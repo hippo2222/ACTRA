@@ -239,6 +239,7 @@ def _default_ui_state(user_id: str) -> Dict[str, Any]:
         "updated_at": datetime.now().isoformat(),
         "pinned": [],
         "recent": [],
+        "dismissed": [],
         "settings": {},
     }
 
@@ -251,6 +252,7 @@ def _normalize_ui_state_payload(user_id: str, raw: Any) -> Dict[str, Any]:
             normalized["updated_at"] = updated_at
         normalized["pinned"] = [x for x in raw.get("pinned", []) if isinstance(x, str)]
         normalized["recent"] = [x for x in raw.get("recent", []) if isinstance(x, str)]
+        normalized["dismissed"] = [x for x in raw.get("dismissed", []) if isinstance(x, str)]
         settings = raw.get("settings")
         if isinstance(settings, dict):
             normalized["settings"] = dict(settings)
@@ -305,6 +307,8 @@ def _read_ui_state(user_id: str) -> Dict[str, Any]:
             data["pinned"] = []
         if not isinstance(data.get("recent"), list):
             data["recent"] = []
+        if not isinstance(data.get("dismissed"), list):
+            data["dismissed"] = []
         return _normalize_ui_state_payload(user_id, data)
     except Exception as exc:
         logger.exception("[HTTP] Failed to read ui_state for user %s: %s", user_id, exc)
@@ -437,6 +441,7 @@ def get_quick_access() -> Any:
 
     pinned = [x for x in state.get("pinned", []) if isinstance(x, str)]
     recent = [x for x in state.get("recent", []) if isinstance(x, str)]
+    dismissed = {x for x in state.get("dismissed", []) if isinstance(x, str)}
 
     paused_sessions_by_complex: Dict[str, Dict[str, Any]] = {}
     try:
@@ -508,7 +513,8 @@ def get_quick_access() -> Any:
         key=lambda cid: paused_sessions_by_complex.get(cid, {}).get("_sort_ts", 0),
         reverse=True,
     )
-    for cid in paused_ids + pinned + recent:
+    visible_paused_ids = [cid for cid in paused_ids if cid not in dismissed]
+    for cid in visible_paused_ids + pinned + recent:
         if cid in seen:
             continue
         seen.add(cid)
@@ -586,7 +592,7 @@ def get_quick_access() -> Any:
             "items": items,
             "pinned": pinned,
             "recent": recent,
-            "paused_complex_ids": paused_ids,
+            "paused_complex_ids": visible_paused_ids,
         }
     )
 
@@ -605,6 +611,9 @@ def pin_quick_access() -> Any:
         if complex_id not in pinned:
             pinned.insert(0, complex_id)
         state["pinned"] = pinned[:12]
+        state["dismissed"] = [
+            x for x in state.get("dismissed", []) if isinstance(x, str) and x != complex_id
+        ]
         _write_ui_state(user_id, state)
         return jsonify({"ok": True})
     except Exception as exc:
@@ -650,6 +659,9 @@ def remove_from_quick_access() -> Any:
         state = _read_ui_state(user_id)
         state["pinned"] = [x for x in state.get("pinned", []) if isinstance(x, str) and x != complex_id]
         state["recent"] = [x for x in state.get("recent", []) if isinstance(x, str) and x != complex_id]
+        dismissed = [x for x in state.get("dismissed", []) if isinstance(x, str) and x != complex_id]
+        dismissed.insert(0, complex_id)
+        state["dismissed"] = dismissed[:50]
         _write_ui_state(user_id, state)
         return jsonify({"ok": True})
     except Exception as exc:
@@ -673,6 +685,9 @@ def mark_recent_complex() -> Any:
         recent = [x for x in state.get("recent", []) if isinstance(x, str) and x != complex_id]
         recent.insert(0, complex_id)
         state["recent"] = recent[:12]
+        state["dismissed"] = [
+            x for x in state.get("dismissed", []) if isinstance(x, str) and x != complex_id
+        ]
         _write_ui_state(user_id, state)
         return jsonify({"ok": True})
     except Exception as exc:

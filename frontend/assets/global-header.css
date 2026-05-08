@@ -54,7 +54,8 @@
 .global-header__link,
 .global-header__menu-button,
 .global-header__profile,
-.global-header__reference {
+.global-header__reference,
+.global-header__onboarding-help {
     border: 1px solid transparent;
     border-radius: 0.75rem;
     color: var(--color-component-button-muted-fg);
@@ -79,6 +80,7 @@
 
 .global-header__link:hover,
 .global-header__menu-button:hover,
+.global-header__reference:hover,
 .global-header__profile:hover {
     background: var(--color-component-button-muted-hover-bg);
     border-color: var(--color-component-button-muted-hover-border);
@@ -196,12 +198,16 @@
 .global-header__reference {
     background: var(--color-component-button-muted-bg);
     border-color: var(--color-component-button-muted-border);
-    cursor: not-allowed;
+    cursor: pointer;
     gap: 0.4rem;
-    opacity: 0.78;
     padding: 0 0.75rem;
     font-size: 0.82rem;
     font-weight: 750;
+}
+
+.global-header__reference .material-symbols-outlined {
+    font-size: 1.08rem;
+    line-height: 1;
 }
 
 .global-header__profile {
@@ -229,6 +235,22 @@
     white-space: nowrap;
 }
 
+.global-header__plan-badge {
+    border: 1px solid var(--color-border-subtle);
+    border-radius: 999px;
+    color: var(--color-text-secondary);
+    font-size: 0.66rem;
+    font-weight: 800;
+    line-height: 1;
+    padding: 0.26rem 0.42rem;
+}
+
+.global-header__plan-badge.is-premium {
+    background: var(--color-primary-lighter);
+    border-color: var(--color-primary-light);
+    color: var(--color-primary);
+}
+
 .global-header :focus-visible {
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
@@ -237,7 +259,9 @@
 @media (max-width: 1120px) {
     .global-header__link span:not(.material-symbols-outlined),
     .global-header__reference span:not(.material-symbols-outlined),
-    .global-header__user-name {
+    .global-header__onboarding-help span:not(.material-symbols-outlined),
+    .global-header__user-name,
+    .global-header__plan-badge {
         display: none;
     }
 }

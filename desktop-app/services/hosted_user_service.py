@@ -201,6 +201,65 @@ class HostedUserService(HostedShadowFallbackMixin, UserService):
         self.logger.info("[HOSTED] Created auth user in Postgres: %s (%s)", user.user_id, user.login)
         return user
 
+    def create_external_auth_user(
+        self,
+        *,
+        provider: str,
+        provider_subject: str,
+        name: str,
+        email: str,
+        avatar_seed: Optional[str] = None,
+    ) -> User:
+        self.ensure_persistence_ready()
+        clean_provider = str(provider or "").strip().lower()
+        clean_subject = str(provider_subject or "").strip()
+        if clean_provider != "google" or not clean_subject:
+            raise ValueError("invalid_external_provider")
+
+        clean_name = self._validate_name(name)
+        clean_email = self.normalize_email(email)
+        self.validate_email(clean_email)
+        if self.repository.name_exists(clean_name):
+            raise ValueError("duplicate_name")
+        if self.repository.email_exists(clean_email) or self.repository.pending_email_exists(clean_email):
+            raise ValueError("email_already_exists")
+
+        clean_login = self.generate_available_login_from_name(clean_email.split("@", 1)[0] or clean_name)
+        created_at = datetime.utcnow().isoformat() + "Z"
+        user = User(
+            user_id=self._generate_user_id(),
+            name=clean_name,
+            created_at=created_at,
+            avatar_seed=(str(avatar_seed or "").strip() or "1.png"),
+            login=clean_login,
+            email=clean_email,
+            email_verified_at=created_at,
+            email_verification_sent_at=created_at,
+            password_hash=None,
+            settings={
+                "auth_providers": {
+                    clean_provider: {
+                        "sub": clean_subject,
+                        "email": clean_email,
+                        "linked_at": created_at,
+                        "last_login_at": created_at,
+                    }
+                }
+            },
+        )
+        security_settings = dict(user.security_settings or {})
+        security_settings["require_password_on_login"] = False
+        user.security_settings = security_settings
+        self.repository.create_user(user, updated_at=created_at)
+        try:
+            self._write_legacy_profile_projection(user, initialize_progress=True)
+        except Exception:
+            self.repository.delete_user(user.user_id)
+            raise
+        user = self._maybe_promote_bootstrap_admin(user)
+        self.logger.info("[HOSTED] Created external auth user in Postgres: %s (%s)", user.user_id, user.login)
+        return user
+
     def get_user(self, user_id: str) -> Optional[User]:
         if not user_id or user_id == "guest":
             return None
@@ -258,6 +317,8 @@ class HostedUserService(HostedShadowFallbackMixin, UserService):
 
         previous_plan = str(user.plan or USER_PLAN_FREE).strip().lower() or USER_PLAN_FREE
         user.plan = clean_plan
+        if clean_plan == USER_PLAN_FREE:
+            user.premium_expires_at = None
         if not self.update_user(user):
             return None
 

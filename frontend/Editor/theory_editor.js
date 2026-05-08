@@ -3,6 +3,7 @@ const THEORY_CENTER_ROUTE = "/ui/editor/Theory_Center.html";
 const EMPTY_THEORY_DELTA = { ops: [{ insert: "\n" }] };
 const THEORY_DEFAULT_TEXT_COLOR_FALLBACK = "#1A1A1A";
 const THEORY_DRAFT_STORAGE_PREFIX = "theory-editor-draft:";
+const THEORY_EDITOR_ONBOARDING_TOUR_ID = "theory-editor-authoring";
 
 const theoryEditorState = {
     catalog: [],
@@ -29,6 +30,353 @@ let theorySkipBeforeUnloadPrompt = false;
 let theoryHistoryGuardToken = "";
 let theoryHistoryGuardPromptOpen = false;
 let theoryHistoryGuardDisabled = false;
+let theoryEditorOnboardingSnapshot = null;
+let theoryEditorOnboardingImageVariantActive = false;
+let theoryEditorOnboardingImageMarkerEventsBound = false;
+let theoryEditorOnboardingImageMarkerTimer = 0;
+
+function getTheoryEditorOnboardingPreviewTourId() {
+    try {
+        const params = new URLSearchParams(window.location.search || "");
+        return params.get("onboarding_preview") || params.get("onboarding_tour") || "";
+    } catch (error) {
+        return "";
+    }
+}
+
+function isTheoryEditorOnboardingDemoRequested() {
+    return getTheoryEditorOnboardingPreviewTourId() === THEORY_EDITOR_ONBOARDING_TOUR_ID;
+}
+
+function isTheoryEditorOnboardingTourActive() {
+    return document.body?.dataset?.onboardingTourId === THEORY_EDITOR_ONBOARDING_TOUR_ID;
+}
+
+function createTheoryEditorOnboardingImageSrc() {
+    const svg = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="720" height="320" viewBox="0 0 720 320">
+            <rect width="720" height="320" rx="28" fill="#eef4ff"/>
+            <path d="M72 238c86-82 142-124 210-90 30 15 48 44 88 42 58-2 84-66 138-70 46-4 82 32 140 118" fill="none" stroke="#32208a" stroke-width="18" stroke-linecap="round"/>
+            <circle cx="560" cy="92" r="38" fill="#b8c7ff"/>
+            <text x="72" y="86" fill="#17213a" font-family="Arial, sans-serif" font-size="34" font-weight="700">Схема распространения волны</text>
+        </svg>
+    `.trim();
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
+function createTheoryEditorOnboardingDelta() {
+    return {
+        ops: [
+            { insert: "Электромагнитная волна\n", attributes: { header: 1 } },
+            { insert: "Волна переносит энергию через связанные электрическое и магнитное поля. В задачах важно видеть три параметра: частоту, длину волны и поляризацию.\n" },
+            {
+                insert: { image: createTheoryEditorOnboardingImageSrc() },
+                attributes: { width: "56%", align: "center", float: "none" },
+            },
+            { insert: "\n" },
+            { insert: "Что запомнить\n", attributes: { header: 2 } },
+            { insert: "частота показывает, сколько колебаний происходит за секунду;" },
+            { insert: "\n", attributes: { list: "bullet" } },
+            { insert: "длина волны связана со скоростью распространения;" },
+            { insert: "\n", attributes: { list: "bullet" } },
+            { insert: "поляризация описывает направление колебаний поля." },
+            { insert: "\n", attributes: { list: "bullet" } },
+        ],
+    };
+}
+
+function createTheoryEditorOnboardingCatalog() {
+    const now = new Date().toISOString();
+    return [
+        {
+            id: "theory-radio-wave-basics",
+            title: "Радиофизика: электромагнитные волны",
+            version: now,
+            updated_at: now,
+            has_content: true,
+            image_count: 0,
+            usage_topics: 2,
+            usage_complexes: 1,
+            ownership: { is_owned_by_current_user: true, owner_user_id: "demo-user" },
+        },
+        {
+            id: "theory-signal-noise",
+            title: "Шум и отношение сигнал/шум",
+            version: now,
+            updated_at: now,
+            has_content: false,
+            image_count: 0,
+            usage_topics: 0,
+            usage_complexes: 0,
+            ownership: { is_owned_by_current_user: true, owner_user_id: "demo-user" },
+        },
+    ];
+}
+
+function applyTheoryEditorOnboardingDemoState() {
+    if (!theoryEditorOnboardingSnapshot) {
+        theoryEditorOnboardingSnapshot = {
+            catalog: theoryEditorState.catalog.slice(),
+            activeTheoryId: theoryEditorState.activeTheoryId,
+            activeItem: theoryEditorState.activeItem,
+            version: theoryEditorState.version,
+            dirty: theoryEditorState.dirty,
+            loading: theoryEditorState.loading,
+            saving: theoryEditorState.saving,
+            search: theoryEditorState.search,
+            context: theoryEditorState.context,
+            publicationItem: theoryEditorState.publicationItem,
+            workspaceLimits: theoryEditorState.workspaceLimits,
+            currentTheoryEditorUserId,
+            publicationItems: allTheoryPublicationItems.slice(),
+            title: document.getElementById("theory-title")?.value || "",
+            editorHtml: document.getElementById("theory-editor")?.innerHTML || "",
+            documentTitle: document.title,
+        };
+    }
+
+    const catalog = createTheoryEditorOnboardingCatalog();
+    theoryEditorState.catalog = catalog;
+    theoryEditorState.activeTheoryId = catalog[0].id;
+    theoryEditorState.activeItem = catalog[0];
+    theoryEditorState.version = catalog[0].version;
+    theoryEditorState.dirty = false;
+    theoryEditorState.loading = false;
+    theoryEditorState.saving = false;
+    theoryEditorState.search = "";
+    theoryEditorState.context = {
+        ...(theoryEditorState.context || {}),
+        returnUrl: THEORY_CENTER_ROUTE,
+    };
+    theoryEditorState.workspaceLimits = {
+        ok: true,
+        plan: "premium",
+        theories: {
+            personal_count: 2,
+            personal_limit: 50,
+            library_total_count: 2,
+            library_limit: 200,
+        },
+    };
+    currentTheoryEditorUserId = "demo-user";
+    allTheoryPublicationItems = [];
+    theoryPublicationBySourceId.clear();
+    theoryPublicationByItemId.clear();
+    theoryEditorState.publicationItem = null;
+
+    const search = document.getElementById("theory-library-search");
+    if (search) search.value = "";
+    setTheoryEditorContent(catalog[0].title, createTheoryEditorOnboardingDelta());
+    setTheoryStatus("Демо-теория готова к редактированию", "info", "edit_note");
+    renderTheoryContextHeader();
+    updateTheoryEditorActions();
+    renderTheoryLibraryList();
+    syncTheoryEditorOnboardingStepState();
+    document.title = "Редактор теории";
+}
+
+function restoreTheoryEditorOnboardingDemoState() {
+    if (!theoryEditorOnboardingSnapshot) return;
+    const snapshot = theoryEditorOnboardingSnapshot;
+    theoryEditorOnboardingSnapshot = null;
+    deselectImage();
+    theoryEditorState.catalog = snapshot.catalog;
+    theoryEditorState.activeTheoryId = snapshot.activeTheoryId;
+    theoryEditorState.activeItem = snapshot.activeItem;
+    theoryEditorState.version = snapshot.version;
+    theoryEditorState.dirty = snapshot.dirty;
+    theoryEditorState.loading = snapshot.loading;
+    theoryEditorState.saving = snapshot.saving;
+    theoryEditorState.search = snapshot.search;
+    theoryEditorState.context = snapshot.context;
+    theoryEditorState.publicationItem = snapshot.publicationItem;
+    theoryEditorState.workspaceLimits = snapshot.workspaceLimits;
+    currentTheoryEditorUserId = snapshot.currentTheoryEditorUserId;
+    allTheoryPublicationItems = snapshot.publicationItems;
+    rebuildTheoryPublicationIndex(allTheoryPublicationItems);
+    const titleEl = document.getElementById("theory-title");
+    if (titleEl) titleEl.value = snapshot.title;
+    const editor = document.getElementById("theory-editor");
+    if (editor) editor.innerHTML = snapshot.editorHtml;
+    document.title = snapshot.documentTitle;
+    renderTheoryContextHeader();
+    updateTheoryEditorActions();
+    renderTheoryLibraryList();
+}
+
+function syncTheoryEditorOnboardingStepState() {
+    const editor = document.getElementById("theory-editor");
+    if (!editor) return;
+    const image = editor.querySelector(".theory-image");
+    const wrapper = image?.closest(".theory-image-wrapper");
+    if (image) {
+        image.setAttribute("data-onboarding-target", "theory-editor-selected-image");
+    }
+    if (wrapper) {
+        wrapper.setAttribute("data-onboarding-target", "theory-editor-selected-image-wrapper");
+    }
+    const activeStepId = document.body?.dataset?.onboardingStepId || "";
+    if (activeStepId === "theory-editor-body-and-text-tools" && image) {
+        if (theoryEditorOnboardingImageVariantActive) {
+            removeTheoryEditorOnboardingImageMarker();
+            selectImage(image);
+            return;
+        }
+        deselectImage();
+        removeTheoryEditorOnboardingImageMarker();
+        return;
+    }
+    theoryEditorOnboardingImageVariantActive = false;
+    delete document.body.dataset.onboardingImageVariant;
+    removeTheoryEditorOnboardingImageMarker();
+    if (activeStepId === "theory-editor-image-tools" && image) {
+        selectImage(image);
+        return;
+    }
+    deselectImage();
+}
+
+function removeTheoryEditorOnboardingImageMarker() {
+    window.clearTimeout(theoryEditorOnboardingImageMarkerTimer);
+    theoryEditorOnboardingImageMarkerTimer = 0;
+    document.querySelectorAll(".theory-onboarding-image-marker").forEach((node) => node.remove());
+}
+
+function scheduleTheoryEditorOnboardingImageMarker(delayMs = 260) {
+    window.clearTimeout(theoryEditorOnboardingImageMarkerTimer);
+    theoryEditorOnboardingImageMarkerTimer = window.setTimeout(() => {
+        theoryEditorOnboardingImageMarkerTimer = 0;
+        if (
+            document.body?.dataset?.onboardingTourId !== THEORY_EDITOR_ONBOARDING_TOUR_ID
+            || document.body?.dataset?.onboardingStepId !== "theory-editor-body-and-text-tools"
+            || theoryEditorOnboardingImageVariantActive
+        ) {
+            return;
+        }
+        const image = document.querySelector("#theory-editor .theory-image");
+        const wrapper = image?.closest(".theory-image-wrapper");
+        if (!image || !wrapper) return;
+        deselectImage();
+        ensureTheoryEditorOnboardingImageMarker(wrapper);
+    }, delayMs);
+}
+
+function positionTheoryEditorOnboardingImageMarker() {
+    const marker = document.querySelector(".theory-onboarding-image-marker");
+    const wrapper = marker?.__theoryOnboardingImageWrapper;
+    if (!marker || !wrapper?.isConnected) return false;
+
+    const image = wrapper.querySelector(".theory-image");
+    const rect = (image || wrapper).getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) {
+        marker.classList.remove("is-positioned", "is-visible");
+        return false;
+    }
+    const markerSize = marker.offsetWidth || 40;
+    const margin = 12;
+    const insetX = Math.max(18, rect.width * 0.06);
+    const insetY = Math.max(18, rect.height * 0.14);
+    const left = Math.max(margin, Math.min(window.innerWidth - markerSize - margin, rect.right - markerSize - insetX));
+    const top = Math.max(margin, Math.min(window.innerHeight - markerSize - margin, rect.top + insetY));
+    marker.style.left = `${left}px`;
+    marker.style.top = `${top}px`;
+    marker.classList.add("is-positioned");
+    return true;
+}
+
+function bindTheoryEditorOnboardingImageMarkerEvents() {
+    if (theoryEditorOnboardingImageMarkerEventsBound) return;
+    theoryEditorOnboardingImageMarkerEventsBound = true;
+    window.addEventListener("scroll", positionTheoryEditorOnboardingImageMarker, { passive: true });
+    window.addEventListener("resize", positionTheoryEditorOnboardingImageMarker);
+}
+
+function applyTheoryEditorOnboardingImageVariant(attempt = 0) {
+    if (document.body?.dataset?.onboardingStepId !== "theory-editor-body-and-text-tools") return;
+    const applied = Boolean(
+        window.OnboardingTour
+        && typeof window.OnboardingTour.setStepVariant === "function"
+        && window.OnboardingTour.setStepVariant("image-tools")
+    );
+    const hasImageCallouts = document.querySelectorAll(".onboarding-tour-callout").length > 0;
+    if ((!applied || !hasImageCallouts) && attempt < 6) {
+        window.setTimeout(() => applyTheoryEditorOnboardingImageVariant(attempt + 1), 120);
+    }
+}
+
+function ensureTheoryEditorOnboardingImageMarker(wrapper) {
+    if (!wrapper) return;
+    const existing = document.querySelector(".theory-onboarding-image-marker");
+    if (existing && existing.__theoryOnboardingImageWrapper === wrapper) {
+        positionTheoryEditorOnboardingImageMarker();
+        return;
+    }
+    removeTheoryEditorOnboardingImageMarker();
+
+    const marker = document.createElement("button");
+    marker.type = "button";
+    marker.className = "theory-onboarding-image-marker";
+    marker.setAttribute("aria-label", "Показать инструменты изображения");
+    marker.setAttribute("title", "Показать инструменты изображения");
+    marker.setAttribute("contenteditable", "false");
+    marker.setAttribute("data-onboarding-interactive", "image-tools-marker");
+    marker.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">priority_high</span>';
+    marker.__theoryOnboardingImageWrapper = wrapper;
+    marker.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const currentWrapper = marker.__theoryOnboardingImageWrapper;
+        const image = currentWrapper?.querySelector(".theory-image");
+        if (!image) return;
+        theoryEditorOnboardingImageVariantActive = true;
+        document.body.dataset.onboardingImageVariant = "image-tools";
+        removeTheoryEditorOnboardingImageMarker();
+        selectImage(image);
+        applyTheoryEditorOnboardingImageVariant();
+    });
+    document.body.appendChild(marker);
+    bindTheoryEditorOnboardingImageMarkerEvents();
+    positionTheoryEditorOnboardingImageMarker();
+    window.requestAnimationFrame(positionTheoryEditorOnboardingImageMarker);
+    window.requestAnimationFrame(() => {
+        if (positionTheoryEditorOnboardingImageMarker()) {
+            marker.classList.add("is-visible");
+        }
+    });
+    window.setTimeout(positionTheoryEditorOnboardingImageMarker, 180);
+    window.setTimeout(positionTheoryEditorOnboardingImageMarker, 420);
+}
+
+function bindTheoryEditorOnboardingStepReady() {
+    window.addEventListener("onboarding:step-ready", (event) => {
+        const detail = event?.detail || {};
+        if (detail.tourId !== THEORY_EDITOR_ONBOARDING_TOUR_ID) return;
+        if (detail.stepId === "theory-editor-body-and-text-tools") {
+            scheduleTheoryEditorOnboardingImageMarker();
+            return;
+        }
+        removeTheoryEditorOnboardingImageMarker();
+    });
+}
+
+function syncTheoryEditorOnboardingDemoState() {
+    if (isTheoryEditorOnboardingDemoRequested() || isTheoryEditorOnboardingTourActive()) {
+        applyTheoryEditorOnboardingDemoState();
+        syncTheoryEditorOnboardingStepState();
+        return;
+    }
+    restoreTheoryEditorOnboardingDemoState();
+}
+
+function bindTheoryEditorOnboardingDemoObserver() {
+    if (!document.body || typeof MutationObserver === "undefined") return;
+    const observer = new MutationObserver(() => syncTheoryEditorOnboardingDemoState());
+    observer.observe(document.body, {
+        attributes: true,
+        attributeFilter: ["data-onboarding-tour-id", "data-onboarding-step-id"],
+    });
+    bindTheoryEditorOnboardingStepReady();
+}
 
 function theoryEditorNavigate(url) {
     theorySkipBeforeUnloadPrompt = true;
@@ -384,6 +732,10 @@ function renderTheoryContextHeader() {
     const openComplexesBtn = document.getElementById("theory-open-complexes-btn");
     const context = theoryEditorState.context || {};
 
+    if (centerBtn) {
+        centerBtn.disabled = false;
+    }
+
     if (openComplexesBtn) {
         openComplexesBtn.disabled = false;
         openComplexesBtn.dataset.target = resolveTheoryComplexesUrl();
@@ -407,8 +759,11 @@ function renderTheoryContextHeader() {
 
     if (backBtn && backLabel) {
         const returnUrl = normalizeTheoryWorkspaceUrl(context.returnUrl, theoryEditorState.activeTheoryId) || THEORY_CENTER_ROUTE;
+        const isCenterReturn = returnUrl.includes("Theory_Center");
         backBtn.dataset.target = returnUrl;
-        if (returnUrl.includes("Theory_Center")) {
+        backBtn.hidden = isCenterReturn;
+        backBtn.classList.toggle("hidden", isCenterReturn);
+        if (isCenterReturn) {
             backLabel.textContent = "К центру теории";
         } else if (returnUrl.includes("/ui/editor")) {
             backLabel.textContent = "К редактору заданий";
@@ -417,15 +772,12 @@ function renderTheoryContextHeader() {
         }
     }
 
-    if (centerBtn) {
-        centerBtn.disabled = false;
-    }
-
     renderTheoryQuotaUi();
 }
 
 function theoryLocalImageSrc(path) {
     if (!path) return "";
+    if (path.startsWith('data:')) return path;
     if (path.startsWith('/api/local-image') || path.startsWith('/api/assets/')) return path;
     return `/api/local-image?path=${encodeURIComponent(path)}`;
 }
@@ -1047,12 +1399,12 @@ function renderTheoryLineContent(segments) {
             
             let wrapperStyle = "";
             if (float === "left") {
-                wrapperStyle = "display:inline-block;float:left;margin:0 16px 8px 0;";
+                wrapperStyle = "display:inline-block;float:left;margin:0 16px 8px 0;position:relative;";
             } else if (float === "right") {
-                wrapperStyle = "display:inline-block;float:right;margin:0 0 8px 16px;";
+                wrapperStyle = "display:inline-block;float:right;margin:0 0 8px 16px;position:relative;";
             } else {
                 const textAlign = align === "center" ? "text-align:center;" : align === "right" ? "text-align:right;" : "";
-                wrapperStyle = `display:block;${textAlign}`;
+                wrapperStyle = `display:block;position:relative;${textAlign}`;
             }
             
             const rotate = attrs.rotate || "0";
@@ -2246,12 +2598,12 @@ function applyImageSettings(img, settings) {
         let wrapperStyle = "";
         
         if (currentFloat === "left") {
-            wrapperStyle = "display:inline-block;float:left;margin:0 16px 8px 0;";
+            wrapperStyle = "display:inline-block;float:left;margin:0 16px 8px 0;position:relative;";
         } else if (currentFloat === "right") {
-            wrapperStyle = "display:inline-block;float:right;margin:0 0 8px 16px;";
+            wrapperStyle = "display:inline-block;float:right;margin:0 0 8px 16px;position:relative;";
         } else {
             const textAlign = currentAlign === "center" ? "text-align:center;" : currentAlign === "right" ? "text-align:right;" : "";
-            wrapperStyle = `display:block;${textAlign}`;
+            wrapperStyle = `display:block;position:relative;${textAlign}`;
         }
         
         wrapper.style.cssText = wrapperStyle;
@@ -2476,6 +2828,7 @@ async function uploadTheoryImage(event) {
             wrapper.className = "theory-image-wrapper";
             wrapper.setAttribute("contenteditable", "false");
             wrapper.style.display = "block";
+            wrapper.style.position = "relative";
             wrapper.appendChild(img);
             
             const p = document.createElement("p");
@@ -2627,6 +2980,9 @@ function renderTheoryLibraryList() {
         const button = document.createElement("button");
         button.type = "button";
         button.className = `theory-library-item card-elevated ${theoryId === theoryEditorState.activeTheoryId ? "is-active" : ""}`;
+        if (theoryId === theoryEditorState.activeTheoryId) {
+            button.setAttribute("data-onboarding-target", "theory-editor-active-library-item");
+        }
         const libraryImageCount = Number(item?.image_count || 0);
         const metaBadges = [];
         const statusBadges = [];
@@ -3171,7 +3527,9 @@ function bindTheoryEditorEvents() {
     const persistDraftOnLeave = (event = null) => {
         if (!theoryEditorState.dirty) return;
         saveTheoryDraftNow();
-        if (event && !theorySkipBeforeUnloadPrompt) {
+        const params = new URLSearchParams(window.location.search || '');
+        const isReferencePreview = params.get('reference_embed') === '1' || params.get('reference_preview') === '1';
+        if (event && !theorySkipBeforeUnloadPrompt && !isReferencePreview) {
             event.preventDefault();
             event.returnValue = "";
         }
@@ -3189,7 +3547,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     theoryEditorState.context = parseTheoryEditorContext();
     renderTheoryContextHeader();
     bindTheoryEditorEvents();
+    bindTheoryEditorOnboardingDemoObserver();
     updateTheoryEditorActions();
+    if (isTheoryEditorOnboardingDemoRequested()) {
+        applyTheoryEditorOnboardingDemoState();
+        return;
+    }
     await Promise.all([
         loadTheoryCatalog({ keepSelection: true }),
         fetchTheoryWorkspaceLimits(),

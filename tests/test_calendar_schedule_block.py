@@ -94,8 +94,8 @@ class TestScheduleStripWithRealData:
         # Задачи должны содержать реальные данные (только комплексы, без Daily Mix)
         tasks_text = " ".join(today_plan.tasks)
         assert "Daily Mix" not in tasks_text
-        # Ожидаем, что будут показаны реальные комплексы
-        assert any(name in tasks_text for name in ["complex_1", "complex_2"])
+        # Ожидаем, что будут показаны человекочитаемые имена реальных комплексов
+        assert any(name in tasks_text for name in ["Комплекс 1", "Комплекс 2"])
     
     def test_schedule_strip_without_data_uses_fallback(self, calendar_service):
         """Без данных расписание использует упрощённый формат."""
@@ -151,11 +151,11 @@ class TestScheduleStripWithRealData:
         # Проверяем, что есть и Daily Mix, и Основной фокус
         assert len(today_plan.tasks) >= 1
         
-        # Для будущих дней должен быть только Daily Mix
+        # Future days should not be mechanically filled when no review is due.
         future_days = [d for d in schedule if d.is_future]
         for day in future_days:
             if day.status == DayStatus.PLANNED:
-                assert len(day.tasks) >= 1
+                assert "Daily Mix" not in day.tasks
 
 
 class TestActivityTracking:

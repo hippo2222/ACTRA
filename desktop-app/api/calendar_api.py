@@ -35,6 +35,7 @@ _RAW_ID_RE = re.compile(
 # Простое кеширование для /api/calendar/activity
 _activity_cache = {
     "data": None,
+    "key": None,
     "timestamp": None,
     "ttl_seconds": 60,
 }
@@ -43,6 +44,7 @@ _activity_cache = {
 def _invalidate_activity_cache():
     """Сбросить кеш активности после мутирующих операций."""
     _activity_cache["data"] = None
+    _activity_cache["key"] = None
     _activity_cache["timestamp"] = None
 
 
@@ -118,6 +120,73 @@ def create_calendar_routes(app, calendar_service, complex_service=None, session_
                 return text
         return "Комплекс без названия"
 
+    def _status_value(value):
+        return getattr(value, "value", value)
+
+    def _build_calendar_data_context():
+        """Collect complex/task metadata once for calendar planning routes."""
+        task_pool = {}
+        complex_names = {}
+        current_complex = None
+        current_complex_id = None
+
+        try:
+            for p in calendar_service.get_all_progress() or []:
+                status = getattr(getattr(p, "status", None), "value", getattr(p, "status", None))
+                if status == "in_progress":
+                    current_complex_id = p.complex_id
+                    break
+        except Exception:
+            current_complex_id = None
+
+        if not complex_service:
+            return {
+                "task_pool": task_pool,
+                "complex_names": complex_names,
+                "current_complex": current_complex,
+            }
+
+        for c in complex_service.get_all_complexes():
+            obj = _normalize_complex_obj(c)
+            cid = obj.get("id") or obj.get("complex_id") or ""
+            if not cid:
+                continue
+
+            display_name = _resolve_complex_display_name(obj, cid)
+            raw_tasks = obj.get("tasks", []) or []
+            normalized_tasks = []
+
+            for t in raw_tasks:
+                if isinstance(t, dict):
+                    task_obj = dict(t)
+                    nested_complex = task_obj.get("complex") if isinstance(task_obj.get("complex"), dict) else {}
+                    task_name = task_obj.get("complex_name") or nested_complex.get("name") or display_name
+                    task_obj["complex_name"] = display_name if _is_raw_display_id(task_name) else task_name
+                    normalized_tasks.append(task_obj)
+                else:
+                    normalized_tasks.append({
+                        "task_id": str(t).split("/")[-1],
+                        "task_ref": str(t),
+                        "complex_name": display_name,
+                        "duration": 150,
+                    })
+
+            task_pool[cid] = normalized_tasks
+            complex_names[cid] = display_name
+
+            status = _status_value(obj.get("status"))
+            if current_complex is None and (
+                (current_complex_id and cid == current_complex_id)
+                or (not current_complex_id and status == "in_progress")
+            ):
+                current_complex = c
+
+        return {
+            "task_pool": task_pool,
+            "complex_names": complex_names,
+            "current_complex": current_complex,
+        }
+
     @app.route("/api/calendar/today", methods=["GET"])
     def get_today_plan():
         """
@@ -135,48 +204,10 @@ def create_calendar_routes(app, calendar_service, complex_service=None, session_
             }
         """
         try:
-            # Получаем пул задач из complex_service
-            task_pool = {}
-            complex_names = {}
-            current_complex = None
-            current_complex_id = None
-
-            # Определяем текущий комплекс на основе прогресса календаря
-            try:
-                for p in calendar_service.get_all_progress() or []:
-                    if getattr(p, "status", None) and p.status.value == "in_progress":
-                        current_complex_id = p.complex_id
-                        break
-            except Exception:
-                current_complex_id = None
-            
-            if complex_service:
-                complexes = complex_service.get_all_complexes()
-                for c in complexes:
-                    obj = _normalize_complex_obj(c)
-                    cid = obj.get("id") or obj.get("complex_id") or ""
-                    display_name = _resolve_complex_display_name(obj, cid)
-                    raw_tasks = obj.get("tasks", []) or []
-                    normalized_tasks = []
-                    for t in raw_tasks:
-                        if isinstance(t, dict):
-                            task_obj = dict(t)
-                            nested_complex = task_obj.get("complex") if isinstance(task_obj.get("complex"), dict) else {}
-                            task_name = task_obj.get("complex_name") or nested_complex.get("name") or display_name
-                            task_obj["complex_name"] = display_name if _is_raw_display_id(task_name) else task_name
-                            normalized_tasks.append(task_obj)
-                        else:
-                            normalized_tasks.append({
-                                "task_id": str(t),
-                                "complex_name": display_name,
-                                "duration": 150,
-                            })
-                    task_pool[cid] = normalized_tasks
-                    complex_names[cid] = display_name
-
-                    # Текущий комплекс = первый комплекс, который отмечен in_progress в календарном прогрессе
-                    if current_complex is None and current_complex_id and cid == current_complex_id:
-                        current_complex = c
+            context = _build_calendar_data_context()
+            task_pool = context["task_pool"]
+            complex_names = context["complex_names"]
+            current_complex = context["current_complex"]
             
             result = calendar_service.get_today_plan(
                 task_pool=task_pool,
@@ -186,18 +217,23 @@ def create_calendar_routes(app, calendar_service, complex_service=None, session_
 
             # Runtime debug to verify which scheduler implementation is used
             try:
-                settings = calendar_service.get_settings()
-                scheduler = getattr(calendar_service, "scheduler_service", None)
-                scheduler_cls = scheduler.__class__ if scheduler else None
-                scheduler_file = inspect.getsourcefile(scheduler_cls) if scheduler_cls else None
-                calculated_target = scheduler.calculate_daily_mix_size(settings.daily_time_limit_minutes) if scheduler else None
+                calendar_debug_enabled = (
+                    str(os.environ.get("ACTRA_CALENDAR_DEBUG") or "").strip().lower()
+                    in {"1", "true", "yes"}
+                )
+                if calendar_debug_enabled:
+                    settings = calendar_service.get_settings()
+                    scheduler = getattr(calendar_service, "scheduler_service", None)
+                    scheduler_cls = scheduler.__class__ if scheduler else None
+                    scheduler_file = inspect.getsourcefile(scheduler_cls) if scheduler_cls else None
+                    calculated_target = scheduler.calculate_daily_mix_size(settings.daily_time_limit_minutes) if scheduler else None
 
-                result["debug"] = {
-                    "daily_time_limit_minutes": settings.daily_time_limit_minutes,
-                    "calculated_daily_mix_target": calculated_target,
-                    "scheduler_class": f"{scheduler_cls.__module__}.{scheduler_cls.__name__}" if scheduler_cls else None,
-                    "scheduler_source_file": scheduler_file,
-                }
+                    result["debug"] = {
+                        "daily_time_limit_minutes": settings.daily_time_limit_minutes,
+                        "calculated_daily_mix_target": calculated_target,
+                        "scheduler_class": f"{scheduler_cls.__module__}.{scheduler_cls.__name__}" if scheduler_cls else None,
+                        "scheduler_source_file": scheduler_file,
+                    }
             except Exception:
                 # Never break response due to debug collection
                 pass
@@ -238,6 +274,8 @@ def create_calendar_routes(app, calendar_service, complex_service=None, session_
             
             return result
         
+        except ValueError as e:
+            return {"success": False, "error": str(e)}, 400
         except Exception as e:
             logger.error(f"Error in update_settings: {e}")
             return _calendar_error_response(e)
@@ -256,9 +294,20 @@ def create_calendar_routes(app, calendar_service, complex_service=None, session_
         try:
             from flask import request
             days = request.args.get("days", 5, type=int)
+            if days is None:
+                days = 5
+            days = max(1, min(days, 31))
             
             settings = calendar_service.get_settings()
             activity = calendar_service.get_activity_history()
+            all_progress = calendar_service.get_all_progress()
+            old_scores = {p.complex_id: p.health_score for p in all_progress}
+            for progress in all_progress:
+                calendar_service.health_service.update_progress_health(progress)
+            if old_scores != {p.complex_id: p.health_score for p in all_progress}:
+                calendar_service.save_all_progress(all_progress)
+            rest_days = calendar_service.get_rest_days()
+            context = _build_calendar_data_context()
             
             schedule = calendar_service.scheduler_service.build_schedule_strip(
                 user_id=calendar_service.user_id,
@@ -266,6 +315,10 @@ def create_calendar_routes(app, calendar_service, complex_service=None, session_
                 schedule_mode=settings.schedule_mode.value,
                 activity_history=activity,
                 available_minutes=settings.daily_time_limit_minutes,
+                all_progress=all_progress,
+                task_pool=context["task_pool"],
+                rest_days=rest_days,
+                complex_names=context["complex_names"],
             )
             
             return {
@@ -301,36 +354,10 @@ def create_calendar_routes(app, calendar_service, complex_service=None, session_
             # For daily_mix we proxy to SessionAPI to create a custom session with task_refs
             if session_type == "daily_mix" and session_api:
                 # Build today's plan to get daily_mix tasks
-                task_pool = {}
-                complex_names = {}
-                current_complex = None
-                if complex_service:
-                    complexes = complex_service.get_all_complexes()
-                    for c in complexes:
-                        obj = _normalize_complex_obj(c)
-
-                        cid = obj.get("id", None) or obj.get("complex_id", "")
-                        display_name = _resolve_complex_display_name(obj, cid)
-                        raw_tasks = obj.get("tasks", []) or []
-                        normalized_tasks = []
-                        for t in raw_tasks:
-                            if isinstance(t, dict):
-                                task_obj = dict(t)
-                                nested_complex = task_obj.get("complex") if isinstance(task_obj.get("complex"), dict) else {}
-                                task_name = task_obj.get("complex_name") or nested_complex.get("name") or display_name
-                                task_obj["complex_name"] = display_name if _is_raw_display_id(task_name) else task_name
-                                normalized_tasks.append(task_obj)
-                            else:
-                                normalized_tasks.append({
-                                    "task_id": str(t),
-                                    "complex_name": display_name,
-                                    "duration": 150,
-                                })
-                        task_pool[cid] = normalized_tasks
-                        complex_names[cid] = display_name
-                        status = obj.get("status", None)
-                        if not current_complex and status == "in_progress":
-                            current_complex = c
+                context = _build_calendar_data_context()
+                task_pool = context["task_pool"]
+                complex_names = context["complex_names"]
+                current_complex = context["current_complex"]
                 
                 plan = calendar_service.get_today_plan(
                     task_pool=task_pool,
@@ -525,6 +552,11 @@ def create_calendar_routes(app, calendar_service, complex_service=None, session_
         """
         try:
             all_progress = calendar_service.get_all_progress()
+            old_scores = {p.complex_id: p.health_score for p in all_progress}
+            for progress in all_progress:
+                calendar_service.health_service.update_progress_health(progress)
+            if old_scores != {p.complex_id: p.health_score for p in all_progress}:
+                calendar_service.save_all_progress(all_progress)
             
             # Получаем названия комплексов
             complex_names = {}
@@ -556,12 +588,17 @@ def create_calendar_routes(app, calendar_service, complex_service=None, session_
         try:
             from flask import request
             days = request.args.get("days", 30, type=int)
+            if days is None:
+                days = 30
+            days = max(1, min(days, 366))
             
             # Проверяем кеш (только для days=30, чтобы не усложнять)
             now = datetime.now()
+            cache_key = (getattr(calendar_service, "user_id", None), days)
             if (
                 days == 30
                 and _activity_cache["data"] is not None
+                and _activity_cache["key"] == cache_key
                 and _activity_cache["timestamp"] is not None
                 and (now - _activity_cache["timestamp"]).total_seconds() < _activity_cache["ttl_seconds"]
             ):
@@ -579,6 +616,7 @@ def create_calendar_routes(app, calendar_service, complex_service=None, session_
             # Кешируем результат для days=30
             if days == 30:
                 _activity_cache["data"] = response
+                _activity_cache["key"] = cache_key
                 _activity_cache["timestamp"] = now
             
             return response

@@ -161,6 +161,8 @@ describe('shared profile menu', () => {
               email: 'hosted@example.com',
               login: 'hosted-login',
               avatar_seed: '2.png',
+              effective_plan: 'premium',
+              premium_expires_at: '2026-06-07T00:00:00Z',
             },
           }),
         };
@@ -215,6 +217,8 @@ describe('shared profile menu', () => {
     const settingsLink = dom.window.document.getElementById('sharedProfileSettings');
     expect(settingsLink?.getAttribute('href')).toBe('/ui/settings');
     expect(settingsLink?.className).toContain('shared-profile-focus-target');
+    expect(dom.window.document.body.textContent).toContain('Premium');
+    expect(dom.window.document.getElementById('sharedProfilePremium')?.getAttribute('href')).toBe('/ui/settings#premium');
 
     expect(dom.window.document.querySelector('[data-theme-chip="dark-a"]')).toBeNull();
 

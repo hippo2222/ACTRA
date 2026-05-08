@@ -296,6 +296,48 @@ def test_hosted_quick_access_mutations_persist_in_user_profile_settings(client, 
     assert (tmp_path / "users" / "user-main" / "ui_state.json").exists() is False
 
 
+def test_hosted_quick_access_remove_dismisses_paused_session_card(client, monkeypatch, tmp_path):
+    user = _make_user()
+    paused_session = _FakePausedSession(
+        id="session-1",
+        user_id="user-main",
+        complex_id="complex-1",
+        queue=["task-1", "task-2"],
+        paused_at=datetime(2026, 4, 19, 12, 0, 0),
+    )
+    user_service = _FakeHostedUserService(user)
+    _install_hosted_runtime(
+        monkeypatch,
+        tmp_path,
+        user_service=user_service,
+        session_api=_FakeSessionAPI(_FakeSessionRepository([paused_session])),
+        statistics_service=_FakeStatisticsService(),
+        calendar_service=_FakeCalendarService(),
+    )
+    monkeypatch.setattr(
+        quick_access_routes,
+        "_get_complex_by_id",
+        lambda complex_id: {"id": complex_id, "title": complex_id},
+    )
+
+    _login_hosted_user(client)
+
+    before_response = client.get("/api/ui/quick-access")
+    remove_response = client.post("/api/ui/quick-access/remove", json={"complex_id": "complex-1"})
+    after_response = client.get("/api/ui/quick-access")
+
+    assert before_response.status_code == 200
+    assert remove_response.status_code == 200
+    assert after_response.status_code == 200
+    before_payload = before_response.get_json()
+    after_payload = after_response.get_json()
+    assert [item["complex"]["id"] for item in before_payload["items"]] == ["complex-1"]
+    assert before_payload["paused_complex_ids"] == ["complex-1"]
+    assert after_payload["items"] == []
+    assert after_payload["paused_complex_ids"] == []
+    assert user.settings["web_ui_state"]["dismissed"] == ["complex-1"]
+
+
 def test_hosted_quick_access_returns_degraded_when_identity_storage_is_blocked(client, monkeypatch, tmp_path):
     user_service = _FakeHostedUserService(_make_user(), fail_reads=True)
     _install_hosted_runtime(

@@ -2,6 +2,8 @@
  * ACTRA Editor Dashboard
  */
 
+const EDITOR_DASHBOARD_ONBOARDING_TOUR_ID = 'editor-dashboard-authoring';
+
 class EditorDashboard {
     constructor() {
         this.catalog = [];
@@ -75,6 +77,9 @@ class EditorDashboard {
         this.topicTheoryModalBound = false;
         this.topicTheorySyncInFlight = new Set();
         this.pendingMicrocardsManual = false;
+        this.onboardingDemoActive = false;
+        this.onboardingSnapshot = null;
+        this.onboardingDemoCatalogLoadSkipped = false;
 
         this.init();
     }
@@ -117,12 +122,16 @@ class EditorDashboard {
             ? 'Premium · без лимита'
             : `Мои задания: ${label}`;
 
-        return `<span class="shrink-0 rounded-full border border-border-subtle bg-bg-secondary px-2 py-0.5 text-[11px] font-semibold leading-none text-text-secondary" data-role="all-tasks-limit-badge" title="${this.escapeHtml(title)}">${this.escapeHtml(label)}</span>`;
+        const promoAttrs = isPremium
+            ? ''
+            : ' data-premium-promo-trigger data-premium-promo-feature="tasks-limit" role="button" tabindex="0"';
+        return `<span class="shrink-0 rounded-full border border-border-subtle bg-bg-secondary px-2 py-0.5 text-[11px] font-semibold leading-none text-text-secondary" data-role="all-tasks-limit-badge" data-onboarding-target="editor-task-limit-badge" title="${this.escapeHtml(title)}"${promoAttrs}>${this.escapeHtml(label)}</span>`;
     }
 
     init() {
         this.log('[init] Dashboard initializing...');
         this.loadWorkspaceShortcuts();
+        this.setupOnboardingTourBridge();
         // this.log(`Location: ${window.location.href}`); // Removed as per instruction
 
         // if (window.location.protocol === 'file:') { // Removed as per instruction
@@ -191,6 +200,204 @@ class EditorDashboard {
             line.style.padding = '2px 0';
             this.debugPanel.appendChild(line);
             this.debugPanel.scrollTop = this.debugPanel.scrollHeight;
+        }
+    }
+
+    setupOnboardingTourBridge() {
+        window.addEventListener('onboarding:before-start', (event) => {
+            if (event?.detail?.tourId !== EDITOR_DASHBOARD_ONBOARDING_TOUR_ID) return;
+            this.applyEditorDashboardOnboardingDemoState();
+        });
+
+        window.addEventListener('onboarding:before-step', (event) => {
+            if (event?.detail?.tourId !== EDITOR_DASHBOARD_ONBOARDING_TOUR_ID) return;
+            if (!this.onboardingDemoActive) {
+                this.applyEditorDashboardOnboardingDemoState();
+            }
+            if (event.detail.stepId === 'editor-dashboard-create-task') {
+                this.prepareEditorDashboardOnboardingCreateModal();
+            } else {
+                this.closeModals();
+            }
+        });
+
+        window.addEventListener('onboarding:finish', (event) => {
+            if (event?.detail?.tourId !== EDITOR_DASHBOARD_ONBOARDING_TOUR_ID) return;
+            this.restoreEditorDashboardOnboardingDemoState();
+        });
+    }
+
+    createEditorDashboardOnboardingCatalog() {
+        const now = new Date().toISOString();
+        return [
+            {
+                id: 'onboarding-module-radiology',
+                name: 'Лучевая диагностика',
+                topics: [
+                    {
+                        id: 'onboarding-topic-waves',
+                        name: 'Электромагнитные волны',
+                        theory_link: {
+                            theory_id: 'theory-radio-wave-basics',
+                            relation: 'primary',
+                        },
+                        tasks: [
+                            {
+                                id: 'onboarding-task-wave-test',
+                                name: 'Тест: параметры волны',
+                                type: 'test',
+                                created_at: now,
+                                updated_at: now,
+                            },
+                            {
+                                id: 'onboarding-task-spectrum-click',
+                                name: 'Клик: участки спектра',
+                                type: 'click',
+                                created_at: now,
+                                updated_at: now,
+                            },
+                        ],
+                    },
+                    {
+                        id: 'onboarding-topic-safety',
+                        name: 'Безопасность исследования',
+                        tasks: [
+                            {
+                                id: 'onboarding-task-safety-open',
+                                name: 'Открытый ответ: подготовка пациента',
+                                type: 'open_answer',
+                                created_at: now,
+                                updated_at: now,
+                            },
+                        ],
+                    },
+                ],
+            },
+            {
+                id: 'onboarding-module-practice',
+                name: 'Практические навыки',
+                topics: [
+                    {
+                        id: 'onboarding-topic-sequence',
+                        name: 'Последовательность действий',
+                        tasks: [
+                            {
+                                id: 'onboarding-task-sequence',
+                                name: 'Сборка: порядок подготовки',
+                                type: 'sequence_assembly',
+                                created_at: now,
+                                updated_at: now,
+                            },
+                        ],
+                    },
+                ],
+            },
+        ];
+    }
+
+    captureEditorDashboardOnboardingSnapshot() {
+        return {
+            catalog: JSON.parse(JSON.stringify(this.catalog || [])),
+            workspaceLimits: this.workspaceLimits ? JSON.parse(JSON.stringify(this.workspaceLimits)) : null,
+            activeModuleId: this.activeModuleId,
+            activeTopicId: this.activeTopicId,
+            currentSearchQuery: this.currentSearchQuery,
+            currentSort: this.currentSort,
+            expandedState: JSON.parse(JSON.stringify(this.expandedState || { modules: [], topics: [] })),
+            selectedTasks: Array.from(this.selectedTasks || []),
+            selectionMode: this.selectionMode,
+            searchValue: document.querySelector('#editor-search-input')?.value || '',
+        };
+    }
+
+    applyEditorDashboardOnboardingDemoState() {
+        if (!this.onboardingSnapshot) {
+            this.onboardingSnapshot = this.captureEditorDashboardOnboardingSnapshot();
+        }
+        this.onboardingDemoActive = true;
+        document.body.dataset.editorDashboardOnboardingDemo = 'true';
+
+        this.catalog = this.createEditorDashboardOnboardingCatalog();
+        this.workspaceLimits = {
+            ...(this.workspaceLimits || {}),
+            plan: 'free',
+            tasks: {
+                personal_count: 4,
+                personal_limit: 50,
+                remaining_personal: 46,
+            },
+        };
+        this.activeModuleId = 'onboarding-module-radiology';
+        this.activeTopicId = 'onboarding-topic-waves';
+        this.currentSearchQuery = '';
+        this.currentSort = 'date';
+        this.expandedState = {
+            modules: ['onboarding-module-radiology'],
+            topics: ['onboarding-module-radiology:onboarding-topic-waves'],
+        };
+        this.selectedTasks.clear();
+        this.selectionMode = false;
+
+        const searchInput = document.querySelector('#editor-search-input');
+        if (searchInput) searchInput.value = '';
+        this.updateSortLabel();
+        this.updateSortMenuChecks();
+        this.closeModals();
+        this.renderSidebar();
+        this.renderTopicTasks('onboarding-module-radiology', 'onboarding-topic-waves');
+    }
+
+    prepareEditorDashboardOnboardingCreateModal() {
+        this.showCreateTaskModal();
+        const moduleSelect = document.querySelector('#task-module-select');
+        const topicSelect = document.querySelector('#task-topic-select');
+        const nameInput = document.querySelector('#task-name-input');
+        const typeSelect = document.querySelector('#task-type-select');
+
+        if (moduleSelect) {
+            moduleSelect.value = 'onboarding-module-radiology';
+            this.updateTopicSelect();
+        }
+        if (topicSelect) topicSelect.value = 'onboarding-topic-waves';
+        if (nameInput) nameInput.value = 'Контрольный вопрос по волнам';
+        if (typeSelect) typeSelect.value = 'test';
+    }
+
+    restoreEditorDashboardOnboardingDemoState() {
+        if (!this.onboardingDemoActive && !this.onboardingSnapshot) return;
+
+        const snapshot = this.onboardingSnapshot;
+        const shouldReloadCatalog = this.onboardingDemoCatalogLoadSkipped;
+        this.onboardingDemoActive = false;
+        this.onboardingDemoCatalogLoadSkipped = false;
+        this.onboardingSnapshot = null;
+        delete document.body.dataset.editorDashboardOnboardingDemo;
+        this.closeModals();
+
+        if (snapshot) {
+            this.catalog = snapshot.catalog || [];
+            this.workspaceLimits = snapshot.workspaceLimits;
+            this.activeModuleId = snapshot.activeModuleId || null;
+            this.activeTopicId = snapshot.activeTopicId || null;
+            this.currentSearchQuery = snapshot.currentSearchQuery || '';
+            this.currentSort = snapshot.currentSort || 'date';
+            this.expandedState = snapshot.expandedState || { modules: [], topics: [] };
+            this.selectedTasks = new Set(snapshot.selectedTasks || []);
+            this.selectionMode = Boolean(snapshot.selectionMode);
+
+            const searchInput = document.querySelector('#editor-search-input');
+            if (searchInput) searchInput.value = snapshot.searchValue || '';
+            this.updateSortLabel();
+            this.updateSortMenuChecks();
+            this.renderSidebar();
+            this.refreshCurrentView();
+        }
+
+        if (shouldReloadCatalog) {
+            this.loadCatalog().then(() => {
+                this.renderWorkspaceShortcuts();
+                this.refreshCurrentView();
+            });
         }
     }
 
@@ -377,6 +584,17 @@ class EditorDashboard {
             const message = blocked ? this.getTaskDraftNotice(summary) : '';
             note.classList.toggle('hidden', !message);
             note.textContent = message;
+            if (message) {
+                note.setAttribute('data-premium-promo-trigger', '');
+                note.setAttribute('data-premium-promo-feature', 'tasks-limit');
+                note.setAttribute('role', 'button');
+                note.setAttribute('tabindex', '0');
+            } else {
+                note.removeAttribute('data-premium-promo-trigger');
+                note.removeAttribute('data-premium-promo-feature');
+                note.removeAttribute('role');
+                note.removeAttribute('tabindex');
+            }
         }
 
         if (submitBtn) {
@@ -1122,6 +1340,7 @@ class EditorDashboard {
     }
 
     updateUrlState() {
+        if (this.onboardingDemoActive) return;
         const params = new URLSearchParams();
         if (this.activeModuleId) params.set('module', this.activeModuleId);
         if (this.activeTopicId) params.set('topic', this.activeTopicId);
@@ -1133,6 +1352,10 @@ class EditorDashboard {
     }
 
     async loadCatalog() {
+        if (this.onboardingDemoActive) {
+            this.onboardingDemoCatalogLoadSkipped = true;
+            return;
+        }
         this.log("Fetching catalog from /api/editor/catalog...");
         try {
             const response = await fetch('/api/editor/catalog');
@@ -1144,6 +1367,10 @@ class EditorDashboard {
             }
 
             const data = await response.json();
+            if (this.onboardingDemoActive) {
+                this.onboardingDemoCatalogLoadSkipped = true;
+                return;
+            }
             if (data.ok) {
                 this.catalog = this.cleanCatalog(data.modules);
                 this.log(`Catalog loaded: ${this.catalog ? this.catalog.length : 0} modules`);
@@ -1458,6 +1685,9 @@ class EditorDashboard {
     }
 
     syncSidebarSelection() {
+        document.querySelectorAll('[data-onboarding-target="editor-active-topic"]').forEach((node) => {
+            node.removeAttribute('data-onboarding-target');
+        });
         if (!this.activeModuleId && !this.activeTopicId) {
             document.querySelectorAll('[data-module-button], [data-topic-button]').forEach(btn => {
                 btn.classList.remove('bg-primary-lighter', 'text-primary');
@@ -1468,7 +1698,7 @@ class EditorDashboard {
         }
 
         document.querySelectorAll('[data-module-button]').forEach(btn => {
-            const moduleId = btn.getAttribute('data-module-id');
+            const moduleId = btn.getAttribute('data-module-id') || btn.dataset.moduleButton;
             const isActive = moduleId === this.activeModuleId;
             btn.classList.toggle('bg-primary-lighter', isActive);
             btn.classList.toggle('text-primary', isActive);
@@ -1480,12 +1710,13 @@ class EditorDashboard {
         });
 
         document.querySelectorAll('[data-topic-button]').forEach(btn => {
-            const topicId = btn.getAttribute('data-topic-id');
+            const topicId = btn.getAttribute('data-topic-id') || btn.dataset.topicButton;
             const isActive = topicId === this.activeTopicId;
             btn.classList.toggle('bg-primary-lighter', isActive);
             btn.classList.toggle('text-primary', isActive);
             if (isActive) {
                 btn.classList.remove('text-text-secondary');
+                btn.setAttribute('data-onboarding-target', 'editor-active-topic');
             } else {
                 btn.classList.add('text-text-secondary');
             }
@@ -1593,7 +1824,7 @@ class EditorDashboard {
         modal.classList.add('flex');
         const modalContent = modal.querySelector('.bg-surface-1');
         if (modalContent) modalContent.classList.add('animate-scale-in');
-        if (this.isTaskCreationBlocked()) {
+        if (!this.onboardingDemoActive && this.isTaskCreationBlocked()) {
             this.showVoiceToast({
                 severity: 'warning',
                 what: 'Лимит заданий достигнут.',
@@ -4399,11 +4630,17 @@ class EditorDashboard {
             return;
         }
 
-        tasksToRender.forEach(task => {
+        tasksToRender.forEach((task, index) => {
             const uniqueId = this.makeTaskUniqueId(task.moduleId, task.topicId, task.id);
             const card = this.createTaskCard(task, {
                 hasDraft: taskDraftIds.has(uniqueId),
             });
+            if (index < 2) {
+                card.setAttribute('data-onboarding-target', 'editor-existing-task-card');
+                if (index === 0) {
+                    card.querySelector('[data-action="favorite-task"]')?.setAttribute('data-onboarding-target', 'editor-task-favorite-action');
+                }
+            }
             gridContainer.appendChild(card);
         });
     }
@@ -4992,8 +5229,11 @@ class EditorDashboard {
         const childrenContainer = document.createElement('div');
         // Check if expanded
         const isExpanded = this.expandedState.modules.includes(module.id);
+        const expandedClass = isExpanded
+            ? (this.onboardingDemoActive ? '' : 'animate-slide-up')
+            : 'hidden';
 
-        childrenContainer.className = `flex flex-col ml-3 pl-3 border-l border-border-subtle mt-1 gap-1 ${isExpanded ? 'animate-slide-up' : 'hidden'}`;
+        childrenContainer.className = `flex flex-col ml-3 pl-3 border-l border-border-subtle mt-1 gap-1 ${expandedClass}`;
         childrenContainer.dataset.moduleChildren = module.id;
         const chevron = button.querySelector('[data-role="toggle"]');
         if (chevron) {
@@ -5011,7 +5251,9 @@ class EditorDashboard {
             const isHidden = childrenContainer.classList.contains('hidden');
             if (isHidden) {
                 childrenContainer.classList.remove('hidden');
-                childrenContainer.classList.add('animate-slide-up');
+                if (!this.onboardingDemoActive) {
+                    childrenContainer.classList.add('animate-slide-up');
+                }
                 if (chevron) {
                     chevron.style.transform = 'rotate(0deg)';
                 }
@@ -5126,7 +5368,10 @@ class EditorDashboard {
         }
 
         const tasksContainer = document.createElement('div');
-        tasksContainer.className = `flex flex-col ml-3 pl-3 border-l border-border-subtle my-1 gap-1 ${isExpanded ? 'animate-slide-up' : 'hidden'}`;
+        const expandedClass = isExpanded
+            ? (this.onboardingDemoActive ? '' : 'animate-slide-up')
+            : 'hidden';
+        tasksContainer.className = `flex flex-col ml-3 pl-3 border-l border-border-subtle my-1 gap-1 ${expandedClass}`;
         tasksContainer.dataset.topicTasks = topicKey;
 
         if (topic.tasks && topic.tasks.length > 0) {
@@ -5153,7 +5398,9 @@ class EditorDashboard {
             const isHidden = tasksContainer.classList.contains('hidden');
             if (isHidden) {
                 tasksContainer.classList.remove('hidden');
-                tasksContainer.classList.add('animate-slide-up');
+                if (!this.onboardingDemoActive) {
+                    tasksContainer.classList.add('animate-slide-up');
+                }
                 if (chevron) {
                     chevron.style.transform = 'rotate(0deg)';
                 }
@@ -5244,7 +5491,9 @@ class EditorDashboard {
         const chevron = moduleContainer?.querySelector('[data-role="toggle"]');
         if (children && children.classList.contains('hidden')) {
             children.classList.remove('hidden');
-            children.classList.add('animate-slide-up');
+            if (!this.onboardingDemoActive) {
+                children.classList.add('animate-slide-up');
+            }
         }
         if (chevron) {
             chevron.style.transform = 'rotate(0deg)';
@@ -5259,7 +5508,9 @@ class EditorDashboard {
         const chevron = topicContainer?.querySelector('[data-role="toggle"]');
         if (tasksContainer && tasksContainer.classList.contains('hidden')) {
             tasksContainer.classList.remove('hidden');
-            tasksContainer.classList.add('animate-slide-up');
+            if (!this.onboardingDemoActive) {
+                tasksContainer.classList.add('animate-slide-up');
+            }
         }
         if (chevron) {
             chevron.style.transform = 'rotate(0deg)';
@@ -5269,6 +5520,9 @@ class EditorDashboard {
     }
 
     syncSidebarSelection() {
+        document.querySelectorAll('[data-onboarding-target="editor-active-topic"]').forEach((node) => {
+            node.removeAttribute('data-onboarding-target');
+        });
         const moduleButtons = document.querySelectorAll('[data-module-button]');
         moduleButtons.forEach(btn => {
             const isActive = this.activeModuleId && btn.dataset.moduleButton === this.activeModuleId;
@@ -5293,6 +5547,7 @@ class EditorDashboard {
             if (isActive) {
                 btn.classList.remove(...allActiveClasses);
                 btn.classList.add(activeBg, activeText, 'font-semibold');
+                btn.setAttribute('data-onboarding-target', 'editor-active-topic');
                 this.expandSidebarTopic(moduleId, topicId);
             } else {
                 btn.classList.remove(...allActiveClasses, 'font-semibold');
@@ -5820,6 +6075,7 @@ class EditorDashboard {
     }
 
     cleanupOrphanedDrafts() {
+        if (this.onboardingDemoActive) return;
         try {
             const drafts = this.collectRecoveryDrafts().filter((item) => item?.kind === 'task');
             let cleanedCount = 0;
@@ -6628,14 +6884,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.dashboard.showCreateTaskModal();
             }
         }, 0);
-    }
-
-    // Theory Center navigation button (sidebar footer)
-    const theoryCenterBtn = document.getElementById('theory-center-sidebar-btn');
-    if (theoryCenterBtn) {
-        theoryCenterBtn.addEventListener('click', () => {
-            window.dashboard.navigateToTheoryCenter({ scope: 'topics' });
-        });
     }
 
     document.addEventListener('keydown', (e) => {

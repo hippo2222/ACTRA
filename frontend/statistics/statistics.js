@@ -10,8 +10,6 @@ const createInitialState = () => ({
     complexStats: {},
     complexList: [],
     complexNames: {},
-    theoryCatalog: [],
-    theoryInsights: [],
     currentUser: null,
     hasData: false,
     currentPeriod: 7,
@@ -325,9 +323,13 @@ const StatisticsApp = {
 
         const container = document.getElementById('chart-content');
         if (container) {
-            container.querySelectorAll('.chart-point').forEach(point => {
-                const idx = Number(point.getAttribute('data-index'));
-                point.classList.toggle('chart-point--focused', idx === index);
+            container.querySelectorAll('.chart-focusable').forEach(el => {
+                const idx = Number(el.getAttribute('data-index'));
+                const isActive = idx === index;
+                el.classList.toggle('chart-point--focused', isActive && el.classList.contains('chart-point'));
+                el.classList.toggle('chart-bar--focused', isActive && el.classList.contains('chart-bar'));
+                el.classList.toggle('chart-fire-icon--focused', isActive && el.classList.contains('chart-fire-icon'));
+                el.classList.toggle('chart-focus-guide--visible', isActive && el.classList.contains('chart-focus-guide'));
             });
         }
     },
@@ -341,8 +343,13 @@ const StatisticsApp = {
 
         const container = document.getElementById('chart-content');
         if (container) {
-            container.querySelectorAll('.chart-point').forEach(point => {
-                point.classList.remove('chart-point--focused');
+            container.querySelectorAll('.chart-focusable').forEach(el => {
+                el.classList.remove(
+                    'chart-point--focused',
+                    'chart-bar--focused',
+                    'chart-fire-icon--focused',
+                    'chart-focus-guide--visible'
+                );
             });
         }
     },
@@ -517,11 +524,16 @@ const StatisticsApp = {
 
     async init() {
         console.log('[Statistics] Initializing...');
-        this.initGlobalTooltip();
-        this.bindEvents();
-        await this.loadUserProfile();
-        await this.loadData();
-        console.log('[Statistics] Init complete. State:', JSON.stringify(this.state, null, 2));
+        try {
+            this.initGlobalTooltip();
+            this.bindEvents();
+            this.setupStatisticsOnboardingDemoObserver();
+            await this.loadUserProfile();
+            await this.loadData();
+            console.log('[Statistics] Init complete. State:', JSON.stringify(this.state, null, 2));
+        } finally {
+            window.PageBoot?.ready();
+        }
     },
 
     initGlobalTooltip() {
@@ -711,6 +723,165 @@ const StatisticsApp = {
         }
     },
 
+    cloneStateForOnboardingDemo() {
+        try {
+            return JSON.parse(JSON.stringify(this.state || {}));
+        } catch (error) {
+            console.warn('[Statistics] Failed to clone onboarding state:', error);
+            return createInitialState();
+        }
+    },
+
+    createStatisticsOnboardingDemoState() {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const makeIsoDate = (offset) => {
+            const date = new Date(today);
+            date.setDate(today.getDate() + offset);
+            return [
+                date.getFullYear(),
+                String(date.getMonth() + 1).padStart(2, '0'),
+                String(date.getDate()).padStart(2, '0')
+            ].join('-');
+        };
+        const dynamics = [
+            { date: makeIsoDate(-6), attempts: 2, total_attempts: 3, activity_attempts_total: 5, study_minutes: 18, microcards_reviews: 2, microcards_study_minutes: 3, combined_study_minutes: 21 },
+            { date: makeIsoDate(-5), attempts: 0, total_attempts: 0, activity_attempts_total: 0, study_minutes: 0, microcards_reviews: 0, microcards_study_minutes: 0, combined_study_minutes: 0 },
+            { date: makeIsoDate(-4), attempts: 4, total_attempts: 5, activity_attempts_total: 9, study_minutes: 24, microcards_reviews: 4, microcards_study_minutes: 6, combined_study_minutes: 30 },
+            { date: makeIsoDate(-3), attempts: 3, total_attempts: 4, activity_attempts_total: 8, study_minutes: 20, microcards_reviews: 4, microcards_study_minutes: 5, combined_study_minutes: 25 },
+            { date: makeIsoDate(-2), attempts: 0, total_attempts: 0, activity_attempts_total: 3, study_minutes: 0, microcards_reviews: 3, microcards_study_minutes: 5, combined_study_minutes: 5 },
+            { date: makeIsoDate(-1), attempts: 5, total_attempts: 6, activity_attempts_total: 16, study_minutes: 32, microcards_reviews: 10, microcards_study_minutes: 8, combined_study_minutes: 40 },
+            { date: makeIsoDate(0), attempts: 3, total_attempts: 4, activity_attempts_total: 10, study_minutes: 22, microcards_reviews: 6, microcards_study_minutes: 7, combined_study_minutes: 29 }
+        ];
+        const previousDynamics = [
+            { date: makeIsoDate(-13), attempts: 1, total_attempts: 1, activity_attempts_total: 2, study_minutes: 8, microcards_reviews: 1, microcards_study_minutes: 2, combined_study_minutes: 10 },
+            { date: makeIsoDate(-12), attempts: 0, total_attempts: 0, activity_attempts_total: 0, study_minutes: 0, microcards_reviews: 0, microcards_study_minutes: 0, combined_study_minutes: 0 },
+            { date: makeIsoDate(-11), attempts: 2, total_attempts: 2, activity_attempts_total: 4, study_minutes: 12, microcards_reviews: 2, microcards_study_minutes: 3, combined_study_minutes: 15 },
+            { date: makeIsoDate(-10), attempts: 0, total_attempts: 0, activity_attempts_total: 0, study_minutes: 0, microcards_reviews: 0, microcards_study_minutes: 0, combined_study_minutes: 0 },
+            { date: makeIsoDate(-9), attempts: 3, total_attempts: 4, activity_attempts_total: 7, study_minutes: 18, microcards_reviews: 3, microcards_study_minutes: 4, combined_study_minutes: 22 },
+            { date: makeIsoDate(-8), attempts: 1, total_attempts: 2, activity_attempts_total: 3, study_minutes: 10, microcards_reviews: 1, microcards_study_minutes: 2, combined_study_minutes: 12 },
+            { date: makeIsoDate(-7), attempts: 0, total_attempts: 0, activity_attempts_total: 2, study_minutes: 0, microcards_reviews: 2, microcards_study_minutes: 3, combined_study_minutes: 3 }
+        ];
+        const recentIso = new Date(today.getTime() - (3 * 60 * 60 * 1000)).toISOString();
+        const yesterdayIso = new Date(today.getTime() - (24 * 60 * 60 * 1000)).toISOString();
+        const olderIso = new Date(today.getTime() - (3 * 24 * 60 * 60 * 1000)).toISOString();
+        const complexList = [
+            { id: 'demo-lagusa', name: 'Laguskа Complex' },
+            { id: 'demo-anatomy', name: 'Анатомия: базовый блок' },
+            { id: 'demo-blood', name: 'Физиология крови' }
+        ];
+        const complexStats = {
+            'demo-lagusa': {
+                aggregated: { attempts: 18, success_rate: 0.64 },
+                recent_sessions: [{ end_time: recentIso }]
+            },
+            'demo-anatomy': {
+                aggregated: { attempts: 12, success_rate: 0.86 },
+                recent_sessions: [{ end_time: yesterdayIso }]
+            },
+            'demo-blood': {
+                aggregated: { attempts: 9, success_rate: 0.72 },
+                recent_sessions: [{ end_time: olderIso }]
+            }
+        };
+
+        return {
+            stats: {
+                tasks_mastered: 18,
+                total_tasks_available: 42,
+                total_tasks_attempted: 31,
+                total_time_spent: 5400,
+                activity_streak_days: 5,
+                activity_streak_best: 9,
+                learning_sources: {
+                    tasks: {
+                        attempts: 31,
+                        time_spent_seconds: 5400
+                    },
+                    microcards: {
+                        attempts: 46,
+                        time_spent_seconds: 1800
+                    },
+                    combined: {
+                        attempts: 77,
+                        time_spent_seconds: 7200
+                    }
+                },
+                microcards: {
+                    reviews_total: 46,
+                    correct_rate: 0.78,
+                    decks_active: 3
+                },
+                by_task_type: {
+                    test: { attempts: 14, success_rate: 0.86, average_score: 86 },
+                    click: { attempts: 9, success_rate: 0.72, average_score: 72 },
+                    sequence: { attempts: 8, success_rate: 0.63, average_score: 63 }
+                }
+            },
+            dynamics,
+            previousDynamics,
+            complexStats,
+            complexList,
+            complexNames: {
+                'demo-lagusa': 'Laguskа Complex',
+                'demo-anatomy': 'Анатомия: базовый блок',
+                'demo-blood': 'Физиология крови'
+            },
+            currentPeriod: 7,
+            currentMetric: 'study',
+            focusedDay: null,
+            focusSource: null,
+            dynamicsCache: { 7: dynamics },
+            previousDynamicsCache: { 7: previousDynamics },
+            hasData: true
+        };
+    },
+
+    applyStatisticsOnboardingDemo(active) {
+        if (active) {
+            if (!this._statisticsOnboardingDemoSnapshot) {
+                this._statisticsOnboardingDemoSnapshot = this.cloneStateForOnboardingDemo();
+            }
+            this.state = {
+                ...this.state,
+                ...this.createStatisticsOnboardingDemoState()
+            };
+            document.body.dataset.statisticsOnboardingDemo = 'true';
+            this.render();
+            this.updateUserDisplay();
+            return;
+        }
+
+        if (!active && this._statisticsOnboardingDemoSnapshot) {
+            this.state = {
+                ...createInitialState(),
+                ...this._statisticsOnboardingDemoSnapshot
+            };
+            this._statisticsOnboardingDemoSnapshot = null;
+            delete document.body.dataset.statisticsOnboardingDemo;
+            this.render();
+            this.updateUserDisplay();
+        }
+    },
+
+    setupStatisticsOnboardingDemoObserver() {
+        if (this._statisticsOnboardingDemoObserver || typeof MutationObserver === 'undefined' || !document.body) {
+            return;
+        }
+
+        const sync = () => {
+            const active = document.body.dataset.onboardingTourId === 'statistics-learning-signals';
+            this.applyStatisticsOnboardingDemo(active);
+        };
+
+        this._statisticsOnboardingDemoObserver = new MutationObserver(sync);
+        this._statisticsOnboardingDemoObserver.observe(document.body, {
+            attributes: true,
+            attributeFilter: ['data-onboarding-tour-id', 'data-onboarding-step-id'],
+        });
+        sync();
+    },
+
     async loadData() {
         this.showSkeleton();
         let hadPartialLoadError = false;
@@ -721,15 +892,13 @@ const StatisticsApp = {
             const previousPeriodUrl = this.buildApiUrl(`/api/statistics/time-dynamics?days=${period}&offset=${period}&smooth=${this.state.smoothingWindow}`);
             const complexesUrl = this.buildApiUrl('/api/statistics/complexes');
             const complexesListUrl = this.buildApiUrl('/api/complexes');
-            const theoriesUrl = this.buildApiUrl('/api/theories');
 
-            const [statsRes, dynamicsRes, previousRes, complexesRes, complexesListRes, theoriesRes] = await Promise.all([
+            const [statsRes, dynamicsRes, previousRes, complexesRes, complexesListRes] = await Promise.all([
                 fetch(statsUrl),
                 fetch(dynamicsUrl),
                 fetch(previousPeriodUrl),
                 fetch(complexesUrl),
-                fetch(complexesListUrl),
-                fetch(theoriesUrl)
+                fetch(complexesListUrl)
             ]);
 
             const statsData = await statsRes.json();
@@ -737,7 +906,6 @@ const StatisticsApp = {
             const previousData = await previousRes.json();
             const complexesData = await complexesRes.json();
             const complexesListData = await complexesListRes.json();
-            const theoriesData = await theoriesRes.json();
 
             console.log('[Statistics] API Responses:', {
                 stats: statsData,
@@ -797,13 +965,6 @@ const StatisticsApp = {
                 rawComplexStats || {},
                 this.state.complexList
             );
-            if (theoriesRes.ok && theoriesData.ok && Array.isArray(theoriesData.items)) {
-                this.state.theoryCatalog = theoriesData.items;
-            } else {
-                this.state.theoryCatalog = [];
-                hadPartialLoadError = true;
-            }
-            this.state.theoryInsights = this.buildTheoryInsights();
             const mcReviews = this.state.stats?.microcards?.reviews_total || 0;
             const combinedAttempts = this.state.stats?.learning_sources?.combined?.attempts || 0;
             const statsHasData = !!(this.state.stats && ((this.state.stats.total_tasks_attempted || 0) > 0 || (this.state.stats.total_time_spent || 0) > 0 || mcReviews > 0 || combinedAttempts > 0));
@@ -813,6 +974,9 @@ const StatisticsApp = {
             this.hideSkeleton();
             this.render();
             this.updateUserDisplay();
+            if (document.body?.dataset.onboardingTourId === 'statistics-learning-signals') {
+                this.applyStatisticsOnboardingDemo(true);
+            }
             if (hadPartialLoadError) {
                 this.showToast('Не удалось полностью обновить статистику. Показаны доступные данные.', 'warning');
             }
@@ -826,11 +990,12 @@ const StatisticsApp = {
             delete this.state.previousDynamicsCache[this.state.currentPeriod];
             this.state.complexStats = {};
             this.state.complexList = [];
-            this.state.theoryCatalog = [];
-            this.state.theoryInsights = [];
             this.state.complexNames = {};
             this.hideSkeleton();
             this.render();
+            if (document.body?.dataset.onboardingTourId === 'statistics-learning-signals') {
+                this.applyStatisticsOnboardingDemo(true);
+            }
             this.showToast('Не удалось загрузить статистику', 'error');
         }
     },
@@ -909,139 +1074,6 @@ const StatisticsApp = {
         }
 
         this.render();
-    },
-
-    buildTheoryInsights() {
-        const theoryTitleById = {};
-        (Array.isArray(this.state.theoryCatalog) ? this.state.theoryCatalog : []).forEach((item) => {
-            const theoryId = String(item?.id || '').trim();
-            if (!theoryId) return;
-            theoryTitleById[theoryId] = String(item?.title || theoryId).trim() || theoryId;
-        });
-
-        const grouped = new Map();
-        (Array.isArray(this.state.complexList) ? this.state.complexList : []).forEach((complex) => {
-            const complexId = String(complex?.id || '').trim();
-            const theoryId = String(complex?.theory_link?.theory_id || '').trim();
-            if (!complexId || !theoryId) return;
-
-            const statEntry = this.state.complexStats?.[complexId] || {};
-            const aggregated = statEntry.aggregated || {};
-            const attempts = Number(aggregated.attempts || 0);
-            const successRate = Number(aggregated.success_rate || 0);
-            const recentSessions = Array.isArray(statEntry.recent_sessions) ? statEntry.recent_sessions : [];
-            const latestEndTime = recentSessions[0]?.end_time || null;
-
-            if (!grouped.has(theoryId)) {
-                grouped.set(theoryId, {
-                    theoryId,
-                    title: theoryTitleById[theoryId] || theoryId,
-                    complexCount: 0,
-                    attempts: 0,
-                    successSum: 0,
-                    successWeight: 0,
-                    latestEndTime: null,
-                });
-            }
-
-            const row = grouped.get(theoryId);
-            row.complexCount += 1;
-            row.attempts += attempts;
-            row.successSum += successRate * attempts;
-            row.successWeight += attempts;
-            if (latestEndTime && (!row.latestEndTime || latestEndTime > row.latestEndTime)) {
-                row.latestEndTime = latestEndTime;
-            }
-        });
-
-        const result = Array.from(grouped.values())
-            .map((row) => ({
-                ...row,
-                successRate: row.successWeight > 0 ? row.successSum / row.successWeight : 0,
-            }))
-            .sort((left, right) => {
-                if (right.attempts !== left.attempts) return right.attempts - left.attempts;
-                if (right.complexCount !== left.complexCount) return right.complexCount - left.complexCount;
-                return (left.title || left.theoryId).localeCompare(right.title || right.theoryId, 'ru');
-            });
-
-        // Show items with >0 attempts, but if none exist, show at least the recent/available ones
-        const withAttempts = result.filter(r => r.attempts > 0);
-        return withAttempts.length > 0 ? withAttempts.slice(0, 3) : result.slice(0, 3);
-    },
-
-    renderTheoryInsights() {
-        const container = document.getElementById('theory-analytics-list');
-        if (!container) return;
-        const hasLiveComplexStats = Object.keys(this.state.complexStats || {}).length > 0;
-        if (!hasLiveComplexStats) {
-            this.renderSidebarEmptyState(container, {
-                icon: 'account_tree',
-                title: 'Пока без аналитики теории',
-                text: 'Когда появятся сессии по актуальным комплексам с теоретическими связями, здесь соберётся понятная сводка.'
-            });
-            return;
-        }
-
-        let insights = Array.isArray(this.state.theoryInsights) ? this.state.theoryInsights.slice(0, 3) : [];
-
-        // Fallback: если theory_link не заполнен — строим из complexStats напрямую
-        if (!insights.length) {
-            const names = this.state.complexNames || {};
-            const complexStats = this.state.complexStats || {};
-            const fallbackResult = Object.keys(complexStats)
-                .map(id => {
-                    const agg = complexStats[id].aggregated || {};
-                    const sessions = complexStats[id].recent_sessions || [];
-                    return {
-                        theoryId: id,
-                        title: names[id] || id,
-                        complexCount: 1,
-                        attempts: agg.attempts || 0,
-                        successRate: agg.success_rate || 0,
-                        latestEndTime: sessions[0]?.end_time || null,
-                    };
-                })
-                .sort((a, b) => b.attempts - a.attempts);
-
-            const fallbackWithAttempts = fallbackResult.filter(x => x.attempts > 0);
-            insights = (fallbackWithAttempts.length > 0 ? fallbackWithAttempts : fallbackResult).slice(0, 3);
-        }
-
-        if (!insights.length) {
-            this.renderSidebarEmptyState(container, {
-                icon: 'account_tree',
-                title: 'Пока без аналитики теории',
-                text: 'Теоретические связи появятся после первых живых сессий по актуальным комплексам.'
-            });
-            return;
-        }
-
-        container.innerHTML = insights.map((item) => {
-            const successRate = Math.max(0, Math.min(100, Math.round((item.successRate || 0) * 100)));
-            const toneClass = successRate >= 80 ? 'bg-success' : (successRate >= 50 ? 'bg-warning' : 'bg-error');
-            const latestLabel = item.latestEndTime ? this.escapeHtml(this.formatFullDate(item.latestEndTime)) : '—';
-            const safeTitle = this.escapeHtml(item.title || item.theoryId);
-            return `
-                <div class="stats-theory-card card-elevated rounded-xl border border-border-subtle bg-bg-secondary p-3">
-                    <div class="flex items-start justify-between gap-2">
-                        <p class="stats-theory-title text-sm font-bold text-text-main min-w-0" title="${safeTitle}">${safeTitle}</p>
-                        <span class="rounded-full border border-border-subtle px-2 py-1 text-[10px] font-semibold text-text-secondary flex-shrink-0">${item.complexCount} компл.</span>
-                    </div>
-                    <div class="stats-theory-meta mt-2 flex items-center justify-between gap-3 text-[11px]">
-                        <span>${item.attempts} попыток</span>
-                        <span>${latestLabel}</span>
-                    </div>
-                    <div class="mt-2 h-1.5 w-full rounded-full bg-surface-1 overflow-hidden">
-                        <div class="h-full ${toneClass} rounded-full transition-all duration-500" style="width:${successRate}%"></div>
-                    </div>
-                    <div class="mt-1 flex items-center justify-between text-[11px]">
-                        <span class="text-text-secondary">Успех по теории</span>
-                        <span class="font-semibold text-text-main">${successRate}%</span>
-                    </div>
-                </div>
-            `;
-        }).join('');
     },
 
     render() {
@@ -1224,6 +1256,7 @@ const StatisticsApp = {
         const step = dynamics.length > 1 ? innerWidth / (dynamics.length - 1) : 0;
         const barWidth = Math.max(10, Math.min(28, innerWidth / Math.max(dynamics.length, 4) * 0.6));
         const focusIndex = this.state.focusedDay;
+        const compactLabels = innerWidth < 360;
 
         const bars = [];
         const labels = [];
@@ -1231,6 +1264,7 @@ const StatisticsApp = {
         const points = [];
         const trendPoints = [];
         const fireIcons = [];
+        const focusGuides = [];
 
         const rolling = this.computeRollingAverage(values, this.state.smoothingWindow || 3);
 
@@ -1291,8 +1325,11 @@ const StatisticsApp = {
                     innerWidth - barWidth
                 );
                 barCenterX = barX + barWidth / 2;
+                const barCls = ['chart-bar', 'chart-focusable'];
+                if (isToday) barCls.push('chart-bar--today');
+                if (isFocused) barCls.push('chart-bar--focused');
                 bars.push(
-                    `<rect x="${barX.toFixed(2)}" y="${barY.toFixed(2)}" width="${barWidth.toFixed(2)}" height="${barH.toFixed(2)}" rx="6" class="chart-bar${isFocused ? ' chart-bar--focused' : ''}"></rect>`
+                    `<rect x="${barX.toFixed(2)}" y="${barY.toFixed(2)}" width="${barWidth.toFixed(2)}" height="${barH.toFixed(2)}" rx="6" class="${barCls.join(' ')}" data-index="${idx}"></rect>`
                 );
             }
 
@@ -1300,10 +1337,10 @@ const StatisticsApp = {
             const isFireDay = fireIsOutstanding && maxIndexSet.has(idx) && maxVal > 0;
             if (isFireDay) {
                 const fireX = barCenterX;
-                const fireY = y;
-                const cls = ['chart-fire-icon', 'chart-point'];
+                const fireY = Math.max(12, barY - 10);
+                const cls = ['chart-fire-icon', 'chart-focusable'];
                 if (isToday) cls.push('chart-point--today');
-                if (isFocused) cls.push('chart-point--focused');
+                if (isFocused) cls.push('chart-fire-icon--focused');
 
                 fireIcons.push(
                     `<text x="${fireX.toFixed(2)}" y="${fireY.toFixed(2)}"
@@ -1315,22 +1352,27 @@ const StatisticsApp = {
                 );
             }
 
-            // Points - только если это не день с огоньком
-            if (!day?._isSynthetic && !isFireDay) {
-                points.push({ x: barCenterX, y, isToday, isFocused, index: idx });
+            // Quiet value markers are revealed for today and hover/focus states.
+            if (!day?._isSynthetic) {
+                points.push({ x: barCenterX, y, isToday, isFocused, index: idx, value });
+                focusGuides.push(
+                    `<line x1="${barCenterX.toFixed(2)}" y1="0" x2="${barCenterX.toFixed(2)}" y2="${innerHeight.toFixed(2)}" class="chart-focus-guide chart-focusable${isFocused ? ' chart-focus-guide--visible' : ''}" data-index="${idx}" />`
+                );
             }
 
             // Trend
             if (typeof rolling[idx] === 'number') {
                 const trRatio = (rolling[idx] - minValue) / range;
                 const trY = innerHeight - (trRatio * innerHeight);
-                trendPoints.push(`${x.toFixed(2)},${trY.toFixed(2)}`);
+                trendPoints.push(`${barCenterX.toFixed(2)},${trY.toFixed(2)}`);
             }
 
             // Labels - показываем только ключевые точки
-            const showLabel = dynamics.length <= 7 || idx === 0 || idx === dynamics.length - 1 ||
-                (dynamics.length <= 14 && idx % 2 === 0) ||
-                (dynamics.length > 14 && idx % Math.ceil(dynamics.length / 7) === 0);
+            const showLabel = compactLabels
+                ? (idx === 0 || idx === dynamics.length - 1 || isToday || idx % Math.ceil(dynamics.length / 4) === 0)
+                : (dynamics.length <= 7 || idx === 0 || idx === dynamics.length - 1 ||
+                    (dynamics.length <= 14 && idx % 2 === 0) ||
+                    (dynamics.length > 14 && idx % Math.ceil(dynamics.length / 7) === 0));
 
             if (showLabel) {
                 const { label } = this.getDayLabelInfo(day.date);
@@ -1361,13 +1403,14 @@ const StatisticsApp = {
 
         // Trend line
         const trendPath = trendPoints.length > 1
-            ? `<polyline points="${trendPoints.join(' ')}" class="chart-line chart-line--smooth" />`
+            ? `<polyline points="${trendPoints.join(' ')}" class="chart-line chart-line--trend" />`
             : '';
 
         // Point markers
         const pointElements = points.map(p => {
-            const r = p.isFocused ? 6 : 5; // today и обычные одинакового размера
-            const cls = ['chart-point'];
+            const r = p.isFocused ? 6 : 4;
+            const cls = ['chart-point', 'chart-focusable'];
+            if (p.value <= 0) cls.push('chart-point--zero');
             if (p.isToday) cls.push('chart-point--today');
             if (p.isFocused) cls.push('chart-point--focused');
             return `<circle cx="${p.x.toFixed(2)}" cy="${p.y.toFixed(2)}" r="${r}" class="${cls.join(' ')}" data-index="${p.index}"></circle>`;
@@ -1412,9 +1455,10 @@ const StatisticsApp = {
                     ${axisLine}
                     ${axisTicks ? `<g>${axisTicks}</g>` : ''}
                     ${gridLines ? `<g>${gridLines}</g>` : ''}
+                    <g class="chart-focus-guides">${focusGuides.join('')}</g>
                     <g class="chart-bars" fill="url(#chartBarGradient)">${bars.join('')}</g>
-                    ${trendPath}
                     <g class="chart-fire-icons">${fireIcons.join('')}</g>
+                    ${trendPath}
                     <g class="chart-points">${pointElements}</g>
                 </g>
 
@@ -1884,7 +1928,7 @@ const StatisticsApp = {
             const barColor = rate >= 80 ? 'bg-success' : rate >= 50 ? 'bg-warning' : 'bg-error';
 
             return `
-                <div class="stats-complex-card-compact card-elevated bg-surface-1 rounded-xl border border-border-subtle transition-all flex-shrink-0">
+                <div class="stats-complex-card-compact card-elevated bg-surface-1 rounded-xl border border-border-subtle transition-all flex-shrink-0" data-onboarding-target="statistics-recent-complex-card">
                     <div class="flex items-center justify-between gap-2 mb-1.5">
                         <h4 class="stats-complex-title font-bold text-xs text-text-main leading-tight flex-1 min-w-0" title="${safeFullName}">${safeName}</h4>
                         <span class="text-[10px] font-bold flex-shrink-0 ${rateColor}">${rate}%</span>

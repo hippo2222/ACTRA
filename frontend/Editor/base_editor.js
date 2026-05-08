@@ -3,6 +3,11 @@
  * Provides common functionality for loading, saving, validation, and UI updates
  */
 
+function isReferencePreviewMode() {
+    const params = new URLSearchParams(window.location.search || '');
+    return params.get('reference_embed') === '1' || params.get('reference_preview') === '1';
+}
+
 class BaseEditor {
     constructor() {
         this.task = null;
@@ -786,6 +791,8 @@ class BaseEditor {
             container = document.createElement('section');
             container.id = containerId;
         }
+        container.setAttribute('data-onboarding-target', 'editor-difficulty-authoring');
+        container.setAttribute('data-onboarding-spotlight', 'frame');
 
         if (container.parentElement !== mountPoint) {
             if (this.getDifficultyAuthoringInsertMode() === 'append') {
@@ -852,11 +859,11 @@ class BaseEditor {
     getDifficultyAuthoringUiCopy() {
         return {
             title: 'Доступные уровни сложности',
-            intro: 'Выберите, на каких уровнях сложности это задание может появляться в комплексе.',
+            intro: 'В стандартном комплексе 3 итерации. Выберите, на каких из них появится это Click-задание.',
             allTitle: 'Все уровни типа',
-            allDescription: 'Задание может появляться на каждом поддерживаемом уровне.',
+            allDescription: 'Показывать задание на всех 3 итерациях Click.',
             customTitle: 'Только выбранные уровни',
-            customDescription: 'Оставьте только те уровни, на которых это задание уместно.',
+            customDescription: 'Показывать задание только на выбранных итерациях.',
             warning: 'Нужно оставить хотя бы один уровень, иначе задание нельзя будет сохранить.',
         };
     }
@@ -874,14 +881,14 @@ class BaseEditor {
             },
             click: {
                 default: {
-                    1: 'Пользователь просто нажимает на нужную область.',
-                    2: 'Пользователь находит область и выбирает её с названием.',
-                    3: 'Пользователь выделяет область и называет её.',
+                    1: 'Итерация 1: пользователь видит изображение и нажимает нужную область. Это проверка узнавания.',
+                    2: 'Итерация 2: пользователь находит область и выбирает её название. Это проверка связи места и термина.',
+                    3: 'Итерация 3: пользователь сам обводит область и вводит название. Это самостоятельная разметка.',
                 },
             },
             draw: {
-                1: 'Пользователь обводит нужную область.',
-                2: 'Пользователь обводит область и подписывает её.',
+                1: 'Итерация 1: пользователь обводит нужную область. Это проверка формы и границ.',
+                2: 'Итерация 2: пользователь обводит область и подписывает её. Это проверка формы и названия.',
             },
             sequence: {
                 1: 'Пользователь раскладывает элементы по уровням или группам.',
@@ -896,7 +903,7 @@ class BaseEditor {
         };
 
         let taskDescriptions = descriptions[taskType];
-        if (taskType === 'click' && subtype) {
+        if (taskType === 'click') {
             taskDescriptions = taskDescriptions?.[subtype] || taskDescriptions?.default || null;
         }
         const directDescription = taskDescriptions?.[normalizedLevel];
@@ -1138,7 +1145,7 @@ class BaseEditor {
         const mountPoint = this.getDifficultyAuthoringMountPoint();
         if (!mountPoint) {
             this.removeDifficultyAuthoringContainer();
-            return;
+            return false;
         }
 
         let meta = null;
@@ -1147,12 +1154,13 @@ class BaseEditor {
         } catch (error) {
             console.warn('[BaseEditor] failed to load difficulty authoring meta', error);
             this.removeDifficultyAuthoringContainer();
-            return;
+            return false;
         }
 
         this.syncDifficultyAuthoringStateFromTask(this.task?.task_data, meta);
         this.applyDifficultyAuthoringStateToTaskData(this.task?.task_data, meta);
         this.renderDifficultyAuthoringControls();
+        return true;
     }
 
     // ===== SAVING =====
@@ -2966,6 +2974,7 @@ class BaseEditor {
      * Setup beforeunload warning for unsaved changes
      */
     setupBeforeUnloadWarning() {
+        if (isReferencePreviewMode()) return;
         window.addEventListener('beforeunload', (e) => {
             if (this.hasUnsavedChanges) {
                 e.preventDefault();
@@ -3153,6 +3162,11 @@ class BaseEditor {
 
     setupNavigationGuards() {
         if (this._navigationGuardsSetup || typeof window === 'undefined') {
+            return;
+        }
+        if (isReferencePreviewMode()) {
+            this._navigationGuardsSetup = true;
+            this._historyGuardDisabled = true;
             return;
         }
 

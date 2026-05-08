@@ -8,6 +8,7 @@
     let consentGateResolver = null;
     let consentGateUserId = null;
     let hostedAuthFlow = false;
+    let authProviders = {};
     let hostedVerificationState = null;
     let forgotPasswordState = { mode: 'request', resetToken: '', requestBusy: false, resetBusy: false };
     let initStarted = false;
@@ -39,12 +40,35 @@
         if (el) el.textContent = value;
     }
 
+    function setAuthProviders(providers) {
+        authProviders = providers && typeof providers === 'object' ? providers : {};
+        const googleEnabled = !!(authProviders.google && authProviders.google.enabled);
+        document.querySelectorAll('[data-google-auth-button]').forEach((button) => {
+            button.disabled = !googleEnabled;
+            button.setAttribute('aria-disabled', googleEnabled ? 'false' : 'true');
+            button.title = googleEnabled ? '' : 'Google OAuth пока не настроен в локальном окружении';
+            const label = button.querySelector('[data-google-auth-label]');
+            if (label) {
+                label.textContent = googleEnabled
+                    ? button.dataset.googleEnabledLabel || 'Продолжить через Google'
+                    : button.dataset.googleDisabledLabel || 'Google OAuth не настроен';
+            }
+        });
+    }
+
     function getSearchParam(name) {
         try {
             return new URL(window.location.href).searchParams.get(name) || '';
         } catch (_) {
             return '';
         }
+    }
+
+    function getRequestedWelcomeView() {
+        const view = String(getSearchParam('view') || getSearchParam('mode') || '').trim().toLowerCase();
+        if (['register', 'registration', 'signup', 'sign-up'].includes(view)) return 'register';
+        if (['login', 'signin', 'sign-in'].includes(view)) return 'login';
+        return '';
     }
 
     function removeSearchParam(name) {
@@ -361,6 +385,7 @@
         toggleHidden('onboardingVerificationPanel', !isActive);
         toggleHidden('modeOnboardingCard', isActive);
         toggleHidden('onboardingCreateBtn', isActive);
+        toggleHidden('onboardingSocialAuth', isActive || !isHostedAuthMode());
         if (isActive) {
             toggleHidden('onboardingSecondaryAction', true);
             toggleHidden('onboardingError', true);
@@ -682,14 +707,44 @@
         toggleHidden('createProfileSection', visible);
     }
 
+    window.welcomeTogglePassword = function (inputId, button) {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        const willShow = input.type === 'password';
+        input.type = willShow ? 'text' : 'password';
+        if (button) {
+            button.setAttribute('aria-label', willShow ? 'Скрыть пароль' : 'Показать пароль');
+            const icon = button.querySelector('.material-symbols-outlined');
+            if (icon) icon.textContent = willShow ? 'visibility_off' : 'visibility';
+        }
+        input.focus();
+    };
+
+    window.welcomeStartGoogleAuth = function () {
+        if (!(authProviders.google && authProviders.google.enabled)) return;
+        window.location.href = '/api/auth/google/start';
+    };
+
     function configureHostedRegistrationMode() {
         clearHostedVerificationState();
         setHostedAuthChoiceVisible(false);
         toggleHidden('onboardingAvatarPreviewWrap', true);
         toggleHidden('onboardingAvatarGallery', true);
+        toggleHidden('onboardingNameIcon', false);
         toggleHidden('onboardingLoginField', true);
         toggleHidden('hostedRegistrationFields', false);
+        toggleHidden('onboardingSocialAuth', false);
         toggleHidden('onboardingSecondaryAction', false);
+
+        const avatarPicker = document.getElementById('onboardingAvatarPicker');
+        if (avatarPicker) {
+            avatarPicker.className = 'flex flex-col items-center gap-0 mb-0';
+        }
+
+        const nameField = document.getElementById('onboardingNameField');
+        if (nameField) {
+            nameField.className = 'relative w-full';
+        }
 
         const button = document.getElementById('onboardingCreateBtn');
         if (button) {
@@ -697,7 +752,10 @@
         }
 
         const nameInput = document.getElementById('onboardingName');
-        if (nameInput) nameInput.placeholder = 'Отображаемое имя';
+        if (nameInput) {
+            nameInput.placeholder = 'Отображаемое имя';
+            nameInput.className = 'w-full pl-12 pr-4 py-3.5 bg-surface-2 border border-border-strong rounded-xl outline-none focus:ring-2 focus:ring-primary transition-all font-medium text-base placeholder:text-text-secondary';
+        }
 
         const avatarSeedInput = document.getElementById('onboardingAvatarSeed');
         if (avatarSeedInput) avatarSeedInput.value = '1.png';
@@ -709,10 +767,22 @@
         setHostedAuthChoiceVisible(false);
         toggleHidden('onboardingAvatarPreviewWrap', false);
         toggleHidden('onboardingAvatarGallery', false);
+        toggleHidden('onboardingNameIcon', true);
         toggleHidden('onboardingLoginField', false);
         toggleHidden('hostedRegistrationFields', true);
+        toggleHidden('onboardingSocialAuth', true);
         toggleHidden('onboardingSecondaryAction', true);
         loadAvatarGallery('onboardingAvatarGallery', 'onboardingAvatarSeed', 'onboardingAvatarPreview');
+
+        const avatarPicker = document.getElementById('onboardingAvatarPicker');
+        if (avatarPicker) {
+            avatarPicker.className = 'flex flex-col items-center gap-4 mb-5';
+        }
+
+        const nameField = document.getElementById('onboardingNameField');
+        if (nameField) {
+            nameField.className = 'w-full text-center';
+        }
 
         const button = document.getElementById('onboardingCreateBtn');
         if (button) {
@@ -720,7 +790,10 @@
         }
 
         const nameInput = document.getElementById('onboardingName');
-        if (nameInput) nameInput.placeholder = 'Ваше имя';
+        if (nameInput) {
+            nameInput.placeholder = 'Ваше имя';
+            nameInput.className = 'welcome-name-input w-full text-center bg-transparent border-b-2 border-border-subtle focus:border-primary px-4 py-2 text-2xl font-bold text-text-main outline-none transition-colors placeholder:text-text-secondary';
+        }
     }
 
     function configureHostedLoginMode() {
@@ -728,6 +801,7 @@
         toggleHidden('loginIdentifierWrap', false);
         toggleHidden('forgotPasswordLink', false);
         toggleHidden('loginBackBtn', false);
+        toggleHidden('loginSocialAuth', false);
         toggleHidden('loginAvatar', true);
         toggleHidden('loginName', true);
 
@@ -748,6 +822,7 @@
         toggleHidden('loginIdentifierWrap', true);
         toggleHidden('forgotPasswordLink', true);
         toggleHidden('loginBackBtn', true);
+        toggleHidden('loginSocialAuth', true);
         toggleHidden('loginAvatar', false);
         toggleHidden('loginName', false);
 
@@ -772,6 +847,14 @@
         showMode('select');
         setHostedAuthChoiceVisible(true);
     };
+
+    function openDesktopCreateProfileForm() {
+        const form = document.getElementById('createProfileSection');
+        if (form && !form.querySelector('*')) {
+            form.classList.add('hidden');
+        }
+        window.welcomeToggleCreate();
+    }
 
     window.welcomeContinueAfterVerification = function () {
         if (hostedVerificationState?.status === 'error' && !hostedVerificationState?.user?.user_id) {
@@ -1566,7 +1649,12 @@
                 return;
             }
 
+            const requestedWelcomeView = getRequestedWelcomeView();
             hostedAuthFlow = data.mode === 'auth' || data.mode === 'authenticated' || !!verifyEmailToken || !!resetPasswordToken;
+            if (requestedWelcomeView && ['auth', 'authenticated'].includes(data.mode)) {
+                hostedAuthFlow = true;
+            }
+            setAuthProviders(data.auth_providers);
 
             if (verifyEmailToken) {
                 removeSearchParam('verify_email_token');
@@ -1636,8 +1724,14 @@
 
             switch (data.mode) {
                 case 'auth':
-                    showMode('select');
-                    setHostedAuthChoiceVisible(true);
+                    if (requestedWelcomeView === 'register') {
+                        window.welcomeShowAuthRegister();
+                    } else if (requestedWelcomeView === 'login') {
+                        window.welcomeShowAuthLogin();
+                    } else {
+                        showMode('select');
+                        setHostedAuthChoiceVisible(true);
+                    }
                     break;
 
                 case 'onboarding':
@@ -1650,6 +1744,9 @@
                     showMode('select');
                     setHostedAuthChoiceVisible(false);
                     renderProfilesList();
+                    if (requestedWelcomeView === 'register') {
+                        setTimeout(openDesktopCreateProfileForm, 0);
+                    }
                     break;
 
                 case 'login':

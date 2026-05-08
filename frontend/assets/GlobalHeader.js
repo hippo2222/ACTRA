@@ -47,6 +47,7 @@
         if (path === '/ui/complexes') return 'complexes';
         if (path === '/ui/theory-center' || path.endsWith('/Theory_Center.html')) return 'theory';
         if (path === '/ui/editor') return 'editor';
+        if (path === '/ui/reference') return 'reference';
         return '';
     }
 
@@ -57,15 +58,6 @@
             return;
         }
         window.location.href = href;
-    }
-
-    function showReferenceToast() {
-        const message = 'Справочник в разработке';
-        if (window.NotificationUI && typeof window.NotificationUI.toast === 'function') {
-            window.NotificationUI.toast(message, 'warning', 2200);
-            return;
-        }
-        window.alert(message);
     }
 
     function closeCreateMenu(root) {
@@ -118,12 +110,16 @@
                                 ${createHtml}
                             </div>
                         </div>
-                        <button class="global-header__reference" type="button" data-global-reference data-disabled="true" title="Справочник в разработке">
+                        <button class="global-header__reference" type="button" data-global-reference title="Открыть справочник">
                             <span class="material-symbols-outlined" aria-hidden="true">menu_book</span>
                             <span>Справочник</span>
                         </button>
+                        <button class="global-header__onboarding-help onboarding-help-button onboarding-help-button--icon" type="button" data-onboarding-help-button data-onboarding-help-mode="direct" hidden title="Показать обучение" aria-label="Показать обучение">
+                            <span class="material-symbols-outlined" aria-hidden="true">help</span>
+                        </button>
                         <button class="global-header__profile" type="button" data-profile-menu-anchor aria-haspopup="menu" aria-expanded="false">
                             <img src="/api/assets/avatars/1.png" class="global-header__avatar" alt="" id="headerAvatar" data-global-avatar>
+                            <span class="global-header__plan-badge" data-global-plan-badge hidden>Free</span>
                             <span class="global-header__user-name" id="headerUserName" data-global-user-name>Загрузка...</span>
                             <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
                         </button>
@@ -136,19 +132,27 @@
     async function hydrateUser(root) {
         const avatar = root.querySelector('[data-global-avatar]');
         const name = root.querySelector('[data-global-user-name]');
+        const planBadge = root.querySelector('[data-global-plan-badge]');
         try {
             const response = await fetch('/api/users/current');
             const data = await response.json();
             const user = data && (data.user || data.profile || data);
             const displayName = user?.display_name || user?.name || user?.username || user?.login || '';
             const avatarSeed = user?.avatar_seed || user?.avatar || user?.avatarSeed || '1.png';
+            const effectivePlan = String(user?.effective_plan || user?.plan || 'free').trim().toLowerCase();
             if (name && displayName) name.textContent = displayName;
+            if (planBadge) {
+                planBadge.hidden = false;
+                planBadge.textContent = effectivePlan === 'premium' ? 'Premium' : 'Free';
+                planBadge.classList.toggle('is-premium', effectivePlan === 'premium');
+            }
             if (avatar) {
                 avatar.src = String(avatarSeed).includes('.')
                     ? `/api/assets/avatars/${encodeURIComponent(String(avatarSeed))}`
                     : '/api/assets/avatars/1.png';
             }
         } catch (_) {
+            if (planBadge) planBadge.hidden = true;
             if (name) name.textContent = 'Профиль';
         }
     }
@@ -169,7 +173,8 @@
             const reference = event.target.closest('[data-global-reference]');
             if (reference) {
                 event.preventDefault();
-                showReferenceToast();
+                closeCreateMenu(root);
+                navigate('/ui/reference');
                 return;
             }
 
@@ -204,7 +209,16 @@
             root.dataset.globalHeaderReady = '1';
             renderHeader(root);
             bindHeader(root);
-            hydrateUser(root);
+            if (window.__mainOwnsGlobalHeaderHydration && root.dataset.appSection === 'main') {
+                if (window.__mainCurrentUser && typeof window.__mainUpdateHeaderUser === 'function') {
+                    window.__mainUpdateHeaderUser(window.__mainCurrentUser);
+                }
+            } else {
+                hydrateUser(root);
+            }
+            if (window.OnboardingTour && typeof window.OnboardingTour.refreshHelpButtons === 'function') {
+                window.OnboardingTour.refreshHelpButtons();
+            }
         });
     }
 
@@ -212,9 +226,8 @@
         init: initGlobalHeaders,
     };
 
+    initGlobalHeaders();
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initGlobalHeaders, { once: true });
-    } else {
-        initGlobalHeaders();
     }
 })();

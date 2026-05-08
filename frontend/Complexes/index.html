@@ -841,6 +841,32 @@
       border-radius: 999px;
     }
 
+    .cx-onboarding-demo-card {
+      display: none;
+    }
+
+    body[data-onboarding-tour-id="complexes-library-navigation"][data-onboarding-step-id="complex-card-actions"] .cx-onboarding-demo-card {
+      display: block;
+      margin-bottom: 14rem;
+    }
+
+    body[data-onboarding-tour-id="complexes-library-navigation"][data-onboarding-step-id="complex-card-actions"] .cx-page-shell {
+      padding-bottom: 14rem;
+    }
+
+    body[data-onboarding-tour-id="complexes-library-navigation"][data-onboarding-step-id="complex-card-actions"] #empty-state,
+    body[data-onboarding-tour-id="complexes-library-navigation"][data-onboarding-step-id="complex-card-actions"] #filtered-empty-state,
+    body[data-onboarding-tour-id="complexes-library-navigation"][data-onboarding-step-id="complex-card-actions"] #error-state {
+      display: none !important;
+    }
+
+    .cx-onboarding-demo-card .cx-card-inner {
+      border-color: color-mix(in srgb, var(--color-primary) 54%, var(--color-border-subtle));
+      box-shadow:
+        0 16px 42px color-mix(in srgb, black 16%, transparent),
+        0 0 0 1px color-mix(in srgb, var(--color-primary-light) 32%, transparent);
+    }
+
     .cx-card-actions-secondary {
       margin-left: 0;
       justify-content: flex-start;
@@ -1057,9 +1083,16 @@
   <link href="/assets/lightB-components.css" rel="stylesheet" />
   <link href="/assets/global-header.css" rel="stylesheet" />
   <link href="/assets/animations.css" rel="stylesheet" />
+  <link href="/assets/PageBoot.css" rel="stylesheet" />
+  <link href="/assets/onboarding-tour.css?v=complexes-onboarding-11" rel="stylesheet" />
 </head>
 
-<body class="bg-bg-main font-display text-text-main antialiased selection:bg-primary-light selection:text-primary">
+<body class="actra-page-booting bg-bg-main font-display text-text-main antialiased selection:bg-primary-light selection:text-primary">
+  <div class="actra-page-boot-screen" role="status" aria-live="polite" aria-label="ACTRA">
+    <div class="actra-page-boot-card">
+      <img class="actra-page-boot-logo" src="/assets/logo_animated.svg" alt="ACTRA" />
+    </div>
+  </div>
   <div data-global-header data-app-section="complexes"></div>
   <div class="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden">
     <div class="layout-container flex h-full grow flex-col">
@@ -1069,35 +1102,39 @@
             <div class="cx-toolbar-main">
               <div id="complex-library-limit-badge" class="cx-breadcrumb-limit" hidden aria-live="polite"></div>
             </div>
-            <div class="cx-toolbar-actions flex items-center gap-2">
+            <div class="cx-toolbar-actions flex items-center gap-2" data-onboarding-target="complexes-toolbar-actions">
               <button id="toggle-select-complexes"
                 class="btn-secondary inline-flex min-w-[84px] items-center justify-center gap-2 text-sm font-medium"
-                title="Выбрать несколько комплексов">
+                title="Выбрать несколько комплексов"
+                data-onboarding-target="complexes-bulk-select">
                 <span class="material-symbols-outlined text-lg">checklist</span>
                 <span class="truncate">Выбрать</span>
               </button>
               <button id="import-complexes"
-                class="btn-secondary inline-flex min-w-[84px] items-center justify-center gap-2 text-sm font-medium">
+                class="btn-secondary inline-flex min-w-[84px] items-center justify-center gap-2 text-sm font-medium"
+                data-onboarding-target="complexes-import">
                 <span class="material-symbols-outlined text-lg">upload_file</span>
                 <span class="truncate">Импорт</span>
               </button>
               <button id="add-complex-by-code"
                 class="btn-secondary inline-flex min-w-[84px] items-center justify-center gap-2 text-sm font-medium"
-                title="Добавить комплекс из каталога по коду доступа">
+                title="Добавить комплекс из каталога по коду доступа"
+                data-onboarding-target="complexes-add-by-code">
                 <span class="material-symbols-outlined text-lg">password</span>
                 <span class="truncate">По коду</span>
               </button>
               <button id="create-complex"
-                class="btn-primary inline-flex min-w-[84px] items-center justify-center text-sm font-bold">
+                class="btn-primary inline-flex min-w-[84px] items-center justify-center text-sm font-bold"
+                data-onboarding-target="complexes-create">
                 <span class="truncate">+ Создать комплекс</span>
               </button>
             </div>
           </div>
           <div class="px-4 mb-4">
-            <div class="card-elevated cx-controls-panel p-3 md:p-4">
+            <div class="card-elevated cx-controls-panel p-3 md:p-4" data-onboarding-target="complexes-library-navigation">
               <div class="cx-controls-stack">
                 <div class="cx-controls-hero">
-                  <label class="cx-controls-search">
+                  <label class="cx-controls-search" data-onboarding-target="complexes-search">
                     <span class="cx-controls-search-icon" aria-hidden="true">
                       <span class="material-symbols-outlined text-[22px]">search</span>
                     </span>
@@ -1106,7 +1143,7 @@
                       placeholder="Найти комплекс в библиотеке по названию, описанию или конкретному заданию"
                       aria-label="Поиск по комплексам">
                   </label>
-                  <div class="cx-controls-summary-card">
+                  <div class="cx-controls-summary-card" data-onboarding-target="complexes-filter-summary">
                     <p class="cx-controls-summary-label">Состояние библиотеки</p>
                     <p id="complex-filter-summary" aria-live="polite">Показаны все комплексы библиотеки</p>
                   </div>
@@ -1137,7 +1174,7 @@
 
                     <div class="cx-control-lane">
                       <div class="cx-control-lane__label">Сортировка</div>
-                      <div class="cx-sort-grid">
+                      <div class="cx-sort-grid" data-onboarding-target="complexes-sort-grid">
                         <button type="button" class="cx-sort-btn active" data-sort="name-asc" aria-pressed="true">По имени ↑</button>
                         <button type="button" class="cx-sort-btn" data-sort="name-desc" aria-pressed="false">По имени ↓</button>
                         <button type="button" class="cx-sort-btn" data-sort="date-desc" aria-pressed="false">Сначала новые</button>
@@ -1192,6 +1229,53 @@
             </button>
           </div>
           <div class="px-4">
+            <div class="p-4 @container cx-card cx-onboarding-demo-card" data-onboarding-target="complexes-card" aria-hidden="true">
+              <div data-complex-card-shell class="cx-card-shell card-elevated relative flex flex-col items-stretch justify-start rounded-lg border border-primary-light cx-card-inner">
+                <div class="cx-card-body flex w-full min-w-0 grow flex-col items-stretch justify-center gap-3 p-4">
+                  <div class="cx-card-top">
+                    <div class="cx-card-heading">
+                      <div class="cx-card-title-row">
+                        <p class="cx-card-title text-text-main text-lg font-bold leading-tight tracking-[-0.015em]">Демо-комплекс: активное обучение</p>
+                      </div>
+                      <div class="cx-card-badges">
+                        <span class="cx-card-badge pill pill-sm pill-warning"><span class="material-symbols-outlined text-sm">pause</span> На паузе</span>
+                        <span class="cx-card-badge pill pill-sm pill-success"><span class="material-symbols-outlined text-sm">play_arrow</span> В работе</span>
+                        <span class="cx-card-badge pill pill-sm pill-info"><span class="material-symbols-outlined text-sm">menu_book</span> Теория</span>
+                        <span class="cx-card-badge pill pill-sm pill-neutral"><span class="material-symbols-outlined text-sm">travel_explore</span> Из каталога</span>
+                        <span class="cx-card-badge pill pill-sm pill-info"><span class="material-symbols-outlined text-sm">priority_high</span> Нужно повторить</span>
+                      </div>
+                    </div>
+                    <p class="cx-card-description text-[15px] font-normal">Учебная карточка показывает основные состояния комплекса: сохранённая сессия, прогресс, связанная теория, источник и действия.</p>
+                    <div class="cx-card-meta-stack">
+                      <div class="cx-card-inline-meta">
+                        <span>Пауза: сегодня, 18:40</span>
+                        <span class="inline-flex items-center gap-2 whitespace-nowrap">
+                          <span>Прогресс 4/12</span>
+                          <span class="h-1.5 w-24 shrink-0 overflow-hidden rounded-full bg-bg-secondary">
+                            <span class="block h-1.5 rounded-full bg-warning transition-all" style="width: 33%"></span>
+                          </span>
+                        </span>
+                      </div>
+                      <p class="cx-card-inline-meta"><span>Всего заданий: <strong>12</strong></span><span class="cx-meta-divider">•</span><span>Адаптивность: <strong>Вкл</strong></span></p>
+                    </div>
+                  </div>
+                  <div class="cx-card-actions">
+                    <div class="cx-card-actions-primary" data-onboarding-target="complexes-card-primary-actions">
+                      <button class="start-btn cx-btn cx-card-action-btn cx-card-action-btn--primary btn-primary inline-flex items-center justify-center text-sm font-bold" data-onboarding-target="complexes-start-action" type="button"><span class="truncate">Продолжить</span></button>
+                      <button type="button" class="restart-session-btn cx-card-action-btn cx-card-action-btn--session btn-secondary inline-flex items-center justify-center gap-2 text-sm font-medium border-error-light bg-error-lighter text-error-text"><span class="material-symbols-outlined text-lg">restart_alt</span><span class="truncate">Начать заново</span></button>
+                      <button class="detail-toggle-btn cx-card-action-btn cx-card-action-btn--theory btn-secondary inline-flex items-center justify-center gap-1 text-sm font-medium" data-onboarding-target="complexes-detail-action" type="button"><span class="material-symbols-outlined text-lg">expand_more</span><span class="truncate">Подробнее</span></button>
+                      <button class="theory-btn cx-card-action-btn cx-card-action-btn--theory btn-secondary inline-flex items-center justify-center gap-2 text-sm font-medium border-primary-light bg-primary-lighter text-primary" type="button"><span class="material-symbols-outlined text-lg">visibility</span><span class="truncate">Теория</span></button>
+                    </div>
+                    <div class="cx-card-actions-secondary" data-onboarding-target="complexes-card-secondary-actions">
+                      <button class="pin-btn icon-button-muted border-primary-light bg-primary-lighter text-primary cx-card-action-btn cx-card-action-btn--icon" type="button" title="Закреплён в быстром доступе"><span class="material-symbols-outlined text-lg">push_pin</span></button>
+                      <button class="export-btn cx-card-action-btn cx-card-action-btn--wide btn-secondary inline-flex items-center justify-center gap-2 text-sm font-medium" type="button"><span class="material-symbols-outlined text-lg">download</span><span class="truncate">Экспорт</span></button>
+                      <button class="edit-btn cx-card-action-btn cx-card-action-btn--wide btn-secondary inline-flex items-center justify-center gap-2 text-sm font-medium" type="button"><span class="material-symbols-outlined text-lg">edit</span><span class="truncate">Редактировать</span></button>
+                      <button class="delete-btn cx-card-action-btn cx-card-action-btn--wide btn-secondary inline-flex items-center justify-center gap-2 text-sm font-medium border-error-light bg-error-lighter text-error-text" type="button"><span class="material-symbols-outlined text-lg">delete</span><span class="truncate">Удалить</span></button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
             <div id="complexes-list" class="space-y-4">
               <!-- Cards will be rendered here via JavaScript. -->
             </div>
@@ -1387,16 +1471,31 @@
             const badge = document.getElementById("complex-library-limit-badge");
             const summary = getComplexLimitSummary();
             if (!badge) return;
+            const setPremiumPromoTrigger = (enabled) => {
+              if (enabled) {
+                badge.setAttribute("data-premium-promo-trigger", "");
+                badge.setAttribute("data-premium-promo-feature", "complexes-limit");
+                badge.setAttribute("role", "button");
+                badge.setAttribute("tabindex", "0");
+              } else {
+                badge.removeAttribute("data-premium-promo-trigger");
+                badge.removeAttribute("data-premium-promo-feature");
+                badge.removeAttribute("role");
+                badge.removeAttribute("tabindex");
+              }
+            };
             if (!summary) {
               badge.hidden = true;
               badge.textContent = "";
               badge.className = "cx-breadcrumb-limit";
+              setPremiumPromoTrigger(false);
               return;
             }
 
             badge.hidden = false;
             if (isComplexPremiumPlan()) {
               badge.className = "cx-breadcrumb-limit cx-breadcrumb-limit--premium";
+              setPremiumPromoTrigger(false);
               badge.textContent = "Premium · без лимита";
               return;
             }
@@ -1407,6 +1506,7 @@
               ? "cx-breadcrumb-limit cx-breadcrumb-limit--warning"
               : "cx-breadcrumb-limit";
             badge.textContent = `Мои комплексы ${Number(summary.personal_count || 0)}/${Number(summary.personal_limit || 0)} · Библиотека ${Number(summary.library_total_count || 0)}/${Number(summary.library_limit || 0)}`;
+            setPremiumPromoTrigger(true);
           }
 
           async function fetchComplexWorkspaceLimits() {
@@ -3452,10 +3552,11 @@
             const errorEl = document.getElementById("error-state");
             const filterEmptyEl = document.getElementById("filtered-empty-state");
             if (!listEl) return;
+            const isInitialLoad = !hasLoadedComplexesOnce;
 
             isComplexesLoading = true;
             fetchComplexWorkspaceLimits();
-            if (!hasLoadedComplexesOnce) {
+            if (isInitialLoad) {
               scheduleComplexesSkeleton(listEl);
             }
             listEl.classList.remove("hidden");
@@ -3730,6 +3831,9 @@
               isComplexesLoading = false;
               clearComplexesSkeletonTimer();
               hasLoadedComplexesOnce = true;
+              if (isInitialLoad) {
+                window.PageBoot?.ready();
+              }
             }
           }
 
@@ -4803,10 +4907,14 @@
         </script>
 
         <script src="../assets/NotificationUI.js"></script>
+<script src="/assets/PageBoot.js"></script>
+<script src="../assets/PremiumPromoModal.js"></script>
 <script src="../assets/SharedProfileModal.js"></script>
 <script src="../assets/GlobalHeader.js"></script>
 <script src="../assets/ThemeSwitcherUI.js"></script>
 <script src="../assets/ConnectionMonitor.js"></script>
+<script src="/assets/onboarding_tours.js?v=complexes-onboarding-11"></script>
+<script src="/assets/OnboardingTour.js?v=complexes-onboarding-11"></script>
 </body>
 
 </html>

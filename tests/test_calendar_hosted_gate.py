@@ -206,6 +206,29 @@ def test_hosted_calendar_schedule_and_activity_routes_use_hosted_activity_truth(
     assert today_item["activity_attempts_total"] == 8
 
 
+def test_calendar_schedule_route_uses_complex_context_for_real_names(tmp_path):
+    repo = _FakeHostedCalendarRepository()
+    _seed_hosted_calendar_docs(repo)
+    service = _build_calendar_service(tmp_path, repo)
+
+    app = _build_app(
+        service,
+        complex_service=_ComplexServiceStub([
+            {"id": "complex-1", "name": "Hosted Complex", "tasks": ["module/topic/task-1"]},
+        ]),
+    )
+
+    with app.test_client() as client:
+        response = client.get("/api/calendar/schedule?days=3")
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["success"] is True
+    today_item = next(item for item in payload["schedule"] if item["is_today"])
+    assert "Hosted Complex" in today_item["tasks"]
+    assert "Daily Mix" not in today_item["tasks"]
+
+
 def test_hosted_calendar_settings_route_persists_to_repository(tmp_path):
     repo = _FakeHostedCalendarRepository()
     _seed_hosted_calendar_docs(repo)

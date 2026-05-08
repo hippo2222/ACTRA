@@ -58,6 +58,7 @@ def _serialize_admin_user(user: Any) -> Dict[str, Any]:
         "email": str(getattr(user, "email", "") or "").strip() or None,
         "role": str(getattr(user, "role", "") or "").strip().lower() or "user",
         "plan": raw_plan,
+        "premium_expires_at": (str(getattr(user, "premium_expires_at", "") or "").strip() or None),
         "effective_plan": resolve_effective_plan(user),
         "created_at": str(getattr(user, "created_at", "") or "").strip(),
     }

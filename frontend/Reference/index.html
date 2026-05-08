@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <link rel="icon" href="/assets/actra_white.ico" type="image/x-icon" />
+    <script src="/assets/ThemeManager.js"></script>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>ACTRA — Справочник</title>
+    <link href="/assets/tailwind.css" rel="stylesheet" />
+    <link href="/assets/fonts.css" rel="stylesheet" />
+    <link href="/assets/lightB-variables.css" rel="stylesheet" />
+    <link href="/assets/lightB-components.css" rel="stylesheet" />
+    <link href="/assets/global-header.css" rel="stylesheet" />
+    <link href="/ui/reference/reference.css" rel="stylesheet" />
+</head>
+
+<body class="reference-page" data-app-section="reference">
+    <div data-global-header data-app-section="reference"></div>
+
+    <main class="reference-shell" data-reference-root>
+        <section class="reference-hero" aria-label="Обучение ACTRA">
+            <p>
+                <strong>Обучение ACTRA</strong> - Найдите функцию проекта, прочитайте шаги обучения и откройте уменьшенное живое превью нужного экрана.
+            </p>
+        </section>
+
+        <section class="reference-workspace" aria-label="Справочник туров">
+            <aside class="reference-sidebar" aria-label="Оглавление">
+                <label class="reference-search" for="referenceSearch">
+                    <span class="material-symbols-outlined" aria-hidden="true">search</span>
+                    <input id="referenceSearch" type="search" placeholder="Поиск по функциям и шагам" autocomplete="off" data-reference-search />
+                </label>
+
+                <div class="reference-sidebar__meta" aria-live="polite" data-reference-result-count></div>
+                <nav class="reference-toc" data-reference-toc></nav>
+            </aside>
+
+            <aside class="reference-preview" aria-label="Живое превью тура">
+                <div class="reference-preview__header">
+                    <div>
+                        <p class="reference-preview__eyebrow">Живое превью</p>
+                        <h2 data-reference-preview-title>Выберите тур</h2>
+                    </div>
+                </div>
+                <div class="reference-preview__notice" hidden data-reference-preview-notice></div>
+                <div class="reference-preview__viewport">
+                    <div class="reference-preview__welcome" data-reference-preview-empty>
+                        <div>
+                            <p class="reference-preview__welcome-kicker">Добро пожаловать в обучение ACTRA</p>
+                            <h3>Выберите раздел, тур или конкретное состояние</h3>
+                            <p>Здесь появится уменьшенное живое превью нужного экрана с тем же шагом обучения, который выбран в справочнике.</p>
+                        </div>
+                    </div>
+                    <div class="reference-preview__scale">
+                        <iframe
+                            title="Превью выбранного тура"
+                            data-reference-preview-frame
+                            loading="lazy"
+                            referrerpolicy="same-origin"
+                        ></iframe>
+                    </div>
+                </div>
+            </aside>
+        </section>
+    </main>
+
+    <script src="/assets/GlobalHeader.js"></script>
+    <script src="/assets/onboarding_tours.js"></script>
+    <script src="/ui/reference/reference.js"></script>
+</body>
+
+</html>

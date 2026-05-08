@@ -2,6 +2,8 @@
  * ACTRA Open Answer Editor
  */
 
+const OPEN_ANSWER_ONBOARDING_TOUR_ID = 'open-answer-authoring';
+
 class OpenAnswerEditor extends BaseEditor {
     constructor() {
         super(); // Call BaseEditor constructor
@@ -21,6 +23,11 @@ class OpenAnswerEditor extends BaseEditor {
         this.toastDismissTimer = null;
         this.toastDismissCallback = null;
         this.pendingDeletedImageUndo = null;
+        this.openAnswerOnboardingPreview = new URLSearchParams(window.location.search)
+            .get('onboarding_preview') === OPEN_ANSWER_ONBOARDING_TOUR_ID;
+        this.openAnswerOnboardingFinished = false;
+        this.openAnswerOnboardingDemoSnapshot = null;
+        this.openAnswerOnboardingDemoActive = false;
         this.handleGlobalKeyDown = (event) => {
             if (event.key === 'Escape') {
                 this.hideImagePreview();
@@ -31,10 +38,158 @@ class OpenAnswerEditor extends BaseEditor {
     }
 
     async init() {
-        await this.initTaskFromUrlContext();
+        if (this.openAnswerOnboardingPreview) {
+            this.ensureOpenAnswerOnboardingPreviewTask();
+            this.applyOpenAnswerOnboardingPreviewState();
+        } else {
+            await this.initTaskFromUrlContext();
+        }
+        this.setupOpenAnswerOnboardingTourBridge();
         this.setupEventListeners();
         this.setupDirtyTracking();
         this.setupBeforeUnloadWarning();
+    }
+
+    ensureOpenAnswerOnboardingPreviewTask() {
+        if (!this.openAnswerOnboardingPreview) return;
+
+        this.moduleId = this.moduleId || 'onboarding-preview-module';
+        this.topicId = this.topicId || 'onboarding-preview-topic';
+        this.taskId = this.taskId || 'onboarding-preview-open-answer';
+        this.isNewTaskParam = true;
+        this.hasPersistedTask = false;
+        this.task = {
+            task_data: {
+                id: this.taskId,
+                type: 'open_answer',
+                name: 'Открытый ответ: газообмен',
+                content: {},
+                settings: {},
+                meta: {
+                    id: this.taskId,
+                    module: this.moduleId,
+                    topic: this.topicId,
+                    name: 'Открытый ответ: газообмен',
+                },
+            },
+            metadata: {
+                id: this.taskId,
+                module: this.moduleId,
+                topic: this.topicId,
+                name: 'Открытый ответ: газообмен',
+                type: 'open_answer',
+            },
+        };
+    }
+
+    createOpenAnswerOnboardingContent() {
+        const onboardingAlveoliImageUrl = 'data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20160%20120%22%3E%3Crect%20width%3D%22160%22%20height%3D%22120%22%20rx%3D%2216%22%20fill%3D%22%23eef7ff%22%2F%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%232f63d8%22%20stroke-width%3D%225%22%20stroke-linecap%3D%22round%22%3E%3Cpath%20d%3D%22M80%2062%20V24%22%2F%3E%3Cpath%20d%3D%22M80%2062%20C62%2052%2050%2043%2038%2031%22%2F%3E%3Cpath%20d%3D%22M80%2062%20C98%2052%20110%2043%20122%2031%22%2F%3E%3C%2Fg%3E%3Cg%20fill%3D%22%23dbeafe%22%20stroke%3D%22%230f766e%22%20stroke-width%3D%223%22%3E%3Ccircle%20cx%3D%2240%22%20cy%3D%2282%22%20r%3D%2216%22%2F%3E%3Ccircle%20cx%3D%2280%22%20cy%3D%2291%22%20r%3D%2219%22%2F%3E%3Ccircle%20cx%3D%22120%22%20cy%3D%2282%22%20r%3D%2216%22%2F%3E%3C%2Fg%3E%3Cpath%20d%3D%22M29%2098%20C62%20110%2099%20110%20131%2098%22%20fill%3D%22none%22%20stroke%3D%22%23ef4444%22%20stroke-width%3D%224%22%20stroke-linecap%3D%22round%22%20stroke-dasharray%3D%226%207%22%2F%3E%3C%2Fsvg%3E';
+        return {
+            question: 'Как называется процесс обмена кислородом и углекислым газом в альвеолах?',
+            prompt: 'Как называется процесс обмена кислородом и углекислым газом в альвеолах?',
+            reference_answer: 'Этот процесс называется газообмен.',
+            hint: 'Вспомните термин для обмена газами в альвеолах.',
+            keywords: ['газообмен'],
+            sequence_matters: false,
+            maxLength: 420,
+            images: [{ asset_url: onboardingAlveoliImageUrl }],
+        };
+    }
+
+    applyOpenAnswerOnboardingPreviewState() {
+        if ((!this.openAnswerOnboardingPreview && !this.openAnswerOnboardingDemoActive) || !this.task) return;
+
+        if (!this.task.task_data) this.task.task_data = {};
+        if (!this.task.task_data.meta) this.task.task_data.meta = {};
+        if (!this.task.metadata) this.task.metadata = {};
+        this.task.task_data.name = 'Открытый ответ: газообмен';
+        this.task.task_data.type = 'open_answer';
+        this.task.task_data.meta.name = 'Открытый ответ: газообмен';
+        this.task.metadata.name = 'Открытый ответ: газообмен';
+        this.task.metadata.type = 'open_answer';
+        this.task.task_data.content = this.createOpenAnswerOnboardingContent();
+        this.keywords = this.task.task_data.content.keywords || [];
+        this.sequenceMatters = Boolean(this.task.task_data.content.sequence_matters);
+        this.renderUI();
+        this.hasUnsavedChanges = false;
+        this.updateSaveStatus();
+    }
+
+    createEmptyOpenAnswerOnboardingContent() {
+        return {
+            question: '',
+            prompt: '',
+            reference_answer: '',
+            hint: '',
+            keywords: [],
+            sequence_matters: false,
+            images: [],
+        };
+    }
+
+    resetOpenAnswerOnboardingPreviewState() {
+        if (!this.openAnswerOnboardingPreview || !this.task || this.openAnswerOnboardingFinished) return;
+        this.openAnswerOnboardingFinished = true;
+        this.task.task_data.content = this.createEmptyOpenAnswerOnboardingContent();
+        this.keywords = [];
+        this.sequenceMatters = false;
+        this.renderUI();
+        this.hasUnsavedChanges = false;
+        this.updateSaveStatus();
+    }
+
+    cloneOpenAnswerOnboardingValue(value) {
+        if (value == null) return value;
+        try {
+            return JSON.parse(JSON.stringify(value));
+        } catch (_) {
+            return value;
+        }
+    }
+
+    applyOpenAnswerOnboardingDemoState() {
+        if (this.openAnswerOnboardingPreview || !this.task) return;
+        if (!this.openAnswerOnboardingDemoSnapshot) {
+            this.openAnswerOnboardingDemoSnapshot = {
+                task: this.cloneOpenAnswerOnboardingValue(this.task),
+                keywords: this.cloneOpenAnswerOnboardingValue(this.keywords),
+                sequenceMatters: this.sequenceMatters,
+                hasUnsavedChanges: this.hasUnsavedChanges,
+            };
+        }
+        this.openAnswerOnboardingDemoActive = true;
+        this.applyOpenAnswerOnboardingPreviewState();
+    }
+
+    restoreOpenAnswerOnboardingDemoState() {
+        const snapshot = this.openAnswerOnboardingDemoSnapshot;
+        this.openAnswerOnboardingDemoSnapshot = null;
+        this.openAnswerOnboardingDemoActive = false;
+        if (!snapshot) return;
+        this.task = this.cloneOpenAnswerOnboardingValue(snapshot.task);
+        this.keywords = this.cloneOpenAnswerOnboardingValue(snapshot.keywords) || [];
+        this.sequenceMatters = Boolean(snapshot.sequenceMatters);
+        this.renderUI();
+        this.hasUnsavedChanges = Boolean(snapshot.hasUnsavedChanges);
+        this.updateSaveStatus();
+    }
+
+    setupOpenAnswerOnboardingTourBridge() {
+        window.addEventListener('onboarding:before-start', (event) => {
+            const detail = event?.detail || {};
+            if (detail.tourId !== OPEN_ANSWER_ONBOARDING_TOUR_ID || detail.preview) return;
+            this.applyOpenAnswerOnboardingDemoState();
+        });
+
+        window.addEventListener('onboarding:finish', (event) => {
+            const detail = event?.detail || {};
+            if (detail.tourId !== OPEN_ANSWER_ONBOARDING_TOUR_ID) return;
+            if (!this.openAnswerOnboardingPreview) {
+                this.restoreOpenAnswerOnboardingDemoState();
+                return;
+            }
+            this.resetOpenAnswerOnboardingPreviewState();
+        });
     }
 
     /**
@@ -813,6 +968,8 @@ class OpenAnswerEditor extends BaseEditor {
     }
 
     setupBeforeUnloadWarning() {
+        const params = new URLSearchParams(window.location.search || '');
+        if (params.get('reference_embed') === '1' || params.get('reference_preview') === '1') return;
         window.addEventListener('beforeunload', (event) => {
             if (!this.hasUnsavedChanges) return;
             event.preventDefault();

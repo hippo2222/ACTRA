@@ -15,6 +15,7 @@
     <link href="/assets/lightB-variables.css" rel="stylesheet" />
     <link href="/assets/lightB-components.css" rel="stylesheet" />
     <link href="/assets/animations.css" rel="stylesheet" />
+    <link href="/assets/onboarding-tour.css?v=theory-editor-onboarding-8" rel="stylesheet" />
     <style>
         body {
             background:
@@ -185,12 +186,78 @@
             box-shadow: 0 0 0 4px var(--color-component-empty-state-icon-bg);
         }
 
+        .theory-onboarding-image-marker {
+            position: fixed;
+            top: -9999px;
+            left: -9999px;
+            z-index: 130;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 2.45rem;
+            height: 2.45rem;
+            border: 2px solid color-mix(in srgb, white 86%, transparent);
+            border-radius: 999px;
+            background: #e11d48;
+            color: white;
+            box-shadow:
+                0 0 0 0 rgba(225, 29, 72, 0.46),
+                0 10px 24px rgba(127, 29, 29, 0.28);
+            cursor: pointer;
+            opacity: 0;
+            pointer-events: auto;
+            transform: scale(0.9);
+            transition: opacity 0.18s ease, transform 0.18s ease;
+            visibility: hidden;
+        }
+
+        .theory-onboarding-image-marker.is-positioned {
+            visibility: visible;
+        }
+
+        .theory-onboarding-image-marker.is-positioned.is-visible {
+            opacity: 1;
+            transform: scale(1);
+            animation: theory-onboarding-marker-pulse 1.35s ease-out 0.12s infinite;
+        }
+
+        .theory-onboarding-image-marker .material-symbols-outlined {
+            font-size: 1.55rem;
+            font-variation-settings: "FILL" 1, "wght" 700;
+        }
+
+        .theory-onboarding-image-marker:hover,
+        .theory-onboarding-image-marker:focus-visible {
+            outline: none;
+            background: #be123c;
+            transform: scale(1.04);
+        }
+
+        @keyframes theory-onboarding-marker-pulse {
+            0% {
+                box-shadow:
+                    0 0 0 0 rgba(225, 29, 72, 0.48),
+                    0 10px 24px rgba(127, 29, 29, 0.28);
+            }
+            70% {
+                box-shadow:
+                    0 0 0 14px rgba(225, 29, 72, 0),
+                    0 10px 24px rgba(127, 29, 29, 0.28);
+            }
+            100% {
+                box-shadow:
+                    0 0 0 0 rgba(225, 29, 72, 0),
+                    0 10px 24px rgba(127, 29, 29, 0.28);
+            }
+        }
+
         #theory-text-controls {
             opacity: 1;
             transition: opacity 0.2s ease;
         }
 
         #theory-text-controls.hidden {
+            display: none !important;
             opacity: 0;
             pointer-events: none;
         }
@@ -303,12 +370,16 @@
         .theory-status-pill {
             display: inline-flex;
             align-items: center;
+            justify-content: center;
             gap: 0.4rem;
+            flex: 0 0 auto;
             border-radius: 999px;
             border: 1px solid var(--color-border-subtle);
-            padding: 0.35rem 0.7rem;
+            padding: 0.42rem 0.78rem;
             font-size: 0.75rem;
             font-weight: 700;
+            line-height: 1;
+            white-space: nowrap;
         }
 
         .theory-status-pill[data-tone="success"] {
@@ -344,13 +415,17 @@
         .theory-chip {
             display: inline-flex;
             align-items: center;
+            justify-content: center;
             gap: 0.35rem;
+            flex: 0 0 auto;
             border-radius: 999px;
             border: 1px solid var(--color-component-pill-neutral-border);
             background: var(--color-component-pill-neutral-bg);
-            padding: 0.35rem 0.7rem;
+            padding: 0.42rem 0.78rem;
             font-size: 0.72rem;
             font-weight: 600;
+            line-height: 1;
+            white-space: nowrap;
             color: var(--color-component-pill-neutral-fg);
         }
 
@@ -421,6 +496,15 @@
 
         .theory-header-action-group > button {
             min-height: 2.75rem;
+            white-space: nowrap;
+        }
+
+        .theory-header-action-group > button .material-symbols-outlined {
+            flex: 0 0 auto;
+        }
+
+        .theory-header-action-group--secondary > button {
+            flex: 0 0 auto;
         }
 
         .theory-form-field {
@@ -464,6 +548,22 @@
 
         .theory-content-stack {
             gap: 1rem;
+        }
+
+        body.onboarding-tour-active[data-onboarding-tour-id="theory-editor-authoring"][data-onboarding-step-id="theory-editor-library-and-title"] .theory-workspace-panel {
+            filter: blur(3px);
+            opacity: 0.68;
+        }
+
+        body.onboarding-tour-active[data-onboarding-tour-id="theory-editor-authoring"][data-onboarding-step-id="theory-editor-body-and-text-tools"] .theory-frame > header,
+        body.onboarding-tour-active[data-onboarding-tour-id="theory-editor-authoring"][data-onboarding-step-id="theory-editor-body-and-text-tools"] .theory-library-panel {
+            filter: blur(3px);
+            opacity: 0.68;
+        }
+
+        body.onboarding-tour-active[data-onboarding-tour-id="theory-editor-authoring"][data-onboarding-step-id="theory-editor-save-and-publish"] .theory-main-grid {
+            filter: blur(3px);
+            opacity: 0.68;
         }
 
         @media (max-width: 1024px) {
@@ -524,6 +624,13 @@
             .theory-header-action-group > button {
                 flex: 1 1 12rem;
             }
+
+            .theory-header-action-group--secondary > button {
+                flex: 0 0 auto;
+                min-height: 2.35rem;
+                padding: 0.5rem 0.75rem;
+                font-size: 0.8rem;
+            }
         }
     </style>
 </head>
@@ -531,7 +638,7 @@
 <body class="text-text-main">
     <div class="theory-shell">
         <div class="theory-frame mx-auto flex min-h-screen flex-col px-4 py-4 sm:px-6 lg:px-8">
-            <header class="theory-card theory-panel card-elevated animate-slide-up px-5 py-4 sm:px-6 sm:py-5">
+            <header class="theory-card theory-panel card-elevated animate-slide-up px-5 py-4 sm:px-6 sm:py-5" data-onboarding-target="theory-editor-header">
                 <div class="theory-header-layout">
                     <div class="min-w-0">
                         <h1 class="theory-title text-2xl font-bold tracking-tight text-text-main">Редактор теории</h1>
@@ -541,11 +648,10 @@
                     </div>
                     <div class="theory-header-controls">
                         <div class="theory-header-actions">
-                            <button id="theory-publish-btn" type="button" class="theory-status-pill hidden transition-colors hover:border-primary hover:text-primary disabled:opacity-60 disabled:cursor-not-allowed" data-tone="muted">
+                            <button id="theory-publish-btn" type="button" class="theory-status-pill hidden transition-colors hover:border-primary hover:text-primary disabled:opacity-60 disabled:cursor-not-allowed" data-tone="muted" data-onboarding-target="theory-editor-publish-action">
                                 <span class="material-symbols-outlined text-[16px]">public</span>
                                 Не опубликована
                             </button>
-                            <span id="theory-quota-pill" class="theory-chip theory-chip--primary hidden"></span>
                             <div class="theory-header-action-group theory-header-action-group--secondary">
                                 <button id="theory-back-btn" type="button"
                                     class="btn-secondary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold">
@@ -562,13 +668,24 @@
                                     К комплексам
                                 </button>
                             </div>
-                            <div class="theory-header-action-group theory-header-action-group--primary">
+                            <div class="theory-header-action-group theory-header-action-group--primary" data-onboarding-target="theory-editor-primary-actions">
                                 <button id="theory-new-btn" type="button"
                                     class="btn-primary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold">
                                     <span class="material-symbols-outlined text-[18px]">add_circle</span>
                                     Новая теория
                                 </button>
+                                <button type="button"
+                                    class="onboarding-help-button onboarding-help-button--icon"
+                                    data-onboarding-help-button
+                                    data-onboarding-help-mode="direct"
+                                    data-onboarding-tour-id="theory-editor-authoring"
+                                    hidden
+                                    title="Показать обучение"
+                                    aria-label="Показать обучение">
+                                    <span class="material-symbols-outlined" aria-hidden="true">help</span>
+                                </button>
                                 <button id="theory-save-btn" type="button"
+                                    data-onboarding-target="theory-editor-save-action"
                                     class="theory-save-btn btn-primary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold shadow-sm hover:shadow-md">
                                     <span class="material-symbols-outlined text-[18px]">save</span>
                                     Сохранить
@@ -580,7 +697,7 @@
             </header>
 
             <main class="theory-main-grid mt-4">
-                <aside class="theory-card theory-panel theory-library-panel card-elevated animate-slide-up px-4 py-4 sm:px-5 flex flex-col overflow-visible">
+                <aside class="theory-card theory-panel theory-library-panel card-elevated animate-slide-up px-4 py-4 sm:px-5 flex flex-col overflow-visible" data-onboarding-target="theory-editor-library-panel" data-onboarding-clone-variant="library-panel">
                     <div class="flex items-center justify-between gap-3">
                         <div>
                             <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-text-muted">Библиотека</p>
@@ -590,45 +707,49 @@
                     <div class="mt-4">
                         <label class="sr-only" for="theory-library-search">Поиск теории</label>
                         <input id="theory-library-search" class="theory-form-field" type="search"
+                            data-onboarding-target="theory-editor-library-search"
                             placeholder="Поиск по названию или ID" />
                     </div>
                     <div class="mt-3 flex items-center justify-between text-xs text-text-secondary">
                         <span id="theory-library-count">0 теорий</span>
                         <span>Личная библиотека</span>
                     </div>
-                    <div id="theory-library-list" class="theory-library-list theory-scroll mt-4 flex flex-col gap-2 overflow-y-auto pr-1 min-h-0">
+                    <div id="theory-library-list" class="theory-library-list theory-scroll mt-4 flex flex-col gap-2 overflow-y-auto pr-1 min-h-0" data-onboarding-target="theory-editor-library-list">
                         <div class="rounded-2xl border border-dashed border-border-subtle px-4 py-5 text-sm text-text-secondary">
                             Загружаем библиотеку теорий...
                         </div>
                     </div>
                 </aside>
 
-                <section class="theory-card theory-panel theory-workspace-panel card-elevated animate-slide-up px-4 py-4 sm:px-6 sm:py-5">
+                <section class="theory-card theory-panel theory-workspace-panel card-elevated animate-slide-up px-4 py-4 sm:px-6 sm:py-5" data-onboarding-target="theory-editor-workspace">
                     <div class="theory-content-stack flex flex-col">
                         <div id="theory-limit-banner" class="hidden rounded-2xl border border-warning-light bg-warning-light/40 px-4 py-3 text-sm text-warning-darker"></div>
-                        <div class="theory-section-card flex flex-col gap-3 px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
-                            <div class="min-w-0">
-                                <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-text-muted">Материал</p>
-                                <div class="mt-2 flex flex-wrap items-center gap-2">
-                                    <span id="theory-status-pill" class="theory-status-pill" data-tone="muted">
-                                        <span class="material-symbols-outlined text-[16px]">notes</span>
-                                        Готово к редактированию
-                                    </span>
+                        <div class="theory-workspace-meta-stack flex flex-col gap-4" data-onboarding-target="theory-editor-workspace-meta">
+                            <div class="theory-section-card flex flex-col gap-3 px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
+                                <div class="min-w-0">
+                                    <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-text-muted">Материал</p>
+                                    <div class="mt-2 flex flex-wrap items-center gap-2">
+                                        <span id="theory-status-pill" class="theory-status-pill" data-tone="muted">
+                                            <span class="material-symbols-outlined text-[16px]">notes</span>
+                                            Готово к редактированию
+                                        </span>
+                                    </div>
                                 </div>
+                                <p class="max-w-xl text-sm text-text-secondary">
+                                    Здесь вы редактируете сам материал. Использование в темах и комплексах управляется отдельно через Центр теории.
+                                </p>
                             </div>
-                            <p class="max-w-xl text-sm text-text-secondary">
-                                Здесь вы редактируете сам материал. Использование в темах и комплексах управляется отдельно через Центр теории.
-                            </p>
+
+                            <div class="theory-section-card px-4 py-4" data-onboarding-target="theory-editor-title-block">
+                                <label class="mb-2 block text-sm font-semibold text-text-secondary" for="theory-title">Название теории</label>
+                                <input id="theory-title" class="theory-form-field text-base" type="text"
+                                    data-onboarding-target="theory-editor-title-input"
+                                    placeholder="Например: КТ органов грудной клетки" />
+                            </div>
                         </div>
 
-                        <div class="theory-section-card px-4 py-4">
-                            <label class="mb-2 block text-sm font-semibold text-text-secondary" for="theory-title">Название теории</label>
-                            <input id="theory-title" class="theory-form-field text-base" type="text"
-                                placeholder="Например: КТ органов грудной клетки" />
-                        </div>
-
-                        <div id="theory-toolbar" class="theory-toolbar-shell flex flex-wrap items-center gap-1.5 px-3 py-3">
-                            <div id="theory-text-controls" class="inline-flex flex-wrap items-center gap-1.5">
+                        <div id="theory-toolbar" class="theory-toolbar-shell flex flex-wrap items-center gap-1.5 px-3 py-3" data-onboarding-target="theory-editor-toolbar">
+                            <div id="theory-text-controls" class="inline-flex flex-wrap items-center gap-1.5" data-onboarding-target="theory-editor-text-controls">
                                 <button id="theory-bold" type="button" class="theory-toolbar-btn" title="Жирный (Ctrl+B)">
                                     <span class="material-symbols-outlined text-[18px]">format_bold</span>
                                 </button>
@@ -672,12 +793,12 @@
                                 </div>
                                 <span class="theory-toolbar-sep"></span>
                             </div>
-                            <button id="theory-image-btn" type="button" class="theory-toolbar-btn" title="Добавить изображение">
+                            <button id="theory-image-btn" type="button" class="theory-toolbar-btn" title="Добавить изображение" data-onboarding-target="theory-editor-image-action">
                                 <span class="material-symbols-outlined text-[18px]">add_photo_alternate</span>
                             </button>
                             <input id="theory-image-input" type="file" accept=".png,.jpg,.jpeg,.gif,.webp,.svg" class="hidden" />
                             
-                            <div id="theory-image-controls">
+                            <div id="theory-image-controls" data-onboarding-target="theory-editor-image-controls">
                                 <span class="theory-toolbar-sep"></span>
                                 
                                 <!-- Width slider -->
@@ -732,7 +853,7 @@
                             </div>
                         </div>
 
-                        <div id="theory-editor" class="theory-editor-surface theory-scroll text-sm" contenteditable="true"></div>
+                        <div id="theory-editor" class="theory-editor-surface theory-scroll text-sm" contenteditable="true" data-onboarding-target="theory-editor-content"></div>
 
                         <p class="theory-help-note px-1 pt-1 text-xs leading-relaxed">
                             Теория сохраняется как отдельный материал и может использоваться в нескольких местах без дублирования содержимого.
@@ -742,6 +863,8 @@
             </main>
         </div>
     </div>
+    <script src="/assets/onboarding_tours.js?v=theory-editor-onboarding-8"></script>
+    <script src="/assets/OnboardingTour.js?v=theory-editor-onboarding-8"></script>
 </body>
 
 </html>

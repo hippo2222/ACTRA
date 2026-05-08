@@ -15,7 +15,8 @@ class HostedIdentityRepository:
 
     _USER_SELECT_FIELDS = (
         "user_id, name, created_at, avatar_seed, login, email, pending_email, email_verified_at, "
-        "email_verification_sent_at, pending_email_verification_sent_at, password_hash, role, plan, security_settings, settings"
+        "email_verification_sent_at, pending_email_verification_sent_at, password_hash, role, plan, "
+        "premium_expires_at, security_settings, settings"
     )
 
     def ensure_schema(self) -> None:
@@ -37,6 +38,7 @@ class HostedIdentityRepository:
                         password_hash TEXT NULL,
                         role TEXT NOT NULL DEFAULT 'user',
                         plan TEXT NOT NULL DEFAULT 'free',
+                        premium_expires_at TEXT NULL,
                         security_settings JSONB NOT NULL DEFAULT '{}'::jsonb,
                         settings JSONB NOT NULL DEFAULT '{}'::jsonb,
                         updated_at TEXT NOT NULL
@@ -89,6 +91,12 @@ class HostedIdentityRepository:
                     """
                     ALTER TABLE actra_hosted_users
                     ADD COLUMN IF NOT EXISTS plan TEXT NOT NULL DEFAULT 'free'
+                    """
+                )
+                cur.execute(
+                    """
+                    ALTER TABLE actra_hosted_users
+                    ADD COLUMN IF NOT EXISTS premium_expires_at TEXT NULL
                     """
                 )
                 cur.execute(
@@ -428,9 +436,9 @@ class HostedIdentityRepository:
                     INSERT INTO actra_hosted_users (
                         user_id, name, created_at, avatar_seed, login, email, pending_email,
                         email_verified_at, email_verification_sent_at, pending_email_verification_sent_at,
-                        password_hash, role, plan, security_settings, settings, updated_at
+                        password_hash, role, plan, premium_expires_at, security_settings, settings, updated_at
                     ) VALUES (
-                        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s::jsonb, %s
+                        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s::jsonb, %s
                     )
                     """,
                     (
@@ -447,6 +455,7 @@ class HostedIdentityRepository:
                         user.password_hash,
                         user.role or USER_ROLE_USER,
                         user.plan or USER_PLAN_FREE,
+                        user.premium_expires_at,
                         json.dumps(user.security_settings or {}, ensure_ascii=False),
                         json.dumps(user.settings or {}, ensure_ascii=False),
                         updated_at,
@@ -461,9 +470,9 @@ class HostedIdentityRepository:
                     INSERT INTO actra_hosted_users (
                         user_id, name, created_at, avatar_seed, login, email, pending_email,
                         email_verified_at, email_verification_sent_at, pending_email_verification_sent_at,
-                        password_hash, role, plan, security_settings, settings, updated_at
+                        password_hash, role, plan, premium_expires_at, security_settings, settings, updated_at
                     ) VALUES (
-                        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s::jsonb, %s
+                        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s::jsonb, %s
                     )
                     ON CONFLICT (user_id) DO NOTHING
                     """,
@@ -481,6 +490,7 @@ class HostedIdentityRepository:
                         user.password_hash,
                         user.role or USER_ROLE_USER,
                         user.plan or USER_PLAN_FREE,
+                        user.premium_expires_at,
                         json.dumps(user.security_settings or {}, ensure_ascii=False),
                         json.dumps(user.settings or {}, ensure_ascii=False),
                         updated_at,
@@ -505,6 +515,7 @@ class HostedIdentityRepository:
                         password_hash = %s,
                         role = %s,
                         plan = %s,
+                        premium_expires_at = %s,
                         security_settings = %s::jsonb,
                         settings = %s::jsonb,
                         updated_at = %s
@@ -522,6 +533,7 @@ class HostedIdentityRepository:
                         user.password_hash,
                         user.role or USER_ROLE_USER,
                         user.plan or USER_PLAN_FREE,
+                        user.premium_expires_at,
                         json.dumps(user.security_settings or {}, ensure_ascii=False),
                         json.dumps(user.settings or {}, ensure_ascii=False),
                         updated_at,
@@ -795,6 +807,7 @@ class HostedIdentityRepository:
             password_hash=(str(row[10]).strip() if row[10] is not None else None) or None,
             role=(str(row[11]).strip() if row[11] is not None else USER_ROLE_USER) or USER_ROLE_USER,
             plan=(str(row[12]).strip() if row[12] is not None else USER_PLAN_FREE) or USER_PLAN_FREE,
-            security_settings=cls._json_obj(row[13]),
-            settings=cls._json_obj(row[14]),
+            premium_expires_at=(str(row[13]).strip() if row[13] is not None else None) or None,
+            security_settings=cls._json_obj(row[14]),
+            settings=cls._json_obj(row[15]),
         )

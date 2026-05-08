@@ -89,6 +89,70 @@ describe('welcome hosted auth flow', () => {
     expect(dom.window.document.getElementById('loginBackBtn').classList.contains('hidden')).toBe(false);
   });
 
+  it('shows Google auth button when hosted provider is enabled', async () => {
+    const fetchMock = vi.fn(async (input) => {
+      const url = typeof input === 'string' ? input : String(input?.url || '');
+
+      if (url === '/api/users/should-welcome') {
+        return {
+          ok: true,
+          json: async () => ({
+            ok: true,
+            show_welcome: true,
+            mode: 'auth',
+            authenticated: false,
+            profiles: [],
+            auth_providers: { google: { enabled: true, configured: true } },
+          }),
+        };
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    const dom = setupDom(fetchMock);
+    dom.window.eval(loadFile('frontend/Welcome/welcome.js'));
+    dom.window.document.dispatchEvent(new dom.window.Event('DOMContentLoaded'));
+    await flushPromises();
+
+    expect(dom.window.document.getElementById('hostedGoogleAuthBtn').classList.contains('hidden')).toBe(false);
+  });
+
+  it('toggles password visibility without changing the value', async () => {
+    const fetchMock = vi.fn(async (input) => {
+      const url = typeof input === 'string' ? input : String(input?.url || '');
+
+      if (url === '/api/users/should-welcome') {
+        return {
+          ok: true,
+          json: async () => ({ ok: true, show_welcome: true, mode: 'auth', authenticated: false, profiles: [] }),
+        };
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    const dom = setupDom(fetchMock);
+    dom.window.eval(loadFile('frontend/Welcome/welcome.js'));
+    dom.window.document.dispatchEvent(new dom.window.Event('DOMContentLoaded'));
+    await flushPromises();
+
+    dom.window.welcomeShowAuthRegister();
+    const input = dom.window.document.getElementById('onboardingPassword');
+    const button = input.parentElement.querySelector('.password-toggle');
+    input.value = 'StrongPass1';
+
+    dom.window.welcomeTogglePassword('onboardingPassword', button);
+    expect(input.type).toBe('text');
+    expect(input.value).toBe('StrongPass1');
+    expect(button.querySelector('.material-symbols-outlined').textContent).toBe('visibility_off');
+
+    dom.window.welcomeTogglePassword('onboardingPassword', button);
+    expect(input.type).toBe('password');
+    expect(input.value).toBe('StrongPass1');
+    expect(button.querySelector('.material-symbols-outlined').textContent).toBe('visibility');
+  });
+
   it('shows verification state after hosted registration and continues on demand', async () => {
     const navigateSpy = vi.fn();
     const fetchMock = vi.fn(async (input, init) => {

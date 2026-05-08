@@ -7,19 +7,20 @@
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>ACTRA - Редактор тестовых заданий</title>
-    <link rel="stylesheet" href="test_editor.css">
+    <link rel="stylesheet" href="test_editor.css?v=test-editor-onboarding-35">
     <script src="undo_manager.js"></script>
     <script src="autosave_manager.js"></script>
     <script src="../../assets/NotificationUI.js"></script>
     <script src="ai_ux_messages.js"></script>
     <script src="base_editor.js"></script>
-    <script src="test_editor.js" defer></script>
+    <script src="test_editor.js?v=test-editor-onboarding-35" defer></script>
 
     <link href="../../assets/tailwind.css" rel="stylesheet" />
     <link href="../../assets/fonts.css" rel="stylesheet" />
     <link href="../../assets/lightB-variables.css" rel="stylesheet" />
     <link href="../../assets/lightB-components.css" rel="stylesheet" />
     <link href="../../assets/animations.css" rel="stylesheet" />
+    <link href="/assets/onboarding-tour.css?v=test-editor-onboarding-35" rel="stylesheet" />
 </head>
 
 <body
@@ -34,9 +35,10 @@
 
     <div id="import-modal" data-import-source="file"
         class="import-modal hidden fixed inset-0 bg-scrim backdrop-blur-sm z-50 flex items-center justify-center px-4 py-4">
-        <div id="import-modal-panel" class="import-modal__panel bg-surface-1 rounded-2xl shadow-2xl p-6 space-y-4">
-            <div class="flex items-center justify-between">
-                <div>
+        <div id="import-modal-panel" class="import-modal__panel bg-surface-1 rounded-2xl shadow-2xl p-6 space-y-4"
+            data-onboarding-target="test-editor-import-modal-panel">
+            <div class="flex items-center justify-between" data-onboarding-target="test-editor-import-modal-header">
+                <div data-onboarding-target="test-editor-import-modal-title">
                     <p class="text-xs font-semibold uppercase tracking-wider text-text-disabled">Импорт вопросов</p>
                     <h3 class="text-lg font-bold text-text-main mt-1">Подтвердите импорт</h3>
                 </div>
@@ -47,7 +49,8 @@
                     <span class="sr-only">Закрыть</span>
                 </button>
             </div>
-            <div class="grid grid-cols-2 gap-2 text-xs font-semibold" role="radiogroup" aria-label="Источник импорта">
+            <div class="grid grid-cols-2 gap-2 text-xs font-semibold" role="radiogroup" aria-label="Источник импорта"
+                data-onboarding-target="test-editor-import-source">
                 <label
                     class="import-source-option flex items-center justify-center gap-1 px-3 py-2 rounded-lg border border-border-subtle bg-surface-1 text-text-secondary cursor-pointer transition data-[active=true]:bg-primary-light data-[active=true]:border-primary-light data-[active=true]:text-primary"
                     data-active="true">
@@ -63,7 +66,8 @@
                     Из текста
                 </label>
             </div>
-            <div class="bg-surface-2 rounded-xl p-4 text-sm text-text-main space-y-4">
+            <div class="bg-surface-2 rounded-xl p-4 text-sm text-text-main space-y-4"
+                data-onboarding-target="test-editor-import-parse-panel">
                 <div id="import-file-panel" data-import-source-panel="file" class="flex items-center justify-between gap-4">
                     <span class="text-text-secondary">Файл</span>
                     <span id="import-file-name"
@@ -99,6 +103,7 @@
                         <span class="text-[10px] text-text-disabled">Первые 10 вопросов</span>
                     </div>
                     <div id="import-question-preview"
+                        data-onboarding-target="test-editor-import-preview"
                         class="max-h-40 overflow-y-auto rounded-lg border border-border-subtle bg-surface-1 text-[12px] text-text-main divide-y divide-border-subtle">
                         <p class="p-3 text-text-muted">Файл еще не выбран</p>
                     </div>
@@ -106,15 +111,17 @@
             </div>
             <div id="import-error"
                 class="hidden text-xs px-3 py-2 rounded-lg bg-error-lighter text-error font-semibold"></div>
-            <div class="import-modal__toolbar flex items-center justify-between pt-1 gap-4">
+            <div class="import-modal__toolbar flex items-center justify-between pt-1 gap-4"
+                data-onboarding-target="test-editor-import-file-action">
                 <p class="text-xs text-text-secondary" id="import-mode-hint">Новые вопросы будут добавлены после существующих.</p>
                 <button id="choose-import-file-btn"
+                    data-onboarding-target="test-editor-import-choose-file"
                     class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border-subtle text-xs font-semibold text-text-secondary hover:bg-bg-hover transition">
                     <span class="material-symbols-outlined text-[16px]">upload_file</span>
                     Выбрать файл
                 </button>
             </div>
-            <div class="space-y-2">
+            <div class="space-y-2" data-onboarding-target="test-editor-import-mode">
                 <p class="text-xs font-semibold text-text-secondary">Как обработать импортированные вопросы?</p>
                 <div class="grid grid-cols-2 gap-2 text-xs font-semibold">
                     <label
@@ -131,7 +138,8 @@
                     </label>
                 </div>
             </div>
-            <div class="import-modal__actions flex items-center justify-end gap-3 pt-2">
+            <div class="import-modal__actions flex items-center justify-end gap-3 pt-2"
+                data-onboarding-target="test-editor-import-modal-actions">
                 <button id="cancel-import-btn"
                     class="px-4 py-2 rounded-lg border border-border-subtle text-sm font-semibold text-text-secondary hover:bg-bg-hover transition">Отмена</button>
                 <button id="confirm-import-btn" disabled
@@ -168,7 +176,9 @@
     </div>
 
     <aside
-        class="test-editor-sidebar test-editor-sidebar--left w-[200px] bg-surface-1 border-r border-border-subtle flex flex-col shrink-0 z-20 h-full">
+        class="test-editor-sidebar test-editor-sidebar--left w-[200px] bg-surface-1 border-r border-border-subtle flex flex-col shrink-0 z-20 h-full"
+        data-onboarding-target="test-editor-left-sidebar"
+        data-onboarding-spotlight="frame">
         <div class="test-editor-sidebar__brand h-16 flex items-center px-4 border-b border-border-subtle">
             <div class="brand-lockup brand-lockup--compact">
                 <span class="brand-logo" style="color:var(--color-primary)" aria-hidden="true"></span>
@@ -190,23 +200,28 @@
             </div>
         </div>
 
-        <div id="question-list" class="flex-1 overflow-y-auto custom-scrollbar px-3 py-3 space-y-2">
+        <div id="question-list" class="flex-1 overflow-y-auto custom-scrollbar px-3 py-3 space-y-2"
+            data-onboarding-target="test-editor-question-list">
             <!-- Questions will be rendered here -->
         </div>
 
-        <div class="test-editor-sidebar__footer p-3 border-t border-border-subtle bg-surface-2 backdrop-blur space-y-3">
-            <button id="add-question-btn" class="test-editor-sidebar__primary-btn" type="button">
+        <div class="test-editor-sidebar__footer p-3 border-t border-border-subtle bg-surface-2 backdrop-blur space-y-3"
+            data-onboarding-target="test-editor-question-actions">
+            <button id="add-question-btn" class="test-editor-sidebar__primary-btn" type="button"
+                data-onboarding-target="test-editor-add-question">
                 <span class="material-symbols-outlined text-[18px]">add</span>
                 <span class="text-sm font-bold">Добавить вопрос</span>
             </button>
 
-            <div class="test-editor-sidebar__tool-row">
+            <div class="test-editor-sidebar__tool-row" data-onboarding-target="test-editor-import-export">
                 <button id="import-btn" class="test-editor-sidebar__tool-btn" type="button"
+                    data-onboarding-target="test-editor-import-button"
                     title="Импортировать вопросы из файла">
                     <span class="material-symbols-outlined text-[16px]">upload_file</span>
                     <span>Импорт</span>
                 </button>
                 <button id="export-btn" class="test-editor-sidebar__tool-btn" type="button"
+                    data-onboarding-target="test-editor-export-button"
                     title="Экспортировать вопросы в файл">
                     <span class="material-symbols-outlined text-[16px]">download</span>
                     <span>Экспорт</span>
@@ -231,7 +246,8 @@
 
     <main class="test-editor-main flex-1 flex flex-col h-full overflow-hidden relative bg-bg-main">
         <header
-            class="test-editor-header px-6 py-3 bg-surface-1 backdrop-blur-md border-b border-border-subtle shrink-0 z-30 shadow-sm sticky top-0">
+            class="test-editor-header px-6 py-3 bg-surface-1 backdrop-blur-md border-b border-border-subtle shrink-0 z-30 shadow-sm sticky top-0"
+            data-onboarding-target="test-editor-header">
             <div class="test-editor-header__inner">
                 <div class="test-editor-header__title">
                     <button title="Библиотека заданий"
@@ -250,7 +266,7 @@
                 </div>
                 <div class="test-editor-header__actions">
                     <div class="test-editor-header__controls">
-                        <div class="test-editor-header__history">
+                        <div class="test-editor-header__history" data-onboarding-target="test-editor-history-actions">
                             <button id="undo-btn" disabled title="Отменить (Ctrl+Z)" class="test-editor-icon-btn"
                                 type="button">
                                 <span class="material-symbols-outlined text-[20px]">undo</span>
@@ -260,14 +276,25 @@
                                 <span class="material-symbols-outlined text-[20px]">redo</span>
                             </button>
                         </div>
+                        <button type="button"
+                            class="onboarding-help-button onboarding-help-button--icon"
+                            data-onboarding-help-button
+                            data-onboarding-help-mode="direct"
+                            data-onboarding-tour-id="test-editor-authoring"
+                            hidden
+                            title="Показать обучение"
+                            aria-label="Показать обучение">
+                            <span class="material-symbols-outlined" aria-hidden="true">help</span>
+                        </button>
                         <button id="save-task-btn"
                             class="test-editor-save-btn shrink-0 flex items-center justify-center gap-2 px-4 py-1.5 bg-primary text-primary-fg text-sm font-semibold rounded-lg hover:bg-primary-dark transition-all active:scale-95 border border-primary"
-                            type="button">
+                            type="button" data-onboarding-target="test-editor-save-action">
                             <span class="material-symbols-outlined text-[18px]">save</span>
                             Сохранить
                         </button>
                     </div>
-                    <div id="save-status-container" class="status-cluster test-editor-header__status" data-tone="success">
+                    <div id="save-status-container" class="status-cluster test-editor-header__status" data-tone="success"
+                        data-onboarding-target="test-editor-save-status">
                         <div id="save-status-indicator" class="status-cluster__dot"></div>
                         <div class="status-cluster__body">
                             <span id="save-status-text"
@@ -283,7 +310,7 @@
         <div class="test-editor-main__scroll flex-1 overflow-y-auto">
             <div class="test-editor-main__inner p-4 md:p-6">
                 <div class="editor-workspace">
-                    <section class="editor-card editor-card--hero">
+                    <section class="editor-card editor-card--hero" data-onboarding-target="test-editor-question-card">
                         <div class="editor-card__header">
                             <div>
                                 <h3 class="editor-card__title">Вопрос</h3>
@@ -293,11 +320,13 @@
 
                         <div class="relative group">
                             <textarea id="question-textarea"
+                                data-onboarding-target="test-editor-question-text"
                                 class="block w-full rounded-lg border-border-subtle bg-surface-1 py-4 pl-4 pr-28 text-text-main placeholder:text-text-disabled focus:border-primary focus:ring-primary shadow-sm focus:shadow-md text-base leading-relaxed resize-none transition-all min-h-[112px]"
                                 placeholder="Введите формулировку вопроса..." rows="3"></textarea>
 
                             <div class="question-media-dock absolute top-3 right-3 flex flex-col items-end gap-2">
                                 <button id="upload-image-btn" type="button"
+                                    data-onboarding-target="test-editor-question-image"
                                     class="question-media-trigger rounded-full bg-surface-1 border border-border-subtle text-icon-secondary flex items-center justify-center shadow-sm hover:text-primary hover:border-primary transition-all active:scale-95 opacity-95 hover:opacity-100"
                                     title="Добавить изображение к вопросу" aria-label="Добавить изображение к вопросу">
                                     <span class="material-symbols-outlined text-[20px]">add_photo_alternate</span>
@@ -318,7 +347,7 @@
                         <input type="file" id="image-upload-input" class="hidden" accept="image/*" multiple>
                     </section>
 
-                    <section class="editor-card">
+                    <section class="editor-card" data-onboarding-target="test-editor-options-card">
                         <div class="editor-card__header editor-card__header--stack-sm">
                             <div>
                                 <div class="flex items-center gap-3 flex-wrap">
@@ -331,12 +360,13 @@
                             <p class="editor-card__meta">Нажмите на букву варианта, чтобы отметить правильный ответ.</p>
                         </div>
 
-                        <div id="options-container" class="flex flex-col gap-3">
+                        <div id="options-container" class="flex flex-col gap-3" data-onboarding-target="test-editor-options-list">
                             <!-- Options will be rendered here -->
                         </div>
 
                         <div class="pt-2 flex flex-col gap-2">
-                            <button id="add-option-btn" class="test-editor-secondary-action" type="button">
+                            <button id="add-option-btn" class="test-editor-secondary-action" type="button"
+                                data-onboarding-target="test-editor-add-option">
                                 <span class="material-symbols-outlined text-[20px]">add_circle</span>
                                 Добавить вариант
                             </button>
@@ -352,7 +382,8 @@
     <aside
         class="test-editor-sidebar test-editor-sidebar--right w-[320px] bg-surface-1 border-l border-border-subtle flex flex-col shrink-0 overflow-y-auto custom-scrollbar">
         <div
-            class="test-editor-inspector__header h-16 flex items-center px-6 border-b border-border-subtle bg-surface-1 backdrop-blur sticky top-0 z-10">
+            class="test-editor-inspector__header h-16 flex items-center px-6 border-b border-border-subtle bg-surface-1 backdrop-blur sticky top-0 z-10"
+            data-onboarding-target="test-editor-inspector-header">
             <div>
                 <p class="section-label">Инспектор</p>
                 <h2 class="text-base font-bold text-text-main">Настройки вопроса</h2>
@@ -360,7 +391,9 @@
         </div>
 
         <div class="p-6 space-y-8 test-editor-inspector__content">
-            <section class="test-editor-inspector-card space-y-3">
+            <section class="test-editor-inspector-card space-y-3" data-onboarding-target="test-editor-answer-type"
+                data-onboarding-clone-variant="test-editor-inspector-text"
+                data-onboarding-clone-height-extra="44">
                 <div class="space-y-1">
                     <label class="block text-xs font-bold text-text-secondary uppercase tracking-wider">Тип ответа</label>
                     <div class="flex items-center gap-2 text-sm font-semibold text-text-main">
@@ -373,7 +406,8 @@
                     выбор.</p>
             </section>
 
-            <section class="test-editor-inspector-card test-image-bank is-expanded" aria-labelledby="test-image-bank-title">
+            <section class="test-editor-inspector-card test-image-bank is-expanded" aria-labelledby="test-image-bank-title"
+                data-onboarding-target="test-editor-image-bank">
                 <button id="test-image-bank-toggle" class="test-image-bank__toggle" type="button"
                     aria-expanded="true" aria-controls="test-image-bank-panel">
                     <span class="test-image-bank__toggle-copy">
@@ -392,12 +426,15 @@
                 </div>
             </section>
 
-            <section class="test-editor-inspector-card space-y-3">
+            <section class="test-editor-inspector-card space-y-3" data-onboarding-target="test-editor-feedback"
+                data-onboarding-clone-variant="test-editor-inspector-text"
+                data-onboarding-clone-height-extra="48">
                 <div class="space-y-1">
                     <label class="block text-xs font-bold text-text-secondary uppercase tracking-wider">Обратная связь</label>
                     <h3 class="text-base font-bold text-text-main">Комментарий после ответа</h3>
                 </div>
                 <textarea id="explanation-textarea"
+                    data-onboarding-target="test-editor-explanation"
                     class="block w-full rounded-xl border-border-subtle bg-surface-1 text-sm py-3 px-3 focus:border-primary focus:ring-primary shadow-sm focus:shadow-md transition-all min-h-[148px]"
                     placeholder="Комментарий, который увидит пользователь после ответа..." rows="5"></textarea>
                 <p class="text-[12px] text-text-secondary leading-relaxed">Подскажите, почему ответ верный, на что обратить
@@ -407,6 +444,8 @@
     </aside>
 
     <script src="../../assets/ConnectionMonitor.js"></script>
+    <script src="/assets/onboarding_tours.js?v=test-editor-onboarding-35" defer></script>
+    <script src="/assets/OnboardingTour.js?v=test-editor-onboarding-35" defer></script>
 </body>
 
 </html>

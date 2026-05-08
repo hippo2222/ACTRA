@@ -38,10 +38,73 @@
             overflow-y: auto;
         }
 
+        body.main-is-booting {
+            overflow: hidden;
+        }
+
+        body.main-is-booting #app-content {
+            opacity: 0;
+            pointer-events: none;
+            visibility: hidden;
+        }
+
+        body:not(.main-is-booting) #app-content {
+            opacity: 1;
+            pointer-events: auto;
+            visibility: visible;
+        }
+
+        .main-boot-screen {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            background: var(--color-bg-main, #f6f7fb);
+            color: var(--color-text-main, #111827);
+        }
+
+        .main-boot-screen[aria-hidden="true"] {
+            display: none;
+        }
+
+        .main-boot-card {
+            display: grid;
+            align-items: center;
+            justify-items: center;
+            width: min(11rem, 42vw);
+            border: 1px solid var(--color-border-subtle, #d8deea);
+            border-radius: 1.5rem;
+            padding: 1.25rem;
+            background: var(--color-surface-1, #ffffff);
+            box-shadow: 0 18px 42px rgba(15, 23, 42, 0.12);
+        }
+
+        .main-boot-logo {
+            display: block;
+            width: min(7.5rem, 30vw);
+            height: auto;
+        }
+
         #app-content {
             min-height: calc(100vh - var(--connection-banner-height, 0px));
             min-height: calc(100dvh - var(--connection-banner-height, 0px));
             height: auto;
+        }
+
+        [data-global-header] {
+            display: block;
+            min-height: var(--main-header-height);
+            border-bottom: 1px solid var(--color-border-subtle);
+            background: var(--color-surface-1);
+        }
+
+        [data-global-header][data-global-header-ready="1"] {
+            min-height: 0;
+            border-bottom: 0;
+            background: transparent;
         }
 
         .main-topbar {
@@ -2530,10 +2593,16 @@
     <link href="/assets/global-header.css" rel="stylesheet" />
     <link href="/assets/animations.css" rel="stylesheet" />
     <link href="/assets/main-polish.css" rel="stylesheet" />
+    <link href="/assets/onboarding-tour.css?v=main-onboarding-21" rel="stylesheet" />
 </head>
 
 <body
-    class="bg-bg-main font-display text-text-main antialiased overflow-x-hidden selection:bg-primary selection:text-primary-fg">
+    class="main-is-booting bg-bg-main font-display text-text-main antialiased overflow-x-hidden selection:bg-primary selection:text-primary-fg">
+    <div class="main-boot-screen" role="status" aria-live="polite" aria-label="Загрузка ACTRA">
+        <div class="main-boot-card">
+            <img class="main-boot-logo" src="/assets/logo_animated.svg" alt="ACTRA" />
+        </div>
+    </div>
     <div id="app-content"
         class="relative flex min-h-screen w-full flex-col overflow-x-hidden transition-all duration-300">
         <div data-global-header data-app-section="main"></div>
@@ -2544,7 +2613,7 @@
                 <div class="main-dashboard-grid">
                     <div class="main-primary-column">
                         <section class="main-entry-grid">
-                            <article class="main-entry-card main-entry-card--catalog interactive-card" role="link" tabindex="0" data-nav="/ui/catalog" aria-label="Открыть каталог материалов">
+                            <article class="main-entry-card main-entry-card--catalog interactive-card" role="link" tabindex="0" data-nav="/ui/catalog" data-onboarding-target="main-catalog-card" aria-label="Открыть каталог материалов">
                                 <div class="flex flex-col gap-3">
                                     <span class="main-entry-kicker"><span class="material-symbols-outlined text-[16px]">travel_explore</span>Главный вход</span>
                                     <div class="flex flex-col gap-2">
@@ -2557,7 +2626,7 @@
                                     <span class="main-entry-action" aria-hidden="true"><span class="material-symbols-outlined text-[28px]">arrow_forward</span></span>
                                 </div>
                             </article>
-                            <article class="main-entry-card main-entry-card--practice interactive-card" role="link" tabindex="0" data-nav="/ui/complexes" aria-label="Открыть список комплексов">
+                            <article class="main-entry-card main-entry-card--practice interactive-card" role="link" tabindex="0" data-nav="/ui/complexes" data-onboarding-target="main-complexes-card" aria-label="Открыть список комплексов">
                                 <div class="flex flex-col gap-3">
                                     <span class="main-entry-kicker"><span class="material-symbols-outlined text-[16px]">play_circle</span>Практика</span>
                                     <div class="flex flex-col gap-2">
@@ -2578,7 +2647,7 @@
                                 </div>
                             </div>
                             <div class="main-editor-grid">
-                                <article class="main-editor-card interactive-card" role="link" tabindex="0" data-nav="/ui/editor">
+                                <article class="main-editor-card interactive-card" role="link" tabindex="0" data-nav="/ui/editor" data-onboarding-target="main-author-task-editor-card">
                                     <span class="main-editor-icon" aria-hidden="true">
                                         <span class="material-symbols-outlined">edit_document</span>
                                     </span>
@@ -2588,7 +2657,7 @@
                                     </div>
                                     <div class="main-editor-card-footer"><span class="text-xs font-bold text-primary">Открыть</span><span class="material-symbols-outlined text-[18px] text-text-muted">arrow_forward</span></div>
                                 </article>
-                                <article class="main-editor-card interactive-card" role="link" tabindex="0" data-nav="/ui/complexes/create">
+                                <article class="main-editor-card interactive-card" role="link" tabindex="0" data-nav="/ui/complexes/create" data-onboarding-target="main-author-complex-editor-card">
                                     <span class="main-editor-icon" aria-hidden="true">
                                         <span class="material-symbols-outlined">design_services</span>
                                     </span>
@@ -2598,7 +2667,7 @@
                                     </div>
                                     <div class="main-editor-card-footer"><span class="text-xs font-bold text-primary">Создать</span><span class="material-symbols-outlined text-[18px] text-text-muted">arrow_forward</span></div>
                                 </article>
-                                <article class="main-editor-card interactive-card" role="link" tabindex="0" data-nav="/ui/theory-center">
+                                <article class="main-editor-card interactive-card" role="link" tabindex="0" data-nav="/ui/theory-center" data-onboarding-target="main-author-theory-center-card">
                                     <span class="main-editor-icon" aria-hidden="true">
                                         <span class="material-symbols-outlined">hub</span>
                                     </span>
@@ -2611,7 +2680,7 @@
                             </div>
                         </section>
                         <section class="main-continuity-grid" aria-label="Быстрые рабочие состояния">
-                            <article class="main-continuity-card main-continuity-card--microcards transition-all"
+                            <article class="main-continuity-card main-continuity-card--microcards transition-all" data-onboarding-target="main-microcards-card"
                                 id="microcardsCard">
                                 <div class="main-continuity-card__head">
                                     <div class="main-continuity-titleline">
@@ -2706,11 +2775,28 @@
                                     </div>
                                 </div>
                             </article>
-                            <section class="main-continuity-card main-continuity-card--quick" id="quick-access-section">
-                                <div class="main-quick-access-header">
-                                    <h3 class="text-base font-bold text-text-main flex items-center gap-2">
-                                        <span class="material-symbols-outlined text-text-secondary text-[20px]">history</span>Быстрый доступ
-                                    </h3>
+                            <section class="main-continuity-card main-continuity-card--quick" id="quick-access-section" data-onboarding-target="main-quick-access-card">
+                                <div class="main-quick-access-header" data-enhanced="true">
+                                    <div class="main-quick-access-heading">
+                                        <div class="main-quick-access-heading-icon">
+                                            <span class="material-symbols-outlined text-[20px]">bolt</span>
+                                        </div>
+                                        <div class="min-w-0">
+                                            <p class="main-quick-access-kicker">Продолжить</p>
+                                            <h3 class="text-base font-bold text-text-main">Быстрый доступ</h3>
+                                        </div>
+                                    </div>
+                                    <div class="main-quick-access-toolbar">
+                                        <span class="main-quick-access-count" id="quick-access-count" title="Комплексов в быстром доступе">0</span>
+                                        <div class="main-quick-access-nav" id="quick-access-nav" hidden>
+                                            <button type="button" class="main-quick-access-nav-btn icon-button-muted" id="quick-access-prev" aria-label="Предыдущий комплекс">
+                                                <span class="material-symbols-outlined text-[16px]">chevron_left</span>
+                                            </button>
+                                            <button type="button" class="main-quick-access-nav-btn icon-button-muted" id="quick-access-next" aria-label="Следующий комплекс">
+                                                <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="bg-surface-1 rounded-xl border border-border-subtle shadow-sm overflow-hidden"
                                     id="quick-access-list" hidden></div>
@@ -2729,7 +2815,7 @@
                         </section>
                     </div>
                     <div class="main-secondary-column">
-                        <div class="main-widget-card main-side-card bg-surface-1 rounded-xl shadow-sm border border-border-strong p-2.5 flex flex-col interactive-card cursor-pointer hover:border-primary transition-all main-side-enter"
+                        <div class="main-widget-card main-side-card bg-surface-1 rounded-xl shadow-sm border border-border-strong p-2.5 flex flex-col interactive-card cursor-pointer hover:border-primary transition-all main-side-enter" data-onboarding-target="main-calendar-card"
                             id="calendarCard" role="link" tabindex="0" data-nav="/ui/calendar">
                             <!-- Header with Streak -->
                             <div class="flex items-center justify-between mb-1.5">
@@ -2799,7 +2885,7 @@
                         </div>
                         <div
                             class="main-widget-card main-side-card flex flex-col bg-surface-1 rounded-xl shadow-sm border border-border-strong p-2.5 interactive-card cursor-pointer hover:border-primary hover:shadow-md transition-all main-side-enter"
-                            id="statsCard" role="link" tabindex="0" data-nav="/ui/statistics">
+                            id="statsCard" role="link" tabindex="0" data-nav="/ui/statistics" data-onboarding-target="main-stats-card">
                             <div class="flex items-center justify-between mb-1.5">
                                 <h3 class="text-sm font-bold text-text-main flex items-center gap-1.5"><span
                                         class="material-symbols-outlined main-stats-heading-icon text-[16px]">bar_chart</span>Статистика
@@ -2816,7 +2902,7 @@
                                         onclick="selectStatsPeriod(event, 0, this); return false;" id="btnPeriod0">Все</button>
                                 </div>
                             </div>
-                            <div class="transition-all duration-300 ease-in-out" id="statsContent">
+                            <div class="transition-all duration-300 ease-in-out hidden" id="statsContent">
                                 <div class="main-stats-row panel-row flex items-center justify-between bg-surface-2 rounded-lg">
                                     <div class="flex flex-col"><span
                                             class="main-stats-label text-[11px] font-bold uppercase tracking-wider">Пройдено
@@ -2851,7 +2937,7 @@
                                 </div>
                             </div>
                             <!-- Loading Skeleton -->
-                            <div id="statsSkeleton" class="space-y-2 hidden">
+                            <div id="statsSkeleton" class="space-y-2">
                                 <div
                                     class="flex items-center justify-between p-2 bg-surface-2 rounded-lg animate-pulse">
                                     <div class="flex flex-col gap-1.5 flex-1">
@@ -3197,11 +3283,14 @@
     </div>
 
     <script src="/assets/NotificationUI.js"></script>
+    <script src="/assets/PremiumPromoModal.js"></script>
     <script src="/assets/MainLogic.js"></script>
     <script src="/assets/SharedProfileModal.js"></script>
-    <script src="/assets/GlobalHeader.js"></script>
+    <script src="/assets/GlobalHeader.js?v=onboarding-help-1"></script>
     <script src="/assets/ThemeSwitcherUI.js"></script>
     <script src="/assets/ConnectionMonitor.js"></script>
+    <script src="/assets/onboarding_tours.js?v=main-onboarding-21"></script>
+    <script src="/assets/OnboardingTour.js?v=main-onboarding-21"></script>
 </body>
 
 </html>

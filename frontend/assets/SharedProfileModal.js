@@ -119,6 +119,12 @@
         return 'Личный кабинет ACTRA';
     }
 
+    function formatPremiumDate(value) {
+        const date = new Date(String(value || ''));
+        if (Number.isNaN(date.getTime())) return '';
+        return date.toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+
     function hexToRgb(hex) {
         const normalized = String(hex || '').trim().replace('#', '');
         const source = normalized.length === 3
@@ -367,6 +373,11 @@
         const currentThemeMeta = getCurrentThemeMeta();
         const currentThemeLabel = currentThemeMeta?.name || 'Тема';
         const spoilerIcon = isThemeSectionExpanded ? 'expand_less' : 'expand_more';
+        const effectivePlan = String(currentHostedUser?.effective_plan || currentHostedUser?.plan || 'free').trim().toLowerCase();
+        const premiumExpiresAt = String(currentHostedUser?.premium_expires_at || '').trim();
+        const planLabel = effectivePlan === 'premium'
+            ? (premiumExpiresAt ? `Premium до ${formatPremiumDate(premiumExpiresAt)}` : 'Premium активен')
+            : 'Free план';
 
         panel.innerHTML = `
             <div class="border-b border-border-subtle px-4 py-4">
@@ -391,6 +402,20 @@
                         <div>
                             <div class="text-sm font-semibold text-text-main">Настройки аккаунта</div>
                             <div class="text-sm text-text-secondary">Профиль, аватар и персональные параметры</div>
+                        </div>
+                    </div>
+                    <span class="material-symbols-outlined text-text-secondary">arrow_forward</span>
+                </a>
+                <a href="/ui/settings#premium"
+                    id="sharedProfilePremium"
+                    class="shared-profile-focus-target flex items-center justify-between rounded-2xl border border-border-subtle bg-surface-1 px-4 py-3 text-left transition-all hover:border-primary hover:bg-bg-hover">
+                    <div class="flex items-center gap-3">
+                        <span class="flex h-11 w-11 items-center justify-center rounded-2xl border border-primary-light bg-primary-lighter text-primary">
+                            <span class="material-symbols-outlined text-[20px]">workspace_premium</span>
+                        </span>
+                        <div>
+                            <div class="text-sm font-semibold text-text-main">${escapeHtml(planLabel)}</div>
+                            <div class="text-sm text-text-secondary">Premium и заявки на доступ</div>
                         </div>
                     </div>
                     <span class="material-symbols-outlined text-text-secondary">arrow_forward</span>
@@ -436,6 +461,13 @@
         const settingsLink = document.getElementById('sharedProfileSettings');
         if (settingsLink) {
             settingsLink.addEventListener('click', () => {
+                closeProfileMenu();
+            });
+        }
+
+        const premiumLink = document.getElementById('sharedProfilePremium');
+        if (premiumLink) {
+            premiumLink.addEventListener('click', () => {
                 closeProfileMenu();
             });
         }

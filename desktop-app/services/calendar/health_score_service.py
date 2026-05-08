@@ -202,7 +202,24 @@ class HealthScoreService:
             return self.calculate_retrievability(days_since, new_stability)
         else:
             # Decay модель (MVP)
-            return self.calculate_decay_health(days_since)
+            decayed_health = self.calculate_decay_health(days_since)
+            if recent_attempts:
+                quality_values = []
+                for attempt in recent_attempts:
+                    if attempt.confidence_rating is not None:
+                        try:
+                            rating = max(1, min(5, int(attempt.confidence_rating)))
+                            quality_values.append((rating - 1) / 4)
+                            continue
+                        except Exception:
+                            pass
+                    quality_values.append(1.0 if attempt.user_grading == 1 else 0.0)
+
+                if quality_values:
+                    quality = sum(quality_values) / len(quality_values)
+                    outcome_capped_health = 0.35 + (0.65 * quality)
+                    return min(decayed_health, outcome_capped_health)
+            return min(progress.health_score, decayed_health)
     
     def update_progress_health(
         self,

@@ -485,6 +485,8 @@ class HealthSummary:
     complexes: List[Dict[str, Any]] = field(default_factory=list)
     # Each: {"complex_id", "name", "health_score", "status"}
     critical_count: int = 0  # Количество с health < 0.65
+    active_count: int = 0
+    has_data: bool = True
     
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -492,6 +494,8 @@ class HealthSummary:
             "overall_health_percent": int(self.overall_health * 100),
             "complexes": self.complexes,
             "critical_count": self.critical_count,
+            "active_count": self.active_count,
+            "has_data": self.has_data,
         }
 
 

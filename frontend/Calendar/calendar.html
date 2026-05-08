@@ -23,27 +23,27 @@
 
     <link href="/assets/animations.css" rel="stylesheet" />
 
-    <link href="calendar.css" rel="stylesheet" />
+    <link href="/assets/PageBoot.css" rel="stylesheet" />
+
+    <link href="calendar.css?v=calendar-activity-health-4" rel="stylesheet" />
+    <link href="/assets/onboarding-tour.css?v=calendar-onboarding-11" rel="stylesheet" />
 
 </head>
 
-<body class="calendar-layout bg-bg-main text-text-main font-display antialiased selection:bg-primary-light"
+<body class="actra-page-booting calendar-layout bg-bg-main text-text-main font-display antialiased selection:bg-primary-light"
     data-calendar-build="variantA-debug-20260117">
+    <div class="actra-page-boot-screen" role="status" aria-live="polite" aria-label="ACTRA">
+        <div class="actra-page-boot-card">
+            <img class="actra-page-boot-logo" src="/assets/logo_animated.svg" alt="ACTRA" />
+        </div>
+    </div>
 
     <div id="app" class="relative flex min-h-screen flex-col overflow-x-hidden">
         <div id="calendarInitialLoading"
-            class="absolute inset-0 z-[60] hidden flex flex-col items-center justify-center gap-5 bg-bg-main/95 backdrop-blur-sm">
-            <div class="calendar-loading-panel rounded-2xl border border-border-subtle bg-surface-1/90 p-5 shadow-sm">
-                <div class="calendar-loading-logo-frame" aria-hidden="true">
-                    <img id="calendarLoadingLogoAnimated" src="/assets/logo_animated.svg" alt="ACTRA" class="calendar-loading-logo">
-                    <img id="calendarLoadingLogoStatic" src="/assets/logo.svg" alt="ACTRA" class="calendar-loading-logo hidden">
-                </div>
-            </div>
-            <p class="text-xs font-semibold uppercase tracking-widest text-text-muted">Загрузка календаря...</p>
-            <div class="calendar-loading-skeleton w-full max-w-[560px] space-y-3 px-4 animate-pulse" aria-hidden="true">
-                <div class="h-24 rounded-xl bg-surface-1 border border-border-subtle"></div>
-                <div class="h-16 rounded-xl bg-surface-1 border border-border-subtle"></div>
-                <div class="h-40 rounded-xl bg-surface-1 border border-border-subtle"></div>
+            class="absolute inset-0 z-[60] flex items-center justify-center bg-bg-main">
+            <div class="calendar-loading-logo-frame" aria-hidden="true">
+                <img id="calendarLoadingLogoAnimated" src="/assets/logo_animated.svg" alt="ACTRA" class="calendar-loading-logo">
+                <img id="calendarLoadingLogoStatic" src="/assets/logo.svg" alt="ACTRA" class="calendar-loading-logo hidden">
             </div>
         </div>
 
@@ -89,6 +89,16 @@
 
                 <div class="flex items-center gap-3">
 
+                    <button type="button"
+                        class="onboarding-help-button onboarding-help-button--icon"
+                        data-onboarding-help-button
+                        data-onboarding-help-mode="direct"
+                        hidden
+                        title="Показать обучение"
+                        aria-label="Показать обучение">
+                        <span class="material-symbols-outlined" aria-hidden="true">help</span>
+                    </button>
+
                     <!-- Streak Badge -->
 
                     <div id="streak-badge"
@@ -122,6 +132,7 @@
 
                     <article id="daily-mix-card"
                         class="card-elevated calendar-summary-card calendar-summary-card--primary flex flex-col cursor-pointer"
+                        data-onboarding-target="calendar-daily-mix-card"
                         onclick="startSession('daily_mix')">
 
                         <div class="calendar-card-body flex-1 flex flex-col justify-between gap-3">
@@ -178,6 +189,7 @@
 
                     <article id="main-focus-card"
                         class="card-elevated calendar-summary-card calendar-summary-card--accent flex flex-col cursor-pointer"
+                        data-onboarding-target="calendar-main-focus-card"
                         onclick="startSession('new_material')">
 
                         <div class="calendar-card-body flex-1 flex flex-col justify-between gap-3">
@@ -232,19 +244,19 @@
 
                 <!-- Time Controller (vertical, right side) -->
 
-                <div class="card-elevated calendar-summary-card calendar-control-card">
+                <div class="card-elevated calendar-summary-card calendar-control-card" data-onboarding-target="calendar-time-controller">
 
                         <div class="calendar-control-card__section">
 
-                            <span class="calendar-control-card__eyebrow">Времени сегодня</span>
+                            <span class="calendar-control-card__eyebrow">Время на сегодня</span>
 
-                            <div id="time-controller" class="calendar-time-controller" role="group" aria-label="Лимит времени на сегодня">
+                            <div id="time-controller" class="calendar-time-controller" role="group" aria-label="Время на сегодняшний план" title="Влияет на объём плана на сегодня">
 
-                                <button type="button" onclick="setTimeLimit(20)" data-time="20" class="time-btn">20 мин</button>
+                                <button type="button" onclick="setTimeLimit(20)" data-time="20" class="time-btn" title="План на 20 минут">20 мин</button>
 
-                                <button type="button" onclick="setTimeLimit(30)" data-time="30" class="time-btn">30 мин</button>
+                                <button type="button" onclick="setTimeLimit(30)" data-time="30" class="time-btn" title="План на 30 минут">30 мин</button>
 
-                                <button type="button" onclick="setTimeLimit(45)" data-time="45" class="time-btn">45 мин</button>
+                                <button type="button" onclick="setTimeLimit(45)" data-time="45" class="time-btn" title="План на 45 минут">45 мин</button>
 
                             </div>
 
@@ -258,7 +270,7 @@
 
             <!-- Schedule Strip -->
 
-            <div class="calendar-schedule pt-1">
+            <div class="calendar-schedule pt-1" data-onboarding-target="calendar-schedule-panel">
 
                 <div class="calendar-schedule-header schedule-toolbar px-1">
 
@@ -277,7 +289,7 @@
                         <span class="material-symbols-outlined">chevron_left</span>
                     </button>
 
-                    <div id="schedule-strip" class="schedule-strip flex overflow-x-auto hide-scrollbar drag-scroll"></div>
+                    <div id="schedule-strip" class="schedule-strip flex overflow-x-auto hide-scrollbar drag-scroll" data-onboarding-target="calendar-schedule-strip"></div>
 
                     <button id="schedule-scroll-next" onclick="scrollSchedule(1)" class="icon-button-muted schedule-scroll-button schedule-scroll-button--side" aria-label="Вперёд">
                         <span class="material-symbols-outlined">chevron_right</span>
@@ -294,7 +306,7 @@
 
                 <div class="calendar-activity-col">
 
-                    <section class="card-elevated calendar-panel-card">
+                    <section class="card-elevated calendar-panel-card" data-onboarding-target="calendar-activity-panel">
 
                         <div class="flex justify-between items-center mb-3">
 
@@ -319,7 +331,7 @@
 
                         </div>
 
-                        <div id="heatmap" class="grid grid-cols-10 gap-1.5 w-full mb-4"></div>
+                        <div id="heatmap" class="grid grid-cols-10 gap-1.5 w-full mb-4" data-onboarding-target="calendar-activity-heatmap"></div>
 
                         <!-- Contextual Banner -->
 
@@ -335,19 +347,13 @@
 
                     <!-- Notification Card -->
 
-                    <div id="notification-card" class="hidden"></div>
+                    <div id="notification-card" class="hidden" data-onboarding-target="calendar-memory-notification"></div>
 
                     <!-- Health Indicator -->
 
-                    <section class="card-elevated calendar-panel-card memory-health-panel flex flex-col">
+                    <section class="card-elevated calendar-panel-card memory-health-panel flex flex-col" data-onboarding-target="calendar-memory-health-panel">
 
-                        <div class="flex justify-between items-center mb-3">
-
-                            <h3 class="text-text-main font-bold text-base">Здоровье памяти</h3>
-
-                        </div>
-
-                        <div id="memory-health-shell" class="memory-health-shell">
+                        <div id="memory-health-shell" class="memory-health-shell" data-onboarding-target="calendar-memory-health">
 
                             <div id="memory-health-overview" class="memory-health-overview">
 
@@ -364,6 +370,8 @@
                                 </div>
 
                                 <div class="memory-health-overview-copy">
+
+                                    <h3 class="memory-health-title">Здоровье памяти</h3>
 
                                     <span id="memory-health-status" class="memory-health-status">—</span>
 
@@ -408,6 +416,8 @@
         // STATE (initialized empty - will be populated from API)
 
         // =============================================================================
+
+        const ACTIVITY_MISS_BANNER_DISMISSED_KEY = 'actra.calendar.activityMissBannerDismissed';
 
         const state = {
 
@@ -481,6 +491,8 @@
 
                 dragScrollInitialized: false,
 
+                activityMissBannerDismissed: localStorage.getItem(ACTIVITY_MISS_BANNER_DISMISSED_KEY) === '1',
+
             }
 
         };
@@ -494,11 +506,18 @@
         const API_BASE = '/api';
         const CALENDAR_INITIAL_LOADING_DELAY_MS = window.ACTRA_CONFIG?.ui?.loadingRevealDelayMs ?? 280;
         const CALENDAR_PREVIEW_MODE = new URLSearchParams(window.location.search).get('preview');
+        const CALENDAR_QA_PREVIEW_MODES = new Set(['prod-empty', 'qa-empty', 'qa-single', 'qa-multi', 'qa-heavy']);
         let calendarInitialLoadingTimer = null;
 
         function isProdEmptyPreview() {
             return CALENDAR_PREVIEW_MODE === 'prod-empty';
         }
+
+        function isCalendarQaPreview() {
+            return CALENDAR_QA_PREVIEW_MODES.has(CALENDAR_PREVIEW_MODE);
+        }
+
+        window.ACTRA_DISABLE_AUTO_ONBOARDING = isCalendarQaPreview();
 
         function formatIsoDate(date) {
             return [
@@ -586,6 +605,229 @@
             state.complexes = [];
             state.restDays = {};
             state.microcardsSummary = null;
+        }
+
+        function createCalendarPreviewActivity(pattern = 'light') {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            return Array.from({ length: 30 }, (_, index) => {
+                const date = new Date(today);
+                date.setDate(today.getDate() - (29 - index));
+
+                const isToday = index === 29;
+                const dense = pattern === 'heavy';
+                const hasSignal = dense
+                    ? index % 2 === 0 || index > 24
+                    : [18, 21, 25, 27, 29].includes(index);
+                const attempts = hasSignal ? (dense ? 4 + (index % 6) : 1 + (index % 3)) : 0;
+                const minutes = attempts > 0 ? attempts * (dense ? 6 : 4) : 0;
+
+                return {
+                    date: formatIsoDate(date),
+                    completion_percent: attempts > 0 ? Math.min(100, 35 + attempts * 8) : 0,
+                    tasks_solved: Math.max(0, attempts - 1),
+                    tasks_attempted: attempts,
+                    seconds_spent: minutes * 60,
+                    microcards_reviews: dense && index > 22 ? 6 + (index % 5) : 0,
+                    microcards_correct: dense && index > 22 ? 4 + (index % 4) : 0,
+                    microcards_seconds_spent: dense && index > 22 ? 180 : 0,
+                    activity_attempts_total: attempts,
+                    activity_seconds_spent_total: minutes * 60,
+                    is_missed: !hasSignal && index < 29,
+                    is_today: isToday,
+                    is_future: false,
+                };
+            });
+        }
+
+        function createCalendarPreviewSchedule(tasksByDay) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const dayNames = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+
+            return Array.from({ length: 7 }, (_, index) => {
+                const date = new Date(today);
+                date.setDate(today.getDate() + index);
+                const tasks = tasksByDay[index] || [];
+
+                return {
+                    date: formatIsoDate(date),
+                    day_name: index === 0 ? 'Сегодня' : index === 1 ? 'Завтра' : dayNames[date.getDay()],
+                    day_num: date.getDate(),
+                    month: date.toLocaleDateString('ru', { month: 'short' }),
+                    status: tasks.length ? 'planned' : 'empty',
+                    tasks,
+                    all_tasks: tasks,
+                    badges: tasks.length ? ['Повтор', 'Запланировано'] : [],
+                    is_today: index === 0,
+                    is_future: index > 0,
+                    is_empty_placeholder: tasks.length === 0,
+                };
+            });
+        }
+
+        function createCalendarPreviewTask(complex, index, completed = false) {
+            return {
+                name: complex.name,
+                complex_name: complex.name,
+                complex_id: complex.complex_id,
+                is_completed: completed,
+                task_id: `${complex.complex_id}-${index}`,
+            };
+        }
+
+        function getCalendarPreviewMasteryRank(complex) {
+            const health = Math.max(0, Math.min(100, Number(complex.health_percent || 0)));
+            if (health < 50) return 0;
+            if (health < 70) return 1;
+            if (health < 85) return 2;
+            if (health < 95) return 3;
+            return 4;
+        }
+
+        function getCalendarPreviewReviewOffsets(complex, daysCount = 7) {
+            const health = Math.max(0, Math.min(100, Number(complex.health_percent || 0)));
+            const dueOffset = Math.max(0, Number(complex.preview_due_offset || 0));
+            if (dueOffset >= daysCount) return [];
+
+            const rank = getCalendarPreviewMasteryRank(complex);
+            let spacing;
+            if (rank === 0) {
+                spacing = health < 35 ? [0, 1, 2, 4, 6] : [0, 1, 3, 6];
+            } else if (rank === 1) {
+                spacing = health < 65 ? [0, 1, 3, 6] : [0, 2, 5];
+            } else if (rank === 2) {
+                spacing = [0, 3, 6];
+            } else {
+                spacing = [0];
+            }
+
+            return spacing
+                .map((delta) => dueOffset + delta)
+                .filter((offset, index, offsets) => offset < daysCount && offsets.indexOf(offset) === index);
+        }
+
+        function buildCalendarPreviewTasksByDay(complexes, mode) {
+            const daysCount = 7;
+            const maxComplexesPerDay = 4;
+            const tasksByDay = Array.from({ length: daysCount }, () => []);
+            const candidates = [];
+
+            complexes.forEach((complex) => {
+                const rank = getCalendarPreviewMasteryRank(complex);
+                getCalendarPreviewReviewOffsets(complex, daysCount).forEach((offset) => {
+                    candidates.push({
+                        offset,
+                        complex,
+                        priority: [rank, complex.health_percent || 0, complex.complex_id || ''],
+                    });
+                });
+            });
+
+            candidates.sort((a, b) => {
+                if (a.offset !== b.offset) return a.offset - b.offset;
+                if (a.priority[0] !== b.priority[0]) return a.priority[0] - b.priority[0];
+                if (a.priority[1] !== b.priority[1]) return a.priority[1] - b.priority[1];
+                return String(a.priority[2]).localeCompare(String(b.priority[2]));
+            });
+
+            candidates.forEach((candidate) => {
+                let targetOffset = candidate.offset;
+                while (targetOffset < daysCount) {
+                    const dayTasks = tasksByDay[targetOffset];
+                    const alreadyPlanned = dayTasks.some((task) => task.complex_id === candidate.complex.complex_id);
+                    if (!alreadyPlanned && dayTasks.length < maxComplexesPerDay) {
+                        dayTasks.push(createCalendarPreviewTask(
+                            candidate.complex,
+                            targetOffset,
+                            mode === 'qa-heavy' && targetOffset === 0 && dayTasks.length === 0
+                        ));
+                        return;
+                    }
+                    targetOffset += 1;
+                }
+            });
+
+            return tasksByDay;
+        }
+
+        function applyCalendarQaPreviewState(mode) {
+            if (mode === 'prod-empty' || mode === 'qa-empty') {
+                applyProdEmptyPreviewState();
+                return;
+            }
+
+            const baseComplexes = [
+                { complex_id: 'qa-anatomy', name: 'Анатомия: базовый блок', health_percent: 62, is_critical: true, status: 'in_progress', recovery_time: 'срочно' },
+                { complex_id: 'qa-physiology', name: 'Физиология крови и дыхания', health_percent: 78, is_critical: false, status: 'in_progress', recovery_time: '2 дня' },
+                { complex_id: 'qa-biochem', name: 'Биохимия ферментов', health_percent: 87, is_critical: false, status: 'in_progress', recovery_time: 'держится' },
+                { complex_id: 'qa-neuro', name: 'Нейрофизиология: длинное название комплекса', health_percent: 54, is_critical: true, status: 'in_progress', recovery_time: 'сегодня' },
+                { complex_id: 'qa-histo', name: 'Гистология тканей', health_percent: 93, is_critical: false, status: 'mastered', recovery_time: 'стабильно' },
+            ];
+            const heavyComplexes = [
+                ...baseComplexes,
+                { complex_id: 'qa-pharma', name: 'Фармакология: рецепторы', health_percent: 38, is_critical: true, status: 'in_progress', recovery_time: 'срочно' },
+                { complex_id: 'qa-genetics', name: 'Генетика наследования', health_percent: 47, is_critical: true, status: 'in_progress', recovery_time: 'сегодня' },
+                { complex_id: 'qa-immunity', name: 'Иммунология воспаления', health_percent: 66, is_critical: false, status: 'in_progress', recovery_time: 'завтра' },
+                { complex_id: 'qa-embryology', name: 'Эмбриология органов', health_percent: 74, is_critical: false, status: 'in_progress', recovery_time: '3 дня' },
+            ];
+            const heavy = mode === 'qa-heavy';
+            const activeComplexes = mode === 'qa-single' ? baseComplexes.slice(0, 1) : (heavy ? heavyComplexes : baseComplexes);
+            const tasksByDay = buildCalendarPreviewTasksByDay(activeComplexes, mode);
+
+            state.hasData = true;
+            state.settings.daily_time_limit_minutes = heavy ? 45 : 30;
+            state.settings.schedule_mode = 'daily';
+            state.settings.streak_days = heavy ? 11 : 4;
+            state.daily_plan = {
+                daily_mix_count: heavy ? 8 : (mode === 'qa-single' ? 1 : 3),
+                daily_mix_minutes: heavy ? 22 : 10,
+                daily_mix_estimated_minutes: heavy ? 24 : 12,
+                main_focus_name: mode === 'qa-single' ? activeComplexes[0].name : activeComplexes[1].name,
+                main_focus_count: heavy ? 7 : (mode === 'qa-single' ? 2 : 4),
+                main_focus_minutes: heavy ? 20 : 14,
+                main_focus_estimated_minutes: heavy ? 21 : 15,
+                is_adapted: true,
+            };
+            state.health_summary = {
+                overall_health: mode === 'qa-single' ? 0.62 : (heavy ? 0.68 : 0.79),
+                complexes: activeComplexes,
+                critical_count: activeComplexes.filter((complex) => complex.is_critical).length,
+            };
+            state.schedule = createCalendarPreviewSchedule(tasksByDay);
+            state.activity = createCalendarPreviewActivity(heavy ? 'heavy' : 'light');
+            state.notifications = heavy
+                ? [{
+                    title: 'Есть материал для срочного повтора',
+                    message: 'Самые слабые комплексы лучше освежить сегодня.',
+                    action_type: 'fix',
+                    action_data: { complex_id: activeComplexes[0].complex_id },
+                }]
+                : [];
+            state.complexes = activeComplexes.map((complex) => ({
+                id: complex.complex_id,
+                complex_id: complex.complex_id,
+                name: complex.name,
+                status: complex.status,
+            }));
+            state.restDays = {};
+            state.microcardsSummary = heavy
+                ? {
+                    ok: true,
+                    queue_summary: {
+                        cards_due_total: 18,
+                        cards_new_total: 7,
+                    },
+                    today: {
+                        reviews: 24,
+                        correct_rate: 0.83,
+                    },
+                    totals: {
+                        reviews: 24,
+                    },
+                }
+                : null;
         }
 
         function setupCalendarLoadingLogo() {
@@ -880,9 +1122,9 @@
 
             try {
 
-                if (isProdEmptyPreview()) {
+                if (isCalendarQaPreview()) {
 
-                    applyProdEmptyPreviewState();
+                    applyCalendarQaPreviewState(CALENDAR_PREVIEW_MODE);
 
                     return;
 
@@ -1151,25 +1393,42 @@
 
                     setCalendarInitialLoading(false);
 
+                    window.PageBoot?.ready();
+
                 }
 
             }
 
         }
 
+        function clearScheduleError() {
+
+            document.querySelectorAll('.schedule-error-banner').forEach((banner) => banner.remove());
+
+        }
+
+        function isCalendarOnboardingActive() {
+
+            return document.body.dataset.onboardingTourId === 'calendar-daily-plan'
+                || document.body.dataset.calendarOnboardingDemo === 'true';
+
+        }
+
         function showScheduleError(message) {
+
+            if (isCalendarOnboardingActive()) {
+
+                clearScheduleError();
+
+                return;
+
+            }
 
             // Show error banner above schedule strip
 
             const scheduleSection = document.querySelector('#schedule-strip').parentElement;
 
-            const existingError = scheduleSection.querySelector('.schedule-error-banner');
-
-            if (existingError) {
-
-                existingError.remove();
-
-            }
+            clearScheduleError();
 
             const errorBanner = document.createElement('div');
 
@@ -1746,7 +2005,11 @@
 
                 if (dailyMixReasonEl) {
 
-                    dailyMixReasonEl.textContent = activeComplexes.length > 1
+                    dailyMixReasonEl.textContent = document.body.dataset.calendarOnboardingDemo === 'true'
+
+                        ? 'Сначала закрываем повторы, пока память не начала проседать.'
+
+                        : activeComplexes.length > 1
 
                         ? 'Подборка собрана из активных комплексов, чтобы не копить отложенные повторы.'
 
@@ -1839,6 +2102,10 @@
         function renderMicrocardsTodaySummary() {
             const container = document.getElementById('microcards-today-summary');
             if (!container) return;
+
+            container.innerHTML = '';
+            container.classList.add('hidden');
+            return;
 
             const mc = state.microcardsSummary;
             if (!mc || !mc.queue_summary) {
@@ -1974,6 +2241,18 @@
 
             };
 
+            const getRepeatWord = (count) => {
+
+                const abs = Math.abs(count) % 100;
+                const mod = abs % 10;
+
+                if (abs > 10 && abs < 20) return 'повторов';
+                if (mod > 1 && mod < 5) return 'повтора';
+                if (mod === 1) return 'повтор';
+                return 'повторов';
+
+            };
+
             const isScheduleEmpty = state.schedule.every(d => {
 
                 const tasks = Array.isArray(d.tasks) ? d.tasks : [];
@@ -2025,7 +2304,7 @@
             const headerMeta = document.getElementById('schedule-header-meta');
             if (headerMeta) {
                 headerMeta.textContent = plannedDays > 0
-                    ? `${plannedDays} дней с повторами · ${totalItems} ${getComplexWord(totalItems)}`
+                    ? `${plannedDays} дней с повторами · ${totalItems} ${getRepeatWord(totalItems)}`
                     : 'Повторов на неделю нет';
             }
 
@@ -2074,11 +2353,47 @@
                 )];
                 const taskCount = Math.max(allTasks.length, complexNames.length);
                 const completedCount = allTasks.filter((task) => task.is_completed).length;
-                const visibleDots = Math.min(taskCount, 3);
+                const visibleDots = Math.min(taskCount, 4);
                 const hiddenDotCount = Math.max(0, taskCount - visibleDots);
                 const detailTitle = complexNames.length > 0
                     ? complexNames.join(', ')
                     : (isMissed ? 'План не выполнен' : 'Повторов нет');
+
+                const compactBadgeLabel = (badge) => {
+                    const normalized = String(badge || '').trim();
+                    const labelMap = {
+                        'Повтор': 'Повтор',
+                        'Повторы': 'Повтор',
+                        'Фокус дня': 'Фокус',
+                        'Запланировано': 'План',
+                        'Пересчитано': 'Обновлено',
+                        'Пропущено': 'Пропуск',
+                        'Нет данных': 'Нет данных',
+                    };
+                    return labelMap[normalized] || normalized;
+                };
+
+                const compactBadges = [...new Set((day.badges || [])
+                    .map(compactBadgeLabel)
+                    .filter((badge) => badge !== 'Повтор')
+                    .filter(Boolean)
+                )];
+                const visibleBadgeLimit = taskCount >= 5 ? 0 : 1;
+                const visibleBadgeLabels = compactBadges.slice(0, visibleBadgeLimit);
+                const hiddenBadgeCount = Math.max(0, compactBadges.length - visibleBadgeLabels.length);
+                const completedLabel = completedCount > 0
+                    ? `${completedCount}/${taskCount} готово`
+                    : '';
+                const metaSegments = [];
+                if (!isMissed) {
+                    visibleBadgeLabels.forEach((badge) => metaSegments.push(badge));
+                    if (hiddenBadgeCount > 0 && taskCount < 5) metaSegments.push(`+${hiddenBadgeCount}`);
+                    if (completedLabel) metaSegments.push(completedLabel);
+                }
+                const metaLine = metaSegments.join(' · ');
+                const cardDensityClass = taskCount >= 5
+                    ? 'schedule-card-v2--dense'
+                    : (taskCount >= 3 ? 'schedule-card-v2--stacked' : '');
 
                 const statusMeta = (() => {
                     if (isEmptyPlaceholder && isToday) return { icon: 'play_circle', label: 'Начать', tone: 'active' };
@@ -2088,28 +2403,8 @@
                     if (isMissed) return { icon: 'warning', label: 'Пропущено', tone: 'danger' };
                     if (taskCount > 0 && completedCount >= taskCount) return { icon: 'check_circle', label: 'Готово', tone: 'good' };
                     if (isToday && taskCount > 0) return { icon: 'play_circle', label: 'Сегодня', tone: 'active' };
-                    if (taskCount > 0) return { icon: 'schedule', label: day.is_future ? 'Запланировано' : 'Было в плане', tone: 'planned' };
+                    if (taskCount > 0) return { icon: 'schedule', label: day.is_future ? 'План' : 'Было в плане', tone: 'planned' };
                     return { icon: 'event_available', label: day.is_future ? 'Свободно' : 'Нет задач', tone: 'muted' };
-                })();
-
-                const badgesHtml = (() => {
-
-                    const list = [...(day.badges || [])];
-                    if (isMissed) return '';
-
-                    return list.map((badge) => {
-
-                        let badgeClass = 'pill-neutral pill-sm';
-                        const badgeLabel = escapeHtml(badge);
-
-                        if (badge === 'Пропущено') badgeClass = 'pill-error pill-sm';
-                        if (badge === 'Пересчитано') badgeClass = 'pill-info pill-sm';
-                        if (badge === 'Нет данных') badgeClass = 'pill-warning pill-sm';
-
-                        return `<span class="${badgeClass}">${badgeLabel}</span>`;
-
-                    }).join('');
-
                 })();
 
                 const restToggleHtml = canToggleRest ? `
@@ -2130,7 +2425,7 @@
 
                 return `
 
-            <article class="card-elevated schedule-card schedule-card-v2 ${stateClass} ${bgClass} ${borderClass}" title="${escapeHtml(detailTitle)}">
+            <article class="card-elevated schedule-card schedule-card-v2 ${cardDensityClass} ${stateClass} ${bgClass} ${borderClass}" title="${escapeHtml(detailTitle)}">
 
                 ${extraContent}
 
@@ -2155,16 +2450,21 @@
 
                         <div class="schedule-plan-kind">
                             <span class="material-symbols-outlined">replay</span>
-                            <span>к повторению</span>
+                            <span>Повтор</span>
                         </div>
 
                         <div class="schedule-plan-dots" aria-label="${escapeHtml(`${taskCount} ${getComplexWord(taskCount)}`)}">
                             ${Array.from({ length: visibleDots }, (_, index) => `<span class="schedule-plan-dot ${index < completedCount ? 'is-complete' : ''}"></span>`).join('')}
-                            ${hiddenDotCount > 0 ? '<span class="schedule-plan-dot-more">+</span>' : ''}
+                            ${hiddenDotCount > 0 ? `<span class="schedule-plan-dot-more">+${hiddenDotCount}</span>` : ''}
                         </div>
+
+                        ${metaLine ? `
+                            <div class="schedule-card-v2__meta">
+                                <span class="schedule-card-v2__meta-text">${escapeHtml(metaLine)}</span>
+                            </div>
+                        ` : ''}
                     ` : `
                         <div class="schedule-plan-empty">
-                            <span class="material-symbols-outlined">${statusMeta.icon}</span>
                             ${isEmptyPlaceholder && isToday
                                 ? `<button type="button" data-nav-target="/ui/complexes" class="schedule-plan-empty__action">Запустить комплекс</button>`
                                 : `<span>${isRestDay ? 'День без нагрузки' : isMissed ? 'План не выполнен' : isEmptyPlaceholder && day.is_future ? 'Будет доступно' : 'Повторов нет'}</span>`}
@@ -2177,7 +2477,6 @@
                     <footer class="schedule-card-v2__status schedule-card-v2__status--${statusMeta.tone}">
                         <span class="material-symbols-outlined">${statusMeta.icon}</span>
                         <span>${statusMeta.label}</span>
-                        ${badgesHtml ? `<span class="schedule-card-v2__badges">${badgesHtml}</span>` : ''}
                     </footer>
                 `}
 
@@ -2415,25 +2714,35 @@
 
             if (hasMissed && state.daily_plan.is_adapted) {
 
+                if (state.ui.activityMissBannerDismissed) {
+                    container.classList.add('hidden');
+                    container.innerHTML = '';
+                    return;
+                }
+
                 // Missed day message
 
                 container.innerHTML = `
 
-            <div class="flex items-start gap-4 p-4 rounded-xl bg-bg-secondary border border-border-subtle shadow-sm animate-slide-in">
+            <div class="activity-alert activity-alert--missed animate-slide-in">
 
-                <div class="flex items-center justify-center size-10 rounded-full bg-secondary-lighter text-secondary shrink-0">
+                <div class="activity-alert__icon">
 
                     <span class="material-symbols-outlined">event_busy</span>
 
                 </div>
 
-                <div class="flex flex-col gap-1">
+                <div class="activity-alert__copy">
 
-                    <p class="text-sm text-text-main font-bold">Пропустили день? Это нормально!</p>
+                    <p class="activity-alert__title">Пропустили день? Это нормально!</p>
 
-                    <p class="text-xs text-text-secondary leading-relaxed"></p>
+                    <p class="activity-alert__text">План уже перестроен. Вернитесь коротким повтором, без накопления долга.</p>
 
                 </div>
+
+                <button type="button" class="activity-alert__dismiss" onclick="dismissActivityMissBanner()" aria-label="Скрыть уведомление">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
 
             </div>
 
@@ -2449,6 +2758,15 @@
 
             }
 
+        }
+
+        function dismissActivityMissBanner() {
+            state.ui.activityMissBannerDismissed = true;
+            localStorage.setItem(ACTIVITY_MISS_BANNER_DISMISSED_KEY, '1');
+            const container = document.getElementById('activity-banner');
+            if (!container) return;
+            container.classList.add('hidden');
+            container.innerHTML = '';
         }
 
         function renderNotificationCard() {
@@ -2547,8 +2865,8 @@
                         headline: `${criticalCount} ${getComplexWord(criticalCount)} проседают`,
                         compactHeadline: criticalCount === 1 ? 'Один комплекс проседает' : `${criticalCount} в зоне риска`,
                         subline: criticalCount === activeCount
-                            ? 'Лучше вернуть их в работу сегодня, чтобы не терять ритм.'
-                            : 'Остальная база держится лучше, но эти комплексы уже просят короткий повтор.',
+                            ? 'Короткий повтор вернёт ритм.'
+                            : 'Эти комплексы просят короткий повтор.',
                     };
                 }
 
@@ -2628,6 +2946,7 @@
             const setHealthEmptyState = ({ headline, subline }) => {
                 healthShell.classList.add('memory-health-shell--empty');
                 healthShell.classList.remove('memory-health-shell--compact');
+                healthShell.classList.remove('memory-health-shell--polished', 'memory-health-shell--sparse', 'memory-health-shell--single', 'memory-health-shell--short');
                 allActionEl.classList.add('is-hidden');
                 setRing(0, 'var(--color-bg-tertiary)');
                 setOverview({
@@ -2708,21 +3027,22 @@
             healthShell.classList.remove('memory-health-shell--empty');
 
             const shellWidth = Math.round(healthShell.getBoundingClientRect().width || window.innerWidth);
+            const shellHeight = Math.round(healthShell.getBoundingClientRect().height || 0);
             const compactHealthLayout = shellWidth < 420;
+            const shortHealthLayout = !compactHealthLayout && shellHeight > 0 && shellHeight < 150;
             healthShell.classList.toggle('memory-health-shell--compact', compactHealthLayout);
+            healthShell.classList.toggle('memory-health-shell--polished', !compactHealthLayout);
+            healthShell.classList.toggle('memory-health-shell--sparse', !compactHealthLayout && visibleComplexes.length <= 2);
+            healthShell.classList.toggle('memory-health-shell--single', !compactHealthLayout && visibleComplexes.length === 1);
+            healthShell.classList.toggle('memory-health-shell--short', shortHealthLayout);
             allActionEl.textContent = '\u0412\u0441\u0435';
             allActionEl.classList.remove('memory-health-overflow-action', 'memory-health-overflow-action--compact-sibling');
             allActionEl.classList.toggle('is-hidden', compactHealthLayout);
             if (!compactHealthLayout) {
                 allActionEl.classList.remove('is-hidden');
             }
-            const percent = Math.max(0, Math.min(100, Math.round((health.overall_health || 0) * 100)));
             const criticalCount = visibleComplexes.filter((complex) => complex.is_critical).length;
             const weakCount = visibleComplexes.filter((complex) => (complex.health_percent || 0) < 80 || complex.is_critical).length;
-            const statusMeta = getStatusMeta(percent, criticalCount, visibleComplexes.length);
-            const ringTone = statusMeta.tone === 'good'
-                ? 'var(--color-success)'
-                : (statusMeta.tone === 'steady' ? 'var(--color-primary)' : 'var(--color-error)');
 
             const sortedComplexes = [...visibleComplexes].sort((a, b) => {
                 if (Number(b.is_critical) !== Number(a.is_critical)) {
@@ -2730,6 +3050,14 @@
                 }
                 return (a.health_percent || 0) - (b.health_percent || 0);
             });
+
+            const aggregatePercent = Math.max(0, Math.min(100, Math.round((health.overall_health || 0) * 100)));
+            const weakestPercent = Math.max(0, Math.min(100, Math.round(sortedComplexes[0]?.health_percent ?? aggregatePercent)));
+            const percent = visibleComplexes.length > 1 ? weakestPercent : aggregatePercent;
+            const statusMeta = getStatusMeta(percent, criticalCount, visibleComplexes.length);
+            const ringTone = statusMeta.tone === 'good'
+                ? 'var(--color-success)'
+                : (statusMeta.tone === 'steady' ? 'var(--color-primary)' : 'var(--color-error)');
 
             const primaryComplex = sortedComplexes[0];
             const hiddenComplexCount = Math.max(0, sortedComplexes.length - 1);
@@ -2747,7 +3075,9 @@
                     ? (criticalCount > 0
                         ? 'Лучше быстро освежить самый слабый комплекс.'
                         : 'Достаточно поддерживать текущий ритм.')
-                    : statusMeta.subline,
+                    : (visibleComplexes.length === 1 && criticalCount > 0
+                        ? 'Повтор вернёт ритм.'
+                        : statusMeta.subline),
                 stats: [
                     { value: String(visibleComplexes.length), label: 'активно' },
                     { value: String(weakCount), label: 'в фокусе' },
@@ -2758,7 +3088,12 @@
                 const tone = getTone(complex.health_percent || 0, complex.is_critical);
                 const healthPercent = Math.max(0, Math.min(100, Math.round(complex.health_percent || 0)));
                 const safeComplexId = escapeHtml(complex.complex_id || '');
-                const safeComplexName = escapeHtml(complex.name || 'Комплекс');
+                const rawComplexName = complex.name || 'Комплекс';
+                const displayComplexName = hiddenComplexCount > 0 && rawComplexName.includes(':')
+                    ? rawComplexName.split(':')[0]
+                    : rawComplexName;
+                const safeComplexName = escapeHtml(displayComplexName);
+                const safeFullComplexName = escapeHtml(rawComplexName);
                 const safePercent = escapeHtml(healthPercent);
                 const actionLabel = complex.is_critical
                     ? 'Срочный повтор'
@@ -2768,10 +3103,11 @@
                 const toneText = complex.recovery_time
                     ? escapeHtml(complex.recovery_time)
                     : escapeHtml((complex.health_percent || 0) < 80 ? 'поддержать ритм' : 'держится стабильно');
+                const meterWidth = Math.max(4, Math.min(100, healthPercent));
 
                 return `
 
-            <button type="button" class="memory-health-action memory-health-action--${tone} memory-health-trigger" data-complex-id="${safeComplexId}" title="${safeComplexName}">
+            <button type="button" class="memory-health-action memory-health-action--${tone} memory-health-trigger" data-complex-id="${safeComplexId}" title="${safeFullComplexName}">
 
                 <div class="memory-health-action__copy">
 
@@ -2787,6 +3123,64 @@
 
                     <span class="memory-health-action__meta">${toneText}</span>
 
+                </div>
+
+                <div class="memory-health-action__meter" aria-hidden="true">
+                    <span style="width: ${meterWidth}%"></span>
+                </div>
+
+            </button>
+
+        `;
+            };
+
+            const renderStackAction = (complex) => {
+                const tone = getTone(complex.health_percent || 0, complex.is_critical);
+                const healthPercent = Math.max(0, Math.min(100, Math.round(complex.health_percent || 0)));
+                const safeComplexId = escapeHtml(complex.complex_id || '');
+                const rawComplexName = complex.name || '\u041a\u043e\u043c\u043f\u043b\u0435\u043a\u0441';
+                let displayComplexName = rawComplexName.includes(':')
+                    ? rawComplexName.split(':')[0]
+                    : rawComplexName;
+                if (displayComplexName.length > 20) {
+                    const nameParts = displayComplexName.split(/\s+/).filter(Boolean);
+                    displayComplexName = nameParts.length > 1
+                        ? nameParts.slice(0, 2).join(' ')
+                        : `${displayComplexName.slice(0, 20)}\u2026`;
+                }
+                const safeComplexName = escapeHtml(displayComplexName);
+                const safeFullComplexName = escapeHtml(rawComplexName);
+                const safePercent = escapeHtml(healthPercent);
+                const actionLabel = complex.is_critical
+                    ? '\u0421\u0440\u043e\u0447\u043d\u044b\u0439 \u043f\u043e\u0432\u0442\u043e\u0440'
+                    : '\u041f\u043e\u0432\u0442\u043e\u0440';
+                const toneText = complex.recovery_time
+                    ? escapeHtml(complex.recovery_time)
+                    : escapeHtml((complex.health_percent || 0) < 80 ? '\u0441\u0435\u0433\u043e\u0434\u043d\u044f' : '\u0434\u0435\u0440\u0436\u0438\u0442\u0441\u044f');
+                const meterWidth = Math.max(4, Math.min(100, healthPercent));
+
+                return `
+
+            <button type="button" class="memory-health-action memory-health-action--${tone} memory-health-action--stack-item memory-health-trigger" data-complex-id="${safeComplexId}" title="${safeFullComplexName}">
+
+                <div class="memory-health-action__copy">
+
+                    <span class="memory-health-action__label">${escapeHtml(actionLabel)}</span>
+
+                    <span class="memory-health-action__name">${safeComplexName}</span>
+
+                </div>
+
+                <div class="memory-health-action__side">
+
+                    <span class="memory-health-action__percent">${safePercent}%</span>
+
+                    <span class="memory-health-action__meta">${toneText}</span>
+
+                </div>
+
+                <div class="memory-health-action__meter" aria-hidden="true">
+                    <span style="width: ${meterWidth}%"></span>
                 </div>
 
             </button>
@@ -2839,7 +3233,12 @@
                 const tone = getTone(complex.health_percent || 0, complex.is_critical);
                 const healthPercent = Math.max(0, Math.min(100, Math.round(complex.health_percent || 0)));
                 const safeComplexId = escapeHtml(complex.complex_id || '');
-                const safeComplexName = escapeHtml(complex.name || 'РљРѕРјРїР»РµРєСЃ');
+                const rawName = complex.name || 'Комплекс';
+                let shortName = rawName.includes(':') ? rawName.split(':')[0] : rawName;
+                if (shortName.length > 16) {
+                    shortName = shortName.split(' ')[0] || shortName.slice(0, 16);
+                }
+                const safeComplexName = escapeHtml(shortName);
 
                 return `
 
@@ -2850,6 +3249,26 @@
                 <span class="memory-health-chip__percent">${escapeHtml(healthPercent)}%</span>
 
             </button>
+
+        `;
+            };
+
+            const renderGuidance = () => {
+                const message = criticalCount > 0
+                    ? 'Короткий повтор сегодня удержит комплекс в рабочем ритме.'
+                    : hiddenComplexCount > 0
+                    ? 'Сначала разберите самый слабый комплекс, остальные можно поддерживать следом.'
+                    : 'Память держится ровно. Достаточно не выпадать из ритма повторений.';
+
+                return `
+
+            <div class="memory-health-guidance">
+
+                <span class="material-symbols-outlined">tips_and_updates</span>
+
+                <span>${escapeHtml(message)}</span>
+
+            </div>
 
         `;
             };
@@ -2868,36 +3287,45 @@
                     allActionEl.classList.add('is-hidden');
                 }
             } else {
-                const secondaryVisibleCount = sortedComplexes.length > 3 ? 1 : 2;
-                const secondaryComplexes = sortedComplexes.slice(1, 1 + secondaryVisibleCount);
-                const hiddenSecondaryCount = Math.max(0, sortedComplexes.length - 1 - secondaryComplexes.length);
-                const secondaryItemCount = secondaryComplexes.length + (hiddenSecondaryCount > 0 ? 1 : 0);
-                const secondaryHtml = secondaryComplexes.length > 0 || hiddenSecondaryCount > 0
-                    ? `
-
-            <div class="memory-health-secondary${secondaryItemCount === 1 ? ' memory-health-secondary--single' : ''}">
-
-                ${secondaryComplexes.map(renderSecondaryChip).join('')}
-
-                ${hiddenSecondaryCount > 0 ? renderCompactOverflowAction(hiddenSecondaryCount) : ''}
-
-            </div>
-
-        `
-                    : '';
-
                 allActionEl.classList.add('is-hidden');
-                list.innerHTML = `
+                if (visibleComplexes.length > 1) {
+                    const rightPaneHeight = Math.round(healthShell.getBoundingClientRect().height || 0);
+                    const maxStackRows = rightPaneHeight < 150 ? 2 : 4;
+                    const stackSource = (focusComplexes.length > 0 ? focusComplexes : sortedComplexes)
+                        .slice()
+                        .sort((a, b) => (b.health_percent || 0) - (a.health_percent || 0));
+                    let visibleStackCount = Math.min(stackSource.length, maxStackRows);
+                    let hiddenStackCount = Math.max(0, sortedComplexes.length - visibleStackCount);
+                    if (hiddenStackCount > 0) {
+                        visibleStackCount = Math.max(1, maxStackRows - 1);
+                    }
+                    const stackComplexes = stackSource.slice(0, visibleStackCount);
+                    hiddenStackCount = Math.max(0, sortedComplexes.length - stackComplexes.length);
 
-        <div class="memory-health-stack">
+                    list.innerHTML = `
 
-            ${renderPrimaryAction(primaryComplex)}
+        <div class="memory-health-stack memory-health-stack--list">
 
-            ${secondaryHtml}
+            ${stackComplexes.map(renderStackAction).join('')}
+
+            ${hiddenStackCount > 0 ? renderCompactOverflowAction(hiddenStackCount) : ''}
 
         </div>
 
     `;
+                } else {
+                    list.innerHTML = `
+
+        <div class="memory-health-stack${visibleComplexes.length <= 2 ? ' memory-health-stack--sparse' : ''}">
+
+            ${renderPrimaryAction(primaryComplex)}
+
+            ${visibleComplexes.length <= 2 ? renderGuidance() : ''}
+
+        </div>
+
+    `;
+                }
             }
 
             const reviewTriggers = list.querySelectorAll('.memory-health-trigger[data-complex-id]');
@@ -2961,7 +3389,7 @@
                 if (state.settings.daily_time_limit_minutes !== minutes) {
                     state.settings.daily_time_limit_minutes = previousMinutes;
                 } else {
-                    showNotification('Лимит сохранён, но план не удалось обновить сразу', 'warning');
+                    showNotification('Время сохранено, но план не удалось обновить сразу', 'warning');
                 }
 
             }
@@ -3028,6 +3456,7 @@
         function syncScheduleStripState() {
 
             const container = document.getElementById('schedule-strip');
+            const shell = container?.closest('.schedule-strip-shell');
             const prevBtn = document.getElementById('schedule-scroll-prev');
             const nextBtn = document.getElementById('schedule-scroll-next');
 
@@ -3040,13 +3469,18 @@
 
             container.classList.toggle('schedule-strip--centered', !hasOverflow);
             container.classList.toggle('schedule-strip--scrollable', hasOverflow);
+            if (shell) {
+                shell.classList.toggle('schedule-strip-shell--scrollable', hasOverflow);
+            }
 
             if (prevBtn) {
+                prevBtn.hidden = !hasOverflow;
                 prevBtn.disabled = atStart;
                 prevBtn.setAttribute('aria-disabled', atStart ? 'true' : 'false');
             }
 
             if (nextBtn) {
+                nextBtn.hidden = !hasOverflow;
                 nextBtn.disabled = atEnd;
                 nextBtn.setAttribute('aria-disabled', atEnd ? 'true' : 'false');
             }
@@ -3197,6 +3631,260 @@
 
         }
 
+        // =============================================================================
+
+        // ONBOARDING DEMO STATE
+
+        // =============================================================================
+
+        let calendarOnboardingSnapshot = null;
+
+        function cloneCalendarSnapshot() {
+            return {
+                loaded: state.loaded,
+                hasData: state.hasData,
+                settings: JSON.parse(JSON.stringify(state.settings || {})),
+                daily_plan: JSON.parse(JSON.stringify(state.daily_plan || {})),
+                health_summary: JSON.parse(JSON.stringify(state.health_summary || {})),
+                schedule: JSON.parse(JSON.stringify(state.schedule || [])),
+                activity: JSON.parse(JSON.stringify(state.activity || [])),
+                notifications: JSON.parse(JSON.stringify(state.notifications || [])),
+                complexes: JSON.parse(JSON.stringify(state.complexes || [])),
+                restDays: JSON.parse(JSON.stringify(state.restDays || {})),
+                microcardsSummary: state.microcardsSummary ? JSON.parse(JSON.stringify(state.microcardsSummary)) : null,
+            };
+        }
+
+        function restoreCalendarSnapshot(snapshot) {
+            if (!snapshot) return;
+            state.loaded = snapshot.loaded;
+            state.hasData = snapshot.hasData;
+            state.settings = snapshot.settings;
+            state.daily_plan = snapshot.daily_plan;
+            state.health_summary = snapshot.health_summary;
+            state.schedule = snapshot.schedule;
+            state.activity = snapshot.activity;
+            state.notifications = snapshot.notifications;
+            state.complexes = snapshot.complexes;
+            state.restDays = snapshot.restDays;
+            state.microcardsSummary = snapshot.microcardsSummary;
+        }
+
+        function createCalendarOnboardingActivity() {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const activeIndexes = new Map([
+                [20, { completion_percent: 42, tasks_count: 3 }],
+                [23, { completion_percent: 68, tasks_count: 5 }],
+                [25, { completion_percent: 100, tasks_count: 8 }],
+                [27, { completion_percent: 54, tasks_count: 4 }],
+                [29, { completion_percent: 82, tasks_count: 6 }],
+            ]);
+
+            return Array.from({ length: 30 }, (_, index) => {
+                const date = new Date(today);
+                date.setDate(today.getDate() - (29 - index));
+                const signal = activeIndexes.get(index) || {};
+                return {
+                    date: formatIsoDate(date),
+                    completion_percent: signal.completion_percent || 0,
+                    tasks_count: signal.tasks_count || 0,
+                    tasks_solved: signal.tasks_count || 0,
+                    tasks_attempted: signal.tasks_count || 0,
+                    seconds_spent: (signal.tasks_count || 0) * 210,
+                    microcards_reviews: index === 28 ? 12 : 0,
+                    activity_attempts_total: signal.tasks_count || 0,
+                    is_missed: index === 26,
+                    is_today: index === 29,
+                    is_future: false,
+                };
+            });
+        }
+
+        function createCalendarOnboardingSchedule() {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const dayNames = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+            const tasksByDay = [
+                [
+                    { name: 'Daily Mix', complex_name: 'Повторение ошибок', is_completed: false, complex_id: 'demo-repeat' },
+                    { name: 'Контрольные вопросы', complex_name: 'Laguskа Complex', is_completed: false, complex_id: 'demo-lagusa' },
+                ],
+                [
+                    { name: 'Короткий повтор', complex_name: 'Анатомия: базовый блок', is_completed: false, complex_id: 'demo-anatomy' },
+                ],
+                [],
+                [
+                    { name: 'Закрепление', complex_name: 'Физиология крови', is_completed: false, complex_id: 'demo-blood' },
+                ],
+                [],
+                [],
+                [
+                    { name: 'Финальное повторение', complex_name: 'Laguskа Complex', is_completed: false, complex_id: 'demo-lagusa' },
+                ],
+            ];
+
+            return Array.from({ length: 7 }, (_, index) => {
+                const date = new Date(today);
+                date.setDate(today.getDate() + index);
+                const tasks = tasksByDay[index] || [];
+                return {
+                    date: formatIsoDate(date),
+                    day_name: index === 0 ? 'Сегодня' : index === 1 ? 'Завтра' : dayNames[date.getDay()],
+                    day_num: date.getDate(),
+                    month: date.toLocaleDateString('ru', { month: 'short' }),
+                    status: tasks.length ? 'planned' : 'empty',
+                    tasks,
+                    all_tasks: tasks,
+                    badges: index === 0 ? ['Повтор', 'Фокус дня'] : (tasks.length ? ['Запланировано'] : []),
+                    is_today: index === 0,
+                    is_future: index > 0,
+                    is_empty_placeholder: false,
+                };
+            });
+        }
+
+        function restoreCalendarRecipeCardBaseMarkup() {
+            const dailyMixCard = document.getElementById('daily-mix-card');
+            const mainFocusCard = document.getElementById('main-focus-card');
+
+            if (dailyMixCard) {
+                dailyMixCard.classList.remove('cursor-default', 'calendar-summary-card--empty');
+                dailyMixCard.classList.add('cursor-pointer', 'calendar-summary-card--primary');
+                dailyMixCard.onclick = () => startSession('daily_mix');
+                dailyMixCard.innerHTML = `
+                    <div class="calendar-card-body flex-1 flex flex-col justify-between gap-3">
+                        <div>
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="material-symbols-outlined text-primary text-[20px]">cached</span>
+                                <span id="daily-mix-badge" class="pill-kicker pill-sm pill-neutral">Повторение</span>
+                            </div>
+                            <h3 class="text-lg font-bold text-text-main mb-1">Daily Mix</h3>
+                            <p id="daily-mix-desc" class="text-text-secondary text-sm">Персонализированная подборка для закрепления материала.</p>
+                            <p id="daily-mix-reason" class="mt-2 text-xs font-medium text-text-muted">Сначала закрываем повторы, чтобы не копить просадки по памяти.</p>
+                        </div>
+                        <div class="flex items-end justify-between">
+                            <div class="flex flex-col">
+                                <span id="daily-mix-count" class="text-xl font-bold text-text-main">0</span>
+                                <span id="daily-mix-time" class="text-xs text-text-secondary">задач (~0 мин)</span>
+                            </div>
+                            <button class="btn-secondary flex items-center gap-2 text-sm">
+                                <span class="material-symbols-outlined text-[18px]">play_circle</span>
+                                <span id="daily-mix-btn-text">Начать</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (mainFocusCard) {
+                mainFocusCard.classList.remove('cursor-default', 'calendar-summary-card--empty');
+                mainFocusCard.classList.add('cursor-pointer', 'calendar-summary-card--accent');
+                mainFocusCard.onclick = () => startSession('new_material');
+                mainFocusCard.innerHTML = `
+                    <div class="calendar-card-body flex-1 flex flex-col justify-between gap-3">
+                        <div>
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="material-symbols-outlined text-accent text-[20px]">school</span>
+                                <span id="main-focus-badge" class="pill-kicker pill-sm pill-neutral">Изучение</span>
+                            </div>
+                            <h3 id="main-focus-title" class="text-lg font-bold text-text-main mb-1">Новый комплекс</h3>
+                            <p id="main-focus-desc" class="text-text-secondary text-sm">Сегодняшние задачи вашего комплекса.</p>
+                        </div>
+                        <div class="flex items-end justify-between">
+                            <div class="flex flex-col">
+                                <span id="main-focus-count" class="text-xl font-bold text-text-main">0</span>
+                                <span id="main-focus-time" class="text-xs text-text-secondary">задач (~0 мин)</span>
+                            </div>
+                            <button class="btn-secondary flex items-center gap-2 text-sm">
+                                <span class="material-symbols-outlined text-[18px]">play_circle</span>
+                                Начать
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function applyCalendarOnboardingDemo(active) {
+            if (active && !calendarOnboardingSnapshot) {
+                clearScheduleError();
+                calendarOnboardingSnapshot = cloneCalendarSnapshot();
+                restoreCalendarRecipeCardBaseMarkup();
+                state.loaded = true;
+                state.hasData = true;
+                state.settings = {
+                    ...state.settings,
+                    daily_time_limit_minutes: 45,
+                    schedule_mode: 'daily',
+                    streak_days: 6,
+                };
+                state.daily_plan = {
+                    daily_mix_count: 7,
+                    daily_mix_minutes: 18,
+                    main_focus_name: 'Laguskа Complex',
+                    main_focus_count: 5,
+                    main_focus_minutes: 22,
+                    is_adapted: false,
+                };
+                state.health_summary = {
+                    overall_health: 74,
+                    critical_count: 1,
+                    complexes: [
+                        { complex_id: 'demo-lagusa', name: 'Laguskа Complex', health_percent: 58, is_critical: true, status: 'in_progress', recovery_time: 'срочно' },
+                        { complex_id: 'demo-anatomy', name: 'Анатомия: базовый блок', health_percent: 81, is_critical: false, status: 'in_progress', recovery_time: '2 дня' },
+                        { complex_id: 'demo-blood', name: 'Физиология крови', health_percent: 92, is_critical: false, status: 'mastered', recovery_time: 'держится' },
+                    ],
+                };
+                state.schedule = createCalendarOnboardingSchedule();
+                state.activity = createCalendarOnboardingActivity();
+                state.notifications = [
+                    {
+                        title: 'Есть материал для короткого повтора',
+                        message: 'Один комплекс просел по памяти. Лучше освежить его сегодня.',
+                        action_type: 'fix',
+                    },
+                ];
+                state.complexes = state.health_summary.complexes.map((complex) => ({
+                    id: complex.complex_id,
+                    name: complex.name,
+                    status: complex.status,
+                }));
+                state.restDays = {};
+                state.microcardsSummary = {
+                    due_count: 12,
+                    new_count: 4,
+                    estimated_minutes: 8,
+                };
+                document.body.dataset.calendarOnboardingDemo = 'true';
+                clearScheduleError();
+                renderAll();
+                return;
+            }
+
+            if (!active && calendarOnboardingSnapshot) {
+                restoreCalendarSnapshot(calendarOnboardingSnapshot);
+                calendarOnboardingSnapshot = null;
+                delete document.body.dataset.calendarOnboardingDemo;
+                restoreCalendarRecipeCardBaseMarkup();
+                renderAll();
+            }
+        }
+
+        function setupCalendarOnboardingDemoObserver() {
+            const sync = () => {
+                const active = document.body.dataset.onboardingTourId === 'calendar-daily-plan';
+                applyCalendarOnboardingDemo(active);
+            };
+
+            const observer = new MutationObserver(sync);
+            observer.observe(document.body, {
+                attributes: true,
+                attributeFilter: ['data-onboarding-tour-id', 'data-onboarding-step-id'],
+            });
+            sync();
+        }
+
         // Drag scroll for schedule strip
 
         function setupDragScroll() {
@@ -3304,6 +3992,7 @@
         document.addEventListener('DOMContentLoaded', () => {
 
             setupCalendarLoadingLogo();
+            setupCalendarOnboardingDemoObserver();
 
             loadUserAvatar();
 
@@ -3327,9 +4016,12 @@
 
     </script>
 
+    <script src="/assets/PageBoot.js"></script>
     <script src="../assets/SharedProfileModal.js"></script>
     <script src="../assets/ThemeSwitcherUI.js"></script>
     <script src="../assets/ConnectionMonitor.js"></script>
+    <script src="/assets/onboarding_tours.js?v=calendar-onboarding-11"></script>
+    <script src="/assets/OnboardingTour.js?v=calendar-onboarding-11"></script>
 
 </body>
 

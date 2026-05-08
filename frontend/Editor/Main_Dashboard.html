@@ -46,7 +46,8 @@
     </script>
     <script src="ai_ux_messages.js?v=1"></script>
     <script src="import_manager.js?v=3" defer></script>
-    <script src="dashboard.js?v=9" defer></script>
+    <script src="../../assets/PremiumPromoModal.js" defer></script>
+    <script src="dashboard.js?v=14" defer></script>
 
     <link href="../../assets/tailwind.css" rel="stylesheet" />
     <link href="../../assets/fonts.css" rel="stylesheet" />
@@ -54,6 +55,7 @@
     <link href="../../assets/lightB-components.css" rel="stylesheet" />
     <link href="../../assets/global-header.css" rel="stylesheet" />
     <link href="../../assets/animations.css" rel="stylesheet" />
+    <link href="/assets/onboarding-tour.css?v=editor-dashboard-onboarding-31" rel="stylesheet" />
     <style>
         .editor-sidebar-action-label {
             display: block;
@@ -529,13 +531,14 @@
 <body
     class="bg-bg-main text-text-main h-screen overflow-hidden flex flex-col font-display antialiased selection:bg-primary-lighter selection:text-primary-dark">
     <div data-global-header data-app-section="editor"></div>
-    <div class="editor-dashboard-shell relative flex min-h-0 overflow-hidden">
+    <div class="editor-dashboard-shell relative flex min-h-0 overflow-hidden" data-onboarding-target="editor-dashboard-shell">
     <aside id="editor-sidebar"
         class="editor-dashboard-sidebar bg-surface-1 border-r border-border-subtle flex flex-col shrink-0 z-20 h-full editor-sidebar-enter"
+        data-onboarding-target="editor-dashboard-sidebar"
         style="width: var(--sidebar-width, 250px);">
-        <div class="flex-1 overflow-y-auto pt-4 no-scrollbar">
-            <div class="px-4 mb-4">
-                <button onclick="dashboard.showModuleModal()"
+        <div class="flex-1 min-h-0 overflow-y-auto pt-4 no-scrollbar">
+            <div class="px-4 mb-4" data-onboarding-target="editor-sidebar-actions">
+                <button onclick="dashboard.showModuleModal()" data-onboarding-target="editor-new-module-action"
                     class="flex items-center justify-center gap-2 w-full px-3 py-2 bg-surface-2 border border-border-subtle text-text-secondary hover:text-primary hover:border-primary hover:bg-bg-hover rounded-lg transition-all shadow-sm group">
                     <span
                         class="material-symbols-outlined text-[18px] group-hover:scale-110 transition-transform">add_circle</span>
@@ -544,6 +547,7 @@
             </div>
             <div class="px-4 mb-4">
                 <button onclick="dashboard.showImportModal()" data-role="open-import-modal"
+                    data-onboarding-target="editor-import-action"
                     class="flex items-center justify-center gap-2 w-full px-3 py-2 bg-surface-2 border border-border-subtle text-text-secondary hover:text-primary hover:border-primary hover:bg-bg-hover rounded-lg transition-all shadow-sm group">
                     <span
                         class="material-symbols-outlined text-[18px] group-hover:scale-110 transition-transform">upload_file</span>
@@ -551,16 +555,18 @@
                 </button>
             </div>
             <div class="px-4 mb-4">
-                <button onclick="dashboard.showTheoryAnalysisModal()"
+                <button onclick="dashboard.showTheoryAnalysisModal()" data-onboarding-target="editor-analysis-action"
+                    title="Анализ теории через внешний ИИ"
                     class="flex items-center justify-center gap-2 w-full px-3 py-2 bg-surface-2 border border-border-subtle text-text-secondary hover:text-primary hover:border-primary hover:bg-bg-hover rounded-lg transition-all shadow-sm group">
                     <span
                         class="material-symbols-outlined text-[18px] group-hover:scale-110 transition-transform">analytics</span>
-                    <span class="editor-sidebar-action-label text-xs font-bold uppercase tracking-wider">Анализ теории</span>
+                    <span class="editor-sidebar-action-label text-xs font-bold uppercase tracking-wider">Анализ теории · ИИ</span>
                 </button>
             </div>
 
             <div class="px-4 mb-4">
                 <button data-role="open-recovery-center"
+                    data-onboarding-target="editor-drafts-action"
                     class="flex items-center justify-center gap-2 w-full px-3 py-2 bg-surface-2 border border-border-subtle text-text-secondary hover:text-primary hover:border-primary hover:bg-bg-hover rounded-lg transition-all shadow-sm group">
                     <span
                         class="material-symbols-outlined text-[18px] group-hover:scale-110 transition-transform">history</span>
@@ -569,16 +575,11 @@
             </div>
             <div id="editor-workspace-shortcuts" class="px-4 mb-4"></div>
             <!-- Dynamic Module List Container -->
-            <div class="flex flex-col gap-1 px-3">
+            <div class="flex flex-col gap-1 px-3"
+                data-onboarding-target="editor-module-tree"
+                data-onboarding-clone-variant="editor-module-tree">
                 <!-- Modules will be injected here by dashboard.js -->
             </div>
-        </div>
-        <div class="p-4 border-t border-border-subtle">
-            <button id="theory-center-sidebar-btn" type="button"
-                class="flex w-full items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-sm font-semibold text-text-secondary hover:text-primary hover:bg-bg-hover transition-colors min-w-0">
-                <span class="material-symbols-outlined text-[18px] shrink-0">hub</span>
-                <span class="editor-sidebar-action-label truncate">Центр теории</span>
-            </button>
         </div>
     </aside>
     <!-- Sidebar Resizer Handle -->
@@ -649,13 +650,17 @@
     </div>
     <main class="flex-1 flex flex-col h-full overflow-hidden relative">
         <header
-            class="editor-workspace-toolbar flex items-center justify-between bg-surface-1 border-b border-border-subtle shrink-0 sticky top-0 z-10 transition-colors">
+            class="editor-workspace-toolbar flex items-center justify-between bg-surface-1 border-b border-border-subtle shrink-0 sticky top-0 z-10 transition-colors"
+            data-onboarding-target="editor-workspace-toolbar"
+            data-onboarding-spotlight="frame">
             <nav id="header-breadcrumbs"
+                data-onboarding-target="editor-breadcrumbs"
                 class="editor-workspace-breadcrumbs flex shrink-1 min-w-0 flex-1">
                 <span class="cursor-pointer hover:text-primary transition-colors">Библиотека</span>
             </nav>
             <div class="editor-header-actions flex items-center gap-4 justify-end min-w-0 shrink-0">
-                <div class="editor-toolbar-search relative search-container-expanding shrink-0 rounded-lg">
+                <div class="editor-toolbar-search relative search-container-expanding shrink-0 rounded-lg"
+                    data-onboarding-target="editor-search">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <span class="material-symbols-outlined text-[20px] text-text-muted">search</span>
                     </div>
@@ -663,7 +668,7 @@
                         class="block w-full pl-10 pr-4 outline-none focus:ring-0"
                         placeholder="Поиск заданий, модулей или файлов..." type="text" />
                 </div>
-                <div class="relative shrink-0" data-role="sort-controller">
+                <div class="relative shrink-0" data-role="sort-controller" data-onboarding-target="editor-sort">
                     <button data-role="sort-toggle"
                         class="editor-toolbar-sort flex items-center gap-2 text-text-secondary hover:text-primary hover:border-primary transition-colors shadow-sm whitespace-nowrap shrink-0">
                         <span class="material-symbols-outlined text-[20px] text-text-secondary">sort</span>
@@ -705,9 +710,12 @@
         </header>
         <div class="editor-content-area flex-1 overflow-y-auto editor-content-enter">
             <!-- Dynamic Grid Container -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6 max-w-7xl mx-auto pb-10">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6 max-w-7xl mx-auto pb-10"
+                data-onboarding-target="editor-task-grid">
                 <!-- Tasks will be injected here by dashboard.js -->
                 <button data-role="create-task-card"
+                    data-onboarding-target="editor-create-task-card"
+                    data-onboarding-clone-variant="editor-create-task-card"
                     class="group h-[200px] rounded-xl border-2 border-dashed border-border-strong hover:border-primary bg-transparent flex flex-col items-center justify-center gap-3 transition-all hover:bg-bg-hover cursor-pointer">
                     <div
                         class="h-12 w-12 rounded-full bg-surface-2 group-hover:bg-primary-lighter flex items-center justify-center transition-colors">
@@ -723,8 +731,11 @@
     </div>
     <!-- Create Task Modal -->
     <div id="create-task-modal"
+        data-onboarding-target="editor-create-task-modal"
         class="hidden fixed inset-0 z-50 overflow-y-auto modal-backdrop items-center justify-center p-4">
         <div
+            data-onboarding-target="editor-create-task-dialog"
+            data-onboarding-spotlight="frame"
             class="editor-dialog-shell editor-dialog-shell-wide inline-block align-bottom bg-surface-1 rounded-xl text-left shadow-xl transform transition-all sm:my-8 sm:align-middle sm:w-full">
             <div class="editor-dialog-header bg-surface-1 px-6 pt-6 pb-4">
                 <div class="flex items-start justify-between gap-4 mb-6">
@@ -739,7 +750,7 @@
                 </div>
                 <div id="create-task-limit-note" class="hidden mb-4 rounded-lg border border-warning-light bg-warning-lighter px-4 py-3 text-sm text-warning-darker"></div>
                 <form id="create-task-form" class="space-y-4">
-                    <div>
+                    <div data-onboarding-target="editor-create-task-context">
                         <label class="block text-sm font-semibold text-text-secondary mb-1">Модуль</label>
                         <div class="editor-dialog-inline-row">
                             <select id="task-module-select"
@@ -753,7 +764,7 @@
                             </button>
                         </div>
                     </div>
-                    <div>
+                    <div data-onboarding-target="editor-create-task-topic">
                         <label class="block text-sm font-semibold text-text-secondary mb-1">Тема</label>
                         <div class="editor-dialog-inline-row">
                             <select id="task-topic-select"
@@ -767,13 +778,13 @@
                             </button>
                         </div>
                     </div>
-                    <div>
+                    <div data-onboarding-target="editor-create-task-name">
                         <label class="block text-sm font-semibold text-text-secondary mb-1">Название задания</label>
                         <input type="text" id="task-name-input"
                             class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main placeholder:text-text-disabled focus:ring-2 focus:ring-primary sm:text-sm"
                             placeholder="Введите понятное название" required>
                     </div>
-                    <div>
+                    <div data-onboarding-target="editor-create-task-type">
                         <label class="block text-sm font-semibold text-text-secondary mb-1">Тип задания</label>
                         <select id="task-type-select"
                             class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main focus:ring-2 focus:ring-primary sm:text-sm">
@@ -792,6 +803,7 @@
                     Отмена
                 </button>
                 <button id="create-task-submit-btn" type="button" onclick="dashboard.submitTaskForm()"
+                    data-onboarding-target="editor-create-task-submit"
                     class="px-6 py-2 bg-primary hover:bg-primary-dark text-primary-contrast font-bold rounded-lg transition-all shadow-md">
                     Создать задание
                 </button>
@@ -1315,6 +1327,8 @@
     <script src="../../assets/GlobalHeader.js"></script>
     <script src="../../assets/ThemeSwitcherUI.js"></script>
     <script src="../../assets/ConnectionMonitor.js"></script>
+    <script src="/assets/onboarding_tours.js?v=editor-dashboard-onboarding-31" defer></script>
+    <script src="/assets/OnboardingTour.js?v=editor-dashboard-onboarding-31" defer></script>
 </body>
 
 </html>

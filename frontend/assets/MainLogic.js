@@ -1,4 +1,6 @@
 (function () {
+    window.__mainOwnsGlobalHeaderHydration = true;
+
     let currentUser = null;
 
     // --- Abort Controllers for Race Condition Prevention (7.4) ---
@@ -9,6 +11,7 @@
     let mainConsentGateResolver = null;
     let mainConsentGateUserId = null;
     let projectLinksMenuInitialized = false;
+    let mainBootRedirecting = false;
 
     const PROJECT_COMMUNITY_LINKS = Object.freeze({
         github: 'https://github.com/hippo2222/ACTRA',
@@ -175,6 +178,88 @@
             .replace(/</g, '\\x3C')
             .replace(/>/g, '\\x3E');
         return escapeHtml(escaped);
+    }
+
+    const PREMIUM_GATED_UI_PAGES = Object.freeze({
+        '/ui/calendar': '\u041a\u0430\u043b\u0435\u043d\u0434\u0430\u0440\u044c',
+        '/ui/statistics': '\u0421\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u0430',
+    });
+    let premiumGateModalOpen = false;
+
+    function getPremiumGatedPage(url) {
+        if (!url) return null;
+        try {
+            const destination = new URL(String(url), window.location.href);
+            const path = destination.pathname.replace(/\/+$/, '') || '/';
+            const label = PREMIUM_GATED_UI_PAGES[path];
+            return label ? { path, label } : null;
+        } catch (_err) {
+            return null;
+        }
+    }
+
+    function currentUserHasPremiumAccess() {
+        const effectivePlan = String(currentUser?.effective_plan || currentUser?.plan || 'free').trim().toLowerCase();
+        const role = String(currentUser?.role || currentUser?.account_role || '').trim().toLowerCase();
+        return effectivePlan === 'premium' || role === 'admin' || currentUser?.is_admin === true;
+    }
+
+    async function showPremiumNavigationGate(page) {
+        if (!page || premiumGateModalOpen) return;
+        premiumGateModalOpen = true;
+        try {
+            if (window.PremiumPromo && typeof window.PremiumPromo.open === 'function') {
+                window.PremiumPromo.open({
+                    title: page.path === '/ui/statistics'
+                        ? '\u041f\u043e\u043b\u043d\u0430\u044f \u0421\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u0430 \u0434\u043e\u0441\u0442\u0443\u043f\u043d\u0430 \u0432 Premium'
+                        : '\u041f\u043e\u043b\u043d\u044b\u0439 \u041a\u0430\u043b\u0435\u043d\u0434\u0430\u0440\u044c \u0434\u043e\u0441\u0442\u0443\u043f\u0435\u043d \u0432 Premium',
+                    lead: page.path === '/ui/statistics'
+                        ? '\u041f\u043e\u043b\u043d\u0430\u044f \u0441\u0432\u043e\u0434\u043a\u0430: \u0437\u0430\u0434\u0430\u0447\u0438, \u0432\u0440\u0435\u043c\u044f, \u043c\u0438\u043a\u0440\u043e\u043a\u0430\u0440\u0442\u043e\u0447\u043a\u0438, \u0441\u0435\u0440\u0438\u044f, \u0433\u0440\u0430\u0444\u0438\u043a, \u0442\u0438\u043f\u044b \u0437\u0430\u0434\u0430\u043d\u0438\u0439 \u0438 \u043a\u043e\u043c\u043f\u043b\u0435\u043a\u0441\u044b.'
+                        : '\u041f\u043e\u043b\u043d\u0430\u044f \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0430: Daily Mix, \u043d\u043e\u0432\u044b\u0439 \u043c\u0430\u0442\u0435\u0440\u0438\u0430\u043b, \u0440\u0430\u0441\u043f\u0438\u0441\u0430\u043d\u0438\u0435, \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c \u0438 \u0437\u0434\u043e\u0440\u043e\u0432\u044c\u0435 \u043f\u0430\u043c\u044f\u0442\u0438.',
+                });
+                return;
+            }
+            if (window.NotificationUI && typeof window.NotificationUI.confirm === 'function') {
+                const shouldOpenSettings = await window.NotificationUI.confirm({
+                    title: `${page.label} \u0434\u043e\u0441\u0442\u0443\u043f\u0435\u043d \u0432 Premium`,
+                    message: '\u0412\u0438\u0434\u0436\u0435\u0442 \u043d\u0430 \u0433\u043b\u0430\u0432\u043d\u043e\u0439 \u043e\u0441\u0442\u0430\u0435\u0442\u0441\u044f \u0434\u043e\u0441\u0442\u0443\u043f\u0435\u043d \u0432\u0441\u0435\u043c. \u041f\u043e\u043b\u043d\u0430\u044f \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0430 \u0441 \u0440\u0430\u0441\u0448\u0438\u0440\u0435\u043d\u043d\u044b\u043c\u0438 \u0434\u0430\u043d\u043d\u044b\u043c\u0438 \u043e\u0442\u043a\u0440\u044b\u0432\u0430\u0435\u0442\u0441\u044f \u043f\u043e\u0441\u043b\u0435 \u0430\u043a\u0442\u0438\u0432\u0430\u0446\u0438\u0438 Premium.',
+                    confirmText: '\u041e\u0442\u043a\u0440\u044b\u0442\u044c Premium',
+                    cancelText: '\u041e\u0441\u0442\u0430\u0442\u044c\u0441\u044f \u0437\u0434\u0435\u0441\u044c',
+                    variant: 'primary',
+                });
+                if (shouldOpenSettings) {
+                    window.__mainPremiumNavigationBase?.('/ui/settings#premium');
+                }
+                return;
+            }
+
+            const shouldOpenSettings = window.confirm(`${page.label} \u0434\u043e\u0441\u0442\u0443\u043f\u0435\u043d \u0432 Premium. \u041e\u0442\u043a\u0440\u044b\u0442\u044c \u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438 Premium?`);
+            if (shouldOpenSettings) {
+                window.__mainPremiumNavigationBase?.('/ui/settings#premium');
+            }
+        } finally {
+            premiumGateModalOpen = false;
+        }
+    }
+
+    function installPremiumNavigationGate() {
+        if (window.__mainPremiumNavigationGateInstalled) return;
+        const baseNavigate = typeof window.navigateWithTransition === 'function'
+            ? window.navigateWithTransition.bind(window)
+            : (url, options = {}) => {
+                if (options?.replace) window.location.replace(url);
+                else window.location.assign(url);
+            };
+        window.__mainPremiumNavigationGateInstalled = true;
+        window.__mainPremiumNavigationBase = baseNavigate;
+        window.navigateWithTransition = (url, options) => {
+            const gatedPage = getPremiumGatedPage(url);
+            if (gatedPage && !currentUserHasPremiumAccess()) {
+                showPremiumNavigationGate(gatedPage);
+                return;
+            }
+            baseNavigate(url, options);
+        };
     }
 
     const mainRecommendationState = {
@@ -500,13 +585,16 @@
     };
 
     async function ensureUserConsent(userId) {
-        const loaded = await ensureLegalDocumentsLoaded();
+        const [loaded, consentResponse] = await Promise.all([
+            ensureLegalDocumentsLoaded(),
+            apiFetch(`/api/consent/status?user_id=${encodeURIComponent(userId)}`),
+        ]);
         if (!loaded) {
             NotificationUI.toast('Не удалось загрузить юридические документы', 'error');
             return false;
         }
 
-        const { ok, data } = await apiFetch(`/api/consent/status?user_id=${encodeURIComponent(userId)}`);
+        const { ok, data } = consentResponse;
         if (!ok || !data) {
             NotificationUI.toast('Не удалось проверить согласие с условиями', 'error');
             return false;
@@ -681,23 +769,39 @@
     };
 
     // --- Initialization ---
-    async function initialize() {
-        // 1. Update UI baseline
-        updateDateTime();
-        initProjectLinksMenu();
-
-        if (!window.updateDateTimeInterval) {
-            window.updateDateTimeInterval = setInterval(updateDateTime, 30000);
+    function finishMainBoot() {
+        document.body.classList.remove('main-is-booting');
+        const bootScreen = document.querySelector('.main-boot-screen');
+        if (bootScreen) {
+            window.setTimeout(() => {
+                bootScreen.setAttribute('aria-hidden', 'true');
+            }, 360);
         }
+    }
 
-        // 2. Load User
-        await loadCurrentUser();
+    async function initialize() {
+        try {
+            // 1. Update UI baseline
+            updateDateTime();
+            initProjectLinksMenu();
+            installPremiumNavigationGate();
 
-        // 3. Load Dynamic Content
-        if (currentUser) {
+            if (!window.updateDateTimeInterval) {
+                window.updateDateTimeInterval = setInterval(updateDateTime, 30000);
+            }
+
+            // 2. Load User
+            await loadCurrentUser();
+
+            // 3. Load Dynamic Content
+            if (!currentUser) {
+                return;
+            }
+
             retryPendingFeedbackDelivery();
             const consentOk = await ensureUserConsent(currentUser.user_id);
             if (!consentOk) {
+                mainBootRedirecting = true;
                 window.navigateWithTransition('/ui/welcome');
                 return;
             }
@@ -720,14 +824,38 @@
                 });
             });
 
-            await Promise.all([
-                loadQuickAccess(),
-                loadUserSettings(), // Renamed from loadStatsSettings
+            Promise.allSettled([
                 loadCalendarWidget(),
                 loadMicrocardsWidget(),
+            ]).then((widgetLoads) => {
+                widgetLoads.forEach((result) => {
+                    if (result.status === 'rejected') {
+                        console.error('[MainLogic] Deferred widget load failed:', result.reason);
+                    }
+                });
+            });
+
+            const criticalWidgetLoads = await Promise.allSettled([
+                loadQuickAccess(),
+                loadUserSettings(), // Renamed from loadStatsSettings
             ]);
+            criticalWidgetLoads.forEach((result) => {
+                if (result.status === 'rejected') {
+                    console.error('[MainLogic] Initial critical widget load failed:', result.reason);
+                }
+            });
+
+            loadStatistics().catch((error) => {
+                console.error('[MainLogic] Deferred statistics load failed:', error);
+            });
 
             applyMainPreviewMode();
+        } catch (error) {
+            console.error('[MainLogic] Failed to initialize main screen:', error);
+        } finally {
+            if (!mainBootRedirecting) {
+                finishMainBoot();
+            }
         }
     }
 
@@ -949,6 +1077,7 @@
             updateHeaderUser(currentUser);
         } else {
             // No active user — redirect to Welcome Screen
+            mainBootRedirecting = true;
             window.navigateWithTransition('/ui/welcome');
         }
     }
@@ -967,11 +1096,20 @@
     }
 
     function updateHeaderUser(user) {
+        window.__mainCurrentUser = user;
         const nameEl = document.getElementById('headerUserName');
         const avatarEl = document.getElementById('headerAvatar');
+        const planBadgeEl = document.querySelector('[data-global-plan-badge]');
         if (nameEl) nameEl.textContent = user.name;
         if (avatarEl) avatarEl.src = getAvatarUrl(user.avatar_seed, user.user_id);
+        if (planBadgeEl) {
+            const effectivePlan = String(user.effective_plan || user.plan || 'free').trim().toLowerCase();
+            planBadgeEl.hidden = false;
+            planBadgeEl.textContent = effectivePlan === 'premium' ? 'Premium' : 'Free';
+            planBadgeEl.classList.toggle('is-premium', effectivePlan === 'premium');
+        }
     }
+    window.__mainUpdateHeaderUser = updateHeaderUser;
 
     // --- User Management ---
     window.openProfileManagementModal = async function () {
@@ -1368,11 +1506,20 @@
     let userSettingsLoaded = false;
     let isInitialThemeLoad = true;
 
+    async function fetchMainUserSettings() {
+        if (window.OnboardingTour && typeof window.OnboardingTour.getSettings === 'function') {
+            const settings = await window.OnboardingTour.getSettings();
+            return { ok: true, settings };
+        }
+
+        const { ok, data } = await apiFetch('/api/ui/settings');
+        return { ok, settings: data?.settings };
+    }
+
     async function loadUserSettings() {
         try {
-            const { ok, data } = await apiFetch('/api/ui/settings');
-            if (ok && data.settings) {
-                const settings = data.settings;
+            const { ok, settings } = await fetchMainUserSettings();
+            if (ok && settings) {
 
                 // 1. Stats Period
                 if (settings.stats_period) {
@@ -1398,7 +1545,6 @@
 
         userSettingsLoaded = true;
         updatePeriodButtons();
-        await loadStatistics();
     }
 
     function updatePeriodButtons() {
@@ -1939,7 +2085,13 @@
         const contentState = document.getElementById('calendarContentState');
         const streakEl = document.getElementById('calendarStreakDays');
 
-        const { ok, data } = await apiFetch('/api/calendar/today');
+        const [
+            { ok, data },
+            { ok: statsOk, data: statsData },
+        ] = await Promise.all([
+            apiFetch('/api/calendar/today'),
+            apiFetch('/api/statistics/time-dynamics?days=14'),
+        ]);
         if (loadingState) loadingState.classList.add('hidden');
         let hasData = false;
         let streakDays = 0;
@@ -1955,7 +2107,6 @@
         }
 
         // WEAK-1 fix: only fetch time-dynamics for heatmap (removed duplicate /api/statistics/overall)
-        const { ok: statsOk, data: statsData } = await apiFetch('/api/statistics/time-dynamics?days=14');
         const hasActivity = statsOk && statsData?.dynamics?.some(d => {
             const taskAttempts = d?.total_attempts ?? d?.tasks_attempted ?? d?.attempts ?? 0;
             const studyMinutes = d?.combined_study_minutes ?? d?.study_minutes ?? 0;
@@ -2931,5 +3082,9 @@
         const el = e.target?.closest("[data-nav]");
         if (el) window.navigateWithTransition(el.getAttribute("data-nav"));
     });
-    document.addEventListener("DOMContentLoaded", initialize);
+    if (document.body?.classList.contains('main-is-booting')) {
+        initialize();
+    } else {
+        document.addEventListener("DOMContentLoaded", initialize);
+    }
 })();

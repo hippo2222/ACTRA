@@ -13,6 +13,8 @@
   <link href="/assets/lightB-components.css" rel="stylesheet" />
   <link href="/assets/global-header.css" rel="stylesheet" />
   <link href="/assets/animations.css" rel="stylesheet" />
+  <link href="/assets/PageBoot.css" rel="stylesheet" />
+  <link href="/assets/onboarding-tour.css?v=catalog-onboarding-11" rel="stylesheet" />
 
   <style>
     :root {
@@ -61,6 +63,33 @@
       gap: 1.25rem 1.5rem;
       align-items: start;
       margin-bottom: 1rem;
+      transition: filter 0.22s ease, opacity 0.22s ease;
+    }
+
+    body.onboarding-tour-active[data-onboarding-tour-id="catalog-discovery-library"][data-onboarding-step-id="catalog-search-and-filters"] .catalog-header {
+      filter: blur(3px);
+      opacity: 0.72;
+    }
+
+    body.onboarding-tour-active[data-onboarding-tour-id="catalog-discovery-library"][data-onboarding-step-id="catalog-search-and-filters"] .catalog-layout {
+      filter: blur(3px);
+      opacity: 0.68;
+      transition: filter 0.22s ease, opacity 0.22s ease;
+    }
+
+    body.onboarding-tour-active[data-onboarding-tour-id="catalog-discovery-library"][data-onboarding-step-id="catalog-card-and-detail"] .catalog-shell {
+      padding-bottom: 14rem;
+    }
+
+    body.onboarding-tour-active[data-onboarding-tour-id="catalog-discovery-library"] .catalog-detail {
+      min-height: 27.5rem;
+      transition: none !important;
+    }
+
+    body.onboarding-tour-active[data-onboarding-tour-id="catalog-discovery-library"][data-onboarding-step-id="catalog-card-and-detail"] .catalog-grid {
+      filter: blur(3px);
+      opacity: 0.68;
+      transition: filter 0.22s ease, opacity 0.22s ease;
     }
 
     .catalog-header-main {
@@ -114,7 +143,7 @@
 
     .catalog-hero {
       position: relative;
-      overflow: hidden;
+      overflow: visible;
       border-radius: 1.8rem;
       border: 1px solid color-mix(in srgb, var(--color-border-strong) 70%, transparent);
       background:
@@ -139,6 +168,7 @@
       background: radial-gradient(circle, color-mix(in srgb, var(--color-primary-light) 32%, transparent) 0%, transparent 70%);
       pointer-events: none;
       opacity: 0.9;
+      clip-path: inset(5rem 4rem 0 0);
     }
 
     .catalog-hero__inner {
@@ -245,6 +275,15 @@
       gap: 0.55rem;
     }
 
+    .catalog-filter-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 0.7rem;
+      margin-left: auto;
+      flex-wrap: wrap;
+    }
+
     .catalog-pill {
       display: inline-flex;
       align-items: center;
@@ -271,6 +310,105 @@
       border-color: var(--color-component-pill-info-border);
       background: var(--color-component-pill-info-bg);
       color: var(--color-component-pill-info-fg);
+    }
+
+    .catalog-sort {
+      position: relative;
+      flex: 0 0 auto;
+      z-index: 30;
+    }
+
+    .catalog-sort__toggle {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.45rem;
+      min-height: 2.5rem;
+      padding: 0 0.85rem;
+      border-radius: 0.85rem;
+      border: 1px solid var(--color-border-subtle);
+      background: color-mix(in srgb, var(--color-surface-1) 90%, white 10%);
+      color: var(--color-text-secondary);
+      font-size: 0.8rem;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: var(--shadow-sm);
+      transition: border-color 0.2s ease, color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
+    }
+
+    .catalog-sort__toggle:hover,
+    .catalog-sort__toggle[aria-expanded="true"] {
+      border-color: var(--color-primary-light);
+      color: var(--color-primary);
+      background: color-mix(in srgb, var(--color-surface-1) 96%, white 4%);
+    }
+
+    .catalog-sort__toggle .material-symbols-outlined {
+      font-size: 1.15rem;
+    }
+
+    .catalog-sort__label {
+      white-space: nowrap;
+    }
+
+    .catalog-sort__menu {
+      position: absolute;
+      top: calc(100% + 0.45rem);
+      right: 0;
+      z-index: 20;
+      width: min(16rem, calc(100vw - 2rem));
+      padding: 0.45rem;
+      border-radius: 1rem;
+      border: 1px solid var(--color-border-subtle);
+      background: var(--color-surface-1);
+      box-shadow: var(--shadow-xl, 0 20px 42px -24px rgba(15, 23, 42, 0.45));
+    }
+
+    .catalog-sort__title {
+      margin: 0;
+      padding: 0.35rem 0.55rem 0.45rem;
+      color: var(--color-text-disabled);
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .catalog-sort__option {
+      display: flex;
+      width: 100%;
+      align-items: center;
+      gap: 0.55rem;
+      min-height: 2.35rem;
+      padding: 0.35rem 0.55rem;
+      border: 0;
+      border-radius: 0.75rem;
+      background: transparent;
+      color: var(--color-text-secondary);
+      font-size: 0.84rem;
+      font-weight: 700;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .catalog-sort__option:hover,
+    .catalog-sort__option.is-active {
+      background: var(--color-bg-hover);
+      color: var(--color-primary);
+    }
+
+    .catalog-sort__option-label {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    .catalog-sort__check {
+      color: var(--color-primary);
+      opacity: 0;
+    }
+
+    .catalog-sort__option.is-active .catalog-sort__check {
+      opacity: 1;
     }
 
     .catalog-summary {
@@ -1568,6 +1706,19 @@
         flex: 1 1 calc(50% - 0.5rem);
       }
 
+      .catalog-filter-actions {
+        width: 100%;
+        justify-content: space-between;
+      }
+
+      .catalog-sort {
+        flex: 1 1 auto;
+      }
+
+      .catalog-sort__toggle {
+        width: 100%;
+      }
+
       .catalog-hero__inner {
         padding: 1.15rem;
       }
@@ -1648,7 +1799,12 @@
   </style>
 
 </head>
-<body class="text-text-main">
+<body class="actra-page-booting text-text-main">
+  <div class="actra-page-boot-screen" role="status" aria-live="polite" aria-label="ACTRA">
+    <div class="actra-page-boot-card">
+      <img class="actra-page-boot-logo" src="/assets/logo_animated.svg" alt="ACTRA" />
+    </div>
+  </div>
   <div data-global-header data-app-section="catalog"></div>
   <div class="catalog-shell">
     <section class="catalog-header">
@@ -1656,12 +1812,11 @@
         <h1 class="catalog-title">Комплексы и теории в одном месте</h1>
       </div>
       <p class="catalog-subtitle">
-        Ищите готовые публикации, быстро оценивайте их пользу по описанию и количеству заданий,
-        а затем добавляйте в свою библиотеку только те материалы, которые действительно подходят под ваш текущий фокус обучения.
+        Находите готовые публикации, оценивайте их по описанию и объёму, затем добавляйте подходящее в библиотеку.
       </p>
 </section>
 
-    <section class="catalog-hero">
+    <section class="catalog-hero" data-onboarding-target="catalog-search-block">
       <div class="catalog-hero__inner">
         <div class="catalog-auth-note" id="catalog-auth-note">
           <span class="material-symbols-outlined">lock</span>
@@ -1670,8 +1825,8 @@
           </div>
         </div>
 
-        <div class="catalog-controls">
-          <label class="catalog-search" for="catalog-search-input">
+        <div class="catalog-controls" data-onboarding-target="catalog-controls">
+          <label class="catalog-search" for="catalog-search-input" data-onboarding-target="catalog-search">
             <span class="catalog-search__icon material-symbols-outlined">search</span>
             <input
               class="catalog-search__input"
@@ -1683,13 +1838,52 @@
           </label>
 
           <div class="catalog-filters">
-            <div class="catalog-filter-pills" role="tablist" aria-label="Фильтр каталога по типу">
+            <div class="catalog-filter-pills" role="tablist" aria-label="Фильтр каталога по типу" data-onboarding-target="catalog-filters">
               <button type="button" class="catalog-pill is-active" data-filter="all">Все публикации</button>
               <button type="button" class="catalog-pill" data-filter="complex">Комплексы</button>
               <button type="button" class="catalog-pill" data-filter="theory">Теории</button>
               <button type="button" class="catalog-pill" data-filter="saved">Мои сохранённые</button>
             </div>
-            <p class="catalog-summary" id="catalog-summary">Загружаем каталог…</p>
+            <div class="catalog-filter-actions" data-onboarding-target="catalog-filter-actions">
+              <div class="catalog-sort" data-catalog-sort-controller data-onboarding-target="catalog-sort">
+                <button
+                  type="button"
+                  class="catalog-sort__toggle"
+                  data-catalog-sort-toggle
+                  data-onboarding-target="catalog-sort-toggle"
+                  aria-haspopup="listbox"
+                  aria-expanded="false"
+                >
+                  <span class="material-symbols-outlined">sort</span>
+                  <span class="catalog-sort__label" data-catalog-sort-label>Сначала новые</span>
+                  <span class="material-symbols-outlined">expand_more</span>
+                </button>
+                <div class="catalog-sort__menu catalog-hidden" data-catalog-sort-menu role="listbox" aria-label="Сортировка каталога">
+                  <p class="catalog-sort__title">Сортировка</p>
+                  <button type="button" class="catalog-sort__option" data-catalog-sort-option="date" role="option">
+                    <span class="material-symbols-outlined">schedule</span>
+                    <span class="catalog-sort__option-label">Сначала новые</span>
+                    <span class="material-symbols-outlined catalog-sort__check">check</span>
+                  </button>
+                  <button type="button" class="catalog-sort__option" data-catalog-sort-option="alphabet" role="option">
+                    <span class="material-symbols-outlined">sort_by_alpha</span>
+                    <span class="catalog-sort__option-label">По алфавиту</span>
+                    <span class="material-symbols-outlined catalog-sort__check">check</span>
+                  </button>
+                  <button type="button" class="catalog-sort__option" data-catalog-sort-option="type" role="option">
+                    <span class="material-symbols-outlined">category</span>
+                    <span class="catalog-sort__option-label">По типу контента</span>
+                    <span class="material-symbols-outlined catalog-sort__check">check</span>
+                  </button>
+                  <button type="button" class="catalog-sort__option" data-catalog-sort-option="volume" role="option">
+                    <span class="material-symbols-outlined">format_list_numbered</span>
+                    <span class="catalog-sort__option-label">По объёму</span>
+                    <span class="material-symbols-outlined catalog-sort__check">check</span>
+                  </button>
+                </div>
+              </div>
+              <p class="catalog-summary" id="catalog-summary" data-onboarding-target="catalog-summary">Загружаем каталог…</p>
+            </div>
           </div>
         </div>
       </div>
@@ -1703,7 +1897,7 @@
         <div class="catalog-grid" id="catalog-grid"></div>
       </section>
 
-      <aside class="catalog-detail" id="catalog-detail">
+      <aside class="catalog-detail" id="catalog-detail" data-onboarding-target="catalog-detail-panel">
         <div class="catalog-detail__empty" id="catalog-detail-empty">
           <div style="display: flex; flex-direction: column; align-items: center; gap: 0.85rem;">
             <span class="material-symbols-outlined" style="font-size: 2.8rem; color: var(--color-text-secondary); opacity: 0.45;">touch_app</span>
@@ -1722,7 +1916,10 @@
   <script src="../assets/NotificationUI.js"></script>
   <script src="../assets/SharedProfileModal.js"></script>
   <script src="../assets/GlobalHeader.js"></script>
+  <script src="/assets/PageBoot.js"></script>
   <script src="/ui/catalog/catalog.js"></script>
+  <script src="/assets/onboarding_tours.js?v=catalog-onboarding-11"></script>
+  <script src="/assets/OnboardingTour.js?v=catalog-onboarding-11"></script>
 </body>
 </html>
 

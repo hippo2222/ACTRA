@@ -19,11 +19,11 @@ describe('ui terminology cleanup', () => {
       'frontend/Editor/theory_center.js',
     ];
     const forbiddenPhrases = [
-      /Р›РёС‡РЅР°СЏ РєРѕРїРёСЏ/i,
-      /Р»РёС‡РЅР°СЏ РєРѕРїРёСЏ/i,
-      /РњРѕСЏ РєРѕРїРёСЏ/i,
-      /Р›РѕРєР°Р»СЊРЅР°СЏ РєРѕРїРёСЏ/i,
-      /Workspace-РєРѕРїРёСЏ/i,
+      /Личная копия/i,
+      /личная копия/i,
+      /Моя копия/i,
+      /Локальная копия/i,
+      /Workspace-копия/i,
       /personal copy/i,
       /Preview copy/i,
       /Preview import/i,

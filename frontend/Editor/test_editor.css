@@ -113,6 +113,71 @@ body.test-editor-shell {
     flex-shrink: 0;
 }
 
+.test-editor-onboarding-import-marker {
+    position: fixed;
+    z-index: 94;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 0;
+    border-radius: 999px;
+    background: #e11d48;
+    color: #ffffff;
+    box-shadow:
+        0 0 0 0 rgba(225, 29, 72, 0.46),
+        0 10px 24px rgba(127, 29, 29, 0.28);
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: auto;
+    transform: scale(0.9);
+    transition: opacity 0.18s ease, transform 0.18s ease;
+    visibility: hidden;
+}
+
+.test-editor-onboarding-import-marker.is-positioned {
+    visibility: visible;
+}
+
+.test-editor-onboarding-import-marker.is-positioned.is-visible {
+    opacity: 1;
+    transform: scale(1);
+    animation: test-editor-onboarding-import-marker-pulse 1.35s ease-out 0.12s infinite;
+}
+
+.test-editor-onboarding-import-marker .material-symbols-outlined {
+    font-size: 1rem !important;
+    font-variation-settings: "FILL" 1, "wght" 700;
+}
+
+.test-editor-onboarding-import-marker:hover,
+.test-editor-onboarding-import-marker:focus-visible {
+    outline: none;
+    background: #be123c;
+    transform: scale(1.04);
+}
+
+@keyframes test-editor-onboarding-import-marker-pulse {
+    0% {
+        box-shadow:
+            0 0 0 0 rgba(225, 29, 72, 0.48),
+            0 10px 24px rgba(127, 29, 29, 0.28);
+    }
+
+    70% {
+        box-shadow:
+            0 0 0 14px rgba(225, 29, 72, 0),
+            0 10px 24px rgba(127, 29, 29, 0.28);
+    }
+
+    100% {
+        box-shadow:
+            0 0 0 0 rgba(225, 29, 72, 0),
+            0 10px 24px rgba(127, 29, 29, 0.28);
+    }
+}
+
 .test-editor-sidebar__heading {
     height: 4.375rem;
     overflow: hidden;
@@ -384,25 +449,28 @@ body.test-editor-shell {
 }
 
 .test-editor-header__status.status-cluster {
-    flex: 0 1 13rem;
-    width: 13rem;
-    max-width: min(13rem, 28vw);
-    max-inline-size: min(13rem, 28vw);
-    min-width: 8.75rem;
-    justify-content: flex-start;
+    flex: 0 0 auto;
+    width: fit-content;
+    max-width: min(16rem, 28vw);
+    max-inline-size: min(16rem, 28vw);
+    min-width: max-content;
+    justify-content: center;
     overflow: hidden;
+    padding-inline: 0.9rem;
 }
 
 .test-editor-header__status .status-cluster__body {
     min-width: 0;
-    flex: 1 1 auto;
+    flex: 0 1 auto;
     gap: 0;
+    text-align: center;
 }
 
 .test-editor-header__status .status-cluster__label {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
+    text-align: center;
 }
 
 .test-editor-header__status .status-cluster__detail {
@@ -1806,39 +1874,94 @@ body.bank-image-placement-mode .option-row.is-bank-selectable:hover {
 
 .import-source-option,
 .import-mode-option {
+    min-width: 0;
+    border-color: color-mix(in srgb, var(--color-border-subtle) 58%, transparent);
     transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.import-source-option:hover,
+.import-mode-option:hover {
+    border-color: color-mix(in srgb, var(--color-primary) 36%, var(--color-border-subtle));
+    background: color-mix(in srgb, var(--color-surface-1) 82%, var(--color-primary-light) 18%);
+    color: var(--color-text-main);
 }
 
 .import-source-option[data-active="true"],
 .import-mode-option[data-active="true"] {
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 25%, transparent);
+    border-color: color-mix(in srgb, var(--color-primary) 52%, var(--color-border-strong));
+    background: color-mix(in srgb, var(--color-surface-1) 54%, var(--color-primary-light) 46%);
+    color: color-mix(in srgb, var(--color-primary) 76%, var(--color-text-main));
+    box-shadow:
+        inset 0 1px 0 color-mix(in srgb, white 38%, transparent),
+        0 0 0 2px color-mix(in srgb, var(--color-primary-light) 38%, transparent);
+}
+
+#import-modal .import-source-option[data-active="true"],
+#import-modal .import-mode-option[data-active="true"] {
+    border-color: color-mix(in srgb, var(--color-primary) 52%, var(--color-border-strong));
+    background: color-mix(in srgb, var(--color-surface-1) 54%, var(--color-primary-light) 46%);
+    color: color-mix(in srgb, var(--color-primary) 76%, var(--color-text-main));
 }
 
 #import-modal .import-modal__panel {
     --import-modal-width: 34rem;
-    width: min(calc(100vw - 2rem), var(--import-modal-width));
+    width: min(100%, var(--import-modal-width));
+    max-width: calc(100vw - 2rem);
     max-height: calc(100vh - 2rem);
     max-height: calc(100dvh - 2rem);
     box-sizing: border-box;
+    border: 1px solid color-mix(in srgb, var(--color-border-subtle) 48%, transparent);
+    display: flex;
+    flex-direction: column;
     overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;
     scrollbar-gutter: stable;
-    transition: width 180ms ease, transform 180ms ease;
+    box-shadow:
+        0 24px 58px color-mix(in srgb, black 22%, transparent),
+        inset 0 1px 0 color-mix(in srgb, white 78%, transparent);
+    transition: max-width 180ms ease, transform 180ms ease;
 }
 
 #import-modal[data-import-source="text"] .import-modal__panel {
     --import-modal-width: 48rem;
 }
 
+#import-modal [data-onboarding-target="test-editor-import-modal-header"] p {
+    color: color-mix(in srgb, var(--color-text-secondary) 72%, var(--color-text-main));
+    letter-spacing: 0.08em;
+}
+
+#import-modal [data-onboarding-target="test-editor-import-parse-panel"] {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    border: 1px solid color-mix(in srgb, var(--color-border-subtle) 30%, transparent);
+    background: color-mix(in srgb, var(--color-surface-1) 68%, var(--color-surface-2) 32%);
+}
+
 #import-modal .import-text-input {
-    height: clamp(8.5rem, 26vh, 14rem);
-    max-height: min(40vh, 22rem);
+    height: clamp(6.75rem, 15vh, 8.5rem);
+    max-height: min(34vh, 18rem);
     overflow: auto;
 }
 
 #import-modal[data-import-source="text"] #import-question-preview {
-    max-height: min(28vh, 14rem);
+    max-height: min(18vh, 8.5rem);
+}
+
+#import-modal #import-parser-status,
+#import-modal #import-warning,
+#import-modal #import-error {
+    border: 1px solid color-mix(in srgb, currentColor 16%, transparent);
+}
+
+#import-modal #import-parser-status.bg-surface-2 {
+    background: color-mix(in srgb, var(--color-surface-1) 62%, var(--color-surface-2) 38%);
+}
+
+#import-modal #import-question-preview {
+    border-color: color-mix(in srgb, var(--color-border-subtle) 62%, transparent);
 }
 
 #import-modal .import-modal__toolbar {
@@ -1856,13 +1979,13 @@ body.bank-image-placement-mode .option-row.is-bank-selectable:hover {
 }
 
 #import-modal .import-modal__actions {
-    position: sticky;
-    bottom: -1.5rem;
+    flex: 0 0 auto;
+    position: static;
     z-index: 2;
     margin-right: -1.5rem;
     margin-bottom: -1.5rem;
     margin-left: -1.5rem;
-    padding: 0.75rem 1.5rem 1.5rem;
+    padding: 0.85rem 1.5rem 1.25rem;
     border-top: 1px solid color-mix(in srgb, var(--color-border-subtle) 72%, transparent);
     background:
         linear-gradient(
@@ -1870,6 +1993,26 @@ body.bank-image-placement-mode .option-row.is-bank-selectable:hover {
             color-mix(in srgb, var(--color-surface-1) 0%, transparent),
             var(--color-surface-1) 28%
         );
+}
+
+#import-modal #cancel-import-btn,
+#import-modal #confirm-import-btn,
+#import-modal #choose-import-file-btn,
+#import-modal #parse-import-text-btn {
+    min-height: 2.35rem;
+    border-color: color-mix(in srgb, var(--color-border-subtle) 62%, transparent);
+}
+
+#import-modal #confirm-import-btn {
+    box-shadow: 0 10px 22px color-mix(in srgb, var(--color-primary) 24%, transparent);
+}
+
+#import-modal #confirm-import-btn:disabled {
+    border: 1px solid color-mix(in srgb, var(--color-border-subtle) 42%, transparent);
+    background: color-mix(in srgb, var(--color-surface-1) 60%, var(--color-surface-2) 40%);
+    color: color-mix(in srgb, var(--color-text-secondary) 78%, var(--color-text-main));
+    box-shadow: none;
+    opacity: 1;
 }
 
 #paste-image-target-modal {
@@ -1932,24 +2075,58 @@ body.paste-image-selection-mode #paste-image-target-modal {
 
 @media (max-width: 720px) {
     #import-modal {
-        display: block;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
         overflow-y: auto;
+        padding: 0.5rem;
     }
 
     #import-modal .import-modal__panel {
-        width: min(calc(100vw - 1rem), var(--import-modal-width));
+        --import-modal-width: 100%;
+        width: 100%;
+        max-width: calc(100vw - 1rem);
         max-height: calc(100vh - 1rem);
         max-height: calc(100dvh - 1rem);
         margin: 0 auto;
         padding: 1rem;
+        border-radius: 1rem;
+    }
+
+    #import-modal[data-import-source="text"] .import-modal__panel {
+        --import-modal-width: 100%;
+    }
+
+    #import-modal .import-source-option,
+    #import-modal .import-mode-option {
+        padding-right: 0.5rem;
+        padding-left: 0.5rem;
+        white-space: nowrap;
     }
 
     #import-modal .import-modal__actions {
-        bottom: -1rem;
         margin-right: -1rem;
         margin-bottom: -1rem;
         margin-left: -1rem;
         padding: 0.75rem 1rem 1rem;
+    }
+
+    #import-modal .import-modal__actions,
+    #import-modal .import-modal__toolbar {
+        gap: 0.75rem;
+    }
+
+    #import-modal .import-modal__actions {
+        justify-content: stretch;
+    }
+
+    #import-modal .import-modal__actions > button {
+        flex: 1 1 0;
+        min-width: 0;
+    }
+
+    #import-modal .import-text-input {
+        height: clamp(7rem, 22vh, 10rem);
     }
 
     #paste-image-target-modal .paste-image-target-modal__panel {

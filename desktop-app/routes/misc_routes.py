@@ -1,6 +1,7 @@
 """Miscellaneous app-level routes: welcome, legal, consent, network, update, feedback, evaluation."""
 
 import logging
+import os
 from typing import Any, Dict
 
 from flask import Blueprint, jsonify, request
@@ -10,6 +11,32 @@ from routes._context import get_authenticated_user_id, get_ctx, get_extra, is_ho
 logger = logging.getLogger(__name__)
 
 misc_bp = Blueprint("misc", __name__)
+
+
+def _env_bool(name: str, default: bool = False) -> bool:
+    raw = str(os.environ.get(name) or "").strip().lower()
+    if not raw:
+        return bool(default)
+    return raw in {"1", "true", "yes", "on"}
+
+
+def _auth_providers_payload() -> Dict[str, Any]:
+    google_enabled = (
+        _env_bool("ACTRA_GOOGLE_AUTH_ENABLED", False)
+        and bool(str(os.environ.get("ACTRA_GOOGLE_CLIENT_ID") or "").strip())
+        and bool(str(os.environ.get("ACTRA_GOOGLE_CLIENT_SECRET") or "").strip())
+    )
+    return {
+        "google": {
+            "enabled": google_enabled,
+            "configured": google_enabled,
+            "hosted_domain": str(
+                os.environ.get("ACTRA_GOOGLE_HOSTED_DOMAIN")
+                or os.environ.get("ACTRA_GOOGLE_HD")
+                or ""
+            ).strip().lower(),
+        }
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -41,6 +68,7 @@ def should_welcome() -> Any:
                         "mode": "authenticated",
                         "authenticated": True,
                         "auto_select_user_id": user_id,
+                        "auth_providers": _auth_providers_payload(),
                     }
                 )
             return jsonify(
@@ -50,6 +78,7 @@ def should_welcome() -> Any:
                     "mode": "auth",
                     "authenticated": False,
                     "profiles": [],
+                    "auth_providers": _auth_providers_payload(),
                 }
             )
         user_service = h["user_service"]

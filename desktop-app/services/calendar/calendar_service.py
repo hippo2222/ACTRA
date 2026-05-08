@@ -765,6 +765,7 @@ class CalendarService(HostedShadowFallbackMixin):
                 ComplexStatus.MASTERED,
                 ComplexStatus.FROZEN,
             )
+            and p.complex_id not in ("daily_mix", "study", "new_material")
         ]
 
         known_complex_ids = set(complex_names.keys())
@@ -775,7 +776,7 @@ class CalendarService(HostedShadowFallbackMixin):
             ]
         
         if not active_progress:
-            return HealthSummary(overall_health=1.0)
+            return HealthSummary(overall_health=1.0, active_count=0, has_data=False)
         
         # Средний HealthScore
         overall = sum(p.health_score for p in active_progress) / len(active_progress)
@@ -787,9 +788,6 @@ class CalendarService(HostedShadowFallbackMixin):
         
         for p in sorted(active_progress, key=lambda x: x.health_score):
             # Фильтрация: скрываем синтетические комплексы
-            if p.complex_id in ("daily_mix", "study", "new_material"):
-                continue
-
             name = _safe_complex_display_name(
                 complex_names.get(p.complex_id),
                 f"Комплекс {len(complexes) + 1}",
@@ -819,6 +817,8 @@ class CalendarService(HostedShadowFallbackMixin):
             overall_health=overall,
             complexes=complexes,
             critical_count=critical_count,
+            active_count=len(complexes),
+            has_data=bool(complexes),
         )
     
     # =========================================================================
@@ -835,8 +835,16 @@ class CalendarService(HostedShadowFallbackMixin):
         Returns:
             dict: Обновлённые настройки
         """
+        try:
+            normalized_minutes = int(minutes)
+        except Exception as exc:
+            raise ValueError("invalid_daily_time_limit_minutes") from exc
+
+        if normalized_minutes not in (20, 30, 45):
+            raise ValueError("invalid_daily_time_limit_minutes")
+
         settings = self.get_settings()
-        settings.daily_time_limit_minutes = minutes
+        settings.daily_time_limit_minutes = normalized_minutes
         settings.suggested_time_update = None  # Сбрасываем предложение
         self.save_settings(settings)
         

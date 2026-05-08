@@ -67,6 +67,7 @@ def test_hosted_ui_state_reads_and_writes_via_user_profile(monkeypatch, tmp_path
         {
             "pinned": ["complex-a"],
             "recent": ["complex-b"],
+            "dismissed": ["complex-c"],
             "settings": {"theme": "forest"},
         },
     )
@@ -75,8 +76,10 @@ def test_hosted_ui_state_reads_and_writes_via_user_profile(monkeypatch, tmp_path
 
     assert state["pinned"] == ["complex-a"]
     assert state["recent"] == ["complex-b"]
+    assert state["dismissed"] == ["complex-c"]
     assert state["settings"]["theme"] == "forest"
     assert user.settings["web_ui_state"]["pinned"] == ["complex-a"]
+    assert user.settings["web_ui_state"]["dismissed"] == ["complex-c"]
     assert (tmp_path / "users" / "user1" / "ui_state.json").exists() is False
 
 

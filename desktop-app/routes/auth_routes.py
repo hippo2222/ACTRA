@@ -1,12 +1,19 @@
 """Hosted auth routes for request-scoped user sessions."""
 
+import json
 import logging
+import os
+import secrets
+import time as time_module
 from datetime import datetime
 import threading
 import time
 from typing import Any, Dict, Optional
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, redirect, request, session
 
 from routes._context import (
     get_authenticated_identity_source,
@@ -26,6 +33,8 @@ auth_bp = Blueprint("auth", __name__)
 _AUTH_RATE_LIMITS: Dict[str, Dict[str, int]] = {
     "register": {"limit": 10, "window_seconds": 60},
     "login": {"limit": 8, "window_seconds": 60},
+    "google_start": {"limit": 12, "window_seconds": 60},
+    "google_callback": {"limit": 12, "window_seconds": 60},
     "resend_verification": {"limit": 6, "window_seconds": 60},
     "verify_email": {"limit": 12, "window_seconds": 60},
     "forgot_password": {"limit": 6, "window_seconds": 60},
@@ -33,11 +42,64 @@ _AUTH_RATE_LIMITS: Dict[str, Dict[str, int]] = {
 }
 _AUTH_RATE_LIMIT_STATE: Dict[str, list[float]] = {}
 _AUTH_RATE_LIMIT_LOCK = threading.RLock()
+_GOOGLE_OAUTH_STATE_SESSION_KEY = "google_oauth_state"
+_GOOGLE_OAUTH_NONCE_SESSION_KEY = "google_oauth_nonce"
+_GOOGLE_AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth"
+_GOOGLE_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
+_GOOGLE_TOKENINFO_ENDPOINT = "https://oauth2.googleapis.com/tokeninfo"
 
 
 def _h(name: str) -> Any:
     helpers = get_extra("server_helpers", {})
     return helpers[name]
+
+
+def _env_bool(name: str, default: bool = False) -> bool:
+    raw = str(os.environ.get(name) or "").strip().lower()
+    if not raw:
+        return bool(default)
+    return raw in {"1", "true", "yes", "on"}
+
+
+def _request_base_url() -> str:
+    configured = (
+        str(os.environ.get("ACTRA_AUTH_PUBLIC_BASE_URL") or "").strip()
+        or str(os.environ.get("ACTRA_PUBLIC_BASE_URL") or "").strip()
+    )
+    if configured:
+        return configured.rstrip("/")
+    return str(request.host_url or "").strip().rstrip("/")
+
+
+def _google_auth_settings() -> Dict[str, Any]:
+    client_id = str(os.environ.get("ACTRA_GOOGLE_CLIENT_ID") or "").strip()
+    client_secret = str(os.environ.get("ACTRA_GOOGLE_CLIENT_SECRET") or "").strip()
+    enabled = _env_bool("ACTRA_GOOGLE_AUTH_ENABLED", False)
+    redirect_uri = str(os.environ.get("ACTRA_GOOGLE_REDIRECT_URI") or "").strip()
+    if not redirect_uri and request:
+        redirect_uri = f"{_request_base_url()}/api/auth/google/callback"
+    hosted_domain = str(
+        os.environ.get("ACTRA_GOOGLE_HOSTED_DOMAIN")
+        or os.environ.get("ACTRA_GOOGLE_HD")
+        or ""
+    ).strip().lower()
+    return {
+        "enabled": enabled,
+        "configured": bool(enabled and client_id and client_secret and redirect_uri),
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "redirect_uri": redirect_uri,
+        "hosted_domain": hosted_domain,
+    }
+
+
+def _google_auth_provider_payload() -> Dict[str, Any]:
+    settings = _google_auth_settings()
+    return {
+        "enabled": bool(settings.get("configured")),
+        "configured": bool(settings.get("configured")),
+        "hosted_domain": settings.get("hosted_domain") or "",
+    }
 
 
 def _client_fingerprint() -> str:
@@ -188,6 +250,180 @@ def _find_user_by_identifier(identifier: str) -> Optional[Any]:
     return None
 
 
+def _normalize_external_email(user_service: Any, email: str) -> str:
+    normalizer = getattr(user_service, "normalize_email", None)
+    if callable(normalizer):
+        return str(normalizer(email) or "").strip().lower()
+    return str(email or "").strip().lower()
+
+
+def _find_user_by_google_subject(subject: str) -> Optional[Any]:
+    clean_subject = str(subject or "").strip()
+    if not clean_subject:
+        return None
+    for user in get_ctx().user_service.get_all_users():
+        providers = dict(getattr(user, "settings", {}) or {}).get("auth_providers") or {}
+        google = providers.get("google") or {}
+        if str(google.get("sub") or "").strip() == clean_subject:
+            return user
+    return None
+
+
+def _available_display_name(user_service: Any, preferred_name: str, email: str) -> str:
+    base = str(preferred_name or "").strip()
+    if not base and email:
+        base = str(email).split("@", 1)[0].replace(".", " ").replace("_", " ").strip()
+    if len(base) < 2:
+        base = "Google user"
+    base = base[:50].strip()
+
+    existing_names = {
+        str(getattr(user, "name", "") or "").strip().lower()
+        for user in user_service.get_all_users()
+    }
+    if base.lower() not in existing_names:
+        return base
+
+    for suffix_number in range(2, 1000):
+        suffix = f" {suffix_number}"
+        candidate = f"{base[:50 - len(suffix)].rstrip()}{suffix}"
+        if candidate.lower() not in existing_names:
+            return candidate
+    raise ValueError("duplicate_name")
+
+
+def _touch_google_identity(user: Any, claims: Dict[str, Any]) -> Any:
+    user_service = get_ctx().user_service
+    now_iso = str(_h("utc_now_iso")() if "utc_now_iso" in get_extra("server_helpers", {}) else "")
+    if not now_iso:
+        now_iso = datetime.utcnow().isoformat(timespec="seconds") + "Z"
+
+    settings = dict(getattr(user, "settings", {}) or {})
+    providers = dict(settings.get("auth_providers") or {})
+    providers["google"] = {
+        "sub": str(claims.get("sub") or "").strip(),
+        "email": str(claims.get("email") or "").strip().lower(),
+        "linked_at": str((providers.get("google") or {}).get("linked_at") or now_iso),
+        "last_login_at": now_iso,
+    }
+    settings["auth_providers"] = providers
+    user.settings = settings
+
+    google_email = str(claims.get("email") or "").strip().lower()
+    if google_email and not str(getattr(user, "email", "") or "").strip():
+        user.email = google_email
+
+    updated = getattr(user_service, "update_user", None)
+    if callable(updated):
+        updated(user)
+
+    if google_email and str(getattr(user, "email", "") or "").strip().lower() == google_email:
+        marker = getattr(user_service, "mark_email_as_verified", None)
+        if callable(marker):
+            marker(user.user_id)
+            return user_service.get_user(user.user_id) or user
+        user.email_verified_at = str(getattr(user, "email_verified_at", "") or "").strip() or now_iso
+        if callable(updated):
+            updated(user)
+    return user_service.get_user(user.user_id) or user
+
+
+def _create_google_user(claims: Dict[str, Any]) -> Any:
+    user_service = get_ctx().user_service
+    email = _normalize_external_email(user_service, str(claims.get("email") or ""))
+    name = _available_display_name(user_service, str(claims.get("name") or ""), email)
+    creator = getattr(user_service, "create_external_auth_user", None)
+    if callable(creator):
+        user = creator(
+            provider="google",
+            provider_subject=str(claims.get("sub") or "").strip(),
+            name=name,
+            email=email,
+            avatar_seed="1.png",
+        )
+    else:
+        auth_creator = getattr(user_service, "create_auth_user", None)
+        if not callable(auth_creator):
+            user = user_service.create_user(name)
+            user.email = email
+            user.login = email.split("@", 1)[0][:32] if email else ""
+            user.password_hash = None
+            user_service.update_user(user)
+        else:
+            user = auth_creator(
+                name=name,
+                login="",
+                email=email,
+                password=secrets.token_urlsafe(24),
+                avatar_seed="1.png",
+            )
+            user.password_hash = None
+            security_settings = dict(getattr(user, "security_settings", {}) or {})
+            security_settings["require_password_on_login"] = False
+            user.security_settings = security_settings
+            user_service.update_user(user)
+    return _touch_google_identity(user, claims)
+
+
+def _http_post_form_json(url: str, payload: Dict[str, Any], timeout_sec: float = 10.0) -> Dict[str, Any]:
+    encoded = urlencode(payload).encode("utf-8")
+    req = Request(
+        url,
+        data=encoded,
+        headers={"Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json"},
+        method="POST",
+    )
+    with urlopen(req, timeout=timeout_sec) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
+def _http_get_json(url: str, params: Dict[str, Any], timeout_sec: float = 10.0) -> Dict[str, Any]:
+    query = urlencode(params)
+    req = Request(f"{url}?{query}", headers={"Accept": "application/json"}, method="GET")
+    with urlopen(req, timeout=timeout_sec) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
+def _exchange_google_authorization_code(code: str, settings: Dict[str, Any]) -> Dict[str, Any]:
+    return _http_post_form_json(
+        _GOOGLE_TOKEN_ENDPOINT,
+        {
+            "code": str(code or "").strip(),
+            "client_id": settings["client_id"],
+            "client_secret": settings["client_secret"],
+            "redirect_uri": settings["redirect_uri"],
+            "grant_type": "authorization_code",
+        },
+    )
+
+
+def _verify_google_id_token(id_token_value: str, client_id: str) -> Dict[str, Any]:
+    try:
+        from google.auth.transport import requests as google_requests  # type: ignore
+        from google.oauth2 import id_token as google_id_token  # type: ignore
+
+        return dict(google_id_token.verify_oauth2_token(
+            id_token_value,
+            google_requests.Request(),
+            client_id,
+        ))
+    except ModuleNotFoundError:
+        payload = _http_get_json(_GOOGLE_TOKENINFO_ENDPOINT, {"id_token": id_token_value})
+    except Exception:
+        logger.exception("[HTTP] google-auth ID token verification failed")
+        raise
+
+    issuer = str(payload.get("iss") or "").strip()
+    if issuer not in {"https://accounts.google.com", "accounts.google.com"}:
+        raise ValueError("invalid_google_issuer")
+    if str(payload.get("aud") or "").strip() != str(client_id or "").strip():
+        raise ValueError("invalid_google_audience")
+    exp = int(payload.get("exp") or 0)
+    if exp <= int(time_module.time()):
+        raise ValueError("expired_google_id_token")
+    return payload
+
+
 def _validation_error_response(code: str) -> Any:
     messages = {
         "name_required": "Введите отображаемое имя.",
@@ -207,6 +443,105 @@ def _validation_error_response(code: str) -> Any:
         jsonify({"ok": False, "error": code, "message": messages.get(code, code)}),
         400,
     )
+
+
+@auth_bp.route("/api/auth/google/status", methods=["GET"])
+def google_auth_status() -> Any:
+    """Return whether Google auth is configured for the hosted welcome screen."""
+    return jsonify({"ok": True, "provider": _google_auth_provider_payload()})
+
+
+@auth_bp.route("/api/auth/google/start", methods=["GET"])
+def start_google_auth() -> Any:
+    """Start Google OpenID Connect server flow."""
+    try:
+        limited = _apply_auth_rate_limit("google_start")
+        if limited is not None:
+            return limited
+
+        settings = _google_auth_settings()
+        if not bool(settings.get("configured")):
+            return jsonify({"ok": False, "error": "google_auth_not_configured"}), 503
+
+        state = secrets.token_urlsafe(32)
+        nonce = secrets.token_urlsafe(32)
+        session[_GOOGLE_OAUTH_STATE_SESSION_KEY] = state
+        session[_GOOGLE_OAUTH_NONCE_SESSION_KEY] = nonce
+        session.permanent = True
+
+        params = {
+            "response_type": "code",
+            "client_id": settings["client_id"],
+            "redirect_uri": settings["redirect_uri"],
+            "scope": "openid email profile",
+            "state": state,
+            "nonce": nonce,
+            "prompt": "select_account",
+        }
+        if settings.get("hosted_domain"):
+            params["hd"] = settings["hosted_domain"]
+        return redirect(f"{_GOOGLE_AUTH_ENDPOINT}?{urlencode(params)}")
+    except Exception as exc:
+        logger.exception("[HTTP] Google auth start failed: %s", exc)
+        return jsonify({"ok": False, "error": "google_auth_start_failed"}), 500
+
+
+@auth_bp.route("/api/auth/google/callback", methods=["GET"])
+def google_auth_callback() -> Any:
+    """Handle Google OpenID Connect callback and create a hosted ACTRA session."""
+    try:
+        limited = _apply_auth_rate_limit("google_callback")
+        if limited is not None:
+            return limited
+
+        settings = _google_auth_settings()
+        if not bool(settings.get("configured")):
+            return jsonify({"ok": False, "error": "google_auth_not_configured"}), 503
+
+        if request.args.get("error"):
+            return redirect("/ui/welcome?auth_error=google")
+
+        code = str(request.args.get("code") or "").strip()
+        state = str(request.args.get("state") or "").strip()
+        expected_state = str(session.pop(_GOOGLE_OAUTH_STATE_SESSION_KEY, "") or "").strip()
+        expected_nonce = str(session.pop(_GOOGLE_OAUTH_NONCE_SESSION_KEY, "") or "").strip()
+        if not code:
+            return jsonify({"ok": False, "error": "code_required"}), 400
+        if not state or not expected_state or not secrets.compare_digest(state, expected_state):
+            return jsonify({"ok": False, "error": "invalid_google_state"}), 400
+
+        token_payload = _exchange_google_authorization_code(code, settings)
+        id_token_value = str(token_payload.get("id_token") or "").strip()
+        if not id_token_value:
+            return jsonify({"ok": False, "error": "google_id_token_missing"}), 502
+
+        claims = _verify_google_id_token(id_token_value, str(settings.get("client_id") or ""))
+        if expected_nonce and str(claims.get("nonce") or "").strip() != expected_nonce:
+            return jsonify({"ok": False, "error": "invalid_google_nonce"}), 400
+        if not bool(claims.get("email_verified") in {True, "true", "True", "1", 1}):
+            return jsonify({"ok": False, "error": "google_email_not_verified"}), 403
+        if settings.get("hosted_domain") and str(claims.get("hd") or "").strip().lower() != settings["hosted_domain"]:
+            return jsonify({"ok": False, "error": "google_hosted_domain_mismatch"}), 403
+
+        email = str(claims.get("email") or "").strip().lower()
+        subject = str(claims.get("sub") or "").strip()
+        if not email or not subject:
+            return jsonify({"ok": False, "error": "google_identity_incomplete"}), 400
+
+        user = _find_user_by_google_subject(subject) or _find_user_by_identifier(email)
+        if user is None:
+            user = _create_google_user(claims)
+        else:
+            user = _touch_google_identity(user, claims)
+
+        login_authenticated_user(user.user_id)
+        return redirect("/ui/welcome")
+    except (HTTPError, URLError, TimeoutError, ValueError) as exc:
+        logger.warning("[HTTP] Google auth callback rejected: %s", exc)
+        return jsonify({"ok": False, "error": "google_auth_failed"}), 400
+    except Exception as exc:
+        logger.exception("[HTTP] Google auth callback failed: %s", exc)
+        return jsonify({"ok": False, "error": "google_auth_callback_failed"}), 500
 
 
 def _serialize_auth_user(user: Any) -> Dict[str, Any]:

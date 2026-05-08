@@ -51,6 +51,7 @@ body.calendar-layout .calendar-header {
     height: var(--calendar-header-height);
     min-height: var(--calendar-header-height);
     box-shadow: 0 1px 0 var(--color-border-subtle, rgba(15, 23, 42, 0.06));
+    top: 0 !important;
 }
 
 body.calendar-layout .calendar-header > div {
@@ -129,6 +130,43 @@ body.calendar-layout .calendar-summary-card {
     min-height: 164px;
 }
 
+body.calendar-layout .calendar-summary-card .calendar-card-body {
+    gap: 0.58rem;
+}
+
+body.calendar-layout .calendar-summary-card h3 {
+    font-size: 1.04rem;
+    line-height: 1.15;
+    margin-bottom: 0.28rem;
+}
+
+body.calendar-layout #daily-mix-desc,
+body.calendar-layout #main-focus-desc {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-size: 0.78rem;
+    line-height: 1.28;
+}
+
+body.calendar-layout #daily-mix-reason {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-top: 0.42rem;
+    font-size: 0.68rem;
+    line-height: 1.22;
+}
+
+body.calendar-layout .calendar-summary-card .btn-secondary {
+    min-height: 2.05rem;
+    padding-block: 0.34rem;
+}
+
 /* ---- Control card (time + microcards) ---- */
 
 body.calendar-layout .calendar-control-card {
@@ -169,11 +207,12 @@ body.calendar-layout .calendar-schedule {
     display: flex;
     flex-direction: column;
     gap: 0.45rem;
-    min-height: 0;
+    min-height: 258px;
     border: 1px solid var(--color-border-subtle);
     border-radius: var(--calendar-card-radius);
     background: color-mix(in srgb, var(--color-surface-1) 74%, transparent);
     padding: 0.55rem;
+    overflow: hidden;
 }
 
 body.calendar-layout .calendar-schedule-header {
@@ -224,6 +263,19 @@ body.calendar-layout .calendar-health-col > .calendar-panel-card {
     flex-direction: column;
     gap: var(--calendar-gap-sm);
     overflow: visible;
+}
+
+body.calendar-layout .onboarding-tour-spotlight-clone > .calendar-panel-card {
+    min-height: 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--calendar-gap-sm);
+    overflow: visible;
+}
+
+body.calendar-layout .onboarding-tour-spotlight-clone > .memory-health-panel {
+    height: 100% !important;
 }
 
 /* Heatmap tooltips need overflow:visible on the activity card */
@@ -517,6 +569,114 @@ body.calendar-layout #heatmap > .heatmap-cell:nth-child(n+21).tooltip::after {
 
 body.calendar-layout #activity-banner {
     flex: 0 0 auto;
+}
+
+body.calendar-layout #activity-banner > div {
+    align-items: center !important;
+    gap: 0.62rem !important;
+    min-height: 3rem;
+    padding: 0.5rem 0.68rem !important;
+    border-radius: 0.75rem !important;
+}
+
+body.calendar-layout #activity-banner .size-10 {
+    width: 2rem !important;
+    height: 2rem !important;
+}
+
+body.calendar-layout #activity-banner .material-symbols-outlined {
+    font-size: 1.12rem;
+}
+
+body.calendar-layout #activity-banner p {
+    margin: 0;
+}
+
+body.calendar-layout #activity-banner .text-sm {
+    font-size: 0.8rem !important;
+    line-height: 1.18;
+}
+
+body.calendar-layout #activity-banner .text-xs:empty {
+    display: none;
+}
+
+body.calendar-layout #activity-banner .activity-alert {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.74rem;
+    min-height: 4rem;
+    padding: 0.64rem 0.66rem 0.64rem 0.72rem !important;
+    border-radius: 0.85rem !important;
+}
+
+body.calendar-layout #activity-banner .activity-alert--missed {
+    border: 1px solid color-mix(in srgb, var(--color-warning) 76%, var(--color-primary) 24%);
+    background:
+        linear-gradient(135deg, color-mix(in srgb, var(--color-warning-light) 86%, var(--color-surface-1) 14%), var(--color-surface-1) 72%),
+        var(--color-surface-1);
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.1), inset 3px 0 0 var(--color-warning);
+}
+
+body.calendar-layout #activity-banner .activity-alert__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.35rem;
+    height: 2.35rem;
+    border-radius: 999px;
+    background: var(--color-surface-1);
+    color: var(--color-warning-dark);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-warning) 62%, transparent);
+}
+
+body.calendar-layout #activity-banner .activity-alert__copy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.18rem;
+}
+
+body.calendar-layout #activity-banner .activity-alert__title {
+    margin: 0;
+    color: var(--color-text-main);
+    font-size: 0.88rem;
+    font-weight: 900;
+    line-height: 1.08;
+}
+
+body.calendar-layout #activity-banner .activity-alert__text {
+    margin: 0;
+    max-width: 42rem;
+    color: var(--color-text-secondary);
+    font-size: 0.72rem;
+    font-weight: 650;
+    line-height: 1.22;
+}
+
+body.calendar-layout #activity-banner .activity-alert__dismiss {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.68rem;
+    border: 1px solid color-mix(in srgb, var(--color-warning) 44%, var(--color-border-subtle) 56%);
+    background: color-mix(in srgb, var(--color-surface-1) 88%, var(--color-warning-light) 12%);
+    color: var(--color-text-secondary);
+    transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+
+body.calendar-layout #activity-banner .activity-alert__dismiss:hover {
+    background: var(--color-surface-1);
+    color: var(--color-text-main);
+    transform: translateY(-1px);
+}
+
+body.calendar-layout #activity-banner .activity-alert__dismiss .material-symbols-outlined {
+    font-size: 1rem;
 }
 
 /* =============================================================================
@@ -1047,10 +1207,6 @@ body.calendar-layout .calendar-health-col > .memory-health-panel {
     display: block;
 }
 
-.calendar-loading-panel {
-    backdrop-filter: saturate(1.05);
-}
-
 .calendar-loading-logo-frame {
     position: relative;
     width: 72px;
@@ -1062,10 +1218,6 @@ body.calendar-layout .calendar-health-col > .memory-health-panel {
 
 .calendar-loading-logo-frame > .calendar-loading-logo {
     grid-area: 1 / 1;
-}
-
-.calendar-loading-skeleton {
-    pointer-events: none;
 }
 
 /* =============================================================================
@@ -2483,14 +2635,14 @@ body.calendar-layout #health-percent {
 
 .memory-health-progress-value {
     color: var(--color-text-main);
-    font-size: 1.16rem;
+    font-size: 1.06rem;
     font-weight: 900;
     line-height: 1;
-    letter-spacing: -0.05em;
+    letter-spacing: -0.02em;
 }
 
 .memory-health-shell--compact .memory-health-progress-value {
-    font-size: 1.02rem;
+    font-size: 0.94rem;
 }
 
 .memory-health-overview-copy {
@@ -3498,7 +3650,7 @@ body.calendar-layout .memory-health-shell.memory-health-shell--compact .memory-h
     }
 
     .memory-health-progress-value {
-        font-size: 1rem;
+        font-size: 0.94rem;
     }
 
     .memory-health-overview-title {
@@ -3703,30 +3855,49 @@ body.calendar-layout .schedule-toolbar__meta {
 }
 
 body.calendar-layout .schedule-strip-shell {
+    --schedule-strip-gap: 10px;
+    --schedule-card-height: 176px;
+    --schedule-card-fit-width: clamp(144px, calc((100% - 68px) / 7), 180px);
     min-width: 0;
-    min-height: 0;
+    height: calc(var(--schedule-card-height) + 4px);
+    min-height: calc(var(--schedule-card-height) + 4px);
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    gap: 0;
+    overflow: hidden;
+}
+
+body.calendar-layout .schedule-strip-shell.schedule-strip-shell--scrollable {
     grid-template-columns: 2.25rem minmax(0, 1fr) 2.25rem;
-    align-items: stretch;
     gap: 0.55rem;
 }
 
 body.calendar-layout #schedule-strip {
-    align-items: stretch;
-    gap: clamp(0.5rem, 0.7vw, 0.75rem);
-    padding: 0;
+    height: calc(var(--schedule-card-height) + 4px);
+    min-height: calc(var(--schedule-card-height) + 4px);
+    align-items: start;
+    gap: var(--schedule-strip-gap);
+    padding: 1px 4px 3px;
+    box-sizing: border-box;
+    overflow-y: hidden;
 }
 
 body.calendar-layout .schedule-scroll-button--side {
+    display: none;
     width: 2.25rem;
-    height: 100%;
+    height: var(--schedule-card-height);
     min-height: 0;
     border-radius: 0.75rem;
-    align-self: stretch;
+    align-self: start;
     box-shadow: none;
     background: color-mix(in srgb, var(--color-surface-2) 72%, transparent);
     border-color: var(--color-border-subtle);
     color: var(--color-text-secondary);
+}
+
+body.calendar-layout .schedule-strip-shell.schedule-strip-shell--scrollable .schedule-scroll-button--side {
+    display: inline-flex;
 }
 
 body.calendar-layout .schedule-scroll-button--side:not(:disabled) {
@@ -3742,26 +3913,33 @@ body.calendar-layout .schedule-scroll-button--side:disabled {
 }
 
 body.calendar-layout .schedule-card.schedule-card-v2 {
-    width: clamp(9.25rem, 8.55vw, 10.25rem);
-    min-width: clamp(9.25rem, 8.55vw, 10.25rem);
-    height: 100%;
-    min-height: 0;
+    width: var(--schedule-card-fit-width);
+    min-width: var(--schedule-card-fit-width);
+    flex: 0 0 var(--schedule-card-fit-width);
+    height: var(--schedule-card-height);
+    min-height: var(--schedule-card-height);
     display: grid;
-    grid-template-rows: auto minmax(0, 1fr) auto;
-    gap: 0.5rem;
-    padding: 0.72rem;
+    grid-template-rows: 2.25rem minmax(4.65rem, 1fr) 1.55rem;
+    gap: 0.28rem;
+    padding: 0.6rem;
     overflow: hidden;
 }
 
 body.calendar-layout .schedule-card.schedule-card-v2.schedule-card-empty {
-    height: auto;
-    min-height: 8.1rem;
-    grid-template-rows: auto minmax(0, 1fr);
+    height: var(--schedule-card-height);
+    min-height: var(--schedule-card-height);
+    grid-template-rows: 2.25rem minmax(4.35rem, 1fr);
     opacity: 0.86;
+    background:
+        radial-gradient(circle at 50% 58%, color-mix(in srgb, var(--color-primary) 7%, transparent) 0 32%, transparent 33%),
+        linear-gradient(180deg, color-mix(in srgb, var(--color-surface-1) 94%, var(--color-primary) 6%) 0%, var(--color-surface-1) 100%);
 }
 
 body.calendar-layout .schedule-card.schedule-card-v2.schedule-card-empty.schedule-card-today {
     opacity: 1;
+    background:
+        radial-gradient(circle at 50% 58%, color-mix(in srgb, var(--color-primary) 12%, transparent) 0 34%, transparent 35%),
+        linear-gradient(180deg, color-mix(in srgb, var(--color-surface-1) 90%, var(--color-primary) 10%) 0%, var(--color-surface-1) 100%);
 }
 
 body.calendar-layout .schedule-card-v2__top,
@@ -3777,6 +3955,7 @@ body.calendar-layout .schedule-card-v2__date {
     min-width: 0;
     display: grid;
     gap: 0.1rem;
+    align-content: start;
 }
 
 body.calendar-layout .schedule-card-v2 .schedule-day-label {
@@ -3784,14 +3963,14 @@ body.calendar-layout .schedule-card-v2 .schedule-day-label {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: 0.95rem;
+    font-size: 0.88rem;
     font-weight: 800;
     line-height: 1.1;
 }
 
 body.calendar-layout .schedule-card-v2 .schedule-date-label {
     color: var(--color-text-secondary);
-    font-size: 0.72rem;
+    font-size: 0.67rem;
     font-weight: 700;
     line-height: 1.1;
 }
@@ -3799,9 +3978,10 @@ body.calendar-layout .schedule-card-v2 .schedule-date-label {
 body.calendar-layout .schedule-card-v2__body {
     min-height: 0;
     display: grid;
-    grid-template-rows: auto auto auto;
-    align-content: center;
-    gap: 0.48rem;
+    grid-template-rows: auto auto auto minmax(0, auto);
+    align-content: start;
+    gap: 0.24rem;
+    overflow: hidden;
 }
 
 body.calendar-layout .schedule-plan-count {
@@ -3809,11 +3989,12 @@ body.calendar-layout .schedule-plan-count {
     align-items: baseline;
     gap: 0.35rem;
     min-width: 0;
+    max-width: 100%;
 }
 
 body.calendar-layout .schedule-plan-count__value {
     color: var(--color-text-main);
-    font-size: 1.45rem;
+    font-size: 1.24rem;
     font-weight: 850;
     line-height: 1;
 }
@@ -3821,7 +4002,7 @@ body.calendar-layout .schedule-plan-count__value {
 body.calendar-layout .schedule-plan-count__label {
     min-width: 0;
     color: var(--color-text-secondary);
-    font-size: 0.78rem;
+    font-size: 0.72rem;
     font-weight: 750;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -3832,9 +4013,9 @@ body.calendar-layout .schedule-plan-kind {
     min-width: 0;
     display: flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.32rem;
     color: var(--color-text-main);
-    font-size: 0.9rem;
+    font-size: 0.75rem;
     font-weight: 780;
     line-height: 1.15;
 }
@@ -3856,15 +4037,17 @@ body.calendar-layout .schedule-plan-dots {
     min-width: 0;
     display: flex;
     align-items: center;
-    gap: 0.32rem;
+    gap: 0.28rem;
+    overflow: hidden;
 }
 
 body.calendar-layout .schedule-plan-dot {
-    width: 0.48rem;
-    height: 0.48rem;
+    width: 0.44rem;
+    height: 0.44rem;
     border-radius: 999px;
     background: var(--color-primary-soft);
     border: 1px solid var(--color-primary-light);
+    flex: 0 0 auto;
 }
 
 body.calendar-layout .schedule-plan-dot.is-complete {
@@ -3885,27 +4068,72 @@ body.calendar-layout .schedule-plan-dot-more {
     font-weight: 800;
     line-height: 1;
     padding: 0.18rem 0.38rem;
+    flex: 0 0 auto;
+}
+
+body.calendar-layout .schedule-card-v2__meta {
+    min-width: 0;
+    max-width: 100%;
+    display: block;
+    overflow: hidden;
+    color: var(--color-text-secondary);
+    font-size: 0.68rem;
+    font-weight: 780;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+body.calendar-layout .schedule-card-v2__meta-text {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 body.calendar-layout .schedule-plan-empty {
-    min-height: 5rem;
+    min-height: 3.15rem;
     display: grid;
     place-items: center;
     gap: 0.35rem;
     color: var(--color-text-secondary);
     text-align: center;
-    font-size: 0.82rem;
+    font-size: 0.74rem;
     font-weight: 700;
 }
 
 body.calendar-layout .schedule-card-empty .schedule-plan-empty {
-    min-height: 3.9rem;
+    min-height: 4.05rem;
     align-content: center;
-    gap: 0.42rem;
+    gap: 0.34rem;
 }
 
-body.calendar-layout .schedule-card-empty .schedule-plan-empty .material-symbols-outlined {
-    font-size: 1.15rem;
+body.calendar-layout .schedule-card-empty .schedule-plan-empty::before {
+    content: '';
+    width: 2.28rem;
+    height: 1.62rem;
+    border-radius: 0.52rem;
+    border: 1px solid color-mix(in srgb, var(--color-border-subtle) 78%, var(--color-primary) 22%);
+    background:
+        linear-gradient(color-mix(in srgb, var(--color-primary) 40%, transparent), color-mix(in srgb, var(--color-primary) 40%, transparent)) 0.45rem 0.42rem / 1.08rem 0.12rem no-repeat,
+        linear-gradient(color-mix(in srgb, var(--color-border-subtle) 90%, var(--color-primary) 10%), color-mix(in srgb, var(--color-border-subtle) 90%, var(--color-primary) 10%)) 0.45rem 0.78rem / 1.38rem 0.12rem no-repeat,
+        linear-gradient(color-mix(in srgb, var(--color-border-subtle) 84%, transparent), color-mix(in srgb, var(--color-border-subtle) 84%, transparent)) 0.45rem 1.12rem / 0.92rem 0.12rem no-repeat,
+        linear-gradient(180deg, color-mix(in srgb, var(--color-surface-2) 86%, transparent), var(--color-surface-1));
+    box-shadow:
+        inset 0 1px 0 color-mix(in srgb, var(--color-surface-1) 82%, white 18%),
+        0 8px 16px color-mix(in srgb, var(--color-primary) 8%, transparent);
+    opacity: 0.72;
+}
+
+body.calendar-layout .schedule-card-empty.schedule-card-today .schedule-plan-empty::before {
+    width: 2.42rem;
+    height: 1.72rem;
+    border-color: color-mix(in srgb, var(--color-primary) 55%, var(--color-border-subtle));
+    background:
+        linear-gradient(var(--color-primary), var(--color-primary)) 0.48rem 0.44rem / 1.18rem 0.13rem no-repeat,
+        linear-gradient(color-mix(in srgb, var(--color-primary) 32%, transparent), color-mix(in srgb, var(--color-primary) 32%, transparent)) 0.48rem 0.82rem / 1.44rem 0.13rem no-repeat,
+        linear-gradient(color-mix(in srgb, var(--color-primary) 22%, transparent), color-mix(in srgb, var(--color-primary) 22%, transparent)) 0.48rem 1.18rem / 0.96rem 0.13rem no-repeat,
+        linear-gradient(180deg, color-mix(in srgb, var(--color-surface-1) 86%, var(--color-primary) 14%), var(--color-surface-1));
+    opacity: 1;
 }
 
 body.calendar-layout .schedule-card-empty:not(.schedule-card-today) .schedule-plan-empty {
@@ -3913,18 +4141,33 @@ body.calendar-layout .schedule-card-empty:not(.schedule-card-today) .schedule-pl
 }
 
 body.calendar-layout .schedule-plan-empty__action {
-    border: 0;
-    background: transparent;
+    border: 1px solid color-mix(in srgb, var(--color-primary) 34%, var(--color-border-subtle));
+    border-radius: 0.55rem;
+    background-color: var(--color-surface-1);
+    background-image: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--color-surface-1) 76%, var(--color-primary-lighter) 24%) 0%,
+        color-mix(in srgb, var(--color-surface-1) 88%, var(--color-primary-lighter) 12%) 100%
+    );
     color: var(--color-primary);
-    font-size: 0.76rem;
+    padding: 0.3rem 0.52rem;
+    font-size: 0.7rem;
     font-weight: 800;
     line-height: 1.15;
+    box-shadow:
+        inset 0 1px 0 color-mix(in srgb, white 42%, transparent),
+        0 4px 10px color-mix(in srgb, var(--color-primary) 8%, transparent);
     cursor: pointer;
 }
 
 body.calendar-layout .schedule-plan-empty__action:hover {
+    background-color: color-mix(in srgb, var(--color-surface-1) 70%, var(--color-primary-lighter) 30%);
+    background-image: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--color-surface-1) 66%, var(--color-primary-lighter) 34%) 0%,
+        color-mix(in srgb, var(--color-surface-1) 80%, var(--color-primary-lighter) 20%) 100%
+    );
     color: var(--color-primary-dark);
-    text-decoration: underline;
 }
 
 body.calendar-layout .schedule-plan-empty .material-symbols-outlined {
@@ -3933,16 +4176,25 @@ body.calendar-layout .schedule-plan-empty .material-symbols-outlined {
 }
 
 body.calendar-layout .schedule-card-v2__status {
-    min-height: 1.75rem;
+    min-height: 1.35rem;
     border-top: 1px solid var(--color-border-subtle);
-    padding-top: 0.5rem;
+    padding-top: 0.28rem;
     color: var(--color-text-secondary);
-    font-size: 0.76rem;
+    font-size: 0.66rem;
     font-weight: 760;
+    overflow: hidden;
+    white-space: nowrap;
 }
 
 body.calendar-layout .schedule-card-v2__status > .material-symbols-outlined {
     font-size: 1rem;
+    flex: 0 0 auto;
+}
+
+body.calendar-layout .schedule-card-v2__status > span:not(.material-symbols-outlined) {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 body.calendar-layout .schedule-card-v2__status--active,
@@ -3962,6 +4214,7 @@ body.calendar-layout .schedule-card-v2__badges {
     margin-left: auto;
     min-width: 0;
     overflow: hidden;
+    display: none;
 }
 
 body.calendar-layout .schedule-card-v2__badges .pill-sm {
@@ -3969,35 +4222,79 @@ body.calendar-layout .schedule-card-v2__badges .pill-sm {
     font-size: 0.66rem;
 }
 
+body.calendar-layout .schedule-card-v2--stacked .schedule-plan-count__value,
+body.calendar-layout .schedule-card-v2--dense .schedule-plan-count__value {
+    font-size: 1.15rem;
+}
+
+body.calendar-layout .schedule-card-v2--dense {
+    grid-template-rows: 2.25rem minmax(4.65rem, 1fr) 1.55rem;
+}
+
+body.calendar-layout .schedule-card-v2--dense .schedule-card-v2__body {
+    gap: 0.2rem;
+}
+
 /* Memory health: compact, content-sized panel for the calendar right rail. */
 body.calendar-layout .calendar-health-col > .memory-health-panel {
-    height: auto !important;
+    flex: 1 1 auto;
+    height: 100% !important;
     max-height: none;
     min-height: 0;
     align-self: stretch;
-    overflow: visible !important;
+    overflow: hidden !important;
+    padding: 0.66rem 0.78rem;
+}
+
+body.calendar-layout .calendar-health-col:has(#notification-card:not(.hidden)) > .memory-health-panel {
+    height: auto !important;
+}
+
+body.calendar-layout .calendar-health-col > .memory-health-panel:has(.memory-health-shell--empty) {
+    height: 100% !important;
+    min-height: 100%;
+    padding: 0.85rem 0.95rem;
 }
 
 body.calendar-layout .memory-health-panel > .flex:first-child {
-    margin-bottom: 0.65rem !important;
+    margin-bottom: 0 !important;
 }
 
 body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--compact) {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(12.75rem, 0.72fr);
+    grid-template-columns: minmax(0, 1fr) minmax(12.5rem, 0.7fr);
     grid-template-areas: 'overview actions';
-    align-items: stretch;
-    gap: 0.72rem;
-    height: auto;
+    align-items: center;
+    gap: 0.78rem;
+    height: 100%;
     min-height: 0;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--polished:not(.memory-health-shell--compact) {
+    grid-template-columns: minmax(12rem, 0.7fr) minmax(17.25rem, 1.3fr);
+    align-items: stretch;
+    gap: 0.9rem;
+    padding-inline: 0.15rem 0.5rem;
+    overflow: visible;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--single.memory-health-shell--polished:not(.memory-health-shell--compact) {
+    grid-template-columns: minmax(15rem, 0.96fr) minmax(15rem, 1.04fr);
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--single).memory-health-shell--polished:not(.memory-health-shell--compact) {
+    grid-template-columns: 76px minmax(12rem, 1.12fr) minmax(12.75rem, 0.98fr);
+    grid-template-areas: 'ring copy actions';
+    align-items: stretch;
+    gap: 0.9rem;
 }
 
 body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--compact) .memory-health-overview {
     grid-area: overview;
     display: grid;
-    grid-template-columns: 58px minmax(0, 1fr);
+    grid-template-columns: 56px minmax(0, 1fr);
     align-items: center;
-    gap: 0.72rem;
+    gap: 0.68rem;
     min-width: 0;
     padding: 0;
     border: 0;
@@ -4005,9 +4302,41 @@ body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-healt
     box-shadow: none;
 }
 
+body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-overview {
+    height: 100%;
+    align-items: center;
+    grid-template-columns: 62px minmax(0, 1fr);
+    gap: 0.72rem;
+    padding: 0.56rem 0.08rem 0.56rem 0.24rem;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--single).memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-overview {
+    display: contents;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--single).memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-progress-wrap {
+    grid-area: ring;
+    align-self: center;
+    width: 76px;
+    height: 76px;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--short:not(.memory-health-shell--single).memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-progress-wrap {
+    width: 62px;
+    height: 62px;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-progress-wrap {
+    width: 62px;
+    height: 62px;
+}
+
 body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--compact) .memory-health-progress-wrap {
-    width: 58px;
-    height: 58px;
+    width: 56px;
+    height: 56px;
 }
 
 body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--compact) .memory-health-progress::after {
@@ -4015,45 +4344,216 @@ body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-healt
 }
 
 body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--compact) .memory-health-progress-value {
-    font-size: 1.02rem;
-    letter-spacing: 0;
-    line-height: 1.1;
+    font-size: 0.92rem;
+    letter-spacing: -0.01em;
+    line-height: 1.05;
 }
 
 body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--compact) .memory-health-overview-copy {
     display: grid;
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+        'title title'
+        'headline headline'
+        'status stats';
     align-content: center;
-    gap: 0.36rem;
+    align-items: center;
+    column-gap: 0.45rem;
+    row-gap: 0.18rem;
     min-width: 0;
 }
 
+body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-overview-copy {
+    position: relative;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+        'title'
+        'status'
+        'headline'
+        'subline'
+        'stats';
+    align-content: center;
+    column-gap: 0.52rem;
+    row-gap: 0.4rem;
+    min-height: 100%;
+    padding-left: 0.78rem;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--single).memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-overview-copy {
+    grid-area: copy;
+    min-height: 100%;
+    align-content: center;
+    row-gap: 0.48rem;
+    padding-left: 0.92rem;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--short:not(.memory-health-shell--single).memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-overview-copy {
+    row-gap: 0.22rem;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-overview-copy::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.18rem;
+    bottom: 0.18rem;
+    width: 1px;
+    background: color-mix(in srgb, var(--color-border-subtle) 74%, var(--color-primary) 26%);
+}
+
+body.calendar-layout .memory-health-panel .memory-health-title {
+    grid-area: title;
+    min-width: 0;
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: 0.62rem;
+    font-weight: 850;
+    line-height: 1;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: normal;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-title {
+    color: var(--color-text-main);
+    font-size: 0.7rem;
+    font-weight: 900;
+    letter-spacing: 0;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--single).memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-title {
+    font-size: 0.78rem;
+    letter-spacing: 0;
+    line-height: 1.08;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--short:not(.memory-health-shell--single).memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-title {
+    font-size: 0.66rem;
+}
+
 body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--compact) .memory-health-status {
-    min-height: 1.42rem;
-    padding: 0.16rem 0.56rem;
-    font-size: 0.6rem;
+    grid-area: status;
+    min-height: 1.28rem;
+    justify-self: start;
+    padding: 0.12rem 0.42rem;
+    font-size: 0.54rem;
 }
 
 body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--compact) .memory-health-overview-title {
-    font-size: 0.96rem;
-    line-height: 1.15;
+    grid-area: headline;
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 900;
+    line-height: 1.14;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-overview-title {
+    display: -webkit-box;
+    max-width: 100%;
+    font-size: 1.04rem;
+    line-height: 1.12;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--single).memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-overview-title {
+    font-size: 1.2rem;
+    line-height: 1.08;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--short:not(.memory-health-shell--single).memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-overview-title {
+    font-size: 0.98rem;
+    line-height: 1.05;
 }
 
 body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--compact) .memory-health-overview-text {
     display: none;
 }
 
+body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-overview-text {
+    grid-area: subline;
+    display: -webkit-box;
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: 0.72rem;
+    font-weight: 650;
+    line-height: 1.28;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--single).memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-overview-text {
+    font-size: 0.82rem;
+    line-height: 1.22;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--short:not(.memory-health-shell--single).memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-overview-text {
+    display: none;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--single).memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-status {
+    min-height: 1.36rem;
+    padding-inline: 0.48rem;
+    font-size: 0.58rem;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--short:not(.memory-health-shell--single).memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-status {
+    min-height: 1.12rem;
+    padding: 0.08rem 0.36rem;
+    font-size: 0.5rem;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-status {
+    justify-self: start;
+    align-self: start;
+}
+
 body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--compact) .memory-health-stats {
-    gap: 0.36rem;
+    grid-area: stats;
+    justify-self: start;
+    gap: 0.34rem;
+    color: var(--color-text-secondary);
 }
 
 body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--compact) .memory-health-stat {
-    min-height: 1.52rem;
-    padding: 0.22rem 0.52rem;
-    gap: 0.22rem;
+    min-height: 0;
+    padding: 0;
+    gap: 0.16rem;
+    border: 0;
+    background: transparent;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--compact) .memory-health-stat__value {
+    font-size: 0.68rem;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--compact) .memory-health-stat__label {
+    font-size: 0.56rem;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--short:not(.memory-health-shell--single).memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-stats {
+    gap: 0.24rem;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--short:not(.memory-health-shell--single).memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-stat__value {
+    font-size: 0.62rem;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--short:not(.memory-health-shell--single).memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-stat__label {
+    font-size: 0.5rem;
 }
 
 body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--compact) .memory-health-actions {
@@ -4063,17 +4563,103 @@ body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-healt
     padding-top: 0;
 }
 
+body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--single).memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-actions {
+    grid-area: actions;
+    min-width: 0;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-actions,
+body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-list,
+body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-stack {
+    height: 100%;
+    min-width: 0;
+}
+
 body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--compact) .memory-health-list,
 body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--compact) .memory-health-stack {
     width: 100%;
-    gap: 0.42rem;
+    gap: 0.34rem;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-stack {
+    display: grid;
+    grid-template-rows: minmax(5.55rem, auto) auto;
+    align-content: center;
+    gap: 0.44rem;
+    padding: 1px 2px 1px 0;
+    box-sizing: border-box;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--single).memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-stack {
+    align-content: stretch;
+    grid-template-rows: minmax(0, 1fr) auto;
+    gap: 0.62rem;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--single).memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-stack--list {
+    grid-template-rows: none;
+    grid-auto-rows: minmax(0, auto);
+    align-content: stretch;
+    gap: 0.38rem;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--single:not(.memory-health-shell--compact) .memory-health-stack {
+    grid-template-rows: minmax(6.15rem, auto) minmax(2.55rem, auto);
 }
 
 body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--compact) .memory-health-action {
-    min-height: 3.25rem;
-    padding: 0.54rem 0.68rem;
-    border-radius: 0.9rem;
+    min-height: 3rem;
+    padding: 0.46rem 0.62rem;
+    border-radius: 0.85rem;
     box-shadow: none;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-action {
+    min-height: 5.55rem;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+    align-items: start;
+    row-gap: 0.58rem;
+    column-gap: 0.85rem;
+    padding: 0.72rem 0.78rem;
+    border-radius: 0.9rem;
+    border-color: color-mix(in srgb, var(--color-border-subtle) 62%, var(--memory-health-accent) 38%);
+    background:
+        linear-gradient(180deg, color-mix(in srgb, var(--color-surface-1) 94%, var(--memory-health-soft) 6%) 0%, var(--color-surface-1) 100%);
+    box-shadow: inset 3px 0 0 var(--memory-health-accent);
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--single).memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-action {
+    min-height: 0;
+    height: 100%;
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    row-gap: 0.42rem;
+    padding: 0.72rem 0.82rem;
+    align-self: stretch;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--single).memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-stack--list .memory-health-action {
+    height: auto;
+    min-height: 0;
+    grid-template-rows: auto auto auto;
+    row-gap: 0.22rem;
+    column-gap: 0.55rem;
+    padding: 0.46rem 0.58rem;
+    border-radius: 0.76rem;
+    box-shadow: inset 2px 0 0 var(--memory-health-accent);
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--single).memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-action__copy {
+    display: contents;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--single).memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-action__label {
+    grid-column: 1;
+    grid-row: 1;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--single:not(.memory-health-shell--compact) .memory-health-action {
+    height: auto;
 }
 
 body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--compact) .memory-health-action__label {
@@ -4088,6 +4674,133 @@ body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-healt
     display: block;
 }
 
+body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-action__copy {
+    align-self: start;
+    gap: 0.34rem;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-action__label {
+    font-size: 0.56rem;
+    line-height: 1;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-action__name {
+    font-size: 0.92rem;
+    line-height: 1.16;
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--single).memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-action__name {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    font-size: 1.04rem;
+    line-height: 1.1;
+    overflow-wrap: anywhere;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--single).memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-action__side {
+    grid-column: 2;
+    grid-row: 1;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--single).memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-action__percent {
+    font-size: 1.16rem;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--single).memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-action__meter {
+    grid-row: 4;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--single).memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-stack--list .memory-health-action__label {
+    font-size: 0.5rem;
+    line-height: 1;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--single).memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-stack--list .memory-health-action__name {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    display: block;
+    font-size: 0.82rem;
+    line-height: 1.05;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow-wrap: normal;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--single).memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-stack--list .memory-health-action__side {
+    min-width: 2.65rem;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--single).memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-stack--list .memory-health-action__percent {
+    font-size: 0.86rem;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--single).memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-stack--list .memory-health-action__meta {
+    display: none;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--single).memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-stack--list .memory-health-action__meter {
+    grid-row: 3;
+    height: 0.26rem;
+    margin-top: 0.04rem;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--single).memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-stack--list .memory-health-overflow-action {
+    width: 100%;
+    max-width: none;
+    min-height: 1.58rem;
+    align-self: stretch;
+    padding-block: 0.22rem;
+    border-radius: 0.72rem;
+    font-size: 0.68rem;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--single).memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-secondary {
+    gap: 0.42rem;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--single).memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-chip,
+body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--single).memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-secondary .memory-health-overflow-action {
+    min-height: 1.74rem;
+    padding-block: 0.3rem;
+    font-size: 0.66rem;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-action__side {
+    align-self: start;
+    min-width: 3.6rem;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-action__percent {
+    font-size: 1.02rem;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--single).memory-health-shell--polished:not(.memory-health-shell--compact) .memory-health-action__percent {
+    font-size: 1.16rem;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-action__meter {
+    grid-column: 1 / -1;
+    width: 100%;
+    height: 0.34rem;
+    overflow: hidden;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-bg-tertiary) 74%, var(--memory-health-soft) 26%);
+}
+
+body.calendar-layout .memory-health-panel .memory-health-action__meter > span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--memory-health-accent), color-mix(in srgb, var(--memory-health-accent) 64%, var(--color-surface-1) 36%));
+}
+
 body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--compact) .memory-health-action__meta {
     -webkit-line-clamp: 1;
     line-clamp: 1;
@@ -4097,7 +4810,28 @@ body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-healt
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: stretch;
-    gap: 0.36rem;
+    gap: 0.3rem;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-guidance {
+    display: flex;
+    align-items: center;
+    gap: 0.42rem;
+    min-height: 2.55rem;
+    padding: 0.54rem 0.6rem;
+    border-radius: 0.78rem;
+    border: 1px solid color-mix(in srgb, var(--color-border-subtle) 78%, var(--color-primary) 22%);
+    background: color-mix(in srgb, var(--color-bg-secondary) 72%, var(--color-surface-1) 28%);
+    color: var(--color-text-secondary);
+    font-size: 0.66rem;
+    font-weight: 700;
+    line-height: 1.18;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-guidance .material-symbols-outlined {
+    flex: 0 0 auto;
+    color: var(--color-primary);
+    font-size: 1rem;
 }
 
 body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--compact) .memory-health-secondary--single {
@@ -4108,11 +4842,12 @@ body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-healt
 body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--compact) .memory-health-secondary .memory-health-overflow-action {
     width: 100%;
     min-width: 0;
-    min-height: 1.72rem;
+    min-height: 1.54rem;
     max-width: 100%;
-    gap: 0.28rem;
-    padding: 0.32rem 0.38rem;
-    font-size: 0.66rem;
+    gap: 0.24rem;
+    padding: 0.24rem 0.34rem;
+    font-size: 0.62rem;
+    opacity: 0.88;
 }
 
 body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--compact) .memory-health-chip__name {
@@ -4129,12 +4864,135 @@ body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-healt
     border: 0;
 }
 
+body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--empty {
+    height: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: center;
+    justify-items: center;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--empty .memory-health-overview {
+    width: min(100%, 30rem);
+    display: grid;
+    grid-template-columns: 68px minmax(0, 1fr);
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.95rem 1rem;
+    border: 1px solid color-mix(in srgb, var(--color-border-subtle) 82%, var(--color-primary) 18%);
+    border-radius: 1rem;
+    background:
+        radial-gradient(circle at top right, color-mix(in srgb, var(--color-primary) 9%, transparent), transparent 44%),
+        linear-gradient(180deg, color-mix(in srgb, var(--color-surface-1) 94%, var(--color-primary) 6%), var(--color-surface-1));
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-surface-1) 82%, white 18%);
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--empty .memory-health-progress-wrap {
+    width: 68px;
+    height: 68px;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--empty .memory-health-progress::after {
+    inset: 8px;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--empty .memory-health-progress-value {
+    color: var(--color-text-secondary);
+    font-size: 1.12rem;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--empty .memory-health-overview-copy {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+        'title'
+        'headline'
+        'subline'
+        'status';
+    align-content: center;
+    justify-items: start;
+    gap: 0.3rem;
+    min-width: 0;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--empty .memory-health-title {
+    display: block;
+    font-size: 0.66rem;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--empty .memory-health-status {
+    grid-area: status;
+    min-height: 1.35rem;
+    padding: 0.15rem 0.48rem;
+    font-size: 0.56rem;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--empty .memory-health-overview-title {
+    grid-area: headline;
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 900;
+    line-height: 1.14;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--empty .memory-health-overview-text {
+    grid-area: subline;
+    display: block;
+    max-width: 23rem;
+    color: var(--color-text-secondary);
+    font-size: 0.75rem;
+    font-weight: 650;
+    line-height: 1.28;
+}
+
+body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--empty .memory-health-stats {
+    display: none !important;
+}
+
 @media (max-width: 1180px) {
+    body.calendar-layout .calendar-summary-card .calendar-card-body {
+        padding: 0.56rem 0.66rem;
+        gap: 0.42rem;
+    }
+
+    body.calendar-layout #daily-mix-reason {
+        margin-top: 0.3rem;
+        font-size: 0.64rem;
+    }
+
+    body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--compact {
+        grid-template-columns: 58px minmax(0, 1fr);
+        grid-template-areas:
+            'ring status'
+            'ring title'
+            'actions actions'
+            'stats stats';
+        align-content: start;
+        row-gap: 0.38rem;
+    }
+
+    body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--compact .memory-health-stats {
+        width: 100%;
+        margin-left: 0;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        justify-content: stretch;
+    }
+
+    body.calendar-layout .memory-health-panel .memory-health-shell.memory-health-shell--compact .memory-health-stat {
+        width: 100%;
+        min-width: 0;
+        padding-inline: 0.36rem;
+    }
+
     body.calendar-layout .memory-health-panel .memory-health-shell:not(.memory-health-shell--compact) {
         grid-template-columns: 1fr;
         grid-template-areas:
             'overview'
             'actions';
+    }
+
+    body.calendar-layout .memory-health-panel .memory-health-title {
+        display: none;
     }
 }
 

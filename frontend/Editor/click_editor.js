@@ -141,6 +141,12 @@ class ClickEditor extends BaseEditor {
         this.toolbarTooltipTimer = null;
         this.toolbarTooltipTarget = null;
         this.toolbarTooltipDismissBound = false;
+        this.clickEditorOnboardingErrorsVariantActive = false;
+        this.clickEditorOnboardingErrorsMarkerTimer = 0;
+        this.clickEditorOnboardingErrorsSnapshot = null;
+        this.clickEditorOnboardingDemoSnapshot = null;
+        this.clickEditorOnboardingDemoActive = false;
+        this.clickEditorOnboardingAnnotationAnchor = null;
 
         // Additional info (legacy placeholder)
         this.additionalInfo = { type: "none", text: "", images: [] };
@@ -150,6 +156,8 @@ class ClickEditor extends BaseEditor {
 
         this.cacheDom();
         this.setupEventListeners();
+        this.setupClickEditorOnboardingTourBridge();
+        this.setupAuthoringOnboardingHelp();
         this.init().catch(err => {
             console.error("Critical initialization error:", err);
             this.showFatalError("Ошибка инициализации редактора: " + err.message);
@@ -605,12 +613,745 @@ class ClickEditor extends BaseEditor {
             "click";
         this.taskType = candidate;
         this.isDrawTask = candidate === "draw" || candidate === "draw_task";
+        if (window.OnboardingTour && typeof window.OnboardingTour.refreshHelpButtons === "function") {
+            window.OnboardingTour.refreshHelpButtons();
+        }
     }
 
     resetVertexEditingState() {
         this.selectedVertex = null;
         this.draggingVertex = null;
         this.vertexDragMoved = false;
+    }
+
+    isClickOnboardingPreview() {
+        const params = new URLSearchParams(window.location.search || "");
+        const previewTourId = params.get("onboarding_preview") || params.get("onboarding_tour") || "";
+        return previewTourId === "click-editor-authoring"
+            || previewTourId === "draw-editor-authoring"
+            || previewTourId === "click-editor-errors-authoring"
+            || previewTourId === "click-editor-errors-texts-authoring";
+    }
+
+    getOnboardingPreviewTourId() {
+        const params = new URLSearchParams(window.location.search || "");
+        return params.get("onboarding_preview") || params.get("onboarding_tour") || "";
+    }
+
+    getAuthoringOnboardingTourId() {
+        const previewTourId = this.getOnboardingPreviewTourId();
+        if (previewTourId === "draw-editor-authoring" || previewTourId === "click-editor-authoring") {
+            return previewTourId;
+        }
+
+        const params = new URLSearchParams(window.location.search || "");
+        const candidate = String(
+            this.task?.task_data?.type ||
+            this.task?.task_data?.task_type ||
+            this.task?.task_type ||
+            this.task?.type ||
+            this.taskTypeParam ||
+            params.get("task_type") ||
+            this.taskType ||
+            ""
+        ).trim();
+        return candidate === "draw" || candidate === "draw_task" || this.isDrawTask
+            ? "draw-editor-authoring"
+            : "click-editor-authoring";
+    }
+
+    setupAuthoringOnboardingHelp() {
+        window.ACTRA_ONBOARDING_HELP = {
+            mode: "direct",
+            getTourId: () => this.getAuthoringOnboardingTourId()
+        };
+        if (window.OnboardingTour && typeof window.OnboardingTour.refreshHelpButtons === "function") {
+            window.OnboardingTour.refreshHelpButtons();
+        }
+        if (
+            !this.isClickOnboardingPreview()
+            && window.OnboardingTour
+            && typeof window.OnboardingTour.startIfUnseen === "function"
+        ) {
+            window.setTimeout(() => {
+                window.OnboardingTour.startIfUnseen(this.getAuthoringOnboardingTourId());
+            }, 900);
+        }
+    }
+
+    createClickOnboardingPreviewTask() {
+        const svg = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="920" height="560" viewBox="0 0 920 560">
+                <defs>
+                    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+                        <stop offset="0" stop-color="#f8fafc"/>
+                        <stop offset="1" stop-color="#dbeafe"/>
+                    </linearGradient>
+                    <radialGradient id="scan" cx="50%" cy="45%" r="65%">
+                        <stop offset="0" stop-color="#ffffff"/>
+                        <stop offset="0.58" stop-color="#cbd5e1"/>
+                        <stop offset="1" stop-color="#64748b"/>
+                    </radialGradient>
+                </defs>
+                <rect width="920" height="560" rx="28" fill="url(#bg)"/>
+                <rect x="42" y="38" width="836" height="484" rx="22" fill="#e2e8f0" stroke="#94a3b8" stroke-width="2"/>
+                <ellipse cx="460" cy="280" rx="300" ry="188" fill="url(#scan)" opacity="0.92"/>
+                <path d="M260 276 C302 198 396 156 488 176 C575 194 642 255 661 336 C603 314 540 306 477 322 C394 343 324 326 260 276Z" fill="#94a3b8" opacity="0.65"/>
+                <circle cx="395" cy="244" r="38" fill="#f87171" opacity="0.34"/>
+                <circle cx="548" cy="318" r="42" fill="#22c55e" opacity="0.32"/>
+                <path d="M190 116 H730" stroke="#cbd5e1" stroke-width="14" stroke-linecap="round" opacity="0.8"/>
+                <path d="M176 444 H756" stroke="#cbd5e1" stroke-width="12" stroke-linecap="round" opacity="0.72"/>
+            </svg>
+        `;
+        const image = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+        return {
+            metadata: {
+                id: "click-onboarding-preview",
+                name: "Демо Click-задание"
+            },
+            task_data: {
+                id: "click-onboarding-preview",
+                type: "click",
+                name: "Демо Click-задание",
+                meta: {
+                    id: "click-onboarding-preview",
+                    module: "onboarding-preview",
+                    topic: "click",
+                    title: "Демо Click-задание"
+                },
+                content: {
+                    prompt: "Отметьте на изображении области, которые пользователь должен найти кликом.",
+                    choice_prompt: "Выберите область на изображении.",
+                    image: { asset_url: image },
+                    required_correct: 1,
+                    annotations: [
+                        {
+                            type: "polygon",
+                            label: "Область 1",
+                            color: "#ef4444",
+                            labelVisible: true,
+                            points: [[350, 208], [425, 190], [466, 236], [434, 294], [360, 284]]
+                        },
+                        {
+                            type: "polygon",
+                            label: "Область 2",
+                            color: "#22c55e",
+                            labelVisible: true,
+                            points: [[512, 284], [578, 274], [610, 326], [568, 374], [506, 350]]
+                        },
+                        {
+                            type: "freehand",
+                            label: "Контур",
+                            color: "#8b5cf6",
+                            labelVisible: true,
+                            points: [[696, 166], [725, 194], [746, 224], [758, 254], [760, 282], [755, 314], [742, 346], [720, 378], [686, 410], [638, 440]]
+                        }
+                    ],
+                    additionalInfo: {
+                        type: "text",
+                        text: "Дополнительный контекст можно оставить здесь."
+                    }
+                },
+                settings: {
+                    success_threshold: 1
+                }
+            }
+        };
+    }
+
+    createDrawOnboardingPreviewTask() {
+        const task = this.createClickOnboardingPreviewTask();
+        task.metadata.id = "draw-onboarding-preview";
+        task.metadata.name = "Демо задание «Рисование»";
+        task.task_data.id = "draw-onboarding-preview";
+        task.task_data.type = "draw";
+        task.task_data.name = "Демо задание «Рисование»";
+        task.task_data.meta.id = "draw-onboarding-preview";
+        task.task_data.meta.topic = "draw";
+        task.task_data.meta.title = "Демо задание «Рисование»";
+        task.task_data.content.prompt = "Найдите красный и зелёный круги, а также отметьте правый контур овала.";
+        task.task_data.content.choice_prompt = "";
+        task.task_data.content.required_correct = 2;
+        task.task_data.settings.success_threshold = 2;
+        task.task_data.content.annotations = [
+            {
+                type: "polygon",
+                label: "Область 1",
+                color: "#ef4444",
+                labelVisible: true,
+                points: [[350, 208], [425, 190], [466, 236], [434, 294], [360, 284]]
+            },
+            {
+                type: "polygon",
+                label: "Область 2",
+                color: "#22c55e",
+                labelVisible: true,
+                points: [[512, 284], [578, 274], [610, 326], [568, 374], [506, 350]]
+            },
+            {
+                type: "freehand",
+                label: "Свободный контур",
+                color: "#8b5cf6",
+                labelVisible: true,
+                points: [[696, 166], [725, 194], [746, 224], [758, 254], [760, 282], [755, 314], [742, 346], [720, 378], [686, 410], [638, 440]]
+            }
+        ];
+        task.task_data.content.additionalInfo = {
+            type: "text",
+            text: "Здесь можно оставить контекст, который поможет автору точнее разметить изображение."
+        };
+        return task;
+    }
+
+
+    getClickEditorOnboardingErrorsConfig() {
+        return {
+            tourId: "click-editor-errors-authoring",
+            buttonSelector: '[data-onboarding-target="click-errors-mode-button"]',
+            markerSelector: '.click-editor-onboarding-errors-marker',
+            markerClass: 'click-editor-onboarding-errors-marker',
+            datasetKey: 'onboardingErrorsTour',
+            title: 'Показать обучение по режиму ошибок',
+            calloutTitles: ['Режим ошибок', 'Текст с ошибками', 'Отметить ошибку', 'Условие прохождения']
+        };
+    }
+
+    removeClickEditorOnboardingErrorsMarker() {
+        window.clearTimeout(this.clickEditorOnboardingErrorsMarkerTimer);
+        this.clickEditorOnboardingErrorsMarkerTimer = 0;
+        document.querySelectorAll(this.getClickEditorOnboardingErrorsConfig().markerSelector).forEach((node) => node.remove());
+    }
+
+    positionClickEditorOnboardingErrorsMarker() {
+        const config = this.getClickEditorOnboardingErrorsConfig();
+        const marker = document.querySelector(config.markerSelector);
+        const button = marker?.__clickEditorErrorsButton || document.querySelector(config.buttonSelector);
+        if (!marker || !button?.isConnected) return false;
+
+        const rect = button.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) {
+            marker.classList.remove("is-positioned", "is-visible");
+            return false;
+        }
+
+        const markerSize = marker.offsetWidth || 24;
+        const margin = 12;
+        const left = Math.max(
+            margin,
+            Math.min(window.innerWidth - markerSize - margin, rect.left + (rect.width - markerSize) / 2)
+        );
+        const top = Math.max(
+            margin,
+            Math.min(window.innerHeight - markerSize - margin, rect.bottom + 5)
+        );
+        marker.style.left = `${left}px`;
+        marker.style.top = `${top}px`;
+        marker.classList.add("is-positioned");
+        return true;
+    }
+
+    cloneClickEditorOnboardingSnapshotValue(value) {
+        if (value == null) return value;
+        try {
+            return JSON.parse(JSON.stringify(value));
+        } catch (_) {
+            return value;
+        }
+    }
+
+    async applyClickEditorOnboardingDemoState(tourId) {
+        if (this.isClickOnboardingPreview() || !this.task?.task_data) return;
+        const normalizedTourId = String(tourId || this.getAuthoringOnboardingTourId() || "").trim();
+        if (normalizedTourId !== "click-editor-authoring" && normalizedTourId !== "draw-editor-authoring") return;
+
+        if (!this.clickEditorOnboardingDemoSnapshot) {
+            this.clickEditorOnboardingDemoSnapshot = {
+                task: this.cloneClickEditorOnboardingSnapshotValue(this.task),
+                state: this.captureState(),
+                hasPersistedTask: this.hasPersistedTask,
+                hasUnsavedChanges: this.hasUnsavedChanges,
+                additionalInfoDirty: this.additionalInfoDirty,
+                initialTaskSnapshot: this.initialTaskSnapshot,
+                currentMode: this.currentMode,
+                currentSubtaskMode: this.currentSubtaskMode,
+                taskType: this.taskType,
+                isDrawTask: this.isDrawTask,
+            };
+        }
+
+        this.clickEditorOnboardingDemoActive = true;
+        const demoTask = normalizedTourId === "draw-editor-authoring"
+            ? this.createDrawOnboardingPreviewTask()
+            : this.createClickOnboardingPreviewTask();
+        await this.hydrateTask(demoTask, {
+            persisted: false,
+            skipAutosave: true
+        });
+    }
+
+    restoreClickEditorOnboardingDemoState() {
+        const snapshot = this.clickEditorOnboardingDemoSnapshot;
+        this.clickEditorOnboardingDemoSnapshot = null;
+        this.clickEditorOnboardingDemoActive = false;
+        if (!snapshot?.task) return;
+
+        this.task = this.cloneClickEditorOnboardingSnapshotValue(snapshot.task);
+        this.hasPersistedTask = Boolean(snapshot.hasPersistedTask);
+        this.taskType = snapshot.taskType || this.taskType;
+        this.isDrawTask = Boolean(snapshot.isDrawTask);
+        this.restoreState(this.cloneClickEditorOnboardingSnapshotValue(snapshot.state), { markUnsaved: false });
+        this.currentMode = snapshot.currentMode || this.currentMode;
+        this.currentSubtaskMode = snapshot.currentSubtaskMode || this.currentSubtaskMode;
+        this.additionalInfoDirty = Boolean(snapshot.additionalInfoDirty);
+        this.initialTaskSnapshot = snapshot.initialTaskSnapshot;
+        this.hasUnsavedChanges = Boolean(snapshot.hasUnsavedChanges);
+        this.updateSaveStatus(false);
+        window.requestAnimationFrame(() => {
+            void this.setModeToggleActive(this.currentMode || "text").then(() => {
+                if (this.currentSubtaskMode) {
+                    this.updateSubtaskButtons();
+                    this.updateErrorsSubpaneVisibility();
+                }
+                this.updateSaveStatus(false);
+            });
+        });
+    }
+
+    captureClickEditorOnboardingErrorsSnapshot() {
+        if (this.clickEditorOnboardingErrorsSnapshot || !this.task) return;
+        this.clickEditorOnboardingErrorsSnapshot = {
+            state: this.captureState(),
+            hasUnsavedChanges: this.hasUnsavedChanges,
+            additionalInfoDirty: this.additionalInfoDirty,
+            initialTaskSnapshot: this.initialTaskSnapshot,
+            currentMode: this.currentMode,
+            currentSubtaskMode: this.currentSubtaskMode,
+            errorsModePaneScrollTop: this.errorsModePane ? this.errorsModePane.scrollTop : 0
+        };
+    }
+
+    restoreClickEditorOnboardingErrorsSnapshot(options = {}) {
+        const snapshot = this.clickEditorOnboardingErrorsSnapshot;
+        this.clickEditorOnboardingErrorsSnapshot = null;
+        if (!snapshot?.state) return;
+        const restoreMode = options.restoreMode !== false;
+
+        this.restoreState(this.cloneClickEditorOnboardingSnapshotValue(snapshot.state), { markUnsaved: false });
+        this.hasUnsavedChanges = Boolean(snapshot.hasUnsavedChanges);
+        this.additionalInfoDirty = Boolean(snapshot.additionalInfoDirty);
+        this.initialTaskSnapshot = snapshot.initialTaskSnapshot;
+        this.updateSaveStatus(false);
+        if (!restoreMode) return;
+        const mode = snapshot.currentMode || (this.errorDetection.enabled ? "errors" : "text");
+        const submode = snapshot.currentSubtaskMode || this.currentSubtaskMode;
+        window.requestAnimationFrame(() => {
+            if (submode) {
+                this.currentSubtaskMode = submode;
+                this.updateSubtaskButtons();
+                this.updateErrorsSubpaneVisibility();
+            }
+            void this.setModeToggleActive(mode).then(() => {
+                if (this.errorsModePane && Number.isFinite(Number(snapshot.errorsModePaneScrollTop))) {
+                    this.errorsModePane.scrollTo({ top: Number(snapshot.errorsModePaneScrollTop), behavior: "auto" });
+                }
+                this.updateSaveStatus(false);
+            });
+        });
+    }
+
+    seedClickEditorOnboardingErrorsState() {
+        if (!this.task?.task_data) return;
+        this.captureClickEditorOnboardingErrorsSnapshot();
+        const content = this.ensureTaskContentObject();
+        const text = "Пациенту рекомендовано принимать препарат три раза в неделю после еды.";
+        const errorStart = text.indexOf("в неделю");
+        const errorEnd = errorStart + "в неделю".length;
+        const referenceText = "Пациенту рекомендовано принимать препарат три раза в день после еды.";
+        const referenceStart = referenceText.indexOf("в день");
+        const referenceEnd = referenceStart + "в день".length;
+        content.mode = "text_errors";
+        content.prompt = DEFAULT_PROMPT;
+        content.choice_prompt = DEFAULT_CHOICE_PROMPT;
+        content.text = text;
+        content.error_spans = errorStart >= 0
+            ? [{ start: errorStart, end: errorEnd, label: "Неверная частота приёма" }]
+            : [];
+        content.reference_text = referenceText;
+        content.reference_spans = referenceStart >= 0
+            ? [{ start: referenceStart, end: referenceEnd }]
+            : [];
+        content.options = [
+            {
+                id: "click_onboarding_choice_correct",
+                text: "Пациенту рекомендовано принимать препарат три раза в день после еды.",
+                is_correct: true
+            },
+            {
+                id: "click_onboarding_choice_wrong",
+                text: "Пациенту рекомендовано принимать препарат три раза в неделю после еды.",
+                is_correct: false
+            }
+        ];
+        content.required_correct = 1;
+        content.require_all_errors = true;
+        this.errorDetection.enabled = true;
+        this.errorDetection.mode = "text_errors";
+        this.errorDetection.text = content.text;
+        this.errorDetection.errorSpans = content.error_spans;
+        this.errorDetection.options = content.options;
+        this.errorDetection.requiredCorrect = 1;
+        this.errorDetection.requiredCorrectManual = true;
+        this.loadReferenceDataFromContent(content);
+    }
+
+    setClickEditorOnboardingErrorsSubmode(submode) {
+        const content = this.ensureTaskContentObject();
+        const isTextsMode = submode === "texts";
+        this.currentSubtaskMode = isTextsMode ? "errors" : "text";
+        this.errorDetection.mode = isTextsMode ? "text_choice" : "text_errors";
+        if (content) {
+            content.mode = this.errorDetection.mode;
+        }
+        this.updateSubtaskButtons();
+        this.updateErrorsSubpaneVisibility();
+        if (isTextsMode) {
+            if (this.choicePromptTextarea) {
+                this.choicePromptTextarea.value = content.choice_prompt || DEFAULT_CHOICE_PROMPT;
+            }
+            this.populateChoicePaneFromState();
+        } else {
+            this.populateErrorsPaneFromState();
+            this.populateReferencePaneFromState();
+        }
+    }
+
+    setClickEditorOnboardingTextPane(pane) {
+        if (typeof this.setActiveTextPane === "function") {
+            this.setActiveTextPane(pane === "reference" ? "reference" : "primary");
+        }
+    }
+
+    setClickEditorOnboardingPromptOpen(open) {
+        if (!this.promptAreaWrapper) return;
+        this.promptAreaWrapper.classList.toggle("hidden", !open);
+        const icon = this.promptToggleBtn?.querySelector("[data-prompt-icon]");
+        const label = this.promptToggleBtn?.querySelector("[data-prompt-label]");
+        if (icon) icon.textContent = open ? "expand_less" : "expand_more";
+        if (label) label.textContent = open ? "Скрыть" : "Показать";
+    }
+
+    setClickEditorOnboardingChoicePromptOpen(open) {
+        if (!this.choicePromptAreaWrapper) return;
+        this.choicePromptAreaWrapper.classList.toggle("hidden", !open);
+        const icon = this.choicePromptToggleBtn?.querySelector("[data-choice-prompt-icon]");
+        const label = this.choicePromptToggleBtn?.querySelector("[data-choice-prompt-label]");
+        if (icon) icon.textContent = open ? "expand_less" : "expand_more";
+        if (label) label.textContent = open ? "Скрыть" : "Показать";
+    }
+
+    prepareClickEditorOnboardingErrorsStep(stepId) {
+        if (!stepId) return;
+        if (stepId === "click-errors-texts-mode" || stepId === "click-errors-texts-instruction") {
+            this.setClickEditorOnboardingErrorsSubmode("texts");
+            this.setClickEditorOnboardingChoicePromptOpen(true);
+            return;
+        }
+
+        this.setClickEditorOnboardingErrorsSubmode("words");
+        if (stepId === "click-errors-reference") {
+            this.setClickEditorOnboardingTextPane("reference");
+        } else {
+            this.setClickEditorOnboardingTextPane("primary");
+        }
+        this.setClickEditorOnboardingPromptOpen(stepId === "click-errors-rules-instruction");
+        this.setClickEditorOnboardingChoicePromptOpen(false);
+    }
+
+    prepareClickEditorOnboardingErrorsTour() {
+        const config = this.getClickEditorOnboardingErrorsConfig();
+        this.clickEditorOnboardingErrorsVariantActive = true;
+        document.body.dataset[config.datasetKey] = config.tourId;
+        this.removeClickEditorOnboardingErrorsMarker();
+        this.seedClickEditorOnboardingErrorsState();
+        return Promise.resolve(this.setModeToggleActive("errors")).then(() => {
+            this.populateErrorsPaneFromState();
+            this.populateReferencePaneFromState();
+            this.renderErrorsSpanList();
+            this.renderErrorsHighlightLayer();
+            this.updateErrorsTotalCount();
+            if (this.errorsTextEditor && this.errorDetection.text) {
+                const selectionText = "в неделю";
+                const selectionStart = this.errorDetection.text.indexOf(selectionText);
+                if (selectionStart >= 0 && typeof this.errorsTextEditor.setSelectionRange === "function") {
+                    const selectionEnd = selectionStart + selectionText.length;
+                    this.errorsTextEditor.focus({ preventScroll: true });
+                    this.errorsTextEditor.setSelectionRange(selectionStart, selectionEnd);
+                    this.handleErrorsTextSelection();
+                }
+            }
+            if (this.errorsModePane) {
+                this.errorsModePane.scrollTo({ top: 0, behavior: "auto" });
+            }
+            window.dispatchEvent(new Event("resize"));
+        });
+    }
+
+    startClickEditorOnboardingErrorsTour() {
+        const config = this.getClickEditorOnboardingErrorsConfig();
+        this.prepareClickEditorOnboardingErrorsTour().then(() => {
+            window.requestAnimationFrame(() => {
+                if (window.OnboardingTour && typeof window.OnboardingTour.start === "function") {
+                    window.OnboardingTour.start(config.tourId);
+                }
+            });
+        });
+    }
+
+    ensureClickEditorOnboardingErrorsMarker() {
+        const config = this.getClickEditorOnboardingErrorsConfig();
+        const button = document.querySelector(config.buttonSelector);
+        if (!button) return;
+        const existing = document.querySelector(config.markerSelector);
+        if (existing && existing.__clickEditorErrorsButton === button) {
+            this.positionClickEditorOnboardingErrorsMarker();
+            return;
+        }
+
+        this.removeClickEditorOnboardingErrorsMarker();
+        const marker = document.createElement("button");
+        marker.type = "button";
+        marker.className = config.markerClass;
+        marker.setAttribute("aria-label", config.title);
+        marker.setAttribute("title", config.title);
+        marker.setAttribute("data-onboarding-interactive", "click-errors-marker");
+        marker.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">priority_high</span>';
+        marker.__clickEditorErrorsButton = button;
+        marker.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            this.startClickEditorOnboardingErrorsTour();
+        });
+        document.body.appendChild(marker);
+        this.positionClickEditorOnboardingErrorsMarker();
+        window.requestAnimationFrame(() => this.positionClickEditorOnboardingErrorsMarker());
+        window.requestAnimationFrame(() => {
+            if (this.positionClickEditorOnboardingErrorsMarker()) {
+                marker.classList.add("is-visible");
+            }
+        });
+        window.setTimeout(() => this.positionClickEditorOnboardingErrorsMarker(), 180);
+        window.setTimeout(() => this.positionClickEditorOnboardingErrorsMarker(), 420);
+    }
+
+    scheduleClickEditorOnboardingErrorsMarker(delayMs = 260) {
+        window.clearTimeout(this.clickEditorOnboardingErrorsMarkerTimer);
+        this.clickEditorOnboardingErrorsMarkerTimer = window.setTimeout(() => {
+            this.clickEditorOnboardingErrorsMarkerTimer = 0;
+            if (
+                document.body?.dataset?.onboardingTourId !== "click-editor-authoring"
+                || document.body?.dataset?.onboardingStepId !== "click-header-save"
+                || this.clickEditorOnboardingErrorsVariantActive
+            ) {
+                return;
+            }
+            this.ensureClickEditorOnboardingErrorsMarker();
+        }, delayMs);
+    }
+
+    resetClickEditorOnboardingErrorsBranchState(options = {}) {
+        this.clickEditorOnboardingErrorsVariantActive = false;
+        delete document.body.dataset.onboardingErrorsTour;
+        if (options.restoreSnapshot !== false) {
+            this.restoreClickEditorOnboardingErrorsSnapshot(options);
+        }
+    }
+
+    selectClickEditorOnboardingAnnotation() {
+        if (!Array.isArray(this.annotations) || !this.annotations.length) return;
+        const preferredIndex = this.annotations.findIndex((annotation) => {
+            const label = String(annotation?.label || "").trim().toLowerCase();
+            return label === "область 1";
+        });
+        const index = preferredIndex >= 0 ? preferredIndex : 0;
+        this.selectAnnotation(index);
+        this.updateClickEditorOnboardingAnnotationAnchor();
+    }
+
+    removeClickEditorOnboardingAnnotationAnchor() {
+        if (this.clickEditorOnboardingAnnotationAnchor?.parentNode) {
+            this.clickEditorOnboardingAnnotationAnchor.parentNode.removeChild(this.clickEditorOnboardingAnnotationAnchor);
+        }
+        this.clickEditorOnboardingAnnotationAnchor = null;
+    }
+
+    updateClickEditorOnboardingAnnotationAnchor() {
+        const index = this.selectedAnnotationIndex;
+        if (!this.overlay || index < 0) {
+            this.removeClickEditorOnboardingAnnotationAnchor();
+            return;
+        }
+        const annotation = this.annotations[index];
+
+        const shape = this.overlay.querySelector(`.annotation-shape.is-selected[data-annotation-index="${index}"]`);
+        const handles = Array.from(this.overlay.querySelectorAll(`.vertex-handle[data-annotation-index="${index}"]`));
+        const nodes = [shape, ...handles].filter(Boolean);
+        if (!nodes.length) {
+            this.removeClickEditorOnboardingAnnotationAnchor();
+            return;
+        }
+
+        const rects = nodes
+            .map((node) => node.getBoundingClientRect())
+            .filter((rect) => rect.width > 0 && rect.height > 0);
+        if (!rects.length) {
+            this.removeClickEditorOnboardingAnnotationAnchor();
+            return;
+        }
+
+        const pad = 14;
+        const left = Math.max(0, Math.min(...rects.map((rect) => rect.left)) - pad);
+        const top = Math.max(0, Math.min(...rects.map((rect) => rect.top)) - pad);
+        const right = Math.min(window.innerWidth, Math.max(...rects.map((rect) => rect.right)) + pad);
+        const bottom = Math.min(window.innerHeight, Math.max(...rects.map((rect) => rect.bottom)) + pad);
+        const width = Math.max(1, right - left);
+        const height = Math.max(1, bottom - top);
+
+        if (!this.clickEditorOnboardingAnnotationAnchor) {
+            const anchor = document.createElement("div");
+            anchor.className = "click-onboarding-selected-annotation-anchor";
+            anchor.setAttribute("data-onboarding-target", "click-selected-annotation");
+            anchor.setAttribute("aria-hidden", "true");
+            document.body.appendChild(anchor);
+            this.clickEditorOnboardingAnnotationAnchor = anchor;
+        }
+
+        Object.assign(this.clickEditorOnboardingAnnotationAnchor.style, {
+            left: `${left}px`,
+            top: `${top}px`,
+            width: `${width}px`,
+            height: `${height}px`
+        });
+
+        const displayPoints = this.getDisplayPoints(annotation?.points || []);
+        const overlayRect = this.overlay.getBoundingClientRect();
+        const viewBox = this.overlay.viewBox?.baseVal || null;
+        const viewBoxWidth = viewBox?.width || this.baseImageWidth || this.overlay.clientWidth || 1;
+        const viewBoxHeight = viewBox?.height || this.baseImageHeight || this.overlay.clientHeight || 1;
+        const scaleX = overlayRect.width / viewBoxWidth;
+        const scaleY = overlayRect.height / viewBoxHeight;
+        const localPoints = displayPoints.map(([x, y]) => [
+            (overlayRect.left + x * scaleX) - left,
+            (overlayRect.top + y * scaleY) - top
+        ]);
+        const pathData = localPoints.length
+            ? localPoints.map(([x, y], pointIndex) => `${pointIndex === 0 ? "M" : "L"}${x.toFixed(2)} ${y.toFixed(2)}`).join(" ") + (annotation?.type === "polygon" ? " Z" : "")
+            : "";
+        const color = annotation?.color || this.pickColor(index);
+        const handlesHtml = localPoints.map(([x, y]) => (
+            `<circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="5.5" fill="#ffffff" stroke="${this.escapeHtml(color)}" stroke-width="2.6"></circle>`
+        )).join("");
+        this.clickEditorOnboardingAnnotationAnchor.innerHTML = `
+            <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" aria-hidden="true">
+                ${pathData ? `<path d="${pathData}" fill="${this.escapeHtml(color)}" fill-opacity="0.28" stroke="${this.escapeHtml(color)}" stroke-width="3.4" stroke-linejoin="round" stroke-linecap="round"></path>` : ""}
+                ${handlesHtml}
+            </svg>
+        `;
+    }
+
+    async prepareDifficultyAuthoringForOnboarding() {
+        this.setDifficultyAuthoringExpanded(true);
+        const refreshed = await this.refreshDifficultyAuthoringControls({ force: true });
+        this.setDifficultyAuthoringExpanded(true);
+        await new Promise((resolve) => {
+            requestAnimationFrame(() => requestAnimationFrame(resolve));
+        });
+        return refreshed;
+    }
+
+    setupClickEditorOnboardingTourBridge() {
+        window.addEventListener("onboarding:step-ready", (event) => {
+            const detail = event?.detail || {};
+            if (detail.tourId === "click-editor-errors-authoring" || detail.tourId === "click-editor-errors-texts-authoring") {
+                this.clickEditorOnboardingErrorsVariantActive = true;
+                this.removeClickEditorOnboardingErrorsMarker();
+                return;
+            }
+            if (detail.tourId !== "click-editor-authoring") return;
+            if (detail.stepId === "click-header-save") {
+                this.resetClickEditorOnboardingErrorsBranchState();
+                void this.setModeToggleActive("text");
+                this.scheduleClickEditorOnboardingErrorsMarker();
+                return;
+            }
+            this.removeClickEditorOnboardingErrorsMarker();
+        });
+
+        window.addEventListener("onboarding:before-start", (event) => {
+            const detail = event?.detail || {};
+            if (detail.tourId === "click-editor-authoring" || detail.tourId === "draw-editor-authoring") {
+                this.restoreClickEditorOnboardingErrorsSnapshot({ restoreMode: false });
+                if (!detail.preview) {
+                    const preparation = this.applyClickEditorOnboardingDemoState(detail.tourId);
+                    if (typeof detail.waitUntil === "function") {
+                        detail.waitUntil(preparation);
+                    }
+                }
+                return;
+            }
+            if (detail.tourId !== "click-editor-errors-authoring" && detail.tourId !== "click-editor-errors-texts-authoring") return;
+            void this.prepareClickEditorOnboardingErrorsTour();
+        });
+
+        window.addEventListener("onboarding:before-step", (event) => {
+            const detail = event?.detail || {};
+            if (detail.tourId === "click-editor-authoring" || detail.tourId === "draw-editor-authoring") {
+                if (detail.stepId === "click-annotations-manage") {
+                    this.selectClickEditorOnboardingAnnotation();
+                } else if (detail.stepId === "draw-regions-manage") {
+                    this.selectClickEditorOnboardingAnnotation();
+                } else {
+                    this.removeClickEditorOnboardingAnnotationAnchor();
+                }
+                if (detail.stepId === "click-difficulty-levels" || detail.stepId === "draw-difficulty-levels") {
+                    const preparation = this.prepareDifficultyAuthoringForOnboarding().catch((error) => {
+                        console.warn("[ClickEditor] difficulty authoring onboarding refresh failed", error);
+                    });
+                    if (typeof detail.waitUntil === "function") {
+                        detail.waitUntil(preparation);
+                    }
+                }
+                return;
+            }
+            if (detail.tourId !== "click-editor-errors-authoring" && detail.tourId !== "click-editor-errors-texts-authoring") return;
+            this.prepareClickEditorOnboardingErrorsStep(detail.stepId);
+        });
+
+        window.addEventListener("resize", () => {
+            this.positionClickEditorOnboardingErrorsMarker();
+        }, { passive: true });
+
+        window.addEventListener("scroll", () => {
+            this.positionClickEditorOnboardingErrorsMarker();
+        }, { passive: true });
+
+        window.addEventListener("onboarding:finish", (event) => {
+            const detail = event?.detail || {};
+            if (detail.tourId === "click-editor-errors-authoring" || detail.tourId === "click-editor-errors-texts-authoring") {
+                this.resetClickEditorOnboardingErrorsBranchState({
+                    restoreMode: detail.seen !== false,
+                    restoreSnapshot: detail.seen !== false
+                });
+                this.removeClickEditorOnboardingErrorsMarker();
+                return;
+            }
+            if (detail.tourId !== "click-editor-authoring" && detail.tourId !== "draw-editor-authoring") return;
+            this.resetClickEditorOnboardingErrorsBranchState();
+            this.removeClickEditorOnboardingErrorsMarker();
+            this.removeClickEditorOnboardingAnnotationAnchor();
+            if (!this.isClickOnboardingPreview()) {
+                this.restoreClickEditorOnboardingDemoState();
+            }
+        });
     }
 
     cacheDom() {
@@ -695,6 +1436,18 @@ class ClickEditor extends BaseEditor {
         this.taskNameParam = String(context.taskName || "").trim();
 
         if (!this.moduleId || !this.topicId || !this.taskId) {
+            if (this.isClickOnboardingPreview()) {
+                const previewTourId = this.getOnboardingPreviewTourId();
+                const isDrawPreview = previewTourId === "draw-editor-authoring";
+                this.moduleId = "onboarding-preview";
+                this.topicId = isDrawPreview ? "draw" : "click";
+                this.taskId = isDrawPreview ? "draw-onboarding-preview" : "click-onboarding-preview";
+                await this.hydrateTask(isDrawPreview ? this.createDrawOnboardingPreviewTask() : this.createClickOnboardingPreviewTask(), {
+                    persisted: false,
+                    skipAutosave: true
+                });
+                return;
+            }
             console.error("Missing task parameters in URL");
             this.showFatalError("Неверная ссылка: отсутствуют параметры задания (module, topic, task)");
             return;
@@ -760,59 +1513,61 @@ class ClickEditor extends BaseEditor {
     }
 
     async hydrateTask(task, options = {}) {
-        const { persisted = true } = options;
+        const { persisted = true, skipAutosave = false } = options;
         this.task = task;
         this.hasPersistedTask = Boolean(persisted);
 
-        if (!this.autoSaveManager) {
-            this.autoSaveManager = new AutoSaveManager(this, { interval: 30000 });
-        }
-
-        const lastSaved = persisted ? (this.task.task_data?.meta?.modified || 0) : 0;
-        if (this.autoSaveManager.hasFresherDraft(lastSaved)) {
-            const draft = this.autoSaveManager.loadDraft();
-            if (this.shouldAutoRestoreDraft(draft)) {
-                this.restoreState(draft.data);
-                this.initTheoryGroundingPanel();
-                this.bootstrapTheoryGroundingPanel().catch((error) => {
-                    console.warn("[ClickEditor] theory grounding bootstrap failed", error);
-                });
-                this.showToast(this.getAutoRestoreDraftToastMessage(), "info");
-                this.autoSaveManager.start();
-                this.hasUnsavedChanges = true;
-                if (this.restoreDraftIntent) {
-                    this.restoreDraftIntent = false;
-                    this.cleanupPersistedTaskRoute();
-                }
-                return;
+        if (!skipAutosave) {
+            if (!this.autoSaveManager) {
+                this.autoSaveManager = new AutoSaveManager(this, { interval: 30000 });
             }
 
-            const recoveryCopy = this.buildDraftRecoveryCopy(draft, lastSaved);
-            const shouldRestoreDraft = await this.confirmAction({
-                title: recoveryCopy.title,
-                message: recoveryCopy.message,
-                confirmText: recoveryCopy.confirmText,
-                cancelText: recoveryCopy.cancelText,
-                variant: "info"
-            });
-            if (shouldRestoreDraft) {
-                if (draft && draft.data) {
+            const lastSaved = persisted ? (this.task.task_data?.meta?.modified || 0) : 0;
+            if (this.autoSaveManager.hasFresherDraft(lastSaved)) {
+                const draft = this.autoSaveManager.loadDraft();
+                if (this.shouldAutoRestoreDraft(draft)) {
                     this.restoreState(draft.data);
                     this.initTheoryGroundingPanel();
                     this.bootstrapTheoryGroundingPanel().catch((error) => {
                         console.warn("[ClickEditor] theory grounding bootstrap failed", error);
                     });
+                    this.showToast(this.getAutoRestoreDraftToastMessage(), "info");
                     this.autoSaveManager.start();
                     this.hasUnsavedChanges = true;
+                    if (this.restoreDraftIntent) {
+                        this.restoreDraftIntent = false;
+                        this.cleanupPersistedTaskRoute();
+                    }
                     return;
                 }
-            }
-        }
 
-        this.autoSaveManager.start();
-        if (this.restoreDraftIntent) {
-            this.restoreDraftIntent = false;
-            this.cleanupPersistedTaskRoute();
+                const recoveryCopy = this.buildDraftRecoveryCopy(draft, lastSaved);
+                const shouldRestoreDraft = await this.confirmAction({
+                    title: recoveryCopy.title,
+                    message: recoveryCopy.message,
+                    confirmText: recoveryCopy.confirmText,
+                    cancelText: recoveryCopy.cancelText,
+                    variant: "info"
+                });
+                if (shouldRestoreDraft) {
+                    if (draft && draft.data) {
+                        this.restoreState(draft.data);
+                        this.initTheoryGroundingPanel();
+                        this.bootstrapTheoryGroundingPanel().catch((error) => {
+                            console.warn("[ClickEditor] theory grounding bootstrap failed", error);
+                        });
+                        this.autoSaveManager.start();
+                        this.hasUnsavedChanges = true;
+                        return;
+                    }
+                }
+            }
+
+            this.autoSaveManager.start();
+            if (this.restoreDraftIntent) {
+                this.restoreDraftIntent = false;
+                this.cleanupPersistedTaskRoute();
+            }
         }
         this.detectTaskType();
         this.resetImageMetrics();
@@ -825,13 +1580,15 @@ class ClickEditor extends BaseEditor {
         this.additionalInfoDirty = false;
         this.setupModeSwitch();
         this.renderUI();
-        this.refreshDifficultyAuthoringControls().catch((error) => {
-            console.warn("[ClickEditor] difficulty authoring refresh failed", error);
-        });
-        this.initTheoryGroundingPanel();
-        this.bootstrapTheoryGroundingPanel().catch((error) => {
-            console.warn("[ClickEditor] theory grounding bootstrap failed", error);
-        });
+        if (!skipAutosave) {
+            this.refreshDifficultyAuthoringControls().catch((error) => {
+                console.warn("[ClickEditor] difficulty authoring refresh failed", error);
+            });
+            this.initTheoryGroundingPanel();
+            this.bootstrapTheoryGroundingPanel().catch((error) => {
+                console.warn("[ClickEditor] theory grounding bootstrap failed", error);
+            });
+        }
         setTimeout(() => {
             this.initialTaskSnapshot = this.captureTaskSnapshot();
             this.hasUnsavedChanges = false;
@@ -915,8 +1672,9 @@ class ClickEditor extends BaseEditor {
         };
     }
 
-    restoreState(state) {
+    restoreState(state, options = {}) {
         if (!state) return;
+        const shouldMarkUnsaved = options.markUnsaved !== false;
 
         // Restore core task data
         if (state.content) {
@@ -953,10 +1711,14 @@ class ClickEditor extends BaseEditor {
         // Re-render everything
         this.detectTaskType();
         this.renderUI();
-        this.refreshDifficultyAuthoringControls().catch((error) => {
-            console.warn("[ClickEditor] difficulty authoring refresh failed", error);
-        });
-        this.markUnsaved();
+        if (!this.isClickOnboardingPreview()) {
+            this.refreshDifficultyAuthoringControls().catch((error) => {
+                console.warn("[ClickEditor] difficulty authoring refresh failed", error);
+            });
+        }
+        if (shouldMarkUnsaved) {
+            this.markUnsaved();
+        }
     }
 
     isErrorDetectionTask() {
@@ -1749,10 +2511,10 @@ class ClickEditor extends BaseEditor {
                         </td>
                         <td class="px-4 py-3 align-top">
                             <div class="flex flex-col gap-2 items-end">
-                                <button type="button" class="px-3 py-1.5 text-xs font-semibold text-success-dark border border-success-light rounded-lg hover:bg-success-lighter transition" data-reference-action="jump">
+                                <button type="button" class="click-reference-span-action click-reference-span-action--jump px-3 py-1.5 text-xs font-semibold text-success-dark border border-success-light rounded-lg transition" data-reference-action="jump">
                                     Перейти
                                 </button>
-                                <button type="button" class="px-3 py-1.5 text-xs font-semibold text-error border border-error-light rounded-lg hover:bg-error-lighter transition" data-reference-action="delete">
+                                <button type="button" class="click-reference-span-action click-reference-span-action--delete px-3 py-1.5 text-xs font-semibold text-error border border-error-light rounded-lg transition" data-reference-action="delete">
                                     Удалить
                                 </button>
                             </div>
@@ -3272,7 +4034,7 @@ class ClickEditor extends BaseEditor {
         if (!this.currentPolygonPoints.length) return;
         this.currentPolygonPoints.pop();
         if (!this.currentPolygonPoints.length) {
-            this.updateStatusBadge("Контур очищен, начните заново.", { tone: "warning" });
+            this.updateStatusBadge("Контур очищен", { tone: "warning" });
         } else {
             this.updateStatusBadge(this.getPolygonProgressMessage(), { tone: "info" });
         }
@@ -3283,12 +4045,12 @@ class ClickEditor extends BaseEditor {
     getPolygonProgressMessage() {
         const pointsCount = this.currentPolygonPoints.length;
         if (pointsCount <= 0) {
-            return "Поставьте минимум 3 точки, чтобы замкнуть контур.";
+            return "Нужно минимум 3 точки";
         }
         if (pointsCount < 3) {
-            return `Точек: ${pointsCount} из 3. Добавьте ещё ${3 - pointsCount}.`;
+            return `Точек: ${pointsCount}/3`;
         }
-        return `Контур готов. Нажмите «Завершить контур» или сделайте двойной клик.`;
+        return "Контур готов";
     }
 
     cloneAnnotation(annotation) {
@@ -3398,15 +4160,10 @@ class ClickEditor extends BaseEditor {
 
         if (!skipStatus) {
             const kindLabel = removedAnnotation?.type === "freehand" ? "Линия" : "Контур";
-            const customLabel = String(removedAnnotation?.label || "").trim();
-            const statusMessage = customLabel ? `${kindLabel} «${customLabel}» удалён.` : `${kindLabel} удалён.`;
-            this.updateStatusBadge(
-                customLabel ? `${kindLabel} «${customLabel}» удалён.` : `${kindLabel} удалён.`,
-                { tone: "warning" }
-            );
+            this.updateStatusBadge(`${kindLabel} удалён`, { tone: "warning" });
             if (requiredCorrectMeta?.autoLowered) {
                 this.updateStatusBadge(
-                    `${statusMessage} Порог снижен до ${requiredCorrectMeta.value} из ${this.formatContourCount(requiredCorrectMeta.annotationsCount)}.`,
+                    `Порог: ${requiredCorrectMeta.value}/${this.formatContourCount(requiredCorrectMeta.annotationsCount)}`,
                     { tone: "warning" }
                 );
             }
@@ -3427,8 +4184,7 @@ class ClickEditor extends BaseEditor {
             const minPoints = annotation.type === "polygon" ? 3 : 2;
             if (annotation.points.length <= minPoints) {
                 this.updateStatusBadge(
-                    `В ${annotation.type === "polygon" ? "контуре" : "линии"} должно оставаться минимум ${minPoints} точ${minPoints === 3 ? "ки" : "ки"
-                    }.`,
+                    `Минимум точек: ${minPoints}`,
                     { tone: "warning" }
                 );
                 return;
@@ -3444,7 +4200,7 @@ class ClickEditor extends BaseEditor {
                 annotation.points.length > 0 ? { annotationIndex, vertexIndex: nextVertexIndex } : null;
             this.renderAnnotations();
             this.renderAnnotationList();
-            this.updateStatusBadge(`Точка удалена. Осталось ${annotation.points.length} точек.`, { tone: "info" });
+            this.updateStatusBadge(`Осталось точек: ${annotation.points.length}`, { tone: "info" });
             this.updateDrawingControlsState();
             return;
         }
@@ -3484,7 +4240,7 @@ class ClickEditor extends BaseEditor {
         this.currentPolygonPoints = [];
         this.updateAnnotationCount();
         this.updateDrawingControlsState();
-        this.updateStatusBadge("Контур добавлен. Выберите следующий участок или сохраните задачу.", { tone: "success" });
+        this.updateStatusBadge("Контур добавлен", { tone: "success" });
         this.renderAnnotations();
         this.renderAnnotationList();
         this.enforceRequiredCorrectBounds({ clampToMax: true });
@@ -3505,7 +4261,7 @@ class ClickEditor extends BaseEditor {
         this.freehandPoints = [startCoords];
         this.selectedAnnotationIndex = -1;
         this.resetVertexEditingState();
-        this.updateStatusBadge("Ведите мышь, зажав ЛКМ, чтобы провести линию или линейный контур.", { tone: "info" });
+        this.updateStatusBadge("Рисуйте с зажатой ЛКМ", { tone: "info" });
         this.renderAnnotations();
     }
 
@@ -3527,7 +4283,7 @@ class ClickEditor extends BaseEditor {
         if (!this.drawingFreehand) return;
         if (this.freehandPoints.length < 2) {
             this.cancelFreehandDrawing();
-            this.updateStatusBadge("Линия слишком короткая. Попробуйте ещё раз.", { tone: "warning" });
+            this.updateStatusBadge("Линия слишком короткая", { tone: "warning" });
             return;
         }
 
@@ -3548,7 +4304,7 @@ class ClickEditor extends BaseEditor {
         this.updateAnnotationCount();
         this.renderAnnotations();
         this.renderAnnotationList();
-        this.updateStatusBadge("Линия добавлена. Нажмите ЛКМ, чтобы начать новую.", { tone: "success" });
+        this.updateStatusBadge("Линия добавлена", { tone: "success" });
         this.enforceRequiredCorrectBounds({ clampToMax: true });
         this.markUnsaved();
     }

@@ -12,6 +12,9 @@ const {
   deleteEditorTask,
 } = require("./browser_smoke_helpers");
 
+const QUESTION_NAV_ITEM_SELECTOR = "#question-list [data-question-index]";
+const QUESTION_NAV_SELECT_SELECTOR = `${QUESTION_NAV_ITEM_SELECTOR} .question-nav-item__select`;
+
 function parseArgs(argv = process.argv.slice(2)) {
   const out = {
     baseUrl: DEFAULT_BASE_URL,
@@ -477,7 +480,7 @@ async function fillCurrentQuestion(page, payload) {
 }
 
 async function selectQuestionByIndex(page, index) {
-  await page.locator("#question-list > button").nth(index).click();
+  await page.locator(QUESTION_NAV_SELECT_SELECTOR).nth(index).click();
 }
 
 async function waitForQuestionText(page, expectedText) {
@@ -593,6 +596,17 @@ async function downloadExportFile(page, targetPath) {
 
 async function runScenario(browser, artifacts, options, definition) {
   const context = await browser.newContext({ acceptDownloads: true });
+  await context.addInitScript(() => {
+    window.ACTRA_DISABLE_AUTO_ONBOARDING = true;
+    try {
+      const seenKey = "actra_onboarding_seen_v1";
+      const seen = JSON.parse(localStorage.getItem(seenKey) || "{}");
+      seen["test-editor-authoring"] = Math.max(Number(seen["test-editor-authoring"]) || 0, 1);
+      localStorage.setItem(seenKey, JSON.stringify(seen));
+    } catch (_) {
+      // Onboarding also respects the global flag when localStorage is unavailable.
+    }
+  });
   const page = await context.newPage();
   const startedAt = Date.now();
   const result = {
@@ -986,7 +1000,7 @@ function createScenarioDefinitions() {
         await step("add_and_fill_second_question", async () => {
           await page.locator("#add-question-btn").click();
           await page.waitForFunction(() => {
-            const items = document.querySelectorAll("#question-list > button");
+            const items = document.querySelectorAll("#question-list [data-question-index]");
             return items.length === 2;
           });
           await fillCurrentQuestion(page, questionTwo);
@@ -1027,7 +1041,7 @@ function createScenarioDefinitions() {
         await step("reload_and_verify_multi_question_state", async () => {
           await page.reload({ waitUntil: "domcontentloaded", timeout: 30000 });
           await page.waitForFunction(() => {
-            const items = document.querySelectorAll("#question-list > button");
+            const items = document.querySelectorAll("#question-list [data-question-index]");
             return items.length === 2;
           });
           await selectQuestionByIndex(page, 0);
@@ -1197,7 +1211,7 @@ function createScenarioDefinitions() {
           await uploadImportFile(page, importFilePath);
           await chooseImportMode(page, "replace");
           await confirmImport(page);
-          await page.waitForFunction(() => document.querySelectorAll("#question-list > button").length === 2);
+          await page.waitForFunction(() => document.querySelectorAll("#question-list [data-question-index]").length === 2);
           await waitForQuestionText(page, "Imported question one");
           return { note: "Import replace swapped current content with 2 imported questions" };
         });
@@ -1283,7 +1297,7 @@ function createScenarioDefinitions() {
           await uploadImportFile(page, importFilePath);
           await chooseImportMode(page, "append");
           await confirmImport(page);
-          await page.waitForFunction(() => document.querySelectorAll("#question-list > button").length === 2);
+          await page.waitForFunction(() => document.querySelectorAll("#question-list [data-question-index]").length === 2);
           await selectQuestionByIndex(page, 0);
           await waitForQuestionText(page, originalQuestionText);
           await selectQuestionByIndex(page, 1);
@@ -1423,10 +1437,10 @@ function createScenarioDefinitions() {
         });
 
         await step("clear_current_test", async () => {
-          await page.locator("#clear-test-btn").click();
+          await page.locator("#clear-test-sidebar-btn").click();
           await confirmModal(page);
           await waitForQuestionText(page, "Новый вопрос");
-          await page.waitForFunction(() => document.querySelectorAll("#question-list > button").length === 1);
+          await page.waitForFunction(() => document.querySelectorAll("#question-list [data-question-index]").length === 1);
           return { note: "Clear action reset editor to a single default question" };
         });
 
@@ -1455,7 +1469,7 @@ function createScenarioDefinitions() {
               ),
             { timeout: 30000 }
           );
-          await page.locator("#delete-test-btn").click();
+          await page.locator("#delete-test-sidebar-btn").click();
           await confirmModal(page);
           const response = await deleteResponse;
           if (!response.ok()) {

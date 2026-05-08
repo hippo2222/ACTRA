@@ -19,6 +19,7 @@
 
   const THEORY_CENTER_TEST_HOOKS_FLAG = '__THEORY_CENTER_ENABLE_TEST_HOOKS__';
   const THEORY_CENTER_AUTO_INIT_DISABLED_FLAG = '__THEORY_CENTER_AUTO_INIT_DISABLED__';
+  const THEORY_CENTER_ONBOARDING_TOUR_ID = 'theory-center-library';
   const THEORY_DELETE_UNDO_WINDOW_MS = 5000;
   const pendingTheoryDeleteJobs = new Map();
   const pendingTheoryDeleteIds = new Set();
@@ -27,9 +28,244 @@
   let allTheoryPublicationItems = [];
   let currentTheoryCenterUserId = '';
   let searchTimer = null;
+  let onboardingPrimaryRowId = '';
+  let onboardingDemoSnapshot = null;
 
   function $(id) {
     return document.getElementById(id);
+  }
+
+  function getOnboardingPreviewTourId() {
+    try {
+      const params = new URLSearchParams(window.location.search || '');
+      return params.get('onboarding_preview') || params.get('onboarding_tour') || '';
+    } catch (error) {
+      return '';
+    }
+  }
+
+  function isTheoryCenterOnboardingDemoRequested() {
+    return getOnboardingPreviewTourId() === THEORY_CENTER_ONBOARDING_TOUR_ID;
+  }
+
+  function isTheoryCenterOnboardingTourActive() {
+    return document.body?.dataset?.onboardingTourId === THEORY_CENTER_ONBOARDING_TOUR_ID;
+  }
+
+  function createTheoryCenterOnboardingDemoOverview() {
+    const now = new Date().toISOString();
+    const owner = {
+      created_by_user_id: 'demo-user',
+      created_by_user_name: 'Иванов А.П.',
+      ownership: {
+        created_by_user_id: 'demo-user',
+        created_by_user_name: 'Иванов А.П.',
+        is_owned_by_current_user: true,
+      },
+    };
+    const primaryTheory = {
+      id: 'theory-radio-wave-basics',
+      title: 'Радиофизика: электромагнитные волны',
+      version: now,
+      updated_at: now,
+      has_content: true,
+      image_count: 3,
+      usage_topics: 2,
+      usage_complexes: 1,
+      linked_complex_names: ['Короткий комплекс по радиоволнам'],
+      catalog_visibility: 'private',
+      is_onboarding_primary: true,
+      ...owner,
+    };
+    const orphanTheory = {
+      id: 'theory-signal-noise',
+      title: 'Шум и отношение сигнал/шум',
+      version: now,
+      updated_at: now,
+      has_content: false,
+      image_count: 0,
+      usage_topics: 0,
+      usage_complexes: 0,
+      catalog_visibility: '',
+      ...owner,
+    };
+    return {
+      ok: true,
+      summary: {
+        topics_without_theory: 1,
+        complexes_single_theory: 2,
+        complexes_composite_theory: 1,
+        complexes_override_theory: 1,
+        complexes_without_theory: 1,
+        orphan_theories: 1,
+      },
+      filters: {
+        modules: [
+          { id: 'radio-basics', name: 'Радиофизика' },
+          { id: 'signals', name: 'Сигналы и тракты' },
+        ],
+        topic_states: [
+          { id: 'all', label: 'Все состояния' },
+          { id: 'missing', label: 'Без теории' },
+          { id: 'single', label: 'Есть теория' },
+        ],
+        complex_states: [
+          { id: 'all', label: 'Все состояния' },
+          { id: 'none', label: 'Без теории' },
+          { id: 'single', label: 'Одна теория' },
+          { id: 'composite', label: 'Подборка теорий' },
+          { id: 'own', label: 'Своя теория' },
+        ],
+      },
+      theories: [primaryTheory, orphanTheory],
+      linked_theories: [
+        {
+          library_entry_id: 'linked-theory-polarization',
+          id: 'published-polarization',
+          title: 'Поляризация сигнала: базовая теория',
+          updated_at: now,
+          is_linked_publication: true,
+          access_state: 'active',
+          owner_user_id: 'catalog-author',
+          owner_display_name: 'Смирнова Е.В.',
+          image_count: 2,
+        },
+      ],
+      orphans: [orphanTheory],
+      topics: [
+        {
+          module_id: 'radio-basics',
+          module_name: 'Радиофизика',
+          topic_id: 'wave-frequency',
+          topic_name: 'Частота и длина волны',
+          has_theory: true,
+          theory_id: primaryTheory.id,
+          theory_title: primaryTheory.title,
+          theory_state: 'single',
+          theory_state_label: 'Есть теория',
+          linked_complexes_count: 1,
+          theory_has_content: true,
+          theory_image_count: 3,
+        },
+        {
+          module_id: 'signals',
+          module_name: 'Сигналы и тракты',
+          topic_id: 'signal-noise',
+          topic_name: 'Шум в канале',
+          has_theory: false,
+          theory_state: 'missing',
+          theory_state_label: 'Без теории',
+          linked_complexes_count: 0,
+        },
+      ],
+      complexes: [
+        {
+          complex_id: 'complex-radio-short',
+          complex_name: 'Короткий комплекс по радиоволнам',
+          module_ids: ['radio-basics'],
+          module_names: ['Радиофизика'],
+          theory_state: 'single',
+          theory_state_label: 'Одна теория',
+          theory_source: 'topic',
+          theory_source_label: 'Из тем',
+          task_count: 12,
+          theory_items: [
+            { theory_id: primaryTheory.id, title_cache: primaryTheory.title },
+          ],
+          theory_ids: [primaryTheory.id],
+          theory_titles: [primaryTheory.title],
+          open_theory_id: primaryTheory.id,
+          needs_sync: false,
+          has_empty_content: false,
+        },
+      ],
+    };
+  }
+
+  function applyTheoryCenterOnboardingDemoState() {
+    if (!onboardingDemoSnapshot) {
+      onboardingDemoSnapshot = {
+        overview: state.overview,
+        workspaceLimits: state.workspaceLimits,
+        scope: state.scope,
+        search: state.search,
+        moduleId: state.moduleId,
+        stateFilter: state.stateFilter,
+        loading: state.loading,
+        summaryCollapsed: state.summaryCollapsed,
+        selectionMode: state.selectionMode,
+        selectedTheoryIds: new Set(state.selectedTheoryIds),
+        lastSelectedTheoryId: state.lastSelectedTheoryId,
+        bulkDeleting: state.bulkDeleting,
+        linkedEntryAutoOpened: state.linkedEntryAutoOpened,
+        currentTheoryCenterUserId,
+        publicationItems: allTheoryPublicationItems.slice(),
+      };
+    }
+    currentTheoryCenterUserId = 'demo-user';
+    state.workspaceLimits = {
+      ok: true,
+      plan: 'premium',
+      theories: {
+        personal_count: 2,
+        personal_limit: 50,
+        library_total_count: 3,
+        library_limit: 200,
+      },
+    };
+    state.overview = createTheoryCenterOnboardingDemoOverview();
+    state.scope = 'all';
+    state.search = '';
+    state.moduleId = 'all';
+    state.stateFilter = 'all';
+    state.summaryCollapsed = false;
+    state.selectionMode = false;
+    state.selectedTheoryIds.clear();
+    state.lastSelectedTheoryId = '';
+    rebuildTheoryPublicationIndex([]);
+    clearFlash();
+    renderView();
+  }
+
+  function restoreTheoryCenterOnboardingDemoState() {
+    if (!onboardingDemoSnapshot) return;
+    const snapshot = onboardingDemoSnapshot;
+    onboardingDemoSnapshot = null;
+    state.overview = snapshot.overview;
+    state.workspaceLimits = snapshot.workspaceLimits;
+    state.scope = snapshot.scope;
+    state.search = snapshot.search;
+    state.moduleId = snapshot.moduleId;
+    state.stateFilter = snapshot.stateFilter;
+    state.loading = false;
+    state.summaryCollapsed = snapshot.summaryCollapsed;
+    state.selectionMode = snapshot.selectionMode;
+    state.selectedTheoryIds = new Set(snapshot.selectedTheoryIds);
+    state.lastSelectedTheoryId = snapshot.lastSelectedTheoryId;
+    state.bulkDeleting = snapshot.bulkDeleting;
+    state.linkedEntryAutoOpened = snapshot.linkedEntryAutoOpened;
+    currentTheoryCenterUserId = snapshot.currentTheoryCenterUserId;
+    rebuildTheoryPublicationIndex(snapshot.publicationItems);
+    onboardingPrimaryRowId = '';
+    renderView();
+  }
+
+  function syncTheoryCenterOnboardingDemoState() {
+    if (isTheoryCenterOnboardingDemoRequested() || isTheoryCenterOnboardingTourActive()) {
+      applyTheoryCenterOnboardingDemoState();
+      return;
+    }
+    restoreTheoryCenterOnboardingDemoState();
+  }
+
+  function bindTheoryCenterOnboardingDemoObserver() {
+    if (!document.body || typeof MutationObserver === 'undefined') return;
+    const observer = new MutationObserver(() => syncTheoryCenterOnboardingDemoState());
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: ['data-onboarding-tour-id'],
+    });
+    syncTheoryCenterOnboardingDemoState();
   }
 
   function theoryCenterConfirm(options) {
@@ -488,7 +724,7 @@
       id: String(libraryEntry.library_entry_id || '').trim(),
       library_entry_id: String(libraryEntry.library_entry_id || '').trim(),
       catalog_item_id: String(item.item_id || libraryEntry.catalog_item_id || '').trim(),
-      title: String(item.title || 'Связанная теория').trim() || 'Связанная теория',
+      title: String(item.title || 'Теория из каталога').trim() || 'Теория из каталога',
       owner_user_id: String(item.owner_user_id || '').trim(),
       owner_display_name: String(item.owner_display_name || item.owner_name || '').trim(),
       catalog_visibility: String(item.catalog_visibility || '').trim(),
@@ -710,7 +946,7 @@
         <div class="flex items-start justify-between gap-4 border-b border-border-subtle px-5 py-4">
           <div>
             <p class="text-lg font-bold text-text-main">${escapeHtml(snapshot.title || data?.item?.title || 'Теория')}</p>
-            <p class="mt-2 text-sm text-text-secondary">${escapeHtml(entry.access_reason || 'Связанная публикация из каталога.')}</p>
+            <p class="mt-2 text-sm text-text-secondary">${escapeHtml(entry.access_reason || 'Теория из каталога, созданная другим автором.')}</p>
           </div>
           <button type="button" class="btn-secondary h-10 px-4" data-close>Закрыть</button>
         </div>
@@ -848,36 +1084,6 @@
         message: String(data?.message || data?.details?.message || `HTTP ${response.status}`),
         usage_topics: Number(data?.usage_topics || 0),
         usage_complexes: Number(data?.usage_complexes || 0),
-    };
-  }
-
-  async function deleteLinkedTheoryByLibraryEntryId(libraryEntryId) {
-    const normalizedLibraryEntryId = String(libraryEntryId || '').trim();
-    if (!normalizedLibraryEntryId) {
-      return {
-        ok: false,
-        library_entry_id: '',
-        error: 'library_entry_id_required',
-        message: 'Library entry id is required',
-      };
-    }
-
-    const response = await fetch(`/api/theory-library/${encodeURIComponent(normalizedLibraryEntryId)}`, {
-      method: 'DELETE',
-    });
-    const data = await readJsonSafely(response);
-    if (response.ok && data?.ok) {
-      return {
-        ok: true,
-        library_entry_id: normalizedLibraryEntryId,
-      };
-    }
-
-    return {
-      ok: false,
-      library_entry_id: normalizedLibraryEntryId,
-      error: String(data?.error || 'theory_library_delete_failed'),
-      message: String(data?.message || data?.details?.message || `HTTP ${response.status}`),
     };
   }
 
@@ -1061,7 +1267,12 @@
 
   function writeQueryState() {
     try {
+      const currentParams = new URLSearchParams(window.location.search || '');
       const params = new URLSearchParams();
+      ['onboarding_preview', 'onboarding_tour'].forEach((key) => {
+        const value = currentParams.get(key);
+        if (value) params.set(key, value);
+      });
       params.set('scope', state.scope);
       if (state.search) params.set('q', state.search);
       if (state.moduleId && state.moduleId !== 'all') params.set('module_id', state.moduleId);
@@ -1513,6 +1724,20 @@
 
       return true;
     });
+  }
+
+  function getTheoryRowOnboardingAttributes(row) {
+    const theoryId = getTheoryRowId(row);
+    return theoryId && theoryId === onboardingPrimaryRowId
+      ? ' data-onboarding-target="theory-selected-row"'
+      : '';
+  }
+
+  function getTheoryOpenActionOnboardingAttributes(row) {
+    const theoryId = getTheoryRowId(row);
+    return theoryId && theoryId === onboardingPrimaryRowId
+      ? ' data-onboarding-target="theory-open-action"'
+      : '';
   }
 
   function renderBadges(row, options = {}) {
@@ -2093,7 +2318,7 @@
     const selectable = isTheoryRowDeletable(row);
     const selectionMode = state.selectionMode && supportsTheorySelectionScope();
     return `
-      <article class="theory-row-card card-elevated rounded-[28px] p-5"
+      <article class="theory-row-card card-elevated rounded-[28px] p-5"${getTheoryRowOnboardingAttributes(row)}
         data-theory-id="${escapeHtml(theoryId)}"
         data-selectable="${selectable ? '1' : '0'}"
         data-selection-mode="${selectionMode ? '1' : '0'}"
@@ -2109,6 +2334,7 @@
               ${renderTheoryDeleteButton(row)}
               <button type="button"
                 class="theory-mini-btn ${getTheoryToneClass('primary', 'button')} rounded-2xl border px-3 py-2 text-xs font-semibold"
+                ${getTheoryOpenActionOnboardingAttributes(row)}
                 data-action="open-orphan-theory"
                 data-theory-id="${escapeHtml(row.id)}"
                 title="${escapeHtml(openMeta.title)}">
@@ -2172,14 +2398,14 @@
           ? getTheoryToneClass('warning')
           : getTheoryNeutralChipClass();
       const accessLabel = accessState === 'active'
-        ? 'Связанная публикация'
+        ? 'Теория из каталога'
         : accessState === 'requires_access_code'
           ? 'Нужен код доступа'
           : accessState === 'revoked'
             ? 'Доступ отозван'
             : 'Источник недоступен';
       return `
-        <article class="theory-row-card card-elevated rounded-[28px] p-5"
+        <article class="theory-row-card card-elevated rounded-[28px] p-5"${getTheoryRowOnboardingAttributes(row)}
           data-theory-id="${escapeHtml(getTheoryRowId(row))}"
           data-selectable="0"
           data-selection-mode="0"
@@ -2187,19 +2413,13 @@
           <div class="flex flex-col gap-3">
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0 space-y-1">
-                <p class="text-[11px] font-bold uppercase tracking-[0.14em] text-text-secondary">Связанная теория</p>
+                <p class="text-[11px] font-bold uppercase tracking-[0.14em] text-text-secondary">Теория из каталога</p>
                 <h3 class="text-xl font-semibold tracking-[-0.02em] text-text-main truncate">${escapeHtml(row.title || row.id)}</h3>
               </div>
               <div class="flex items-start gap-2 shrink-0">
                 <button type="button"
-                  class="theory-mini-btn rounded-2xl border border-error-light bg-error-lighter px-3 py-2 text-xs font-semibold text-error-text hover:border-error"
-                  data-action="delete-linked-theory-record"
-                  data-library-entry-id="${escapeHtml(row.library_entry_id)}"
-                  title="Убрать связанную теорию из библиотеки">
-                  Убрать
-                </button>
-                <button type="button"
                   class="theory-mini-btn ${getTheoryToneClass('primary', 'button')} rounded-2xl border px-3 py-2 text-xs font-semibold"
+                  ${getTheoryOpenActionOnboardingAttributes(row)}
                   data-action="${accessState === 'requires_access_code' ? 'enter-linked-access-code' : 'open-linked-theory'}"
                   data-library-entry-id="${escapeHtml(row.library_entry_id)}">
                   ${accessState === 'requires_access_code' ? 'Ввести код' : 'Открыть'}
@@ -2215,12 +2435,6 @@
                   <span class="material-symbols-outlined text-[14px]">${accessState === 'active' ? 'link' : accessState === 'requires_access_code' ? 'password' : 'lock'}</span>
                   ${escapeHtml(accessLabel)}
                 </span>
-                ${row.image_count > 0 ? `
-                  <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 ${getTheoryNeutralChipClass()}">
-                    <span class="material-symbols-outlined text-[14px]">imagesmode</span>
-                    Фото: ${escapeHtml(String(row.image_count))}
-                  </span>
-                ` : ''}
                 <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 ${getTheoryNeutralChipClass({ muted: true })}">
                   <span class="material-symbols-outlined text-[14px]">event</span>
                   ${escapeHtml(formatDateLabel(row.updated_at))}
@@ -2241,14 +2455,13 @@
     const usageTopics = Number(row.usage_topics || 0);
     const usageComplexes = Number(row.usage_complexes || 0);
     const hasContent = row.has_content !== false;
-    const imageCount = Number(row.image_count || 0);
     const ownership = resolveComplexOwnership(row);
     const openMeta = getTheoryOpenMeta(row);
     const selected = state.selectedTheoryIds.has(theoryId);
     const selectable = isTheoryRowDeletable(row);
     const selectionMode = state.selectionMode && supportsTheorySelectionScope();
     return `
-      <article class="theory-row-card card-elevated rounded-[28px] p-5"
+      <article class="theory-row-card card-elevated rounded-[28px] p-5"${getTheoryRowOnboardingAttributes(row)}
         data-theory-id="${escapeHtml(theoryId)}"
         data-selectable="${selectable ? '1' : '0'}"
         data-selection-mode="${selectionMode ? '1' : '0'}"
@@ -2263,6 +2476,7 @@
               ${renderTheoryDeleteButton(row)}
               <button type="button"
                 class="theory-mini-btn ${getTheoryToneClass('primary', 'button')} rounded-2xl border px-3 py-2 text-xs font-semibold"
+                ${getTheoryOpenActionOnboardingAttributes(row)}
                 data-action="open-theory-record"
                 data-theory-id="${escapeHtml(row.id)}"
                 title="${escapeHtml(openMeta.title)}">
@@ -2298,12 +2512,6 @@
                 Комплексов: ${usageComplexes}
               </span>
               ${renderTheoryLinkedComplexBadge(row)}
-              ${imageCount > 0 ? `
-                <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 ${getTheoryNeutralChipClass()}">
-                  <span class="material-symbols-outlined text-[14px]">imagesmode</span>
-                  Фото: ${imageCount}
-                </span>
-              ` : ''}
               ${hasContent ? '' : `
                 <span class="inline-flex items-center gap-1 rounded-full border border-error-light bg-error-lighter px-2.5 py-1 font-semibold text-error-text">
                   <span class="material-symbols-outlined text-[14px]">text_ad</span>
@@ -2605,8 +2813,8 @@
         <section class="space-y-4">
           <div class="flex items-center justify-between gap-3">
             <div>
-              <p class="text-[11px] font-bold uppercase tracking-[0.14em] text-text-secondary">Связанные публикации</p>
-              <p class="mt-1 text-sm text-text-secondary">Теории из каталога, которые читаются в центре как связанные публикации.</p>
+              <p class="text-[11px] font-bold uppercase tracking-[0.14em] text-text-secondary">Теории из каталога</p>
+              <p class="mt-1 text-sm text-text-secondary">Материалы других авторов, которые добавлены в вашу библиотеку вместе с комплексами или отдельно из каталога.</p>
             </div>
             <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${getTheoryNeutralChipClass()}">${escapeHtml(String(linkedRows.length))}</span>
           </div>
@@ -2640,6 +2848,11 @@
 
     const rows = getVisibleRows();
     const total = getVisibleTheoryDeleteRows(getScopeRows()).length;
+    const onboardingPrimaryRow = rows.find((row) => row?.is_onboarding_primary)
+      || rows.find((row) => state.scope === 'all' && !row?.is_linked_publication)
+      || rows[0]
+      || null;
+    onboardingPrimaryRowId = getTheoryRowId(onboardingPrimaryRow);
 
     if (title) {
       title.textContent = state.scope === 'all'
@@ -2654,7 +2867,7 @@
     }
     if (subtitle) {
       subtitle.textContent = state.scope === 'all'
-        ? 'Рабочие теории и связанные публикации из каталога в одном центре.'
+        ? 'Ваши теории и материалы других авторов из каталога в одном центре.'
         : state.scope === 'complexes'
         ? 'Показываем источник теории у комплексов и быстрые действия по обновлению.'
         : state.scope === 'orphans'
@@ -2708,6 +2921,11 @@
     state.loading = true;
     if (!options.silent) {
       renderLoadingState('Обновляем обзор теории...');
+    }
+    if (isTheoryCenterOnboardingDemoRequested()) {
+      state.loading = false;
+      applyTheoryCenterOnboardingDemoState();
+      return;
     }
     try {
       await fetchWorkspaceLimits();
@@ -2888,7 +3106,7 @@
       if (action === 'open-linked-theory') {
         openLinkedTheoryViewer(button.getAttribute('data-library-entry-id')).catch((error) => {
           console.error('[Theory Center] Failed to open linked theory', error);
-          setFlash('Не удалось открыть связанную теорию.', 'error');
+          setFlash('Не удалось открыть теорию из каталога.', 'error');
         });
         return;
       }
@@ -2916,36 +3134,6 @@
       }
       if (action === 'delete-theory-record') {
         deleteSingleTheory(button.getAttribute('data-theory-id'));
-        return;
-      }
-      if (action === 'delete-linked-theory-record') {
-        theoryCenterConfirm({
-          title: 'Убрать связанную теорию?',
-          message: 'Связанная теория будет удалена только из вашей библиотеки. Публикация автора не изменится.',
-          confirmText: 'Убрать',
-          cancelText: 'Отмена',
-          variant: 'warning',
-        }).then(async (confirmed) => {
-          if (!confirmed) return;
-          const libraryEntryId = button.getAttribute('data-library-entry-id');
-          button.setAttribute('disabled', 'disabled');
-          button.classList.add('opacity-70');
-          try {
-            const result = await deleteLinkedTheoryByLibraryEntryId(libraryEntryId);
-            if (!result?.ok) {
-              throw new Error(String(result?.error || result?.message || 'theory_library_delete_failed'));
-            }
-            await loadOverview({ silent: true });
-            setFlash('Связанная теория убрана из библиотеки.', 'success');
-          } catch (error) {
-            console.error('[Theory Center] Failed to delete linked theory entry', error);
-            await loadOverview({ silent: true });
-            setFlash('Не удалось убрать связанную теорию из библиотеки.', 'error');
-          } finally {
-            button.removeAttribute('disabled');
-            button.classList.remove('opacity-70');
-          }
-        });
         return;
       }
     }
@@ -3083,6 +3271,7 @@
     readQueryState();
     readUiState();
     bindStaticActions();
+    bindTheoryCenterOnboardingDemoObserver();
     syncControlsFromState();
     updateSelectionControls([]);
     applySummaryCollapsedState();

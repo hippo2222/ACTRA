@@ -18,7 +18,7 @@ import tempfile
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 
 from services.schemas.user_schemas import ProfileSchema, ProgressSchema, StatisticsSchema
 from task_system.core.exceptions import TaskValidationError
@@ -39,6 +39,29 @@ def normalize_user_plan(plan: Any) -> str:
     return USER_PLAN_PREMIUM if clean_plan == USER_PLAN_PREMIUM else USER_PLAN_FREE
 
 
+def parse_premium_expires_at(value: Any) -> Optional[datetime]:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def is_premium_expiry_active(value: Any, *, now: Optional[datetime] = None) -> bool:
+    expires_at = parse_premium_expires_at(value)
+    if expires_at is None:
+        return False
+    current = now or datetime.now(timezone.utc)
+    if current.tzinfo is None:
+        current = current.replace(tzinfo=timezone.utc)
+    return expires_at > current.astimezone(timezone.utc)
+
+
 def resolve_effective_plan_for_axes(role: Any, plan: Any) -> str:
     if normalize_user_role(role) == USER_ROLE_ADMIN:
         return USER_PLAN_PREMIUM
@@ -48,10 +71,13 @@ def resolve_effective_plan_for_axes(role: Any, plan: Any) -> str:
 def resolve_effective_plan(user: Any) -> str:
     if user is None:
         return USER_PLAN_FREE
-    return resolve_effective_plan_for_axes(
-        getattr(user, "role", USER_ROLE_USER),
-        getattr(user, "plan", USER_PLAN_FREE),
-    )
+    role = getattr(user, "role", USER_ROLE_USER)
+    if normalize_user_role(role) == USER_ROLE_ADMIN:
+        return USER_PLAN_PREMIUM
+    premium_expires_at = getattr(user, "premium_expires_at", None)
+    if premium_expires_at:
+        return USER_PLAN_PREMIUM if is_premium_expiry_active(premium_expires_at) else USER_PLAN_FREE
+    return normalize_user_plan(getattr(user, "plan", USER_PLAN_FREE))
 
 
 @dataclass
@@ -78,6 +104,7 @@ class User:
     password_hash: Optional[str] = None
     role: str = USER_ROLE_USER
     plan: str = USER_PLAN_FREE
+    premium_expires_at: Optional[str] = None
     security_settings: Dict[str, Any] = field(default_factory=lambda: {
         "require_password_on_login": False,
         "require_password_on_edit": False
@@ -105,6 +132,7 @@ class User:
                 "password_hash": self.password_hash,
                 "role": self.role or USER_ROLE_USER,
                 "plan": self.plan or USER_PLAN_FREE,
+                "premium_expires_at": self.premium_expires_at,
                 "security_settings": self.security_settings,
                 "settings": self.settings
             }
@@ -130,7 +158,8 @@ class User:
             "has_password": bool(self.password_hash),
             "role": raw_role,
             "plan": raw_plan,
-            "effective_plan": resolve_effective_plan_for_axes(raw_role, raw_plan),
+            "premium_expires_at": self.premium_expires_at,
+            "effective_plan": resolve_effective_plan(self),
             "security_settings": {
                 "require_password_on_login": self.security_settings.get("require_password_on_login", False),
                 "require_password_on_edit": self.security_settings.get("require_password_on_edit", False),
@@ -156,6 +185,7 @@ class User:
             password_hash=profile.get("password_hash"),
             role=str(profile.get("role") or USER_ROLE_USER).strip() or USER_ROLE_USER,
             plan=str(profile.get("plan") or USER_PLAN_FREE).strip() or USER_PLAN_FREE,
+            premium_expires_at=(str(profile.get("premium_expires_at")).strip() if profile.get("premium_expires_at") else None),
             security_settings=profile.get("security_settings", {
                 "require_password_on_login": False,
                 "require_password_on_edit": False

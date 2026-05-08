@@ -14,7 +14,8 @@ from typing import Any, Dict
 
 from flask import Blueprint, jsonify, redirect, send_from_directory
 
-from routes._context import get_ctx, get_extra
+from routes._context import get_authenticated_user_id, get_ctx, get_extra, is_hosted_web_runtime
+from services.user_service import USER_PLAN_PREMIUM, resolve_effective_plan
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,58 @@ static_bp = Blueprint("static_ui", __name__)
 def _get_ui_dirs() -> Dict[str, Path]:
     """Return the dict of UI directory paths stored during init_context."""
     return get_extra("ui_dirs", {})
+
+
+def _current_ui_user() -> Any:
+    ctx = get_ctx()
+    if ctx is None:
+        return None
+    user_id = str(get_authenticated_user_id() or "").strip() if is_hosted_web_runtime() else str(getattr(ctx, "user_id", "") or "").strip()
+    if not user_id or user_id == "guest":
+        return None
+    try:
+        return ctx.user_service.get_user(user_id)
+    except Exception:
+        return None
+
+
+def _current_user_has_premium_access() -> bool:
+    return resolve_effective_plan(_current_ui_user()) == USER_PLAN_PREMIUM
+
+
+def _premium_required_page(feature_label: str) -> Any:
+    safe_label = str(feature_label or "Premium").strip() or "Premium"
+    return (
+        f"""<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Premium required - ACTRA</title>
+  <link rel="stylesheet" href="/assets/tailwind.css" />
+  <link rel="stylesheet" href="/assets/fonts.css" />
+  <link rel="stylesheet" href="/assets/lightB-variables.css" />
+  <link rel="stylesheet" href="/assets/lightB-components.css" />
+</head>
+<body class="min-h-screen bg-bg-main text-text-main">
+  <main class="mx-auto flex min-h-screen max-w-2xl flex-col items-center justify-center px-6 py-12 text-center">
+    <div class="rounded-2xl border border-border-subtle bg-surface-1 px-6 py-8 shadow-lg">
+      <p class="text-xs font-bold uppercase tracking-[0.18em] text-primary">Premium</p>
+      <h1 class="mt-3 text-3xl font-bold">{safe_label} доступен в Premium</h1>
+      <p class="mt-3 text-sm leading-6 text-text-secondary">
+        Виджеты на главной остаются доступны, а полная страница открывается после активации Premium.
+      </p>
+      <div class="mt-6 flex flex-wrap justify-center gap-3">
+        <a class="btn-primary inline-flex rounded-xl px-4 py-2.5 text-sm font-semibold" href="/ui/settings#premium">Открыть Premium</a>
+        <a class="btn-secondary inline-flex rounded-xl px-4 py-2.5 text-sm font-semibold" href="/ui/main">На главную</a>
+      </div>
+    </div>
+  </main>
+</body>
+</html>""",
+        403,
+        {"Cache-Control": "no-store"},
+    )
 
 
 def _file_debug_meta(path: Path) -> Dict[str, Any]:
@@ -392,6 +445,9 @@ def serve_calendar_css_direct() -> Any:
 @static_bp.route("/ui/calendar/", methods=["GET"])
 def serve_calendar_ui() -> Any:
     """Serve the Calendar page."""
+    if not _current_user_has_premium_access():
+        return _premium_required_page("Календарь")
+
     dirs = _get_ui_dirs()
     CALENDAR_UI_DIR = dirs.get("CALENDAR_UI_DIR")
     if not CALENDAR_UI_DIR or not CALENDAR_UI_DIR.exists():
@@ -424,6 +480,9 @@ def serve_calendar_file(filename: str) -> Any:
 @static_bp.route("/ui/statistics/", methods=["GET"])
 def serve_statistics_ui() -> Any:
     """Serve the Statistics page."""
+    if not _current_user_has_premium_access():
+        return _premium_required_page("Статистика")
+
     dirs = _get_ui_dirs()
     STATISTICS_UI_DIR = dirs.get("STATISTICS_UI_DIR")
     if not STATISTICS_UI_DIR or not STATISTICS_UI_DIR.exists():
@@ -510,6 +569,38 @@ def serve_settings_file(filename: str) -> Any:
     if not SETTINGS_UI_DIR or not SETTINGS_UI_DIR.exists():
         return jsonify({"ok": False, "error": "settings_ui_not_found"}), 500
     return send_from_directory(SETTINGS_UI_DIR, filename)
+
+
+# ---------------------------------------------------------------------------
+# Reference UI Routes
+# ---------------------------------------------------------------------------
+
+@static_bp.route("/ui/reference", methods=["GET"])
+@static_bp.route("/ui/reference/", methods=["GET"])
+def serve_reference_ui() -> Any:
+    """Serve the onboarding reference page."""
+    dirs = _get_ui_dirs()
+    REFERENCE_UI_DIR = dirs.get("REFERENCE_UI_DIR")
+    if not REFERENCE_UI_DIR or not REFERENCE_UI_DIR.exists():
+        logger.error("[HTTP] REFERENCE_UI_DIR does not exist: %s", REFERENCE_UI_DIR)
+        return jsonify({"ok": False, "error": "reference_ui_not_found"}), 500
+
+    resp = send_from_directory(REFERENCE_UI_DIR, "index.html")
+    try:
+        resp.headers["Cache-Control"] = "no-store"
+    except Exception:
+        pass
+    return resp
+
+
+@static_bp.route("/ui/reference/<path:filename>", methods=["GET"])
+def serve_reference_file(filename: str) -> Any:
+    """Serve Reference static files."""
+    dirs = _get_ui_dirs()
+    REFERENCE_UI_DIR = dirs.get("REFERENCE_UI_DIR")
+    if not REFERENCE_UI_DIR or not REFERENCE_UI_DIR.exists():
+        return jsonify({"ok": False, "error": "reference_ui_not_found"}), 500
+    return send_from_directory(REFERENCE_UI_DIR, filename)
 
 
 # ---------------------------------------------------------------------------

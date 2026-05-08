@@ -188,11 +188,11 @@ class CalendarUI {
         elements.count.textContent = plan.main_focus_count || 0;
         elements.time.textContent = `новых кейса (~${plan.main_focus_minutes || 0} мин)`;
 
-        // Короткое описание с учетом выбранного лимита времени
+        // Короткое описание с учетом выбранного времени на день
         const descEl = document.getElementById('main-focus-desc');
         if (descEl) {
             descEl.textContent = plan.main_focus_name
-                ? `На сегодня, под лимит ${limit} мин.`
+                ? `На сегодня, план на ${limit} мин.`
                 : 'Нет активного комплекса.';
         }
     }
@@ -361,7 +361,7 @@ class CalendarUI {
                 <div class="flex flex-col gap-1">
                     <p class="text-sm text-text-main font-medium">Это нормально — пропускать дни</p>
                     <p class="text-xs text-text-muted leading-relaxed">
-                        Ваш прогресс сохраняется. Можно уменьшить дневной лимит времени, если график стал слишком плотным.
+                        Ваш прогресс сохраняется. Можно выбрать меньше времени на день, если график стал слишком плотным.
                     </p>
                 </div>
             </div>

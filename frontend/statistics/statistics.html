@@ -13,10 +13,17 @@
   <link href="/assets/lightB-variables.css" rel="stylesheet" />
   <link href="/assets/lightB-components.css" rel="stylesheet" />
   <link href="/assets/animations.css" rel="stylesheet" />
+  <link href="/assets/PageBoot.css" rel="stylesheet" />
+  <link href="/assets/onboarding-tour.css?v=statistics-onboarding-1" rel="stylesheet" />
   <link href="/ui/statistics/statistics.css" rel="stylesheet" />
 </head>
 
-<body class="stats-body">
+<body class="actra-page-booting stats-body">
+  <div class="actra-page-boot-screen" role="status" aria-live="polite" aria-label="ACTRA">
+    <div class="actra-page-boot-card">
+      <img class="actra-page-boot-logo" src="/assets/logo_animated.svg" alt="ACTRA" />
+    </div>
+  </div>
 
   <!-- ── HEADER ──────────────────────────────────────────────── -->
   <header class="stats-header">
@@ -36,6 +43,15 @@
       </div>
 
       <div class="stats-header-end">
+        <button type="button"
+          class="onboarding-help-button onboarding-help-button--icon"
+          data-onboarding-help-button
+          data-onboarding-help-mode="direct"
+          hidden
+          title="Показать обучение"
+          aria-label="Показать обучение">
+          <span class="material-symbols-outlined" aria-hidden="true">help</span>
+        </button>
         <div class="pill pill--neutral pill--sm" id="streak-badge"></div>
         <button class="stats-user-chip" onclick="openProfileModal()" aria-label="Открыть профиль">
           <img src="/api/assets/avatars/1.png" class="stats-avatar" alt="" id="headerAvatar" aria-hidden="true">
@@ -53,10 +69,14 @@
     <section class="stats-left-col" aria-label="Метрики и активность">
 
       <!-- ── METRIC CARDS ──────────────────────────────────── -->
-      <div class="stats-metrics-grid" role="list">
+      <div class="stats-metrics-grid" role="list" data-onboarding-target="statistics-overall-metrics">
+        <span class="stats-onboarding-pair-anchor stats-onboarding-pair-anchor--progress"
+          data-onboarding-target="statistics-metrics-progress-anchor" aria-hidden="true"></span>
+        <span class="stats-onboarding-pair-anchor stats-onboarding-pair-anchor--repeat"
+          data-onboarding-target="statistics-metrics-repeat-anchor" aria-hidden="true"></span>
 
         <!-- Tasks -->
-        <div class="st-metric-card card-elevated metric-card-enter" id="metric-tasks" role="listitem">
+        <div class="st-metric-card card-elevated metric-card-enter" id="metric-tasks" role="listitem" data-onboarding-target="statistics-metric-tasks">
           <div class="st-metric-top">
             <div class="st-metric-icon" id="metric-tasks-icon">
               <span class="material-symbols-outlined" aria-hidden="true">school</span>
@@ -81,7 +101,7 @@
         </div>
 
         <!-- Time -->
-        <div class="st-metric-card card-elevated metric-card-enter" id="metric-time" role="listitem">
+        <div class="st-metric-card card-elevated metric-card-enter" id="metric-time" role="listitem" data-onboarding-target="statistics-metric-time">
           <div class="st-metric-top">
             <div class="st-metric-icon" id="metric-time-icon">
               <span class="material-symbols-outlined" aria-hidden="true">schedule</span>
@@ -111,7 +131,7 @@
         </div>
 
         <!-- Microcards -->
-        <div class="st-metric-card card-elevated metric-card-enter" id="metric-microcards" role="listitem">
+        <div class="st-metric-card card-elevated metric-card-enter" id="metric-microcards" role="listitem" data-onboarding-target="statistics-metric-microcards">
           <div class="st-metric-top">
             <div class="st-metric-icon" id="metric-microcards-icon">
               <span class="material-symbols-outlined" aria-hidden="true">style</span>
@@ -136,7 +156,7 @@
         </div>
 
         <!-- Streak -->
-        <div class="st-metric-card card-elevated metric-card-enter" id="metric-streak" role="listitem">
+        <div class="st-metric-card card-elevated metric-card-enter" id="metric-streak" role="listitem" data-onboarding-target="statistics-metric-streak">
           <div class="st-metric-top">
             <div class="st-metric-icon" id="metric-streak-icon">
               <span class="material-symbols-outlined" aria-hidden="true">local_fire_department</span>
@@ -171,7 +191,8 @@
       </div>
 
       <!-- ── CHART CARD ────────────────────────────────────── -->
-      <div class="st-chart-card card-elevated card-with-tooltip" id="chart-card">
+      <div class="st-chart-card card-elevated card-with-tooltip" id="chart-card"
+        data-onboarding-target="statistics-time-dynamics-card">
 
         <header class="st-chart-head" id="chart-header">
           <div class="st-chart-copy">
@@ -179,8 +200,9 @@
             <div class="st-chart-delta" id="chart-period-delta">—</div>
             <div class="st-chart-insight hidden" id="chart-insight"></div>
           </div>
-          <div class="chart-controls">
-            <div class="chart-toggle" id="chart-metric-selector" role="tablist" aria-label="Метрика графика">
+          <div class="chart-controls" data-onboarding-target="statistics-chart-controls">
+            <div class="chart-toggle" id="chart-metric-selector" role="tablist" aria-label="Метрика графика"
+              data-onboarding-target="statistics-chart-metric-selector">
               <button class="chart-toggle-btn segmented-control__button active" data-metric="study" role="tab" aria-selected="true">
                 <span aria-hidden="true">⏱️</span>
                 <span>Время</span>
@@ -190,7 +212,7 @@
                 <span>Активность</span>
               </button>
             </div>
-            <div class="chart-period-switch segmented-control">
+            <div class="chart-period-switch segmented-control" data-onboarding-target="statistics-chart-period-switch">
               <button data-period="7" class="period-btn active">7 дней</button>
               <button data-period="30" class="period-btn">30</button>
               <button data-period="90" class="period-btn">90</button>
@@ -211,7 +233,7 @@
                 <div class="chart-skeleton-bar"></div>
               </div>
             </div>
-            <div id="chart-content" class="chart-canvas"></div>
+            <div id="chart-content" class="chart-canvas" data-onboarding-target="statistics-chart-canvas"></div>
             <div id="empty-chart" class="hidden st-empty-overlay">
               <span class="material-symbols-outlined st-empty-icon" aria-hidden="true">insights</span>
               <h3 class="st-empty-title">Нет данных</h3>
@@ -237,19 +259,9 @@
     <!-- RIGHT COLUMN: sidebar -->
     <section class="stats-sidebar stats-side-enter" id="right-column" aria-label="Детальная аналитика">
 
-      <!-- Theory analytics -->
-      <div class="st-side-card card-elevated card-with-tooltip" id="theory-analytics-card">
-        <header class="st-side-head">
-          <span class="material-symbols-outlined st-side-icon" aria-hidden="true">account_tree</span>
-          <h3 class="st-side-title">Аналитика теории</h3>
-        </header>
-        <div class="st-theory-list" id="theory-analytics-list">
-          <p class="st-placeholder-text">Теоретические связи появятся после первых связанных complex-сессий.</p>
-        </div>
-      </div>
-
       <!-- Performance -->
-      <div class="st-side-card card-elevated card-with-tooltip" id="performance-card">
+      <div class="st-side-card card-elevated card-with-tooltip" id="performance-card"
+        data-onboarding-target="statistics-performance-card">
         <header class="st-side-head">
           <span class="material-symbols-outlined st-side-icon tooltip-parent"
             data-tooltip="Распределение успешности по типам задач и микрокарточек"
@@ -267,7 +279,7 @@
       </div>
 
       <!-- Recent complexes -->
-      <div class="stats-complexes-section">
+      <div class="stats-complexes-section" data-onboarding-target="statistics-recent-complexes-section">
         <header class="st-complexes-head">
           <div class="st-side-head">
             <span class="material-symbols-outlined st-side-icon" aria-hidden="true">history</span>
@@ -284,7 +296,7 @@
           </nav>
         </header>
         <div id="complexes-carousel" class="complexes-carousel">
-          <div id="complexes-grid" class="complexes-carousel-track"></div>
+          <div id="complexes-grid" class="complexes-carousel-track" data-onboarding-target="statistics-recent-complexes-grid"></div>
         </div>
       </div>
 
@@ -292,10 +304,13 @@
 
   </main>
 
+  <script src="/assets/PageBoot.js"></script>
   <script src="/ui/statistics/statistics.js"></script>
   <script src="../assets/SharedProfileModal.js"></script>
   <script src="../assets/ThemeSwitcherUI.js"></script>
   <script src="../assets/ConnectionMonitor.js"></script>
+  <script src="/assets/onboarding_tours.js?v=statistics-onboarding-4"></script>
+  <script src="/assets/OnboardingTour.js?v=statistics-onboarding-4"></script>
 
 </body>
 </html>

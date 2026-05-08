@@ -2,6 +2,8 @@
  * ACTRA Sequence Assembly Editor
  */
 
+const SEQUENCE_ONBOARDING_TOUR_ID = 'sequence-editor-authoring';
+
 class SequenceEditor extends BaseEditor {
     constructor() {
         super(); // Call BaseEditor constructor
@@ -11,6 +13,11 @@ class SequenceEditor extends BaseEditor {
 
         // Sequence Editor specific fields
         this.levels = [];
+        this.sequenceOnboardingPreview = new URLSearchParams(window.location.search)
+            .get('onboarding_preview') === SEQUENCE_ONBOARDING_TOUR_ID;
+        this.sequenceOnboardingFinished = false;
+        this.sequenceOnboardingDemoSnapshot = null;
+        this.sequenceOnboardingDemoActive = false;
         this.init();
     }
 
@@ -166,12 +173,176 @@ class SequenceEditor extends BaseEditor {
     }
 
     async init() {
-        const loaded = await this.initTaskFromUrlContext();
+        let loaded = false;
+        if (this.sequenceOnboardingPreview) {
+            this.ensureSequenceOnboardingPreviewTask();
+            this.applySequenceOnboardingPreviewState();
+            loaded = true;
+        } else {
+            loaded = await this.initTaskFromUrlContext();
+        }
         if (!loaded) {
             this.ensureDefaultStructure();
             this.renderUI();
         }
+        this.setupSequenceOnboardingTourBridge();
         this.setupEventListeners();
+    }
+
+    ensureSequenceOnboardingPreviewTask() {
+        if (!this.sequenceOnboardingPreview) return;
+
+        this.moduleId = this.moduleId || 'onboarding-preview-module';
+        this.topicId = this.topicId || 'onboarding-preview-topic';
+        this.taskId = this.taskId || 'onboarding-preview-sequence';
+        this.isNewTaskParam = true;
+        this.hasPersistedTask = false;
+        this.task = {
+            task_data: {
+                id: this.taskId,
+                type: 'sequence_assembly',
+                name: 'Последовательность: приготовление раствора',
+                content: {},
+                settings: {},
+                meta: {
+                    id: this.taskId,
+                    module: this.moduleId,
+                    topic: this.topicId,
+                    name: 'Последовательность: приготовление раствора',
+                },
+            },
+            metadata: {
+                id: this.taskId,
+                module: this.moduleId,
+                topic: this.topicId,
+                name: 'Последовательность: приготовление раствора',
+                type: 'sequence_assembly',
+            },
+        };
+    }
+
+    createSequenceOnboardingContent() {
+        return {
+            prompt: 'Расположите этапы приготовления раствора по двум уровням: подготовка и выполнение.',
+            sequence_within_level_matters: true,
+            level_order_matters: true,
+            elements: [
+                { id: 'seq_elem_check_flask', text: 'Проверить мерную колбу', semantic_key: 'text:проверить мерную колбу' },
+                { id: 'seq_elem_measure_solvent', text: 'Отмерить растворитель', semantic_key: 'text:отмерить растворитель' },
+                { id: 'seq_elem_add_substance', text: 'Добавить вещество', semantic_key: 'text:добавить вещество' },
+                { id: 'seq_elem_mix_solution', text: 'Перемешать раствор', semantic_key: 'text:перемешать раствор' },
+            ],
+            levels: [
+                {
+                    level_id: 'seq_level_prepare',
+                    level_name: 'Подготовка',
+                    blocks: ['seq_elem_check_flask', 'seq_elem_measure_solvent'],
+                },
+                {
+                    level_id: 'seq_level_execute',
+                    level_name: 'Выполнение',
+                    blocks: ['seq_elem_add_substance', 'seq_elem_mix_solution'],
+                },
+            ],
+        };
+    }
+
+    applySequenceOnboardingPreviewState() {
+        if ((!this.sequenceOnboardingPreview && !this.sequenceOnboardingDemoActive) || !this.task) return;
+
+        if (!this.task.task_data) this.task.task_data = {};
+        if (!this.task.task_data.meta) this.task.task_data.meta = {};
+        if (!this.task.metadata) this.task.metadata = {};
+        this.task.task_data.name = 'Последовательность: приготовление раствора';
+        this.task.task_data.type = 'sequence_assembly';
+        this.task.task_data.meta.name = 'Последовательность: приготовление раствора';
+        this.task.metadata.name = 'Последовательность: приготовление раствора';
+        this.task.metadata.type = 'sequence_assembly';
+        this.task.task_data.content = this.createSequenceOnboardingContent();
+        this.task.task_data.settings = {
+            ...(this.task.task_data.settings || {}),
+            sequence_within_level_matters: true,
+            level_order_matters: true,
+        };
+        this.levels = this.parseLevels(this.task.task_data.content);
+        this.ensureDefaultStructure();
+        this.renderUI();
+        this.hasUnsavedChanges = false;
+        this.updateSaveStatus();
+    }
+
+    resetSequenceOnboardingPreviewState() {
+        if (!this.sequenceOnboardingPreview || !this.task || this.sequenceOnboardingFinished) return;
+        this.sequenceOnboardingFinished = true;
+        if (!this.task.task_data) this.task.task_data = {};
+        this.task.task_data.content = {
+            prompt: '',
+            sequence_within_level_matters: false,
+            level_order_matters: false,
+            elements: [],
+            levels: [],
+        };
+        this.task.task_data.settings = {
+            ...(this.task.task_data.settings || {}),
+            sequence_within_level_matters: false,
+            level_order_matters: false,
+        };
+        this.levels = [this.createEmptyLevel()];
+        this.renderUI();
+        this.hasUnsavedChanges = false;
+        this.updateSaveStatus();
+    }
+
+    cloneSequenceOnboardingValue(value) {
+        if (value == null) return value;
+        try {
+            return JSON.parse(JSON.stringify(value));
+        } catch (_) {
+            return value;
+        }
+    }
+
+    applySequenceOnboardingDemoState() {
+        if (this.sequenceOnboardingPreview || !this.task) return;
+        if (!this.sequenceOnboardingDemoSnapshot) {
+            this.sequenceOnboardingDemoSnapshot = {
+                task: this.cloneSequenceOnboardingValue(this.task),
+                levels: this.cloneSequenceOnboardingValue(this.levels),
+                hasUnsavedChanges: this.hasUnsavedChanges,
+            };
+        }
+        this.sequenceOnboardingDemoActive = true;
+        this.applySequenceOnboardingPreviewState();
+    }
+
+    restoreSequenceOnboardingDemoState() {
+        const snapshot = this.sequenceOnboardingDemoSnapshot;
+        this.sequenceOnboardingDemoSnapshot = null;
+        this.sequenceOnboardingDemoActive = false;
+        if (!snapshot) return;
+        this.task = this.cloneSequenceOnboardingValue(snapshot.task);
+        this.levels = this.cloneSequenceOnboardingValue(snapshot.levels) || [];
+        this.renderUI();
+        this.hasUnsavedChanges = Boolean(snapshot.hasUnsavedChanges);
+        this.updateSaveStatus();
+    }
+
+    setupSequenceOnboardingTourBridge() {
+        window.addEventListener('onboarding:before-start', (event) => {
+            const detail = event?.detail || {};
+            if (detail.tourId !== SEQUENCE_ONBOARDING_TOUR_ID || detail.preview) return;
+            this.applySequenceOnboardingDemoState();
+        });
+
+        window.addEventListener('onboarding:finish', (event) => {
+            const detail = event?.detail || {};
+            if (detail.tourId !== SEQUENCE_ONBOARDING_TOUR_ID) return;
+            if (!this.sequenceOnboardingPreview) {
+                this.restoreSequenceOnboardingDemoState();
+                return;
+            }
+            this.resetSequenceOnboardingPreviewState();
+        });
     }
 
     getDifficultyAuthoringMountPoint() {
@@ -297,6 +468,8 @@ class SequenceEditor extends BaseEditor {
     createLevelElement(level, lIndex) {
         const div = document.createElement('div');
         div.className = 'card-elevated rounded-xl p-2 group/level relative mb-6 transition-all';
+        div.setAttribute('data-onboarding-spotlight', 'frame');
+        div.setAttribute('data-onboarding-target', lIndex === 0 ? 'sequence-first-level' : `sequence-level-${lIndex + 1}`);
         if (level.levelId) {
             div.style.viewTransitionName = `level-${level.levelId}`;
         }
@@ -308,6 +481,8 @@ class SequenceEditor extends BaseEditor {
                 </div>
                 <input class="level-title-input bg-transparent border-transparent hover:border-border-subtle focus:border-primary focus:ring-0 rounded text-sm font-bold text-text-main px-2 py-1 flex-1 transition-colors" 
                        type="text" placeholder="Название уровня"/>
+                <span class="sequence-level-title-onboarding-anchor absolute pointer-events-none" aria-hidden="true"></span>
+                <span class="sequence-level-title-onboarding-edge absolute pointer-events-none" aria-hidden="true"></span>
                 <div class="sequence-level-actions flex items-center gap-1 transition-opacity">
                     <button class="move-up icon-button-muted" title="Переместить вверх"><span class="material-symbols-outlined text-[20px]">arrow_upward</span></button>
                     <button class="move-down icon-button-muted" title="Переместить вниз"><span class="material-symbols-outlined text-[20px]">arrow_downward</span></button>
@@ -320,16 +495,47 @@ class SequenceEditor extends BaseEditor {
 
         const titleInput = div.querySelector('.level-title-input');
         titleInput.value = level.title || '';
+        if (lIndex === 0) {
+            const titleAnchor = div.querySelector('.sequence-level-title-onboarding-anchor');
+            if (titleAnchor) {
+                const titleWidth = Math.max(104, Math.min(220, (level.title || '').length * 8 + 28));
+                titleAnchor.setAttribute('data-onboarding-target', 'sequence-first-level-title');
+                titleAnchor.setAttribute('data-onboarding-clone-variant', 'sequence-level-title');
+                titleAnchor.textContent = level.title || 'Название уровня';
+                titleAnchor.style.left = '72px';
+                titleAnchor.style.top = '18px';
+                titleAnchor.style.width = `${titleWidth}px`;
+                titleAnchor.style.height = '30px';
+
+                const titleEdge = div.querySelector('.sequence-level-title-onboarding-edge');
+                if (titleEdge) {
+                    titleEdge.setAttribute('data-onboarding-target', 'sequence-first-level-title-edge');
+                    titleEdge.style.left = `${72 + titleWidth - 6}px`;
+                    titleEdge.style.top = '18px';
+                    titleEdge.style.width = '6px';
+                    titleEdge.style.height = '30px';
+                }
+
+            }
+        }
         titleInput.oninput = (e) => {
             this.levels[lIndex].title = e.target.value;
             this.markUnsaved();
         };
+
+        const levelActions = div.querySelector('.sequence-level-actions');
+        if (levelActions && lIndex === 0) {
+            levelActions.setAttribute('data-onboarding-target', 'sequence-first-level-actions');
+        }
 
         div.querySelector('.move-up').onclick = () => this.moveLevel(lIndex, -1);
         div.querySelector('.move-down').onclick = () => this.moveLevel(lIndex, 1);
         div.querySelector('.delete-level').onclick = () => this.deleteLevel(lIndex);
 
         const itemsContainer = div.querySelector('.items-container');
+        if (lIndex === 0) {
+            itemsContainer.setAttribute('data-onboarding-target', 'sequence-first-level-items');
+        }
         level.items.forEach((item, iIndex) => {
             const block = this.createBlockElement(item, lIndex, iIndex);
             itemsContainer.appendChild(block);
@@ -339,6 +545,9 @@ class SequenceEditor extends BaseEditor {
         addButton.className = 'sequence-add-block-btn empty-state-card empty-state-card--compact empty-state-card--icon-only w-12 h-[104px] shrink-0 border-2 border-dashed text-text-disabled hover:text-primary transition-all duration-300';
         addButton.title = 'Добавить шаг в этот уровень';
         addButton.setAttribute('aria-label', 'Добавить блок');
+        if (lIndex === 0) {
+            addButton.setAttribute('data-onboarding-target', 'sequence-first-level-add-step');
+        }
         addButton.innerHTML = '<span class="material-symbols-outlined text-[28px]">add</span>';
         addButton.onclick = () => this.addBlock(lIndex);
         itemsContainer.appendChild(addButton);
@@ -349,6 +558,11 @@ class SequenceEditor extends BaseEditor {
     createBlockElement(item, lIndex, iIndex) {
         const div = document.createElement('div');
         div.className = 'sequence-block-card card-elevated w-48 shrink-0 rounded-lg p-4 pt-8 flex flex-col gap-3 group/block relative transition-all';
+        if (lIndex === 0 && iIndex === 0) {
+            div.setAttribute('data-onboarding-target', 'sequence-first-step');
+        } else if (lIndex === 0 && iIndex === 1) {
+            div.setAttribute('data-onboarding-target', 'sequence-second-step');
+        }
         if (item.id) {
             div.style.viewTransitionName = `block-${item.id}`;
         }
@@ -373,6 +587,9 @@ class SequenceEditor extends BaseEditor {
 
         const titleField = div.querySelector('.block-title-input');
         if (titleField) {
+            if (lIndex === 0 && iIndex === 0) {
+                titleField.setAttribute('data-onboarding-target', 'sequence-first-step-text');
+            }
             titleField.value = item.label || '';
             titleField.dataset.minHeight = titleField.scrollHeight || titleField.clientHeight || 40;
             titleField.style.overflow = 'hidden';
@@ -385,8 +602,15 @@ class SequenceEditor extends BaseEditor {
         }
 
         div.querySelector('.delete-block').onclick = () => this.deleteBlock(lIndex, iIndex);
-        div.querySelector('.move-left').onclick = () => this.moveBlock(lIndex, iIndex, -1);
-        div.querySelector('.move-right').onclick = () => this.moveBlock(lIndex, iIndex, 1);
+        const moveLeft = div.querySelector('.move-left');
+        const moveRight = div.querySelector('.move-right');
+        if (lIndex === 0 && iIndex === 0) {
+            div.querySelector('.sequence-block-actions')?.setAttribute('data-onboarding-target', 'sequence-first-step-actions');
+            moveLeft.setAttribute('data-onboarding-target', 'sequence-first-step-move-left');
+            moveRight.setAttribute('data-onboarding-target', 'sequence-first-step-move-right');
+        }
+        moveLeft.onclick = () => this.moveBlock(lIndex, iIndex, -1);
+        moveRight.onclick = () => this.moveBlock(lIndex, iIndex, 1);
 
         return div;
     }

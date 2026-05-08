@@ -210,6 +210,109 @@
             gap: 1.5rem;
         }
 
+        #hostedAuthChoice .auth-provider-row {
+            margin-top: 1rem;
+        }
+
+        .google-auth-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            width: 100%;
+            min-height: 3.5rem;
+            border: 1px solid var(--color-border-strong);
+            border-radius: 1rem;
+            background: var(--color-surface-1);
+            color: var(--color-text-main);
+            font-weight: 800;
+            box-shadow: var(--shadow-sm);
+            transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+        }
+
+        .google-auth-button:not(:disabled):hover,
+        .google-auth-button:not(:disabled):focus-visible {
+            border-color: color-mix(in srgb, var(--color-primary) 28%, var(--color-border-strong));
+            box-shadow: var(--shadow-md);
+            transform: translateY(-1px);
+        }
+
+        .google-auth-button:disabled {
+            cursor: not-allowed;
+            background: color-mix(in srgb, var(--color-surface-1) 82%, var(--color-surface-2));
+            color: var(--color-text-secondary);
+            box-shadow: none;
+        }
+
+        .google-auth-mark {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 1.45rem;
+            height: 1.45rem;
+            border-radius: 999px;
+            background: #ffffff;
+            color: #4285f4;
+            font-family: Arial, sans-serif;
+            font-size: 1rem;
+            font-weight: 900;
+            line-height: 1;
+        }
+
+        .auth-divider {
+            display: flex;
+            align-items: center;
+            gap: 0.9rem;
+            color: var(--color-text-secondary);
+            font-size: 0.78rem;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        .auth-divider::before,
+        .auth-divider::after {
+            content: "";
+            height: 1px;
+            flex: 1 1 0;
+            background: var(--color-border-subtle);
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 0.55rem;
+            top: 50%;
+            display: inline-flex;
+            width: 2.35rem;
+            height: 2.35rem;
+            transform: translateY(-50%);
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            color: var(--color-text-secondary);
+            transition: background 120ms ease, color 120ms ease;
+        }
+
+        .password-toggle:hover,
+        .password-toggle:focus-visible {
+            background: var(--color-surface-1);
+            color: var(--color-primary-dark);
+        }
+
+        .password-toggle .material-symbols-outlined {
+            font-size: 1.25rem;
+        }
+
+        input[type="password"]::-ms-reveal,
+        input[type="password"]::-ms-clear {
+            display: none;
+        }
+
+        input[type="password"]::-webkit-credentials-auto-fill-button,
+        input[type="password"]::-webkit-caps-lock-indicator {
+            visibility: hidden;
+            pointer-events: none;
+        }
+
         #hostedAuthChoice .auth-choice-card {
             position: relative;
             display: flex;
@@ -743,7 +846,9 @@
                                     <img id="onboardingAvatarPreview" src="/api/assets/avatars/1.png?trim=1&size=256"
                                         class="w-24 h-24 rounded-full object-cover avatar-fill ring-4 ring-primary-light/50 shadow-lg">
                                 </div>
-                                <div class="w-full text-center">
+                                <div id="onboardingNameField" class="w-full text-center">
+                                    <span id="onboardingNameIcon"
+                                        class="hidden absolute left-4 top-3.5 text-text-secondary material-symbols-outlined">person</span>
                                     <input type="text" id="onboardingName" placeholder="Ваше имя"
                                         class="welcome-name-input w-full text-center bg-transparent border-b-2 border-border-subtle focus:border-primary px-4 py-2 text-2xl font-bold text-text-main outline-none transition-colors placeholder:text-text-secondary"
                                         maxlength="50"
@@ -774,14 +879,24 @@
                                 <div class="relative">
                                     <span class="absolute left-4 top-3.5 text-text-secondary material-symbols-outlined">lock</span>
                                     <input type="password" id="onboardingPassword" placeholder="Пароль"
-                                        class="w-full pl-12 pr-4 py-3.5 bg-surface-2 border border-border-strong rounded-xl outline-none focus:ring-2 focus:ring-primary transition-all font-medium text-base placeholder:text-text-secondary"
+                                        class="w-full pl-12 pr-12 py-3.5 bg-surface-2 border border-border-strong rounded-xl outline-none focus:ring-2 focus:ring-primary transition-all font-medium text-base placeholder:text-text-secondary"
                                         onkeydown="if(event.key==='Enter'){event.preventDefault();window.welcomeCreateProfile()}">
+                                    <button type="button" class="password-toggle" aria-label="Показать пароль"
+                                        onmousedown="event.preventDefault()"
+                                        onclick="window.welcomeTogglePassword('onboardingPassword', this)">
+                                        <span class="material-symbols-outlined">visibility</span>
+                                    </button>
                                 </div>
                                 <div class="relative">
                                     <span class="absolute left-4 top-3.5 text-text-secondary material-symbols-outlined">verified_user</span>
                                     <input type="password" id="onboardingPasswordConfirm" placeholder="Повторите пароль"
-                                        class="w-full pl-12 pr-4 py-3.5 bg-surface-2 border border-border-strong rounded-xl outline-none focus:ring-2 focus:ring-primary transition-all font-medium text-base placeholder:text-text-secondary"
+                                        class="w-full pl-12 pr-12 py-3.5 bg-surface-2 border border-border-strong rounded-xl outline-none focus:ring-2 focus:ring-primary transition-all font-medium text-base placeholder:text-text-secondary"
                                         onkeydown="if(event.key==='Enter'){event.preventDefault();window.welcomeCreateProfile()}">
+                                    <button type="button" class="password-toggle" aria-label="Показать пароль"
+                                        onmousedown="event.preventDefault()"
+                                        onclick="window.welcomeTogglePassword('onboardingPasswordConfirm', this)">
+                                        <span class="material-symbols-outlined">visibility</span>
+                                    </button>
                                 </div>
                             </div>
 
@@ -867,6 +982,19 @@
                             </p>
                         </div>
 
+                        <div id="onboardingSocialAuth" class="hidden space-y-3">
+                            <div class="auth-divider">или</div>
+                            <button type="button"
+                                onclick="window.welcomeStartGoogleAuth()"
+                                data-google-auth-button
+                                data-google-enabled-label="Зарегистрироваться через Google"
+                                data-google-disabled-label="Зарегистрироваться через Google"
+                                class="google-auth-button px-4 py-3 outline-none focus:ring-4 focus:ring-primary/20">
+                                <span class="google-auth-mark" aria-hidden="true">G</span>
+                                <span data-google-auth-label>Зарегистрироваться через Google</span>
+                            </button>
+                        </div>
+
                         <p id="onboardingError"
                             class="text-sm text-error font-bold text-center hidden flex items-center justify-center gap-2 bg-error/10 p-3 rounded-xl border border-error/20">
                             <span class="material-symbols-outlined">error</span> <span id="onboardingErrorMsg"></span>
@@ -919,6 +1047,17 @@
                                     </div>
                                 </button>
                             </div>
+                            <div class="auth-provider-row">
+                                <button type="button" id="hostedGoogleAuthBtn"
+                                    onclick="window.welcomeStartGoogleAuth()"
+                                    data-google-auth-button
+                                    data-google-enabled-label="Войти с аккаунтом Google"
+                                    data-google-disabled-label="Войти с аккаунтом Google"
+                                    class="google-auth-button px-4 py-3 outline-none focus:ring-4 focus:ring-primary/20">
+                                    <span class="google-auth-mark" aria-hidden="true">G</span>
+                                    <span data-google-auth-label>Войти с аккаунтом Google</span>
+                                </button>
+                            </div>
                         </div>
 
                         <!-- Grid Layout for Cards -->
@@ -937,7 +1076,12 @@
                                         <span
                                             class="absolute left-4 top-3.5 text-text-secondary material-symbols-outlined">lock</span>
                                         <input type="password" id="passwordInlineInput" placeholder="Введите пароль..."
-                                            class="w-full pl-12 pr-4 py-3.5 bg-surface-2 border border-border-strong rounded-xl outline-none focus:ring-2 focus:ring-primary transition-all font-medium text-lg placeholder:text-text-secondary">
+                                            class="w-full pl-12 pr-12 py-3.5 bg-surface-2 border border-border-strong rounded-xl outline-none focus:ring-2 focus:ring-primary transition-all font-medium text-lg placeholder:text-text-secondary">
+                                        <button type="button" class="password-toggle" aria-label="Показать пароль"
+                                            onmousedown="event.preventDefault()"
+                                            onclick="window.welcomeTogglePassword('passwordInlineInput', this)">
+                                            <span class="material-symbols-outlined">visibility</span>
+                                        </button>
                                     </div>
                                     <p id="passwordInlineError"
                                         class="text-sm text-error font-bold mb-4 hidden bg-error/10 p-2 rounded-lg text-center">
@@ -980,11 +1124,28 @@
                                         class="absolute left-4 top-3.5 text-text-secondary material-symbols-outlined">lock</span>
                                     <input type="password" id="loginPassword" placeholder="Пароль" autofocus
                                         class="w-full pl-12 pr-12 py-4 bg-surface-2 border border-border-strong rounded-xl outline-none focus:ring-2 focus:ring-primary focus:border-border-normal transition-all font-medium text-lg placeholder:text-text-secondary">
+                                    <button type="button" class="password-toggle" aria-label="Показать пароль"
+                                        onmousedown="event.preventDefault()"
+                                        onclick="window.welcomeTogglePassword('loginPassword', this)">
+                                        <span class="material-symbols-outlined">visibility</span>
+                                    </button>
                                 </div>
                                 <button type="button" id="forgotPasswordLink" onclick="window.welcomeOpenForgotPasswordModal()"
                                     class="hidden -mt-1 text-sm font-semibold text-primary hover:underline">
                                     Забыли пароль?
                                 </button>
+                                <div id="loginSocialAuth" class="hidden space-y-3">
+                                    <div class="auth-divider">или</div>
+                                    <button type="button"
+                                        onclick="window.welcomeStartGoogleAuth()"
+                                        data-google-auth-button
+                                        data-google-enabled-label="Войти через Google"
+                                        data-google-disabled-label="Войти через Google"
+                                        class="google-auth-button px-4 py-3 outline-none focus:ring-4 focus:ring-primary/20">
+                                        <span class="google-auth-mark" aria-hidden="true">G</span>
+                                        <span data-google-auth-label>Войти через Google</span>
+                                    </button>
+                                </div>
                                 <p id="loginError"
                                     class="text-sm text-error font-bold text-center hidden bg-error/10 p-2 rounded-lg">
                                 </p>
@@ -1151,13 +1312,27 @@
                     </div>
                     <label class="block">
                         <span class="mb-2 block text-sm font-semibold text-text-main">Новый пароль</span>
-                        <input type="password" id="forgotPasswordNewPassword" placeholder="Минимум 8 символов"
-                            class="w-full rounded-xl border border-border-strong bg-surface-2 px-4 py-3 outline-none focus:ring-2 focus:ring-primary focus:border-border-normal transition-all font-medium text-base placeholder:text-text-secondary">
+                        <div class="relative">
+                            <input type="password" id="forgotPasswordNewPassword" placeholder="Минимум 8 символов"
+                                class="w-full rounded-xl border border-border-strong bg-surface-2 px-4 py-3 pr-12 outline-none focus:ring-2 focus:ring-primary focus:border-border-normal transition-all font-medium text-base placeholder:text-text-secondary">
+                            <button type="button" class="password-toggle" aria-label="Показать пароль"
+                                onmousedown="event.preventDefault()"
+                                onclick="window.welcomeTogglePassword('forgotPasswordNewPassword', this)">
+                                <span class="material-symbols-outlined">visibility</span>
+                            </button>
+                        </div>
                     </label>
                     <label class="block">
                         <span class="mb-2 block text-sm font-semibold text-text-main">Повторите пароль</span>
-                        <input type="password" id="forgotPasswordConfirmPassword" placeholder="Ещё раз новый пароль"
-                            class="w-full rounded-xl border border-border-strong bg-surface-2 px-4 py-3 outline-none focus:ring-2 focus:ring-primary focus:border-border-normal transition-all font-medium text-base placeholder:text-text-secondary">
+                        <div class="relative">
+                            <input type="password" id="forgotPasswordConfirmPassword" placeholder="Ещё раз новый пароль"
+                                class="w-full rounded-xl border border-border-strong bg-surface-2 px-4 py-3 pr-12 outline-none focus:ring-2 focus:ring-primary focus:border-border-normal transition-all font-medium text-base placeholder:text-text-secondary">
+                            <button type="button" class="password-toggle" aria-label="Показать пароль"
+                                onmousedown="event.preventDefault()"
+                                onclick="window.welcomeTogglePassword('forgotPasswordConfirmPassword', this)">
+                                <span class="material-symbols-outlined">visibility</span>
+                            </button>
+                        </div>
                     </label>
                     <p id="forgotPasswordResetStatus"
                         class="hidden rounded-xl border px-3 py-2 text-sm font-semibold"></p>

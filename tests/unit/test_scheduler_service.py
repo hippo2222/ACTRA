@@ -1,6 +1,6 @@
 import sys
 from pathlib import Path
-from datetime import date
+from datetime import date, datetime, timedelta
 
 import pytest
 
@@ -12,7 +12,14 @@ if str(DESKTOP_APP) not in sys.path:
     sys.path.append(str(DESKTOP_APP))
 
 from services.calendar.scheduler_service import SchedulerService  # type: ignore
-from services.calendar.models import DailyPlan, DayStatus, ScheduledTask, TaskType  # type: ignore
+from services.calendar.models import (  # type: ignore
+    ComplexProgress,
+    ComplexStatus,
+    DailyPlan,
+    DayStatus,
+    ScheduledTask,
+    TaskType,
+)
 
 
 @pytest.fixture
@@ -64,6 +71,98 @@ def test_build_schedule_strip_includes_date_fields_and_flags(scheduler):
     # Future day should be planned or rest day (weekend in flexible mode would be rest)
     assert tomorrow.status in {DayStatus.PLANNED, DayStatus.REST_DAY}
     assert "Daily Mix" in tomorrow.tasks
+
+
+def test_schedule_strip_spaces_single_weak_complex_across_week(scheduler):
+    progress = [
+        ComplexProgress(
+            complex_id="anatomy",
+            user_id="user1",
+            status=ComplexStatus.IN_PROGRESS,
+            health_score=0.62,
+            last_reviewed_at=None,
+        )
+    ]
+
+    schedule = scheduler.build_schedule_strip(
+        user_id="user1",
+        days_count=7,
+        schedule_mode="daily",
+        activity_history={},
+        available_minutes=30,
+        all_progress=progress,
+        task_pool={"anatomy": [{"task_id": "a1", "complex_name": "Anatomy"}]},
+        complex_names={"anatomy": "Anatomy"},
+    )
+
+    today = date.today()
+    planned_offsets = [
+        (day.date - today).days
+        for day in schedule
+        if not day.is_future or day.date >= today
+        if day.all_tasks
+    ]
+
+    assert planned_offsets == [0, 1, 3, 6]
+
+
+def test_schedule_strip_does_not_fill_week_when_review_not_due(scheduler):
+    progress = [
+        ComplexProgress(
+            complex_id="stable",
+            user_id="user1",
+            status=ComplexStatus.MASTERED,
+            health_score=0.98,
+            last_reviewed_at=datetime.now() - timedelta(days=1),
+        )
+    ]
+
+    schedule = scheduler.build_schedule_strip(
+        user_id="user1",
+        days_count=7,
+        schedule_mode="daily",
+        activity_history={},
+        available_minutes=30,
+        all_progress=progress,
+        task_pool={"stable": [{"task_id": "s1", "complex_name": "Stable"}]},
+        complex_names={"stable": "Stable"},
+    )
+
+    future_and_today = [day for day in schedule if day.date >= date.today()]
+    assert all(not day.tasks and not day.all_tasks for day in future_and_today)
+
+
+def test_schedule_strip_pushes_overloaded_reviews_to_later_days(scheduler):
+    progress = [
+        ComplexProgress(
+            complex_id=f"critical_{idx}",
+            user_id="user1",
+            status=ComplexStatus.IN_PROGRESS,
+            health_score=0.3,
+            last_reviewed_at=datetime.now() - timedelta(days=1),
+        )
+        for idx in range(6)
+    ]
+
+    schedule = scheduler.build_schedule_strip(
+        user_id="user1",
+        days_count=2,
+        schedule_mode="daily",
+        activity_history={},
+        available_minutes=30,
+        all_progress=progress,
+        task_pool={
+            f"critical_{idx}": [{"task_id": f"c{idx}", "complex_name": f"C{idx}"}]
+            for idx in range(6)
+        },
+        complex_names={f"critical_{idx}": f"C{idx}" for idx in range(6)},
+    )
+
+    today = next(day for day in schedule if day.is_today)
+    tomorrow = next(day for day in schedule if day.date == date.today() + timedelta(days=1))
+
+    assert len(today.all_tasks) == 4
+    assert len(tomorrow.all_tasks) == 4
 
 
 def test_daily_plan_to_dict_keeps_main_focus_frontend_aliases():
@@ -121,10 +220,11 @@ class TestProblem1Interleaving:
         
         all_tasks = tasks_a + tasks_b + tasks_c
         
-        # ✅ ЗАЩИТА: Должно вернуть ровно 10 задач без бесконечного цикла
+        # Когда уникальных задач меньше цели, не дублируем их: старт сессии
+        # работает с уникальными task_refs.
         result = scheduler._apply_interleaving(all_tasks, count=10)
         
-        assert len(result) == 10, f"Expected 10 tasks, got {len(result)}"
+        assert len(result) == 3, f"Expected 3 unique tasks, got {len(result)}"
         assert all(isinstance(t, ScheduledTask) for t in result)
     
     def test_interleaving_single_complex_remaining(self, scheduler):
@@ -140,10 +240,10 @@ class TestProblem1Interleaving:
             for i in range(1, 4)
         ]
         
-        # ✅ ЗАЩИТА: Должно вернуть 5 задач из одного комплекса без бесконечного цикла
+        # Не дублируем задачи одного комплекса, если реальных задач меньше цели.
         result = scheduler._apply_interleaving(tasks, count=5)
         
-        assert len(result) == 5
+        assert len(result) == 3
         assert all(t.complex_id == "A" for t in result)
 
 
@@ -247,15 +347,11 @@ class TestProblem3UnifiedPadding:
             for i in range(1, 4)
         ]
         
-        # ✅ Дополняем до 7 (дублируем)
+        # Не дополняем до 7 дубликатами: план должен отражать реальные задачи.
         result = scheduler._pad_tasks_to_count(tasks, 7)
         
-        assert len(result) == 7
-        assert result[:3] == tasks  # Первые 3 - оригинальные
-        assert result[3] == tasks[0]  # Потом дублирование: 4-й = 1-й
-        assert result[4] == tasks[1]  # 5-й = 2-й
-        assert result[5] == tasks[2]  # 6-й = 3-й
-        assert result[6] == tasks[0]  # 7-й = 1-й (повторение цикла)
+        assert len(result) == 3
+        assert result == tasks
     
     def test_pad_tasks_already_sufficient(self, scheduler):
         """Тест: если задач достаточно, не дублируем."""

@@ -17,6 +17,7 @@
   <title>Создание комплекса</title>
 
   <link href="/assets/tailwind.css?v=1.2" rel="stylesheet" />
+  <link href="/assets/onboarding-tour.css?v=complex-editor-onboarding-5" rel="stylesheet" />
 
 
   <style>
@@ -518,6 +519,11 @@
       display: flex;
       align-items: center;
       gap: 1rem;
+      min-width: 0;
+    }
+
+    .module-info > div {
+      min-width: 0;
     }
 
     .module-icon {
@@ -550,6 +556,9 @@
       font-weight: 500;
       color: var(--color-text-muted);
       margin-top: 0.125rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .module-expand {
@@ -600,6 +609,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 0.75rem;
       padding: 0.625rem 0.5rem;
       margin: -0.5rem -0.5rem 1rem -0.5rem;
       border-bottom: 1px solid var(--color-border-subtle);
@@ -819,6 +829,9 @@
       color: var(--color-text-main);
       text-transform: uppercase;
       letter-spacing: 0.05em;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .topic-count {
@@ -828,6 +841,8 @@
       padding: 0.25rem 0.625rem;
       border-radius: 0.375rem;
       font-weight: 500;
+      flex-shrink: 0;
+      white-space: nowrap;
     }
 
     .tasks-chips {
@@ -911,6 +926,34 @@
     .task-chip input:checked+label .chip-type {
       color: inherit;
       opacity: 1;
+    }
+
+    .task-chip--added label,
+    .task-chip--added input:disabled+label {
+      background: linear-gradient(180deg, var(--color-page-builder-primary-bg-strong), var(--color-page-builder-surface-strong)) !important;
+      border-color: var(--color-page-builder-primary-border) !important;
+      color: var(--color-text-main) !important;
+      box-shadow: var(--color-page-builder-shadow-soft), inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 18%, transparent);
+    }
+
+    .chip-added-icon {
+      font-size: 1rem !important;
+      color: var(--color-primary) !important;
+    }
+
+    .chip-added-badge {
+      display: inline-flex;
+      align-items: center;
+      height: 1.25rem;
+      padding: 0 0.45rem;
+      border-radius: 999px;
+      border: 1px solid var(--color-page-builder-primary-border);
+      background: var(--color-component-pill-info-bg);
+      color: var(--color-text-main);
+      font-size: 0.68rem;
+      font-weight: 700;
+      line-height: 1;
+      white-space: nowrap;
     }
 
     .delete-task-btn {
@@ -2003,6 +2046,27 @@
       border-color: var(--color-page-builder-border);
     }
 
+    .task-chip--added input:disabled + label {
+      background: linear-gradient(180deg, var(--color-page-builder-primary-bg-strong), var(--color-page-builder-surface-strong)) !important;
+      border-color: var(--color-page-builder-primary-border) !important;
+      color: var(--color-text-main) !important;
+      box-shadow: var(--color-page-builder-shadow-soft), inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 18%, transparent);
+    }
+
+    body[data-onboarding-step-variant="test-mode-control"] .onboarding-tour-spotlight-clone .test-mode-control,
+    body[data-onboarding-step-variant="test-mode-control"] [data-onboarding-target="complex-editor-test-mode-control"].onboarding-tour-target {
+      border-color: var(--color-primary) !important;
+      background: var(--color-surface-1) !important;
+      box-shadow: var(--color-page-builder-shadow-soft), inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 22%, transparent);
+    }
+
+    body[data-onboarding-step-variant="test-mode-control"] .onboarding-tour-spotlight-clone .test-mode-control button,
+    body[data-onboarding-step-variant="test-mode-control"] [data-onboarding-target="complex-editor-test-mode-control"].onboarding-tour-target button {
+      background: var(--color-component-pill-info-bg) !important;
+      color: var(--color-text-main) !important;
+      box-shadow: none !important;
+    }
+
     [data-theme="neutral-b"] .task-chip label {
       background: var(--color-surface-chip) !important;
     }
@@ -2433,7 +2497,8 @@
 <body
   class="font-display bg-bg-main text-text-main h-screen flex flex-col overflow-hidden selection:bg-primary-light selection:text-primary antialiased">
 
-  <header class="cx-editor-header bg-surface-1 border-b border-border-subtle shrink-0 flex justify-between z-50">
+  <header class="cx-editor-header bg-surface-1 border-b border-border-subtle shrink-0 flex justify-between z-50"
+    data-onboarding-target="complex-editor-header">
     <div class="cx-editor-header__left">
       <a href="/ui/complexes"
         class="cx-editor-header__back cursor-pointer" title="Назад к списку">
@@ -2460,9 +2525,22 @@
     </div>
 
     <div class="cx-editor-header__actions">
+      <button
+        class="onboarding-help-button onboarding-help-button--icon"
+        type="button"
+        data-onboarding-help-button
+        data-onboarding-help-mode="direct"
+        data-onboarding-tour-id="complex-editor-authoring"
+        hidden
+        title="Показать обучение"
+        aria-label="Показать обучение">
+        <span class="material-symbols-outlined" aria-hidden="true">help</span>
+      </button>
+
       <!-- Quality Beacon -->
       <div class="relative">
         <button id="builder-quality-beacon"
+          data-onboarding-target="complex-editor-quality"
           class="h-9 px-3 flex items-center gap-2 rounded-lg border border-border-subtle bg-surface-1 transition-all hover:bg-bg-hover"
           title="Анализ состава"
           onclick="toggleQualityDropdown(event)">
@@ -2500,6 +2578,7 @@
       </button>
 
       <button id="publish-btn"
+        data-onboarding-target="complex-editor-publish"
         class="h-9 inline-flex items-center gap-1.5 rounded-lg border border-border-subtle bg-surface-1 px-3 text-text-secondary hover:text-primary hover:border-primary hover:bg-bg-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:text-text-secondary disabled:hover:border-border-subtle disabled:hover:bg-surface-1"
         title="Публикация комплекса">
         <span class="material-symbols-outlined text-[18px]">public</span>
@@ -2507,7 +2586,7 @@
       </button>
 
       <!-- Save Button -->
-      <button id="save-btn" class="btn-primary flex items-center gap-2">
+      <button id="save-btn" class="btn-primary flex items-center gap-2" data-onboarding-target="complex-editor-save">
         <span>Сохранить</span>
       </button>
     </div>
@@ -2549,6 +2628,7 @@
           <div class="flex flex-col gap-6 min-w-0">
 
             <section
+              data-onboarding-target="complex-editor-info"
               class="card-section-premium p-5 flex flex-col gap-4 relative before:absolute before:left-0 before:top-4 before:bottom-4 before:w-1 before:bg-primary before:rounded-r">
               <div class="flex items-center gap-2">
                 <span class="material-symbols-outlined text-primary text-[20px]">info</span>
@@ -2574,6 +2654,7 @@
 
 
             <section
+              data-onboarding-target="complex-editor-theory"
               class="card-section-premium p-0 relative overflow-hidden before:absolute before:left-0 before:top-4 before:bottom-4 before:w-1 before:bg-info before:rounded-r">
 
               <!-- Theory Header (always visible, clickable) -->
@@ -2594,7 +2675,7 @@
                 <div class="theory-body-inner px-5 pb-5 pt-1 flex flex-col gap-4">
 
                   <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <div class="flex flex-col gap-1.5">
+                    <div class="flex flex-col gap-1.5" data-onboarding-target="complex-editor-theory-source">
                       <label class="text-sm font-medium text-text-secondary">Источник теории</label>
                       <div class="theory-select-shell">
                         <select id="theory-mode" class="form-field form-field-input">
@@ -2636,7 +2717,7 @@
 
                   <div id="theory-inherited-preview-list" class="hidden"></div>
 
-                  <div id="theory-editor-wrap" class="flex flex-col gap-3" hidden>
+                  <div id="theory-editor-wrap" class="flex flex-col gap-3" hidden data-onboarding-target="complex-editor-theory-content">
                     <div id="theory-title-wrap" class="flex flex-col gap-1.5" hidden>
                       <label class="text-sm font-medium text-text-secondary">Название теории</label>
                       <input id="theory-title" class="form-field form-field-input"
@@ -2754,7 +2835,7 @@
           </div>
           </section>
 
-          <section class="card-section-premium flex flex-col">
+          <section class="card-section-premium flex flex-col" data-onboarding-target="complex-editor-selected-tasks">
             <!-- Premium Header with Buttons -->
             <div class="section-header-premium flex items-center justify-between p-4">
               <div class="flex items-center gap-3">
@@ -2804,6 +2885,7 @@
 
           <!-- Chains Section (Bug 2 fix: was missing from DOM) -->
           <section id="chains-section"
+            data-onboarding-target="complex-editor-chains"
             class="card-section-premium flex flex-col rounded-xl border border-border-subtle bg-surface-1 overflow-hidden"
             hidden>
             <div class="flex items-center justify-between p-4 border-b border-border-subtle">
@@ -2822,7 +2904,8 @@
 
     </div>
 
-    <aside class="sidebar-responsive shrink-0 flex flex-col sidebar-glass rounded-xl overflow-hidden self-stretch">
+    <aside class="sidebar-responsive shrink-0 flex flex-col sidebar-glass rounded-xl overflow-hidden self-stretch"
+      data-onboarding-target="complex-editor-task-library">
       <div
         class="flex border-b border-border-subtle shrink-0 px-4 gap-6 sidebar-header sidebar-tabs sticky top-0 z-30 bg-surface-2">
         <button id="tab-tasks"
@@ -2830,6 +2913,7 @@
           Задания
         </button>
         <button id="tab-complexes"
+          data-onboarding-target="complex-editor-complexes-tab"
           class="py-2 text-sm font-medium text-text-muted border-b-2 border-transparent hover:text-text-secondary transition-all">
           Комплексы
         </button>
@@ -2866,6 +2950,7 @@
                 class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary text-[20px] transition-colors peer-focus:text-primary">search</span>
 
               <input id="catalog-search"
+                data-onboarding-target="complex-editor-task-search"
                 class="peer w-full pl-9 pr-3 py-2 bg-bg-tertiary border border-transparent rounded-lg text-sm focus:outline-none focus:border-transparent focus:ring-2 focus:ring-primary transition-all placeholder:text-text-muted text-text-main"
                 placeholder="Поиск по названию, ID или тегу..." type="text" aria-label="Поиск заданий" />
 
@@ -2884,6 +2969,7 @@
           <div class="p-4 border-t border-border-subtle shrink-0">
 
             <button id="add-from-catalog"
+              data-onboarding-target="complex-editor-add-selected"
               class="add-btn-premium w-full h-11 rounded-lg font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2 disabled:cursor-not-allowed"
               aria-label="Добавить выбранные задания (0)">
 
@@ -3211,13 +3297,29 @@
       const saveBtn = document.getElementById('save-btn');
       const summary = getComplexLimitSummary();
       const blocked = isComplexCreationBlocked();
+      const setPremiumPromoTrigger = (node, enabled) => {
+        if (!node) return;
+        if (enabled) {
+          node.setAttribute('data-premium-promo-trigger', '');
+          node.setAttribute('data-premium-promo-feature', 'complexes-limit');
+          node.setAttribute('role', 'button');
+          node.setAttribute('tabindex', '0');
+        } else {
+          node.removeAttribute('data-premium-promo-trigger');
+          node.removeAttribute('data-premium-promo-feature');
+          node.removeAttribute('role');
+          node.removeAttribute('tabindex');
+        }
+      };
       if (badge) {
         if (!summary) {
           badge.hidden = true;
           badge.textContent = '';
+          setPremiumPromoTrigger(badge, false);
         } else if (isComplexPremiumPlan()) {
           badge.hidden = false;
           badge.className = 'cx-header-pill cx-mini-pill';
+          setPremiumPromoTrigger(badge, false);
           badge.textContent = 'Premium · без лимита';
         } else {
           badge.hidden = false;
@@ -3227,10 +3329,14 @@
           badge.textContent = `Мои комплексы ${Number(summary.personal_count || 0)}/${Number(summary.personal_limit || 0)} · Библиотека ${Number(summary.library_total_count || 0)}/${Number(summary.library_limit || 0)}`;
         }
       }
+      if (badge && summary && !isComplexPremiumPlan()) {
+        setPremiumPromoTrigger(badge, true);
+      }
       if (banner) {
         const message = blocked ? getComplexLimitMessage(summary) : '';
         banner.hidden = !message;
         banner.textContent = message;
+        setPremiumPromoTrigger(banner, !!message);
       }
       if (saveBtn) {
         saveBtn.disabled = blocked;
@@ -5857,7 +5963,7 @@
         const safeTaskLabel = escapeHtml(t.label);
         const safeTaskTypeLabel = escapeHtml(taskTypeLabel);
         const testModeHtml = isTestTask ? `
-          <div class="test-mode-control flex shrink-0 items-center gap-0.5 rounded-md border border-border-subtle bg-surface-soft p-0.5" data-test-mode-control title="${isInChain ? 'В цепочках тесты всегда показываются вместе' : 'Режим показа вопросов теста'}">
+          <div class="test-mode-control flex shrink-0 items-center gap-0.5 rounded-md border border-border-subtle bg-surface-soft p-0.5" data-test-mode-control data-onboarding-target="complex-editor-test-mode-control" title="${isInChain ? 'В цепочках тесты всегда показываются вместе' : 'Режим показа вопросов теста'}">
             <button type="button" class="px-2 py-1 text-[11px] font-semibold rounded ${testMode === 'together' || isInChain ? 'bg-white text-text-main shadow-sm' : 'text-text-muted hover:text-text-main'}" data-mode="together" ${isInChain ? 'disabled' : ''}>Вместе</button>
             <button type="button" class="px-2 py-1 text-[11px] font-semibold rounded ${testMode === 'scattered' && !isInChain ? 'bg-white text-text-main shadow-sm' : 'text-text-muted hover:text-text-main'}" data-mode="scattered" ${isInChain ? 'disabled' : ''}>Вразброс</button>
           </div>
@@ -6131,6 +6237,26 @@
 
       if (!list) return;
 
+      if (document.body.dataset.complexEditorOnboardingDemo === 'true') {
+
+        state.catalog = createComplexEditorOnboardingCatalog();
+
+        if (totalEl) {
+
+          totalEl.textContent = `Всего: ${state.catalog.length}`;
+
+        }
+
+        applyCatalogFilter();
+
+        syncCatalogTreeSelectionFromSelect();
+
+        if (stateEl) stateEl.hidden = true;
+
+        return;
+
+      }
+
       if (stateEl) {
 
         stateEl.hidden = false;
@@ -6150,6 +6276,26 @@
         if (!data.ok) {
 
           throw new Error(data.error || 'task_catalog_failed');
+
+        }
+
+        if (document.body.dataset.complexEditorOnboardingDemo === 'true') {
+
+          state.catalog = createComplexEditorOnboardingCatalog();
+
+          if (totalEl) {
+
+            totalEl.textContent = `Всего: ${state.catalog.length}`;
+
+          }
+
+          applyCatalogFilter();
+
+          syncCatalogTreeSelectionFromSelect();
+
+          if (stateEl) stateEl.hidden = true;
+
+          return;
 
         }
 
@@ -6419,7 +6565,7 @@
 
       }
 
-      for (const m of groups) {
+      groups.forEach((m, moduleIndex) => {
         // Module card wrapper
         const modCard = document.createElement('div');
         modCard.className = 'module-card panel-card';
@@ -6457,9 +6603,14 @@
         modContentInner.className = 'module-card-content-inner';
 
         // Toggle functionality
-        let isExpanded = false;
+        let isExpanded = document.body.dataset.complexEditorOnboardingDemo === 'true' && moduleIndex === 0;
         const toggleBtn = modHeader.querySelector('[data-action="toggle"]');
         const chevron = modHeader.querySelector('[data-chevron]');
+
+        if (isExpanded) {
+          modContent.classList.add('expanded');
+          if (chevron) chevron.textContent = 'expand_more';
+        }
 
         modHeader.addEventListener('click', () => {
           isExpanded = !isExpanded;
@@ -6473,7 +6624,7 @@
         });
 
         // Render topics
-        for (const t of m.topicsArr || []) {
+        (m.topicsArr || []).forEach((t, topicIndex) => {
           const topicCard = document.createElement('div');
           topicCard.className = 'topic-card panel-card';
 
@@ -6484,7 +6635,7 @@
           const safeTopicName = escapeHtml(t.name);
           topicHeader.innerHTML = `
             <span class="topic-name">${safeTopicName}</span>
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <div class="flex shrink-0 items-center gap-2">
               <span class="topic-count">${taskCountInTopic} ${taskCountInTopic === 1 ? 'задание' : taskCountInTopic < 5 ? 'задания' : 'заданий'}</span>
               <span class="material-symbols-outlined topic-expand" data-topic-chevron>expand_more</span>
             </div>
@@ -6528,14 +6679,16 @@
                 ${alreadyAdded ? 'disabled' : ''}
                 data-task-ref="${safeRef}" />
               <label for="${safeChipId}">
+                ${alreadyAdded ? '<span class="material-symbols-outlined chip-added-icon" aria-hidden="true">check_circle</span>' : ''}
                 <span class="chip-number">${safeTaskName}</span>
                 ${isErrorDetection ? '<span class="material-symbols-outlined" style="font-size: 0.875rem;">error</span>' : ''}
                 <span class="material-symbols-outlined chip-type" title="${safeTypeLabel}" style="font-size: 1rem;">${getTaskTypeIcon(task.task_type)}</span>
+                ${alreadyAdded ? '<span class="chip-added-badge">В комплексе</span>' : ''}
               </label>
             `;
 
             if (alreadyAdded) {
-              chip.classList.add('grayscale');
+              chip.classList.add('task-chip--added');
             }
 
             // Checkbox change handler
@@ -6557,10 +6710,13 @@
           tasksWrapper.appendChild(tasksInner);
 
           // Topic collapse/expand functionality
-          let topicExpanded = false;
+          let topicExpanded = document.body.dataset.complexEditorOnboardingDemo === 'true' && moduleIndex === 0 && topicIndex === 0;
           const topicChevron = topicHeader.querySelector('[data-topic-chevron]');
           if (topicChevron) {
-            topicChevron.textContent = 'chevron_right';
+            topicChevron.textContent = topicExpanded ? 'expand_more' : 'chevron_right';
+          }
+          if (topicExpanded) {
+            tasksWrapper.classList.remove('collapsed');
           }
           topicHeader.addEventListener('click', () => {
             topicExpanded = !topicExpanded;
@@ -6580,14 +6736,14 @@
           topicCard.appendChild(topicHeader);
           topicCard.appendChild(tasksWrapper);
           modContentInner.appendChild(topicCard);
-        }
+        });
 
         modContent.appendChild(modContentInner);
 
         modCard.appendChild(modHeader);
         modCard.appendChild(modContent);
         root.appendChild(modCard);
-      }
+      });
 
       syncCatalogTreeSelectionFromSelect();
 
@@ -10593,14 +10749,22 @@
     }
 
     // Store beforeunload handler reference for later removal
+    const isReferencePreviewMode = () => {
+      const params = new URLSearchParams(window.location.search || '');
+      return params.get('reference_embed') === '1' || params.get('reference_preview') === '1';
+    };
+
     const beforeUnloadHandler = (e) => {
+      if (isReferencePreviewMode()) return;
       if (hasUnsavedChanges()) {
         e.preventDefault();
         e.returnValue = ''; // Modern browsers ignore custom messages, but this triggers the warning
       }
     };
 
-    window.addEventListener('beforeunload', beforeUnloadHandler);
+    if (!isReferencePreviewMode()) {
+      window.addEventListener('beforeunload', beforeUnloadHandler);
+    }
     window.addEventListener('pagehide', stopComplexAutosaveLoop);
 
     // Capture initial state after page loads
@@ -10783,6 +10947,202 @@
         showUnsavedChangesModal(href);
       }
     }, true);
+
+    let complexEditorOnboardingSnapshot = null;
+
+    function createComplexEditorOnboardingCatalog() {
+      const moduleId = 'demo-anatomy';
+      const topicId = 'lung-zones';
+      const moduleName = 'Демо-модуль: основы анатомии';
+      const topicName = 'Тема: ориентиры грудной клетки';
+      const tasks = [
+        { task_id: '01-test-basics', task_name: 'Базовые ориентиры', task_type: 'test' },
+        { task_id: '02-click-apex', task_name: 'Найти верхушку лёгкого', task_type: 'click' },
+        { task_id: '03-draw-border', task_name: 'Обвести границу доли', task_type: 'draw' },
+        { task_id: '04-open-answer', task_name: 'Объяснить ход плевры', task_type: 'open_answer' },
+      ];
+
+      return tasks.map((task) => ({
+        ...task,
+        module_id: moduleId,
+        module_name: moduleName,
+        topic_id: topicId,
+        topic_name: topicName,
+        ref: `${moduleId}/${topicId}/${task.task_id}`,
+      }));
+    }
+
+    function cloneComplexEditorOnboardingSnapshot() {
+      return {
+        catalog: JSON.parse(JSON.stringify(state.catalog || [])),
+        selectedTasks: JSON.parse(JSON.stringify(state.selectedTasks || [])),
+        chains: JSON.parse(JSON.stringify(state.chains || [])),
+        complexSettings: JSON.parse(JSON.stringify(state.complexSettings || {})),
+        theory: JSON.parse(JSON.stringify(state.theory || {})),
+        theoryEnabled: !!window._theoryEnabled,
+        name: document.getElementById('name')?.value || '',
+        description: document.getElementById('description')?.value || '',
+        catalogSearch: document.getElementById('catalog-search')?.value || '',
+        theoryMode: document.getElementById('theory-mode')?.value || 'none',
+        theoryTitle: document.getElementById('theory-title')?.value || '',
+        theoryEditorHtml: document.getElementById('theory-editor')?.innerHTML || '',
+      };
+    }
+
+    function restoreComplexEditorOnboardingSnapshot(snapshot) {
+      if (!snapshot) return;
+      state.catalog = snapshot.catalog || [];
+      state.selectedTasks = snapshot.selectedTasks || [];
+      state.chains = snapshot.chains || [];
+      state.complexSettings = snapshot.complexSettings || {};
+      state.theory = snapshot.theory || createEmptyTheoryState();
+      window._theoryEnabled = !!snapshot.theoryEnabled;
+      const nameEl = document.getElementById('name');
+      const descriptionEl = document.getElementById('description');
+      const searchEl = document.getElementById('catalog-search');
+      const totalEl = document.getElementById('catalog-total');
+      const theoryModeEl = document.getElementById('theory-mode');
+      const theoryTitleEl = document.getElementById('theory-title');
+      const theoryEditorEl = document.getElementById('theory-editor');
+      if (nameEl) nameEl.value = snapshot.name || '';
+      if (descriptionEl) descriptionEl.value = snapshot.description || '';
+      if (searchEl) searchEl.value = snapshot.catalogSearch || '';
+      if (totalEl) totalEl.textContent = `Всего: ${state.catalog.length}`;
+      if (theoryModeEl) theoryModeEl.value = snapshot.theoryMode || state.theory.mode || 'none';
+      setTheoryMode(state.theory.mode || snapshot.theoryMode || 'none');
+      if (theoryTitleEl) theoryTitleEl.value = snapshot.theoryTitle || state.theory.title || '';
+      if (typeof renderTheoryDeltaToEditor === 'function') {
+        renderTheoryDeltaToEditor(state.theory.delta || { ops: [{ insert: "\n" }] });
+      } else if (theoryEditorEl) {
+        theoryEditorEl.innerHTML = snapshot.theoryEditorHtml || '<p><br></p>';
+      }
+      syncTheorySectionChrome();
+      updateTheoryModeHelp();
+      updateTheoryEditorInteractivity();
+      updateTheoryPreviewPresentation();
+      renderTheoryContextActions();
+      renderSelectedList();
+      renderChains();
+      applyCatalogFilter();
+      renderBuilderQualityPreview();
+    }
+
+    function applyComplexEditorOnboardingDemo(active) {
+      if (active && !complexEditorOnboardingSnapshot) {
+        complexEditorOnboardingSnapshot = cloneComplexEditorOnboardingSnapshot();
+        document.body.dataset.complexEditorOnboardingDemo = 'true';
+        const nameEl = document.getElementById('name');
+        const descriptionEl = document.getElementById('description');
+        const searchEl = document.getElementById('catalog-search');
+        const totalEl = document.getElementById('catalog-total');
+        if (nameEl) nameEl.value = 'Демо-комплекс: грудная клетка';
+        if (descriptionEl) descriptionEl.value = 'Короткий маршрут для проверки анатомических ориентиров.';
+        if (searchEl) searchEl.value = '';
+        window._theoryEnabled = true;
+        state.theory = {
+          ...state.theory,
+          mode: 'new',
+          sourceKind: 'workspace',
+          theoryId: null,
+          libraryEntryId: null,
+          catalogItemId: null,
+          sourceTheoryId: null,
+          title: 'Ориентиры грудной клетки',
+          dirty: false,
+          delta: {
+            ops: [
+              { insert: 'Ориентиры грудной клетки\n' },
+              { insert: 'Перед началом задач ученик видит краткий контекст: границы долей, верхушки лёгких и ключевые линии разметки.\n' },
+              { insert: 'Такая теория помогает связать отдельные задания в один учебный маршрут.\n' },
+            ],
+          },
+        };
+        const theoryModeEl = document.getElementById('theory-mode');
+        const theoryTitleEl = document.getElementById('theory-title');
+        if (theoryModeEl) theoryModeEl.value = 'new';
+        setTheoryMode('new');
+        if (theoryTitleEl) theoryTitleEl.value = state.theory.title;
+        if (typeof renderTheoryDeltaToEditor === 'function') {
+          renderTheoryDeltaToEditor(state.theory.delta);
+        }
+        syncTheorySectionChrome();
+        updateTheoryModeHelp();
+        updateTheoryEditorInteractivity();
+        updateTheoryPreviewPresentation();
+        renderTheoryContextActions();
+        state.catalog = createComplexEditorOnboardingCatalog();
+        state.selectedTasks = [];
+        addTaskRef('demo-anatomy/lung-zones/01-test-basics');
+        addTaskRef('demo-anatomy/lung-zones/02-click-apex');
+        state.chains = [];
+        if (totalEl) totalEl.textContent = `Всего: ${state.catalog.length}`;
+        renderSelectedList();
+        renderChains();
+        applyCatalogFilter();
+        const list = document.getElementById('catalog-list');
+        const drawBorderOption = Array.from(list?.options || [])
+          .find((option) => option.value === 'demo-anatomy/lung-zones/03-draw-border');
+        if (drawBorderOption) {
+          drawBorderOption.selected = true;
+          syncCatalogTreeSelectionFromSelect();
+        }
+        renderBuilderQualityPreview();
+        return;
+      }
+
+      if (!active && complexEditorOnboardingSnapshot) {
+        const snapshot = complexEditorOnboardingSnapshot;
+        complexEditorOnboardingSnapshot = null;
+        delete document.body.dataset.complexEditorOnboardingDemo;
+        restoreComplexEditorOnboardingSnapshot(snapshot);
+      }
+    }
+
+    function setComplexEditorOnboardingDemoChains(visible) {
+      if (document.body.dataset.complexEditorOnboardingDemo !== 'true') return;
+      const demoChain = [
+        'demo-anatomy/lung-zones/01-test-basics',
+        'demo-anatomy/lung-zones/02-click-apex',
+      ];
+      const shouldShow = Boolean(visible);
+      const hasDemoChain = state.chains.some((chain) => (
+        Array.isArray(chain)
+        && chain.length === demoChain.length
+        && chain.every((ref, index) => ref === demoChain[index])
+      ));
+
+      if (shouldShow && !hasDemoChain) {
+        state.chains = [demoChain];
+      } else if (!shouldShow && hasDemoChain) {
+        state.chains = state.chains.filter((chain) => !(
+          Array.isArray(chain)
+          && chain.length === demoChain.length
+          && chain.every((ref, index) => ref === demoChain[index])
+        ));
+      }
+
+      renderSelectedList();
+      renderChains();
+      applyCatalogFilter();
+    }
+
+    window.addEventListener('onboarding:before-start', (event) => {
+      if (event.detail?.tourId === 'complex-editor-authoring') {
+        applyComplexEditorOnboardingDemo(true);
+      }
+    });
+
+    window.addEventListener('onboarding:before-step', (event) => {
+      if (event.detail?.tourId === 'complex-editor-authoring') {
+        setComplexEditorOnboardingDemoChains(Number(event.detail?.stepIndex || 0) >= 3);
+      }
+    });
+
+    window.addEventListener('onboarding:finish', (event) => {
+      if (event.detail?.tourId === 'complex-editor-authoring') {
+        applyComplexEditorOnboardingDemo(false);
+      }
+    });
 
   </script>
 
@@ -10979,6 +11339,9 @@
     }
   </script>
   <script src="/assets/NotificationUI.js"></script>
+  <script src="/assets/PremiumPromoModal.js"></script>
+  <script src="/assets/onboarding_tours.js?v=complex-editor-onboarding-5"></script>
+  <script src="/assets/OnboardingTour.js?v=complex-editor-onboarding-5"></script>
 </body>
 
 </html>

@@ -88,6 +88,36 @@ def test_ui_main_serves_current_mainscreen_html(client, tmp_path, monkeypatch):
     assert response.headers.get("Cache-Control") == "no-store"
 
 
+def test_ui_reference_serves_reference_html_and_assets(client, tmp_path, monkeypatch):
+    reference_dir = tmp_path / "Reference"
+    reference_dir.mkdir(parents=True, exist_ok=True)
+    (reference_dir / "index.html").write_text(
+        "<!doctype html><html><body><h1>Reference Test</h1></body></html>",
+        encoding="utf-8",
+    )
+    (reference_dir / "reference.js").write_text("window.referenceAsset = true;", encoding="utf-8")
+    (reference_dir / "reference.css").write_text(".reference-page {}", encoding="utf-8")
+
+    import routes._context as ctx_module
+
+    existing_extra = dict(getattr(ctx_module, "_extra", {}))
+    existing_extra["ui_dirs"] = {"REFERENCE_UI_DIR": reference_dir}
+    monkeypatch.setattr(ctx_module, "_extra", existing_extra)
+
+    html_response = client.get("/ui/reference")
+    js_response = client.get("/ui/reference/reference.js")
+    css_response = client.get("/ui/reference/reference.css")
+
+    assert html_response.status_code == 200
+    assert "text/html" in (html_response.content_type or "")
+    assert b"Reference Test" in html_response.data
+    assert html_response.headers.get("Cache-Control") == "no-store"
+    assert js_response.status_code == 200
+    assert b"referenceAsset" in js_response.data
+    assert css_response.status_code == 200
+    assert b"reference-page" in css_response.data
+
+
 def test_should_welcome_onboarding_when_no_users(client, monkeypatch):
     # After refactoring, misc_routes uses _mh() helper which gets from _extra["misc_helpers"]
     import routes._context as ctx_module
@@ -183,12 +213,15 @@ def test_hosted_ui_pages_redirect_to_welcome_without_auth(client, monkeypatch, t
 
     main_response = client.get("/ui/main", headers={"Accept": "text/html"})
     settings_response = client.get("/ui/settings", headers={"Accept": "text/html"})
+    reference_response = client.get("/ui/reference", headers={"Accept": "text/html"})
     welcome_response = client.get("/ui/welcome")
 
     assert main_response.status_code == 302
     assert main_response.headers["Location"].endswith("/ui/welcome")
     assert settings_response.status_code == 302
     assert settings_response.headers["Location"].endswith("/ui/welcome")
+    assert reference_response.status_code == 302
+    assert reference_response.headers["Location"].endswith("/ui/welcome")
     assert welcome_response.status_code == 200
 
 

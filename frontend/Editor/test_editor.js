@@ -2,6 +2,8 @@
  * ACTRA Test Task Editor (Multiple Choice)
  */
 
+const TEST_EDITOR_ONBOARDING_TOUR_ID = 'test-editor-authoring';
+
 class TestEditor extends BaseEditor {
     constructor() {
         super(); // Call BaseEditor constructor
@@ -41,6 +43,13 @@ class TestEditor extends BaseEditor {
         this.isPasteImageTargetMode = false;
         this.pendingQuestionDeletion = null;
         this.questionDeletionUndoMs = 6000;
+        this.testEditorOnboardingPreview = new URLSearchParams(window.location.search)
+            .get('onboarding_preview') === TEST_EDITOR_ONBOARDING_TOUR_ID;
+        this.testEditorOnboardingImportVariantActive = false;
+        this.testEditorOnboardingImportMarkerTimer = 0;
+        this.testEditorOnboardingFinished = false;
+        this.testEditorOnboardingDemoSnapshot = null;
+        this.testEditorOnboardingDemoActive = false;
         this.init();
     }
 
@@ -1017,10 +1026,15 @@ class TestEditor extends BaseEditor {
         overlay.focus();
     }
 
+    getImageBankContainer() {
+        return document.querySelector('.test-editor-sidebar--right .test-image-bank')
+            || document.querySelector('.test-image-bank');
+    }
+
     syncImageBankCollapsedState() {
-        const bank = document.querySelector('.test-image-bank');
-        const panel = document.querySelector('#test-image-bank-panel');
-        const toggle = document.querySelector('#test-image-bank-toggle');
+        const bank = this.getImageBankContainer();
+        const panel = bank?.querySelector('#test-image-bank-panel');
+        const toggle = bank?.querySelector('#test-image-bank-toggle');
         const expanded = Boolean(this.isImageBankExpanded);
 
         if (bank) bank.classList.toggle('is-expanded', expanded);
@@ -1036,11 +1050,12 @@ class TestEditor extends BaseEditor {
     }
 
     renderImageBank() {
-        const grid = document.querySelector('#test-image-bank-grid');
-        const empty = document.querySelector('#test-image-bank-empty');
-        const count = document.querySelector('#test-image-bank-count');
-        const panel = document.querySelector('#test-image-bank-panel');
-        const toggle = document.querySelector('#test-image-bank-toggle');
+        const bank = this.getImageBankContainer();
+        const grid = bank?.querySelector('#test-image-bank-grid');
+        const empty = bank?.querySelector('#test-image-bank-empty');
+        const count = bank?.querySelector('#test-image-bank-count');
+        const panel = bank?.querySelector('#test-image-bank-panel');
+        const toggle = bank?.querySelector('#test-image-bank-toggle');
         if (!grid && !empty && !count && !panel && !toggle) return;
         this.syncImageBankCollapsedState();
 
@@ -1180,6 +1195,419 @@ class TestEditor extends BaseEditor {
             image_asset_url: null,
             images: []
         };
+    }
+
+    createTestEditorOnboardingQuestions() {
+        const onboardingWaveImageUrl = 'data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20160%2090%22%3E%3Crect%20width%3D%22160%22%20height%3D%2290%22%20rx%3D%2216%22%20fill%3D%22%23eef7ff%22%2F%3E%3Cpath%20d%3D%22M14%2048%20C32%2018%2C50%2018%2C68%2048%20S104%2078%2C122%2048%20S146%2018%2C154%2034%22%20fill%3D%22none%22%20stroke%3D%22%232f63d8%22%20stroke-width%3D%226%22%20stroke-linecap%3D%22round%22%2F%3E%3Cpath%20d%3D%22M38%2068%20H118%22%20stroke%3D%22%230f766e%22%20stroke-width%3D%223%22%20stroke-linecap%3D%22round%22%20stroke-dasharray%3D%226%207%22%2F%3E%3Ccircle%20cx%3D%2238%22%20cy%3D%2248%22%20r%3D%225%22%20fill%3D%22%230f766e%22%2F%3E%3Ccircle%20cx%3D%22118%22%20cy%3D%2248%22%20r%3D%225%22%20fill%3D%22%230f766e%22%2F%3E%3C%2Fsvg%3E';
+        return [
+            {
+                id: 101,
+                text: 'Какой параметр электромагнитной волны определяет расстояние между двумя соседними максимумами?',
+                options: [
+                    { text: 'Длина волны', is_correct: true, image_path: null, image_asset_id: null, image_asset_url: onboardingWaveImageUrl },
+                    { text: 'Амплитуда сигнала', is_correct: false, image_path: null, image_asset_id: null, image_asset_url: null },
+                    { text: 'Период полураспада', is_correct: false, image_path: null, image_asset_id: null, image_asset_url: null },
+                ],
+                settings: { all_correct_required: true, allow_partial_credit: false },
+                explanation: 'Длина волны измеряет расстояние между соседними точками колебания в одинаковой фазе.',
+                image: null,
+                image_asset_id: null,
+                image_asset_url: null,
+                images: [],
+            },
+            {
+                id: 102,
+                text: 'Какие утверждения верны для электромагнитных волн?',
+                options: [
+                    { text: 'Могут распространяться в вакууме', is_correct: true, image_path: null, image_asset_id: null, image_asset_url: null },
+                    { text: 'Всегда требуют упругую среду', is_correct: false, image_path: null, image_asset_id: null, image_asset_url: null },
+                    { text: 'Переносят энергию', is_correct: true, image_path: null, image_asset_id: null, image_asset_url: null },
+                ],
+                settings: { all_correct_required: true, allow_partial_credit: false },
+                explanation: 'Если отмечено несколько правильных вариантов, тест автоматически становится множественным выбором.',
+                image: null,
+                image_asset_id: null,
+                image_asset_url: null,
+                images: [],
+            },
+        ];
+    }
+
+    ensureTestEditorOnboardingPreviewTask() {
+        if (!this.testEditorOnboardingPreview) return;
+
+        this.moduleId = this.moduleId || 'onboarding-preview-module';
+        this.topicId = this.topicId || 'onboarding-preview-topic';
+        this.taskId = this.taskId || 'onboarding-preview-test';
+        this.isNewTaskParam = true;
+        this.hasPersistedTask = false;
+        this.task = {
+            task_data: {
+                id: this.taskId,
+                type: 'test',
+                name: 'Тест: параметры волны',
+                content: {},
+                settings: {},
+                meta: {
+                    id: this.taskId,
+                    module: this.moduleId,
+                    topic: this.topicId,
+                    name: 'Тест: параметры волны',
+                },
+            },
+            metadata: {
+                id: this.taskId,
+                module: this.moduleId,
+                topic: this.topicId,
+                name: 'Тест: параметры волны',
+                type: 'test',
+            },
+        };
+    }
+
+    applyTestEditorOnboardingPreviewState() {
+        if ((!this.testEditorOnboardingPreview && !this.testEditorOnboardingDemoActive) || !this.task) return;
+
+        this.questions = this.createTestEditorOnboardingQuestions();
+        this.currentQuestionIndex = 0;
+        if (!this.task.task_data) this.task.task_data = {};
+        if (!this.task.task_data.content) this.task.task_data.content = {};
+        if (!this.task.task_data.meta) this.task.task_data.meta = {};
+        if (!this.task.metadata) this.task.metadata = {};
+        this.task.task_data.name = 'Тест: параметры волны';
+        this.task.task_data.type = 'test';
+        this.task.task_data.meta.name = 'Тест: параметры волны';
+        this.task.metadata.name = 'Тест: параметры волны';
+        this.task.metadata.type = 'test';
+        this.task.task_data.content = {
+            ...this.task.task_data.content,
+            ...this.buildBackendContent(),
+        };
+        this.renderUI();
+        this.hasUnsavedChanges = false;
+        this.updateSaveStatus();
+    }
+
+    resetTestEditorOnboardingPreviewState() {
+        if (!this.testEditorOnboardingPreview || !this.task || this.testEditorOnboardingFinished) return;
+        this.testEditorOnboardingFinished = true;
+        this.finalizePendingQuestionDeletion({ dismissToast: true, silent: true });
+        this.questions = [this.createEmptyQuestion()];
+        this.currentQuestionIndex = 0;
+        if (!this.task.task_data) this.task.task_data = {};
+        this.task.task_data.content = this.buildBackendContent();
+        this.renderUI();
+        this.initialSnapshot = this.captureSnapshot();
+        this.hasUnsavedChanges = false;
+        this.updateSaveStatus();
+    }
+
+    cloneTestEditorOnboardingValue(value) {
+        if (value == null) return value;
+        try {
+            return JSON.parse(JSON.stringify(value));
+        } catch (_) {
+            return value;
+        }
+    }
+
+    applyTestEditorOnboardingDemoState() {
+        if (this.testEditorOnboardingPreview || !this.task) return;
+        this.finalizePendingQuestionDeletion({ dismissToast: true, silent: true });
+        if (!this.testEditorOnboardingDemoSnapshot) {
+            this.testEditorOnboardingDemoSnapshot = {
+                task: this.cloneTestEditorOnboardingValue(this.task),
+                questions: this.cloneTestEditorOnboardingValue(this.questions),
+                currentQuestionIndex: this.currentQuestionIndex,
+                initialSnapshot: this.initialSnapshot,
+                hasUnsavedChanges: this.hasUnsavedChanges,
+            };
+        }
+        this.testEditorOnboardingDemoActive = true;
+        this.applyTestEditorOnboardingPreviewState();
+    }
+
+    restoreTestEditorOnboardingDemoState() {
+        const snapshot = this.testEditorOnboardingDemoSnapshot;
+        this.testEditorOnboardingDemoSnapshot = null;
+        this.testEditorOnboardingDemoActive = false;
+        if (!snapshot) return;
+        this.finalizePendingQuestionDeletion({ dismissToast: true, silent: true });
+        this.task = this.cloneTestEditorOnboardingValue(snapshot.task);
+        this.questions = this.cloneTestEditorOnboardingValue(snapshot.questions) || [];
+        this.currentQuestionIndex = Number.isFinite(snapshot.currentQuestionIndex)
+            ? snapshot.currentQuestionIndex
+            : 0;
+        this.renderUI();
+        this.initialSnapshot = snapshot.initialSnapshot;
+        this.hasUnsavedChanges = Boolean(snapshot.hasUnsavedChanges);
+        this.updateSaveStatus();
+    }
+
+    getTestEditorOnboardingBranchConfig(kind) {
+        return {
+            kind: 'import',
+            buttonSelector: '[data-onboarding-target="test-editor-import-button"]',
+            markerSelector: '.test-editor-onboarding-import-marker',
+            markerClass: 'test-editor-onboarding-import-marker',
+            activeProp: 'testEditorOnboardingImportVariantActive',
+            timerProp: 'testEditorOnboardingImportMarkerTimer',
+            datasetKey: 'onboardingImportVariant',
+            variant: 'import-tools',
+            title: 'Показать обучение по импорту вопросов',
+            calloutTitles: ['Способ импорта', 'Проверка данных', 'Применение к тесту'],
+        };
+    }
+
+    removeTestEditorOnboardingBranchMarker(kind) {
+        const config = this.getTestEditorOnboardingBranchConfig(kind);
+        window.clearTimeout(this[config.timerProp]);
+        this[config.timerProp] = 0;
+        document.querySelectorAll(config.markerSelector).forEach((node) => node.remove());
+    }
+
+    removeTestEditorOnboardingBranchMarkers() {
+        this.removeTestEditorOnboardingBranchMarker('import');
+    }
+
+    positionTestEditorOnboardingBranchMarker(kind) {
+        const config = this.getTestEditorOnboardingBranchConfig(kind);
+        const marker = document.querySelector(config.markerSelector);
+        const button = marker?.__testEditorBranchButton || document.querySelector(config.buttonSelector);
+        if (!marker || !button?.isConnected) return false;
+
+        const rect = button.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) {
+            marker.classList.remove('is-positioned', 'is-visible');
+            return false;
+        }
+
+        const markerSize = marker.offsetWidth || 24;
+        const margin = 12;
+        const left = Math.max(
+            margin,
+            Math.min(window.innerWidth - markerSize - margin, rect.left + (rect.width - markerSize) / 2)
+        );
+        const top = Math.max(
+            margin,
+            Math.min(window.innerHeight - markerSize - margin, rect.bottom + 5)
+        );
+        marker.style.left = `${left}px`;
+        marker.style.top = `${top}px`;
+        marker.classList.add('is-positioned');
+        return true;
+    }
+
+    positionTestEditorOnboardingBranchMarkers() {
+        this.positionTestEditorOnboardingBranchMarker('import');
+    }
+
+    applyTestEditorOnboardingBranchVariant(kind, attempt = 0) {
+        const config = this.getTestEditorOnboardingBranchConfig(kind);
+        if (document.body?.dataset?.onboardingStepId !== 'test-editor-question-structure') return;
+        const applied = Boolean(
+            window.OnboardingTour
+            && typeof window.OnboardingTour.setStepVariant === 'function'
+            && window.OnboardingTour.setStepVariant(config.variant)
+        );
+        const hasBranchCallouts = Array.from(document.querySelectorAll('.onboarding-tour-callout-title'))
+            .some((node) => config.calloutTitles.includes(node.textContent?.trim()));
+        if ((!applied || !hasBranchCallouts) && attempt < 6) {
+            window.setTimeout(() => this.applyTestEditorOnboardingBranchVariant(kind, attempt + 1), 120);
+        }
+    }
+
+    ensureTestEditorOnboardingBranchMarker(kind) {
+        const config = this.getTestEditorOnboardingBranchConfig(kind);
+        const button = document.querySelector(config.buttonSelector);
+        if (!button) return;
+        const existing = document.querySelector(config.markerSelector);
+        if (existing && existing.__testEditorBranchButton === button) {
+            this.positionTestEditorOnboardingBranchMarker(kind);
+            return;
+        }
+
+        this.removeTestEditorOnboardingBranchMarker(kind);
+        const marker = document.createElement('button');
+        marker.type = 'button';
+        marker.className = config.markerClass;
+        marker.setAttribute('aria-label', config.title);
+        marker.setAttribute('title', config.title);
+        marker.setAttribute('data-onboarding-interactive', `test-${kind}-marker`);
+        marker.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">priority_high</span>';
+        marker.__testEditorBranchButton = button;
+        marker.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            this.testEditorOnboardingImportVariantActive = kind === 'import';
+            document.body.dataset[config.datasetKey] = config.variant;
+            this.removeTestEditorOnboardingBranchMarkers();
+            this.resetImportModal();
+            this.showImportModal(true);
+            this.applyTestEditorOnboardingBranchVariant(kind);
+        });
+        document.body.appendChild(marker);
+        this.positionTestEditorOnboardingBranchMarker(kind);
+        window.requestAnimationFrame(() => this.positionTestEditorOnboardingBranchMarker(kind));
+        window.requestAnimationFrame(() => {
+            if (this.positionTestEditorOnboardingBranchMarker(kind)) {
+                marker.classList.add('is-visible');
+            }
+        });
+        window.setTimeout(() => this.positionTestEditorOnboardingBranchMarker(kind), 180);
+        window.setTimeout(() => this.positionTestEditorOnboardingBranchMarker(kind), 420);
+    }
+
+    scheduleTestEditorOnboardingBranchMarker(kind, delayMs = 260) {
+        const config = this.getTestEditorOnboardingBranchConfig(kind);
+        window.clearTimeout(this[config.timerProp]);
+        this[config.timerProp] = window.setTimeout(() => {
+            this[config.timerProp] = 0;
+            if (
+                document.body?.dataset?.onboardingTourId !== TEST_EDITOR_ONBOARDING_TOUR_ID
+                || document.body?.dataset?.onboardingStepId !== 'test-editor-question-structure'
+                || this.testEditorOnboardingImportVariantActive
+            ) {
+                return;
+            }
+            this.ensureTestEditorOnboardingBranchMarker(kind);
+        }, delayMs);
+    }
+
+    scheduleTestEditorOnboardingBranchMarkers(delayMs = 260) {
+        this.scheduleTestEditorOnboardingBranchMarker('import', delayMs);
+    }
+
+    resetTestEditorOnboardingBranchState() {
+        this.testEditorOnboardingImportVariantActive = false;
+        delete document.body.dataset.onboardingImportVariant;
+    }
+
+    syncTestEditorOnboardingInspectorVariant(attempt = 0) {
+        if (document.body?.dataset?.onboardingStepId !== 'test-editor-inspector') return;
+        if (!window.OnboardingTour || typeof window.OnboardingTour.setStepVariant !== 'function') return;
+
+        const answerTypeCard = document.querySelector('[data-onboarding-target="test-editor-answer-type"]');
+        if (!answerTypeCard) {
+            if (attempt < 6) {
+                window.setTimeout(() => this.syncTestEditorOnboardingInspectorVariant(attempt + 1), 90);
+            }
+            return;
+        }
+
+        const rect = answerTypeCard.getBoundingClientRect();
+        const useSideCallout = rect.width <= 520 && rect.left > 520;
+        window.OnboardingTour.setStepVariant(useSideCallout ? 'inspector-side' : '');
+    }
+
+    prepareTestEditorOnboardingOptionsStep(attempt = 0) {
+        if (document.body?.dataset?.onboardingStepId !== 'test-editor-options') return;
+        const imageBank = document.querySelector('[data-onboarding-target="test-editor-image-bank"]');
+        if (!imageBank) {
+            if (attempt < 6) {
+                window.setTimeout(() => this.prepareTestEditorOnboardingOptionsStep(attempt + 1), 90);
+            }
+            return;
+        }
+
+        this.toggleImageBankExpanded(true);
+        this.renderImageBank();
+        const sidebar = imageBank.closest('.test-editor-sidebar--right');
+        if (sidebar) {
+            const sidebarRect = sidebar.getBoundingClientRect();
+            const bankRect = imageBank.getBoundingClientRect();
+            const nextTop = Math.max(0, sidebar.scrollTop + bankRect.top - sidebarRect.top - 82);
+            sidebar.scrollTo({ top: nextTop, behavior: 'auto' });
+        }
+        window.requestAnimationFrame(() => {
+            window.OnboardingTour?.setStepVariant?.('');
+            window.dispatchEvent(new Event('resize'));
+        });
+    }
+
+    prepareTestEditorOnboardingInspectorStep(attempt = 0) {
+        if (document.body?.dataset?.onboardingStepId !== 'test-editor-inspector') return;
+        const answerType = document.querySelector('[data-onboarding-target="test-editor-answer-type"]');
+        const feedback = document.querySelector('[data-onboarding-target="test-editor-feedback"]');
+        if (!answerType || !feedback) {
+            if (attempt < 6) {
+                window.setTimeout(() => this.prepareTestEditorOnboardingInspectorStep(attempt + 1), 90);
+            }
+            return;
+        }
+
+        this.toggleImageBankExpanded(false);
+        const sidebar = answerType.closest('.test-editor-sidebar--right');
+        if (sidebar) {
+            sidebar.scrollTo({ top: 0, behavior: 'auto' });
+        }
+        window.requestAnimationFrame(() => {
+            this.syncTestEditorOnboardingInspectorVariant();
+            window.dispatchEvent(new Event('resize'));
+        });
+    }
+
+    setupTestEditorOnboardingTourBridge() {
+        window.addEventListener('onboarding:before-start', (event) => {
+            const detail = event?.detail || {};
+            if (detail.tourId !== TEST_EDITOR_ONBOARDING_TOUR_ID || detail.preview) return;
+            this.applyTestEditorOnboardingDemoState();
+        });
+
+        window.addEventListener('onboarding:step-ready', (event) => {
+            const detail = event?.detail || {};
+            if (detail.tourId !== TEST_EDITOR_ONBOARDING_TOUR_ID) return;
+            if (detail.stepId === 'test-editor-question-structure') {
+                this.resetTestEditorOnboardingBranchState();
+                this.hideImportModal();
+                this.scheduleTestEditorOnboardingBranchMarkers();
+                return;
+            }
+            this.removeTestEditorOnboardingBranchMarkers();
+            this.hideImportModal();
+            if (detail.stepId === 'test-editor-options') {
+                window.requestAnimationFrame(() => this.prepareTestEditorOnboardingOptionsStep());
+                return;
+            }
+            if (detail.stepId !== 'test-editor-inspector') return;
+            window.requestAnimationFrame(() => this.prepareTestEditorOnboardingInspectorStep());
+        });
+
+        window.addEventListener('resize', () => {
+            this.positionTestEditorOnboardingBranchMarkers();
+            this.syncTestEditorOnboardingInspectorVariant();
+        }, { passive: true });
+
+        window.addEventListener('scroll', () => {
+            this.positionTestEditorOnboardingBranchMarkers();
+        }, { passive: true });
+
+        window.addEventListener('onboarding:finish', (event) => {
+            const detail = event?.detail || {};
+            if (detail.tourId !== TEST_EDITOR_ONBOARDING_TOUR_ID) return;
+            this.resetTestEditorOnboardingBranchState();
+            this.removeTestEditorOnboardingBranchMarkers();
+            this.hideImportModal();
+            if (!this.testEditorOnboardingPreview) {
+                this.restoreTestEditorOnboardingDemoState();
+                return;
+            }
+            this.resetTestEditorOnboardingPreviewState();
+        });
+
+        window.addEventListener('onboarding:before-variant-back', (event) => {
+            const detail = event?.detail || {};
+            if (
+                detail.tourId !== TEST_EDITOR_ONBOARDING_TOUR_ID
+                || detail.stepId !== 'test-editor-question-structure'
+                || detail.variant !== 'import-tools'
+            ) {
+                return;
+            }
+            this.resetTestEditorOnboardingBranchState();
+            this.hideImportModal();
+            this.scheduleTestEditorOnboardingBranchMarkers(420);
+        });
     }
 
     normalizeTestSettings(rawSettings = {}) {
@@ -1352,7 +1780,13 @@ class TestEditor extends BaseEditor {
     }
 
     async init() {
-        await this.initTaskFromUrlContext();
+        if (this.testEditorOnboardingPreview) {
+            this.ensureTestEditorOnboardingPreviewTask();
+        } else {
+            await this.initTaskFromUrlContext();
+        }
+        this.applyTestEditorOnboardingPreviewState();
+        this.setupTestEditorOnboardingTourBridge();
         this.setupEventListeners();
     }
 
@@ -1635,6 +2069,9 @@ class TestEditor extends BaseEditor {
             const item = document.createElement('div');
             item.className = `question-nav-item ${isActive ? 'is-active' : ''}`;
             item.dataset.questionIndex = String(index);
+            if (isActive) {
+                item.setAttribute('data-onboarding-target', 'test-editor-active-question');
+            }
 
             const questionTitle = (q.text || `Вопрос ${index + 1}`).trim();
             const preview = questionTitle.length > 42 ? `${questionTitle.slice(0, 42).trim()}…` : questionTitle || `Вопрос ${index + 1}`;
@@ -1926,6 +2363,9 @@ class TestEditor extends BaseEditor {
             div.className = `group option-row ${opt.is_correct ? 'is-correct' : ''}`;
             div.dataset.imagePasteTarget = 'option';
             div.dataset.optionIndex = String(index);
+            if (index === 0) {
+                div.setAttribute('data-onboarding-target', 'test-editor-first-option');
+            }
 
             const label = String.fromCharCode(65 + index); // A, B, C...
             const optionLabel = `вариант ${label}`;
@@ -1933,7 +2373,7 @@ class TestEditor extends BaseEditor {
             const optionImageSrc = this.resolveImageSource(opt.image_path, opt.image_asset_url, opt.image_asset_id);
 
             div.innerHTML = `
-                <button type="button" class="option-letter" aria-pressed="${opt.is_correct ? 'true' : 'false'}" title="Отметить ${optionLabel} как правильный">${label}</button>
+                <button type="button" class="option-letter" ${index === 0 ? 'data-onboarding-target="test-editor-correct-toggle"' : ''} aria-pressed="${opt.is_correct ? 'true' : 'false'}" title="Отметить ${optionLabel} как правильный">${label}</button>
                 <div class="option-row__main">
                     <div class="option-row__content">
                         <div class="option-row__toolbar">
@@ -1956,6 +2396,7 @@ class TestEditor extends BaseEditor {
                         ${optionImageSrc ? `
                             <div class="option-row__media-frame option-row__media-frame--filled relative">
                                 <button class="upload-option-image option-row__media-preview-button"
+                                    ${index === 0 ? 'data-onboarding-target="test-editor-first-option-image"' : ''}
                                     data-index="${index}" data-option-index="${index}" data-image-paste-target="option" title="Заменить изображение ${optionLabel} или вставить его через Ctrl+V" aria-label="Заменить изображение ${optionLabel}">
                                     <span class="option-row__media-preview w-full h-full rounded-lg border border-border-subtle shadow overflow-hidden bg-surface-1">
                                         <img src="${optionImageSrc}" alt="Изображение ${optionLabel}"
@@ -1971,6 +2412,7 @@ class TestEditor extends BaseEditor {
                             </div>
                         ` : `
                             <button class="upload-option-image option-row__media-empty-button"
+                                    ${index === 0 ? 'data-onboarding-target="test-editor-first-option-image"' : ''}
                                     data-index="${index}" data-option-index="${index}" data-image-paste-target="option" title="Добавить изображение к ${optionLabel} или вставить его через Ctrl+V" aria-label="Добавить изображение к ${optionLabel}">
                                 <span class="material-symbols-outlined text-[18px]">add_photo_alternate</span>
                                 <span class="option-row__media-empty-copy">

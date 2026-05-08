@@ -88,6 +88,8 @@
     let _isAdminPlanSaving = false;
     let _adminUsersQuery = '';
     let _adminUsers = [];
+    let _billingStatus = null;
+    let _isPremiumOrderSaving = false;
 
     function composeFeedbackMessage({ what = '', impact = '', next = '' } = {}) {
         if (typeof NotificationUI !== 'undefined' && typeof NotificationUI.voiceMessage === 'function') {
@@ -943,6 +945,134 @@
         button.setAttribute('aria-disabled', isBusy ? 'true' : 'false');
     }
 
+    function formatPremiumDate(value) {
+        const date = new Date(String(value || ''));
+        if (Number.isNaN(date.getTime())) return '';
+        return date.toLocaleDateString([], { year: 'numeric', month: 'long', day: 'numeric' });
+    }
+
+    function getPremiumPeriodLabel(days) {
+        if (window.PremiumPromo && typeof window.PremiumPromo.formatPeriod === 'function') {
+            return window.PremiumPromo.formatPeriod(days);
+        }
+        const n = Number(days || 0);
+        if (n === 14) return '14 дней';
+        if (n === 30) return '30 дней';
+        if (n === 90) return '90 дней';
+        return `${n} дней`;
+    }
+
+    function getPremiumPeriodPrice(days) {
+        const offer = window.PremiumPromo && typeof window.PremiumPromo.getOffer === 'function'
+            ? window.PremiumPromo.getOffer(days)
+            : null;
+        return offer?.price || '';
+    }
+
+    function renderPremiumSection(payload = _billingStatus) {
+        const body = document.getElementById('settings-premium-body');
+        const pill = document.getElementById('settings-premium-status-pill');
+        if (!body || !pill) return;
+
+        const data = payload && typeof payload === 'object' ? payload : {};
+        const user = data.user || _accountContext?.user || {};
+        const effectivePlan = String(data.effective_plan || user.effective_plan || '').trim().toLowerCase();
+        const premiumExpiresAt = String(data.premium_expires_at || user.premium_expires_at || '').trim();
+        const pendingOrders = Array.isArray(data.pending_orders) ? data.pending_orders : [];
+        const periods = Array.isArray(data.supported_period_days) && data.supported_period_days.length
+            ? data.supported_period_days
+            : [14, 30, 90];
+        const isPremium = effectivePlan === 'premium';
+
+        pill.textContent = isPremium
+            ? (premiumExpiresAt ? `Premium до ${formatPremiumDate(premiumExpiresAt)}` : 'Premium активен')
+            : (pendingOrders.length ? 'Заявка ожидает подтверждения' : 'Free');
+
+        const periodButtons = periods.map((days) => `
+            <button type="button"
+                data-premium-period="${Number(days)}"
+                class="btn-secondary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold"
+                ${_isPremiumOrderSaving ? 'disabled aria-disabled="true"' : ''}>
+                <span class="material-symbols-outlined text-[18px]">workspace_premium</span>
+                <span>${escapeHtml(getPremiumPeriodLabel(days))}</span>
+                ${getPremiumPeriodPrice(days) ? `<span class="text-text-secondary">${escapeHtml(getPremiumPeriodPrice(days))}</span>` : ''}
+            </button>
+        `).join('');
+
+        const pendingHtml = pendingOrders.length ? `
+            <div class="mb-4 rounded-2xl border border-warning-light bg-warning-lighter/60 p-4 text-sm text-text-main">
+                Заявка на ${escapeHtml(getPremiumPeriodLabel(pendingOrders[0].period_days))} уже создана и ждёт подтверждения администратором.
+            </div>
+        ` : '';
+
+        body.innerHTML = `
+            ${pendingHtml}
+            <div class="grid gap-4 lg:grid-cols-[1fr,auto] lg:items-center">
+                <div>
+                    <p class="text-base font-semibold text-text-main">
+                        ${isPremium ? 'Premium открыт' : 'Откройте Premium'}
+                    </p>
+                    <p class="mt-2 text-sm leading-6 text-text-secondary">
+                        ${isPremium
+                            ? (premiumExpiresAt ? `Доступ действует до ${escapeHtml(formatPremiumDate(premiumExpiresAt))}.` : 'Доступ действует без даты окончания.')
+                            : 'Полные страницы Календаря и Статистики доступны после активации Premium. Виджеты на главной остаются доступны всем.'}
+                    </p>
+                </div>
+                <div class="flex flex-wrap gap-3">${periodButtons}</div>
+            </div>
+        `;
+
+        body.querySelectorAll('[data-premium-period]').forEach((button) => {
+            button.addEventListener('click', () => {
+                void createPremiumOrder(button.getAttribute('data-premium-period'));
+            });
+        });
+    }
+
+    async function loadBillingStatus() {
+        const body = document.getElementById('settings-premium-body');
+        try {
+            const response = await fetch('/api/billing/status');
+            const data = await response.json().catch(() => null);
+            if (!response.ok || !data?.ok) {
+                throw new Error(data?.error || 'billing_status_failed');
+            }
+            _billingStatus = data;
+            renderPremiumSection(data);
+        } catch (error) {
+            console.error('[Settings] Failed to load billing status:', error);
+            if (body) {
+                body.innerHTML = '<div class="text-sm text-text-secondary">Premium temporarily unavailable.</div>';
+            }
+        }
+    }
+
+    async function createPremiumOrder(periodDays) {
+        if (_isPremiumOrderSaving) return;
+        _isPremiumOrderSaving = true;
+        renderPremiumSection();
+        setInlineStatus('settings-premium-action-status', 'Создаём заявку...', 'neutral');
+        try {
+            const response = await fetch('/api/billing/orders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ period_days: Number(periodDays || 0) }),
+            });
+            const data = await response.json().catch(() => null);
+            if (!response.ok || !data?.ok) {
+                throw new Error(data?.error || 'billing_order_failed');
+            }
+            setInlineStatus('settings-premium-action-status', 'Заявка создана. Администратор подтвердит доступ.', 'success');
+            await loadBillingStatus();
+        } catch (error) {
+            console.error('[Settings] Failed to create premium order:', error);
+            setInlineStatus('settings-premium-action-status', 'Не удалось создать заявку Premium', 'error');
+        } finally {
+            _isPremiumOrderSaving = false;
+            renderPremiumSection();
+        }
+    }
+
     function renderAdminUsersList() {
         const section = document.getElementById('settings-admin-section');
         const listEl = document.getElementById('settings-admin-users-list');
@@ -981,6 +1111,8 @@
             const rawPlan = getRawPlan(user);
             const isAdminRow = String(user.role || '').trim().toLowerCase() === 'admin';
             const nextPlan = rawPlan === 'premium' ? 'free' : 'premium';
+            const expiresAt = String(user.premium_expires_at || '').trim();
+            const expiryText = expiresAt ? `Premium до ${escapeHtml(formatPremiumDate(expiresAt))}` : '';
             const buttonLabel = rawPlan === 'premium'
                 ? '\u0421\u0434\u0435\u043b\u0430\u0442\u044c free'
                 : '\u0421\u0434\u0435\u043b\u0430\u0442\u044c premium';
@@ -997,15 +1129,26 @@
                             <div class="mt-3 flex flex-wrap gap-2">
                                 <span class="settings-info-pill">${role}</span>
                                 <span class="settings-info-pill">${escapeHtml(getEffectivePlanLabel(user))}</span>
+                                ${expiryText ? `<span class="settings-info-pill">${expiryText}</span>` : ''}
                             </div>
                         </div>
-                        <button type="button"
-                            class="btn-secondary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold"
-                            data-admin-plan-user="${userId}"
-                            data-admin-next-plan="${nextPlan}"${buttonDisabledAttrs}>
-                            <span class="material-symbols-outlined text-[18px]">workspace_premium</span>
-                            ${isAdminRow ? '\u041f\u043b\u0430\u043d \u0437\u0430\u0434\u0430\u0451\u0442\u0441\u044f \u0440\u043e\u043b\u044c\u044e' : buttonLabel}
-                        </button>
+                        <div class="flex flex-wrap gap-2 lg:justify-end">
+                            ${[14, 30, 90].map((days) => `
+                                <button type="button"
+                                    class="btn-secondary inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold"
+                                    data-admin-grant-user="${userId}"
+                                    data-admin-grant-days="${days}"${buttonDisabledAttrs}>
+                                    +${days}д
+                                </button>
+                            `).join('')}
+                            <button type="button"
+                                class="btn-secondary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold"
+                                data-admin-plan-user="${userId}"
+                                data-admin-next-plan="${nextPlan}"${buttonDisabledAttrs}>
+                                <span class="material-symbols-outlined text-[18px]">workspace_premium</span>
+                                ${isAdminRow ? '\u041f\u043b\u0430\u043d \u0437\u0430\u0434\u0430\u0451\u0442\u0441\u044f \u0440\u043e\u043b\u044c\u044e' : buttonLabel}
+                            </button>
+                        </div>
                     </div>
                 </article>
             `;
@@ -1016,6 +1159,13 @@
                 const targetUserId = button.getAttribute('data-admin-plan-user');
                 const nextPlan = button.getAttribute('data-admin-next-plan');
                 void updateAdminUserPlan(targetUserId, nextPlan);
+            });
+        });
+        listEl.querySelectorAll('[data-admin-grant-user]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const targetUserId = button.getAttribute('data-admin-grant-user');
+                const periodDays = button.getAttribute('data-admin-grant-days');
+                void grantAdminUserPremium(targetUserId, periodDays);
             });
         });
     }
@@ -1074,9 +1224,11 @@
                 _accountContext.user = {
                     ..._accountContext.user,
                     plan: data.user.plan,
+                    premium_expires_at: data.user.premium_expires_at,
                     effective_plan: data.user.effective_plan,
                 };
                 updateAccountSummary(_accountContext.user, { hosted: _accountContext?.hosted === true });
+                await loadBillingStatus();
             }
             setInlineStatus('settings-admin-status', '\u041f\u043b\u0430\u043d \u043e\u0431\u043d\u043e\u0432\u043b\u0451\u043d', 'success');
         } catch (error) {
@@ -1110,6 +1262,39 @@
         if (next) next.value = '';
         if (confirm) confirm.value = '';
         setInlineStatus('settings-password-save-status');
+    }
+
+    async function grantAdminUserPremium(userId, periodDays) {
+        const cleanUserId = String(userId || '').trim();
+        const days = Number(periodDays || 0);
+        if (_isAdminPlanSaving || !cleanUserId || !days) return;
+        _isAdminPlanSaving = true;
+        renderAdminUsersList();
+        setInlineStatus('settings-admin-status', 'Выдаём Premium...', 'neutral');
+        try {
+            const response = await fetch(`/api/admin/users/${encodeURIComponent(cleanUserId)}/premium/grant`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ period_days: days }),
+            });
+            const data = await response.json().catch(() => null);
+            if (!response.ok || !data?.ok || !data.user) {
+                throw new Error(data?.error || 'admin_premium_grant_failed');
+            }
+            _adminUsers = _adminUsers.map((item) => item.user_id === data.user.user_id ? data.user : item);
+            if (_accountContext?.user?.user_id === data.user.user_id) {
+                _accountContext.user = { ..._accountContext.user, ...data.user };
+                updateAccountSummary(_accountContext.user, { hosted: _accountContext?.hosted === true });
+                await loadBillingStatus();
+            }
+            setInlineStatus('settings-admin-status', 'Premium выдан', 'success');
+        } catch (error) {
+            console.error('[Settings] Failed to grant premium:', error);
+            setInlineStatus('settings-admin-status', 'Не удалось выдать Premium', 'error');
+        } finally {
+            _isAdminPlanSaving = false;
+            renderAdminUsersList();
+        }
     }
 
     function resetDeleteForm() {
@@ -2084,6 +2269,7 @@
         _accountContext = verificationContext || accountContext || { user: null, hosted: false };
         updateAccountSummary(_accountContext?.user, { hosted: _accountContext?.hosted === true });
         updateProfileCaption(_accountContext?.user, { hosted: _accountContext?.hosted === true });
+        await loadBillingStatus();
         renderAdminUsersList();
         if (String(_accountContext?.user?.role || '').trim().toLowerCase() === 'admin') {
             await loadAdminUsers(_adminUsersQuery);

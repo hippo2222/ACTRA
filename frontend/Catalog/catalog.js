@@ -12,6 +12,7 @@
     error: '',
     query: '',
     contentType: 'all',
+    sortBy: 'date',
     selectedItemId: '',
     statusByVersionKey: new Map(),
     pendingStatusKeys: new Set(),
@@ -19,6 +20,16 @@
     complexLibraryDetailCache: new Map(),
     listRequestId: 0,
   };
+
+  const CATALOG_SORT_LABELS = {
+    date: 'Сначала новые',
+    alphabet: 'По алфавиту',
+    type: 'По типу контента',
+    volume: 'По объёму',
+  };
+
+  const VALID_CATALOG_SORTS = Object.keys(CATALOG_SORT_LABELS);
+  const catalogCollator = new Intl.Collator('ru-RU', { sensitivity: 'base', numeric: true });
 
   const TASK_TYPE_LABELS = {
     click: 'Клик',
@@ -463,6 +474,64 @@
     return formatRelativeDate(item && item.latest_published_at);
   }
 
+  function normalizeCatalogSort(value) {
+    const key = asString(value).toLowerCase();
+    return VALID_CATALOG_SORTS.includes(key) ? key : 'date';
+  }
+
+  function getCatalogDateValue(item) {
+    const raw = asString(item && (item.latest_published_at || item.updated_at || item.created_at));
+    const time = raw ? new Date(raw).getTime() : 0;
+    return Number.isFinite(time) ? time : 0;
+  }
+
+  function getCatalogVolumeValue(item) {
+    if (item && item.content_type === 'theory') {
+      const manifest = getLatestManifest(item);
+      return normalizeCount(manifest.image_count || getDependencyCounts(item).images || 0);
+    }
+    return getTaskCount(item);
+  }
+
+  function compareCatalogTitle(left, right) {
+    const leftTitle = asString(left && left.title) || asString(left && left.item_id);
+    const rightTitle = asString(right && right.title) || asString(right && right.item_id);
+    return catalogCollator.compare(leftTitle, rightTitle);
+  }
+
+  function sortCatalogItems(items) {
+    const sorted = Array.isArray(items) ? items.slice() : [];
+    const compareDate = (left, right) => {
+      const diff = getCatalogDateValue(right) - getCatalogDateValue(left);
+      return diff || compareCatalogTitle(left, right);
+    };
+
+    if (state.sortBy === 'alphabet') {
+      return sorted.sort((left, right) => compareCatalogTitle(left, right) || compareDate(left, right));
+    }
+
+    if (state.sortBy === 'type') {
+      const order = { complex: 0, theory: 1 };
+      return sorted.sort((left, right) => {
+        const diff = (order[getTypeKey(left)] ?? 99) - (order[getTypeKey(right)] ?? 99);
+        return diff || compareCatalogTitle(left, right) || compareDate(left, right);
+      });
+    }
+
+    if (state.sortBy === 'volume') {
+      return sorted.sort((left, right) => {
+        const diff = getCatalogVolumeValue(right) - getCatalogVolumeValue(left);
+        return diff || compareCatalogTitle(left, right) || compareDate(left, right);
+      });
+    }
+
+    return sorted.sort(compareDate);
+  }
+
+  function setFilteredCatalogItems(items) {
+    state.filteredItems = sortCatalogItems(items);
+  }
+
   function getVersionKey(item) {
     const itemId = asString(item && item.item_id);
     if (item && item.content_type === 'theory') return itemId;
@@ -640,6 +709,248 @@
     }
   }
 
+  function isCatalogOnboardingDemoRequested() {
+    return global.document?.body?.dataset?.onboardingTourId === 'catalog-discovery-library';
+  }
+
+  function cloneCatalogOnboardingState() {
+    return {
+      items: state.items.slice(),
+      filteredItems: state.filteredItems.slice(),
+      savedComplexEntries: state.savedComplexEntries.slice(),
+      currentUser: state.currentUser ? { ...state.currentUser } : null,
+      authenticated: state.authenticated,
+      workspaceLimits: state.workspaceLimits ? JSON.parse(JSON.stringify(state.workspaceLimits)) : null,
+      loading: state.loading,
+      error: state.error,
+      query: state.query,
+      contentType: state.contentType,
+      sortBy: state.sortBy,
+      selectedItemId: state.selectedItemId,
+      statusByVersionKey: new Map(state.statusByVersionKey),
+      pendingStatusKeys: new Set(state.pendingStatusKeys),
+      versionCache: new Map(state.versionCache),
+      complexLibraryDetailCache: new Map(state.complexLibraryDetailCache),
+      listRequestId: state.listRequestId,
+    };
+  }
+
+  function restoreCatalogOnboardingState(snapshot) {
+    Object.assign(state, {
+      items: snapshot.items.slice(),
+      filteredItems: snapshot.filteredItems.slice(),
+      savedComplexEntries: snapshot.savedComplexEntries.slice(),
+      currentUser: snapshot.currentUser ? { ...snapshot.currentUser } : null,
+      authenticated: snapshot.authenticated,
+      workspaceLimits: snapshot.workspaceLimits ? JSON.parse(JSON.stringify(snapshot.workspaceLimits)) : null,
+      loading: snapshot.loading,
+      error: snapshot.error,
+      query: snapshot.query,
+      contentType: snapshot.contentType,
+      sortBy: normalizeCatalogSort(snapshot.sortBy),
+      selectedItemId: snapshot.selectedItemId,
+      statusByVersionKey: new Map(snapshot.statusByVersionKey),
+      pendingStatusKeys: new Set(snapshot.pendingStatusKeys),
+      versionCache: new Map(snapshot.versionCache),
+      complexLibraryDetailCache: new Map(snapshot.complexLibraryDetailCache),
+      listRequestId: snapshot.listRequestId,
+    });
+  }
+
+  function createCatalogOnboardingDemoState() {
+    const now = Date.now();
+    const isoDaysAgo = (days) => new Date(now - days * 86400000).toISOString();
+    const items = [
+      {
+        item_id: 'catalog-demo-complex-waves',
+        content_type: 'complex',
+        title: 'Радиофизика: электромагнитные волны',
+        description: 'Короткий комплекс с задачами на частоту, длину волны, поляризацию и распространение сигнала.',
+        owner_user_id: 'demo-author-1',
+        owner_display_name: 'Иванов А.П.',
+        latest_version_id: 'demo-waves-v1',
+        latest_published_at: isoDaysAgo(1),
+        latest_manifest: {
+          task_count: 12,
+          dependency_counts: { tasks: 12, theories: 1 },
+        },
+        linked_theory_item: {
+          item_id: 'catalog-demo-theory-superposition',
+          title: 'Принцип суперпозиции волн',
+        },
+      },
+      {
+        item_id: 'catalog-demo-theory-superposition',
+        content_type: 'theory',
+        title: 'Принцип суперпозиции волн',
+        description: 'Теория объясняет, как складываются волны и почему это важно для задач по интерференции.',
+        owner_user_id: 'demo-author-2',
+        owner_display_name: 'Смирнова Е.В.',
+        latest_version_id: 'demo-superposition-v1',
+        latest_published_at: isoDaysAgo(3),
+        latest_manifest: {
+          image_count: 3,
+          dependency_counts: { complexes: 1 },
+        },
+        linked_complex_items: [
+          {
+            item_id: 'catalog-demo-complex-waves',
+            title: 'Радиофизика: электромагнитные волны',
+          },
+        ],
+      },
+      {
+        item_id: 'catalog-demo-complex-antennas',
+        content_type: 'complex',
+        title: 'Антенны: базовые параметры',
+        description: 'Практика по диаграмме направленности, усилению и согласованию антенн.',
+        owner_user_id: 'demo-author-3',
+        owner_display_name: 'RadioLab',
+        latest_version_id: 'demo-antennas-v1',
+        latest_published_at: isoDaysAgo(5),
+        latest_manifest: {
+          task_count: 8,
+          dependency_counts: { tasks: 8, theories: 0 },
+        },
+      },
+    ];
+    const versionCache = new Map([
+      ['catalog-demo-complex-waves:demo-waves-v1', {
+        snapshot: {
+          complex: {
+            tasks: [
+              'waves/basics/frequency',
+              'waves/basics/length',
+              'waves/polarization/click',
+              'waves/propagation/sequence',
+            ],
+          },
+          dependencies: {
+            tasks: {
+              'waves/basics/frequency': { task_data: { type: 'test', name: 'Частота и период' } },
+              'waves/basics/length': { task_data: { type: 'open_answer', name: 'Длина волны' } },
+              'waves/polarization/click': { task_data: { type: 'click', name: 'Выбор поляризации' } },
+              'waves/propagation/sequence': { task_data: { type: 'sequence_assembly', name: 'Порядок распространения' } },
+            },
+            modules: {
+              waves: { name: 'Волны' },
+            },
+            topics: {
+              'waves/basics': { name: 'Базовые параметры' },
+              'waves/polarization': { name: 'Поляризация' },
+              'waves/propagation': { name: 'Распространение' },
+            },
+          },
+        },
+      }],
+      ['catalog-demo-theory-superposition', {
+        snapshot: {
+          delta: {
+            ops: [
+              { insert: 'Принцип суперпозиции помогает разбирать задачи, где несколько волн действуют одновременно.\\n' },
+              { insert: 'Главная идея: результирующее поле складывается из вкладов отдельных источников.\\n' },
+            ],
+          },
+        },
+      }],
+      ['catalog-demo-complex-antennas:demo-antennas-v1', {
+        snapshot: {
+          complex: {
+            tasks: ['antennas/base/gain', 'antennas/base/matching'],
+          },
+          dependencies: {
+            tasks: {
+              'antennas/base/gain': { task_data: { type: 'test', name: 'Усиление антенны' } },
+              'antennas/base/matching': { task_data: { type: 'click', name: 'Согласование' } },
+            },
+          },
+        },
+      }],
+    ]);
+    const statusByVersionKey = new Map();
+    items.forEach((item) => {
+      const key = getVersionKey(item);
+      if (!key) return;
+      statusByVersionKey.set(key, {
+        ok: true,
+        library_status: {
+          already_in_library: false,
+          action: 'create_link',
+          content_type: item.content_type,
+        },
+      });
+    });
+    return {
+      items,
+      filteredItems: sortCatalogItems(items),
+      savedComplexEntries: [],
+      currentUser: { user_id: 'catalog-demo-user', display_name: 'Feedback Test User' },
+      authenticated: true,
+      workspaceLimits: {
+        plan: 'free',
+        theories: { library_total_count: 2, library_limit: 10, personal_count: 1, personal_limit: 10 },
+        complexes: { library_total_count: 3, library_limit: 10, personal_count: 2, personal_limit: 10 },
+      },
+      loading: false,
+      error: '',
+      query: '',
+      contentType: 'all',
+      sortBy: state.sortBy,
+      selectedItemId: 'catalog-demo-complex-waves',
+      statusByVersionKey,
+      pendingStatusKeys: new Set(),
+      versionCache,
+      complexLibraryDetailCache: new Map(),
+    };
+  }
+
+  function syncCatalogOnboardingControls() {
+    if (els.searchInput) {
+      els.searchInput.value = state.query || '';
+    }
+    global.document.querySelectorAll('[data-filter]').forEach((node) => {
+      node.classList.toggle('is-active', asString(node.getAttribute('data-filter')) === state.contentType);
+    });
+    updateCatalogSortControls();
+    if (els.authNote) {
+      els.authNote.classList.toggle('is-visible', !state.authenticated);
+    }
+  }
+
+  function applyCatalogOnboardingDemo(active) {
+    if (active) {
+      if (!state._catalogOnboardingDemoSnapshot) {
+        state._catalogOnboardingDemoSnapshot = cloneCatalogOnboardingState();
+      }
+      Object.assign(state, createCatalogOnboardingDemoState());
+      global.document.body.dataset.catalogOnboardingDemo = 'true';
+      syncCatalogOnboardingControls();
+      render();
+      return;
+    }
+
+    if (state._catalogOnboardingDemoSnapshot) {
+      restoreCatalogOnboardingState(state._catalogOnboardingDemoSnapshot);
+      state._catalogOnboardingDemoSnapshot = null;
+      delete global.document.body.dataset.catalogOnboardingDemo;
+      syncCatalogOnboardingControls();
+      render();
+    }
+  }
+
+  function setupCatalogOnboardingDemoObserver() {
+    if (state._catalogOnboardingDemoObserver || typeof global.MutationObserver !== 'function' || !global.document.body) {
+      return;
+    }
+    const sync = () => applyCatalogOnboardingDemo(isCatalogOnboardingDemoRequested());
+    state._catalogOnboardingDemoObserver = new global.MutationObserver(sync);
+    state._catalogOnboardingDemoObserver.observe(global.document.body, {
+      attributes: true,
+      attributeFilter: ['data-onboarding-tour-id'],
+    });
+    sync();
+  }
+
   function isPremiumWorkspacePlan() {
     return asString(state.workspaceLimits?.plan).toLowerCase() === 'premium';
   }
@@ -756,6 +1067,10 @@
   }
 
   async function loadCatalogItems() {
+    if (isCatalogOnboardingDemoRequested()) {
+      applyCatalogOnboardingDemo(true);
+      return;
+    }
     const requestId = ++state.listRequestId;
     state.loading = true;
     state.error = '';
@@ -774,7 +1089,7 @@
       if (state.contentType === 'saved') {
         state.savedComplexEntries = Array.isArray(payload.entries) ? payload.entries : [];
         state.items = state.savedComplexEntries.map(mapSavedComplexEntryToItem);
-        state.filteredItems = filterSavedComplexItems(state.items);
+        setFilteredCatalogItems(filterSavedComplexItems(state.items));
         state.items.forEach((item, index) => {
           const entry = state.savedComplexEntries[index];
           const key = getVersionKey(item);
@@ -798,13 +1113,17 @@
         });
       } else {
         state.items = Array.isArray(payload.items) ? payload.items : [];
-        state.filteredItems = state.items.slice();
+        setFilteredCatalogItems(state.items);
       }
       if (!state.filteredItems.some((item) => asString(item.item_id) === state.selectedItemId)) {
         state.selectedItemId = state.filteredItems[0] ? asString(state.filteredItems[0].item_id) : '';
       }
       state.loading = false;
       render();
+      if (isCatalogOnboardingDemoRequested()) {
+        applyCatalogOnboardingDemo(true);
+        return;
+      }
       refreshVisibleStatuses();
     } catch (error) {
       if (requestId !== state.listRequestId) return;
@@ -813,10 +1132,14 @@
       state.filteredItems = [];
       state.error = error && error.message ? error.message : 'catalog_list_failed';
       render();
+      if (isCatalogOnboardingDemoRequested()) {
+        applyCatalogOnboardingDemo(true);
+      }
     }
   }
 
   async function refreshVisibleStatuses() {
+    if (isCatalogOnboardingDemoRequested()) return;
     if (!state.authenticated) return;
     if (state.contentType === 'saved') return;
     const requests = state.filteredItems
@@ -928,6 +1251,12 @@
     const typeKey = getTypeKey(item);
     card.className = `catalog-card catalog-card--${typeKey}${withinBundle ? ' catalog-card--bundled' : ''}${isSelected ? ' is-selected' : ''}`;
     card.setAttribute('data-item-id', asString(item.item_id));
+    if (isSelected) {
+      card.setAttribute('data-onboarding-target', 'catalog-selected-card');
+    }
+    const actionTargetAttr = primaryAction && primaryAction.key === 'preview' && isSelected
+      ? ' data-onboarding-target="catalog-add-action"'
+      : '';
     card.tabIndex = 0;
     card.setAttribute('role', 'button');
     card.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
@@ -981,7 +1310,7 @@
         ${primaryAction ? `
           <div class="catalog-card__footer">
             <div class="catalog-card__actions">
-              <button type="button" class="${escapeHtml(primaryAction.className)}" data-action="${escapeHtml(primaryAction.key)}"${primaryAction.disabled ? ' disabled' : ''}>
+              <button type="button" class="${escapeHtml(primaryAction.className)}" data-action="${escapeHtml(primaryAction.key)}"${actionTargetAttr}${primaryAction.disabled ? ' disabled' : ''}>
                 ${escapeHtml(primaryAction.label)}
               </button>
             </div>
@@ -2601,11 +2930,92 @@
     els.summary.textContent = `Найдено ${total} ${typeLabel}${slotsText}`;
   }
 
+  function updateCatalogSortControls() {
+    if (els.sortLabel) {
+      els.sortLabel.textContent = CATALOG_SORT_LABELS[state.sortBy] || CATALOG_SORT_LABELS.date;
+    }
+    if (els.sortToggle) {
+      const isOpen = !!(els.sortMenu && !els.sortMenu.classList.contains('catalog-hidden'));
+      els.sortToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    }
+    if (!els.sortMenu) return;
+    els.sortMenu.querySelectorAll('[data-catalog-sort-option]').forEach((button) => {
+      const isActive = normalizeCatalogSort(button.getAttribute('data-catalog-sort-option')) === state.sortBy;
+      button.classList.toggle('is-active', isActive);
+      button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    });
+  }
+
+  function closeCatalogSortMenu() {
+    if (!els.sortMenu) return;
+    els.sortMenu.classList.add('catalog-hidden');
+    if (els.sortToggle) els.sortToggle.setAttribute('aria-expanded', 'false');
+    if (state._catalogSortOutsideHandler) {
+      global.document.removeEventListener('click', state._catalogSortOutsideHandler);
+    }
+  }
+
+  function openCatalogSortMenu() {
+    if (!els.sortMenu) return;
+    els.sortMenu.classList.remove('catalog-hidden');
+    if (els.sortToggle) els.sortToggle.setAttribute('aria-expanded', 'true');
+    if (!state._catalogSortOutsideHandler) {
+      state._catalogSortOutsideHandler = (event) => {
+        if (!els.sortController || !els.sortController.contains(event.target)) {
+          closeCatalogSortMenu();
+        }
+      };
+    }
+    global.document.addEventListener('click', state._catalogSortOutsideHandler);
+  }
+
+  function setCatalogSort(sortBy) {
+    const next = normalizeCatalogSort(sortBy);
+    if (state.sortBy === next) {
+      closeCatalogSortMenu();
+      return;
+    }
+    state.sortBy = next;
+    setFilteredCatalogItems(state.filteredItems);
+    if (!state.filteredItems.some((item) => asString(item.item_id) === state.selectedItemId)) {
+      state.selectedItemId = state.filteredItems[0] ? asString(state.filteredItems[0].item_id) : '';
+    }
+    updateCatalogSortControls();
+    try {
+      const url = new URL(global.location.href);
+      if (next === 'date') url.searchParams.delete('sort');
+      else url.searchParams.set('sort', next);
+      global.history.replaceState({}, '', `${url.pathname}${url.search}`);
+    } catch (_) {}
+    closeCatalogSortMenu();
+    render();
+  }
+
   function bindEvents() {
     els.searchInput.addEventListener('input', debounce((event) => {
       state.query = asString(event.target && event.target.value);
       loadCatalogItems();
     }, 260));
+
+    if (els.sortToggle) {
+      els.sortToggle.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!els.sortMenu) return;
+        if (els.sortMenu.classList.contains('catalog-hidden')) openCatalogSortMenu();
+        else closeCatalogSortMenu();
+      });
+    }
+
+    if (els.sortMenu) {
+      els.sortMenu.querySelectorAll('[data-catalog-sort-option]').forEach((button) => {
+        button.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          setCatalogSort(button.getAttribute('data-catalog-sort-option'));
+        });
+      });
+    }
 
     global.document.querySelectorAll('[data-filter]').forEach((button) => {
       button.addEventListener('click', () => {
@@ -2639,30 +3049,41 @@
   }
 
   async function init() {
-    els.searchInput = $('catalog-search-input');
-    els.summary = $('catalog-summary');
-    els.loading = $('catalog-loading');
-    els.error = $('catalog-error');
-    els.empty = $('catalog-empty');
-    els.grid = $('catalog-grid');
-    els.detail = $('catalog-detail');
-    els.detailEmpty = $('catalog-detail-empty');
-    els.detailContent = $('catalog-detail-content');
-    els.authNote = $('catalog-auth-note');
+    try {
+      els.searchInput = $('catalog-search-input');
+      els.summary = $('catalog-summary');
+      els.loading = $('catalog-loading');
+      els.error = $('catalog-error');
+      els.empty = $('catalog-empty');
+      els.grid = $('catalog-grid');
+      els.detail = $('catalog-detail');
+      els.detailEmpty = $('catalog-detail-empty');
+      els.detailContent = $('catalog-detail-content');
+      els.authNote = $('catalog-auth-note');
+      els.sortController = global.document.querySelector('[data-catalog-sort-controller]');
+      els.sortToggle = global.document.querySelector('[data-catalog-sort-toggle]');
+      els.sortMenu = global.document.querySelector('[data-catalog-sort-menu]');
+      els.sortLabel = global.document.querySelector('[data-catalog-sort-label]');
 
-    const params = new URLSearchParams(global.location.search || '');
-    const initialContentType = asString(params.get('content_type')).toLowerCase();
-    if (['all', 'complex', 'theory', 'saved'].includes(initialContentType)) {
-      state.contentType = initialContentType;
+      const params = new URLSearchParams(global.location.search || '');
+      const initialContentType = asString(params.get('content_type')).toLowerCase();
+      if (['all', 'complex', 'theory', 'saved'].includes(initialContentType)) {
+        state.contentType = initialContentType;
+      }
+      state.sortBy = normalizeCatalogSort(params.get('sort'));
+      global.document.querySelectorAll('[data-filter]').forEach((node) => {
+        node.classList.toggle('is-active', asString(node.getAttribute('data-filter')) === state.contentType);
+      });
+      updateCatalogSortControls();
+
+      setupCatalogOnboardingDemoObserver();
+      bindEvents();
+      await loadCurrentUser();
+      await loadWorkspaceLimits();
+      await loadCatalogItems();
+    } finally {
+      global.PageBoot?.ready();
     }
-    global.document.querySelectorAll('[data-filter]').forEach((node) => {
-      node.classList.toggle('is-active', asString(node.getAttribute('data-filter')) === state.contentType);
-    });
-
-    bindEvents();
-    await loadCurrentUser();
-    await loadWorkspaceLimits();
-    await loadCatalogItems();
   }
 
   if (global.document.readyState === 'loading') {

@@ -7,20 +7,21 @@
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>ACTRA — Редактор аннотаций</title>
-    <link rel="stylesheet" href="click_editor.css">
+    <link rel="stylesheet" href="click_editor.css?v=draw-onboarding-5">
     <script src="click_editor_helpers.js"></script>
     <script src="undo_manager.js"></script>
     <!-- BaseEditor must be loaded before click_editor.js -->
     <script src="autosave_manager.js"></script>
     <script src="ai_ux_messages.js"></script>
-    <script src="base_editor.js"></script>
-    <script src="click_editor.js" defer></script>
+    <script src="base_editor.js?v=draw-onboarding-5"></script>
+    <script src="click_editor.js?v=draw-onboarding-5" defer></script>
 
     <link href="../../assets/tailwind.css" rel="stylesheet" />
     <link href="../../assets/fonts.css" rel="stylesheet" />
     <link href="../../assets/lightB-variables.css" rel="stylesheet" />
     <link href="../../assets/lightB-components.css" rel="stylesheet" />
     <link href="../../assets/animations.css" rel="stylesheet" />
+    <link href="../../assets/onboarding-tour.css?v=click-onboarding-21" rel="stylesheet" />
 
 </head>
 
@@ -28,17 +29,19 @@
     class="bg-bg-main text-text-main h-screen overflow-hidden flex flex-col font-display antialiased selection:bg-primary-light selection:text-primary">
     <main class="flex-1 flex flex-col h-full overflow-hidden relative bg-bg-main">
         <header
-            class="click-editor-header h-16 flex items-center px-6 bg-surface-1 backdrop-blur-md border-b border-border-subtle shrink-0 z-30 shadow-sm sticky top-0">
+            class="click-editor-header h-16 flex items-center px-6 bg-surface-1 backdrop-blur-md border-b border-border-subtle shrink-0 z-30 shadow-sm sticky top-0"
+            data-onboarding-target="click-header" data-onboarding-spotlight="frame">
             <div class="click-editor-header__primary flex items-center gap-4">
                 <button id="back-btn" class="p-2 hover:bg-bg-hover rounded-full text-text-secondary transition-colors"
                     title="Библиотека заданий">
                     <span class="material-symbols-outlined">arrow_back</span>
                 </button>
-                <div>
+                <div data-onboarding-target="click-title">
                     <h2 class="text-lg font-bold text-text-main tracking-tight"></h2>
                     <p class="text-xs text-text-secondary">Последнее изменение: 2 минуты назад</p>
                 </div>
-                <div id="click-mode-switch" class="flex items-center gap-3 ml-4">
+                <div id="click-mode-switch" class="flex items-center gap-3 ml-4"
+                    data-onboarding-target="click-mode-switch">
                     <div class="flex bg-surface-2 border border-border-subtle p-1 rounded-lg shadow-sm">
                         <button id="mode-text-btn"
                             class="mode-toggle-btn flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-md transition-all border border-transparent text-text-secondary hover:text-primary hover:bg-bg-hover"
@@ -46,7 +49,7 @@
                             <span class="material-symbols-outlined text-[14px]">touch_app</span>
                             Клик
                         </button>
-                        <button id="mode-errors-btn"
+                        <button id="mode-errors-btn" data-onboarding-target="click-errors-mode-button"
                             class="mode-toggle-btn flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-md transition-all border border-transparent text-text-secondary hover:text-primary hover:bg-bg-hover"
                             type="button" data-mode="errors">
                             <span class="material-symbols-outlined text-[14px]">error</span>
@@ -55,13 +58,16 @@
                     </div>
                 </div>
                 <div class="w-px h-5 bg-border-subtle"></div>
-                <div id="subtask-toggle" class="hidden flex bg-surface-2 p-1 rounded-lg">
+                <div id="subtask-toggle" class="hidden flex bg-surface-2 p-1 rounded-lg"
+                    data-onboarding-target="click-errors-kind-switch" data-onboarding-spotlight="frame">
                     <button data-subtask-mode="text"
+                        data-onboarding-target="click-errors-words-mode"
                         class="subtask-toggle-btn flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-md shadow-sm bg-surface-1 text-text-main transition-all">
                         <span class="material-symbols-outlined text-[14px]">text_fields</span>
                         Слова
                     </button>
                     <button data-subtask-mode="errors"
+                        data-onboarding-target="click-errors-texts-mode"
                         class="subtask-toggle-btn flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-md text-text-secondary hover:text-text-main transition-all">
                         <span class="material-symbols-outlined text-[14px]">error</span>
                         Тексты
@@ -69,7 +75,7 @@
                 </div>
             </div>
             <div class="click-editor-header__drawing-status-shell" id="toolbar-status-row">
-                <div data-drawing-status
+                <div data-drawing-status data-onboarding-target="click-drawing-status"
                     class="click-editor-header__drawing-status flex min-h-[2.5rem] items-center gap-3 rounded-xl border border-border-subtle px-3.5 py-2 transition-all duration-200 shadow-sm bg-surface-2 text-text-secondary">
                     <span data-drawing-status-icon=""
                         class="material-symbols-outlined text-[18px] text-primary shrink-0">info</span>
@@ -82,7 +88,8 @@
                 </div>
             </div>
             <div class="click-editor-header__actions flex items-center gap-3">
-                <div id="save-status-container" class="status-cluster" data-tone="success">
+                <div id="save-status-container" class="status-cluster" data-tone="success"
+                    data-onboarding-target="click-save-status">
                     <div id="save-status-indicator" class="status-cluster__dot"></div>
                     <div class="status-cluster__body">
                         <span id="save-status-text"
@@ -91,7 +98,17 @@
                             class="text-xs text-text-disabled leading-none mt-1 hidden"></span>
                     </div>
                 </div>
-                <button id="save-task-btn"
+                <button type="button"
+                    class="onboarding-help-button onboarding-help-button--icon"
+                    data-onboarding-help-button
+                    data-onboarding-help-mode="direct"
+                    data-onboarding-fallback-tour-id="click-editor-authoring"
+                    hidden
+                    title="Показать обучение"
+                    aria-label="Показать обучение">
+                    <span class="material-symbols-outlined" aria-hidden="true">help</span>
+                </button>
+                <button id="save-task-btn" data-onboarding-target="click-save-action"
                     class="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-dark active:bg-primary-darker text-primary-contrast font-semibold rounded-xl shadow-md text-sm tracking-tight transition focus:outline-none focus:border-primary">
                     <span class="material-symbols-outlined text-[18px]">save</span>
                     <span>Сохранить</span>
@@ -103,9 +120,11 @@
                 <div class="flex-1 flex flex-col relative bg-canvas-bg canvas-pattern">
                     <div
                         class="h-auto bg-surface-1 border-b border-border-color flex flex-col gap-2 px-4 py-3 shadow-sm z-10">
-                        <div class="flex items-center gap-3 gap-y-2 w-full flex-wrap xl:flex-nowrap" id="toolbar-row">
+                        <div class="flex items-center gap-3 gap-y-2 w-full flex-wrap xl:flex-nowrap" id="toolbar-row"
+                            data-onboarding-target="click-toolbar" data-onboarding-spotlight="frame">
                             <div
-                                class="inline-flex items-center gap-2 rounded-2xl border border-border-subtle bg-surface-2 p-1 shadow-sm">
+                                class="inline-flex items-center gap-2 rounded-2xl border border-border-subtle bg-surface-2 p-1 shadow-sm"
+                                data-onboarding-target="click-tool-choice">
                                 <span class="inline-flex" data-toolbar-tooltip="Прямолинейное лассо: ставьте точки по контуру объекта">
                                     <button id="lasso-tool-btn" data-tool="polygon" aria-pressed="true"
                                         class="tool-toggle inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border border-transparent transition-all">
@@ -122,7 +141,8 @@
                                 </span>
                             </div>
                             <div
-                                class="inline-flex items-center gap-2 rounded-2xl border border-border-subtle bg-surface-2 p-1 shadow-sm text-sm flex-none">
+                                class="inline-flex items-center gap-2 rounded-2xl border border-border-subtle bg-surface-2 p-1 shadow-sm text-sm flex-none"
+                                data-onboarding-target="click-polygon-actions">
                                 <span class="inline-flex" data-toolbar-tooltip="Завершить текущий контур после трёх и более точек">
                                     <button id="finish-polygon-btn" type="button" title="Завершить контур (или двойной клик)"
                                         class="inline-flex h-11 shrink-0 min-w-[12.75rem] items-center justify-center gap-2 px-3 py-2 rounded-xl border border-primary bg-primary-lighter text-primary shadow-sm transition-all disabled:opacity-70 disabled:pointer-events-none"
@@ -148,7 +168,8 @@
                                     </button>
                                 </span>
                             </div>
-                            <div class="flex items-center gap-2 text-xs text-text-secondary xl:ml-auto justify-end">
+                            <div class="flex items-center gap-2 text-xs text-text-secondary xl:ml-auto justify-end"
+                                data-onboarding-target="click-view-actions">
                                 <span class="inline-flex" data-toolbar-tooltip="Переключить отображение подписей у контуров">
                                     <button id="toggle-label-visibility-btn"
                                         class="inline-flex h-11 items-center gap-1 px-3 py-1.5 rounded-xl border border-border-subtle bg-surface-1 text-text-secondary hover:bg-bg-hover transition text-xs font-semibold shadow-sm"
@@ -168,8 +189,9 @@
                         </div>
                     </div>
                     <div class="flex-1 relative overflow-hidden flex items-center justify-center p-8">
-                        <div id="canvas-container" class="relative w-full h-full">
-                            <div id="canvas-stage"
+                        <div id="canvas-container" class="relative w-full h-full"
+                            data-onboarding-target="click-canvas" data-onboarding-spotlight="frame">
+                            <div id="canvas-stage" data-onboarding-spotlight="live"
                                 class="relative inline-block bg-surface-1 shadow-2xl rounded-xl border border-border-subtle transform-gpu origin-top-left will-change-transform select-none">
                                 <img id="main-image" alt="Medical Scan"
                                     class="block opacity-95 pointer-events-none select-none" src="" />
@@ -183,7 +205,7 @@
                                 </div>
                             </div>
                             <div class="absolute top-4 right-4 z-20">
-                                <button id="change-image-btn"
+                                <button id="change-image-btn" data-onboarding-target="click-change-image" data-onboarding-spotlight="live"
                                     class="bg-surface-1 hover:bg-surface-1 text-primary p-2 rounded-full shadow-lg border border-border-subtle flex items-center gap-2 px-3">
                                     <span class="material-symbols-outlined text-[20px]">add_photo_alternate</span>
                                     <span class="text-xs font-bold">Сменить изображение</span>
@@ -192,7 +214,8 @@
                             </div>
                         </div>
                         <div
-                            class="absolute bottom-6 right-6 bg-surface-1 rounded-lg shadow-lg border border-border-subtle p-1 flex items-center gap-1">
+                            class="absolute bottom-6 right-6 bg-surface-1 rounded-lg shadow-lg border border-border-subtle p-1 flex items-center gap-1"
+                            data-onboarding-target="click-zoom-controls" data-onboarding-spotlight="live">
                             <button id="zoom-out-btn"
                                 class="p-1.5 hover:bg-bg-hover rounded text-text-secondary focus:outline-none">
                                 <span class="material-symbols-outlined text-[20px]">remove</span>
@@ -208,12 +231,12 @@
                 </div>
                 <aside
                     class="w-[320px] bg-surface-1 border-l border-border-subtle flex flex-col shrink-0 overflow-y-auto"
-                    style="width: 320px;">
-                    <div class="p-5 flex flex-col gap-4">
+                    style="width: 320px;" data-onboarding-target="click-sidebar" data-onboarding-spotlight="frame">
+                    <div class="click-sidebar-content p-5 flex flex-col gap-4">
                         <div class="flex flex-col gap-1 pb-1">
                             <label class="text-xs font-semibold uppercase tracking-wider text-text-muted">Инструкция
                                 к заданию</label>
-                            <div class="relative">
+                            <div class="relative" data-onboarding-target="click-prompt">
                                 <label class="block text-sm font-medium text-text-main mb-1">Формулировка
                                     задания</label>
                                 <textarea id="prompt-textarea"
@@ -224,7 +247,7 @@
                         <div class="flex flex-col gap-1 pt-1 -mt-2">
                             <label class="text-xs font-semibold uppercase tracking-wider text-text-muted">Критерии
                                 успеха</label>
-                            <div>
+                            <div data-onboarding-target="click-required-correct">
                                 <label class="block text-sm font-medium text-text-main mb-1">Сколько аннотаций нужно
                                     отметить</label>
                                 <div class="flex items-center gap-2">
@@ -242,7 +265,8 @@
                             </div>
                         </div>
                         <hr class="border-border-subtle" />
-                        <div class="flex flex-col gap-2">
+                        <div class="flex flex-col gap-2" data-onboarding-target="click-additional-materials"
+                            data-onboarding-spotlight="frame">
                             <button id="additional-info-toggle-btn" type="button"
                                 class="flex items-center justify-between w-full text-left rounded-lg px-1 py-1.5 hover:bg-bg-hover transition"
                                 aria-expanded="true">
@@ -289,7 +313,8 @@
                             </div>
                         </div>
                         <hr class="border-border-subtle" />
-                        <div class="flex flex-col gap-3">
+                        <div class="flex flex-col gap-3" data-onboarding-target="click-annotations-panel"
+                            data-onboarding-spotlight="frame">
                             <div class="flex items-center justify-between">
                                 <label
                                     class="text-xs font-semibold uppercase tracking-wider text-text-secondary">Аннотации</label>
@@ -327,17 +352,21 @@
     <template id="errors-mode-template">
         <main class="flex-1 px-4 py-6 sm:px-6 bg-bg-main">
             <div class="max-w-5xl mx-auto flex flex-col gap-3">
-                <div data-errors-subpane="text" class="flex flex-col gap-3">
+                <div data-errors-subpane="text" class="flex flex-col gap-3"
+                    data-onboarding-target="click-errors-authoring">
                     <section data-pane-container
                         class="bg-surface-1 rounded-xl border border-border-subtle shadow-sm overflow-hidden">
                         <div class="px-5 pb-5 pt-6 flex flex-col gap-4">
-                            <div class="flex flex-wrap items-center gap-2">
+                            <div class="flex flex-wrap items-center gap-2"
+                                data-onboarding-target="click-errors-pane-tabs">
                                 <button data-pane-toggle="primary"
+                                    data-onboarding-target="click-errors-primary-tab"
                                     class="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg shadow-sm bg-primary text-primary-contrast active:scale-[0.99] transition">
                                     <span class="material-symbols-outlined text-[16px]">edit</span>
                                     Основной текст
                                 </button>
                                 <button data-pane-toggle="reference"
+                                    data-onboarding-target="click-errors-reference-tab"
                                     class="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg border border-border-subtle text-text-secondary bg-surface-1 hover:bg-bg-hover transition">
                                     <span class="material-symbols-outlined text-[16px]">menu_book</span>
                                     Референс
@@ -347,6 +376,7 @@
                                 <div data-pane="primary" class="flex flex-col gap-4">
                                     <div class="flex flex-wrap items-center gap-3">
                                         <button data-errors-add-span-btn type="button"
+                                            data-onboarding-target="click-errors-add-span"
                                             class="inline-flex items-center gap-2 bg-primary text-primary-contrast px-4 py-2 rounded-lg shadow-md text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed">
                                             <span class="material-symbols-outlined text-[16px]">add_circle</span>
                                             Отметить как ошибку
@@ -358,22 +388,28 @@
                                             Выделите отрезок текста, чтобы активировать кнопку.
                                         </div>
                                     </div>
-                                    <div class="flex flex-col gap-4 xl:flex-row">
+                                    <div class="flex flex-col gap-4 xl:flex-row"
+                                        data-onboarding-target="click-errors-text-workspace"
+                                        data-onboarding-spotlight="frame">
                                         <div class="flex-1 flex flex-col gap-3">
                                             <label class="flex flex-col">
                                                 <div
-                                                    class="relative rounded-lg border border-border-subtle bg-surface-1 font-mono">
+                                                    class="relative rounded-lg border border-border-subtle bg-surface-1 font-mono"
+                                                    data-onboarding-target="click-errors-text-card"
+                                                    data-onboarding-spotlight="frame">
                                                     <div data-errors-highlight-layer
                                                         class="pointer-events-none absolute inset-0 px-4 py-4 text-sm leading-relaxed text-transparent whitespace-pre-wrap custom-scrollbar rounded-lg">
                                                     </div>
                                                     <textarea data-errors-text-editor
-                                                        class="relative w-full min-h-[220px] rounded-lg bg-transparent text-sm leading-relaxed text-text-main custom-scrollbar p-4 font-mono resize-none focus:border-primary focus:ring-0 placeholder:text-text-disabled"
+                                                        data-onboarding-target="click-errors-text-editor"
+                                                        class="relative w-full min-h-[220px] rounded-lg border-0 bg-transparent text-sm leading-relaxed text-text-main custom-scrollbar p-4 font-mono resize-none focus:border-transparent focus:ring-0 placeholder:text-text-disabled"
                                                         spellcheck="false"></textarea>
                                                 </div>
                                             </label>
                                         </div>
                                         <div class="xl:w-[360px] flex flex-col gap-4">
-                                            <div
+                                            <div data-onboarding-target="click-errors-span-list"
+                                                data-onboarding-spotlight="frame"
                                                 class="bg-surface-2 rounded-xl border border-border-subtle shadow-sm flex flex-col h-full overflow-hidden">
                                                 <div
                                                     class="flex items-center justify-between px-4 py-3 border-b border-border-subtle">
@@ -406,7 +442,9 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="flex flex-col gap-3">
+                                    <div class="flex flex-col gap-3"
+                                        data-onboarding-target="click-errors-threshold"
+                                        data-onboarding-spotlight="frame">
                                         <div class="flex flex-wrap items-center gap-3">
                                             <span class="text-sm font-semibold text-text-main flex items-center gap-2">
                                                 <span
@@ -443,12 +481,14 @@
                                             </label>
                                         </div>
                                     </div>
-                                    <section
+                                    <section data-onboarding-target="click-errors-instruction"
+                                        data-onboarding-spotlight="frame"
                                         class="bg-surface-1 rounded-xl border border-border-subtle shadow-sm overflow-hidden">
                                         <div class="px-5 py-5 flex flex-col gap-4">
                                             <div class="flex items-center justify-between">
                                                 <h3
-                                                    class="text-sm font-semibold text-text-main flex items-center gap-2">
+                                                    class="text-sm font-semibold text-text-main flex items-center gap-2"
+                                                    data-onboarding-target="click-errors-instruction-title">
                                                     <span
                                                         class="material-symbols-outlined text-primary text-[18px]">wysiwyg</span>
                                                     Инструкция (опционально)
@@ -475,9 +515,12 @@
                                     <div
                                         class="bg-surface-2 p-4 rounded-lg border border-border-subtle shadow-sm flex flex-col gap-4">
                                         <div data-reference-section
+                                            data-onboarding-target="click-errors-reference-section"
+                                            data-onboarding-spotlight="frame"
                                             class="flex flex-col gap-4 bg-surface-1 border border-border-subtle rounded-xl p-4 shadow-sm">
                                             <div class="flex flex-wrap items-center gap-3 justify-between">
-                                                <h4 class="text-sm font-bold text-text-main flex items-center gap-2">
+                                                <h4 class="text-sm font-bold text-text-main flex items-center gap-2"
+                                                    data-onboarding-target="click-errors-reference-title">
                                                     <span
                                                         class="material-symbols-outlined text-primary text-[18px]">menu_book</span>
                                                     Референсный текст
@@ -556,8 +599,11 @@
                         </div>
                     </section>
                 </div>
-                <div data-errors-subpane="errors" class="hidden flex flex-col gap-3">
-                    <section class="bg-surface-1 rounded-xl border border-border-subtle shadow-sm overflow-hidden">
+                <div data-errors-subpane="errors" class="hidden flex flex-col gap-3"
+                    data-onboarding-target="click-errors-texts-authoring">
+                    <section class="bg-surface-1 rounded-xl border border-border-subtle shadow-sm overflow-hidden"
+                        data-onboarding-target="click-errors-texts-options"
+                        data-onboarding-spotlight="frame">
                         <div
                             class="flex items-center justify-between px-5 py-3 bg-surface-2 border-b border-border-subtle">
                             <h3 class="text-base font-semibold text-text-main">Список вариантов</h3>
@@ -587,7 +633,9 @@
                             </div>
                         </div>
                     </section>
-                    <section class="bg-surface-1 rounded-xl border border-border-subtle shadow-sm overflow-hidden">
+                    <section class="bg-surface-1 rounded-xl border border-border-subtle shadow-sm overflow-hidden"
+                        data-onboarding-target="click-errors-texts-instruction"
+                        data-onboarding-spotlight="frame">
                         <div class="px-5 py-5 flex flex-col gap-4">
                             <div class="flex items-center justify-between">
                                 <h3 class="text-sm font-semibold text-text-main flex items-center gap-2">
@@ -617,6 +665,8 @@
     </template>
 
     <script src="../../assets/ConnectionMonitor.js"></script>
+    <script src="../../assets/onboarding_tours.js?v=draw-onboarding-4"></script>
+    <script src="../../assets/OnboardingTour.js?v=draw-onboarding-4"></script>
 </body>
 
 </html>

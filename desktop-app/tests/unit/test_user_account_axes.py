@@ -1,4 +1,5 @@
 import sys
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 
@@ -65,6 +66,40 @@ def test_admin_effective_plan_is_premium_even_when_stored_plan_is_free():
     assert user.effective_plan == USER_PLAN_PREMIUM
     assert payload["plan"] == USER_PLAN_FREE
     assert payload["effective_plan"] == USER_PLAN_PREMIUM
+
+
+def test_active_timed_premium_is_effective_premium():
+    expires_at = (datetime.now(timezone.utc) + timedelta(days=2)).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    user = User(
+        user_id="user_1",
+        name="Timed Premium",
+        created_at="2026-04-20T10:00:00",
+        role=USER_ROLE_USER,
+        plan=USER_PLAN_PREMIUM,
+        premium_expires_at=expires_at,
+        settings={},
+    )
+
+    payload = user.to_api_dict()
+
+    assert user.effective_plan == USER_PLAN_PREMIUM
+    assert payload["premium_expires_at"] == expires_at
+    assert payload["effective_plan"] == USER_PLAN_PREMIUM
+
+
+def test_expired_timed_premium_resolves_to_free():
+    expires_at = (datetime.now(timezone.utc) - timedelta(days=1)).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    user = User(
+        user_id="user_1",
+        name="Expired Premium",
+        created_at="2026-04-20T10:00:00",
+        role=USER_ROLE_USER,
+        plan=USER_PLAN_PREMIUM,
+        premium_expires_at=expires_at,
+        settings={},
+    )
+
+    assert user.to_api_dict()["effective_plan"] == USER_PLAN_FREE
 
 
 def test_user_service_create_user_defaults_role_and_plan(tmp_path):

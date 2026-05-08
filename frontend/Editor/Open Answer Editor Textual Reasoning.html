@@ -7,35 +7,40 @@
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>ACTRA — Редактор открытых ответов</title>
-    <link rel="stylesheet" href="open_answer_editor.css">
+    <link rel="stylesheet" href="open_answer_editor.css?v=open-answer-onboarding-14">
     <!-- BaseEditor must be loaded before open_answer_editor.js -->
     <script src="undo_manager.js"></script>
     <script src="autosave_manager.js"></script>
     <script src="ai_ux_messages.js"></script>
     <script src="base_editor.js"></script>
-    <script src="open_answer_editor.js" defer></script>
+    <script src="open_answer_editor.js?v=open-answer-onboarding-14" defer></script>
 
     <link href="../../assets/tailwind.css" rel="stylesheet" />
     <link href="../../assets/fonts.css" rel="stylesheet" />
     <link href="../../assets/lightB-variables.css" rel="stylesheet" />
     <link href="../../assets/lightB-components.css" rel="stylesheet" />
     <link href="../../assets/animations.css" rel="stylesheet" />
+    <link href="/assets/onboarding-tour.css?v=open-answer-onboarding-14" rel="stylesheet" />
 
 </head>
 
 <body class="bg-bg-main text-text-main h-screen overflow-hidden flex font-display antialiased">
     <main class="flex-1 flex flex-col h-full overflow-hidden relative">
         <header
-            class="open-answer-editor-header h-16 flex items-center justify-between gap-4 px-6 bg-surface-1 border-b border-border-subtle shrink-0 z-10">
+            class="open-answer-editor-header h-16 flex items-center justify-between gap-4 px-6 bg-surface-1 border-b border-border-subtle shrink-0 z-10"
+            data-onboarding-spotlight="frame"
+            data-onboarding-target="open-answer-header">
             <div class="open-answer-editor-header__main flex min-w-0 flex-1 items-center gap-4">
                 <button id="back-to-dashboard-btn" title="Библиотека заданий"
                     class="p-2 rounded-full hover:bg-bg-hover text-text-secondary transition-colors">
                     <span class="material-symbols-outlined">arrow_back</span>
                 </button>
                 <div class="open-answer-editor-header__title-row flex min-w-0 flex-1 items-center gap-4">
-                    <h2 id="editor-title" class="text-lg font-bold text-text-main tracking-tight">Редактирование задания
+                    <h2 id="editor-title" class="text-lg font-bold text-text-main tracking-tight"
+                        data-onboarding-target="open-answer-title">Редактирование задания
                     </h2>
-                    <div id="save-status-container" class="open-answer-header-status status-cluster" data-tone="success">
+                    <div id="save-status-container" class="open-answer-header-status status-cluster" data-tone="success"
+                        data-onboarding-target="open-answer-save-status">
                         <div id="save-status-indicator" class="status-cluster__dot"></div>
                         <div class="status-cluster__body">
                             <span id="save-status-text"
@@ -48,7 +53,18 @@
                 </div>
             </div>
             <div class="open-answer-editor-header__actions flex items-center gap-3">
-                <button id="save-task-btn" class="btn-primary flex items-center gap-2 text-sm font-semibold shadow-md">
+                <button type="button"
+                    class="onboarding-help-button onboarding-help-button--icon"
+                    data-onboarding-help-button
+                    data-onboarding-help-mode="direct"
+                    data-onboarding-tour-id="open-answer-authoring"
+                    hidden
+                    title="Показать обучение"
+                    aria-label="Показать обучение">
+                    <span class="material-symbols-outlined" aria-hidden="true">help</span>
+                </button>
+                <button id="save-task-btn" class="btn-primary flex items-center gap-2 text-sm font-semibold shadow-md"
+                    data-onboarding-target="open-answer-save-action">
                     <span class="material-symbols-outlined text-[18px]">save</span>
                     Сохранить
                 </button>
@@ -57,7 +73,8 @@
         <div class="flex-1 flex overflow-hidden">
             <div class="flex-1 overflow-y-auto custom-scrollbar bg-bg-main p-8">
                 <div class="max-w-3xl mx-auto flex flex-col gap-6 pb-20">
-                    <div class="flex flex-col gap-2">
+                    <div class="flex flex-col gap-2" data-onboarding-spotlight="frame"
+                        data-onboarding-target="open-answer-question-block">
                         <label class="text-sm font-semibold text-text-main flex items-center gap-2">
                             <span class="material-symbols-outlined text-[18px] text-text-disabled">help</span>
                             Вопрос
@@ -65,11 +82,13 @@
                         <div
                             class="bg-surface-2 rounded-xl shadow-sm border border-border-subtle overflow-hidden focus-within:border-primary transition-all">
                             <textarea id="question-textarea" data-auto-resize="true"
+                                data-onboarding-target="open-answer-question-text"
                                 class="w-full border-0 p-4 text-sm text-text-main placeholder:text-text-disabled focus:ring-0 resize-none min-h-[60px] leading-relaxed bg-transparent"
                                 placeholder="Введите формулировку вопроса или описание кейса..."></textarea>
                         </div>
                     </div>
-                    <div class="flex flex-col gap-2">
+                    <div class="flex flex-col gap-2" data-onboarding-spotlight="frame"
+                        data-onboarding-target="open-answer-reference-block">
                         <div class="flex items-center justify-between">
                             <label class="text-sm font-semibold text-text-main flex items-center gap-2">
                                 <span
@@ -80,6 +99,7 @@
                         <div
                             class="bg-surface-2 rounded-xl shadow-sm border border-border-subtle overflow-hidden focus-within:border-primary transition-all">
                             <textarea id="reference-textarea" data-auto-resize="true"
+                                data-onboarding-target="open-answer-reference-text"
                                 class="w-full border-0 p-4 text-sm text-text-main placeholder:text-text-disabled focus:ring-0 resize-none min-h-[72px] leading-relaxed bg-transparent"
                                 placeholder="Введите текст правильного ответа..."></textarea>
                             <div
@@ -88,6 +108,7 @@
                                     для
                                     правильного ответа</span>
                                 <button id="split-keywords-btn"
+                                    data-onboarding-target="open-answer-split-keywords"
                                     class="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-primary bg-primary-lighter hover:bg-primary-light rounded-md border border-primary-light transition-colors">
                                     <span class="material-symbols-outlined text-[16px]">cut</span>
                                     Разбить на ключевые слова
@@ -95,19 +116,22 @@
                             </div>
                         </div>
                     </div>
-                    <div class="flex flex-col gap-3">
+                    <div class="flex flex-col gap-3" data-onboarding-spotlight="frame"
+                        data-onboarding-target="open-answer-keywords-hint-block">
                         <div class="flex items-center justify-between">
                             <h3 class="text-xs font-bold text-text-secondary uppercase tracking-wider">Ключевые слова
                             </h3>
                             <span id="selected-count-badge"
+                                data-onboarding-target="open-answer-selected-count"
                                 class="text-xs font-medium text-text-secondary bg-surface-2 px-2 py-0.5 rounded-full">Выбрано:
                                 0</span>
                         </div>
                         <div id="keywords-container"
+                            data-onboarding-target="open-answer-keywords-container"
                             class="flex flex-wrap gap-2 p-4 bg-surface-1 rounded-xl border border-dashed border-border-subtle min-h-[80px]">
                             <!-- Keywords will be rendered here -->
                         </div>
-                        <div class="flex flex-col gap-2">
+                        <div class="flex flex-col gap-2" data-onboarding-target="open-answer-hint-block">
                             <label class="text-sm font-semibold text-text-main flex items-center gap-2">
                                 <span
                                     class="material-symbols-outlined text-[18px] text-text-disabled">chat_bubble</span>
@@ -116,6 +140,7 @@
                             <div
                                 class="bg-surface-2 rounded-xl shadow-sm border border-border-subtle overflow-hidden focus-within:border-primary transition-all">
                                 <textarea id="hint-textarea" data-auto-resize="true"
+                                    data-onboarding-target="open-answer-hint-text"
                                     class="w-full border-0 p-4 text-sm text-text-main placeholder:text-text-disabled focus:ring-0 resize-none min-h-[48px] leading-relaxed bg-transparent"
                                     placeholder="Добавьте подсказку, которую увидит пользователь при необходимости..."></textarea>
                             </div>
@@ -125,9 +150,9 @@
             </div>
             <aside
                 class="w-[320px] bg-surface-1 border-l border-border-subtle flex flex-col shrink-0 z-10 overflow-y-auto custom-scrollbar"
-                style="width: 320px;">
+                style="width: 320px;" data-onboarding-spotlight="frame" data-onboarding-target="open-answer-sidebar">
                 <div class="p-6 flex flex-col gap-8">
-                    <div class="flex flex-col gap-5">
+                    <div class="flex flex-col gap-5" data-onboarding-target="open-answer-requirements">
                         <div class="flex items-center gap-2 pb-2 border-b border-border-subtle">
                             <span class="material-symbols-outlined text-text-disabled">fact_check</span>
                             <h3 class="text-sm font-bold text-text-main">Требования к ответу</h3>
@@ -136,6 +161,7 @@
                             <div class="flex items-start gap-3 mt-2">
                                 <div class="flex h-5 items-center">
                                     <input
+                                        data-onboarding-target="open-answer-sequence-check"
                                         class="h-4 w-4 rounded border-border-subtle text-primary focus:ring-primary bg-surface-1"
                                         id="sequence-order-check" type="checkbox" />
                                 </div>
@@ -150,6 +176,7 @@
                                 <label class="text-xs font-semibold text-text-secondary uppercase tracking-wide"
                                     for="max-length-input">Максимальная длина ответа</label>
                                 <input id="max-length-input" type="number" min="1" inputmode="numeric"
+                                    data-onboarding-target="open-answer-max-length"
                                     class="w-full rounded-md border-border-subtle py-2 px-3 text-sm focus:ring-primary focus:border-primary text-text-main bg-surface-1"
                                     placeholder="Оставьте пустым, если ответ можно вводить без лимита" />
                                 <p class="text-xs text-text-muted">Необязательная настройка. Если задать лимит, в
@@ -158,7 +185,8 @@
                         </div>
                     </div>
 
-                    <div class="flex flex-col gap-3 pt-2 border-t border-border-subtle">
+                    <div class="flex flex-col gap-3 pt-2 border-t border-border-subtle"
+                        data-onboarding-target="open-answer-images-panel">
                         <div class="flex items-center gap-2 pb-2">
                             <span class="material-symbols-outlined text-text-disabled">image</span>
                             <h3 class="text-sm font-bold text-text-main">Изображения</h3>
@@ -169,6 +197,7 @@
                         <div id="images-container" class="grid grid-cols-2 gap-3">
                             <!-- Images will be rendered here -->
                             <button id="add-image-btn"
+                                data-onboarding-target="open-answer-add-image"
                                 class="aspect-square rounded-lg border-2 border-dashed border-border-subtle hover:border-primary-light hover:bg-primary-lighter flex flex-col items-center justify-center gap-2 transition-all group">
                                 <span
                                     class="material-symbols-outlined text-text-disabled group-hover:text-primary text-[24px]">add_photo_alternate</span>
@@ -199,6 +228,8 @@
     </div>
 
     <script src="../../assets/ConnectionMonitor.js"></script>
+    <script src="/assets/onboarding_tours.js?v=open-answer-onboarding-14" defer></script>
+    <script src="/assets/OnboardingTour.js?v=open-answer-onboarding-14" defer></script>
 </body>
 
 </html>

@@ -25,7 +25,7 @@ from services.calendar.calendar_service import (
     _empty_activity_entry,
     CalendarService,
 )
-from services.calendar.models import UserCalendarSettings
+from services.calendar.models import ComplexProgress, ComplexStatus, UserCalendarSettings
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -250,6 +250,30 @@ class TestSettings:
 
 
 class TestActivity:
+    def test_failed_attempt_health_survives_background_recalculation(self, svc):
+        svc.save_complex_progress(ComplexProgress(
+            complex_id="complex_1",
+            user_id="user1",
+            status=ComplexStatus.IN_PROGRESS,
+            health_score=0.9,
+        ))
+
+        svc.record_task_attempt(
+            task_id="task_1",
+            complex_id="complex_1",
+            user_grading=0,
+            response_time_seconds=30,
+        )
+        after_attempt = svc.get_complex_progress("complex_1")
+        assert after_attempt.health_score < 0.65
+
+        svc.get_today_plan(
+            task_pool={"complex_1": [{"task_id": "task_1", "complex_name": "Complex 1"}]},
+            complex_names={"complex_1": "Complex 1"},
+        )
+        after_recalculation = svc.get_complex_progress("complex_1")
+        assert after_recalculation.health_score < 0.65
+
     def test_load_empty_activity(self, svc):
         result = svc.get_activity_history(days=30)
         assert isinstance(result, dict)

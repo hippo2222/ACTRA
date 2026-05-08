@@ -47,6 +47,34 @@ def _safe_complex_display_name(value: Any, fallback: str = "Комплекс") -
     return text
 
 
+def _activity_entry_has_learning_activity(raw: Any) -> bool:
+    """Return True when a persisted day contains any real learning signal."""
+    if isinstance(raw, dict):
+        numeric_keys = (
+            "completion_percent",
+            "tasks_attempted",
+            "tasks_solved",
+            "seconds_spent",
+            "microcards_reviews",
+            "microcards_correct",
+            "microcards_seconds_spent",
+            "activity_attempts_total",
+            "activity_success_total",
+            "activity_seconds_spent_total",
+        )
+        for key in numeric_keys:
+            try:
+                if int(raw.get(key, 0) or 0) > 0:
+                    return True
+            except Exception:
+                continue
+        return False
+    try:
+        return int(raw or 0) > 0
+    except Exception:
+        return False
+
+
 class SchedulerService:
     """Сервис планирования обучения."""
     
@@ -64,6 +92,13 @@ class SchedulerService:
     
     # Интерливинг
     MAX_CONSECUTIVE_SAME_COMPLEX = 2
+    MASTERY_SORT_RANK = {
+        MasteryCategory.CRITICAL: 0,
+        MasteryCategory.NEEDS_PRACTICE: 1,
+        MasteryCategory.GOOD: 2,
+        MasteryCategory.MASTERED: 3,
+        MasteryCategory.MAINTAINED: 4,
+    }
     
     def __init__(self, health_service: Optional[HealthScoreService] = None):
         """
@@ -238,15 +273,7 @@ class SchedulerService:
         """
         if not tasks or len(tasks) >= target_count:
             return tasks
-        
-        result = list(tasks)
-        idx = 0
-        
-        while len(result) < target_count and tasks:
-            result.append(tasks[idx % len(tasks)])
-            idx += 1
-        
-        return result
+        return tasks
     
     def _apply_interleaving(
         self,
@@ -273,12 +300,7 @@ class SchedulerService:
         
         # Если задач меньше, чем нужно, сразу размножаем, чтобы выдержать требуемый count
         if len(tasks) < count:
-            padded: List[ScheduledTask] = []
-            idx = 0
-            while len(padded) < count and tasks:
-                padded.append(tasks[idx % len(tasks)])
-                idx += 1
-            return padded
+            return tasks
         
         result: List[ScheduledTask] = []
         by_complex: Dict[str, List[ScheduledTask]] = defaultdict(list)
@@ -504,6 +526,116 @@ class SchedulerService:
     # SCHEDULE STRIP (ЛЕНТА ДНЕЙ)
     # =========================================================================
     
+    def _get_active_review_complexes(
+        self,
+        all_progress: List[ComplexProgress],
+        task_pool: Dict[str, List[Dict[str, Any]]],
+        complex_names: Dict[str, str],
+    ) -> List[ComplexProgress]:
+        known_complex_ids = set(task_pool.keys()) | set(complex_names.keys())
+        active_complexes = [
+            p for p in all_progress
+            if p.status in (ComplexStatus.IN_PROGRESS, ComplexStatus.MASTERED)
+            and str(p.complex_id).lower() != "daily_mix"
+        ]
+        if known_complex_ids:
+            active_complexes = [
+                p for p in active_complexes
+                if p.complex_id in known_complex_ids
+            ]
+        return active_complexes
+
+    def _review_offsets_for_progress(
+        self,
+        progress: ComplexProgress,
+        today: date,
+        days_count: int,
+    ) -> List[int]:
+        try:
+            due_date = progress.get_next_review_date(today)
+        except Exception:
+            due_date = today
+
+        due_offset = max(0, (due_date - today).days)
+        last_reviewed_at = progress.last_reviewed_at
+        last_reviewed_date = (
+            last_reviewed_at.date()
+            if hasattr(last_reviewed_at, "date")
+            else last_reviewed_at
+        )
+        reviewed_today = last_reviewed_date == today
+        if due_offset >= days_count:
+            return [0] if reviewed_today and days_count > 0 else []
+
+        category = progress.get_mastery_category()
+        never_reviewed = last_reviewed_at is None
+
+        if category == MasteryCategory.CRITICAL:
+            spacing = [0, 1, 2, 4, 6] if progress.health_score < 0.35 else [0, 1, 3, 6]
+        elif category == MasteryCategory.NEEDS_PRACTICE:
+            spacing = [0, 1, 3, 6] if never_reviewed or progress.health_score < 0.65 else [0, 2, 5]
+        elif category == MasteryCategory.GOOD:
+            spacing = [0, 3, 6] if never_reviewed else [0, 3]
+        elif category == MasteryCategory.MASTERED:
+            spacing = [0]
+        else:
+            spacing = [0]
+
+        offsets = []
+        for delta in spacing:
+            offset = due_offset + delta
+            if 0 <= offset < days_count and offset not in offsets:
+                offsets.append(offset)
+        if reviewed_today and 0 not in offsets:
+            offsets.insert(0, 0)
+        return offsets
+
+    def _build_review_schedule_by_date(
+        self,
+        active_complexes: List[ComplexProgress],
+        today: date,
+        days_count: int,
+        rest_days: Dict[str, Any],
+    ) -> Dict[date, List[ComplexProgress]]:
+        max_complexes_per_day = 4
+        schedule: Dict[date, List[ComplexProgress]] = defaultdict(list)
+        candidates: List[Tuple[int, Tuple[int, float, str], ComplexProgress]] = []
+
+        for progress in active_complexes:
+            rank = self.MASTERY_SORT_RANK.get(progress.get_mastery_category(), 99)
+            priority = (rank, progress.health_score, str(progress.complex_id))
+            for offset in self._review_offsets_for_progress(progress, today, days_count):
+                candidates.append((offset, priority, progress))
+
+        candidates.sort(key=lambda item: (item[0], item[1]))
+
+        for offset, _priority, progress in candidates:
+            target_offset = offset
+            while target_offset < days_count:
+                target_date = today + timedelta(days=target_offset)
+                if target_date.isoformat() in rest_days:
+                    target_offset += 1
+                    continue
+
+                day_items = schedule[target_date]
+                already_planned = any(p.complex_id == progress.complex_id for p in day_items)
+                if not already_planned and len(day_items) < max_complexes_per_day:
+                    day_items.append(progress)
+                    break
+
+                target_offset += 1
+
+        for day_items in schedule.values():
+            day_items.sort(
+                key=lambda p: (
+                    self.MASTERY_SORT_RANK.get(p.get_mastery_category(), 99),
+                    p.health_score,
+                    str(p.complex_id),
+                )
+            )
+
+        return dict(schedule)
+
     def build_schedule_strip(
         self,
         user_id: str,
@@ -555,6 +687,21 @@ class SchedulerService:
                        "Пятница", "Суббота", "Воскресенье"]
         day_names_short_ru = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
         
+        reviewable_complexes: List[ComplexProgress] = []
+        review_schedule_by_date: Dict[date, List[ComplexProgress]] = {}
+        if all_progress is not None and task_pool is not None:
+            reviewable_complexes = self._get_active_review_complexes(
+                all_progress,
+                task_pool,
+                complex_names,
+            )
+            review_schedule_by_date = self._build_review_schedule_by_date(
+                reviewable_complexes,
+                today,
+                days_count,
+                rest_days,
+            )
+        
         result = []
         
         for i in range(-1, days_count):  # -1 = вчера
@@ -583,14 +730,13 @@ class SchedulerService:
             # Определяем статус
             if i < 0:
                 # Прошлый день
-                day_activity = activity_history.get(date_iso, {})
-                if not isinstance(day_activity, dict):
-                    day_activity = {}
-                completion = int(day_activity.get("completion_percent", 0) or 0)
-                if is_manual_rest and completion == 0:
+                has_activity = _activity_entry_has_learning_activity(
+                    activity_history.get(date_iso, {})
+                )
+                if is_manual_rest and not has_activity:
                     status = DayStatus.REST_DAY
                     badges = ["Выходной"]
-                elif completion > 0:
+                elif has_activity:
                     status = DayStatus.COMPLETED
                     badges = []
                 else:
@@ -653,7 +799,12 @@ class SchedulerService:
                         complexes_needing_review = sorted_by_health[:3]  # Максимум 3
                     
                     # Сортируем по приоритету: критичные первыми
-                    complexes_needing_review.sort(key=lambda p: (p.get_mastery_category().value, p.health_score))
+                    complexes_needing_review.sort(
+                        key=lambda p: (
+                            self.MASTERY_SORT_RANK.get(p.get_mastery_category(), 99),
+                            p.health_score,
+                        )
+                    )
                     
                     # Ограничиваем количество комплексов в день (не более 4)
                     max_complexes_per_day = 4
@@ -671,7 +822,7 @@ class SchedulerService:
                         available_slots = max_complexes_per_day - len(critical)
                         complexes_needing_review = critical + non_critical[:available_slots]
                     
-                    active_complexes = complexes_needing_review
+                    active_complexes = review_schedule_by_date.get(current_date, [])
                     
                     # Определяем лимит отображения (3 для компактного вида)
                     display_limit = 3
@@ -716,7 +867,7 @@ class SchedulerService:
                             overflow_count = len(all_tasks_detailed) - display_limit
                     else:
                         # Нет активных комплексов
-                        if i == 0:
+                        if i == 0 and not reviewable_complexes:
                             badges.append("Нет данных")
                 else:
                     # Нет данных о прогрессе/пуле задач: показываем совместимый fallback.

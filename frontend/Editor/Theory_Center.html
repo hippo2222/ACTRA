@@ -15,6 +15,7 @@
     <link href="/assets/lightB-components.css" rel="stylesheet" />
     <link href="/assets/global-header.css" rel="stylesheet" />
     <link href="/assets/animations.css" rel="stylesheet" />
+    <link href="/assets/onboarding-tour.css?v=theory-center-onboarding-1" rel="stylesheet" />
     <style>
         body {
             min-height: 100vh;
@@ -328,6 +329,20 @@
             min-height: 42px;
         }
 
+        body.onboarding-tour-active[data-onboarding-tour-id="theory-center-library"][data-onboarding-step-id="theory-center-find-and-filter"] .theory-center-shell > .theory-center-list-panel,
+        body.onboarding-tour-active[data-onboarding-tour-id="theory-center-library"][data-onboarding-step-id="theory-center-find-and-filter"] .theory-center-shell > .theory-center-summary-panel {
+            filter: blur(3px);
+            opacity: 0.68;
+            transition: filter 0.22s ease, opacity 0.22s ease;
+        }
+
+        body.onboarding-tour-active[data-onboarding-tour-id="theory-center-library"][data-onboarding-step-id="theory-center-card-and-actions"] .theory-center-shell > .theory-center-controls-panel,
+        body.onboarding-tour-active[data-onboarding-tour-id="theory-center-library"][data-onboarding-step-id="theory-center-card-and-actions"] .theory-center-shell > .theory-center-summary-panel {
+            filter: blur(3px);
+            opacity: 0.68;
+            transition: filter 0.22s ease, opacity 0.22s ease;
+        }
+
         @media (prefers-reduced-motion: reduce) {
             .theory-summary-card,
             .theory-row-card,
@@ -344,7 +359,7 @@
     <div data-global-header data-app-section="theory"></div>
     <main class="theory-center-enter px-4 py-6 sm:px-6 lg:px-8" data-page-transition-root>
         <div class="theory-center-shell mx-auto flex flex-col gap-5">
-            <section class="theory-center-panel rounded-[24px] p-4 sm:p-5">
+            <section class="theory-center-panel theory-center-summary-panel rounded-[24px] p-4 sm:p-5" data-onboarding-target="theory-summary-block">
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div class="min-w-0">
                         <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-text-secondary">Быстрые подборки</p>
@@ -352,21 +367,22 @@
                     </div>
                     <button id="theory-center-summary-toggle" type="button"
                         class="theory-mini-btn theory-mini-btn--neutral inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold hover:border-primary hover:text-primary"
+                        data-onboarding-target="theory-summary-toggle"
                         aria-expanded="false">
                         <span id="theory-center-summary-toggle-icon" class="material-symbols-outlined text-[18px]">expand_more</span>
                         <span id="theory-center-summary-toggle-label">Развернуть</span>
                     </button>
                 </div>
                 <div id="theory-center-summary-wrap" class="theory-summary-wrap mt-3 hidden" data-collapsed="1">
-                    <div class="theory-summary-grid" id="theory-center-summary">
+                    <div class="theory-summary-grid" id="theory-center-summary" data-onboarding-target="theory-summary-grid">
                         <div class="theory-center-panel rounded-[24px] p-4 text-sm text-text-secondary">Загрузка...</div>
                     </div>
                 </div>
             </section>
 
-            <section class="theory-center-panel rounded-[30px] p-5 sm:p-6">
+            <section class="theory-center-panel theory-center-controls-panel rounded-[30px] p-5 sm:p-6" data-onboarding-target="theory-controls-block">
                 <div class="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.3fr)_auto_auto] xl:items-end">
-                    <label class="flex min-w-0 flex-col gap-2">
+                    <label class="flex min-w-0 flex-col gap-2" data-onboarding-target="theory-search">
                         <span class="text-xs font-bold uppercase tracking-[0.16em] text-text-secondary">Поиск</span>
                         <span class="relative flex items-center">
                             <span class="pointer-events-none absolute left-4 text-text-secondary">
@@ -378,7 +394,7 @@
                         </span>
                     </label>
 
-                    <div class="flex flex-col gap-2">
+                    <div class="flex flex-col gap-2" data-onboarding-target="theory-scope-filters">
                         <span class="text-xs font-bold uppercase tracking-[0.16em] text-text-secondary">Раздел</span>
                         <div class="flex flex-wrap rounded-2xl border border-border-subtle bg-surface-1 p-1">
                             <button id="theory-center-scope-all" type="button" data-scope="all" data-active="1"
@@ -394,15 +410,15 @@
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:min-w-[360px]">
-                        <label class="flex flex-col gap-2">
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:min-w-[360px]" data-onboarding-target="theory-filter-selects">
+                        <label class="flex flex-col gap-2" data-onboarding-target="theory-module-filter">
                             <span class="text-xs font-bold uppercase tracking-[0.16em] text-text-secondary">Модуль</span>
                             <select id="theory-center-module-filter"
                                 class="rounded-2xl border border-border-strong bg-bg-main px-4 py-3 text-sm text-text-main outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary-light">
                                 <option value="all">Все модули</option>
                             </select>
                         </label>
-                        <label class="flex flex-col gap-2">
+                        <label class="flex flex-col gap-2" data-onboarding-target="theory-state-filter">
                             <span class="text-xs font-bold uppercase tracking-[0.16em] text-text-secondary">Состояние</span>
                             <select id="theory-center-state-filter"
                                 class="rounded-2xl border border-border-strong bg-bg-main px-4 py-3 text-sm text-text-main outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary-light">
@@ -414,7 +430,7 @@
                 <div id="theory-center-flash" class="mt-4 hidden rounded-2xl border px-4 py-3 text-sm"></div>
             </section>
 
-            <section class="theory-center-panel rounded-[30px] p-5 sm:p-6">
+            <section class="theory-center-panel theory-center-list-panel rounded-[30px] p-5 sm:p-6" data-onboarding-target="theory-list-block">
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                     <div class="min-w-0 sm:flex-1">
                         <h2 id="theory-center-list-title" class="text-xl font-bold text-text-main">Теории: все</h2>
@@ -422,7 +438,7 @@
                             Рабочие теории и связанные публикации из каталога в одном центре.
                         </p>
                     </div>
-                    <div class="flex w-full flex-wrap items-center justify-end gap-2 sm:ml-auto sm:w-auto sm:max-w-none">
+                    <div class="flex w-full flex-wrap items-center justify-end gap-2 sm:ml-auto sm:w-auto sm:max-w-none" data-onboarding-target="theory-list-actions">
                         <p id="theory-center-result-summary" class="text-right text-sm font-medium text-text-secondary">Подготавливаем данные...</p>
                         <span id="theory-center-selection-toggle-wrap" class="inline-flex"
                             title="Массовые операции доступны в разделах «Все» и «Без привязки»">
@@ -436,7 +452,7 @@
                     </div>
                 </div>
 
-                <div id="theory-center-list" class="mt-5 grid grid-cols-1 gap-4">
+                <div id="theory-center-list" class="mt-5 grid grid-cols-1 gap-4" data-onboarding-target="theory-list">
                     <div class="rounded-3xl border border-border-subtle bg-surface-1 px-5 py-10 text-center text-sm text-text-secondary">
                         Загружаем обзор теории...
                     </div>
@@ -477,6 +493,8 @@
 
     <script src="/assets/SharedProfileModal.js"></script>
     <script src="/assets/GlobalHeader.js"></script>
+    <script src="/assets/onboarding_tours.js?v=theory-center-onboarding-1"></script>
+    <script src="/assets/OnboardingTour.js?v=theory-center-onboarding-1"></script>
     <script src="/ui/editor/theory_center.js"></script>
 </body>
 

@@ -33,9 +33,10 @@
 }
 
 #editor-title {
-    flex: 1 1 auto;
+    flex: 0 1 auto;
     margin: 0;
     min-width: 0;
+    max-width: min(44rem, 100%);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -44,28 +45,74 @@
     font-weight: 700;
 }
 
+.open-answer-header-status,
 .open-answer-editor-header__title-row #save-status-container {
-    flex: 0 1 auto;
+    flex: 0 0 auto;
     margin-left: auto;
     min-height: 2.5rem;
+    width: fit-content;
     max-inline-size: min(100%, 22rem);
-    min-width: 0;
+    min-width: max-content;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     line-height: 1;
-    padding-inline: 1rem;
+    padding-inline: 1.05rem;
 }
 
+.open-answer-header-status {
+    max-width: none;
+    overflow: visible !important;
+}
+
+.open-answer-header-status .status-cluster__body {
+    display: flex;
+    flex-direction: row;
+    width: max-content;
+    min-width: max-content;
+    min-height: 100%;
+    gap: 0;
+    align-items: center;
+    justify-content: center;
+    overflow: visible !important;
+}
+
+.open-answer-header-status #save-status-indicator,
+.open-answer-header-status .status-cluster__dot {
+    display: none !important;
+}
+
+.open-answer-header-status #save-status-text,
+.open-answer-header-status .status-cluster__label {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    min-width: max-content;
+    max-width: none;
+    text-align: center;
+    white-space: nowrap;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    font-size: 0.875rem !important;
+    line-height: 1.2;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+.open-answer-editor-header__title-row #save-status-text,
 .open-answer-editor-header__title-row #save-status-container .status-cluster__label {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     margin: 0;
+    min-width: max-content;
+    max-width: none;
     text-align: center;
     white-space: nowrap;
-    overflow: visible;
-    text-overflow: clip;
+    overflow: visible !important;
+    text-overflow: clip !important;
     font-size: 0.875rem !important;
     line-height: 1.2;
     font-weight: 700;
@@ -79,6 +126,7 @@
     line-height: 1.2;
 }
 
+.open-answer-editor-header__title-row #save-status-indicator,
 .open-answer-editor-header__title-row #save-status-container .status-cluster__dot {
     display: none;
 }
@@ -86,12 +134,13 @@
 .open-answer-editor-header__title-row #save-status-container .status-cluster__body {
     display: flex;
     flex-direction: row;
-    width: auto;
+    width: max-content;
+    min-width: max-content;
     min-height: 100%;
     gap: 0;
     align-items: center;
     justify-content: center;
-    overflow: visible;
+    overflow: visible !important;
 }
 
 .open-answer-editor-header__actions {

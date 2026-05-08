@@ -70,6 +70,8 @@ def test_admin_list_users_returns_compact_payload(monkeypatch):
             "email": "alice@actra.site",
             "role": "user",
             "plan": "premium",
+            "premium_expires_at": None,
+            "effective_plan": "premium",
             "created_at": "2026-04-20T10:00:00Z",
         }
     ]

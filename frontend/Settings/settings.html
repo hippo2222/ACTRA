@@ -415,6 +415,28 @@
             </div>
         </section>
 
+        <section id="premium" class="animate-fade-in mb-6">
+            <div class="settings-card px-5 py-6 sm:px-6">
+                <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="flex h-10 w-10 items-center justify-center rounded-xl border border-primary-light bg-surface-1 shadow-sm">
+                            <span class="material-symbols-outlined text-[22px] text-primary">workspace_premium</span>
+                        </div>
+                        <div>
+                            <h2 id="settings-premium-title" class="text-xl font-bold text-text-main">Premium</h2>
+                            <p id="settings-premium-description" class="text-sm text-text-secondary">Больше места в библиотеке и доступ к полным страницам Календаря и Статистики.</p>
+                        </div>
+                    </div>
+                    <span id="settings-premium-status-pill" class="settings-info-pill">Загрузка...</span>
+                </div>
+
+                <div id="settings-premium-body" class="settings-section-card p-4 sm:p-5">
+                    <div class="text-sm text-text-secondary">Проверяем статус Premium...</div>
+                </div>
+                <span id="settings-premium-action-status" class="mt-4 hidden"></span>
+            </div>
+        </section>
+
         <div class="grid gap-6 lg:grid-cols-[1.35fr,0.95fr]">
             <section class="animate-fade-in">
                 <div class="settings-card px-5 py-6 sm:px-6">
@@ -817,6 +839,7 @@
     </div>
 
     <script src="../assets/NotificationUI.js"></script>
+    <script src="../assets/PremiumPromoModal.js"></script>
     <script src="/ui/settings/settings.js"></script>
 </body>
 
