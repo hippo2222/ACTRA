@@ -29,10 +29,10 @@
                     callouts: [
                         {
                             target: '[data-onboarding-target="main-catalog-card"]',
-                            placement: 'top',
+                            placement: 'bottom',
                             keepPlacement: true,
                             offsetX: -80,
-                            offsetY: 18,
+                            offsetY: 10,
                             title: 'Каталог учебных материалов',
                             body: 'Здесь можно смотреть открытые материалы других авторов, выбирать подходящие комплексы или теорию и добавлять их в свою библиотеку.'
                         },

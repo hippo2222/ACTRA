@@ -8,6 +8,10 @@ const source = fs.readFileSync(
     path.resolve('frontend/assets/OnboardingTour.js'),
     'utf8'
 );
+const toursSource = fs.readFileSync(
+    path.resolve('frontend/assets/onboarding_tours.js'),
+    'utf8'
+);
 
 const mainTour = {
     tourId: 'main-dashboard-work-contour',
@@ -131,5 +135,13 @@ describe('OnboardingTour first-run behavior', () => {
 
         expect(document.body.classList.contains('onboarding-tour-active')).toBe(true);
         expect(document.body.dataset.onboardingTourId).toBe('main-dashboard-work-contour');
+    });
+});
+
+describe('main onboarding tour config', () => {
+    it('points the catalog callout upward to the catalog card', () => {
+        expect(toursSource).toMatch(
+            /target:\s*'\[data-onboarding-target="main-catalog-card"\]',\s*placement:\s*'bottom',\s*keepPlacement:\s*true,\s*offsetX:\s*-80/
+        );
     });
 });
