@@ -47,9 +47,9 @@ describe('premium UI wiring', () => {
     const settings = read('frontend/Settings/settings.html');
 
     expect(promo).toContain('window.PremiumPromo');
+    expect(promo).toContain('$4.99');
     expect(promo).toContain('$7.99');
-    expect(promo).toContain('$14.99');
-    expect(promo).toContain('$37.99');
+    expect(promo).toContain('$19.99');
     expect(promo).toContain('\\u0432\\u044b\\u0433\\u043e\\u0434\\u043d\\u0435\\u0435');
     expect(promo).not.toContain('data-premium-order-days');
     expect(editor).toContain('data-premium-promo-feature="tasks-limit"');

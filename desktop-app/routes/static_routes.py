@@ -5,9 +5,11 @@ via ``send_from_directory``.  No business logic — pure file serving.
 """
 
 import hashlib
+from html import escape
 import json
 import logging
 import os
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict
@@ -20,6 +22,492 @@ from services.user_service import USER_PLAN_PREMIUM, resolve_effective_plan
 logger = logging.getLogger(__name__)
 
 static_bp = Blueprint("static_ui", __name__)
+
+
+_LEGAL_DOC_TYPES = {"terms", "privacy"}
+
+_PREMIUM_OFFERS = (
+    {"days": 14, "label": "14 days", "price": "$4.99", "per_day": "$0.36/day"},
+    {"days": 30, "label": "30 days", "price": "$7.99", "per_day": "$0.27/day"},
+    {"days": 90, "label": "90 days", "price": "$19.99", "per_day": "$0.22/day"},
+)
+
+_SUPPORT_EMAIL = "actrafb@proton.me"
+
+
+def _public_base_url() -> str:
+    configured = (
+        str(os.environ.get("ACTRA_AUTH_PUBLIC_BASE_URL") or "").strip()
+        or str(os.environ.get("ACTRA_PUBLIC_BASE_URL") or "").strip()
+        or "https://actra.site"
+    )
+    return configured.rstrip("/") or "https://actra.site"
+
+
+def _inline_markdown_to_html(text: str) -> str:
+    safe = escape(str(text or ""), quote=True)
+    safe = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", safe)
+    safe = re.sub(r"`([^`]+)`", r"<code>\1</code>", safe)
+    return safe
+
+
+def _markdown_to_legal_html(markdown: str) -> str:
+    blocks: list[str] = []
+    paragraph: list[str] = []
+    list_items: list[str] = []
+
+    def flush_paragraph() -> None:
+        if not paragraph:
+            return
+        text = " ".join(part.strip() for part in paragraph if part.strip()).strip()
+        if text:
+            blocks.append(f"<p>{_inline_markdown_to_html(text)}</p>")
+        paragraph.clear()
+
+    def flush_list() -> None:
+        if not list_items:
+            return
+        items = "".join(f"<li>{_inline_markdown_to_html(item)}</li>" for item in list_items)
+        blocks.append(f"<ul>{items}</ul>")
+        list_items.clear()
+
+    for raw_line in str(markdown or "").splitlines():
+        line = raw_line.strip()
+        if not line:
+            flush_paragraph()
+            flush_list()
+            continue
+
+        heading = re.match(r"^(#{1,3})\s+(.+)$", line)
+        if heading:
+            flush_paragraph()
+            flush_list()
+            level = min(3, len(heading.group(1)))
+            blocks.append(f"<h{level}>{_inline_markdown_to_html(heading.group(2))}</h{level}>")
+            continue
+
+        bullet = re.match(r"^[-*]\s+(.+)$", line)
+        if bullet:
+            flush_paragraph()
+            list_items.append(bullet.group(1))
+            continue
+
+        numbered = re.match(r"^\d+\.\s+(.+)$", line)
+        if numbered:
+            flush_paragraph()
+            list_items.append(numbered.group(1))
+            continue
+
+        flush_list()
+        paragraph.append(line.rstrip("\\"))
+
+    flush_paragraph()
+    flush_list()
+    return "\n".join(blocks)
+
+
+def _public_legal_document_page(doc_type: str) -> Any:
+    clean_type = str(doc_type or "").strip().lower()
+    if clean_type not in _LEGAL_DOC_TYPES:
+        return jsonify({"ok": False, "error": "document_not_found"}), 404
+
+    helpers = get_extra("misc_helpers", {}) or {}
+    load_manifest = helpers.get("load_legal_manifest")
+    resolve_doc_path = helpers.get("legal_doc_path")
+    if callable(load_manifest) and callable(resolve_doc_path):
+        manifest = load_manifest()
+        path = resolve_doc_path(clean_type, manifest=manifest)
+    else:
+        legal_dir = Path(__file__).resolve().parents[2] / "frontend" / "legal"
+        manifest_path = legal_dir / "manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.exists() else {}
+        filename = str(((manifest or {}).get(clean_type) or {}).get("filename") or f"{clean_type}.md")
+        path = legal_dir / filename
+
+    meta = dict((manifest or {}).get(clean_type) or {})
+    if path is None or not Path(path).exists():
+        return jsonify({"ok": False, "error": "document_not_found"}), 404
+
+    content = Path(path).read_text(encoding="utf-8")
+    title = str(meta.get("title") or ("Privacy Policy" if clean_type == "privacy" else "Terms of Service"))
+    version = str(meta.get("version") or "").strip()
+    effective_at = str(meta.get("effective_at") or "").strip()
+    body_html = _markdown_to_legal_html(content)
+    title_html = escape(title)
+    meta_parts = [part for part in (f"Version {version}" if version else "", effective_at) if part]
+    meta_html = escape(" | ".join(meta_parts))
+
+    return (
+        f"""<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{title_html} - ACTRA</title>
+  <style>
+    :root {{
+      color-scheme: light;
+      --bg: #f8f7f4;
+      --paper: #ffffff;
+      --text: #221f1a;
+      --muted: #6d6258;
+      --line: #dfd7ce;
+      --accent: #9d4f21;
+    }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.65;
+    }}
+    header {{
+      border-bottom: 1px solid var(--line);
+      background: var(--paper);
+    }}
+    .wrap {{
+      width: min(920px, calc(100% - 32px));
+      margin: 0 auto;
+    }}
+    .top {{
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 18px 0;
+    }}
+    .brand {{
+      color: var(--text);
+      font-size: 15px;
+      font-weight: 750;
+      text-decoration: none;
+    }}
+    .back {{
+      color: var(--accent);
+      font-size: 14px;
+      font-weight: 650;
+      text-decoration: none;
+    }}
+    main {{
+      padding: 42px 0 64px;
+    }}
+    article {{
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: clamp(22px, 4vw, 44px);
+      box-shadow: 0 14px 36px rgba(31, 25, 20, 0.07);
+    }}
+    h1 {{
+      margin: 0 0 8px;
+      font-size: clamp(28px, 4vw, 42px);
+      line-height: 1.12;
+    }}
+    .meta {{
+      margin: 0 0 30px;
+      color: var(--muted);
+      font-size: 14px;
+    }}
+    article h1:first-child {{
+      display: none;
+    }}
+    h2 {{
+      margin: 32px 0 10px;
+      font-size: 22px;
+      line-height: 1.25;
+    }}
+    h3 {{
+      margin: 24px 0 8px;
+      font-size: 18px;
+      line-height: 1.3;
+    }}
+    p {{
+      margin: 12px 0;
+    }}
+    ul {{
+      margin: 12px 0 18px;
+      padding-left: 24px;
+    }}
+    li {{
+      margin: 6px 0;
+    }}
+    code {{
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      padding: 1px 5px;
+      background: #fbfaf8;
+      font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+      font-size: 0.92em;
+    }}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap top">
+      <a class="brand" href="/">ACTRA</a>
+      <a class="back" href="/ui/welcome">Open app</a>
+    </div>
+  </header>
+  <main class="wrap">
+    <article>
+      <h1>{title_html}</h1>
+      <p class="meta">{meta_html}</p>
+      {body_html}
+    </article>
+  </main>
+</body>
+</html>""",
+        200,
+        {"Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store"},
+    )
+
+
+def _public_commerce_page(*, title: str, subtitle: str, body_html: str) -> Any:
+    title_html = escape(str(title or "ACTRA").strip() or "ACTRA")
+    subtitle_html = escape(str(subtitle or "").strip())
+    return (
+        f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{title_html} - ACTRA</title>
+  <style>
+    :root {{
+      color-scheme: light;
+      --bg: #f7f8fb;
+      --paper: #ffffff;
+      --text: #182039;
+      --muted: #5a657c;
+      --line: #d9deea;
+      --accent: #2f2690;
+      --accent-soft: #eef0ff;
+    }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.6;
+    }}
+    a {{ color: var(--accent); font-weight: 700; }}
+    header {{
+      border-bottom: 1px solid var(--line);
+      background: var(--paper);
+    }}
+    .wrap {{
+      width: min(1040px, calc(100% - 32px));
+      margin: 0 auto;
+    }}
+    .top {{
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 18px 0;
+    }}
+    .brand {{
+      color: var(--text);
+      font-size: 15px;
+      font-weight: 850;
+      text-decoration: none;
+      letter-spacing: 0;
+    }}
+    nav {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      font-size: 14px;
+    }}
+    nav a {{ text-decoration: none; }}
+    main {{
+      padding: clamp(34px, 6vw, 72px) 0 70px;
+    }}
+    .hero {{
+      max-width: 760px;
+      margin-bottom: 28px;
+    }}
+    .eyebrow {{
+      margin: 0 0 8px;
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }}
+    h1 {{
+      margin: 0;
+      font-size: clamp(34px, 5vw, 58px);
+      line-height: 1.02;
+      letter-spacing: 0;
+    }}
+    .subtitle {{
+      margin: 16px 0 0;
+      max-width: 680px;
+      color: var(--muted);
+      font-size: 18px;
+    }}
+    .grid {{
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin: 28px 0;
+    }}
+    .card, .panel {{
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--paper);
+      box-shadow: 0 14px 34px rgba(20, 28, 52, 0.07);
+    }}
+    .card {{
+      display: grid;
+      gap: 10px;
+      padding: 20px;
+    }}
+    .card strong {{
+      font-size: 18px;
+    }}
+    .price {{
+      font-size: 34px;
+      line-height: 1;
+      font-weight: 950;
+      letter-spacing: 0;
+    }}
+    .muted {{ color: var(--muted); }}
+    .badge {{
+      display: inline-flex;
+      width: fit-content;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      padding: 4px 9px;
+      font-size: 12px;
+      font-weight: 850;
+    }}
+    .panel {{
+      margin-top: 18px;
+      padding: clamp(20px, 4vw, 32px);
+    }}
+    h2 {{
+      margin: 0 0 12px;
+      font-size: 24px;
+      line-height: 1.25;
+    }}
+    p {{ margin: 10px 0; }}
+    ul {{
+      margin: 12px 0 0;
+      padding-left: 22px;
+    }}
+    li {{ margin: 6px 0; }}
+    footer {{
+      border-top: 1px solid var(--line);
+      padding: 22px 0 32px;
+      color: var(--muted);
+      font-size: 14px;
+    }}
+    @media (max-width: 760px) {{
+      .top {{ align-items: flex-start; flex-direction: column; }}
+      .grid {{ grid-template-columns: 1fr; }}
+      nav {{ gap: 10px; }}
+    }}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap top">
+      <a class="brand" href="/">ACTRA</a>
+      <nav aria-label="Public links">
+        <a href="/pricing">Pricing</a>
+        <a href="/refund">Refund policy</a>
+        <a href="/legal/terms">Terms</a>
+        <a href="/legal/privacy">Privacy</a>
+        <a href="/ui/welcome">Open app</a>
+      </nav>
+    </div>
+  </header>
+  <main class="wrap">
+    <section class="hero">
+      <p class="eyebrow">ACTRA Premium</p>
+      <h1>{title_html}</h1>
+      <p class="subtitle">{subtitle_html}</p>
+    </section>
+    {body_html}
+  </main>
+  <footer>
+    <div class="wrap">Support: <a href="mailto:{_SUPPORT_EMAIL}">{_SUPPORT_EMAIL}</a></div>
+  </footer>
+</body>
+</html>""",
+        200,
+        {"Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store"},
+    )
+
+
+def _pricing_page() -> Any:
+    cards = "\n".join(
+        f"""<section class="card">
+          <span class="badge">Premium access</span>
+          <strong>{escape(offer["label"])}</strong>
+          <div class="price">{escape(offer["price"])}</div>
+          <div class="muted">{escape(offer["per_day"])}</div>
+        </section>"""
+        for offer in _PREMIUM_OFFERS
+    )
+    body = f"""
+    <section class="grid" aria-label="ACTRA Premium prices">
+      {cards}
+    </section>
+    <section class="panel">
+      <h2>What is included</h2>
+      <p>ACTRA Premium is digital access for a fixed period. No physical goods are sold or shipped.</p>
+      <ul>
+        <li>Higher limits for personal learning tasks, theories, and learning complexes.</li>
+        <li>Access to the full Calendar and Statistics pages.</li>
+        <li>Premium learning workflow features available inside the ACTRA web app.</li>
+      </ul>
+    </section>
+    <section class="panel">
+      <h2>Delivery and access</h2>
+      <p>Premium access is delivered digitally to the user account after payment is confirmed. The selected access period starts when Premium is activated.</p>
+      <p>For support, contact <a href="mailto:{_SUPPORT_EMAIL}">{_SUPPORT_EMAIL}</a>.</p>
+    </section>
+    """
+    return _public_commerce_page(
+        title="Pricing",
+        subtitle="Simple fixed-period digital access for ACTRA Premium.",
+        body_html=body,
+    )
+
+
+def _refund_page() -> Any:
+    body = f"""
+    <section class="panel">
+      <h2>Digital access refund policy</h2>
+      <p>ACTRA Premium is a digital service. Refund requests are reviewed by support and handled according to the circumstances of the purchase and applicable payment provider rules.</p>
+      <p>Refunds may be considered in the following cases:</p>
+      <ul>
+        <li>duplicate or accidental payment;</li>
+        <li>payment was successful, but Premium access could not be activated due to a technical issue;</li>
+        <li>another clear billing error related to the purchase.</li>
+      </ul>
+    </section>
+    <section class="panel">
+      <h2>How to request a refund</h2>
+      <p>Send a request to <a href="mailto:{_SUPPORT_EMAIL}">{_SUPPORT_EMAIL}</a> and include the email used for your ACTRA account, payment date, selected Premium period, and a short description of the issue.</p>
+      <p>We may ask for additional information needed to locate the payment and verify the request.</p>
+    </section>
+    <section class="panel">
+      <h2>Access after a refund</h2>
+      <p>If a refund is approved, the related Premium access may be cancelled or adjusted.</p>
+    </section>
+    """
+    return _public_commerce_page(
+        title="Refund policy",
+        subtitle="How refunds are handled for ACTRA Premium digital access.",
+        body_html=body,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -211,6 +699,60 @@ def serve_catalog_file(filename: str) -> Any:
 def serve_root_ui_alias() -> Any:
     """Send the browser through the canonical UI entrypoint."""
     return redirect("/ui")
+
+
+@static_bp.route("/robots.txt", methods=["GET"])
+def serve_robots_txt() -> Any:
+    base_url = _public_base_url()
+    body = f"""User-agent: *
+Allow: /
+
+Sitemap: {base_url}/sitemap.xml
+"""
+    return body, 200, {"Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store"}
+
+
+@static_bp.route("/sitemap.xml", methods=["GET"])
+def serve_sitemap_xml() -> Any:
+    base_url = escape(_public_base_url(), quote=True)
+    paths = ("", "pricing", "refund", "privacy", "terms")
+    urls = "\n".join(
+        f"  <url><loc>{base_url}/{path}</loc></url>" if path else f"  <url><loc>{base_url}/</loc></url>"
+        for path in paths
+    )
+    body = f"""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+{urls}
+</urlset>
+"""
+    return body, 200, {"Content-Type": "application/xml; charset=utf-8", "Cache-Control": "no-store"}
+
+
+@static_bp.route("/privacy", methods=["GET"])
+@static_bp.route("/legal/privacy", methods=["GET"])
+def serve_privacy_policy() -> Any:
+    """Serve the public privacy policy page for OAuth consent links."""
+    return _public_legal_document_page("privacy")
+
+
+@static_bp.route("/terms", methods=["GET"])
+@static_bp.route("/legal/terms", methods=["GET"])
+def serve_terms_of_service() -> Any:
+    """Serve the public terms page for OAuth consent links."""
+    return _public_legal_document_page("terms")
+
+
+@static_bp.route("/pricing", methods=["GET"])
+def serve_pricing_page() -> Any:
+    """Serve the public ACTRA Premium pricing page for payment verification."""
+    return _pricing_page()
+
+
+@static_bp.route("/refund", methods=["GET"])
+@static_bp.route("/refund-policy", methods=["GET"])
+def serve_refund_policy() -> Any:
+    """Serve the public refund policy page for payment verification."""
+    return _refund_page()
 
 
 @static_bp.route("/ui/welcome", methods=["GET"])

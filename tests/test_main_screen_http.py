@@ -232,6 +232,65 @@ def test_root_redirects_to_ui_entrypoint(client):
     assert response.headers["Location"].endswith("/ui")
 
 
+def test_public_legal_pages_are_available_without_hosted_auth(client, monkeypatch):
+    _install_hosted_runtime(monkeypatch, users=[])
+
+    privacy_response = client.get("/privacy")
+    terms_response = client.get("/terms")
+
+    assert privacy_response.status_code == 200
+    assert "text/html" in (privacy_response.content_type or "")
+    assert "Политика приватности ACTRA".encode("utf-8") in privacy_response.data
+    assert privacy_response.headers.get("Cache-Control") == "no-store"
+    assert terms_response.status_code == 200
+    assert "text/html" in (terms_response.content_type or "")
+    assert "Условия пользования".encode("utf-8") in terms_response.data
+
+
+def test_public_premium_commerce_pages_are_available_without_hosted_auth(client, monkeypatch):
+    _install_hosted_runtime(monkeypatch, users=[])
+
+    pricing_response = client.get("/pricing")
+    refund_response = client.get("/refund")
+
+    assert pricing_response.status_code == 200
+    assert "text/html" in (pricing_response.content_type or "")
+    pricing_text = pricing_response.get_data(as_text=True)
+    assert "$4.99" in pricing_text
+    assert "$7.99" in pricing_text
+    assert "$19.99" in pricing_text
+    assert "/legal/terms" in pricing_text
+    assert "/legal/privacy" in pricing_text
+    assert "/refund" in pricing_text
+
+    assert refund_response.status_code == 200
+    assert "text/html" in (refund_response.content_type or "")
+    refund_text = refund_response.get_data(as_text=True)
+    assert "Refund policy" in refund_text
+    assert "actrafb@proton.me" in refund_text
+    assert "/pricing" in refund_text
+
+
+def test_public_seo_files_are_available_without_hosted_auth(client, monkeypatch):
+    monkeypatch.setenv("ACTRA_AUTH_PUBLIC_BASE_URL", "https://actra.site")
+    _install_hosted_runtime(monkeypatch, users=[])
+
+    robots_response = client.get("/robots.txt")
+    sitemap_response = client.get("/sitemap.xml")
+
+    assert robots_response.status_code == 200
+    assert "text/plain" in (robots_response.content_type or "")
+    assert b"User-agent: *" in robots_response.data
+    assert b"Sitemap: https://actra.site/sitemap.xml" in robots_response.data
+    assert sitemap_response.status_code == 200
+    assert "application/xml" in (sitemap_response.content_type or "")
+    assert b"<loc>https://actra.site/</loc>" in sitemap_response.data
+    assert b"<loc>https://actra.site/pricing</loc>" in sitemap_response.data
+    assert b"<loc>https://actra.site/refund</loc>" in sitemap_response.data
+    assert b"<loc>https://actra.site/privacy</loc>" in sitemap_response.data
+    assert b"<loc>https://actra.site/terms</loc>" in sitemap_response.data
+
+
 def test_missing_route_preserves_http_404(client):
     response = client.get("/definitely-missing")
 
