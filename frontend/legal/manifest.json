@@ -1,16 +1,20 @@
 {
   "terms": {
     "title": "Условия пользования",
+    "title_en": "Terms of Service",
     "version": "2026-04-21.1",
     "effective_at": "2026-04-21T00:00:00Z",
     "filename": "terms.md",
+    "filename_en": "terms.en.md",
     "format": "markdown"
   },
   "privacy": {
     "title": "Политика приватности",
+    "title_en": "Privacy Policy",
     "version": "2026-04-21.1",
     "effective_at": "2026-04-21T00:00:00Z",
     "filename": "privacy.md",
+    "filename_en": "privacy.en.md",
     "format": "markdown"
   }
 }

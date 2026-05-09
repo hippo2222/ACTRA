@@ -14,7 +14,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict
 
-from flask import Blueprint, jsonify, redirect, send_from_directory
+from flask import Blueprint, jsonify, redirect, request, send_from_directory
 
 from routes._context import get_authenticated_user_id, get_ctx, get_extra, is_hosted_web_runtime
 from services.user_service import USER_PLAN_PREMIUM, resolve_effective_plan
@@ -25,6 +25,7 @@ static_bp = Blueprint("static_ui", __name__)
 
 
 _LEGAL_DOC_TYPES = {"terms", "privacy"}
+_PUBLIC_LANGS = {"en", "ru"}
 
 _PREMIUM_OFFERS = (
     {"days": 14, "label": "14 days", "price": "$4.99", "per_day": "$0.36/day"},
@@ -33,6 +34,64 @@ _PREMIUM_OFFERS = (
 )
 
 _SUPPORT_EMAIL = "actrafb@proton.me"
+
+_PUBLIC_LABELS = {
+    "en": {
+        "pricing": "Pricing",
+        "refund": "Refund policy",
+        "terms": "Terms",
+        "privacy": "Privacy",
+        "open_app": "Open app",
+        "support": "Support",
+        "version": "Version",
+        "premium": "ACTRA Premium",
+    },
+    "ru": {
+        "pricing": "Цены",
+        "refund": "Возвраты",
+        "terms": "Условия",
+        "privacy": "Приватность",
+        "open_app": "Открыть приложение",
+        "support": "Поддержка",
+        "version": "Версия",
+        "premium": "ACTRA Premium",
+    },
+}
+
+
+def _public_lang(default: str = "en") -> str:
+    requested = str(request.args.get("lang") or default or "en").strip().lower()
+    return requested if requested in _PUBLIC_LANGS else "en"
+
+
+def _localized_url(path: str, lang: str) -> str:
+    clean_path = str(path or "/").strip() or "/"
+    if not clean_path.startswith("/"):
+        clean_path = f"/{clean_path}"
+    return f"{clean_path}?lang={lang}"
+
+
+def _public_nav_html(lang: str) -> str:
+    labels = _PUBLIC_LABELS.get(lang, _PUBLIC_LABELS["en"])
+    return f"""
+      <nav aria-label="Public links">
+        <a href="{_localized_url('/pricing', lang)}">{escape(labels['pricing'])}</a>
+        <a href="{_localized_url('/refund', lang)}">{escape(labels['refund'])}</a>
+        <a href="{_localized_url('/legal/terms', lang)}">{escape(labels['terms'])}</a>
+        <a href="{_localized_url('/legal/privacy', lang)}">{escape(labels['privacy'])}</a>
+        <a href="/ui/welcome">{escape(labels['open_app'])}</a>
+      </nav>
+    """
+
+
+def _language_switch_html(current_path: str, lang: str) -> str:
+    items = []
+    for code, label in (("en", "English"), ("ru", "Русский")):
+        active = code == lang
+        attrs = ' aria-current="page"' if active else ""
+        cls = "active" if active else ""
+        items.append(f'<a class="{cls}" href="{_localized_url(current_path, code)}"{attrs}>{escape(label)}</a>')
+    return f'<div class="language-switch" aria-label="Language selector">{"".join(items)}</div>'
 
 
 def _public_base_url() -> str:
@@ -111,35 +170,45 @@ def _public_legal_document_page(doc_type: str) -> Any:
     if clean_type not in _LEGAL_DOC_TYPES:
         return jsonify({"ok": False, "error": "document_not_found"}), 404
 
-    helpers = get_extra("misc_helpers", {}) or {}
-    load_manifest = helpers.get("load_legal_manifest")
-    resolve_doc_path = helpers.get("legal_doc_path")
-    if callable(load_manifest) and callable(resolve_doc_path):
-        manifest = load_manifest()
-        path = resolve_doc_path(clean_type, manifest=manifest)
+    lang = _public_lang("en")
+    legal_dir = Path(__file__).resolve().parents[2] / "frontend" / "legal"
+    manifest_path = legal_dir / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.exists() else {}
+    if lang == "en":
+        meta = dict((manifest or {}).get(clean_type) or {})
+        path = legal_dir / str(meta.get("filename_en") or f"{clean_type}.en.md")
+        title = str(meta.get("title_en") or ("Privacy Policy" if clean_type == "privacy" else "Terms of Service"))
+        version = str(meta.get("version") or "").strip()
+        effective_at = str(meta.get("effective_at") or "").strip()
     else:
-        legal_dir = Path(__file__).resolve().parents[2] / "frontend" / "legal"
-        manifest_path = legal_dir / "manifest.json"
-        manifest = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.exists() else {}
-        filename = str(((manifest or {}).get(clean_type) or {}).get("filename") or f"{clean_type}.md")
-        path = legal_dir / filename
+        helpers = get_extra("misc_helpers", {}) or {}
+        load_manifest = helpers.get("load_legal_manifest")
+        resolve_doc_path = helpers.get("legal_doc_path")
+        if callable(load_manifest) and callable(resolve_doc_path):
+            manifest = load_manifest()
+            path = resolve_doc_path(clean_type, manifest=manifest)
+        else:
+            filename = str(((manifest or {}).get(clean_type) or {}).get("filename") or f"{clean_type}.md")
+            path = legal_dir / filename
+        meta = dict((manifest or {}).get(clean_type) or {})
+        title = str(meta.get("title") or ("Политика приватности" if clean_type == "privacy" else "Условия пользования"))
+        version = str(meta.get("version") or "").strip()
+        effective_at = str(meta.get("effective_at") or "").strip()
 
-    meta = dict((manifest or {}).get(clean_type) or {})
     if path is None or not Path(path).exists():
         return jsonify({"ok": False, "error": "document_not_found"}), 404
 
     content = Path(path).read_text(encoding="utf-8")
-    title = str(meta.get("title") or ("Privacy Policy" if clean_type == "privacy" else "Terms of Service"))
-    version = str(meta.get("version") or "").strip()
-    effective_at = str(meta.get("effective_at") or "").strip()
     body_html = _markdown_to_legal_html(content)
     title_html = escape(title)
-    meta_parts = [part for part in (f"Version {version}" if version else "", effective_at) if part]
+    labels = _PUBLIC_LABELS.get(lang, _PUBLIC_LABELS["en"])
+    meta_parts = [part for part in (f"{labels['version']} {version}" if version else "", effective_at) if part]
     meta_html = escape(" | ".join(meta_parts))
+    current_path = "/legal/privacy" if clean_type == "privacy" else "/legal/terms"
 
     return (
         f"""<!doctype html>
-<html lang="ru">
+<html lang="{lang}">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -188,6 +257,38 @@ def _public_legal_document_page(doc_type: str) -> Any:
       font-size: 14px;
       font-weight: 650;
       text-decoration: none;
+    }}
+    nav {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      font-size: 14px;
+    }}
+    nav a {{
+      color: var(--accent);
+      font-weight: 700;
+      text-decoration: none;
+    }}
+    .language-switch {{
+      display: inline-flex;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fbfaf8;
+      margin: 0 0 18px;
+    }}
+    .language-switch a {{
+      min-width: 82px;
+      padding: 8px 13px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 800;
+      text-align: center;
+      text-decoration: none;
+    }}
+    .language-switch a.active {{
+      background: var(--accent);
+      color: #ffffff;
     }}
     main {{
       padding: 42px 0 64px;
@@ -240,16 +341,23 @@ def _public_legal_document_page(doc_type: str) -> Any:
       font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
       font-size: 0.92em;
     }}
+    @media (max-width: 760px) {{
+      .top {{
+        align-items: flex-start;
+        flex-direction: column;
+      }}
+    }}
   </style>
 </head>
 <body>
   <header>
     <div class="wrap top">
       <a class="brand" href="/">ACTRA</a>
-      <a class="back" href="/ui/welcome">Open app</a>
+      {_public_nav_html(lang)}
     </div>
   </header>
   <main class="wrap">
+    {_language_switch_html(current_path, lang)}
     <article>
       <h1>{title_html}</h1>
       <p class="meta">{meta_html}</p>
@@ -263,12 +371,13 @@ def _public_legal_document_page(doc_type: str) -> Any:
     )
 
 
-def _public_commerce_page(*, title: str, subtitle: str, body_html: str) -> Any:
+def _public_commerce_page(*, title: str, subtitle: str, body_html: str, lang: str, current_path: str) -> Any:
     title_html = escape(str(title or "ACTRA").strip() or "ACTRA")
     subtitle_html = escape(str(subtitle or "").strip())
+    labels = _PUBLIC_LABELS.get(lang, _PUBLIC_LABELS["en"])
     return (
         f"""<!doctype html>
-<html lang="en">
+<html lang="{lang}">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -322,6 +431,27 @@ def _public_commerce_page(*, title: str, subtitle: str, body_html: str) -> Any:
       font-size: 14px;
     }}
     nav a {{ text-decoration: none; }}
+    .language-switch {{
+      display: inline-flex;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--paper);
+      margin-bottom: 24px;
+    }}
+    .language-switch a {{
+      min-width: 82px;
+      padding: 8px 13px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 850;
+      text-align: center;
+      text-decoration: none;
+    }}
+    .language-switch a.active {{
+      background: var(--accent);
+      color: #ffffff;
+    }}
     main {{
       padding: clamp(34px, 6vw, 72px) 0 70px;
     }}
@@ -418,25 +548,20 @@ def _public_commerce_page(*, title: str, subtitle: str, body_html: str) -> Any:
   <header>
     <div class="wrap top">
       <a class="brand" href="/">ACTRA</a>
-      <nav aria-label="Public links">
-        <a href="/pricing">Pricing</a>
-        <a href="/refund">Refund policy</a>
-        <a href="/legal/terms">Terms</a>
-        <a href="/legal/privacy">Privacy</a>
-        <a href="/ui/welcome">Open app</a>
-      </nav>
+      {_public_nav_html(lang)}
     </div>
   </header>
   <main class="wrap">
+    {_language_switch_html(current_path, lang)}
     <section class="hero">
-      <p class="eyebrow">ACTRA Premium</p>
+      <p class="eyebrow">{escape(labels['premium'])}</p>
       <h1>{title_html}</h1>
       <p class="subtitle">{subtitle_html}</p>
     </section>
     {body_html}
   </main>
   <footer>
-    <div class="wrap">Support: <a href="mailto:{_SUPPORT_EMAIL}">{_SUPPORT_EMAIL}</a></div>
+    <div class="wrap">{escape(labels['support'])}: <a href="mailto:{_SUPPORT_EMAIL}">{_SUPPORT_EMAIL}</a></div>
   </footer>
 </body>
 </html>""",
@@ -446,67 +571,134 @@ def _public_commerce_page(*, title: str, subtitle: str, body_html: str) -> Any:
 
 
 def _pricing_page() -> Any:
+    lang = _public_lang("en")
+    offer_labels = {
+        "en": ("14 days", "30 days", "90 days"),
+        "ru": ("14 дней", "30 дней", "90 дней"),
+    }
+    per_day_labels = {
+        "en": ("$0.36/day", "$0.27/day", "$0.22/day"),
+        "ru": ("$0.36/день", "$0.27/день", "$0.22/день"),
+    }
+    badge = "Premium access" if lang == "en" else "Премиум-доступ"
     cards = "\n".join(
         f"""<section class="card">
-          <span class="badge">Premium access</span>
-          <strong>{escape(offer["label"])}</strong>
+          <span class="badge">{escape(badge)}</span>
+          <strong>{escape(offer_labels[lang][index])}</strong>
           <div class="price">{escape(offer["price"])}</div>
-          <div class="muted">{escape(offer["per_day"])}</div>
+          <div class="muted">{escape(per_day_labels[lang][index])}</div>
         </section>"""
-        for offer in _PREMIUM_OFFERS
+        for index, offer in enumerate(_PREMIUM_OFFERS)
     )
-    body = f"""
-    <section class="grid" aria-label="ACTRA Premium prices">
-      {cards}
-    </section>
-    <section class="panel">
-      <h2>What is included</h2>
-      <p>ACTRA Premium is digital access for a fixed period. No physical goods are sold or shipped.</p>
-      <ul>
-        <li>Higher limits for personal learning tasks, theories, and learning complexes.</li>
-        <li>Access to the full Calendar and Statistics pages.</li>
-        <li>Premium learning workflow features available inside the ACTRA web app.</li>
-      </ul>
-    </section>
-    <section class="panel">
-      <h2>Delivery and access</h2>
-      <p>Premium access is delivered digitally to the user account after payment is confirmed. The selected access period starts when Premium is activated.</p>
-      <p>For support, contact <a href="mailto:{_SUPPORT_EMAIL}">{_SUPPORT_EMAIL}</a>.</p>
-    </section>
-    """
+    if lang == "ru":
+        title = "Цены"
+        subtitle = "Фиксированный цифровой доступ к ACTRA Premium на выбранный срок."
+        body = f"""
+        <section class="grid" aria-label="Цены ACTRA Premium">
+          {cards}
+        </section>
+        <section class="panel">
+          <h2>Что входит</h2>
+          <p>ACTRA Premium — это цифровой доступ на фиксированный срок. Физические товары не продаются и не доставляются.</p>
+          <ul>
+            <li>Повышенные лимиты для личных учебных задач, теорий и комплексов.</li>
+            <li>Доступ к полным страницам Календаря и Статистики.</li>
+            <li>Премиум-функции учебного процесса внутри web-приложения ACTRA.</li>
+          </ul>
+        </section>
+        <section class="panel">
+          <h2>Доставка и доступ</h2>
+          <p>Премиум-доступ предоставляется цифровым способом в аккаунте пользователя после подтверждения оплаты. Выбранный срок начинается с момента активации Premium.</p>
+          <p>По вопросам поддержки: <a href="mailto:{_SUPPORT_EMAIL}">{_SUPPORT_EMAIL}</a>.</p>
+        </section>
+        """
+    else:
+        title = "Pricing"
+        subtitle = "Simple fixed-period digital access for ACTRA Premium."
+        body = f"""
+        <section class="grid" aria-label="ACTRA Premium prices">
+          {cards}
+        </section>
+        <section class="panel">
+          <h2>What is included</h2>
+          <p>ACTRA Premium is digital access for a fixed period. No physical goods are sold or shipped.</p>
+          <ul>
+            <li>Higher limits for personal learning tasks, theories, and learning complexes.</li>
+            <li>Access to the full Calendar and Statistics pages.</li>
+            <li>Premium learning workflow features available inside the ACTRA web app.</li>
+          </ul>
+        </section>
+        <section class="panel">
+          <h2>Delivery and access</h2>
+          <p>Premium access is delivered digitally to the user account after payment is confirmed. The selected access period starts when Premium is activated.</p>
+          <p>For support, contact <a href="mailto:{_SUPPORT_EMAIL}">{_SUPPORT_EMAIL}</a>.</p>
+        </section>
+        """
     return _public_commerce_page(
-        title="Pricing",
-        subtitle="Simple fixed-period digital access for ACTRA Premium.",
+        title=title,
+        subtitle=subtitle,
         body_html=body,
+        lang=lang,
+        current_path="/pricing",
     )
 
 
 def _refund_page() -> Any:
-    body = f"""
-    <section class="panel">
-      <h2>Digital access refund policy</h2>
-      <p>ACTRA Premium is a digital service. Refund requests are reviewed by support and handled according to the circumstances of the purchase and applicable payment provider rules.</p>
-      <p>Refunds may be considered in the following cases:</p>
-      <ul>
-        <li>duplicate or accidental payment;</li>
-        <li>payment was successful, but Premium access could not be activated due to a technical issue;</li>
-        <li>another clear billing error related to the purchase.</li>
-      </ul>
-    </section>
-    <section class="panel">
-      <h2>How to request a refund</h2>
-      <p>Send a request to <a href="mailto:{_SUPPORT_EMAIL}">{_SUPPORT_EMAIL}</a> and include the email used for your ACTRA account, payment date, selected Premium period, and a short description of the issue.</p>
-      <p>We may ask for additional information needed to locate the payment and verify the request.</p>
-    </section>
-    <section class="panel">
-      <h2>Access after a refund</h2>
-      <p>If a refund is approved, the related Premium access may be cancelled or adjusted.</p>
-    </section>
-    """
+    lang = _public_lang("en")
+    if lang == "ru":
+        title = "Политика возвратов"
+        subtitle = "Как рассматриваются возвраты за цифровой доступ ACTRA Premium."
+        body = f"""
+        <section class="panel">
+          <h2>Возвраты за цифровой доступ</h2>
+          <p>ACTRA Premium является цифровой услугой. Запросы на возврат рассматриваются службой поддержки с учетом обстоятельств покупки и правил платежного провайдера.</p>
+          <p>Возврат может быть рассмотрен в следующих случаях:</p>
+          <ul>
+            <li>дублирующая или случайная оплата;</li>
+            <li>оплата прошла успешно, но Premium-доступ не был активирован из-за технической ошибки;</li>
+            <li>другая очевидная ошибка биллинга, связанная с покупкой.</li>
+          </ul>
+        </section>
+        <section class="panel">
+          <h2>Как запросить возврат</h2>
+          <p>Напишите на <a href="mailto:{_SUPPORT_EMAIL}">{_SUPPORT_EMAIL}</a> и укажите email аккаунта ACTRA, дату оплаты, выбранный срок Premium и краткое описание ситуации.</p>
+          <p>Мы можем запросить дополнительную информацию, необходимую для поиска платежа и проверки обращения.</p>
+        </section>
+        <section class="panel">
+          <h2>Доступ после возврата</h2>
+          <p>Если возврат одобрен, связанный Premium-доступ может быть отменен или скорректирован.</p>
+        </section>
+        """
+    else:
+        title = "Refund policy"
+        subtitle = "How refunds are handled for ACTRA Premium digital access."
+        body = f"""
+        <section class="panel">
+          <h2>Digital access refund policy</h2>
+          <p>ACTRA Premium is a digital service. Refund requests are reviewed by support and handled according to the circumstances of the purchase and applicable payment provider rules.</p>
+          <p>Refunds may be considered in the following cases:</p>
+          <ul>
+            <li>duplicate or accidental payment;</li>
+            <li>payment was successful, but Premium access could not be activated due to a technical issue;</li>
+            <li>another clear billing error related to the purchase.</li>
+          </ul>
+        </section>
+        <section class="panel">
+          <h2>How to request a refund</h2>
+          <p>Send a request to <a href="mailto:{_SUPPORT_EMAIL}">{_SUPPORT_EMAIL}</a> and include the email used for your ACTRA account, payment date, selected Premium period, and a short description of the issue.</p>
+          <p>We may ask for additional information needed to locate the payment and verify the request.</p>
+        </section>
+        <section class="panel">
+          <h2>Access after a refund</h2>
+          <p>If a refund is approved, the related Premium access may be cancelled or adjusted.</p>
+        </section>
+        """
     return _public_commerce_page(
-        title="Refund policy",
-        subtitle="How refunds are handled for ACTRA Premium digital access.",
+        title=title,
+        subtitle=subtitle,
         body_html=body,
+        lang=lang,
+        current_path="/refund",
     )
 
 

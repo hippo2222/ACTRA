@@ -236,15 +236,25 @@ def test_public_legal_pages_are_available_without_hosted_auth(client, monkeypatc
     _install_hosted_runtime(monkeypatch, users=[])
 
     privacy_response = client.get("/privacy")
+    privacy_ru_response = client.get("/privacy?lang=ru")
     terms_response = client.get("/terms")
+    terms_ru_response = client.get("/terms?lang=ru")
 
     assert privacy_response.status_code == 200
     assert "text/html" in (privacy_response.content_type or "")
-    assert "Политика приватности ACTRA".encode("utf-8") in privacy_response.data
+    privacy_text = privacy_response.get_data(as_text=True)
+    assert "Privacy Policy" in privacy_text
+    assert "English" in privacy_text
+    assert "Русский" in privacy_text
+    assert "/legal/privacy?lang=ru" in privacy_text
+    assert privacy_ru_response.status_code == 200
+    assert "Политика приватности ACTRA" in privacy_ru_response.get_data(as_text=True)
     assert privacy_response.headers.get("Cache-Control") == "no-store"
     assert terms_response.status_code == 200
     assert "text/html" in (terms_response.content_type or "")
-    assert "Условия пользования".encode("utf-8") in terms_response.data
+    assert "Terms of Service" in terms_response.get_data(as_text=True)
+    assert terms_ru_response.status_code == 200
+    assert "Условия пользования" in terms_ru_response.get_data(as_text=True)
 
 
 def test_public_premium_commerce_pages_are_available_without_hosted_auth(client, monkeypatch):
@@ -259,16 +269,26 @@ def test_public_premium_commerce_pages_are_available_without_hosted_auth(client,
     assert "$4.99" in pricing_text
     assert "$7.99" in pricing_text
     assert "$19.99" in pricing_text
-    assert "/legal/terms" in pricing_text
-    assert "/legal/privacy" in pricing_text
-    assert "/refund" in pricing_text
+    assert "/legal/terms?lang=en" in pricing_text
+    assert "/legal/privacy?lang=en" in pricing_text
+    assert "/refund?lang=en" in pricing_text
+    assert "/pricing?lang=ru" in pricing_text
+
+    pricing_ru_response = client.get("/pricing?lang=ru")
+    assert pricing_ru_response.status_code == 200
+    assert "Цены" in pricing_ru_response.get_data(as_text=True)
 
     assert refund_response.status_code == 200
     assert "text/html" in (refund_response.content_type or "")
     refund_text = refund_response.get_data(as_text=True)
     assert "Refund policy" in refund_text
     assert "actrafb@proton.me" in refund_text
-    assert "/pricing" in refund_text
+    assert "/pricing?lang=en" in refund_text
+    assert "/refund?lang=ru" in refund_text
+
+    refund_ru_response = client.get("/refund?lang=ru")
+    assert refund_ru_response.status_code == 200
+    assert "Политика возвратов" in refund_ru_response.get_data(as_text=True)
 
 
 def test_public_seo_files_are_available_without_hosted_auth(client, monkeypatch):
