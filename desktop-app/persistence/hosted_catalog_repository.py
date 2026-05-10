@@ -470,6 +470,24 @@ class HostedCatalogRepository:
                 row = cur.fetchone()
         return self._json_object(row[0]) if row else None
 
+    def list_complex_library_entries_for_item(self, catalog_item_id: str) -> List[Dict[str, Any]]:
+        clean_item_id = str(catalog_item_id or "").strip()
+        if not clean_item_id:
+            return []
+        with postgres_connection(self._dsn) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT payload
+                    FROM actra_complex_library_entries
+                    WHERE catalog_item_id = %s
+                    ORDER BY updated_at DESC, library_entry_id ASC
+                    """,
+                    (clean_item_id,),
+                )
+                rows = cur.fetchall() or []
+        return [item for item in (self._json_object(row[0]) for row in rows) if item is not None]
+
     def upsert_complex_library_entry(self, payload: Dict[str, Any]) -> None:
         normalized = payload if isinstance(payload, dict) else {}
         library_entry_id = str(normalized.get("library_entry_id") or "").strip()

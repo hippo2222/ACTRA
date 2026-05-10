@@ -348,6 +348,49 @@ def test_complex_linked_entry_reflects_revoked_and_access_code_states(services):
     assert unlocked["snapshot"]["complex"]["id"] == complex_payload["id"]
 
 
+def test_author_deleted_complex_turns_reader_linked_entry_into_deleted_source_ghost(services):
+    complex_payload, catalog_service = services
+    publish_result = catalog_service.publish_complex(
+        complex_payload["id"],
+        requested_by_user_id="author",
+        catalog_visibility="public",
+    )
+    add_result = catalog_service.add_item_to_library(
+        publish_result["item"]["item_id"],
+        requested_by_user_id="reader",
+    )
+    entry_id = add_result["library_entry"]["library_entry_id"]
+
+    deleted = catalog_service.handle_workspace_source_deleted(
+        "complex",
+        owner_user_id="author",
+        source_workspace_id=complex_payload["id"],
+        source_workspace_ref=complex_payload["id"],
+        source_workspace_kind="complex",
+        reason="author_deleted_workspace_complex",
+    )
+    detail = catalog_service.get_complex_library_entry(
+        entry_id,
+        requested_by_user_id="reader",
+    )
+
+    assert deleted["affected_count"] == 1
+    assert deleted["affected_library_entry_count"] == 1
+    assert deleted["affected_library_entries"][0]["library_entry_id"] == entry_id
+    assert deleted["affected_library_entries"][0]["access_state"] == "deleted_source"
+    assert deleted["items"][0]["status"] == "deleted_source"
+    assert catalog_service.list_items(content_type="complex")["items"] == []
+    assert detail["library_entry"]["access_state"] == "deleted_source"
+    assert detail["library_entry"]["resolved_version_id"] is None
+    assert detail["item"]["status"] == "deleted_source"
+    assert detail["snapshot"] is None
+    with pytest.raises(ValueError, match="catalog_item_source_deleted"):
+        catalog_service.add_item_to_library(
+            publish_result["item"]["item_id"],
+            requested_by_user_id="late_reader",
+        )
+
+
 def test_remove_complex_linked_entry_deletes_only_reader_binding(services):
     complex_payload, catalog_service = services
     publish_result = catalog_service.publish_complex(

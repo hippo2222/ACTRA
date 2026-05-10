@@ -12,6 +12,7 @@
     let mainConsentGateUserId = null;
     let projectLinksMenuInitialized = false;
     let mainBootRedirecting = false;
+    let mainPremiumArchiveActionsInitialized = false;
 
     const PROJECT_COMMUNITY_LINKS = Object.freeze({
         github: 'https://github.com/hippo2222/ACTRA',
@@ -260,6 +261,184 @@
             }
             baseNavigate(url, options);
         };
+    }
+
+    const MAIN_PREMIUM_ARCHIVE_KINDS = Object.freeze([
+        {
+            key: 'complexes',
+            icon: 'inventory_2',
+            forms: ['комплекс', 'комплекса', 'комплексов'],
+            target: '/ui/complexes?filter=archived',
+            actionLabel: 'Открыть комплексы',
+        },
+        {
+            key: 'tasks',
+            icon: 'edit_document',
+            forms: ['задание', 'задания', 'заданий'],
+            target: '/ui/editor',
+            actionLabel: 'Открыть задания',
+        },
+        {
+            key: 'theories',
+            icon: 'hub',
+            forms: ['теория', 'теории', 'теорий'],
+            target: '/ui/theory-center',
+            actionLabel: 'Открыть теории',
+        },
+    ]);
+
+    function toMainArchiveCount(value) {
+        const parsed = Number(value || 0);
+        if (!Number.isFinite(parsed) || parsed <= 0) return 0;
+        return Math.floor(parsed);
+    }
+
+    function chooseRuPlural(count, forms) {
+        const abs = Math.abs(Number(count || 0));
+        const mod100 = abs % 100;
+        const mod10 = abs % 10;
+        if (mod100 >= 11 && mod100 <= 14) return forms[2];
+        if (mod10 === 1) return forms[0];
+        if (mod10 >= 2 && mod10 <= 4) return forms[1];
+        return forms[2];
+    }
+
+    function formatMainArchiveCount(count, forms, hasMore = false) {
+        const safeCount = toMainArchiveCount(count);
+        return `${safeCount}${hasMore ? '+' : ''} ${chooseRuPlural(safeCount, forms)}`;
+    }
+
+    function getMainArchiveKindCount(summary, kindKey) {
+        const entitySummary = summary && typeof summary[kindKey] === 'object' ? summary[kindKey] : null;
+        if (!entitySummary) return 0;
+        const archivedCount = toMainArchiveCount(entitySummary.archived_count);
+        if (archivedCount > 0) return archivedCount;
+        return Array.isArray(entitySummary.archived_items) ? entitySummary.archived_items.length : 0;
+    }
+
+    function getMainArchiveSegments(summary) {
+        return MAIN_PREMIUM_ARCHIVE_KINDS
+            .map((config) => {
+                const entitySummary = summary && typeof summary[config.key] === 'object' ? summary[config.key] : null;
+                const count = getMainArchiveKindCount(summary, config.key);
+                if (count <= 0) return null;
+                return {
+                    ...config,
+                    count,
+                    hasMore: entitySummary?.archived_items_truncated === true,
+                    text: formatMainArchiveCount(count, config.forms, entitySummary?.archived_items_truncated === true),
+                };
+            })
+            .filter(Boolean);
+    }
+
+    function getMainArchiveTotal(summary) {
+        return MAIN_PREMIUM_ARCHIVE_KINDS.reduce((total, config) => (
+            total + getMainArchiveKindCount(summary, config.key)
+        ), 0);
+    }
+
+    function resolveMainArchiveAction(summary) {
+        const segments = getMainArchiveSegments(summary);
+        if (!segments.length) {
+            return {
+                icon: 'inventory_2',
+                target: '/ui/complexes?filter=archived',
+                actionLabel: 'Разобрать архив',
+            };
+        }
+        return segments[0];
+    }
+
+    function wireMainPremiumArchiveActions() {
+        if (mainPremiumArchiveActionsInitialized) return;
+        mainPremiumArchiveActionsInitialized = true;
+
+        const openBtn = document.getElementById('main-premium-archive-open');
+        const premiumBtn = document.getElementById('main-premium-archive-premium');
+        openBtn?.addEventListener('click', () => {
+            const target = openBtn.getAttribute('data-target') || '/ui/complexes?filter=archived';
+            window.navigateWithTransition(target);
+        });
+        premiumBtn?.addEventListener('click', () => {
+            if (window.PremiumPromo && typeof window.PremiumPromo.open === 'function') {
+                window.PremiumPromo.open({
+                    title: 'Верните материалы из архива Premium',
+                    lead: 'Premium снова откроет редактирование, запуск, публикацию и копирование материалов, которые сейчас доступны только для просмотра или удаления.',
+                });
+                return;
+            }
+            window.navigateWithTransition('/ui/settings#premium');
+        });
+    }
+
+    function renderMainPremiumArchiveBanner(summary) {
+        const card = document.getElementById('main-premium-archive-card');
+        if (!card) return;
+
+        wireMainPremiumArchiveActions();
+
+        const total = getMainArchiveTotal(summary);
+        const segments = getMainArchiveSegments(summary);
+        const hasArchived = total > 0 || MAIN_PREMIUM_ARCHIVE_KINDS.some((config) => (
+            summary?.[config.key]?.has_premium_archived_items === true
+        ));
+
+        card.hidden = !hasArchived;
+        if (!hasArchived) return;
+
+        const copy = document.getElementById('main-premium-archive-copy');
+        const breakdown = document.getElementById('main-premium-archive-breakdown');
+        const openBtn = document.getElementById('main-premium-archive-open');
+        const openIcon = document.getElementById('main-premium-archive-open-icon');
+        const openLabel = document.getElementById('main-premium-archive-open-label');
+        const totalText = formatMainArchiveCount(total, ['материал', 'материала', 'материалов']);
+        const breakdownText = segments.map((segment) => segment.text).join(', ');
+
+        if (copy) {
+            copy.textContent = `В архиве ${totalText}${breakdownText ? `: ${breakdownText}` : ''}. Они не удалены: можно открыть для просмотра, удалить лишнее и освободить лимит, либо продлить Premium и вернуть редактирование, запуск, публикацию и копирование.`;
+        }
+
+        if (breakdown) {
+            breakdown.innerHTML = '';
+            segments.forEach((segment) => {
+                const pill = document.createElement('span');
+                pill.className = 'pill-neutral pill-sm inline-flex items-center gap-1';
+                const icon = document.createElement('span');
+                icon.className = 'material-symbols-outlined text-[14px]';
+                icon.textContent = segment.icon;
+                const label = document.createElement('span');
+                label.textContent = segment.text;
+                pill.append(icon, label);
+                breakdown.appendChild(pill);
+            });
+        }
+
+        const action = resolveMainArchiveAction(summary);
+        if (openBtn) {
+            openBtn.setAttribute('data-target', action.target);
+        }
+        if (openIcon) {
+            openIcon.textContent = action.icon;
+        }
+        if (openLabel) {
+            openLabel.textContent = action.actionLabel || 'Разобрать архив';
+        }
+    }
+
+    async function loadPremiumArchiveBanner() {
+        try {
+            const { ok, data } = await apiFetch('/api/workspace-limits/summary');
+            if (!ok || data?.ok === false) {
+                throw new Error(data?.error || 'workspace_limits_summary_failed');
+            }
+            renderMainPremiumArchiveBanner(data);
+            return data;
+        } catch (error) {
+            console.warn('[MainLogic] Failed to load premium archive banner:', error);
+            renderMainPremiumArchiveBanner(null);
+            return null;
+        }
     }
 
     const mainRecommendationState = {
@@ -836,6 +1015,7 @@
             });
 
             const criticalWidgetLoads = await Promise.allSettled([
+                loadPremiumArchiveBanner(),
                 loadQuickAccess(),
                 loadUserSettings(), // Renamed from loadStatsSettings
             ]);

@@ -155,6 +155,12 @@ function setupDomSkeleton() {
       <div class="grid"></div>
     </main>
     <button data-role="create-task-card" type="button"></button>
+    <button id="editor-archive-filter" type="button" aria-pressed="false"></button>
+    <span id="editor-archive-filter-count" hidden></span>
+    <div id="selection-action-bar" class="translate-y-[200%]">
+      <span id="selection-counter"></span>
+      <button data-role="selection-export" type="button"></button>
+    </div>
     <button data-role="return-main" type="button"></button>
     <input id="editor-search-input" />
     <div data-role="sort-controller">
@@ -204,6 +210,14 @@ describe("EditorDashboard error detection markers", () => {
     expect(meta.className).toContain("secondary");
   });
 
+  it("uses readable labels for single and text task type badges", () => {
+    const dashboard = window.dashboard;
+    expect(dashboard.getTaskTypeMeta({ type: "single" }).label).toBe("Один ответ");
+    expect(dashboard.getTaskTypeMeta({ type: "single_choice" }).label).toBe("Один ответ");
+    expect(dashboard.getTaskTypeMeta({ type: "text" }).label).toBe("Текст");
+    expect(dashboard.getTaskTypeMeta({ type: "text_input" }).label).toBe("Текст");
+  });
+
   it("renders badge on error_detection cards and sidebar entries", () => {
     const cards = Array.from(document.querySelectorAll("main .grid article"));
     expect(cards.length).toBeGreaterThan(0);
@@ -215,6 +229,43 @@ describe("EditorDashboard error detection markers", () => {
     const errorButton = sidebarButtons.find((btn) => btn.textContent.includes("Задание с ошибками"));
     expect(errorButton).toBeTruthy();
     expect(errorButton.innerHTML).toContain("touch_app");
+  });
+
+  it("renders Premium archive filtering, badge, and blocks export", async () => {
+    const dashboard = window.dashboard;
+    dashboard.workspaceLimits = {
+      ok: true,
+      plan: "free",
+      tasks: {
+        archived_count: 1,
+        archived_items: [{ id: "module_error/topic_a/task_regular" }],
+      },
+    };
+    dashboard.showPremiumArchiveTasks = true;
+    dashboard.renderTaskLimitUi();
+    dashboard.renderGrid();
+
+    const archiveFilter = document.getElementById("editor-archive-filter");
+    const archiveCount = document.getElementById("editor-archive-filter-count");
+    const cards = Array.from(document.querySelectorAll("article.task-card"));
+
+    expect(archiveFilter.hidden).toBe(false);
+    expect(archiveFilter.getAttribute("aria-pressed")).toBe("true");
+    expect(archiveCount.textContent).toBe("1");
+    expect(cards).toHaveLength(1);
+    expect(cards[0].dataset.premiumArchived).toBe("1");
+    expect(cards[0].textContent).toContain("Архив Premium");
+
+    dashboard.selectedTasks.add("module_error:topic_a:task_regular");
+    dashboard.updateActionBar();
+
+    const exportBtn = document.querySelector('[data-role="selection-export"]');
+    expect(exportBtn.disabled).toBe(true);
+    expect(exportBtn.title).toContain("архив Premium");
+
+    const toastSpy = vi.spyOn(dashboard, "showVoiceToast").mockImplementation(() => {});
+    await dashboard.exportSelectedTasks();
+    expect(toastSpy).toHaveBeenCalledWith(expect.objectContaining({ severity: "warning" }));
   });
 });
 
@@ -269,5 +320,26 @@ describe("EditorDashboard workspace limit placement", () => {
   it("removes the standalone header limit pill from the dashboard template", () => {
     const html = fs.readFileSync(path.resolve(process.cwd(), "frontend/Editor/Main_Dashboard.html"), "utf8");
     expect(html).not.toContain('id="task-workspace-limit-pill"');
+  });
+
+  it("keeps custom dashboard modals above the global header layer", () => {
+    const html = fs.readFileSync(path.resolve(process.cwd(), "frontend/Editor/Main_Dashboard.html"), "utf8");
+    const modalIds = [
+      "create-task-modal",
+      "create-module-modal",
+      "create-topic-modal",
+      "import-modal",
+      "recovery-center-modal",
+      "topic-sync-confirm-modal",
+    ];
+
+    modalIds.forEach((id) => {
+      const pattern = new RegExp(`id="${id}"[\\s\\S]*?class="[^"]*editor-modal-layer`);
+      expect(html, `${id} should render above .global-header z-index 60`).toMatch(pattern);
+    });
+    expect(html).toContain(".editor-modal-layer");
+    expect(html).toContain("z-index: 120");
+    expect(html).toContain(".editor-modal-layer-strong");
+    expect(html).toContain("z-index: 130");
   });
 });

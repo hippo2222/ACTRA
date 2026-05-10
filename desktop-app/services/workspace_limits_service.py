@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from services.user_service import USER_PLAN_FREE, USER_PLAN_PREMIUM, resolve_effective_plan
 from services.workspace_lineage import has_source_lineage
@@ -61,7 +61,47 @@ class WorkspaceLimitError(ValueError):
         }
 
 
+@dataclass
+class PremiumArchivedContentError(ValueError):
+    entity_kind: str
+    entity_ref: str
+    action: str
+    plan: str
+    limit_kind: str
+    archived_item: Dict[str, Any]
+
+    def __post_init__(self) -> None:
+        ValueError.__init__(self, self.message)
+
+    @property
+    def message(self) -> str:
+        return (
+            f"{self.entity_kind} '{self.entity_ref}' is archived because the free plan "
+            "limit is exceeded. Delete excess content or renew Premium."
+        )
+
+    def to_payload(self) -> Dict[str, Any]:
+        return {
+            "ok": False,
+            "error": "premium_archived_content",
+            "message": self.message,
+            "details": {
+                "entity_kind": self.entity_kind,
+                "entity_ref": self.entity_ref,
+                "action": self.action,
+                "plan": self.plan,
+                "limit_kind": self.limit_kind,
+                "workspace_access_state": "premium_archived",
+                "archive_reason": "free_plan_limit_exceeded",
+                "allowed_actions": dict(self.archived_item.get("allowed_actions") or {}),
+                "archived_item": dict(self.archived_item),
+            },
+        }
+
+
 class WorkspaceLimitsService:
+    _ARCHIVED_ITEMS_LIMIT = 50
+
     def __init__(
         self,
         *,
@@ -117,6 +157,90 @@ class WorkspaceLimitsService:
         self._raise_for_blocked_evaluation(evaluation)
         return evaluation
 
+    def get_entity_access_state(
+        self,
+        user_id: Any,
+        entity_kind: str,
+        entity_ref: Any,
+        *,
+        scope: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        clean_user_id = self._normalize_optional_text(user_id)
+        clean_entity_kind = self._normalize_entity_kind(entity_kind)
+        clean_entity_ref = self._normalize_optional_text(entity_ref)
+        if not clean_entity_ref:
+            return {
+                "workspace_access_state": "active",
+                "is_premium_archived": False,
+                "archived_item": None,
+            }
+
+        plan = self._resolve_plan(clean_user_id)
+        if plan == USER_PLAN_PREMIUM:
+            return {
+                "workspace_access_state": "active",
+                "is_premium_archived": False,
+                "archived_item": None,
+                "plan": plan,
+            }
+
+        spec = dict(_LIMIT_SPECS[clean_entity_kind])
+        personal_limit = spec.get("personal_limit")
+        library_limit = spec.get("library_limit")
+        workspace_items = self._list_workspace_items(clean_user_id, clean_entity_kind)
+        linked_library_items = self._list_linked_library_entries(clean_user_id, clean_entity_kind)
+        access_items = self._build_access_items(
+            clean_entity_kind,
+            workspace_items=workspace_items,
+            linked_library_items=linked_library_items,
+        )
+        _, archived_items = self._partition_archive_items(
+            access_items,
+            personal_limit=personal_limit,
+            library_limit=library_limit,
+        )
+
+        clean_scope = self._normalize_optional_text(scope)
+        for archived_item in archived_items:
+            if clean_scope and self._normalize_optional_text(archived_item.get("scope")) != clean_scope:
+                continue
+            if self._matches_archived_item_ref(archived_item, clean_entity_ref):
+                return {
+                    "workspace_access_state": "premium_archived",
+                    "is_premium_archived": True,
+                    "archived_item": archived_item,
+                    "plan": plan,
+                }
+
+        return {
+            "workspace_access_state": "active",
+            "is_premium_archived": False,
+            "archived_item": None,
+            "plan": plan,
+        }
+
+    def assert_entity_not_archived(
+        self,
+        user_id: Any,
+        entity_kind: str,
+        entity_ref: Any,
+        *,
+        action: str,
+        scope: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        state = self.get_entity_access_state(user_id, entity_kind, entity_ref, scope=scope)
+        if not bool(state.get("is_premium_archived")):
+            return state
+        archived_item = state.get("archived_item") if isinstance(state.get("archived_item"), dict) else {}
+        raise PremiumArchivedContentError(
+            entity_kind=self._normalize_entity_kind(entity_kind),
+            entity_ref=str(entity_ref or ""),
+            action=str(action or "").strip() or "use",
+            plan=str(state.get("plan") or USER_PLAN_FREE),
+            limit_kind=str(archived_item.get("limit_kind") or "library_total"),
+            archived_item=dict(archived_item),
+        )
+
     def evaluate_capacity(self, user_id: Any, *, requests: Optional[Iterable[Dict[str, Any]]] = None) -> Dict[str, Any]:
         normalized_requests = self._normalize_requests(requests)
         summary = self.get_summary(user_id)
@@ -162,13 +286,25 @@ class WorkspaceLimitsService:
         workspace_items = self._list_workspace_items(user_id, clean_entity_kind)
         workspace_total_count = len(workspace_items)
         personal_count = sum(1 for item in workspace_items if self._is_personal_workspace_item(item))
-        linked_library_count = self._count_linked_library_entries(user_id, clean_entity_kind)
+        linked_library_items = self._list_linked_library_entries(user_id, clean_entity_kind)
+        linked_library_count = len(linked_library_items)
         library_total_count = workspace_total_count + linked_library_count
 
         personal_limit = None if plan == USER_PLAN_PREMIUM else spec.get("personal_limit")
         library_limit = None if plan == USER_PLAN_PREMIUM else spec.get("library_limit")
         remaining_personal = None if personal_limit is None else max(0, int(personal_limit) - int(personal_count))
         remaining_library = None if library_limit is None else max(0, int(library_limit) - int(library_total_count))
+        access_items = self._build_access_items(
+            clean_entity_kind,
+            workspace_items=workspace_items,
+            linked_library_items=linked_library_items,
+        )
+        archive_summary = self._build_archive_summary(
+            access_items,
+            plan=plan,
+            personal_limit=personal_limit,
+            library_limit=library_limit,
+        )
 
         return {
             "entity_kind": clean_entity_kind,
@@ -190,6 +326,7 @@ class WorkspaceLimitsService:
                 (personal_limit is not None and personal_count >= int(personal_limit))
                 or (library_limit is not None and library_total_count >= int(library_limit))
             ),
+            **archive_summary,
         }
 
     def _normalize_requests(self, requests: Optional[Iterable[Dict[str, Any]]]) -> List[Dict[str, Any]]:
@@ -364,19 +501,222 @@ class WorkspaceLimitsService:
             return dict(meta)
         return dict(payload)
 
-    def _count_linked_library_entries(self, user_id: Optional[str], entity_kind: str) -> int:
+    def _list_linked_library_entries(self, user_id: Optional[str], entity_kind: str) -> List[Dict[str, Any]]:
         clean_user_id = self._normalize_optional_text(user_id)
         if not clean_user_id:
-            return 0
+            return []
         if entity_kind == "theory":
             payload = self.catalog_service.list_theory_library_entries(requested_by_user_id=clean_user_id)
             entries = payload.get("entries") if isinstance(payload, dict) else []
-            return len(entries) if isinstance(entries, list) else 0
+            return [dict(item) for item in entries if isinstance(item, dict)] if isinstance(entries, list) else []
         if entity_kind == "complex":
             payload = self.catalog_service.list_complex_library_entries(requested_by_user_id=clean_user_id)
             entries = payload.get("entries") if isinstance(payload, dict) else []
-            return len(entries) if isinstance(entries, list) else 0
-        return 0
+            return [dict(item) for item in entries if isinstance(item, dict)] if isinstance(entries, list) else []
+        return []
+
+    def _build_access_items(
+        self,
+        entity_kind: str,
+        *,
+        workspace_items: List[Dict[str, Any]],
+        linked_library_items: List[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        items: List[Dict[str, Any]] = []
+        for item in workspace_items:
+            items.append(
+                {
+                    "entity_kind": entity_kind,
+                    "scope": "workspace",
+                    "id": self._item_identifier(item),
+                    "ref": self._item_ref(item),
+                    "created_at": self._item_created_at(item),
+                    "updated_at": self._item_updated_at(item),
+                    "is_personal": self._is_personal_workspace_item(item),
+                    "payload": item,
+                }
+            )
+        for item in linked_library_items:
+            entry = item.get("library_entry") if isinstance(item.get("library_entry"), dict) else item
+            catalog_item = item.get("item") if isinstance(item.get("item"), dict) else {}
+            items.append(
+                {
+                    "entity_kind": entity_kind,
+                    "scope": "linked_library",
+                    "id": self._item_identifier(entry) or self._item_identifier(catalog_item),
+                    "ref": self._item_ref(entry) or self._item_ref(catalog_item),
+                    "created_at": self._item_created_at(entry),
+                    "updated_at": self._item_updated_at(entry),
+                    "is_personal": False,
+                    "payload": item,
+                }
+            )
+        return items
+
+    def _build_archive_summary(
+        self,
+        access_items: List[Dict[str, Any]],
+        *,
+        plan: str,
+        personal_limit: Optional[int],
+        library_limit: Optional[int],
+    ) -> Dict[str, Any]:
+        if plan == USER_PLAN_PREMIUM:
+            return {
+                "active_count": len(access_items),
+                "archived_count": 0,
+                "overage_count": 0,
+                "archived_items": [],
+                "archived_items_truncated": False,
+                "has_premium_archived_items": False,
+            }
+
+        active_items, archived_items = self._partition_archive_items(
+            access_items,
+            personal_limit=personal_limit,
+            library_limit=library_limit,
+        )
+
+        return {
+            "active_count": len(active_items),
+            "archived_count": len(archived_items),
+            "overage_count": len(archived_items),
+            "archived_items": archived_items[: self._ARCHIVED_ITEMS_LIMIT],
+            "archived_items_truncated": len(archived_items) > self._ARCHIVED_ITEMS_LIMIT,
+            "has_premium_archived_items": bool(archived_items),
+        }
+
+    def _partition_archive_items(
+        self,
+        access_items: List[Dict[str, Any]],
+        *,
+        personal_limit: Optional[int],
+        library_limit: Optional[int],
+    ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+        active_items: List[Dict[str, Any]] = []
+        archived_items: List[Dict[str, Any]] = []
+        active_personal_count = 0
+        active_library_count = 0
+
+        for item in sorted(access_items, key=self._archive_sort_key):
+            limit_kind = None
+            if library_limit is not None and active_library_count >= int(library_limit):
+                limit_kind = "library_total"
+            if (
+                limit_kind is None
+                and item.get("is_personal")
+                and personal_limit is not None
+                and active_personal_count >= int(personal_limit)
+            ):
+                limit_kind = "personal"
+
+            if limit_kind is not None:
+                archived_items.append(self._summarize_archived_item(item, limit_kind=limit_kind))
+                continue
+
+            active_items.append(item)
+            if library_limit is not None:
+                active_library_count += 1
+            if item.get("is_personal"):
+                active_personal_count += 1
+
+        return active_items, archived_items
+
+    def _matches_archived_item_ref(self, item: Dict[str, Any], entity_ref: str) -> bool:
+        normalized_ref = self._normalize_optional_text(entity_ref)
+        if not normalized_ref:
+            return False
+        candidates = {
+            self._normalize_optional_text(item.get("id")),
+            self._normalize_optional_text(item.get("ref")),
+        }
+        payload = item.get("payload") if isinstance(item.get("payload"), dict) else {}
+        candidates.add(self._item_identifier(payload))
+        candidates.add(self._item_ref(payload))
+        entry = payload.get("library_entry") if isinstance(payload.get("library_entry"), dict) else {}
+        catalog_item = payload.get("item") if isinstance(payload.get("item"), dict) else {}
+        candidates.add(self._item_identifier(entry))
+        candidates.add(self._item_ref(entry))
+        candidates.add(self._item_identifier(catalog_item))
+        candidates.add(self._item_ref(catalog_item))
+        return normalized_ref in {candidate for candidate in candidates if candidate}
+
+    def _summarize_archived_item(self, item: Dict[str, Any], *, limit_kind: str) -> Dict[str, Any]:
+        return {
+            "entity_kind": item.get("entity_kind"),
+            "scope": item.get("scope"),
+            "id": item.get("id"),
+            "ref": item.get("ref"),
+            "created_at": item.get("created_at"),
+            "updated_at": item.get("updated_at"),
+            "limit_kind": limit_kind,
+            "workspace_access_state": "premium_archived",
+            "is_premium_archived": True,
+            "archive_reason": "free_plan_limit_exceeded",
+            "allowed_actions": {
+                "list": True,
+                "read": True,
+                "delete": True,
+                "edit": False,
+                "start": False,
+                "publish": False,
+                "copy": False,
+                "import": False,
+                "use_as_dependency": False,
+            },
+        }
+
+    def _archive_sort_key(self, item: Dict[str, Any]) -> Any:
+        created_at = str(item.get("created_at") or item.get("updated_at") or "")
+        return (
+            created_at,
+            str(item.get("scope") or ""),
+            str(item.get("ref") or ""),
+            str(item.get("id") or ""),
+        )
+
+    def _item_identifier(self, payload: Dict[str, Any]) -> Optional[str]:
+        if not isinstance(payload, dict):
+            return None
+        for key in ("id", "library_entry_id", "item_id", "catalog_item_id", "workspace_entity_id"):
+            value = self._normalize_optional_text(payload.get(key))
+            if value:
+                return value
+        metadata = payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {}
+        value = self._normalize_optional_text(metadata.get("id"))
+        return value
+
+    def _item_ref(self, payload: Dict[str, Any]) -> Optional[str]:
+        if not isinstance(payload, dict):
+            return None
+        for key in ("workspace_entity_ref", "ref", "path"):
+            value = self._normalize_optional_text(payload.get(key))
+            if value:
+                return value
+        module = self._normalize_optional_text(payload.get("module") or payload.get("module_id"))
+        topic = self._normalize_optional_text(payload.get("topic") or payload.get("topic_id"))
+        item_id = self._item_identifier(payload)
+        if module and topic and item_id:
+            return f"{module}/{topic}/{item_id}"
+        return item_id
+
+    def _item_created_at(self, payload: Dict[str, Any]) -> str:
+        if not isinstance(payload, dict):
+            return ""
+        for key in ("created_at", "created", "published_at"):
+            value = self._normalize_optional_text(payload.get(key))
+            if value:
+                return value
+        return ""
+
+    def _item_updated_at(self, payload: Dict[str, Any]) -> str:
+        if not isinstance(payload, dict):
+            return ""
+        for key in ("updated_at", "modified", "latest_published_at"):
+            value = self._normalize_optional_text(payload.get(key))
+            if value:
+                return value
+        return ""
 
     def _is_personal_workspace_item(self, payload: Dict[str, Any]) -> bool:
         if not isinstance(payload, dict):

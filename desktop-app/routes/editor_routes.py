@@ -66,7 +66,7 @@ from services.hosted_shadow_fallback import (
     HostedShadowReadFallbackDisabledError,
     HostedShadowWriteFallbackDisabledError,
 )
-from services.workspace_limits_service import WorkspaceLimitError
+from services.workspace_limits_service import PremiumArchivedContentError, WorkspaceLimitError
 from persistence.runtime import HOSTED_SHADOW_WRITE_FALLBACK_ENV
 
 logger = logging.getLogger(__name__)
@@ -89,6 +89,94 @@ _WORKSPACE_IMPORT_MARKER_KEYS = (
 
 def _workspace_limit_response(exc: WorkspaceLimitError) -> Any:
     return jsonify(exc.to_payload()), 409
+
+
+def _premium_archive_response(exc: PremiumArchivedContentError) -> Any:
+    return jsonify(exc.to_payload()), 409
+
+
+def _assert_task_not_archived(ctx: Any, module_id: str, topic_id: str, task_id: str, *, action: str) -> None:
+    service = getattr(ctx, "workspace_limits_service", None)
+    if service is None:
+        return
+    task_ref = f"{module_id}/{topic_id}/{task_id}"
+    service.assert_entity_not_archived(
+        ctx.user_id,
+        "task",
+        task_ref,
+        action=action,
+        scope="workspace",
+    )
+    if task_id != task_ref:
+        service.assert_entity_not_archived(
+            ctx.user_id,
+            "task",
+            task_id,
+            action=action,
+            scope="workspace",
+        )
+
+
+def _assert_export_task_refs_not_archived(ctx: Any, tasks: Any, *, action: str) -> None:
+    if not isinstance(tasks, list):
+        return
+    for task_ref in tasks:
+        if not isinstance(task_ref, dict):
+            continue
+        module_id = str(task_ref.get("module_id") or "").strip()
+        topic_id = str(task_ref.get("topic_id") or "").strip()
+        task_id = str(task_ref.get("task_id") or "").strip()
+        if not module_id or not topic_id or not task_id:
+            continue
+        _assert_task_not_archived(ctx, module_id, topic_id, task_id, action=action)
+
+
+def _assert_complex_refs_not_archived(ctx: Any, complex_ids: Any, *, action: str) -> None:
+    service = getattr(ctx, "workspace_limits_service", None)
+    if service is None or not isinstance(complex_ids, list):
+        return
+    for complex_id in complex_ids:
+        clean_id = str(complex_id or "").strip()
+        if not clean_id:
+            continue
+        service.assert_entity_not_archived(
+            ctx.user_id,
+            "complex",
+            clean_id,
+            action=action,
+            scope="workspace",
+        )
+
+
+def _assert_theory_dependency_not_archived(ctx: Any, theory_link: Any, *, action: str) -> None:
+    if not isinstance(theory_link, dict):
+        return
+    service = getattr(ctx, "workspace_limits_service", None)
+    if service is None:
+        return
+    source_kind = str(theory_link.get("source_kind") or "workspace").strip().lower() or "workspace"
+    if source_kind == "linked_library":
+        library_entry_id = str(theory_link.get("library_entry_id") or "").strip()
+        if not library_entry_id:
+            return
+        service.assert_entity_not_archived(
+            ctx.user_id,
+            "theory",
+            library_entry_id,
+            action=action,
+            scope="linked_library",
+        )
+        return
+    theory_id = str(theory_link.get("theory_id") or theory_link.get("source_theory_id") or "").strip()
+    if not theory_id:
+        return
+    service.assert_entity_not_archived(
+        ctx.user_id,
+        "theory",
+        theory_id,
+        action=action,
+        scope="workspace",
+    )
 
 
 def _hosted_editor_asset_degraded_response(
@@ -679,6 +767,8 @@ def save_editor_task(module_id: str, topic_id: str, task_id: str) -> Any:
                 ctx.user_id,
                 "task",
             )
+        else:
+            _assert_task_not_archived(ctx, module_id, topic_id, task_id, action="edit")
         payload = request.json
         if not payload:
             return jsonify({"ok": False, "error": "payload_required"}), 400
@@ -700,6 +790,8 @@ def save_editor_task(module_id: str, topic_id: str, task_id: str) -> Any:
 
     except WorkspaceLimitError as exc:
         return _workspace_limit_response(exc)
+    except PremiumArchivedContentError as exc:
+        return _premium_archive_response(exc)
     except Exception as exc:
         degraded_response = _maybe_hosted_shadow_write_error_response(exc)
         if degraded_response is not None:
@@ -969,6 +1061,7 @@ def export_tasks() -> Any:
 
         if not tasks:
             return jsonify({"ok": False, "error": "tasks_required"}), 400
+        _assert_export_task_refs_not_archived(ctx, tasks, action="export")
         zip_path = svc.create_export_archive(tasks)
         filename = f"export_tasks_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.zip"
 
@@ -984,6 +1077,8 @@ def export_tasks() -> Any:
         return send_file(
             zip_path, as_attachment=True, download_name=filename, mimetype="application/zip"
         )
+    except PremiumArchivedContentError as exc:
+        return _premium_archive_response(exc)
     except Exception as exc:
         degraded_response = _maybe_hosted_shadow_write_error_response(
             exc,
@@ -1040,6 +1135,7 @@ def export_bulk() -> Any:
         if not tasks_to_export:
             return jsonify({"ok": False, "error": "no_tasks_found"}), 404
 
+        _assert_export_task_refs_not_archived(ctx, tasks_to_export, action="export")
         zip_path = svc.create_export_archive(tasks_to_export)
         scope = topic_id or module_id
         filename = f"export_{scope}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.zip"
@@ -1056,6 +1152,8 @@ def export_bulk() -> Any:
         return send_file(
             zip_path, as_attachment=True, download_name=filename, mimetype="application/zip"
         )
+    except PremiumArchivedContentError as exc:
+        return _premium_archive_response(exc)
     except Exception as exc:
         degraded_response = _maybe_hosted_shadow_write_error_response(
             exc,
@@ -1441,6 +1539,7 @@ def export_complexes_bundle() -> Any:
         ]
         if not complex_ids:
             return jsonify({"ok": False, "error": "complex_ids_required"}), 400
+        _assert_complex_refs_not_archived(ctx, complex_ids, action="export")
         options = {
             "include_tasks": payload.get("include_tasks", True),
             "include_theories": payload.get("include_theories", True),
@@ -1463,6 +1562,8 @@ def export_complexes_bundle() -> Any:
             download_name=filename,
             mimetype="application/zip",
         )
+    except PremiumArchivedContentError as exc:
+        return _premium_archive_response(exc)
     except Exception as exc:
         degraded_response = _maybe_hosted_shadow_write_error_response(
             exc,
@@ -2161,6 +2262,12 @@ def set_editor_topic_theory_link(module_id: str, topic_id: str) -> Any:
                             400,
                         )
 
+            _assert_theory_dependency_not_archived(
+                ctx,
+                normalized_theory_link,
+                action="use_as_dependency",
+            )
+
         updated_topic_payload = ctx.storage_service.set_topic_theory_link(
             module_id,
             topic_id,
@@ -2193,6 +2300,8 @@ def set_editor_topic_theory_link(module_id: str, topic_id: str) -> Any:
                 "propagation": propagation_result,
             }
         )
+    except PremiumArchivedContentError as exc:
+        return _premium_archive_response(exc)
     except ValueError as exc:
         if str(exc) == "topic_not_found":
             return jsonify({"ok": False, "error": "topic_not_found"}), 404
@@ -2228,6 +2337,8 @@ def upload_editor_image() -> Any:
 
         if "file" not in request.files:
             return jsonify({"ok": False, "error": "file_required"}), 400
+
+        _assert_task_not_archived(ctx, module_id, topic_id, task_id, action="edit")
 
         file = request.files["file"]
         if file.filename == "":
@@ -2379,6 +2490,8 @@ def upload_editor_image() -> Any:
             )
         return jsonify(response_payload)
 
+    except PremiumArchivedContentError as exc:
+        return _premium_archive_response(exc)
     except Exception as exc:
         logger.exception("[HTTP] Failed to upload image: %s", exc)
         return jsonify({"ok": False, "error": str(exc)}), 500

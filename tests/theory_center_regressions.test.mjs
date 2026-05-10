@@ -47,6 +47,7 @@ function setupTheoryCenterDom(url = "http://localhost/ui/editor/Theory_Center.ht
             <button id="theory-center-scope-complexes" data-scope="complexes"></button>
             <button id="theory-center-scope-orphans" data-scope="orphans"></button>
             <button id="theory-center-scope-only-title" data-scope="only_title"></button>
+            <button id="theory-center-scope-archived" data-scope="archived"></button>
             <span id="theory-center-selection-toggle-wrap"></span>
             <button id="theory-center-selection-toggle" data-active="0"></button>
             <span id="theory-center-selection-toggle-icon"></span>
@@ -111,6 +112,7 @@ describe("Theory center regressions", () => {
         expect(document.getElementById("theory-center-refresh")).toBeNull();
         expect(document.getElementById("theory-center-scope-all")).not.toBeNull();
         expect(document.getElementById("theory-center-scope-only-title")).not.toBeNull();
+        expect(document.getElementById("theory-center-scope-archived")).not.toBeNull();
         expect(document.getElementById("theory-center-summary-toggle")).not.toBeNull();
         expect(document.getElementById("theory-center-selection-toggle")).not.toBeNull();
         expect(document.getElementById("theory-center-selection-toggle-wrap")).not.toBeNull();
@@ -124,6 +126,7 @@ describe("Theory center regressions", () => {
         expect(theoryCenterHtml).toContain("Теории: все");
         expect(theoryCenterHtml).toContain("Теории: Без привязки");
         expect(theoryCenterHtml).toContain("Теории: Только заголовок");
+        expect(theoryCenterHtml).toContain('data-scope="archived"');
     });
 
     it("avoids redundant tooltip-only copies on visible theory state badges", () => {
@@ -140,6 +143,48 @@ describe("Theory center regressions", () => {
 
         expect(state.scope).toBe("all");
         expect(state.search).toBe("atlas");
+    });
+
+    it("reads and renders the Premium archive scope", () => {
+        const dom = setupTheoryCenterDom("http://localhost/ui/editor/Theory_Center.html?scope=archived");
+        const { state, readQueryState, renderList, syncControlsFromState } = dom.window.__theoryCenterTestExports;
+
+        state.workspaceLimits = {
+            ok: true,
+            plan: "free",
+            theories: {
+                archived_count: 1,
+                archived_items: [{ id: "th_archived", scope: "personal" }],
+            },
+        };
+        state.overview = {
+            theories: [{
+                id: "th_archived",
+                title: "Archived theory",
+                usage_topics: 0,
+                usage_complexes: 0,
+                is_orphan: true,
+                has_content: true,
+                image_count: 0,
+                ownership: { is_owned_by_current_user: true },
+            }],
+            linked_theories: [],
+            filters: { modules: [], topic_states: [], complex_states: [] },
+        };
+
+        readQueryState();
+        syncControlsFromState();
+        renderList();
+
+        const archivedBtn = dom.window.document.getElementById("theory-center-scope-archived");
+        const list = dom.window.document.getElementById("theory-center-list");
+
+        expect(state.scope).toBe("archived");
+        expect(archivedBtn.hidden).toBe(false);
+        expect(archivedBtn.getAttribute("data-active")).toBe("1");
+        expect(list.innerHTML).toContain('data-premium-archived="1"');
+        expect(list.innerHTML).toContain("Архив Premium");
+        expect(list.innerHTML).toContain("disabled");
     });
 
     it("hides default all-modules captions in summary cards", () => {
@@ -505,6 +550,16 @@ describe("Theory center regressions", () => {
         };
 
         dom.window.fetch = vi.fn(async (url, options = {}) => {
+            if (url === "/api/workspace-limits/summary") {
+                return {
+                    ok: true,
+                    json: async () => ({
+                        ok: true,
+                        plan: "free",
+                        theories: { archived_count: 0, archived_items: [] },
+                    }),
+                };
+            }
             if (url === "/api/theories/th_orphan") {
                 return {
                     ok: true,

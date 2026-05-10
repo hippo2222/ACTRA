@@ -107,3 +107,44 @@ def test_start_session_registers_linked_runtime_complex(monkeypatch):
     assert registered.name == "Linked Mammography"
     assert getattr(registered, "linked_library_entry_id", "") == library_entry_id
     assert getattr(registered, "content_scope", "") == "linked_library"
+
+
+def test_start_session_revalidates_cached_linked_runtime_complex(monkeypatch):
+    runtime_complex_service = _DummyComplexService()
+    session_manager = _DummySessionManager()
+    controller = _DummyController(session_manager)
+    api = SessionAPI(
+        controller,
+        session_manager,
+        runtime_complex_service,
+        storage_service=MagicMock(),
+        statistics_service=MagicMock(),
+    )
+
+    library_entry_id = "complex_library::demo::deleted"
+    runtime_complex_id = build_linked_runtime_complex_id(library_entry_id)
+    runtime_complex_service._complexes_cache[runtime_complex_id] = object()
+    ctx_payload = SimpleNamespace(
+        catalog_service=SimpleNamespace(
+            get_complex_library_entry=lambda entry_id, requested_by_user_id: {
+                "ok": True,
+                "library_entry": {
+                    "library_entry_id": entry_id,
+                    "access_state": "deleted_source",
+                    "access_reason": "Source complex was deleted by the author.",
+                    "resolved_version_id": None,
+                },
+                "snapshot": None,
+            }
+        )
+    )
+
+    import routes._context as ctx_module  # type: ignore
+
+    monkeypatch.setattr(ctx_module, "get_ctx", lambda: ctx_payload)
+
+    result = api.start_session(runtime_complex_id, user_id="reader")
+
+    assert result["ok"] is False
+    assert result["error"] == "complex_library_entry_not_accessible"
+    assert controller.current_session_id is None

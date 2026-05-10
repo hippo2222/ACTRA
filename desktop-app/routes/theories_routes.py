@@ -23,7 +23,7 @@ from services.theory_service import (  # type: ignore
     TheoryNotFoundError,
     TheoryValidationError,
 )
-from services.workspace_limits_service import WorkspaceLimitError
+from services.workspace_limits_service import PremiumArchivedContentError, WorkspaceLimitError
 
 from routes._context import get_ctx, is_hosted_web_runtime
 from persistence.postgres import PostgresUnavailableError
@@ -49,6 +49,23 @@ class TheoryInUseError(Exception):
 
 def _workspace_limit_response(exc: WorkspaceLimitError) -> Any:
     return jsonify(exc.to_payload()), 409
+
+
+def _premium_archive_response(exc: PremiumArchivedContentError) -> Any:
+    return jsonify(exc.to_payload()), 409
+
+
+def _assert_theory_not_archived(ctx: Any, theory_id: str, *, action: str) -> None:
+    service = getattr(ctx, "workspace_limits_service", None)
+    if service is None:
+        return
+    service.assert_entity_not_archived(
+        ctx.user_id,
+        "theory",
+        theory_id,
+        action=action,
+        scope="workspace",
+    )
 
 
 def _hosted_theory_asset_degraded_response(
@@ -518,6 +535,7 @@ def copy_theory(theory_id: str) -> Any:
     payload = request.get_json(silent=True) or {}
     title = payload.get("title")
     try:
+        _assert_theory_not_archived(ctx, theory_id, action="copy")
         ctx.workspace_limits_service.assert_can_create_workspace_entity(ctx.user_id, "theory")
         item = ctx.theory_service.clone_theory(
             theory_id,
@@ -526,6 +544,8 @@ def copy_theory(theory_id: str) -> Any:
         )
         item = _serialize_theory_payload(item, current_user_id=ctx.user_id)
         return jsonify({"ok": True, "item": item})
+    except PremiumArchivedContentError as exc:
+        return _premium_archive_response(exc)
     except WorkspaceLimitError as exc:
         return _workspace_limit_response(exc)
     except TheoryNotFoundError:
@@ -559,6 +579,7 @@ def update_theory(theory_id: str) -> Any:
         if not updates:
             item = ctx.theory_service.get_theory(theory_id, include_delta=True)
         else:
+            _assert_theory_not_archived(ctx, theory_id, action="edit")
             item = ctx.theory_service.update_theory(
                 theory_id,
                 updates,
@@ -566,6 +587,8 @@ def update_theory(theory_id: str) -> Any:
             )
         item = _serialize_theory_payload(item, current_user_id=ctx.user_id)
         return jsonify({"ok": True, "item": item})
+    except PremiumArchivedContentError as exc:
+        return _premium_archive_response(exc)
     except TheoryConflictError as exc:
         return (
             jsonify(
@@ -603,6 +626,7 @@ def upload_theory_image(theory_id: str) -> Any:
         return jsonify({"ok": False, "error": "file_required"}), 400
 
     try:
+        _assert_theory_not_archived(ctx, theory_id, action="edit")
         result = ctx.theory_service.add_image(theory_id, request.files["file"])
         response_payload: Dict[str, Any] = {"ok": True, **result}
         asset_service = getattr(ctx, "asset_service", None)
@@ -670,6 +694,8 @@ def upload_theory_image(theory_id: str) -> Any:
                 )
             response_payload.pop("path", None)
         return jsonify(response_payload), 200
+    except PremiumArchivedContentError as exc:
+        return _premium_archive_response(exc)
     except TheoryNotFoundError:
         return jsonify({"ok": False, "error": "theory_not_found"}), 404
     except TheoryValidationError as exc:
@@ -706,6 +732,7 @@ def restore_theory(theory_id: str, snapshot_timestamp: str) -> Any:
         return jsonify({"ok": False, "error": "guest_cannot_edit"}), 403
 
     try:
+        _assert_theory_not_archived(ctx, theory_id, action="edit")
         item = ctx.theory_service.restore_from_history(
             theory_id,
             snapshot_timestamp,
@@ -713,6 +740,8 @@ def restore_theory(theory_id: str, snapshot_timestamp: str) -> Any:
         )
         item = _serialize_theory_payload(item, current_user_id=ctx.user_id)
         return jsonify({"ok": True, "item": item})
+    except PremiumArchivedContentError as exc:
+        return _premium_archive_response(exc)
     except TheoryNotFoundError as exc:
         return jsonify({"ok": False, "error": str(exc)}), 404
     except TheoryValidationError as exc:

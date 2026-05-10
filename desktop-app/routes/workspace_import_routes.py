@@ -12,6 +12,7 @@ from typing import Any
 from flask import Blueprint, jsonify, request
 
 from routes._context import get_ctx, is_hosted_web_runtime
+from services.workspace_limits_service import PremiumArchivedContentError
 
 logger = logging.getLogger(__name__)
 
@@ -94,6 +95,12 @@ def _error_route_response(*, mode: str, status: int, error: str, **extra: Any) -
     return jsonify(payload), status
 
 
+def _premium_archive_route_response(exc: PremiumArchivedContentError, *, mode: str) -> Any:
+    payload = exc.to_payload()
+    payload["route_contract"] = _route_contract(mode=mode)
+    return jsonify(payload), 409
+
+
 def _find_legacy_import_markers(payload: Any) -> Any:
     if not isinstance(payload, dict):
         return []
@@ -161,6 +168,19 @@ def _validate_import_request(ctx: Any, *, mode: str) -> Any:
     source_complex = ctx.complex_service.get_complex(source_complex_id)
     if source_complex is None:
         return None, _error_route_response(mode=mode, status=404, error="source_complex_not_found")
+
+    limits_service = getattr(ctx, "workspace_limits_service", None)
+    if limits_service is not None:
+        try:
+            limits_service.assert_entity_not_archived(
+                ctx.user_id,
+                "complex",
+                source_complex_id,
+                action="copy",
+                scope="workspace",
+            )
+        except PremiumArchivedContentError as exc:
+            return None, _premium_archive_route_response(exc, mode=mode)
 
     return (
         {

@@ -12,6 +12,8 @@ if str(DESKTOP_APP_PATH) not in sys.path:
 
 import routes.quick_access_routes as quick_access_routes
 from services.hosted_shadow_fallback import HostedShadowWriteFallbackDisabledError
+from services.linked_complex_runtime import build_linked_runtime_complex_id
+from services.workspace_limits_service import PremiumArchivedContentError
 
 
 def test_start_complex_session_force_clears_paused_session_before_restart(monkeypatch):
@@ -169,6 +171,176 @@ def test_start_complex_session_returns_explicit_degraded_response_for_blocked_ho
             "env_opt_in": "ACTRA_ENABLE_HOSTED_SHADOW_WRITE_FALLBACK",
         },
     }
+
+
+def test_start_complex_session_blocks_premium_archived_complex(monkeypatch):
+    app = Flask(__name__)
+    start_calls = []
+
+    archived_item = {
+        "entity_kind": "complex",
+        "scope": "workspace",
+        "id": "complex_alpha",
+        "ref": "complex_alpha",
+        "limit_kind": "personal",
+        "allowed_actions": {
+            "list": True,
+            "read": True,
+            "delete": True,
+            "edit": False,
+            "start": False,
+            "publish": False,
+        },
+    }
+
+    def fake_assert_entity_not_archived(user_id, entity_kind, entity_ref, *, action, scope=None):
+        raise PremiumArchivedContentError(
+            entity_kind=entity_kind,
+            entity_ref=entity_ref,
+            action=action,
+            plan="free",
+            limit_kind="personal",
+            archived_item=archived_item,
+        )
+
+    fake_session_api = SimpleNamespace(
+        _session_manager=SimpleNamespace(cancel_session=lambda session_id, user_id=None: True),
+        start_session=lambda **kwargs: start_calls.append(kwargs) or {"ok": True},
+    )
+    fake_ctx = SimpleNamespace(
+        session_api=fake_session_api,
+        workspace_limits_service=SimpleNamespace(assert_entity_not_archived=fake_assert_entity_not_archived),
+    )
+
+    monkeypatch.setattr(quick_access_routes, "get_ctx", lambda: fake_ctx)
+    monkeypatch.setattr(
+        quick_access_routes,
+        "_find_paused_session",
+        lambda session_api, complex_id, user_id: None,
+    )
+
+    with app.test_request_context(
+        "/api/session/complex_alpha/start",
+        method="POST",
+        json={"user_id": "audit_user", "start_iteration": 1},
+    ):
+        response, status = quick_access_routes.start_complex_session("complex_alpha")
+
+    payload = response.get_json()
+    assert status == 409
+    assert payload["error"] == "premium_archived_content"
+    assert payload["details"]["action"] == "start"
+    assert start_calls == []
+
+
+def test_start_complex_session_blocks_deleted_source_linked_complex(monkeypatch):
+    app = Flask(__name__)
+    start_calls = []
+    runtime_complex_id = build_linked_runtime_complex_id("complexlib_item_alpha")
+
+    fake_session_api = SimpleNamespace(
+        start_session=lambda **kwargs: start_calls.append(kwargs) or {"ok": True},
+    )
+    fake_catalog_service = SimpleNamespace(
+        get_complex_library_entry=lambda library_entry_id, *, requested_by_user_id: {
+            "ok": True,
+            "library_entry": {
+                "library_entry_id": library_entry_id,
+                "access_state": "deleted_source",
+                "access_reason": "Source complex was deleted by the author.",
+            },
+            "snapshot": None,
+        }
+    )
+    fake_ctx = SimpleNamespace(
+        session_api=fake_session_api,
+        catalog_service=fake_catalog_service,
+        workspace_limits_service=SimpleNamespace(
+            assert_entity_not_archived=lambda *args, **kwargs: {
+                "workspace_access_state": "active",
+                "is_premium_archived": False,
+            }
+        ),
+    )
+
+    monkeypatch.setattr(quick_access_routes, "get_ctx", lambda: fake_ctx)
+    monkeypatch.setattr(
+        quick_access_routes,
+        "_find_paused_session",
+        lambda session_api, complex_id, user_id: None,
+    )
+
+    with app.test_request_context(
+        f"/api/session/{runtime_complex_id}/start",
+        method="POST",
+        json={"user_id": "reader", "start_iteration": 1},
+    ):
+        response, status = quick_access_routes.start_complex_session(runtime_complex_id)
+
+    payload = response.get_json()
+    assert status == 409
+    assert payload["error"] == "complex_library_entry_not_accessible"
+    assert payload["access_state"] == "deleted_source"
+    assert payload["message"] == "Source complex was deleted by the author."
+    assert payload["library_entry_id"] == "complexlib_item_alpha"
+    assert payload["resolution_actions"] == ["remove_from_library"]
+    assert start_calls == []
+
+
+def test_start_old_paused_linked_complex_returns_deleted_source_message(monkeypatch):
+    app = Flask(__name__)
+    start_calls = []
+    paused_session = SimpleNamespace(id="paused_linked_session")
+    runtime_complex_id = build_linked_runtime_complex_id("complexlib_item_deleted")
+
+    fake_session_api = SimpleNamespace(
+        _session_manager=SimpleNamespace(cancel_session=lambda session_id, user_id=None: True),
+        start_session=lambda **kwargs: start_calls.append(kwargs) or {"ok": True},
+    )
+    fake_catalog_service = SimpleNamespace(
+        get_complex_library_entry=lambda library_entry_id, *, requested_by_user_id: {
+            "ok": True,
+            "library_entry": {
+                "library_entry_id": library_entry_id,
+                "access_state": "deleted_source",
+                "access_reason": "Source complex was deleted by the author.",
+            },
+            "snapshot": None,
+        }
+    )
+    fake_ctx = SimpleNamespace(
+        session_api=fake_session_api,
+        catalog_service=fake_catalog_service,
+        workspace_limits_service=SimpleNamespace(
+            assert_entity_not_archived=lambda *args, **kwargs: {
+                "workspace_access_state": "active",
+                "is_premium_archived": False,
+            }
+        ),
+    )
+
+    monkeypatch.setattr(quick_access_routes, "get_ctx", lambda: fake_ctx)
+    monkeypatch.setattr(
+        quick_access_routes,
+        "_find_paused_session",
+        lambda session_api, complex_id, user_id: paused_session,
+    )
+
+    with app.test_request_context(
+        f"/api/session/{runtime_complex_id}/start",
+        method="POST",
+        json={"user_id": "reader", "force": True},
+    ):
+        response, status = quick_access_routes.start_complex_session(runtime_complex_id)
+
+    payload = response.get_json()
+    assert status == 409
+    assert payload["error"] == "complex_library_entry_not_accessible"
+    assert payload["message"] == "Source complex was deleted by the author."
+    assert payload["access_state"] == "deleted_source"
+    assert payload["resolution_actions"] == ["remove_from_library"]
+    assert "session_id" not in payload
+    assert start_calls == []
 
 
 def test_get_quick_access_marks_repository_restored_active_session_as_paused(monkeypatch):

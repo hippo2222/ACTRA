@@ -142,6 +142,47 @@
             box-shadow: var(--shadow-md);
         }
 
+        .theory-row-card--premium-archived {
+            border-color: var(--color-component-pill-warning-border);
+            background: var(--color-component-card-elevated-bg);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .theory-row-card--premium-archived:hover {
+            border-color: var(--color-component-pill-warning-border);
+        }
+
+        .theory-row-card--premium-archived::before,
+        .theory-row-card--premium-archived::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            right: 0;
+            z-index: 0;
+            height: 0.625rem;
+            pointer-events: none;
+            background: repeating-linear-gradient(
+                135deg,
+                var(--color-component-pill-warning-border) 0 0.625rem,
+                color-mix(in srgb, var(--color-text-main) 82%, var(--color-component-pill-warning-border) 18%) 0.625rem 1.25rem
+            );
+            opacity: 0.9;
+        }
+
+        .theory-row-card--premium-archived::before {
+            top: 0;
+        }
+
+        .theory-row-card--premium-archived::after {
+            bottom: 0;
+        }
+
+        .theory-row-card--premium-archived > * {
+            position: relative;
+            z-index: 1;
+        }
+
         .theory-row-card[data-selection-mode="1"][data-selectable="1"] {
             cursor: pointer;
         }
@@ -407,6 +448,8 @@
                                 class="theory-scope-btn rounded-xl px-4 py-2 text-sm font-semibold text-text-secondary">Теории: Без привязки</button>
                             <button id="theory-center-scope-only-title" type="button" data-scope="only_title" data-active="0"
                                 class="theory-scope-btn rounded-xl px-4 py-2 text-sm font-semibold text-text-secondary">Теории: Только заголовок</button>
+                            <button id="theory-center-scope-archived" type="button" data-scope="archived" data-active="0"
+                                class="theory-scope-btn rounded-xl px-4 py-2 text-sm font-semibold text-text-secondary">Архив Premium</button>
                         </div>
                     </div>
 

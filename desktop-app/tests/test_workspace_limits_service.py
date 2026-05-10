@@ -1,18 +1,36 @@
+from datetime import datetime, timedelta, timezone
+import sys
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
+
+DESKTOP_APP_PATH = Path(__file__).resolve().parents[1]
+if str(DESKTOP_APP_PATH) not in sys.path:
+    sys.path.insert(0, str(DESKTOP_APP_PATH))
+
 from services.user_service import USER_PLAN_FREE, USER_PLAN_PREMIUM, USER_ROLE_ADMIN, USER_ROLE_USER
-from services.workspace_limits_service import WorkspaceLimitError, WorkspaceLimitsService
+from services.workspace_limits_service import (
+    PremiumArchivedContentError,
+    WorkspaceLimitError,
+    WorkspaceLimitsService,
+)
 
 
 class _FakeUserService:
-    def __init__(self, plan=USER_PLAN_FREE, role=USER_ROLE_USER):
+    def __init__(self, plan=USER_PLAN_FREE, role=USER_ROLE_USER, premium_expires_at=None):
         self.plan = plan
         self.role = role
+        self.premium_expires_at = premium_expires_at
 
     def get_user(self, user_id):
-        return SimpleNamespace(user_id=user_id, plan=self.plan, role=self.role)
+        return SimpleNamespace(
+            user_id=user_id,
+            plan=self.plan,
+            role=self.role,
+            premium_expires_at=self.premium_expires_at,
+        )
 
 
 class _FakeTheoryService:
@@ -60,9 +78,14 @@ def _make_service(
     modules=None,
     linked_theories=None,
     linked_complexes=None,
+    premium_expires_at=None,
 ):
     return WorkspaceLimitsService(
-        user_service=_FakeUserService(plan=plan, role=role),
+        user_service=_FakeUserService(
+            plan=plan,
+            role=role,
+            premium_expires_at=premium_expires_at,
+        ),
         theory_service=_FakeTheoryService(theories),
         complex_service=_FakeComplexService(complexes),
         storage_service=_FakeStorageService(modules),
@@ -169,6 +192,206 @@ def test_premium_user_is_unlimited():
     assert evaluation["ok"] is True
     assert evaluation["blocked"] is False
     assert evaluation["plan"] == USER_PLAN_PREMIUM
+
+
+def test_free_user_archives_newest_personal_complexes_beyond_limit():
+    service = _make_service(
+        complexes=[
+            {
+                "id": f"c{i}",
+                "created_by_user_id": "u1",
+                "created_via": "complex_builder",
+                "created_at": f"2026-05-{i + 1:02d}T00:00:00",
+            }
+            for i in range(7)
+        ]
+    )
+
+    summary = service.get_summary("u1")
+    complexes = summary["complexes"]
+
+    assert complexes["active_count"] == 5
+    assert complexes["archived_count"] == 2
+    assert complexes["overage_count"] == 2
+    assert [item["id"] for item in complexes["archived_items"]] == ["c5", "c6"]
+    assert {item["workspace_access_state"] for item in complexes["archived_items"]} == {"premium_archived"}
+
+
+def test_expired_timed_premium_uses_free_archive_limits():
+    expired = (datetime.now(timezone.utc) - timedelta(days=1)).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    service = _make_service(
+        plan=USER_PLAN_PREMIUM,
+        premium_expires_at=expired,
+        complexes=[
+            {
+                "id": f"c{i}",
+                "created_by_user_id": "u1",
+                "created_via": "complex_builder",
+                "created_at": f"2026-05-{i + 1:02d}T00:00:00",
+            }
+            for i in range(6)
+        ],
+    )
+
+    summary = service.get_summary("u1")
+
+    assert summary["plan"] == USER_PLAN_FREE
+    assert summary["complexes"]["archived_count"] == 1
+    assert summary["complexes"]["archived_items"][0]["id"] == "c5"
+
+
+def test_restored_premium_clears_expiry_archive_restrictions():
+    expired = (datetime.now(timezone.utc) - timedelta(days=1)).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    restored = (datetime.now(timezone.utc) + timedelta(days=30)).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    service = _make_service(
+        plan=USER_PLAN_PREMIUM,
+        premium_expires_at=expired,
+        complexes=[
+            {
+                "id": f"c{i}",
+                "created_by_user_id": "u1",
+                "created_via": "complex_builder",
+                "created_at": f"2026-05-{i + 1:02d}T00:00:00",
+            }
+            for i in range(6)
+        ],
+    )
+
+    expired_summary = service.get_summary("u1")
+    assert expired_summary["plan"] == USER_PLAN_FREE
+    assert expired_summary["complexes"]["archived_count"] == 1
+    with pytest.raises(PremiumArchivedContentError):
+        service.assert_entity_not_archived("u1", "complex", "c5", action="start", scope="workspace")
+
+    service.user_service.premium_expires_at = restored
+    restored_summary = service.get_summary("u1")
+    restored_state = service.assert_entity_not_archived("u1", "complex", "c5", action="start", scope="workspace")
+
+    assert restored_summary["plan"] == USER_PLAN_PREMIUM
+    assert restored_summary["complexes"]["archived_count"] == 0
+    assert restored_summary["complexes"]["active_count"] == 6
+    assert restored_state["workspace_access_state"] == "active"
+    assert restored_state["is_premium_archived"] is False
+
+
+def test_premium_user_has_no_archive_even_above_free_limits():
+    service = _make_service(
+        plan=USER_PLAN_PREMIUM,
+        complexes=[
+            {
+                "id": f"c{i}",
+                "created_by_user_id": "u1",
+                "created_via": "complex_builder",
+                "created_at": f"2026-05-{i + 1:02d}T00:00:00",
+            }
+            for i in range(7)
+        ],
+    )
+
+    summary = service.get_summary("u1")
+
+    assert summary["complexes"]["active_count"] == 7
+    assert summary["complexes"]["archived_count"] == 0
+    assert summary["complexes"]["archived_items"] == []
+
+
+def test_library_total_archives_newest_linked_entries_beyond_limit():
+    service = _make_service(
+        theories=[
+            {
+                "id": f"t{i}",
+                "created_by_user_id": "u1",
+                "created_via": "manual",
+                "created_at": f"2026-05-{i + 1:02d}T00:00:00",
+            }
+            for i in range(4)
+        ],
+        linked_theories=[
+            {
+                "library_entry": {
+                    "library_entry_id": f"lt{i}",
+                    "created_at": f"2026-05-{i + 5:02d}T00:00:00",
+                }
+            }
+            for i in range(8)
+        ],
+    )
+
+    summary = service.get_summary("u1")
+    theories = summary["theories"]
+
+    assert theories["library_total_count"] == 12
+    assert theories["active_count"] == 10
+    assert theories["archived_count"] == 2
+    assert [item["id"] for item in theories["archived_items"]] == ["lt6", "lt7"]
+    assert {item["scope"] for item in theories["archived_items"]} == {"linked_library"}
+
+
+def test_archive_state_recomputes_after_deleting_excess_item():
+    complex_items = [
+        {
+            "id": f"c{i}",
+            "created_by_user_id": "u1",
+            "created_via": "complex_builder",
+            "created_at": f"2026-05-{i + 1:02d}T00:00:00",
+        }
+        for i in range(6)
+    ]
+    service = _make_service(complexes=complex_items)
+
+    before = service.get_summary("u1")
+    assert before["complexes"]["archived_count"] == 1
+
+    service.complex_service.items = complex_items[:5]
+    after = service.get_summary("u1")
+
+    assert after["complexes"]["archived_count"] == 0
+    assert after["complexes"]["active_count"] == 5
+
+
+def test_archived_complex_guard_blocks_mutating_actions():
+    service = _make_service(
+        complexes=[
+            {
+                "id": f"c{i}",
+                "created_by_user_id": "u1",
+                "created_via": "complex_builder",
+                "created_at": f"2026-05-{i + 1:02d}T00:00:00",
+            }
+            for i in range(6)
+        ]
+    )
+
+    with pytest.raises(PremiumArchivedContentError) as excinfo:
+        service.assert_entity_not_archived("u1", "complex", "c5", action="edit", scope="workspace")
+
+    payload = excinfo.value.to_payload()
+    assert payload["error"] == "premium_archived_content"
+    assert payload["details"]["entity_kind"] == "complex"
+    assert payload["details"]["entity_ref"] == "c5"
+    assert payload["details"]["action"] == "edit"
+    assert payload["details"]["allowed_actions"]["delete"] is True
+    assert payload["details"]["allowed_actions"]["edit"] is False
+
+
+def test_archived_linked_complex_guard_matches_library_entry_id():
+    service = _make_service(
+        linked_complexes=[
+            {
+                "library_entry": {
+                    "library_entry_id": f"lc{i}",
+                    "created_at": f"2026-05-{i + 1:02d}T00:00:00",
+                }
+            }
+            for i in range(11)
+        ]
+    )
+
+    state = service.get_entity_access_state("u1", "complex", "lc10", scope="linked_library")
+
+    assert state["workspace_access_state"] == "premium_archived"
+    assert state["is_premium_archived"] is True
+    assert state["archived_item"]["id"] == "lc10"
 
 
 def test_admin_with_free_plan_is_treated_as_effective_premium():

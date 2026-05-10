@@ -27,6 +27,7 @@ from services.hosted_shadow_fallback import (
     HostedShadowReadFallbackDisabledError,
     HostedShadowWriteFallbackDisabledError,
 )
+from services.workspace_limits_service import PremiumArchivedContentError
 
 logger = logging.getLogger(__name__)
 
@@ -212,6 +213,40 @@ def _workspace_import_markers_in_payload(payload: Any) -> List[str]:
     if not isinstance(payload, dict):
         return []
     return [key for key in _WORKSPACE_IMPORT_MARKER_KEYS if key in payload]
+
+
+def _premium_archive_response(exc: PremiumArchivedContentError) -> Any:
+    return jsonify(exc.to_payload()), 409
+
+
+def _assert_export_task_refs_not_archived(ctx: Any, task_refs: Any, *, action: str) -> None:
+    service = getattr(ctx, "workspace_limits_service", None)
+    if service is None or not isinstance(task_refs, list):
+        return
+    for ref in task_refs:
+        if not isinstance(ref, dict):
+            continue
+        mid = str(ref.get("module_id") or "").strip()
+        tid = str(ref.get("topic_id") or "").strip()
+        task_id = str(ref.get("task_id") or "").strip()
+        if not mid or not tid or not task_id:
+            continue
+        task_ref = f"{mid}/{tid}/{task_id}"
+        service.assert_entity_not_archived(
+            ctx.user_id,
+            "task",
+            task_ref,
+            action=action,
+            scope="workspace",
+        )
+        if task_id != task_ref:
+            service.assert_entity_not_archived(
+                ctx.user_id,
+                "task",
+                task_id,
+                action=action,
+                scope="workspace",
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -817,6 +852,11 @@ def export_tasks_to_text() -> Any:
         return jsonify({"ok": False, "error": "no_tasks"}), 400
     storage = ctx.storage_service
     lines: List[str] = []
+
+    try:
+        _assert_export_task_refs_not_archived(ctx, task_refs, action="export")
+    except PremiumArchivedContentError as exc:
+        return _premium_archive_response(exc)
 
     for ref in task_refs:
         mid = ref.get("module_id")

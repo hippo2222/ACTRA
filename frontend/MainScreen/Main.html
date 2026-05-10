@@ -313,7 +313,7 @@
         .main-primary-column {
             display: grid;
             grid-template-columns: minmax(0, 1fr);
-            grid-template-rows: auto auto auto;
+            grid-template-rows: auto auto auto auto;
             align-content: start;
             gap: var(--main-gap);
             min-width: 0;
@@ -333,6 +333,112 @@
             border: 1px solid var(--color-border-subtle);
             background: var(--color-surface-1);
             box-shadow: var(--main-shadow-soft) !important;
+        }
+
+        .main-premium-archive-card {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: clamp(0.9rem, 1.5vw, 1.35rem);
+            border-color: color-mix(in srgb, var(--color-component-pill-warning-border, var(--color-warning)) 68%, var(--color-border-subtle) 32%);
+            background:
+                linear-gradient(135deg,
+                    color-mix(in srgb, var(--color-component-pill-warning-bg, var(--color-warning-lighter)) 62%, var(--color-surface-1) 38%) 0%,
+                    var(--color-surface-1) 72%);
+            color: var(--color-text-main);
+            box-shadow: 0 16px 34px -30px color-mix(in srgb, var(--color-warning) 62%, transparent) !important;
+        }
+
+        .main-premium-archive-card[hidden] {
+            display: none !important;
+        }
+
+        .main-premium-archive-copy {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.8rem;
+            min-width: 0;
+        }
+
+        .main-premium-archive-icon {
+            display: inline-flex;
+            flex: 0 0 auto;
+            align-items: center;
+            justify-content: center;
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: var(--main-card-radius-sm);
+            border: 1px solid var(--color-component-pill-warning-border, var(--color-warning-light));
+            background: var(--color-component-pill-warning-bg, var(--color-warning-lighter));
+            color: var(--color-component-pill-warning-fg, var(--color-warning-dark));
+        }
+
+        .main-premium-archive-icon .material-symbols-outlined {
+            font-size: 1.35rem;
+        }
+
+        .main-premium-archive-kicker {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            width: fit-content;
+            margin: 0 0 0.35rem;
+            color: var(--color-component-pill-warning-fg, var(--color-warning-dark));
+            font-size: 0.7rem;
+            font-weight: 900;
+            letter-spacing: 0.08em;
+            line-height: 1.15;
+            text-transform: uppercase;
+        }
+
+        .main-premium-archive-title {
+            margin: 0;
+            color: var(--color-text-main);
+            font-size: clamp(1rem, 1.1vw, 1.18rem);
+            font-weight: 900;
+            line-height: 1.2;
+        }
+
+        .main-premium-archive-text {
+            margin: 0.35rem 0 0;
+            max-width: 56rem;
+            color: var(--color-text-secondary);
+            font-size: 0.84rem;
+            font-weight: 600;
+            line-height: 1.45;
+        }
+
+        .main-premium-archive-breakdown {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            margin-top: 0.65rem;
+        }
+
+        .main-premium-archive-breakdown .pill-neutral {
+            background: color-mix(in srgb, var(--color-surface-1) 74%, var(--color-component-pill-warning-bg, var(--color-warning-lighter)) 26%);
+            border-color: color-mix(in srgb, var(--color-component-pill-warning-border, var(--color-warning-light)) 54%, var(--color-border-subtle) 46%);
+            color: var(--color-text-main);
+        }
+
+        .main-premium-archive-actions {
+            display: flex;
+            flex: 0 0 auto;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: 0.55rem;
+            max-width: 24rem;
+        }
+
+        .main-premium-archive-actions .btn-primary,
+        .main-premium-archive-actions .btn-secondary {
+            min-height: 2.45rem;
+            border-radius: 0.75rem;
+            padding: 0.6rem 0.9rem;
+            font-size: 0.82rem;
+            font-weight: 800;
+            line-height: 1.15;
+            white-space: normal;
         }
 
         .main-entry-card {
@@ -1583,6 +1689,16 @@
                 min-height: auto;
             }
 
+            .main-premium-archive-card {
+                flex-direction: column;
+            }
+
+            .main-premium-archive-actions {
+                width: 100%;
+                max-width: none;
+                justify-content: flex-start;
+            }
+
             #quick-access-section {
                 margin-top: 0;
             }
@@ -2583,6 +2699,21 @@
             .main-quick-access-grid {
                 grid-template-columns: 1fr;
             }
+
+            .main-premium-archive-copy {
+                flex-direction: column;
+                gap: 0.65rem;
+            }
+
+            .main-premium-archive-actions {
+                display: grid;
+                grid-template-columns: 1fr;
+            }
+
+            .main-premium-archive-actions .btn-primary,
+            .main-premium-archive-actions .btn-secondary {
+                width: 100%;
+            }
         }
     </style>
 
@@ -2639,6 +2770,29 @@
                                     <span class="main-entry-action" aria-hidden="true"><span class="material-symbols-outlined text-[28px]">play_arrow</span></span>
                                 </div>
                             </article>
+                        </section>
+                        <section class="main-premium-archive-card main-widget-card main-primary-card" id="main-premium-archive-card" aria-labelledby="main-premium-archive-title" aria-live="polite" hidden>
+                            <div class="main-premium-archive-copy">
+                                <span class="main-premium-archive-icon" aria-hidden="true">
+                                    <span class="material-symbols-outlined">inventory_2</span>
+                                </span>
+                                <div class="min-w-0">
+                                    <p class="main-premium-archive-kicker"><span class="material-symbols-outlined text-[15px]">workspace_premium</span>Premium</p>
+                                    <h3 class="main-premium-archive-title" id="main-premium-archive-title">Premium закончился — часть материалов в архиве</h3>
+                                    <p class="main-premium-archive-text" id="main-premium-archive-copy">Материалы не удалены: их можно открыть для просмотра, удалить лишнее или продлить Premium.</p>
+                                    <div class="main-premium-archive-breakdown" id="main-premium-archive-breakdown" aria-label="Материалы в архиве Premium"></div>
+                                </div>
+                            </div>
+                            <div class="main-premium-archive-actions">
+                                <button type="button" class="btn-primary inline-flex items-center justify-center gap-2" id="main-premium-archive-open">
+                                    <span class="material-symbols-outlined text-[18px]" id="main-premium-archive-open-icon">inventory_2</span>
+                                    <span id="main-premium-archive-open-label">Разобрать архив</span>
+                                </button>
+                                <button type="button" class="btn-secondary inline-flex items-center justify-center gap-2" id="main-premium-archive-premium">
+                                    <span class="material-symbols-outlined text-[18px]">workspace_premium</span>
+                                    <span>Продлить Premium</span>
+                                </button>
+                            </div>
                         </section>
                         <section class="main-editor-panel">
                             <div class="main-section-heading">

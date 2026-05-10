@@ -9,7 +9,7 @@ from flask import Blueprint, jsonify, request
 
 from routes._context import get_ctx
 from routes._helpers import _maybe_hosted_shadow_write_error_response
-from services.workspace_limits_service import WorkspaceLimitError
+from services.workspace_limits_service import PremiumArchivedContentError, WorkspaceLimitError
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +50,87 @@ def _workspace_limit_response(exc: WorkspaceLimitError, *, mode: str, public_api
     payload = exc.to_payload()
     payload["route_contract"] = _route_contract(mode=mode, public_api=public_api)
     return jsonify(payload), 409
+
+
+def _premium_archive_response(exc: PremiumArchivedContentError, *, mode: str, public_api: bool = True) -> Any:
+    payload = exc.to_payload()
+    payload["route_contract"] = _route_contract(mode=mode, public_api=public_api)
+    return jsonify(payload), 409
+
+
+def _assert_complex_not_archived(ctx: Any, complex_id: Any, *, action: str) -> None:
+    service = getattr(ctx, "workspace_limits_service", None)
+    if service is None:
+        return
+    service.assert_entity_not_archived(
+        ctx.user_id,
+        "complex",
+        complex_id,
+        action=action,
+        scope="workspace",
+    )
+
+
+def _assert_theory_not_archived(ctx: Any, theory_id: Any, *, action: str) -> None:
+    service = getattr(ctx, "workspace_limits_service", None)
+    if service is None:
+        return
+    service.assert_entity_not_archived(
+        ctx.user_id,
+        "theory",
+        theory_id,
+        action=action,
+        scope="workspace",
+    )
+
+
+def _catalog_visibility_rank(value: Any) -> Optional[int]:
+    text = str(value or "").strip().lower()
+    if text == "private":
+        return 0
+    if text == "access_code":
+        return 1
+    if text == "public":
+        return 2
+    return None
+
+
+def _is_catalog_visibility_expansion(current_visibility: Any, next_visibility: Any) -> bool:
+    current_rank = _catalog_visibility_rank(current_visibility)
+    next_rank = _catalog_visibility_rank(next_visibility)
+    if current_rank is None or next_rank is None:
+        return False
+    return next_rank > current_rank
+
+
+def _catalog_source_ref(item: Dict[str, Any]) -> Any:
+    return item.get("source_workspace_id") or item.get("source_workspace_ref")
+
+
+def _assert_catalog_source_not_archived(ctx: Any, item: Dict[str, Any], *, action: str) -> None:
+    content_type = str(item.get("content_type") or "").strip().lower()
+    source_ref = _catalog_source_ref(item)
+    if content_type == "complex":
+        _assert_complex_not_archived(ctx, source_ref, action=action)
+    elif content_type == "theory":
+        _assert_theory_not_archived(ctx, source_ref, action=action)
+
+
+def _assert_catalog_visibility_change_allowed(
+    ctx: Any,
+    service: Any,
+    item_id: str,
+    *,
+    catalog_visibility: Any,
+) -> None:
+    payload = service.get_item(item_id, requested_by_user_id=ctx.user_id)
+    item = payload.get("item") if isinstance(payload, dict) and isinstance(payload.get("item"), dict) else {}
+    content_type = str(item.get("content_type") or "").strip().lower()
+    if content_type not in {"complex", "theory"}:
+        return
+    if not _is_catalog_visibility_expansion(item.get("catalog_visibility") or "public", catalog_visibility):
+        return
+    _assert_catalog_source_not_archived(ctx, item, action="change_visibility")
 
 
 def _maybe_degraded_catalog_error(exc: Exception, *, mode: str, public_api: bool = True) -> Optional[Any]:
@@ -115,7 +196,7 @@ def _publish_error_status(error: str) -> int:
         return 403
     if text in {"theory_library_entry_not_found", "catalog_version_not_found", "catalog_item_not_found"}:
         return 404
-    if text == "theory_catalog_visibility_locked_by_public_complex":
+    if text in {"theory_catalog_visibility_locked_by_public_complex", "catalog_item_source_deleted"}:
         return 409
     if text == "requested_by_user_id_required":
         return 403
@@ -303,12 +384,15 @@ def publish_catalog_complex(workspace_complex_id: str) -> Any:
         )
     try:
         body = _json_body()
+        _assert_complex_not_archived(ctx, workspace_complex_id, action="publish")
         payload = service.publish_complex(
             workspace_complex_id,
             requested_by_user_id=ctx.user_id,
             catalog_visibility=body.get("catalog_visibility"),
         )
         return jsonify(_with_route_contract(payload, mode="publish_complex", public_api=False))
+    except PremiumArchivedContentError as exc:
+        return _premium_archive_response(exc, mode="publish_complex", public_api=False)
     except ValueError as exc:
         return _error_response(
             mode="publish_complex",
@@ -344,12 +428,15 @@ def publish_catalog_theory(theory_id: str) -> Any:
         )
     try:
         body = _json_body()
+        _assert_theory_not_archived(ctx, theory_id, action="publish")
         payload = service.publish_theory(
             theory_id,
             requested_by_user_id=ctx.user_id,
             catalog_visibility=body.get("catalog_visibility"),
         )
         return jsonify(_with_route_contract(payload, mode="publish_theory", public_api=False))
+    except PremiumArchivedContentError as exc:
+        return _premium_archive_response(exc, mode="publish_theory", public_api=False)
     except ValueError as exc:
         return _error_response(
             mode="publish_theory",
@@ -544,12 +631,20 @@ def update_catalog_item_visibility(item_id: str) -> Any:
         )
     try:
         body = _json_body()
+        _assert_catalog_visibility_change_allowed(
+            ctx,
+            service,
+            item_id,
+            catalog_visibility=body.get("catalog_visibility"),
+        )
         payload = service.set_item_visibility(
             item_id,
             catalog_visibility=body.get("catalog_visibility"),
             requested_by_user_id=ctx.user_id,
         )
         return jsonify(_with_route_contract(payload, mode="set_visibility", public_api=False))
+    except PremiumArchivedContentError as exc:
+        return _premium_archive_response(exc, mode="set_visibility", public_api=False)
     except ValueError as exc:
         return _error_response(
             mode="set_visibility",

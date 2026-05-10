@@ -1133,6 +1133,8 @@ class CatalogService:
         item_payload = self._get_item_payload(clean_item_id)
         if not isinstance(item_payload, dict):
             raise ValueError("catalog_item_not_found")
+        if self._is_item_deleted_source(item_payload):
+            raise ValueError("catalog_item_source_deleted")
         owner_user_id = self._require_text(item_payload.get("owner_user_id"), "catalog_item_owner_required")
         if owner_user_id != requester:
             raise ValueError("catalog_item_visibility_update_forbidden")
@@ -1169,6 +1171,98 @@ class CatalogService:
             "requested_by_user_id": requester,
             "service_contract": dict(self.SERVICE_CONTRACT),
             "item": self._summarize_item_payload(updated_item, include_sensitive=True),
+        }
+
+    def handle_workspace_source_deleted(
+        self,
+        content_type: str,
+        *,
+        owner_user_id: Optional[str],
+        source_workspace_id: Optional[str] = None,
+        source_workspace_ref: Optional[str] = None,
+        source_workspace_kind: Optional[str] = None,
+        reason: str = "workspace_source_deleted",
+    ) -> Dict[str, Any]:
+        normalized_content_type = self._normalize_content_type(content_type)
+        owner = self._require_text(owner_user_id, "catalog_item_owner_required")
+        source_id = self._normalize_optional_text(source_workspace_id)
+        source_ref = self._normalize_optional_text(source_workspace_ref)
+        source_kind = self._normalize_optional_text(source_workspace_kind) or normalized_content_type
+        if not source_id and not source_ref:
+            raise ValueError("source_workspace_id_required")
+
+        candidate_keys = set()
+        if source_id and source_ref:
+            candidate_keys.add(
+                self._build_source_workspace_key(
+                    owner_user_id=owner,
+                    content_type=normalized_content_type,
+                    source_workspace_kind=source_kind,
+                    source_workspace_id=source_id,
+                    source_workspace_ref=source_ref,
+                )
+            )
+
+        matched_items: List[Dict[str, Any]] = []
+        for item_payload in self._list_item_payloads():
+            if not isinstance(item_payload, dict):
+                continue
+            if str(item_payload.get("content_type") or "").strip().lower() != normalized_content_type:
+                continue
+            if self._normalize_optional_text(item_payload.get("owner_user_id")) != owner:
+                continue
+            item_key = self._normalize_optional_text(item_payload.get("source_workspace_key"))
+            item_source_id = self._normalize_optional_text(item_payload.get("source_workspace_id"))
+            item_source_ref = self._normalize_optional_text(item_payload.get("source_workspace_ref"))
+            key_match = bool(item_key and item_key in candidate_keys)
+            id_match = bool(source_id and source_id in {item_source_id, item_source_ref})
+            ref_match = bool(source_ref and source_ref in {item_source_id, item_source_ref})
+            if key_match or id_match or ref_match:
+                matched_items.append(item_payload)
+
+        deleted_at = self._utcnow_iso()
+        affected_items: List[Dict[str, Any]] = []
+        affected_library_entries: List[Dict[str, Any]] = []
+        for item_payload in matched_items:
+            updated_item = dict(item_payload)
+            updated_item["status"] = "deleted_source"
+            updated_item["catalog_visibility"] = "private"
+            updated_item["source_deleted_at"] = deleted_at
+            updated_item["source_deleted_reason"] = str(reason or "workspace_source_deleted")
+            updated_item["updated_at"] = deleted_at
+            updated_item.pop("access_code", None)
+            self._upsert_item_payload(updated_item)
+            affected_items.append(self._summarize_item_payload(updated_item, include_sensitive=True))
+            for entry_payload in self._list_complex_library_entry_payloads_for_item(
+                self._normalize_optional_text(updated_item.get("item_id"))
+            ):
+                updated_entry = dict(entry_payload)
+                updated_entry["access_state"] = "deleted_source"
+                updated_entry["access_reason"] = "Source complex was deleted by the author."
+                updated_entry["resolved_version_id"] = None
+                updated_entry["updated_at"] = deleted_at
+                self._upsert_complex_library_entry_payload(updated_entry)
+                affected_library_entries.append(
+                    {
+                        "library_entry_id": updated_entry.get("library_entry_id"),
+                        "user_id": updated_entry.get("user_id"),
+                        "catalog_item_id": updated_entry.get("catalog_item_id"),
+                        "access_state": updated_entry.get("access_state"),
+                        "access_reason": updated_entry.get("access_reason"),
+                    }
+                )
+
+        return {
+            "ok": True,
+            "delete_source_kind": "catalog_workspace_source_deleted",
+            "content_type": normalized_content_type,
+            "owner_user_id": owner,
+            "source_workspace_id": source_id,
+            "source_workspace_ref": source_ref,
+            "affected_count": len(affected_items),
+            "items": affected_items,
+            "affected_library_entries": affected_library_entries,
+            "affected_library_entry_count": len(affected_library_entries),
         }
 
     def resolve_access_code(
@@ -2521,6 +2615,18 @@ class CatalogService:
                 return dict(item)
         return None
 
+    def _list_complex_library_entry_payloads_for_item(self, catalog_item_id: Optional[str]) -> List[Dict[str, Any]]:
+        clean_item_id = self._normalize_optional_text(catalog_item_id)
+        if not clean_item_id:
+            return []
+        state = self._read_state()
+        return [
+            dict(item)
+            for item in state.get("complex_library_entries") or []
+            if isinstance(item, dict)
+            and self._normalize_optional_text(item.get("catalog_item_id")) == clean_item_id
+        ]
+
     def _upsert_complex_library_entry_payload(self, entry_payload: Dict[str, Any]) -> None:
         state = self._read_state()
         entries = [dict(item) for item in state.get("complex_library_entries") or [] if isinstance(item, dict)]
@@ -2744,6 +2850,14 @@ class CatalogService:
                 "granted_access_code": None,
             }
 
+        if self._is_item_deleted_source(item_payload):
+            return {
+                "access_state": "deleted_source",
+                "access_reason": "Source theory was deleted by the author.",
+                "resolved_version_id": None,
+                "granted_access_code": None,
+            }
+
         if self._is_item_owner(item_payload, requested_by_user_id=requester):
             return {
                 "access_state": "active",
@@ -2835,6 +2949,14 @@ class CatalogService:
             return {
                 "access_state": "deleted_source",
                 "access_reason": "Источник больше не доступен.",
+                "resolved_version_id": None,
+                "granted_access_code": None,
+            }
+
+        if self._is_item_deleted_source(item_payload):
+            return {
+                "access_state": "deleted_source",
+                "access_reason": "Source complex was deleted by the author.",
                 "resolved_version_id": None,
                 "granted_access_code": None,
             }
@@ -3120,6 +3242,10 @@ class CatalogService:
         owner_user_id = self._normalize_optional_text(payload.get("owner_user_id"))
         return bool(requester and owner_user_id and requester == owner_user_id)
 
+    def _is_item_deleted_source(self, payload: Dict[str, Any]) -> bool:
+        status = str(payload.get("status") or "").strip().lower()
+        return status in {"deleted_source", "source_deleted", "deleted"}
+
     def _should_include_sensitive_fields(self, payload: Dict[str, Any], *, requested_by_user_id: Optional[str]) -> bool:
         return self._is_item_owner(payload, requested_by_user_id=requested_by_user_id)
 
@@ -3131,6 +3257,8 @@ class CatalogService:
         owner_user_id: Optional[str],
         include_owned_non_public: bool,
     ) -> bool:
+        if self._is_item_deleted_source(payload):
+            return False
         visibility = self._normalize_catalog_visibility(payload.get("catalog_visibility"), allow_empty=True) or "public"
         payload_owner_user_id = self._normalize_optional_text(payload.get("owner_user_id"))
         if owner_user_id:
@@ -3154,6 +3282,8 @@ class CatalogService:
         requested_by_user_id: Optional[str],
         access_code: Optional[str],
     ) -> None:
+        if self._is_item_deleted_source(payload):
+            raise ValueError("catalog_item_source_deleted")
         visibility = self._normalize_catalog_visibility(payload.get("catalog_visibility"), allow_empty=True) or "public"
         if visibility == "public":
             return

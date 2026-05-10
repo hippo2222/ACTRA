@@ -33,6 +33,8 @@
                 topic: params.get('topic'),
                 sort: params.get('sort'),
                 microcards_manual: params.get('microcards_manual'),
+                archive: params.get('archive'),
+                filter: params.get('filter'),
             };
 
             // Restore sidebar width immediately to avoid jump
@@ -163,6 +165,81 @@
             max-width: 100%;
             white-space: normal;
             line-height: 1.2;
+        }
+
+        .editor-archive-filter {
+            border: 1px solid var(--color-component-pill-warning-border);
+            background: var(--color-component-pill-warning-bg);
+            color: var(--color-component-pill-warning-fg);
+        }
+
+        .editor-archive-filter[aria-pressed="true"] {
+            border-color: var(--color-warning);
+            background: linear-gradient(180deg, var(--color-component-pill-warning-bg), var(--color-surface-1));
+            color: var(--color-text-main);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .task-card--premium-archived {
+            border-color: color-mix(in srgb, var(--color-component-pill-warning-border) 72%, var(--color-border-subtle) 28%) !important;
+            background: linear-gradient(180deg, var(--color-component-pill-warning-bg), var(--color-surface-2) 72%) !important;
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+        }
+
+        .task-card--premium-archived:hover {
+            transform: none !important;
+            border-color: var(--color-component-pill-warning-border) !important;
+        }
+
+        .task-card--premium-archived::before,
+        .task-card--premium-archived::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            right: 0;
+            z-index: 0;
+            height: 0.625rem;
+            pointer-events: none;
+            background: repeating-linear-gradient(
+                135deg,
+                var(--color-component-pill-warning-border) 0 0.625rem,
+                color-mix(in srgb, var(--color-text-main) 82%, var(--color-component-pill-warning-border) 18%) 0.625rem 1.25rem
+            );
+            opacity: 0.9;
+        }
+
+        .task-card--premium-archived::before {
+            top: 0;
+        }
+
+        .task-card--premium-archived::after {
+            bottom: 0;
+        }
+
+        .task-card--premium-archived > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        .task-card--premium-archived .editor-task-card-title {
+            color: var(--color-text-main);
+        }
+
+        .task-card--premium-archived .editor-task-card-archived-note {
+            color: var(--color-text-secondary);
+        }
+
+        .editor-modal-layer {
+            z-index: 120;
+        }
+
+        .editor-modal-layer-strong {
+            z-index: 130;
+        }
+
+        .editor-toast-layer {
+            z-index: 160;
         }
 
         #header-breadcrumbs {
@@ -563,6 +640,16 @@
                     <span class="editor-sidebar-action-label text-xs font-bold uppercase tracking-wider">Анализ теории · ИИ</span>
                 </button>
             </div>
+            <div class="px-4 mb-4">
+                <button id="editor-archive-filter" type="button"
+                    class="editor-archive-filter flex items-center justify-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+                    aria-pressed="false"
+                    title="Показать задания, которые стали доступны только для просмотра/удаления после окончания Premium">
+                    <span class="material-symbols-outlined text-[18px]">inventory_2</span>
+                    <span class="editor-sidebar-action-label">Архив Premium</span>
+                    <span id="editor-archive-filter-count" class="rounded-full border border-border-subtle bg-surface-1 px-1.5 py-0.5 text-[11px] leading-none text-text-main normal-case tracking-normal" hidden>0</span>
+                </button>
+            </div>
 
             <div class="px-4 mb-4">
                 <button data-role="open-recovery-center"
@@ -621,7 +708,7 @@
         </div>
     </div>
     <!-- Sidebar Sync Confirmation Modal -->
-    <div id="topic-sync-confirm-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div id="topic-sync-confirm-modal" class="editor-modal-layer-strong hidden fixed inset-0 flex items-center justify-center p-4">
         <div id="topic-sync-blur-overlay" class="absolute inset-0 bg-black/40 backdrop-blur-md opacity-0 transition-opacity duration-200"></div>
         <div id="topic-sync-modal-content"
             class="relative w-full max-w-sm bg-surface-1 rounded-2xl shadow-2xl border border-white/10 p-6 transform scale-95 opacity-0 transition-all duration-200">
@@ -732,7 +819,7 @@
     <!-- Create Task Modal -->
     <div id="create-task-modal"
         data-onboarding-target="editor-create-task-modal"
-        class="hidden fixed inset-0 z-50 overflow-y-auto modal-backdrop items-center justify-center p-4">
+        class="editor-modal-layer hidden fixed inset-0 overflow-y-auto modal-backdrop items-center justify-center p-4">
         <div
             data-onboarding-target="editor-create-task-dialog"
             data-onboarding-spotlight="frame"
@@ -813,7 +900,7 @@
     </div>
     <!-- Create Module Modal -->
     <div id="create-module-modal"
-        class="hidden fixed inset-0 z-[60] overflow-y-auto modal-backdrop items-center justify-center p-4">
+        class="editor-modal-layer hidden fixed inset-0 overflow-y-auto modal-backdrop items-center justify-center p-4">
         <div
             class="editor-dialog-shell editor-dialog-shell-compact inline-block align-bottom bg-surface-1 rounded-xl text-left shadow-xl transform transition-all sm:my-8 sm:align-middle sm:w-full">
             <div class="editor-dialog-header bg-surface-1 px-6 pt-6 pb-4">
@@ -850,7 +937,7 @@
     </div>
     <!-- Create Topic Modal -->
     <div id="create-topic-modal"
-        class="hidden fixed inset-0 z-[60] overflow-y-auto modal-backdrop items-center justify-center p-4">
+        class="editor-modal-layer hidden fixed inset-0 overflow-y-auto modal-backdrop items-center justify-center p-4">
         <div
             class="editor-dialog-shell editor-dialog-shell-compact inline-block align-bottom bg-surface-1 rounded-xl text-left shadow-xl transform transition-all sm:my-8 sm:align-middle sm:w-full">
             <div class="editor-dialog-header bg-surface-1 px-6 pt-6 pb-4">
@@ -1228,7 +1315,7 @@
     </dialog>
     </div>
     <!-- Import Tasks Modal -->
-    <div id="import-modal" class="hidden fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4">
+    <div id="import-modal" class="editor-modal-layer hidden fixed inset-0 modal-backdrop flex items-center justify-center p-4">
         <div
             class="editor-import-modal-shell bg-surface-1 rounded-2xl shadow-xl w-full mx-4 overflow-hidden flex flex-col">
             <!-- Header -->
@@ -1301,7 +1388,7 @@
             </div>
         </div>
     </div>
-    <div id="recovery-center-modal" class="hidden fixed inset-0 z-[70] modal-backdrop items-center justify-center p-4">
+    <div id="recovery-center-modal" class="editor-modal-layer hidden fixed inset-0 modal-backdrop items-center justify-center p-4">
         <div class="editor-recovery-modal-shell bg-surface-1 rounded-2xl shadow-xl w-full overflow-hidden flex flex-col">
             <div class="editor-recovery-header px-6 py-4 border-b border-border-subtle flex items-start justify-between gap-4">
                 <div class="min-w-0">
@@ -1320,7 +1407,7 @@
     </div>
 
     <!-- Toast Container -->
-    <div id="toast-container" class="fixed bottom-6 right-6 z-[100] flex flex-col gap-3 pointer-events-none"></div>
+    <div id="toast-container" class="editor-toast-layer fixed bottom-6 right-6 flex flex-col gap-3 pointer-events-none"></div>
 
     <script src="../../assets/NotificationUI.js"></script>
     <script src="../../assets/SharedProfileModal.js"></script>

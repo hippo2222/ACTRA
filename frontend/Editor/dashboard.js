@@ -28,6 +28,7 @@ class EditorDashboard {
         this.currentView = null; // { type: 'all' | 'module' | 'topic', moduleId?, topicId? }
         this.currentSearch = '';
         this.currentSort = 'date';
+        this.showPremiumArchiveTasks = false;
         this.sortMenuOpen = false;
         this.boundSortOutsideHandler = null;
 
@@ -176,6 +177,9 @@ class EditorDashboard {
         if (routeState.microcards_manual === '1') {
             this.pendingMicrocardsManual = true;
         }
+        if (routeState.archive === 'premium' || routeState.filter === 'archived') {
+            this.showPremiumArchiveTasks = true;
+        }
 
         if (routeState.module && routeState.topic) {
             this.pendingInitialView = { moduleId: routeState.module, topicId: routeState.topic };
@@ -303,6 +307,7 @@ class EditorDashboard {
             activeTopicId: this.activeTopicId,
             currentSearchQuery: this.currentSearchQuery,
             currentSort: this.currentSort,
+            showPremiumArchiveTasks: this.showPremiumArchiveTasks,
             expandedState: JSON.parse(JSON.stringify(this.expandedState || { modules: [], topics: [] })),
             selectedTasks: Array.from(this.selectedTasks || []),
             selectionMode: this.selectionMode,
@@ -331,6 +336,7 @@ class EditorDashboard {
         this.activeTopicId = 'onboarding-topic-waves';
         this.currentSearchQuery = '';
         this.currentSort = 'date';
+        this.showPremiumArchiveTasks = false;
         this.expandedState = {
             modules: ['onboarding-module-radiology'],
             topics: ['onboarding-module-radiology:onboarding-topic-waves'],
@@ -381,6 +387,7 @@ class EditorDashboard {
             this.activeTopicId = snapshot.activeTopicId || null;
             this.currentSearchQuery = snapshot.currentSearchQuery || '';
             this.currentSort = snapshot.currentSort || 'date';
+            this.showPremiumArchiveTasks = Boolean(snapshot.showPremiumArchiveTasks);
             this.expandedState = snapshot.expandedState || { modules: [], topics: [] };
             this.selectedTasks = new Set(snapshot.selectedTasks || []);
             this.selectionMode = Boolean(snapshot.selectionMode);
@@ -538,6 +545,53 @@ class EditorDashboard {
             : null;
     }
 
+    getTaskArchivedItems() {
+        const summary = this.getTaskLimitSummary();
+        return Array.isArray(summary?.archived_items) ? summary.archived_items : [];
+    }
+
+    getArchivedTaskRefs(item) {
+        if (!item || typeof item !== 'object') return [];
+        return [item.id, item.ref, item.workspace_entity_id, item.workspace_entity_ref]
+            .map((value) => String(value || '').trim())
+            .filter(Boolean);
+    }
+
+    getTaskArchiveCandidateRefs(task = {}) {
+        const moduleId = String(task.moduleId || task.module_id || '').trim();
+        const topicId = String(task.topicId || task.topic_id || '').trim();
+        const taskId = String(this.getCanonicalTaskId(task) || task.id || '').trim();
+        return new Set([
+            taskId,
+            String(task.legacy_id || '').trim(),
+            String(task.ref || task.path || task.metadata?.path || '').trim(),
+            moduleId && topicId && taskId ? `${moduleId}/${topicId}/${taskId}` : '',
+        ].filter(Boolean));
+    }
+
+    resolveTaskArchiveItem(task = {}) {
+        const archivedItems = this.getTaskArchivedItems();
+        if (!archivedItems.length || !task || typeof task !== 'object') return null;
+        const candidateRefs = this.getTaskArchiveCandidateRefs(task);
+        return archivedItems.find((item) => {
+            if (!item || typeof item !== 'object') return false;
+            return this.getArchivedTaskRefs(item).some((ref) => candidateRefs.has(ref));
+        }) || null;
+    }
+
+    isTaskPremiumArchived(task = {}) {
+        return Boolean(this.resolveTaskArchiveItem(task));
+    }
+
+    isTaskUniqueIdPremiumArchived(uniqueId) {
+        const normalizedId = String(uniqueId || '').trim();
+        if (!normalizedId) return false;
+        return this.collectAllTasks().some((task) => (
+            this.makeTaskUniqueId(task.moduleId, task.topicId, task.id) === normalizedId
+            && this.isTaskPremiumArchived(task)
+        ));
+    }
+
     isPremiumWorkspacePlan() {
         return String(this.workspaceLimits?.plan || '').trim().toLowerCase() === 'premium';
     }
@@ -563,8 +617,11 @@ class EditorDashboard {
         const note = document.getElementById('create-task-limit-note');
         const submitBtn = document.getElementById('create-task-submit-btn');
         const createCard = document.querySelector('[data-role="create-task-card"]');
+        const archiveFilter = document.getElementById('editor-archive-filter');
+        const archiveFilterCount = document.getElementById('editor-archive-filter-count');
         const summary = this.getTaskLimitSummary();
         const blocked = this.isTaskCreationBlocked();
+        const archivedCount = Number(summary?.archived_count || this.getTaskArchivedItems().length || 0);
 
         if (pill) {
             if (!summary) {
@@ -606,6 +663,18 @@ class EditorDashboard {
             createCard.disabled = false;
             createCard.classList.remove('opacity-60', 'cursor-not-allowed');
             createCard.title = blocked ? (this.getTaskDraftNotice(summary) || 'Можно открыть черновик, но сохранить новое задание пока нельзя') : 'Создать новое задание';
+        }
+        if (archiveFilter) {
+            archiveFilter.hidden = archivedCount <= 0;
+            archiveFilter.disabled = archivedCount <= 0;
+            archiveFilter.setAttribute('aria-pressed', this.showPremiumArchiveTasks ? 'true' : 'false');
+            archiveFilter.title = archivedCount > 0
+                ? `В архиве Premium: ${archivedCount} заданий. Они доступны для просмотра и удаления, но не для редактирования или экспорта.`
+                : 'В архиве Premium пока нет заданий.';
+        }
+        if (archiveFilterCount) {
+            archiveFilterCount.hidden = archivedCount <= 0;
+            archiveFilterCount.textContent = String(archivedCount);
         }
         this.renderSidebar();
     }
@@ -1345,6 +1414,7 @@ class EditorDashboard {
         if (this.activeModuleId) params.set('module', this.activeModuleId);
         if (this.activeTopicId) params.set('topic', this.activeTopicId);
         if (this.currentSort) params.set('sort', this.currentSort);
+        if (this.showPremiumArchiveTasks) params.set('archive', 'premium');
 
         const url = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
         history.replaceState(null, '', url);
@@ -1484,6 +1554,18 @@ class EditorDashboard {
             searchInput.addEventListener('input', handler);
             searchInput.addEventListener('search', handler);
             this.debouncedSearchHandler = handler;
+        }
+
+        const archiveFilter = document.getElementById('editor-archive-filter');
+        if (archiveFilter) {
+            archiveFilter.addEventListener('click', () => {
+                this.showPremiumArchiveTasks = !this.showPremiumArchiveTasks;
+                this.selectedTasks.clear();
+                this.lastSelectedTaskId = null;
+                this.updateActionBar();
+                this.renderTaskLimitUi();
+                this.refreshCurrentView();
+            });
         }
 
         const backBtn = document.querySelector('[data-role="return-main"]');
@@ -4612,7 +4694,10 @@ class EditorDashboard {
         const addBtn = document.querySelector('[data-role="create-task-card"]');
         const isFiltered = Array.isArray(tasks);
         const sourceTasks = tasks ?? this.collectAllTasks();
-        const tasksToRender = this.sortTasks(sourceTasks);
+        const archiveFilteredTasks = this.showPremiumArchiveTasks
+            ? sourceTasks.filter((task) => this.isTaskPremiumArchived(task))
+            : sourceTasks;
+        const tasksToRender = this.sortTasks(archiveFilteredTasks);
         const taskDraftIds = this.collectTaskDraftIds();
 
         gridContainer.innerHTML = '';
@@ -4622,7 +4707,9 @@ class EditorDashboard {
 
         if (!tasksToRender.length) {
             const emptyCard = this.createEmptyStateCard(
-                isFiltered && this.currentSearchQuery
+                this.showPremiumArchiveTasks
+                    ? 'В архиве Premium нет заданий для текущего раздела'
+                    : isFiltered && this.currentSearchQuery
                     ? `По запросу «${this.currentSearchQuery.trim()}» ничего не найдено`
                     : 'Задания не найдены'
             );
@@ -4698,6 +4785,8 @@ class EditorDashboard {
     createTaskCard(task, options = {}) {
         const article = document.createElement('article');
         const isErrorDetection = this.isErrorDetectionTask(task);
+        const archiveItem = this.resolveTaskArchiveItem(task);
+        const isPremiumArchived = Boolean(archiveItem);
         const baseCardClasses = 'group rounded-xl p-5 flex flex-col h-[200px] border transition-all hover:shadow-xl hover:translate-y-[-4px] relative animate-slide-up shadow-sm cursor-pointer task-card';
         const cardTheme = 'bg-surface-2 border-border-subtle hover:border-primary';
         const hasDraft = Boolean(options.hasDraft);
@@ -4709,13 +4798,17 @@ class EditorDashboard {
         const isFavorite = this.isFavoriteTask(uniqueId);
 
         if (isSelected) {
-            article.className = `${baseCardClasses} bg-surface-2 border-primary ring-2 ring-primary`;
+            article.className = `${baseCardClasses} bg-surface-2 border-primary ring-2 ring-primary${isPremiumArchived ? ' task-card--premium-archived' : ''}`;
         } else {
-            article.className = `${baseCardClasses} ${cardTheme}`;
+            article.className = `${baseCardClasses} ${cardTheme}${isPremiumArchived ? ' task-card--premium-archived' : ''}`;
         }
 
         // Pass unique ID to element dataset
         article.dataset.taskId = uniqueId;
+        article.dataset.premiumArchived = isPremiumArchived ? '1' : '0';
+        if (isPremiumArchived) {
+            article.title = 'Задание в архиве Premium: можно выделить и удалить, но нельзя открыть для редактирования или экспортировать.';
+        }
 
         const { label: typeLabel, className: typeClass } = this.getTaskTypeMeta(task);
         const topicLabel = task.topicName || task.topicId || 'Без темы';
@@ -4732,6 +4825,7 @@ class EditorDashboard {
             ? 'bg-error-dark text-error-lighter ring-1 ring-inset ring-error-lighter'
             : 'bg-error-light text-error-darker ring-1 ring-inset ring-error-darker';
         const draftBadgeClass = 'border border-warning-light bg-warning-lighter text-warning-darker';
+        const archiveBadgeClass = 'border border-warning-light bg-warning-lighter text-warning-darker';
 
         article.innerHTML = `
             <div class="flex justify-between items-start mb-3 gap-3">
@@ -4751,6 +4845,10 @@ class EditorDashboard {
                         ${isErrorDetection ? `<span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${errorBadgeClass}">
                             <span class="material-symbols-outlined leading-none" style="font-size: 18px;">bug_report</span>
                             Ошибки
+                        </span>` : ""}
+                        ${isPremiumArchived ? `<span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${archiveBadgeClass}" title="Архив Premium: редактирование и экспорт заблокированы до продления Premium">
+                            <span class="material-symbols-outlined leading-none" style="font-size: 16px;">inventory_2</span>
+                            Архив Premium
                         </span>` : ""}
                     </div>
                 </div>
@@ -4805,6 +4903,15 @@ class EditorDashboard {
                 checkbox.checked = !checkbox.checked;
                 this.handleTaskSelection(uniqueId, checkbox.checked, e.shiftKey);
             } else {
+                if (isPremiumArchived) {
+                    this.showVoiceToast({
+                        severity: 'warning',
+                        what: 'Задание находится в архиве Premium.',
+                        impact: 'Редактирование и экспорт временно недоступны.',
+                        next: 'Можно удалить задание или продлить Premium, чтобы вернуть полный доступ.',
+                    });
+                    return;
+                }
                 this.openTaskEntry(
                     { ...task, hasDraft },
                     task.moduleId,
@@ -4994,6 +5101,22 @@ class EditorDashboard {
                     : 'bg-warning-light text-warning ring-1 ring-inset ring-warning'
             };
         }
+        if (task.type === 'single' || task.type === 'single_choice') {
+            return {
+                label: 'Один ответ',
+                className: isDark
+                    ? 'bg-warning-dark text-warning-lighter ring-1 ring-inset ring-warning-lighter'
+                    : 'bg-warning-light text-warning ring-1 ring-inset ring-warning'
+            };
+        }
+        if (task.type === 'text' || task.type === 'text_input') {
+            return {
+                label: 'Текст',
+                className: isDark
+                    ? 'bg-info-dark text-info-lighter ring-1 ring-inset ring-info-lighter'
+                    : 'bg-info-light text-info ring-1 ring-inset ring-info'
+            };
+        }
         if (task.type === 'sequence_assembly') {
             return {
                 label: 'Последовательность',
@@ -5128,6 +5251,9 @@ class EditorDashboard {
         if (!bar || !counter) return;
 
         const count = this.selectedTasks.size;
+        const exportBtn = bar.querySelector('[data-role="selection-export"]') || document.querySelector('#selection-action-bar [onclick*="exportSelectedTasks"]');
+        const hasArchivedSelection = Array.from(this.selectedTasks)
+            .some((uniqueId) => this.isTaskUniqueIdPremiumArchived(uniqueId));
 
         if (count > 0 || this.selectionMode) {
             bar.classList.remove('translate-y-[200%]');
@@ -5135,10 +5261,31 @@ class EditorDashboard {
         } else {
             bar.classList.add('translate-y-[200%]');
         }
+
+        if (exportBtn) {
+            const exportBlocked = count === 0 || hasArchivedSelection;
+            exportBtn.disabled = exportBlocked;
+            exportBtn.classList.toggle('opacity-60', exportBlocked);
+            exportBtn.classList.toggle('cursor-not-allowed', exportBlocked);
+            exportBtn.title = hasArchivedSelection
+                ? 'Экспорт недоступен: среди выбранных заданий есть архив Premium.'
+                : 'Экспортировать выбранные задания';
+        }
     }
 
     async exportSelectedTasks() {
         if (this.selectedTasks.size === 0) return;
+        const hasArchivedSelection = Array.from(this.selectedTasks)
+            .some((uniqueId) => this.isTaskUniqueIdPremiumArchived(uniqueId));
+        if (hasArchivedSelection) {
+            this.showVoiceToast({
+                severity: 'warning',
+                what: 'Экспорт недоступен для архива Premium.',
+                impact: 'Среди выбранных заданий есть материалы с ограниченным доступом.',
+                next: 'Снимите выделение с архивных заданий или продлите Premium.',
+            });
+            return;
+        }
 
         const tasksToExport = [];
         this.selectedTasks.forEach(uniqueId => {

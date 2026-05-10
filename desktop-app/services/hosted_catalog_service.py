@@ -186,6 +186,13 @@ class HostedCatalogService(HostedShadowFallbackMixin, CatalogService):
         except PostgresUnavailableError as exc:
             self._guard_shadow_read_fallback("_get_complex_library_entry_by_user_item", exc)
 
+    def _list_complex_library_entry_payloads_for_item(self, catalog_item_id: Optional[str]) -> List[Dict[str, Any]]:
+        try:
+            self.ensure_persistence_ready()
+            return self.repository.list_complex_library_entries_for_item(str(catalog_item_id or "").strip())
+        except PostgresUnavailableError as exc:
+            self._guard_shadow_read_fallback("_list_complex_library_entry_payloads_for_item", exc)
+
     def _upsert_complex_library_entry_payload(self, entry_payload: Dict[str, Any]) -> None:
         try:
             self.ensure_persistence_ready()

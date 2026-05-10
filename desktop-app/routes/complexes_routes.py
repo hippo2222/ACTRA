@@ -25,7 +25,7 @@ from api.complexes_api import validate_and_normalize_create_payload
 from services.linked_complex_runtime import build_linked_runtime_complex_id
 from services.complex_service import ConflictError  # type: ignore
 from services.theory_service import TheoryNotFoundError  # type: ignore
-from services.workspace_limits_service import WorkspaceLimitError
+from services.workspace_limits_service import PremiumArchivedContentError, WorkspaceLimitError
 
 from routes._context import get_ctx
 from routes._helpers import (
@@ -45,6 +45,148 @@ def _serialize_complex_response_item(complex_obj: Any) -> Dict[str, Any]:
 
 def _workspace_limit_response(exc: WorkspaceLimitError) -> Any:
     return jsonify(exc.to_payload()), 409
+
+
+def _premium_archive_response(exc: PremiumArchivedContentError) -> Any:
+    return jsonify(exc.to_payload()), 409
+
+
+def _assert_complex_not_archived(ctx: Any, complex_id: str, *, action: str) -> None:
+    service = getattr(ctx, "workspace_limits_service", None)
+    if service is None:
+        return
+    service.assert_entity_not_archived(
+        ctx.user_id,
+        "complex",
+        complex_id,
+        action=action,
+        scope="workspace",
+    )
+
+
+def _assert_task_refs_not_archived(ctx: Any, task_refs: Any, *, action: str) -> None:
+    service = getattr(ctx, "workspace_limits_service", None)
+    if service is None or not isinstance(task_refs, list):
+        return
+    for task_ref in task_refs:
+        clean_ref = str(task_ref or "").strip()
+        if not clean_ref:
+            continue
+        service.assert_entity_not_archived(
+            ctx.user_id,
+            "task",
+            clean_ref,
+            action=action,
+            scope="workspace",
+        )
+        parsed = _parse_task_ref(clean_ref)
+        if parsed is None:
+            continue
+        _, _, task_id = parsed
+        if task_id and task_id != clean_ref:
+            service.assert_entity_not_archived(
+                ctx.user_id,
+                "task",
+                task_id,
+                action=action,
+                scope="workspace",
+            )
+
+
+def _assert_theory_link_not_archived(ctx: Any, theory_link: Any, *, action: str) -> None:
+    if not isinstance(theory_link, dict):
+        return
+    service = getattr(ctx, "workspace_limits_service", None)
+    if service is None:
+        return
+    source_kind = str(theory_link.get("source_kind") or "workspace").strip().lower() or "workspace"
+    if source_kind == "linked_library":
+        library_entry_id = str(theory_link.get("library_entry_id") or "").strip()
+        if not library_entry_id:
+            return
+        service.assert_entity_not_archived(
+            ctx.user_id,
+            "theory",
+            library_entry_id,
+            action=action,
+            scope="linked_library",
+        )
+        return
+    theory_id = str(theory_link.get("theory_id") or theory_link.get("source_theory_id") or "").strip()
+    if not theory_id:
+        return
+    service.assert_entity_not_archived(
+        ctx.user_id,
+        "theory",
+        theory_id,
+        action=action,
+        scope="workspace",
+    )
+
+
+def _cleanup_linked_runtime_for_source_delete(ctx: Any, catalog_source_delete: Any) -> Dict[str, Any]:
+    if not isinstance(catalog_source_delete, dict):
+        return {"cleaned_count": 0, "entries": []}
+    affected_entries = catalog_source_delete.get("affected_library_entries")
+    if not isinstance(affected_entries, list) or not affected_entries:
+        return {"cleaned_count": 0, "entries": []}
+
+    session_api = getattr(ctx, "session_api", None)
+    session_manager = getattr(session_api, "_session_manager", None) if session_api is not None else None
+    active_sessions = getattr(session_manager, "_active_sessions", None) if session_manager is not None else None
+    session_repo = getattr(session_manager, "session_repository", None) if session_manager is not None else None
+    complex_service = getattr(ctx, "complex_service", None)
+    complexes_cache = getattr(complex_service, "_complexes_cache", None) if complex_service is not None else None
+
+    cleaned_entries: List[Dict[str, Any]] = []
+    for entry in affected_entries:
+        if not isinstance(entry, dict):
+            continue
+        library_entry_id = str(entry.get("library_entry_id") or "").strip()
+        user_id = str(entry.get("user_id") or "").strip()
+        runtime_complex_id = build_linked_runtime_complex_id(library_entry_id)
+        if not runtime_complex_id or not user_id:
+            continue
+
+        removed_active_count = 0
+        if isinstance(active_sessions, dict):
+            for session_id, loaded in list(active_sessions.items()):
+                if str(getattr(loaded, "complex_id", "") or "").strip() != runtime_complex_id:
+                    continue
+                if str(getattr(loaded, "user_id", "") or "").strip() != user_id:
+                    continue
+                active_sessions.pop(session_id, None)
+                removed_active_count += 1
+
+        removed_cache = False
+        if isinstance(complexes_cache, dict) and runtime_complex_id in complexes_cache:
+            complexes_cache.pop(runtime_complex_id, None)
+            removed_cache = True
+
+        removed_persisted = None
+        if session_repo is not None:
+            try:
+                removed_persisted = bool(session_repo.delete_session(runtime_complex_id, user_id))
+            except Exception:
+                removed_persisted = False
+                logger.warning(
+                    "[HTTP] Failed to clear linked runtime sessions for source-deleted library entry %s",
+                    library_entry_id,
+                    exc_info=True,
+                )
+
+        cleaned_entries.append(
+            {
+                "library_entry_id": library_entry_id,
+                "user_id": user_id,
+                "runtime_complex_id": runtime_complex_id,
+                "removed_active_count": removed_active_count,
+                "removed_cache": removed_cache,
+                "removed_persisted": removed_persisted,
+            }
+        )
+
+    return {"cleaned_count": len(cleaned_entries), "entries": cleaned_entries}
 
 
 def _normalize_propagation_mode(value: Any) -> str:
@@ -512,6 +654,9 @@ def create_complex() -> Any:
                 400,
             )
 
+        _assert_task_refs_not_archived(ctx, normalized.get("tasks"), action="use_as_dependency")
+        _assert_theory_link_not_archived(ctx, resolved_theory_link, action="use_as_dependency")
+
         complex_data = {
             "id": complex_id,
             "name": normalized["name"],
@@ -547,6 +692,8 @@ def create_complex() -> Any:
         return jsonify({"ok": True, "item": _serialize_complex_response_item(created)}), 200
     except WorkspaceLimitError as exc:
         return _workspace_limit_response(exc)
+    except PremiumArchivedContentError as exc:
+        return _premium_archive_response(exc)
     except Exception as exc:
         degraded_response = _maybe_hosted_shadow_write_error_response(exc)
         if degraded_response is not None:
@@ -562,6 +709,7 @@ def update_complex(complex_id: str) -> Any:
         return jsonify({"ok": False, "error": "guest_cannot_edit"}), 403
     payload = request.get_json(silent=True) or {}
     try:
+        _assert_complex_not_archived(ctx, complex_id, action="edit")
         # Extract expected_version from payload before validation
         expected_version = payload.pop("expected_version", None)
 
@@ -592,6 +740,9 @@ def update_complex(complex_id: str) -> Any:
                     ),
                     400,
                 )
+
+        _assert_task_refs_not_archived(ctx, normalized.get("tasks"), action="use_as_dependency")
+        _assert_theory_link_not_archived(ctx, resolved_theory_link, action="use_as_dependency")
 
         update_payload = {
             **normalized,
@@ -641,6 +792,9 @@ def update_complex(complex_id: str) -> Any:
             409,
         )
 
+    except PremiumArchivedContentError as exc:
+        return _premium_archive_response(exc)
+
     except Exception as exc:
         degraded_response = _maybe_hosted_shadow_write_error_response(exc)
         if degraded_response is not None:
@@ -662,6 +816,7 @@ def sync_complex_theory_from_topics(complex_id: str) -> Any:
     allow_override = mode == "all_force"
 
     try:
+        _assert_complex_not_archived(ctx, complex_id, action="edit")
         complex_obj = ctx.complex_service.get_complex(complex_id)
         if not complex_obj:
             return jsonify({"ok": False, "error": "complex_not_found"}), 404
@@ -783,6 +938,8 @@ def sync_complex_theory_from_topics(complex_id: str) -> Any:
                 },
             }
         )
+    except PremiumArchivedContentError as exc:
+        return _premium_archive_response(exc)
     except Exception as exc:
         degraded_response = _maybe_hosted_shadow_write_error_response(exc)
         if degraded_response is not None:
@@ -797,9 +954,64 @@ def delete_complex_endpoint(complex_id: str) -> Any:
     if ctx.user_id == "guest":
         return jsonify({"ok": False, "error": "guest_cannot_edit"}), 403
     try:
+        complex_obj = ctx.complex_service.get_complex(complex_id)
+        if complex_obj is None:
+            return jsonify({"ok": False, "error": "complex_not_found"}), 404
+        complex_payload = (
+            complex_obj.dict()
+            if hasattr(complex_obj, "dict")
+            else dict(complex_obj)
+            if isinstance(complex_obj, dict)
+            else {}
+        )
+        catalog_source_delete = None
+        catalog_service = getattr(ctx, "catalog_service", None)
+        if catalog_service is not None and hasattr(catalog_service, "handle_workspace_source_deleted"):
+            try:
+                catalog_source_delete = catalog_service.handle_workspace_source_deleted(
+                    "complex",
+                    owner_user_id=ctx.user_id,
+                    source_workspace_id=(
+                        complex_payload.get("workspace_entity_id")
+                        or complex_payload.get("id")
+                        or complex_id
+                    ),
+                    source_workspace_ref=(
+                        complex_payload.get("workspace_entity_ref")
+                        or complex_payload.get("id")
+                        or complex_id
+                    ),
+                    source_workspace_kind="complex",
+                    reason="author_deleted_workspace_complex",
+                )
+            except Exception as exc:
+                degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+                if degraded_response is not None:
+                    return degraded_response
+                logger.warning(
+                    "[HTTP] Refusing to delete complex %s because catalog source delete failed",
+                    complex_id,
+                    exc_info=True,
+                )
+                return jsonify(
+                    {
+                        "ok": False,
+                        "error": "catalog_source_delete_failed",
+                        "message": "Catalog publication could not be marked as source-deleted; complex was not deleted.",
+                    }
+                ), 409
+
         deleted = ctx.complex_service.delete_complex(complex_id)
         if not deleted:
-            return jsonify({"ok": False, "error": "complex_not_found"}), 404
+            return jsonify(
+                {
+                    "ok": False,
+                    "error": "complex_delete_failed_after_catalog_source_delete",
+                    "catalog_source_delete": catalog_source_delete,
+                }
+            ), 409
+
+        linked_runtime_cleanup = _cleanup_linked_runtime_for_source_delete(ctx, catalog_source_delete)
 
         # BUG-3 fix: удаляем файл паузированной сессии для этого комплекса
         try:
@@ -814,7 +1026,13 @@ def delete_complex_endpoint(complex_id: str) -> Any:
                 "[HTTP] Failed to clean up session file for complex %s", complex_id, exc_info=True
             )
 
-        return jsonify({"ok": True})
+        return jsonify(
+            {
+                "ok": True,
+                "catalog_source_delete": catalog_source_delete,
+                "linked_runtime_cleanup": linked_runtime_cleanup,
+            }
+        )
     except Exception as exc:
         degraded_response = _maybe_hosted_shadow_write_error_response(exc)
         if degraded_response is not None:
@@ -846,6 +1064,7 @@ def save_complex_autosave(complex_id: str) -> Any:
         return jsonify({"ok": False, "error": "guest_cannot_edit"}), 403
     payload = request.get_json(silent=True) or {}
     try:
+        _assert_complex_not_archived(ctx, complex_id, action="edit")
         snapshot = ctx.complex_service.save_autosave_snapshot(complex_id, payload)
         return jsonify(
             {
@@ -857,6 +1076,8 @@ def save_complex_autosave(complex_id: str) -> Any:
         )
     except ValueError:
         return jsonify({"ok": False, "error": "complex_not_found"}), 404
+    except PremiumArchivedContentError as exc:
+        return _premium_archive_response(exc)
     except Exception as exc:
         degraded_response = _maybe_hosted_shadow_write_error_response(exc)
         if degraded_response is not None:
@@ -903,6 +1124,7 @@ def restore_complex_from_history(complex_id: str, snapshot_timestamp: str) -> An
         return jsonify({"ok": False, "error": "guest_cannot_edit"}), 403
     """Восстановить комплекс из исторического snapshot."""
     try:
+        _assert_complex_not_archived(ctx, complex_id, action="edit")
         restored = ctx.complex_service.restore_from_history(
             complex_id, snapshot_timestamp
         )
@@ -916,6 +1138,8 @@ def restore_complex_from_history(complex_id: str, snapshot_timestamp: str) -> An
         return jsonify({"ok": True, "item": obj})
     except ValueError as exc:
         return jsonify({"ok": False, "error": str(exc)}), 404
+    except PremiumArchivedContentError as exc:
+        return _premium_archive_response(exc)
     except Exception as exc:
         degraded_response = _maybe_hosted_shadow_write_error_response(exc)
         if degraded_response is not None:

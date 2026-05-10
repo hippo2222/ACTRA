@@ -321,10 +321,10 @@ class SessionAPI:
         normalized_complex_id = str(complex_id or "").strip()
         if not normalized_complex_id:
             return False
-        if self._complex_service.get_complex(normalized_complex_id):
-            return True
         if parse_linked_runtime_complex_id(normalized_complex_id):
             return self._register_linked_runtime_complex(normalized_complex_id, user_id)
+        if self._complex_service.get_complex(normalized_complex_id):
+            return True
         return False
 
     def _resolve_runtime_user_id(

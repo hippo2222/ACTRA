@@ -425,6 +425,54 @@
       line-height: 1.45;
     }
 
+    .cx-archive-notice {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      border-radius: 1rem;
+      border: 1px solid color-mix(in srgb, var(--color-warning) 42%, var(--color-border-subtle) 58%);
+      background: color-mix(in srgb, var(--color-warning-lighter) 62%, var(--color-surface-1) 38%);
+      color: var(--color-text-main);
+      box-shadow: 0 16px 34px -28px color-mix(in srgb, var(--color-warning) 62%, transparent);
+    }
+
+    .cx-archive-notice.hidden {
+      display: none;
+    }
+
+    .cx-archive-notice__icon {
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 2.15rem;
+      height: 2.15rem;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--color-warning) 18%, var(--color-surface-1) 82%);
+      color: var(--color-warning-text);
+    }
+
+    .cx-archive-notice__body {
+      min-width: 0;
+      display: grid;
+      gap: 0.2rem;
+    }
+
+    .cx-archive-notice__title {
+      margin: 0;
+      font-size: 0.92rem;
+      font-weight: 900;
+      line-height: 1.25;
+    }
+
+    .cx-archive-notice__copy {
+      margin: 0;
+      color: var(--color-text-secondary);
+      font-size: 0.8rem;
+      font-weight: 650;
+      line-height: 1.45;
+    }
+
     #complex-theory-banner {
       border-radius: 1rem;
       border: 1px solid color-mix(in srgb, var(--color-primary-light) 70%, var(--color-border-subtle) 30%);
@@ -731,6 +779,78 @@
     .cx-card-badges .pill .material-symbols-outlined {
       font-size: 1rem;
       line-height: 1;
+    }
+
+    .cx-card-shell--premium-archived {
+      border-color: color-mix(in srgb, var(--color-border-strong) 72%, var(--color-warning) 28%) !important;
+      background:
+        linear-gradient(135deg,
+          color-mix(in srgb, var(--color-surface-1) 86%, var(--color-bg-secondary) 14%) 0%,
+          color-mix(in srgb, var(--color-surface-2) 78%, var(--color-bg-main) 22%) 100%) !important;
+      box-shadow: 0 12px 30px -24px rgba(0, 0, 0, 0.28) !important;
+      filter: grayscale(0.72) saturate(0.52);
+      opacity: 0.78;
+    }
+
+    .cx-card-shell--premium-archived:hover,
+    .cx-card-shell--premium-archived:focus-within {
+      filter: grayscale(0.52) saturate(0.68);
+      opacity: 0.88;
+    }
+
+    .cx-card-shell--premium-archived .cx-card-title,
+    .cx-card-shell--premium-archived .cx-detail-panel__title {
+      color: color-mix(in srgb, var(--color-text-main) 74%, var(--color-text-disabled) 26%) !important;
+    }
+
+    .cx-card-shell--premium-archived .cx-card-description,
+    .cx-card-shell--premium-archived .cx-card-inline-meta,
+    .cx-card-shell--premium-archived .cx-detail-panel__copy {
+      color: color-mix(in srgb, var(--color-text-secondary) 74%, var(--color-text-disabled) 26%) !important;
+    }
+
+    .cx-card-shell--premium-archived .cx-card-actions {
+      border-top-color: color-mix(in srgb, var(--color-border-subtle) 72%, var(--color-border-strong) 28%);
+    }
+
+    .cx-card-shell--premium-archived .cx-card-action-btn:disabled {
+      cursor: not-allowed;
+      filter: grayscale(0.6);
+      opacity: 0.62;
+    }
+
+    .cx-card-shell--linked-unavailable {
+      border-color: color-mix(in srgb, var(--color-border-strong) 76%, var(--color-text-disabled) 24%) !important;
+      background:
+        linear-gradient(135deg,
+          color-mix(in srgb, var(--color-surface-1) 82%, var(--color-bg-tertiary) 18%) 0%,
+          color-mix(in srgb, var(--color-surface-2) 74%, var(--color-bg-secondary) 26%) 100%) !important;
+      box-shadow: 0 10px 28px -24px rgba(0, 0, 0, 0.34) !important;
+      filter: grayscale(0.88) saturate(0.42);
+      opacity: 0.72;
+    }
+
+    .cx-card-shell--linked-unavailable:hover,
+    .cx-card-shell--linked-unavailable:focus-within {
+      filter: grayscale(0.7) saturate(0.54);
+      opacity: 0.84;
+    }
+
+    .cx-card-shell--linked-unavailable .cx-card-title,
+    .cx-card-shell--linked-unavailable .cx-detail-panel__title {
+      color: color-mix(in srgb, var(--color-text-main) 68%, var(--color-text-disabled) 32%) !important;
+    }
+
+    .cx-card-shell--linked-unavailable .cx-card-description,
+    .cx-card-shell--linked-unavailable .cx-card-inline-meta,
+    .cx-card-shell--linked-unavailable .cx-detail-panel__copy {
+      color: color-mix(in srgb, var(--color-text-secondary) 64%, var(--color-text-disabled) 36%) !important;
+    }
+
+    .cx-card-shell--linked-unavailable .cx-card-action-btn:disabled {
+      cursor: not-allowed;
+      filter: grayscale(0.7);
+      opacity: 0.58;
     }
 
     .cx-card-description {
@@ -1130,6 +1250,15 @@
               </button>
             </div>
           </div>
+          <div id="complex-premium-archive-notice" class="cx-archive-notice mx-4 mb-4 hidden px-4 py-3" aria-live="polite">
+            <span class="cx-archive-notice__icon material-symbols-outlined" aria-hidden="true">inventory_2</span>
+            <div class="cx-archive-notice__body">
+              <p class="cx-archive-notice__title">Часть комплексов перенесена в архив Premium</p>
+              <p id="complex-premium-archive-notice-copy" class="cx-archive-notice__copy">
+                Лишние комплексы не удалены: их можно открыть для просмотра или удалить, но нельзя запускать, редактировать и публиковать до освобождения лимита или продления Premium.
+              </p>
+            </div>
+          </div>
           <div class="px-4 mb-4">
             <div class="card-elevated cx-controls-panel p-3 md:p-4" data-onboarding-target="complexes-library-navigation">
               <div class="cx-controls-stack">
@@ -1169,6 +1298,7 @@
                         <button type="button" class="complex-filter-chip pill pill-sm pill-neutral" data-filter="pinned" aria-selected="false">Закреплённые</button>
                         <button type="button" class="complex-filter-chip pill pill-sm pill-neutral" data-filter="frozen" aria-selected="false">Замороженные</button>
                         <button type="button" class="complex-filter-chip pill pill-sm pill-neutral" data-filter="review" aria-selected="false">Нужно повторить</button>
+                        <button type="button" class="complex-filter-chip pill pill-sm pill-neutral" data-filter="archived" aria-selected="false">Архив Premium</button>
                       </div>
                     </div>
 
@@ -1509,6 +1639,58 @@
             setPremiumPromoTrigger(true);
           }
 
+          function getComplexArchivedItems() {
+            const summary = getComplexLimitSummary();
+            return Array.isArray(summary?.archived_items) ? summary.archived_items : [];
+          }
+
+          function getArchivedItemRefs(item) {
+            if (!item || typeof item !== "object") return [];
+            return [item.id, item.ref, item.workspace_entity_id, item.workspace_entity_ref, item.library_entry_id]
+              .map((value) => String(value || "").trim())
+              .filter(Boolean);
+          }
+
+          function resolveComplexArchiveItem(complex) {
+            const archivedItems = getComplexArchivedItems();
+            if (!archivedItems.length || !complex || typeof complex !== "object") return null;
+            const complexId = normalizeComplexId(complex?.id);
+            const linkedLibraryEntryId = getLinkedLibraryEntryId(complex);
+            const candidateRefs = new Set([
+              complexId,
+              normalizeComplexId(complex?.workspace_entity_id),
+              normalizeComplexId(complex?.workspace_entity_ref),
+              String(complex?.source_catalog_item_id || "").trim(),
+              linkedLibraryEntryId,
+            ].filter(Boolean));
+            const preferredScope = linkedLibraryEntryId ? "linked_library" : "workspace";
+            return archivedItems.find((item) => {
+              if (!item || typeof item !== "object") return false;
+              const itemScope = String(item.scope || "").trim();
+              if (itemScope && itemScope !== preferredScope) return false;
+              return getArchivedItemRefs(item).some((ref) => candidateRefs.has(ref));
+            }) || null;
+          }
+
+          function isComplexPremiumArchived(complex) {
+            return !!resolveComplexArchiveItem(complex);
+          }
+
+          function renderComplexArchiveNotice() {
+            const notice = document.getElementById("complex-premium-archive-notice");
+            const copy = document.getElementById("complex-premium-archive-notice-copy");
+            const summary = getComplexLimitSummary();
+            if (!notice) return;
+            const archivedCount = Number(summary?.archived_count || 0);
+            const hasArchived = archivedCount > 0 || getComplexArchivedItems().length > 0;
+            notice.classList.toggle("hidden", !hasArchived);
+            if (!hasArchived || !copy) return;
+            const visibleCount = getComplexArchivedItems().length;
+            const countText = archivedCount > 0 ? archivedCount : visibleCount;
+            const truncated = summary?.archived_items_truncated === true;
+            copy.textContent = `В архиве Premium: ${countText}${truncated ? "+" : ""} шт. Они не удалены: их можно открыть для просмотра или удалить, но нельзя запускать, редактировать и публиковать до освобождения лимита или продления Premium.`;
+          }
+
           async function fetchComplexWorkspaceLimits() {
             try {
               const response = await fetch("/api/workspace-limits/summary", {
@@ -1528,6 +1710,7 @@
               return null;
             } finally {
               renderComplexLibraryLimitBadge();
+              renderComplexArchiveNotice();
             }
           }
 
@@ -1604,6 +1787,33 @@
               default:
                 return "Комплекс виден в общем каталоге и доступен для добавления в библиотеку.";
             }
+          }
+
+          function getCatalogVisibilityAccessRank(value) {
+            switch (String(value || "").trim().toLowerCase()) {
+              case "private":
+                return 0;
+              case "access_code":
+                return 1;
+              case "public":
+                return 2;
+              default:
+                return null;
+            }
+          }
+
+          function isCatalogVisibilityExpansion(currentVisibility, nextVisibility) {
+            const currentRank = getCatalogVisibilityAccessRank(currentVisibility);
+            const nextRank = getCatalogVisibilityAccessRank(nextVisibility);
+            return currentRank !== null && nextRank !== null && nextRank > currentRank;
+          }
+
+          function getPremiumArchivedPublicationErrorMessage(error, fallback = "catalog_visibility_update_failed") {
+            const message = String(error?.message || error || "").trim();
+            if (message.includes("premium_archived_content")) {
+              return "Источник находится в архиве Premium. Сужение доступа доступно, а публикация новой версии и расширение доступа вернутся после восстановления Premium.";
+            }
+            return message || fallback;
           }
 
           function formatPublicationTimestamp(value) {
@@ -3074,9 +3284,23 @@
             }
 
             const publication = resolveComplexPublication(complex);
+            const isPremiumArchivedSource = isComplexPremiumArchived(complex);
+            if (isPremiumArchivedSource && !publication) {
+              showComplexVoiceToast({
+                severity: "warning",
+                what: "Публикация недоступна для архива Premium.",
+                impact: "Комплекс не удалён и остаётся доступным для просмотра, но опубликовать его можно после восстановления Premium.",
+                next: "Удалите лишние комплексы до лимита Free или продлите Premium.",
+              });
+              return;
+            }
+
             const currentVisibility = String(publication?.catalog_visibility || "public").trim().toLowerCase() || "public";
             const accessCode = getAccessCodeValue(publication);
             const complexName = escapeHtml(complex?.name || "Без названия");
+            const archivePolicyText = isPremiumArchivedSource
+              ? "Источник комплекса находится в архиве Premium. Опубликованная версия остаётся доступной, но новую версию и расширение доступа можно сделать только после восстановления Premium. Сузить доступ или скрыть публикацию можно сейчас."
+              : "Здесь можно опубликовать комплекс и отдельно поменять режим доступа без перехода в редактор.";
 
             const modal = document.createElement("dialog");
             modal.id = "complex-publication-dialog";
@@ -3108,11 +3332,16 @@
                   <div class="space-y-1">
                     <p class="text-xs font-bold uppercase tracking-[0.16em] text-text-muted">Публикация комплекса</p>
                     <h3 class="text-xl font-bold text-text-main">${complexName}</h3>
-                    <p class="text-sm text-text-secondary">Здесь можно опубликовать комплекс и отдельно поменять режим доступа без перехода в редактор.</p>
+                    <p class="text-sm text-text-secondary">${escapeHtml(archivePolicyText)}</p>
                   </div>
                   <button type="button" class="btn-secondary h-10 px-4" data-role="close">Закрыть</button>
                 </div>
                 <div class="custom-scrollbar space-y-5 overflow-y-auto p-5">
+                  ${isPremiumArchivedSource ? `
+                    <div class="rounded-2xl border border-warning-light bg-warning-light/40 px-4 py-3 text-sm text-warning-darker">
+                      Источник в архиве Premium. Текущая публикация не снята с доступа автоматически; обновление версии и расширение доступа заблокированы до восстановления Premium.
+                    </div>
+                  ` : ""}
                   <div class="rounded-2xl border border-border-subtle bg-bg-secondary px-4 py-4">
                     <div class="flex flex-wrap items-start justify-between gap-3">
                       <div>
@@ -3127,13 +3356,13 @@
                   <div class="space-y-3">
                     <div>
                       <div class="text-sm font-semibold text-text-main">Режим доступа</div>
-                      <p class="mt-1 text-sm text-text-secondary">Если публикация уже существует, доступ можно поменять отдельно от публикации новой версии. Новые правки из редактора увидят другие пользователи только после публикации.</p>
+                      <p class="mt-1 text-sm text-text-secondary">${isPremiumArchivedSource ? "Можно выбрать только текущий или более закрытый режим доступа. Расширение доступа вернётся после Premium." : "Если публикация уже существует, доступ можно поменять отдельно от публикации новой версии. Новые правки из редактора увидят другие пользователи только после публикации."}</p>
                     </div>
                     <div class="grid gap-3 md:grid-cols-3">
                       ${["public", "access_code", "private"].map((visibility) => `
-                        <label class="rounded-2xl border border-border-subtle bg-surface-1 p-4 hover:border-primary-light transition-colors cursor-pointer">
+                        <label class="rounded-2xl border border-border-subtle bg-surface-1 p-4 hover:border-primary-light transition-colors ${isPremiumArchivedSource && isCatalogVisibilityExpansion(currentVisibility, visibility) ? "cursor-not-allowed opacity-60" : "cursor-pointer"}">
                           <div class="flex items-start gap-3">
-                            <input type="radio" name="complex-publish-visibility" value="${visibility}" ${visibility === currentVisibility ? "checked" : ""} class="mt-1 h-4 w-4 text-primary" />
+                            <input type="radio" name="complex-publish-visibility" value="${visibility}" ${visibility === currentVisibility ? "checked" : ""} ${isPremiumArchivedSource && isCatalogVisibilityExpansion(currentVisibility, visibility) ? "disabled" : ""} class="mt-1 h-4 w-4 text-primary" />
                             <div class="space-y-1 min-w-0">
                               <div class="text-sm font-semibold text-text-main">${escapeHtml(getCatalogVisibilityLabel(visibility))}</div>
                               <div class="text-sm text-text-secondary">${escapeHtml(getCatalogVisibilityDescription(visibility))}</div>
@@ -3184,7 +3413,16 @@
               const selected = modal.querySelector('input[name="complex-publish-visibility"]:checked');
               return String(selected?.value || currentVisibility || "public").trim().toLowerCase() || "public";
             };
+            let modalBusy = false;
+            const applyVisibilityControlState = (item = null) => {
+              const currentItemVisibility = String(item?.catalog_visibility || currentVisibility || "public").trim().toLowerCase() || "public";
+              modal.querySelectorAll('input[name="complex-publish-visibility"]').forEach((radio) => {
+                const visibility = String(radio?.value || "").trim().toLowerCase();
+                radio.disabled = modalBusy || (isPremiumArchivedSource && isCatalogVisibilityExpansion(currentItemVisibility, visibility));
+              });
+            };
             const setBusy = (busy) => {
+              modalBusy = !!busy;
               modal.querySelectorAll("button, input[type='radio']").forEach((node) => {
                 if (busy) {
                   node.setAttribute("disabled", "true");
@@ -3192,6 +3430,7 @@
                   node.removeAttribute("disabled");
                 }
               });
+              applyVisibilityControlState(resolveComplexPublication(complex));
             };
             const setFeedback = (message = "", tone = "info") => {
               const box = modal.querySelector("#complex-publish-feedback");
@@ -3218,7 +3457,9 @@
               const accessBox = modal.querySelector("#complex-publish-access-box");
               const accessCodeEl = modal.querySelector("#complex-publish-access-code");
               const updateBtn = modal.querySelector('[data-role="update-visibility"]');
+              const publishBtn = modal.querySelector('[data-role="publish-version"]');
 
+              applyVisibilityControlState(currentItem);
               if (currentStatus) {
                 currentStatus.textContent = currentItem ? getCatalogVisibilityLabel(currentItem.catalog_visibility) : "Не опубликован";
               }
@@ -3241,9 +3482,20 @@
               }
               if (updateBtn) {
                 const currentItemVisibility = String(currentItem?.catalog_visibility || "").trim().toLowerCase();
-                const canUpdateVisibility = !!currentItem && selectedVisibility !== currentItemVisibility;
+                const blockedByArchive = isPremiumArchivedSource && isCatalogVisibilityExpansion(currentItemVisibility, selectedVisibility);
+                const canUpdateVisibility = !!currentItem && selectedVisibility !== currentItemVisibility && !blockedByArchive;
                 updateBtn.disabled = !canUpdateVisibility;
                 updateBtn.classList.toggle("opacity-60", !canUpdateVisibility);
+                updateBtn.title = blockedByArchive
+                  ? "Расширение доступа для архива Premium недоступно до восстановления Premium."
+                  : "";
+              }
+              if (publishBtn) {
+                publishBtn.disabled = modalBusy || isPremiumArchivedSource;
+                publishBtn.classList.toggle("opacity-60", isPremiumArchivedSource);
+                publishBtn.title = isPremiumArchivedSource
+                  ? "Новая версия недоступна, пока источник находится в архиве Premium."
+                  : "";
               }
             };
 
@@ -3282,6 +3534,10 @@
                 setFeedback("Выбранный режим доступа уже сохранён.", "info");
                 return;
               }
+              if (isPremiumArchivedSource && isCatalogVisibilityExpansion(currentItem.catalog_visibility, nextVisibility)) {
+                setFeedback("Источник находится в архиве Premium: можно только сузить доступ или скрыть публикацию.", "error");
+                return;
+              }
               setBusy(true);
               setFeedback("");
               try {
@@ -3311,12 +3567,16 @@
                 await fetchComplexes();
               } catch (error) {
                 console.error("[Complexes] Visibility update failed", error);
-                setFeedback(`Не удалось изменить доступ: ${String(error?.message || "catalog_visibility_update_failed")}`, "error");
+                setFeedback(`Не удалось изменить доступ: ${getPremiumArchivedPublicationErrorMessage(error)}`, "error");
               } finally {
                 setBusy(false);
               }
             });
             modal.querySelector('[data-role="publish-version"]')?.addEventListener("click", async () => {
+              if (isPremiumArchivedSource) {
+                setFeedback("Новая версия недоступна, пока источник находится в архиве Premium. Сузить доступ можно кнопкой «Сохранить доступ».", "error");
+                return;
+              }
               const selectedVisibility = getSelectedVisibility();
               setBusy(true);
               setFeedback("");
@@ -3349,7 +3609,7 @@
                 await fetchComplexes();
               } catch (error) {
                 console.error("[Complexes] Publish failed", error);
-                setFeedback(`Не удалось опубликовать комплекс: ${String(error?.message || "catalog_publish_failed")}`, "error");
+                setFeedback(`Не удалось опубликовать комплекс: ${getPremiumArchivedPublicationErrorMessage(error, "catalog_publish_failed")}`, "error");
               } finally {
                 setBusy(false);
               }
@@ -3450,6 +3710,17 @@
           function handleComplexSelection(complexId, isSelected) {
             const normalizedId = normalizeComplexId(complexId);
             if (!normalizedId) return;
+            const card = document.querySelector(`[data-complex-card-id="${escapeAttributeSelectorValue(normalizedId)}"]`);
+            if (
+              card?.getAttribute("data-complex-archived") === "true"
+              || card?.getAttribute("data-complex-linked-access-state") === "deleted_source"
+              || card?.getAttribute("data-complex-linked-access-state") === "revoked"
+            ) {
+              selectedComplexes.delete(normalizedId);
+              updateComplexCardSelectionState(normalizedId);
+              syncComplexSelectionUi();
+              return;
+            }
 
             if (!selectionMode) selectionMode = true;
             if (isSelected) {
@@ -3469,9 +3740,21 @@
               document.querySelectorAll("[data-complex-card-id]:not([hidden])")
             );
             const visibleIds = visibleCards
+              .filter((card) => (
+                card.getAttribute("data-complex-archived") !== "true"
+                && !["deleted_source", "revoked"].includes(card.getAttribute("data-complex-linked-access-state") || "")
+              ))
               .map((card) => normalizeComplexId(card.getAttribute("data-complex-card-id")))
               .filter(Boolean);
-            const targetIds = visibleIds.length ? visibleIds : renderedComplexIds;
+            const targetIds = visibleIds.length
+              ? visibleIds
+              : renderedComplexIds.filter((complexId) => {
+                  const card = document.querySelector(`[data-complex-card-id="${escapeAttributeSelectorValue(complexId)}"]`);
+                  return (
+                    card?.getAttribute("data-complex-archived") !== "true"
+                    && !["deleted_source", "revoked"].includes(card?.getAttribute("data-complex-linked-access-state") || "")
+                  );
+                });
             targetIds.forEach((complexId) => {
               selectedComplexes.add(complexId);
             });
@@ -3555,7 +3838,7 @@
             const isInitialLoad = !hasLoadedComplexesOnce;
 
             isComplexesLoading = true;
-            fetchComplexWorkspaceLimits();
+            const workspaceLimitsPromise = fetchComplexWorkspaceLimits();
             if (isInitialLoad) {
               scheduleComplexesSkeleton(listEl);
             }
@@ -3571,6 +3854,7 @@
                 fetch(appendUserIdQuery("/api/sessions/active", userId)),
                 fetch(appendUserIdQuery("/api/ui/quick-access", userId)),
                 fetch("/api/editor/catalog"),
+                workspaceLimitsPromise,
               ]);
               const data = await complexesResp.json();
               let sessions = [];
@@ -3741,10 +4025,49 @@
                 const theoryContext = buildComplexTheoryBadges(complex);
                 const hasTheoryContext = !!(complex.has_theory || theoryId || theoryContext.syncStatus === "composite");
                 const ownershipContext = buildComplexOwnershipBadges(complex);
+                const linkedAccessState = ownershipContext.isLinked ? getLinkedLibraryAccessState(complex) : "active";
+                const isLinkedSourceDeleted = linkedAccessState === "deleted_source";
+                const isLinkedUnavailable = linkedAccessState === "revoked" || isLinkedSourceDeleted;
+                const isLinkedLocked = isLinkedUnavailable || linkedAccessState === "requires_access_code";
+                const linkedStatusBadge = ownershipContext.isLinked && linkedAccessState !== "active"
+                  ? isLinkedSourceDeleted
+                    ? `<span class="cx-card-badge pill pill-sm pill-neutral" title="Автор удалил исходный комплекс. Запуск больше недоступен.">
+                        <span class="material-symbols-outlined text-sm">visibility_off</span> Источник удалён
+                      </span>`
+                    : linkedAccessState === "revoked"
+                      ? `<span class="cx-card-badge pill pill-sm pill-neutral" title="Автор закрыл доступ к публикации.">
+                          <span class="material-symbols-outlined text-sm">lock</span> Доступ закрыт
+                        </span>`
+                      : `<span class="cx-card-badge pill pill-sm pill-info" title="Для этой публикации нужен код доступа.">
+                          <span class="material-symbols-outlined text-sm">password</span> Нужен код
+                        </span>`
+                  : "";
+                const archiveItem = resolveComplexArchiveItem(complex);
+                const isPremiumArchived = !!archiveItem;
                 const theoryModeBadge = theoryContext.modeBadge || "";
                 const theoryStatusBadge = theoryContext.statusBadge || "";
                 const ownerBadge = ownershipContext.ownerBadge || "";
                 const sourceBadge = ownershipContext.sourceBadge || "";
+                const premiumArchiveBadge = isPremiumArchived
+                  ? `<span class="cx-card-badge pill pill-sm pill-warning" title="Комплекс доступен только для просмотра и удаления, пока превышен лимит Free">
+                      <span class="material-symbols-outlined text-sm">inventory_2</span> Архив Premium
+                    </span>`
+                  : "";
+                const premiumArchiveInfo = isPremiumArchived
+                  ? `<div class="cx-card-inline-meta"><span>Комплекс в архиве Premium: доступен просмотр и удаление. Запуск, редактирование и публикация заблокированы.</span></div>`
+                  : "";
+                const archivedDisabledAttr = isPremiumArchived
+                  ? `disabled aria-disabled="true" data-premium-archived="true" title="Недоступно для архива Premium"`
+                  : "";
+                const linkedUnavailableInfo = isLinkedSourceDeleted
+                  ? `<div class="cx-card-inline-meta"><span>Автор удалил исходный комплекс. Он больше недоступен для прохождения; можно только убрать этот след из вашей библиотеки.</span></div>`
+                  : linkedAccessState === "revoked"
+                    ? `<div class="cx-card-inline-meta"><span>Автор закрыл доступ к публикации. Комплекс нельзя запустить; можно удалить его из вашей библиотеки.</span></div>`
+                    : "";
+                const linkedLockedDisabledAttr = isLinkedLocked
+                  ? `disabled aria-disabled="true" data-linked-unavailable="true" title="${isLinkedSourceDeleted ? "Источник удалён" : linkedAccessState === "revoked" ? "Доступ закрыт" : "Нужен код доступа"}"`
+                  : "";
+                const blockedActionAttr = archivedDisabledAttr || linkedLockedDisabledAttr;
                 const theoryActionLabel = theoryContext.mode === "inherit" ? "Теория (наследование)" : "Теория";
                 const theoryBadge = hasTheoryContext
                   ? `<span class="cx-card-badge pill pill-sm pill-info"><span class="material-symbols-outlined text-sm">menu_book</span> Теория</span>`
@@ -3760,6 +4083,13 @@
 
                 const searchSource = [complex.name || "", complex.description || "", ...tasksList.map((task) => typeof task === "string" ? task : (task.task_ref || task.task_id || ""))].join(" ");
                 const detailRows = buildComplexTaskRows(tasksList);
+                const detailContent = isLinkedSourceDeleted
+                  ? `<div class="panel-row panel-row--soft px-3 py-3 text-sm text-text-secondary">Автор удалил исходный комплекс. Содержимое больше не выдаётся для прохождения; удалите эту карточку, чтобы убрать её из библиотеки.</div>`
+                  : linkedAccessState === "revoked"
+                    ? `<div class="panel-row panel-row--soft px-3 py-3 text-sm text-text-secondary">Автор закрыл доступ к публикации. Содержимое недоступно, но запись оставлена как поясняющий след в вашей библиотеке.</div>`
+                    : tasksCount > 0
+                      ? `<div class="cx-detail-list">${detailRows}</div>`
+                      : '<p class="text-sm text-text-secondary">Нет заданий</p>';
                 const safePausedSessionId = isPaused ? escapeHtml(pausedSession.session_id || "") : "";
                 const safeResumeUrl = isPaused ? escapeHtml(pausedSession?.resume_target?.url || "") : "";
                 const pinBtnClass = isPinned
@@ -3774,31 +4104,34 @@
                 card.setAttribute("data-complex-theory-id", theoryId || "");
                 card.setAttribute("data-complex-owned", ownershipContext.ownership.isOwnedByCurrentUser ? "true" : "false");
                 card.setAttribute("data-complex-imported", ownershipContext.ownership.createdVia === "archive_import" ? "true" : "false");
+                card.setAttribute("data-complex-linked", ownershipContext.isLinked ? "true" : "false");
+                card.setAttribute("data-complex-linked-access-state", linkedAccessState);
+                card.setAttribute("data-complex-archived", isPremiumArchived ? "true" : "false");
                 card.innerHTML = `
-            <div data-complex-card-shell class="cx-card-shell card-elevated relative flex flex-col items-stretch justify-start rounded-lg border ${isSelected ? "border-primary ring-2 ring-primary-lighter" : (isTheoryFocused ? "border-primary-light ring-1 ring-primary-light" : "border-border-subtle")} cx-card-inner">
+            <div data-complex-card-shell class="cx-card-shell card-elevated relative flex flex-col items-stretch justify-start rounded-lg border ${isSelected ? "border-primary ring-2 ring-primary-lighter" : (isTheoryFocused ? "border-primary-light ring-1 ring-primary-light" : "border-border-subtle")} ${isPremiumArchived ? "cx-card-shell--premium-archived" : ""} ${isLinkedUnavailable ? "cx-card-shell--linked-unavailable" : ""} cx-card-inner">
               <div data-complex-select-box class="cx-card-select-box absolute right-3 top-3 z-10 ${selectionMode ? "is-visible" : ""}">
-                <input type="checkbox" class="complex-select-checkbox h-5 w-5 rounded border-border-strong text-primary focus:ring-primary" data-complex-id="${safeComplexId}" ${isSelected ? "checked" : ""} aria-label="Выбрать комплекс">
+                <input type="checkbox" class="complex-select-checkbox h-5 w-5 rounded border-border-strong text-primary focus:ring-primary" data-complex-id="${safeComplexId}" ${isSelected ? "checked" : ""} ${isPremiumArchived || isLinkedUnavailable ? "disabled" : ""} aria-label="Выбрать комплекс">
               </div>
               <div class="cx-card-body flex w-full min-w-0 grow flex-col items-stretch justify-center gap-3 p-4">
                 <div class="cx-card-top">
                   <div class="cx-card-heading">
                     <div class="cx-card-title-row"><p class="cx-card-title text-text-main text-lg font-bold leading-tight tracking-[-0.015em]" title="${safeComplexName}">${safeComplexName}</p></div>
-                    <div class="cx-card-badges">${pausedBadge}${statusBadge}${theoryBadge}${theoryModeBadge}${theoryStatusBadge}${ownerBadge}${sourceBadge}</div>
+                    <div class="cx-card-badges">${premiumArchiveBadge}${linkedStatusBadge}${pausedBadge}${statusBadge}${theoryBadge}${theoryModeBadge}${theoryStatusBadge}${ownerBadge}${sourceBadge}</div>
                   </div>
                   <p class="cx-card-description text-[15px] font-normal">${safeComplexDescription}</p>
-                  <div class="cx-card-meta-stack">${pausedInfo}<p class="cx-card-inline-meta"><span>Всего заданий: <strong>${tasksCount}</strong></span><span class="cx-meta-divider">•</span><span>Адаптивность: <strong>${adaptiveOn ? "Вкл" : "Выкл"}</strong></span></p></div>
+                  <div class="cx-card-meta-stack">${premiumArchiveInfo}${linkedUnavailableInfo}${pausedInfo}<p class="cx-card-inline-meta"><span>Всего заданий: <strong>${tasksCount}</strong></span><span class="cx-meta-divider">•</span><span>Адаптивность: <strong>${adaptiveOn ? "Вкл" : "Выкл"}</strong></span></p></div>
                 </div>
                 <div class="cx-card-actions">
                   <div class="cx-card-actions-primary">
-                    <button class="start-btn cx-btn cx-card-action-btn cx-card-action-btn--primary btn-primary inline-flex items-center justify-center text-sm font-bold" data-complex-id="${safeComplexId}" ${isPaused ? `data-session-id="${safePausedSessionId}" data-resume-url="${safeResumeUrl}"` : ""}><span class="truncate">${isPaused ? "Продолжить" : "Запустить"}</span></button>
-                    ${isPaused ? `<button type="button" class="restart-session-btn cx-card-action-btn cx-card-action-btn--session btn-secondary inline-flex items-center justify-center gap-2 text-sm font-medium border-error-light bg-error-lighter text-error-text hover:border-error hover:bg-error-lighter hover:text-error" data-complex-id="${safeComplexId}" data-session-id="${safePausedSessionId}"><span class="material-symbols-outlined text-lg">restart_alt</span><span class="truncate">Начать заново</span></button><button type="button" class="delete-session-btn cx-card-action-btn cx-card-action-btn--session btn-secondary inline-flex items-center justify-center gap-2 text-sm font-medium border-error-light bg-error-lighter text-error-text hover:border-error hover:bg-error-lighter hover:text-error" data-complex-id="${safeComplexId}" data-session-id="${safePausedSessionId}"><span class="material-symbols-outlined text-lg">delete_forever</span><span class="truncate">Удалить сессию</span></button>` : ""}
+                    <button class="start-btn cx-btn cx-card-action-btn cx-card-action-btn--primary btn-primary inline-flex items-center justify-center text-sm font-bold" data-complex-id="${safeComplexId}" ${isPaused ? `data-session-id="${safePausedSessionId}" data-resume-url="${safeResumeUrl}"` : ""} ${blockedActionAttr}><span class="truncate">${isPaused ? "Продолжить" : "Запустить"}</span></button>
+                    ${isPaused ? `<button type="button" class="restart-session-btn cx-card-action-btn cx-card-action-btn--session btn-secondary inline-flex items-center justify-center gap-2 text-sm font-medium border-error-light bg-error-lighter text-error-text hover:border-error hover:bg-error-lighter hover:text-error" data-complex-id="${safeComplexId}" data-session-id="${safePausedSessionId}" ${blockedActionAttr}><span class="material-symbols-outlined text-lg">restart_alt</span><span class="truncate">Начать заново</span></button><button type="button" class="delete-session-btn cx-card-action-btn cx-card-action-btn--session btn-secondary inline-flex items-center justify-center gap-2 text-sm font-medium border-error-light bg-error-lighter text-error-text hover:border-error hover:bg-error-lighter hover:text-error" data-complex-id="${safeComplexId}" data-session-id="${safePausedSessionId}"><span class="material-symbols-outlined text-lg">delete_forever</span><span class="truncate">Удалить сессию</span></button>` : ""}
                     <button class="detail-toggle-btn cx-card-action-btn cx-card-action-btn--theory btn-secondary inline-flex items-center justify-center gap-1 text-sm font-medium" data-complex-id="${safeComplexId}" title="Подробнее"><span class="material-symbols-outlined text-lg">expand_more</span><span class="truncate">Подробнее</span></button>
                     ${theoryButton}
                   </div>
                   <div class="cx-card-actions-secondary">
                     <button class="${pinBtnClass} cx-card-action-btn cx-card-action-btn--icon" data-complex-id="${safeComplexId}" title="${isPinned ? "Уже в быстром доступе" : "Закрепить в быстром доступе"}"><span class="material-symbols-outlined text-lg">push_pin</span></button>
-                    <button class="export-btn cx-card-action-btn cx-card-action-btn--wide btn-secondary inline-flex items-center justify-center gap-2 text-sm font-medium" data-complex-id="${safeComplexId}"><span class="material-symbols-outlined text-lg">download</span><span class="truncate">Экспорт</span></button>
-                    <button class="edit-btn cx-card-action-btn cx-card-action-btn--wide btn-secondary inline-flex items-center justify-center gap-2 text-sm font-medium" data-complex-id="${safeComplexId}"><span class="material-symbols-outlined text-lg">edit</span><span class="truncate">Редактировать</span></button>
+                    <button class="export-btn cx-card-action-btn cx-card-action-btn--wide btn-secondary inline-flex items-center justify-center gap-2 text-sm font-medium" data-complex-id="${safeComplexId}" ${blockedActionAttr}><span class="material-symbols-outlined text-lg">download</span><span class="truncate">Экспорт</span></button>
+                    <button class="edit-btn cx-card-action-btn cx-card-action-btn--wide btn-secondary inline-flex items-center justify-center gap-2 text-sm font-medium" data-complex-id="${safeComplexId}" ${blockedActionAttr}><span class="material-symbols-outlined text-lg">edit</span><span class="truncate">Редактировать</span></button>
                     <button class="delete-btn cx-card-action-btn cx-card-action-btn--wide btn-secondary inline-flex items-center justify-center gap-2 text-sm font-medium border-error-light bg-error-lighter text-error-text hover:border-error hover:bg-error-lighter hover:text-error" data-complex-id="${safeComplexId}" title="Удалить комплекс"><span class="material-symbols-outlined text-lg">delete</span><span class="truncate">Удалить</span></button>
                   </div>
                 </div>
@@ -3813,7 +4146,7 @@
                     </div>
                     <div class="cx-detail-panel__stats"><span class="cx-detail-stat"><span>Заданий</span><strong>${tasksCount}</strong></span></div>
                   </div>
-                  <div><p class="cx-detail-panel__eyebrow">Задания (${tasksCount})</p>${tasksCount > 0 ? `<div class="cx-detail-list">${detailRows}</div>` : '<p class="text-sm text-text-secondary">Нет заданий</p>'}</div>
+                  <div><p class="cx-detail-panel__eyebrow">Задания (${tasksCount})</p>${detailContent}</div>
                 </div>
               </div>
             </div>`;
@@ -4248,6 +4581,8 @@
                 return "замороженные";
               case "review":
                 return "нужно повторить";
+              case "archived":
+                return "архив Premium";
               default:
                 return "все комплексы библиотеки";
             }
@@ -4316,6 +4651,7 @@
               const isOwnedByCurrentUser = card.getAttribute("data-complex-owned") === "true";
               const isImported = card.getAttribute("data-complex-imported") === "true";
               const isLinked = card.getAttribute("data-complex-linked") === "true";
+              const isArchived = card.getAttribute("data-complex-archived") === "true";
               const theoryId = card.getAttribute("data-complex-theory-id") || "";
 
               let matchesFilter = true;
@@ -4333,6 +4669,8 @@
                 matchesFilter = status === "frozen";
               } else if (activeComplexFilter === "review") {
                 matchesFilter = needsReview;
+              } else if (activeComplexFilter === "archived") {
+                matchesFilter = isArchived;
               }
 
               const matchesTheory = !activeTheoryFilterId || theoryId === activeTheoryFilterId;

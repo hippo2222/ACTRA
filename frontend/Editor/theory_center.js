@@ -292,11 +292,11 @@
   }
 
   function supportsTheorySelectionScope(scope = state.scope) {
-    return scope === 'all' || scope === 'orphans' || scope === 'only_title';
+    return scope === 'all' || scope === 'orphans' || scope === 'only_title' || scope === 'archived';
   }
 
   function isTheoryCollectionScope(scope = state.scope) {
-    return scope === 'all' || scope === 'orphans' || scope === 'only_title';
+    return scope === 'all' || scope === 'orphans' || scope === 'only_title' || scope === 'archived';
   }
 
   function getTheoryRowId(row) {
@@ -320,6 +320,50 @@
     return Array.isArray(state.overview?.theories) ? state.overview.theories : [];
   }
 
+  function getTheoryArchivedItems() {
+    const summary = getWorkspaceLimitSummary('theory');
+    return Array.isArray(summary?.archived_items) ? summary.archived_items : [];
+  }
+
+  function getArchivedTheoryRefs(item) {
+    if (!item || typeof item !== 'object') return [];
+    return [
+      item.id,
+      item.ref,
+      item.workspace_entity_id,
+      item.workspace_entity_ref,
+      item.library_entry_id,
+      item.catalog_item_id,
+      item.item_id,
+    ].map((value) => String(value || '').trim()).filter(Boolean);
+  }
+
+  function getTheoryArchiveCandidateRefs(row = {}) {
+    return new Set([
+      row.id,
+      row.ref,
+      row.path,
+      row.workspace_entity_id,
+      row.workspace_entity_ref,
+      row.library_entry_id,
+      row.catalog_item_id,
+      row.item_id,
+      row.source_workspace_id,
+      getTheoryRowId(row),
+    ].map((value) => String(value || '').trim()).filter(Boolean));
+  }
+
+  function resolveTheoryArchiveItem(row = {}) {
+    const archivedItems = getTheoryArchivedItems();
+    if (!archivedItems.length || !row || typeof row !== 'object') return null;
+    const refs = getTheoryArchiveCandidateRefs(row);
+    return archivedItems.find((item) => getArchivedTheoryRefs(item).some((ref) => refs.has(ref))) || null;
+  }
+
+  function isTheoryPremiumArchived(row = {}) {
+    return Boolean(resolveTheoryArchiveItem(row));
+  }
+
   function isTheoryPendingDeletion(theoryId) {
     return pendingTheoryDeleteIds.has(String(theoryId || '').trim());
   }
@@ -327,6 +371,11 @@
   function getScopeRows(scope = state.scope) {
     if (scope === 'complexes') {
       return Array.isArray(state.overview?.complexes) ? state.overview.complexes : [];
+    }
+    if (scope === 'archived') {
+      return getWorkspaceTheoryRows()
+        .concat(getLinkedTheoryRows())
+        .filter((row) => isTheoryPremiumArchived(row));
     }
     if (scope === 'only_title') {
       const theoryRows = getWorkspaceTheoryRows();
@@ -615,6 +664,25 @@
     }
   }
 
+  function getCatalogVisibilityAccessRank(value) {
+    switch (String(value || '').trim().toLowerCase()) {
+      case 'private':
+        return 0;
+      case 'access_code':
+        return 1;
+      case 'public':
+        return 2;
+      default:
+        return null;
+    }
+  }
+
+  function isCatalogVisibilityExpansion(currentVisibility, nextVisibility) {
+    const currentRank = getCatalogVisibilityAccessRank(currentVisibility);
+    const nextRank = getCatalogVisibilityAccessRank(nextVisibility);
+    return currentRank !== null && nextRank !== null && nextRank > currentRank;
+  }
+
   function getTheoryVisibilityLock(item) {
     const lock = item?.visibility_lock && typeof item.visibility_lock === 'object' ? item.visibility_lock : null;
     if (!lock) return null;
@@ -638,6 +706,9 @@
     const message = String(error?.message || error || '').trim();
     if (message.includes('theory_catalog_visibility_locked_by_public_complex')) {
       return 'Теория привязана к опубликованному для всех комплексу. Сначала измените публикацию комплекса.';
+    }
+    if (message.includes('premium_archived_content')) {
+      return 'Источник находится в архиве Premium. Сужение доступа доступно, а публикация новой версии и расширение доступа вернутся после восстановления Premium.';
     }
     return message || fallback;
   }
@@ -862,12 +933,30 @@
     `;
   }
 
+  function renderTheoryArchiveBadge(row) {
+    if (!isTheoryPremiumArchived(row)) return '';
+    return `
+      <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold ${getTheoryToneClass('warning')}" title="Архив Premium: редактирование, публикация и изменения заблокированы до продления Premium">
+        <span class="material-symbols-outlined text-[14px]">inventory_2</span>
+        Архив Premium
+      </span>
+    `;
+  }
+
   function canOpenTheoryInEditor(row) {
     if (row?.is_linked_publication) return false;
+    if (isTheoryPremiumArchived(row)) return false;
     return getTheoryAuthorMeta(row).isOwnedByCurrentUser === true;
   }
 
   function getTheoryOpenMeta(row) {
+    if (isTheoryPremiumArchived(row)) {
+      return {
+        label: 'Просмотр',
+        title: 'Открыть теорию в режиме просмотра. Редактирование заблокировано, пока материал в архиве Premium.',
+        opensEditor: false,
+      };
+    }
     if (canOpenTheoryInEditor(row)) {
       return {
         label: 'Открыть',
@@ -1254,7 +1343,7 @@
       const search = String(params.get('q') || '').trim();
       const moduleId = String(params.get('module_id') || '').trim();
       const stateFilter = String(params.get('state') || '').trim();
-      if (scope === 'all' || scope === 'topics' || scope === 'complexes' || scope === 'orphans' || scope === 'only_title') {
+      if (scope === 'all' || scope === 'topics' || scope === 'complexes' || scope === 'orphans' || scope === 'only_title' || scope === 'archived') {
         state.scope = scope;
       }
       if (search) state.search = search;
@@ -1489,6 +1578,7 @@
     }
     const personalBlocked = Number(theorySummary.remaining_personal || 0) <= 0;
     const libraryBlocked = Number(theorySummary.remaining_library || 0) <= 0;
+    const archivedCount = Number(theorySummary.archived_count || getTheoryArchivedItems().length || 0);
     host.innerHTML = `
       <span class="inline-flex items-center gap-0.5 rounded-md border px-1.5 py-0.5 text-[11px] leading-none font-medium whitespace-nowrap ${getTheoryToneClass(personalBlocked ? 'warning' : 'info')}">
         <span class="material-symbols-outlined text-[12px] leading-none">edit_note</span>
@@ -1498,6 +1588,12 @@
         <span class="material-symbols-outlined text-[12px] leading-none">inventory_2</span>
         Библиотека: ${escapeHtml(`${Number(theorySummary.library_total_count || 0)}/${Number(theorySummary.library_limit || 0)}`)}
       </span>
+      ${archivedCount > 0 ? `
+        <span class="inline-flex items-center gap-0.5 rounded-md border px-1.5 py-0.5 text-[11px] leading-none font-medium whitespace-nowrap ${getTheoryToneClass('warning')}">
+          <span class="material-symbols-outlined text-[12px] leading-none">archive</span>
+          Архив Premium: ${escapeHtml(String(archivedCount))}
+        </span>
+      ` : ''}
     `;
   }
 
@@ -1661,11 +1757,21 @@
     const complexesBtn = $('theory-center-scope-complexes');
     const orphansBtn = $('theory-center-scope-orphans');
     const onlyTitleBtn = $('theory-center-scope-only-title');
+    const archivedBtn = $('theory-center-scope-archived');
     if (allBtn) allBtn.setAttribute('data-active', state.scope === 'all' ? '1' : '0');
     if (topicsBtn) topicsBtn.setAttribute('data-active', state.scope === 'topics' ? '1' : '0');
     if (complexesBtn) complexesBtn.setAttribute('data-active', state.scope === 'complexes' ? '1' : '0');
     if (orphansBtn) orphansBtn.setAttribute('data-active', state.scope === 'orphans' ? '1' : '0');
     if (onlyTitleBtn) onlyTitleBtn.setAttribute('data-active', state.scope === 'only_title' ? '1' : '0');
+    if (archivedBtn) {
+      const archivedCount = Number(getWorkspaceLimitSummary('theory')?.archived_count || getTheoryArchivedItems().length || 0);
+      archivedBtn.hidden = archivedCount <= 0;
+      archivedBtn.disabled = archivedCount <= 0;
+      archivedBtn.setAttribute('data-active', state.scope === 'archived' ? '1' : '0');
+      archivedBtn.title = archivedCount > 0
+        ? `В архиве Premium: ${archivedCount} теорий. Они доступны для просмотра и удаления, но редактирование и публикация заблокированы.`
+        : 'В архиве Premium пока нет теорий.';
+    }
 
     populateFilters();
   }
@@ -1925,12 +2031,19 @@
       setFlash('Публикацией можно управлять только для своих теорий.', 'warning');
       return;
     }
-
     const publication = resolveTheoryPublication(row);
+    const isPremiumArchivedSource = isTheoryPremiumArchived(row);
+    if (isPremiumArchivedSource && !publication) {
+      setFlash('Публикация недоступна: теория находится в архиве Premium. Продлите Premium, чтобы опубликовать её.', 'warning');
+      return;
+    }
     const currentVisibility = String(publication?.catalog_visibility || 'public').trim().toLowerCase() || 'public';
     const visibilityLock = getTheoryVisibilityLock(publication);
     const accessCode = getAccessCodeValue(publication);
     const theoryTitle = escapeHtml(row?.title || theoryId || 'Без названия');
+    const archivePolicyText = isPremiumArchivedSource
+      ? 'Источник теории находится в архиве Premium. Опубликованная версия остаётся доступной, но новую версию и расширение доступа можно сделать только после восстановления Premium. Сузить доступ или скрыть публикацию можно сейчас.'
+      : '';
 
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 z-[1220] bg-scrim backdrop-blur-sm flex items-center justify-center p-4';
@@ -1940,11 +2053,16 @@
           <div class="space-y-1">
             <p class="text-xs font-bold uppercase tracking-[0.16em] text-text-muted">Публикация теории</p>
             <h3 class="text-xl font-bold text-text-main">${theoryTitle}</h3>
-            <p class="text-sm text-text-secondary">Здесь можно опубликовать теорию, изменить режим доступа и при необходимости получить код доступа.</p>
+            <p class="text-sm text-text-secondary">${isPremiumArchivedSource ? escapeHtml(archivePolicyText) : 'Здесь можно опубликовать теорию, изменить режим доступа и при необходимости получить код доступа.'}</p>
           </div>
           <button type="button" class="btn-secondary h-10 px-4" data-role="close">Закрыть</button>
         </div>
         <div class="custom-scrollbar space-y-5 overflow-y-auto p-5">
+          ${isPremiumArchivedSource ? `
+            <div class="rounded-2xl border border-warning-light bg-warning-light/40 px-4 py-3 text-sm text-warning-darker">
+              Источник в архиве Premium. Текущая публикация не снята с доступа автоматически; обновление версии и расширение доступа заблокированы до восстановления Premium.
+            </div>
+          ` : ''}
           <div class="rounded-2xl border border-border-subtle bg-bg-secondary px-4 py-4">
             <div class="flex flex-wrap items-start justify-between gap-3">
               <div>
@@ -1959,7 +2077,7 @@
           <div class="space-y-3">
             <div>
               <div class="text-sm font-semibold text-text-main">Режим доступа</div>
-              <p class="mt-1 text-sm text-text-secondary">${visibilityLock ? escapeHtml(formatTheoryVisibilityLockMessage(visibilityLock)) : 'Если публикация уже существует, доступ можно поменять отдельно от публикации новой версии. Новые правки из редактора увидят другие пользователи только после публикации.'}</p>
+              <p class="mt-1 text-sm text-text-secondary">${visibilityLock ? escapeHtml(formatTheoryVisibilityLockMessage(visibilityLock)) : isPremiumArchivedSource ? 'Можно выбрать только текущий или более закрытый режим доступа. Расширение доступа вернётся после Premium.' : 'Если публикация уже существует, доступ можно поменять отдельно от публикации новой версии. Новые правки из редактора увидят другие пользователи только после публикации.'}</p>
             </div>
             ${visibilityLock ? `
               <div class="rounded-2xl border border-warning-light bg-warning-light/40 px-4 py-3 text-sm text-warning-darker">
@@ -1968,9 +2086,9 @@
             ` : ''}
             <div class="grid gap-3 md:grid-cols-3">
               ${['public', 'access_code', 'private'].map((visibility) => `
-                <label class="rounded-2xl border border-border-subtle bg-surface-1 p-4 transition-colors hover:border-primary-light ${visibilityLock && visibility !== 'public' ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}">
+                <label class="rounded-2xl border border-border-subtle bg-surface-1 p-4 transition-colors hover:border-primary-light ${(visibilityLock && visibility !== 'public') || (isPremiumArchivedSource && isCatalogVisibilityExpansion(currentVisibility, visibility)) ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}">
                   <div class="flex items-start gap-3">
-                    <input type="radio" name="theory-publish-visibility" value="${visibility}" ${visibility === currentVisibility ? 'checked' : ''} ${visibilityLock && visibility !== 'public' ? 'disabled' : ''} class="mt-1 h-4 w-4 text-primary" />
+                    <input type="radio" name="theory-publish-visibility" value="${visibility}" ${visibility === currentVisibility ? 'checked' : ''} ${(visibilityLock && visibility !== 'public') || (isPremiumArchivedSource && isCatalogVisibilityExpansion(currentVisibility, visibility)) ? 'disabled' : ''} class="mt-1 h-4 w-4 text-primary" />
                     <div class="space-y-1 min-w-0">
                       <div class="text-sm font-semibold text-text-main">${escapeHtml(getCatalogVisibilityLabel(visibility))}</div>
                       <div class="text-sm text-text-secondary">${escapeHtml(getTheoryCatalogVisibilityDescription(visibility))}</div>
@@ -2019,10 +2137,11 @@
       radios.forEach((radio) => {
         const visibility = String(radio?.value || '').trim().toLowerCase();
         const disabledByLock = !!lock && visibility !== 'public';
+        const disabledByArchive = isPremiumArchivedSource && isCatalogVisibilityExpansion(item?.catalog_visibility || currentVisibility, visibility);
         if (visibility === 'public') {
           publicRadio = radio;
         }
-        radio.disabled = modalBusy || disabledByLock;
+        radio.disabled = modalBusy || disabledByLock || disabledByArchive;
       });
       if (lock) {
         const selected = getSelectedVisibility();
@@ -2069,6 +2188,7 @@
       const accessBox = modal.querySelector('#theory-publish-access-box');
       const accessCodeEl = modal.querySelector('#theory-publish-access-code');
       const updateBtn = modal.querySelector('[data-role="update-visibility"]');
+      const publishBtn = modal.querySelector('[data-role="publish-version"]');
 
       if (currentStatus) {
         currentStatus.textContent = currentItem ? getCatalogVisibilityLabel(currentItem.catalog_visibility) : 'Не опубликована';
@@ -2092,9 +2212,20 @@
       }
       if (updateBtn) {
         const currentItemVisibility = String(currentItem?.catalog_visibility || '').trim().toLowerCase();
-        const canUpdateVisibility = !!currentItem && selectedVisibility !== currentItemVisibility && !(lock && selectedVisibility !== 'public');
+        const blockedByArchive = isPremiumArchivedSource && isCatalogVisibilityExpansion(currentItemVisibility, selectedVisibility);
+        const canUpdateVisibility = !!currentItem && selectedVisibility !== currentItemVisibility && !(lock && selectedVisibility !== 'public') && !blockedByArchive;
         updateBtn.disabled = !canUpdateVisibility;
         updateBtn.classList.toggle('opacity-60', !canUpdateVisibility);
+        updateBtn.title = blockedByArchive
+          ? 'Расширение доступа для архива Premium недоступно до восстановления Premium.'
+          : '';
+      }
+      if (publishBtn) {
+        publishBtn.disabled = modalBusy || isPremiumArchivedSource;
+        publishBtn.classList.toggle('opacity-60', isPremiumArchivedSource);
+        publishBtn.title = isPremiumArchivedSource
+          ? 'Новая версия недоступна, пока источник находится в архиве Premium.'
+          : '';
       }
     };
 
@@ -2116,6 +2247,10 @@
       const nextVisibility = getSelectedVisibility();
       if (nextVisibility === String(currentItem.catalog_visibility || '').trim().toLowerCase()) {
         setFeedback('Выбранный режим доступа уже сохранён.', 'info');
+        return;
+      }
+      if (isPremiumArchivedSource && isCatalogVisibilityExpansion(currentItem.catalog_visibility, nextVisibility)) {
+        setFeedback('Источник находится в архиве Premium: можно только сузить доступ или скрыть публикацию.', 'error');
         return;
       }
       setBusy(true);
@@ -2147,6 +2282,10 @@
       }
     });
     modal.querySelector('[data-role="publish-version"]')?.addEventListener('click', async () => {
+      if (isPremiumArchivedSource) {
+        setFeedback('Новая версия недоступна, пока источник находится в архиве Premium. Сузить доступ можно кнопкой «Сохранить доступ».', 'error');
+        return;
+      }
       const selectedVisibility = getSelectedVisibility();
       setBusy(true);
       setFeedback('');
@@ -2314,12 +2453,16 @@
     const hasContent = row.has_content !== false;
     const ownership = resolveComplexOwnership(row);
     const openMeta = getTheoryOpenMeta(row);
+    const isPremiumArchived = isTheoryPremiumArchived(row);
+    const publication = resolveTheoryPublication(row);
+    const publicationBlocked = isPremiumArchived && !publication;
     const selected = state.selectedTheoryIds.has(theoryId);
     const selectable = isTheoryRowDeletable(row);
     const selectionMode = state.selectionMode && supportsTheorySelectionScope();
     return `
-      <article class="theory-row-card card-elevated rounded-[28px] p-5"${getTheoryRowOnboardingAttributes(row)}
+      <article class="theory-row-card card-elevated rounded-[28px] p-5${isPremiumArchived ? ' theory-row-card--premium-archived' : ''}"${getTheoryRowOnboardingAttributes(row)}
         data-theory-id="${escapeHtml(theoryId)}"
+        data-premium-archived="${isPremiumArchived ? '1' : '0'}"
         data-selectable="${selectable ? '1' : '0'}"
         data-selection-mode="${selectionMode ? '1' : '0'}"
         data-selected="${selected ? '1' : '0'}">
@@ -2344,7 +2487,9 @@
                 <button type="button"
                   class="theory-mini-btn ${getTheoryNeutralButtonClass()} rounded-2xl border px-3 py-2 text-xs font-semibold hover:border-primary hover:text-primary"
                   data-action="manage-theory-publication"
-                  data-theory-id="${escapeHtml(row.id)}">
+                  data-theory-id="${escapeHtml(row.id)}"
+                  title="${publicationBlocked ? 'Публикация заблокирована, пока теория в архиве Premium' : isPremiumArchived ? 'Источник в архиве Premium: можно сузить доступ текущей публикации' : 'Управлять публикацией'}"
+                  ${publicationBlocked ? 'disabled' : ''}>
                   Публикация
                 </button>
               ` : ''}
@@ -2355,6 +2500,7 @@
               ${renderTheoryAuthorBadge(row)}
               ${renderTheoryOriginBadge(row)}
               ${renderTheoryCatalogStatusBadge(row)}
+              ${renderTheoryArchiveBadge(row)}
               <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 font-semibold ${getTheoryToneClass('warning')}" title="Тема или комплекс не используют эту теорию">
                 <span class="material-symbols-outlined text-[14px]">priority_high</span>
                 Не привязана
@@ -2390,6 +2536,7 @@
 
   function renderTheoryCatalogCard(row) {
     if (row?.is_linked_publication) {
+      const isPremiumArchived = isTheoryPremiumArchived(row);
       const accessState = String(row.access_state || 'active').trim();
       const isLocked = accessState === 'requires_access_code' || accessState === 'revoked' || accessState === 'deleted_source';
       const accessTone = accessState === 'active'
@@ -2405,8 +2552,9 @@
             ? 'Доступ отозван'
             : 'Источник недоступен';
       return `
-        <article class="theory-row-card card-elevated rounded-[28px] p-5"${getTheoryRowOnboardingAttributes(row)}
+        <article class="theory-row-card card-elevated rounded-[28px] p-5${isPremiumArchived ? ' theory-row-card--premium-archived' : ''}"${getTheoryRowOnboardingAttributes(row)}
           data-theory-id="${escapeHtml(getTheoryRowId(row))}"
+          data-premium-archived="${isPremiumArchived ? '1' : '0'}"
           data-selectable="0"
           data-selection-mode="0"
           data-selected="0">
@@ -2417,6 +2565,15 @@
                 <h3 class="text-xl font-semibold tracking-[-0.02em] text-text-main truncate">${escapeHtml(row.title || row.id)}</h3>
               </div>
               <div class="flex items-start gap-2 shrink-0">
+                ${row.library_entry_id ? `
+                  <button type="button"
+                    class="theory-mini-btn rounded-2xl border border-error-light bg-error-lighter px-3 py-2 text-xs font-semibold text-error-text hover:border-error"
+                    data-action="delete-linked-theory-record"
+                    data-library-entry-id="${escapeHtml(row.library_entry_id)}"
+                    title="Убрать теорию из библиотеки">
+                    Убрать
+                  </button>
+                ` : ''}
                 <button type="button"
                   class="theory-mini-btn ${getTheoryToneClass('primary', 'button')} rounded-2xl border px-3 py-2 text-xs font-semibold"
                   ${getTheoryOpenActionOnboardingAttributes(row)}
@@ -2431,6 +2588,7 @@
                 ${renderTheoryAuthorBadge(row)}
                 ${renderTheoryOriginBadge(row)}
                 ${renderTheoryCatalogStatusBadge(row)}
+                ${renderTheoryArchiveBadge(row)}
                 <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 font-semibold ${accessTone}">
                   <span class="material-symbols-outlined text-[14px]">${accessState === 'active' ? 'link' : accessState === 'requires_access_code' ? 'password' : 'lock'}</span>
                   ${escapeHtml(accessLabel)}
@@ -2457,12 +2615,16 @@
     const hasContent = row.has_content !== false;
     const ownership = resolveComplexOwnership(row);
     const openMeta = getTheoryOpenMeta(row);
+    const isPremiumArchived = isTheoryPremiumArchived(row);
+    const publication = resolveTheoryPublication(row);
+    const publicationBlocked = isPremiumArchived && !publication;
     const selected = state.selectedTheoryIds.has(theoryId);
     const selectable = isTheoryRowDeletable(row);
     const selectionMode = state.selectionMode && supportsTheorySelectionScope();
     return `
-      <article class="theory-row-card card-elevated rounded-[28px] p-5"${getTheoryRowOnboardingAttributes(row)}
+      <article class="theory-row-card card-elevated rounded-[28px] p-5${isPremiumArchived ? ' theory-row-card--premium-archived' : ''}"${getTheoryRowOnboardingAttributes(row)}
         data-theory-id="${escapeHtml(theoryId)}"
+        data-premium-archived="${isPremiumArchived ? '1' : '0'}"
         data-selectable="${selectable ? '1' : '0'}"
         data-selection-mode="${selectionMode ? '1' : '0'}"
         data-selected="${selected ? '1' : '0'}">
@@ -2486,7 +2648,9 @@
                 <button type="button"
                   class="theory-mini-btn ${getTheoryNeutralButtonClass()} rounded-2xl border px-3 py-2 text-xs font-semibold hover:border-primary hover:text-primary"
                   data-action="manage-theory-publication"
-                  data-theory-id="${escapeHtml(row.id)}">
+                  data-theory-id="${escapeHtml(row.id)}"
+                  title="${publicationBlocked ? 'Публикация заблокирована, пока теория в архиве Premium' : isPremiumArchived ? 'Источник в архиве Premium: можно сузить доступ текущей публикации' : 'Управлять публикацией'}"
+                  ${publicationBlocked ? 'disabled' : ''}>
                   Публикация
                 </button>
               ` : ''}
@@ -2497,6 +2661,7 @@
               ${renderTheoryAuthorBadge(row)}
               ${renderTheoryOriginBadge(row)}
               ${renderTheoryCatalogStatusBadge(row)}
+              ${renderTheoryArchiveBadge(row)}
               ${row.is_orphan ? `
                 <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 font-semibold ${getTheoryToneClass('warning')}" title="Теория пока не связана ни с темами, ни с комплексами">
                   <span class="material-symbols-outlined text-[14px]">link_off</span>
@@ -2777,6 +2942,41 @@
     scheduleTheoryDeletion([normalizedTheoryId]);
   }
 
+  async function deleteLinkedTheoryRecord(libraryEntryId) {
+    const normalizedEntryId = String(libraryEntryId || '').trim();
+    if (state.bulkDeleting || !normalizedEntryId) {
+      return;
+    }
+    const confirmed = await theoryCenterConfirm({
+      title: 'Убрать теорию из библиотеки?',
+      message: 'Связанная теория будет удалена из вашей библиотеки. Материал автора в каталоге не изменится.',
+      confirmText: 'Убрать',
+      cancelText: 'Отмена',
+      variant: 'error',
+    });
+    if (!confirmed) return;
+
+    state.bulkDeleting = true;
+    renderView();
+    try {
+      const response = await fetch(`/api/theory-library/${encodeURIComponent(normalizedEntryId)}`, {
+        method: 'DELETE',
+      });
+      const data = await readJsonSafely(response);
+      if (!response.ok || data?.ok === false) {
+        throw new Error(data?.error || `HTTP ${response.status}`);
+      }
+      setFlash('Теория убрана из библиотеки.', 'success');
+      await loadOverview({ silent: true });
+    } catch (error) {
+      console.error('[Theory Center] Failed to delete linked theory entry', error);
+      setFlash('Не удалось убрать теорию из библиотеки.', 'error');
+    } finally {
+      state.bulkDeleting = false;
+      renderView();
+    }
+  }
+
   function renderEmptyState() {
     const host = $('theory-center-list');
     if (!host) return;
@@ -2786,6 +2986,8 @@
         ? 'теории без привязки'
         : state.scope === 'only_title'
           ? 'теории только с заголовком'
+        : state.scope === 'archived'
+          ? 'теории в архиве Premium'
         : state.scope === 'all'
           ? 'теории'
           : 'темы';
@@ -2813,7 +3015,7 @@
         <section class="space-y-4">
           <div class="flex items-center justify-between gap-3">
             <div>
-              <p class="text-[11px] font-bold uppercase tracking-[0.14em] text-text-secondary">Теории из каталога</p>
+              <p class="text-[11px] font-bold uppercase tracking-[0.14em] text-text-secondary">Связанные публикации</p>
               <p class="mt-1 text-sm text-text-secondary">Материалы других авторов, которые добавлены в вашу библиотеку вместе с комплексами или отдельно из каталога.</p>
             </div>
             <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${getTheoryNeutralChipClass()}">${escapeHtml(String(linkedRows.length))}</span>
@@ -2863,6 +3065,8 @@
           ? 'Теории: Без привязки'
           : state.scope === 'only_title'
             ? 'Теории: Только заголовок'
+          : state.scope === 'archived'
+            ? 'Архив Premium'
           : 'Темы';
     }
     if (subtitle) {
@@ -2874,6 +3078,8 @@
           ? 'Теории, которые пока не привязаны ни к одной теме или комплексу.'
           : state.scope === 'only_title'
             ? 'Теории, в которых пока есть только заголовок без основного текста.'
+          : state.scope === 'archived'
+            ? 'Материалы доступны для просмотра и удаления, но редактирование и публикация вернутся после Premium.'
           : 'Показываем темы, их теорию и влияние на связанные комплексы.';
     }
     if (summaryEl) {
@@ -2887,8 +3093,8 @@
       return;
     }
 
-    if (state.scope === 'all' || state.scope === 'only_title') {
-      host.innerHTML = state.scope === 'all'
+    if (state.scope === 'all' || state.scope === 'only_title' || state.scope === 'archived') {
+      host.innerHTML = state.scope === 'all' || state.scope === 'archived'
         ? renderAllTheoryGroups(rows)
         : rows.map(renderTheoryCatalogCard).join('');
     } else if (state.scope === 'orphans') {
@@ -3136,6 +3342,10 @@
         deleteSingleTheory(button.getAttribute('data-theory-id'));
         return;
       }
+      if (action === 'delete-linked-theory-record') {
+        deleteLinkedTheoryRecord(button.getAttribute('data-library-entry-id'));
+        return;
+      }
     }
 
     if (state.selectionMode && supportsTheorySelectionScope()) {
@@ -3232,7 +3442,8 @@
     const complexesBtn = $('theory-center-scope-complexes');
     const orphansBtn = $('theory-center-scope-orphans');
     const onlyTitleBtn = $('theory-center-scope-only-title');
-    [allBtn, topicsBtn, complexesBtn, orphansBtn, onlyTitleBtn].filter(Boolean).forEach((button) => {
+    const archivedBtn = $('theory-center-scope-archived');
+    [allBtn, topicsBtn, complexesBtn, orphansBtn, onlyTitleBtn, archivedBtn].filter(Boolean).forEach((button) => {
       button.addEventListener('click', () => {
         const nextScope = String(button.getAttribute('data-scope') || 'all').trim();
         if (!nextScope || nextScope === state.scope) return;

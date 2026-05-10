@@ -3266,6 +3266,29 @@
       return String(state.workspaceLimits?.plan || '').trim().toLowerCase() === 'premium';
     }
 
+    function getComplexArchivedItems() {
+      const summary = getComplexLimitSummary();
+      return Array.isArray(summary?.archived_items) ? summary.archived_items : [];
+    }
+
+    function getArchivedItemRefs(item) {
+      if (!item || typeof item !== 'object') return [];
+      return [item.id, item.ref, item.workspace_entity_id, item.workspace_entity_ref, item.library_entry_id]
+        .map((value) => asCleanString(value))
+        .filter(Boolean);
+    }
+
+    function isCurrentComplexPremiumArchived() {
+      const complexId = asCleanString(state.editingId);
+      if (!complexId) return false;
+      return getComplexArchivedItems().some((item) => {
+        if (!item || typeof item !== 'object') return false;
+        const itemScope = asCleanString(item.scope);
+        if (itemScope && itemScope !== 'workspace') return false;
+        return getArchivedItemRefs(item).includes(complexId);
+      });
+    }
+
     function getComplexLimitMessage(summary = getComplexLimitSummary()) {
       if (!summary || isComplexPremiumPlan()) return '';
       const personalCount = Number(summary.personal_count || 0);
@@ -3499,6 +3522,54 @@
 
     }
 
+    function getCatalogVisibilityAccessRank(value) {
+
+      switch (asCleanString(value).toLowerCase()) {
+
+        case 'private':
+
+          return 0;
+
+        case 'access_code':
+
+          return 1;
+
+        case 'public':
+
+          return 2;
+
+        default:
+
+          return null;
+
+      }
+
+    }
+
+    function isCatalogVisibilityExpansion(currentVisibility, nextVisibility) {
+
+      const currentRank = getCatalogVisibilityAccessRank(currentVisibility);
+
+      const nextRank = getCatalogVisibilityAccessRank(nextVisibility);
+
+      return currentRank !== null && nextRank !== null && nextRank > currentRank;
+
+    }
+
+    function getPremiumArchivedPublicationErrorMessage(error, fallback = 'catalog_visibility_update_failed') {
+
+      const message = asCleanString(error?.message || error);
+
+      if (message.includes('premium_archived_content')) {
+
+        return 'Источник находится в архиве Premium. Сужение доступа доступно, а публикация новой версии и расширение доступа вернутся после восстановления Premium.';
+
+      }
+
+      return message || fallback;
+
+    }
+
     function formatPublicationTimestamp(value) {
 
       const raw = asCleanString(value);
@@ -3679,22 +3750,29 @@
       const loading = state.publication.loading === true;
 
       const labelEl = btn.querySelector('span:last-child');
+      const archivedSource = isCurrentComplexPremiumArchived();
 
-      btn.disabled = loading || !complexId;
+      btn.disabled = loading || !complexId || (archivedSource && !publication);
       btn.classList.toggle('cx-publish-btn--stale', notice.kind === 'stale');
 
       if (labelEl) {
-        labelEl.textContent = notice.kind === 'stale'
+        labelEl.textContent = archivedSource && !publication
+          ? 'Архив Premium'
+          : notice.kind === 'stale'
           ? 'Обновить'
           : (publication ? 'Публикация' : 'Опубликовать');
       }
 
       btn.title = !complexId
         ? 'Сначала сохраните комплекс'
+        : archivedSource && !publication
+          ? 'Комплекс находится в архиве Premium. Опубликовать его можно после восстановления Premium.'
         : notice.kind === 'stale'
           ? notice.tooltip
           : publication
-            ? `Управление публикацией: ${getCatalogVisibilityLabel(publication.catalog_visibility)}`
+            ? archivedSource
+              ? `Источник в архиве Premium. Можно сузить доступ текущей публикации: ${getCatalogVisibilityLabel(publication.catalog_visibility)}`
+              : `Управление публикацией: ${getCatalogVisibilityLabel(publication.catalog_visibility)}`
             : notice.tooltip;
 
       badge.className = 'cx-header-pill cx-mini-pill cx-mini-pill--muted';
@@ -3860,6 +3938,15 @@
       }
 
       const publication = await refreshComplexPublicationState(true);
+      const archivedSource = isCurrentComplexPremiumArchived();
+
+      if (archivedSource && !publication) {
+
+        notifyComplexToast('Комплекс находится в архиве Premium. Опубликовать его можно после восстановления Premium.', 'warning', 3600);
+
+        return;
+
+      }
 
       const currentVisibility = asCleanString(publication?.catalog_visibility || 'public').toLowerCase() || 'public';
 
@@ -3868,19 +3955,29 @@
       const hasPublication = !!publication;
 
       const publishIntroText = hasPublication
-        ? 'Опубликовывается последняя сохранённая версия комплекса. Смена режима доступа влияет на текущую публикацию, а новые изменения из редактора станут видны другим пользователям только после публикации новой версии.'
+        ? archivedSource
+          ? 'Источник комплекса находится в архиве Premium. Опубликованная версия остаётся доступной, но новую версию и расширение доступа можно сделать только после восстановления Premium. Сузить доступ или скрыть публикацию можно сейчас.'
+          : 'Опубликовывается последняя сохранённая версия комплекса. Смена режима доступа влияет на текущую публикацию, а новые изменения из редактора станут видны другим пользователям только после публикации новой версии.'
         : 'Будет опубликована последняя сохранённая версия комплекса. Выберите режим доступа, с которым комплекс появится для других пользователей.';
 
       const visibilityHelpText = hasPublication
-        ? 'Если публикация уже существует, доступ можно поменять отдельно от публикации новой версии.'
+        ? archivedSource
+          ? 'Можно выбрать только текущий или более закрытый режим доступа. Расширение доступа вернётся после Premium.'
+          : 'Если публикация уже существует, доступ можно поменять отдельно от публикации новой версии.'
         : 'Этот режим будет применён сразу после первой публикации комплекса.';
 
       const publicationInfoTitle = hasPublication
-        ? 'Что произойдёт после изменения доступа'
+        ? archivedSource ? 'Архив Premium и публикация' : 'Что произойдёт после изменения доступа'
         : 'Что произойдёт после публикации';
 
       const publicationInfoItems = hasPublication
-        ? [
+        ? archivedSource
+          ? [
+          'Текущая опубликованная версия остаётся доступной в выбранном сейчас режиме.',
+          'Можно сузить доступ, например с общего каталога до доступа по коду или приватного режима.',
+          'Опубликовать новую версию или расширить доступ можно после восстановления Premium.',
+        ]
+          : [
           'Новые пользователи будут видеть публикацию только в рамках выбранного режима доступа.',
           'Изменение доступа не публикует новую версию автоматически и не меняет содержимое текущей опубликованной версии.',
           'Чтобы другие пользователи увидели новые правки из редактора, опубликуйте новую версию.',
@@ -3932,9 +4029,9 @@
                 </div>
                 <div class="cx-publish-visibility-grid grid gap-3">
                   ${['public', 'access_code', 'private'].map((visibility) => `
-                    <label class="cx-publish-visibility-card rounded-xl border border-border-subtle bg-surface-1 p-4 hover:border-primary-light transition-colors cursor-pointer">
+                    <label class="cx-publish-visibility-card rounded-xl border border-border-subtle bg-surface-1 p-4 hover:border-primary-light transition-colors ${archivedSource && isCatalogVisibilityExpansion(currentVisibility, visibility) ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}">
                       <div class="flex items-start gap-3">
-                        <input type="radio" name="complex-publish-visibility" value="${visibility}" ${visibility === currentVisibility ? 'checked' : ''} class="mt-1 h-4 w-4 text-primary" />
+                        <input type="radio" name="complex-publish-visibility" value="${visibility}" ${visibility === currentVisibility ? 'checked' : ''} ${archivedSource && isCatalogVisibilityExpansion(currentVisibility, visibility) ? 'disabled' : ''} class="mt-1 h-4 w-4 text-primary" />
                         <div class="space-y-1 min-w-0">
                           <div class="text-sm font-semibold text-text-main">${escapeHtml(getCatalogVisibilityLabel(visibility))}</div>
                           <div class="text-sm text-text-secondary">${escapeHtml(getCatalogVisibilityDescription(visibility))}</div>
@@ -4003,6 +4100,21 @@
         return asCleanString(selected?.value).toLowerCase() || currentVisibility || 'public';
 
       };
+      let modalBusy = false;
+
+      const applyVisibilityControlState = (item = state.publication.item) => {
+
+        const currentItemVisibility = asCleanString(item?.catalog_visibility || currentVisibility).toLowerCase() || 'public';
+
+        modal.querySelectorAll('input[name="complex-publish-visibility"]').forEach((input) => {
+
+          const visibility = asCleanString(input?.value).toLowerCase();
+
+          input.disabled = modalBusy || (archivedSource && isCatalogVisibilityExpansion(currentItemVisibility, visibility));
+
+        });
+
+      };
 
       const setFeedback = (message, tone = 'info') => {
 
@@ -4061,6 +4173,9 @@
         const updateBtn = modal.querySelector('[data-action="update-visibility"]');
 
         const publishVersionLabel = modal.querySelector('[data-role="publish-version-label"]');
+        const publishVersionBtn = modal.querySelector('[data-action="publish-version"]');
+
+        applyVisibilityControlState(currentItem);
 
         if (currentBox) {
 
@@ -4102,13 +4217,18 @@
 
           const currentItemVisibility = asCleanString(currentItem?.catalog_visibility).toLowerCase();
 
-          const canUpdateVisibility = !!currentItem && selectedVisibility !== currentItemVisibility;
+          const blockedByArchive = archivedSource && isCatalogVisibilityExpansion(currentItemVisibility, selectedVisibility);
+
+          const canUpdateVisibility = !!currentItem && selectedVisibility !== currentItemVisibility && !blockedByArchive;
 
           updateBtn.classList.toggle('hidden', !currentItem);
 
           updateBtn.disabled = !canUpdateVisibility;
 
           updateBtn.classList.toggle('opacity-60', !canUpdateVisibility);
+          updateBtn.title = blockedByArchive
+            ? 'Расширение доступа для архива Premium недоступно до восстановления Premium.'
+            : '';
 
         }
 
@@ -4116,9 +4236,18 @@
           publishVersionLabel.textContent = currentItem ? 'Опубликовать версию' : 'Опубликовать';
         }
 
+        if (publishVersionBtn) {
+          publishVersionBtn.disabled = modalBusy || archivedSource;
+          publishVersionBtn.classList.toggle('opacity-60', archivedSource);
+          publishVersionBtn.title = archivedSource
+            ? 'Новая версия недоступна, пока источник находится в архиве Premium.'
+            : '';
+        }
+
       };
 
       const setBusy = (busy) => {
+        modalBusy = !!busy;
 
         modal.querySelectorAll('button').forEach((button) => {
 
@@ -4131,6 +4260,7 @@
           input.disabled = !!busy;
 
         });
+        applyVisibilityControlState();
 
       };
 
@@ -4176,6 +4306,14 @@
 
         }
 
+        if (archivedSource && isCatalogVisibilityExpansion(currentItem.catalog_visibility, nextVisibility)) {
+
+          setFeedback('Источник находится в архиве Premium: можно только сузить доступ или скрыть публикацию.', 'error');
+
+          return;
+
+        }
+
         setBusy(true);
 
         setFeedback('');
@@ -4213,7 +4351,7 @@
 
           console.error('[Complex Builder] Visibility update failed', error);
 
-          setFeedback(`Не удалось изменить доступ: ${String(error?.message || 'catalog_visibility_update_failed')}`, 'error');
+          setFeedback(`Не удалось изменить доступ: ${getPremiumArchivedPublicationErrorMessage(error)}`, 'error');
 
         } finally {
 
@@ -4225,6 +4363,14 @@
       });
 
       modal.querySelector('[data-action="publish-version"]')?.addEventListener('click', async () => {
+
+        if (archivedSource) {
+
+          setFeedback('Новая версия недоступна, пока источник находится в архиве Premium. Сузить доступ можно кнопкой «Сохранить доступ».', 'error');
+
+          return;
+
+        }
 
         const nextVisibility = getSelectedVisibility();
 
@@ -4267,7 +4413,7 @@
 
           console.error('[Complex Builder] Publish failed', error);
 
-          setFeedback(`Не удалось опубликовать комплекс: ${String(error?.message || 'catalog_publish_failed')}`, 'error');
+          setFeedback(`Не удалось опубликовать комплекс: ${getPremiumArchivedPublicationErrorMessage(error, 'catalog_publish_failed')}`, 'error');
 
         } finally {
 

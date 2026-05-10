@@ -42,6 +42,36 @@ describe('premium UI wiring', () => {
     expect(mainHtml).toContain('/assets/PremiumPromoModal.js');
   });
 
+  it('shows the premium archive signal on the main screen', () => {
+    const mainLogic = read('frontend/assets/MainLogic.js');
+    const mainHtml = read('frontend/MainScreen/Main.html');
+
+    expect(mainHtml).toContain('id="main-premium-archive-card"');
+    expect(mainHtml).toContain('id="main-premium-archive-open"');
+    expect(mainHtml).toContain('var(--color-component-pill-warning-bg');
+    expect(mainLogic).toContain('loadPremiumArchiveBanner');
+    expect(mainLogic).toContain('/api/workspace-limits/summary');
+    expect(mainLogic).toContain('/ui/complexes?filter=archived');
+    expect(mainLogic).toContain('main-premium-archive-breakdown');
+    expect(mainLogic).toContain('Верните материалы из архива Premium');
+  });
+
+  it('explains published archived content policy in publication dialogs', () => {
+    const theoryCenter = read('frontend/Editor/theory_center.js');
+    const complexBuilder = read('frontend/Complexes/create.html');
+    const complexes = read('frontend/Complexes/index.html');
+
+    [theoryCenter, complexBuilder, complexes].forEach((source) => {
+      expect(source).toContain('Источник находится в архиве Premium');
+      expect(source).toContain('isCatalogVisibilityExpansion');
+      expect(source).toContain('Новая версия недоступна');
+      expect(source).toContain('можно только сузить доступ');
+    });
+    expect(theoryCenter).toContain('Опубликованная версия остаётся доступной');
+    expect(complexBuilder).toContain('Опубликованная версия остаётся доступной');
+    expect(complexes).toContain('Опубликованная версия остаётся доступной');
+  });
+
   it('provides a shared premium promo modal with prices and limit triggers', () => {
     const promo = read('frontend/assets/PremiumPromoModal.js');
     const editor = read('frontend/Editor/dashboard.js');

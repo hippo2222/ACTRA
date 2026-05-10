@@ -34,6 +34,8 @@ from routes._helpers import (
     _serialize_complex_payload,
 )
 from services.hosted_shadow_fallback import HostedShadowReadFallbackDisabledError
+from services.linked_complex_runtime import parse_linked_runtime_complex_id
+from services.workspace_limits_service import PremiumArchivedContentError
 
 logger = logging.getLogger(__name__)
 
@@ -224,6 +226,77 @@ def _find_paused_session(session_api: Any, complex_id: str, user_id: str) -> Opt
     return None
 
 
+def _premium_archive_response(exc: PremiumArchivedContentError) -> Any:
+    return jsonify(exc.to_payload()), 409
+
+
+def _assert_complex_start_not_archived(ctx: Any, user_id: str, complex_id: str) -> None:
+    service = getattr(ctx, "workspace_limits_service", None)
+    if service is None:
+        return
+    linked_entry_id = parse_linked_runtime_complex_id(complex_id)
+    service.assert_entity_not_archived(
+        user_id,
+        "complex",
+        linked_entry_id or complex_id,
+        action="start",
+        scope="linked_library" if linked_entry_id else "workspace",
+    )
+
+
+def _linked_complex_unavailable_response(detail: Dict[str, Any], complex_id: str) -> Any:
+    library_entry = detail.get("library_entry") if isinstance(detail.get("library_entry"), dict) else {}
+    access_state = str(library_entry.get("access_state") or "revoked").strip() or "revoked"
+    access_reason = str(library_entry.get("access_reason") or "").strip()
+    if access_state == "deleted_source":
+        message = "Source complex was deleted by the author."
+    elif access_state == "requires_access_code":
+        message = "Access code is required to start this linked complex."
+    else:
+        message = access_reason or "Linked complex is no longer accessible."
+    return jsonify(
+        {
+            "ok": False,
+            "error": "complex_library_entry_not_accessible",
+            "message": message,
+            "complex_id": complex_id,
+            "library_entry_id": library_entry.get("library_entry_id"),
+            "access_state": access_state,
+            "access_reason": access_reason,
+            "resolution_actions": ["remove_from_library"],
+        }
+    ), 409
+
+
+def _linked_complex_start_unavailable(ctx: Any, user_id: str, complex_id: str) -> Optional[Any]:
+    linked_entry_id = parse_linked_runtime_complex_id(complex_id)
+    if not linked_entry_id:
+        return None
+    catalog_service = getattr(ctx, "catalog_service", None)
+    if catalog_service is None:
+        return None
+    try:
+        detail = catalog_service.get_complex_library_entry(
+            linked_entry_id,
+            requested_by_user_id=user_id,
+        )
+    except ValueError as exc:
+        error = str(exc)
+        status = 404 if error.endswith("_not_found") else 403 if "forbidden" in error else 400
+        return jsonify(
+            {
+                "ok": False,
+                "error": error,
+                "complex_id": complex_id,
+                "library_entry_id": linked_entry_id,
+            }
+        ), status
+    library_entry = detail.get("library_entry") if isinstance(detail, dict) else {}
+    if str((library_entry or {}).get("access_state") or "").strip().lower() == "active":
+        return None
+    return _linked_complex_unavailable_response(detail, complex_id)
+
+
 def _get_user_dir(user_id: str) -> Path:
     return get_ctx().data_dir / "users" / user_id
 
@@ -382,6 +455,14 @@ def start_complex_session(complex_id: str) -> Any:
     force = payload.get("force", False)
 
     # MISSING-3 fix: проверяем наличие паузированной сессии для этого комплекса
+    try:
+        _assert_complex_start_not_archived(ctx, user_id, complex_id)
+    except PremiumArchivedContentError as exc:
+        return _premium_archive_response(exc)
+    linked_unavailable_response = _linked_complex_start_unavailable(ctx, user_id, complex_id)
+    if linked_unavailable_response is not None:
+        return linked_unavailable_response
+
     existing = _find_paused_session(session_api, complex_id, user_id)
     if existing and not force:
         return (
