@@ -14,7 +14,9 @@ describe('premium UI wiring', () => {
     expect(html).toContain('id="premium"');
     expect(html).toContain('settings-premium-body');
     expect(js).toContain('/api/billing/status');
-    expect(js).toContain('/api/billing/orders');
+    expect(js).not.toContain('/api/billing/orders');
+    expect(js).toContain('checkout');
+    expect(js).toContain('disabled aria-disabled="true"');
   });
 
   it('renders plan badges in global header and profile menu', () => {
@@ -24,7 +26,8 @@ describe('premium UI wiring', () => {
     expect(header).toContain('data-global-plan-badge');
     expect(header).toContain('effective_plan');
     expect(menu).toContain('sharedProfilePremium');
-    expect(menu).toContain('/ui/settings#premium');
+    expect(menu).toContain('PremiumPromo.open');
+    expect(menu).toContain('checkout');
   });
 
   it('intercepts free-user navigation to full premium pages from main', () => {

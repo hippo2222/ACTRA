@@ -102,7 +102,6 @@ describe('shared profile menu', () => {
 
     dom.window.fetch = fetchMock;
     defineGlobal('fetch', fetchMock);
-
     dom.window.eval(loadScript('frontend/assets/SharedProfileModal.js'));
     dom.window.openProfileMenu({ currentTarget: dom.window.document.getElementById('profile-anchor') });
     await flushPromises();
@@ -218,7 +217,9 @@ describe('shared profile menu', () => {
     expect(settingsLink?.getAttribute('href')).toBe('/ui/settings');
     expect(settingsLink?.className).toContain('shared-profile-focus-target');
     expect(dom.window.document.body.textContent).toContain('Premium');
-    expect(dom.window.document.getElementById('sharedProfilePremium')?.getAttribute('href')).toBe('/ui/settings#premium');
+    const premiumButton = dom.window.document.getElementById('sharedProfilePremium');
+    expect(premiumButton?.tagName).toBe('BUTTON');
+    expect(premiumButton?.textContent).toContain('Premium');
 
     expect(dom.window.document.querySelector('[data-theme-chip="dark-a"]')).toBeNull();
 
@@ -258,6 +259,66 @@ describe('shared profile menu', () => {
       }),
     );
     expect(navigateSpy).toHaveBeenCalledWith('/ui/welcome');
+  });
+
+  it('opens the premium promo modal from hosted profile menu', async () => {
+    dom.window.ThemeManager = {
+      getThemes: () => [],
+      getTheme: () => 'light-a',
+      setTheme: vi.fn(),
+    };
+    defineGlobal('ThemeManager', dom.window.ThemeManager);
+
+    const premiumOpenSpy = vi.fn();
+    dom.window.PremiumPromo = { open: premiumOpenSpy };
+    defineGlobal('PremiumPromo', dom.window.PremiumPromo);
+
+    const fetchMock = vi.fn(async (input, init = {}) => {
+      const url = typeof input === 'string' ? input : String(input?.url || '');
+      const method = String(init?.method || 'GET').toUpperCase();
+
+      if (url === '/api/auth/me' && method === 'GET') {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            ok: true,
+            authenticated: true,
+            user: {
+              user_id: 'u-hosted',
+              name: 'Hosted User',
+              avatar_seed: '2.png',
+              effective_plan: 'free',
+            },
+          }),
+        };
+      }
+
+      if (url === '/api/ui/settings' && method === 'GET') {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ ok: true, settings: { theme: 'light-a' } }),
+        };
+      }
+
+      throw new Error(`Unexpected fetch: ${method} ${url}`);
+    });
+
+    dom.window.fetch = fetchMock;
+    defineGlobal('fetch', fetchMock);
+
+    dom.window.eval(loadScript('frontend/assets/SharedProfileModal.js'));
+    dom.window.openProfileMenu({ currentTarget: dom.window.document.getElementById('profile-anchor') });
+    await flushPromises();
+
+    dom.window.document.getElementById('sharedProfilePremium').click();
+
+    expect(premiumOpenSpy).toHaveBeenCalledWith(expect.objectContaining({
+      title: expect.stringContaining('Premium'),
+      lead: expect.stringContaining('checkout'),
+    }));
+    expect(dom.window.document.getElementById('sharedProfileMenuOverlay').classList.contains('hidden')).toBe(true);
   });
 
   it('reverts hosted theme on save failure and keeps the menu open', async () => {

@@ -408,6 +408,12 @@
         }
     }
 
+    function acknowledgePaymentPending() {
+        if (activeModal) {
+            setStatus(activeModal, '\u041c\u044b \u043f\u043e\u0434\u043a\u043b\u044e\u0447\u0430\u0435\u043c \u043e\u043f\u043b\u0430\u0442\u0443. \u041a\u0430\u043a \u0442\u043e\u043b\u044c\u043a\u043e checkout \u0431\u0443\u0434\u0435\u0442 \u0433\u043e\u0442\u043e\u0432, \u043a\u043d\u043e\u043f\u043a\u0438 \u043e\u043f\u043b\u0430\u0442\u044b \u043f\u043e\u044f\u0432\u044f\u0442\u0441\u044f \u0437\u0434\u0435\u0441\u044c.', 'neutral');
+        }
+    }
+
     function navigateToSettings() {
         close();
         const url = '/ui/settings#premium';
@@ -489,10 +495,10 @@
                     <div class="premium-promo-modal__offers">${renderOffers()}</div>
                     <div class="premium-promo-modal__footer">
                         <div class="premium-promo-modal__status" data-premium-promo-status>
-                            \u041e\u043f\u043b\u0430\u0442\u0430 Premium \u0441\u043a\u043e\u0440\u043e \u043f\u043e\u044f\u0432\u0438\u0442\u0441\u044f \u0437\u0434\u0435\u0441\u044c.
+                            \u041c\u0435\u0445\u0430\u043d\u0438\u0437\u043c \u043e\u043f\u043b\u0430\u0442\u044b Premium \u0443\u0436\u0435 \u0432 \u0440\u0430\u0431\u043e\u0442\u0435. \u041f\u043e\u043a\u0430 \u044d\u0442\u043e \u043e\u043a\u043d\u043e \u043f\u043e\u043a\u0430\u0437\u044b\u0432\u0430\u0435\u0442 \u0442\u0430\u0440\u0438\u0444\u044b.
                         </div>
                         <button class="premium-promo-modal__settings" type="button" data-premium-promo-settings>
-                            \u0412 \u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438 Premium
+                            \u041f\u043e\u043d\u044f\u0442\u043d\u043e
                         </button>
                     </div>
                 </div>
@@ -506,7 +512,7 @@
             }
             const settings = event.target.closest('[data-premium-promo-settings]');
             if (settings) {
-                navigateToSettings();
+                acknowledgePaymentPending();
                 return;
             }
         });
@@ -588,6 +594,7 @@
         getOffer,
         formatPeriod,
         formatPeriodWithPrice,
+        navigateToSettings,
     };
 
     bindTriggers();

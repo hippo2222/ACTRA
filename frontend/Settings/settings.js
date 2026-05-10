@@ -978,7 +978,6 @@
         const user = data.user || _accountContext?.user || {};
         const effectivePlan = String(data.effective_plan || user.effective_plan || '').trim().toLowerCase();
         const premiumExpiresAt = String(data.premium_expires_at || user.premium_expires_at || '').trim();
-        const pendingOrders = Array.isArray(data.pending_orders) ? data.pending_orders : [];
         const periods = Array.isArray(data.supported_period_days) && data.supported_period_days.length
             ? data.supported_period_days
             : [14, 30, 90];
@@ -986,27 +985,26 @@
 
         pill.textContent = isPremium
             ? (premiumExpiresAt ? `Premium до ${formatPremiumDate(premiumExpiresAt)}` : 'Premium активен')
-            : (pendingOrders.length ? 'Заявка ожидает подтверждения' : 'Free');
+            : 'Free';
 
         const periodButtons = periods.map((days) => `
             <button type="button"
                 data-premium-period="${Number(days)}"
-                class="btn-secondary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold"
-                ${_isPremiumOrderSaving ? 'disabled aria-disabled="true"' : ''}>
+                class="btn-secondary inline-flex cursor-default items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold opacity-80"
+                disabled aria-disabled="true"
+                title="Оплата Premium скоро появится здесь">
                 <span class="material-symbols-outlined text-[18px]">workspace_premium</span>
                 <span>${escapeHtml(getPremiumPeriodLabel(days))}</span>
                 ${getPremiumPeriodPrice(days) ? `<span class="text-text-secondary">${escapeHtml(getPremiumPeriodPrice(days))}</span>` : ''}
             </button>
         `).join('');
 
-        const pendingHtml = pendingOrders.length ? `
-            <div class="mb-4 rounded-2xl border border-warning-light bg-warning-lighter/60 p-4 text-sm text-text-main">
-                Заявка на ${escapeHtml(getPremiumPeriodLabel(pendingOrders[0].period_days))} уже создана и ждёт подтверждения администратором.
-            </div>
-        ` : '';
-
         body.innerHTML = `
-            ${pendingHtml}
+            ${!isPremium ? `
+                <div class="mb-4 rounded-2xl border border-info-light bg-info-lighter/60 p-4 text-sm leading-6 text-text-main">
+                    Механизм оплаты Premium сейчас подключается. Тарифы уже можно посмотреть, но покупка временно недоступна: безопасный checkout появится здесь после завершения интеграции.
+                </div>
+            ` : ''}
             <div class="grid gap-4 lg:grid-cols-[1fr,auto] lg:items-center">
                 <div>
                     <p class="text-base font-semibold text-text-main">
@@ -1021,12 +1019,6 @@
                 <div class="flex flex-wrap gap-3">${periodButtons}</div>
             </div>
         `;
-
-        body.querySelectorAll('[data-premium-period]').forEach((button) => {
-            button.addEventListener('click', () => {
-                void createPremiumOrder(button.getAttribute('data-premium-period'));
-            });
-        });
     }
 
     async function loadBillingStatus() {
@@ -1051,26 +1043,9 @@
         if (_isPremiumOrderSaving) return;
         _isPremiumOrderSaving = true;
         renderPremiumSection();
-        setInlineStatus('settings-premium-action-status', 'Создаём заявку...', 'neutral');
-        try {
-            const response = await fetch('/api/billing/orders', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ period_days: Number(periodDays || 0) }),
-            });
-            const data = await response.json().catch(() => null);
-            if (!response.ok || !data?.ok) {
-                throw new Error(data?.error || 'billing_order_failed');
-            }
-            setInlineStatus('settings-premium-action-status', 'Заявка создана. Администратор подтвердит доступ.', 'success');
-            await loadBillingStatus();
-        } catch (error) {
-            console.error('[Settings] Failed to create premium order:', error);
-            setInlineStatus('settings-premium-action-status', 'Не удалось создать заявку Premium', 'error');
-        } finally {
-            _isPremiumOrderSaving = false;
-            renderPremiumSection();
-        }
+        setInlineStatus('settings-premium-action-status', 'Оплата Premium скоро появится здесь.', 'neutral');
+        _isPremiumOrderSaving = false;
+        renderPremiumSection();
     }
 
     function renderAdminUsersList() {

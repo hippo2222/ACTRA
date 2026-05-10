@@ -406,20 +406,20 @@
                     </div>
                     <span class="material-symbols-outlined text-text-secondary">arrow_forward</span>
                 </a>
-                <a href="/ui/settings#premium"
+                <button type="button"
                     id="sharedProfilePremium"
-                    class="shared-profile-focus-target flex items-center justify-between rounded-2xl border border-border-subtle bg-surface-1 px-4 py-3 text-left transition-all hover:border-primary hover:bg-bg-hover">
+                    class="shared-profile-focus-target flex w-full items-center justify-between rounded-2xl border border-border-subtle bg-surface-1 px-4 py-3 text-left transition-all hover:border-primary hover:bg-bg-hover">
                     <div class="flex items-center gap-3">
                         <span class="flex h-11 w-11 items-center justify-center rounded-2xl border border-primary-light bg-primary-lighter text-primary">
                             <span class="material-symbols-outlined text-[20px]">workspace_premium</span>
                         </span>
                         <div>
                             <div class="text-sm font-semibold text-text-main">${escapeHtml(planLabel)}</div>
-                            <div class="text-sm text-text-secondary">Premium и заявки на доступ</div>
+                            <div class="text-sm text-text-secondary">Premium и будущая оплата</div>
                         </div>
                     </div>
                     <span class="material-symbols-outlined text-text-secondary">arrow_forward</span>
-                </a>
+                </button>
                 <div class="rounded-2xl border border-border-subtle bg-surface-1 overflow-hidden">
                     <button type="button"
                         id="sharedProfileThemeToggle"
@@ -467,8 +467,21 @@
 
         const premiumLink = document.getElementById('sharedProfilePremium');
         if (premiumLink) {
-            premiumLink.addEventListener('click', () => {
+            premiumLink.addEventListener('click', (event) => {
+                event.preventDefault();
                 closeProfileMenu();
+                if (window.PremiumPromo && typeof window.PremiumPromo.open === 'function') {
+                    window.PremiumPromo.open({
+                        title: 'Откройте ACTRA Premium',
+                        lead: 'Оплата Premium сейчас подключается. Пока можно посмотреть тарифы и возможности, а checkout появится после завершения интеграции.',
+                    });
+                    return;
+                }
+                if (typeof window.navigateWithTransition === 'function') {
+                    window.navigateWithTransition('/ui/settings#premium');
+                    return;
+                }
+                window.location.assign('/ui/settings#premium');
             });
         }
 
