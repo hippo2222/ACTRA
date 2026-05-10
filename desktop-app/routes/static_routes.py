@@ -570,6 +570,87 @@ def _public_commerce_page(*, title: str, subtitle: str, body_html: str, lang: st
     )
 
 
+def _public_home_page() -> Any:
+    lang = _public_lang("en")
+    if lang == "ru":
+        title = "ACTRA"
+        subtitle = "Веб-приложение для создания учебных материалов, практики по заданиям и отслеживания учебного прогресса."
+        body = f"""
+        <section class="panel">
+          <h2>Что такое ACTRA</h2>
+          <p>ACTRA помогает пользователям собирать личную учебную библиотеку, создавать задания и теории, проходить учебные комплексы, повторять материал и видеть прогресс в календаре и статистике.</p>
+          <p>Базовый доступ доступен после регистрации. ACTRA Premium добавляет повышенные лимиты и расширенные учебные возможности внутри web-приложения.</p>
+        </section>
+        <section class="grid" aria-label="ACTRA Premium prices">
+          <section class="card">
+            <span class="badge">ACTRA Premium</span>
+            <strong>14 дней</strong>
+            <div class="price">$4.99</div>
+            <div class="muted">$0.36/день</div>
+          </section>
+          <section class="card">
+            <span class="badge">ACTRA Premium</span>
+            <strong>30 дней</strong>
+            <div class="price">$7.99</div>
+            <div class="muted">$0.27/день</div>
+          </section>
+          <section class="card">
+            <span class="badge">ACTRA Premium</span>
+            <strong>90 дней</strong>
+            <div class="price">$19.99</div>
+            <div class="muted">$0.22/день</div>
+          </section>
+        </section>
+        <section class="panel">
+          <h2>Цифровой доступ</h2>
+          <p>ACTRA Premium является цифровой услугой. Физические товары не продаются и не доставляются. Доступ предоставляется в аккаунте пользователя после подтверждения оплаты.</p>
+          <p><a href="/pricing?lang=ru">Посмотреть цены</a> · <a href="/ui/welcome">Открыть приложение</a> · <a href="mailto:{_SUPPORT_EMAIL}">{_SUPPORT_EMAIL}</a></p>
+        </section>
+        """
+    else:
+        title = "ACTRA"
+        subtitle = "A web app for creating learning materials, practicing tasks, and tracking study progress."
+        body = f"""
+        <section class="panel">
+          <h2>What ACTRA does</h2>
+          <p>ACTRA helps users build a personal learning library, create tasks and theories, run learning complexes, review material, and follow progress through calendar and statistics views.</p>
+          <p>Basic access is available after registration. ACTRA Premium adds higher limits and expanded learning workflow features inside the web app.</p>
+        </section>
+        <section class="grid" aria-label="ACTRA Premium prices">
+          <section class="card">
+            <span class="badge">ACTRA Premium</span>
+            <strong>14 days</strong>
+            <div class="price">$4.99</div>
+            <div class="muted">$0.36/day</div>
+          </section>
+          <section class="card">
+            <span class="badge">ACTRA Premium</span>
+            <strong>30 days</strong>
+            <div class="price">$7.99</div>
+            <div class="muted">$0.27/day</div>
+          </section>
+          <section class="card">
+            <span class="badge">ACTRA Premium</span>
+            <strong>90 days</strong>
+            <div class="price">$19.99</div>
+            <div class="muted">$0.22/day</div>
+          </section>
+        </section>
+        <section class="panel">
+          <h2>Digital access</h2>
+          <p>ACTRA Premium is a digital service. No physical goods are sold or shipped. Access is delivered to the user account after payment is confirmed.</p>
+          <p><a href="/pricing?lang=en">View pricing</a> · <a href="/ui/welcome">Open the app</a> · <a href="mailto:{_SUPPORT_EMAIL}">{_SUPPORT_EMAIL}</a></p>
+        </section>
+        """
+    return _public_commerce_page(
+        title=title,
+        subtitle=subtitle,
+        body_html=body,
+        lang=lang,
+        current_path="/",
+    )
+
+
 def _pricing_page() -> Any:
     lang = _public_lang("en")
     offer_labels = {
@@ -889,8 +970,8 @@ def serve_catalog_file(filename: str) -> Any:
 
 @static_bp.route("/", methods=["GET"])
 def serve_root_ui_alias() -> Any:
-    """Send the browser through the canonical UI entrypoint."""
-    return redirect("/ui")
+    """Serve the public product page for domain and payment verification."""
+    return _public_home_page()
 
 
 @static_bp.route("/robots.txt", methods=["GET"])
