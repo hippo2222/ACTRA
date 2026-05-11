@@ -497,6 +497,7 @@ class HostedUserService(HostedShadowFallbackMixin, UserService):
         user_id: str,
         terms_version: str,
         privacy_version: str,
+        refund_version: str,
         *,
         source: str = "unknown",
     ) -> Dict[str, Any]:
@@ -507,6 +508,7 @@ class HostedUserService(HostedShadowFallbackMixin, UserService):
             "user_id": user_id,
             "terms_version": terms_version,
             "privacy_version": privacy_version,
+            "refund_version": refund_version,
             "accepted_at": datetime.utcnow().isoformat() + "Z",
             "source": source,
         }

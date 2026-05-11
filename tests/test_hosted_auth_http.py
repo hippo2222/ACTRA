@@ -357,19 +357,22 @@ def _install_hosted_auth_context(monkeypatch, data_dir=None):
                 "required_consent_versions": lambda: {
                     "terms_version": "terms-v1",
                     "privacy_version": "privacy-v1",
+                    "refund_version": "refund-v1",
                 },
                 "validate_consent_payload": lambda consent: (
                     {"ok": True}
                     if consent.get("accepted")
                     and consent.get("terms_version")
                     and consent.get("privacy_version")
+                    and consent.get("refund_version")
                     else {"ok": False, "error": "consent_required", "status_code": 400}
                 ),
-                "write_user_consent": lambda user_id, terms, privacy, source="unknown": {
+                "write_user_consent": lambda user_id, terms, privacy, refund, source="unknown": {
                     "consent_id": f"consent-{user_id}",
                     "accepted_at": "2026-04-13T10:16:00Z",
                     "terms_version": terms,
                     "privacy_version": privacy,
+                    "refund_version": refund,
                     "source": source,
                 },
                 "issue_auth_verification_email": _issue_auth_verification_email,
@@ -524,6 +527,7 @@ def test_register_creates_hosted_user_and_logs_in(client):
                 "accepted": True,
                 "terms_version": "terms-v1",
                 "privacy_version": "privacy-v1",
+                "refund_version": "refund-v1",
             },
         },
     )
@@ -560,6 +564,7 @@ def test_register_generates_unique_login_from_display_name(client):
                 "accepted": True,
                 "terms_version": "terms-v1",
                 "privacy_version": "privacy-v1",
+                "refund_version": "refund-v1",
             },
         },
     )
@@ -576,6 +581,7 @@ def test_register_generates_unique_login_from_display_name(client):
                 "accepted": True,
                 "terms_version": "terms-v1",
                 "privacy_version": "privacy-v1",
+                "refund_version": "refund-v1",
             },
         },
     )
@@ -596,6 +602,7 @@ def test_delete_account_allows_reregister_with_same_email(client):
             "accepted": True,
             "terms_version": "terms-v1",
             "privacy_version": "privacy-v1",
+                "refund_version": "refund-v1",
         },
     }
 
@@ -638,6 +645,7 @@ def test_login_accepts_email_identifier(client):
                 "accepted": True,
                 "terms_version": "terms-v1",
                 "privacy_version": "privacy-v1",
+                "refund_version": "refund-v1",
             },
         },
     )
@@ -673,6 +681,7 @@ def test_login_uses_generic_invalid_credentials_response(client):
                 "accepted": True,
                 "terms_version": "terms-v1",
                 "privacy_version": "privacy-v1",
+                "refund_version": "refund-v1",
             },
         },
     )
@@ -709,6 +718,7 @@ def test_login_rate_limit_returns_too_many_requests(client, monkeypatch):
                 "accepted": True,
                 "terms_version": "terms-v1",
                 "privacy_version": "privacy-v1",
+                "refund_version": "refund-v1",
             },
         },
     )
@@ -748,6 +758,7 @@ def test_resend_verification_email_returns_delivery_status(client):
                 "accepted": True,
                 "terms_version": "terms-v1",
                 "privacy_version": "privacy-v1",
+                "refund_version": "refund-v1",
             },
         },
     )
@@ -776,6 +787,7 @@ def test_resend_verification_is_concealed_for_identifier_lookup(client):
                 "accepted": True,
                 "terms_version": "terms-v1",
                 "privacy_version": "privacy-v1",
+                "refund_version": "refund-v1",
             },
         },
     )
@@ -812,6 +824,7 @@ def test_verify_email_marks_user_as_verified_and_rejects_token_reuse(client):
                 "accepted": True,
                 "terms_version": "terms-v1",
                 "privacy_version": "privacy-v1",
+                "refund_version": "refund-v1",
             },
         },
     )
@@ -845,6 +858,7 @@ def test_register_rejects_duplicate_login_email_and_name(client):
             "accepted": True,
             "terms_version": "terms-v1",
             "privacy_version": "privacy-v1",
+                "refund_version": "refund-v1",
         },
     }
 
@@ -899,6 +913,7 @@ def test_hosted_email_change_rate_limit_returns_too_many_requests(client, monkey
                 "accepted": True,
                 "terms_version": "terms-v1",
                 "privacy_version": "privacy-v1",
+                "refund_version": "refund-v1",
             },
         },
     )
@@ -928,6 +943,7 @@ def test_resend_pending_email_change_rate_limit_returns_too_many_requests(client
                 "accepted": True,
                 "terms_version": "terms-v1",
                 "privacy_version": "privacy-v1",
+                "refund_version": "refund-v1",
             },
         },
     )
@@ -958,6 +974,7 @@ def test_hosted_profile_update_stages_pending_email_change(client):
                 "accepted": True,
                 "terms_version": "terms-v1",
                 "privacy_version": "privacy-v1",
+                "refund_version": "refund-v1",
             },
         },
     )
@@ -996,6 +1013,7 @@ def test_hosted_profile_update_conceals_duplicate_email_change_conflict(client):
                 "accepted": True,
                 "terms_version": "terms-v1",
                 "privacy_version": "privacy-v1",
+                "refund_version": "refund-v1",
             },
         },
     )
@@ -1012,6 +1030,7 @@ def test_hosted_profile_update_conceals_duplicate_email_change_conflict(client):
                 "accepted": True,
                 "terms_version": "terms-v1",
                 "privacy_version": "privacy-v1",
+                "refund_version": "refund-v1",
             },
         },
     )
@@ -1045,6 +1064,7 @@ def test_resend_pending_email_change_returns_delivery_status(client):
                 "accepted": True,
                 "terms_version": "terms-v1",
                 "privacy_version": "privacy-v1",
+                "refund_version": "refund-v1",
             },
         },
     )
@@ -1080,6 +1100,7 @@ def test_verify_pending_email_change_promotes_pending_email(client):
                 "accepted": True,
                 "terms_version": "terms-v1",
                 "privacy_version": "privacy-v1",
+                "refund_version": "refund-v1",
             },
         },
     )
@@ -1119,6 +1140,7 @@ def test_forgot_password_returns_generic_success_and_reset_link(client):
                 "accepted": True,
                 "terms_version": "terms-v1",
                 "privacy_version": "privacy-v1",
+                "refund_version": "refund-v1",
             },
         },
     )
@@ -1160,6 +1182,7 @@ def test_reset_password_changes_password_and_rejects_token_reuse(client):
                 "accepted": True,
                 "terms_version": "terms-v1",
                 "privacy_version": "privacy-v1",
+                "refund_version": "refund-v1",
             },
         },
     )
@@ -1227,6 +1250,7 @@ def test_hosted_profile_update_rejects_invalid_email(client):
                 "accepted": True,
                 "terms_version": "terms-v1",
                 "privacy_version": "privacy-v1",
+                "refund_version": "refund-v1",
             },
         },
     )
@@ -1253,6 +1277,7 @@ def test_hosted_change_password_requires_current_password(client):
                 "accepted": True,
                 "terms_version": "terms-v1",
                 "privacy_version": "privacy-v1",
+                "refund_version": "refund-v1",
             },
         },
     )
@@ -1310,6 +1335,7 @@ def test_hosted_avatar_upload_accepts_png_and_updates_profile(client):
                 "accepted": True,
                 "terms_version": "terms-v1",
                 "privacy_version": "privacy-v1",
+                "refund_version": "refund-v1",
             },
         },
     )
@@ -1339,6 +1365,7 @@ def test_hosted_avatar_upload_crops_to_square_without_transparent_padding(client
                 "accepted": True,
                 "terms_version": "terms-v1",
                 "privacy_version": "privacy-v1",
+                "refund_version": "refund-v1",
             },
         },
     )
@@ -1373,6 +1400,7 @@ def test_hosted_avatar_upload_uses_self_service_shadow_fallback_when_profile_wri
                 "accepted": True,
                 "terms_version": "terms-v1",
                 "privacy_version": "privacy-v1",
+                "refund_version": "refund-v1",
             },
         },
     )
@@ -1413,6 +1441,7 @@ def test_hosted_avatar_upload_rejects_unsupported_file_type(client):
                 "accepted": True,
                 "terms_version": "terms-v1",
                 "privacy_version": "privacy-v1",
+                "refund_version": "refund-v1",
             },
         },
     )

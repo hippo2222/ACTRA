@@ -638,21 +638,24 @@
     }
 
     function getRequiredConsentVersions() {
-        if (!legalDocuments) return { terms_version: '', privacy_version: '' };
+        if (!legalDocuments) return { terms_version: '', privacy_version: '', refund_version: '' };
         return {
             terms_version: legalDocuments.terms?.version || '',
             privacy_version: legalDocuments.privacy?.version || '',
+            refund_version: legalDocuments.refund?.version || '',
         };
     }
 
-    function collectConsent(termsCheckboxId, privacyCheckboxId) {
+    function collectConsent(termsCheckboxId, privacyCheckboxId, refundCheckboxId) {
         const termsEl = document.getElementById(termsCheckboxId);
         const privacyEl = document.getElementById(privacyCheckboxId);
+        const refundEl = document.getElementById(refundCheckboxId);
         const versions = getRequiredConsentVersions();
         return {
-            accepted: !!(termsEl && termsEl.checked && privacyEl && privacyEl.checked),
+            accepted: !!(termsEl && termsEl.checked && privacyEl && privacyEl.checked && refundEl && refundEl.checked),
             terms_version: versions.terms_version,
             privacy_version: versions.privacy_version,
+            refund_version: versions.refund_version,
         };
     }
 
@@ -686,15 +689,17 @@
     window.updateNewProfileConsentState = function () {
         const terms = document.getElementById('newProfileAcceptTerms');
         const privacy = document.getElementById('newProfileAcceptPrivacy');
+        const refund = document.getElementById('newProfileAcceptRefund');
         const btn = document.getElementById('createProfileBtn');
-        if (btn) btn.disabled = !(terms?.checked && privacy?.checked);
+        if (btn) btn.disabled = !(terms?.checked && privacy?.checked && refund?.checked);
     };
 
     window.updateMainConsentGateState = function () {
         const terms = document.getElementById('mainConsentGateAcceptTerms');
         const privacy = document.getElementById('mainConsentGateAcceptPrivacy');
+        const refund = document.getElementById('mainConsentGateAcceptRefund');
         const btn = document.getElementById('mainConsentGateSubmitBtn');
-        if (btn) btn.disabled = !(terms?.checked && privacy?.checked);
+        if (btn) btn.disabled = !(terms?.checked && privacy?.checked && refund?.checked);
     };
 
     function openMainConsentGate(userId, required) {
@@ -702,12 +707,14 @@
         const versionsEl = document.getElementById('mainConsentGateVersions');
         const termsEl = document.getElementById('mainConsentGateAcceptTerms');
         const privacyEl = document.getElementById('mainConsentGateAcceptPrivacy');
+        const refundEl = document.getElementById('mainConsentGateAcceptRefund');
 
         if (versionsEl) {
-            versionsEl.textContent = `Terms: ${required.terms_version || '-'} | Privacy: ${required.privacy_version || '-'}`;
+            versionsEl.textContent = `Terms: ${required.terms_version || '-'} | Privacy: ${required.privacy_version || '-'} | Refund: ${required.refund_version || '-'}`;
         }
         if (termsEl) termsEl.checked = false;
         if (privacyEl) privacyEl.checked = false;
+        if (refundEl) refundEl.checked = false;
         showMainConsentGateError(null);
         window.updateMainConsentGateState();
         openModal('mainConsentGateModal');
@@ -733,7 +740,7 @@
             return;
         }
 
-        const consent = collectConsent('mainConsentGateAcceptTerms', 'mainConsentGateAcceptPrivacy');
+        const consent = collectConsent('mainConsentGateAcceptTerms', 'mainConsentGateAcceptPrivacy', 'mainConsentGateAcceptRefund');
         if (!consent.accepted) {
             showMainConsentGateError('Подтвердите оба документа');
             return;
@@ -1392,7 +1399,7 @@
             return;
         }
 
-        const consent = collectConsent('newProfileAcceptTerms', 'newProfileAcceptPrivacy');
+        const consent = collectConsent('newProfileAcceptTerms', 'newProfileAcceptPrivacy', 'newProfileAcceptRefund');
         if (!consent.accepted) {
             NotificationUI.toast('Подтвердите согласие с условиями и политикой приватности', 'warning');
             return;

@@ -611,6 +611,7 @@ def register_auth_user() -> Any:
                 "accepted": True,
                 "terms_version": required_versions["terms_version"],
                 "privacy_version": required_versions["privacy_version"],
+                "refund_version": required_versions["refund_version"],
             }
 
         validation = _h("validate_consent_payload")(consent_payload)
@@ -649,6 +650,7 @@ def register_auth_user() -> Any:
             user.user_id,
             consent_payload["terms_version"],
             consent_payload["privacy_version"],
+            consent_payload["refund_version"],
             source="auth_register",
         )
         verification_email = _h("issue_auth_verification_email")(

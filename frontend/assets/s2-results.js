@@ -659,7 +659,7 @@
       return {
         tone: "error",
         status: "1 ошибка",
-        summary: "База удержана, ошибка точечная.",
+        summary: "В целом хорошо, осталась одна точная правка.",
         focusLabel: "Критично",
         focusTitle: "Есть 1 ошибка",
         focusCopy: firstFailed
@@ -674,24 +674,24 @@
       return {
         tone: "error",
         status: formatErrorCount(failed),
-        summary: "Ошибки уже влияют на устойчивость ответа.",
+        summary: "Есть несколько ошибок, их стоит разобрать перед следующей попыткой.",
         focusLabel: "Критично",
         focusTitle: `Есть ${formatErrorCount(failed)}`,
         focusCopy: "Лучше учесть ошибки до следующей итерации.",
-        recommendationTitle: "Сначала короткий разбор",
-        recommendationCopy: "Проверь ошибки и только потом переходи дальше.",
+        recommendationTitle: "Короткий разбор перед продолжением",
+        recommendationCopy: "Посмотри, где сбился ответ, и переходи дальше увереннее.",
       };
     }
 
     return {
       tone: "error",
       status: formatErrorCount(failed),
-      summary: "Результат просел, без разбора дальше идти рискованно.",
+      summary: "Много ошибок: сначала лучше восстановить слабые места.",
       focusLabel: "Критично",
       focusTitle: `Есть ${formatErrorCount(failed)}`,
       focusCopy: "Сейчас важнее понять ошибки, чем ускоряться.",
-      recommendationTitle: "Не спеши с переходом",
-      recommendationCopy: "Сначала разберись с ошибками выше, затем продолжай.",
+      recommendationTitle: "Начни с разбора",
+      recommendationCopy: "Разбери ошибки выше, затем запускай следующую попытку.",
     };
   }
 

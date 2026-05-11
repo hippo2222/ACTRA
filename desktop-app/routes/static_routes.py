@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 static_bp = Blueprint("static_ui", __name__)
 
 
-_LEGAL_DOC_TYPES = {"terms", "privacy"}
+_LEGAL_DOC_TYPES = {"terms", "privacy", "refund"}
 _PUBLIC_LANGS = {"en", "ru"}
 
 _PREMIUM_OFFERS = (
@@ -41,9 +41,13 @@ _PUBLIC_LABELS = {
         "refund": "Refund policy",
         "terms": "Terms",
         "privacy": "Privacy",
-        "open_app": "Open app",
+        "home": "Home",
+        "back_home": "Back to home",
+        "language": "Language",
         "support": "Support",
         "version": "Version",
+        "effective": "Effective",
+        "reviewed": "Last reviewed",
         "premium": "ACTRA Premium",
     },
     "ru": {
@@ -51,9 +55,12 @@ _PUBLIC_LABELS = {
         "refund": "Возвраты",
         "terms": "Условия",
         "privacy": "Приватность",
-        "open_app": "Открыть приложение",
+        "home": "Главная",
+        "back_home": "Вернуться на главную",
+        "language": "Язык",
         "support": "Поддержка",
         "version": "Версия",
+        "effective": "Действует с",
         "premium": "ACTRA Premium",
     },
 }
@@ -71,27 +78,40 @@ def _localized_url(path: str, lang: str) -> str:
     return f"{clean_path}?lang={lang}"
 
 
-def _public_nav_html(lang: str) -> str:
+def _public_nav_html(lang: str, current_path: str = "") -> str:
     labels = _PUBLIC_LABELS.get(lang, _PUBLIC_LABELS["en"])
+    normalized_current = str(current_path or "").strip() or "/"
+    if normalized_current in {"/terms", "/legal/terms"}:
+        normalized_current = "/legal/terms"
+    elif normalized_current in {"/privacy", "/legal/privacy"}:
+        normalized_current = "/legal/privacy"
+    items = (
+        ("/pricing", labels["pricing"]),
+        ("/refund", labels["refund"]),
+        ("/legal/terms", labels["terms"]),
+        ("/legal/privacy", labels["privacy"]),
+    )
+    links = []
+    for path, label in items:
+        active = normalized_current == path
+        attrs = ' class="active" aria-current="page"' if active else ""
+        links.append(f'<a href="{_localized_url(path, lang)}"{attrs}>{escape(label)}</a>')
     return f"""
       <nav aria-label="Public links">
-        <a href="{_localized_url('/pricing', lang)}">{escape(labels['pricing'])}</a>
-        <a href="{_localized_url('/refund', lang)}">{escape(labels['refund'])}</a>
-        <a href="{_localized_url('/legal/terms', lang)}">{escape(labels['terms'])}</a>
-        <a href="{_localized_url('/legal/privacy', lang)}">{escape(labels['privacy'])}</a>
-        <a href="/ui/welcome">{escape(labels['open_app'])}</a>
+        {"".join(links)}
       </nav>
     """
 
 
 def _language_switch_html(current_path: str, lang: str) -> str:
+    labels = _PUBLIC_LABELS.get(lang, _PUBLIC_LABELS["en"])
     items = []
     for code, label in (("en", "English"), ("ru", "Русский")):
         active = code == lang
         attrs = ' aria-current="page"' if active else ""
         cls = "active" if active else ""
         items.append(f'<a class="{cls}" href="{_localized_url(current_path, code)}"{attrs}>{escape(label)}</a>')
-    return f'<div class="language-switch" aria-label="Language selector">{"".join(items)}</div>'
+    return f'<div class="language-switch" aria-label="{escape(labels["language"])}">{"".join(items)}</div>'
 
 
 def _public_base_url() -> str:
@@ -105,6 +125,11 @@ def _public_base_url() -> str:
 
 def _inline_markdown_to_html(text: str) -> str:
     safe = escape(str(text or ""), quote=True)
+    safe = re.sub(
+        r"\[([^\]]+)\]\((https?://[^)]+|mailto:[^)]+|/[^)]+)\)",
+        r'<a href="\2">\1</a>',
+        safe,
+    )
     safe = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", safe)
     safe = re.sub(r"`([^`]+)`", r"<code>\1</code>", safe)
     return safe
@@ -165,6 +190,355 @@ def _markdown_to_legal_html(markdown: str) -> str:
     return "\n".join(blocks)
 
 
+def _strip_legal_document_lead(markdown: str) -> str:
+    skipped_prefixes = (
+        "Версия:",
+        "Дата вступления в силу:",
+        "Версия:",
+        "Дата вступления в силу:",
+        "Дата последнего пересмотра:",
+        "Version:",
+        "Effective date:",
+        "Last reviewed:",
+    )
+    lines = []
+    in_document_lead = True
+    for raw_line in str(markdown or "").splitlines():
+        line = raw_line.strip()
+        if in_document_lead and any(line.startswith(prefix) for prefix in skipped_prefixes):
+            continue
+        if line.startswith("## "):
+            in_document_lead = False
+        lines.append(raw_line)
+    return "\n".join(lines).strip()
+
+
+def _public_page_css() -> str:
+    return """
+    :root {
+      color-scheme: light;
+      --bg: #f4efe8;
+      --paper: #fffdf9;
+      --paper-strong: #ffffff;
+      --text: #221f1a;
+      --muted: #645d55;
+      --line: #dfd3c6;
+      --accent: #2f2189;
+      --accent-hover: #24176f;
+      --accent-soft: #ebe7ff;
+      --orange: #ff4b18;
+      --shadow: 0 18px 44px rgba(38, 25, 16, 0.09);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at top left, rgba(255, 75, 24, 0.12), transparent 34rem),
+        linear-gradient(180deg, #fffaf4 0%, var(--bg) 100%);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.62;
+      letter-spacing: 0;
+    }
+    a { color: var(--accent); font-weight: 750; text-decoration: none; }
+    a:hover, a:focus-visible { color: var(--accent-hover); text-decoration: underline; text-underline-offset: 3px; }
+    .wrap { width: min(1080px, calc(100% - 32px)); margin: 0 auto; }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      border-bottom: 1px solid rgba(223, 211, 198, 0.9);
+      background: rgba(255, 253, 249, 0.88);
+      backdrop-filter: blur(18px);
+      box-shadow: 0 12px 30px rgba(38, 25, 16, 0.06);
+    }
+    .top {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 18px;
+      min-height: 70px;
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.7rem;
+      color: var(--text);
+      text-decoration: none;
+      min-width: 0;
+    }
+    .brand-logo {
+      display: inline-block;
+      flex: 0 0 auto;
+      width: 2.35rem;
+      height: 2.35rem;
+      background-color: currentColor;
+      color: var(--accent);
+      mask: url('/assets/logo.svg') center/contain no-repeat;
+      -webkit-mask: url('/assets/logo.svg') center/contain no-repeat;
+    }
+    .brand-word {
+      display: block;
+      color: var(--text);
+      font-size: 1.25rem;
+      font-weight: 900;
+      line-height: 1;
+      letter-spacing: 0;
+      white-space: nowrap;
+    }
+    nav {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.35rem;
+      font-size: 14px;
+      font-weight: 750;
+    }
+    nav a {
+      border-radius: 999px;
+      color: var(--muted);
+      padding: 0.45rem 0.72rem;
+      text-decoration: none;
+    }
+    nav a:hover, nav a:focus-visible, nav a.active {
+      background: var(--accent-soft);
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .home-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 2.55rem;
+      border-radius: 999px;
+      padding: 0 1rem;
+      font-size: 14px;
+      font-weight: 850;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .home-button {
+      background: var(--accent);
+      color: #ffffff;
+      box-shadow: 0 12px 28px rgba(47, 33, 137, 0.2);
+    }
+    .home-button:hover, .home-button:focus-visible {
+      background: var(--accent-hover);
+      color: #ffffff;
+      text-decoration: none;
+    }
+    main { padding: clamp(34px, 6vw, 72px) 0 78px; }
+    .utility-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: clamp(20px, 4vw, 34px);
+    }
+    .language-switch {
+      display: inline-flex;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255, 253, 249, 0.84);
+      box-shadow: 0 8px 22px rgba(38, 25, 16, 0.04);
+    }
+    .language-switch a {
+      min-width: 88px;
+      padding: 8px 14px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 850;
+      text-align: center;
+      text-decoration: none;
+    }
+    .language-switch a.active {
+      background: var(--accent);
+      color: #ffffff;
+    }
+    .hero {
+      max-width: 760px;
+      margin: 0 0 28px;
+    }
+    .hero--compact { max-width: 880px; }
+    .eyebrow {
+      margin: 0 0 0.55rem;
+      color: var(--orange);
+      font-size: 0.78rem;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+    h1 {
+      margin: 0;
+      color: var(--text);
+      font-size: clamp(2.15rem, 5vw, 4rem);
+      line-height: 1.02;
+      letter-spacing: 0;
+    }
+    .subtitle, .meta {
+      max-width: 720px;
+      color: var(--muted);
+      font-size: 1.05rem;
+    }
+    .subtitle { margin: 1rem 0 0; }
+    .meta { margin: 0.8rem 0 0; font-size: 0.95rem; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin: 28px 0;
+    }
+    .card, .panel, .document-card {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--paper-strong);
+      box-shadow: var(--shadow);
+    }
+    .card {
+      display: grid;
+      gap: 10px;
+      min-height: 170px;
+      padding: 22px;
+    }
+    .card strong { font-size: 1.08rem; }
+    .price {
+      color: var(--text);
+      font-size: clamp(2.2rem, 4vw, 3.25rem);
+      line-height: 1;
+      font-weight: 950;
+      letter-spacing: 0;
+    }
+    .muted { color: var(--muted); }
+    .badge {
+      display: inline-flex;
+      width: fit-content;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      padding: 4px 9px;
+      font-size: 12px;
+      font-weight: 850;
+    }
+    .panel, .document-card {
+      margin-top: 18px;
+      padding: clamp(22px, 4vw, 38px);
+    }
+    .document-card {
+      max-width: 920px;
+    }
+    .document-card > h1:first-child {
+      display: none;
+    }
+    h2 {
+      margin: 0 0 12px;
+      color: var(--text);
+      font-size: clamp(1.35rem, 3vw, 1.75rem);
+      line-height: 1.18;
+    }
+    .document-card h2 {
+      margin-top: 2rem;
+    }
+    h3 {
+      margin: 1.5rem 0 0.55rem;
+      font-size: 1.08rem;
+      line-height: 1.25;
+    }
+    p { margin: 10px 0; }
+    ul { margin: 12px 0 0; padding-left: 22px; }
+    li { margin: 6px 0; }
+    code {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 1px 5px;
+      background: #fff8ef;
+      font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+      font-size: 0.92em;
+    }
+    footer {
+      border-top: 1px solid var(--line);
+      padding: 24px 0 34px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    @media (max-width: 860px) {
+      .top { grid-template-columns: 1fr; gap: 12px; padding: 14px 0; }
+      nav { justify-content: flex-start; }
+      .home-button { width: fit-content; }
+      .grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 520px) {
+      .wrap { width: min(100% - 24px, 1080px); }
+      .utility-row { align-items: stretch; flex-direction: column; }
+      .language-switch { width: 100%; }
+      .language-switch a { flex: 1; min-width: 0; }
+      h1 { font-size: clamp(2rem, 12vw, 3rem); }
+    }
+    """
+
+
+def _public_shell_page(
+    *,
+    title: str,
+    subtitle: str = "",
+    body_html: str,
+    lang: str,
+    current_path: str,
+    eyebrow: str = "",
+    meta_html: str = "",
+    legal: bool = False,
+) -> Any:
+    labels = _PUBLIC_LABELS.get(lang, _PUBLIC_LABELS["en"])
+    title_html = escape(str(title or "ACTRA").strip() or "ACTRA")
+    subtitle_html = escape(str(subtitle or "").strip())
+    clean_eyebrow = escape(str(eyebrow or labels["premium"]).strip())
+    meta_block = f'<p class="meta">{meta_html}</p>' if meta_html else ""
+    subtitle_block = f'<p class="subtitle">{subtitle_html}</p>' if subtitle_html else ""
+    article_class = "document-card" if legal else ""
+    content_html = f'<article class="{article_class}">{body_html}</article>' if legal else body_html
+    return (
+        f"""<!doctype html>
+<html lang="{lang}">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{title_html} - ACTRA</title>
+  <style>{_public_page_css()}</style>
+</head>
+<body>
+  <header>
+    <div class="wrap top">
+      <a class="brand" href="/ui/welcome" aria-label="ACTRA">
+        <span class="brand-logo" aria-hidden="true"></span>
+        <span class="brand-word">ACTRA</span>
+      </a>
+      {_public_nav_html(lang, current_path)}
+      <a class="home-button" href="/ui/welcome">{escape(labels['back_home'])}</a>
+    </div>
+  </header>
+  <main class="wrap">
+    <div class="utility-row">
+      {_language_switch_html(current_path, lang)}
+    </div>
+    <section class="hero{' hero--compact' if legal else ''}">
+      <p class="eyebrow">{clean_eyebrow}</p>
+      <h1>{title_html}</h1>
+      {subtitle_block}
+      {meta_block}
+    </section>
+    {content_html}
+  </main>
+  <footer>
+    <div class="wrap">{escape(labels['support'])}: <a href="mailto:{_SUPPORT_EMAIL}">{_SUPPORT_EMAIL}</a></div>
+  </footer>
+</body>
+</html>""",
+        200,
+        {"Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store"},
+    )
+
+
 def _public_legal_document_page(doc_type: str) -> Any:
     clean_type = str(doc_type or "").strip().lower()
     if clean_type not in _LEGAL_DOC_TYPES:
@@ -177,9 +551,15 @@ def _public_legal_document_page(doc_type: str) -> Any:
     if lang == "en":
         meta = dict((manifest or {}).get(clean_type) or {})
         path = legal_dir / str(meta.get("filename_en") or f"{clean_type}.en.md")
-        title = str(meta.get("title_en") or ("Privacy Policy" if clean_type == "privacy" else "Terms of Service"))
+        fallback_titles = {
+            "terms": "Terms of Service",
+            "privacy": "Privacy Policy",
+            "refund": "Refund Policy",
+        }
+        title = str(meta.get("title_en") or fallback_titles.get(clean_type) or "Legal document")
         version = str(meta.get("version") or "").strip()
         effective_at = str(meta.get("effective_at") or "").strip()
+        last_reviewed_at = str(meta.get("last_reviewed_at") or "").strip()
     else:
         helpers = get_extra("misc_helpers", {}) or {}
         load_manifest = helpers.get("load_legal_manifest")
@@ -194,379 +574,59 @@ def _public_legal_document_page(doc_type: str) -> Any:
         title = str(meta.get("title") or ("Политика приватности" if clean_type == "privacy" else "Условия пользования"))
         version = str(meta.get("version") or "").strip()
         effective_at = str(meta.get("effective_at") or "").strip()
+        last_reviewed_at = str(meta.get("last_reviewed_at") or "").strip()
 
     if path is None or not Path(path).exists():
         return jsonify({"ok": False, "error": "document_not_found"}), 404
 
     content = Path(path).read_text(encoding="utf-8")
-    body_html = _markdown_to_legal_html(content)
-    title_html = escape(title)
+    body_html = _markdown_to_legal_html(_strip_legal_document_lead(content))
     labels = _PUBLIC_LABELS.get(lang, _PUBLIC_LABELS["en"])
-    meta_parts = [part for part in (f"{labels['version']} {version}" if version else "", effective_at) if part]
-    meta_html = escape(" | ".join(meta_parts))
-    current_path = "/legal/privacy" if clean_type == "privacy" else "/legal/terms"
+    effective_date = effective_at.split("T", 1)[0] if "T" in effective_at else effective_at
+    last_reviewed_date = (
+        last_reviewed_at.split("T", 1)[0] if "T" in last_reviewed_at else last_reviewed_at
+    )
+    reviewed_label = "Дата последнего пересмотра" if lang == "ru" else labels.get("reviewed", "Last reviewed")
+    meta_parts = [
+        part
+        for part in (
+            f"{labels['version']} {version}" if version else "",
+            f"{labels['effective']} {effective_date}" if effective_date else "",
+            f"{reviewed_label} {last_reviewed_date}" if last_reviewed_date else "",
+        )
+        if part
+    ]
+    meta_html = escape(" · ".join(meta_parts))
+    current_path = (
+        "/legal/privacy"
+        if clean_type == "privacy"
+        else "/refund"
+        if clean_type == "refund"
+        else "/legal/terms"
+    )
 
-    return (
-        f"""<!doctype html>
-<html lang="{lang}">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>{title_html} - ACTRA</title>
-  <style>
-    :root {{
-      color-scheme: light;
-      --bg: #f8f7f4;
-      --paper: #ffffff;
-      --text: #221f1a;
-      --muted: #6d6258;
-      --line: #dfd7ce;
-      --accent: #9d4f21;
-    }}
-    * {{ box-sizing: border-box; }}
-    body {{
-      margin: 0;
-      background: var(--bg);
-      color: var(--text);
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      line-height: 1.65;
-    }}
-    header {{
-      border-bottom: 1px solid var(--line);
-      background: var(--paper);
-    }}
-    .wrap {{
-      width: min(920px, calc(100% - 32px));
-      margin: 0 auto;
-    }}
-    .top {{
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      padding: 18px 0;
-    }}
-    .brand {{
-      color: var(--text);
-      font-size: 15px;
-      font-weight: 750;
-      text-decoration: none;
-    }}
-    .back {{
-      color: var(--accent);
-      font-size: 14px;
-      font-weight: 650;
-      text-decoration: none;
-    }}
-    nav {{
-      display: flex;
-      flex-wrap: wrap;
-      gap: 14px;
-      font-size: 14px;
-    }}
-    nav a {{
-      color: var(--accent);
-      font-weight: 700;
-      text-decoration: none;
-    }}
-    .language-switch {{
-      display: inline-flex;
-      overflow: hidden;
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      background: #fbfaf8;
-      margin: 0 0 18px;
-    }}
-    .language-switch a {{
-      min-width: 82px;
-      padding: 8px 13px;
-      color: var(--muted);
-      font-size: 13px;
-      font-weight: 800;
-      text-align: center;
-      text-decoration: none;
-    }}
-    .language-switch a.active {{
-      background: var(--accent);
-      color: #ffffff;
-    }}
-    main {{
-      padding: 42px 0 64px;
-    }}
-    article {{
-      background: var(--paper);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: clamp(22px, 4vw, 44px);
-      box-shadow: 0 14px 36px rgba(31, 25, 20, 0.07);
-    }}
-    h1 {{
-      margin: 0 0 8px;
-      font-size: clamp(28px, 4vw, 42px);
-      line-height: 1.12;
-    }}
-    .meta {{
-      margin: 0 0 30px;
-      color: var(--muted);
-      font-size: 14px;
-    }}
-    article h1:first-child {{
-      display: none;
-    }}
-    h2 {{
-      margin: 32px 0 10px;
-      font-size: 22px;
-      line-height: 1.25;
-    }}
-    h3 {{
-      margin: 24px 0 8px;
-      font-size: 18px;
-      line-height: 1.3;
-    }}
-    p {{
-      margin: 12px 0;
-    }}
-    ul {{
-      margin: 12px 0 18px;
-      padding-left: 24px;
-    }}
-    li {{
-      margin: 6px 0;
-    }}
-    code {{
-      border: 1px solid var(--line);
-      border-radius: 4px;
-      padding: 1px 5px;
-      background: #fbfaf8;
-      font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
-      font-size: 0.92em;
-    }}
-    @media (max-width: 760px) {{
-      .top {{
-        align-items: flex-start;
-        flex-direction: column;
-      }}
-    }}
-  </style>
-</head>
-<body>
-  <header>
-    <div class="wrap top">
-      <a class="brand" href="/">ACTRA</a>
-      {_public_nav_html(lang)}
-    </div>
-  </header>
-  <main class="wrap">
-    {_language_switch_html(current_path, lang)}
-    <article>
-      <h1>{title_html}</h1>
-      <p class="meta">{meta_html}</p>
-      {body_html}
-    </article>
-  </main>
-</body>
-</html>""",
-        200,
-        {"Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store"},
+    return _public_shell_page(
+        title=title,
+        body_html=body_html,
+        lang=lang,
+        current_path=current_path,
+        eyebrow=str(labels.get(clean_type) or title),
+        meta_html=meta_html,
+        legal=True,
     )
 
 
 def _public_commerce_page(*, title: str, subtitle: str, body_html: str, lang: str, current_path: str) -> Any:
-    title_html = escape(str(title or "ACTRA").strip() or "ACTRA")
-    subtitle_html = escape(str(subtitle or "").strip())
     labels = _PUBLIC_LABELS.get(lang, _PUBLIC_LABELS["en"])
-    return (
-        f"""<!doctype html>
-<html lang="{lang}">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>{title_html} - ACTRA</title>
-  <style>
-    :root {{
-      color-scheme: light;
-      --bg: #f7f8fb;
-      --paper: #ffffff;
-      --text: #182039;
-      --muted: #5a657c;
-      --line: #d9deea;
-      --accent: #2f2690;
-      --accent-soft: #eef0ff;
-    }}
-    * {{ box-sizing: border-box; }}
-    body {{
-      margin: 0;
-      background: var(--bg);
-      color: var(--text);
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      line-height: 1.6;
-    }}
-    a {{ color: var(--accent); font-weight: 700; }}
-    header {{
-      border-bottom: 1px solid var(--line);
-      background: var(--paper);
-    }}
-    .wrap {{
-      width: min(1040px, calc(100% - 32px));
-      margin: 0 auto;
-    }}
-    .top {{
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      padding: 18px 0;
-    }}
-    .brand {{
-      color: var(--text);
-      font-size: 15px;
-      font-weight: 850;
-      text-decoration: none;
-      letter-spacing: 0;
-    }}
-    nav {{
-      display: flex;
-      flex-wrap: wrap;
-      gap: 14px;
-      font-size: 14px;
-    }}
-    nav a {{ text-decoration: none; }}
-    .language-switch {{
-      display: inline-flex;
-      overflow: hidden;
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      background: var(--paper);
-      margin-bottom: 24px;
-    }}
-    .language-switch a {{
-      min-width: 82px;
-      padding: 8px 13px;
-      color: var(--muted);
-      font-size: 13px;
-      font-weight: 850;
-      text-align: center;
-      text-decoration: none;
-    }}
-    .language-switch a.active {{
-      background: var(--accent);
-      color: #ffffff;
-    }}
-    main {{
-      padding: clamp(34px, 6vw, 72px) 0 70px;
-    }}
-    .hero {{
-      max-width: 760px;
-      margin-bottom: 28px;
-    }}
-    .eyebrow {{
-      margin: 0 0 8px;
-      color: var(--accent);
-      font-size: 12px;
-      font-weight: 900;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-    }}
-    h1 {{
-      margin: 0;
-      font-size: clamp(34px, 5vw, 58px);
-      line-height: 1.02;
-      letter-spacing: 0;
-    }}
-    .subtitle {{
-      margin: 16px 0 0;
-      max-width: 680px;
-      color: var(--muted);
-      font-size: 18px;
-    }}
-    .grid {{
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 14px;
-      margin: 28px 0;
-    }}
-    .card, .panel {{
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: var(--paper);
-      box-shadow: 0 14px 34px rgba(20, 28, 52, 0.07);
-    }}
-    .card {{
-      display: grid;
-      gap: 10px;
-      padding: 20px;
-    }}
-    .card strong {{
-      font-size: 18px;
-    }}
-    .price {{
-      font-size: 34px;
-      line-height: 1;
-      font-weight: 950;
-      letter-spacing: 0;
-    }}
-    .muted {{ color: var(--muted); }}
-    .badge {{
-      display: inline-flex;
-      width: fit-content;
-      border-radius: 999px;
-      background: var(--accent-soft);
-      color: var(--accent);
-      padding: 4px 9px;
-      font-size: 12px;
-      font-weight: 850;
-    }}
-    .panel {{
-      margin-top: 18px;
-      padding: clamp(20px, 4vw, 32px);
-    }}
-    h2 {{
-      margin: 0 0 12px;
-      font-size: 24px;
-      line-height: 1.25;
-    }}
-    p {{ margin: 10px 0; }}
-    ul {{
-      margin: 12px 0 0;
-      padding-left: 22px;
-    }}
-    li {{ margin: 6px 0; }}
-    footer {{
-      border-top: 1px solid var(--line);
-      padding: 22px 0 32px;
-      color: var(--muted);
-      font-size: 14px;
-    }}
-    @media (max-width: 760px) {{
-      .top {{ align-items: flex-start; flex-direction: column; }}
-      .grid {{ grid-template-columns: 1fr; }}
-      nav {{ gap: 10px; }}
-    }}
-  </style>
-</head>
-<body>
-  <header>
-    <div class="wrap top">
-      <a class="brand" href="/">ACTRA</a>
-      {_public_nav_html(lang)}
-    </div>
-  </header>
-  <main class="wrap">
-    {_language_switch_html(current_path, lang)}
-    <section class="hero">
-      <p class="eyebrow">{escape(labels['premium'])}</p>
-      <h1>{title_html}</h1>
-      <p class="subtitle">{subtitle_html}</p>
-    </section>
-    {body_html}
-  </main>
-  <footer>
-    <div class="wrap">{escape(labels['support'])}: <a href="mailto:{_SUPPORT_EMAIL}">{_SUPPORT_EMAIL}</a></div>
-  </footer>
-</body>
-</html>""",
-        200,
-        {"Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store"},
+
+    return _public_shell_page(
+        title=title,
+        subtitle=subtitle,
+        body_html=body_html,
+        lang=lang,
+        current_path=current_path,
+        eyebrow=str(labels["premium"]),
+        legal=False,
     )
 
 
@@ -604,7 +664,7 @@ def _public_home_page() -> Any:
         <section class="panel">
           <h2>Цифровой доступ</h2>
           <p>ACTRA Premium является цифровой услугой. Физические товары не продаются и не доставляются. Доступ предоставляется в аккаунте пользователя после подтверждения оплаты.</p>
-          <p><a href="/pricing?lang=ru">Посмотреть цены</a> · <a href="/ui/welcome">Открыть приложение</a> · <a href="mailto:{_SUPPORT_EMAIL}">{_SUPPORT_EMAIL}</a></p>
+          <p><a href="/pricing?lang=ru">Посмотреть цены</a> · <a href="/ui/welcome">Главная ACTRA</a> · <a href="mailto:{_SUPPORT_EMAIL}">{_SUPPORT_EMAIL}</a></p>
         </section>
         """
     else:
@@ -639,7 +699,7 @@ def _public_home_page() -> Any:
         <section class="panel">
           <h2>Digital access</h2>
           <p>ACTRA Premium is a digital service. No physical goods are sold or shipped. Access is delivered to the user account after payment is confirmed.</p>
-          <p><a href="/pricing?lang=en">View pricing</a> · <a href="/ui/welcome">Open the app</a> · <a href="mailto:{_SUPPORT_EMAIL}">{_SUPPORT_EMAIL}</a></p>
+          <p><a href="/pricing?lang=en">View pricing</a> · <a href="/ui/welcome">ACTRA home</a> · <a href="mailto:{_SUPPORT_EMAIL}">{_SUPPORT_EMAIL}</a></p>
         </section>
         """
     return _public_commerce_page(
@@ -725,62 +785,7 @@ def _pricing_page() -> Any:
 
 
 def _refund_page() -> Any:
-    lang = _public_lang("en")
-    if lang == "ru":
-        title = "Политика возвратов"
-        subtitle = "Как рассматриваются возвраты за цифровой доступ ACTRA Premium."
-        body = f"""
-        <section class="panel">
-          <h2>Возвраты за цифровой доступ</h2>
-          <p>ACTRA Premium является цифровой услугой. Запросы на возврат рассматриваются службой поддержки с учетом обстоятельств покупки и правил платежного провайдера.</p>
-          <p>Возврат может быть рассмотрен в следующих случаях:</p>
-          <ul>
-            <li>дублирующая или случайная оплата;</li>
-            <li>оплата прошла успешно, но Premium-доступ не был активирован из-за технической ошибки;</li>
-            <li>другая очевидная ошибка биллинга, связанная с покупкой.</li>
-          </ul>
-        </section>
-        <section class="panel">
-          <h2>Как запросить возврат</h2>
-          <p>Напишите на <a href="mailto:{_SUPPORT_EMAIL}">{_SUPPORT_EMAIL}</a> и укажите email аккаунта ACTRA, дату оплаты, выбранный срок Premium и краткое описание ситуации.</p>
-          <p>Мы можем запросить дополнительную информацию, необходимую для поиска платежа и проверки обращения.</p>
-        </section>
-        <section class="panel">
-          <h2>Доступ после возврата</h2>
-          <p>Если возврат одобрен, связанный Premium-доступ может быть отменен или скорректирован.</p>
-        </section>
-        """
-    else:
-        title = "Refund policy"
-        subtitle = "How refunds are handled for ACTRA Premium digital access."
-        body = f"""
-        <section class="panel">
-          <h2>Digital access refund policy</h2>
-          <p>ACTRA Premium is a digital service. Refund requests are reviewed by support and handled according to the circumstances of the purchase and applicable payment provider rules.</p>
-          <p>Refunds may be considered in the following cases:</p>
-          <ul>
-            <li>duplicate or accidental payment;</li>
-            <li>payment was successful, but Premium access could not be activated due to a technical issue;</li>
-            <li>another clear billing error related to the purchase.</li>
-          </ul>
-        </section>
-        <section class="panel">
-          <h2>How to request a refund</h2>
-          <p>Send a request to <a href="mailto:{_SUPPORT_EMAIL}">{_SUPPORT_EMAIL}</a> and include the email used for your ACTRA account, payment date, selected Premium period, and a short description of the issue.</p>
-          <p>We may ask for additional information needed to locate the payment and verify the request.</p>
-        </section>
-        <section class="panel">
-          <h2>Access after a refund</h2>
-          <p>If a refund is approved, the related Premium access may be cancelled or adjusted.</p>
-        </section>
-        """
-    return _public_commerce_page(
-        title=title,
-        subtitle=subtitle,
-        body_html=body,
-        lang=lang,
-        current_path="/refund",
-    )
+    return _public_legal_document_page("refund")
 
 
 # ---------------------------------------------------------------------------

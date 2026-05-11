@@ -147,7 +147,7 @@ def legal_current() -> Any:
 @misc_bp.route("/api/legal/document/<string:doc_type>", methods=["GET"])
 def legal_document(doc_type: str) -> Any:
     """Return legal document content and metadata."""
-    if doc_type not in ("terms", "privacy"):
+    if doc_type not in ("terms", "privacy", "refund"):
         return jsonify({"ok": False, "error": "document_not_found"}), 404
 
     try:
@@ -167,6 +167,7 @@ def legal_document(doc_type: str) -> Any:
                     "title": meta.get("title"),
                     "version": meta.get("version"),
                     "effective_at": meta.get("effective_at"),
+                    "last_reviewed_at": meta.get("last_reviewed_at"),
                     "format": meta.get("format"),
                     "content": content,
                 },
@@ -234,6 +235,7 @@ def consent_accept() -> Any:
             user_id,
             consent_payload["terms_version"],
             consent_payload["privacy_version"],
+            consent_payload["refund_version"],
             source=str(payload.get("source") or "user_action"),
         )
         return jsonify(

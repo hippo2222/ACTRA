@@ -44,8 +44,17 @@ function getTheoryEditorOnboardingPreviewTourId() {
     }
 }
 
+function getTheoryEditorDemoStateId() {
+    try {
+        const params = new URLSearchParams(window.location.search || "");
+        return params.get("demo_state") || getTheoryEditorOnboardingPreviewTourId();
+    } catch (error) {
+        return getTheoryEditorOnboardingPreviewTourId();
+    }
+}
+
 function isTheoryEditorOnboardingDemoRequested() {
-    return getTheoryEditorOnboardingPreviewTourId() === THEORY_EDITOR_ONBOARDING_TOUR_ID;
+    return getTheoryEditorDemoStateId() === THEORY_EDITOR_ONBOARDING_TOUR_ID;
 }
 
 function isTheoryEditorOnboardingTourActive() {

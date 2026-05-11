@@ -39,6 +39,7 @@
     "smoke:readiness:hosted": "pytest tests/test_readiness_hosted_gate.py tests/test_hosted_shadow_write_policy.py -q --cov-fail-under=0",
     "smoke:launch-contract:hosted": "pytest tests/test_launch_contract_hosted_gate.py tests/test_readiness_hosted_gate.py -q --cov-fail-under=0",
     "smoke:launch-acceptance:hosted": "node scripts/run_hosted_launch_acceptance.js",
+    "verify:paddle-readiness": "node scripts/verify_paddle_readiness.js",
     "audit:test-editor:browser": "node scripts/test_editor_browser_audit.js",
     "audit:sequence-editor:browser": "node scripts/sequence_editor_browser_audit.js",
     "validate:themes": "node scripts/validate_theme_vars.js"

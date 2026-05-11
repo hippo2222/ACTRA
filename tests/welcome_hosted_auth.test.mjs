@@ -173,6 +173,7 @@ describe('welcome hosted auth flow', () => {
             documents: {
               terms: { version: 'terms-v1' },
               privacy: { version: 'privacy-v1' },
+              refund: { version: 'refund-v1' },
             },
           }),
         };
@@ -216,6 +217,7 @@ describe('welcome hosted auth flow', () => {
     dom.window.document.getElementById('onboardingPasswordConfirm').value = 'StrongPass1';
     dom.window.document.getElementById('onboardingAcceptTerms').checked = true;
     dom.window.document.getElementById('onboardingAcceptPrivacy').checked = true;
+    dom.window.document.getElementById('onboardingAcceptRefund').checked = true;
     dom.window.welcomeUpdateConsentState('onboarding');
 
     await dom.window.welcomeCreateProfile();
@@ -231,6 +233,7 @@ describe('welcome hosted auth flow', () => {
     expect(Object.prototype.hasOwnProperty.call(body, 'login')).toBe(false);
     expect(Object.prototype.hasOwnProperty.call(body, 'avatar_seed')).toBe(false);
     expect(body.consent.accepted).toBe(true);
+    expect(body.consent.refund_version).toBe('refund-v1');
     expect(fetchMock.mock.calls.some(([url]) => url === '/api/assets/avatars')).toBe(false);
     expect(navigateSpy).not.toHaveBeenCalled();
     expect(dom.window.document.getElementById('onboardingVerificationPanel').classList.contains('hidden')).toBe(false);
@@ -238,6 +241,59 @@ describe('welcome hosted auth flow', () => {
 
     dom.window.welcomeContinueAfterVerification();
     expect(navigateSpy).toHaveBeenCalledWith('/ui/main');
+  });
+
+  it('blocks hosted registration when refund consent metadata is missing', async () => {
+    const fetchMock = vi.fn(async (input) => {
+      const url = typeof input === 'string' ? input : String(input?.url || '');
+
+      if (url === '/api/users/should-welcome') {
+        return {
+          ok: true,
+          json: async () => ({ ok: true, show_welcome: true, mode: 'auth', authenticated: false, profiles: [] }),
+        };
+      }
+
+      if (url === '/api/legal/current') {
+        return {
+          ok: true,
+          json: async () => ({
+            ok: true,
+            documents: {
+              terms: { version: 'terms-v1' },
+              privacy: { version: 'privacy-v1' },
+            },
+          }),
+        };
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    const dom = setupDom(fetchMock);
+    dom.window.eval(loadFile('frontend/Welcome/welcome.js'));
+    dom.window.document.dispatchEvent(new dom.window.Event('DOMContentLoaded'));
+    await flushPromises();
+
+    dom.window.welcomeShowAuthRegister();
+    await flushPromises();
+
+    dom.window.document.getElementById('onboardingName').value = 'Reader One';
+    dom.window.document.getElementById('onboardingEmail').value = 'reader@example.com';
+    dom.window.document.getElementById('onboardingPassword').value = 'StrongPass1';
+    dom.window.document.getElementById('onboardingPasswordConfirm').value = 'StrongPass1';
+    dom.window.document.getElementById('onboardingAcceptTerms').checked = true;
+    dom.window.document.getElementById('onboardingAcceptPrivacy').checked = true;
+    dom.window.document.getElementById('onboardingAcceptRefund').checked = true;
+    dom.window.welcomeUpdateConsentState('onboarding');
+
+    await dom.window.welcomeCreateProfile();
+    await flushPromises();
+
+    expect(fetchMock.mock.calls.some(([url]) => url === '/api/auth/register')).toBe(false);
+    const error = dom.window.document.getElementById('onboardingError');
+    expect(error.classList.contains('hidden')).toBe(false);
+    expect(error.textContent).toContain('Legal documents are not fully configured');
   });
 
   it('confirms email token from welcome URL and shows success state', async () => {

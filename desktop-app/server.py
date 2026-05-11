@@ -1909,16 +1909,26 @@ def _get_user_dir(user_id: str) -> Path:
 LEGAL_DEFAULT_MANIFEST: Dict[str, Dict[str, str]] = {
     "terms": {
         "title": "Условия пользования",
-        "version": "2026-02-15.1",
-        "effective_at": "2026-02-15T00:00:00Z",
+        "version": "2026-05-25.1",
+        "effective_at": "2026-05-25T00:00:00Z",
+        "last_reviewed_at": "2026-05-11T00:00:00Z",
         "filename": "terms.md",
         "format": "markdown",
     },
     "privacy": {
         "title": "Политика приватности",
-        "version": "2026-02-15.1",
-        "effective_at": "2026-02-15T00:00:00Z",
+        "version": "2026-05-25.1",
+        "effective_at": "2026-05-25T00:00:00Z",
+        "last_reviewed_at": "2026-05-11T00:00:00Z",
         "filename": "privacy.md",
+        "format": "markdown",
+    },
+    "refund": {
+        "title": "Политика возвратов",
+        "version": "2026-05-25.1",
+        "effective_at": "2026-05-25T00:00:00Z",
+        "last_reviewed_at": "2026-05-11T00:00:00Z",
+        "filename": "refund.md",
         "format": "markdown",
     },
 }
@@ -1972,7 +1982,7 @@ def _load_legal_manifest() -> Dict[str, Dict[str, str]]:
         raw = {}
 
     normalized: Dict[str, Dict[str, str]] = {}
-    for doc_type in ("terms", "privacy"):
+    for doc_type in ("terms", "privacy", "refund"):
         fallback = LEGAL_DEFAULT_MANIFEST[doc_type]
         src = raw.get(doc_type)
         if not isinstance(src, dict):
@@ -1980,12 +1990,18 @@ def _load_legal_manifest() -> Dict[str, Dict[str, str]]:
 
         normalized[doc_type] = {
             "title": str(src.get("title") or fallback["title"]).strip() or fallback["title"],
+            "title_en": str(src.get("title_en") or "").strip(),
             "version": str(src.get("version") or fallback["version"]).strip()
             or fallback["version"],
             "effective_at": str(src.get("effective_at") or fallback["effective_at"]).strip()
             or fallback["effective_at"],
+            "last_reviewed_at": str(
+                src.get("last_reviewed_at") or fallback.get("last_reviewed_at") or fallback["effective_at"]
+            ).strip()
+            or fallback.get("last_reviewed_at", fallback["effective_at"]),
             "filename": str(src.get("filename") or fallback["filename"]).strip()
             or fallback["filename"],
+            "filename_en": str(src.get("filename_en") or "").strip(),
             "format": str(src.get("format") or fallback["format"]).strip() or fallback["format"],
         }
 
@@ -1995,7 +2011,7 @@ def _load_legal_manifest() -> Dict[str, Dict[str, str]]:
 def _legal_doc_path(
     doc_type: str, manifest: Optional[Dict[str, Dict[str, str]]] = None
 ) -> Optional[Path]:
-    if doc_type not in ("terms", "privacy"):
+    if doc_type not in ("terms", "privacy", "refund"):
         return None
     if manifest is None:
         manifest = _load_legal_manifest()
@@ -2010,6 +2026,7 @@ def _required_consent_versions() -> Dict[str, str]:
     return {
         "terms_version": manifest["terms"]["version"],
         "privacy_version": manifest["privacy"]["version"],
+        "refund_version": manifest["refund"]["version"],
     }
 
 
@@ -2030,6 +2047,9 @@ def _extract_consent_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
         "privacy_version": str(
             consent_obj.get("privacy_version") or payload.get("privacy_version") or ""
         ).strip(),
+        "refund_version": str(
+            consent_obj.get("refund_version") or payload.get("refund_version") or ""
+        ).strip(),
     }
 
 
@@ -2038,7 +2058,7 @@ def _has_explicit_consent_payload(payload: Dict[str, Any]) -> bool:
         return False
     if isinstance(payload.get("consent"), dict):
         return True
-    return any(key in payload for key in ("accepted", "terms_version", "privacy_version"))
+    return any(key in payload for key in ("accepted", "terms_version", "privacy_version", "refund_version"))
 
 
 def _validate_consent_payload(consent_payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -2046,14 +2066,19 @@ def _validate_consent_payload(consent_payload: Dict[str, Any]) -> Dict[str, Any]
     accepted = bool(consent_payload.get("accepted"))
     terms_version = str(consent_payload.get("terms_version") or "").strip()
     privacy_version = str(consent_payload.get("privacy_version") or "").strip()
+    refund_version = str(consent_payload.get("refund_version") or "").strip()
 
     if not accepted:
         return {"ok": False, "status_code": 400, "error": "consent_required"}
 
-    if not terms_version or not privacy_version:
+    if not terms_version or not privacy_version or not refund_version:
         return {"ok": False, "status_code": 400, "error": "consent_required"}
 
-    if terms_version != required["terms_version"] or privacy_version != required["privacy_version"]:
+    if (
+        terms_version != required["terms_version"]
+        or privacy_version != required["privacy_version"]
+        or refund_version != required["refund_version"]
+    ):
         return {
             "ok": False,
             "status_code": 409,
@@ -2062,6 +2087,7 @@ def _validate_consent_payload(consent_payload: Dict[str, Any]) -> Dict[str, Any]
             "provided": {
                 "terms_version": terms_version,
                 "privacy_version": privacy_version,
+                "refund_version": refund_version,
             },
         }
 
@@ -2100,6 +2126,7 @@ def _write_user_consent(
     user_id: str,
     terms_version: str,
     privacy_version: str,
+    refund_version: str,
     *,
     source: str = "unknown",
 ) -> Dict[str, Any]:
@@ -2109,6 +2136,7 @@ def _write_user_consent(
             user_id,
             terms_version,
             privacy_version,
+            refund_version,
             source=source,
         )
 
@@ -2123,6 +2151,7 @@ def _write_user_consent(
         "user_id": user_id,
         "terms_version": terms_version,
         "privacy_version": privacy_version,
+        "refund_version": refund_version,
         "accepted_at": datetime.utcnow().isoformat() + "Z",
         "source": source,
     }
@@ -2162,9 +2191,11 @@ def _get_consent_status(user_id: str) -> Dict[str, Any]:
 
     accepted_terms = str(accepted.get("terms_version") or "").strip()
     accepted_privacy = str(accepted.get("privacy_version") or "").strip()
+    accepted_refund = str(accepted.get("refund_version") or "").strip()
     if (
         accepted_terms != required["terms_version"]
         or accepted_privacy != required["privacy_version"]
+        or accepted_refund != required["refund_version"]
     ):
         return {
             "status": "outdated",
@@ -2172,6 +2203,7 @@ def _get_consent_status(user_id: str) -> Dict[str, Any]:
             "accepted": {
                 "terms_version": accepted_terms,
                 "privacy_version": accepted_privacy,
+                "refund_version": accepted_refund,
                 "accepted_at": accepted.get("accepted_at"),
             },
         }
@@ -2182,6 +2214,7 @@ def _get_consent_status(user_id: str) -> Dict[str, Any]:
         "accepted": {
             "terms_version": accepted_terms,
             "privacy_version": accepted_privacy,
+            "refund_version": accepted_refund,
             "accepted_at": accepted.get("accepted_at"),
         },
     }

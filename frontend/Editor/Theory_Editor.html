@@ -16,6 +16,16 @@
     <link href="/assets/lightB-components.css" rel="stylesheet" />
     <link href="/assets/animations.css" rel="stylesheet" />
     <link href="/assets/onboarding-tour.css?v=theory-editor-onboarding-8" rel="stylesheet" />
+    <script>
+        (() => {
+            try {
+                const params = new URLSearchParams(window.location.search || "");
+                if (params.get("welcome_material_preview") === "1") {
+                    document.documentElement.dataset.welcomeMaterialPreview = "1";
+                }
+            } catch (error) {}
+        })();
+    </script>
     <style>
         body {
             background:
@@ -81,6 +91,92 @@
                 linear-gradient(180deg, color-mix(in srgb, var(--color-surface-2) 84%, white), color-mix(in srgb, var(--color-component-panel-row-soft-bg) 100%, white));
             border-radius: 1.25rem;
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76);
+        }
+
+        html[data-welcome-material-preview="1"],
+        html[data-welcome-material-preview="1"] body {
+            width: 1200px;
+            height: 675px;
+            overflow: hidden;
+            scrollbar-width: none;
+        }
+
+        html[data-welcome-material-preview="1"] body::-webkit-scrollbar,
+        html[data-welcome-material-preview="1"] .theory-scroll::-webkit-scrollbar {
+            display: none;
+        }
+
+        html[data-welcome-material-preview="1"] .theory-scroll {
+            scrollbar-width: none;
+        }
+
+        html[data-welcome-material-preview="1"] body {
+            background:
+                radial-gradient(circle at top left, color-mix(in srgb, var(--color-primary) 10%, transparent), transparent 30%),
+                linear-gradient(180deg, color-mix(in srgb, var(--color-surface-1) 86%, white), var(--color-bg-main));
+        }
+
+        html[data-welcome-material-preview="1"] .theory-shell,
+        html[data-welcome-material-preview="1"] .theory-frame {
+            width: 1200px;
+            height: 675px;
+            min-height: 675px;
+            overflow: hidden;
+        }
+
+        html[data-welcome-material-preview="1"] .theory-frame {
+            max-width: none;
+            padding: 1.4rem 1.6rem;
+        }
+
+        html[data-welcome-material-preview="1"] .theory-frame > header,
+        html[data-welcome-material-preview="1"] .theory-library-panel,
+        html[data-welcome-material-preview="1"] [data-onboarding-target="theory-editor-title-block"],
+        html[data-welcome-material-preview="1"] .theory-help-note {
+            display: none !important;
+        }
+
+        html[data-welcome-material-preview="1"] .theory-main-grid {
+            grid-template-columns: minmax(0, 1fr);
+            height: 100%;
+            margin-top: 0;
+            overflow: hidden;
+        }
+
+        html[data-welcome-material-preview="1"] .theory-workspace-panel,
+        html[data-welcome-material-preview="1"] .theory-content-stack {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        html[data-welcome-material-preview="1"] .theory-workspace-panel {
+            padding: 1.15rem 1.35rem;
+        }
+
+        html[data-welcome-material-preview="1"] .theory-content-stack {
+            gap: 0.82rem;
+        }
+
+        html[data-welcome-material-preview="1"] .theory-workspace-meta-stack {
+            gap: 0;
+        }
+
+        html[data-welcome-material-preview="1"] .theory-section-card {
+            border-radius: 1.15rem;
+        }
+
+        html[data-welcome-material-preview="1"] .theory-toolbar-shell {
+            flex-wrap: nowrap;
+            min-height: 3.45rem;
+            overflow: hidden;
+        }
+
+        html[data-welcome-material-preview="1"] .theory-editor-surface {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow: hidden;
+            border-radius: 1.15rem;
+            padding: 1.25rem 1.4rem;
         }
 
         .theory-save-btn:hover {

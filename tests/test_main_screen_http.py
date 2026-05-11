@@ -254,6 +254,9 @@ def test_public_legal_pages_are_available_without_hosted_auth(client, monkeypatc
     assert "text/html" in (privacy_response.content_type or "")
     privacy_text = privacy_response.get_data(as_text=True)
     assert "Privacy Policy" in privacy_text
+    assert "Last reviewed 2026-05-11" in privacy_text
+    assert "/legal/terms?lang=en" in privacy_text
+    assert "/refund?lang=en" in privacy_text
     assert "English" in privacy_text
     assert "Русский" in privacy_text
     assert "/legal/privacy?lang=ru" in privacy_text
@@ -262,9 +265,23 @@ def test_public_legal_pages_are_available_without_hosted_auth(client, monkeypatc
     assert privacy_response.headers.get("Cache-Control") == "no-store"
     assert terms_response.status_code == 200
     assert "text/html" in (terms_response.content_type or "")
-    assert "Terms of Service" in terms_response.get_data(as_text=True)
+    terms_text = terms_response.get_data(as_text=True)
+    assert "Terms of Service" in terms_text
+    assert "Last reviewed 2026-05-11" in terms_text
+    assert "/legal/privacy?lang=en" in terms_text
+    assert "/refund?lang=en" in terms_text
     assert terms_ru_response.status_code == 200
     assert "Условия пользования" in terms_ru_response.get_data(as_text=True)
+    current_response = client.get("/api/legal/current")
+    assert current_response.status_code == 200
+    current_payload = current_response.get_json()
+    assert current_payload["documents"]["refund"]["version"] == "2026-05-25.1"
+
+    refund_document_response = client.get("/api/legal/document/refund")
+    assert refund_document_response.status_code == 200
+    refund_document = refund_document_response.get_json()["document"]
+    assert refund_document["version"] == "2026-05-25.1"
+    assert refund_document["last_reviewed_at"] == "2026-05-11T00:00:00Z"
 
 
 def test_public_premium_commerce_pages_are_available_without_hosted_auth(client, monkeypatch):
@@ -291,10 +308,14 @@ def test_public_premium_commerce_pages_are_available_without_hosted_auth(client,
     assert refund_response.status_code == 200
     assert "text/html" in (refund_response.content_type or "")
     refund_text = refund_response.get_data(as_text=True)
-    assert "Refund policy" in refund_text
+    assert "Refund Policy" in refund_text
+    assert "Last reviewed 2026-05-11" in refund_text
+    assert "within 14 days after the payment date" in refund_text
     assert "actrafb@proton.me" in refund_text
     assert "/pricing?lang=en" in refund_text
     assert "/refund?lang=ru" in refund_text
+    assert "/legal/terms?lang=en" in refund_text
+    assert "/legal/privacy?lang=en" in refund_text
 
     refund_ru_response = client.get("/refund?lang=ru")
     assert refund_ru_response.status_code == 200
@@ -319,6 +340,22 @@ def test_public_seo_files_are_available_without_hosted_auth(client, monkeypatch)
     assert b"<loc>https://actra.site/refund</loc>" in sitemap_response.data
     assert b"<loc>https://actra.site/privacy</loc>" in sitemap_response.data
     assert b"<loc>https://actra.site/terms</loc>" in sitemap_response.data
+
+
+def test_public_seo_files_default_to_production_domain_without_env(client, monkeypatch):
+    monkeypatch.delenv("ACTRA_AUTH_PUBLIC_BASE_URL", raising=False)
+    monkeypatch.delenv("ACTRA_PUBLIC_BASE_URL", raising=False)
+    _install_hosted_runtime(monkeypatch, users=[])
+
+    robots_response = client.get("/robots.txt")
+    sitemap_response = client.get("/sitemap.xml")
+
+    assert robots_response.status_code == 200
+    assert sitemap_response.status_code == 200
+    assert b"localhost" not in robots_response.data
+    assert b"localhost" not in sitemap_response.data
+    assert b"Sitemap: https://actra.site/sitemap.xml" in robots_response.data
+    assert b"<loc>https://actra.site/</loc>" in sitemap_response.data
 
 
 def test_missing_route_preserves_http_404(client):

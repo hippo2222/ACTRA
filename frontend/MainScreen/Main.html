@@ -3189,7 +3189,7 @@
                                     onclick="openMainLegalDocument('terms'); return false;">Условия пользования</button>
                             </span>
                         </label>
-                        <label class="flex items-start gap-2 text-xs text-text-main cursor-pointer">
+                        <label class="flex items-start gap-2 text-xs text-text-main mb-2 cursor-pointer">
                             <input type="checkbox" id="newProfileAcceptPrivacy"
                                 class="mt-0.5 rounded text-primary focus:ring-primary"
                                 onchange="updateNewProfileConsentState()">
@@ -3198,6 +3198,17 @@
                                 <button type="button" class="text-primary hover:underline font-semibold"
                                     onclick="openMainLegalDocument('privacy'); return false;">Политикой
                                     приватности</button>
+                            </span>
+                        </label>
+                        <label class="flex items-start gap-2 text-xs text-text-main cursor-pointer">
+                            <input type="checkbox" id="newProfileAcceptRefund"
+                                class="mt-0.5 rounded text-primary focus:ring-primary"
+                                onchange="updateNewProfileConsentState()">
+                            <span>
+                                Я ознакомился(ась) с
+                                <button type="button" class="text-primary hover:underline font-semibold"
+                                    onclick="openMainLegalDocument('refund'); return false;">Политикой
+                                    возвратов</button>
                             </span>
                         </label>
                     </div>
@@ -3417,6 +3428,14 @@
                     <span>Я ознакомился(ась) с
                         <button type="button" class="text-primary hover:underline font-semibold"
                             onclick="openMainLegalDocument('privacy'); return false;">Политикой приватности</button>
+                    </span>
+                </label>
+                <label class="flex items-start gap-3 text-sm text-text-main cursor-pointer">
+                    <input type="checkbox" id="mainConsentGateAcceptRefund"
+                        class="mt-0.5 rounded text-primary focus:ring-primary" onchange="updateMainConsentGateState()">
+                    <span>Я ознакомился(ась) с
+                        <button type="button" class="text-primary hover:underline font-semibold"
+                            onclick="openMainLegalDocument('refund'); return false;">Политикой возвратов</button>
                     </span>
                 </label>
                 <p id="mainConsentGateError"

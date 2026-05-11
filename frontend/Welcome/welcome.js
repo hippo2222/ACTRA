@@ -542,20 +542,33 @@
     }
 
     function getRequiredConsentVersions() {
-        if (!legalDocuments) return { terms_version: '', privacy_version: '' };
+        if (!legalDocuments) return { terms_version: '', privacy_version: '', refund_version: '' };
         return {
             terms_version: legalDocuments.terms?.version || '',
-            privacy_version: legalDocuments.privacy?.version || ''
+            privacy_version: legalDocuments.privacy?.version || '',
+            refund_version: legalDocuments.refund?.version || ''
         };
     }
 
-    function collectConsent(termsCheckboxId, privacyCheckboxId) {
+    function hasRequiredConsentVersions() {
+        const versions = getRequiredConsentVersions();
+        return Boolean(versions.terms_version && versions.privacy_version && versions.refund_version);
+    }
+
+    function showMissingLegalDocumentsError(errorId = 'onboardingError') {
+        showError(errorId, 'Legal documents are not fully configured. Please try again later or contact support.');
+    }
+
+    function collectConsent(termsCheckboxId, privacyCheckboxId, refundCheckboxId) {
         const termsEl = document.getElementById(termsCheckboxId);
         const privacyEl = document.getElementById(privacyCheckboxId);
+        const refundEl = document.getElementById(refundCheckboxId);
+        const versions = getRequiredConsentVersions();
         return {
-            accepted: !!(termsEl && termsEl.checked && privacyEl && privacyEl.checked),
-            terms_version: getRequiredConsentVersions().terms_version,
-            privacy_version: getRequiredConsentVersions().privacy_version,
+            accepted: !!(termsEl && termsEl.checked && privacyEl && privacyEl.checked && refundEl && refundEl.checked),
+            terms_version: versions.terms_version,
+            privacy_version: versions.privacy_version,
+            refund_version: versions.refund_version,
         };
     }
 
@@ -606,21 +619,24 @@
             const btn = document.getElementById('onboardingCreateBtn');
             const terms = document.getElementById('onboardingAcceptTerms');
             const privacy = document.getElementById('onboardingAcceptPrivacy');
-            if (btn) btn.disabled = !(terms?.checked && privacy?.checked);
+            const refund = document.getElementById('onboardingAcceptRefund');
+            if (btn) btn.disabled = !(terms?.checked && privacy?.checked && refund?.checked);
             return;
         }
         if (scope === 'select') {
             const btn = document.getElementById('selectCreateBtn');
             const terms = document.getElementById('selectAcceptTerms');
             const privacy = document.getElementById('selectAcceptPrivacy');
-            if (btn) btn.disabled = !(terms?.checked && privacy?.checked);
+            const refund = document.getElementById('selectAcceptRefund');
+            if (btn) btn.disabled = !(terms?.checked && privacy?.checked && refund?.checked);
             return;
         }
         if (scope === 'gate') {
             const btn = document.getElementById('consentGateSubmitBtn');
             const terms = document.getElementById('consentGateAcceptTerms');
             const privacy = document.getElementById('consentGateAcceptPrivacy');
-            if (btn) btn.disabled = !(terms?.checked && privacy?.checked);
+            const refund = document.getElementById('consentGateAcceptRefund');
+            if (btn) btn.disabled = !(terms?.checked && privacy?.checked && refund?.checked);
         }
     };
 
@@ -629,12 +645,14 @@
         const versionsEl = document.getElementById('consentGateVersions');
         const termsEl = document.getElementById('consentGateAcceptTerms');
         const privacyEl = document.getElementById('consentGateAcceptPrivacy');
+        const refundEl = document.getElementById('consentGateAcceptRefund');
 
         if (versionsEl) {
-            versionsEl.textContent = `Terms: ${required.terms_version || '-'} | Privacy: ${required.privacy_version || '-'}`;
+            versionsEl.textContent = `Terms: ${required.terms_version || '-'} | Privacy: ${required.privacy_version || '-'} | Refund: ${required.refund_version || '-'}`;
         }
         if (termsEl) termsEl.checked = false;
         if (privacyEl) privacyEl.checked = false;
+        if (refundEl) refundEl.checked = false;
         showConsentGateError(null);
         window.welcomeUpdateConsentState('gate');
         openBlockModal('consentGateModal');
@@ -659,7 +677,12 @@
             return;
         }
 
-        const consent = collectConsent('consentGateAcceptTerms', 'consentGateAcceptPrivacy');
+        if (!hasRequiredConsentVersions()) {
+            showConsentGateError('Legal documents are not fully configured. Please try again later or contact support.');
+            return;
+        }
+
+        const consent = collectConsent('consentGateAcceptTerms', 'consentGateAcceptPrivacy', 'consentGateAcceptRefund');
         if (!consent.accepted) {
             showConsentGateError('Подтвердите оба документа');
             return;
@@ -691,6 +714,7 @@
     async function ensureUserConsent(userId) {
         const loaded = await ensureLegalDocumentsLoaded();
         if (!loaded) return false;
+        if (!hasRequiredConsentVersions()) return false;
 
         const { ok, data } = await apiFetch(`/api/consent/status?user_id=${encodeURIComponent(userId)}`);
         if (!ok || !data) return false;
@@ -832,17 +856,103 @@
         }
     }
 
+    function setWelcomePageMode(mode) {
+        if (!document.body) return;
+        const nextMode = mode === 'auth' ? 'auth' : 'landing';
+        document.body.dataset.mode = nextMode;
+        document.body.classList.toggle('welcome-auth-open', nextMode === 'auth');
+        document.body.classList.remove('welcome-auth-entering', 'welcome-auth-closing');
+        if (nextMode === 'auth') {
+            document.body.classList.add('welcome-auth-entering');
+            window.setTimeout(() => {
+                document.body?.classList.remove('welcome-auth-entering');
+            }, 420);
+        }
+    }
+
+    let welcomeAuthEntryScrollY = 0;
+    let welcomeAuthShouldScrollToHero = false;
+
+    function getWelcomeShell() {
+        return document.querySelector('.welcome-shell') || document.querySelector('.welcome-hero');
+    }
+
+    function isWelcomeShellAlreadyFramed() {
+        const shell = getWelcomeShell();
+        if (!shell) return false;
+        const rect = shell.getBoundingClientRect();
+        const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+        return rect.top >= -8 && rect.top <= 96 && rect.bottom >= Math.min(360, viewportHeight * 0.5);
+    }
+
+    function openWelcomeAuthLayer() {
+        welcomeAuthEntryScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+        welcomeAuthShouldScrollToHero = !isWelcomeShellAlreadyFramed();
+        setWelcomePageMode('auth');
+    }
+
+    function keepHeroInViewIfNeeded() {
+        const shell = getWelcomeShell();
+        if (!shell || typeof shell.scrollIntoView !== 'function') return;
+
+        const rect = shell.getBoundingClientRect();
+        const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+        const isAlreadyFramed = rect.top >= 0 && rect.top <= 96 && rect.bottom >= Math.min(360, viewportHeight * 0.5);
+        if (isAlreadyFramed) return;
+
+        shell.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
     window.welcomeShowAuthLogin = function () {
+        openWelcomeAuthLayer();
         showMode('login');
         configureHostedLoginMode();
+        setTimeout(() => {
+            if (welcomeAuthShouldScrollToHero) keepHeroInViewIfNeeded();
+        }, 0);
     };
 
     window.welcomeShowAuthRegister = function () {
+        openWelcomeAuthLayer();
         showMode('onboarding');
         configureHostedRegistrationMode();
+        setTimeout(() => {
+            if (welcomeAuthShouldScrollToHero) keepHeroInViewIfNeeded();
+        }, 0);
+    };
+
+    window.welcomeScrollToTop = function () {
+        window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+    };
+
+    window.welcomeScrollToRegister = function () {
+        window.welcomeShowAuthRegister();
+    };
+
+    window.welcomeReturnToHero = function () {
+        const finishReturn = () => {
+            clearHostedVerificationState();
+            setHostedAuthChoiceVisible(false);
+            setWelcomePageMode('landing');
+            if (!welcomeAuthShouldScrollToHero) {
+                window.requestAnimationFrame(() => {
+                    window.scrollTo({ top: welcomeAuthEntryScrollY, left: 0, behavior: 'auto' });
+                });
+            }
+        };
+
+        if (document.body?.dataset.mode === 'auth') {
+            document.body.classList.remove('welcome-auth-entering');
+            document.body.classList.add('welcome-auth-closing');
+            window.setTimeout(finishReturn, 220);
+            return;
+        }
+
+        finishReturn();
     };
 
     window.welcomeBackToAuthChoice = function () {
+        openWelcomeAuthLayer();
         clearHostedVerificationState();
         showMode('select');
         setHostedAuthChoiceVisible(true);
@@ -1045,7 +1155,7 @@
 
         if (mode === 'onboarding') {
             title.textContent = 'Добро пожаловать!';
-            subtitle.textContent = 'Похоже, вы здесь впервые. Создайте профиль, чтобы начать обучение.';
+            subtitle.textContent = 'Создайте профиль, чтобы начать.';
             return;
         }
 
@@ -1124,7 +1234,7 @@
 
         if (mode === 'onboarding') {
             title.textContent = 'Добро пожаловать!';
-            subtitle.textContent = 'Похоже, вы здесь впервые. Создайте профиль, чтобы начать обучение.';
+            subtitle.textContent = 'Создайте профиль, чтобы начать.';
             return;
         }
 
@@ -1188,7 +1298,16 @@
             return false;
         }
 
-        const consent = collectConsent(consentConfig.termsCheckboxId, consentConfig.privacyCheckboxId);
+        if (!hasRequiredConsentVersions()) {
+            showMissingLegalDocumentsError(errorElementId);
+            return false;
+        }
+
+        const consent = collectConsent(
+            consentConfig.termsCheckboxId,
+            consentConfig.privacyCheckboxId,
+            consentConfig.refundCheckboxId
+        );
         if (!consent.accepted) {
             showError(errorElementId, 'Подтвердите согласие с условиями и политикой приватности');
             return false;
@@ -1264,7 +1383,11 @@
                 showError('onboardingError', 'Не удалось загрузить документы для согласия');
                 return;
             }
-            const consent = collectConsent('onboardingAcceptTerms', 'onboardingAcceptPrivacy');
+            if (!hasRequiredConsentVersions()) {
+                showMissingLegalDocumentsError('onboardingError');
+                return;
+            }
+            const consent = collectConsent('onboardingAcceptTerms', 'onboardingAcceptPrivacy', 'onboardingAcceptRefund');
             if (!consent.accepted) {
                 showError('onboardingError', 'Подтвердите согласие с документами');
                 return;
@@ -1298,6 +1421,7 @@
         const ok = await createAndSelect(name, avatar, 'onboardingError', {
             termsCheckboxId: 'onboardingAcceptTerms',
             privacyCheckboxId: 'onboardingAcceptPrivacy',
+            refundCheckboxId: 'onboardingAcceptRefund',
         });
         if (ok) goToMain();
     };
@@ -1309,6 +1433,7 @@
         const ok = await createAndSelect(name, avatar, 'selectError', {
             termsCheckboxId: 'selectAcceptTerms',
             privacyCheckboxId: 'selectAcceptPrivacy',
+            refundCheckboxId: 'selectAcceptRefund',
         });
         if (ok) goToMain();
     };
@@ -1356,7 +1481,7 @@
                                 </button>
                             </span>
                         </label>
-                        <label class="flex items-start gap-3 text-sm text-text-main cursor-pointer">
+                        <label class="flex items-start gap-3 text-sm text-text-main mb-2 cursor-pointer">
                             <input type="checkbox" id="selectAcceptPrivacy"
                                 class="mt-0.5 rounded text-primary focus:ring-primary"
                                 onchange="window.welcomeUpdateConsentState('select')">
@@ -1366,6 +1491,19 @@
                                     class="text-primary hover:underline font-semibold"
                                     onclick="window.welcomeOpenLegalDocument('privacy'); return false;">
                                     Политикой приватности
+                                </button>
+                            </span>
+                        </label>
+                        <label class="flex items-start gap-3 text-sm text-text-main cursor-pointer">
+                            <input type="checkbox" id="selectAcceptRefund"
+                                class="mt-0.5 rounded text-primary focus:ring-primary"
+                                onchange="window.welcomeUpdateConsentState('select')">
+                            <span>
+                                Я ознакомился(ась) с
+                                <button type="button"
+                                    class="text-primary hover:underline font-semibold"
+                                    onclick="window.welcomeOpenLegalDocument('refund'); return false;">
+                                    Политикой возвратов
                                 </button>
                             </span>
                         </label>
@@ -1604,10 +1742,435 @@
         container.innerHTML = cardsHtml + addCardHtml;
     }
 
+    function setupWelcomeSurfaceCarousel() {
+        document.querySelectorAll('[data-welcome-carousel]').forEach((carousel) => {
+            const track = carousel.querySelector('[data-welcome-carousel-track]');
+            const slides = Array.from(carousel.querySelectorAll('[data-welcome-carousel-slide]'));
+            const tabs = Array.from(carousel.querySelectorAll('[data-welcome-carousel-tab]'));
+            const prev = carousel.querySelector('[data-welcome-carousel-prev]');
+            const next = carousel.querySelector('[data-welcome-carousel-next]');
+            if (!track || slides.length === 0) return;
+
+            let activeIndex = Math.max(0, slides.findIndex((slide) => slide.classList.contains('is-active')));
+            if (activeIndex < 0) activeIndex = 0;
+            let autoplayTimer = 0;
+            const autoplayDelay = Number(carousel.dataset.welcomeCarouselDelay || 6200);
+            const canAutoplay = !window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+
+            const stopAutoplay = () => {
+                if (autoplayTimer) {
+                    window.clearTimeout(autoplayTimer);
+                    autoplayTimer = 0;
+                }
+            };
+
+            const startAutoplay = (delay = autoplayDelay) => {
+                if (!canAutoplay || autoplayTimer || slides.length < 2) return;
+                autoplayTimer = window.setTimeout(() => {
+                    autoplayTimer = 0;
+                    setActiveSlide(activeIndex + 1, { userInitiated: false });
+                    startAutoplay();
+                }, delay);
+            };
+
+            const pauseAutoplayBriefly = () => {
+                if (!canAutoplay) return;
+                stopAutoplay();
+                startAutoplay(autoplayDelay * 1.15);
+            };
+
+            const setActiveSlide = (nextIndex, options = {}) => {
+                activeIndex = (nextIndex + slides.length) % slides.length;
+                track.style.transform = `translateX(-${activeIndex * 100}%)`;
+
+                slides.forEach((slide, index) => {
+                    const isActive = index === activeIndex;
+                    slide.classList.toggle('is-active', isActive);
+                    slide.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+                    slide.inert = !isActive;
+                    if (slide.getAttribute('role') === 'tabpanel') {
+                        slide.tabIndex = isActive ? 0 : -1;
+                    }
+                });
+
+                tabs.forEach((tab, index) => {
+                    const isActive = index === activeIndex;
+                    tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+                    tab.tabIndex = isActive ? 0 : -1;
+                });
+
+                if (options.userInitiated) {
+                    pauseAutoplayBriefly();
+                }
+            };
+
+            tabs.forEach((tab, index) => {
+                tab.addEventListener('click', () => setActiveSlide(index, { userInitiated: true }));
+            });
+
+            prev?.addEventListener('click', () => setActiveSlide(activeIndex - 1, { userInitiated: true }));
+            next?.addEventListener('click', () => setActiveSlide(activeIndex + 1, { userInitiated: true }));
+
+            carousel.addEventListener('keydown', (event) => {
+                if (event.key === 'ArrowLeft') {
+                    event.preventDefault();
+                    setActiveSlide(activeIndex - 1, { userInitiated: true });
+                    tabs[activeIndex]?.focus();
+                } else if (event.key === 'ArrowRight') {
+                    event.preventDefault();
+                    setActiveSlide(activeIndex + 1, { userInitiated: true });
+                    tabs[activeIndex]?.focus();
+                }
+            });
+
+            carousel.addEventListener('mouseenter', stopAutoplay);
+            carousel.addEventListener('mouseleave', () => startAutoplay());
+            carousel.addEventListener('focusin', stopAutoplay);
+            carousel.addEventListener('focusout', () => {
+                startAutoplay(900);
+            });
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden) {
+                    stopAutoplay();
+                } else {
+                    startAutoplay();
+                }
+            });
+
+            setActiveSlide(activeIndex);
+            startAutoplay();
+        });
+    }
+
+    function markDecorativeMaterialIcons() {
+        document.querySelectorAll('.material-symbols-outlined').forEach((icon) => {
+            if (!icon.hasAttribute('aria-label') && !icon.hasAttribute('aria-hidden')) {
+                icon.setAttribute('aria-hidden', 'true');
+            }
+        });
+    }
+
+    function createWelcomePracticeDemoTask() {
+        const questions = [
+            {
+                id: 'wave_q1',
+                text: 'Какой параметр электромагнитной волны определяет расстояние между двумя соседними максимумами?',
+                answers: [
+                    { id: 0, text: 'Длина волны' },
+                    { id: 1, text: 'Амплитуда сигнала' },
+                    { id: 2, text: 'Период полураспада' },
+                ],
+            },
+            {
+                id: 'wave_q2',
+                text: 'Какие утверждения верны для электромагнитных волн?',
+                answers: [
+                    { id: 0, text: 'Могут распространяться в вакууме' },
+                    { id: 1, text: 'Всегда требуют упругую среду' },
+                    { id: 2, text: 'Переносят энергию' },
+                ],
+            },
+            {
+                id: 'wave_q3',
+                text: 'Что происходит с частотой волны, если период колебаний уменьшается?',
+                answers: [
+                    { id: 0, text: 'Частота уменьшается' },
+                    { id: 1, text: 'Частота увеличивается' },
+                    { id: 2, text: 'Частота не зависит от периода' },
+                ],
+            },
+            {
+                id: 'wave_q4',
+                text: 'Какая величина показывает число колебаний за одну секунду?',
+                answers: [
+                    { id: 0, text: 'Частота' },
+                    { id: 1, text: 'Длина волны' },
+                    { id: 2, text: 'Фаза' },
+                ],
+            },
+            {
+                id: 'wave_q5',
+                text: 'В какой среде электромагнитная волна может распространяться без вещества?',
+                answers: [
+                    { id: 0, text: 'В вакууме' },
+                    { id: 1, text: 'Только в воде' },
+                    { id: 2, text: 'Только в твёрдом теле' },
+                ],
+            },
+            {
+                id: 'wave_q6',
+                text: 'Как связаны скорость, длина волны и частота?',
+                answers: [
+                    { id: 0, text: 'Скорость равна произведению длины волны на частоту' },
+                    { id: 1, text: 'Скорость равна сумме длины волны и частоты' },
+                    { id: 2, text: 'Связи между ними нет' },
+                ],
+            },
+            {
+                id: 'wave_q7',
+                text: 'Что переносит электромагнитная волна?',
+                answers: [
+                    { id: 0, text: 'Энергию' },
+                    { id: 1, text: 'Только массу вещества' },
+                    { id: 2, text: 'Только электрический заряд' },
+                ],
+            },
+        ];
+
+        return {
+            metadata: {
+                id: 'welcome-practice-testui-preview',
+                name: 'Тест: параметры волны',
+                type: 'test',
+            },
+            task_data: {
+                id: 'welcome-practice-testui-preview',
+                type: 'test',
+                name: 'Тест: параметры волны',
+                difficulty: 1,
+                content: {
+                    test_type: 'single_choice',
+                    questions,
+                    show_options: true,
+                },
+                meta: {
+                    id: 'welcome-practice-testui-preview',
+                    module: 'onboarding-preview',
+                    topic: 'radiophysics',
+                    title: 'Тест: параметры волны',
+                },
+            },
+        };
+    }
+
+    function serializePreviewData(value) {
+        return JSON.stringify(value).replace(/</g, '\\u003c');
+    }
+
+    function buildWelcomePracticePreviewDoc() {
+        const task = serializePreviewData(createWelcomePracticeDemoTask());
+        const draft = serializePreviewData({
+            answers: {
+                wave_q1: 0,
+                wave_q2: 2,
+                wave_q3: 1,
+            },
+        });
+        const viewState = serializePreviewData({
+            current_index: 2,
+            visited_indices: [0, 1, 2],
+            sidebar_scroll_top: 0,
+        });
+
+        return `<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=1200, initial-scale=1">
+  <link href="/assets/fonts.css" rel="stylesheet">
+  <link href="/assets/tailwind.css" rel="stylesheet">
+  <link href="/assets/lightB-variables.css" rel="stylesheet">
+  <link href="/assets/lightB-components.css" rel="stylesheet">
+  <style>
+    html, body { width: 1200px; height: 675px; margin: 0; overflow: hidden; }
+    body { background: var(--color-bg-secondary); color: var(--color-text-main); }
+    .preview-shell { height: 100%; padding: 24px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px; }
+    .preview-toolbar { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(18rem, .95fr) auto; gap: 14px; align-items: center; border: 1px solid var(--color-border-strong); border-radius: 18px; background: var(--color-surface-1); padding: 14px; box-shadow: var(--shadow-sm); }
+    .preview-title { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .preview-title h1 { margin: 0; overflow: hidden; color: var(--color-text-main); font-size: 21px; font-weight: 800; line-height: 1.18; text-overflow: ellipsis; white-space: nowrap; }
+    .preview-title p { margin: 3px 0 0; color: var(--color-text-secondary); font-size: 12px; font-weight: 700; }
+    .preview-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 38px; border: 1px solid var(--color-border-strong); border-radius: 12px; background: var(--color-surface-2); color: var(--color-text-main); padding: 0 14px; font-size: 13px; font-weight: 800; }
+    .preview-btn--primary { border-color: var(--color-primary); background: var(--color-primary); color: var(--color-primary-fg); }
+    .preview-progress { display: grid; gap: 6px; border: 1px solid var(--color-border-strong); border-radius: 14px; background: var(--color-surface-2); padding: 9px 12px; }
+    .preview-progress div:first-child { display: flex; justify-content: space-between; color: var(--color-text-secondary); font-size: 12px; font-weight: 800; }
+    .preview-track { height: 8px; overflow: hidden; border-radius: 999px; background: var(--color-border-subtle); }
+    .preview-track span { display: block; width: 43%; height: 100%; border-radius: inherit; background: var(--color-primary); }
+    .preview-actions { display: flex; justify-content: flex-end; gap: 8px; }
+    #task-content { min-height: 0; flex: 1; }
+    #task-content > .grid { height: 100%; }
+  </style>
+</head>
+<body class="font-display antialiased">
+  <div class="preview-shell">
+    <header class="preview-toolbar">
+      <div class="preview-title">
+        <span class="preview-btn preview-btn--primary">← К списку</span>
+        <div>
+          <h1>Тест: параметры волны</h1>
+          <p>Практика · радиофизика</p>
+        </div>
+      </div>
+      <div class="preview-progress">
+        <div><span>Задание 3 из 7</span><span>Итерация 1</span></div>
+        <div class="preview-track"><span></span></div>
+      </div>
+      <div class="preview-actions">
+        <span class="preview-btn preview-btn--primary">Проверить</span>
+        <span class="preview-btn">Завершить комплекс</span>
+      </div>
+    </header>
+    <main id="task-content"></main>
+  </div>
+  <script src="/ui/TestUI/TestUI.web.js?v=20260402-reviewfix1"><\/script>
+  <script src="/ui/TestUI/TestUI.question.js?v=20260402-reviewfix1"><\/script>
+  <script src="/ui/TestUI/TestUI.sidebar.js"><\/script>
+  <script>
+    const task = ${task};
+    const draft = ${draft};
+    const viewState = ${viewState};
+    const mount = document.getElementById('task-content');
+    if (mount && typeof TestUI !== 'undefined' && TestUI.render) {
+      TestUI.render(mount, task);
+      TestUI.restoreInput?.(draft);
+      TestUI.restoreViewState?.(viewState);
+    }
+  <\/script>
+</body>
+</html>`;
+    }
+
+    function buildWelcomeResultPreviewDoc() {
+        const resultData = serializePreviewData({
+            session_id: '',
+            complex_name: 'Тест: параметры волны',
+            iteration: 1,
+            total_tasks: 9,
+            successful_tasks: 7,
+            failed_tasks: 2,
+            has_next_iteration: true,
+            duration_seconds: 270,
+            difficulty: 2,
+            iteration_results: [
+                { id: 'q1', task_name: 'Длина волны', success: true, difficulty: 2 },
+                { id: 'q2', task_name: 'Свойства электромагнитных волн', success: true, difficulty: 2 },
+                {
+                    id: 'q3',
+                    task_name: 'Связь периода и частоты',
+                    prompt: 'Что происходит с частотой волны, если период колебаний уменьшается?',
+                    success: false,
+                    difficulty: 2,
+                    user_answer: 'Частота уменьшается',
+                    correct_answer: 'Частота увеличивается',
+                    result_note: 'Частота обратно пропорциональна периоду: чем меньше период, тем больше частота.',
+                },
+                { id: 'q4', task_name: 'Частота колебаний', success: true, difficulty: 2 },
+                { id: 'q5', task_name: 'Распространение в вакууме', success: true, difficulty: 2 },
+                { id: 'q5b', task_name: 'Амплитуда сигнала', success: true, difficulty: 2 },
+                {
+                    id: 'q6',
+                    task_name: 'Скорость волны',
+                    prompt: 'Как связаны скорость, длина волны и частота?',
+                    success: false,
+                    difficulty: 2,
+                    user_answer: 'Скорость равна сумме длины волны и частоты',
+                    correct_answer: 'Скорость равна произведению длины волны на частоту',
+                    result_note: 'Используйте формулу v = λν.',
+                },
+                { id: 'q7', task_name: 'Перенос энергии', success: true, difficulty: 2 },
+                { id: 'q8', task_name: 'Энергия электромагнитной волны', success: true, difficulty: 2 },
+            ],
+        });
+
+        return `<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=1200, initial-scale=1">
+  <link href="/assets/tailwind.css" rel="stylesheet">
+  <link href="/assets/fonts.css" rel="stylesheet">
+  <link href="/assets/lightB-variables.css" rel="stylesheet">
+  <link href="/assets/lightB-components.css" rel="stylesheet">
+  <link href="/assets/s2-results.css" rel="stylesheet">
+  <style>html,body{width:1200px;height:675px;margin:0;overflow:hidden}.s2-root{height:100vh}.s2-page-shell{min-height:100vh;padding:24px}.s2-main-stage{min-height:0}.s2-main{gap:16px}</style>
+</head>
+<body class="font-display bg-bg-main text-text-main antialiased">
+  <div class="s2-root">
+    <div class="s2-page-shell">
+      <header class="s2-toolbar">
+        <div class="s2-toolbar-main">
+          <div class="s2-toolbar-title">
+            <p class="s2-toolbar-context"><span id="complex-name">Комплекс</span><span class="s2-toolbar-separator">·</span><span>Итерация <span id="iteration-number-label">?</span></span></p>
+          </div>
+        </div>
+        <div class="s2-toolbar-actions">
+          <button id="pause-btn-inline" class="s2-btn s2-ghost-btn s2-toolbar-action-btn" type="button">Пауза</button>
+          <button id="finish-complex-btn-inline" class="s2-btn s2-danger-btn s2-toolbar-action-btn" type="button">Завершить комплекс</button>
+          <div id="toolbar-menu-wrap" class="s2-menu-wrap">
+            <button id="toolbar-menu-btn" class="s2-btn s2-menu-btn" type="button" aria-label="Дополнительные действия"><span class="material-symbols-outlined" aria-hidden="true">more_horiz</span></button>
+            <div id="toolbar-menu-panel" class="s2-menu-panel hidden" role="menu" aria-hidden="true">
+              <button id="pause-btn" class="s2-menu-item" type="button" role="menuitem">Поставить на паузу</button>
+              <button id="finish-complex-btn" class="s2-menu-item s2-menu-item--danger" type="button" role="menuitem">Завершить комплекс</button>
+            </div>
+          </div>
+        </div>
+      </header>
+      <div class="s2-main-stage">
+        <main id="s2-main" class="s2-main">
+          <section class="s2-panel s2-result-panel" aria-labelledby="result-heading">
+            <div class="s2-result-head"><div class="s2-result-copy"><p class="s2-eyebrow">Результат</p><div class="s2-hero-line"><div class="s2-score-stack"><h1 id="result-heading" class="s2-score-line"><span id="stat-success-rate">—</span></h1></div></div><p id="hero-summary" class="s2-hero-summary">Короткая сводка появится сразу после загрузки.</p></div></div>
+            <div class="s2-result-footer">
+              <div class="s2-progress-block"><div class="s2-progress-track" aria-hidden="true"><div id="progress-success-bar" class="s2-progress-bar s2-progress-bar--success"></div><div id="progress-failed-bar" class="s2-progress-bar s2-progress-bar--error"></div></div><div class="s2-progress-counts"><span class="s2-count-chip s2-count-chip--success"><strong id="hero-success-count">—</strong> верно</span><span id="hero-failed-chip" class="s2-count-chip s2-count-chip--error"><strong id="hero-failed-count">—</strong> ошибок</span></div></div>
+              <div class="s2-meta-strip" aria-label="Контекст итерации"><span class="s2-meta-inline"><span class="s2-meta-pill-label">Задачи</span><strong id="stat-total-tasks">—</strong></span><span class="s2-meta-inline"><span class="s2-meta-pill-label">Сложность</span><strong id="stat-difficulty">—</strong></span><span class="s2-meta-inline"><span class="s2-meta-pill-label">Время</span><strong id="stat-iteration-time">—</strong></span></div>
+            </div>
+          </section>
+          <section class="s2-panel s2-action-panel"><article id="continue-btn" class="s2-action-card s2-action-card--next" role="button" tabindex="0"><p class="s2-eyebrow">Следующий шаг</p><h2 id="recommendation-title" class="s2-action-title">—</h2><p id="recommendation-copy" class="s2-action-copy">—</p><div class="s2-next-cta" aria-hidden="true"><span id="continue-btn-label" class="truncate s2-next-cta-text">К следующей итерации</span></div></article></section>
+          <section id="result-review-panel" class="s2-result-review hidden" aria-hidden="true"><div class="s2-result-review-head"><div class="s2-result-review-copy"><p class="s2-eyebrow">Разбор ошибок</p><h2 id="result-review-title" class="s2-review-panel-title">—</h2><p id="result-review-copy" class="s2-action-copy">—</p></div><button id="review-btn" class="s2-btn s2-secondary-btn hidden" type="button">Показать разбор</button></div><div id="review-inline" class="s2-inline-review hidden" aria-hidden="true"></div></section>
+          <div hidden aria-hidden="true"><strong id="stat-total-tasks-main">—</strong><strong id="stat-failed-tasks">—</strong><div id="trigger-tasks-list"></div></div>
+        </main>
+      </div>
+    </div>
+  </div>
+  <div id="details-dialog-backdrop" class="s2-dialog-backdrop hidden" aria-hidden="true"><div class="s2-dialog-panel"><div class="s2-dialog-header"><div><p class="s2-eyebrow">Детали</p><h2 id="details-dialog-title" class="s2-dialog-title">Детали итерации</h2><p id="details-dialog-subtitle" class="s2-dialog-subtitle">—</p></div><button id="details-dialog-close-btn" class="s2-btn s2-ghost-btn" type="button">Закрыть</button></div><div class="s2-dialog-body"><div class="s2-dialog-metrics"><div class="s2-dialog-metric"><span class="s2-meta-pill-label">Точность</span><strong id="details-rate">—</strong></div><div class="s2-dialog-metric"><span class="s2-meta-pill-label">Верно</span><strong id="details-success">—</strong></div><div class="s2-dialog-metric"><span class="s2-meta-pill-label">Ошибки</span><strong id="details-failed">—</strong></div><div class="s2-dialog-metric"><span class="s2-meta-pill-label">Время</span><strong id="details-time">—</strong></div></div><div class="s2-dialog-progress-track"><div id="details-success-bar" class="s2-progress-bar s2-progress-bar--success"></div><div id="details-failed-bar" class="s2-progress-bar s2-progress-bar--error"></div></div><div id="details-errors" class="s2-dialog-list"></div></div></div></div>
+  <script src="/assets/s2-results.js?v=20260511-copy1"><\/script>
+  <script>
+    if (window.S2Page && typeof window.S2Page.renderIterationResults === 'function') {
+      window.S2Page.renderIterationResults(${resultData});
+    }
+  <\/script>
+</body>
+</html>`;
+    }
+
+    function setupWelcomePreviewStages() {
+        const updateStage = (stage) => {
+            const canvas = stage.querySelector('[data-welcome-preview-canvas]');
+            if (!canvas) return;
+            const scale = Math.max(0.1, stage.clientWidth / 1200);
+            canvas.style.setProperty('--welcome-preview-scale', scale.toFixed(5));
+        };
+
+        const stages = Array.from(document.querySelectorAll('[data-welcome-preview-stage]'));
+        stages.forEach(updateStage);
+        if (typeof ResizeObserver === 'function') {
+            const observer = new ResizeObserver((entries) => {
+                entries.forEach((entry) => updateStage(entry.target));
+            });
+            stages.forEach((stage) => observer.observe(stage));
+        } else {
+            window.addEventListener('resize', () => stages.forEach(updateStage));
+        }
+    }
+
+    function setupWelcomePreviewFrames() {
+        const practiceFrame = document.getElementById('welcomePracticePreviewFrame');
+        if (practiceFrame && !practiceFrame.srcdoc) {
+            practiceFrame.srcdoc = buildWelcomePracticePreviewDoc();
+        }
+
+        const resultFrame = document.getElementById('welcomeResultPreviewFrame');
+        if (resultFrame && !resultFrame.srcdoc) {
+            resultFrame.srcdoc = buildWelcomeResultPreviewDoc();
+        }
+    }
+
     // --- Initialize ---
     async function init() {
         if (initStarted) return;
         initStarted = true;
+        markDecorativeMaterialIcons();
+        setupWelcomePreviewFrames();
+        setupWelcomePreviewStages();
+        setupWelcomeSurfaceCarousel();
         const verifyEmailToken = getSearchParam('verify_email_token');
         const resetPasswordToken = getSearchParam('reset_password_token');
         const overlay = document.getElementById('loadingOverlay');
@@ -1658,6 +2221,7 @@
 
             if (verifyEmailToken) {
                 removeSearchParam('verify_email_token');
+                openWelcomeAuthLayer();
                 showMode('onboarding');
                 configureHostedRegistrationMode();
                 await submitWelcomeEmailVerificationToken(verifyEmailToken);
@@ -1666,6 +2230,7 @@
 
             if (resetPasswordToken) {
                 removeSearchParam('reset_password_token');
+                openWelcomeAuthLayer();
                 showMode('login');
                 configureHostedLoginMode();
                 window.welcomeOpenForgotPasswordModal({ resetToken: resetPasswordToken });
