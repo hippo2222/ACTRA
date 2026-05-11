@@ -105,6 +105,17 @@ async function checkHttpsAndRedirect(baseUrl) {
 }
 
 async function checkPublicPages(baseUrl) {
+  const rootRedirect = await fetch(new URL("/", baseUrl), { redirect: "manual" });
+  const rootLocation = rootRedirect.headers.get("location") || "";
+  assert(
+    rootRedirect.status >= 300 && rootRedirect.status < 400,
+    `/ must redirect to /ui/welcome, got status ${rootRedirect.status}`
+  );
+  assert(
+    rootLocation === "/ui/welcome" || rootLocation.endsWith("/ui/welcome"),
+    `/ redirects to unexpected location: ${rootLocation || "<empty>"}`
+  );
+
   const cache = new Map();
   for (const path of REQUIRED_PUBLIC_PATHS) {
     const result = await fetchText(baseUrl, path);
@@ -119,11 +130,13 @@ async function checkPublicPages(baseUrl) {
 
   const root = cache.get("/") || "";
   assertContains(root, "ACTRA", "/");
-  assertContains(root, "What ACTRA does", "/");
+  assertContains(root, "Premium", "/");
   assertContains(root, "$4.99", "/");
   assertContains(root, "$7.99", "/");
   assertContains(root, "$19.99", "/");
-  assertContains(root, "ACTRA Premium is a digital service", "/");
+  assertContains(root, "/pricing?lang=ru", "/");
+  assertContains(root, "/refund?lang=ru", "/");
+  assertContains(root, "/terms?lang=ru", "/");
 
   const pricing = cache.get("/pricing") || "";
   assertContains(pricing, "$4.99", "/pricing");

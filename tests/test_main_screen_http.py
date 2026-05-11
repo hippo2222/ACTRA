@@ -225,21 +225,25 @@ def test_hosted_ui_pages_redirect_to_welcome_without_auth(client, monkeypatch, t
     assert welcome_response.status_code == 200
 
 
-def test_root_serves_public_product_page(client, monkeypatch):
+def test_root_redirects_to_public_welcome_page(client, monkeypatch):
     _install_hosted_runtime(monkeypatch, users=[])
 
     response = client.get("/")
 
-    assert response.status_code == 200
-    assert "text/html" in (response.content_type or "")
-    text = response.get_data(as_text=True)
+    assert response.status_code == 302
+    assert response.headers["Location"].endswith("/ui/welcome")
+
+    welcome_response = client.get("/", follow_redirects=True)
+    assert welcome_response.status_code == 200
+    assert "text/html" in (welcome_response.content_type or "")
+    text = welcome_response.get_data(as_text=True)
     assert "ACTRA" in text
-    assert "What ACTRA does" in text
     assert "$4.99" in text
     assert "$7.99" in text
     assert "$19.99" in text
-    assert "/ui/welcome" in text
-    assert "/pricing?lang=en" in text
+    assert "/pricing?lang=ru" in text
+    assert "/refund?lang=ru" in text
+    assert "/terms?lang=ru" in text
 
 
 def test_public_legal_pages_are_available_without_hosted_auth(client, monkeypatch):

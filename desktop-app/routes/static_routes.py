@@ -975,8 +975,8 @@ def serve_catalog_file(filename: str) -> Any:
 
 @static_bp.route("/", methods=["GET"])
 def serve_root_ui_alias() -> Any:
-    """Serve the public product page for domain and payment verification."""
-    return _public_home_page()
+    """Send the product domain entry point to the public welcome experience."""
+    return redirect("/ui/welcome", code=302)
 
 
 @static_bp.route("/robots.txt", methods=["GET"])
