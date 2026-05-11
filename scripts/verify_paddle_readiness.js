@@ -160,6 +160,8 @@ async function checkPublicPages(baseUrl) {
 
   const welcome = cache.get("/ui/welcome") || "";
   assert(!welcome.includes("heroGradient.js"), "/ui/welcome still references removed heroGradient.js");
+  assert(!welcome.includes("/ui/editor/Theory_Editor.html"), "/ui/welcome still embeds the protected theory editor route");
+  assertContains(welcome, "welcome-theory-real", "/ui/welcome");
   assertContains(welcome, "onboardingAcceptRefund", "/ui/welcome");
   assertContains(welcome, "consentGateAcceptRefund", "/ui/welcome");
 

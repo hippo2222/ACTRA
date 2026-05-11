@@ -58,6 +58,15 @@ describe('welcome hosted auth flow', () => {
     vi.restoreAllMocks();
   });
 
+  it('keeps the public theory editor showcase independent from hosted auth', () => {
+    const html = loadFile('frontend/Welcome/welcome.html');
+
+    expect(html).toContain('welcomeShowcasePanelTheory');
+    expect(html).toContain('welcome-theory-real');
+    expect(html).not.toContain('/ui/editor/Theory_Editor.html');
+    expect(html).not.toContain('welcomeTheoryPreviewFrame');
+  });
+
   it('shows auth choice in hosted mode and switches to login form', async () => {
     const fetchMock = vi.fn(async (input) => {
       const url = typeof input === 'string' ? input : String(input?.url || '');
