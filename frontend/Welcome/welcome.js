@@ -684,7 +684,7 @@
 
         const consent = collectConsent('consentGateAcceptTerms', 'consentGateAcceptPrivacy', 'consentGateAcceptRefund');
         if (!consent.accepted) {
-            showConsentGateError('Подтвердите оба документа');
+            showConsentGateError('Подтвердите все три документа');
             return;
         }
 

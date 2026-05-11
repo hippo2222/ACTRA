@@ -1370,6 +1370,347 @@
             box-shadow: var(--welcome-card-shadow) !important;
         }
 
+        #consentGateModal {
+            overflow-y: auto;
+        }
+
+        #consentGateModal .consent-gate-card {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            max-height: min(88vh, 46rem);
+            border: 1px solid color-mix(in srgb, var(--welcome-stone) 72%, transparent);
+            border-radius: 24px !important;
+            background:
+                linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 253, 250, 0.98)),
+                #ffffff;
+            box-shadow: 0 28px 70px rgba(38, 22, 20, 0.22);
+        }
+
+        .consent-gate-header {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr) auto;
+            gap: 1rem;
+            align-items: start;
+            padding: 1.35rem 1.35rem 1.05rem;
+            background:
+                radial-gradient(circle at top left, color-mix(in srgb, var(--welcome-orange) 16%, transparent), transparent 42%),
+                color-mix(in srgb, var(--welcome-parchment) 58%, #ffffff 42%);
+        }
+
+        .consent-gate-icon {
+            display: grid;
+            place-items: center;
+            width: 3rem;
+            height: 3rem;
+            border: 1px solid color-mix(in srgb, var(--welcome-orange) 32%, transparent);
+            border-radius: 16px;
+            background: #ffffff;
+            color: var(--welcome-orange);
+            box-shadow: 0 10px 22px rgba(156, 66, 21, 0.12);
+        }
+
+        .consent-gate-title {
+            margin: 0;
+            color: var(--welcome-midnight);
+            font-size: 1.35rem;
+            font-weight: 850;
+            line-height: 1.12;
+        }
+
+        .consent-gate-copy {
+            margin: 0.45rem 0 0;
+            color: var(--welcome-graphite);
+            font-size: 0.88rem;
+            font-weight: 650;
+            line-height: 1.5;
+        }
+
+        .consent-gate-close {
+            display: grid;
+            place-items: center;
+            width: 2.35rem;
+            height: 2.35rem;
+            border: 1px solid color-mix(in srgb, var(--welcome-stone) 72%, transparent);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.78);
+            color: var(--welcome-graphite);
+            transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+        }
+
+        .consent-gate-close:hover,
+        .consent-gate-close:focus-visible {
+            background: #ffffff;
+            color: var(--welcome-midnight);
+            transform: translateY(-1px);
+        }
+
+        .consent-gate-body {
+            display: grid;
+            gap: 0.85rem;
+            min-height: 0;
+            overflow-y: auto;
+            padding: 1.15rem 1.35rem;
+        }
+
+        .consent-gate-version-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.9rem;
+            border: 1px solid color-mix(in srgb, var(--welcome-blue) 18%, var(--welcome-stone));
+            border-radius: 16px;
+            background: color-mix(in srgb, var(--welcome-blue) 7%, #ffffff 93%);
+            padding: 0.82rem 0.95rem;
+        }
+
+        .consent-gate-version-card p {
+            margin: 0;
+        }
+
+        .consent-gate-version-label {
+            color: var(--welcome-midnight);
+            font-size: 0.76rem;
+            font-weight: 850;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        #consentGateVersions {
+            color: var(--welcome-graphite);
+            font-size: 0.82rem;
+            font-weight: 760;
+            line-height: 1.35;
+            text-align: right;
+        }
+
+        .consent-gate-checklist {
+            display: grid;
+            gap: 0.65rem;
+        }
+
+        .consent-gate-check {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr);
+            gap: 0.75rem;
+            align-items: start;
+            border: 1px solid color-mix(in srgb, var(--welcome-stone) 74%, transparent);
+            border-radius: 18px;
+            background: #ffffff;
+            padding: 0.85rem;
+            color: var(--welcome-midnight);
+            cursor: pointer;
+            transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+        }
+
+        .consent-gate-check:hover,
+        .consent-gate-check:focus-within {
+            border-color: color-mix(in srgb, var(--welcome-orange) 38%, var(--welcome-stone));
+            box-shadow: 0 12px 24px rgba(38, 22, 20, 0.08);
+            transform: translateY(-1px);
+        }
+
+        .consent-gate-check input {
+            width: 1.05rem;
+            height: 1.05rem;
+            margin-top: 0.15rem;
+            accent-color: var(--welcome-midnight);
+        }
+
+        .consent-gate-check strong {
+            display: block;
+            color: var(--welcome-midnight);
+            font-size: 0.92rem;
+            font-weight: 850;
+            line-height: 1.25;
+        }
+
+        .consent-gate-check > span {
+            display: block;
+            margin-top: 0.16rem;
+            color: var(--welcome-graphite);
+            font-size: 0.78rem;
+            font-weight: 650;
+            line-height: 1.42;
+        }
+
+        .consent-gate-check > span > span {
+            display: block;
+            margin-top: 0.16rem;
+        }
+
+        .consent-gate-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.2rem;
+            margin-top: 0.42rem;
+            border: 0;
+            background: transparent;
+            color: var(--welcome-orange);
+            cursor: pointer;
+            font-size: 0.78rem;
+            font-weight: 850;
+            padding: 0;
+            text-decoration: none;
+        }
+
+        .consent-gate-link:hover,
+        .consent-gate-link:focus-visible {
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        }
+
+        .consent-gate-link .material-symbols-outlined {
+            display: inline-flex;
+            margin: 0;
+            color: inherit;
+            font-size: 1rem;
+            line-height: 1;
+        }
+
+        .consent-gate-icon-mark {
+            font-size: 1.25rem;
+            font-weight: 900;
+            line-height: 1;
+        }
+
+        .consent-gate-error {
+            border-radius: 14px;
+        }
+
+        .consent-gate-actions {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: 0.65rem;
+            border-top: 1px solid color-mix(in srgb, var(--welcome-stone) 72%, transparent);
+            background: color-mix(in srgb, var(--welcome-parchment) 34%, #ffffff 66%);
+            padding: 1rem 1.35rem 1.15rem;
+        }
+
+        .consent-gate-secondary,
+        .consent-gate-primary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.45rem;
+            min-height: 2.75rem;
+            border-radius: 999px;
+            padding: 0.74rem 1rem;
+            font-size: 0.88rem;
+            font-weight: 820;
+            transition: background 0.18s ease, transform 0.18s ease, opacity 0.18s ease;
+        }
+
+        .consent-gate-secondary {
+            border: 1px solid color-mix(in srgb, var(--welcome-stone) 82%, transparent);
+            background: #ffffff;
+            color: var(--welcome-midnight);
+        }
+
+        .consent-gate-primary {
+            border: 1px solid var(--welcome-midnight);
+            background: var(--welcome-midnight);
+            color: #ffffff;
+        }
+
+        .consent-gate-secondary:hover,
+        .consent-gate-primary:hover {
+            transform: translateY(-1px);
+        }
+
+        .consent-gate-primary:disabled {
+            opacity: 0.46;
+            transform: none;
+        }
+
+        @media (max-width: 640px) {
+            .consent-gate-header {
+                grid-template-columns: auto minmax(0, 1fr);
+            }
+
+            .consent-gate-close {
+                grid-column: 2;
+                grid-row: 1;
+                justify-self: end;
+            }
+
+            .consent-gate-title {
+                font-size: 1.18rem;
+            }
+
+            #consentGateModal .consent-gate-card {
+                max-height: calc(100vh - 20px);
+            }
+
+            .consent-gate-header {
+                gap: 0.75rem;
+                padding: 0.95rem 1rem 0.82rem;
+            }
+
+            .consent-gate-icon {
+                width: 2.65rem;
+                height: 2.65rem;
+                border-radius: 14px;
+            }
+
+            .consent-gate-copy {
+                font-size: 0.82rem;
+                line-height: 1.4;
+            }
+
+            .consent-gate-body {
+                gap: 0.58rem;
+                padding: 0.82rem 1rem;
+            }
+
+            .consent-gate-version-card {
+                gap: 0.4rem;
+                padding: 0.68rem 0.75rem;
+            }
+
+            .consent-gate-check {
+                gap: 0.6rem;
+                border-radius: 15px;
+                padding: 0.7rem;
+            }
+
+            .consent-gate-check strong {
+                font-size: 0.86rem;
+            }
+
+            .consent-gate-check > span,
+            .consent-gate-check > span > span,
+            .consent-gate-link {
+                font-size: 0.74rem;
+            }
+
+            .consent-gate-link {
+                margin-top: 0.25rem;
+            }
+
+            .consent-gate-actions {
+                gap: 0.55rem;
+                padding: 0.75rem 1rem 0.82rem;
+            }
+
+            .consent-gate-secondary,
+            .consent-gate-primary {
+                min-height: 2.5rem;
+                padding: 0.62rem 0.85rem;
+            }
+
+            .consent-gate-version-card,
+            .consent-gate-actions {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            #consentGateVersions {
+                text-align: left;
+            }
+        }
+
         .welcome-marketing {
             display: grid;
             gap: var(--welcome-section-gap);
@@ -6601,57 +6942,73 @@
     <!-- Consent Gate Modal (for outdated/missing consent) -->
     <div id="consentGateModal"
         class="fixed inset-0 z-[95] hidden items-center justify-center bg-scrim-strong backdrop-blur-md p-4">
-        <div class="w-full max-w-lg rounded-2xl bg-surface-1 border border-border-subtle shadow-2xl overflow-hidden">
-            <div class="px-5 py-4 border-b border-border-subtle bg-surface-2">
-                <h3 class="text-lg font-bold text-text-main">Требуется согласие с условиями</h3>
-                <p class="text-xs text-text-secondary mt-1">Перед продолжением необходимо подтвердить актуальные
-                    документы.</p>
-            </div>
-            <div class="p-5">
-                <div class="rounded-xl border border-border-subtle bg-surface-2 p-4 mb-4">
-                    <p class="text-xs text-text-secondary mb-2">Текущие версии:</p>
-                    <p id="consentGateVersions" class="text-sm font-medium text-text-main"></p>
+        <div class="consent-gate-card w-full max-w-xl">
+            <div class="consent-gate-header">
+                <div class="consent-gate-icon" aria-hidden="true">
+                    <span class="consent-gate-icon-mark">✓</span>
                 </div>
-                <label class="flex items-start gap-3 text-sm text-text-main mb-3 cursor-pointer">
-                    <input type="checkbox" id="consentGateAcceptTerms"
-                        class="mt-0.5 rounded text-primary focus:ring-primary"
-                        onchange="window.welcomeUpdateConsentState('gate')">
-                    <span>Я принимаю
-                        <button type="button" class="text-primary hover:underline font-semibold"
-                            onclick="window.welcomeOpenLegalDocument('terms'); return false;">Условия
-                            пользования</button>
-                    </span>
-                </label>
-                <label class="flex items-start gap-3 text-sm text-text-main cursor-pointer">
-                    <input type="checkbox" id="consentGateAcceptPrivacy"
-                        class="mt-0.5 rounded text-primary focus:ring-primary"
-                        onchange="window.welcomeUpdateConsentState('gate')">
-                    <span>Я ознакомился(ась) с
-                        <button type="button" class="text-primary hover:underline font-semibold"
-                            onclick="window.welcomeOpenLegalDocument('privacy'); return false;">Политикой
-                            приватности</button>
-                    </span>
-                </label>
-                <label class="flex items-start gap-3 text-sm text-text-main cursor-pointer">
-                    <input type="checkbox" id="consentGateAcceptRefund"
-                        class="mt-0.5 rounded text-primary focus:ring-primary"
-                        onchange="window.welcomeUpdateConsentState('gate')">
-                    <span>Я ознакомился(ась) с
-                        <button type="button" class="text-primary hover:underline font-semibold"
-                            onclick="window.welcomeOpenLegalDocument('refund'); return false;">Политикой
-                            возвратов</button>
-                    </span>
-                </label>
-                <p id="consentGateError"
-                    class="hidden mt-3 text-xs text-error bg-error/10 border border-error/20 rounded-lg px-3 py-2"></p>
+                <div>
+                    <h3 class="consent-gate-title">Подтвердите актуальные условия ACTRA</h3>
+                    <p class="consent-gate-copy">Мы обновили юридические документы. Чтобы продолжить работу с аккаунтом,
+                        отметьте все пункты ниже.</p>
+                </div>
+                <button type="button" class="consent-gate-close" onclick="window.welcomeCancelConsentGate()"
+                    aria-label="Закрыть окно подтверждения">
+                    <span aria-hidden="true">×</span>
+                </button>
             </div>
-            <div class="px-5 py-4 border-t border-border-subtle bg-surface-2 flex justify-end gap-2">
-                <button type="button" onclick="window.welcomeCancelConsentGate()"
-                    class="px-4 py-2 rounded-lg border border-border-strong text-text-main hover:bg-surface-1 transition-colors text-sm font-semibold">
-                    Отмена
+            <div class="consent-gate-body">
+                <div class="consent-gate-version-card">
+                    <p class="consent-gate-version-label">Актуальные версии</p>
+                    <p id="consentGateVersions"></p>
+                </div>
+                <div class="consent-gate-checklist" aria-label="Подтверждение документов">
+                <label class="consent-gate-check">
+                    <input type="checkbox" id="consentGateAcceptTerms"
+                        onchange="window.welcomeUpdateConsentState('gate')">
+                    <span>
+                        <strong>Условия пользования</strong>
+                        <span>Правила доступа к ACTRA, аккаунту и учебным материалам.</span>
+                        <button type="button" class="consent-gate-link"
+                            onclick="window.welcomeOpenLegalDocument('terms'); return false;">
+                            Открыть документ
+                        </button>
+                    </span>
+                </label>
+                <label class="consent-gate-check">
+                    <input type="checkbox" id="consentGateAcceptPrivacy"
+                        onchange="window.welcomeUpdateConsentState('gate')">
+                    <span>
+                        <strong>Политика приватности</strong>
+                        <span>Как мы обрабатываем данные аккаунта, входа и обучения.</span>
+                        <button type="button" class="consent-gate-link"
+                            onclick="window.welcomeOpenLegalDocument('privacy'); return false;">
+                            Открыть документ
+                        </button>
+                    </span>
+                </label>
+                <label class="consent-gate-check">
+                    <input type="checkbox" id="consentGateAcceptRefund"
+                        onchange="window.welcomeUpdateConsentState('gate')">
+                    <span>
+                        <strong>Политика возвратов</strong>
+                        <span>Условия refund для подписки Premium и способы связи.</span>
+                        <button type="button" class="consent-gate-link"
+                            onclick="window.welcomeOpenLegalDocument('refund'); return false;">
+                            Открыть документ
+                        </button>
+                    </span>
+                </label>
+                </div>
+                <p id="consentGateError"
+                    class="consent-gate-error hidden text-xs text-error bg-error/10 border border-error/20 px-3 py-2"></p>
+            </div>
+            <div class="consent-gate-actions">
+                <button type="button" class="consent-gate-secondary" onclick="window.welcomeCancelConsentGate()">
+                    Позже
                 </button>
                 <button type="button" id="consentGateSubmitBtn" onclick="window.welcomeSubmitConsentGate()"
-                    class="px-4 py-2 rounded-lg bg-primary text-primary-fg hover:bg-primary-hover transition-colors text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                    class="consent-gate-primary disabled:cursor-not-allowed"
                     disabled>
                     Подтвердить и продолжить
                 </button>
