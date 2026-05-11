@@ -9,6 +9,7 @@ const REQUIRED_PUBLIC_PATHS = [
   "/robots.txt",
   "/sitemap.xml",
   "/ui/welcome",
+  "/Welcome/welcome.js",
 ];
 
 const TEXT_PATHS_WITHOUT_LOCALHOST = [
@@ -20,6 +21,7 @@ const TEXT_PATHS_WITHOUT_LOCALHOST = [
   "/robots.txt",
   "/sitemap.xml",
   "/ui/welcome",
+  "/Welcome/welcome.js",
 ];
 
 function normalizeBaseUrl(raw) {
@@ -146,8 +148,11 @@ async function checkPublicPages(baseUrl) {
   const welcome = cache.get("/ui/welcome") || "";
   assert(!welcome.includes("heroGradient.js"), "/ui/welcome still references removed heroGradient.js");
   assertContains(welcome, "onboardingAcceptRefund", "/ui/welcome");
-  assertContains(welcome, "selectAcceptRefund", "/ui/welcome");
   assertContains(welcome, "consentGateAcceptRefund", "/ui/welcome");
+
+  const welcomeJs = cache.get("/Welcome/welcome.js") || "";
+  assertContains(welcomeJs, "selectAcceptRefund", "/Welcome/welcome.js");
+  assertContains(welcomeJs, "refund_version", "/Welcome/welcome.js");
 }
 
 async function checkLegalApi(baseUrl) {
@@ -163,7 +168,11 @@ async function checkLegalApi(baseUrl) {
   const document = refundDocument.data && refundDocument.data.document;
   assert(refundDocument.data && refundDocument.data.ok === true, "/api/legal/document/refund returned ok=false");
   assert(document && document.version === "2026-05-25.1", "/api/legal/document/refund has unexpected version");
-  assert(String(document.content || "").includes("ACTRA Refund Policy"), "/api/legal/document/refund is missing refund policy content");
+  const refundContent = String(document.content || "");
+  assert(
+    refundContent.includes("ACTRA Refund Policy") || refundContent.includes("Политика возвратов"),
+    "/api/legal/document/refund is missing refund policy content"
+  );
 }
 
 async function main() {
