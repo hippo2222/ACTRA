@@ -148,7 +148,7 @@ def test_submit_answer_attaches_per_question_ui_in_shuffled_indices():
     assert result.details["per_question_ui"]["2"]["user_option_ids"] == [3]
 
 
-def test_scattered_group_payload_uses_single_queue_slot():
+def test_scattered_group_payload_collects_adjacent_queue_slots():
     controller = MagicMock()
     controller.current_session_id = "sess_1"
     controller.current_task_ref = "module/topic/test_a"
@@ -231,16 +231,20 @@ def test_scattered_group_payload_uses_single_queue_slot():
     group = api._resolve_scattered_test_group(session, 0)
     payload = api._build_scattered_test_group_payload("sess_1", session, group)
 
-    assert len(group) == 1
+    assert len(group) == 2
     assert payload is not None
     questions = payload["task_data"]["content"]["questions"]
     assert [q["_split_source_task_ref"] for q in questions] == [
         "module/topic/test_a",
+        "module/topic/test_b",
     ]
-    assert [q["_split_source_question_index"] for q in questions] == [1]
+    assert [q["_split_source_question_index"] for q in questions] == [1, 0]
     assert payload["test_group_meta"]["sources"] == [
         "module/topic/test_a",
+        "module/topic/test_b",
     ]
+    assert payload["test_group_meta"]["slot_count"] == 2
+    assert payload["queue"]["end_index"] == 1
 
 
 def test_get_current_task_reapplies_scattered_filter_after_controller_task_reuse():

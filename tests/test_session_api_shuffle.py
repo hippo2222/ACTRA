@@ -373,7 +373,7 @@ def test_new_iteration_has_separate_permutation() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Тесты для фикса: scattered отображается строго как один queue-slot.
+# Тесты для фикса: scattered отображается группами соседних queue-slots.
 # ---------------------------------------------------------------------------
 
 class DummyScatteredSlot:
@@ -400,8 +400,8 @@ def _make_api_for_boundary() -> SessionAPI:
     return SessionAPI(controller, adaptive, complex_service, storage, statistics)
 
 
-def test_scattered_group_uses_only_start_slot_at_source_boundary() -> None:
-    """Даже соседние scattered-слоты не сливаются обратно в один тест."""
+def test_scattered_group_collects_adjacent_source_boundary_slots() -> None:
+    """Соседние scattered-слоты могут образовать один TestUI payload."""
     api = _make_api_for_boundary()
 
     session = DummySession("boundary_test")
@@ -414,29 +414,33 @@ def test_scattered_group_uses_only_start_slot_at_source_boundary() -> None:
 
     group = api._resolve_scattered_test_group(session, 0)
 
-    assert len(group) == 1
-    assert [idx for idx, _ in group] == [0]
-    assert all(getattr(slot, "source_task_ref", None) == "m/t/test_A" for _, slot in group)
+    assert len(group) == 4
+    assert [idx for idx, _ in group] == [0, 1, 2, 3]
+    assert [getattr(slot, "source_task_ref", None) for _, slot in group] == [
+        "m/t/test_A",
+        "m/t/test_A",
+        "m/t/test_B",
+        "m/t/test_B",
+    ]
 
 
-def test_scattered_group_does_not_collect_all_from_single_source() -> None:
-    """Несколько вопросов одного теста остаются отдельными показами."""
+def test_scattered_group_collects_full_scattered_run() -> None:
+    """Если подряд идут только scattered-слоты, они образуют один TestUI payload."""
     api = _make_api_for_boundary()
 
     session = DummySession("single_source_test")
     session.queue = [
-        DummyScatteredSlot("m/t/test_A", 0),
-        DummyScatteredSlot("m/t/test_A", 1),
-        DummyScatteredSlot("m/t/test_A", 2),
+        DummyScatteredSlot("m/t/test_A", index)
+        for index in range(8)
     ]
 
     group = api._resolve_scattered_test_group(session, 0)
-    assert len(group) == 1
-    assert [idx for idx, _ in group] == [0]
+    assert len(group) == 8
+    assert [idx for idx, _ in group] == list(range(8))
 
 
-def test_scattered_group_mid_queue_uses_only_requested_slot() -> None:
-    """Работает корректно если scattered-слот находится не в нулевой позиции."""
+def test_scattered_group_mid_queue_collects_adjacent_requested_run() -> None:
+    """Работает корректно если scattered-run начинается не в нулевой позиции."""
     api = _make_api_for_boundary()
 
     session = DummySession("mid_queue_test")
@@ -459,6 +463,11 @@ def test_scattered_group_mid_queue_uses_only_requested_slot() -> None:
     ]
 
     group = api._resolve_scattered_test_group(session, 1)
-    assert len(group) == 1
-    assert [idx for idx, _ in group] == [1]
-    assert all(getattr(slot, "source_task_ref", None) == "m/t/test_A" for _, slot in group)
+    assert len(group) == 4
+    assert [idx for idx, _ in group] == [1, 2, 3, 4]
+    assert [getattr(slot, "source_task_ref", None) for _, slot in group] == [
+        "m/t/test_A",
+        "m/t/test_A",
+        "m/t/test_B",
+        "m/t/test_B",
+    ]

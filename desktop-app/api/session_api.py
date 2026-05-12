@@ -919,7 +919,7 @@ class SessionAPI:
             return False
 
     def _resolve_scattered_test_group(self, session: Any, start_index: Optional[int]) -> List[Tuple[int, Any]]:
-        """Return the single scattered queue slot that should be displayed now."""
+        """Return the contiguous scattered queue run that should share one TestUI screen."""
         if not session or not isinstance(start_index, int):
             return []
         queue = getattr(session, "queue", None)
@@ -927,7 +927,15 @@ class SessionAPI:
             return []
         if not self._is_scattered_test_slot(queue[start_index]):
             return []
-        return [(start_index, queue[start_index])]
+
+        group: List[Tuple[int, Any]] = []
+        for queue_index in range(start_index, len(queue)):
+            queued_task = queue[queue_index]
+            if not self._is_scattered_test_slot(queued_task):
+                break
+            group.append((queue_index, queued_task))
+
+        return group
 
     def _get_test_questions_from_task_data(self, task_data: Dict[str, Any]) -> List[Any]:
         if not isinstance(task_data, dict):
