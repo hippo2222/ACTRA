@@ -1795,7 +1795,9 @@ class AdaptiveSessionManager:
                     display_mode = str(v or "").strip().lower()
                     break
 
-        # logger.info(f"[_get_test_question_display_mode] {task_ref} -> {display_mode}")
+        if display_mode == "scattered":
+             logger.info(f"[_get_test_question_display_mode] ✓ SCATTERED detected for {task_ref}")
+        
         return display_mode if display_mode in ("together", "scattered") else "together"
 
     def _get_test_question_count(self, task_ref: str) -> int:
@@ -1807,12 +1809,22 @@ class AdaptiveSessionManager:
         except Exception:
             logger.exception("[_get_test_question_count] Failed to load task %s", task_ref)
             return 0
-        task_data = task_data_full.get("task_data") if isinstance(task_data_full, dict) else None
-        if not isinstance(task_data, dict):
+        
+        if not isinstance(task_data_full, dict):
             return 0
+            
+        # Support both wrapped and raw task structures
+        task_data = task_data_full.get("task_data")
+        if not isinstance(task_data, dict):
+            task_data = task_data_full
+            
         content = task_data.get("content") if isinstance(task_data.get("content"), dict) else {}
         questions = content.get("questions") if isinstance(content.get("questions"), list) else task_data.get("questions")
-        return len(questions) if isinstance(questions, list) else 0
+        
+        count = len(questions) if isinstance(questions, list) else 0
+        if count > 0:
+            logger.info(f"[_get_test_question_count] Found {count} questions for {task_ref}")
+        return count
 
     def _build_queued_tasks_for_complex_task(
         self,
