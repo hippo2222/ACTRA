@@ -5567,20 +5567,16 @@
             .welcome-origin-layout,
             .welcome-practice-grid,
             .welcome-screen-grid,
-            .welcome-preview-grid,
-            .welcome-complex-grid,
-            .welcome-editor-preview-shell,
-            .welcome-product-surfaces,
-            .welcome-editor-mini,
-            .welcome-click-surface,
-            .welcome-theory-surface,
-            .welcome-click-demo,
-            .welcome-theory-demo {
+            .welcome-product-surfaces {
                 grid-template-columns: 1fr;
             }
 
-            .welcome-editor-toolbar {
-                grid-template-columns: 1fr;
+            .welcome-product-preview,
+            .welcome-complex-preview,
+            .welcome-editor-dashboard-preview,
+            .welcome-click-demo,
+            .welcome-theory-demo {
+                zoom: 0.75;
             }
 
             .welcome-demo-card--wide {
@@ -5594,41 +5590,6 @@
 
             .welcome-product-card--wide {
                 grid-column: auto;
-            }
-
-            .welcome-editor-mini__side,
-            .welcome-theory-library {
-                border-right: 0;
-                border-bottom: 1px solid color-mix(in srgb, var(--welcome-stone) 70%, transparent);
-            }
-
-            .welcome-editor-mini__cards {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
-
-            .welcome-carousel-slide .welcome-click-surface {
-                grid-template-columns: 1fr;
-            }
-
-            .welcome-click-editor-header,
-            .welcome-click-editor-workspace,
-            .welcome-s1-live-toolbar,
-            .welcome-theory-real-main {
-                grid-template-columns: 1fr;
-            }
-
-            .welcome-click-editor-sidebar {
-                max-height: 17rem;
-                border-left: 0;
-                border-top: 1px solid #d9dfe8;
-            }
-
-            .welcome-s2-real-main {
-                grid-template-columns: 1fr;
-                grid-template-areas:
-                    "result"
-                    "action"
-                    "review";
             }
 
             .welcome-blob--green {
@@ -5666,11 +5627,12 @@
                 flex-direction: column;
             }
 
-            .welcome-editor-preview-topbar {
-                align-items: flex-start;
-                flex-direction: column;
-                gap: 0.55rem;
-                padding-bottom: 0.65rem;
+            .welcome-product-preview,
+            .welcome-complex-preview,
+            .welcome-editor-dashboard-preview,
+            .welcome-click-demo,
+            .welcome-theory-demo {
+                zoom: 0.55;
             }
 
             .welcome-product-card__header {
@@ -5699,45 +5661,8 @@
                 padding: 0.75rem;
             }
 
-            .welcome-click-editor-header,
-            .welcome-click-header-primary,
-            .welcome-click-editor-toolbar,
-            .welcome-click-editor-toolbar__left,
-            .welcome-click-editor-toolbar__right,
-            .welcome-s1-live-toolbar,
-            .welcome-s1-live-title,
-            .welcome-s2-real-toolbar,
-            .welcome-s2-review-head,
-            .welcome-theory-real-header {
-                align-items: flex-start;
-                flex-direction: column;
-            }
-
-            .welcome-click-header-primary,
-            .welcome-click-editor-toolbar,
-            .welcome-click-editor-toolbar__left,
-            .welcome-click-editor-toolbar__right,
-            .welcome-s1-live-title,
-            .welcome-s1-live-actions,
-            .welcome-s2-actions {
-                flex-wrap: wrap;
-            }
-
-            .welcome-click-stage {
-                width: 100%;
-            }
-
-            .welcome-s2-answer-grid,
-            .welcome-s2-meta-strip {
-                grid-template-columns: 1fr;
-            }
-
-            .welcome-editor-mini__toolbar {
-                grid-template-columns: 1fr;
-            }
-
-            .welcome-editor-mini__cards {
-                grid-template-columns: 1fr;
+            .welcome-click-demo__cursor {
+                display: none;
             }
 
             .welcome-click-viewport {
