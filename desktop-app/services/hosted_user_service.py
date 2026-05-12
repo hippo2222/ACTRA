@@ -30,6 +30,7 @@ from services.user_service import (
     USER_PLAN_PREMIUM,
     USER_ROLE_ADMIN,
     USER_ROLE_USER,
+    apply_registration_premium_promo,
 )
 
 
@@ -137,6 +138,7 @@ class HostedUserService(HostedShadowFallbackMixin, UserService):
             avatar_seed=f"{random.randint(1, 7)}.png",
             settings={},
         )
+        apply_registration_premium_promo(user, created_at)
         self.repository.create_user(user, updated_at=created_at)
         try:
             self._write_legacy_profile_projection(user, initialize_progress=True)
@@ -188,6 +190,7 @@ class HostedUserService(HostedShadowFallbackMixin, UserService):
             password_hash=bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8"),
             settings={},
         )
+        apply_registration_premium_promo(user, created_at)
         security_settings = dict(user.security_settings or {})
         security_settings["require_password_on_login"] = True
         user.security_settings = security_settings
@@ -247,6 +250,7 @@ class HostedUserService(HostedShadowFallbackMixin, UserService):
                 }
             },
         )
+        apply_registration_premium_promo(user, created_at)
         security_settings = dict(user.security_settings or {})
         security_settings["require_password_on_login"] = False
         user.security_settings = security_settings

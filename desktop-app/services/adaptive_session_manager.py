@@ -1650,7 +1650,7 @@ class AdaptiveSessionManager:
                 continue
             for task_ref in chain:
                 if isinstance(task_ref, str) and task_ref:
-                    refs.add(task_ref)
+                    refs.add(task_ref.strip())
         return refs
 
     def _chunk_variety_key(self, chunk: List[QueuedTask]) -> str:
@@ -1659,8 +1659,9 @@ class AdaptiveSessionManager:
         Логика:
         - Многоэлементный chunk (связка) → ``"chain"``: связка всегда считается
           перебивкой и никогда не образует монотонную серию.
-        - Одиночный scattered-слот → ``"scattered_q"``: отдельный виртуальный тип,
-          чтобы scattered-вопросы не поглощали весь бюджет типа ``"test"``.
+        - Одиночный scattered-слот → ``"scattered_q:" + task_ref``: 
+          используем task_ref, чтобы round-robin ПЕРЕМЕШИВАЛ вопросы РАЗНЫХ заданий
+          между собой, а не просто сваливал их в одну кучу.
         - Обычное задание → реальный task_type (``"test"``, ``"click"`` и т.д.).
         """
         if not chunk:
@@ -1669,7 +1670,7 @@ class AdaptiveSessionManager:
             return "chain"
         task = chunk[0]
         if str(getattr(task, "display_mode", "") or "").strip().lower() == "scattered":
-            return "scattered_q"
+            return f"scattered_q:{task.task_ref}"
         return self._get_task_type(task.task_ref)
 
     def _break_monotony_runs(
@@ -1730,19 +1731,58 @@ class AdaptiveSessionManager:
         return result
 
     def _get_test_question_display_mode(self, complex_obj: Optional[Complex], task_ref: str) -> str:
-        if not complex_obj or task_ref in self._task_refs_in_chains(getattr(complex_obj, "chains", None)):
+        """
+        Определяет режим отображения вопросов для тестового задания (together или scattered).
+        Учитывает настройки комплекса и наличие задания в сцепках.
+        """
+        if not complex_obj:
             return "together"
+
+        # Нормализуем ref для поиска
+        tref = str(task_ref or "").strip()
+
+        # 1. Если задание в сцепке (Chain), оно ВСЕГДА отображается 'together' (монолитно),
+        # так как сцепка подразумевает фиксированный порядок и целостность группы заданий.
+        chains = getattr(complex_obj, "chains", None)
+        if chains is None and isinstance(complex_obj, dict):
+            chains = complex_obj.get("chains")
+
+        if chains and tref in self._task_refs_in_chains(chains):
+            return "together"
+
+        # 2. Ищем в настройках комплекса (test_question_display_modes)
         settings = getattr(complex_obj, "settings", None)
-        modes = getattr(settings, "test_question_display_modes", None)
+        if settings is None and isinstance(complex_obj, dict):
+            settings = complex_obj.get("settings")
+
+        modes = None
+        if settings is not None:
+            # Пытаемся достать как атрибут (Pydantic/Object)
+            modes = getattr(settings, "test_question_display_modes", None)
+            # Если не вышло, пытаемся как ключ (Dict)
+            if modes is None and isinstance(settings, dict):
+                modes = settings.get("test_question_display_modes")
+            # Fallback: если это Pydantic модель, но getattr не сработал как надо
+            if modes is None and hasattr(settings, "dict"):
+                try:
+                    modes = settings.dict().get("test_question_display_modes")
+                except Exception:
+                    pass
+
         if not isinstance(modes, dict):
-            try:
-                modes = (settings.dict() if settings is not None and hasattr(settings, "dict") else {}).get(
-                    "test_question_display_modes"
-                )
-            except Exception:
-                modes = None
-        mode = str((modes or {}).get(task_ref) or "together").strip().lower()
-        return mode if mode in {"together", "scattered"} else "together"
+            modes = {}
+
+        # 3. Поиск режима (регистронезависимый и с обрезкой пробелов)
+        mode = modes.get(tref)
+        if mode is None:
+            tref_lower = tref.lower()
+            for k, v in modes.items():
+                if str(k).strip().lower() == tref_lower:
+                    mode = v
+                    break
+
+        mode_str = str(mode or "together").strip().lower()
+        return mode_str if mode_str in {"together", "scattered"} else "together"
 
     def _get_test_question_count(self, task_ref: str) -> int:
         module_id, topic_id, task_id = self._split_task_ref(task_ref)
@@ -2683,19 +2723,11 @@ class AdaptiveSessionManager:
     def _get_task_type(self, task_ref: str) -> str:
         """
         Получает task_type из кэша или загружает через StorageService.
-        
-        Проверяет все возможные места хранения типа задания:
-        1. metadata['type'] (из module.json) - приоритет
-        2. task_data['task_data']['type'] (из task.json)
-        3. task_data['task_data']['content']['type']
-        4. task_data['task_data']['_original_type'] (если задание модифицировано)
-        
-        Args:
-            task_ref: Ссылка на задание (module/topic/task)
-            
-        Returns:
-            str: Тип задания или "unknown"
         """
+        task_ref = str(task_ref or "").strip()
+        if not task_ref:
+            return "unknown"
+
         # Проверяем кэш
         # ИСПРАВЛЕНИЕ: Если в кэше "unknown", пытаемся переопределить тип
         if task_ref in self.task_meta_cache:

@@ -15,6 +15,8 @@ from services.user_service import (
     USER_PLAN_PREMIUM,
     USER_ROLE_ADMIN,
     USER_ROLE_USER,
+    apply_registration_premium_promo,
+    registration_premium_promo_expires_at,
 )
 
 
@@ -111,6 +113,37 @@ def test_user_service_create_user_defaults_role_and_plan(tmp_path):
     assert user.plan == USER_PLAN_FREE
     profile_errors = ProfileSchema.validate(user.to_dict())
     assert profile_errors == []
+
+
+def test_registration_premium_promo_includes_start_and_end_dates():
+    start_expiry = registration_premium_promo_expires_at("2026-05-13T00:00:00+03:00")
+    end_expiry = registration_premium_promo_expires_at("2026-06-01T23:59:59+03:00")
+
+    assert start_expiry == "2026-06-02T21:00:00Z"
+    assert end_expiry == "2026-06-22T20:59:59Z"
+
+
+def test_registration_premium_promo_excludes_dates_outside_window():
+    assert registration_premium_promo_expires_at("2026-05-12T23:59:59+03:00") is None
+    assert registration_premium_promo_expires_at("2026-06-02T00:00:00+03:00") is None
+
+
+def test_apply_registration_premium_promo_sets_timed_premium():
+    user = User(
+        user_id="user_1",
+        name="Promo User",
+        created_at="2026-05-20T10:00:00+03:00",
+        role=USER_ROLE_USER,
+        plan=USER_PLAN_FREE,
+        settings={},
+    )
+
+    applied = apply_registration_premium_promo(user, user.created_at)
+
+    assert applied is True
+    assert user.plan == USER_PLAN_PREMIUM
+    assert user.premium_expires_at == "2026-06-10T07:00:00Z"
+    assert user.effective_plan == USER_PLAN_PREMIUM
 
 
 def test_profile_schema_rejects_invalid_role_and_plan():

@@ -18,7 +18,7 @@ import tempfile
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from services.schemas.user_schemas import ProfileSchema, ProgressSchema, StatisticsSchema
 from task_system.core.exceptions import TaskValidationError
@@ -27,6 +27,10 @@ USER_ROLE_USER = "user"
 USER_ROLE_ADMIN = "admin"
 USER_PLAN_FREE = "free"
 USER_PLAN_PREMIUM = "premium"
+REGISTRATION_PREMIUM_PROMO_DAYS = 21
+REGISTRATION_PREMIUM_PROMO_START_DATE = date(2026, 5, 13)
+REGISTRATION_PREMIUM_PROMO_END_DATE = date(2026, 6, 1)
+REGISTRATION_PREMIUM_PROMO_LOCAL_TZ = timezone(timedelta(hours=3))
 
 
 def normalize_user_role(role: Any) -> str:
@@ -78,6 +82,45 @@ def resolve_effective_plan(user: Any) -> str:
     if premium_expires_at:
         return USER_PLAN_PREMIUM if is_premium_expiry_active(premium_expires_at) else USER_PLAN_FREE
     return normalize_user_plan(getattr(user, "plan", USER_PLAN_FREE))
+
+
+def _parse_registration_datetime(value: Any) -> Optional[datetime]:
+    if isinstance(value, datetime):
+        parsed = value
+    else:
+        text = str(value or "").strip()
+        if not text:
+            return None
+        try:
+            parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=REGISTRATION_PREMIUM_PROMO_LOCAL_TZ)
+    return parsed.astimezone(REGISTRATION_PREMIUM_PROMO_LOCAL_TZ)
+
+
+def registration_premium_promo_expires_at(registered_at: Any) -> Optional[str]:
+    registered_local = _parse_registration_datetime(registered_at)
+    if registered_local is None:
+        return None
+
+    registered_date = registered_local.date()
+    if not (REGISTRATION_PREMIUM_PROMO_START_DATE <= registered_date <= REGISTRATION_PREMIUM_PROMO_END_DATE):
+        return None
+
+    expires_at = registered_local + timedelta(days=REGISTRATION_PREMIUM_PROMO_DAYS)
+    return expires_at.astimezone(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def apply_registration_premium_promo(user: Any, registered_at: Any) -> bool:
+    expires_at = registration_premium_promo_expires_at(registered_at)
+    if not expires_at:
+        return False
+    user.plan = USER_PLAN_PREMIUM
+    user.premium_expires_at = expires_at
+    return True
 
 
 @dataclass
