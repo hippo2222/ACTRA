@@ -47,6 +47,13 @@
         id: q.id != null ? String(q.id) : `q_${idx + 1}`,
         index: idx,
         text: q.text || q.title || "Question",
+        sourceTaskTitle:
+          q._split_source_task_name ||
+          q._split_source_task_title ||
+          q.source_task_name ||
+          q.source_task_title ||
+          "",
+        sourceTaskRef: q._split_source_task_ref || q.source_task_ref || "",
       };
     });
 

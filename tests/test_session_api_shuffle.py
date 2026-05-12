@@ -555,3 +555,59 @@ def test_scattered_group_mid_queue_collects_adjacent_requested_run() -> None:
         "m/t/test_B",
         "m/t/test_B",
     ]
+
+
+def test_scattered_group_payload_carries_source_task_names_per_question() -> None:
+    api = _make_api_for_boundary()
+    api._controller.task_controller.difficulty_manager = None
+
+    def load_task(module_id: str, topic_id: str, task_id: str) -> Dict[str, Any]:
+        task_name = "Test A title" if task_id == "test_A" else "Test B title"
+        question_text = "Question A" if task_id == "test_A" else "Question B"
+        return {
+            "task_data": {
+                "type": "test",
+                "name": task_name,
+                "content": {
+                    "questions": [
+                        {
+                            "id": f"{task_id}_q0",
+                            "text": question_text,
+                            "answers": [
+                                {"text": "yes", "correct": True},
+                                {"text": "no", "correct": False},
+                            ],
+                        }
+                    ],
+                },
+            },
+            "answer_key": {},
+        }
+
+    api._storage_service.load_task.side_effect = load_task
+    session = DummySession("mixed_titles")
+    session.queue = [
+        DummyScatteredSlot("m/t/test_A", 0),
+        DummyScatteredSlot("m/t/test_B", 0),
+    ]
+
+    payload = api._build_scattered_test_group_payload(
+        "mixed_titles",
+        session,
+        [(0, session.queue[0]), (1, session.queue[1])],
+        load_controller=False,
+    )
+
+    assert payload is not None
+    questions = payload["task_data"]["content"]["questions"]
+    assert [q["_split_source_task_name"] for q in questions] == [
+        "Test A title",
+        "Test B title",
+    ]
+    assert [
+        q["source_task_name"]
+        for q in payload["test_group_meta"]["questions"]
+    ] == [
+        "Test A title",
+        "Test B title",
+    ]

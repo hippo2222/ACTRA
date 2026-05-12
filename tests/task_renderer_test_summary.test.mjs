@@ -24,6 +24,7 @@ describe("TaskRenderer test summary normalization", () => {
       <div id="result-reference" class="hidden"></div>
       <div id="result-reference-title"></div>
       <div id="result-reference-text"></div>
+      <div id="current-task-title"></div>
     `;
 
     globalThis.SuccessEffects = undefined;
@@ -49,5 +50,57 @@ describe("TaskRenderer test summary normalization", () => {
     expect(document.getElementById("result-message").textContent).toContain(
       "❌ Есть ошибки: 2 из 3 с ошибкой, верно 1",
     );
+  });
+
+  it("updates the S1 header when TestUI reports a per-question source title", () => {
+    TaskRenderer.renderTask({
+      task_type: "test",
+      task_name: "First test title",
+      task_data: {
+        type: "test",
+        content: { questions: [] },
+      },
+    });
+
+    expect(document.getElementById("current-task-title").textContent).toBe(
+      "First test title",
+    );
+
+    window.dispatchEvent(
+      new CustomEvent("test:current-question-changed", {
+        detail: { taskTitle: "Second test title" },
+      }),
+    );
+
+    expect(document.getElementById("current-task-title").textContent).toBe(
+      "Second test title",
+    );
+    expect(document.getElementById("current-task-title").classList.contains("s1-title-updated")).toBe(
+      true,
+    );
+  });
+
+  it("does not touch the S1 header when the per-question source title is unchanged", () => {
+    TaskRenderer.renderTask({
+      task_type: "test",
+      task_name: "Same test title",
+      task_data: {
+        type: "test",
+        content: { questions: [] },
+      },
+    });
+
+    const titleEl = document.getElementById("current-task-title");
+    titleEl.dispatchEvent(new Event("animationend"));
+    titleEl.classList.remove("s1-title-updated");
+
+    window.dispatchEvent(
+      new CustomEvent("test:current-question-changed", {
+        detail: { taskTitle: "Same   test   title" },
+      }),
+    );
+
+    expect(titleEl.textContent).toBe("Same test title");
+    expect(titleEl.classList.contains("s1-title-updated")).toBe(false);
   });
 });

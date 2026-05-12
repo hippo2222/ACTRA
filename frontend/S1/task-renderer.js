@@ -367,6 +367,65 @@
         syncHeaderTitleTooltip();
     }
 
+    function normalizeHeaderTitle(title) {
+        return String(title || "").replace(/\s+/g, " ").trim();
+    }
+
+    function animateCurrentTaskHeaderTitle(titleEl) {
+        if (!titleEl || typeof titleEl.classList === "undefined") return;
+        titleEl.classList.remove("s1-title-updated");
+        try {
+            void titleEl.offsetWidth;
+        } catch (e) {
+            // ignore
+        }
+        titleEl.classList.add("s1-title-updated");
+        if (typeof titleEl.addEventListener === "function") {
+            titleEl.addEventListener(
+                "animationend",
+                () => titleEl.classList.remove("s1-title-updated"),
+                { once: true }
+            );
+        }
+    }
+
+    function setCurrentTaskHeaderTitle(title, options) {
+        const nextTitle = String(title || "").trim();
+        if (!nextTitle) return false;
+
+        const titleEl = document.getElementById("current-task-title") || document.getElementById("complex-title");
+        if (!titleEl) return false;
+
+        const currentTitle = normalizeHeaderTitle(titleEl.textContent || titleEl.getAttribute("title") || "");
+        const normalizedNextTitle = normalizeHeaderTitle(nextTitle);
+        if (currentTitle === normalizedNextTitle) return false;
+
+        titleEl.textContent = nextTitle;
+        titleEl.setAttribute("title", nextTitle);
+        titleEl.setAttribute("aria-label", nextTitle);
+        if (options && options.animate) {
+            animateCurrentTaskHeaderTitle(titleEl);
+        }
+        scheduleHeaderTitleToggleSync();
+        return true;
+    }
+
+    function handleTestCurrentQuestionChanged(event) {
+        const task = SessionState && SessionState.currentTask;
+        if (!task || pickEffectiveTaskType(task) !== "test") return;
+
+        const taskTitle = String(
+            (event && event.detail && (event.detail.taskTitle || event.detail.sourceTaskTitle)) || ""
+        ).trim();
+        if (!taskTitle) return;
+
+        setCurrentTaskHeaderTitle(taskTitle, { animate: true });
+    }
+
+    if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
+        window.addEventListener("test:current-question-changed", handleTestCurrentQuestionChanged);
+    }
+
     function scheduleHeaderTitleToggleSync() {
         const runSync = () => syncHeaderTitleTooltip();
 

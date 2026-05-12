@@ -1081,6 +1081,26 @@ class SessionAPI:
         questions = content.get("questions") if isinstance(content.get("questions"), list) else task_data.get("questions")
         return questions if isinstance(questions, list) else []
 
+    @staticmethod
+    def _extract_task_display_name(task_data: Dict[str, Any], fallback: str = "") -> str:
+        if not isinstance(task_data, dict):
+            return str(fallback or "").strip()
+        meta = task_data.get("meta") if isinstance(task_data.get("meta"), dict) else {}
+        content = task_data.get("content") if isinstance(task_data.get("content"), dict) else {}
+        for value in (
+            meta.get("name"),
+            meta.get("title"),
+            task_data.get("name"),
+            task_data.get("title"),
+            content.get("task_name"),
+            content.get("title"),
+            fallback,
+        ):
+            text = str(value or "").strip()
+            if text:
+                return text
+        return ""
+
     def _ensure_test_shuffle_entry(
         self,
         session: Any,
@@ -1196,6 +1216,10 @@ class SessionAPI:
                 task_data = task_data_full.get("task_data")
                 if not isinstance(task_data, dict):
                     continue
+                task_data_full["_source_task_display_name"] = self._extract_task_display_name(
+                    task_data,
+                    source_ref,
+                )
                 difficulty_manager = getattr(
                     getattr(self._controller, "task_controller", None),
                     "difficulty_manager",
@@ -1231,6 +1255,10 @@ class SessionAPI:
             source_question = questions[original_question_index]
             if not isinstance(source_question, dict):
                 continue
+            source_task_name = str(
+                cached.get("_source_task_display_name")
+                or self._extract_task_display_name(task_data, source_ref)
+            ).strip()
 
             shuffle_entry = self._ensure_test_shuffle_entry(session, source_ref, task_data)
             grouped_question = self._apply_grouped_answer_shuffle(
@@ -1248,6 +1276,7 @@ class SessionAPI:
             grouped_question["id"] = grouped_question_id
             grouped_question["_partial_retry_original_index"] = original_question_index
             grouped_question["_split_source_task_ref"] = source_ref
+            grouped_question["_split_source_task_name"] = source_task_name
             grouped_question["_split_source_question_index"] = original_question_index
             grouped_question["_split_source_question_id"] = source_question_id
             grouped_question["_split_queue_index"] = queue_index
@@ -1256,6 +1285,7 @@ class SessionAPI:
                 {
                     "question_id": grouped_question_id,
                     "source_task_ref": source_ref,
+                    "source_task_name": source_task_name,
                     "source_question_id": source_question_id,
                     "source_question_index": original_question_index,
                     "queue_index": queue_index,
@@ -1354,13 +1384,7 @@ class SessionAPI:
             if isinstance(ui_state.get("view_state"), dict):
                 restored_view_state = ui_state.get("view_state")
 
-        task_meta = first_task_data.get("meta") if isinstance(first_task_data.get("meta"), dict) else {}
-        task_name = (
-            task_meta.get("name")
-            or task_meta.get("title")
-            or first_task_data.get("name")
-            or first_task_data.get("title")
-        )
+        task_name = self._extract_task_display_name(first_task_data)
 
         return {
             "session_id": session_id,

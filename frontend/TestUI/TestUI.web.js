@@ -93,6 +93,13 @@ const TestUI = (function () {
           id: q.id != null ? String(q.id) : `q_${idx + 1}`,
           index: idx,
           text: q.text || q.title || "Вопрос",
+          sourceTaskTitle:
+            q._split_source_task_name ||
+            q._split_source_task_title ||
+            q.source_task_name ||
+            q.source_task_title ||
+            "",
+          sourceTaskRef: q._split_source_task_ref || q.source_task_ref || "",
         }));
 
         const testType =
@@ -182,6 +189,58 @@ const TestUI = (function () {
         // ignore
       }
       return progress;
+    }
+
+    function getCurrentQuestionForEvent() {
+      const questions = Array.isArray(state.questions) ? state.questions : [];
+      if (!questions.length) return null;
+      const currentMeta = questions[state.currentIndex] || questions[0] || null;
+      if (!currentMeta) return null;
+      const raw =
+        (state.rawQuestions &&
+          state.rawQuestions[currentMeta.index ?? state.currentIndex]) ||
+        null;
+      return { currentMeta, raw };
+    }
+
+    function emitCurrentQuestionChanged() {
+      const current = getCurrentQuestionForEvent();
+      if (!current) return null;
+      const { currentMeta, raw } = current;
+      const sourceTaskTitle = String(
+        currentMeta.sourceTaskTitle ||
+          (raw &&
+            (raw._split_source_task_name ||
+              raw._split_source_task_title ||
+              raw.source_task_name ||
+              raw.source_task_title)) ||
+          ""
+      ).trim();
+      const sourceTaskRef = String(
+        currentMeta.sourceTaskRef ||
+          (raw && (raw._split_source_task_ref || raw.source_task_ref)) ||
+          ""
+      ).trim();
+      const detail = {
+        currentIndex: Number.isInteger(state.currentIndex) ? state.currentIndex : 0,
+        totalQuestions: Array.isArray(state.questions) ? state.questions.length : 0,
+        questionId: currentMeta.id,
+        taskTitle: sourceTaskTitle,
+        sourceTaskTitle,
+        sourceTaskRef,
+        sourceQuestionIndex:
+          raw && raw._split_source_question_index != null
+            ? raw._split_source_question_index
+            : currentMeta.index,
+      };
+      try {
+        if (typeof window !== "undefined" && typeof window.dispatchEvent === "function" && typeof CustomEvent === "function") {
+          window.dispatchEvent(new CustomEvent("test:current-question-changed", { detail }));
+        }
+      } catch (e) {
+        // ignore
+      }
+      return detail;
     }
 
     if (usingCustomLayout) {
@@ -409,6 +468,7 @@ const TestUI = (function () {
     }
 
     function renderQuestionViewC2C3C4() {
+      emitCurrentQuestionChanged();
       const questionModule =
         (typeof TestUIQuestion !== "undefined" && TestUIQuestion) || null;
 
@@ -450,6 +510,7 @@ const TestUI = (function () {
     };
     state._rerenderQuestion = renderQuestionViewC2C3C4;
     state._notifyAnswerStateChanged = emitAnswerStateChanged;
+    state._notifyCurrentQuestionChanged = emitCurrentQuestionChanged;
 
     renderQuestionSidebarC1();
     renderQuestionViewC2C3C4();
