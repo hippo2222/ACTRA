@@ -1653,6 +1653,82 @@ class AdaptiveSessionManager:
                     refs.add(task_ref)
         return refs
 
+    def _chunk_variety_key(self, chunk: List[QueuedTask]) -> str:
+        """Возвращает ключ «типа» для chunk при балансировке разнообразия.
+
+        Логика:
+        - Многоэлементный chunk (связка) → ``"chain"``: связка всегда считается
+          перебивкой и никогда не образует монотонную серию.
+        - Одиночный scattered-слот → ``"scattered_q"``: отдельный виртуальный тип,
+          чтобы scattered-вопросы не поглощали весь бюджет типа ``"test"``.
+        - Обычное задание → реальный task_type (``"test"``, ``"click"`` и т.д.).
+        """
+        if not chunk:
+            return "unknown"
+        if len(chunk) > 1:
+            return "chain"
+        task = chunk[0]
+        if str(getattr(task, "display_mode", "") or "").strip().lower() == "scattered":
+            return "scattered_q"
+        return self._get_task_type(task.task_ref)
+
+    def _break_monotony_runs(
+        self,
+        chunks: List[List[QueuedTask]],
+        max_run: int,
+    ) -> List[List[QueuedTask]]:
+        """Перераспределяет chunks так, чтобы не было >max_run подряд с одним variety_key.
+
+        Алгоритм: greedy — всегда берём тип с наибольшим остатком,
+        избегая «заблокированного» ключа если хвост уже равен max_run.
+        Работает на уровне chunks — связки (multi-task) никогда не разрываются.
+        """
+        if max_run <= 0 or len(chunks) <= 1:
+            return chunks
+
+        # Разбиваем по variety_key
+        by_key: Dict[str, List[List[QueuedTask]]] = {}
+        for chunk in chunks:
+            k = self._chunk_variety_key(chunk)
+            by_key.setdefault(k, []).append(chunk)
+
+        if len(by_key) <= 1:
+            return chunks  # Один тип — нечем перебивать, возвращаем как есть
+
+        from collections import deque as _deque
+        queues: Dict[str, Any] = {k: _deque(v) for k, v in by_key.items()}
+        result: List[List[QueuedTask]] = []
+
+        while any(queues.values()):
+            # Определяем заблокированный ключ (последние max_run одинаковы)
+            blocked_key: Optional[str] = None
+            if len(result) >= max_run:
+                tail_key = self._chunk_variety_key(result[-1])
+                if all(
+                    self._chunk_variety_key(result[-i - 1]) == tail_key
+                    for i in range(max_run)
+                ):
+                    blocked_key = tail_key
+
+            # Кандидаты: не заблокированные, с непустой очередью
+            candidates = [
+                (k, q) for k, q in queues.items() if q and k != blocked_key
+            ]
+            if not candidates:
+                # Нет альтернатив — вынуждены взять заблокированный
+                candidates = [(k, q) for k, q in queues.items() if q]
+
+            if not candidates:
+                break
+
+            # Берём тип с наибольшим остатком (greedy)
+            best_key = max(candidates, key=lambda kq: len(kq[1]))[0]
+            result.append(queues[best_key].popleft())
+            if not queues[best_key]:
+                del queues[best_key]
+
+        return result
+
     def _get_test_question_display_mode(self, complex_obj: Optional[Complex], task_ref: str) -> str:
         if not complex_obj or task_ref in self._task_refs_in_chains(getattr(complex_obj, "chains", None)):
             return "together"
@@ -1799,34 +1875,30 @@ class AdaptiveSessionManager:
         self,
         chunks: List[List[QueuedTask]],
         seed_base: Optional[str],
-        phase_id: int
+        phase_id: int,
+        max_run: int = 3,
     ) -> List[QueuedTask]:
         """
         Балансирует типы заданий внутри фазы используя round-robin распределение.
-        
-        Args:
-            chunks: Список chunks для одной фазы
-            seed_base: Seed для детерминированности
-            phase_id: ID фазы (для логирования и seed)
-            
-        Returns:
-            Плоский список заданий с чередующимися типами
+
+        Использует _chunk_variety_key вместо голого task_type, чтобы:
+        - связки (chain) не сливались в серию одного типа;
+        - scattered-вопросы не поглощали весь бюджет типа ``test``.
+
+        После round-robin применяет _break_monotony_runs (anti-run защита).
         """
         if not chunks:
             return []
-        
-        # Группируем chunks по типу первого задания
+
+        # Группируем chunks по variety_key
         by_type: Dict[str, List[List[QueuedTask]]] = {}
         for chunk in chunks:
             if not chunk:
                 continue
-            first_task = chunk[0]
-            task_type = self._get_task_type(first_task.task_ref)
-            if task_type not in by_type:
-                by_type[task_type] = []
-            by_type[task_type].append(chunk)
-        
-        # Если только один тип - просто shuffle
+            vkey = self._chunk_variety_key(chunk)
+            by_type.setdefault(vkey, []).append(chunk)
+
+        # Если только один variety_key — просто shuffle и возврат
         if len(by_type) <= 1:
             if seed_base:
                 seed_material = f"{seed_base}:phase:{phase_id}".encode("utf-8", errors="ignore")
@@ -1839,24 +1911,22 @@ class AdaptiveSessionManager:
                     random.setstate(state)
             else:
                 random.shuffle(chunks)
-            
-            # Развернуть chunks в плоский список
             result = []
             for chunk in chunks:
                 result.extend(chunk)
             return result
-        
-        # Round-robin распределение по типам
-        max_len = max(len(chunks_list) for chunks_list in by_type.values())
-        sorted_types = sorted(by_type.keys())  # Детерминированный порядок
-        
-        distributed = []
+
+        # Round-robin распределение по variety_key
+        max_len = max(len(v) for v in by_type.values())
+        sorted_types = sorted(by_type.keys())
+
+        distributed: List[List[QueuedTask]] = []
         for i in range(max_len):
-            for task_type in sorted_types:
-                if i < len(by_type[task_type]):
-                    distributed.append(by_type[task_type][i])
-        
-        # Легкий shuffle в окнах для непредсказуемости
+            for vkey in sorted_types:
+                if i < len(by_type[vkey]):
+                    distributed.append(by_type[vkey][i])
+
+        # Лёгкий shuffle в окнах для непредсказуемости
         window_size = 3
         if seed_base:
             seed_material = f"{seed_base}:phase:{phase_id}:window".encode("utf-8", errors="ignore")
@@ -1865,65 +1935,71 @@ class AdaptiveSessionManager:
             try:
                 random.seed(seed_int)
                 for i in range(0, len(distributed), window_size):
-                    window = distributed[i:i+window_size]
+                    window = distributed[i:i + window_size]
                     random.shuffle(window)
-                    distributed[i:i+window_size] = window
+                    distributed[i:i + window_size] = window
             finally:
                 random.setstate(state)
         else:
             for i in range(0, len(distributed), window_size):
-                window = distributed[i:i+window_size]
+                window = distributed[i:i + window_size]
                 random.shuffle(window)
-                distributed[i:i+window_size] = window
-        
-        # Развернуть chunks в плоский список
+                distributed[i:i + window_size] = window
+
+        # Anti-run: гарантируем не более max_run одного variety_key подряд
+        if max_run > 0:
+            distributed = self._break_monotony_runs(distributed, max_run)
+
+        # Flatten chunks в плоский список
         result = []
         for chunk in distributed:
             result.extend(chunk)
-        
+
         logger.debug(
-            f"[_balance_chunks_by_type] Phase {phase_id}: "
-            f"распределено {len(result)} заданий, типы: {sorted_types}"
+            "[_balance_chunks_by_type] Phase %s: %s заданий, variety_keys: %s",
+            phase_id,
+            len(result),
+            sorted_types,
         )
-        
         return result
 
-    def _sort_chunks_by_phase(self, chunks: List[List[QueuedTask]], seed_base: Optional[str] = None) -> List[QueuedTask]:
+    def _sort_chunks_by_phase(
+        self,
+        chunks: List[List[QueuedTask]],
+        seed_base: Optional[str] = None,
+        max_same_type_run: int = 3,
+    ) -> List[QueuedTask]:
         """
         Сортирует блоки по фазам (0 -> 1 -> 2).
-        Внутри фазы блоки балансируются по типам для лучшего UX.
-        
+        Внутри фазы блоки балансируются по variety_key с anti-run защитой.
+
         Args:
             chunks: Список блоков заданий
             seed_base: Seed для детерминированности
-            
-        Returns:
-            List[QueuedTask]: Плоский список заданий, отсортированный по фазам с балансировкой типов
+            max_same_type_run: Максимум подряд идущих chunks одного variety_key
         """
-        phase_groups = {0: [], 1: [], 2: []}
-        
+        phase_groups: Dict[int, List[List[QueuedTask]]] = {0: [], 1: [], 2: []}
+
         for chunk in chunks:
             if not chunk:
                 continue
-                
             first_task = chunk[0]
             task_type = self._get_task_type(first_task.task_ref)
             phase = self._get_task_phase(task_type, first_task.difficulty, first_task.task_ref)
-            
-            # Safety check
             if phase not in phase_groups:
                 phase = 1
-                
             phase_groups[phase].append(chunk)
-            
-        final_queue = []
+
+        final_queue: List[QueuedTask] = []
         for phase_id in sorted(phase_groups.keys()):
-            chunks_in_phase = phase_groups[phase_id]
-            
-            # Балансировка типов внутри фазы
-            balanced_tasks = self._balance_chunks_by_type(chunks_in_phase, seed_base, phase_id)
-            final_queue.extend(balanced_tasks)
-            
+            balanced = self._balance_chunks_by_type(
+                phase_groups[phase_id],
+                seed_base,
+                phase_id,
+                max_run=max_same_type_run,
+            )
+            final_queue.extend(balanced)
+
         return final_queue
     
     def _generate_initial_queue(
@@ -2107,8 +2183,13 @@ class AdaptiveSessionManager:
                 )
 
         # Перемешиваем очередь с учетом фаз и цепочек (вместо random.shuffle)
+        max_run = int(getattr(getattr(complex_obj, "settings", None), "max_same_type_run", 3) or 3)
         chunks = self._group_tasks_into_chunks(queue, complex_obj.chains)
-        session.queue = self._sort_chunks_by_phase(chunks, seed_base=f"{session.id}:{target_iteration}")
+        session.queue = self._sort_chunks_by_phase(
+            chunks,
+            seed_base=f"{session.id}:{target_iteration}",
+            max_same_type_run=max_run,
+        )
 
         session.current_task_index = 0
 

@@ -53,6 +53,15 @@ class ComplexSettings(BaseModel):
         default_factory=dict,
         description="Per test task display mode: together or scattered"
     )
+    max_same_type_run: int = Field(
+        default=3,
+        ge=1,
+        description=(
+            "Максимум подряд идущих заданий одного типа в очереди итерации. "
+            "Anti-run защита: при превышении система вставляет задание другого типа. "
+            "Работает на уровне chunks (связки не разрываются)."
+        ),
+    )
 
     @validator("test_question_display_modes", pre=True, always=True)
     def validate_test_question_display_modes(cls, value):

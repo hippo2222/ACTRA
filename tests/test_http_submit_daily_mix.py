@@ -30,20 +30,20 @@ class _DummySessionAPI:
     def __init__(self):
         self.last_submit = None
 
-    def next_task(self, session_id: str):
+    def next_task(self, session_id: str, **kwargs):
         return {"ok": False, "error": "session_completed"}
 
-    def get_session(self, session_id: str):
+    def get_session(self, session_id: str, **kwargs):
         return _DummySession(session_id)
 
-    def get_current_task(self, session_id: str, auto_resume: bool = False):
+    def get_current_task(self, session_id: str, auto_resume: bool = False, **kwargs):
         return {
             "task_ref": "m/t/task1",
             "task_data": {"type": "test", "content": {"prompt": "p"}},
             "queue": {"index": 0, "total": 1},
         }
 
-    def submit_answer(self, session_id: str, task_id: str, user_input):
+    def submit_answer(self, session_id: str, task_id: str, user_input, **kwargs):
         self.last_submit = {"session_id": session_id, "task_id": task_id, "user_input": user_input}
         return _DummyResult(success=True)
 
