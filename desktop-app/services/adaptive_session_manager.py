@@ -1898,21 +1898,26 @@ class AdaptiveSessionManager:
             vkey = self._chunk_variety_key(chunk)
             by_type.setdefault(vkey, []).append(chunk)
 
-        # Если только один variety_key — просто shuffle и возврат
-        if len(by_type) <= 1:
+        # Изолированное перемешивание внутри каждой группы variety_key
+        # Это гарантирует, что scattered-вопросы одного задания (и вообще задания одного типа)
+        # будут изначально в случайном порядке, а не сгруппированы.
+        for vkey, group_chunks in by_type.items():
             if seed_base:
-                seed_material = f"{seed_base}:phase:{phase_id}".encode("utf-8", errors="ignore")
+                seed_material = f"{seed_base}:vkey:{vkey}:{phase_id}".encode("utf-8", errors="ignore")
                 seed_int = int.from_bytes(hashlib.sha256(seed_material).digest()[:8], "big", signed=False)
                 state = random.getstate()
                 try:
                     random.seed(seed_int)
-                    random.shuffle(chunks)
+                    random.shuffle(group_chunks)
                 finally:
                     random.setstate(state)
             else:
-                random.shuffle(chunks)
+                random.shuffle(group_chunks)
+
+        # Если только один variety_key — просто возвращаем группу (она уже перемешана)
+        if len(by_type) <= 1:
             result = []
-            for chunk in chunks:
+            for chunk in (list(by_type.values())[0] if by_type else []):
                 result.extend(chunk)
             return result
 
