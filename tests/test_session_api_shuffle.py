@@ -395,6 +395,7 @@ def _make_api_for_boundary() -> SessionAPI:
     controller = MagicMock()
     adaptive = MagicMock()
     complex_service = MagicMock()
+    complex_service.get_complex.return_value = None
     storage = MagicMock()
     statistics = MagicMock()
     return SessionAPI(controller, adaptive, complex_service, storage, statistics)
@@ -424,19 +425,102 @@ def test_scattered_group_collects_adjacent_source_boundary_slots() -> None:
     ]
 
 
-def test_scattered_group_collects_full_scattered_run() -> None:
-    """Если подряд идут только scattered-слоты, они образуют один TestUI payload."""
+def test_scattered_group_is_bounded_by_default_for_long_mixed_runs() -> None:
+    """Long mixed scattered runs should not collapse into one huge TestUI payload."""
     api = _make_api_for_boundary()
 
     session = DummySession("single_source_test")
+    session.queue = [
+        DummyScatteredSlot("m/t/test_A", index)
+        for index in range(12)
+    ]
+
+    group = api._resolve_scattered_test_group(session, 0)
+    assert len(group) == 8
+    assert [idx for idx, _ in group] == list(range(8))
+
+
+def test_scattered_group_can_collect_all_for_pure_test_complex() -> None:
+    """A pure test complex may keep all adjacent scattered questions on one TestUI screen."""
+    api = _make_api_for_boundary()
+    api._complex_service.get_complex.return_value = {"tasks": ["m/t/test_A"]}
+    api._storage_service.load_task.return_value = {"task_data": {"type": "test"}}
+
+    session = DummySession("pure_test_complex")
+    session.queue = [
+        DummyScatteredSlot("m/t/test_A", index)
+        for index in range(12)
+    ]
+
+    group = api._resolve_scattered_test_group(session, 0)
+    assert len(group) == 12
+    assert [idx for idx, _ in group] == list(range(12))
+
+
+def test_scattered_group_stays_bounded_when_complex_contains_other_task_types() -> None:
+    """Click/sequence tasks in the complex disable automatic full-screen grouping."""
+    api = _make_api_for_boundary()
+    api._complex_service.get_complex.return_value = {"tasks": ["m/t/test_A", "m/t/click_1"]}
+
+    def load_task(module_id: str, topic_id: str, task_id: str) -> Dict[str, Any]:
+        task_type = "click" if task_id == "click_1" else "test"
+        return {"task_data": {"type": task_type}}
+
+    api._storage_service.load_task.side_effect = load_task
+
+    session = DummySession("mixed_complex")
+    session.queue = [
+        DummyScatteredSlot("m/t/test_A", index)
+        for index in range(12)
+    ]
+
+    group = api._resolve_scattered_test_group(session, 0)
+    assert len(group) == 8
+    assert [idx for idx, _ in group] == list(range(8))
+
+
+def test_scattered_group_respects_questions_per_screen_setting() -> None:
+    api = _make_api_for_boundary()
+    api._complex_service.get_complex.return_value = {
+        "settings": {"scattered_questions_per_screen": 3},
+        "tasks": ["m/t/test_A"],
+    }
+    api._storage_service.load_task.return_value = {"task_data": {"type": "test"}}
+
+    session = DummySession("custom_group_size")
     session.queue = [
         DummyScatteredSlot("m/t/test_A", index)
         for index in range(8)
     ]
 
     group = api._resolve_scattered_test_group(session, 0)
-    assert len(group) == 8
-    assert [idx for idx, _ in group] == list(range(8))
+    assert len(group) == 3
+    assert [idx for idx, _ in group] == [0, 1, 2]
+
+
+def test_scattered_group_stops_before_non_scattered_slot() -> None:
+    api = _make_api_for_boundary()
+
+    class DummyClick:
+        task_ref = "m/t/click_1"
+        display_mode = None
+        source_task_ref = None
+        test_question_index = None
+        difficulty = 1
+        is_retry = False
+        origin_iteration = None
+
+    session = DummySession("stop_before_click")
+    session.queue = [
+        DummyScatteredSlot("m/t/test_A", 0),
+        DummyScatteredSlot("m/t/test_A", 1),
+        DummyClick(),
+        DummyScatteredSlot("m/t/test_B", 0),
+    ]
+
+    group = api._resolve_scattered_test_group(session, 0)
+    assert len(group) == 2
+    assert [idx for idx, _ in group] == [0, 1]
 
 
 def test_scattered_group_mid_queue_collects_adjacent_requested_run() -> None:

@@ -2063,6 +2063,65 @@
             };
           }
 
+          function normalizeLinkedLibraryComplexEntriesForList(payload) {
+            const entries = Array.isArray(payload?.entries) ? payload.entries : [];
+            return entries
+              .map((entry) => normalizeLinkedLibraryComplexEntry(entry))
+              .filter((complex) => normalizeComplexId(complex?.id));
+          }
+
+          function mergeWorkspaceAndLinkedComplexItems(workspaceItems, linkedItems) {
+            const merged = [];
+            const linkedEntryIds = new Set();
+            const runtimeIds = new Set();
+
+            const remember = (complex) => {
+              const runtimeId = normalizeComplexId(complex?.id);
+              const libraryEntryId = getLinkedLibraryEntryId(complex);
+              if (runtimeId) runtimeIds.add(runtimeId);
+              if (libraryEntryId) linkedEntryIds.add(libraryEntryId);
+            };
+
+            (Array.isArray(workspaceItems) ? workspaceItems : []).forEach((complex) => {
+              if (!complex || typeof complex !== "object") return;
+              merged.push(complex);
+              remember(complex);
+            });
+
+            (Array.isArray(linkedItems) ? linkedItems : []).forEach((complex) => {
+              if (!complex || typeof complex !== "object") return;
+              const runtimeId = normalizeComplexId(complex?.id);
+              const libraryEntryId = getLinkedLibraryEntryId(complex);
+              if ((runtimeId && runtimeIds.has(runtimeId)) || (libraryEntryId && linkedEntryIds.has(libraryEntryId))) {
+                return;
+              }
+              merged.push(complex);
+              remember(complex);
+            });
+
+            return merged;
+          }
+
+          async function fetchLinkedComplexLibraryItemsForList() {
+            try {
+              const resp = await fetch("/api/complex-library", {
+                credentials: "same-origin",
+              });
+              const data = await resp.json().catch(() => ({}));
+              if (!resp.ok || data?.ok === false) {
+                const error = String(data?.error || `complex_library_load_failed:${resp.status}`).trim();
+                if (resp.status !== 403 || error !== "guest_cannot_read_library_status") {
+                  console.warn("[Complexes] Failed to load linked complex library", error);
+                }
+                return [];
+              }
+              return normalizeLinkedLibraryComplexEntriesForList(data);
+            } catch (error) {
+              console.warn("[Complexes] Failed to load linked complex library", error);
+              return [];
+            }
+          }
+
           function extractLinkedEmbeddedTheoryItemsFromSnapshot(snapshot) {
             const payload = snapshot && typeof snapshot === "object" ? snapshot : {};
             const complexPayload = payload?.complex && typeof payload.complex === "object" ? payload.complex : {};
@@ -3923,8 +3982,9 @@
 
             try {
               const userId = await resolveCurrentComplexesUserId();
-              const [complexesResp, sessionsResp, quickAccessResp, catalogResp] = await Promise.all([
+              const [complexesResp, linkedLibraryItems, sessionsResp, quickAccessResp, catalogResp] = await Promise.all([
                 fetch("/api/complexes"),
+                fetchLinkedComplexLibraryItemsForList(),
                 fetch(appendUserIdQuery("/api/sessions/active", userId)),
                 fetch(appendUserIdQuery("/api/ui/quick-access", userId)),
                 fetch("/api/editor/catalog"),
@@ -3977,7 +4037,8 @@
                 return;
               }
 
-              const items = Array.isArray(data.items) ? data.items : [];
+              const workspaceItems = Array.isArray(data.items) ? data.items : [];
+              const items = mergeWorkspaceAndLinkedComplexItems(workspaceItems, linkedLibraryItems);
               allComplexItems = items;
               pinnedComplexIds.clear();
               if (quickAccessData && Array.isArray(quickAccessData.pinned)) {

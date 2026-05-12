@@ -33,6 +33,9 @@ from api.web_models.sequence_models import (
 
 logger = logging.getLogger(__name__)
 
+SCATTERED_TEST_GROUP_DEFAULT_MAX_SLOTS = 8
+SCATTERED_TEST_GROUP_HARD_MAX_SLOTS = 20
+
 
 def _hosted_controller_serialized(fn):
     """Bind controller-bound SessionAPI flows to an isolated hosted context."""
@@ -87,6 +90,7 @@ class SessionAPI:
         self._storage_service = storage_service
         self._statistics_service = statistics_service
         self._default_user_id = default_user_id
+        self._scattered_group_pure_test_cache: Dict[str, Optional[bool]] = {}
         self._controller_context: contextvars.ContextVar[ComplexSessionController] = contextvars.ContextVar(
             "session_api_controller",
             default=session_controller,
@@ -918,8 +922,137 @@ class SessionAPI:
         except Exception:
             return False
 
+    def _get_complex_settings_for_session(self, session: Any) -> Dict[str, Any]:
+        complex_id = getattr(session, "complex_id", None)
+        if not complex_id or self._complex_service is None:
+            return {}
+
+        try:
+            complex_obj = self._complex_service.get_complex(complex_id)
+        except Exception:
+            logger.exception("[SessionAPI] Failed to load complex settings for %s", complex_id)
+            return {}
+
+        if isinstance(complex_obj, dict):
+            raw_settings = complex_obj.get("settings")
+        else:
+            raw_settings = getattr(complex_obj, "settings", None)
+
+        if isinstance(raw_settings, dict):
+            return raw_settings
+
+        for method_name in ("model_dump", "dict"):
+            method = getattr(raw_settings, method_name, None)
+            if not callable(method):
+                continue
+            try:
+                settings = method()
+            except Exception:
+                continue
+            if isinstance(settings, dict):
+                return settings
+
+        return {}
+
+    @staticmethod
+    def _coerce_scattered_group_size(value: Any) -> Optional[int]:
+        if isinstance(value, bool) or value is None:
+            return None
+        try:
+            size = int(value)
+        except Exception:
+            return None
+        if size < 1:
+            return None
+        return min(size, SCATTERED_TEST_GROUP_HARD_MAX_SLOTS)
+
+    def _complex_has_only_test_tasks(self, session: Any) -> Optional[bool]:
+        complex_id = getattr(session, "complex_id", None)
+        if not complex_id or self._complex_service is None or self._storage_service is None:
+            return None
+        cache_key = str(complex_id)
+        if cache_key in self._scattered_group_pure_test_cache:
+            return self._scattered_group_pure_test_cache[cache_key]
+
+        try:
+            complex_obj = self._complex_service.get_complex(complex_id)
+        except Exception:
+            logger.exception("[SessionAPI] Failed to inspect complex task types for %s", complex_id)
+            self._scattered_group_pure_test_cache[cache_key] = None
+            return None
+
+        task_refs = complex_obj.get("tasks") if isinstance(complex_obj, dict) else getattr(complex_obj, "tasks", None)
+        if not isinstance(task_refs, list) or not task_refs:
+            self._scattered_group_pure_test_cache[cache_key] = None
+            return None
+
+        saw_task = False
+        for task_ref in task_refs:
+            if not isinstance(task_ref, str):
+                self._scattered_group_pure_test_cache[cache_key] = None
+                return None
+            parts = task_ref.split("/")
+            if len(parts) < 3:
+                self._scattered_group_pure_test_cache[cache_key] = None
+                return None
+            try:
+                task_data_full = self._storage_service.load_task(parts[0], parts[1], parts[-1])
+            except Exception:
+                logger.exception("[SessionAPI] Failed to inspect task type for %s", task_ref)
+                self._scattered_group_pure_test_cache[cache_key] = None
+                return None
+            task_data = task_data_full.get("task_data") if isinstance(task_data_full, dict) else None
+            if not isinstance(task_data, dict):
+                self._scattered_group_pure_test_cache[cache_key] = None
+                return None
+            task_type = str(task_data.get("type") or task_data.get("task_type") or "").strip().lower()
+            if task_type != "test":
+                self._scattered_group_pure_test_cache[cache_key] = False
+                return False
+            saw_task = True
+
+        result = True if saw_task else None
+        self._scattered_group_pure_test_cache[cache_key] = result
+        return result
+
+    def _scattered_group_policy(self, session: Any) -> Dict[str, Any]:
+        settings = self._get_complex_settings_for_session(session)
+        strategy_value = settings.get("scattered_test_group_strategy") or settings.get("scattered_group_strategy")
+        size_value = settings.get("scattered_questions_per_screen", settings.get("scattered_test_group_size"))
+        size_is_explicit = size_value is not None
+
+        strategy = str(strategy_value or "auto").strip().lower()
+        if isinstance(size_value, str) and size_value.strip().lower() in {"single", "all"}:
+            strategy = size_value.strip().lower()
+        if strategy not in {"auto", "bounded", "single", "all"}:
+            strategy = "auto"
+
+        if strategy == "single":
+            return {"strategy": "single", "max_slots": 1}
+        if strategy == "all":
+            return {"strategy": "all", "max_slots": None}
+
+        max_slots = self._coerce_scattered_group_size(size_value)
+        if max_slots is None:
+            max_slots = SCATTERED_TEST_GROUP_DEFAULT_MAX_SLOTS
+
+        queue = getattr(session, "queue", None)
+        queue_is_only_scattered = bool(queue) and isinstance(queue, list) and all(
+            self._is_scattered_test_slot(slot)
+            for slot in queue
+        )
+        if (
+            strategy == "auto"
+            and not size_is_explicit
+            and queue_is_only_scattered
+            and self._complex_has_only_test_tasks(session) is True
+        ):
+            return {"strategy": "auto_all_test_only", "max_slots": None}
+
+        return {"strategy": "bounded", "max_slots": max_slots}
+
     def _resolve_scattered_test_group(self, session: Any, start_index: Optional[int]) -> List[Tuple[int, Any]]:
-        """Return the contiguous scattered queue run that should share one TestUI screen."""
+        """Return the bounded scattered queue run that should share one TestUI screen."""
         if not session or not isinstance(start_index, int):
             return []
         queue = getattr(session, "queue", None)
@@ -928,12 +1061,16 @@ class SessionAPI:
         if not self._is_scattered_test_slot(queue[start_index]):
             return []
 
+        policy = self._scattered_group_policy(session)
+        max_slots = policy.get("max_slots")
         group: List[Tuple[int, Any]] = []
         for queue_index in range(start_index, len(queue)):
             queued_task = queue[queue_index]
             if not self._is_scattered_test_slot(queued_task):
                 break
             group.append((queue_index, queued_task))
+            if isinstance(max_slots, int) and len(group) >= max_slots:
+                break
 
         return group
 
@@ -1134,6 +1271,7 @@ class SessionAPI:
         if not grouped_questions or first_task_data_full is None or first_source_ref is None or first_parts is None:
             return None
 
+        group_policy = self._scattered_group_policy(session)
         first_task_data = copy.deepcopy(first_task_data_full.get("task_data") or {})
         content = first_task_data.get("content") if isinstance(first_task_data.get("content"), dict) else {}
         content = copy.deepcopy(content)
@@ -1152,10 +1290,20 @@ class SessionAPI:
             source_ref = meta.get("source_task_ref")
             if isinstance(source_ref, str) and source_ref not in source_refs:
                 source_refs.append(source_ref)
+        queue = getattr(session, "queue", None)
+        next_index = end_index + 1
+        truncated = (
+            isinstance(queue, list)
+            and next_index < len(queue)
+            and self._is_scattered_test_slot(queue[next_index])
+        )
 
         group_meta = {
             "type": "scattered_test_group",
             "display_mode": "scattered",
+            "group_strategy": group_policy.get("strategy"),
+            "max_slots": group_policy.get("max_slots"),
+            "truncated": truncated,
             "start_index": start_index,
             "end_index": end_index,
             "slot_count": len(group),
