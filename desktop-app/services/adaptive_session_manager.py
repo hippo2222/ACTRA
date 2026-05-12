@@ -1650,7 +1650,8 @@ class AdaptiveSessionManager:
                 continue
             for task_ref in chain:
                 if isinstance(task_ref, str) and task_ref:
-                    refs.add(task_ref.strip())
+                    # Normalize to lowercase for robust matching
+                    refs.add(task_ref.strip().lower())
         return refs
 
     def _chunk_variety_key(self, chunk: List[QueuedTask]) -> str:
@@ -1669,8 +1670,11 @@ class AdaptiveSessionManager:
         if len(chunk) > 1:
             return "chain"
         task = chunk[0]
-        if str(getattr(task, "display_mode", "") or "").strip().lower() == "scattered":
-            return f"scattered_q:{task.task_ref}"
+        display_mode = str(getattr(task, "display_mode", "") or "").strip().lower()
+        if display_mode == "scattered":
+            # Normalize ref to ensure consistency
+            tref = str(task.task_ref or "").strip().lower()
+            return f"scattered_q:{tref}"
         return self._get_task_type(task.task_ref)
 
     def _break_monotony_runs(
@@ -1732,17 +1736,16 @@ class AdaptiveSessionManager:
 
     def _get_test_question_display_mode(self, complex_obj: Optional[Complex], task_ref: str) -> str:
         """
-        Определяет режим отображения вопросов для тестового задания (together или scattered).
-        Учитывает настройки комплекса и наличие задания в сцепках.
+        Determines how test questions within a task should be displayed: 'together' or 'scattered'.
+        Handles both dictionary and Pydantic model structures for settings.
         """
         if not complex_obj:
             return "together"
 
-        # Нормализуем ref для поиска
-        tref = str(task_ref or "").strip()
+        # Normalize ref for search
+        tref = str(task_ref or "").strip().lower()
 
-        # 1. Если задание в сцепке (Chain), оно ВСЕГДА отображается 'together' (монолитно),
-        # так как сцепка подразумевает фиксированный порядок и целостность группы заданий.
+        # 1. If task is in a chain, it is ALWAYS 'together'
         chains = getattr(complex_obj, "chains", None)
         if chains is None and isinstance(complex_obj, dict):
             chains = complex_obj.get("chains")
@@ -1750,39 +1753,50 @@ class AdaptiveSessionManager:
         if chains and tref in self._task_refs_in_chains(chains):
             return "together"
 
-        # 2. Ищем в настройках комплекса (test_question_display_modes)
+        # 2. Look in settings (test_question_display_modes)
         settings = getattr(complex_obj, "settings", None)
         if settings is None and isinstance(complex_obj, dict):
             settings = complex_obj.get("settings")
 
         modes = None
         if settings is not None:
-            # Пытаемся достать как атрибут (Pydantic/Object)
+            # Try attribute access (Pydantic/Object)
             modes = getattr(settings, "test_question_display_modes", None)
-            # Если не вышло, пытаемся как ключ (Dict)
+            # Try dictionary access
             if modes is None and isinstance(settings, dict):
                 modes = settings.get("test_question_display_modes")
-            # Fallback: если это Pydantic модель, но getattr не сработал как надо
+            # Fallback for complex models
             if modes is None and hasattr(settings, "dict"):
                 try:
                     modes = settings.dict().get("test_question_display_modes")
                 except Exception:
                     pass
 
-        if not isinstance(modes, dict):
-            modes = {}
-
-        # 3. Поиск режима (регистронезависимый и с обрезкой пробелов)
-        mode = modes.get(tref)
-        if mode is None:
-            tref_lower = tref.lower()
+        # 3. Robust lookup: modes can be a list of Pydantic models or a raw dict
+        display_mode = "together"
+        if isinstance(modes, list):
+            for entry in modes:
+                ref = ""
+                mode_val = ""
+                if hasattr(entry, "task_ref"):
+                    ref = str(getattr(entry, "task_ref") or "").strip().lower()
+                    mode_val = str(getattr(entry, "display_mode") or "").strip().lower()
+                elif isinstance(entry, dict):
+                    ref = str(entry.get("task_ref") or "").strip().lower()
+                    mode_val = str(entry.get("display_mode") or "").strip().lower()
+                
+                if ref == tref:
+                    display_mode = mode_val
+                    break
+        elif isinstance(modes, dict):
+            # Case-insensitive search
             for k, v in modes.items():
-                if str(k).strip().lower() == tref_lower:
-                    mode = v
+                if str(k).strip().lower() == tref:
+                    display_mode = str(v or "").strip().lower()
                     break
 
-        mode_str = str(mode or "together").strip().lower()
-        return mode_str if mode_str in {"together", "scattered"} else "together"
+        # logger.info(f"[_get_test_question_display_mode] {task_ref} -> {display_mode}")
+        return display_mode if display_mode in ("together", "scattered") else "together"
 
     def _get_test_question_count(self, task_ref: str) -> int:
         module_id, topic_id, task_id = self._split_task_ref(task_ref)
@@ -2000,12 +2014,15 @@ class AdaptiveSessionManager:
         for chunk in distributed:
             result.extend(chunk)
 
-        logger.debug(
-            "[_balance_chunks_by_type] Phase %s: %s заданий, variety_keys: %s",
+        logger.info(
+            "[_balance_chunks_by_type] Phase %s: %s tasks, variety_keys: %s",
             phase_id,
             len(result),
             sorted_types,
         )
+        if len(result) > 0:
+            logger.info(f"[_balance_chunks_by_type] First 10 task types: {[self._chunk_variety_key([t]) for t in result[:10]]}")
+            
         return result
 
     def _sort_chunks_by_phase(
