@@ -101,6 +101,8 @@ class ComplexSessionController:
             content["questions"] = _filter_question_list(content.get("questions") or [])
             task_data = dict(task_data)
             task_data["content"] = content
+            if isinstance(task_data.get("questions"), list):
+                task_data["questions"] = _filter_question_list(task_data["questions"])
             filtered_payload["task_data"] = task_data
 
         answer_key = filtered_payload.get("answer_key")
