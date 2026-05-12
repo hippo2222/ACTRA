@@ -1299,6 +1299,7 @@ class AppContextHeadless:
             complex_service=self.complex_service,
             user_progress_manager=self.progress_service.progress_manager,
             difficulty_manager=self.difficulty_manager,
+            storage_service=self.storage_service,
             session_repository=self.session_repository,
         )
         logger.info("[HTTP] AdaptiveSessionManager initialized")
