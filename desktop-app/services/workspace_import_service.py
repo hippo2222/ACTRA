@@ -225,6 +225,10 @@ class WorkspaceImportService:
                 "description": source_payload.get("description"),
                 "tasks": [task_ref_map[str(task_ref)] for task_ref in source_payload.get("tasks") or []],
                 "chains": self.materializer._remap_chains(source_payload.get("chains"), task_ref_map),
+                "settings": self.materializer._remap_complex_settings(
+                    source_payload.get("settings"),
+                    task_ref_map,
+                ),
                 "theory_link": mapped_complex_theory_link,
                 **complex_workspace_meta,
             },

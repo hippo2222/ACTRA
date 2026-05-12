@@ -154,6 +154,10 @@ class WorkspaceGraphMaterializationService:
             source_payload.get("chains"),
             task_ref_map,
         )
+        complex_copy_payload["settings"] = self._remap_complex_settings(
+            source_payload.get("settings"),
+            task_ref_map,
+        )
         if isinstance(mapped_complex_theory_link, dict):
             complex_copy_payload["theory_link"] = mapped_complex_theory_link
         complex_copy_payload["created_via"] = normalized_created_via
@@ -399,6 +403,45 @@ class WorkspaceGraphMaterializationService:
             if remapped_chain:
                 remapped.append(remapped_chain)
         return remapped
+
+    def _remap_complex_settings(
+        self,
+        raw_settings: Any,
+        task_ref_map: Dict[str, str],
+    ) -> Dict[str, Any]:
+        if hasattr(raw_settings, "dict"):
+            raw_settings = raw_settings.dict()
+        if not isinstance(raw_settings, dict):
+            return {}
+
+        remapped_settings = copy.deepcopy(raw_settings)
+        raw_modes = remapped_settings.get("test_question_display_modes")
+        remapped_modes: Dict[str, str] = {}
+
+        if isinstance(raw_modes, dict):
+            mode_items = raw_modes.items()
+        elif isinstance(raw_modes, list):
+            mode_items = [
+                (
+                    entry.get("task_ref") if isinstance(entry, dict) else getattr(entry, "task_ref", None),
+                    entry.get("display_mode") if isinstance(entry, dict) else getattr(entry, "display_mode", None),
+                )
+                for entry in raw_modes
+            ]
+        else:
+            mode_items = []
+
+        for raw_task_ref, raw_mode in mode_items:
+            source_task_ref = str(raw_task_ref or "").strip()
+            target_task_ref = str(task_ref_map.get(source_task_ref) or "").strip()
+            display_mode = str(raw_mode or "").strip().lower()
+            if target_task_ref and display_mode in {"together", "scattered"}:
+                remapped_modes[target_task_ref] = display_mode
+
+        if "test_question_display_modes" in remapped_settings or remapped_modes:
+            remapped_settings["test_question_display_modes"] = remapped_modes
+
+        return remapped_settings
 
     def _build_reused_complex_result(self, existing_complex: Any) -> Dict[str, Any]:
         complex_item = existing_complex.dict() if hasattr(existing_complex, "dict") else dict(existing_complex or {})

@@ -1772,8 +1772,28 @@ class AdaptiveSessionManager:
                 except Exception:
                     pass
 
-        # 3. Robust lookup: modes can be a list of Pydantic models or a raw dict
-        display_mode = "together"
+        # 3. Robust lookup: modes can be a list of Pydantic models or a raw dict.
+        # Imported workspace copies may still have settings keyed by the source task
+        # ref, so fall back to task lineage metadata when the current ref misses.
+        has_display_modes = isinstance(modes, (dict, list)) and bool(modes)
+        display_mode = self._lookup_test_question_display_mode(modes, {tref})
+        if display_mode is None and has_display_modes:
+            source_task_ref = self._get_task_source_ref(task_ref)
+            source_tref = str(source_task_ref or "").strip().lower()
+            if source_tref and source_tref != tref:
+                display_mode = self._lookup_test_question_display_mode(modes, {source_tref})
+
+        if display_mode is None:
+            display_mode = "together"
+
+        if display_mode == "scattered":
+             logger.info(f"[_get_test_question_display_mode] вњ“ SCATTERED detected for {task_ref}")
+        
+        return display_mode if display_mode in ("together", "scattered") else "together"
+
+    def _lookup_test_question_display_mode(self, modes: Any, task_refs: set[str]) -> Optional[str]:
+        if not task_refs:
+            return None
         if isinstance(modes, list):
             for entry in modes:
                 ref = ""
@@ -1785,20 +1805,51 @@ class AdaptiveSessionManager:
                     ref = str(entry.get("task_ref") or "").strip().lower()
                     mode_val = str(entry.get("display_mode") or "").strip().lower()
                 
-                if ref == tref:
-                    display_mode = mode_val
-                    break
+                if ref in task_refs:
+                    return mode_val
         elif isinstance(modes, dict):
             # Case-insensitive search
             for k, v in modes.items():
-                if str(k).strip().lower() == tref:
-                    display_mode = str(v or "").strip().lower()
-                    break
+                if str(k).strip().lower() in task_refs:
+                    return str(v or "").strip().lower()
 
-        if display_mode == "scattered":
-             logger.info(f"[_get_test_question_display_mode] ✓ SCATTERED detected for {task_ref}")
-        
-        return display_mode if display_mode in ("together", "scattered") else "together"
+        return None
+
+    def _get_task_source_ref(self, task_ref: str) -> Optional[str]:
+        module_id, topic_id, task_id = self._split_task_ref(task_ref)
+        if not module_id or not topic_id or not task_id or not self.storage_service:
+            return None
+
+        try:
+            task_data_full = self.storage_service.load_task(module_id, topic_id, task_id)
+        except Exception:
+            logger.exception("[_get_task_source_ref] Failed to load task %s", task_ref)
+            return None
+
+        if not isinstance(task_data_full, dict):
+            return None
+
+        candidates = []
+        for container in (
+            task_data_full.get("metadata"),
+            task_data_full.get("meta"),
+            task_data_full.get("task_data", {}).get("meta")
+            if isinstance(task_data_full.get("task_data"), dict)
+            else None,
+        ):
+            if not isinstance(container, dict):
+                continue
+            candidates.append(container.get("source_entity_id"))
+            lineage = container.get("source_lineage")
+            if isinstance(lineage, dict):
+                candidates.append(lineage.get("source_entity_id"))
+
+        for candidate in candidates:
+            source_ref = str(candidate or "").strip()
+            if source_ref.count("/") >= 2:
+                return source_ref
+
+        return None
 
     def _get_test_question_count(self, task_ref: str) -> int:
         module_id, topic_id, task_id = self._split_task_ref(task_ref)
