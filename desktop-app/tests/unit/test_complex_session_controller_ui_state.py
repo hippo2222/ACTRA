@@ -245,6 +245,54 @@ def test_load_current_task_partial_retry_uses_shuffled_positions_when_present():
     assert task_question_ids == ["q2"]
 
 
+def test_load_current_task_scattered_retry_uses_single_queue_question():
+    session_manager = MagicMock()
+    task_controller = MagicMock()
+    storage_service = MagicMock()
+    complex_service = MagicMock()
+
+    session = make_session(current_task_index=1)
+    session.test_failed_subtests = {"m/t/task2": [0, 2]}
+    session.queue[1].is_retry = True
+    session.queue[1].display_mode = "scattered"
+    session.queue[1].source_task_ref = "m/t/task2"
+    session.queue[1].test_question_index = 2
+    session_manager.get_session.return_value = session
+    storage_service.load_task.return_value = {
+        "task_data": {
+            "type": "test",
+            "content": {
+                "questions": [
+                    {"id": "q1", "prompt": "one"},
+                    {"id": "q2", "prompt": "two"},
+                    {"id": "q3", "prompt": "three"},
+                ]
+            },
+        },
+        "answer_key": {
+            "questions": [
+                {"id": "q1", "answers": [{"text": "A", "correct": True}]},
+                {"id": "q2", "answers": [{"text": "B", "correct": True}]},
+                {"id": "q3", "answers": [{"text": "C", "correct": True}]},
+            ]
+        },
+    }
+
+    controller = ComplexSessionController(
+        session_manager=session_manager,
+        task_controller=task_controller,
+        storage_service=storage_service,
+        complex_service=complex_service,
+    )
+    controller.current_session_id = session.id
+
+    controller._load_current_task()
+
+    _, kwargs = task_controller.load_task.call_args
+    assert [item["id"] for item in kwargs["task_data"]["content"]["questions"]] == ["q3"]
+    assert [item["id"] for item in kwargs["answer_key"]["questions"]] == ["q3"]
+
+
 def test_load_next_task_filters_answer_key_for_test_partial_retry():
     session_manager = MagicMock()
     task_controller = MagicMock()
@@ -309,6 +357,62 @@ def test_load_next_task_filters_answer_key_for_test_partial_retry():
     assert task_question_ids == ["q1", "q3"]
     assert answer_question_ids == ["q1", "q3"]
     assert original_indices == [0, 2]
+
+
+def test_load_next_task_filters_scattered_question_from_next_task_info():
+    session_manager = MagicMock()
+    task_controller = MagicMock()
+    storage_service = MagicMock()
+    complex_service = MagicMock()
+
+    session = make_session(current_task_index=0)
+    session_manager.get_session.return_value = session
+    session_manager.get_next_task.return_value = {
+        "task_ref": "m/t/task2",
+        "difficulty": 1,
+        "is_retry": False,
+        "index": 1,
+        "total": len(session.queue),
+        "iteration": session.iteration,
+        "display_mode": "scattered",
+        "source_task_ref": "m/t/task2",
+        "test_question_index": 1,
+    }
+    storage_service.load_task.return_value = {
+        "task_data": {
+            "type": "test",
+            "content": {
+                "questions": [
+                    {"id": "q1", "prompt": "one"},
+                    {"id": "q2", "prompt": "two"},
+                    {"id": "q3", "prompt": "three"},
+                ]
+            },
+        },
+        "answer_key": {
+            "questions": [
+                {"id": "q1", "answers": [{"text": "A", "correct": True}]},
+                {"id": "q2", "answers": [{"text": "B", "correct": True}]},
+                {"id": "q3", "answers": [{"text": "C", "correct": True}]},
+            ]
+        },
+    }
+
+    controller = ComplexSessionController(
+        session_manager=session_manager,
+        task_controller=task_controller,
+        storage_service=storage_service,
+        complex_service=complex_service,
+    )
+    controller.current_session_id = session.id
+    controller.save_ui_state = MagicMock()
+
+    controller._load_next_task()
+
+    task_controller.load_task.assert_called_once()
+    _, kwargs = task_controller.load_task.call_args
+    assert [item["id"] for item in kwargs["task_data"]["content"]["questions"]] == ["q2"]
+    assert [item["id"] for item in kwargs["answer_key"]["questions"]] == ["q2"]
 
 
 def test_submit_answer_recomputes_stale_test_message_after_session_success():

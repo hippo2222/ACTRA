@@ -39,7 +39,7 @@ def test_chunk_variety_key():
     
     # 3. Scattered вопрос
     chunk3 = [QueuedTask(task_ref="m/t/test_1", difficulty=1, display_mode="scattered", test_question_index=0)]
-    assert mgr._chunk_variety_key(chunk3) == "scattered_q"
+    assert mgr._chunk_variety_key(chunk3) == "scattered_q:m/t/test_1"
 
 def test_break_monotony_runs():
     mgr = DummyAdaptiveSessionManager()

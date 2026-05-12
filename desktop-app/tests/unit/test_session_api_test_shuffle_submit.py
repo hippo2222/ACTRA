@@ -2,6 +2,7 @@ import sys
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock
+import copy
 
 
 DESKTOP_APP_PATH = Path(__file__).resolve().parents[2]
@@ -147,7 +148,7 @@ def test_submit_answer_attaches_per_question_ui_in_shuffled_indices():
     assert result.details["per_question_ui"]["2"]["user_option_ids"] == [3]
 
 
-def test_scattered_group_payload_collects_adjacent_test_questions():
+def test_scattered_group_payload_uses_single_queue_slot():
     controller = MagicMock()
     controller.current_session_id = "sess_1"
     controller.current_task_ref = "module/topic/test_a"
@@ -230,15 +231,99 @@ def test_scattered_group_payload_collects_adjacent_test_questions():
     group = api._resolve_scattered_test_group(session, 0)
     payload = api._build_scattered_test_group_payload("sess_1", session, group)
 
-    assert len(group) == 2
+    assert len(group) == 1
     assert payload is not None
     questions = payload["task_data"]["content"]["questions"]
     assert [q["_split_source_task_ref"] for q in questions] == [
         "module/topic/test_a",
-        "module/topic/test_b",
     ]
-    assert [q["_split_source_question_index"] for q in questions] == [1, 0]
+    assert [q["_split_source_question_index"] for q in questions] == [1]
     assert payload["test_group_meta"]["sources"] == [
         "module/topic/test_a",
-        "module/topic/test_b",
     ]
+
+
+def test_get_current_task_reapplies_scattered_filter_after_controller_task_reuse():
+    controller = MagicMock()
+    controller.current_session_id = "sess_1"
+    controller.current_task_ref = "module/topic/test_a"
+    controller.get_current_session_stats.return_value = {}
+
+    def apply_scattered_filter(*, queued_task, task_data_full, context_label):
+        payload = copy.deepcopy(task_data_full)
+        task_data = payload["task_data"]
+        questions = task_data["content"]["questions"]
+        task_data["content"]["questions"] = [questions[int(queued_task.test_question_index)]]
+        payload["task_data"] = task_data
+        return payload
+
+    controller._apply_test_scattered_filter.side_effect = apply_scattered_filter
+
+    full_task_data = {
+        "type": "test",
+        "content": {
+            "questions": [
+                {"id": "q0", "text": "Q0"},
+                {"id": "q1", "text": "Q1"},
+                {"id": "q2", "text": "Q2"},
+            ]
+        },
+    }
+    task_obj = MagicMock()
+    task_obj.full_id = "module/topic/test_a"
+    task_obj.task_data = copy.deepcopy(full_task_data)
+    controller.task_controller = MagicMock()
+    controller.task_controller.current_task = task_obj
+    controller.task_controller.difficulty_manager = None
+
+    queued_task = SimpleNamespace(
+        task_ref="module/topic/test_a",
+        difficulty=1,
+        is_retry=False,
+        origin_iteration=None,
+        display_mode=None,
+        source_task_ref="module/topic/test_a",
+        test_question_index=1,
+    )
+    session = SimpleNamespace(
+        id="sess_1",
+        user_id="u1",
+        complex_id="complex_1",
+        iteration=1,
+        current_task_index=1,
+        queue=[queued_task],
+        completed_tasks=[],
+        test_shuffle={},
+        test_failed_subtests={},
+        ui_state=None,
+        paused=False,
+        is_active=True,
+    )
+
+    session_manager = MagicMock()
+    session_manager.get_session.return_value = session
+    session_manager.session_repository = None
+    session_manager._get_task_type.return_value = "test"
+    session_manager._get_task_phase.return_value = 1
+
+    storage = MagicMock()
+    storage.load_task.return_value = {
+        "task_data": copy.deepcopy(full_task_data),
+        "answer_key": {},
+        "task_dir": None,
+    }
+
+    api = SessionAPI(
+        session_controller=controller,
+        adaptive_session_manager=session_manager,
+        complex_service=MagicMock(),
+        storage_service=storage,
+        statistics_service=MagicMock(),
+    )
+
+    payload = api.get_current_task("sess_1", user_id="u1")
+
+    assert payload is not None
+    questions = payload["task_data"]["content"]["questions"]
+    assert [question["id"] for question in questions] == ["q1"]
+    assert controller._apply_test_scattered_filter.call_args.kwargs["context_label"] == "session_api_final"

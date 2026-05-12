@@ -1228,6 +1228,13 @@ class SessionAPI:
                 "retry": {
                     "is_retry": any(bool(getattr(slot, "is_retry", False)) for _, slot in group),
                 },
+                "queue_slot": {
+                    "index": start_index,
+                    "task_ref": getattr(group[0][1], "task_ref", None),
+                    "display_mode": getattr(group[0][1], "display_mode", None),
+                    "test_question_index": getattr(group[0][1], "test_question_index", None),
+                    "source_task_ref": getattr(group[0][1], "source_task_ref", None),
+                },
             },
             "available_levels": [],
             "difficulty_meta": None,
@@ -2355,6 +2362,23 @@ class SessionAPI:
             self._enrich_task_data_for_web(task_data, task_dir)
             task_data_full["task_data"] = task_data
 
+            if (
+                queued_task_for_state is not None
+                and getattr(queued_task_for_state, "test_question_index", None) is not None
+            ):
+                try:
+                    task_data_full = self._controller._apply_test_scattered_filter(
+                        queued_task=queued_task_for_state,
+                        task_data_full=task_data_full,
+                        context_label="session_api_final",
+                    )
+                    task_data = task_data_full.get("task_data")
+                except Exception:
+                    logger.exception(
+                        "[SessionAPI.get_current_task] Final scattered filter failed for %s",
+                        current_task_ref,
+                    )
+
             # Дополнительно нормализуем структуру для sequence_assembly задач
             try:
                 task_type = task_data.get("type") or task_data.get("task_type")
@@ -2761,6 +2785,14 @@ class SessionAPI:
                     "variant": retry_variant,
                 },
             }
+            if queued_task is not None:
+                order_meta["queue_slot"] = {
+                    "index": resolved_queue_index,
+                    "task_ref": getattr(queued_task, "task_ref", None),
+                    "display_mode": getattr(queued_task, "display_mode", None),
+                    "test_question_index": getattr(queued_task, "test_question_index", None),
+                    "source_task_ref": getattr(queued_task, "source_task_ref", None),
+                }
         except Exception:
             order_meta = {}
 

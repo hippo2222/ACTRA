@@ -373,8 +373,7 @@ def test_new_iteration_has_separate_permutation() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Тесты для фикса: _resolve_scattered_test_group должна останавливаться
-# при смене source_task_ref (каждый тест = отдельная встреча)
+# Тесты для фикса: scattered отображается строго как один queue-slot.
 # ---------------------------------------------------------------------------
 
 class DummyScatteredSlot:
@@ -401,8 +400,8 @@ def _make_api_for_boundary() -> SessionAPI:
     return SessionAPI(controller, adaptive, complex_service, storage, statistics)
 
 
-def test_scattered_group_stops_at_source_boundary() -> None:
-    """Группа прерывается при смене source_task_ref — слоты из разных тестов не сливаются."""
+def test_scattered_group_uses_only_start_slot_at_source_boundary() -> None:
+    """Даже соседние scattered-слоты не сливаются обратно в один тест."""
     api = _make_api_for_boundary()
 
     session = DummySession("boundary_test")
@@ -415,13 +414,13 @@ def test_scattered_group_stops_at_source_boundary() -> None:
 
     group = api._resolve_scattered_test_group(session, 0)
 
-    # Должны собраться только слоты из test_A
-    assert len(group) == 2
+    assert len(group) == 1
+    assert [idx for idx, _ in group] == [0]
     assert all(getattr(slot, "source_task_ref", None) == "m/t/test_A" for _, slot in group)
 
 
-def test_scattered_group_collects_all_from_single_source() -> None:
-    """Если все слоты из одного источника — собираются все."""
+def test_scattered_group_does_not_collect_all_from_single_source() -> None:
+    """Несколько вопросов одного теста остаются отдельными показами."""
     api = _make_api_for_boundary()
 
     session = DummySession("single_source_test")
@@ -432,12 +431,12 @@ def test_scattered_group_collects_all_from_single_source() -> None:
     ]
 
     group = api._resolve_scattered_test_group(session, 0)
-    assert len(group) == 3
-    assert [idx for idx, _ in group] == [0, 1, 2]
+    assert len(group) == 1
+    assert [idx for idx, _ in group] == [0]
 
 
-def test_scattered_group_mid_queue_stops_at_source_change() -> None:
-    """Работает корректно если группа начинается не с нулевой позиции."""
+def test_scattered_group_mid_queue_uses_only_requested_slot() -> None:
+    """Работает корректно если scattered-слот находится не в нулевой позиции."""
     api = _make_api_for_boundary()
 
     session = DummySession("mid_queue_test")
@@ -460,5 +459,6 @@ def test_scattered_group_mid_queue_stops_at_source_change() -> None:
     ]
 
     group = api._resolve_scattered_test_group(session, 1)
-    assert len(group) == 2
+    assert len(group) == 1
+    assert [idx for idx, _ in group] == [1]
     assert all(getattr(slot, "source_task_ref", None) == "m/t/test_A" for _, slot in group)

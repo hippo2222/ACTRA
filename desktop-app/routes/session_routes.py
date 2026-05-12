@@ -244,15 +244,29 @@ def get_current_task(session_id: str) -> Any:
         task_type = task_data.get("type")
         task_task_type = task_data.get("task_type")
         content_mode = content.get("mode")
+        content_questions = content.get("questions")
+        top_level_questions = task_data.get("questions")
+        order_meta = data.get("order_meta") if isinstance(data.get("order_meta"), dict) else {}
+        test_group_meta = data.get("test_group_meta") if isinstance(data.get("test_group_meta"), dict) else None
+        queue_slot_meta = order_meta.get("queue_slot") if isinstance(order_meta.get("queue_slot"), dict) else {}
+        queue_test_question_index = (
+            queue_slot_meta.get("test_question_index")
+            if queue_slot_meta
+            else None
+        )
 
         logger.info(
-            "[HTTP][TASK_DEBUG] session_id=%s task_ref=%s task_data.type=%s task_data.task_type=%s content.mode=%s requires_labels=%s",
+            "[HTTP][TASK_DEBUG] session_id=%s task_ref=%s task_data.type=%s task_data.task_type=%s content.mode=%s requires_labels=%s content_questions=%s top_level_questions=%s test_question_index=%s test_group=%s",
             session_id,
             data.get("task_ref"),
             task_type,
             task_task_type,
             content_mode,
             req_labels,
+            len(content_questions) if isinstance(content_questions, list) else None,
+            len(top_level_questions) if isinstance(top_level_questions, list) else None,
+            queue_test_question_index,
+            bool(test_group_meta),
         )
         logger.info(
             "[HTTP][TASK_DEBUG] task keys=%s task_data keys=%s content keys=%s",
