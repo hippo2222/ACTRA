@@ -919,11 +919,7 @@ class SessionAPI:
             return False
 
     def _resolve_scattered_test_group(self, session: Any, start_index: Optional[int]) -> List[Tuple[int, Any]]:
-        """Собирает группу consecutive scattered-слотов начиная с start_index.
-
-        Останавливается при смене source_task_ref — каждый тест отображается
-        отдельно, предотвращая слияние вопросов разных источников в один гигантский тест.
-        """
+        """Return the single scattered queue slot that should be displayed now."""
         if not session or not isinstance(start_index, int):
             return []
         queue = getattr(session, "queue", None)
@@ -931,17 +927,7 @@ class SessionAPI:
             return []
         if not self._is_scattered_test_slot(queue[start_index]):
             return []
-        first_source = getattr(queue[start_index], "source_task_ref", None)
-        group: List[Tuple[int, Any]] = []
-        idx = start_index
-        while idx < len(queue) and self._is_scattered_test_slot(queue[idx]):
-            slot = queue[idx]
-            # Стоп при смене источника: каждый тест — отдельная встреча
-            if getattr(slot, "source_task_ref", None) != first_source:
-                break
-            group.append((idx, slot))
-            idx += 1
-        return group
+        return [(start_index, queue[start_index])]
 
     def _get_test_questions_from_task_data(self, task_data: Dict[str, Any]) -> List[Any]:
         if not isinstance(task_data, dict):

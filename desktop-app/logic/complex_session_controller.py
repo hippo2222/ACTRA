@@ -212,6 +212,78 @@ class ComplexSessionController:
         return task_data_full
 
     @staticmethod
+    def _queued_task_value(queued_task: Any, key: str, default: Any = None) -> Any:
+        if isinstance(queued_task, dict):
+            return queued_task.get(key, default)
+        return getattr(queued_task, key, default)
+
+    @classmethod
+    def _queued_task_test_question_index(cls, queued_task: Any) -> Optional[int]:
+        question_idx = cls._queued_task_value(queued_task, "test_question_index")
+        if question_idx is None:
+            return None
+        try:
+            return int(question_idx)
+        except Exception:
+            return None
+
+    def _apply_test_scattered_filter(
+        self,
+        *,
+        queued_task: Any,
+        task_data_full: Dict[str, Any],
+        context_label: str,
+    ) -> Dict[str, Any]:
+        """Filter test questions to a single one if test_question_index is specified (SCATTERED mode)."""
+        if not isinstance(task_data_full, dict):
+            return task_data_full
+
+        question_idx = self._queued_task_test_question_index(queued_task)
+        if question_idx is None:
+            return task_data_full
+
+        try:
+            # Reuse partial retry filter logic with a single index to keep structure consistent
+            return self._filter_test_questions_for_partial_retry(
+                task_data_full,
+                [question_idx],
+            )
+        except Exception as e:
+            logger.warning(
+                "[%s] Failed to apply scattered filter for task %s at index %s: %s",
+                context_label,
+                self._queued_task_value(queued_task, "task_ref", "unknown"),
+                question_idx,
+                e,
+            )
+            return task_data_full
+
+    def _apply_test_queue_slot_filters(
+        self,
+        *,
+        session: Optional[ComplexSession],
+        queued_task: Any,
+        task_ref: str,
+        is_retry: bool,
+        task_data_full: Dict[str, Any],
+        context_label: str,
+    ) -> Dict[str, Any]:
+        if self._queued_task_test_question_index(queued_task) is not None:
+            return self._apply_test_scattered_filter(
+                queued_task=queued_task,
+                task_data_full=task_data_full,
+                context_label=context_label,
+            )
+
+        return self._apply_test_partial_retry_filter(
+            session=session,
+            task_ref=task_ref,
+            is_retry=is_retry,
+            task_data_full=task_data_full,
+            context_label=context_label,
+        )
+
+    @staticmethod
     def _format_test_result_message(correct_count: int, total_count: int) -> str:
         """Keep TEST summary text consistent with evaluator output."""
         if total_count <= 0:
@@ -477,8 +549,9 @@ class ComplexSessionController:
             if not task_data_full:
                 raise ValueError(f"Task not found: {task_ref}")
 
-            task_data_full = self._apply_test_partial_retry_filter(
+            task_data_full = self._apply_test_queue_slot_filters(
                 session=session,
+                queued_task=queued_task,
                 task_ref=task_ref,
                 is_retry=bool(queued_task.is_retry),
                 task_data_full=task_data_full,
@@ -791,8 +864,9 @@ class ComplexSessionController:
                 if not task_data_full:
                     raise ValueError(f"Task not found: {task_ref}")
 
-                task_data_full = self._apply_test_partial_retry_filter(
+                task_data_full = self._apply_test_queue_slot_filters(
                     session=session,
+                    queued_task=next_task_info,
                     task_ref=task_ref,
                     is_retry=bool(next_task_info.get("is_retry")),
                     task_data_full=task_data_full,
