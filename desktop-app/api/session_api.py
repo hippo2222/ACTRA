@@ -2288,6 +2288,12 @@ class SessionAPI:
         # leaking between repeated get_current_task() calls.
         try:
             task_data_full = copy.deepcopy(task_data_full)
+            if queued_task_for_state is not None and getattr(queued_task_for_state, "test_question_index", None) is not None:
+                task_data_full = self._controller._apply_test_scattered_filter(
+                    queued_task=queued_task_for_state,
+                    task_data_full=task_data_full,
+                    context_label="session_api"
+                )
         except Exception:
             logger.exception(
                 "[SessionAPI.get_current_task] Failed to deepcopy task_data_full for %s",
