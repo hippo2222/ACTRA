@@ -28,7 +28,20 @@ def serve_asset_content(asset_id: str) -> Any:
         if str(user_id or "").strip() == "guest":
             return jsonify({"ok": False, "error": "authentication_required"}), 401
         if not asset_service.can_access_asset(asset, user_id=user_id):
-            return jsonify({"ok": False, "error": "asset_forbidden"}), 403
+            catalog_service = getattr(ctx, "catalog_service", None)
+            catalog_allows = False
+            if catalog_service is not None and hasattr(catalog_service, "can_access_catalog_asset"):
+                try:
+                    catalog_allows = bool(
+                        catalog_service.can_access_catalog_asset(
+                            asset_id,
+                            requested_by_user_id=user_id,
+                        )
+                    )
+                except Exception as exc:
+                    logger.warning("[HTTP] Catalog asset access check failed for %s: %s", asset_id, exc)
+            if not catalog_allows:
+                return jsonify({"ok": False, "error": "asset_forbidden"}), 403
 
     target = asset_service.resolve_asset_file(asset_id)
     if target is None:

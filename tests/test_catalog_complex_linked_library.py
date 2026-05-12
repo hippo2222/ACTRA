@@ -266,6 +266,62 @@ def test_catalog_list_hides_non_public_items_even_for_author(tmp_path):
     assert owner_index_items[0]["catalog_visibility"] == "access_code"
 
 
+def test_catalog_asset_access_allows_public_complex_task_images(services):
+    complex_payload, catalog_service = services
+    asset_id = "asset_catalog_task_image_1"
+    task_payload = catalog_service.storage_service.tasks["module-a/topic-a/task-a"]
+    task_payload["task_data"]["content"] = {
+        "image_asset_id": asset_id,
+        "image": f"/api/assets/{asset_id}/content",
+    }
+
+    catalog_service.publish_complex(
+        complex_payload["id"],
+        requested_by_user_id="author",
+        catalog_visibility="public",
+    )
+
+    assert catalog_service.can_access_catalog_asset(asset_id, requested_by_user_id="reader") is True
+    assert catalog_service.can_access_catalog_asset("asset_unrelated", requested_by_user_id="reader") is False
+    assert catalog_service.can_access_catalog_asset(asset_id, requested_by_user_id="guest") is False
+
+
+def test_catalog_asset_access_honors_access_code_library_grant(services):
+    complex_payload, catalog_service = services
+    asset_id = "asset_catalog_task_image_by_code"
+    task_payload = catalog_service.storage_service.tasks["module-a/topic-a/task-a"]
+    task_payload["task_data"]["content"] = {
+        "image": f"/api/local-image?asset_id={asset_id}",
+    }
+
+    publish_result = catalog_service.publish_complex(
+        complex_payload["id"],
+        requested_by_user_id="author",
+        catalog_visibility="access_code",
+    )
+    item_id = publish_result["item"]["item_id"]
+    item_payload = catalog_service.get_item(item_id, requested_by_user_id="author")["item"]
+    access_code = item_payload["access_code"]
+
+    assert catalog_service.can_access_catalog_asset(asset_id, requested_by_user_id="reader") is False
+
+    catalog_service.add_item_to_library(
+        item_id,
+        requested_by_user_id="reader",
+        access_code=access_code,
+    )
+
+    assert catalog_service.can_access_catalog_asset(asset_id, requested_by_user_id="reader") is True
+
+    catalog_service.set_item_visibility(
+        item_id,
+        catalog_visibility="private",
+        requested_by_user_id="author",
+    )
+
+    assert catalog_service.can_access_catalog_asset(asset_id, requested_by_user_id="reader") is False
+
+
 def test_add_complex_item_to_library_is_idempotent_and_tracks_latest_version(services):
     complex_payload, catalog_service = services
     first_publish = catalog_service.publish_complex(

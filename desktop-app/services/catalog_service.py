@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import copy
 import json
+import re
 from datetime import datetime
 from pathlib import Path
 import secrets
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
+from urllib.parse import parse_qs, urlparse
 from uuid import uuid4
 
 from werkzeug.utils import secure_filename
@@ -110,6 +112,7 @@ class CatalogService:
     }
     _ACCESS_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
     _ACCESS_CODE_LENGTH = 16
+    _ASSET_CONTENT_URL_RE = re.compile(r"/api/assets/([^/?#]+)/content")
 
     def __init__(
         self,
@@ -3296,6 +3299,148 @@ class CatalogService:
                 return
             raise ValueError("catalog_access_code_required")
         raise ValueError("catalog_item_not_accessible")
+
+    def can_access_catalog_asset(
+        self,
+        asset_id: str,
+        *,
+        requested_by_user_id: Optional[str],
+    ) -> bool:
+        clean_asset_id = self._normalize_optional_text(asset_id)
+        requester = self._normalize_optional_text(requested_by_user_id)
+        if not clean_asset_id or not requester or requester == "guest":
+            return False
+
+        for item_payload in self._list_item_payloads():
+            if not isinstance(item_payload, dict) or self._is_item_deleted_source(item_payload):
+                continue
+            item_id = self._normalize_optional_text(item_payload.get("item_id"))
+            if not item_id:
+                continue
+            visibility = self._normalize_catalog_visibility(
+                item_payload.get("catalog_visibility"),
+                allow_empty=True,
+            ) or "public"
+            if (visibility == "public" or self._is_item_owner(item_payload, requested_by_user_id=requester)) and (
+                self._catalog_item_versions_reference_asset(item_id, clean_asset_id)
+            ):
+                return True
+
+        for entry_payload in self._list_theory_library_entry_payloads_for_user(requester):
+            if self._library_entry_references_accessible_asset(
+                entry_payload,
+                content_type="theory",
+                asset_id=clean_asset_id,
+                requested_by_user_id=requester,
+            ):
+                return True
+        for entry_payload in self._list_complex_library_entry_payloads_for_user(requester):
+            if self._library_entry_references_accessible_asset(
+                entry_payload,
+                content_type="complex",
+                asset_id=clean_asset_id,
+                requested_by_user_id=requester,
+            ):
+                return True
+        return False
+
+    def _catalog_item_versions_reference_asset(self, item_id: str, asset_id: str) -> bool:
+        for version_payload in self._list_version_payloads(item_id):
+            if self._version_snapshot_references_asset(version_payload, asset_id):
+                return True
+        return False
+
+    def _library_entry_references_accessible_asset(
+        self,
+        entry_payload: Any,
+        *,
+        content_type: str,
+        asset_id: str,
+        requested_by_user_id: str,
+    ) -> bool:
+        if not isinstance(entry_payload, dict):
+            return False
+        item_id = self._normalize_optional_text(entry_payload.get("catalog_item_id"))
+        if not item_id:
+            return False
+        item_payload = self._get_item_payload(item_id)
+        if not isinstance(item_payload, dict):
+            return False
+
+        if content_type == "theory":
+            access = self._compute_theory_library_access(
+                item_payload,
+                requested_by_user_id=requested_by_user_id,
+                granted_access_code=entry_payload.get("granted_access_code"),
+            )
+        elif content_type == "complex":
+            access = self._compute_complex_library_access(
+                item_payload,
+                requested_by_user_id=requested_by_user_id,
+                granted_access_code=entry_payload.get("granted_access_code"),
+            )
+        else:
+            return False
+
+        if str(access.get("access_state") or "").strip() != "active":
+            return False
+        version_id = self._normalize_optional_text(access.get("resolved_version_id"))
+        if not version_id:
+            return False
+        version_payload = self._get_version_payload(item_id, version_id)
+        return self._version_snapshot_references_asset(version_payload, asset_id)
+
+    def _version_snapshot_references_asset(self, version_payload: Any, asset_id: str) -> bool:
+        if not isinstance(version_payload, dict):
+            return False
+        snapshot = version_payload.get("snapshot")
+        return self._payload_references_asset(snapshot, asset_id)
+
+    def _payload_references_asset(self, payload: Any, asset_id: str) -> bool:
+        clean_asset_id = self._normalize_optional_text(asset_id)
+        if not clean_asset_id:
+            return False
+        return clean_asset_id in self._collect_asset_ids_from_payload(payload)
+
+    @classmethod
+    def _collect_asset_ids_from_payload(cls, payload: Any) -> Set[str]:
+        found: Set[str] = set()
+        if isinstance(payload, dict):
+            for raw_key, value in payload.items():
+                key = str(raw_key or "").strip().lower()
+                if isinstance(value, str):
+                    if key == "asset_id" or key.endswith("_asset_id"):
+                        clean_value = value.strip()
+                        if clean_value:
+                            found.add(clean_value)
+                    found.update(cls._collect_asset_ids_from_string(value))
+                else:
+                    found.update(cls._collect_asset_ids_from_payload(value))
+            return found
+        if isinstance(payload, list):
+            for item in payload:
+                found.update(cls._collect_asset_ids_from_payload(item))
+            return found
+        if isinstance(payload, str):
+            found.update(cls._collect_asset_ids_from_string(payload))
+        return found
+
+    @classmethod
+    def _collect_asset_ids_from_string(cls, value: str) -> Set[str]:
+        text = str(value or "").strip()
+        if not text:
+            return set()
+        found = {match.group(1) for match in cls._ASSET_CONTENT_URL_RE.finditer(text) if match.group(1)}
+        try:
+            parsed = urlparse(text)
+            if parsed.path == "/api/local-image":
+                for candidate in parse_qs(parsed.query).get("asset_id", []):
+                    clean_candidate = str(candidate or "").strip()
+                    if clean_candidate:
+                        found.add(clean_candidate)
+        except Exception:
+            pass
+        return found
 
     def _build_catalog_item_id(self, content_type: str, source_workspace_id: str) -> str:
         base = secure_filename(f"{content_type}_{source_workspace_id}").strip().lower() or f"{content_type}_{uuid4().hex[:8]}"
