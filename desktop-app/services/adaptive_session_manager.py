@@ -1335,6 +1335,135 @@ class AdaptiveSessionManager:
             
         return success
 
+    @staticmethod
+    def _task_spacing_ref(task: QueuedTask) -> str:
+        return str(
+            getattr(task, "source_task_ref", None)
+            or getattr(task, "task_ref", "")
+            or ""
+        ).strip().lower()
+
+    def _find_retry_insert_position_by_spacing(
+        self,
+        queue: List[QueuedTask],
+        retry_task: QueuedTask,
+        start_idx: int,
+        other_task_distance: int,
+        max_insert_pos: int,
+    ) -> int:
+        if other_task_distance <= 0:
+            return max(0, min(start_idx, max_insert_pos, len(queue)))
+
+        target_ref = self._task_spacing_ref(retry_task)
+        remaining = other_task_distance
+        limit = max(0, min(max_insert_pos, len(queue)))
+
+        for pos in range(max(0, start_idx), limit):
+            queued = queue[pos]
+            if self._task_spacing_ref(queued) == target_ref:
+                continue
+            remaining -= 1
+            if remaining <= 0:
+                return min(pos + 1, limit)
+
+        return limit
+
+    def _defer_retry_task_for_next_iteration(
+        self,
+        session: ComplexSession,
+        retry_task: QueuedTask,
+    ) -> None:
+        if getattr(session, "deferred_retry_tasks", None) is None:
+            session.deferred_retry_tasks = []
+        session.deferred_retry_tasks.append(retry_task)
+
+    def _rebalance_queue_tail(
+        self,
+        session: ComplexSession,
+        complex_obj: Optional[Complex],
+        *,
+        start_idx: int,
+        window_size: Optional[int] = None,
+    ) -> None:
+        if complex_obj is None:
+            return
+
+        start_idx = max(0, min(start_idx, len(session.queue)))
+        end_idx = len(session.queue)
+        if window_size is not None:
+            end_idx = min(
+                len(session.queue),
+                start_idx + max(0, int(window_size)),
+            )
+
+        tail = session.queue[start_idx:end_idx]
+        if len(tail) <= 1:
+            return
+
+        max_run = int(getattr(getattr(complex_obj, "settings", None), "max_same_type_run", 3) or 3)
+        tail_chunks = self._group_tasks_into_chunks(tail, complex_obj.chains)
+        rebalanced_tail = self._sort_chunks_by_phase(
+            tail_chunks,
+            seed_base=f"{session.id}:{session.iteration}:tail:{start_idx}:{end_idx}",
+            max_same_type_run=max_run,
+        )
+        session.queue = (
+            session.queue[:start_idx]
+            + rebalanced_tail
+            + session.queue[end_idx:]
+        )
+
+    def _place_deferred_retry_tasks_in_next_queue(
+        self,
+        queue: List[QueuedTask],
+        deferred_retry_tasks: List[QueuedTask],
+        session: ComplexSession,
+        complex_obj: Optional[Complex],
+        upcoming_iteration: int,
+    ) -> List[QueuedTask]:
+        if not deferred_retry_tasks:
+            return queue
+
+        settings = getattr(complex_obj, "settings", None) if complex_obj is not None else None
+        near_offset = max(0, int(getattr(settings, "smart_retry_near_offset", 2) or 2))
+        near_jitter_max = max(0, int(getattr(settings, "smart_retry_near_jitter_max", 2) or 2))
+        positioned_queue = list(queue)
+
+        for order, retry_task in enumerate(deferred_retry_tasks):
+            if near_jitter_max > 0:
+                seed_material = (
+                    f"{session.id}:{upcoming_iteration}:{retry_task.task_ref}:deferred:{order}"
+                ).encode("utf-8", errors="ignore")
+                jitter = int.from_bytes(
+                    hashlib.sha256(seed_material).digest()[:4],
+                    "big",
+                    signed=False,
+                ) % (near_jitter_max + 1)
+            else:
+                jitter = 0
+
+            late_anchor = min(
+                len(positioned_queue),
+                max(0, int(len(positioned_queue) * 0.6)),
+            )
+            late_distance = max(4, near_offset * 2) + jitter
+            insert_pos = self._find_retry_insert_position_by_spacing(
+                positioned_queue,
+                retry_task,
+                late_anchor,
+                late_distance,
+                len(positioned_queue),
+            )
+            positioned_queue.insert(insert_pos, retry_task)
+            logger.info(
+                "[_place_deferred_retry_tasks_in_next_queue] Added deferred retry %s at %s for iteration %s",
+                retry_task.task_ref,
+                insert_pos,
+                upcoming_iteration,
+            )
+
+        return positioned_queue
+
     def _add_failed_task_to_current_queue(
         self,
         session: ComplexSession,
@@ -1393,12 +1522,11 @@ class AdaptiveSessionManager:
                 if lowered in ("false", "0", "no", "n", "off"):
                     return False
             return default
+        complex_obj: Optional[Complex] = None
         try:
             complex_id = getattr(session, "complex_id", None)
             if complex_id:
                 complex_obj = self.complex_service.get_complex(complex_id)
-            else:
-                complex_obj = None
             settings = getattr(complex_obj, "settings", None) if complex_obj is not None else None
             if settings is not None:
                 near_offset = _coerce_int(
@@ -1431,6 +1559,11 @@ class AdaptiveSessionManager:
 
         # Ограничение количества retry-копий одного задания
         current_copies = sum(1 for t in session.queue if t.task_ref == task_ref and t.is_retry)
+        current_copies += sum(
+            1
+            for t in (getattr(session, "deferred_retry_tasks", None) or [])
+            if t.task_ref == task_ref and t.is_retry
+        )
         if max_copies >= 0 and current_copies >= max_copies:
             logger.info(
                 f"[_add_failed_task_to_current_queue] ⚠️ Пропуск Smart Retry для {task_ref}: "
@@ -1471,6 +1604,7 @@ class AdaptiveSessionManager:
             return QueuedTask(**kwargs)
 
         retry_question_indices: List[Optional[int]] = scattered_retry_indices or [None]
+        control_position_type = "next_iteration" if task_type == "test" else "end_of_phase"
         tasks_to_add = []
         
         if difficulty > 1 and training_control_enabled:
@@ -1492,7 +1626,7 @@ class AdaptiveSessionManager:
                     is_retry=True,
                     origin_iteration=session.iteration
                 ),
-                'position_type': 'end_of_phase'
+                'position_type': control_position_type
             })
         else:
             # Fallback / standard retry: две копии текущей сложности (вместо lvl-1 + original)
@@ -1512,7 +1646,7 @@ class AdaptiveSessionManager:
                     is_retry=True,
                     origin_iteration=session.iteration
                 ),
-                'position_type': 'end_of_phase'
+                'position_type': control_position_type
             })
 
         # Если лимит ограничивает количество новых копий за один вызов — обрезаем.
@@ -1559,6 +1693,7 @@ class AdaptiveSessionManager:
         
         # Вставляем задания
         idx_shift = 0
+        inserted_into_queue = False
         
         for item in tasks_to_add:
             task = item['task']
@@ -1574,15 +1709,25 @@ class AdaptiveSessionManager:
                     seed_material = f"{session.id}:{session.iteration}:{task_ref}:near".encode("utf-8", errors="ignore")
                     jitter = int.from_bytes(hashlib.sha256(seed_material).digest()[:4], "big", signed=False) % (jitter_max + 1)
 
-                requested_pos = current_idx + base + jitter
+                requested_distance = base + jitter
                 # Не позволяем тренировочной копии перескочить границу фазы:
                 if end_of_phase_idx < queue_len:
                     max_pos_before_next_phase = end_of_phase_idx + idx_shift
-                    insert_pos = min(requested_pos, max_pos_before_next_phase)
                 else:
-                    insert_pos = requested_pos
+                    max_pos_before_next_phase = len(session.queue)
+                if str(getattr(task, "display_mode", "") or "").strip().lower() == "scattered":
+                    insert_pos = self._find_retry_insert_position_by_spacing(
+                        session.queue,
+                        task,
+                        current_idx,
+                        requested_distance,
+                        max_pos_before_next_phase,
+                    )
+                else:
+                    insert_pos = min(current_idx + requested_distance, max_pos_before_next_phase)
                 insert_pos = min(max(0, insert_pos), len(session.queue))
                 session.queue.insert(insert_pos, task)
+                inserted_into_queue = True
                 
                 # Если вставка произошла ДО конца фазы, сдвигаем индекс конца фазы
                 if insert_pos <= end_of_phase_idx + idx_shift:
@@ -1599,7 +1744,26 @@ class AdaptiveSessionManager:
                 else:
                      session.queue.insert(target, task)
                 
+                inserted_into_queue = True
                 logger.info(f"[_add_failed_task_to_current_queue] Added 'end_of_phase' retry task {task_ref} (lvl {task.difficulty}) at {target}")
+            elif pos_type == 'next_iteration':
+                self._defer_retry_task_for_next_iteration(session, task)
+                logger.info(f"[_add_failed_task_to_current_queue] Deferred 'next_iteration' retry task {task_ref} (lvl {task.difficulty})")
+
+        if inserted_into_queue:
+            local_rebalance_window = max(
+                12,
+                min(
+                    24,
+                    (max(0, near_offset) + max(0, near_jitter_max) + 1) * 4,
+                ),
+            )
+            self._rebalance_queue_tail(
+                session,
+                complex_obj,
+                start_idx=current_idx,
+                window_size=local_rebalance_window,
+            )
 
     def _get_task_phase(self, task_type: str, difficulty: int, task_ref: Optional[str] = None) -> int:
         """
@@ -2678,13 +2842,20 @@ class AdaptiveSessionManager:
         # Комплекс завершается только если:
         # - Есть результаты по всем заданиям итерации (completed_all_tasks)
         # - Все задания (без битых) успешны и на максимальной сложности
+        deferred_retry_tasks = [
+            retry_task
+            for retry_task in (getattr(session, "deferred_retry_tasks", None) or [])
+            if retry_task.task_ref not in session.broken_tasks
+        ]
+        session.deferred_retry_tasks = list(deferred_retry_tasks)
         should_complete_complex = (
             completed_all_tasks
             and all_at_max_difficulty
             and successful_count > 0
             and failed_count == 0
             and len(current_iteration_results) > 0
-            and not new_queue  # если есть задания для следующей итерации, продолжаем
+            and not new_queue
+            and not deferred_retry_tasks
         )
         
         if should_complete_complex:
@@ -2708,7 +2879,17 @@ class AdaptiveSessionManager:
         else:
             # Перемешиваем очередь с учетом фаз и цепочек (вместо random.shuffle)
             chunks = self._group_tasks_into_chunks(new_queue, complex_obj.chains)
-            session.queue = self._sort_chunks_by_phase(chunks, seed_base=f"{session.id}:{upcoming_iteration}")
+            sorted_queue = self._sort_chunks_by_phase(chunks, seed_base=f"{session.id}:{upcoming_iteration}")
+            if deferred_retry_tasks:
+                sorted_queue = self._place_deferred_retry_tasks_in_next_queue(
+                    sorted_queue,
+                    deferred_retry_tasks,
+                    session,
+                    complex_obj,
+                    upcoming_iteration,
+                )
+            session.queue = sorted_queue
+            session.deferred_retry_tasks = []
             
             # Обновляем сессию
             session.iteration += 1

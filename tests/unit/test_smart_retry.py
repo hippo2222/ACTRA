@@ -60,6 +60,23 @@ class TestSmartRetry(unittest.TestCase):
         self.session.queue = []
         self.session.current_task_index = 0
         self.session.test_failed_subtests = {}
+        self.session.deferred_retry_tasks = []
+        self.session.broken_tasks = []
+        self.session.error_detection_tasks = []
+        self.session.completed_tasks = []
+        self.session.skip_counts = {}
+        self.session.iteration_timestamps = {}
+        self.complex_service.get_complex.return_value = Complex(
+            id="test_complex",
+            name="Complex",
+            tasks=[],
+            settings={
+                "smart_retry_near_offset": TEST_CONFIG["smart_retry_defaults"]["near_offset"],
+                "smart_retry_near_jitter_max": TEST_CONFIG["smart_retry_defaults"]["near_jitter_max"],
+                "smart_retry_max_copies_per_task": TEST_CONFIG["smart_retry_defaults"]["max_copies"],
+                "smart_retry_training_control_enabled": TEST_CONFIG["smart_retry_defaults"]["training_control_enabled"],
+            },
+        )
 
     def test_smart_retry_config_usage(self):
         """Test that _add_failed_task_to_current_queue uses values from difficulty_manager."""
@@ -67,6 +84,7 @@ class TestSmartRetry(unittest.TestCase):
         # Mock methods to avoid external calls
         self.manager._get_task_type = MagicMock(return_value="click")
         self.manager._get_task_phase = MagicMock(return_value=1)
+        self.manager._rebalance_queue_tail = MagicMock()
         
         # Add 10 dummy tasks to queue so we have space to insert
         self.session.queue = [
@@ -286,6 +304,17 @@ class TestSmartRetry(unittest.TestCase):
 
     def test_scattered_test_retry_adds_only_failed_questions(self):
         task_ref = "module_01/topic_01/test_001"
+        self.complex_service.get_complex.return_value = Complex(
+            id="test_complex",
+            name="Complex",
+            tasks=[task_ref],
+            settings={
+                "smart_retry_near_offset": 1,
+                "smart_retry_near_jitter_max": 0,
+                "smart_retry_max_copies_per_task": 10,
+                "smart_retry_training_control_enabled": True,
+            },
+        )
         self.difficulty_manager.get_smart_retry_config.return_value = {
             "near_offset": 1,
             "near_jitter_max": 0,
@@ -306,9 +335,316 @@ class TestSmartRetry(unittest.TestCase):
         )
 
         retry_slots = [task for task in self.session.queue if task.task_ref == task_ref]
-        self.assertEqual(len(retry_slots), 4)
+        deferred_slots = [task for task in self.session.deferred_retry_tasks if task.task_ref == task_ref]
+        self.assertEqual(len(retry_slots), 2)
+        self.assertEqual(len(deferred_slots), 2)
         self.assertEqual(sorted({task.test_question_index for task in retry_slots}), [1, 3])
-        self.assertTrue(all(task.display_mode == "scattered" for task in retry_slots))
+        self.assertEqual(sorted({task.test_question_index for task in deferred_slots}), [1, 3])
+        self.assertTrue(all(task.display_mode == "scattered" for task in retry_slots + deferred_slots))
+
+    def test_scattered_near_retry_counts_other_source_tasks_instead_of_raw_slots(self):
+        task_ref = "module_01/topic_01/test_failed"
+        other_scattered_ref = "module_01/topic_01/test_neighbor"
+        self.complex_service.get_complex.return_value = Complex(
+            id="test_complex",
+            name="Complex",
+            tasks=[task_ref, other_scattered_ref],
+            settings={
+                "smart_retry_near_offset": 2,
+                "smart_retry_near_jitter_max": 0,
+                "smart_retry_max_copies_per_task": 1,
+                "smart_retry_training_control_enabled": False,
+            },
+        )
+        self.difficulty_manager.get_smart_retry_config.return_value = {
+            "near_offset": 2,
+            "near_jitter_max": 0,
+            "max_copies": 1,
+            "training_control_enabled": False,
+        }
+        self.manager._get_task_type = MagicMock(return_value="test")
+        self.manager._get_task_phase = MagicMock(return_value=1)
+        self.manager._rebalance_queue_tail = MagicMock()
+        self.session.queue = [
+            QueuedTask(
+                task_ref=task_ref,
+                difficulty=1,
+                display_mode="scattered",
+                source_task_ref=task_ref,
+                test_question_index=1,
+            ),
+            QueuedTask(task_ref="module_01/topic_01/click_a", difficulty=1),
+            QueuedTask(task_ref="module_01/topic_01/click_b", difficulty=1),
+            QueuedTask(task_ref="module_01/topic_01/click_c", difficulty=1),
+        ]
+        self.session.current_task_index = 0
+
+        self.manager._add_failed_task_to_current_queue(
+            self.session,
+            task_ref,
+            difficulty=1,
+            failed_question_indices=[0],
+            display_mode="scattered",
+        )
+
+        inserted_index = next(
+            idx for idx, task in enumerate(self.session.queue)
+            if task.task_ref == task_ref and task.test_question_index == 0
+        )
+        self.assertEqual(inserted_index, 3)
+
+    def test_test_retry_control_copy_moves_to_next_iteration(self):
+        task_ref = "module_01/topic_01/test_001"
+        self.complex_service.get_complex.return_value = Complex(
+            id="test_complex",
+            name="Complex",
+            tasks=[task_ref],
+            settings={
+                "smart_retry_near_offset": 1,
+                "smart_retry_near_jitter_max": 0,
+                "smart_retry_max_copies_per_task": 10,
+                "smart_retry_training_control_enabled": True,
+            },
+        )
+        self.difficulty_manager.get_smart_retry_config.return_value = {
+            "near_offset": 1,
+            "near_jitter_max": 0,
+            "max_copies": 10,
+            "training_control_enabled": True,
+        }
+        self.manager._get_task_type = MagicMock(return_value="test")
+        self.manager._get_task_phase = MagicMock(return_value=1)
+        self.manager._rebalance_queue_tail = MagicMock()
+        self.session.queue = [QueuedTask(task_ref="other", difficulty=1)]
+        self.session.current_task_index = 0
+
+        self.manager._add_failed_task_to_current_queue(
+            self.session,
+            task_ref,
+            difficulty=2,
+            failed_question_indices=[1],
+            display_mode="scattered",
+        )
+
+        retry_slots = [task for task in self.session.queue if task.task_ref == task_ref]
+        deferred_slots = [task for task in self.session.deferred_retry_tasks if task.task_ref == task_ref]
+        self.assertEqual(len(retry_slots), 1)
+        self.assertEqual(retry_slots[0].difficulty, 1)
+        self.assertEqual(retry_slots[0].test_question_index, 1)
+        self.assertEqual(len(deferred_slots), 1)
+        self.assertEqual(deferred_slots[0].difficulty, 2)
+        self.assertEqual(deferred_slots[0].test_question_index, 1)
+
+    def test_retry_insertion_rebalances_pending_tail(self):
+        failed_ref = "module_01/topic_01/test_failed"
+        other_ref = "module_01/topic_01/test_neighbor"
+        self.difficulty_manager.get_smart_retry_config.return_value = {
+            "near_offset": 0,
+            "near_jitter_max": 0,
+            "max_copies": 1,
+            "training_control_enabled": False,
+        }
+        self.complex_service.get_complex.return_value = Complex(
+            id="test_complex",
+            name="Complex",
+            tasks=[failed_ref, other_ref, "module_01/topic_01/click_a", "module_01/topic_01/click_b"],
+            settings={
+                "max_same_type_run": 1,
+                "smart_retry_near_offset": 0,
+                "smart_retry_near_jitter_max": 0,
+                "smart_retry_max_copies_per_task": 1,
+                "smart_retry_training_control_enabled": False,
+            },
+        )
+
+        def task_type(task_ref):
+            return "test" if "test_" in task_ref else "click"
+
+        self.manager._get_task_type = MagicMock(side_effect=task_type)
+        self.manager._get_task_phase = MagicMock(return_value=1)
+        self.session.queue = [
+            QueuedTask(
+                task_ref=other_ref,
+                difficulty=1,
+                display_mode="scattered",
+                source_task_ref=other_ref,
+                test_question_index=0,
+            ),
+            QueuedTask(
+                task_ref=other_ref,
+                difficulty=1,
+                display_mode="scattered",
+                source_task_ref=other_ref,
+                test_question_index=1,
+            ),
+            QueuedTask(task_ref="module_01/topic_01/click_a", difficulty=1),
+            QueuedTask(task_ref="module_01/topic_01/click_b", difficulty=1),
+        ]
+        self.session.current_task_index = 0
+
+        self.manager._add_failed_task_to_current_queue(
+            self.session,
+            failed_ref,
+            difficulty=1,
+            failed_question_indices=[0],
+            display_mode="scattered",
+        )
+
+        tail_keys = [
+            self.manager._chunk_variety_key([task])
+            for task in self.session.queue[self.session.current_task_index:]
+        ]
+        max_run = 1
+        run = 1
+        max_seen_run = 1
+        for prev_key, key in zip(tail_keys, tail_keys[1:]):
+            if key == prev_key:
+                run += 1
+            else:
+                run = 1
+            max_seen_run = max(max_seen_run, run)
+        self.assertLessEqual(max_seen_run, max_run)
+
+    def test_rebalance_queue_tail_keeps_distant_suffix_untouched(self):
+        self.manager._get_task_type = MagicMock(
+            side_effect=lambda ref: "test" if ref.startswith("test_") else "click"
+        )
+        self.manager._get_task_phase = MagicMock(return_value=1)
+        complex_obj = Complex(
+            id="test_complex",
+            name="Complex",
+            tasks=[],
+            settings={"max_same_type_run": 1},
+        )
+        queue = [
+            QueuedTask(task_ref="test_a", difficulty=1),
+            QueuedTask(task_ref="test_b", difficulty=1),
+            QueuedTask(task_ref="click_a", difficulty=1),
+            QueuedTask(task_ref="click_b", difficulty=1),
+            QueuedTask(task_ref="suffix_1", difficulty=1),
+            QueuedTask(task_ref="suffix_2", difficulty=1),
+            QueuedTask(task_ref="suffix_3", difficulty=1),
+        ]
+        session = ComplexSession(
+            id="session_suffix_scope",
+            complex_id="complex_1",
+            user_id="user_1",
+            queue=list(queue),
+        )
+
+        original_suffix = [task.task_ref for task in session.queue[4:]]
+        self.manager._rebalance_queue_tail(
+            session,
+            complex_obj,
+            start_idx=0,
+            window_size=4,
+        )
+
+        self.assertEqual([task.task_ref for task in session.queue[4:]], original_suffix)
+
+    def test_generate_next_iteration_consumes_deferred_retry_tasks(self):
+        task_ref = "module_01/topic_01/click_001"
+        retry_ref = "module_01/topic_01/test_001"
+        self.manager._load_task_metadata = MagicMock(return_value={})
+        self.manager._is_error_detection_metadata = MagicMock(return_value=False)
+        self.manager._get_task_type = MagicMock(side_effect=lambda ref: "test" if ref == retry_ref else "click")
+        self.manager._get_task_phase = MagicMock(return_value=1)
+        self.manager._get_task_max_level = MagicMock(return_value=1)
+        self.manager._normalize_level_for_available = MagicMock(side_effect=lambda level, _levels: level)
+        self.manager._next_level_for_available = MagicMock(side_effect=lambda level, _levels: level)
+        self.manager._get_planned_final_iteration = MagicMock(return_value=1)
+        self.manager._get_absolute_iteration_level = MagicMock(return_value=1)
+        self.manager._get_error_detection_finisher_level = MagicMock(return_value=3)
+        self.manager._task_participates_in_absolute_level = MagicMock(return_value=True)
+        self.manager._get_iteration_target_difficulty = MagicMock(return_value=1)
+        self.difficulty_manager.get_available_levels.return_value = [1]
+
+        session = ComplexSession(
+            id="session_1",
+            complex_id="complex_1",
+            user_id="user_1",
+            iteration=1,
+            current_task_index=1,
+            queue=[QueuedTask(task_ref=task_ref, difficulty=1)],
+            completed_tasks=[
+                SessionTaskResult(
+                    task_ref=task_ref,
+                    success=True,
+                    difficulty=1,
+                    iteration_index=1,
+                    time_spent=5,
+                )
+            ],
+            deferred_retry_tasks=[
+                QueuedTask(
+                    task_ref=retry_ref,
+                    difficulty=2,
+                    is_retry=True,
+                    origin_iteration=1,
+                    display_mode="scattered",
+                    source_task_ref=retry_ref,
+                    test_question_index=2,
+                )
+            ],
+        )
+        complex_obj = Complex(
+            id="complex_1",
+            name="Complex",
+            tasks=[task_ref],
+            settings={},
+        )
+
+        self.manager._generate_next_iteration(session, complex_obj)
+
+        self.assertEqual(session.iteration, 2)
+        self.assertEqual([task.task_ref for task in session.queue], [retry_ref])
+        self.assertEqual(session.queue[0].test_question_index, 2)
+        self.assertEqual(session.deferred_retry_tasks, [])
+
+    def test_place_deferred_retry_tasks_in_next_queue_uses_late_window(self):
+        retry_ref = "module_01/topic_01/test_001"
+        complex_obj = Complex(
+            id="complex_1",
+            name="Complex",
+            tasks=[],
+            settings={
+                "smart_retry_near_offset": 2,
+                "smart_retry_near_jitter_max": 0,
+            },
+        )
+        base_queue = [
+            QueuedTask(task_ref=f"click_{idx}", difficulty=1)
+            for idx in range(10)
+        ]
+        deferred_retry = QueuedTask(
+            task_ref=retry_ref,
+            difficulty=2,
+            is_retry=True,
+            origin_iteration=1,
+            display_mode="scattered",
+            source_task_ref=retry_ref,
+            test_question_index=3,
+        )
+        session = ComplexSession(
+            id="session_late_window",
+            complex_id="complex_1",
+            user_id="user_1",
+        )
+
+        positioned = self.manager._place_deferred_retry_tasks_in_next_queue(
+            list(base_queue),
+            [deferred_retry],
+            session,
+            complex_obj,
+            upcoming_iteration=2,
+        )
+
+        retry_index = next(
+            idx for idx, task in enumerate(positioned)
+            if task.task_ref == retry_ref and task.is_retry
+        )
+        self.assertGreaterEqual(retry_index, 8)
+        self.assertLess(retry_index, len(positioned))
 
 if __name__ == '__main__':
     unittest.main()

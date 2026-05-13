@@ -170,6 +170,8 @@ class ComplexSession(BaseModel):
         description="task_ref заданий click/error_detection, отложенных до финальной фазы",
     )
     
+    deferred_retry_tasks: List[QueuedTask] = Field(default_factory=list)
+
     is_active: bool = True
     paused: bool = Field(default=False, description="Сессия приостановлена пользователем")
     paused_at: Optional[datetime] = Field(default=None, description="Время последней паузы")
