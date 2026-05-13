@@ -1179,11 +1179,32 @@ class SessionAPI:
             return None
 
         grouped_questions: List[Dict[str, Any]] = []
+        controller_grouped_questions: List[Dict[str, Any]] = []
         question_meta: List[Dict[str, Any]] = []
         source_task_cache: Dict[str, Dict[str, Any]] = {}
         first_task_data_full: Optional[Dict[str, Any]] = None
         first_source_ref: Optional[str] = None
         first_parts: Optional[List[str]] = None
+
+        def _decorate_grouped_question(
+            question_payload: Dict[str, Any],
+            *,
+            grouped_question_id: str,
+            source_ref: str,
+            source_task_name: str,
+            source_question_id: str,
+            original_question_index: int,
+            queue_index: int,
+        ) -> Dict[str, Any]:
+            grouped_question = copy.deepcopy(question_payload)
+            grouped_question["id"] = grouped_question_id
+            grouped_question["_partial_retry_original_index"] = original_question_index
+            grouped_question["_split_source_task_ref"] = source_ref
+            grouped_question["_split_source_task_name"] = source_task_name
+            grouped_question["_split_source_question_index"] = original_question_index
+            grouped_question["_split_source_question_id"] = source_question_id
+            grouped_question["_split_queue_index"] = queue_index
+            return grouped_question
 
         for display_index, (queue_index, queued_task) in enumerate(group):
             source_ref = (
@@ -1273,14 +1294,28 @@ class SessionAPI:
                 else str(original_question_index)
             )
             grouped_question_id = f"split_{queue_index}_{original_question_index}_{source_question_id}"
-            grouped_question["id"] = grouped_question_id
-            grouped_question["_partial_retry_original_index"] = original_question_index
-            grouped_question["_split_source_task_ref"] = source_ref
-            grouped_question["_split_source_task_name"] = source_task_name
-            grouped_question["_split_source_question_index"] = original_question_index
-            grouped_question["_split_source_question_id"] = source_question_id
-            grouped_question["_split_queue_index"] = queue_index
-            grouped_questions.append(grouped_question)
+            grouped_questions.append(
+                _decorate_grouped_question(
+                    grouped_question,
+                    grouped_question_id=grouped_question_id,
+                    source_ref=source_ref,
+                    source_task_name=source_task_name,
+                    source_question_id=source_question_id,
+                    original_question_index=original_question_index,
+                    queue_index=queue_index,
+                )
+            )
+            controller_grouped_questions.append(
+                _decorate_grouped_question(
+                    source_question,
+                    grouped_question_id=grouped_question_id,
+                    source_ref=source_ref,
+                    source_task_name=source_task_name,
+                    source_question_id=source_question_id,
+                    original_question_index=original_question_index,
+                    queue_index=queue_index,
+                )
+            )
             question_meta.append(
                 {
                     "question_id": grouped_question_id,
@@ -1345,13 +1380,25 @@ class SessionAPI:
 
         if load_controller:
             try:
+                controller_task_data = copy.deepcopy(first_task_data)
+                controller_content = (
+                    controller_task_data.get("content")
+                    if isinstance(controller_task_data.get("content"), dict)
+                    else {}
+                )
+                controller_content = copy.deepcopy(controller_content)
+                controller_content["questions"] = copy.deepcopy(controller_grouped_questions)
+                controller_task_data["content"] = controller_content
+                if isinstance(controller_task_data.get("questions"), list):
+                    controller_task_data["questions"] = copy.deepcopy(controller_grouped_questions)
+
                 task_controller = self._controller.task_controller
                 task_controller.current_task = Task(
                     module_id=first_parts[0],
                     topic_id=first_parts[1],
                     task_id=first_parts[-1],
                     task_type="test",
-                    task_data=copy.deepcopy(first_task_data),
+                    task_data=controller_task_data,
                     answer_key=first_task_data_full.get("answer_key") or {},
                 )
                 task_controller.task_state = TaskState.IN_PROGRESS

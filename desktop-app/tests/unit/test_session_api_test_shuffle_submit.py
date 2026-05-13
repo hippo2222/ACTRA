@@ -10,6 +10,7 @@ if str(DESKTOP_APP_PATH) not in sys.path:
     sys.path.insert(0, str(DESKTOP_APP_PATH))
 
 from api.session_api import SessionAPI
+from services.task_evaluator_service import EvaluationResult
 
 
 class _EvalResult:
@@ -17,6 +18,69 @@ class _EvalResult:
         self.success = True
         self.score = 100.0
         self.details = {}
+
+
+class _ScatteredEvaluatingTaskController:
+    def __init__(self) -> None:
+        self.current_task = None
+        self.current_difficulty_level = None
+        self.defer_progress_persistence = False
+        self.task_state = None
+
+    def is_task_loaded(self) -> bool:
+        return self.current_task is not None
+
+    def submit_answer(self, user_input):
+        task_data = getattr(self.current_task, "task_data", {}) or {}
+        content = task_data.get("content") if isinstance(task_data.get("content"), dict) else {}
+        questions = content.get("questions") if isinstance(content.get("questions"), list) else []
+        answers = user_input.get("answers") if isinstance(user_input, dict) else {}
+        answers = answers if isinstance(answers, dict) else {}
+
+        question_results = []
+        per_question = {}
+        correct_count = 0
+
+        for index, question in enumerate(questions):
+            qid_raw = question.get("id")
+            qid = str(qid_raw) if qid_raw is not None else str(index)
+            answer_options = question.get("answers") if isinstance(question.get("answers"), list) else []
+            raw_answer = answers.get(qid)
+            correct_option_ids = [
+                option_index
+                for option_index, option in enumerate(answer_options)
+                if option.get("correct", False)
+            ]
+            is_correct = raw_answer in correct_option_ids
+            if is_correct:
+                correct_count += 1
+            question_results.append(
+                {
+                    "question_id": qid,
+                    "correct": is_correct,
+                    "user_answer": raw_answer,
+                    "correct_answer": correct_option_ids[0] if correct_option_ids else None,
+                }
+            )
+            per_question[qid] = {
+                "status": "correct" if is_correct else "incorrect",
+                "correct_option_ids": correct_option_ids,
+                "user_option_ids": [] if raw_answer is None else [raw_answer],
+            }
+
+        total_count = len(questions)
+        return EvaluationResult(
+            success=correct_count == total_count,
+            message="ok",
+            score=(correct_count / total_count * 100.0) if total_count else 0.0,
+            metric="percent",
+            details={
+                "correct_count": correct_count,
+                "total_count": total_count,
+                "question_results": question_results,
+                "per_question": per_question,
+            },
+        )
 
 
 def test_submit_answer_remaps_shuffled_test_answer_indices():
@@ -331,3 +395,93 @@ def test_get_current_task_reapplies_scattered_filter_after_controller_task_reuse
     questions = payload["task_data"]["content"]["questions"]
     assert [question["id"] for question in questions] == ["q1"]
     assert controller._apply_test_scattered_filter.call_args.kwargs["context_label"] == "session_api_final"
+
+
+def test_scattered_group_submit_uses_original_order_in_controller_and_shuffled_order_in_ui():
+    controller = MagicMock()
+    controller.current_session_id = "sess_1"
+    controller.current_task_ref = "module/topic/task_005"
+    controller.task_controller = _ScatteredEvaluatingTaskController()
+    controller.save_ui_state = MagicMock()
+
+    slot = SimpleNamespace(
+        task_ref="module/topic/task_005",
+        difficulty=1,
+        is_retry=False,
+        origin_iteration=None,
+        display_mode="scattered",
+        source_task_ref="module/topic/task_005",
+        test_question_index=0,
+    )
+    session = SimpleNamespace(
+        id="sess_1",
+        user_id="u1",
+        complex_id="complex_1",
+        iteration=1,
+        current_task_index=0,
+        queue=[slot],
+        test_shuffle={
+            "module/topic/task_005@1": {
+                "question_order": [0],
+                "answer_order_by_question": {
+                    "0": [1, 0],
+                },
+            }
+        },
+        ui_state=None,
+    )
+
+    session_manager = MagicMock()
+    session_manager.get_session.return_value = session
+    session_manager.session_repository = None
+    session_manager.submit_result.return_value = SimpleNamespace(
+        task_ref="module/topic/task_005",
+        success=True,
+        score=100.0,
+    )
+
+    storage = MagicMock()
+    storage.load_task.return_value = {
+        "task_data": {
+            "type": "test",
+            "content": {
+                "questions": [
+                    {
+                        "id": "q0",
+                        "text": "Pick the correct answer",
+                        "answers": [
+                            {"text": "Correct", "correct": True},
+                            {"text": "Wrong", "correct": False},
+                        ],
+                    }
+                ]
+            },
+        },
+        "answer_key": {},
+        "task_dir": None,
+    }
+
+    api = SessionAPI(
+        session_controller=controller,
+        adaptive_session_manager=session_manager,
+        complex_service=MagicMock(),
+        storage_service=storage,
+        statistics_service=MagicMock(),
+    )
+
+    result = api.submit_answer(
+        "sess_1",
+        "task_005",
+        {
+            "answers": {
+                "split_0_0_q0": 1,
+            }
+        },
+    )
+
+    assert result is not None
+    assert result.success is True
+    assert result.details["per_question"]["split_0_0_q0"]["correct_option_ids"] == [0]
+    assert result.details["per_question_ui"]["split_0_0_q0"]["correct_option_ids"] == [1]
+    controller_task_questions = controller.task_controller.current_task.task_data["content"]["questions"]
+    assert controller_task_questions[0]["answers"][0]["text"] == "Correct"
