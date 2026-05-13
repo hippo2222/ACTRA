@@ -313,6 +313,98 @@ describe('settings theme preferences', () => {
     expect(dom.window.document.getElementById('settings-ai-title')?.textContent).toBe('AI keys');
   });
 
+  it('shows admin premium duration and can grant unlimited premium', async () => {
+    dom.window.document.body.insertAdjacentHTML('beforeend', `
+      <section id="settings-admin-section" class="hidden">
+        <div id="settings-admin-users-list"></div>
+        <span id="settings-admin-status" class="hidden"></span>
+      </section>
+    `);
+
+    const fetchMock = buildFetchMock({
+      'GET /api/auth/me': async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          ok: true,
+          authenticated: true,
+          user: {
+            user_id: 'admin_1',
+            name: 'Admin',
+            role: 'admin',
+            plan: 'premium',
+            effective_plan: 'premium',
+          },
+        }),
+      }),
+      'GET /api/billing/status': async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({ ok: true, effective_plan: 'premium', premium_expires_at: null, user: { user_id: 'admin_1' } }),
+      }),
+      'GET /api/admin/users?query=': async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          ok: true,
+          users: [
+            {
+              user_id: 'user_2',
+              name: 'Mira',
+              login: 'mira',
+              email: 'mira@example.com',
+              role: 'user',
+              plan: 'premium',
+              effective_plan: 'premium',
+              premium_expires_at: '2099-06-07T00:00:00Z',
+            },
+          ],
+        }),
+      }),
+      'PATCH /api/admin/users/user_2/plan': async (_input, init) => ({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          ok: true,
+          user: {
+            user_id: 'user_2',
+            name: 'Mira',
+            login: 'mira',
+            email: 'mira@example.com',
+            role: 'user',
+            plan: 'premium',
+            effective_plan: 'premium',
+            premium_expires_at: null,
+            requestBody: JSON.parse(init.body),
+          },
+        }),
+      }),
+    });
+
+    dom.window.fetch = fetchMock;
+    defineGlobal('fetch', fetchMock);
+
+    dom.window.eval(loadScript('frontend/Settings/settings.js'));
+    dom.window.document.dispatchEvent(new dom.window.Event('DOMContentLoaded'));
+    await flushPromises();
+
+    const adminList = dom.window.document.getElementById('settings-admin-users-list');
+    expect(adminList?.textContent).toContain('Premium:');
+    expect(adminList?.textContent).toContain('2099');
+
+    dom.window.document.querySelector('[data-admin-unlimited-user="user_2"]')?.click();
+    await flushPromises();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/admin/users/user_2/plan',
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({ plan: 'premium', unlimited: true }),
+      }),
+    );
+    expect(adminList?.textContent).toContain('Premium:');
+  });
+
   it('keeps the main button icon intact and navigates via PageTransition', async () => {
     const navigateSpy = vi.fn();
     dom.window.PageTransition = { navigate: navigateSpy };

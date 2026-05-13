@@ -21,6 +21,21 @@
   - `premium_expires_at = <UTC ISO timestamp>`.
 - Отдельная миграция БД не нужна: поле `premium_expires_at` уже есть в hosted identity schema.
 
+## Связь с ручной админской выдачей premium
+
+Регистрационное промо всегда выдаёт срочный premium:
+
+- у пользователя выставляется `plan = "premium"`;
+- `premium_expires_at` заполняется датой окончания через 21 день после регистрации;
+- после истечения `premium_expires_at` effective plan снова становится `free`, если нет другого основания для premium.
+
+Бессрочный premium является отдельной админской операцией для конкретного пользователя. Он хранится как:
+
+- `plan = "premium"`;
+- `premium_expires_at = null`.
+
+В настройках администратора список пользователей должен показывать срок premium: оставшиеся дни и дату окончания для срочного доступа, либо `без ограничения` для бессрочного доступа. Администратор также может перевести конкретного пользователя на бессрочный premium, очистив `premium_expires_at`.
+
 ## Уже сделано локально
 
 ### Общая промо-логика
@@ -59,6 +74,21 @@
 - 2 июня 2026 не входит;
 - применение промо выставляет `plan = "premium"`, `premium_expires_at` и дает effective premium.
 
+### Пользовательская видимость промо
+
+Файлы:
+
+- `frontend/Welcome/welcome.html`;
+- `frontend/Welcome/welcome.js`;
+- `tests/welcome_hosted_auth.test.mjs`.
+
+Добавлено:
+
+- промо-блок на hosted registration форме: `21 день Premium бесплатно`;
+- промо-пометка на карточке `Создать аккаунт`;
+- сообщение на экране подтверждения почты, если backend вернул `effective_plan = "premium"` и `premium_expires_at`;
+- frontend-регрессия на наличие промо-текста и отображение активированного premium после регистрации.
+
 ## Проверено
 
 Успешно:
@@ -77,25 +107,44 @@ python -m pytest desktop-app/tests/unit/test_user_account_axes.py --basetemp=.py
 
 Примечание: запуск того же одиночного тестового файла без `--no-cov` прошел сами тесты, но упал на глобальном coverage-gate проекта, потому что одиночный прогон покрывает меньше 10% всего репозитория. Это не связано с промо-изменением.
 
+Дополнительно после добавления UI-сообщения и админской индикации premium успешно:
+
+```powershell
+npx vitest run tests/welcome_hosted_auth.test.mjs tests/settings_theme_preferences.test.mjs
+```
+
+Результат: `19 passed`.
+
+Успешно:
+
+```powershell
+pytest desktop-app/tests/unit/test_user_account_axes.py desktop-app/tests/unit/test_admin_routes_account_roles.py desktop-app/tests/unit/test_billing_routes.py desktop-app/tests/test_billing_service.py tests/test_hosted_auth_http.py -q --basetemp=.pytest_tmp_registration_promo_full --cov-fail-under=0
+```
+
+Результат: `49 passed`.
+
+Успешно:
+
+```powershell
+python -m py_compile desktop-app/services/user_service.py desktop-app/services/hosted_user_service.py desktop-app/routes/admin_routes.py
+```
+
 ## Еще не сделано
 
 - Не сделан коммит.
 - Не создан PR.
 - Не выполнена выкатка на прод.
 - Не проведена проверка на проде после выкатки.
-- Не добавлен пользовательский текст/баннер о промо на фронтенде. Изначальная техническая цель была именно в автоматической выдаче премиума, но для маркетинговой видимости можно отдельно добавить UI-сообщение.
 - Не проведен полный регрессионный прогон всего проекта.
 
 ## Рекомендуемый следующий план
 
 1. Просмотреть локальный diff и убедиться, что формулировка дат/таймзоны устраивает.
-2. При необходимости добавить UI-уведомление на welcome/register экране о бесплатных 21 днях премиума.
-3. Запустить более широкий backend-набор тестов вокруг auth/billing/hosted users.
-4. Сделать коммит.
-5. Создать PR или подготовить прямую выкатку по текущему релиз-процессу.
-6. Выкатить на прод.
-7. Проверить на проде регистрацию тестового аккаунта в промо-окне и наличие:
+2. Запустить более широкий backend-набор тестов вокруг auth/billing/hosted users.
+3. Сделать коммит.
+4. Создать PR или подготовить прямую выкатку по текущему релиз-процессу.
+5. Выкатить на прод.
+6. Проверить на проде регистрацию тестового аккаунта в промо-окне и наличие:
    - `plan = "premium"`;
    - `effective_plan = "premium"`;
    - `premium_expires_at` примерно через 21 день после регистрации.
-

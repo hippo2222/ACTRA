@@ -295,7 +295,7 @@
             ['settings-security-title', '\u0411\u0435\u0437\u043e\u043f\u0430\u0441\u043d\u043e\u0441\u0442\u044c'],
             ['settings-security-description', '\u0421\u043c\u0435\u043d\u0430 \u043f\u0430\u0440\u043e\u043b\u044f \u0438 \u0431\u0430\u0437\u043e\u0432\u0430\u044f \u0437\u0430\u0449\u0438\u0442\u0430 \u0432\u0445\u043e\u0434\u0430.'],
             ['settings-admin-title', '\u0423\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0438\u0435 \u0430\u043a\u043a\u0430\u0443\u043d\u0442\u0430\u043c\u0438'],
-            ['settings-admin-description', '\u041f\u043e\u0438\u0441\u043a \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u0435\u0439 \u0438 \u043f\u0435\u0440\u0435\u043a\u043b\u044e\u0447\u0435\u043d\u0438\u0435 \u0441\u0442\u0430\u0442\u0443\u0441\u0430 premium.'],
+            ['settings-admin-description', '\u041f\u043e\u0438\u0441\u043a \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u0435\u0439, \u0441\u0440\u043e\u043a\u0438 premium \u0438 \u0432\u044b\u0434\u0430\u0447\u0430 \u0434\u043e\u0441\u0442\u0443\u043f\u0430.'],
             ['settings-appearance-title', '\u041e\u0444\u043e\u0440\u043c\u043b\u0435\u043d\u0438\u0435'],
             ['settings-ai-title', 'AI keys'],
             ['settings-ai-description', '\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u0435 \u043a\u043b\u044e\u0447\u0438 \u0438 \u043f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 \u0438\u0445 \u043f\u0440\u044f\u043c\u043e \u043d\u0430 \u044d\u0442\u043e\u0439 \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0435.'],
@@ -951,6 +951,38 @@
         return date.toLocaleDateString([], { year: 'numeric', month: 'long', day: 'numeric' });
     }
 
+    function formatRuCount(value, forms) {
+        const n = Math.abs(Number(value || 0));
+        const mod10 = n % 10;
+        const mod100 = n % 100;
+        if (mod10 === 1 && mod100 !== 11) return `${n} ${forms[0]}`;
+        if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${n} ${forms[1]}`;
+        return `${n} ${forms[2]}`;
+    }
+
+    function formatPremiumAccessLabel(user) {
+        const effectivePlan = getEffectivePlan(user);
+        const expiresAt = String(user?.premium_expires_at || '').trim();
+        if (effectivePlan !== 'premium') {
+            const expiredDate = expiresAt ? formatPremiumDate(expiresAt) : '';
+            return expiredDate ? `Premium истёк ${expiredDate}` : 'Premium: нет';
+        }
+        if (!expiresAt) {
+            return 'Premium: без ограничения';
+        }
+
+        const expiryDate = new Date(expiresAt);
+        if (Number.isNaN(expiryDate.getTime())) {
+            return 'Premium: срок не распознан';
+        }
+        const msLeft = expiryDate.getTime() - Date.now();
+        if (msLeft <= 0) {
+            return `Premium истёк ${formatPremiumDate(expiresAt)}`;
+        }
+        const daysLeft = Math.ceil(msLeft / (24 * 60 * 60 * 1000));
+        return `Premium: осталось ${formatRuCount(daysLeft, ['день', 'дня', 'дней'])} (до ${formatPremiumDate(expiresAt)})`;
+    }
+
     function getPremiumPeriodLabel(days) {
         if (window.PremiumPromo && typeof window.PremiumPromo.formatPeriod === 'function') {
             return window.PremiumPromo.formatPeriod(days);
@@ -1087,12 +1119,19 @@
             const isAdminRow = String(user.role || '').trim().toLowerCase() === 'admin';
             const nextPlan = rawPlan === 'premium' ? 'free' : 'premium';
             const expiresAt = String(user.premium_expires_at || '').trim();
-            const expiryText = expiresAt ? `Premium до ${escapeHtml(formatPremiumDate(expiresAt))}` : '';
+            const premiumAccessText = formatPremiumAccessLabel(user);
+            const isUnlimitedPremium = rawPlan === 'premium' && !expiresAt;
             const buttonLabel = rawPlan === 'premium'
                 ? '\u0421\u0434\u0435\u043b\u0430\u0442\u044c free'
                 : '\u0421\u0434\u0435\u043b\u0430\u0442\u044c premium';
             const buttonDisabledAttrs = isAdminRow
                 ? ' disabled title="\u0410\u0434\u043c\u0438\u043d \u0432\u0441\u0435\u0433\u0434\u0430 \u0438\u043c\u0435\u0435\u0442 effective premium"'
+                : '';
+            const grantDisabledAttrs = isAdminRow || isUnlimitedPremium
+                ? ` disabled title="${isAdminRow ? '\u0410\u0434\u043c\u0438\u043d \u0432\u0441\u0435\u0433\u0434\u0430 \u0438\u043c\u0435\u0435\u0442 effective premium' : '\u0423 \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044f \u0443\u0436\u0435 premium \u0431\u0435\u0437 \u0441\u0440\u043e\u043a\u0430'}"`
+                : '';
+            const unlimitedDisabledAttrs = isAdminRow || isUnlimitedPremium
+                ? ` disabled title="${isAdminRow ? '\u0410\u0434\u043c\u0438\u043d \u0432\u0441\u0435\u0433\u0434\u0430 \u0438\u043c\u0435\u0435\u0442 effective premium' : '\u0423 \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044f \u0443\u0436\u0435 premium \u0431\u0435\u0437 \u0441\u0440\u043e\u043a\u0430'}"`
                 : '';
             return `
                 <article class="rounded-2xl border border-border-subtle bg-surface-1 px-4 py-4">
@@ -1104,7 +1143,7 @@
                             <div class="mt-3 flex flex-wrap gap-2">
                                 <span class="settings-info-pill">${role}</span>
                                 <span class="settings-info-pill">${escapeHtml(getEffectivePlanLabel(user))}</span>
-                                ${expiryText ? `<span class="settings-info-pill">${expiryText}</span>` : ''}
+                                <span class="settings-info-pill">${escapeHtml(premiumAccessText)}</span>
                             </div>
                         </div>
                         <div class="flex flex-wrap gap-2 lg:justify-end">
@@ -1112,10 +1151,16 @@
                                 <button type="button"
                                     class="btn-secondary inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold"
                                     data-admin-grant-user="${userId}"
-                                    data-admin-grant-days="${days}"${buttonDisabledAttrs}>
+                                    data-admin-grant-days="${days}"${grantDisabledAttrs}>
                                     +${days}д
                                 </button>
                             `).join('')}
+                            <button type="button"
+                                class="btn-secondary inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold"
+                                data-admin-unlimited-user="${userId}"${unlimitedDisabledAttrs}>
+                                <span class="material-symbols-outlined text-[18px]">all_inclusive</span>
+                                Без срока
+                            </button>
                             <button type="button"
                                 class="btn-secondary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold"
                                 data-admin-plan-user="${userId}"
@@ -1141,6 +1186,12 @@
                 const targetUserId = button.getAttribute('data-admin-grant-user');
                 const periodDays = button.getAttribute('data-admin-grant-days');
                 void grantAdminUserPremium(targetUserId, periodDays);
+            });
+        });
+        listEl.querySelectorAll('[data-admin-unlimited-user]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const targetUserId = button.getAttribute('data-admin-unlimited-user');
+                void updateAdminUserPlan(targetUserId, 'premium', { unlimited: true });
             });
         });
     }
@@ -1175,19 +1226,26 @@
         }
     }
 
-    async function updateAdminUserPlan(userId, plan) {
+    async function updateAdminUserPlan(userId, plan, options = {}) {
         if (_isAdminPlanSaving) return;
         const cleanUserId = String(userId || '').trim();
         const cleanPlan = String(plan || '').trim().toLowerCase();
         if (!cleanUserId || !cleanPlan) return;
 
         _isAdminPlanSaving = true;
-        setInlineStatus('settings-admin-status', '\u0421\u043e\u0445\u0440\u0430\u043d\u044f\u0435\u043c \u043d\u043e\u0432\u044b\u0439 \u043f\u043b\u0430\u043d...', 'neutral');
+        const makeUnlimited = options && options.unlimited === true;
+        setInlineStatus(
+            'settings-admin-status',
+            makeUnlimited ? 'Выдаём Premium без срока...' : '\u0421\u043e\u0445\u0440\u0430\u043d\u044f\u0435\u043c \u043d\u043e\u0432\u044b\u0439 \u043f\u043b\u0430\u043d...',
+            'neutral'
+        );
         try {
+            const payload = { plan: cleanPlan };
+            if (makeUnlimited) payload.unlimited = true;
             const response = await fetch(`/api/admin/users/${encodeURIComponent(cleanUserId)}/plan`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ plan: cleanPlan }),
+                body: JSON.stringify(payload),
             });
             const data = await response.json().catch(() => null);
             if (!response.ok || !data?.ok || !data.user) {
@@ -1205,7 +1263,7 @@
                 updateAccountSummary(_accountContext.user, { hosted: _accountContext?.hosted === true });
                 await loadBillingStatus();
             }
-            setInlineStatus('settings-admin-status', '\u041f\u043b\u0430\u043d \u043e\u0431\u043d\u043e\u0432\u043b\u0451\u043d', 'success');
+            setInlineStatus('settings-admin-status', makeUnlimited ? 'Premium без срока выдан' : '\u041f\u043b\u0430\u043d \u043e\u0431\u043d\u043e\u0432\u043b\u0451\u043d', 'success');
         } catch (error) {
             console.error('[Settings] Failed to update user plan:', error);
             setInlineStatus('settings-admin-status', '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043e\u0431\u043d\u043e\u0432\u0438\u0442\u044c \u043f\u043b\u0430\u043d', 'error');

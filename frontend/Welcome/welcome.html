@@ -415,6 +415,69 @@
             max-width: 38rem;
         }
 
+        .registration-promo-card {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr);
+            gap: 0.9rem;
+            align-items: start;
+            border: 1px solid color-mix(in srgb, var(--color-primary) 22%, var(--color-border-subtle));
+            border-radius: 1.25rem;
+            background:
+                linear-gradient(135deg,
+                    color-mix(in srgb, var(--color-primary) 9%, var(--color-surface-1)) 0%,
+                    var(--color-surface-1) 100%);
+            padding: 1rem;
+            color: var(--color-text-main);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .registration-promo-card__icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 2.7rem;
+            height: 2.7rem;
+            border-radius: 1rem;
+            background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface-2));
+            color: var(--color-primary-dark);
+        }
+
+        .registration-promo-card__title {
+            margin: 0;
+            color: var(--color-text-main);
+            font-size: 0.98rem;
+            font-weight: 900;
+            line-height: 1.2;
+        }
+
+        .registration-promo-card__copy {
+            margin: 0.35rem 0 0;
+            color: var(--color-text-secondary);
+            font-size: 0.86rem;
+            font-weight: 600;
+            line-height: 1.45;
+        }
+
+        .auth-choice-card__promo {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            width: fit-content;
+            margin-top: 1rem;
+            border: 1px solid color-mix(in srgb, var(--color-primary) 20%, var(--color-border-subtle));
+            border-radius: 999px;
+            background: color-mix(in srgb, var(--color-primary) 7%, var(--color-surface-1));
+            padding: 0.42rem 0.7rem;
+            color: var(--color-primary-dark);
+            font-size: 0.78rem;
+            font-weight: 850;
+            line-height: 1;
+        }
+
+        .auth-choice-card__promo .material-symbols-outlined {
+            font-size: 1rem;
+        }
+
         #modeLogin[data-hosted-auth="1"] {
             max-width: 36rem;
         }
@@ -5841,6 +5904,17 @@
                             <input type="hidden" id="onboardingAvatarSeed" value="1.png">
 
                             <div id="hostedRegistrationFields" class="hidden space-y-4 mt-4">
+                                <div id="registrationPremiumPromo" class="registration-promo-card"
+                                    data-registration-premium-promo>
+                                    <span class="registration-promo-card__icon material-symbols-outlined"
+                                        aria-hidden="true">workspace_premium</span>
+                                    <div>
+                                        <p class="registration-promo-card__title">21 день Premium бесплатно</p>
+                                        <p class="registration-promo-card__copy">
+                                            Зарегистрируйтесь до 1 июня 2026 включительно — Premium включится автоматически сразу после создания аккаунта.
+                                        </p>
+                                    </div>
+                                </div>
                                 <div id="onboardingLoginField" class="relative">
                                     <span class="absolute left-4 top-3.5 text-text-secondary material-symbols-outlined">alternate_email</span>
                                     <input type="text" id="onboardingLogin" placeholder="Логин"
@@ -6030,6 +6104,10 @@
                                         <p class="auth-choice-card__eyebrow">Для нового доступа</p>
                                         <p class="auth-choice-card__title">Создать аккаунт</p>
                                         <p class="auth-choice-card__copy">Создайте отдельный аккаунт для библиотеки, прогресса, календаря и собственных публикаций.</p>
+                                        <p class="auth-choice-card__promo" data-registration-premium-promo>
+                                            <span class="material-symbols-outlined" aria-hidden="true">workspace_premium</span>
+                                            21 день Premium до 1 июня
+                                        </p>
                                     </div>
                                     <div class="auth-choice-card__bottom">
                                         <p class="auth-choice-card__footer-note">Имя, email и пароль</p>

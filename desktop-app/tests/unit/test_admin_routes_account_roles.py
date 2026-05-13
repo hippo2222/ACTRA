@@ -121,3 +121,48 @@ def test_admin_update_user_plan_updates_plan(monkeypatch):
     assert payload["ok"] is True
     assert payload["user"]["plan"] == "premium"
     assert payload["user"]["role"] == "user"
+
+
+def test_admin_update_user_plan_can_make_premium_unlimited(monkeypatch):
+    app = _make_app()
+    user = SimpleNamespace(
+        user_id="user_1",
+        name="Alice",
+        login="alice",
+        email="alice@actra.site",
+        role="user",
+        plan="premium",
+        premium_expires_at="2026-06-07T00:00:00Z",
+        created_at="2026-04-20T10:00:00Z",
+    )
+
+    def set_user_plan(user_id, plan, actor_user_id=""):
+        user.user_id = user_id
+        user.plan = plan
+        return user
+
+    def update_user(updated_user):
+        user.premium_expires_at = updated_user.premium_expires_at
+        return True
+
+    fake_service = SimpleNamespace(
+        set_user_plan=set_user_plan,
+        update_user=update_user,
+        get_user=lambda user_id: user if user_id == "user_1" else None,
+    )
+
+    monkeypatch.setattr(admin_routes, "is_hosted_web_runtime", lambda: True)
+    monkeypatch.setattr(admin_routes, "get_authenticated_user_id", lambda: "admin_1")
+    monkeypatch.setattr(admin_routes, "get_authenticated_hosted_user", lambda: SimpleNamespace(user_id="admin_1", role="admin"))
+    monkeypatch.setattr(admin_routes, "current_user_is_hosted_admin", lambda: True)
+    monkeypatch.setattr(admin_routes, "get_ctx", lambda: SimpleNamespace(user_service=fake_service))
+
+    with app.test_client() as client:
+        response = client.patch("/api/admin/users/user_1/plan", json={"plan": "premium", "unlimited": True})
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["ok"] is True
+    assert payload["user"]["plan"] == "premium"
+    assert payload["user"]["premium_expires_at"] is None
+    assert payload["user"]["effective_plan"] == "premium"

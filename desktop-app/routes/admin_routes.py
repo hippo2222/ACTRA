@@ -111,4 +111,14 @@ def admin_update_user_plan(user_id: str) -> Any:
     if updated_user is None:
         return jsonify({"ok": False, "error": "user_not_found"}), 404
 
+    if plan == "premium" and payload.get("unlimited") is True:
+        updated_user.premium_expires_at = None
+        updater = getattr(user_service, "update_user", None)
+        if not callable(updater) or not updater(updated_user):
+            logger.error("[HTTP][ADMIN] Failed to clear premium expiry for user %s", user_id)
+            return jsonify({"ok": False, "error": "premium_unlimited_update_failed"}), 500
+        getter = getattr(user_service, "get_user", None)
+        refreshed_user = getter(user_id) if callable(getter) else None
+        updated_user = refreshed_user or updated_user
+
     return jsonify({"ok": True, "user": _serialize_admin_user(updated_user)})

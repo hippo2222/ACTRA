@@ -67,6 +67,14 @@ describe('welcome hosted auth flow', () => {
     expect(html).not.toContain('welcomeTheoryPreviewFrame');
   });
 
+  it('advertises the registration premium promo on welcome and register surfaces', () => {
+    const html = loadFile('frontend/Welcome/welcome.html');
+
+    expect(html).toContain('21 день Premium бесплатно');
+    expect(html).toContain('Зарегистрируйтесь до 1 июня 2026 включительно');
+    expect(html).toContain('21 день Premium до 1 июня');
+  });
+
   it('shows auth choice in hosted mode and switches to login form', async () => {
     const fetchMock = vi.fn(async (input) => {
       const url = typeof input === 'string' ? input : String(input?.url || '');
@@ -197,6 +205,8 @@ describe('welcome hosted auth flow', () => {
               user_id: 'user_1',
               login: 'reader-one',
               email: 'reader@example.com',
+              effective_plan: 'premium',
+              premium_expires_at: '2026-06-10T07:00:00Z',
               email_verification_sent_at: '2026-04-13T10:17:00Z',
             },
             verification_email: {
@@ -247,6 +257,7 @@ describe('welcome hosted auth flow', () => {
     expect(navigateSpy).not.toHaveBeenCalled();
     expect(dom.window.document.getElementById('onboardingVerificationPanel').classList.contains('hidden')).toBe(false);
     expect(dom.window.document.getElementById('onboardingVerificationEmail').textContent).toContain('reader@example.com');
+    expect(dom.window.document.getElementById('onboardingVerificationStatus').textContent).toContain('Premium активирован');
 
     dom.window.welcomeContinueAfterVerification();
     expect(navigateSpy).toHaveBeenCalledWith('/ui/main');

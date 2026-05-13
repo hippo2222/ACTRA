@@ -116,6 +116,12 @@
         );
     }
 
+    function formatPremiumDate(value) {
+        const date = new Date(String(value || ''));
+        if (Number.isNaN(date.getTime())) return '';
+        return date.toLocaleDateString([], { year: 'numeric', month: 'long', day: 'numeric' });
+    }
+
     function setupLoadingOverlayLogo() {
         const animatedLogo = document.getElementById('loadingLogoAnimated');
         const staticLogo = document.getElementById('loadingLogoStatic');
@@ -365,6 +371,11 @@
 
         const user = state.user || {};
         const sentAt = user.email_verification_sent_at || state.sentAt || '';
+        const effectivePlan = String(user.effective_plan || '').trim().toLowerCase();
+        const premiumExpiresAt = String(user.premium_expires_at || '').trim();
+        const premiumDate = effectivePlan === 'premium' && premiumExpiresAt
+            ? formatPremiumDate(premiumExpiresAt)
+            : '';
         if (state.status === 'verified') {
             return user.email_verified_at
                 ? `Почта подтверждена ${user.email_verified_at}.`
@@ -374,6 +385,9 @@
             return state.verificationEmail?.sent
                 ? 'Новое письмо уже отправлено. Проверьте входящие.'
                 : '';
+        }
+        if (premiumDate) {
+            return `Premium активирован до ${premiumDate}. Подтвердите email, чтобы завершить регистрацию.`;
         }
         return sentAt
             ? `Последнее письмо отправлено ${sentAt}.`
