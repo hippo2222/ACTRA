@@ -271,7 +271,7 @@ def test_public_legal_pages_are_available_without_hosted_auth(client, monkeypatc
     assert "text/html" in (terms_response.content_type or "")
     terms_text = terms_response.get_data(as_text=True)
     assert "Terms of Service" in terms_text
-    assert "Last reviewed 2026-05-11" in terms_text
+    assert "Last reviewed 2026-05-13" in terms_text
     assert "/legal/privacy?lang=en" in terms_text
     assert "/refund?lang=en" in terms_text
     assert terms_ru_response.status_code == 200
@@ -279,6 +279,7 @@ def test_public_legal_pages_are_available_without_hosted_auth(client, monkeypatc
     current_response = client.get("/api/legal/current")
     assert current_response.status_code == 200
     current_payload = current_response.get_json()
+    assert current_payload["documents"]["terms"]["version"] == "2026-05-25.2"
     assert current_payload["documents"]["refund"]["version"] == "2026-05-25.1"
 
     refund_document_response = client.get("/api/legal/document/refund")
