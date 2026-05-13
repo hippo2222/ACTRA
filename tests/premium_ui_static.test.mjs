@@ -90,4 +90,14 @@ describe('premium UI wiring', () => {
     expect(complexes).toContain('data-premium-promo-feature", "complexes-limit"');
     expect(settings).toContain('PremiumPromoModal.js');
   });
+
+  it('closes the shared premium promo modal from the acknowledgement button', () => {
+    const promo = read('frontend/assets/PremiumPromoModal.js');
+
+    expect(promo).toContain("const settings = event.target.closest('[data-premium-promo-settings]');");
+    expect(promo).toContain(`if (settings) {
+                close();
+                return;
+            }`);
+  });
 });

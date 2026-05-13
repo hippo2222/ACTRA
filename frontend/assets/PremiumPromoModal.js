@@ -512,7 +512,7 @@
             }
             const settings = event.target.closest('[data-premium-promo-settings]');
             if (settings) {
-                acknowledgePaymentPending();
+                close();
                 return;
             }
         });
