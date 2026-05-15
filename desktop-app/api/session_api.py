@@ -1920,7 +1920,7 @@ class SessionAPI:
 
     def get_resume_target(self, session: Any) -> Dict[str, Any]:
         session_id = str(getattr(session, "id", "") or "").strip()
-        session_url = f"/ui/session/{quote(session_id, safe='')}" if session_id else "/ui/complexes"
+        session_url = f"/session/{quote(session_id, safe='')}" if session_id else "/complexes"
         target: Dict[str, Any] = {
             "screen_type": "task",
             "url": session_url,

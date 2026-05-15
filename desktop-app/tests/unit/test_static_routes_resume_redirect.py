@@ -27,7 +27,7 @@ def test_serve_session_ui_redirects_to_iteration_results_resume_target(monkeypat
         get_resume_target=lambda loaded: {
             "screen_type": "iteration_results",
             "iteration_number": 1,
-            "url": "/ui/session/sess_1/iteration/1",
+            "url": "/session/sess_1/iteration/1",
         },
     )
     fake_ctx = SimpleNamespace(user_id="audit_user", session_api=fake_session_api)
@@ -40,11 +40,11 @@ def test_serve_session_ui_redirects_to_iteration_results_resume_target(monkeypat
         lambda *_args, **_kwargs: Response("S1", status=200, mimetype="text/html"),
     )
 
-    with app.test_request_context("/ui/session/sess_1", method="GET"):
+    with app.test_request_context("/session/sess_1", method="GET"):
         response = static_routes.serve_session_ui("sess_1")
 
     assert response.status_code == 302
-    assert response.location.endswith("/ui/session/sess_1/iteration/1")
+    assert response.location.endswith("/session/sess_1/iteration/1")
 
 
 def test_serve_session_ui_keeps_s1_when_resume_target_is_current_task(monkeypatch, tmp_path):
@@ -61,7 +61,7 @@ def test_serve_session_ui_keeps_s1_when_resume_target_is_current_task(monkeypatc
         get_session=lambda session_id, user_id=None: session,
         get_resume_target=lambda loaded: {
             "screen_type": "task",
-            "url": "/ui/session/sess_1",
+            "url": "/session/sess_1",
         },
     )
     fake_ctx = SimpleNamespace(user_id="audit_user", session_api=fake_session_api)
@@ -74,7 +74,7 @@ def test_serve_session_ui_keeps_s1_when_resume_target_is_current_task(monkeypatc
         lambda *_args, **_kwargs: Response("S1", status=200, mimetype="text/html"),
     )
 
-    with app.test_request_context("/ui/session/sess_1", method="GET"):
+    with app.test_request_context("/session/sess_1", method="GET"):
         response = static_routes.serve_session_ui("sess_1")
 
     assert response.status_code == 200

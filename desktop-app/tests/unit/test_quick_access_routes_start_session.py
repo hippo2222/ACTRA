@@ -370,7 +370,7 @@ def test_get_quick_access_marks_repository_restored_active_session_as_paused(mon
         session.paused_at = now
         session.paused_resume_target = {
             "screen_type": "task",
-            "url": "/ui/session/session_orphan",
+            "url": "/session/session_orphan",
             "task_ref": "module/topic/task_001",
             "task_index": 0,
         }

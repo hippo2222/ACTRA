@@ -509,12 +509,12 @@ def _public_shell_page(
 <body>
   <header>
     <div class="wrap top">
-      <a class="brand" href="/ui/welcome" aria-label="ACTRA">
+      <a class="brand" href="/welcome" aria-label="ACTRA">
         <span class="brand-logo" aria-hidden="true"></span>
         <span class="brand-word">ACTRA</span>
       </a>
       {_public_nav_html(lang, current_path)}
-      <a class="home-button" href="/ui/welcome">{escape(labels['back_home'])}</a>
+      <a class="home-button" href="/welcome">{escape(labels['back_home'])}</a>
     </div>
   </header>
   <main class="wrap">
@@ -664,7 +664,7 @@ def _public_home_page() -> Any:
         <section class="panel">
           <h2>Цифровой доступ</h2>
           <p>ACTRA Premium является цифровой услугой. Физические товары не продаются и не доставляются. Доступ предоставляется в аккаунте пользователя после подтверждения оплаты.</p>
-          <p><a href="/pricing?lang=ru">Посмотреть цены</a> · <a href="/ui/welcome">Главная ACTRA</a> · <a href="mailto:{_SUPPORT_EMAIL}">{_SUPPORT_EMAIL}</a></p>
+          <p><a href="/pricing?lang=ru">Посмотреть цены</a> · <a href="/welcome">Главная ACTRA</a> · <a href="mailto:{_SUPPORT_EMAIL}">{_SUPPORT_EMAIL}</a></p>
         </section>
         """
     else:
@@ -699,7 +699,7 @@ def _public_home_page() -> Any:
         <section class="panel">
           <h2>Digital access</h2>
           <p>ACTRA Premium is a digital service. No physical goods are sold or shipped. Access is delivered to the user account after payment is confirmed.</p>
-          <p><a href="/pricing?lang=en">View pricing</a> · <a href="/ui/welcome">ACTRA home</a> · <a href="mailto:{_SUPPORT_EMAIL}">{_SUPPORT_EMAIL}</a></p>
+          <p><a href="/pricing?lang=en">View pricing</a> · <a href="/welcome">ACTRA home</a> · <a href="mailto:{_SUPPORT_EMAIL}">{_SUPPORT_EMAIL}</a></p>
         </section>
         """
     return _public_commerce_page(
@@ -792,6 +792,17 @@ def _refund_page() -> Any:
 # Helpers (used only by UI routes)
 # ---------------------------------------------------------------------------
 
+def _legacy_redirect(new_path: str) -> Any:
+    """301-redirect from a legacy ``/ui/...`` URL to a new canonical path.
+
+    The current request's query string is preserved so deep-link URLs like
+    ``/ui/editor?module=X&topic=Y`` correctly become ``/editor?module=X&topic=Y``.
+    """
+    qs = request.query_string.decode("utf-8") if request.query_string else ""
+    target = f"{new_path}?{qs}" if qs else new_path
+    return redirect(target, code=301)
+
+
 def _get_ui_dirs() -> Dict[str, Path]:
     """Return the dict of UI directory paths stored during init_context."""
     return get_extra("ui_dirs", {})
@@ -837,8 +848,8 @@ def _premium_required_page(feature_label: str) -> Any:
         Виджеты на главной остаются доступны, а полная страница открывается после активации Premium.
       </p>
       <div class="mt-6 flex flex-wrap justify-center gap-3">
-        <a class="btn-primary inline-flex rounded-xl px-4 py-2.5 text-sm font-semibold" href="/ui/settings#premium">Открыть Premium</a>
-        <a class="btn-secondary inline-flex rounded-xl px-4 py-2.5 text-sm font-semibold" href="/ui/main">На главную</a>
+        <a class="btn-primary inline-flex rounded-xl px-4 py-2.5 text-sm font-semibold" href="/settings#premium">Открыть Premium</a>
+        <a class="btn-secondary inline-flex rounded-xl px-4 py-2.5 text-sm font-semibold" href="/main">На главную</a>
       </div>
     </div>
   </main>
@@ -897,7 +908,7 @@ def _flush_log_handlers() -> None:
 # Complexes UI
 # ---------------------------------------------------------------------------
 
-@static_bp.route("/ui/complexes", methods=["GET"])
+@static_bp.route("/complexes", methods=["GET"])
 def serve_complexes_ui() -> Any:
     """Serve the complexes list HTML UI (S0)."""
     dirs = _get_ui_dirs()
@@ -914,7 +925,12 @@ def serve_complexes_ui() -> Any:
     return resp
 
 
-@static_bp.route("/ui/complexes/create", methods=["GET"])
+@static_bp.route("/ui/complexes", methods=["GET"])
+def serve_complexes_ui_legacy() -> Any:
+    return _legacy_redirect("/complexes")
+
+
+@static_bp.route("/complexes/create", methods=["GET"])
 def serve_complexes_create_ui() -> Any:
     dirs = _get_ui_dirs()
     COMPLEXES_UI_DIR = dirs.get("COMPLEXES_UI_DIR")
@@ -930,12 +946,17 @@ def serve_complexes_create_ui() -> Any:
     return resp
 
 
+@static_bp.route("/ui/complexes/create", methods=["GET"])
+def serve_complexes_create_ui_legacy() -> Any:
+    return _legacy_redirect("/complexes/create")
+
+
 # ---------------------------------------------------------------------------
 # Catalog UI
 # ---------------------------------------------------------------------------
 
-@static_bp.route("/ui/catalog", methods=["GET"])
-@static_bp.route("/ui/catalog/", methods=["GET"])
+@static_bp.route("/catalog", methods=["GET"])
+@static_bp.route("/catalog/", methods=["GET"])
 def serve_catalog_ui() -> Any:
     """Serve the public catalog UI."""
     dirs = _get_ui_dirs()
@@ -952,14 +973,13 @@ def serve_catalog_ui() -> Any:
     return resp
 
 
-@static_bp.route("/catalog", methods=["GET"])
-@static_bp.route("/catalog/", methods=["GET"])
-def serve_catalog_ui_alias() -> Any:
-    """Legacy-friendly alias for the public catalog UI."""
-    return redirect("/ui/catalog")
+@static_bp.route("/ui/catalog", methods=["GET"])
+@static_bp.route("/ui/catalog/", methods=["GET"])
+def serve_catalog_ui_legacy() -> Any:
+    return _legacy_redirect("/catalog")
 
 
-@static_bp.route("/ui/catalog/<path:filename>", methods=["GET"])
+@static_bp.route("/catalog/<path:filename>", methods=["GET"])
 def serve_catalog_file(filename: str) -> Any:
     """Serve Catalog static files (HTML, JS)."""
     dirs = _get_ui_dirs()
@@ -969,14 +989,25 @@ def serve_catalog_file(filename: str) -> Any:
     return send_from_directory(CATALOG_UI_DIR, filename)
 
 
+@static_bp.route("/ui/catalog/<path:filename>", methods=["GET"])
+def serve_catalog_file_legacy(filename: str) -> Any:
+    return _legacy_redirect(f"/catalog/{filename}")
+
+
 # ---------------------------------------------------------------------------
 # Welcome UI
 # ---------------------------------------------------------------------------
 
 @static_bp.route("/", methods=["GET"])
 def serve_root_ui_alias() -> Any:
-    """Send the product domain entry point to the public welcome experience."""
-    return redirect("/ui/welcome", code=302)
+    """Send the product domain entry point to the public welcome experience.
+
+    Uses 301 (permanent) so that Google Search Console treats /welcome as the
+    canonical indexable URL for the root domain. The previous 302 broke
+    indexing because Google declines to follow temporary redirects when
+    deciding canonical URLs.
+    """
+    return redirect("/welcome", code=301)
 
 
 @static_bp.route("/robots.txt", methods=["GET"])
@@ -993,7 +1024,8 @@ Sitemap: {base_url}/sitemap.xml
 @static_bp.route("/sitemap.xml", methods=["GET"])
 def serve_sitemap_xml() -> Any:
     base_url = escape(_public_base_url(), quote=True)
-    paths = ("", "pricing", "refund", "privacy", "terms")
+    # /welcome is the canonical indexable entry point (/ 301-redirects to it).
+    paths = ("", "welcome", "pricing", "refund", "privacy", "terms")
     urls = "\n".join(
         f"  <url><loc>{base_url}/{path}</loc></url>" if path else f"  <url><loc>{base_url}/</loc></url>"
         for path in paths
@@ -1033,7 +1065,7 @@ def serve_refund_policy() -> Any:
     return _refund_page()
 
 
-@static_bp.route("/ui/welcome", methods=["GET"])
+@static_bp.route("/welcome", methods=["GET"])
 def serve_welcome_ui() -> Any:
     """Serve the Welcome / onboarding screen."""
     dirs = _get_ui_dirs()
@@ -1047,6 +1079,11 @@ def serve_welcome_ui() -> Any:
     except Exception:
         pass
     return resp
+
+
+@static_bp.route("/ui/welcome", methods=["GET"])
+def serve_welcome_ui_legacy() -> Any:
+    return _legacy_redirect("/welcome")
 
 
 @static_bp.route("/Welcome/<path:filename>", methods=["GET"])
@@ -1063,8 +1100,7 @@ def serve_welcome_static(filename: str) -> Any:
 # Main Screen UI
 # ---------------------------------------------------------------------------
 
-@static_bp.route("/ui", methods=["GET"])
-@static_bp.route("/ui/main", methods=["GET"])
+@static_bp.route("/main", methods=["GET"])
 def serve_main_ui() -> Any:
     dirs = _get_ui_dirs()
     MAINSCREEN_UI_DIR = dirs.get("MAINSCREEN_UI_DIR")
@@ -1088,16 +1124,22 @@ def serve_main_ui() -> Any:
     return resp
 
 
+@static_bp.route("/ui", methods=["GET"])
+@static_bp.route("/ui/main", methods=["GET"])
+def serve_main_ui_legacy() -> Any:
+    return _legacy_redirect("/main")
+
+
 # ---------------------------------------------------------------------------
 # Task UI modules (TestUI, SequenceUI, ClickUI, DrawUI, OpenAnswerUI, MistakesUI)
 # ---------------------------------------------------------------------------
 
-@static_bp.route("/ui/TestUI/<path:filename>", methods=["GET"])
+@static_bp.route("/TestUI/<path:filename>", methods=["GET"])
 def serve_testui_static(filename: str) -> Any:
     """Serve static JS/CSS/assets for the TestUI module used by S1.
 
-    This allows paths like ../TestUI/TestUI.web.js in S1/index.html to be resolved
-    as /ui/TestUI/TestUI.web.js.
+    This allows paths like ../TestUI/TestUI.web.js in S1/index.html to be
+    resolved as /TestUI/TestUI.web.js.
     """
     dirs = _get_ui_dirs()
     TESTUI_DIR = dirs.get("TESTUI_DIR")
@@ -1108,7 +1150,12 @@ def serve_testui_static(filename: str) -> Any:
     return send_from_directory(TESTUI_DIR, filename)
 
 
-@static_bp.route("/ui/SequenceUI/<path:filename>", methods=["GET"])
+@static_bp.route("/ui/TestUI/<path:filename>", methods=["GET"])
+def serve_testui_static_legacy(filename: str) -> Any:
+    return _legacy_redirect(f"/TestUI/{filename}")
+
+
+@static_bp.route("/SequenceUI/<path:filename>", methods=["GET"])
 def serve_sequenceui_static(filename: str) -> Any:
     dirs = _get_ui_dirs()
     SEQUENCEUI_DIR = dirs.get("SEQUENCEUI_DIR")
@@ -1119,7 +1166,12 @@ def serve_sequenceui_static(filename: str) -> Any:
     return send_from_directory(SEQUENCEUI_DIR, filename)
 
 
-@static_bp.route("/ui/ClickUI/<path:filename>", methods=["GET"])
+@static_bp.route("/ui/SequenceUI/<path:filename>", methods=["GET"])
+def serve_sequenceui_static_legacy(filename: str) -> Any:
+    return _legacy_redirect(f"/SequenceUI/{filename}")
+
+
+@static_bp.route("/ClickUI/<path:filename>", methods=["GET"])
 def serve_clickui_static(filename: str) -> Any:
     dirs = _get_ui_dirs()
     CLICKUI_DIR = dirs.get("CLICKUI_DIR")
@@ -1130,7 +1182,12 @@ def serve_clickui_static(filename: str) -> Any:
     return send_from_directory(CLICKUI_DIR, filename)
 
 
-@static_bp.route("/ui/DrawUI/<path:filename>", methods=["GET"])
+@static_bp.route("/ui/ClickUI/<path:filename>", methods=["GET"])
+def serve_clickui_static_legacy(filename: str) -> Any:
+    return _legacy_redirect(f"/ClickUI/{filename}")
+
+
+@static_bp.route("/DrawUI/<path:filename>", methods=["GET"])
 def serve_drawui_static(filename: str) -> Any:
     dirs = _get_ui_dirs()
     DRAWUI_DIR = dirs.get("DRAWUI_DIR")
@@ -1141,7 +1198,12 @@ def serve_drawui_static(filename: str) -> Any:
     return send_from_directory(DRAWUI_DIR, filename)
 
 
-@static_bp.route("/ui/OpenAnswerUI/<path:filename>", methods=["GET"])
+@static_bp.route("/ui/DrawUI/<path:filename>", methods=["GET"])
+def serve_drawui_static_legacy(filename: str) -> Any:
+    return _legacy_redirect(f"/DrawUI/{filename}")
+
+
+@static_bp.route("/OpenAnswerUI/<path:filename>", methods=["GET"])
 def serve_openanswerui_static(filename: str) -> Any:
     dirs = _get_ui_dirs()
     OPENANSWERUI_DIR = dirs.get("OPENANSWERUI_DIR")
@@ -1152,7 +1214,12 @@ def serve_openanswerui_static(filename: str) -> Any:
     return send_from_directory(OPENANSWERUI_DIR, filename)
 
 
-@static_bp.route("/ui/MistakesUI/<path:filename>", methods=["GET"])
+@static_bp.route("/ui/OpenAnswerUI/<path:filename>", methods=["GET"])
+def serve_openanswerui_static_legacy(filename: str) -> Any:
+    return _legacy_redirect(f"/OpenAnswerUI/{filename}")
+
+
+@static_bp.route("/MistakesUI/<path:filename>", methods=["GET"])
 def serve_mistakesui_static(filename: str) -> Any:
     dirs = _get_ui_dirs()
     MISTAKESUI_DIR = dirs.get("MISTAKESUI_DIR")
@@ -1163,12 +1230,17 @@ def serve_mistakesui_static(filename: str) -> Any:
     return send_from_directory(MISTAKESUI_DIR, filename)
 
 
+@static_bp.route("/ui/MistakesUI/<path:filename>", methods=["GET"])
+def serve_mistakesui_static_legacy(filename: str) -> Any:
+    return _legacy_redirect(f"/MistakesUI/{filename}")
+
+
 # ---------------------------------------------------------------------------
 # Theory Center UI
 # ---------------------------------------------------------------------------
 
-@static_bp.route("/ui/theory-center", methods=["GET"])
-@static_bp.route("/ui/theory-center/", methods=["GET"])
+@static_bp.route("/theory-center", methods=["GET"])
+@static_bp.route("/theory-center/", methods=["GET"])
 def serve_theory_center_ui() -> Any:
     """Serve the standalone Theory Center overview UI."""
     dirs = _get_ui_dirs()
@@ -1185,7 +1257,13 @@ def serve_theory_center_ui() -> Any:
     return resp
 
 
-@static_bp.route("/ui/editor/theory_center.js", methods=["GET"])
+@static_bp.route("/ui/theory-center", methods=["GET"])
+@static_bp.route("/ui/theory-center/", methods=["GET"])
+def serve_theory_center_ui_legacy() -> Any:
+    return _legacy_redirect("/theory-center")
+
+
+@static_bp.route("/editor/theory_center.js", methods=["GET"])
 def serve_theory_center_js() -> Any:
     """Serve the Theory Center JavaScript directly."""
     dirs = _get_ui_dirs()
@@ -1196,8 +1274,13 @@ def serve_theory_center_js() -> Any:
     return send_from_directory(EDITOR_UI_DIR, "theory_center.js")
 
 
-@static_bp.route("/ui/theory-editor", methods=["GET"])
-@static_bp.route("/ui/theory-editor/", methods=["GET"])
+@static_bp.route("/ui/editor/theory_center.js", methods=["GET"])
+def serve_theory_center_js_legacy() -> Any:
+    return _legacy_redirect("/editor/theory_center.js")
+
+
+@static_bp.route("/theory-editor", methods=["GET"])
+@static_bp.route("/theory-editor/", methods=["GET"])
 def serve_theory_editor_ui() -> Any:
     """Serve the Theory Editor UI."""
     dirs = _get_ui_dirs()
@@ -1214,12 +1297,18 @@ def serve_theory_editor_ui() -> Any:
     return resp
 
 
+@static_bp.route("/ui/theory-editor", methods=["GET"])
+@static_bp.route("/ui/theory-editor/", methods=["GET"])
+def serve_theory_editor_ui_legacy() -> Any:
+    return _legacy_redirect("/theory-editor")
+
+
 # ---------------------------------------------------------------------------
 # Editor UI
 # ---------------------------------------------------------------------------
 
-@static_bp.route("/ui/editor", methods=["GET"])
-@static_bp.route("/ui/editor/", methods=["GET"])
+@static_bp.route("/editor", methods=["GET"])
+@static_bp.route("/editor/", methods=["GET"])
 def serve_editor_dashboard() -> Any:
     """Serve the Editor Main Dashboard."""
     dirs = _get_ui_dirs()
@@ -1236,7 +1325,13 @@ def serve_editor_dashboard() -> Any:
     return resp
 
 
-@static_bp.route("/ui/editor/<path:filename>", methods=["GET"])
+@static_bp.route("/ui/editor", methods=["GET"])
+@static_bp.route("/ui/editor/", methods=["GET"])
+def serve_editor_dashboard_legacy() -> Any:
+    return _legacy_redirect("/editor")
+
+
+@static_bp.route("/editor/<path:filename>", methods=["GET"])
 def serve_editor_file(filename: str) -> Any:
     """Serve any file (HTML, CSS, JS) from the Editor directory."""
     dirs = _get_ui_dirs()
@@ -1247,11 +1342,16 @@ def serve_editor_file(filename: str) -> Any:
     return send_from_directory(EDITOR_UI_DIR, filename)
 
 
+@static_bp.route("/ui/editor/<path:filename>", methods=["GET"])
+def serve_editor_file_legacy(filename: str) -> Any:
+    return _legacy_redirect(f"/editor/{filename}")
+
+
 # ---------------------------------------------------------------------------
 # Calendar UI Routes
 # ---------------------------------------------------------------------------
 
-@static_bp.route("/ui/calendar.css", methods=["GET"])
+@static_bp.route("/calendar.css", methods=["GET"])
 def serve_calendar_css_direct() -> Any:
     """Serve calendar.css specifically."""
     dirs = _get_ui_dirs()
@@ -1261,8 +1361,13 @@ def serve_calendar_css_direct() -> Any:
     return send_from_directory(CALENDAR_UI_DIR, "calendar.css")
 
 
-@static_bp.route("/ui/calendar", methods=["GET"])
-@static_bp.route("/ui/calendar/", methods=["GET"])
+@static_bp.route("/ui/calendar.css", methods=["GET"])
+def serve_calendar_css_direct_legacy() -> Any:
+    return _legacy_redirect("/calendar.css")
+
+
+@static_bp.route("/calendar", methods=["GET"])
+@static_bp.route("/calendar/", methods=["GET"])
 def serve_calendar_ui() -> Any:
     """Serve the Calendar page."""
     if not _current_user_has_premium_access():
@@ -1282,7 +1387,13 @@ def serve_calendar_ui() -> Any:
     return resp
 
 
-@static_bp.route("/ui/calendar/<path:filename>", methods=["GET"])
+@static_bp.route("/ui/calendar", methods=["GET"])
+@static_bp.route("/ui/calendar/", methods=["GET"])
+def serve_calendar_ui_legacy() -> Any:
+    return _legacy_redirect("/calendar")
+
+
+@static_bp.route("/calendar/<path:filename>", methods=["GET"])
 def serve_calendar_file(filename: str) -> Any:
     """Serve Calendar static files (CSS, JS)."""
     dirs = _get_ui_dirs()
@@ -1292,12 +1403,17 @@ def serve_calendar_file(filename: str) -> Any:
     return send_from_directory(CALENDAR_UI_DIR, filename)
 
 
+@static_bp.route("/ui/calendar/<path:filename>", methods=["GET"])
+def serve_calendar_file_legacy(filename: str) -> Any:
+    return _legacy_redirect(f"/calendar/{filename}")
+
+
 # ---------------------------------------------------------------------------
 # Statistics UI Routes
 # ---------------------------------------------------------------------------
 
-@static_bp.route("/ui/statistics", methods=["GET"])
-@static_bp.route("/ui/statistics/", methods=["GET"])
+@static_bp.route("/statistics", methods=["GET"])
+@static_bp.route("/statistics/", methods=["GET"])
 def serve_statistics_ui() -> Any:
     """Serve the Statistics page."""
     if not _current_user_has_premium_access():
@@ -1317,7 +1433,13 @@ def serve_statistics_ui() -> Any:
     return resp
 
 
-@static_bp.route("/ui/statistics/<path:filename>", methods=["GET"])
+@static_bp.route("/ui/statistics", methods=["GET"])
+@static_bp.route("/ui/statistics/", methods=["GET"])
+def serve_statistics_ui_legacy() -> Any:
+    return _legacy_redirect("/statistics")
+
+
+@static_bp.route("/statistics/<path:filename>", methods=["GET"])
 def serve_statistics_file(filename: str) -> Any:
     """Serve Statistics static files (CSS, JS)."""
     dirs = _get_ui_dirs()
@@ -1327,12 +1449,17 @@ def serve_statistics_file(filename: str) -> Any:
     return send_from_directory(STATISTICS_UI_DIR, filename)
 
 
+@static_bp.route("/ui/statistics/<path:filename>", methods=["GET"])
+def serve_statistics_file_legacy(filename: str) -> Any:
+    return _legacy_redirect(f"/statistics/{filename}")
+
+
 # ---------------------------------------------------------------------------
 # Microcards Runtime UI Routes (M10)
 # ---------------------------------------------------------------------------
 
-@static_bp.route("/ui/microcards", methods=["GET"])
-@static_bp.route("/ui/microcards/", methods=["GET"])
+@static_bp.route("/microcards", methods=["GET"])
+@static_bp.route("/microcards/", methods=["GET"])
 def serve_microcards_ui() -> Any:
     """Serve the Microcards runtime review page (M10)."""
     dirs = _get_ui_dirs()
@@ -1349,7 +1476,13 @@ def serve_microcards_ui() -> Any:
     return resp
 
 
-@static_bp.route("/ui/microcards/<path:filename>", methods=["GET"])
+@static_bp.route("/ui/microcards", methods=["GET"])
+@static_bp.route("/ui/microcards/", methods=["GET"])
+def serve_microcards_ui_legacy() -> Any:
+    return _legacy_redirect("/microcards")
+
+
+@static_bp.route("/microcards/<path:filename>", methods=["GET"])
 def serve_microcards_file(filename: str) -> Any:
     """Serve Microcards static files (CSS, JS)."""
     dirs = _get_ui_dirs()
@@ -1359,12 +1492,17 @@ def serve_microcards_file(filename: str) -> Any:
     return send_from_directory(MICROCARDS_UI_DIR, filename)
 
 
+@static_bp.route("/ui/microcards/<path:filename>", methods=["GET"])
+def serve_microcards_file_legacy(filename: str) -> Any:
+    return _legacy_redirect(f"/microcards/{filename}")
+
+
 # ---------------------------------------------------------------------------
 # Settings UI Routes
 # ---------------------------------------------------------------------------
 
-@static_bp.route("/ui/settings", methods=["GET"])
-@static_bp.route("/ui/settings/", methods=["GET"])
+@static_bp.route("/settings", methods=["GET"])
+@static_bp.route("/settings/", methods=["GET"])
 def serve_settings_ui() -> Any:
     """Serve the Settings page (AI keys, etc.)."""
     dirs = _get_ui_dirs()
@@ -1381,7 +1519,13 @@ def serve_settings_ui() -> Any:
     return resp
 
 
-@static_bp.route("/ui/settings/<path:filename>", methods=["GET"])
+@static_bp.route("/ui/settings", methods=["GET"])
+@static_bp.route("/ui/settings/", methods=["GET"])
+def serve_settings_ui_legacy() -> Any:
+    return _legacy_redirect("/settings")
+
+
+@static_bp.route("/settings/<path:filename>", methods=["GET"])
 def serve_settings_file(filename: str) -> Any:
     """Serve Settings static files (CSS, JS)."""
     dirs = _get_ui_dirs()
@@ -1391,12 +1535,17 @@ def serve_settings_file(filename: str) -> Any:
     return send_from_directory(SETTINGS_UI_DIR, filename)
 
 
+@static_bp.route("/ui/settings/<path:filename>", methods=["GET"])
+def serve_settings_file_legacy(filename: str) -> Any:
+    return _legacy_redirect(f"/settings/{filename}")
+
+
 # ---------------------------------------------------------------------------
 # Reference UI Routes
 # ---------------------------------------------------------------------------
 
-@static_bp.route("/ui/reference", methods=["GET"])
-@static_bp.route("/ui/reference/", methods=["GET"])
+@static_bp.route("/reference", methods=["GET"])
+@static_bp.route("/reference/", methods=["GET"])
 def serve_reference_ui() -> Any:
     """Serve the onboarding reference page."""
     dirs = _get_ui_dirs()
@@ -1413,7 +1562,13 @@ def serve_reference_ui() -> Any:
     return resp
 
 
-@static_bp.route("/ui/reference/<path:filename>", methods=["GET"])
+@static_bp.route("/ui/reference", methods=["GET"])
+@static_bp.route("/ui/reference/", methods=["GET"])
+def serve_reference_ui_legacy() -> Any:
+    return _legacy_redirect("/reference")
+
+
+@static_bp.route("/reference/<path:filename>", methods=["GET"])
 def serve_reference_file(filename: str) -> Any:
     """Serve Reference static files."""
     dirs = _get_ui_dirs()
@@ -1421,6 +1576,11 @@ def serve_reference_file(filename: str) -> Any:
     if not REFERENCE_UI_DIR or not REFERENCE_UI_DIR.exists():
         return jsonify({"ok": False, "error": "reference_ui_not_found"}), 500
     return send_from_directory(REFERENCE_UI_DIR, filename)
+
+
+@static_bp.route("/ui/reference/<path:filename>", methods=["GET"])
+def serve_reference_file_legacy(filename: str) -> Any:
+    return _legacy_redirect(f"/reference/{filename}")
 
 
 # ---------------------------------------------------------------------------
@@ -1463,7 +1623,7 @@ def favicon() -> Any:
 # Session UI routes (S1, S2, S3)
 # ---------------------------------------------------------------------------
 
-@static_bp.route("/ui/session/<string:session_id>", methods=["GET"])
+@static_bp.route("/session/<string:session_id>", methods=["GET"])
 def serve_session_ui(session_id: str) -> Any:
     """Serve the S1 HTML UI for a given session.
 
@@ -1494,7 +1654,7 @@ def serve_session_ui(session_id: str) -> Any:
                         if isinstance(resume_target, dict)
                         else None
                     )
-                    session_url = f"/ui/session/{session_id}"
+                    session_url = f"/session/{session_id}"
                     if isinstance(resume_url, str) and resume_url and resume_url != session_url:
                         logger.info(
                             "[HTTP] serve_session_ui redirect session_id=%s -> %s",
@@ -1514,7 +1674,12 @@ def serve_session_ui(session_id: str) -> Any:
     return send_from_directory(S1_UI_DIR, "index.html")
 
 
-@static_bp.route("/ui/S1/<path:filename>", methods=["GET"])
+@static_bp.route("/ui/session/<string:session_id>", methods=["GET"])
+def serve_session_ui_legacy(session_id: str) -> Any:
+    return _legacy_redirect(f"/session/{session_id}")
+
+
+@static_bp.route("/S1/<path:filename>", methods=["GET"])
 def serve_session_static(filename: str) -> Any:
     """Serve static assets for S1 (JS/CSS)."""
     dirs = _get_ui_dirs()
@@ -1526,7 +1691,12 @@ def serve_session_static(filename: str) -> Any:
     return send_from_directory(S1_UI_DIR, filename)
 
 
-@static_bp.route("/ui/session/<string:session_id>/iteration/<string:iteration_id>", methods=["GET"])
+@static_bp.route("/ui/S1/<path:filename>", methods=["GET"])
+def serve_session_static_legacy(filename: str) -> Any:
+    return _legacy_redirect(f"/S1/{filename}")
+
+
+@static_bp.route("/session/<string:session_id>/iteration/<string:iteration_id>", methods=["GET"])
 def serve_iteration_results_ui(session_id: str, iteration_id: str) -> Any:
     """Serve the S2 HTML UI for iteration results.
 
@@ -1539,7 +1709,12 @@ def serve_iteration_results_ui(session_id: str, iteration_id: str) -> Any:
     return send_from_directory(S2_UI_DIR, "index.html")
 
 
-@static_bp.route("/ui/session/<string:session_id>/results", methods=["GET"])
+@static_bp.route("/ui/session/<string:session_id>/iteration/<string:iteration_id>", methods=["GET"])
+def serve_iteration_results_ui_legacy(session_id: str, iteration_id: str) -> Any:
+    return _legacy_redirect(f"/session/{session_id}/iteration/{iteration_id}")
+
+
+@static_bp.route("/session/<string:session_id>/results", methods=["GET"])
 def serve_session_results_ui(session_id: str) -> Any:
     """Serve the S3 HTML UI for final session results."""
     dirs = _get_ui_dirs()
@@ -1548,3 +1723,8 @@ def serve_session_results_ui(session_id: str) -> Any:
         logger.error("[HTTP] S3_UI_DIR does not exist: %s", S3_UI_DIR)
         return jsonify({"ok": False, "error": "s3_ui_not_found"}), 500
     return send_from_directory(S3_UI_DIR, "index.html")
+
+
+@static_bp.route("/ui/session/<string:session_id>/results", methods=["GET"])
+def serve_session_results_ui_legacy(session_id: str) -> Any:
+    return _legacy_redirect(f"/session/{session_id}/results")

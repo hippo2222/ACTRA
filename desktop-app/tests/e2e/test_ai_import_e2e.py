@@ -10,8 +10,8 @@ def test_ai_generation_full_cycle_e2e(page, local_server):
     Simulates a user going through the AI generation import cycle.
     """
     # 1. Open the UI Editor where the import modal is located
-    # Assuming "/ui/editor" is the main entry for complexes and has the import button.
-    page.goto(f"{local_server}/ui/editor")
+    # Assuming "/editor" is the main entry for complexes and has the import button.
+    page.goto(f"{local_server}/editor")
 
     # The actual selector for the open import modal button might vary.
     # Searching for generic terms if exact ID is unknown. 

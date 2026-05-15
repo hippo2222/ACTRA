@@ -26,10 +26,10 @@ def test_calendar_page_requires_premium(monkeypatch):
     monkeypatch.setattr(static_routes, "get_ctx", lambda: ctx)
 
     with app.test_client() as client:
-        response = client.get("/ui/calendar")
+        response = client.get("/calendar")
 
     assert response.status_code == 403
-    assert b"/ui/settings#premium" in response.data
+    assert b"/settings#premium" in response.data
 
 
 def test_premium_calendar_page_is_served(monkeypatch, tmp_path):
@@ -44,7 +44,7 @@ def test_premium_calendar_page_is_served(monkeypatch, tmp_path):
     monkeypatch.setattr(static_routes, "get_extra", lambda key, default=None: {"CALENDAR_UI_DIR": calendar_dir} if key == "ui_dirs" else default)
 
     with app.test_client() as client:
-        response = client.get("/ui/calendar")
+        response = client.get("/calendar")
 
     assert response.status_code == 200
     assert response.data == b"<html>calendar</html>"

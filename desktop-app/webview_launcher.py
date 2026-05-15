@@ -17,7 +17,7 @@ You can set environment variable TRAINER_SESSION_ID to open S1 directly, e.g.:
     set TRAINER_SESSION_ID=your-session-id-here
     python webview_launcher.py
 
-Later this can be switched to `/ui/complexes` or another start page
+Later this can be switched to `/complexes` or another start page
 when such UI is implemented.
 """
 
@@ -309,8 +309,8 @@ def _get_start_url(base_url: str) -> str:
     cache_buster = int(time() * 1000)  # Current timestamp in ms
     session_id = os.environ.get("TRAINER_SESSION_ID")
     if session_id:
-        return f"{base_url}/ui/session/{session_id}?_cb={cache_buster}&force={cache_buster}"
-    return f"{base_url}/ui/welcome?_cb={cache_buster}&force={cache_buster}"
+        return f"{base_url}/session/{session_id}?_cb={cache_buster}&force={cache_buster}"
+    return f"{base_url}/welcome?_cb={cache_buster}&force={cache_buster}"
 
 
 def main() -> None:

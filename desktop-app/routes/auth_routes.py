@@ -499,7 +499,7 @@ def google_auth_callback() -> Any:
             return jsonify({"ok": False, "error": "google_auth_not_configured"}), 503
 
         if request.args.get("error"):
-            return redirect("/ui/welcome?auth_error=google")
+            return redirect("/welcome?auth_error=google")
 
         code = str(request.args.get("code") or "").strip()
         state = str(request.args.get("state") or "").strip()
@@ -535,7 +535,7 @@ def google_auth_callback() -> Any:
             user = _touch_google_identity(user, claims)
 
         login_authenticated_user(user.user_id)
-        return redirect("/ui/welcome")
+        return redirect("/welcome")
     except (HTTPError, URLError, TimeoutError, ValueError) as exc:
         logger.warning("[HTTP] Google auth callback rejected: %s", exc)
         return jsonify({"ok": False, "error": "google_auth_failed"}), 400

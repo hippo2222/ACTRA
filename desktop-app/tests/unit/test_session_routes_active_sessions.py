@@ -91,7 +91,7 @@ def test_list_active_session_items_merges_repo_and_memory_for_same_user():
         _session_manager=session_manager,
         get_resume_target=lambda session: {
             "screen_type": "iteration_results" if getattr(session, "paused", False) else "task",
-            "url": f"/ui/session/{session.id}/iteration/1" if getattr(session, "paused", False) else f"/ui/session/{session.id}",
+            "url": f"/session/{session.id}/iteration/1" if getattr(session, "paused", False) else f"/session/{session.id}",
         },
     )
 
@@ -101,7 +101,7 @@ def test_list_active_session_items_merges_repo_and_memory_for_same_user():
 
     assert set(by_id.keys()) == {"session_repo", "session_mem"}
     assert by_id["session_mem"]["paused"] is True
-    assert by_id["session_mem"]["resume_target"]["url"] == "/ui/session/session_mem/iteration/1"
+    assert by_id["session_mem"]["resume_target"]["url"] == "/session/session_mem/iteration/1"
     assert by_id["session_mem"]["total_tasks"] == 3
     assert by_id["session_mem"]["iteration"] == 2
     assert by_id["session_mem"]["current_task_index"] == 1
@@ -155,7 +155,7 @@ def test_list_active_session_items_marks_repository_restored_active_session_as_p
     fake_session_api = SimpleNamespace(
         _session_manager=session_manager,
         mark_interrupted_session_as_paused=fake_mark_interrupted_session_as_paused,
-        get_resume_target=lambda session: {"screen_type": "task", "url": f"/ui/session/{session.id}"},
+        get_resume_target=lambda session: {"screen_type": "task", "url": f"/session/{session.id}"},
     )
 
     items = session_routes._list_active_session_items(fake_session_api, "audit_user")
@@ -263,7 +263,7 @@ def test_pause_session_route_forwards_explicit_resume_target(monkeypatch):
             "resume_target": {
                 "screen_type": "iteration_results",
                 "iteration_number": 1,
-                "url": "/ui/session/session_pause/iteration/1",
+                "url": "/session/session_pause/iteration/1",
             },
         },
     ):
@@ -283,7 +283,7 @@ def test_pause_session_route_forwards_explicit_resume_target(monkeypatch):
                 "resume_target": {
                     "screen_type": "iteration_results",
                     "iteration_number": 1,
-                    "url": "/ui/session/session_pause/iteration/1",
+                    "url": "/session/session_pause/iteration/1",
                 },
             },
         ),
@@ -306,7 +306,7 @@ def test_resume_session_route_returns_resume_target(monkeypatch):
         return {
             "screen_type": "iteration_results",
             "iteration_number": 1,
-            "url": "/ui/session/session_resume/iteration/1",
+            "url": "/session/session_resume/iteration/1",
         }
 
     fake_session_api = SimpleNamespace(
@@ -330,7 +330,7 @@ def test_resume_session_route_returns_resume_target(monkeypatch):
         "resume_target": {
             "screen_type": "iteration_results",
             "iteration_number": 1,
-            "url": "/ui/session/session_resume/iteration/1",
+            "url": "/session/session_resume/iteration/1",
         },
     }
     assert resume_calls == [("session_resume", "audit_user", "http_resume")]

@@ -148,7 +148,7 @@ def test_get_session_marks_repository_restored_active_session_as_paused_after_re
     assert session.paused_at.isoformat() == "2026-04-01T10:15:00"
     assert session.paused_resume_target == {
         "screen_type": "task",
-        "url": "/ui/session/sess_1",
+        "url": "/session/sess_1",
         "task_ref": "module/topic/task_001",
         "task_index": 0,
     }
@@ -521,7 +521,7 @@ def test_get_resume_target_returns_iteration_results_url():
     assert target == {
         "screen_type": "iteration_results",
         "iteration_number": 1,
-        "url": "/ui/session/sess_1/iteration/1",
+        "url": "/session/sess_1/iteration/1",
     }
 
 
@@ -532,7 +532,7 @@ def test_get_resume_target_prefers_explicit_paused_resume_target_snapshot():
     session.paused_resume_target = {
         "screen_type": "iteration_results",
         "iteration_number": 1,
-        "url": "/ui/session/sess_1/iteration/1",
+        "url": "/session/sess_1/iteration/1",
     }
     api, _, _, _ = _build_api(session)
 
@@ -541,7 +541,7 @@ def test_get_resume_target_prefers_explicit_paused_resume_target_snapshot():
     assert target == {
         "screen_type": "iteration_results",
         "iteration_number": 1,
-        "url": "/ui/session/sess_1/iteration/1",
+        "url": "/session/sess_1/iteration/1",
     }
 
 
@@ -591,7 +591,7 @@ def test_pause_session_keeps_iteration_results_ui_state_without_overwriting():
     assert session.paused_resume_target == {
         "screen_type": "iteration_results",
         "iteration_number": 1,
-        "url": "/ui/session/sess_1/iteration/1",
+        "url": "/session/sess_1/iteration/1",
     }
     session_manager.pause_session.assert_called_once_with("sess_1")
 
@@ -609,7 +609,7 @@ def test_pause_session_replaces_stale_iteration_resume_target_with_latest_task_s
     session.paused_resume_target = {
         "screen_type": "iteration_results",
         "iteration_number": 1,
-        "url": "/ui/session/sess_1/iteration/1",
+        "url": "/session/sess_1/iteration/1",
     }
     api, controller, session_manager, _ = _build_api(session)
 
@@ -633,7 +633,7 @@ def test_pause_session_replaces_stale_iteration_resume_target_with_latest_task_s
 
     assert session.paused_resume_target == {
         "screen_type": "task",
-        "url": "/ui/session/sess_1",
+        "url": "/session/sess_1",
         "task_ref": "module/topic/task_002",
         "task_index": 1,
     }

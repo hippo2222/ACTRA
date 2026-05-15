@@ -1508,7 +1508,12 @@ ASSETS_DIR = FRONTEND_ROOT / "assets"
 # Create global watchdog
 watchdog = WatchdogService(check_interval=2.0, hang_threshold=10.0, heartbeat_interval=60.0)
 
-app = Flask(__name__, static_folder=str(EDITOR_UI_DIR), static_url_path="/ui/editor")
+# Note: Flask's built-in static_folder is intentionally omitted. All static
+# assets (Editor HTML/CSS/JS, /assets/*, /ui/assets/*, S1/TestUI/etc) are
+# served by explicit routes registered on `static_bp`. Keeping Flask's
+# default behaviour out of the picture removes a second source of truth and
+# avoids accidental conflicts during the /ui/* → /* URL migration.
+app = Flask(__name__, static_folder=None)
 _configured_secret_key = str(os.environ.get("ACTRA_SECRET_KEY") or "").strip()
 if _configured_secret_key:
     app.secret_key = _configured_secret_key
@@ -1644,6 +1649,42 @@ def watchdog_end(exception=None):
     watchdog.end_request(req_id)
 
 
+# Paths that are always public — the auth gate must never intercept them.
+# This includes the welcome screen itself (both new and legacy URLs) and
+# the legacy Welcome static-asset directory.
+_AUTH_GATE_PUBLIC_EXACT = frozenset({"", "/welcome", "/ui/welcome"})
+_AUTH_GATE_PUBLIC_PREFIX = ("/Welcome/",)
+
+# Paths that REQUIRE the auth check. The gate redirects unauthenticated
+# GET/HEAD HTML requests for these paths to /welcome. Everything not listed
+# here (and not in _AUTH_GATE_PUBLIC_*) passes through untouched — those
+# routes are either public marketing pages, /api/* (which have their own
+# auth), or static assets (also skipped by the file-extension filter below).
+_AUTH_GATE_REQUIRE_EXACT = frozenset({
+    # Legacy entry points — still served during the URL-cleanup transition
+    "/ui", "/catalog",
+    # New canonical UI roots (no /ui/ prefix)
+    "/main", "/complexes", "/editor",
+    "/theory-center", "/theory-editor",
+    "/calendar", "/statistics", "/microcards",
+    "/settings", "/reference",
+})
+_AUTH_GATE_REQUIRE_PREFIX = (
+    # Legacy paths (will be served as 301 redirects, but we gate them first
+    # so that logged-out users go to /welcome instead of being bounced
+    # through the redirect into a gated new path).
+    "/ui/", "/catalog/",
+    # New canonical UI subtrees
+    "/main/", "/complexes/", "/editor/",
+    "/theory-center/", "/theory-editor/",
+    "/calendar/", "/statistics/", "/microcards/",
+    "/settings/", "/reference/",
+    "/session/",
+    "/S1/", "/TestUI/", "/SequenceUI/", "/ClickUI/",
+    "/DrawUI/", "/OpenAnswerUI/", "/MistakesUI/",
+)
+
+
 @app.before_request
 def _redirect_unauthenticated_hosted_pages():
     if _runtime_mode() != "hosted_web":
@@ -1653,11 +1694,25 @@ def _redirect_unauthenticated_hosted_pages():
         return None
 
     path = str(request.path or "")
-    if not path or path == "/ui/welcome" or path.startswith("/Welcome/"):
+
+    # Always-public paths bypass the gate entirely.
+    if path in _AUTH_GATE_PUBLIC_EXACT:
         return None
-    if not (path == "/catalog" or path.startswith("/catalog/") or path == "/ui" or path.startswith("/ui/")):
+    if any(path.startswith(prefix) for prefix in _AUTH_GATE_PUBLIC_PREFIX):
         return None
 
+    # The gate only applies to known UI paths. Anything else (API, marketing
+    # pages, /assets/*, /favicon.ico, /robots.txt, /sitemap.xml, ...) passes
+    # through.
+    requires_auth = (
+        path in _AUTH_GATE_REQUIRE_EXACT
+        or any(path.startswith(prefix) for prefix in _AUTH_GATE_REQUIRE_PREFIX)
+    )
+    if not requires_auth:
+        return None
+
+    # Skip non-HTML static-file requests (CSS, JS, images) — they don't carry
+    # session UI and don't need to be gated.
     last_segment = path.rsplit("/", 1)[-1]
     if "." in last_segment and not last_segment.lower().endswith(".html"):
         return None
@@ -1666,12 +1721,12 @@ def _redirect_unauthenticated_hosted_pages():
 
     user_id = get_authenticated_user_id()
     if not user_id:
-        return redirect("/ui/welcome")
+        return redirect("/welcome")
 
     user = _headless_app_ctx.user_service.get_user(user_id)
     if user is None:
         logout_authenticated_user()
-        return redirect("/ui/welcome")
+        return redirect("/welcome")
 
     return None
 
@@ -3146,7 +3201,7 @@ def _build_auth_verify_email_url(token: str, *, request_base_url: Optional[str] 
     base_url = _resolve_auth_public_base_url(request_base_url=request_base_url)
     if not base_url:
         raise ValueError("missing_base_url")
-    return f"{base_url}/ui/welcome?verify_email_token={quote(str(token or '').strip())}"
+    return f"{base_url}/welcome?verify_email_token={quote(str(token or '').strip())}"
 
 
 def _auth_email_display_name(user: Optional[Any]) -> str:
@@ -3503,7 +3558,7 @@ def _build_auth_pending_email_verify_url(token: str, *, request_base_url: Option
     base_url = _resolve_auth_public_base_url(request_base_url=request_base_url)
     if not base_url:
         raise ValueError("missing_base_url")
-    return f"{base_url}/ui/settings?pending_email_token={quote(str(token or '').strip())}"
+    return f"{base_url}/settings?pending_email_token={quote(str(token or '').strip())}"
 
 
 def _build_auth_pending_email_verification_subject(user: Optional[Any]) -> str:
@@ -3664,7 +3719,7 @@ def _build_auth_password_reset_url(token: str, *, request_base_url: Optional[str
     base_url = _resolve_auth_public_base_url(request_base_url=request_base_url)
     if not base_url:
         raise ValueError("missing_base_url")
-    return f"{base_url}/ui/welcome?reset_password_token={quote(str(token or '').strip())}"
+    return f"{base_url}/welcome?reset_password_token={quote(str(token or '').strip())}"
 
 
 def _build_auth_password_reset_subject(user: Optional[Any]) -> str:
