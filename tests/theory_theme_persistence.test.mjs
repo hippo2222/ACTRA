@@ -58,7 +58,7 @@ describe("Theory theme persistence", () => {
 
     it("restores the saved theme from localStorage and keeps dark-mode compatibility flags", () => {
         const dom = new JSDOM("<!DOCTYPE html><html><body><main></main></body></html>", {
-            url: "http://localhost/ui/editor/Theory_Editor.html",
+            url: "http://localhost/editor/Theory_Editor.html",
             runScripts: "dangerously",
         });
 
@@ -94,12 +94,12 @@ describe("Theory theme persistence", () => {
                 <span class="material-symbols-outlined">home</span>
                 Главная
             </button>
-            <a id="main-link" href="/ui/main">
+            <a id="main-link" href="/main">
                 <span class="material-symbols-outlined">dashboard</span>
                 <span>Библиотека</span>
             </a>
         </body></html>`, {
-            url: "http://localhost/ui/settings",
+            url: "http://localhost/settings",
             runScripts: "dangerously",
         });
 

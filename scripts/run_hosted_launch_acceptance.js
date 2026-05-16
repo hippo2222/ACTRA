@@ -273,17 +273,17 @@ async function runAuthLifecycle(baseUrl) {
   const email = `launch.reader.${suffix}@example.test`;
   const password = `StrongPass!${suffix}`;
 
-  const unauthMain = await request(baseUrl, "/ui/main", {
+  const unauthMain = await request(baseUrl, "/main", {
     cookieJar,
     expectJson: false,
   });
   assertCondition(
     unauthMain.response.status === 302,
-    "Expected /ui/main to redirect to /ui/welcome before authentication."
+    "Expected /main to redirect to /welcome before authentication."
   );
   assertCondition(
-    String(unauthMain.response.headers.get("location") || "").includes("/ui/welcome"),
-    "Expected /ui/main redirect target to contain /ui/welcome."
+    String(unauthMain.response.headers.get("location") || "").includes("/welcome"),
+    "Expected /main redirect target to contain /welcome."
   );
 
   const register = await request(baseUrl, "/api/auth/register", {
@@ -318,13 +318,13 @@ async function runAuthLifecycle(baseUrl) {
   const meAfterVerify = await request(baseUrl, "/api/auth/me", { cookieJar });
   assertCondition(meAfterVerify.payload?.authenticated === true, "Hosted session is missing after email verification.");
 
-  const mainAfterVerify = await request(baseUrl, "/ui/main", {
+  const mainAfterVerify = await request(baseUrl, "/main", {
     cookieJar,
     expectJson: false,
   });
   assertCondition(
     mainAfterVerify.response.status === 200,
-    "Expected /ui/main to render successfully after authentication."
+    "Expected /main to render successfully after authentication."
   );
 
   const resend = await request(baseUrl, "/api/auth/resend-verification", {
@@ -405,7 +405,7 @@ async function main() {
         "  - /api/health and /api/ready.launch_contract",
         "  - hosted register -> verify email -> me -> logout -> login",
         "  - hosted forgot-password request",
-        "  - /ui/main redirect before auth and render after auth",
+        "  - /main redirect before auth and render after auth",
       ].join("\n")
     );
     return;

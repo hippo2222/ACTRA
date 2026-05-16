@@ -2670,7 +2670,7 @@
                   impact: "Без авторизации библиотека не может сохранить связанную публикацию.",
                   next: "Войдите в аккаунт и повторите попытку.",
                 });
-                window.navigateWithTransition?.("/ui/welcome");
+                window.navigateWithTransition?.("/welcome");
                 return;
               }
               if (errorText === "catalog_access_code_not_found" || errorText === "invalid_access_code") {
@@ -4360,7 +4360,7 @@
               const resumeUrl =
                 (typeof preferredResumeUrl === "string" && preferredResumeUrl) ||
                 (typeof data?.resume_target?.url === "string" && data.resume_target.url) ||
-                `/ui/session/${encodeURIComponent(sessionId)}`;
+                `/session/${encodeURIComponent(sessionId)}`;
               window.navigateWithTransition(resumeUrl);
               return true;
             };
@@ -4420,7 +4420,7 @@
               }
 
               await markRecent(complexId);
-              window.navigateWithTransition(`/ui/session/${data.session_id}`);
+              window.navigateWithTransition(`/session/${data.session_id}`);
               return true;
             };
 
@@ -4554,7 +4554,7 @@
               btn.addEventListener("click", () => {
                 const complexId = btn.getAttribute("data-complex-id");
                 if (complexId) {
-                  window.navigateWithTransition(`/ui/complexes/create?id=${complexId}`);
+                  window.navigateWithTransition(`/complexes/create?id=${complexId}`);
                 }
               });
             });
@@ -5322,7 +5322,7 @@
             const createBtn = document.getElementById("create-complex");
             if (createBtn) {
               createBtn.addEventListener("click", () => {
-                window.navigateWithTransition("/ui/complexes/create");
+                window.navigateWithTransition("/complexes/create");
               });
             }
             const importBtn = document.getElementById("import-complexes");
@@ -5334,13 +5334,13 @@
             const theoryCenterBtn = document.getElementById("open-theory-center");
             if (theoryCenterBtn) {
               theoryCenterBtn.addEventListener("click", () => {
-                window.navigateWithTransition("/ui/theory-center?scope=complexes");
+                window.navigateWithTransition("/theory-center?scope=complexes");
               });
             }
             const catalogBtn = document.getElementById("open-catalog");
             if (catalogBtn) {
               catalogBtn.addEventListener("click", () => {
-                window.navigateWithTransition("/ui/catalog");
+                window.navigateWithTransition("/catalog");
               });
             }
             const addByCodeBtn = document.getElementById("add-complex-by-code");
@@ -5352,7 +5352,7 @@
             const emptyCreateBtns = document.querySelectorAll("#empty-state button");
             emptyCreateBtns.forEach((btn) => {
               btn.addEventListener("click", () => {
-                window.navigateWithTransition("/ui/complexes/create");
+                window.navigateWithTransition("/complexes/create");
               });
             });
             const retryButton = document.getElementById("retry-load");
@@ -5365,14 +5365,14 @@
             const backButton = document.getElementById("back-button");
             if (backButton) {
               backButton.addEventListener("click", () => {
-                window.navigateWithTransition("/ui/main");
+                window.navigateWithTransition("/main");
               });
             }
             // Breadcrumb home navigation
             const breadcrumbHome = document.getElementById("breadcrumb-home");
             if (breadcrumbHome) {
               breadcrumbHome.addEventListener("click", () => {
-                window.navigateWithTransition("/ui/main");
+                window.navigateWithTransition("/main");
               });
             }
             syncComplexSelectionUi();

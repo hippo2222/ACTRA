@@ -57,8 +57,8 @@ describe("SessionControls UI-state autosave", () => {
       clearDraft: vi.fn(),
     };
     sessionRoutesRef = {
-      MAIN: "/ui/main",
-      COMPLEXES: "/ui/complexes",
+      MAIN: "/main",
+      COMPLEXES: "/complexes",
       API: {
         PAUSE: vi.fn((sessionId) => `/api/session/${sessionId}/pause`),
         CANCEL: vi.fn((sessionId) => `/api/session/${sessionId}/cancel`),

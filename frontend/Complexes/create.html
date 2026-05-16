@@ -2500,7 +2500,7 @@
   <header class="cx-editor-header bg-surface-1 border-b border-border-subtle shrink-0 flex justify-between z-50"
     data-onboarding-target="complex-editor-header">
     <div class="cx-editor-header__left">
-      <a href="/ui/complexes"
+      <a href="/complexes"
         class="cx-editor-header__back cursor-pointer" title="Назад к списку">
         <span class="material-symbols-outlined">arrow_back</span>
       </a>
@@ -3003,7 +3003,7 @@
         <div id="complexes-list" class="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2"></div>
 
         <div class="p-4 bg-surface-2 border-t border-border-subtle shadow-[0_-4px_12px_rgba(0,0,0,0.03)] z-10">
-          <a href="/ui/complexes/create"
+          <a href="/complexes/create"
             class="w-full h-10 bg-bg-secondary border border-border-subtle text-text-secondary hover:bg-bg-tertiary rounded-lg font-semibold text-sm transition-all flex items-center justify-center gap-2">
             <span class="material-symbols-outlined text-[20px]">add</span>
             Создать новый
@@ -5249,7 +5249,7 @@
 
     function buildTheoryWorkspaceUrl(theoryId) {
       const normalizedTheoryId = String(theoryId || '').trim();
-      const url = new URL('/ui/editor/Theory_Editor.html', window.location.origin);
+      const url = new URL('/editor/Theory_Editor.html', window.location.origin);
       if (normalizedTheoryId) {
         url.searchParams.set('theory_id', normalizedTheoryId);
       }
@@ -5262,8 +5262,8 @@
         url.searchParams.set('complex_name', complexName);
       }
       const returnUrl = state.editingId
-        ? `/ui/complexes/create?id=${encodeURIComponent(state.editingId)}`
-        : '/ui/complexes/create';
+        ? `/complexes/create?id=${encodeURIComponent(state.editingId)}`
+        : '/complexes/create';
       url.searchParams.set('return_url', returnUrl);
       return `${url.pathname}${url.search}`;
     }
@@ -9031,7 +9031,7 @@
 
           showGlobalError('Комплекс сохранён (перезаписаны чужие изменения)');
 
-          setTimeout(() => window.navigateWithTransition('/ui/complexes'), 1500);
+          setTimeout(() => window.navigateWithTransition('/complexes'), 1500);
 
         } else {
 
@@ -9497,7 +9497,7 @@
 
       if (!cleanId || !window.history || typeof window.history.replaceState !== 'function') return;
 
-      const url = `/ui/complexes/create?id=${encodeURIComponent(cleanId)}`;
+      const url = `/complexes/create?id=${encodeURIComponent(cleanId)}`;
 
       window.history.replaceState({}, '', url);
 
@@ -10738,7 +10738,7 @@
         notifyComplexToast(`Рабочая версия добавлена. Заданий в workspace: ${taskCount}.`, 'success', 3600);
         await fetchComplexes();
         if (importedComplexId) {
-          window.navigateWithTransition(`/ui/complexes/create?id=${encodeURIComponent(importedComplexId)}`);
+          window.navigateWithTransition(`/complexes/create?id=${encodeURIComponent(importedComplexId)}`);
         }
       } catch (error) {
         console.error('[Complex Builder] Workspace import failed', error);
@@ -10781,7 +10781,7 @@
         const isActive = (typeof state !== 'undefined' && state.editingId === item.id);
         const isSelected = state.selectedComplexes.has(item.id);
         const safeItemIdLiteral = escapeInlineJsString(rawId);
-        const editUrlLiteral = escapeInlineJsString(`/ui/complexes/create?id=${encodeURIComponent(rawId)}`);
+        const editUrlLiteral = escapeInlineJsString(`/complexes/create?id=${encodeURIComponent(rawId)}`);
         const safeName = escapeHtml(item.name || 'Без названия');
         const safeDate = escapeHtml(date);
         const theoryContextBadges = buildComplexTheoryMiniBadges(item);
@@ -11035,7 +11035,7 @@
       const backLink = e.target.closest('.cx-editor-header__back');
       if (backLink) {
         e.preventDefault();
-        const targetUrl = backLink.getAttribute('href') || '/ui/complexes';
+        const targetUrl = backLink.getAttribute('href') || '/complexes';
         if (!hasUnsavedChanges()) {
           window.navigateWithTransition(targetUrl);
         } else {

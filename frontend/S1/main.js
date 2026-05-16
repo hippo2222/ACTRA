@@ -226,7 +226,7 @@
             if (status === 404) {
                 showStatus('Сессия не найдена', 'error');
                 setTimeout(() => {
-                    window.navigateWithTransition('/ui/main');
+                    window.navigateWithTransition('/main');
                 }, 2000);
                 renderTask(null);
                 syncCheckButtonState();
@@ -405,10 +405,10 @@
         if (resumeExit) {
             resumeExit.addEventListener('click', () => {
                 if (typeof navigateWithoutPrompt === 'function') {
-                    navigateWithoutPrompt(SessionRoutes.COMPLEXES || '/ui/complexes');
+                    navigateWithoutPrompt(SessionRoutes.COMPLEXES || '/complexes');
                     return;
                 }
-                window.navigateWithTransition(SessionRoutes.COMPLEXES || '/ui/complexes');
+                window.navigateWithTransition(SessionRoutes.COMPLEXES || '/complexes');
             });
         }
         const resumeContinue = document.getElementById('resume-continue-btn');

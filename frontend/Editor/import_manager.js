@@ -9641,7 +9641,7 @@ text: Сердце человека состоит из [трёх] камер. �
                             <div>
                                 <p class="text-sm font-semibold text-text-main mb-1">ИИ-генерация не настроена</p>
                                 <p class="text-xs text-text-secondary">Для запуска анализа необходимо указать API-ключ. Ранее сохранённые анализы остаются доступны.</p>
-                                <a href="/ui/settings" class="inline-flex items-center gap-1.5 mt-2 text-xs font-semibold text-primary hover:underline">
+                                <a href="/settings" class="inline-flex items-center gap-1.5 mt-2 text-xs font-semibold text-primary hover:underline">
                                     <span class="material-symbols-outlined text-[14px]">settings</span>
                                     Настроить API-ключи
                                 </a>

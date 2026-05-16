@@ -19,7 +19,7 @@ function loadReferenceHelpers() {
 describe('Reference page helpers', () => {
     beforeEach(() => {
         document.body.innerHTML = '';
-        history.replaceState(null, '', '/ui/reference');
+        history.replaceState(null, '', '/reference');
     });
 
     it('builds a searchable catalog from every tour, including manual tours', () => {
@@ -28,7 +28,7 @@ describe('Reference page helpers', () => {
             {
                 tourId: 'auto-tour',
                 version: 1,
-                route: ['/ui/main'],
+                route: ['/main'],
                 title: 'Главная',
                 summary: 'Старт проекта',
                 referenceCategory: 'Знакомимся с проектом',
@@ -39,7 +39,7 @@ describe('Reference page helpers', () => {
             {
                 tourId: 'manual-tour',
                 version: 1,
-                route: ['/ui/editor/Point_Annotation.html'],
+                route: ['/editor/Point_Annotation.html'],
                 autoStart: false,
                 title: 'Click',
                 summary: 'Ручной сценарий',
@@ -61,21 +61,21 @@ describe('Reference page helpers', () => {
         const url = helpers.buildPreviewUrl(
             {
                 tourId: 'click-editor-authoring',
-                route: ['/ui/editor/Point_Annotation.html'],
+                route: ['/editor/Point_Annotation.html'],
             },
             'https://actra.test'
         );
 
-        expect(url).toBe('/ui/editor/Point_Annotation.html?onboarding_preview=click-editor-authoring&reference_embed=1');
+        expect(url).toBe('/editor/Point_Annotation.html?onboarding_preview=click-editor-authoring&reference_embed=1');
         expect(helpers.buildPreviewUrl(
             {
                 tourId: 'click-editor-authoring',
-                route: ['/ui/editor/Point_Annotation.html'],
+                route: ['/editor/Point_Annotation.html'],
                 steps: [{ kicker: 'Шаг 1' }, { kicker: 'Шаг 2' }],
             },
             'https://actra.test',
             1
-        )).toBe('/ui/editor/Point_Annotation.html?onboarding_preview=click-editor-authoring&reference_embed=1&onboarding_step=1');
+        )).toBe('/editor/Point_Annotation.html?onboarding_preview=click-editor-authoring&reference_embed=1&onboarding_step=1');
     });
 
     it('returns an empty result set for unmatched searches', () => {
@@ -84,7 +84,7 @@ describe('Reference page helpers', () => {
             {
                 tourId: 'calendar',
                 version: 1,
-                route: ['/ui/calendar'],
+                route: ['/calendar'],
                 title: 'Календарь',
                 summary: 'План повторений',
                 steps: [{ kicker: 'Daily Mix', callouts: [{ body: 'Фокус дня' }] }],
@@ -100,7 +100,7 @@ describe('Reference page helpers', () => {
             {
                 tourId: 'zeta',
                 version: 1,
-                route: ['/ui/zeta'],
+                route: ['/zeta'],
                 title: 'Яркий тур',
                 referenceCategory: 'Знакомимся с проектом',
                 referenceOrder: 1,
@@ -109,7 +109,7 @@ describe('Reference page helpers', () => {
             {
                 tourId: 'alpha',
                 version: 1,
-                route: ['/ui/alpha'],
+                route: ['/alpha'],
                 title: 'Аккуратный тур',
                 referenceCategory: 'Знакомимся с проектом',
                 referenceOrder: 99,
@@ -118,7 +118,7 @@ describe('Reference page helpers', () => {
             {
                 tourId: 'calendar',
                 version: 1,
-                route: ['/ui/calendar'],
+                route: ['/calendar'],
                 title: 'Календарь',
                 referenceCategory: 'Проходим и повторяем',
                 referenceOrder: 1,
@@ -146,7 +146,7 @@ describe('Reference page helpers', () => {
             {
                 tourId: 'main-tour',
                 version: 1,
-                route: ['/ui/main'],
+                route: ['/main'],
                 title: 'Главная',
                 summary: 'Старт проекта',
                 referenceCategory: 'Знакомимся с проектом',
@@ -157,7 +157,7 @@ describe('Reference page helpers', () => {
             {
                 tourId: 'calendar-tour',
                 version: 1,
-                route: ['/ui/calendar'],
+                route: ['/calendar'],
                 title: 'Календарь',
                 summary: 'План повторений',
                 referenceCategory: 'Проходим и повторяем',
@@ -179,9 +179,9 @@ describe('Reference page helpers', () => {
         expect(frame.getAttribute('src')).toBe(initialSrc);
 
         document.querySelector('[data-reference-tour-id="calendar-tour"]').click();
-        expect(frame.getAttribute('src')).toBe('/ui/calendar?onboarding_preview=calendar-tour&reference_embed=1');
+        expect(frame.getAttribute('src')).toBe('/calendar?onboarding_preview=calendar-tour&reference_embed=1');
         document.querySelector('[data-reference-tour-id="calendar-tour"][data-reference-step-index="0"]').click();
-        expect(frame.getAttribute('src')).toBe('/ui/calendar?onboarding_preview=calendar-tour&reference_embed=1');
+        expect(frame.getAttribute('src')).toBe('/calendar?onboarding_preview=calendar-tour&reference_embed=1');
         vi.useRealTimers();
     });
 
@@ -201,7 +201,7 @@ describe('Reference page helpers', () => {
             {
                 tourId: 'main-tour',
                 version: 1,
-                route: ['/ui/main'],
+                route: ['/main'],
                 title: 'Главная',
                 summary: 'Старт проекта',
                 referenceCategory: 'Знакомимся с проектом',
@@ -221,7 +221,7 @@ describe('Reference page helpers', () => {
         expect(secondState.textContent).toContain('2/2');
         secondState.click();
 
-        expect(document.querySelector('[data-reference-preview-frame]').getAttribute('src')).toBe('/ui/main?onboarding_preview=main-tour&reference_embed=1&onboarding_step=1');
+        expect(document.querySelector('[data-reference-preview-frame]').getAttribute('src')).toBe('/main?onboarding_preview=main-tour&reference_embed=1&onboarding_step=1');
         expect(window.location.hash).toBe('#main-tour/state-2');
     });
 
@@ -241,7 +241,7 @@ describe('Reference page helpers', () => {
             {
                 tourId: 'main-tour',
                 version: 1,
-                route: ['/ui/main'],
+                route: ['/main'],
                 title: 'Главная',
                 summary: 'Старт проекта',
                 referenceCategory: 'Знакомимся с проектом',
@@ -251,7 +251,7 @@ describe('Reference page helpers', () => {
             {
                 tourId: 'calendar-tour',
                 version: 1,
-                route: ['/ui/calendar'],
+                route: ['/calendar'],
                 title: 'Календарь',
                 summary: 'План повторений',
                 referenceCategory: 'Проходим и повторяем',
@@ -279,7 +279,7 @@ describe('Reference page helpers', () => {
 
         document.querySelector('[data-reference-tour-id="main-tour"].reference-toc__button').click();
         expect(document.getElementById('reference-steps-main-tour').hidden).toBe(false);
-        expect(frame.getAttribute('src')).toBe('/ui/main?onboarding_preview=main-tour&reference_embed=1');
+        expect(frame.getAttribute('src')).toBe('/main?onboarding_preview=main-tour&reference_embed=1');
 
         const selectedSrc = frame.getAttribute('src');
         document.querySelectorAll('[data-reference-toggle-category]')[1].click();
@@ -316,7 +316,7 @@ describe('Reference page helpers', () => {
             {
                 tourId: 'main-tour',
                 version: 1,
-                route: ['/ui/main'],
+                route: ['/main'],
                 title: 'Главная',
                 summary: 'Старт проекта',
                 referenceCategory: 'Знакомимся с проектом',
@@ -326,7 +326,7 @@ describe('Reference page helpers', () => {
             {
                 tourId: 'calendar-tour',
                 version: 1,
-                route: ['/ui/calendar'],
+                route: ['/calendar'],
                 title: 'Календарь',
                 summary: 'План повторений',
                 referenceCategory: 'Проходим и повторяем',
@@ -370,7 +370,7 @@ describe('Reference page helpers', () => {
             {
                 tourId: 'main-tour',
                 version: 1,
-                route: ['/ui/main'],
+                route: ['/main'],
                 title: 'Главная',
                 summary: 'Старт проекта',
                 referenceCategory: 'Знакомимся с проектом',

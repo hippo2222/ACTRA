@@ -279,7 +279,7 @@ function buildFixture(prefix = "pw_sequence_editor") {
 }
 
 async function waitForDashboardReady(page, baseUrl) {
-  await page.goto(resolveUrl(baseUrl, "/ui/editor"), {
+  await page.goto(resolveUrl(baseUrl, "/editor"), {
     waitUntil: "domcontentloaded",
     timeout: 60000,
   });
@@ -784,7 +784,7 @@ function createScenarioDefinitions() {
         await step("open_task_in_editor", async () => {
           const editorUrl = resolveUrl(
             options.baseUrl,
-            `/ui/editor/Sequence%20Assembly%20Editor%20Procedural%20Steps.html?module=${encodeURIComponent(scope.moduleId)}&topic=${encodeURIComponent(scope.topicId)}&task=${encodeURIComponent(taskId)}`
+            `/editor/Sequence%20Assembly%20Editor%20Procedural%20Steps.html?module=${encodeURIComponent(scope.moduleId)}&topic=${encodeURIComponent(scope.topicId)}&task=${encodeURIComponent(taskId)}`
           );
           await page.goto(editorUrl, { waitUntil: "networkidle", timeout: 60000 });
           await page.waitForSelector("#prompt-textarea", { state: "visible", timeout: 30000 });
@@ -924,7 +924,7 @@ function createScenarioDefinitions() {
         await step("open_task_in_editor", async () => {
           const editorUrl = resolveUrl(
             options.baseUrl,
-            `/ui/editor/Sequence%20Assembly%20Editor%20Procedural%20Steps.html?module=${encodeURIComponent(scope.moduleId)}&topic=${encodeURIComponent(scope.topicId)}&task=${encodeURIComponent(taskId)}`
+            `/editor/Sequence%20Assembly%20Editor%20Procedural%20Steps.html?module=${encodeURIComponent(scope.moduleId)}&topic=${encodeURIComponent(scope.topicId)}&task=${encodeURIComponent(taskId)}`
           );
           await page.goto(editorUrl, { waitUntil: "networkidle", timeout: 60000 });
           await page.waitForSelector("#prompt-textarea", { state: "visible", timeout: 30000 });

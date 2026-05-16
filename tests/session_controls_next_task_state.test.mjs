@@ -63,8 +63,8 @@ describe("SessionControls next task state", () => {
     };
     window.DraftStorage = {};
     window.SessionRoutes = {
-      MAIN: "/ui/main",
-      COMPLEXES: "/ui/complexes",
+      MAIN: "/main",
+      COMPLEXES: "/complexes",
       API: {
         CANCEL: () => "/api/cancel",
       },
@@ -111,7 +111,7 @@ describe("SessionControls next task state", () => {
 
     expect(window.SessionState.skipBeforeUnloadPrompt).toBe(true);
     expect(window.navigateWithTransition).toHaveBeenCalledWith(
-      "/ui/session/sess-1/iteration/1"
+      "/session/sess-1/iteration/1"
     );
   });
 });

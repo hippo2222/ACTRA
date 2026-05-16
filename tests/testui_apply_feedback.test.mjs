@@ -12,7 +12,7 @@ function loadScript(filePath) {
 function createTestUIWindow() {
   const dom = new JSDOM(
     '<div id="app"></div><aside><ol id="question-panel-list"></ol></aside>',
-    { runScripts: "outside-only", url: "http://localhost/ui/session/test" }
+    { runScripts: "outside-only", url: "http://localhost/session/test" }
   );
   const { window } = dom;
 

@@ -350,7 +350,7 @@ function createTextFixture(artifacts, name, contents) {
 }
 
 async function waitForDashboardReady(page, baseUrl) {
-  await page.goto(resolveUrl(baseUrl, "/ui/editor"), {
+  await page.goto(resolveUrl(baseUrl, "/editor"), {
     waitUntil: "domcontentloaded",
     timeout: 60000,
   });
@@ -529,7 +529,7 @@ async function confirmModal(page) {
 async function openEditorDirectly(page, baseUrl, moduleId, topicId, taskId) {
   const editorUrl = resolveUrl(
     baseUrl,
-    `/ui/editor/Test%20Task%20Editor%20Multiple%20Choice.html?module=${encodeURIComponent(moduleId)}&topic=${encodeURIComponent(topicId)}&task=${encodeURIComponent(taskId)}`
+    `/editor/Test%20Task%20Editor%20Multiple%20Choice.html?module=${encodeURIComponent(moduleId)}&topic=${encodeURIComponent(topicId)}&task=${encodeURIComponent(taskId)}`
   );
   await page.goto(editorUrl, { waitUntil: "networkidle", timeout: 60000 });
   await page.waitForSelector("#question-textarea", { state: "visible", timeout: 30000 });

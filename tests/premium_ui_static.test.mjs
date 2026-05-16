@@ -35,8 +35,8 @@ describe('premium UI wiring', () => {
     const mainHtml = read('frontend/MainScreen/Main.html');
 
     expect(mainLogic).toContain('PREMIUM_GATED_UI_PAGES');
-    expect(mainLogic).toContain('/ui/calendar');
-    expect(mainLogic).toContain('/ui/statistics');
+    expect(mainLogic).toContain('/calendar');
+    expect(mainLogic).toContain('/statistics');
     expect(mainLogic).toContain('showPremiumNavigationGate');
     expect(mainLogic).toContain('PremiumPromo.open');
     expect(mainHtml).toContain('/assets/PremiumPromoModal.js');
@@ -51,7 +51,7 @@ describe('premium UI wiring', () => {
     expect(mainHtml).toContain('var(--color-component-pill-warning-bg');
     expect(mainLogic).toContain('loadPremiumArchiveBanner');
     expect(mainLogic).toContain('/api/workspace-limits/summary');
-    expect(mainLogic).toContain('/ui/complexes?filter=archived');
+    expect(mainLogic).toContain('/complexes?filter=archived');
     expect(mainLogic).toContain('main-premium-archive-breakdown');
     expect(mainLogic).toContain('Верните материалы из архива Premium');
   });

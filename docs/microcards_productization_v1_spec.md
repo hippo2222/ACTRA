@@ -12,10 +12,10 @@
 
 План покрывает:
 
-- отдельный пользовательский экран микрокарточек (`/ui/microcards`);
-- интеграцию микрокарточек в календарь (`/ui/calendar`);
-- интеграцию микрокарточек в статистику (`/ui/statistics`);
-- интеграцию entry-point и summary на главном экране (`/ui/main`);
+- отдельный пользовательский экран микрокарточек (`/microcards`);
+- интеграцию микрокарточек в календарь (`/calendar`);
+- интеграцию микрокарточек в статистику (`/statistics`);
+- интеграцию entry-point и summary на главном экране (`/main`);
 - ручной режим создания/редактирования колод и карточек;
 - текстовый импорт/парсер микрокарточек + шаблоны промптов для внешних LLM;
 - immediate backfill истории (сразу, а не “потом”);
@@ -27,7 +27,7 @@
 
 Решение:
 
-- создаётся отдельный runtime-экран `/ui/microcards`;
+- создаётся отдельный runtime-экран `/microcards`;
 - editor-режим микрокарточек остаётся для authoring/analysis workflow;
 - runtime и authoring не смешиваются в одну страницу.
 
@@ -83,7 +83,7 @@
 
 - Календарь отдельным модулем: `desktop-app/services/calendar/calendar_service.py`, `desktop-app/api/calendar_api.py`, `frontend/Calendar/*`.
 - Статистика отдельным модулем: `desktop-app/services/statistics_service.py`, `frontend/statistics/*`.
-- Главный экран `/ui/main` существует и уже содержит карточки календаря/статистики: `frontend/MainScreen/Main.html`.
+- Главный экран `/main` существует и уже содержит карточки календаря/статистики: `frontend/MainScreen/Main.html`.
 - Текстовый импорт заданий и parser stack уже есть:
 - parser registry в `desktop-app/server.py`
 - parsers в `task_system/models/parsers/*`
@@ -118,7 +118,7 @@
 
 Решение:
 
-- `/ui/microcards` это learning runtime;
+- `/microcards` это learning runtime;
 - authoring (manual/import/from-analysis deck construction) живёт в editor-поверхности;
 - допускаются мосты между ними (`Открыть в редакторе` / `Открыть в микрокарточках`).
 
@@ -153,10 +153,10 @@
 
 Нормативно выделяются 5 поверхностей:
 
-- `main`: вход и краткие summary (`/ui/main`)
-- `calendar`: план/heatmap/streak (`/ui/calendar`)
-- `statistics`: агрегированная аналитика (`/ui/statistics`)
-- `microcards_runtime`: прохождение колод (`/ui/microcards`)
+- `main`: вход и краткие summary (`/main`)
+- `calendar`: план/heatmap/streak (`/calendar`)
+- `statistics`: агрегированная аналитика (`/statistics`)
+- `microcards_runtime`: прохождение колод (`/microcards`)
 - `editor_microcards`: authoring/import/from-analysis (в editor)
 
 ## 5.2. Источники карточек (после реализации плана)
@@ -413,7 +413,7 @@
 Назначение:
 
 - home card
-- `/ui/microcards` header
+- `/microcards` header
 - быстрые due/new counters
 - сегодня/недавно активная колода
 
@@ -460,8 +460,8 @@
 
 Рекомендация для v1:
 
-- authoring живёт в editor-поверхности (не в runtime `/ui/microcards`);
-- runtime `/ui/microcards` остаётся review-first;
+- authoring живёт в editor-поверхности (не в runtime `/microcards`);
+- runtime `/microcards` остаётся review-first;
 - между ними есть явные CTA.
 
 ## 7.5. Граница `pair_match` authoring v1 / v1.1 (M0 фиксация)
@@ -641,7 +641,7 @@ P: Диастола => Фаза расслабления миокарда
 
 - heatmap/streak/activity учитывают microcards;
 - calendar UI показывает microcards activity в tooltip/summary;
-- есть CTA в `/ui/microcards`.
+- есть CTA в `/microcards`.
 
 Уровень L2 (после стабилизации):
 
@@ -697,7 +697,7 @@ P: Диастола => Фаза расслабления миокарда
 - новые UI блоки читают новые поля;
 - старые графики не ломаются при отсутствии microcards history.
 
-## 11. Спецификация интеграции с главным экраном (`/ui/main`)
+## 11. Спецификация интеграции с главным экраном (`/main`)
 
 ## 11.1. Цель
 
@@ -862,10 +862,10 @@ P: Диастола => Фаза расслабления миокарда
 
 Покрыть:
 
-- `/ui/main` microcards card states
-- `/ui/calendar` heatmap mixed activity
-- `/ui/statistics` microcards-only and mixed states
-- `/ui/microcards` review flow
+- `/main` microcards card states
+- `/calendar` heatmap mixed activity
+- `/statistics` microcards-only and mixed states
+- `/microcards` review flow
 - editor manual microcards authoring flow
 - editor microcards text import flow
 
@@ -1010,7 +1010,7 @@ P: Диастола => Фаза расслабления миокарда
 
 - старые clients работают, новые поля доступны и корректны.
 
-## M7. UI календаря (`/ui/calendar`) под mixed activity
+## M7. UI календаря (`/calendar`) под mixed activity
 
 Цель:
 
@@ -1027,7 +1027,7 @@ P: Диастола => Фаза расслабления миокарда
 
 - календарь правдиво отображает mixed activity без ложных пустых дней.
 
-## M8. UI статистики (`/ui/statistics`) как mixed dashboard
+## M8. UI статистики (`/statistics`) как mixed dashboard
 
 Цель:
 
@@ -1044,7 +1044,7 @@ P: Диастола => Фаза расслабления миокарда
 
 - пользователь с microcards-only данными видит полезную статистику.
 
-## M9. Главный экран (`/ui/main`) и продуктовый entry-point microcards
+## M9. Главный экран (`/main`) и продуктовый entry-point microcards
 
 Цель:
 
@@ -1059,9 +1059,9 @@ P: Диастола => Фаза расслабления миокарда
 
 Критерий готовности:
 
-- с `/ui/main` есть 1-click entry в микрокарточки и понятный статус “что делать дальше”.
+- с `/main` есть 1-click entry в микрокарточки и понятный статус “что делать дальше”.
 
-## M10. Новый runtime UI `/ui/microcards` (review-first)
+## M10. Новый runtime UI `/microcards` (review-first)
 
 Цель:
 
@@ -1207,7 +1207,7 @@ P: Диастола => Фаза расслабления миокарда
 ### Шаг 6 (runtime microcards page)
 
 - Выполнить `M10`.
-- Добавить `/ui/microcards`.
+- Добавить `/microcards`.
 - Подключить runtime telemetry.
 
 ### Шаг 7 (authoring + import)

@@ -110,7 +110,7 @@ def get_file_processor(): return _file_processor
 **Файл:** `routes/static_routes.py`
 
 **Что переносим:**
-- Все маршруты `/ui/*` для 13 экранов (строки 870–2593): MainScreen, Welcome, Complexes, S1, S2, S3, TestUI, SequenceUI, ClickUI, DrawUI, OpenAnswerUI, MistakesUI, Editor
+- Все маршруты `/*` для 13 экранов (строки 870–2593): MainScreen, Welcome, Complexes, S1, S2, S3, TestUI, SequenceUI, ClickUI, DrawUI, OpenAnswerUI, MistakesUI, Editor
 - Calendar/Statistics/Microcards UI (строки 2595–2710)
 - Assets + favicon (строки 2690–2710)
 - Session UI routes (строки 3572–3668)
@@ -123,7 +123,7 @@ def get_file_processor(): return _file_processor
 **Шаблон Blueprint:**
 ```python
 static_bp = Blueprint("static", __name__)
-# Нет url_prefix — пути разнородные (/ui/*, /assets/*, /favicon.ico)
+# Нет url_prefix — пути разнородные (/*, /assets/*, /favicon.ico)
 ```
 
 **Верификация:** Открыть каждый UI-экран в браузере, проверить загрузку CSS/JS.

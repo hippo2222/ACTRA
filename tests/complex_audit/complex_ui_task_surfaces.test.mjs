@@ -41,7 +41,7 @@ async function startMistakesComplex(page, { baseUrl, complexId }) {
   expect(payload.ok).toBe(true);
   const sessionId = String(payload.session_id || "").trim();
   expect(sessionId).not.toBe("");
-  await page.goto(new URL(`/ui/session/${encodeURIComponent(sessionId)}`, baseUrl).toString());
+  await page.goto(new URL(`/session/${encodeURIComponent(sessionId)}`, baseUrl).toString());
   await waitForPageStable(page);
   return sessionId;
 }

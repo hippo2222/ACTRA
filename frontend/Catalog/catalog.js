@@ -405,11 +405,11 @@
   }
 
   function resolveSavedCatalogUrl() {
-    return '/ui/catalog?content_type=saved';
+    return '/catalog?content_type=saved';
   }
 
   function resolveComplexesLibraryUrl() {
-    return '/ui/complexes';
+    return '/complexes';
   }
 
   function debounce(fn, delay) {
@@ -2769,7 +2769,7 @@
     if (!libraryEntityId) return '';
     if (contentType === 'theory') {
       const returnUrl = `${global.location.pathname}${global.location.search}`;
-      return `/ui/editor/Theory_Center.html?linked_entry_id=${encodeURIComponent(libraryEntityId)}&return_url=${encodeURIComponent(returnUrl)}`;
+      return `/editor/Theory_Center.html?linked_entry_id=${encodeURIComponent(libraryEntityId)}&return_url=${encodeURIComponent(returnUrl)}`;
     }
     return '';
   }
@@ -2779,9 +2779,9 @@
     if (!sourceId) return '';
     if (item && item.content_type === 'theory') {
       const returnUrl = `${global.location.pathname}${global.location.search}`;
-      return `/ui/editor/Theory_Editor.html?theory_id=${encodeURIComponent(sourceId)}&return_url=${encodeURIComponent(returnUrl)}`;
+      return `/editor/Theory_Editor.html?theory_id=${encodeURIComponent(sourceId)}&return_url=${encodeURIComponent(returnUrl)}`;
     }
-    return `/ui/complexes/create?id=${encodeURIComponent(sourceId)}`;
+    return `/complexes/create?id=${encodeURIComponent(sourceId)}`;
   }
 
   async function executeAddToLibrary(item) {
@@ -2872,7 +2872,7 @@
     if (!action || action.disabled) return;
     if (action.key === 'login') {
       showToast('Войдите в аккаунт, чтобы добавлять публикации в библиотеку.', 'warning', 3400);
-      navigate('/ui/welcome');
+      navigate('/welcome');
       return;
     }
     if (action.key === 'open-library') {
@@ -2895,7 +2895,7 @@
       } catch (error) {
         if (error && error.status === 403) {
           showToast('Для добавления в библиотеку нужно войти в аккаунт.', 'warning');
-          navigate('/ui/welcome');
+          navigate('/welcome');
           return;
         }
         showToast(`Не удалось открыть превью: ${asString(error && error.message) || 'unknown_error'}`, 'error', 4200);

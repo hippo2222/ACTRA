@@ -137,8 +137,8 @@ class EditorDashboard {
 
         // if (window.location.protocol === 'file:') { // Removed as per instruction
         //     this.log("CRITICAL ERROR: Running via file:// protocol.");
-        //     this.log("You MUST access this page via http://localhost:8000/ui/editor");
-        //     alert("Ошибка: Вы открыли файл напрямую. Используйте http://localhost:8000/ui/editor");
+        //     this.log("You MUST access this page via http://localhost:8000/editor");
+        //     alert("Ошибка: Вы открыли файл напрямую. Используйте http://localhost:8000/editor");
         // }
 
         const lastView = this.loadDashboardState();
@@ -1571,7 +1571,7 @@ class EditorDashboard {
         const backBtn = document.querySelector('[data-role="return-main"]');
         if (backBtn) {
             backBtn.addEventListener('click', () => {
-                window.navigateWithTransition('/ui/main');
+                window.navigateWithTransition('/main');
             });
         }
 
@@ -2131,7 +2131,7 @@ class EditorDashboard {
 
     buildTheoryEditorUrl(theoryId, options = {}) {
         const normalizedTheoryId = String(theoryId || '').trim();
-        const url = new URL('/ui/editor/Theory_Editor.html', window.location.origin);
+        const url = new URL('/editor/Theory_Editor.html', window.location.origin);
         if (normalizedTheoryId) {
             url.searchParams.set('theory_id', normalizedTheoryId);
         }
@@ -2166,7 +2166,7 @@ class EditorDashboard {
     }
 
     buildTheoryCenterUrl(options = {}) {
-        const url = new URL('/ui/theory-center', window.location.origin);
+        const url = new URL('/theory-center', window.location.origin);
         const scope = String(options.scope || '').trim();
         const moduleId = String(options.moduleId || '').trim();
         const state = String(options.state || '').trim();
@@ -2448,8 +2448,8 @@ class EditorDashboard {
         const module = this.catalog.find((item) => item.id === moduleId);
         const topic = this.getTopicRow(moduleId, topicId);
         const returnUrl = moduleId || topicId
-            ? `/ui/editor?module=${encodeURIComponent(moduleId || '')}&topic=${encodeURIComponent(topicId || '')}`
-            : '/ui/editor';
+            ? `/editor?module=${encodeURIComponent(moduleId || '')}&topic=${encodeURIComponent(topicId || '')}`
+            : '/editor';
 
         this.closeTopicTheoryModal();
         this.navigateToTheoryEditor(theoryId, {
@@ -2466,7 +2466,7 @@ class EditorDashboard {
         const theoryId = this.getTopicTheoryModalSelectedTheoryId();
         if (!theoryId) return;
 
-        const url = `/ui/complexes?theory_id=${encodeURIComponent(theoryId)}`;
+        const url = `/complexes?theory_id=${encodeURIComponent(theoryId)}`;
         this.closeTopicTheoryModal();
         if (typeof window.navigateWithTransition === 'function') {
             window.navigateWithTransition(url);
@@ -3840,8 +3840,8 @@ class EditorDashboard {
                 btn.addEventListener('click', () => {
                     const theoryId = String(btn.getAttribute('data-theory-id') || '').trim();
                     const url = theoryId
-                        ? `/ui/complexes?theory_id=${encodeURIComponent(theoryId)}`
-                        : '/ui/complexes';
+                        ? `/complexes?theory_id=${encodeURIComponent(theoryId)}`
+                        : '/complexes';
                     if (typeof window.navigateWithTransition === 'function') {
                         window.navigateWithTransition(url);
                     } else {
@@ -4467,13 +4467,13 @@ class EditorDashboard {
                 complexId,
                 origin: 'editor_theory_hub',
                 returnUrl: this.buildTheoryEditorUrl(normalizedTheoryId, {
-                    returnUrl: '/ui/editor',
+                    returnUrl: '/editor',
                 }),
             });
             if (typeof window.navigateWithTransition === 'function') {
-                window.navigateWithTransition(`/ui/session/${encodeURIComponent(sessionId)}`);
+                window.navigateWithTransition(`/session/${encodeURIComponent(sessionId)}`);
             } else {
-                window.location.href = `/ui/session/${encodeURIComponent(sessionId)}`;
+                window.location.href = `/session/${encodeURIComponent(sessionId)}`;
             }
         } catch (error) {
             console.error('[Dashboard] Failed to start theory-focused training', error);
@@ -4487,7 +4487,7 @@ class EditorDashboard {
     }
 
     openComplexBuilder(complexId) {
-        const url = `/ui/complexes/create?id=${encodeURIComponent(complexId)}`;
+        const url = `/complexes/create?id=${encodeURIComponent(complexId)}`;
         this.closeTheoryHub();
         if (typeof window.navigateWithTransition === 'function') {
             window.navigateWithTransition(url);
@@ -4627,7 +4627,7 @@ class EditorDashboard {
             return '';
         }
         const encodedEditorPage = encodeURIComponent(editorPage);
-        return `/ui/editor/${encodedEditorPage}?${params.toString()}`;
+        return `/editor/${encodedEditorPage}?${params.toString()}`;
     }
 
     renderSidebar() {
@@ -6403,8 +6403,8 @@ class EditorDashboard {
         }
 
         const complexUrl = item.complexId && item.complexId !== 'new'
-            ? `/ui/complexes/create?id=${encodeURIComponent(item.complexId)}`
-            : '/ui/complexes/create';
+            ? `/complexes/create?id=${encodeURIComponent(item.complexId)}`
+            : '/complexes/create';
         this.closeRecoveryCenter();
         window.navigateWithTransition(complexUrl);
     }

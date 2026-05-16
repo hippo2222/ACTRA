@@ -307,12 +307,12 @@ describe("EditorDashboard topic theory modal", () => {
     expect(workspaceNote.textContent).toContain("Комплексы");
 
     openComplexesBtn.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    expect(window.navigateWithTransition).toHaveBeenLastCalledWith("/ui/complexes?theory_id=th_a");
+    expect(window.navigateWithTransition).toHaveBeenLastCalledWith("/complexes?theory_id=th_a");
 
     await dashboard.showTopicTheoryModal("m1", "t1");
     editContentBtn.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     const theoryEditorUrl = window.navigateWithTransition.mock.lastCall[0];
-    expect(theoryEditorUrl).toContain("/ui/editor/Theory_Editor.html?theory_id=th_a");
+    expect(theoryEditorUrl).toContain("/editor/Theory_Editor.html?theory_id=th_a");
     expect(theoryEditorUrl).toContain("context=topic");
     expect(theoryEditorUrl).toContain("module_id=m1");
     expect(theoryEditorUrl).toContain("topic_id=t1");

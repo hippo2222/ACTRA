@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createTestEditorHarness } from "./ui/editor_audit/test_adapter.mjs";
+import { createTestEditorHarness } from "./editor_audit/test_adapter.mjs";
 
 function createImagePasteEvent(target, file) {
     return {

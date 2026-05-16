@@ -2,7 +2,7 @@
 
 Hosted infra + production launch contour now has a recorded local green acceptance run on `2026-04-20`:
 
-- `npm run smoke:launch-acceptance:hosted` now has a recorded local green run on the Docker stack, including live `register -> verify -> me -> logout -> login -> forgot-password request -> /ui/main`;
+- `npm run smoke:launch-acceptance:hosted` now has a recorded local green run on the Docker stack, including live `register -> verify -> me -> logout -> login -> forgot-password request -> /main`;
 - the companion contour `npm run smoke:complex-passage:hosted:infra` also passed in the same story with recorded result `60 passed`;
 - the new runner in `scripts/run_hosted_launch_acceptance.js` still supports `--dry-run`, `--keep-stack` and `--skip-companion-passage` so the launch contour can be checked and rehearsed explicitly;
 - the hosted Docker stack now includes a local `Mailpit` SMTP sink by default, so launch acceptance can exercise auth email lifecycle without requiring external SMTP;

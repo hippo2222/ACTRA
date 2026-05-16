@@ -17,7 +17,7 @@
   "pages": [
     {
       "name": "Welcome",
-      "url": "/ui/welcome",
+      "url": "/welcome",
       "waitFor": "body",
       "actionsOnce": [
         { "type": "wait", "ms": 1200 },
@@ -29,7 +29,7 @@
     },
     {
       "name": "Welcome (select+create)",
-      "url": "/ui/welcome",
+      "url": "/welcome",
       "waitFor": "body",
       "actionsOnce": [
         { "type": "wait", "ms": 1200 },
@@ -42,7 +42,7 @@
     },
     {
       "name": "Welcome (login)",
-      "url": "/ui/welcome",
+      "url": "/welcome",
       "waitFor": "body",
       "actionsOnce": [
         { "type": "wait", "ms": 1200 },
@@ -54,7 +54,7 @@
     },
     {
       "name": "Welcome (legal modal)",
-      "url": "/ui/welcome",
+      "url": "/welcome",
       "waitFor": "body",
       "actionsOnce": [
         { "type": "wait", "ms": 1200 },
@@ -66,7 +66,7 @@
     },
     {
       "name": "Welcome (consent gate modal)",
-      "url": "/ui/welcome",
+      "url": "/welcome",
       "waitFor": "body",
       "actionsOnce": [
         { "type": "wait", "ms": 1200 },
@@ -78,7 +78,7 @@
     },
     {
       "name": "Main",
-      "url": "/ui/main",
+      "url": "/main",
       "waitFor": "#statsCard",
       "actionsOnce": [
         { "type": "wait", "ms": 900 }
@@ -86,7 +86,7 @@
     },
     {
       "name": "Main (profile modal)",
-      "url": "/ui/main",
+      "url": "/main",
       "waitFor": "#profileModal",
       "actionsOnce": [
         { "type": "wait", "ms": 900 },
@@ -99,7 +99,7 @@
     },
     {
       "name": "Main (feedback modal)",
-      "url": "/ui/main",
+      "url": "/main",
       "waitFor": "#feedbackModal",
       "actionsOnce": [
         { "type": "wait", "ms": 900 },
@@ -112,7 +112,7 @@
     },
     {
       "name": "Main (legal modal)",
-      "url": "/ui/main",
+      "url": "/main",
       "waitFor": "#mainLegalDocModal",
       "actionsOnce": [
         { "type": "wait", "ms": 900 },
@@ -124,7 +124,7 @@
     },
     {
       "name": "Main (consent gate modal)",
-      "url": "/ui/main",
+      "url": "/main",
       "waitFor": "#mainConsentGateModal",
       "actionsOnce": [
         { "type": "wait", "ms": 900 },
@@ -136,7 +136,7 @@
     },
     {
       "name": "Complexes",
-      "url": "/ui/complexes",
+      "url": "/complexes",
       "waitFor": "#complexes-list",
       "actionsOnce": [
         { "type": "wait", "ms": 1200 }
@@ -144,7 +144,7 @@
     },
     {
       "name": "Complexes (selection mode)",
-      "url": "/ui/complexes",
+      "url": "/complexes",
       "waitFor": "#toggle-select-complexes",
       "actionsOnce": [
         { "type": "wait", "ms": 1200 },
@@ -157,7 +157,7 @@
     },
     {
       "name": "Complexes Create",
-      "url": "/ui/complexes/create",
+      "url": "/complexes/create",
       "waitFor": "#name",
       "actionsOnce": [
         { "type": "wait", "ms": 1200 }
@@ -165,7 +165,7 @@
     },
     {
       "name": "Calendar",
-      "url": "/ui/calendar",
+      "url": "/calendar",
       "waitFor": "#app",
       "actionsOnce": [
         { "type": "wait", "ms": 1400 }
@@ -173,7 +173,7 @@
     },
     {
       "name": "Statistics",
-      "url": "/ui/statistics",
+      "url": "/statistics",
       "waitFor": "#chart-card",
       "actionsOnce": [
         { "type": "wait", "ms": 1400 }

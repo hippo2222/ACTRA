@@ -39,7 +39,7 @@ async function startComplexAtIteration(page, { baseUrl, complexId, startIteratio
   }
 
   await ensureHostedBrowserAuth(page, baseUrl);
-  await page.goto(new URL(`/ui/session/${encodeURIComponent(sessionId)}`, baseUrl).toString());
+  await page.goto(new URL(`/session/${encodeURIComponent(sessionId)}`, baseUrl).toString());
   await waitForPageStable(page);
   return sessionId;
 }

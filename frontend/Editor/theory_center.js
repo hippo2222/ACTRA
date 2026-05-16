@@ -1412,7 +1412,7 @@
   }
 
   function buildTheoryEditorUrl(theoryId, options = {}) {
-    const url = new URL('/ui/editor/Theory_Editor.html', window.location.origin);
+    const url = new URL('/editor/Theory_Editor.html', window.location.origin);
     const normalizedTheoryId = String(theoryId || '').trim();
     if (normalizedTheoryId) {
       url.searchParams.set('theory_id', normalizedTheoryId);
@@ -3278,7 +3278,7 @@
         return;
       }
       if (action === 'open-editor-dashboard') {
-        navigate('/ui/editor');
+        navigate('/editor');
         return;
       }
       if (action === 'create-topic-theory') {
@@ -3291,7 +3291,7 @@
       }
       if (action === 'open-complex') {
         const complexId = String(button.getAttribute('data-complex-id') || '').trim();
-        if (complexId) navigate(`/ui/complexes/create?id=${encodeURIComponent(complexId)}`);
+        if (complexId) navigate(`/complexes/create?id=${encodeURIComponent(complexId)}`);
         return;
       }
       if (action === 'open-complex-theory' || action === 'open-complex-theory-item') {
@@ -3359,24 +3359,24 @@
   function bindStaticActions() {
     const homeBtn = $('theory-center-go-home');
     if (homeBtn) {
-      homeBtn.addEventListener('click', () => navigate('/ui/main'));
+      homeBtn.addEventListener('click', () => navigate('/main'));
     }
 
     const editorBtn2 = $('theory-center-go-editor');
     if (editorBtn2) {
-      editorBtn2.addEventListener('click', () => navigate('/ui/editor'));
+      editorBtn2.addEventListener('click', () => navigate('/editor'));
     }
 
     const backBtn = $('theory-center-back-complexes');
     if (backBtn) {
-      backBtn.addEventListener('click', () => navigate('/ui/complexes'));
+      backBtn.addEventListener('click', () => navigate('/complexes'));
     }
 
     const editorBtn = $('theory-center-open-editor');
     if (editorBtn) {
       editorBtn.addEventListener('click', () => {
         if (!ensureTheoryCreationAllowed()) return;
-        navigate('/ui/editor/Theory_Editor.html');
+        navigate('/editor/Theory_Editor.html');
       });
     }
 

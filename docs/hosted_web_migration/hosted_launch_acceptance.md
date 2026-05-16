@@ -23,14 +23,14 @@ npm run smoke:launch-acceptance:hosted
 - ждёт `hosted_web` readiness через `/api/health` и `/api/ready`;
 - проверяет, что `/api/ready.launch_contract` уже `green` на живом compose stack;
 - выполняет live hosted auth lifecycle:
-  - `/ui/main` redirect до логина;
+  - `/main` redirect до логина;
   - `register`;
   - `verify email` через `verify_url`;
   - `me`;
   - `logout`;
   - `login`;
   - `forgot-password` request;
-  - `/ui/main` render после логина.
+  - `/main` render после логина.
 
 Для локального прогона без боевого SMTP stack теперь по умолчанию использует встроенный `Mailpit` sink:
 
@@ -51,7 +51,7 @@ npm run smoke:launch-acceptance:hosted
 - `npm run smoke:launch-acceptance:hosted` прошёл end-to-end на Docker stack;
 - companion contour `npm run smoke:complex-passage:hosted:infra` тоже прошёл рядом с recorded result `60 passed`;
 - `/api/ready.launch_contract` стал `green` на живом compose stack;
-- hosted auth lifecycle (`register -> verify -> me -> logout -> login -> forgot-password request -> /ui/main`) прошёл полностью;
+- hosted auth lifecycle (`register -> verify -> me -> logout -> login -> forgot-password request -> /main`) прошёл полностью;
 - локальные `localhost` + `Mailpit` warnings при этом остались ожидаемой частью local proof, а не failure signal.
 
 ## Что acceptance run пока не заменяет

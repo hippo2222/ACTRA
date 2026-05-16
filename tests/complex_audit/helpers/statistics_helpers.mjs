@@ -64,7 +64,7 @@ export async function waitForStatisticsPropagation(baseUrl, fixture, options = {
 }
 
 export async function openStatistics(page, baseUrl) {
-  await page.goto(new URL("/ui/statistics", baseUrl).toString());
+  await page.goto(new URL("/statistics", baseUrl).toString());
   await waitForPageStable(page);
 }
 

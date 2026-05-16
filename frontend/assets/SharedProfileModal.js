@@ -323,7 +323,7 @@
             <div class="px-2 py-2">
                 <div class="flex items-center justify-between gap-3 px-2 pb-2">
                     <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-text-secondary">Быстрое переключение</p>
-                    <a href="/ui/settings"
+                    <a href="/settings"
                         id="sharedProfileSettings"
                         class="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-primary transition-colors hover:bg-bg-hover">
                         <span class="material-symbols-outlined text-[16px]">settings</span>
@@ -392,7 +392,7 @@
                 </div>
             </div>
             <div class="px-4 py-4 space-y-3">
-                <a href="/ui/settings"
+                <a href="/settings"
                     id="sharedProfileSettings"
                     class="shared-profile-focus-target flex items-center justify-between rounded-2xl border border-border-subtle bg-surface-1 px-4 py-3 text-left transition-all hover:border-primary hover:bg-bg-hover">
                     <div class="flex items-center gap-3">
@@ -478,10 +478,10 @@
                     return;
                 }
                 if (typeof window.navigateWithTransition === 'function') {
-                    window.navigateWithTransition('/ui/settings#premium');
+                    window.navigateWithTransition('/settings#premium');
                     return;
                 }
-                window.location.assign('/ui/settings#premium');
+                window.location.assign('/settings#premium');
             });
         }
 
@@ -813,11 +813,11 @@
         }
 
         if (typeof window.navigateWithTransition === 'function') {
-            window.navigateWithTransition('/ui/main');
+            window.navigateWithTransition('/main');
             return;
         }
 
-        window.location.assign('/ui/main');
+        window.location.assign('/main');
     }
 
     function navigateTo(url) {
@@ -849,7 +849,7 @@
             }
 
             closeProfileMenu();
-            navigateTo('/ui/welcome');
+            navigateTo('/welcome');
         } catch (error) {
             console.error('[SharedProfileMenu] Failed to logout:', error);
             showToast('Не удалось выйти из аккаунта');

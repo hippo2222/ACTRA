@@ -18,7 +18,7 @@ test('debug_reload', async ({ page }) => {
 
   // Navigate to editor
   console.log('Opening editor...');
-  await page.goto(`${BASE_URL}/ui/editor/Point_Annotation.html?module=${moduleId}&topic=${topicId}&task=${taskId}&new=true&type=click&name=DebugReload`);
+  await page.goto(`${BASE_URL}/editor/Point_Annotation.html?module=${moduleId}&topic=${topicId}&task=${taskId}&new=true&type=click&name=DebugReload`);
   
   // Wait a bit to see what happens
   await page.waitForTimeout(10000);

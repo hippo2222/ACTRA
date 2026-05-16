@@ -401,14 +401,14 @@ class TestBackwardCompatibility:
     def test_redirect_format_unchanged(self):
         """Проверка: формат редиректов не изменился"""
         
-        # Редиректы должны быть в формате: /ui/session/{session_id}
+        # Редиректы должны быть в формате: /session/{session_id}
         redirect_urls = [
-            "/ui/session/sess_123",
-            "/ui/session/sess_abc",
+            "/session/sess_123",
+            "/session/sess_abc",
         ]
         
         for url in redirect_urls:
-            assert url.startswith("/ui/session/"), f"Неверный формат редиректа: {url}"
+            assert url.startswith("/session/"), f"Неверный формат редиректа: {url}"
         
         print("✅ Формат редиректов не изменился")
 

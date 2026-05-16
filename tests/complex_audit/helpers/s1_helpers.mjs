@@ -15,7 +15,7 @@ import {
 
 export async function startComplexFromList(page, { baseUrl, complexId, complexName }) {
   await ensureHostedBrowserAuth(page, baseUrl);
-  await page.goto(new URL("/ui/complexes", baseUrl).toString());
+  await page.goto(new URL("/complexes", baseUrl).toString());
   await waitForPageStable(page);
 
   const startButton = page.locator(`button.start-btn[data-complex-id="${complexId}"]`);
@@ -25,7 +25,7 @@ export async function startComplexFromList(page, { baseUrl, complexId, complexNa
 
   await startButton.click();
   await page.waitForURL(
-    new RegExp(`${escapeRegExp(baseUrl)}/ui/session/[^/?#]+$`),
+    new RegExp(`${escapeRegExp(baseUrl)}/session/[^/?#]+$`),
     { timeout: 20000 }
   );
   await waitForPageStable(page);

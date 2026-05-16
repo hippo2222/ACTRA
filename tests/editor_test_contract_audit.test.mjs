@@ -1,5 +1,5 @@
-import { defineEditorAuditContract } from "./ui/editor_audit/core.mjs";
-import { createTestEditorAuditAdapter } from "./ui/editor_audit/test_adapter.mjs";
+import { defineEditorAuditContract } from "./editor_audit/core.mjs";
+import { createTestEditorAuditAdapter } from "./editor_audit/test_adapter.mjs";
 
 defineEditorAuditContract({
     editorName: "Test",

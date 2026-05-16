@@ -25,7 +25,7 @@ describe("SessionFlow.handleNextTaskCompletion", () => {
     expect(res.handled).toBe(true);
     expect(res.action).toBe("redirect_final_results");
     expect(redirect).toHaveBeenCalledTimes(1);
-    expect(redirect).toHaveBeenCalledWith("/ui/session/abc/results");
+    expect(redirect).toHaveBeenCalledWith("/session/abc/results");
   });
 
   it("redirects to final results when response.error is session_completed", () => {
@@ -38,7 +38,7 @@ describe("SessionFlow.handleNextTaskCompletion", () => {
     });
 
     expect(res.handled).toBe(true);
-    expect(redirect).toHaveBeenCalledWith("/ui/session/abc/results");
+    expect(redirect).toHaveBeenCalledWith("/session/abc/results");
   });
 
   it("does not redirect when response is ok", () => {

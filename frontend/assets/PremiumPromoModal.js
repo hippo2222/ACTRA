@@ -416,7 +416,7 @@
 
     function navigateToSettings() {
         close();
-        const url = '/ui/settings#premium';
+        const url = '/settings#premium';
         if (typeof window.__mainPremiumNavigationBase === 'function') {
             window.__mainPremiumNavigationBase(url);
             return;

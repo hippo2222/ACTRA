@@ -70,7 +70,7 @@ async function startComplexAtIteration(page, { baseUrl, complexId, startIteratio
   }
 
   await ensureHostedBrowserAuth(page, baseUrl);
-  await page.goto(new URL(`/ui/session/${encodeURIComponent(sessionId)}`, baseUrl).toString());
+  await page.goto(new URL(`/session/${encodeURIComponent(sessionId)}`, baseUrl).toString());
   await waitForPageStable(page);
   return sessionId;
 }
@@ -100,7 +100,7 @@ async function createStartedTypeRun(page, prefix, taskType, difficulty) {
       runtime,
       fixture,
       sessionId,
-      sessionUrl: new URL(`/ui/session/${encodeURIComponent(sessionId)}`, runtime.baseUrl).toString(),
+      sessionUrl: new URL(`/session/${encodeURIComponent(sessionId)}`, runtime.baseUrl).toString(),
     };
   } catch (error) {
     await runtime.dispose();
@@ -121,7 +121,7 @@ test("cpw_s1_click_pause_resume_preserves_checked_state_and_marks", async ({ pag
 
     expect(submitResponse.ok()).toBe(true);
     expect(submitJson.ok).toBe(true);
-    expect(page.url()).toContain(`/ui/session/${sessionId}`);
+    expect(page.url()).toContain(`/session/${sessionId}`);
 
     await expect(page.locator("#result-box")).toBeVisible();
     await expect(page.locator("#next-task-btn")).toBeEnabled();
@@ -201,7 +201,7 @@ test("cpw_s1_click_continue_from_complexes_preserves_checked_state_and_marks", a
     await expect(continueButton).toContainText("Продолжить");
     await continueButton.click();
 
-    await page.waitForURL(new RegExp(`/ui/session/${sessionId}$`));
+    await page.waitForURL(new RegExp(`/session/${sessionId}$`));
     await waitForPageStable(page);
 
     await expect(page.locator("#result-box")).toBeVisible();
@@ -249,7 +249,7 @@ test("cpw_s1_click_l1_continue_from_complexes_preserves_checked_state", async ({
     await expect(continueButton).toBeVisible();
     await continueButton.click();
 
-    await page.waitForURL(new RegExp(`/ui/session/${sessionId}$`));
+    await page.waitForURL(new RegExp(`/session/${sessionId}$`));
     await waitForPageStable(page);
 
     await expect(page.locator("#result-box")).toBeVisible();
@@ -315,7 +315,7 @@ test("cpw_s1_real_click_continue_from_complexes_preserves_checked_state", async 
     await expect(continueButton).toContainText("Продолжить");
     await continueButton.click();
 
-    await page.waitForURL(new RegExp(`/ui/session/${sessionId}$`));
+    await page.waitForURL(new RegExp(`/session/${sessionId}$`));
     await waitForPageStable(page);
 
     await expect(page.locator("#result-box")).toBeVisible();

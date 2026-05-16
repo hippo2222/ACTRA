@@ -16,7 +16,7 @@ const toursSource = fs.readFileSync(
 const mainTour = {
     tourId: 'main-dashboard-work-contour',
     version: 1,
-    route: ['/ui/main'],
+    route: ['/main'],
     autoStart: true,
     autoStartDelay: 10,
     steps: [
@@ -33,7 +33,7 @@ const mainTour = {
     ],
 };
 
-function installDom(pathname = '/ui/main') {
+function installDom(pathname = '/main') {
     history.replaceState(null, '', pathname);
     document.head.innerHTML = '';
     document.body.innerHTML = `

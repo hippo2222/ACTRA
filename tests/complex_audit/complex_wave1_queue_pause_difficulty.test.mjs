@@ -205,7 +205,7 @@ test.describe("complex audit wave 1 queue / pause / difficulty", () => {
       expect(pauseJson.ok).toBe(true);
       expect(pauseJson.paused).toBe(true);
 
-      await page.waitForURL(new RegExp("/ui/complexes$"), { timeout: 20000 });
+      await page.waitForURL(new RegExp("/complexes$"), { timeout: 20000 });
       await waitForPageStable(page);
 
       await expect
@@ -216,7 +216,7 @@ test.describe("complex audit wave 1 queue / pause / difficulty", () => {
         }, { timeout: 10000, intervals: [250, 500, 1000] })
         .toBe(true);
 
-      await page.goto(new URL(`/ui/session/${encodeURIComponent(sessionId)}`, runtime.baseUrl).toString());
+      await page.goto(new URL(`/session/${encodeURIComponent(sessionId)}`, runtime.baseUrl).toString());
       await waitForPageStable(page);
 
       expect(extractSessionIdFromUrl(page.url())).toBe(sessionId);
@@ -269,7 +269,7 @@ test.describe("complex audit wave 1 queue / pause / difficulty", () => {
       const restoredPage = await context.newPage();
       try {
         await restoredPage.goto(
-          new URL(`/ui/session/${encodeURIComponent(sessionId)}`, runtime.baseUrl).toString()
+          new URL(`/session/${encodeURIComponent(sessionId)}`, runtime.baseUrl).toString()
         );
         await waitForPageStable(restoredPage);
 
@@ -326,10 +326,10 @@ test.describe("complex audit wave 1 queue / pause / difficulty", () => {
       expect(pauseJson.ok).toBe(true);
       expect(pauseJson.paused).toBe(true);
 
-      await page.waitForURL(new RegExp("/ui/complexes$"), { timeout: 20000 });
+      await page.waitForURL(new RegExp("/complexes$"), { timeout: 20000 });
       await waitForPageStable(page);
 
-      await page.goto(new URL(`/ui/session/${encodeURIComponent(sessionId)}`, runtime.baseUrl).toString());
+      await page.goto(new URL(`/session/${encodeURIComponent(sessionId)}`, runtime.baseUrl).toString());
       await waitForPageStable(page);
       await expect(page.locator("#resume-modal")).toBeVisible();
     } finally {

@@ -6,8 +6,8 @@ import {
     runCopyLint,
     runDirtyStateAudit,
     runSurfaceDriftAudit,
-} from "./ui/editor_audit/core.mjs";
-import { createTestEditorAuditAdapter } from "./ui/editor_audit/test_adapter.mjs";
+} from "./editor_audit/core.mjs";
+import { createTestEditorAuditAdapter } from "./editor_audit/test_adapter.mjs";
 
 describe("Test editor surface heuristics", () => {
     let adapter;

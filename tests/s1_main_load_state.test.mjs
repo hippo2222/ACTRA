@@ -24,7 +24,7 @@ describe("S1 Main loadInitialTask", () => {
       <div id="theory-session-title"></div>
       <div id="theory-session-meta"></div>
     `;
-    window.history.replaceState({}, "", "/ui/session/sess-1");
+    window.history.replaceState({}, "", "/session/sess-1");
 
     window.SessionState = {
       state: {
@@ -70,9 +70,9 @@ describe("S1 Main loadInitialTask", () => {
       navigateWithoutPrompt: vi.fn(),
     };
     window.SessionRoutes = {
-      MAIN: "/ui/main",
-      COMPLEXES: "/ui/complexes",
-      SESSION_RESULTS: (sessionId) => `/ui/session/${encodeURIComponent(sessionId)}/results`,
+      MAIN: "/main",
+      COMPLEXES: "/complexes",
+      SESSION_RESULTS: (sessionId) => `/session/${encodeURIComponent(sessionId)}/results`,
     };
     window.SessionValidation = {
       validateSessionId: vi.fn(() => ({ valid: true })),

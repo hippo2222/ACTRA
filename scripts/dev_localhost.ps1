@@ -173,7 +173,7 @@ Wait-ForPostgresReady
 
 Write-Host ""
 Write-Host "Local URLs:"
-Write-Host "  App:     http://localhost:8000/ui/welcome"
+Write-Host "  App:     http://localhost:8000/welcome"
 Write-Host "  Mailpit: http://localhost:8025"
 Write-Host "  Dev auth bridge: enabled"
 Write-Host ""

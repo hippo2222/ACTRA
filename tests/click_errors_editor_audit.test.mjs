@@ -256,7 +256,7 @@ test.describe('Click-Errors Editor Audit', () => {
 
     // Verify that text_errors task can be saved with minimal data
     // BUG: Previously failed with "Необходимо добавить хотя бы одну область или линию"
-    await page.goto(`${BASE_URL}/ui/editor/click?module=${moduleId}&topic=${topicId}&task=${taskId}&new=true&type=click&name=Critical01`);
+    await page.goto(`${BASE_URL}/editor/click?module=${moduleId}&topic=${topicId}&task=${taskId}&new=true&type=click&name=Critical01`);
     await helpers.waitForEditorReady(page);
     await helpers.switchToErrorsMode(page);
     await helpers.switchToTextErrorsSubmode(page);
@@ -280,7 +280,7 @@ test.describe('Click-Errors Editor Audit', () => {
     createdTasks.push(taskId);
 
     // Verify that validation blocks save when no error spans added
-    await page.goto(`${BASE_URL}/ui/editor/click?module=${moduleId}&topic=${topicId}&task=${taskId}&new=true&type=click&name=Critical02`);
+    await page.goto(`${BASE_URL}/editor/click?module=${moduleId}&topic=${topicId}&task=${taskId}&new=true&type=click&name=Critical02`);
     await helpers.waitForEditorReady(page);
     await helpers.switchToErrorsMode(page);
     await helpers.switchToTextErrorsSubmode(page);
@@ -307,7 +307,7 @@ test.describe('Click-Errors Editor Audit', () => {
 
     // Verify correct placeholder text for text_errors mode
     // BUG: Previously showed "Выберите правильный вариант текста" (wrong for text_errors)
-    await page.goto(`${BASE_URL}/ui/editor/click?module=${moduleId}&topic=${topicId}&task=${taskId}&new=true&type=click&name=Critical03`);
+    await page.goto(`${BASE_URL}/editor/click?module=${moduleId}&topic=${topicId}&task=${taskId}&new=true&type=click&name=Critical03`);
     await helpers.waitForEditorReady(page);
     await helpers.switchToErrorsMode(page);
     await helpers.switchToTextErrorsSubmode(page);
@@ -327,7 +327,7 @@ test.describe('Click-Errors Editor Audit', () => {
     createdTasks.push(taskId);
 
     // Verify correct placeholder text for text_choice mode
-    await page.goto(`${BASE_URL}/ui/editor/click?module=${moduleId}&topic=${topicId}&task=${taskId}&new=true&type=click&name=Critical04`);
+    await page.goto(`${BASE_URL}/editor/click?module=${moduleId}&topic=${topicId}&task=${taskId}&new=true&type=click&name=Critical04`);
     await helpers.waitForEditorReady(page);
     await helpers.switchToErrorsMode(page);
     await helpers.switchToTextChoiceSubmode(page);
@@ -357,7 +357,7 @@ test.describe('Click-Errors Editor Audit', () => {
 
     // BUG: Previously, reloading error detection task showed Click UI instead of Errors UI
     // Create and save error detection task
-    await page.goto(`${BASE_URL}/ui/editor/Point_Annotation.html?module=${moduleId}&topic=${topicId}&task=${taskId}&new=true&type=click&name=Critical05`);
+    await page.goto(`${BASE_URL}/editor/Point_Annotation.html?module=${moduleId}&topic=${topicId}&task=${taskId}&new=true&type=click&name=Critical05`);
     await helpers.waitForEditorReady(page);
     await helpers.switchToErrorsMode(page);
     await helpers.switchToTextErrorsSubmode(page);
@@ -368,7 +368,7 @@ test.describe('Click-Errors Editor Audit', () => {
     await page.waitForTimeout(500);
     
     // Reload the task
-    await page.goto(`${BASE_URL}/ui/editor/Point_Annotation.html?module=${moduleId}&topic=${topicId}&task=${taskId}`);
+    await page.goto(`${BASE_URL}/editor/Point_Annotation.html?module=${moduleId}&topic=${topicId}&task=${taskId}`);
     await helpers.waitForEditorReady(page);
     await page.waitForTimeout(1000);
     
@@ -407,7 +407,7 @@ test.describe('Click-Errors Editor Audit', () => {
     const errorText = 'Это пример текста с ашибкой и опечаткой.';
 
     // Step 1: Open new task editor
-    await page.goto(`${BASE_URL}/ui/editor/click?module=${moduleId}&topic=${topicId}&task=${taskId}&new=true&type=click&name=S01_TextErrors`);
+    await page.goto(`${BASE_URL}/editor/click?module=${moduleId}&topic=${topicId}&task=${taskId}&new=true&type=click&name=S01_TextErrors`);
     await helpers.waitForEditorReady(page);
     await helpers.takeSnapshot(page, 's01_step1_initial', testInfo);
 
@@ -494,7 +494,7 @@ test.describe('Click-Errors Editor Audit', () => {
     const errorText = 'Проверка сохранения и загрузки данных.';
 
     // Create initial task
-    await page.goto(`${BASE_URL}/ui/editor/click?module=${moduleId}&topic=${topicId}&task=${taskId}&new=true&type=click&name=S02_Roundtrip`);
+    await page.goto(`${BASE_URL}/editor/click?module=${moduleId}&topic=${topicId}&task=${taskId}&new=true&type=click&name=S02_Roundtrip`);
     await helpers.waitForEditorReady(page);
     await helpers.switchToErrorsMode(page);
     await helpers.switchToTextErrorsSubmode(page);
@@ -533,7 +533,7 @@ test.describe('Click-Errors Editor Audit', () => {
     const mainText = 'Основной текст с ошибками для проверки.';
     const referenceText = 'Основной текст с ошибками для проверки.';
 
-    await page.goto(`${BASE_URL}/ui/editor/click?module=${moduleId}&topic=${topicId}&task=${taskId}&new=true&type=click&name=S03_Reference`);
+    await page.goto(`${BASE_URL}/editor/click?module=${moduleId}&topic=${topicId}&task=${taskId}&new=true&type=click&name=S03_Reference`);
     await helpers.waitForEditorReady(page);
     await helpers.switchToErrorsMode(page);
     await helpers.switchToTextErrorsSubmode(page);
@@ -584,7 +584,7 @@ test.describe('Click-Errors Editor Audit', () => {
     createdTasks.push(taskId);
     const errorText = 'Текст с пятью ошибками для теста.';
 
-    await page.goto(`${BASE_URL}/ui/editor/click?module=${moduleId}&topic=${topicId}&task=${taskId}&new=true&type=click&name=S04_Manual`);
+    await page.goto(`${BASE_URL}/editor/click?module=${moduleId}&topic=${topicId}&task=${taskId}&new=true&type=click&name=S04_Manual`);
     await helpers.waitForEditorReady(page);
     await helpers.switchToErrorsMode(page);
     await helpers.switchToTextErrorsSubmode(page);
@@ -637,7 +637,7 @@ test.describe('Click-Errors Editor Audit', () => {
     const taskId = helpers.generateId('task_s05');
     createdTasks.push(taskId);
 
-    await page.goto(`${BASE_URL}/ui/editor/click?module=${moduleId}&topic=${topicId}&task=${taskId}&new=true&type=click&name=S05_Validation`);
+    await page.goto(`${BASE_URL}/editor/click?module=${moduleId}&topic=${topicId}&task=${taskId}&new=true&type=click&name=S05_Validation`);
     await helpers.waitForEditorReady(page);
     await helpers.switchToErrorsMode(page);
     await helpers.switchToTextErrorsSubmode(page);
@@ -679,7 +679,7 @@ test.describe('Click-Errors Editor Audit', () => {
     const taskId = helpers.generateId('task_s07');
     createdTasks.push(taskId);
 
-    await page.goto(`${BASE_URL}/ui/editor/click?module=${moduleId}&topic=${topicId}&task=${taskId}&new=true&type=click&name=S07_Choice`);
+    await page.goto(`${BASE_URL}/editor/click?module=${moduleId}&topic=${topicId}&task=${taskId}&new=true&type=click&name=S07_Choice`);
     await helpers.waitForEditorReady(page);
     await helpers.switchToErrorsMode(page);
     await helpers.switchToTextChoiceSubmode(page);
@@ -717,7 +717,7 @@ test.describe('Click-Errors Editor Audit', () => {
     const taskId = helpers.generateId('task_s08');
     createdTasks.push(taskId);
 
-    await page.goto(`${BASE_URL}/ui/editor/click?module=${moduleId}&topic=${topicId}&task=${taskId}&new=true&type=click&name=S08_ChoiceValidation`);
+    await page.goto(`${BASE_URL}/editor/click?module=${moduleId}&topic=${topicId}&task=${taskId}&new=true&type=click&name=S08_ChoiceValidation`);
     await helpers.waitForEditorReady(page);
     await helpers.switchToErrorsMode(page);
     await helpers.switchToTextChoiceSubmode(page);
@@ -759,7 +759,7 @@ test.describe('Click-Errors Editor Audit', () => {
     const taskId = helpers.generateId('task_s09');
     createdTasks.push(taskId);
 
-    await page.goto(`${BASE_URL}/ui/editor/click?module=${moduleId}&topic=${topicId}&task=${taskId}&new=true&type=click&name=S09_ChoiceRoundtrip`);
+    await page.goto(`${BASE_URL}/editor/click?module=${moduleId}&topic=${topicId}&task=${taskId}&new=true&type=click&name=S09_ChoiceRoundtrip`);
     await helpers.waitForEditorReady(page);
     await helpers.switchToErrorsMode(page);
     await helpers.switchToTextChoiceSubmode(page);
@@ -801,7 +801,7 @@ test.describe('Click-Errors Editor Audit', () => {
     createdTasks.push(taskId);
 
     // Create text_errors task
-    await page.goto(`${BASE_URL}/ui/editor/click?module=${moduleId}&topic=${topicId}&task=${taskId}&new=true&type=click&name=S11_SwitchToChoice`);
+    await page.goto(`${BASE_URL}/editor/click?module=${moduleId}&topic=${topicId}&task=${taskId}&new=true&type=click&name=S11_SwitchToChoice`);
     await helpers.waitForEditorReady(page);
     await helpers.switchToErrorsMode(page);
     await helpers.switchToTextErrorsSubmode(page);
@@ -834,7 +834,7 @@ test.describe('Click-Errors Editor Audit', () => {
     createdTasks.push(taskId);
 
     // Create text_choice task
-    await page.goto(`${BASE_URL}/ui/editor/click?module=${moduleId}&topic=${topicId}&task=${taskId}&new=true&type=click&name=S12_SwitchToText`);
+    await page.goto(`${BASE_URL}/editor/click?module=${moduleId}&topic=${topicId}&task=${taskId}&new=true&type=click&name=S12_SwitchToText`);
     await helpers.waitForEditorReady(page);
     await helpers.switchToErrorsMode(page);
     await helpers.switchToTextChoiceSubmode(page);

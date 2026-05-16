@@ -17,7 +17,7 @@
   "pages": [
     {
       "name": "S1 sequence - answering",
-      "url": "/ui/SequenceUI/audit.html",
+      "url": "/SequenceUI/audit.html",
       "waitFor": "#task-content",
       "waitForTimeout": 30000,
       "actionsOnce": [
@@ -39,7 +39,7 @@
     },
     {
       "name": "S1 sequence - selected",
-      "url": "/ui/SequenceUI/audit.html",
+      "url": "/SequenceUI/audit.html",
       "waitFor": "#task-content",
       "waitForTimeout": 30000,
       "actionsOnce": [
@@ -61,7 +61,7 @@
     },
     {
       "name": "S1 sequence - review success",
-      "url": "/ui/SequenceUI/audit.html",
+      "url": "/SequenceUI/audit.html",
       "waitFor": "#task-content",
       "waitForTimeout": 30000,
       "actionsOnce": [
@@ -83,7 +83,7 @@
     },
     {
       "name": "S1 sequence - review failure",
-      "url": "/ui/SequenceUI/audit.html",
+      "url": "/SequenceUI/audit.html",
       "waitFor": "#task-content",
       "waitForTimeout": 30000,
       "actionsOnce": [

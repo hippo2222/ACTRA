@@ -22,7 +22,7 @@ M14 — управляет пользовательскими поверхнос
 | `disabled` | Все prod-флаги выключены. Backend live, но все интеграции скрыты. |
 | `runtime_hidden` | Аналогично `disabled`. Backend live, UI скрыт. |
 | `calendar_stats_only` | Только calendar + statistics integration включены. Runtime/home/editor скрыты. |
-| `runtime_ui` | + Runtime UI `/ui/microcards` включён. Home entry скрыт. |
+| `runtime_ui` | + Runtime UI `/microcards` включён. Home entry скрыт. |
 | `home_entry` | + Microcards card на главном экране. |
 | `manual_editor` | + Manual deck/card CRUD в editor. |
 | `text_import` | + Текстовый импорт `@MICROCARD`. |
@@ -161,7 +161,7 @@ data/telemetry/microcards_prod_rollout_events.jsonl
 
 | Event | Источник | Описание |
 |---|---|---|
-| `microcards_runtime_opened` | Frontend → POST `/api/microcards/runtime/telemetry` | Открытие `/ui/microcards` |
+| `microcards_runtime_opened` | Frontend → POST `/api/microcards/runtime/telemetry` | Открытие `/microcards` |
 | `microcards_runtime_session_started` | Frontend → POST `/api/microcards/runtime/telemetry` | Начало review session |
 | `microcards_runtime_session_completed` | Frontend → POST `/api/microcards/runtime/telemetry` | Завершение review session |
 | `microcards_manual_deck_created` | Backend (server.py) | Ручное создание колоды |

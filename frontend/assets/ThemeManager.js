@@ -347,7 +347,7 @@ const PageTransition = {
                 }
 
                 if (destination.origin !== window.location.origin) return;
-                if (!destination.pathname.startsWith('/ui/')) return;
+                if (!/^\/(ui\/|main|welcome|complexes|editor|theory-|calendar|statistics|microcards|settings|reference|catalog|session\/|S1\/|TestUI\/|SequenceUI\/|ClickUI\/|DrawUI\/|OpenAnswerUI\/|MistakesUI\/)/.test(destination.pathname)) return;
                 if (destination.href === window.location.href) return;
 
                 event.preventDefault();

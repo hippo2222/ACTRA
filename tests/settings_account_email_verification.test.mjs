@@ -15,7 +15,7 @@ function defineGlobal(name, value) {
   });
 }
 
-function setupDom(fetchMock, url = 'http://localhost/ui/settings') {
+function setupDom(fetchMock, url = 'http://localhost/settings') {
   const html = `<!DOCTYPE html>
     <html>
       <body>
@@ -289,7 +289,7 @@ describe('settings pending email verification', () => {
       }),
     });
 
-    dom = setupDom(fetchMock, 'http://localhost/ui/settings?pending_email_token=token-123');
+    dom = setupDom(fetchMock, 'http://localhost/settings?pending_email_token=token-123');
     installCommonUi(dom);
     dom.window.eval(loadScript('frontend/Settings/settings.js'));
     dom.window.document.dispatchEvent(new dom.window.Event('DOMContentLoaded'));
@@ -329,6 +329,6 @@ describe('settings pending email verification', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
     }));
-    expect(dom.window.PageTransition.navigate).toHaveBeenCalledWith('/ui/welcome');
+    expect(dom.window.PageTransition.navigate).toHaveBeenCalledWith('/welcome');
   });
 });

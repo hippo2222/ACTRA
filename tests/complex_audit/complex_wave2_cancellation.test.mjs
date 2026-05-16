@@ -128,7 +128,7 @@ test.describe("complex audit wave 2 cancellation", () => {
       expect(cancelResponse.ok()).toBe(true);
       expect(cancelJson.ok).toBe(true);
 
-      await page.waitForURL(new RegExp("/ui/complexes$"), { timeout: 20000 });
+      await page.waitForURL(new RegExp("/complexes$"), { timeout: 20000 });
       await waitForPageStable(page);
 
       await expect

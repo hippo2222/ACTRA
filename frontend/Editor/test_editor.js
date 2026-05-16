@@ -3289,7 +3289,7 @@ class TestEditor extends BaseEditor {
                     throw new Error(data.error || 'Не удалось удалить задание');
                 }
                 this.showToast('Задание удалено', 'success');
-                window.navigateWithTransition('/ui/editor');
+                window.navigateWithTransition('/editor');
             });
         } catch (err) {
             this.showToast(err.message || 'Ошибка удаления задания', 'error');

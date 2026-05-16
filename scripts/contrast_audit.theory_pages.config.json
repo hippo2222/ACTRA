@@ -18,7 +18,7 @@
   "pages": [
     {
       "name": "Theory Editor",
-      "url": "/ui/editor/Theory_Editor.html",
+      "url": "/editor/Theory_Editor.html",
       "waitFor": "#theory-editor",
       "actionsOnce": [
         { "type": "wait", "ms": 800 },
@@ -36,7 +36,7 @@
     },
     {
       "name": "Theory Center",
-      "url": "/ui/editor/Theory_Center.html",
+      "url": "/editor/Theory_Center.html",
       "waitFor": "#theory-center-list",
       "actionsOnce": [
         { "type": "wait", "ms": 1600 }

@@ -19,10 +19,10 @@
 
     const ROUTES = {
         // UI Routes
-        MAIN: '/ui/main',
-        COMPLEXES: '/ui/complexes',
-        SESSION_RESULTS: (sessionId) => `/ui/session/${encode(sessionId)}/results`,
-        SESSION_TASK: (sessionId) => `/ui/session/${encode(sessionId)}`,
+        MAIN: '/main',
+        COMPLEXES: '/complexes',
+        SESSION_RESULTS: (sessionId) => `/session/${encode(sessionId)}/results`,
+        SESSION_TASK: (sessionId) => `/session/${encode(sessionId)}`,
 
         // API Endpoints
         API: {

@@ -33,7 +33,7 @@ function bindDomGlobals(dom) {
     defineGlobal("URLSearchParams", dom.window.URLSearchParams);
 }
 
-function setupTheoryCenterDom(url = "http://localhost/ui/editor/Theory_Center.html") {
+function setupTheoryCenterDom(url = "http://localhost/editor/Theory_Center.html") {
     const dom = new JSDOM(
         `<!DOCTYPE html><html><body>
             <button id="theory-center-summary-toggle" type="button"></button>
@@ -136,7 +136,7 @@ describe("Theory center regressions", () => {
     });
 
     it("reads scope=all from the query string", () => {
-        const dom = setupTheoryCenterDom("http://localhost/ui/editor/Theory_Center.html?scope=all&q=atlas");
+        const dom = setupTheoryCenterDom("http://localhost/editor/Theory_Center.html?scope=all&q=atlas");
         const { state, readQueryState } = dom.window.__theoryCenterTestExports;
 
         readQueryState();
@@ -146,7 +146,7 @@ describe("Theory center regressions", () => {
     });
 
     it("reads and renders the Premium archive scope", () => {
-        const dom = setupTheoryCenterDom("http://localhost/ui/editor/Theory_Center.html?scope=archived");
+        const dom = setupTheoryCenterDom("http://localhost/editor/Theory_Center.html?scope=archived");
         const { state, readQueryState, renderList, syncControlsFromState } = dom.window.__theoryCenterTestExports;
 
         state.workspaceLimits = {

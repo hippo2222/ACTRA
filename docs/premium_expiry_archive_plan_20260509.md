@@ -118,10 +118,10 @@ Required content:
 
 Suggested route targets:
 
-- `/ui/complexes?filter=archived`
+- `/complexes?filter=archived`
 - editor/dashboard archive filter for tasks
 - theory center/editor archive filter for theories
-- `/ui/settings#premium`
+- `/settings#premium`
 
 ## Complexes UI
 

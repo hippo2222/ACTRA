@@ -182,8 +182,8 @@
     }
 
     const PREMIUM_GATED_UI_PAGES = Object.freeze({
-        '/ui/calendar': '\u041a\u0430\u043b\u0435\u043d\u0434\u0430\u0440\u044c',
-        '/ui/statistics': '\u0421\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u0430',
+        '/calendar': '\u041a\u0430\u043b\u0435\u043d\u0434\u0430\u0440\u044c',
+        '/statistics': '\u0421\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u0430',
     });
     let premiumGateModalOpen = false;
 
@@ -211,10 +211,10 @@
         try {
             if (window.PremiumPromo && typeof window.PremiumPromo.open === 'function') {
                 window.PremiumPromo.open({
-                    title: page.path === '/ui/statistics'
+                    title: page.path === '/statistics'
                         ? '\u041f\u043e\u043b\u043d\u0430\u044f \u0421\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u0430 \u0434\u043e\u0441\u0442\u0443\u043f\u043d\u0430 \u0432 Premium'
                         : '\u041f\u043e\u043b\u043d\u044b\u0439 \u041a\u0430\u043b\u0435\u043d\u0434\u0430\u0440\u044c \u0434\u043e\u0441\u0442\u0443\u043f\u0435\u043d \u0432 Premium',
-                    lead: page.path === '/ui/statistics'
+                    lead: page.path === '/statistics'
                         ? '\u041f\u043e\u043b\u043d\u0430\u044f \u0441\u0432\u043e\u0434\u043a\u0430: \u0437\u0430\u0434\u0430\u0447\u0438, \u0432\u0440\u0435\u043c\u044f, \u043c\u0438\u043a\u0440\u043e\u043a\u0430\u0440\u0442\u043e\u0447\u043a\u0438, \u0441\u0435\u0440\u0438\u044f, \u0433\u0440\u0430\u0444\u0438\u043a, \u0442\u0438\u043f\u044b \u0437\u0430\u0434\u0430\u043d\u0438\u0439 \u0438 \u043a\u043e\u043c\u043f\u043b\u0435\u043a\u0441\u044b.'
                         : '\u041f\u043e\u043b\u043d\u0430\u044f \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0430: Daily Mix, \u043d\u043e\u0432\u044b\u0439 \u043c\u0430\u0442\u0435\u0440\u0438\u0430\u043b, \u0440\u0430\u0441\u043f\u0438\u0441\u0430\u043d\u0438\u0435, \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c \u0438 \u0437\u0434\u043e\u0440\u043e\u0432\u044c\u0435 \u043f\u0430\u043c\u044f\u0442\u0438.',
                 });
@@ -229,14 +229,14 @@
                     variant: 'primary',
                 });
                 if (shouldOpenSettings) {
-                    window.__mainPremiumNavigationBase?.('/ui/settings#premium');
+                    window.__mainPremiumNavigationBase?.('/settings#premium');
                 }
                 return;
             }
 
             const shouldOpenSettings = window.confirm(`${page.label} \u0434\u043e\u0441\u0442\u0443\u043f\u0435\u043d \u0432 Premium. \u041e\u0442\u043a\u0440\u044b\u0442\u044c \u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438 Premium?`);
             if (shouldOpenSettings) {
-                window.__mainPremiumNavigationBase?.('/ui/settings#premium');
+                window.__mainPremiumNavigationBase?.('/settings#premium');
             }
         } finally {
             premiumGateModalOpen = false;
@@ -268,21 +268,21 @@
             key: 'complexes',
             icon: 'inventory_2',
             forms: ['комплекс', 'комплекса', 'комплексов'],
-            target: '/ui/complexes?filter=archived',
+            target: '/complexes?filter=archived',
             actionLabel: 'Открыть комплексы',
         },
         {
             key: 'tasks',
             icon: 'edit_document',
             forms: ['задание', 'задания', 'заданий'],
-            target: '/ui/editor',
+            target: '/editor',
             actionLabel: 'Открыть задания',
         },
         {
             key: 'theories',
             icon: 'hub',
             forms: ['теория', 'теории', 'теорий'],
-            target: '/ui/theory-center',
+            target: '/theory-center',
             actionLabel: 'Открыть теории',
         },
     ]);
@@ -343,7 +343,7 @@
         if (!segments.length) {
             return {
                 icon: 'inventory_2',
-                target: '/ui/complexes?filter=archived',
+                target: '/complexes?filter=archived',
                 actionLabel: 'Разобрать архив',
             };
         }
@@ -357,7 +357,7 @@
         const openBtn = document.getElementById('main-premium-archive-open');
         const premiumBtn = document.getElementById('main-premium-archive-premium');
         openBtn?.addEventListener('click', () => {
-            const target = openBtn.getAttribute('data-target') || '/ui/complexes?filter=archived';
+            const target = openBtn.getAttribute('data-target') || '/complexes?filter=archived';
             window.navigateWithTransition(target);
         });
         premiumBtn?.addEventListener('click', () => {
@@ -368,7 +368,7 @@
                 });
                 return;
             }
-            window.navigateWithTransition('/ui/settings#premium');
+            window.navigateWithTransition('/settings#premium');
         });
     }
 
@@ -524,7 +524,7 @@
                 reason: 'На сегодня уже есть готовый учебный шаг. Это самый быстрый способ войти в рабочий ритм.',
                 label: 'Открыть календарь',
                 icon: 'calendar_month',
-                action: () => window.navigateWithTransition('/ui/calendar'),
+                action: () => window.navigateWithTransition('/calendar'),
             };
         }
 
@@ -534,7 +534,7 @@
                 reason: `Сейчас к повторению ждут ${mainRecommendationState.microcardsDue} карточек. Это самый короткий путь вернуться в обучение.`,
                 label: 'Открыть микрокарточки',
                 icon: 'style',
-                action: () => window.navigateWithTransition('/ui/microcards'),
+                action: () => window.navigateWithTransition('/microcards'),
             };
         }
 
@@ -544,7 +544,7 @@
                 reason: 'После первого прохождения здесь появятся прогресс, календарь и понятная статистика.',
                 label: 'Открыть комплексы',
                 icon: 'playlist_play',
-                action: () => window.navigateWithTransition('/ui/complexes'),
+                action: () => window.navigateWithTransition('/complexes'),
             };
         }
 
@@ -554,7 +554,7 @@
                 reason: 'Если нет времени на длинную сессию, начните с микрокарточек и быстро вернитесь в ритм.',
                 label: 'Открыть микрокарточки',
                 icon: 'style',
-                action: () => window.navigateWithTransition('/ui/microcards'),
+                action: () => window.navigateWithTransition('/microcards'),
             };
         }
 
@@ -563,7 +563,7 @@
             reason: 'Откройте комплексы и выберите следующий шаг без лишних поисков.',
             label: 'Открыть комплексы',
             icon: 'arrow_forward',
-            action: () => window.navigateWithTransition('/ui/complexes'),
+            action: () => window.navigateWithTransition('/complexes'),
         };
     }
 
@@ -988,7 +988,7 @@
             const consentOk = await ensureUserConsent(currentUser.user_id);
             if (!consentOk) {
                 mainBootRedirecting = true;
-                window.navigateWithTransition('/ui/welcome');
+                window.navigateWithTransition('/welcome');
                 return;
             }
 
@@ -1265,7 +1265,7 @@
         } else {
             // No active user — redirect to Welcome Screen
             mainBootRedirecting = true;
-            window.navigateWithTransition('/ui/welcome');
+            window.navigateWithTransition('/welcome');
         }
     }
 
@@ -2119,7 +2119,7 @@
         if (!enabled) return;
         cardEl.setAttribute('role', 'link');
         cardEl.setAttribute('tabindex', '0');
-        cardEl.setAttribute('data-nav', '/ui/microcards');
+        cardEl.setAttribute('data-nav', '/microcards');
         cardEl.classList.add('interactive-card', 'cursor-pointer', 'hover:border-primary');
     }
 
@@ -2771,7 +2771,7 @@
                     cta.id = 'quick-access-empty-cta';
                     cta.className = 'qa-empty-cta btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm font-bold';
                     cta.textContent = 'Открыть комплексы';
-                    cta.addEventListener('click', () => window.navigateWithTransition('/ui/complexes'));
+                    cta.addEventListener('click', () => window.navigateWithTransition('/complexes'));
                     emptyActions.appendChild(cta);
                 }
                 if (cta.parentElement !== emptyActions) {
@@ -3196,7 +3196,7 @@
         const resumeUrl =
             (typeof preferredResumeUrl === "string" && preferredResumeUrl) ||
             (typeof data?.resume_target?.url === "string" && data.resume_target.url) ||
-            `/ui/session/${encodeURIComponent(sessionId)}`;
+            `/session/${encodeURIComponent(sessionId)}`;
         window.navigateWithTransition(resumeUrl);
         return true;
     }
@@ -3234,7 +3234,7 @@
         }
 
         await markRecentComplex(complexId);
-        window.navigateWithTransition(`/ui/session/${data.session_id}`);
+        window.navigateWithTransition(`/session/${data.session_id}`);
         return true;
     }
 

@@ -699,7 +699,7 @@
             if (!response.ok || !data?.ok) {
                 throw new Error(data?.error || 'auth_logout_failed');
             }
-            navigateTo('/ui/welcome');
+            navigateTo('/welcome');
         } catch (error) {
             console.error('[Settings] Failed to logout:', error);
             showVoiceToast({
@@ -1853,7 +1853,7 @@
                 impact: '\u041f\u043e\u0447\u0442\u0430 \u0438 \u0441\u0432\u044f\u0437\u0430\u043d\u043d\u044b\u0435 \u0434\u0430\u043d\u043d\u044b\u0435 \u043e\u0441\u0432\u043e\u0431\u043e\u0436\u0434\u0435\u043d\u044b.',
                 next: '\u041c\u043e\u0436\u043d\u043e \u0437\u0430\u0440\u0435\u0433\u0438\u0441\u0442\u0440\u0438\u0440\u043e\u0432\u0430\u0442\u044c\u0441\u044f \u0441\u043d\u043e\u0432\u0430 \u0441 \u0442\u043e\u0439 \u0436\u0435 \u043f\u043e\u0447\u0442\u043e\u0439.',
             });
-            navigateTo('/ui/welcome');
+            navigateTo('/welcome');
         } catch (error) {
             const code = String(error?.message || '');
             const message = code === 'password_required_for_delete'
@@ -2356,7 +2356,7 @@
         if (mainBtn) {
             mainBtn.addEventListener('click', (event) => {
                 event.preventDefault();
-                navigateTo('/ui/main');
+                navigateTo('/main');
             });
         }
 

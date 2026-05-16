@@ -54,7 +54,7 @@ export async function waitForCalendarPropagation(baseUrl, fixture, options = {})
 }
 
 export async function openCalendar(page, baseUrl) {
-  await page.goto(new URL("/ui/calendar", baseUrl).toString());
+  await page.goto(new URL("/calendar", baseUrl).toString());
   await waitForPageStable(page);
 }
 

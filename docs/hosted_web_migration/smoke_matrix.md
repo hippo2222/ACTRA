@@ -256,7 +256,7 @@ npm run smoke:launch-acceptance:hosted
 - launch env contract валиден ещё до старта Docker stack;
 - companion contour `npm run smoke:complex-passage:hosted:infra` проходит рядом как часть launch story;
 - live `docker-compose.hosted.yml` stack поднимается и экспортирует `green` `launch_contract` через `/api/ready`;
-- hosted auth lifecycle проходит на живом stack без dev bridge: `register -> verify -> me -> logout -> login -> forgot-password request -> /ui/main`.
+- hosted auth lifecycle проходит на живом stack без dev bridge: `register -> verify -> me -> logout -> login -> forgot-password request -> /main`.
 
 Recorded local result от `2026-04-20`:
 

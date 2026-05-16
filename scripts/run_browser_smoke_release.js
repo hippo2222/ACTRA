@@ -58,12 +58,12 @@ async function finishSmokeSessionFromS1(page) {
 }
 
 async function goToComplexesFromMain(page, baseUrl) {
-  await page.goto(resolveUrl(baseUrl, "/ui/main"), {
+  await page.goto(resolveUrl(baseUrl, "/main"), {
     waitUntil: "domcontentloaded",
     timeout: 60000,
   });
   await waitForVisible(page, "#app-content", 20000);
-  await page.locator('[data-nav="/ui/complexes"]').first().click();
+  await page.locator('[data-nav="/complexes"]').first().click();
   await page.waitForURL(/\/ui\/complexes(?:[?#]|$)/, { timeout: 30000 });
   await waitForVisible(page, `button.start-btn[data-complex-id="${FIXTURE.complexId}"]`, 20000);
 }
@@ -85,7 +85,7 @@ async function waitForComplexesTheoryFilter(page, theoryId, timeout = 30000) {
     (expectedTheoryId) => {
       const url = new URL(window.location.href);
       return (
-        url.pathname.startsWith("/ui/complexes") &&
+        url.pathname.startsWith("/complexes") &&
         url.searchParams.get("theory_id") === expectedTheoryId
       );
     },
@@ -99,7 +99,7 @@ async function waitForTheoryEditorUrl(page, theoryId, timeout = 30000) {
     (expectedTheoryId) => {
       const url = new URL(window.location.href);
       return (
-        url.pathname === "/ui/editor/Theory_Editor.html" &&
+        url.pathname === "/editor/Theory_Editor.html" &&
         url.searchParams.get("theory_id") === expectedTheoryId
       );
     },
@@ -157,7 +157,7 @@ async function setTheme(page, themeId, timeout = 20000) {
 }
 
 async function openTopicTheoryModal(page, baseUrl, fixture) {
-  await page.goto(resolveUrl(baseUrl, "/ui/editor"), {
+  await page.goto(resolveUrl(baseUrl, "/editor"), {
     waitUntil: "domcontentloaded",
     timeout: 60000,
   });
@@ -210,8 +210,8 @@ async function waitForEditorTaskCard(page, uniqueId, timeout = 30000) {
 
 async function openComplexTheoryModal(page, baseUrl, fixture, options = {}) {
   const initialPath = options.filtered
-    ? `/ui/complexes?theory_id=${encodeURIComponent(fixture.theoryId)}`
-    : "/ui/complexes";
+    ? `/complexes?theory_id=${encodeURIComponent(fixture.theoryId)}`
+    : "/complexes";
   await page.goto(resolveUrl(baseUrl, initialPath), {
     waitUntil: "domcontentloaded",
     timeout: 60000,
@@ -268,7 +268,7 @@ async function waitForBuilderTheoryContext(page, fixture, timeout = 30000) {
 }
 
 async function scenarioWelcomeToMain({ page, baseUrl, fixture }) {
-  await page.goto(resolveUrl(baseUrl, "/ui/welcome"), {
+  await page.goto(resolveUrl(baseUrl, "/welcome"), {
     waitUntil: "domcontentloaded",
     timeout: 60000,
   });
@@ -336,7 +336,7 @@ async function scenarioMainToComplexesToS1({ page, baseUrl, fixture }) {
 
 async function scenarioS1CoreSession({ page, baseUrl, fixture }) {
   await cancelActiveSessionsForComplex(baseUrl, fixture.complexId);
-  await page.goto(resolveUrl(baseUrl, "/ui/complexes"), {
+  await page.goto(resolveUrl(baseUrl, "/complexes"), {
     waitUntil: "domcontentloaded",
     timeout: 60000,
   });
@@ -376,7 +376,7 @@ async function scenarioS1CoreSession({ page, baseUrl, fixture }) {
 
 async function scenarioS3BasicResults({ page, baseUrl, fixture }) {
   await cancelActiveSessionsForComplex(baseUrl, fixture.complexId);
-  await page.goto(resolveUrl(baseUrl, "/ui/complexes"), {
+  await page.goto(resolveUrl(baseUrl, "/complexes"), {
     waitUntil: "domcontentloaded",
     timeout: 60000,
   });
@@ -464,7 +464,7 @@ async function scenarioComplexesTheoryModalBuilderContext({
   await page.goto(
     resolveUrl(
       baseUrl,
-      `/ui/complexes/create?id=${encodeURIComponent(fixture.complexId)}`
+      `/complexes/create?id=${encodeURIComponent(fixture.complexId)}`
     ),
     {
       waitUntil: "domcontentloaded",
@@ -475,7 +475,7 @@ async function scenarioComplexesTheoryModalBuilderContext({
 }
 
 async function scenarioStatisticsTheoryFlow({ page, baseUrl, fixture }) {
-  await page.goto(resolveUrl(baseUrl, "/ui/statistics"), {
+  await page.goto(resolveUrl(baseUrl, "/statistics"), {
     waitUntil: "domcontentloaded",
     timeout: 60000,
   });
@@ -503,7 +503,7 @@ async function scenarioStatisticsTheoryFlow({ page, baseUrl, fixture }) {
 
 async function scenarioCalendarRecommendedAction({ page, baseUrl, fixture }) {
   await cancelActiveSessionsForComplex(baseUrl, fixture.complexId);
-  await page.goto(resolveUrl(baseUrl, "/ui/calendar"), {
+  await page.goto(resolveUrl(baseUrl, "/calendar"), {
     waitUntil: "domcontentloaded",
     timeout: 60000,
   });
@@ -532,7 +532,7 @@ async function scenarioCalendarRecommendedAction({ page, baseUrl, fixture }) {
 
 async function startFixtureSessionFromComplexes(page, baseUrl, fixture) {
   await cancelActiveSessionsForComplex(baseUrl, fixture.complexId);
-  await page.goto(resolveUrl(baseUrl, "/ui/complexes"), {
+  await page.goto(resolveUrl(baseUrl, "/complexes"), {
     waitUntil: "domcontentloaded",
     timeout: 60000,
   });
@@ -556,7 +556,7 @@ async function scenarioMicrocardsBasicReview({ page, baseUrl, fixture }) {
     throw new Error("microcards_basic_review.missing_fixture_deck");
   }
 
-  await page.goto(resolveUrl(baseUrl, "/ui/microcards"), {
+  await page.goto(resolveUrl(baseUrl, "/microcards"), {
     waitUntil: "domcontentloaded",
     timeout: 60000,
   });
@@ -636,7 +636,7 @@ async function scenarioMicrocardsEditorImportFlow({ page, baseUrl, fixture }) {
   const importFront = "Smoke import front";
   const importBack = "Smoke import back";
 
-  await page.goto(resolveUrl(baseUrl, "/ui/editor"), {
+  await page.goto(resolveUrl(baseUrl, "/editor"), {
     waitUntil: "domcontentloaded",
     timeout: 60000,
   });
@@ -749,7 +749,7 @@ async function scenarioEditorArchiveExportImportFlow({
     await page.goto(
       resolveUrl(
         baseUrl,
-        `/ui/editor?module=${encodeURIComponent(taskFixture.moduleId)}&topic=${encodeURIComponent(
+        `/editor?module=${encodeURIComponent(taskFixture.moduleId)}&topic=${encodeURIComponent(
           taskFixture.topicId
         )}`
       ),
@@ -870,7 +870,7 @@ async function scenarioComplexArchiveImportFlow({
   );
 
   try {
-    await page.goto(resolveUrl(baseUrl, "/ui/complexes"), {
+    await page.goto(resolveUrl(baseUrl, "/complexes"), {
       waitUntil: "domcontentloaded",
       timeout: 60000,
     });
@@ -961,13 +961,13 @@ async function scenarioComplexArchiveImportFlow({
 async function scenarioSettingsThemePersistence({ page, baseUrl }) {
   const targetTheme = "dark-b";
 
-  await page.goto(resolveUrl(baseUrl, "/ui/editor"), {
+  await page.goto(resolveUrl(baseUrl, "/editor"), {
     waitUntil: "domcontentloaded",
     timeout: 60000,
   });
   await setTheme(page, targetTheme, 30000);
 
-  await page.goto(resolveUrl(baseUrl, "/ui/settings"), {
+  await page.goto(resolveUrl(baseUrl, "/settings"), {
     waitUntil: "domcontentloaded",
     timeout: 60000,
   });
@@ -1028,7 +1028,7 @@ async function scenarioGuardS1ReloadResume({ page, baseUrl, fixture }) {
 
 async function scenarioGuardS1MissingSessionRedirect({ page, baseUrl }) {
   const missingSessionId = "guardrail-missing-session-404";
-  await page.goto(resolveUrl(baseUrl, `/ui/session/${missingSessionId}`), {
+  await page.goto(resolveUrl(baseUrl, `/session/${missingSessionId}`), {
     waitUntil: "domcontentloaded",
     timeout: 60000,
   });
@@ -1041,7 +1041,7 @@ async function scenarioGuardS1MissingSessionRedirect({ page, baseUrl }) {
         !!banner &&
         !banner.classList.contains("hidden") &&
         String(banner.textContent || "").includes("Сессия не найдена");
-      return url.pathname === "/ui/main" || bannerVisible;
+      return url.pathname === "/main" || bannerVisible;
     },
     null,
     { timeout: 10000 }
@@ -1069,7 +1069,7 @@ async function scenarioGuardEmptyUserSurfaces({ page, baseUrl, fixture }) {
 
     await selectUser(baseUrl, tempUserId);
 
-    await page.goto(resolveUrl(baseUrl, "/ui/main"), {
+    await page.goto(resolveUrl(baseUrl, "/main"), {
       waitUntil: "domcontentloaded",
       timeout: 60000,
     });
@@ -1098,7 +1098,7 @@ async function scenarioGuardEmptyUserSurfaces({ page, baseUrl, fixture }) {
       { timeout: 30000 }
     );
 
-    await page.goto(resolveUrl(baseUrl, "/ui/complexes"), {
+    await page.goto(resolveUrl(baseUrl, "/complexes"), {
       waitUntil: "domcontentloaded",
       timeout: 60000,
     });
@@ -1116,7 +1116,7 @@ async function scenarioGuardEmptyUserSurfaces({ page, baseUrl, fixture }) {
       { timeout: 30000 }
     );
 
-    await page.goto(resolveUrl(baseUrl, "/ui/calendar"), {
+    await page.goto(resolveUrl(baseUrl, "/calendar"), {
       waitUntil: "domcontentloaded",
       timeout: 60000,
     });
@@ -1137,7 +1137,7 @@ async function scenarioGuardEmptyUserSurfaces({ page, baseUrl, fixture }) {
       { timeout: 30000 }
     );
 
-    await page.goto(resolveUrl(baseUrl, "/ui/microcards"), {
+    await page.goto(resolveUrl(baseUrl, "/microcards"), {
       waitUntil: "domcontentloaded",
       timeout: 60000,
     });
@@ -1177,7 +1177,7 @@ async function scenarioGuardEmptyUserSurfaces({ page, baseUrl, fixture }) {
 
 async function scenarioGuardEditorInvalidTheoryHub({ page, baseUrl }) {
   await page.goto(
-    resolveUrl(baseUrl, "/ui/editor?theory_hub=1&theory_id=guardrail_missing_theory"),
+    resolveUrl(baseUrl, "/editor?theory_hub=1&theory_id=guardrail_missing_theory"),
     {
       waitUntil: "domcontentloaded",
       timeout: 60000,
@@ -1190,7 +1190,7 @@ async function scenarioGuardEditorInvalidTheoryHub({ page, baseUrl }) {
 
 async function scenarioGuardComplexesUnknownTheoryFilter({ page, baseUrl, fixture }) {
   await page.goto(
-    resolveUrl(baseUrl, "/ui/complexes?theory_id=guardrail_missing_theory"),
+    resolveUrl(baseUrl, "/complexes?theory_id=guardrail_missing_theory"),
     {
       waitUntil: "domcontentloaded",
       timeout: 60000,
@@ -1226,7 +1226,7 @@ async function scenarioGuardComplexesUnknownTheoryFilter({ page, baseUrl, fixtur
 async function scenarioGuardSettingsDraftRecovery({ page, baseUrl }) {
   const draftValue = "smoke-draft-openrouter-key";
 
-  await page.goto(resolveUrl(baseUrl, "/ui/settings"), {
+  await page.goto(resolveUrl(baseUrl, "/settings"), {
     waitUntil: "domcontentloaded",
     timeout: 60000,
   });

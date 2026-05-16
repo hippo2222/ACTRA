@@ -576,7 +576,7 @@
         hide(error);
         if (empty) {
             const textBlocks = empty.querySelectorAll('p');
-            const editorLink = empty.querySelector('a[href="/ui/editor"]');
+            const editorLink = empty.querySelector('a[href="/editor"]');
             if (textBlocks[0]) textBlocks[0].textContent = 'Функционал в разработке';
             if (textBlocks[1]) textBlocks[1].textContent = 'Микрокарточки временно скрыты из продукта. Вернём этот режим после следующего этапа доработки.';
             if (editorLink) editorLink.classList.add('hidden');

@@ -90,7 +90,7 @@ describe("Complexes create theory asset refs", () => {
 
   it("normalizes hosted local-image asset ids into canonical asset URLs", () => {
     const dom = new JSDOM("<!doctype html><html><body></body></html>", {
-      url: "http://localhost/ui/complexes/create",
+      url: "http://localhost/complexes/create",
     });
     const helpers = buildHelpers(dom);
 
@@ -101,7 +101,7 @@ describe("Complexes create theory asset refs", () => {
 
   it("renders hosted theory image segments with asset-first refs", () => {
     const dom = new JSDOM("<!doctype html><html><body></body></html>", {
-      url: "http://localhost/ui/complexes/create",
+      url: "http://localhost/complexes/create",
     });
     const helpers = buildHelpers(dom);
 

@@ -55,7 +55,7 @@
 
                 <div class="flex items-center gap-3">
 
-                    <a href="/ui/main" class="icon-button-muted" title="На главную">
+                    <a href="/main" class="icon-button-muted" title="На главную">
                         <span class="material-symbols-outlined">arrow_back</span>
                     </a>
 
@@ -1677,7 +1677,7 @@
 
                 if (ok && data.session_id) {
 
-                    window.navigateWithTransition(`/ui/session/${data.session_id}`);
+                    window.navigateWithTransition(`/session/${data.session_id}`);
 
                     return true;
 
@@ -1685,7 +1685,7 @@
 
                 if (res.status === 409 && data.error === 'paused_session_exists' && data.session_id) {
 
-                    window.navigateWithTransition(`/ui/session/${data.session_id}`);
+                    window.navigateWithTransition(`/session/${data.session_id}`);
 
                     return true;
 
@@ -1729,7 +1729,7 @@
 
                     if (ok && data.session_id) {
 
-                        window.navigateWithTransition(`/ui/session/${data.session_id}`);
+                        window.navigateWithTransition(`/session/${data.session_id}`);
 
                         return;
 
@@ -1754,7 +1754,7 @@
 
                     setTimeout(() => {
 
-                        window.navigateWithTransition('/ui/complexes');
+                        window.navigateWithTransition('/complexes');
 
                     }, 250);
 
@@ -1782,7 +1782,7 @@
 
                 setTimeout(() => {
 
-                    window.navigateWithTransition('/ui/complexes');
+                    window.navigateWithTransition('/complexes');
 
                 }, 250);
 
@@ -1971,7 +1971,7 @@
                 <p class="empty-state-card__title">Нет активных комплексов</p>
                 <p class="empty-state-card__copy text-sm">Запустите любой комплекс, чтобы появилась подборка повторения.</p>
                 <div class="empty-state-card__actions">
-                    <button type="button" data-nav-target="/ui/complexes" class="btn-secondary text-xs">
+                    <button type="button" data-nav-target="/complexes" class="btn-secondary text-xs">
                         Перейти к комплексам
                         <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
                     </button>
@@ -2067,7 +2067,7 @@
                 <p class="empty-state-card__title">Нет активных комплексов</p>
                 <p class="empty-state-card__copy text-sm">Запустите комплекс, чтобы появилась подборка "Изучение".</p>
                 <div class="empty-state-card__actions">
-                    <button type="button" data-nav-target="/ui/complexes" class="btn-secondary text-xs">
+                    <button type="button" data-nav-target="/complexes" class="btn-secondary text-xs">
                         Перейти к комплексам
                         <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
                     </button>
@@ -2153,7 +2153,7 @@
                     </div>
                     <p class="calendar-microcards-summary__status">${statusLine}</p>
                     ${todayLine ? `<p class="calendar-microcards-summary__today">${todayLine}</p>` : ''}
-                    ${hasDue ? `<a href="/ui/microcards" class="calendar-microcards-summary__link">
+                    ${hasDue ? `<a href="/microcards" class="calendar-microcards-summary__link">
                         Повторить
                         <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
                     </a>` : ''}
@@ -2466,7 +2466,7 @@
                     ` : `
                         <div class="schedule-plan-empty">
                             ${isEmptyPlaceholder && isToday
-                                ? `<button type="button" data-nav-target="/ui/complexes" class="schedule-plan-empty__action">Запустить комплекс</button>`
+                                ? `<button type="button" data-nav-target="/complexes" class="schedule-plan-empty__action">Запустить комплекс</button>`
                                 : `<span>${isRestDay ? 'День без нагрузки' : isMissed ? 'План не выполнен' : isEmptyPlaceholder && day.is_future ? 'Будет доступно' : 'Повторов нет'}</span>`}
                         </div>
                     `}
@@ -3433,7 +3433,7 @@
 
         function openHealthDetails() {
 
-            window.navigateWithTransition('/ui/complexes');
+            window.navigateWithTransition('/complexes');
 
         }
 

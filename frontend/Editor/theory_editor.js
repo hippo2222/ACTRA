@@ -1,5 +1,5 @@
-const THEORY_EDITOR_ROUTE = "/ui/editor/Theory_Editor.html";
-const THEORY_CENTER_ROUTE = "/ui/editor/Theory_Center.html";
+const THEORY_EDITOR_ROUTE = "/editor/Theory_Editor.html";
+const THEORY_CENTER_ROUTE = "/editor/Theory_Center.html";
 const EMPTY_THEORY_DELTA = { ops: [{ insert: "\n" }] };
 const THEORY_DEFAULT_TEXT_COLOR_FALLBACK = "#1A1A1A";
 const THEORY_DRAFT_STORAGE_PREFIX = "theory-editor-draft:";
@@ -463,7 +463,7 @@ function parseTheoryEditorContext() {
     const theoryId = String(params.get("theory_id") || "").trim();
     const context = String(params.get("context") || "").trim();
     const returnUrl = normalizeTheoryWorkspaceUrl(String(params.get("return_url") || "").trim(), theoryId)
-        || "/ui/editor";
+        || "/editor";
 
     return {
         theoryId,
@@ -561,7 +561,7 @@ function resolveTheoryCenterUrl() {
 }
 
 function resolveTheoryComplexesUrl() {
-    return "/ui/complexes";
+    return "/complexes";
 }
 
 function getTheoryDraftScopeId(theoryId = "") {
@@ -774,7 +774,7 @@ function renderTheoryContextHeader() {
         backBtn.classList.toggle("hidden", isCenterReturn);
         if (isCenterReturn) {
             backLabel.textContent = "К центру теории";
-        } else if (returnUrl.includes("/ui/editor")) {
+        } else if (returnUrl.includes("/editor")) {
             backLabel.textContent = "К редактору заданий";
         } else {
             backLabel.textContent = "Назад";

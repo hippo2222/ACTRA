@@ -25,7 +25,7 @@ import * as path from 'path';
  */
 
 const BASE_URL = 'http://localhost:8000';
-const EDITOR_URL = `${BASE_URL}/ui/theory-editor`;
+const EDITOR_URL = `${BASE_URL}/theory-editor`;
 const DATA_DIR = path.join(process.cwd(), 'data', 'complexes', 'theories');
 
 // Увеличенные таймауты согласно парадигме

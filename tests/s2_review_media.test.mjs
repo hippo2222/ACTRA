@@ -78,7 +78,7 @@ function createIterationPayload(overrides = {}) {
 
 function setupDom(options = {}) {
   const {
-    url = "http://localhost/ui/session/sess-1/iteration/1",
+    url = "http://localhost/session/sess-1/iteration/1",
     payload = createIterationPayload(),
     sharedLightbox = null,
   } = options;

@@ -5,7 +5,7 @@ const BASE_URL = 'http://localhost:8000';
 test.describe('Центр теории - Базовые проверки', () => {
   
   test('Страница редактора загружается без ошибок', async ({ page }) => {
-    await page.goto(`${BASE_URL}/ui/editor`);
+    await page.goto(`${BASE_URL}/editor`);
     
     // Проверяем, что страница загрузилась
     await expect(page).toHaveTitle(/ACTRA/);
@@ -16,7 +16,7 @@ test.describe('Центр теории - Базовые проверки', () =>
   });
   
   test('Кнопка "Центр теории" присутствует в хедере', async ({ page }) => {
-    await page.goto(`${BASE_URL}/ui/editor`);
+    await page.goto(`${BASE_URL}/editor`);
     await page.waitForLoadState('networkidle');
     
     // Ищем кнопку по ID
@@ -28,7 +28,7 @@ test.describe('Центр теории - Базовые проверки', () =>
   });
   
   test('Текст "Worker Sync" отсутствует на странице (заменён на "Автосинхронизация")', async ({ page }) => {
-    await page.goto(`${BASE_URL}/ui/editor`);
+    await page.goto(`${BASE_URL}/editor`);
     await page.waitForLoadState('networkidle');
     
     // Получаем весь текст страницы

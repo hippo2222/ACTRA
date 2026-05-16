@@ -117,7 +117,7 @@ async function pauseCurrentRunFromS1(page, sessionId) {
 }
 
 async function assertResumedPausedSession(page, sessionId, expectedTaskName) {
-  await page.waitForURL(new RegExp(`/ui/session/${sessionId}$`), { timeout: 20000 });
+  await page.waitForURL(new RegExp(`/session/${sessionId}$`), { timeout: 20000 });
   await waitForPageStable(page);
 
   expect(extractSessionIdFromUrl(page.url())).toBe(sessionId);
@@ -155,7 +155,7 @@ test.describe("complex audit wave 2 main entry surfaces", () => {
       await moveSmokeRunToSecondTask(page, sessionId, fixture);
       await pauseCurrentRunFromS1(page, sessionId);
 
-      await page.goto(new URL("/ui/main", runtime.baseUrl).toString());
+      await page.goto(new URL("/main", runtime.baseUrl).toString());
       await waitForPageStable(page);
 
       await expect(page.locator("#mainNextStepBanner")).toHaveCount(0);
@@ -183,7 +183,7 @@ test.describe("complex audit wave 2 main entry surfaces", () => {
 
       await pauseCurrentRunFromS1(page, sessionId);
 
-      await page.goto(new URL("/ui/main", runtime.baseUrl).toString());
+      await page.goto(new URL("/main", runtime.baseUrl).toString());
       await waitForPageStable(page);
 
       await expect(page.locator("#quick-access-list")).toContainText(

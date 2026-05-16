@@ -82,7 +82,7 @@ function setupDom(fetchMock) {
     </html>`;
 
   const dom = new JSDOM(html, {
-    url: 'http://localhost/ui/settings',
+    url: 'http://localhost/settings',
     runScripts: 'dangerously',
     resources: 'usable',
   });

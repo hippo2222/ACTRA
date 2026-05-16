@@ -19,7 +19,7 @@
   "pages": [
     {
       "name": "Complex Create (empty baseline)",
-      "url": "/ui/complexes/create",
+      "url": "/complexes/create",
       "waitFor": "#name",
       "actionsOnce": [
         { "type": "wait", "ms": 1500 }
@@ -36,7 +36,7 @@
     },
     {
       "name": "Complex Create (populated builder)",
-      "url": "/ui/complexes/create",
+      "url": "/complexes/create",
       "waitFor": "#name",
       "actionsOnce": [
         { "type": "wait", "ms": 1500 },
@@ -58,7 +58,7 @@
     },
     {
       "name": "Complex Create (theory linked editor)",
-      "url": "/ui/complexes/create",
+      "url": "/complexes/create",
       "waitFor": "#name",
       "actionsOnce": [
         { "type": "wait", "ms": 1500 },
@@ -83,7 +83,7 @@
     },
     {
       "name": "Complex Create (theory inherited sync)",
-      "url": "/ui/complexes/create",
+      "url": "/complexes/create",
       "waitFor": "#name",
       "actionsOnce": [
         { "type": "wait", "ms": 1500 },
@@ -102,7 +102,7 @@
     },
     {
       "name": "Complex Create (task context menu)",
-      "url": "/ui/complexes/create",
+      "url": "/complexes/create",
       "waitFor": "#name",
       "actionsOnce": [
         { "type": "wait", "ms": 1500 },
@@ -121,7 +121,7 @@
     },
     {
       "name": "Complex Create (complexes tab context menu)",
-      "url": "/ui/complexes/create",
+      "url": "/complexes/create",
       "waitFor": "#name",
       "actionsOnce": [
         { "type": "wait", "ms": 1500 },
@@ -140,13 +140,13 @@
     },
     {
       "name": "Complex Create (unsaved changes modal)",
-      "url": "/ui/complexes/create",
+      "url": "/complexes/create",
       "waitFor": "#name",
       "actionsOnce": [
         { "type": "wait", "ms": 1500 },
         {
           "type": "evaluate",
-          "script": "document.getElementById('name').value='Черновой комплекс'; showUnsavedChangesModal('/ui/complexes'); return {ok:true};",
+          "script": "document.getElementById('name').value='Черновой комплекс'; showUnsavedChangesModal('/complexes'); return {ok:true};",
           "waitMs": 120
         },
         { "type": "waitFor", "selector": "#unsaved-changes-modal.flex" }
@@ -158,7 +158,7 @@
     },
     {
       "name": "Complex Create (draft recovery modal)",
-      "url": "/ui/complexes/create",
+      "url": "/complexes/create",
       "waitFor": "#name",
       "actionsOnce": [
         { "type": "wait", "ms": 1500 },
@@ -178,7 +178,7 @@
     },
     {
       "name": "Complex Create (history modal)",
-      "url": "/ui/complexes/create",
+      "url": "/complexes/create",
       "waitFor": "#name",
       "actionsOnce": [
         { "type": "wait", "ms": 1500 },
@@ -196,7 +196,7 @@
     },
     {
       "name": "Complex Create (version conflict modal)",
-      "url": "/ui/complexes/create",
+      "url": "/complexes/create",
       "waitFor": "#name",
       "actionsOnce": [
         { "type": "wait", "ms": 1500 },

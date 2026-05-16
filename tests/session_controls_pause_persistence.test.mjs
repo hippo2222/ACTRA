@@ -61,8 +61,8 @@ describe("SessionControls explicit pause", () => {
       saveDraft: vi.fn(),
     };
     window.SessionRoutes = {
-      COMPLEXES: "/ui/complexes",
-      MAIN: "/ui/main",
+      COMPLEXES: "/complexes",
+      MAIN: "/main",
       API: {
         PAUSE: vi.fn((sessionId) => `/api/session/${sessionId}/pause`),
       },
@@ -120,7 +120,7 @@ describe("SessionControls explicit pause", () => {
         },
       },
     });
-    expect(window.navigateWithTransition).toHaveBeenCalledWith("/ui/complexes");
+    expect(window.navigateWithTransition).toHaveBeenCalledWith("/complexes");
     expect(window.SessionState.skipBeforeUnloadPrompt).toBe(true);
   });
 

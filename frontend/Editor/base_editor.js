@@ -1609,10 +1609,10 @@ class BaseEditor {
         if (backBtn) {
             backBtn.addEventListener('click', () => {
                 if (typeof window.navigateWithTransition === 'function') {
-                    window.navigateWithTransition('/ui/editor');
+                    window.navigateWithTransition('/editor');
                     return;
                 }
-                window.location.href = '/ui/editor';
+                window.location.href = '/editor';
             });
         }
     }
@@ -2287,11 +2287,11 @@ class BaseEditor {
         }
 
         if (typeof window.navigateWithTransition === 'function') {
-            window.navigateWithTransition('/ui/editor');
+            window.navigateWithTransition('/editor');
             return;
         }
 
-        window.location.href = '/ui/editor';
+        window.location.href = '/editor';
     }
 
     _normalizeIntIdList(values) {
@@ -2962,12 +2962,12 @@ class BaseEditor {
                 onConfirm: () => {
                     this.hasUnsavedChanges = false;
                     window.removeEventListener('beforeunload', this._beforeUnloadHandler);
-                    window.navigateWithTransition('/ui/editor');
+                    window.navigateWithTransition('/editor');
                 }
             });
             return;
         }
-        window.navigateWithTransition('/ui/editor');
+        window.navigateWithTransition('/editor');
     }
 
     /**
@@ -3147,13 +3147,13 @@ class BaseEditor {
                 onConfirm: () => {
                     this.hasUnsavedChanges = false;
                     this.teardownNavigationGuards();
-                    window.navigateWithTransition('/ui/editor');
+                    window.navigateWithTransition('/editor');
                 }
             });
             return;
         }
         this.teardownNavigationGuards();
-        window.navigateWithTransition('/ui/editor');
+        window.navigateWithTransition('/editor');
     }
 
     setupBeforeUnloadWarning() {

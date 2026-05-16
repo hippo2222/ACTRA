@@ -17,7 +17,7 @@
   "pages": [
     {
       "name": "S1 state matrix - answering",
-      "url": "/ui/session/session_auto_placeholder",
+      "url": "/session/session_auto_placeholder",
       "autoSession": {
         "preferredIteration": 1,
         "complexId": "contrast_audit_s1_seed",
@@ -54,7 +54,7 @@
     },
     {
       "name": "S1 state matrix - review success",
-      "url": "/ui/session/session_auto_placeholder",
+      "url": "/session/session_auto_placeholder",
       "autoSession": {
         "preferredIteration": 1,
         "complexId": "contrast_audit_s1_seed",
@@ -91,7 +91,7 @@
     },
     {
       "name": "S1 state matrix - review failure",
-      "url": "/ui/session/session_auto_placeholder",
+      "url": "/session/session_auto_placeholder",
       "autoSession": {
         "preferredIteration": 1,
         "complexId": "contrast_audit_s1_seed",
@@ -128,7 +128,7 @@
     },
     {
       "name": "S1 state matrix - pause modal",
-      "url": "/ui/session/session_auto_placeholder",
+      "url": "/session/session_auto_placeholder",
       "autoSession": {
         "preferredIteration": 1,
         "complexId": "contrast_audit_s1_seed",
@@ -164,7 +164,7 @@
     },
     {
       "name": "S1 state matrix - resume modal",
-      "url": "/ui/session/session_auto_placeholder",
+      "url": "/session/session_auto_placeholder",
       "autoSession": {
         "preferredIteration": 1,
         "complexId": "contrast_audit_s1_seed",

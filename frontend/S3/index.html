@@ -238,7 +238,7 @@
 
     function buildTheoryEditorUrl(theoryId, returnUrl = "") {
       const normalizedTheoryId = String(theoryId || "").trim();
-      const url = new URL("/ui/editor/Theory_Editor.html", window.location.origin);
+      const url = new URL("/editor/Theory_Editor.html", window.location.origin);
       if (normalizedTheoryId) url.searchParams.set("theory_id", normalizedTheoryId);
       const normalizedReturnUrl = String(returnUrl || "").trim();
       if (normalizedReturnUrl) url.searchParams.set("return_url", normalizedReturnUrl);
@@ -247,7 +247,7 @@
 
     function buildTheoryCenterUrl(theoryId = "") {
       const normalizedTheoryId = String(theoryId || "").trim();
-      const url = new URL("/ui/theory-center", window.location.origin);
+      const url = new URL("/theory-center", window.location.origin);
       url.searchParams.set("scope", "complexes");
       if (normalizedTheoryId) url.searchParams.set("q", normalizedTheoryId);
       return `${url.pathname}${url.search}`;
@@ -1509,15 +1509,15 @@
 
       document.getElementById("close-btn")?.addEventListener("click", () => {
         if (window.opener) window.close();
-        window.navigateWithTransition("/ui/main");
+        window.navigateWithTransition("/main");
       });
 
       document.getElementById("to-main-btn")?.addEventListener("click", () => {
-        window.navigateWithTransition("/ui/main");
+        window.navigateWithTransition("/main");
       });
 
       document.getElementById("to-complexes-btn")?.addEventListener("click", () => {
-        window.navigateWithTransition("/ui/complexes");
+        window.navigateWithTransition("/complexes");
       });
 
       document.getElementById("to-theory-hub-btn")?.addEventListener("click", () => {

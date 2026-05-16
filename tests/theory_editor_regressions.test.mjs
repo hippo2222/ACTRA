@@ -33,7 +33,7 @@ function bindDomGlobals(dom) {
     defineGlobal("URLSearchParams", dom.window.URLSearchParams);
 }
 
-function setupTheoryEditorDom(url = "http://localhost/ui/editor/Theory_Editor.html") {
+function setupTheoryEditorDom(url = "http://localhost/editor/Theory_Editor.html") {
     const dom = new JSDOM(
         `<!DOCTYPE html><html><body>
             <div id="theory-context-copy"></div>
@@ -131,11 +131,11 @@ describe("Theory editor regressions", () => {
         const dom = setupTheoryEditorDom();
         const { normalizeTheoryWorkspaceUrl } = dom.window.__theoryEditorTestExports;
 
-        expect(normalizeTheoryWorkspaceUrl("/ui/editor?theory_hub=1&theory_id=th_123")).toBe(
-            "/ui/editor/Theory_Center.html?scope=complexes",
+        expect(normalizeTheoryWorkspaceUrl("/editor?theory_hub=1&theory_id=th_123")).toBe(
+            "/editor/Theory_Center.html?scope=complexes",
         );
-        expect(normalizeTheoryWorkspaceUrl("http://localhost/ui/editor?theory_hub=1&theory_id=th_123")).toBe(
-            "/ui/editor/Theory_Center.html?scope=complexes",
+        expect(normalizeTheoryWorkspaceUrl("http://localhost/editor?theory_hub=1&theory_id=th_123")).toBe(
+            "/editor/Theory_Center.html?scope=complexes",
         );
     });
 
@@ -144,13 +144,13 @@ describe("Theory editor regressions", () => {
         const { theoryEditorState, resolveTheoryCenterUrl } = dom.window.__theoryEditorTestExports;
 
         theoryEditorState.context = { context: "complex", complexId: "cx_1" };
-        expect(resolveTheoryCenterUrl()).toBe("/ui/editor/Theory_Center.html?scope=complexes");
+        expect(resolveTheoryCenterUrl()).toBe("/editor/Theory_Center.html?scope=complexes");
 
         theoryEditorState.context = { context: "topic", topicId: "tp_1" };
-        expect(resolveTheoryCenterUrl()).toBe("/ui/editor/Theory_Center.html?scope=topics");
+        expect(resolveTheoryCenterUrl()).toBe("/editor/Theory_Center.html?scope=topics");
 
         theoryEditorState.context = {};
-        expect(resolveTheoryCenterUrl()).toBe("/ui/editor/Theory_Center.html");
+        expect(resolveTheoryCenterUrl()).toBe("/editor/Theory_Center.html");
     });
 
     it("keeps the complexes button active and routes it to the plain complexes page", () => {
@@ -168,23 +168,23 @@ describe("Theory editor regressions", () => {
         renderTheoryContextHeader();
         updateTheoryEditorActions();
         expect(button.disabled).toBe(false);
-        expect(button.dataset.target).toBe("/ui/complexes");
-        expect(resolveTheoryComplexesUrl()).toBe("/ui/complexes");
+        expect(button.dataset.target).toBe("/complexes");
+        expect(resolveTheoryComplexesUrl()).toBe("/complexes");
 
         theoryEditorState.context = {};
         theoryEditorState.activeTheoryId = "th_42";
         renderTheoryContextHeader();
         updateTheoryEditorActions();
         expect(button.disabled).toBe(false);
-        expect(button.dataset.target).toBe("/ui/complexes");
-        expect(resolveTheoryComplexesUrl()).toBe("/ui/complexes");
+        expect(button.dataset.target).toBe("/complexes");
+        expect(resolveTheoryComplexesUrl()).toBe("/complexes");
 
         theoryEditorState.activeTheoryId = "";
         renderTheoryContextHeader();
         updateTheoryEditorActions();
         expect(button.disabled).toBe(false);
-        expect(button.dataset.target).toBe("/ui/complexes");
-        expect(resolveTheoryComplexesUrl()).toBe("/ui/complexes");
+        expect(button.dataset.target).toBe("/complexes");
+        expect(resolveTheoryComplexesUrl()).toBe("/complexes");
     });
 
     it("renders library cards without showing theory ids and keeps badges on one row", () => {

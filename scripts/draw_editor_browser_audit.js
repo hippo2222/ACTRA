@@ -237,7 +237,7 @@ function getImageFixturePath() {
 // ---------------------------------------------------------------------------
 
 async function waitForDashboardReady(page, baseUrl) {
-  await page.goto(resolveUrl(baseUrl, "/ui/editor"), { waitUntil: "networkidle", timeout: 60000 });
+  await page.goto(resolveUrl(baseUrl, "/editor"), { waitUntil: "networkidle", timeout: 60000 });
   // Wait for the sidebar which is always present in the dashboard
   await page.waitForSelector("#editor-sidebar", { state: "visible", timeout: 30000 });
 }
@@ -294,7 +294,7 @@ function extractTaskRefFromUrl(pageUrl) {
 }
 
 async function openEditorDirectly(page, baseUrl, moduleId, topicId, taskId) {
-  const url = resolveUrl(baseUrl, `/ui/editor/Point_Annotation.html?module=${encodeURIComponent(moduleId)}&topic=${encodeURIComponent(topicId)}&task=${encodeURIComponent(taskId)}`);
+  const url = resolveUrl(baseUrl, `/editor/Point_Annotation.html?module=${encodeURIComponent(moduleId)}&topic=${encodeURIComponent(topicId)}&task=${encodeURIComponent(taskId)}`);
   await page.goto(url, { waitUntil: "networkidle", timeout: 60000 });
   await page.waitForSelector("#prompt-textarea", { state: "visible", timeout: 30000 });
 }

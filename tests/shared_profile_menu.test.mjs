@@ -214,7 +214,7 @@ describe('shared profile menu', () => {
     expect(dom.window.document.getElementById('sharedProfileMenuStyles')).toBeTruthy();
 
     const settingsLink = dom.window.document.getElementById('sharedProfileSettings');
-    expect(settingsLink?.getAttribute('href')).toBe('/ui/settings');
+    expect(settingsLink?.getAttribute('href')).toBe('/settings');
     expect(settingsLink?.className).toContain('shared-profile-focus-target');
     expect(dom.window.document.body.textContent).toContain('Premium');
     const premiumButton = dom.window.document.getElementById('sharedProfilePremium');
@@ -258,7 +258,7 @@ describe('shared profile menu', () => {
         method: 'POST',
       }),
     );
-    expect(navigateSpy).toHaveBeenCalledWith('/ui/welcome');
+    expect(navigateSpy).toHaveBeenCalledWith('/welcome');
   });
 
   it('opens the premium promo modal from hosted profile menu', async () => {

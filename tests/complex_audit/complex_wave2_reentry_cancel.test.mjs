@@ -93,7 +93,7 @@ async function resumePausedSessionFromComplexesList(page, { baseUrl, complexId, 
   const deadline = Date.now() + 8000;
 
   while (Date.now() < deadline) {
-    if (page.url().includes(`/ui/session/${sessionId}`)) {
+    if (page.url().includes(`/session/${sessionId}`)) {
       break;
     }
     if (await dialog.isVisible().catch(() => false)) {
@@ -103,7 +103,7 @@ async function resumePausedSessionFromComplexesList(page, { baseUrl, complexId, 
     await page.waitForTimeout(150);
   }
 
-  await page.waitForURL(new RegExp(`${String(baseUrl).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/ui/session/${sessionId}$`), {
+  await page.waitForURL(new RegExp(`${String(baseUrl).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/session/${sessionId}$`), {
     timeout: 20000,
   });
   await waitForPageStable(page);
@@ -142,7 +142,7 @@ test.describe("complex audit wave 2 re-entry / cancel surfaces", () => {
       expect(pauseJson.ok).toBe(true);
       expect(pauseJson.paused).toBe(true);
 
-      await page.waitForURL(new RegExp("/ui/complexes$"), { timeout: 20000 });
+      await page.waitForURL(new RegExp("/complexes$"), { timeout: 20000 });
       await waitForPageStable(page);
 
       await expect(page.locator("#complexes-list")).toContainText(fixture.complexName);
@@ -207,7 +207,7 @@ test.describe("complex audit wave 2 re-entry / cancel surfaces", () => {
       const cancelResponse = await cancelResponsePromise;
       expect(cancelResponse.ok()).toBe(true);
 
-      await page.waitForURL(new RegExp("/ui/complexes$"), { timeout: 20000 });
+      await page.waitForURL(new RegExp("/complexes$"), { timeout: 20000 });
       await waitForPageStable(page);
 
       await expect
@@ -233,7 +233,7 @@ test.describe("complex audit wave 2 re-entry / cancel surfaces", () => {
       await expect(startButton).toBeVisible();
       await startButton.click();
 
-      await page.waitForURL(new RegExp("/ui/session/[^/?#]+$"), { timeout: 20000 });
+      await page.waitForURL(new RegExp("/session/[^/?#]+$"), { timeout: 20000 });
       await waitForPageStable(page);
 
       const newSessionId = extractSessionIdFromUrl(page.url());

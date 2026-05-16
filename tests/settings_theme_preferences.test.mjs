@@ -25,7 +25,7 @@ function setupDom() {
       <body>
         <header>
           <div class="settings-topbar">
-            <a href="/ui/main">
+            <a href="/main">
               <span class="material-symbols-outlined">arrow_back</span>
               <span></span>
             </a>
@@ -34,7 +34,7 @@ function setupDom() {
         </header>
         <main>
           <section>
-            <a id="settings-main-btn" href="/ui/main">
+            <a id="settings-main-btn" href="/main">
               <span class="material-symbols-outlined">dashboard</span>
               Главная
             </a>
@@ -279,7 +279,7 @@ describe('settings theme preferences', () => {
   it('uses the served settings script path and wraps password controls in a form', () => {
     const html = loadText('frontend/Settings/settings.html');
 
-    expect(html).toContain('<script src="/ui/settings/settings.js"></script>');
+    expect(html).toContain('<script src="/settings/settings.js"></script>');
     expect(html).toContain('<form id="settings-password-form"');
     expect(html).toContain('id="settings-password-username"');
     expect(html).toContain('id="settings-avatar-crop-modal"');
@@ -434,7 +434,7 @@ describe('settings theme preferences', () => {
 
     mainButton.click();
 
-    expect(navigateSpy).toHaveBeenCalledWith('/ui/main');
+    expect(navigateSpy).toHaveBeenCalledWith('/main');
   });
 
   it('renders compact account context, theme cards, and saves a newly selected theme', async () => {
@@ -506,7 +506,7 @@ describe('settings theme preferences', () => {
       '/api/auth/logout',
       expect.objectContaining({ method: 'POST' }),
     );
-    expect(navigateSpy).toHaveBeenCalledWith('/ui/welcome');
+    expect(navigateSpy).toHaveBeenCalledWith('/welcome');
   });
 
   it('uploads avatar from the compact profile card after square cropping', async () => {

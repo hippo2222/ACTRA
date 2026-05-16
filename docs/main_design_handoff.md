@@ -6,7 +6,7 @@ This document describes the design surface of the internal ACTRA main page and c
 
 This handoff covers only the authenticated internal main page:
 
-- route: `/ui/main`
+- route: `/main`
 - template: `frontend/MainScreen/Main.html`
 - runtime behavior: `frontend/assets/MainLogic.js`
 
@@ -285,7 +285,7 @@ That script could:
 
 1. start the app in test mode
 2. seed predictable data
-3. open `/ui/main`
+3. open `/main`
 4. force specific UI states
 5. save screenshots into `docs/design/main-states/`
 

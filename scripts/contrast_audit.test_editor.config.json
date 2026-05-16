@@ -18,7 +18,7 @@
   "pages": [
     {
       "name": "Test Editor default",
-      "url": "/ui/editor/Test%20Task%20Editor%20Multiple%20Choice.html?module=test_sistemy_slozhnosti&topic=testovaya_tema&task=task_b67affee",
+      "url": "/editor/Test%20Task%20Editor%20Multiple%20Choice.html?module=test_sistemy_slozhnosti&topic=testovaya_tema&task=task_b67affee",
       "waitFor": "#editor-difficulty-authoring",
       "actionsOnce": [
         { "type": "wait", "ms": 1400 }
@@ -26,7 +26,7 @@
     },
     {
       "name": "Test Editor difficulty blocking",
-      "url": "/ui/editor/Test%20Task%20Editor%20Multiple%20Choice.html?module=test_sistemy_slozhnosti&topic=testovaya_tema&task=task_b67affee",
+      "url": "/editor/Test%20Task%20Editor%20Multiple%20Choice.html?module=test_sistemy_slozhnosti&topic=testovaya_tema&task=task_b67affee",
       "waitFor": "#editor-difficulty-authoring",
       "actionsOnce": [
         { "type": "wait", "ms": 1400 },

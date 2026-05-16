@@ -22,7 +22,7 @@ async function flushPromises(rounds = 10) {
   await new Promise((resolve) => setTimeout(resolve, 0));
 }
 
-function setupDom(fetchMock, url = 'http://localhost/ui/welcome') {
+function setupDom(fetchMock, url = 'http://localhost/welcome') {
   const html = loadFile('frontend/Welcome/welcome.html');
   const dom = new JSDOM(html, {
     url,
@@ -63,7 +63,7 @@ describe('welcome hosted auth flow', () => {
 
     expect(html).toContain('welcomeShowcasePanelTheory');
     expect(html).toContain('welcome-theory-real');
-    expect(html).not.toContain('/ui/editor/Theory_Editor.html');
+    expect(html).not.toContain('/editor/Theory_Editor.html');
     expect(html).not.toContain('welcomeTheoryPreviewFrame');
   });
 
@@ -211,7 +211,7 @@ describe('welcome hosted auth flow', () => {
             },
             verification_email: {
               sent: true,
-              verify_url: 'http://localhost/ui/welcome?verify_email_token=verify-token-1',
+              verify_url: 'http://localhost/welcome?verify_email_token=verify-token-1',
             },
           }),
         };
@@ -260,7 +260,7 @@ describe('welcome hosted auth flow', () => {
     expect(dom.window.document.getElementById('onboardingVerificationStatus').textContent).toContain('Premium активирован');
 
     dom.window.welcomeContinueAfterVerification();
-    expect(navigateSpy).toHaveBeenCalledWith('/ui/main');
+    expect(navigateSpy).toHaveBeenCalledWith('/main');
   });
 
   it('blocks hosted registration when refund consent metadata is missing', async () => {
@@ -357,7 +357,7 @@ describe('welcome hosted auth flow', () => {
       throw new Error(`Unexpected fetch: ${url}`);
     });
 
-    const dom = setupDom(fetchMock, 'http://localhost/ui/welcome?verify_email_token=verify-token-1');
+    const dom = setupDom(fetchMock, 'http://localhost/welcome?verify_email_token=verify-token-1');
     dom.window.navigateWithTransition = navigateSpy;
     defineGlobal('window', dom.window);
     dom.window.eval(loadFile('frontend/Welcome/welcome.js'));
@@ -370,7 +370,7 @@ describe('welcome hosted auth flow', () => {
     expect(dom.window.document.getElementById('onboardingVerificationResendBtn').classList.contains('hidden')).toBe(true);
 
     dom.window.welcomeContinueAfterVerification();
-    expect(navigateSpy).toHaveBeenCalledWith('/ui/main');
+    expect(navigateSpy).toHaveBeenCalledWith('/main');
   });
 
   it('opens forgot-password modal and requests reset email', async () => {
@@ -454,7 +454,7 @@ describe('welcome hosted auth flow', () => {
       throw new Error(`Unexpected fetch: ${url}`);
     });
 
-    const dom = setupDom(fetchMock, 'http://localhost/ui/welcome?reset_password_token=reset-token-1');
+    const dom = setupDom(fetchMock, 'http://localhost/welcome?reset_password_token=reset-token-1');
     dom.window.navigateWithTransition = navigateSpy;
     defineGlobal('window', dom.window);
     dom.window.eval(loadFile('frontend/Welcome/welcome.js'));
@@ -470,6 +470,6 @@ describe('welcome hosted auth flow', () => {
     await flushPromises();
 
     expect(fetchMock.mock.calls.some(([url]) => url === '/api/auth/reset-password')).toBe(true);
-    expect(navigateSpy).toHaveBeenCalledWith('/ui/main');
+    expect(navigateSpy).toHaveBeenCalledWith('/main');
   });
 });

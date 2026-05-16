@@ -520,14 +520,14 @@ class CalendarInteractions {
         try {
             const data = await this.api.startSession('daily_mix', complexId);
             if (data && data.session_id) {
-                window.navigateWithTransition(`/ui/session/${data.session_id}`);
+                window.navigateWithTransition(`/session/${data.session_id}`);
                 return;
             }
         } catch (e) {
             console.error('Failed to start review session:', e);
         }
         // Fallback: navigate to complexes list
-        window.navigateWithTransition('/ui/complexes');
+        window.navigateWithTransition('/complexes');
     }
 }
 

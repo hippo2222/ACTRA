@@ -32,7 +32,7 @@ export function extractTaskIdentity(taskPayload) {
 
 export function getSessionScreen(urlString, sessionId) {
   const url = new URL(urlString);
-  const sessionBasePath = `/ui/session/${encodeURIComponent(sessionId)}`;
+  const sessionBasePath = `/session/${encodeURIComponent(sessionId)}`;
 
   if (url.pathname === sessionBasePath) {
     return "s1";
@@ -67,13 +67,13 @@ export function computeSuccessRatePercent(results) {
 
 export function buildSessionIterationUrl(baseUrl, sessionId, iteration) {
   return new URL(
-    `/ui/session/${encodeURIComponent(sessionId)}/iteration/${encodeURIComponent(iteration)}`,
+    `/session/${encodeURIComponent(sessionId)}/iteration/${encodeURIComponent(iteration)}`,
     baseUrl
   ).toString();
 }
 
 export function buildSessionResultsUrl(baseUrl, sessionId) {
-  return new URL(`/ui/session/${encodeURIComponent(sessionId)}/results`, baseUrl).toString();
+  return new URL(`/session/${encodeURIComponent(sessionId)}/results`, baseUrl).toString();
 }
 
 export async function readCurrentTask(baseUrl, sessionId) {

@@ -1580,11 +1580,11 @@
     if (!state.sessionId) return;
 
     if (state.hasNextIteration) {
-      navigateTo(`/ui/session/${encodeURIComponent(state.sessionId)}`);
+      navigateTo(`/session/${encodeURIComponent(state.sessionId)}`);
       return;
     }
 
-    navigateTo(`/ui/session/${encodeURIComponent(state.sessionId)}/results`);
+    navigateTo(`/session/${encodeURIComponent(state.sessionId)}/results`);
   }
 
   function navigateTo(url) {
@@ -1638,7 +1638,7 @@
 
   async function pauseAndReturnToComplexes() {
     if (!state.sessionId) {
-      navigateTo("/ui/complexes");
+      navigateTo("/complexes");
       return;
     }
 
@@ -1649,7 +1649,7 @@
           ? {
               screen_type: "iteration_results",
               iteration_number: state.iteration,
-              url: `/ui/session/${encodeURIComponent(state.sessionId)}/iteration/${encodeURIComponent(String(state.iteration))}`,
+              url: `/session/${encodeURIComponent(state.sessionId)}/iteration/${encodeURIComponent(String(state.iteration))}`,
             }
           : null;
       const response = await root.fetch(`/api/session/${encodeURIComponent(state.sessionId)}/pause`, {
@@ -1668,7 +1668,7 @@
         return;
       }
 
-      navigateTo("/ui/complexes");
+      navigateTo("/complexes");
     } catch (_) {
       showToast("Не удалось поставить сессию на паузу.", "error");
     }
@@ -1705,7 +1705,7 @@
         return;
       }
 
-      navigateTo("/ui/complexes");
+      navigateTo("/complexes");
     } catch (_) {
       showToast("Не удалось завершить комплекс.", "error");
     }

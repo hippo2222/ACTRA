@@ -8,7 +8,7 @@ const REQUIRED_PUBLIC_PATHS = [
   "/legal/privacy",
   "/robots.txt",
   "/sitemap.xml",
-  "/ui/welcome",
+  "/welcome",
   "/Welcome/welcome.js",
 ];
 
@@ -20,7 +20,7 @@ const TEXT_PATHS_WITHOUT_LOCALHOST = [
   "/privacy",
   "/robots.txt",
   "/sitemap.xml",
-  "/ui/welcome",
+  "/welcome",
   "/Welcome/welcome.js",
 ];
 
@@ -109,10 +109,10 @@ async function checkPublicPages(baseUrl) {
   const rootLocation = rootRedirect.headers.get("location") || "";
   assert(
     rootRedirect.status >= 300 && rootRedirect.status < 400,
-    `/ must redirect to /ui/welcome, got status ${rootRedirect.status}`
+    `/ must redirect to /welcome, got status ${rootRedirect.status}`
   );
   assert(
-    rootLocation === "/ui/welcome" || rootLocation.endsWith("/ui/welcome"),
+    rootLocation === "/welcome" || rootLocation.endsWith("/welcome"),
     `/ redirects to unexpected location: ${rootLocation || "<empty>"}`
   );
 
@@ -158,12 +158,12 @@ async function checkPublicPages(baseUrl) {
   assertContains(sitemap, "<loc>https://actra.site/pricing</loc>", "/sitemap.xml");
   assertContains(sitemap, "<loc>https://actra.site/refund</loc>", "/sitemap.xml");
 
-  const welcome = cache.get("/ui/welcome") || "";
-  assert(!welcome.includes("heroGradient.js"), "/ui/welcome still references removed heroGradient.js");
-  assert(!welcome.includes("/ui/editor/Theory_Editor.html"), "/ui/welcome still embeds the protected theory editor route");
-  assertContains(welcome, "welcome-theory-real", "/ui/welcome");
-  assertContains(welcome, "onboardingAcceptRefund", "/ui/welcome");
-  assertContains(welcome, "consentGateAcceptRefund", "/ui/welcome");
+  const welcome = cache.get("/welcome") || "";
+  assert(!welcome.includes("heroGradient.js"), "/welcome still references removed heroGradient.js");
+  assert(!welcome.includes("/editor/Theory_Editor.html"), "/welcome still embeds the protected theory editor route");
+  assertContains(welcome, "welcome-theory-real", "/welcome");
+  assertContains(welcome, "onboardingAcceptRefund", "/welcome");
+  assertContains(welcome, "consentGateAcceptRefund", "/welcome");
 
   const welcomeJs = cache.get("/Welcome/welcome.js") || "";
   assertContains(welcomeJs, "selectAcceptRefund", "/Welcome/welcome.js");

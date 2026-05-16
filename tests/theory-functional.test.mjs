@@ -15,7 +15,7 @@ test.describe('Центр теории - Функциональные тесты
   
   test('Клик на кнопку "Центр теории" открывает страницу Центра теории', async ({ page }) => {
     // Открываем главный редактор
-    await page.goto(`${BASE_URL}/ui/editor`);
+    await page.goto(`${BASE_URL}/editor`);
     await page.waitForLoadState('networkidle');
     
     // Кликаем на кнопку Центра теории
@@ -34,7 +34,7 @@ test.describe('Центр теории - Функциональные тесты
   });
   
   test('Кнопка подчёркивания в редакторе теории кликабельна', async ({ page }) => {
-    await page.goto(`${BASE_URL}/ui/theory-editor`);
+    await page.goto(`${BASE_URL}/theory-editor`);
     await page.waitForLoadState('networkidle');
     
     const underlineBtn = page.locator('#theory-underline');
@@ -52,7 +52,7 @@ test.describe('Центр теории - Функциональные тесты
   // ============================================================================
   
   test('Модальное окно создания теории открывается и закрывается', async ({ page }) => {
-    await page.goto(`${BASE_URL}/ui/editor`);
+    await page.goto(`${BASE_URL}/editor`);
     await page.waitForLoadState('networkidle');
     
     const modal = page.locator('#create-theory-modal');
@@ -66,7 +66,7 @@ test.describe('Центр теории - Функциональные тесты
   });
   
   test('Кнопка закрытия модального окна работает', async ({ page }) => {
-    await page.goto(`${BASE_URL}/ui/editor`);
+    await page.goto(`${BASE_URL}/editor`);
     await page.waitForLoadState('networkidle');
     
     const modal = page.locator('#create-theory-modal');
@@ -87,7 +87,7 @@ test.describe('Центр теории - Функциональные тесты
   // ============================================================================
   
   test('Кнопки форматирования текста кликабельны и не вызывают ошибок', async ({ page }) => {
-    await page.goto(`${BASE_URL}/ui/theory-editor`);
+    await page.goto(`${BASE_URL}/theory-editor`);
     await page.waitForLoadState('networkidle');
     
     // Проверяем все кнопки форматирования
@@ -118,7 +118,7 @@ test.describe('Центр теории - Функциональные тесты
   // ============================================================================
   
   test('Клик по изображению должен вызывать функцию настройки', async ({ page }) => {
-    await page.goto(`${BASE_URL}/ui/theory-editor`);
+    await page.goto(`${BASE_URL}/theory-editor`);
     await page.waitForLoadState('networkidle');
     
     // Проверяем, что функция theoryImageClick доступна в window
@@ -134,7 +134,7 @@ test.describe('Центр теории - Функциональные тесты
   // ============================================================================
   
   test('Переключение между вкладками Topics/Complexes работает', async ({ page }) => {
-    await page.goto(`${BASE_URL}/ui/theory-center`);
+    await page.goto(`${BASE_URL}/theory-center`);
     await page.waitForLoadState('networkidle');
     
     // Ищем кнопки переключения scope
@@ -152,7 +152,7 @@ test.describe('Центр теории - Функциональные тесты
   });
   
   test('Поиск в Центре теории работает', async ({ page }) => {
-    await page.goto(`${BASE_URL}/ui/theory-center`);
+    await page.goto(`${BASE_URL}/theory-center`);
     await page.waitForLoadState('networkidle');
     
     // Ищем поле поиска
@@ -187,9 +187,9 @@ test.describe('Центр теории - Функциональные тесты
     
     // Список страниц для проверки
     const pages = [
-      '/ui/editor',
-      '/ui/theory-center',
-      '/ui/theory-editor'
+      '/editor',
+      '/theory-center',
+      '/theory-editor'
     ];
     
     for (const url of pages) {
@@ -203,7 +203,7 @@ test.describe('Центр теории - Функциональные тесты
   });
   
   test('Множественные клики на кнопки форматирования не вызывают ошибок', async ({ page }) => {
-    await page.goto(`${BASE_URL}/ui/theory-editor`);
+    await page.goto(`${BASE_URL}/theory-editor`);
     await page.waitForLoadState('networkidle');
     
     const errors = [];
@@ -235,7 +235,7 @@ test.describe('Центр теории - Функциональные тесты
   // ============================================================================
   
   test('Переключение viewport не ломает интерфейс', async ({ page }) => {
-    await page.goto(`${BASE_URL}/ui/editor`);
+    await page.goto(`${BASE_URL}/editor`);
     
     const viewports = [
       { width: 1920, height: 1080 }, // Desktop
@@ -261,7 +261,7 @@ test.describe('Центр теории - Функциональные тесты
   test('Страницы загружаются за разумное время', async ({ page }) => {
     const startTime = Date.now();
     
-    await page.goto(`${BASE_URL}/ui/editor`);
+    await page.goto(`${BASE_URL}/editor`);
     await page.waitForLoadState('networkidle');
     
     const loadTime = Date.now() - startTime;
@@ -271,7 +271,7 @@ test.describe('Центр теории - Функциональные тесты
   });
   
   test('Анимации не блокируют интерфейс', async ({ page }) => {
-    await page.goto(`${BASE_URL}/ui/theory-center`);
+    await page.goto(`${BASE_URL}/theory-center`);
     await page.waitForLoadState('networkidle');
     
     // Сразу после загрузки пытаемся кликнуть на элементы

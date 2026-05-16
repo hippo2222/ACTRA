@@ -70,7 +70,7 @@ describe("TestEditor URL context", () => {
     });
 
     it("reads module, topic and task from URL when opening a new task", async () => {
-        const dom = setupDom("http://localhost/ui/editor/Test%20Task%20Editor%20Multiple%20Choice.html?module=test_module&topic=test_topic&task=task_123&new=1&task_type=test&task_name=Smoke");
+        const dom = setupDom("http://localhost/editor/Test%20Task%20Editor%20Multiple%20Choice.html?module=test_module&topic=test_topic&task=task_123&new=1&task_type=test&task_name=Smoke");
         const EditorClass = dom.window.TestEditor;
         const initSpy = vi.spyOn(EditorClass.prototype, "init").mockResolvedValue(undefined);
         const editor = new EditorClass();
@@ -119,7 +119,7 @@ describe("TestEditor URL context", () => {
     });
 
     it("discards an unsaved bootstrap task locally without calling delete API", async () => {
-        const dom = setupDom("http://localhost/ui/editor/Test%20Task%20Editor%20Multiple%20Choice.html?module=test_module&topic=test_topic&task=task_123&new=1&task_type=test&task_name=Smoke");
+        const dom = setupDom("http://localhost/editor/Test%20Task%20Editor%20Multiple%20Choice.html?module=test_module&topic=test_topic&task=task_123&new=1&task_type=test&task_name=Smoke");
         const EditorClass = dom.window.TestEditor;
         const initSpy = vi.spyOn(EditorClass.prototype, "init").mockResolvedValue(undefined);
         const editor = new EditorClass();
@@ -168,12 +168,12 @@ describe("TestEditor URL context", () => {
         expect(editor.autoSaveManager.clearDraft).toHaveBeenCalledTimes(1);
         expect(clearBootstrapSpy).toHaveBeenCalledTimes(1);
         expect(showToastSpy).toHaveBeenCalledWith("Черновик удалён", "success");
-        expect(dom.window.navigateWithTransition).toHaveBeenCalledWith("/ui/editor");
+        expect(dom.window.navigateWithTransition).toHaveBeenCalledWith("/editor");
         expect(editor.hasUnsavedChanges).toBe(false);
     });
 
     it("falls back to local bootstrap when persisted task is missing on reload", async () => {
-        const dom = setupDom("http://localhost/ui/editor/Test%20Task%20Editor%20Multiple%20Choice.html?module=test_module&topic=test_topic&task=task_123");
+        const dom = setupDom("http://localhost/editor/Test%20Task%20Editor%20Multiple%20Choice.html?module=test_module&topic=test_topic&task=task_123");
         const EditorClass = dom.window.TestEditor;
         const initSpy = vi.spyOn(EditorClass.prototype, "init").mockResolvedValue(undefined);
         const editor = new EditorClass();
@@ -220,7 +220,7 @@ describe("TestEditor URL context", () => {
     });
 
     it("rebuilds a draft-only task from local autosave when persisted task is missing on reload", async () => {
-        const dom = setupDom("http://localhost/ui/editor/Test%20Task%20Editor%20Multiple%20Choice.html?module=test_module&topic=test_topic&task=task_123");
+        const dom = setupDom("http://localhost/editor/Test%20Task%20Editor%20Multiple%20Choice.html?module=test_module&topic=test_topic&task=task_123");
         const EditorClass = dom.window.TestEditor;
         const initSpy = vi.spyOn(EditorClass.prototype, "init").mockResolvedValue(undefined);
         const editor = new EditorClass();
@@ -283,7 +283,7 @@ describe("TestEditor URL context", () => {
     });
 
     it("preserves nested hosted image refs when normalizing backend questions", () => {
-        const dom = setupDom("http://localhost/ui/editor/Test%20Task%20Editor%20Multiple%20Choice.html");
+        const dom = setupDom("http://localhost/editor/Test%20Task%20Editor%20Multiple%20Choice.html");
         const EditorClass = dom.window.TestEditor;
         const initSpy = vi.spyOn(EditorClass.prototype, "init").mockResolvedValue(undefined);
         const editor = new EditorClass();

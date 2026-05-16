@@ -21,7 +21,7 @@
   "pages": [
     {
       "name": "Editor Theory Analysis P6 (report open)",
-      "url": "/ui/editor",
+      "url": "/editor",
       "waitFor": "#import-modal",
       "actionsOnce": [
         { "type": "wait", "ms": 1500 },
@@ -62,7 +62,7 @@
     },
     {
       "name": "Editor Theory Analysis P6 (report collapsed)",
-      "url": "/ui/editor",
+      "url": "/editor",
       "waitFor": "#import-modal",
       "actionsOnce": [
         { "type": "wait", "ms": 1500 },

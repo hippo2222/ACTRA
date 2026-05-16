@@ -210,7 +210,7 @@ async function captureCompletedSurfaces(page, run, snapshotDir, viewport, filePr
     fullPage: true,
   });
 
-  await page.goto(new URL("/ui/main", run.runtime.baseUrl).toString());
+  await page.goto(new URL("/main", run.runtime.baseUrl).toString());
   await waitForPageStable(page);
   await page.screenshot({
     path: path.join(snapshotDir, `${filePrefix}main_completed.png`),
@@ -224,9 +224,9 @@ async function capturePausedMain(page, run, snapshotDir, viewport, filePrefix = 
   await moveSmokeRunToSecondTask(page, run.sessionId, run.fixture);
 
   await pauseCurrentSessionFromS1(page, run.sessionId);
-  await page.waitForURL(new RegExp("/ui/complexes$"), { timeout: 20000 });
+  await page.waitForURL(new RegExp("/complexes$"), { timeout: 20000 });
 
-  await page.goto(new URL("/ui/main", run.runtime.baseUrl).toString());
+  await page.goto(new URL("/main", run.runtime.baseUrl).toString());
   await waitForPageStable(page);
   await expect(page.locator("#mainNextStepBanner")).toHaveCount(0);
   await expect(page.locator("#quick-access-list")).toContainText(

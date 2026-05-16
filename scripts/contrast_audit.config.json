@@ -17,7 +17,7 @@
   "pages": [
     {
       "name": "S1 coverage",
-      "url": "/ui/session/{sessionId}",
+      "url": "/session/{sessionId}",
       "waitFor": "#task-content",
       "actionsOnce": [
         { "type": "wait", "ms": 300 }
@@ -46,7 +46,7 @@
     },
     {
       "name": "S2",
-      "url": "/ui/session/{sessionId}/iteration/1",
+      "url": "/session/{sessionId}/iteration/1",
       "autoSession": {
         "preferredIteration": 1,
         "requireNotPaused": true,
@@ -66,7 +66,7 @@
     },
     {
       "name": "S3",
-      "url": "/ui/session/{sessionId}/results",
+      "url": "/session/{sessionId}/results",
       "autoSession": {
         "preferredIteration": 1,
         "requireNotPaused": true,

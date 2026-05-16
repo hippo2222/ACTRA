@@ -138,7 +138,7 @@
 ### Почему это разумно
 
 1. В [docs/microcards_productization_v1_spec.md](D:/Ai Ai/radioproject_git/docs/microcards_productization_v1_spec.md) microcards описаны как полноценный продуктовый режим, а не как эксперимент:
-   - отдельный `/ui/microcards`;
+   - отдельный `/microcards`;
    - интеграция в `main`;
    - интеграция в `calendar`;
    - интеграция в `statistics`;

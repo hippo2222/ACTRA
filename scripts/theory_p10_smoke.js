@@ -29,7 +29,7 @@ function parseArgs(argv = process.argv.slice(2)) {
 }
 
 async function bootstrapTheoryMode(page, baseUrl) {
-  const url = new URL("/ui/editor", baseUrl).toString();
+  const url = new URL("/editor", baseUrl).toString();
   await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
 
   await page.waitForFunction(

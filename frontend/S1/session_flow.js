@@ -12,7 +12,7 @@
       return SessionRoutes.SESSION_RESULTS(sessionId);
     }
     // Fallback if routes not loaded (should not happen if set up correctly)
-    return `/ui/session/${encodeURIComponent(sessionId)}/results`;
+    return `/session/${encodeURIComponent(sessionId)}/results`;
   }
 
   function shouldRedirectToFinalResults(nextStatus, nextResponse) {

@@ -306,7 +306,7 @@ def _install_hosted_auth_context(monkeypatch, data_dir=None):
             "sent": True,
             "to": [str(getattr(user, "email", "") or "").strip().lower()],
             "from": "noreply@example.test",
-            "verify_url": f"{base_url}/ui/welcome?verify_email_token={token_payload['token']}",
+            "verify_url": f"{base_url}/welcome?verify_email_token={token_payload['token']}",
             "token_id": token_payload["token_id"],
             "expires_at": token_payload["expires_at"],
         }
@@ -324,7 +324,7 @@ def _install_hosted_auth_context(monkeypatch, data_dir=None):
             "sent": True,
             "to": [str(getattr(user, "pending_email", "") or "").strip().lower()],
             "from": "noreply@example.test",
-            "verify_url": f"{base_url}/ui/settings?pending_email_token={token_payload['token']}",
+            "verify_url": f"{base_url}/settings?pending_email_token={token_payload['token']}",
             "token_id": token_payload["token_id"],
             "expires_at": token_payload["expires_at"],
         }
@@ -341,7 +341,7 @@ def _install_hosted_auth_context(monkeypatch, data_dir=None):
             "sent": True,
             "to": [str(getattr(user, "email", "") or "").strip().lower()],
             "from": "noreply@example.test",
-            "reset_url": f"{base_url}/ui/welcome?reset_password_token={token_payload['token']}",
+            "reset_url": f"{base_url}/welcome?reset_password_token={token_payload['token']}",
             "token_id": token_payload["token_id"],
             "expires_at": token_payload["expires_at"],
         }
@@ -543,7 +543,7 @@ def test_register_creates_hosted_user_and_logs_in(client):
     assert payload["user"]["email_verification_sent_at"] == "2026-04-13T10:17:00Z"
     assert payload["user"]["auth_source"] == "auth_session"
     assert payload["verification_email"]["sent"] is True
-    assert payload["verification_email"]["verify_url"].startswith("http://localhost/ui/welcome?verify_email_token=")
+    assert payload["verification_email"]["verify_url"].startswith("http://localhost/welcome?verify_email_token=")
 
     me = client.get("/api/auth/me")
     me_payload = me.get_json()
@@ -772,7 +772,7 @@ def test_resend_verification_email_returns_delivery_status(client):
     assert payload["user"]["email_verified"] is False
     assert payload["user"]["email_verification_sent_at"] == "2026-04-13T10:17:00Z"
     assert payload["verification_email"]["sent"] is True
-    assert payload["verification_email"]["verify_url"].startswith("http://localhost/ui/welcome?verify_email_token=")
+    assert payload["verification_email"]["verify_url"].startswith("http://localhost/welcome?verify_email_token=")
 
 
 def test_resend_verification_is_concealed_for_identifier_lookup(client):
@@ -998,7 +998,7 @@ def test_hosted_profile_update_stages_pending_email_change(client):
     assert payload["user"]["pending_email_change_pending"] is True
     assert payload["user"]["pending_email_verification_sent_at"] == "2026-04-13T10:19:00Z"
     assert payload["verification_email"]["sent"] is True
-    assert payload["verification_email"]["verify_url"].startswith("http://localhost/ui/settings?pending_email_token=")
+    assert payload["verification_email"]["verify_url"].startswith("http://localhost/settings?pending_email_token=")
 
 
 def test_hosted_profile_update_conceals_duplicate_email_change_conflict(client):
@@ -1085,7 +1085,7 @@ def test_resend_pending_email_change_returns_delivery_status(client):
     assert payload["user"]["email"] == "pending.resend@example.com"
     assert payload["user"]["pending_email"] == "pending.resend+next@example.com"
     assert payload["verification_email"]["sent"] is True
-    assert payload["verification_email"]["verify_url"].startswith("http://localhost/ui/settings?pending_email_token=")
+    assert payload["verification_email"]["verify_url"].startswith("http://localhost/settings?pending_email_token=")
 
 
 def test_verify_pending_email_change_promotes_pending_email(client):

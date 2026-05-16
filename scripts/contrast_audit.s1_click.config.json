@@ -17,7 +17,7 @@
   "pages": [
     {
       "name": "S1 click - answering",
-      "url": "/ui/session/session_auto_placeholder",
+      "url": "/session/session_auto_placeholder",
       "autoSession": {
         "preferredIteration": 1,
         "complexId": "contrast_audit_s1_seed",
@@ -45,7 +45,7 @@
     },
     {
       "name": "S1 click - review success",
-      "url": "/ui/session/session_auto_placeholder",
+      "url": "/session/session_auto_placeholder",
       "autoSession": {
         "preferredIteration": 1,
         "complexId": "contrast_audit_s1_seed",
@@ -73,7 +73,7 @@
     },
     {
       "name": "S1 click - review failure",
-      "url": "/ui/session/session_auto_placeholder",
+      "url": "/session/session_auto_placeholder",
       "autoSession": {
         "preferredIteration": 1,
         "complexId": "contrast_audit_s1_seed",

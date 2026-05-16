@@ -81,7 +81,7 @@ def test_ui_main_serves_current_mainscreen_html(client, tmp_path, monkeypatch):
     existing_extra["ui_dirs"] = ui_dirs
     monkeypatch.setattr(ctx_module, "_extra", existing_extra)
 
-    response = client.get("/ui/main")
+    response = client.get("/main")
     assert response.status_code == 200
     assert "text/html" in (response.content_type or "")
     assert b"MainScreen Test" in response.data
@@ -104,9 +104,9 @@ def test_ui_reference_serves_reference_html_and_assets(client, tmp_path, monkeyp
     existing_extra["ui_dirs"] = {"REFERENCE_UI_DIR": reference_dir}
     monkeypatch.setattr(ctx_module, "_extra", existing_extra)
 
-    html_response = client.get("/ui/reference")
-    js_response = client.get("/ui/reference/reference.js")
-    css_response = client.get("/ui/reference/reference.css")
+    html_response = client.get("/reference")
+    js_response = client.get("/reference/reference.js")
+    css_response = client.get("/reference/reference.css")
 
     assert html_response.status_code == 200
     assert "text/html" in (html_response.content_type or "")
@@ -211,17 +211,17 @@ def test_hosted_ui_pages_redirect_to_welcome_without_auth(client, monkeypatch, t
     ui_dirs = {"WELCOME_UI_DIR": welcome_dir}
     _install_hosted_runtime(monkeypatch, users=[], ui_dirs=ui_dirs)
 
-    main_response = client.get("/ui/main", headers={"Accept": "text/html"})
-    settings_response = client.get("/ui/settings", headers={"Accept": "text/html"})
-    reference_response = client.get("/ui/reference", headers={"Accept": "text/html"})
-    welcome_response = client.get("/ui/welcome")
+    main_response = client.get("/main", headers={"Accept": "text/html"})
+    settings_response = client.get("/settings", headers={"Accept": "text/html"})
+    reference_response = client.get("/reference", headers={"Accept": "text/html"})
+    welcome_response = client.get("/welcome")
 
     assert main_response.status_code == 302
-    assert main_response.headers["Location"].endswith("/ui/welcome")
+    assert main_response.headers["Location"].endswith("/welcome")
     assert settings_response.status_code == 302
-    assert settings_response.headers["Location"].endswith("/ui/welcome")
+    assert settings_response.headers["Location"].endswith("/welcome")
     assert reference_response.status_code == 302
-    assert reference_response.headers["Location"].endswith("/ui/welcome")
+    assert reference_response.headers["Location"].endswith("/welcome")
     assert welcome_response.status_code == 200
 
 
@@ -231,7 +231,7 @@ def test_root_redirects_to_public_welcome_page(client, monkeypatch):
     response = client.get("/")
 
     assert response.status_code == 302
-    assert response.headers["Location"].endswith("/ui/welcome")
+    assert response.headers["Location"].endswith("/welcome")
 
     welcome_response = client.get("/", follow_redirects=True)
     assert welcome_response.status_code == 200
@@ -380,6 +380,6 @@ def test_hosted_ui_page_serves_when_authenticated(client, monkeypatch, tmp_path)
     with client.session_transaction() as session:
         session["auth_user_id"] = "u-auth"
 
-    response = client.get("/ui/main")
+    response = client.get("/main")
     assert response.status_code == 200
     assert b"Protected Main" in response.data

@@ -605,7 +605,7 @@ describe("EditorDashboard workspace import history", () => {
     });
 
     expect(window.navigateWithTransition).toHaveBeenCalledWith(
-      "/ui/editor/Point_Annotation.html?module=m1&topic=t1&task=task_1"
+      "/editor/Point_Annotation.html?module=m1&topic=t1&task=task_1"
     );
   });
 

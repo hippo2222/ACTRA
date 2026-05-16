@@ -139,7 +139,7 @@ timeout: 60000, // 60 секунд
 ### Сервер не отвечает
 Проверьте, что сервер запущен:
 ```bash
-curl http://localhost:5000/ui/editor
+curl http://localhost:5000/editor
 ```
 
 ## Дополнительные опции

@@ -239,7 +239,7 @@ async function createSessionForAuto(baseUrl, autoCfg = {}) {
   };
 
   const createdUrl = new URL(
-    `/ui/session/${encodeURIComponent(createdSession.session_id)}`,
+    `/session/${encodeURIComponent(createdSession.session_id)}`,
     baseUrl
   ).toString();
 
@@ -286,7 +286,7 @@ async function resolveAutoSessionUrl(baseUrl, autoCfg = {}) {
       throw new Error(`Pinned sessionId not found in active sessions: ${pinnedSessionId}`);
     }
     const pinnedUrl = new URL(
-      `/ui/session/${encodeURIComponent(pinned.session_id)}`,
+      `/session/${encodeURIComponent(pinned.session_id)}`,
       baseUrl
     ).toString();
     return { url: pinnedUrl, session: pinned };
@@ -344,7 +344,7 @@ async function resolveAutoSessionUrl(baseUrl, autoCfg = {}) {
   }
 
   const best = scored[0].item;
-  const url = new URL(`/ui/session/${encodeURIComponent(best.session_id)}`, baseUrl).toString();
+  const url = new URL(`/session/${encodeURIComponent(best.session_id)}`, baseUrl).toString();
   return { url, session: best };
 }
 
@@ -947,7 +947,7 @@ async function advanceFromIterationPage(page) {
     const sessionIdx = segments.indexOf("session");
     if (sessionIdx >= 0 && segments[sessionIdx + 1]) {
       const sessionId = segments[sessionIdx + 1];
-      window.location.href = `/ui/session/${sessionId}`;
+      window.location.href = `/session/${sessionId}`;
       return "redirected";
     }
     return "none";
@@ -1682,7 +1682,7 @@ async function runS1Coverage({
 
         try {
           const sessionUrl = new URL(
-            `/ui/session/${encodeURIComponent(pageContext.sessionId)}`,
+            `/session/${encodeURIComponent(pageContext.sessionId)}`,
             baseUrl
           ).toString();
           await page.goto(sessionUrl, { waitUntil: "networkidle" });
@@ -1727,7 +1727,7 @@ async function runS1Coverage({
       if (afterTaskWaitMs) await page.waitForTimeout(afterTaskWaitMs);
 
       const urlNow = page.url();
-      if (!urlNow.includes("/ui/session/") || urlNow.includes("/results")) {
+      if (!urlNow.includes("/session/") || urlNow.includes("/results")) {
         sweepDiagnostics.breakReason = "navigated_outside_s1";
         break;
       }

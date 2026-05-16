@@ -26,7 +26,7 @@ test('error_detection_task_shows_correct_ui_on_reload', async ({ page }) => {
   });
 
   console.log('Step 1: Create new error detection task');
-  await page.goto(`${BASE_URL}/ui/editor/Point_Annotation.html?module=${moduleId}&topic=${topicId}&task=${taskId}&new=true&type=click&name=TestErrorTask`);
+  await page.goto(`${BASE_URL}/editor/Point_Annotation.html?module=${moduleId}&topic=${topicId}&task=${taskId}&new=true&type=click&name=TestErrorTask`);
   
   // Wait for editor to load
   await page.waitForFunction(() => {
@@ -66,7 +66,7 @@ test('error_detection_task_shows_correct_ui_on_reload', async ({ page }) => {
   await page.waitForTimeout(2000);
 
   console.log('Step 6: Reload task (open existing task)');
-  await page.goto(`${BASE_URL}/ui/editor/Point_Annotation.html?module=${moduleId}&topic=${topicId}&task=${taskId}`);
+  await page.goto(`${BASE_URL}/editor/Point_Annotation.html?module=${moduleId}&topic=${topicId}&task=${taskId}`);
   
   // Wait for editor to load
   await page.waitForFunction(() => {

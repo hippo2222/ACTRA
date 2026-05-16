@@ -5,7 +5,7 @@ Hosted infra + production launch contour now has a recorded local green acceptan
 - `npm run smoke:launch-acceptance:hosted` завершился зелёно на локальном Docker stack;
 - companion contour `npm run smoke:complex-passage:hosted:infra` прошёл внутри того же acceptance story с recorded result `60 passed`;
 - live `docker-compose.hosted.yml` stack поднялся, а `/api/ready.launch_contract` стал `green` на живом runtime;
-- live hosted auth lifecycle (`register -> verify -> me -> logout -> login -> forgot-password request -> /ui/main`) прошёл полностью без dev bridge;
+- live hosted auth lifecycle (`register -> verify -> me -> logout -> login -> forgot-password request -> /main`) прошёл полностью без dev bridge;
 - contour всё ещё остаётся `transitional`, потому что теперь незакрыт уже не кодовый, а public-env tail: реальный domain/SMTP/proxy/backup proof.
 - канонический remaining checklist для этого хвоста зафиксирован в `hosted_launch_ops_checklist.md`.
 

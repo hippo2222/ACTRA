@@ -16,7 +16,7 @@ test.describe('Центр теории - Исправления', () => {
   test.describe('Локализация и понятность интерфейса', () => {
     
     test('должен отображать "Автосинхронизация" вместо "Worker Sync"', async ({ page }) => {
-      await page.goto(`${BASE_URL}/ui/editor`);
+      await page.goto(`${BASE_URL}/editor`);
       
       // Открыть модалку управления теорией темы (требует наличия темы)
       // Проверяем, что текст "Worker Sync" отсутствует
@@ -29,7 +29,7 @@ test.describe('Центр теории - Исправления', () => {
     });
     
     test('должен показывать пояснения к способам привязки', async ({ page }) => {
-      await page.goto(`${BASE_URL}/ui/editor`);
+      await page.goto(`${BASE_URL}/editor`);
       
       // Проверяем наличие пояснительных текстов в опциях
       const dynamicLinkOption = page.locator('option[value="link"]');
@@ -46,7 +46,7 @@ test.describe('Центр теории - Исправления', () => {
     });
     
     test('должен отображать корректный текст о комплексах', async ({ page }) => {
-      await page.goto(`${BASE_URL}/ui/editor`);
+      await page.goto(`${BASE_URL}/editor`);
       
       // Проверяем, что старый некорректный текст отсутствует
       const oldText = await page.locator('text=В комплексы этой темы будет прописана').count();
@@ -58,7 +58,7 @@ test.describe('Центр теории - Исправления', () => {
     });
     
     test('должен показывать упрощённый текст в редакторе теории', async ({ page }) => {
-      await page.goto(`${BASE_URL}/ui/theory-editor`);
+      await page.goto(`${BASE_URL}/theory-editor`);
       
       // Проверяем отсутствие старого непонятного текста
       const oldText = await page.locator('text=Обзорный центр связей может появиться позже').count();
@@ -77,7 +77,7 @@ test.describe('Центр теории - Исправления', () => {
   test.describe('Кастомное модальное окно создания теории', () => {
     
     test('должно открываться кастомное модальное окно вместо browser prompt', async ({ page }) => {
-      await page.goto(`${BASE_URL}/ui/editor`);
+      await page.goto(`${BASE_URL}/editor`);
       
       // Проверяем наличие модального окна в DOM
       const modal = page.locator('#create-theory-modal');
@@ -93,7 +93,7 @@ test.describe('Центр теории - Исправления', () => {
     });
     
     test('модальное окно должно иметь кнопки закрытия', async ({ page }) => {
-      await page.goto(`${BASE_URL}/ui/editor`);
+      await page.goto(`${BASE_URL}/editor`);
       
       const closeButtons = page.locator('[data-role="create-theory-close"]');
       const count = await closeButtons.count();
@@ -101,7 +101,7 @@ test.describe('Центр теории - Исправления', () => {
     });
     
     test('модальное окно должно поддерживать Enter для подтверждения', async ({ page }) => {
-      await page.goto(`${BASE_URL}/ui/editor`);
+      await page.goto(`${BASE_URL}/editor`);
       
       const input = page.locator('#create-theory-title-input');
       
@@ -118,7 +118,7 @@ test.describe('Центр теории - Исправления', () => {
   test.describe('Навигация и кнопки', () => {
     
     test('должна быть кнопка "Центр теории" в хедере главного экрана', async ({ page }) => {
-      await page.goto(`${BASE_URL}/ui/editor`);
+      await page.goto(`${BASE_URL}/editor`);
       
       const theoryCenterBtn = page.locator('#theory-center-nav-btn');
       await expect(theoryCenterBtn).toBeVisible();
@@ -130,14 +130,14 @@ test.describe('Центр теории - Исправления', () => {
     });
     
     test('кнопка "Центр теории" должна быть кликабельной', async ({ page }) => {
-      await page.goto(`${BASE_URL}/ui/editor`);
+      await page.goto(`${BASE_URL}/editor`);
       
       const theoryCenterBtn = page.locator('#theory-center-nav-btn');
       await expect(theoryCenterBtn).toBeEnabled();
     });
     
     test('кнопка "Назад" в редакторе теории должна иметь правильный текст', async ({ page }) => {
-      await page.goto(`${BASE_URL}/ui/theory-editor`);
+      await page.goto(`${BASE_URL}/theory-editor`);
       
       const backBtn = page.locator('#theory-back-btn');
       if (await backBtn.count() > 0) {
@@ -154,7 +154,7 @@ test.describe('Центр теории - Исправления', () => {
   test.describe('Редактор теории - Форматирование текста', () => {
     
     test('должна быть кнопка подчёркивания текста', async ({ page }) => {
-      await page.goto(`${BASE_URL}/ui/theory-editor`);
+      await page.goto(`${BASE_URL}/theory-editor`);
       
       const underlineBtn = page.locator('#theory-underline');
       await expect(underlineBtn).toBeVisible();
@@ -168,7 +168,7 @@ test.describe('Центр теории - Исправления', () => {
     });
     
     test('кнопка подчёркивания должна быть рядом с Bold и Italic', async ({ page }) => {
-      await page.goto(`${BASE_URL}/ui/theory-editor`);
+      await page.goto(`${BASE_URL}/theory-editor`);
       
       const boldBtn = page.locator('#theory-bold');
       const italicBtn = page.locator('#theory-italic');
@@ -187,7 +187,7 @@ test.describe('Центр теории - Исправления', () => {
   test.describe('Функциональность изображений', () => {
     
     test('изображения должны иметь атрибуты data-width и data-align', async ({ page }) => {
-      await page.goto(`${BASE_URL}/ui/theory-editor`);
+      await page.goto(`${BASE_URL}/theory-editor`);
       
       // Проверяем, что если есть изображения, они имеют нужные атрибуты
       const images = page.locator('.theory-image');
@@ -201,7 +201,7 @@ test.describe('Центр теории - Исправления', () => {
     });
     
     test('изображения должны быть кликабельными (cursor: pointer)', async ({ page }) => {
-      await page.goto(`${BASE_URL}/ui/theory-editor`);
+      await page.goto(`${BASE_URL}/theory-editor`);
       
       const images = page.locator('.theory-image');
       const count = await images.count();
@@ -214,7 +214,7 @@ test.describe('Центр теории - Исправления', () => {
     });
     
     test('изображения должны быть обёрнуты в theory-image-wrapper', async ({ page }) => {
-      await page.goto(`${BASE_URL}/ui/theory-editor`);
+      await page.goto(`${BASE_URL}/theory-editor`);
       
       const wrappers = page.locator('.theory-image-wrapper');
       const images = page.locator('.theory-image');
@@ -236,7 +236,7 @@ test.describe('Центр теории - Исправления', () => {
   test.describe('UI элементы - Списки и теги', () => {
     
     test('список теорий должен иметь достаточную высоту', async ({ page }) => {
-      await page.goto(`${BASE_URL}/ui/theory-editor`);
+      await page.goto(`${BASE_URL}/theory-editor`);
       
       const libraryList = page.locator('#theory-library-list');
       if (await libraryList.count() > 0) {
@@ -249,7 +249,7 @@ test.describe('Центр теории - Исправления', () => {
     });
     
     test('теги в библиотеке не должны растягиваться', async ({ page }) => {
-      await page.goto(`${BASE_URL}/ui/theory-editor`);
+      await page.goto(`${BASE_URL}/theory-editor`);
       
       // Проверяем элементы библиотеки
       const libraryItems = page.locator('.theory-library-item');
@@ -273,7 +273,7 @@ test.describe('Центр теории - Исправления', () => {
     test('кнопки должны адаптироваться на мобильных устройствах', async ({ page }) => {
       // Тест на мобильном viewport
       await page.setViewportSize({ width: 375, height: 667 });
-      await page.goto(`${BASE_URL}/ui/theory-editor`);
+      await page.goto(`${BASE_URL}/theory-editor`);
       
       const saveBtn = page.locator('#theory-save-btn');
       if (await saveBtn.count() > 0) {
@@ -284,7 +284,7 @@ test.describe('Центр теории - Исправления', () => {
     
     test('кнопки должны корректно отображаться на десктопе', async ({ page }) => {
       await page.setViewportSize({ width: 1280, height: 720 });
-      await page.goto(`${BASE_URL}/ui/theory-editor`);
+      await page.goto(`${BASE_URL}/theory-editor`);
       
       const saveBtn = page.locator('#theory-save-btn');
       if (await saveBtn.count() > 0) {
@@ -300,7 +300,7 @@ test.describe('Центр теории - Исправления', () => {
   test.describe('Центр теории - Статусы и tooltips', () => {
     
     test('должны быть tooltips у статусов синхронизации', async ({ page }) => {
-      await page.goto(`${BASE_URL}/ui/theory-center`);
+      await page.goto(`${BASE_URL}/theory-center`);
       
       // Проверяем наличие элементов с title атрибутами
       const syncBadges = page.locator('[title*="синхронизиров"]');
@@ -316,7 +316,7 @@ test.describe('Центр теории - Исправления', () => {
     });
     
     test('кнопки действий должны иметь title атрибуты', async ({ page }) => {
-      await page.goto(`${BASE_URL}/ui/theory-center`);
+      await page.goto(`${BASE_URL}/theory-center`);
       
       // Проверяем кнопки с data-action
       const actionButtons = page.locator('[data-action]');
@@ -338,7 +338,7 @@ test.describe('Центр теории - Исправления', () => {
   test.describe('Оптимизация анимаций', () => {
     
     test('элементы с анимацией должны использовать will-change', async ({ page }) => {
-      await page.goto(`${BASE_URL}/ui/theory-editor`);
+      await page.goto(`${BASE_URL}/theory-editor`);
       
       const toolbarBtn = page.locator('.theory-toolbar-btn').first();
       if (await toolbarBtn.count() > 0) {
@@ -348,7 +348,7 @@ test.describe('Центр теории - Исправления', () => {
     });
     
     test('transition должен быть оптимизирован', async ({ page }) => {
-      await page.goto(`${BASE_URL}/ui/theory-center`);
+      await page.goto(`${BASE_URL}/theory-center`);
       
       const summaryCard = page.locator('.theory-summary-card').first();
       if (await summaryCard.count() > 0) {
@@ -368,7 +368,7 @@ test.describe('Центр теории - Исправления', () => {
   test.describe('Интеграционные тесты', () => {
     
     test('навигация между редактором и центром теории работает', async ({ page }) => {
-      await page.goto(`${BASE_URL}/ui/editor`);
+      await page.goto(`${BASE_URL}/editor`);
       
       const theoryCenterBtn = page.locator('#theory-center-nav-btn');
       if (await theoryCenterBtn.count() > 0) {
@@ -387,7 +387,7 @@ test.describe('Центр теории - Исправления', () => {
       const errors = [];
       page.on('pageerror', error => errors.push(error));
       
-      await page.goto(`${BASE_URL}/ui/editor`);
+      await page.goto(`${BASE_URL}/editor`);
       await page.waitForLoadState('networkidle');
       
       // Проверяем отсутствие критичных ошибок

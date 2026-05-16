@@ -1292,7 +1292,7 @@
 
     // --- Navigate to main ---
     function goToMain() {
-        window.navigateWithTransition('/ui/main');
+        window.navigateWithTransition('/main');
     }
 
     window.welcomeRetryInit = function () {
@@ -2025,9 +2025,9 @@
     </header>
     <main id="task-content"></main>
   </div>
-  <script src="/ui/TestUI/TestUI.web.js?v=20260402-reviewfix1"><\/script>
-  <script src="/ui/TestUI/TestUI.question.js?v=20260402-reviewfix1"><\/script>
-  <script src="/ui/TestUI/TestUI.sidebar.js"><\/script>
+  <script src="/TestUI/TestUI.web.js?v=20260402-reviewfix1"><\/script>
+  <script src="/TestUI/TestUI.question.js?v=20260402-reviewfix1"><\/script>
+  <script src="/TestUI/TestUI.sidebar.js"><\/script>
   <script>
     const task = ${task};
     const draft = ${draft};

@@ -681,11 +681,11 @@
             }
 
             if (hasNext) {
-                navigateWithoutPrompt(`/ui/session/${encodeURIComponent(
+                navigateWithoutPrompt(`/session/${encodeURIComponent(
                     SessionState.sessionId
                 )}/iteration/${encodeURIComponent(iteration)}`);
             } else {
-                navigateWithoutPrompt(`/ui/session/${encodeURIComponent(
+                navigateWithoutPrompt(`/session/${encodeURIComponent(
                     SessionState.sessionId
                 )}/results`);
             }
@@ -787,7 +787,7 @@
                 showStatus(message, "error");
                 return;
             }
-            navigateWithoutPrompt(SessionRoutes.COMPLEXES || SessionRoutes.MAIN || "/ui/complexes");
+            navigateWithoutPrompt(SessionRoutes.COMPLEXES || SessionRoutes.MAIN || "/complexes");
         } catch (err) {
             console.error("Pause request failed", err);
             showStatus("Не удалось поставить сессию на паузу. Проверьте соединение и попробуйте снова", "error");
@@ -798,7 +798,7 @@
 
     async function handleDiscardSession() {
         if (!SessionState.sessionId) {
-            navigateWithoutPrompt(SessionRoutes.COMPLEXES || SessionRoutes.MAIN || "/ui/complexes");
+            navigateWithoutPrompt(SessionRoutes.COMPLEXES || SessionRoutes.MAIN || "/complexes");
             return;
         }
 
@@ -821,7 +821,7 @@
                 return;
             }
 
-            navigateWithoutPrompt(SessionRoutes.COMPLEXES || SessionRoutes.MAIN || "/ui/complexes");
+            navigateWithoutPrompt(SessionRoutes.COMPLEXES || SessionRoutes.MAIN || "/complexes");
         } catch (err) {
             console.error("Discard session failed", err);
             showStatus("Не удалось выйти без сохранения. Попробуйте снова", "error");

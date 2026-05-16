@@ -2,11 +2,11 @@
     'use strict';
 
     const NAV_ITEMS = [
-        { section: 'main', label: 'Главная', icon: 'home', href: '/ui/main' },
-        { section: 'catalog', label: 'Каталог', icon: 'travel_explore', href: '/ui/catalog' },
-        { section: 'complexes', label: 'Комплексы', icon: 'inventory_2', href: '/ui/complexes' },
-        { section: 'theory', label: 'Теория', icon: 'hub', href: '/ui/theory-center' },
-        { section: 'editor', label: 'Редактор', icon: 'edit_document', href: '/ui/editor' },
+        { section: 'main', label: 'Главная', icon: 'home', href: '/main' },
+        { section: 'catalog', label: 'Каталог', icon: 'travel_explore', href: '/catalog' },
+        { section: 'complexes', label: 'Комплексы', icon: 'inventory_2', href: '/complexes' },
+        { section: 'theory', label: 'Теория', icon: 'hub', href: '/theory-center' },
+        { section: 'editor', label: 'Редактор', icon: 'edit_document', href: '/editor' },
     ];
 
     const CREATE_ITEMS = [
@@ -14,19 +14,19 @@
             label: 'Задание',
             copy: 'Открыть мастер создания задания',
             icon: 'add_task',
-            href: '/ui/editor?create=task',
+            href: '/editor?create=task',
         },
         {
             label: 'Комплекс',
             copy: 'Собрать новый учебный комплекс',
             icon: 'design_services',
-            href: '/ui/complexes/create',
+            href: '/complexes/create',
         },
         {
             label: 'Теория',
             copy: 'Создать теоретический материал',
             icon: 'edit_square',
-            href: '/ui/editor/Theory_Editor.html',
+            href: '/editor/Theory_Editor.html',
         },
     ];
 
@@ -42,12 +42,12 @@
 
     function getSectionFromPath() {
         const path = window.location.pathname.replace(/\/+$/, '') || '/';
-        if (path === '/ui' || path === '/ui/main') return 'main';
-        if (path === '/ui/catalog') return 'catalog';
-        if (path === '/ui/complexes') return 'complexes';
-        if (path === '/ui/theory-center' || path.endsWith('/Theory_Center.html')) return 'theory';
-        if (path === '/ui/editor') return 'editor';
-        if (path === '/ui/reference') return 'reference';
+        if (path === '/main' || path === '/ui' || path === '/ui/main') return 'main';
+        if (path === '/catalog' || path === '/ui/catalog') return 'catalog';
+        if (path === '/complexes' || path === '/ui/complexes') return 'complexes';
+        if (path === '/theory-center' || path === '/ui/theory-center' || path.endsWith('/Theory_Center.html')) return 'theory';
+        if (path === '/editor' || path === '/ui/editor') return 'editor';
+        if (path === '/reference' || path === '/ui/reference') return 'reference';
         return '';
     }
 
@@ -92,7 +92,7 @@
         root.innerHTML = `
             <header class="global-header">
                 <div class="global-header__inner">
-                    <a class="global-header__brand" href="/ui/main" data-global-nav="/ui/main" aria-label="ACTRA, на главную">
+                    <a class="global-header__brand" href="/main" data-global-nav="/main" aria-label="ACTRA, на главную">
                         <span class="brand-logo global-header__brand-logo" aria-hidden="true"></span>
                         <span class="global-header__brand-text">ACTRA</span>
                     </a>
@@ -174,7 +174,7 @@
             if (reference) {
                 event.preventDefault();
                 closeCreateMenu(root);
-                navigate('/ui/reference');
+                navigate('/reference');
                 return;
             }
 

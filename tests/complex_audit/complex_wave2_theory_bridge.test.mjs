@@ -38,7 +38,7 @@ async function startComplex(page, { baseUrl, complexId }) {
 }
 
 async function setTheoryBridgeStorage(page, { baseUrl, sessionId, theoryId, theoryTitle, complexId, returnUrl }) {
-  await page.goto(new URL("/ui/main", baseUrl).toString());
+  await page.goto(new URL("/main", baseUrl).toString());
   await page.evaluate(
     ({ key, payload }) => {
       window.sessionStorage.setItem(key, JSON.stringify(payload));
@@ -108,9 +108,9 @@ test.describe("complex audit wave 2 theory bridge", () => {
         complexId: fixture.complexId,
       });
 
-      const expectedReturnUrl = `/ui/editor/Theory_Editor.html?theory_id=${encodeURIComponent(
+      const expectedReturnUrl = `/editor/Theory_Editor.html?theory_id=${encodeURIComponent(
         fixture.theoryId
-      )}&return_url=${encodeURIComponent("/ui/editor")}`;
+      )}&return_url=${encodeURIComponent("/editor")}`;
 
       await setTheoryBridgeStorage(page, {
         baseUrl: runtime.baseUrl,
@@ -121,7 +121,7 @@ test.describe("complex audit wave 2 theory bridge", () => {
         returnUrl: expectedReturnUrl,
       });
 
-      await page.goto(new URL(`/ui/session/${encodeURIComponent(sessionId)}`, runtime.baseUrl).toString());
+      await page.goto(new URL(`/session/${encodeURIComponent(sessionId)}`, runtime.baseUrl).toString());
       await waitForPageStable(page);
 
       await test.step("S1 shows theory-hub bridge context", async () => {
@@ -173,7 +173,7 @@ test.describe("complex audit wave 2 theory bridge", () => {
         complexId: fixture.complexId,
       });
 
-      await page.goto(new URL(`/ui/session/${encodeURIComponent(sessionId)}`, runtime.baseUrl).toString());
+      await page.goto(new URL(`/session/${encodeURIComponent(sessionId)}`, runtime.baseUrl).toString());
       await waitForPageStable(page);
 
       await test.step("S1 falls back to complex theory_link when no storage bridge exists", async () => {
@@ -191,7 +191,7 @@ test.describe("complex audit wave 2 theory bridge", () => {
         await page.locator("#to-theory-hub-btn").click();
         await page.waitForURL(
           new RegExp(
-            `/ui/editor/Theory_Editor\\.html\\?theory_id=${String(fixture.theoryId).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`
+            `/editor/Theory_Editor\\.html\\?theory_id=${String(fixture.theoryId).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`
           ),
           { timeout: 20000 }
         );
