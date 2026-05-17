@@ -1,6 +1,12 @@
 (function () {
     'use strict';
 
+    function wt(key, fallback) {
+        if (!window.i18n || typeof window.i18n.t !== 'function') return fallback;
+        var v = window.i18n.t(key);
+        return v !== key ? v : fallback;
+    }
+
     let currentMode = null;       // 'onboarding' | 'select' | 'login'
     let profiles = [];
     let pendingPasswordUserId = null;
@@ -46,12 +52,12 @@
         document.querySelectorAll('[data-google-auth-button]').forEach((button) => {
             button.disabled = !googleEnabled;
             button.setAttribute('aria-disabled', googleEnabled ? 'false' : 'true');
-            button.title = googleEnabled ? '' : 'Google OAuth пока не настроен в локальном окружении';
+            button.title = googleEnabled ? '' : wt('welcome.google_not_configured', 'Google OAuth пока не настроен в локальном окружении');
             const label = button.querySelector('[data-google-auth-label]');
             if (label) {
                 label.textContent = googleEnabled
-                    ? button.dataset.googleEnabledLabel || 'Продолжить через Google'
-                    : button.dataset.googleDisabledLabel || 'Google OAuth не настроен';
+                    ? button.dataset.googleEnabledLabel || wt('welcome.google_btn_enabled', 'Продолжить через Google')
+                    : button.dataset.googleDisabledLabel || wt('welcome.google_btn_disabled', 'Google OAuth не настроен');
             }
         });
     }
@@ -185,37 +191,37 @@
 
     // --- Validation ---
     function validateName(name) {
-        if (!name || name.trim().length === 0) return 'Введите имя профиля';
+        if (!name || name.trim().length === 0) return wt('welcome.validate_name_required', 'Введите имя профиля');
         name = name.trim();
-        if (name.length < 2) return 'Минимум 2 символа';
-        if (name.length > 50) return 'Максимум 50 символов';
+        if (name.length < 2) return wt('welcome.validate_name_min', 'Минимум 2 символа');
+        if (name.length > 50) return wt('welcome.validate_name_max', 'Максимум 50 символов');
         const forbidden = ['/', '\\', '<', '>', ':', '"', '|', '?', '*'];
         if (forbidden.some(c => name.includes(c))) {
-            return `Недопустимые символы: ${forbidden.join(', ')}`;
+            return wt('welcome.validate_name_forbidden', 'Недопустимые символы: {chars}').replace('{chars}', forbidden.join(', '));
         }
         return null;
     }
 
     function validateLogin(login) {
         const value = String(login || '').trim().toLowerCase();
-        if (!value) return 'Введите логин';
-        if (value.length < 3 || value.length > 32) return 'Логин должен быть длиной 3-32 символа';
+        if (!value) return wt('welcome.validate_login_required', 'Введите логин');
+        if (value.length < 3 || value.length > 32) return wt('welcome.validate_login_length', 'Логин должен быть длиной 3-32 символа');
         if (!/^[a-z0-9](?:[a-z0-9._-]{1,30}[a-z0-9])?$/.test(value)) {
-            return 'Логин может содержать только латиницу, цифры, ".", "-" и "_"';
+            return wt('welcome.validate_login_format', 'Логин может содержать только латиницу, цифры, ".", "-" и "_"');
         }
         return null;
     }
 
     function validateEmail(email) {
         const value = String(email || '').trim().toLowerCase();
-        if (!value) return 'Введите email';
-        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value)) return 'Введите корректный email';
+        if (!value) return wt('welcome.validate_email_required', 'Введите email');
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value)) return wt('welcome.validate_email_invalid', 'Введите корректный email');
         return null;
     }
 
     function validatePassword(password) {
-        if (!password) return 'Введите пароль';
-        if (String(password).length < 8) return 'Пароль должен содержать минимум 8 символов';
+        if (!password) return wt('welcome.validate_password_required', 'Введите пароль');
+        if (String(password).length < 8) return wt('welcome.validate_password_length', 'Пароль должен содержать минимум 8 символов');
         return null;
     }
 
@@ -240,22 +246,22 @@
     function describeVerificationProblem(code) {
         switch (String(code || '').trim()) {
             case 'already_verified':
-                return 'Почта уже подтверждена. Можно продолжать.';
+                return wt('welcome.verify_already_verified', 'Почта уже подтверждена. Можно продолжать.');
             case 'token_already_used':
-                return 'Эта ссылка уже была использована. Если аккаунт подтверждён, просто продолжайте вход.';
+                return wt('welcome.verify_token_used', 'Эта ссылка уже была использована. Если аккаунт подтверждён, просто продолжайте вход.');
             case 'invalid_or_expired_token':
-                return 'Ссылка подтверждения недействительна или уже истекла. Запросите новое письмо.';
+                return wt('welcome.verify_token_expired', 'Ссылка подтверждения недействительна или уже истекла. Запросите новое письмо.');
             case 'email_changed':
-                return 'Для аккаунта уже указан другой email. Запросите новое письмо для актуального адреса.';
+                return wt('welcome.verify_email_changed', 'Для аккаунта уже указан другой email. Запросите новое письмо для актуального адреса.');
             case 'not_configured':
             case 'disabled':
-                return 'Письма подтверждения сейчас временно недоступны. Попробуйте позже.';
+                return wt('welcome.verify_not_configured', 'Письма подтверждения сейчас временно недоступны. Попробуйте позже.');
             case 'send_failed':
-                return 'Не удалось отправить письмо. Попробуйте ещё раз через несколько секунд.';
+                return wt('welcome.verify_send_failed', 'Не удалось отправить письмо. Попробуйте ещё раз через несколько секунд.');
             case 'email_missing':
-                return 'Для аккаунта не указан email для подтверждения.';
+                return wt('welcome.verify_email_missing', 'Для аккаунта не указан email для подтверждения.');
             default:
-                return 'Не удалось завершить подтверждение почты.';
+                return wt('welcome.verify_failed', 'Не удалось завершить подтверждение почты.');
         }
     }
 
@@ -303,33 +309,33 @@
     function describeForgotPasswordProblem(code) {
         switch (String(code || '').trim()) {
             case 'identifier_required':
-                return 'Введите логин или email.';
+                return wt('welcome.forgot_identifier_required', 'Введите логин или email.');
             case 'disabled':
             case 'not_configured':
-                return 'Письма для восстановления пароля сейчас недоступны. Попробуйте позже.';
+                return wt('welcome.forgot_not_configured', 'Письма для восстановления пароля сейчас недоступны. Попробуйте позже.');
             case 'send_failed':
-                return 'Не удалось отправить письмо. Попробуйте ещё раз чуть позже.';
+                return wt('welcome.forgot_send_failed', 'Не удалось отправить письмо. Попробуйте ещё раз чуть позже.');
             case 'email_missing':
-                return 'Для этого аккаунта не указана почта для восстановления.';
+                return wt('welcome.forgot_email_missing', 'Для этого аккаунта не указана почта для восстановления.');
             default:
-                return 'Не удалось запустить восстановление пароля.';
+                return wt('welcome.forgot_failed', 'Не удалось запустить восстановление пароля.');
         }
     }
 
     function describeResetPasswordProblem(code) {
         switch (String(code || '').trim()) {
             case 'token_required':
-                return 'Ссылка для сброса пароля отсутствует или повреждена.';
+                return wt('welcome.reset_token_required', 'Ссылка для сброса пароля отсутствует или повреждена.');
             case 'invalid_password':
-                return 'Новый пароль должен содержать минимум 8 символов.';
+                return wt('welcome.reset_password_length', 'Новый пароль должен содержать минимум 8 символов.');
             case 'token_already_used':
-                return 'Эта ссылка уже была использована. Запросите новое письмо.';
+                return wt('welcome.reset_token_used', 'Эта ссылка уже была использована. Запросите новое письмо.');
             case 'invalid_or_expired_token':
-                return 'Ссылка для сброса недействительна или уже истекла. Запросите новое письмо.';
+                return wt('welcome.reset_token_expired', 'Ссылка для сброса недействительна или уже истекла. Запросите новое письмо.');
             case 'email_changed':
-                return 'Почта аккаунта уже изменилась. Запросите новое письмо для актуального адреса.';
+                return wt('welcome.reset_email_changed', 'Почта аккаунта уже изменилась. Запросите новое письмо для актуального адреса.');
             default:
-                return 'Не удалось сохранить новый пароль.';
+                return wt('welcome.reset_failed', 'Не удалось сохранить новый пароль.');
         }
     }
 
@@ -342,26 +348,26 @@
 
         setText(
             'forgotPasswordTitle',
-            isResetMode ? 'Новый пароль' : 'Восстановление пароля'
+            isResetMode ? wt('welcome.forgot_title_reset', 'Новый пароль') : wt('welcome.forgot_title_request', 'Восстановление пароля')
         );
         setText(
             'forgotPasswordSubtitle',
             isResetMode
-                ? 'Введите новый пароль для аккаунта, открытого по ссылке из письма.'
-                : 'Укажите логин или email, и мы отправим ссылку для сброса.'
+                ? wt('welcome.forgot_subtitle_reset', 'Введите новый пароль для аккаунта, открытого по ссылке из письма.')
+                : wt('welcome.forgot_subtitle_request', 'Укажите логин или email, и мы отправим ссылку для сброса.')
         );
 
         setForgotPasswordButtonBusy(
             'forgotPasswordRequestBtn',
             forgotPasswordState.requestBusy,
-            'Отправить ссылку',
-            'Отправляем...'
+            wt('welcome.forgot_request_btn', 'Отправить ссылку'),
+            wt('welcome.forgot_request_btn_busy', 'Отправляем...')
         );
         setForgotPasswordButtonBusy(
             'forgotPasswordResetBtn',
             forgotPasswordState.resetBusy,
-            'Сохранить новый пароль',
-            'Сохраняем...'
+            wt('welcome.forgot_reset_btn', 'Сохранить новый пароль'),
+            wt('welcome.forgot_reset_btn_busy', 'Сохраняем...')
         );
     }
 
@@ -378,20 +384,20 @@
             : '';
         if (state.status === 'verified') {
             return user.email_verified_at
-                ? `Почта подтверждена ${user.email_verified_at}.`
-                : 'Почта подтверждена. Аккаунт готов к работе.';
+                ? wt('welcome.verify_status_confirmed_at', 'Почта подтверждена {date}.').replace('{date}', user.email_verified_at)
+                : wt('welcome.verify_status_confirmed', 'Почта подтверждена. Аккаунт готов к работе.');
         }
         if (state.status === 'error') {
             return state.verificationEmail?.sent
-                ? 'Новое письмо уже отправлено. Проверьте входящие.'
+                ? wt('welcome.verify_status_resent', 'Новое письмо уже отправлено. Проверьте входящие.')
                 : '';
         }
         if (premiumDate) {
-            return `Premium активирован до ${premiumDate}. Подтвердите email, чтобы завершить регистрацию.`;
+            return wt('welcome.verify_status_premium', 'Premium активирован до {date}. Подтвердите email, чтобы завершить регистрацию.').replace('{date}', premiumDate);
         }
         return sentAt
-            ? `Последнее письмо отправлено ${sentAt}.`
-            : 'Письмо уже отправлено. Откройте ссылку из письма, чтобы завершить регистрацию.';
+            ? wt('welcome.verify_status_sent_at', 'Последнее письмо отправлено {date}.').replace('{date}', sentAt)
+            : wt('welcome.verify_status_sent', 'Письмо уже отправлено. Откройте ссылку из письма, чтобы завершить регистрацию.');
     }
 
     function applyHostedVerificationState() {
@@ -422,31 +428,31 @@
         const status = state.status || 'pending';
 
         let eyebrow = 'Email verification';
-        let title = 'Проверьте почту';
-        let body = 'Мы отправили письмо со ссылкой для подтверждения. После этого аккаунт будет считаться подтверждённым.';
-        let hint = 'Если письмо не пришло сразу, подождите немного и проверьте папку spam.';
+        let title = wt('welcome.verify_panel_title', 'Проверьте почту');
+        let body = wt('welcome.verify_panel_body', 'Мы отправили письмо со ссылкой для подтверждения. После этого аккаунт будет считаться подтверждённым.');
+        let hint = wt('welcome.verify_panel_hint', 'Если письмо не пришло сразу, подождите немного и проверьте папку spam.');
         let icon = 'mail';
         let canResend = state.canResend !== false;
 
         if (status === 'verified') {
             eyebrow = 'Email confirmed';
-            title = 'Почта подтверждена';
-            body = 'Подтверждение прошло успешно. Можно возвращаться в ACTRA и продолжать работу.';
-            hint = 'Если это окно открылось из письма, просто вернитесь в приложение или нажмите кнопку ниже.';
+            title = wt('welcome.verify_panel_confirmed_title', 'Почта подтверждена');
+            body = wt('welcome.verify_panel_confirmed_body', 'Подтверждение прошло успешно. Можно возвращаться в ACTRA и продолжать работу.');
+            hint = wt('welcome.verify_panel_confirmed_hint', 'Если это окно открылось из письма, просто вернитесь в приложение или нажмите кнопку ниже.');
             icon = 'verified';
             canResend = false;
         } else if (status === 'error') {
             eyebrow = 'Verification issue';
-            title = 'Нужно подтвердить почту';
+            title = wt('welcome.verify_panel_error_title', 'Нужно подтвердить почту');
             body = state.message || describeVerificationProblem(state.reason);
-            hint = 'Можно запросить новое письмо ещё раз. Если адрес был введён с ошибкой, позже его можно будет заменить в настройках.';
+            hint = wt('welcome.verify_panel_error_hint', 'Можно запросить новое письмо ещё раз. Если адрес был введён с ошибкой, позже его можно будет заменить в настройках.');
             icon = 'error';
         }
 
         setText('onboardingVerificationEyebrow', eyebrow);
         setText('onboardingVerificationTitle', title);
         setText('onboardingVerificationBody', body);
-        setText('onboardingVerificationEmail', email || 'Email не указан');
+        setText('onboardingVerificationEmail', email || wt('welcome.verify_email_not_specified', 'Email не указан'));
         setText('onboardingVerificationStatus', buildHostedVerificationStatusMessage(state));
         setText('onboardingVerificationHint', hint);
 
@@ -456,14 +462,14 @@
         const resendBtn = document.getElementById('onboardingVerificationResendBtn');
         if (resendBtn) {
             resendBtn.disabled = !!state.resendBusy;
-            resendBtn.textContent = state.resendBusy ? 'Отправляем...' : 'Отправить ещё раз';
+            resendBtn.textContent = state.resendBusy ? wt('welcome.verify_resend_btn_busy', 'Отправляем...') : wt('welcome.verify_resend_btn', 'Отправить ещё раз');
             resendBtn.classList.toggle('hidden', !canResend);
         }
 
         const continueBtn = document.getElementById('onboardingVerificationContinueBtn');
         if (continueBtn) {
             const shouldReturnToAuth = status === 'error' && !user.user_id;
-            continueBtn.textContent = shouldReturnToAuth ? 'К регистрации' : 'Перейти в ACTRA';
+            continueBtn.textContent = shouldReturnToAuth ? wt('welcome.verify_continue_return_auth', 'К регистрации') : wt('welcome.verify_continue_enter_actra', 'Перейти в ACTRA');
         }
 
         setHostedVerificationError(state.error || '');
@@ -514,8 +520,8 @@
                 canResend: false,
                 error: '',
                 statusMessage: data?.verification?.verified_at
-                    ? `Почта подтверждена ${data.verification.verified_at}.`
-                    : 'Почта подтверждена. Аккаунт готов к работе.',
+                    ? wt('welcome.verify_status_confirmed_at', 'Почта подтверждена {date}.').replace('{date}', data.verification.verified_at)
+                    : wt('welcome.verify_status_confirmed', 'Почта подтверждена. Аккаунт готов к работе.'),
             });
             return true;
         }
@@ -603,13 +609,13 @@
     window.welcomeOpenLegalDocument = async function (docType) {
         const loaded = await ensureLegalDocumentsLoaded();
         if (!loaded) {
-            showError('onboardingError', 'Не удалось загрузить юридические документы');
+            showError('onboardingError', wt('welcome.legal_load_failed', 'Не удалось загрузить юридические документы'));
             return;
         }
 
         const { ok, data } = await apiFetch(`/api/legal/document/${docType}`);
         if (!ok || !data.document) {
-            showError('onboardingError', 'Не удалось открыть документ');
+            showError('onboardingError', wt('welcome.legal_open_failed', 'Не удалось открыть документ'));
             return;
         }
 
@@ -617,8 +623,10 @@
         const titleEl = document.getElementById('legalDocTitle');
         const metaEl = document.getElementById('legalDocMeta');
         const contentEl = document.getElementById('legalDocContent');
-        if (titleEl) titleEl.textContent = doc.title || 'Документ';
-        if (metaEl) metaEl.textContent = `Версия: ${doc.version || '-'} | Действует с: ${doc.effective_at || '-'}`;
+        if (titleEl) titleEl.textContent = doc.title || wt('welcome.legal_doc_fallback', 'Документ');
+        if (metaEl) metaEl.textContent = wt('welcome.legal_doc_meta', 'Версия: {version} | Действует с: {date}')
+            .replace('{version}', doc.version || '-')
+            .replace('{date}', doc.effective_at || '-');
         if (contentEl) contentEl.textContent = doc.content || '';
 
         openBlockModal('legalDocModal');
@@ -687,7 +695,7 @@
 
     window.welcomeSubmitConsentGate = async function () {
         if (!consentGateUserId) {
-            showConsentGateError('Не выбран профиль');
+            showConsentGateError(wt('welcome.consent_not_selected', 'Не выбран профиль'));
             return;
         }
 
@@ -698,7 +706,7 @@
 
         const consent = collectConsent('consentGateAcceptTerms', 'consentGateAcceptPrivacy', 'consentGateAcceptRefund');
         if (!consent.accepted) {
-            showConsentGateError('Подтвердите все три документа');
+            showConsentGateError(wt('welcome.consent_confirm_all', 'Подтвердите все три документа'));
             return;
         }
 
@@ -713,7 +721,7 @@
         });
 
         if (!ok) {
-            showConsentGateError((data && (data.message || data.error)) || 'Не удалось сохранить согласие');
+            showConsentGateError((data && (data.message || data.error)) || wt('welcome.consent_save_failed', 'Не удалось сохранить согласие'));
             return;
         }
 
@@ -751,7 +759,7 @@
         const willShow = input.type === 'password';
         input.type = willShow ? 'text' : 'password';
         if (button) {
-            button.setAttribute('aria-label', willShow ? 'Скрыть пароль' : 'Показать пароль');
+            button.setAttribute('aria-label', willShow ? wt('welcome.pw_toggle_hide', 'Скрыть пароль') : wt('welcome.pw_toggle_show', 'Показать пароль'));
             const icon = button.querySelector('.material-symbols-outlined');
             if (icon) icon.textContent = willShow ? 'visibility_off' : 'visibility';
         }
@@ -786,12 +794,12 @@
 
         const button = document.getElementById('onboardingCreateBtn');
         if (button) {
-            button.innerHTML = 'Создать аккаунт <span class="material-symbols-outlined">person_add</span>';
+            button.innerHTML = `${wt('welcome.btn_create_account', 'Создать аккаунт')} <span class="material-symbols-outlined">person_add</span>`;
         }
 
         const nameInput = document.getElementById('onboardingName');
         if (nameInput) {
-            nameInput.placeholder = 'Отображаемое имя';
+            nameInput.placeholder = wt('welcome.placeholder_name_hosted', 'Отображаемое имя');
             nameInput.className = 'w-full pl-12 pr-4 py-3.5 bg-surface-2 border border-border-strong rounded-xl outline-none focus:ring-2 focus:ring-primary transition-all font-medium text-base placeholder:text-text-secondary';
         }
 
@@ -824,12 +832,12 @@
 
         const button = document.getElementById('onboardingCreateBtn');
         if (button) {
-            button.innerHTML = 'Начать обучение <span class="material-symbols-outlined">arrow_forward</span>';
+            button.innerHTML = `${wt('welcome.btn_start_learning', 'Начать обучение')} <span class="material-symbols-outlined">arrow_forward</span>`;
         }
 
         const nameInput = document.getElementById('onboardingName');
         if (nameInput) {
-            nameInput.placeholder = 'Ваше имя';
+            nameInput.placeholder = wt('welcome.placeholder_name_desktop', 'Ваше имя');
             nameInput.className = 'welcome-name-input w-full text-center bg-transparent border-b-2 border-border-subtle focus:border-primary px-4 py-2 text-2xl font-bold text-text-main outline-none transition-colors placeholder:text-text-secondary';
         }
     }
@@ -844,14 +852,14 @@
         toggleHidden('loginName', true);
 
         const passwordInput = document.getElementById('loginPassword');
-        if (passwordInput) passwordInput.placeholder = 'Пароль';
+        if (passwordInput) passwordInput.placeholder = wt('welcome.placeholder_password', 'Пароль');
 
         const identifierInput = document.getElementById('loginIdentifier');
         if (identifierInput) identifierInput.focus();
 
         const submitButton = document.getElementById('loginSubmitBtn');
         if (submitButton) {
-            submitButton.innerHTML = 'Войти <span class="material-symbols-outlined">login</span>';
+            submitButton.innerHTML = `${wt('welcome.btn_login', 'Войти')} <span class="material-symbols-outlined">login</span>`;
         }
     }
 
@@ -866,7 +874,7 @@
 
         const submitButton = document.getElementById('loginSubmitBtn');
         if (submitButton) {
-            submitButton.innerHTML = 'Войти в систему <span class="material-symbols-outlined">login</span>';
+            submitButton.innerHTML = `${wt('welcome.btn_login_system', 'Войти в систему')} <span class="material-symbols-outlined">login</span>`;
         }
     }
 
@@ -1008,7 +1016,7 @@
             showHostedVerificationState({
                 resendBusy: false,
                 status: 'error',
-                error: (data && (data.message || describeVerificationProblem(data.error))) || 'Не удалось отправить письмо повторно.',
+                error: (data && (data.message || describeVerificationProblem(data.error))) || wt('welcome.verify_resend_failed', 'Не удалось отправить письмо повторно.'),
             });
             return;
         }
@@ -1018,7 +1026,7 @@
                 resendBusy: false,
                 error: '',
                 statusMessage: data?.verification_email?.sent
-                    ? 'Новое письмо уже отправлено. Проверьте входящие.'
+                    ? wt('welcome.verify_status_resent', 'Новое письмо уже отправлено. Проверьте входящие.')
                     : buildHostedVerificationStatusMessage(hostedVerificationState),
             })
         );
@@ -1071,7 +1079,7 @@
         if (forgotPasswordState.requestBusy) return;
         const identifier = String(document.getElementById('forgotPasswordIdentifierInput')?.value || '').trim();
         if (!identifier) {
-            setForgotPasswordStatus('forgotPasswordRequestStatus', 'Введите логин или email.', 'error');
+            setForgotPasswordStatus('forgotPasswordRequestStatus', wt('welcome.forgot_identifier_required', 'Введите логин или email.'), 'error');
             return;
         }
 
@@ -1091,7 +1099,7 @@
         if (!ok) {
             setForgotPasswordStatus(
                 'forgotPasswordRequestStatus',
-                (data && (data.message || describeForgotPasswordProblem(data.error))) || 'Не удалось отправить письмо для восстановления.',
+                (data && (data.message || describeForgotPasswordProblem(data.error))) || wt('welcome.forgot_send_recovery_failed', 'Не удалось отправить письмо для восстановления.'),
                 'error'
             );
             return;
@@ -1099,7 +1107,7 @@
 
         setForgotPasswordStatus(
             'forgotPasswordRequestStatus',
-            data?.message || 'Если аккаунт существует, письмо уже отправлено.',
+            data?.message || wt('welcome.forgot_sent_success', 'Если аккаунт существует, письмо уже отправлено.'),
             'success'
         );
     };
@@ -1111,7 +1119,7 @@
         const confirmPassword = String(document.getElementById('forgotPasswordConfirmPassword')?.value || '');
 
         if (!token) {
-            setForgotPasswordStatus('forgotPasswordResetStatus', 'Ссылка для сброса пароля отсутствует.', 'error');
+            setForgotPasswordStatus('forgotPasswordResetStatus', wt('welcome.forgot_token_missing', 'Ссылка для сброса пароля отсутствует.'), 'error');
             return;
         }
         const passwordError = validatePassword(newPassword);
@@ -1120,7 +1128,7 @@
             return;
         }
         if (newPassword !== confirmPassword) {
-            setForgotPasswordStatus('forgotPasswordResetStatus', 'Пароли не совпадают.', 'error');
+            setForgotPasswordStatus('forgotPasswordResetStatus', wt('welcome.forgot_passwords_mismatch', 'Пароли не совпадают.'), 'error');
             return;
         }
 
@@ -1143,7 +1151,7 @@
         if (!ok) {
             setForgotPasswordStatus(
                 'forgotPasswordResetStatus',
-                (data && (data.message || describeResetPasswordProblem(data.error))) || 'Не удалось сохранить новый пароль.',
+                (data && (data.message || describeResetPasswordProblem(data.error))) || wt('welcome.reset_failed', 'Не удалось сохранить новый пароль.'),
                 'error'
             );
             return;
@@ -1168,19 +1176,19 @@
         if (!title || !subtitle) return;
 
         if (mode === 'onboarding') {
-            title.textContent = 'Добро пожаловать!';
-            subtitle.textContent = 'Создайте профиль, чтобы начать.';
+            title.textContent = wt('welcome.header_welcome_title', 'Добро пожаловать!');
+            subtitle.textContent = wt('welcome.header_welcome_subtitle', 'Создайте профиль, чтобы начать.');
             return;
         }
 
         if (mode === 'login') {
-            title.textContent = 'С возвращением';
-            subtitle.textContent = 'Введите пароль, чтобы продолжить обучение.';
+            title.textContent = wt('welcome.header_return_title', 'С возвращением');
+            subtitle.textContent = wt('welcome.header_return_subtitle', 'Введите пароль, чтобы продолжить обучение.');
             return;
         }
 
-        title.textContent = 'Добро пожаловать';
-        subtitle.textContent = 'Выберите профиль, чтобы продолжить обучение.';
+        title.textContent = wt('welcome.header_select_title', 'Добро пожаловать');
+        subtitle.textContent = wt('welcome.header_select_subtitle', 'Выберите профиль, чтобы продолжить обучение.');
     };
 
     function updateWelcomeHeader(mode) {
@@ -1201,39 +1209,39 @@
                 if (hostedVerificationState) {
                     const status = hostedVerificationState.status || 'pending';
                     if (kicker) {
-                        kicker.textContent = status === 'verified' ? 'Email confirmed' : 'Подтверждение почты';
+                        kicker.textContent = status === 'verified' ? 'Email confirmed' : wt('welcome.header_verify_kicker_pending', 'Подтверждение почты');
                         kicker.classList.remove('hidden');
                     }
                     if (status === 'verified') {
-                        title.textContent = 'Почта подтверждена';
-                        subtitle.textContent = 'Аккаунт активирован. Можно переходить в ACTRA и продолжать работу.';
+                        title.textContent = wt('welcome.header_verified_title', 'Почта подтверждена');
+                        subtitle.textContent = wt('welcome.header_verified_subtitle', 'Аккаунт активирован. Можно переходить в ACTRA и продолжать работу.');
                         return;
                     }
                     if (status === 'error') {
-                        title.textContent = 'Подтвердите email';
-                        subtitle.textContent = 'Ссылка не сработала или письмо не дошло. Отсюда можно отправить новое письмо и завершить регистрацию.';
+                        title.textContent = wt('welcome.header_verify_error_title', 'Подтвердите email');
+                        subtitle.textContent = wt('welcome.header_verify_error_subtitle', 'Ссылка не сработала или письмо не дошло. Отсюда можно отправить новое письмо и завершить регистрацию.');
                         return;
                     }
-                    title.textContent = 'Подтвердите email';
-                    subtitle.textContent = 'Мы уже отправили письмо с ссылкой. Откройте его, чтобы завершить первичную регистрацию аккаунта.';
+                    title.textContent = wt('welcome.header_verify_error_title', 'Подтвердите email');
+                    subtitle.textContent = wt('welcome.header_verify_pending_subtitle', 'Мы уже отправили письмо с ссылкой. Откройте его, чтобы завершить первичную регистрацию аккаунта.');
                     return;
                 }
                 if (kicker) {
-                    kicker.textContent = 'Новый аккаунт';
+                    kicker.textContent = wt('welcome.header_new_account_kicker', 'Новый аккаунт');
                     kicker.classList.remove('hidden');
                 }
-                title.textContent = 'Создайте аккаунт';
-                subtitle.textContent = 'Укажите отображаемое имя, логин, email и пароль, чтобы сразу войти в ACTRA Web.';
+                title.textContent = wt('welcome.header_create_title', 'Создайте аккаунт');
+                subtitle.textContent = wt('welcome.header_create_subtitle', 'Укажите отображаемое имя, логин, email и пароль, чтобы сразу войти в ACTRA Web.');
                 return;
             }
 
             if (mode === 'login') {
                 if (kicker) {
-                    kicker.textContent = 'Вход';
+                    kicker.textContent = wt('welcome.header_login_kicker', 'Вход');
                     kicker.classList.remove('hidden');
                 }
-                title.textContent = 'Войти в аккаунт';
-                subtitle.textContent = 'Введите логин или email и пароль, чтобы продолжить обучение и открыть библиотеку.';
+                title.textContent = wt('welcome.header_login_title', 'Войти в аккаунт');
+                subtitle.textContent = wt('welcome.header_login_subtitle', 'Введите логин или email и пароль, чтобы продолжить обучение и открыть библиотеку.');
                 return;
             }
 
@@ -1241,32 +1249,32 @@
                 kicker.textContent = 'ACTRA Web';
                 kicker.classList.remove('hidden');
             }
-            title.textContent = 'Вход или регистрация';
-            subtitle.textContent = 'Используйте существующий аккаунт или создайте новый, чтобы открыть библиотеку, прогресс и публикации.';
+            title.textContent = wt('welcome.header_choice_title', 'Вход или регистрация');
+            subtitle.textContent = wt('welcome.header_choice_subtitle', 'Используйте существующий аккаунт или создайте новый, чтобы открыть библиотеку, прогресс и публикации.');
             return;
         }
 
         if (mode === 'onboarding') {
-            title.textContent = 'Добро пожаловать!';
-            subtitle.textContent = 'Создайте профиль, чтобы начать.';
+            title.textContent = wt('welcome.header_welcome_title', 'Добро пожаловать!');
+            subtitle.textContent = wt('welcome.header_welcome_subtitle', 'Создайте профиль, чтобы начать.');
             return;
         }
 
         if (mode === 'login') {
-            title.textContent = 'С возвращением';
-            subtitle.textContent = 'Введите пароль, чтобы продолжить обучение.';
+            title.textContent = wt('welcome.header_return_title', 'С возвращением');
+            subtitle.textContent = wt('welcome.header_return_subtitle', 'Введите пароль, чтобы продолжить обучение.');
             return;
         }
 
-        title.textContent = 'Добро пожаловать';
-        subtitle.textContent = 'Выберите профиль, чтобы продолжить обучение.';
+        title.textContent = wt('welcome.header_select_title', 'Добро пожаловать');
+        subtitle.textContent = wt('welcome.header_select_subtitle', 'Выберите профиль, чтобы продолжить обучение.');
     }
 
     function showStartupLoadError(message) {
         const title = document.getElementById('welcomeHeaderTitle');
         const subtitle = document.getElementById('welcomeHeaderSubtitle');
-        if (title) title.textContent = 'Не удалось загрузить стартовый экран';
-        if (subtitle) subtitle.textContent = 'Повторите попытку или перезапустите приложение.';
+        if (title) title.textContent = wt('welcome.startup_error_title', 'Не удалось загрузить стартовый экран');
+        if (subtitle) subtitle.textContent = wt('welcome.startup_error_subtitle', 'Повторите попытку или перезапустите приложение.');
 
         showMode('select');
         window.welcomeCancelCreate();
@@ -1279,12 +1287,12 @@
                 <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-error/10 text-error">
                     <span class="material-symbols-outlined text-[28px]">error</span>
                 </div>
-                <h3 class="text-2xl font-black text-text-main mb-3">Стартовые данные недоступны</h3>
-                <p class="text-sm text-text-secondary mb-6">${escapeHtml(message || 'Не удалось получить данные для входа.')}</p>
+                <h3 class="text-2xl font-black text-text-main mb-3">${escapeHtml(wt('welcome.startup_error_heading', 'Стартовые данные недоступны'))}</h3>
+                <p class="text-sm text-text-secondary mb-6">${escapeHtml(message || wt('welcome.startup_error_message', 'Не удалось получить данные для входа.'))}</p>
                 <button type="button" onclick="window.welcomeRetryInit()"
                     class="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 font-bold text-primary-fg hover:bg-primary-hover transition-colors">
                     <span class="material-symbols-outlined text-[18px]">refresh</span>
-                    Повторить
+                    ${escapeHtml(wt('welcome.startup_retry_btn', 'Повторить'))}
                 </button>
             </div>
         `;
@@ -1308,7 +1316,7 @@
         }
         const loaded = await ensureLegalDocumentsLoaded();
         if (!loaded) {
-            showError(errorElementId, 'Не удалось загрузить документы для согласия');
+            showError(errorElementId, wt('welcome.create_docs_failed', 'Не удалось загрузить документы для согласия'));
             return false;
         }
 
@@ -1323,7 +1331,7 @@
             consentConfig.refundCheckboxId
         );
         if (!consent.accepted) {
-            showError(errorElementId, 'Подтвердите согласие с условиями и политикой приватности');
+            showError(errorElementId, wt('welcome.create_consent_required', 'Подтвердите согласие с условиями и политикой приватности'));
             return false;
         }
 
@@ -1340,7 +1348,7 @@
         });
 
         if (!ok) {
-            showError(errorElementId, (data && (data.message || data.error)) || 'Не удалось создать профиль');
+            showError(errorElementId, (data && (data.message || data.error)) || wt('welcome.create_profile_failed', 'Не удалось создать профиль'));
             return false;
         }
 
@@ -1388,13 +1396,13 @@
                 return;
             }
             if (password !== passwordConfirm) {
-                showError('onboardingError', 'Пароли не совпадают');
+                showError('onboardingError', wt('welcome.create_passwords_mismatch', 'Пароли не совпадают'));
                 return;
             }
 
             const loaded = await ensureLegalDocumentsLoaded();
             if (!loaded) {
-                showError('onboardingError', 'Не удалось загрузить документы для согласия');
+                showError('onboardingError', wt('welcome.create_docs_failed', 'Не удалось загрузить документы для согласия'));
                 return;
             }
             if (!hasRequiredConsentVersions()) {
@@ -1403,7 +1411,7 @@
             }
             const consent = collectConsent('onboardingAcceptTerms', 'onboardingAcceptPrivacy', 'onboardingAcceptRefund');
             if (!consent.accepted) {
-                showError('onboardingError', 'Подтвердите согласие с документами');
+                showError('onboardingError', wt('welcome.create_consent_docs', 'Подтвердите согласие с документами'));
                 return;
             }
 
@@ -1420,7 +1428,7 @@
             });
 
             if (!ok) {
-                showError('onboardingError', (data && (data.message || data.error)) || 'Не удалось создать аккаунт');
+                showError('onboardingError', (data && (data.message || data.error)) || wt('welcome.create_account_failed', 'Не удалось создать аккаунт'));
                 return;
             }
 
@@ -1470,28 +1478,28 @@
                              <img id="selectAvatarPreview" src="/api/assets/avatars/1.png?trim=1&size=256" 
                                   class="w-20 h-20 rounded-full object-cover avatar-fill ring-4 ring-primary ring-offset-4 ring-offset-surface-1 shadow-md">
                         </div>
-                        <input type="text" id="selectNewName" placeholder="Имя профиля..."
+                        <input type="text" id="selectNewName" placeholder="${escapeHtml(wt('welcome.placeholder_profile_name', 'Имя профиля...'))}"
                             class="welcome-name-input w-full text-center bg-transparent border-b-2 border-border-subtle focus:border-primary px-2 py-2 text-xl font-bold text-text-main outline-none transition-colors placeholder:text-text-secondary"
                             maxlength="50" onkeydown="if(event.key==='Enter'){event.preventDefault();window.welcomeCreateFromSelect()}">
                     </div>
-                    
+
                     <div id="selectAvatarGallery" class="flex justify-center flex-wrap gap-3 p-2 mb-6 overflow-visible"></div>
                     <input type="hidden" id="selectAvatarSeed" value="1.png">
 
                     <div class="mb-4 rounded-xl border border-border-subtle bg-surface-2 p-4">
                         <p class="text-xs font-semibold text-text-secondary mb-3">
-                            Для создания профиля подтвердите согласие с документами:
+                            ${escapeHtml(wt('welcome.consent_header', 'Для создания профиля подтвердите согласие с документами:'))}
                         </p>
                         <label class="flex items-start gap-3 text-sm text-text-main mb-2 cursor-pointer">
                             <input type="checkbox" id="selectAcceptTerms"
                                 class="mt-0.5 rounded text-primary focus:ring-primary"
                                 onchange="window.welcomeUpdateConsentState('select')">
                             <span>
-                                Я принимаю
+                                ${escapeHtml(wt('welcome.consent_i_accept', 'Я принимаю'))}
                                 <button type="button"
                                     class="text-primary hover:underline font-semibold"
                                     onclick="window.welcomeOpenLegalDocument('terms'); return false;">
-                                    Условия пользования
+                                    ${escapeHtml(wt('welcome.terms_label', 'Условия пользования'))}
                                 </button>
                             </span>
                         </label>
@@ -1500,11 +1508,11 @@
                                 class="mt-0.5 rounded text-primary focus:ring-primary"
                                 onchange="window.welcomeUpdateConsentState('select')">
                             <span>
-                                Я ознакомился(ась) с
+                                ${escapeHtml(wt('welcome.consent_i_read', 'Я ознакомился(ась) с'))}
                                 <button type="button"
                                     class="text-primary hover:underline font-semibold"
                                     onclick="window.welcomeOpenLegalDocument('privacy'); return false;">
-                                    Политикой приватности
+                                    ${escapeHtml(wt('welcome.privacy_label', 'Политикой приватности'))}
                                 </button>
                             </span>
                         </label>
@@ -1513,22 +1521,22 @@
                                 class="mt-0.5 rounded text-primary focus:ring-primary"
                                 onchange="window.welcomeUpdateConsentState('select')">
                             <span>
-                                Я ознакомился(ась) с
+                                ${escapeHtml(wt('welcome.consent_i_read', 'Я ознакомился(ась) с'))}
                                 <button type="button"
                                     class="text-primary hover:underline font-semibold"
                                     onclick="window.welcomeOpenLegalDocument('refund'); return false;">
-                                    Политикой возвратов
+                                    ${escapeHtml(wt('welcome.refund_label', 'Политикой возвратов'))}
                                 </button>
                             </span>
                         </label>
                     </div>
-                     
+
                     <p id="selectError" class="text-xs text-error font-bold mb-4 hidden bg-error/10 p-2 rounded text-center"></p>
-                     
+
                     <button id="selectCreateBtn" onclick="window.welcomeCreateFromSelect()"
                         class="w-full py-4 rounded-xl font-bold bg-primary text-primary-fg hover:bg-primary-hover shadow-lg transition-all text-base tracking-wide flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         disabled>
-                        Создать профиль
+                        ${escapeHtml(wt('welcome.create_profile_btn', 'Создать профиль'))}
                         <span class="material-symbols-outlined">check</span>
                     </button>
                 </div>
@@ -1568,7 +1576,7 @@
                 <img src="${safeAvatarUrl}" class="w-12 h-12 rounded-full bg-surface-2 object-cover avatar-fill ring-2 ring-primary/30 shadow-sm">
                 <div class="flex flex-col">
                     <span class="font-black text-text-main text-lg leading-tight tracking-tight">${safeProfileName}</span>
-                    <span class="text-[10px] text-text-secondary font-bold uppercase tracking-wider mt-0.5">Вход по паролю</span>
+                    <span class="text-[10px] text-text-secondary font-bold uppercase tracking-wider mt-0.5">${escapeHtml(wt('welcome.profile_password_badge', 'Вход по паролю'))}</span>
                 </div>
             `;
             const pwdSection = document.getElementById('passwordInline');
@@ -1596,7 +1604,7 @@
         if (!pendingPasswordUserId) return;
         const password = document.getElementById('passwordInlineInput').value;
         if (!password) {
-            showError('passwordInlineError', 'Введите пароль');
+            showError('passwordInlineError', wt('welcome.validate_password_required', 'Введите пароль'));
             return;
         }
 
@@ -1613,7 +1621,7 @@
             const consentOk = await ensureUserConsent(pendingPasswordUserId);
             if (consentOk) goToMain();
         } else {
-            showError('passwordInlineError', 'Неверный пароль');
+            showError('passwordInlineError', wt('welcome.error_password_wrong', 'Неверный пароль'));
             const input = document.getElementById('passwordInlineInput');
             input.closest('.bg-surface-1').classList.add('shake');
             setTimeout(() => input.closest('.bg-surface-1').classList.remove('shake'), 400);
@@ -1634,7 +1642,7 @@
             const identifier = document.getElementById('loginIdentifier').value;
             const password = document.getElementById('loginPassword').value;
             if (!identifier || !String(identifier).trim()) {
-                showError('loginError', 'Введите логин или email');
+                showError('loginError', wt('welcome.error_login_required', 'Введите логин или email'));
                 return;
             }
             const passwordError = validatePassword(password);
@@ -1658,7 +1666,7 @@
                 return;
             }
 
-            showError('loginError', (data && (data.message || data.error)) || 'Неверный логин, email или пароль');
+            showError('loginError', (data && (data.message || data.error)) || wt('welcome.error_credentials_wrong', 'Неверный логин, email или пароль'));
             const input = document.getElementById('loginPassword');
             input.closest('.bg-surface-1').classList.add('shake');
             setTimeout(() => input.closest('.bg-surface-1').classList.remove('shake'), 400);
@@ -1669,13 +1677,13 @@
 
         const password = document.getElementById('loginPassword').value;
         if (!password) {
-            showError('loginError', 'Введите пароль');
+            showError('loginError', wt('welcome.validate_password_required', 'Введите пароль'));
             return;
         }
 
         const user = profiles[0];
         if (!user || !user.user_id) {
-            showError('loginError', 'Профиль не найден');
+            showError('loginError', wt('welcome.error_profile_not_found', 'Профиль не найден'));
             return;
         }
 
@@ -1693,7 +1701,7 @@
             const consentOk = await ensureUserConsent(userId);
             if (consentOk) goToMain();
         } else {
-            showError('loginError', 'Неверный пароль');
+            showError('loginError', wt('welcome.error_password_wrong', 'Неверный пароль'));
             const input = document.getElementById('loginPassword');
             input.closest('.bg-surface-1').classList.add('shake');
             setTimeout(() => input.closest('.bg-surface-1').classList.remove('shake'), 400);
@@ -1736,7 +1744,7 @@
                 <div class="w-full relative z-10">
                     <p class="welcome-profile-name mb-1 w-full text-xl font-bold tracking-tight text-text-main transition-colors group-hover:text-primary" title="${safeUserName}">${safeUserName}</p>
                     <p class="welcome-profile-meta text-[11px] uppercase tracking-widest font-bold transition-all duration-300 transform translate-y-1 group-hover:translate-y-0 group-hover:text-primary">
-                        ${hasLock ? 'Требуется пароль' : 'Нажмите для входа'}
+                        ${hasLock ? escapeHtml(wt('welcome.profile_password_hint', 'Требуется пароль')) : escapeHtml(wt('welcome.profile_click_hint', 'Нажмите для входа'))}
                     </p>
                 </div>
             </button>`;
@@ -1749,7 +1757,7 @@
                     <span class="material-symbols-outlined text-text-secondary text-4xl group-hover:text-white transition-colors">add</span>
                 </div>
                 <div class="w-full">
-                     <p class="text-lg font-bold text-text-secondary group-hover:text-primary transition-colors tracking-tight">Новый профиль</p>
+                     <p class="text-lg font-bold text-text-secondary group-hover:text-primary transition-colors tracking-tight">${escapeHtml(wt('welcome.profile_new', 'Новый профиль'))}</p>
                 </div>
             </button>`;
 
@@ -2222,7 +2230,7 @@
             const { ok, data } = await apiFetch('/api/users/should-welcome');
 
             if (!ok) {
-                showStartupLoadError('Не удалось получить список профилей и стартовый режим.');
+                showStartupLoadError(wt('welcome.startup_profiles_failed', 'Не удалось получить список профилей и стартовый режим.'));
                 return;
             }
 
@@ -2277,7 +2285,7 @@
                     if (currentResp.ok && currentResp.data?.user?.user_id) {
                         selectedUserId = currentResp.data.user.user_id;
                     } else if (data.auto_select_user_id || availableProfiles.length > 0) {
-                        showStartupLoadError('Не удалось определить активный профиль для входа.');
+                        showStartupLoadError(wt('welcome.startup_profile_missing', 'Не удалось определить активный профиль для входа.'));
                         return;
                     }
                 }
@@ -2347,6 +2355,39 @@
             finalizeOverlay();
         }
     }
+
+    function _applyWelcomeI18n() {
+        if (currentMode) updateWelcomeHeader(currentMode);
+        if (currentMode === 'onboarding') {
+            if (isHostedAuthMode()) {
+                const btn = document.getElementById('onboardingCreateBtn');
+                if (btn) btn.innerHTML = `${wt('welcome.btn_create_account', 'Создать аккаунт')} <span class="material-symbols-outlined">person_add</span>`;
+                const nameIn = document.getElementById('onboardingName');
+                if (nameIn) nameIn.placeholder = wt('welcome.placeholder_name_hosted', 'Отображаемое имя');
+            } else {
+                const btn = document.getElementById('onboardingCreateBtn');
+                if (btn) btn.innerHTML = `${wt('welcome.btn_start_learning', 'Начать обучение')} <span class="material-symbols-outlined">arrow_forward</span>`;
+                const nameIn = document.getElementById('onboardingName');
+                if (nameIn) nameIn.placeholder = wt('welcome.placeholder_name_desktop', 'Ваше имя');
+            }
+        } else if (currentMode === 'login') {
+            const submitBtn = document.getElementById('loginSubmitBtn');
+            if (submitBtn) {
+                const isHosted = isHostedAuthMode();
+                submitBtn.innerHTML = isHosted
+                    ? `${wt('welcome.btn_login', 'Войти')} <span class="material-symbols-outlined">login</span>`
+                    : `${wt('welcome.btn_login_system', 'Войти в систему')} <span class="material-symbols-outlined">login</span>`;
+            }
+            const pwdIn = document.getElementById('loginPassword');
+            if (pwdIn && isHostedAuthMode()) pwdIn.placeholder = wt('welcome.placeholder_password', 'Пароль');
+        } else if (currentMode === 'select') {
+            renderProfilesList();
+        }
+        if (hostedVerificationState) applyHostedVerificationState();
+        if (window.i18n) window.i18n.updateDOM();
+    }
+
+    window.addEventListener('i18n:changed', _applyWelcomeI18n);
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
