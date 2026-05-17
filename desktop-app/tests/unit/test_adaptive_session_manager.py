@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 import pytest
 
 # Добавляем desktop-app в PYTHONPATH, чтобы импортировать services.*
-DESKTOP_APP_PATH = Path(__file__).resolve().parents[2] / "desktop-app"
+DESKTOP_APP_PATH = Path(__file__).resolve().parents[2]
 if str(DESKTOP_APP_PATH) not in sys.path:
     sys.path.insert(0, str(DESKTOP_APP_PATH))
 
@@ -44,7 +44,7 @@ def _setup_complex(complex_service, tasks):
 
 def _wire_task_meta(session_manager, difficulty_manager, task_refs, levels):
     # Все задания считаем одного типа, с одинаковыми доступными уровнями
-    session_manager.task_meta_cache.update({ref: "open_answer" for ref in task_refs})
+    session_manager._task_type_cache.update({ref: "open_answer" for ref in task_refs})
     difficulty_manager.get_available_levels.side_effect = lambda task_type, task_ref: levels
     # Отключаем проверку файлов
     session_manager._check_task_file_exists = lambda task_ref: True
@@ -128,7 +128,8 @@ def test_mixed_allowed_difficulties_follow_global_iteration_layers(session_manag
     assert final_task["difficulty"] == 3
 
 
-def test_inherently_single_level_task_carries_forward_on_later_iterations(session_manager, mock_services):
+def test_inherently_single_level_task_skipped_after_mastery(session_manager, mock_services):
+    """task_open имеет только уровень 1. После успеха в итерации 1 — не появляется в итерации 2+."""
     complex_service, _, difficulty_manager = mock_services
     tasks = ["task_full", "task_open"]
     _setup_complex(complex_service, tasks)
@@ -142,38 +143,32 @@ def test_inherently_single_level_task_carries_forward_on_later_iterations(sessio
 
     session = session_manager.start_session("c1", "user1")
 
+    # Итерация 1: оба задания на уровне 1, оба успешны
     first_round = [session_manager.get_next_task(session.id), session_manager.get_next_task(session.id)]
     assert {task["task_ref"] for task in first_round} == set(tasks)
     assert {task["difficulty"] for task in first_round} == {1}
-
     for task in first_round:
         session_manager.submit_result(
             session.id,
             {"task_ref": task["task_ref"], "success": True, "difficulty": task["difficulty"]},
         )
 
-    second_round = [session_manager.get_next_task(session.id), session_manager.get_next_task(session.id)]
+    # Итерация 2: task_open (max=1) уже освоено — пропускается; только task_full
+    second_task = session_manager.get_next_task(session.id)
     assert session.iteration == 2
-    assert {queued.task_ref: queued.difficulty for queued in session.queue} == {
-        "task_full": 2,
-        "task_open": 1,
-    }
+    assert {queued.task_ref: queued.difficulty for queued in session.queue} == {"task_full": 2}
+    assert second_task["task_ref"] == "task_full"
+    session_manager.submit_result(session.id, {"task_ref": "task_full", "success": True, "difficulty": 2})
 
-    for task in second_round:
-        session_manager.submit_result(
-            session.id,
-            {"task_ref": task["task_ref"], "success": True, "difficulty": task["difficulty"]},
-        )
-
-    session_manager.get_next_task(session.id)
+    # Итерация 3: по-прежнему только task_full
+    third_task = session_manager.get_next_task(session.id)
     assert session.iteration == 3
-    assert {queued.task_ref: queued.difficulty for queued in session.queue} == {
-        "task_full": 3,
-        "task_open": 1,
-    }
+    assert {queued.task_ref: queued.difficulty for queued in session.queue} == {"task_full": 3}
+    assert third_task["task_ref"] == "task_full"
 
 
-def test_inherently_two_level_task_stays_on_max_level_in_later_iterations(session_manager, mock_services):
+def test_two_level_task_skipped_after_mastery_in_later_iterations(session_manager, mock_services):
+    """task_test (max=2) освоено в итерации 2 — не появляется в итерации 3."""
     complex_service, _, difficulty_manager = mock_services
     tasks = ["task_full", "task_test"]
     _setup_complex(complex_service, tasks)
@@ -209,13 +204,11 @@ def test_inherently_two_level_task_stays_on_max_level_in_later_iterations(sessio
 
     session_manager.get_next_task(session.id)
     assert session.iteration == 3
-    assert {queued.task_ref: queued.difficulty for queued in session.queue} == {
-        "task_full": 3,
-        "task_test": 2,
-    }
+    # task_test (max=2) освоено в итерации 2 — не входит в итерацию 3
+    assert {queued.task_ref: queued.difficulty for queued in session.queue} == {"task_full": 3}
 
 
-def test_explicit_single_allowed_level_two_carries_forward_after_first_visibility(session_manager, mock_services):
+def test_task_with_single_allowed_level_skipped_after_first_success(session_manager, mock_services):
     complex_service, _, difficulty_manager = mock_services
     tasks = ["task_full", "task_mid"]
     _setup_complex(complex_service, tasks)
@@ -249,16 +242,12 @@ def test_explicit_single_allowed_level_two_carries_forward_after_first_visibilit
             {"task_ref": task["task_ref"], "success": True, "difficulty": task["difficulty"]},
         )
 
-    final_round = [session_manager.get_next_task(session.id), session_manager.get_next_task(session.id)]
+    # task_mid (max=2) освоено в итерации 2 — не входит в итерацию 3
+    final_task = session_manager.get_next_task(session.id)
     assert session.iteration == 3
-    assert {queued.task_ref: queued.difficulty for queued in session.queue} == {
-        "task_full": 3,
-        "task_mid": 2,
-    }
-    assert {task["task_ref"]: task["difficulty"] for task in final_round} == {
-        "task_full": 3,
-        "task_mid": 2,
-    }
+    assert {queued.task_ref: queued.difficulty for queued in session.queue} == {"task_full": 3}
+    assert final_task["task_ref"] == "task_full"
+    assert final_task["difficulty"] == 3
 
 
 def test_failed_task_retries_shown_in_same_iteration(session_manager, mock_services):
@@ -301,7 +290,7 @@ def test_smart_retry_respects_complex_settings(session_manager, mock_services):
     next_task = session_manager.get_next_task(session.id)
     assert next_task is None
     assert session.is_active is False
-    assert getattr(session, "_should_show_final_results", False) is True
+    assert session.is_completed is True
 
 
 def test_incomplete_iteration_does_not_complete_complex(session_manager, mock_services):
@@ -325,7 +314,7 @@ def test_incomplete_iteration_does_not_complete_complex(session_manager, mock_se
     session_manager._generate_next_iteration(session, complex_obj)
 
     assert session.is_active is True
-    assert not getattr(session, "_should_show_final_results", False)
+    assert not session.is_completed
     # Новая очередь должна содержать оба задания
     assert len(session.queue) == 2
 
@@ -356,6 +345,9 @@ def test_generate_initial_queue_defers_error_detection_until_iteration_three(ses
 
 
 def test_generate_next_iteration_adds_error_detection_on_iteration_three(session_manager, mock_services):
+    """Error-detection joins the first post-planned iteration when it hasn't been completed yet.
+    With regular tasks capped at max=2, planned_final_iteration=2.  Iteration 3 is post-planned,
+    so task_regular (already at max) is skipped and task_error is activated at its max level (2)."""
     complex_service, _, difficulty_manager = mock_services
     tasks = ["task_regular", "task_error"]
     complex_obj = _setup_complex(complex_service, tasks)
@@ -389,9 +381,11 @@ def test_generate_next_iteration_adds_error_detection_on_iteration_three(session
     session_manager._generate_next_iteration(session, complex_obj)
 
     queue_refs = [t.task_ref for t in session.queue]
-    assert queue_refs[-1] == "task_error"
+    # task_regular is already at max (difficulty=2) and is not in a planned iteration → skipped.
+    # task_error has no result yet → activated at max_level (2, from difficulty_manager).
+    assert "task_error" in queue_refs
     assert session.error_detection_tasks == []
-    assert any(t.task_ref == "task_error" and t.difficulty == 3 for t in session.queue)
+    assert any(t.task_ref == "task_error" and t.difficulty == 2 for t in session.queue)
 
 
 def test_generate_next_iteration_activates_error_detection_when_next_pass_reaches_max(session_manager, mock_services):
@@ -433,14 +427,18 @@ def test_generate_next_iteration_activates_error_detection_when_next_pass_reache
     session_manager._generate_next_iteration(session, complex_obj)
 
     queue_by_ref = {t.task_ref: t.difficulty for t in session.queue}
+    # task_regular: not at max yet (difficulty=1 < max=2) → escalated to 2.
+    # task_error: uses max_level from difficulty_manager (2), not hardcoded 3.
     assert queue_by_ref == {
         "task_regular": 2,
-        "task_error": 3,
+        "task_error": 2,
     }
     assert session.error_detection_tasks == []
 
 
-def test_planned_final_iteration_is_forced_to_three_when_error_detection_exists(session_manager, mock_services):
+def test_planned_final_iteration_equals_regular_levels_count_when_error_detection_exists(session_manager, mock_services):
+    """Error-detection tasks do NOT add an extra iteration.  planned_final_iteration is
+    determined solely by the number of distinct regular task difficulty levels."""
     complex_service, _, difficulty_manager = mock_services
     tasks = ["task_regular", "task_error"]
     complex_obj = _setup_complex(complex_service, tasks)
@@ -458,7 +456,8 @@ def test_planned_final_iteration_is_forced_to_three_when_error_detection_exists(
 
     session = session_manager.start_session("c1", "user1")
 
-    assert session_manager._get_planned_final_iteration(session, complex_obj) == 3
+    # Regular tasks have levels [1, 2] → 2 distinct levels → planned_final_iteration == 2.
+    assert session_manager._get_planned_final_iteration(session, complex_obj) == 2
 
 
 def test_get_task_phase_returns_finisher_for_error_detection(session_manager, mock_services):
@@ -551,28 +550,29 @@ def test_generate_initial_queue_raises_on_empty_complex(session_manager, mock_se
     assert "не содержит заданий" in str(exc_info.value).lower()
 
 
-def test_error_detection_stays_deferred_until_iteration_3_even_if_regular_max_is_2(session_manager, mock_services):
-    """Error_detection остаётся отложенным до итерации 3 даже если обычные задания достигают max=2."""
+def test_error_detection_joins_final_planned_iteration_when_regular_max_is_2(session_manager, mock_services):
+    """Error-detection joins the final planned iteration (iter 2 when regular max=2),
+    NOT a separate third iteration.  After activation it is removed from the deferred list."""
     from datetime import datetime
     from task_system.core.models.complex_models import ComplexSession
-    
+
     complex_service, _, difficulty_manager = mock_services
     tasks = ["task_regular", "task_error"]
     complex_obj = _setup_complex(complex_service, tasks)
-    
+
     session_manager._check_task_file_exists = lambda _: True
     session_manager._get_task_type = lambda ref: "test"
-    
+
     # Максимальная сложность = 2
     difficulty_manager.get_available_levels.side_effect = lambda _type, _ref: [1, 2]
-    
+
     def fake_metadata(task_ref):
         if task_ref == "task_error":
             return {"subtype": "error_detection"}
         return {}
-    
+
     session_manager._load_task_metadata = fake_metadata
-    
+
     session = ComplexSession(
         id="test_session",
         complex_id="c1",
@@ -582,7 +582,7 @@ def test_error_detection_stays_deferred_until_iteration_3_even_if_regular_max_is
         iteration=2
     )
     session.error_detection_tasks = ["task_error"]
-    
+
     # task_regular на max difficulty (2) и успешно пройден
     session.completed_tasks = [
         SessionTaskResult(
@@ -593,16 +593,21 @@ def test_error_detection_stays_deferred_until_iteration_3_even_if_regular_max_is
             iteration_index=1
         )
     ]
-    
+
+    # target_iteration=2 == planned_final_iteration=2 → error_detection is activated here
     session_manager._generate_initial_queue(session, complex_obj, target_iteration=2)
-    
+
     queue_refs = [t.task_ref for t in session.queue]
     assert "task_regular" in queue_refs
-    assert "task_error" not in queue_refs
-    assert session.error_detection_tasks == ["task_error"]
+    # Error-detection is activated in the final planned iteration, not deferred further.
+    assert "task_error" in queue_refs
+    assert session.error_detection_tasks == []
 
 
-def test_generate_next_iteration_replays_all_tasks_until_final_iteration(session_manager, mock_services):
+def test_generate_next_iteration_skips_mastered_tasks_in_planned_iterations(session_manager, mock_services):
+    """Задания, освоенные на максимальной сложности, пропускаются в плановых итерациях.
+    task_l1 (max=1) и task_l2 (max=2) уже освоены — не попадают в итерацию 3.
+    task_l3 (max=3, текущий уровень 2) и task_error (финишер) включаются."""
     complex_service, _, difficulty_manager = mock_services
     tasks = ["task_l3", "task_l2", "task_l1", "task_error"]
     complex_obj = _setup_complex(complex_service, tasks)
@@ -644,10 +649,9 @@ def test_generate_next_iteration_replays_all_tasks_until_final_iteration(session
     session_manager._generate_next_iteration(session, complex_obj)
 
     queue_by_ref = {task.task_ref: task.difficulty for task in session.queue}
+    # task_l1 (max=1, освоено) и task_l2 (max=2, освоено) пропускаются
     assert queue_by_ref == {
         "task_l3": 3,
-        "task_l2": 2,
-        "task_l1": 1,
         "task_error": 3,
     }
 

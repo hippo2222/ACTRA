@@ -150,7 +150,7 @@ def test_error_detection_appears_only_after_all_tasks_max(monkeypatch):
     # После выполнения финальной полной итерации сессия должна завершиться
     assert manager.get_session(session_id) is None or not session.is_active
     assert not session.error_detection_tasks
-    assert getattr(session, "_should_show_final_results", False)
+    assert session.is_completed
 
 
 def test_error_detection_words_no_retry_on_success(monkeypatch):

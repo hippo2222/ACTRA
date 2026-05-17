@@ -66,8 +66,10 @@ class AdaptiveSessionManager:
         if prototype_user_id:
             self._progress_manager_by_user[prototype_user_id] = user_progress_manager
         
-        # Кэш метаданных заданий: task_ref -> task_type, а также дополнительные данные
-        self.task_meta_cache: Dict[str, Any] = {}
+        # Two-tier cache: task type strings and full metadata dicts kept separately so
+        # callers cannot accidentally overwrite a metadata dict with a plain type string.
+        self._task_type_cache: Dict[str, str] = {}      # task_ref → "click"/"test"/...
+        self._task_metadata_cache: Dict[str, Dict] = {}  # task_ref → {type, subtype, mode}
 
     def _get_progress_manager_for_user(self, user_id: Optional[str]) -> UserProgressManager:
         normalized_user_id = str(user_id or "").strip()
@@ -121,15 +123,14 @@ class AdaptiveSessionManager:
         """
         Загружает и кэширует метаданные задания (type, subtype, content.mode и др.).
         """
-        cache_key = f"metadata:{task_ref}"
-        cached = self.task_meta_cache.get(cache_key)
+        cached = self._task_metadata_cache.get(task_ref)
         if cached is not None:
             return cached
 
         metadata: Dict[str, Any] = {}
         module_id, topic_id, task_id = self._split_task_ref(task_ref)
         if not module_id or not topic_id or not task_id:
-            self.task_meta_cache[cache_key] = metadata
+            self._task_metadata_cache[task_ref] = metadata
             return metadata
 
         task_json: Optional[Dict[str, Any]] = None
@@ -160,7 +161,7 @@ class AdaptiveSessionManager:
                         logger.warning(f"[_load_task_metadata] Ошибка чтения {task_path}: {file_error}")
 
             if not isinstance(task_json, dict):
-                self.task_meta_cache[cache_key] = metadata
+                self._task_metadata_cache[task_ref] = metadata
                 return metadata
 
             content = task_json.get("content", {})
@@ -189,7 +190,7 @@ class AdaptiveSessionManager:
             logger.exception(f"[_load_task_metadata] Ошибка при загрузке метаданных для {task_ref}")
             metadata = {}
 
-        self.task_meta_cache[cache_key] = metadata
+        self._task_metadata_cache[task_ref] = metadata
         return metadata
 
     @staticmethod
@@ -228,11 +229,19 @@ class AdaptiveSessionManager:
             if self._is_error_detection_metadata(task_metadata):
                 continue
 
-            last_result: Optional[SessionTaskResult] = None
-            for result in reversed(session.completed_tasks):
-                if result.task_ref == task_ref:
-                    last_result = result
-                    break
+            # Prefer the result from the current iteration; fall back to full history.
+            current_iter_results = [
+                r for r in session.completed_tasks
+                if r.task_ref == task_ref and r.iteration_index == session.iteration
+            ]
+            if current_iter_results:
+                last_result: Optional[SessionTaskResult] = current_iter_results[-1]
+            else:
+                last_result = None
+                for result in reversed(session.completed_tasks):
+                    if result.task_ref == task_ref:
+                        last_result = result
+                        break
 
             if not last_result:
                 logger.debug(
@@ -407,13 +416,9 @@ class AdaptiveSessionManager:
         session: ComplexSession,
         complex_obj: Complex,
     ) -> List[int]:
-        visible_levels = list(self._get_regular_iteration_levels(session, complex_obj))
-        if self._has_error_detection_tasks(session, complex_obj):
-            finisher_level = self._get_error_detection_finisher_level()
-            if finisher_level not in visible_levels:
-                visible_levels.append(finisher_level)
-                visible_levels.sort()
-        return visible_levels
+        # Error-detection tasks join the last planned regular iteration — they do NOT
+        # create an extra iteration level.  Only regular task difficulty levels count here.
+        return list(self._get_regular_iteration_levels(session, complex_obj))
 
     def _get_absolute_iteration_level(
         self,
@@ -481,11 +486,14 @@ class AdaptiveSessionManager:
         is_error_detection: bool = False,
     ) -> Optional[int]:
         """Возвращает сложность задания для целевой итерации с учётом максимума."""
+        if is_error_detection:
+            # Error-detection tasks always use the difficulty manager's max level.
+            # They are not tied to the regular iteration progression, so absolute_level
+            # is not needed here.
+            return self._get_task_max_level(task_type, task_ref)
         absolute_level = self._get_absolute_iteration_level(session, complex_obj, target_iteration)
         if absolute_level is None:
             return None
-        if is_error_detection:
-            return self._get_error_detection_finisher_level()
         available_levels = self.difficulty_manager.get_available_levels(task_type, task_ref)
         return self._resolve_regular_iteration_difficulty(
             task_type,
@@ -882,6 +890,13 @@ class AdaptiveSessionManager:
         session.end_time = datetime.utcnow()
         session.is_active = False
 
+        # Close the final iteration's timestamp so iteration_durations is populated.
+        current_iter = getattr(session, "iteration", None)
+        if current_iter:
+            ts = session.iteration_timestamps.setdefault(current_iter, {})
+            if not ts.get("end"):
+                ts["end"] = session.end_time
+
         # Генерируем ExtendedSessionResultSummary
         summary = self._generate_session_summary(session)
         session._final_summary = summary  # type: ignore[attr-defined]
@@ -962,7 +977,7 @@ class AdaptiveSessionManager:
             # Если очередь пуста после генерации -> завершаем сессию
             if not session.queue:
                 # Проверяем, нужно ли показать финальные результаты (все задания на максимальной сложности)
-                if hasattr(session, '_should_show_final_results') and session._should_show_final_results:
+                if session.is_completed:
                     logger.info(f"[get_next_task] Комплекс завершен - все задания на максимальной сложности")
                     # Сохраняем информацию о завершенной итерации перед завершением сессии
                     session._completed_iteration_before_end = completed_iteration
@@ -1029,44 +1044,37 @@ class AdaptiveSessionManager:
             task_meta = {}
         
         # ITERATION MISMATCH PROTECTION
-        # Получаем expected_iteration от клиента для защиты от race conditions
+        # Server iteration is the source of truth. If the client sends a different
+        # value, we log a warning for monitoring but always record against the
+        # server's current iteration to prevent stale/race-condition writes.
         expected_iteration = result_data.get('expected_iteration')
-        
-        # Определяем, какую итерацию использовать
-        if expected_iteration is not None:
-            # Клиент передал итерацию - проверяем на несоответствие
-            if expected_iteration != session.iteration:
-                logger.warning(
-                    f"[submit_result] ⚠️  ITERATION MISMATCH DETECTED! "
-                    f"Expected: {expected_iteration}, Current: {session.iteration}. "
-                    f"Task: {task_ref}, Session: {session_id}. "
-                    f"Using expected_iteration to preserve data integrity."
-                )
-                # Используем итерацию от клиента (более надежно)
-                iteration_to_use = expected_iteration
-                
-                # Увеличиваем счетчик несоответствий для мониторинга
-                if not hasattr(self, 'iteration_mismatch_count'):
-                    self.iteration_mismatch_count = 0
-                self.iteration_mismatch_count += 1
-                logger.warning(
-                    f"[submit_result] 📊 Total iteration mismatches: {self.iteration_mismatch_count}"
-                )
-            else:
-                # Совпадает - все ок
-                iteration_to_use = session.iteration
-                logger.debug(
-                    f"[submit_result] ✓ Iteration match: {iteration_to_use} "
-                    f"(task: {task_ref})"
-                )
-        else:
-            # Клиент не передал (старая версия frontend) - используем текущую
-            logger.debug(
-                f"[submit_result] No expected_iteration provided by client. "
-                f"Using current session.iteration={session.iteration}. "
-                f"Task: {task_ref}"
+
+        if expected_iteration is not None and expected_iteration != session.iteration:
+            logger.warning(
+                "[submit_result] Iteration mismatch: client=%s server=%s task=%s session=%s "
+                "— using server iteration (source of truth)",
+                expected_iteration, session.iteration, task_ref, session_id,
             )
-            iteration_to_use = session.iteration
+            if not hasattr(self, 'iteration_mismatch_count'):
+                self.iteration_mismatch_count = 0
+            self.iteration_mismatch_count += 1
+            logger.warning(
+                "[submit_result] Total iteration mismatches: %s",
+                self.iteration_mismatch_count,
+            )
+        elif expected_iteration is not None:
+            logger.debug(
+                "[submit_result] Iteration match: %s (task: %s)",
+                session.iteration, task_ref,
+            )
+        else:
+            logger.debug(
+                "[submit_result] No expected_iteration from client. "
+                "Using session.iteration=%s (task: %s)",
+                session.iteration, task_ref,
+            )
+
+        iteration_to_use = session.iteration
         
         # Создаем объект результата с правильной итерацией
         result = SessionTaskResult(
@@ -1083,6 +1091,11 @@ class AdaptiveSessionManager:
 
         # Разбираем details один раз, чтобы использовать и для smart-retry, и для partial retry
         details = result.details or {}
+        # API CONTRACT: failed_subtests[i].index — порядковый номер вопроса в SHUFFLED-пространстве,
+        # т.е. индекс вопроса так, как он был отображён пользователю (0 = первый показанный вопрос).
+        # Клиент обязан передавать shuffled-индексы. Сервер не производит обратную
+        # конвертацию по умолчанию; _resolve_test_failed_question_positions является
+        # лишь защитным слоем на случай рассогласования со старым клиентом.
         failed_subtests = details.get("failed_subtests") or []
         task_type = details.get("task_type") or None
 
@@ -1182,7 +1195,7 @@ class AdaptiveSessionManager:
                                 f"[submit_result] Обновляем кэш типа задания {task_ref}: "
                                 f"{task_type} -> {actual_task_type}"
                             )
-                            self.task_meta_cache[task_ref] = actual_task_type
+                            self._task_type_cache[task_ref] = actual_task_type
                             task_type = actual_task_type
                 
                 progress_manager = self._get_progress_manager_for_user(getattr(session, "user_id", None))
@@ -1207,133 +1220,76 @@ class AdaptiveSessionManager:
         return result
     
     def _process_test_partial_retry(
-        self, 
-        session: ComplexSession, 
-        task_ref: str, 
-        result: SessionTaskResult, 
-        failed_subtests_raw: List[Dict[str, Any]]
+        self,
+        session: ComplexSession,
+        task_ref: str,
+        result: SessionTaskResult,
+        failed_subtests_raw: List[Dict[str, Any]],
     ) -> bool:
-        """
-        Обрабатывает логику частичного ретрая для тестов.
-        
-        Нормализует failed_subtests, обновляет session.test_failed_subtests
-        и определяет успешность задания с учетом исправления ошибок.
-        
-        Returns:
-            bool: True если задание считается успешным (все ошибки исправлены), иначе False
-        """
-        success = result.success
-        details = result.details or {}
-        
-        try:
-            # 1. Нормализация failed_subtests относительно сохраненных ошибок
-            if getattr(session, "test_failed_subtests", None):
-                original_failed_indices = session.test_failed_subtests.get(task_ref) or []
-                
-                # Если есть сохраненные ошибки, фильтруем текущие ошибки
-                if original_failed_indices:
-                    normalized: List[Dict[str, Any]] = []
-                    # Если failed_subtests_raw пустой, значит ошибок нет - все исправлено
-                    if failed_subtests_raw:
-                        for item in failed_subtests_raw:
-                            if not isinstance(item, dict):
-                                continue
-                            try:
-                                idx = int(item.get("index"))
-                            except Exception:
-                                continue
-                            # Ошибкой считается только та, что была в исходном списке
-                            if idx in original_failed_indices:
-                                normalized.append(item)
-                    
-                    # Обновляем failed_subtests в details
-                    # Важно: это влияет на то, какие вопросы будут показаны в ретрае
-                    details["failed_subtests"] = normalized
-                    result.details = details
-                    
-                    # Если ошибок не осталось (normalized пуст), значит исправили все "хвосты"
-                    if not normalized:
-                        logger.info(
-                            "[submit_result] All previously failed subtests for %s "
-                            "are now correct; marking partial-retry as success",
-                            task_ref,
-                        )
-                        success = True
-                        result.success = True
-            
-            # 2. Сохранение новых ошибок (если это первая попытка или появились новые в рамках логики)
-            # В текущей логике мы сохраняем только если еще не сохраняли, или дополняем?
-            # Исходная логика: if task_type == "test" and failed_subtests: save...
-            # Но мы это делаем ПОСЛЕ нормализации.
-            
-            current_failed = details.get("failed_subtests") or []
-            if current_failed:
-                indices: List[int] = []
-                for item in current_failed:
-                    try:
-                        idx = int(item.get("index"))
-                        if idx not in indices:
-                            indices.append(idx)
-                    except Exception:
-                        continue
-                
-                if indices:
-                    # Инициализируем словарь, если нужно
-                    if not hasattr(session, "test_failed_subtests") or session.test_failed_subtests is None:
-                        session.test_failed_subtests = {}
-                    
-                    # Если для этого задания еще нет записей, сохраняем
-                    # (Если уже есть, мы обычно не добавляем новые в ретрае, 
-                    # но тут сохраняем "тот же хвост" или обновляем)
-                    # В исходном коде просто перезаписывало/добавляло unique.
-                    # Но учитывая нормализацию выше, сюда попадут только те, что были в original,
-                    # ИЛИ если это первая попытка (original еще нет).
-                    
-                    # Если записи уже есть, мы их не затираем просто так, но wait... 
-                    # Логика сохранения была: если indices не пуст, сохранить.
-                    # Для первой попытки: save indices.
-                    # Для ретрая: normalized indices (subset of original). 
-                    # Мы не должны удалять из test_failed_subtests те индексы, которые мы ИСПРАВИЛИ сейчас?
-                    # Исходный комментарий: "не очищаем test_failed_subtests автоматически... чтобы копии видели хвост".
-                    # Поэтому мы обновляем запись только если ее нет? Или мержим?
-                    
-                    existing = session.test_failed_subtests.get(task_ref)
-                    if not existing:
-                        session.test_failed_subtests[task_ref] = indices
-                    # Если уже есть, оставляем как есть (чтобы помнить ВСЕ изначальные ошибки),
-                    # или обновляем?
-                    # Логика была: просто for item in failed_subtests... if idx not in indices...
-                    # потом session.test_failed_subtests[task_ref] = indices.
-                    # Т.е. мы перезаписывали текущим набором ошибок.
-                    # НО: комментарий говорил "не очищаем".
-                    # Если мы перезапишем [1] поверх [1, 2] (где 2 исправлено), то следующая копия увидит только [1].
-                    # Это правильно? "Smart-retry уже не добавит новых копий".
-                    # Если у нас 2 копии. Первая исправила 2. Вторая копия запускается. Она видит test_failed_subtests.
-                    # Если мы обновили до [1], то вторая копия будет спрашивать только 1. Это ОК.
-                    # Если мы НЕ обновили, она спросит [1, 2]. User ответит 2 правильно опять.
-                    
-                    # В исходном коде (строки 750-763) мы формировали indices из current failed_subtests
-                    # и ПРИСВАИВАЛИ их в session.test_failed_subtests[task_ref].
-                    # Значит, мы сужали круг ошибок с каждой попыткой?
-                    # Нет, исходный код:
-                    # if task_type == "test" and failed_subtests:
-                    #    ... собираем indices ...
-                    #    session.test_failed_subtests[task_ref] = indices
-                    #
-                    # ДА, это перезапись. Значит, с каждой попыткой список "активных" ошибок уменьшается.
-                    
-                    # Однако, комментарий на строке 745 говорит: "ВАЖНО: не очищаем... автоматически при успехе partial-retry".
-                    # Это значит, если failed_subtests пуст (успех), мы НЕ удаляем ключ из словаря.
-                    # А если не пуст - обновляем.
-                    
-                    session.test_failed_subtests[task_ref] = indices
+        """Normalize failed_subtests and update session.test_failed_subtests.
 
-        except Exception:
-            logger.exception(
-                "[submit_result] Failed to process partial retry for task %s", task_ref
-            )
-            
-        return success
+        Invariant: test_failed_subtests[task_ref] is the list of shuffled question indices
+        the user has not yet answered correctly. Key absent = all questions mastered.
+
+        Returns:
+            True if the task should be considered successful (all errors resolved).
+        """
+        if session.test_failed_subtests is None:
+            session.test_failed_subtests = {}
+
+        details = result.details or {}
+
+        # Parse current-attempt failed indices from the raw payload.
+        current_failed_indices: List[int] = []
+        for item in (failed_subtests_raw or []):
+            if not isinstance(item, dict):
+                continue
+            try:
+                current_failed_indices.append(int(item["index"]))
+            except (KeyError, TypeError, ValueError):
+                continue
+
+        known_failed = session.test_failed_subtests.get(task_ref)
+
+        if known_failed is not None:
+            # Partial retry path: narrow down to questions that were previously wrong
+            # AND are still wrong now.
+            known_failed_set = set(known_failed)
+            still_wrong = [i for i in current_failed_indices if i in known_failed_set]
+            still_wrong_set = set(still_wrong)
+            filtered_items: List[Dict[str, Any]] = []
+            for item in (failed_subtests_raw or []):
+                if not isinstance(item, dict):
+                    continue
+                try:
+                    if int(item["index"]) in still_wrong_set:
+                        filtered_items.append(item)
+                except (KeyError, TypeError, ValueError):
+                    continue
+            details["failed_subtests"] = filtered_items
+            result.details = details
+
+            if not still_wrong:
+                # All previously-wrong questions are now correct → mastered, delete key.
+                logger.info(
+                    "[submit_result] All previously failed subtests for %s corrected"
+                    " — marking as success",
+                    task_ref,
+                )
+                del session.test_failed_subtests[task_ref]
+                result.success = True
+                return True
+
+            session.test_failed_subtests[task_ref] = still_wrong
+            return False
+
+        # First attempt: store failures so retry copies know which questions to show.
+        if current_failed_indices:
+            session.test_failed_subtests[task_ref] = current_failed_indices
+            return result.success
+
+        # All correct on first try — no key needed.
+        return True
 
     @staticmethod
     def _task_spacing_ref(task: QueuedTask) -> str:
@@ -1586,83 +1542,27 @@ class AdaptiveSessionManager:
                 if idx >= 0 and idx not in scattered_retry_indices:
                     scattered_retry_indices.append(idx)
 
-        def _make_retry_task(level: int, question_index: Optional[int] = None) -> QueuedTask:
-            kwargs: Dict[str, Any] = {
-                "task_ref": task_ref,
-                "difficulty": level,
-                "is_retry": True,
-                "origin_iteration": session.iteration,
-            }
-            if question_index is not None:
-                kwargs.update(
-                    {
-                        "display_mode": "scattered",
-                        "source_task_ref": task_ref,
-                        "test_question_index": question_index,
-                    }
-                )
-            return QueuedTask(**kwargs)
+        def _build_retry_tasks(level: int) -> List[QueuedTask]:
+            return self._build_queued_tasks_for_complex_task(
+                complex_obj, task_ref, level,
+                is_retry=True, origin_iteration=session.iteration,
+                question_indices=scattered_retry_indices or None,
+            )
 
-        retry_question_indices: List[Optional[int]] = scattered_retry_indices or [None]
         control_position_type = "next_iteration" if task_type == "test" else "end_of_phase"
         tasks_to_add = []
-        
-        if difficulty > 1 and training_control_enabled:
-            # Smart Retry: Lower level + Original level
-            training_level = max(1, difficulty - 1)
-            tasks_to_add.append({
-                'task': QueuedTask(
-                    task_ref=task_ref,
-                    difficulty=training_level,
-                    is_retry=True,
-                    origin_iteration=session.iteration
-                ),
-                'position_type': 'near'
-            })
-            tasks_to_add.append({
-                'task': QueuedTask(
-                    task_ref=task_ref,
-                    difficulty=difficulty,
-                    is_retry=True,
-                    origin_iteration=session.iteration
-                ),
-                'position_type': control_position_type
-            })
-        else:
-            # Fallback / standard retry: две копии текущей сложности (вместо lvl-1 + original)
-            tasks_to_add.append({
-                'task': QueuedTask(
-                    task_ref=task_ref,
-                    difficulty=max(1, int(difficulty)),
-                    is_retry=True,
-                    origin_iteration=session.iteration
-                ),
-                'position_type': 'near'
-            })
-            tasks_to_add.append({
-                'task': QueuedTask(
-                    task_ref=task_ref,
-                    difficulty=max(1, int(difficulty)),
-                    is_retry=True,
-                    origin_iteration=session.iteration
-                ),
-                'position_type': control_position_type
-            })
 
-        # Если лимит ограничивает количество новых копий за один вызов — обрезаем.
-        if scattered_retry_indices:
-            scattered_tasks_to_add = []
-            for question_index in retry_question_indices:
-                for item in tasks_to_add:
-                    base_task = item.get("task")
-                    level = getattr(base_task, "difficulty", difficulty)
-                    scattered_tasks_to_add.append(
-                        {
-                            "task": _make_retry_task(int(level), question_index),
-                            "position_type": item.get("position_type"),
-                        }
-                    )
-            tasks_to_add = scattered_tasks_to_add
+        if difficulty > 1 and training_control_enabled:
+            training_level = max(1, difficulty - 1)
+            for t in _build_retry_tasks(training_level):
+                tasks_to_add.append({'task': t, 'position_type': 'near'})
+            for t in _build_retry_tasks(difficulty):
+                tasks_to_add.append({'task': t, 'position_type': control_position_type})
+        else:
+            for t in _build_retry_tasks(max(1, int(difficulty))):
+                tasks_to_add.append({'task': t, 'position_type': 'near'})
+            for t in _build_retry_tasks(max(1, int(difficulty))):
+                tasks_to_add.append({'task': t, 'position_type': control_position_type})
 
         if remaining_copies is not None:
             tasks_to_add = tasks_to_add[:remaining_copies]
@@ -2136,11 +2036,12 @@ class AdaptiveSessionManager:
                     # Поэтому берем available instances.
                     
                     available_instances = [t for t in task_map_by_ref[ref] if id(t) not in used_task_ids]
-                    if available_instances:
-                        # Берем один экземпляр
-                        instance = available_instances[0]
+                    for instance in available_instances:
+                        # Take ALL instances: a scattered test produces multiple QueuedTask
+                        # objects for the same task_ref (one per question slot) and all of
+                        # them must stay together inside the chain chunk.
                         chain_chunk.append(instance)
-                        used_task_ids.add(id(instance)) # Mark SPECIFIC OBJECT as used
+                        used_task_ids.add(id(instance))
             
             if chain_chunk:
                 chunks.append(chain_chunk)
@@ -2397,13 +2298,6 @@ class AdaptiveSessionManager:
                 )
                 continue
 
-            # Создаем QueuedTask
-            queued_task = QueuedTask(
-                task_ref=task_ref,
-                difficulty=difficulty,
-                is_retry=False,
-                origin_iteration=None,  # Начальная очередь не имеет origin_iteration в контексте повторов
-            )
             queue.extend(
                 self._build_queued_tasks_for_complex_task(
                     complex_obj,
@@ -2430,10 +2324,11 @@ class AdaptiveSessionManager:
                 target_iteration,
             )
             for task_ref in list(session.error_detection_tasks):
+                task_type_fb = self._get_task_type(task_ref)
                 queue.append(
                     QueuedTask(
                         task_ref=task_ref,
-                        difficulty=self._get_error_detection_finisher_level(),
+                        difficulty=self._get_task_max_level(task_type_fb, task_ref),
                         is_retry=False,
                         origin_iteration=None,
                     )
@@ -2609,23 +2504,37 @@ class AdaptiveSessionManager:
                 if isinstance(getattr(result, "details", None), dict)
                 and result.details.get("test_display_mode") == "scattered"
             ]
+            non_scattered_results = [r for r in task_results if r not in scattered_results]
+
             if scattered_results:
                 all_success = all(bool(result.success) for result in scattered_results)
-                latest_result = scattered_results[-1]
+                latest_scattered = scattered_results[-1]
                 score_values = [
                     float(result.score)
                     for result in scattered_results
                     if isinstance(result.score, (int, float))
                 ]
+                # If there is a non-scattered result (e.g. a together-mode control copy) submitted
+                # AFTER the scattered results, it represents a definitive whole-test outcome
+                # and overrides the scattered aggregate.
+                latest_non_scattered = non_scattered_results[-1] if non_scattered_results else None
+                if (
+                    latest_non_scattered is not None
+                    and getattr(latest_non_scattered, "timestamp", None) is not None
+                    and getattr(latest_scattered, "timestamp", None) is not None
+                    and latest_non_scattered.timestamp > latest_scattered.timestamp
+                ):
+                    all_success = latest_non_scattered.success
+
                 last_result_by_task[task_ref_key] = SessionTaskResult(
                     task_ref=task_ref_key,
                     success=all_success,
-                    score=(sum(score_values) / len(score_values)) if score_values else latest_result.score,
+                    score=(sum(score_values) / len(score_values)) if score_values else latest_scattered.score,
                     time_spent=sum(int(getattr(result, "time_spent", 0) or 0) for result in scattered_results),
-                    difficulty=latest_result.difficulty,
-                    iteration_index=latest_result.iteration_index,
-                    timestamp=latest_result.timestamp,
-                    details=dict(latest_result.details or {}),
+                    difficulty=latest_scattered.difficulty,
+                    iteration_index=latest_scattered.iteration_index,
+                    timestamp=latest_scattered.timestamp,
+                    details=dict(latest_scattered.details or {}),
                 )
             else:
                 last_result_by_task[task_ref_key] = task_results[-1]
@@ -2721,11 +2630,11 @@ class AdaptiveSessionManager:
                     continue
 
                 # Для error_detection не используем пошаговую эскалацию (1 -> 2 -> ...):
-                # ставим сразу финальный уровень как финишер.
+                # ставим максимальный уровень из difficulty_manager.
                 if task_ref in session.error_detection_tasks:
                     session.error_detection_tasks.remove(task_ref)
                 if full_replay_iteration or not task_completed_at_max:
-                    finisher_level = self._get_error_detection_finisher_level()
+                    finisher_level = max_available_level
                     new_queue.append(QueuedTask(
                         task_ref=task_ref,
                         difficulty=finisher_level,
@@ -2734,11 +2643,23 @@ class AdaptiveSessionManager:
                     ))
                     logger.info(
                         f"[_generate_next_iteration] Добавлено error_detection {task_ref} "
-                        f"на финальном уровне {finisher_level}"
+                        f"на уровне {finisher_level}"
                     )
                 continue
 
             if full_replay_iteration:
+                # BUG-01 FIX: если задание уже освоено на максимальной сложности —
+                # не включаем его в плановую итерацию. Это позволяет комплексу
+                # завершиться досрочно при мастерском прохождении, не дожидаясь
+                # окончания всех запланированных итераций.
+                if task_completed_at_max:
+                    logger.info(
+                        "[_generate_next_iteration] %s уже освоено на max (lvl=%s) "
+                        "в плановой итерации %s — пропускаем",
+                        task_ref, current_level, upcoming_iteration,
+                    )
+                    continue
+
                 if not self._task_participates_in_absolute_level(
                     task_type,
                     task_ref,
@@ -2769,6 +2690,22 @@ class AdaptiveSessionManager:
                         upcoming_iteration,
                     )
                     continue
+
+                # LOGIC-01 guard: if the user failed in the current iteration,
+                # cap the planned difficulty at their actual level so we don't
+                # jump them past a level they haven't mastered yet.
+                if current_result and not success_in_iteration:
+                    adjusted_difficulty = self._normalize_level_for_available(
+                        current_level, available_levels
+                    )
+                    if adjusted_difficulty < target_difficulty:
+                        logger.info(
+                            "[_generate_next_iteration] LOGIC-01 guard: %s провалился на lvl=%s, "
+                            "плановый уровень %s -> %s",
+                            task_ref, current_level, target_difficulty, adjusted_difficulty,
+                        )
+                        target_difficulty = adjusted_difficulty
+
                 new_queue.extend(
                     self._build_queued_tasks_for_complex_task(
                         complex_obj,
@@ -2865,7 +2802,7 @@ class AdaptiveSessionManager:
             )
             # Не создаем новую очередь - сессия будет завершена
             # Помечаем сессию для завершения
-            session._should_show_final_results = True
+            session.is_completed = True
             session.queue = []  # Пустая очередь означает завершение
             session.iteration += 1
             session.current_task_index = 0
@@ -2879,7 +2816,14 @@ class AdaptiveSessionManager:
         else:
             # Перемешиваем очередь с учетом фаз и цепочек (вместо random.shuffle)
             chunks = self._group_tasks_into_chunks(new_queue, complex_obj.chains)
-            sorted_queue = self._sort_chunks_by_phase(chunks, seed_base=f"{session.id}:{upcoming_iteration}")
+            max_run = int(
+                getattr(getattr(complex_obj, "settings", None), "max_same_type_run", 3) or 3
+            )
+            sorted_queue = self._sort_chunks_by_phase(
+                chunks,
+                seed_base=f"{session.id}:{upcoming_iteration}",
+                max_same_type_run=max_run,
+            )
             if deferred_retry_tasks:
                 sorted_queue = self._place_deferred_retry_tasks_in_next_queue(
                     sorted_queue,
@@ -2971,15 +2915,14 @@ class AdaptiveSessionManager:
             parts = task_ref.split('/')
             if len(parts) >= 3:
                 module_id, topic_id, task_id = parts[0], parts[1], parts[-1]
-                
-                # Пробуем загрузить задание через StorageService
+                if hasattr(self.storage_service, "task_exists"):
+                    return self.storage_service.task_exists(module_id, topic_id, task_id)
                 task_data = self.storage_service.load_task(module_id, topic_id, task_id)
                 return task_data is not None
+            return False
         except Exception as e:
             logger.warning(f"Error checking task file existence for {task_ref}: {e}")
             return False
-        
-        return False
     
     def _get_task_type(self, task_ref: str) -> str:
         """
@@ -2991,8 +2934,8 @@ class AdaptiveSessionManager:
 
         # Проверяем кэш
         # ИСПРАВЛЕНИЕ: Если в кэше "unknown", пытаемся переопределить тип
-        if task_ref in self.task_meta_cache:
-            cached_type = self.task_meta_cache[task_ref]
+        if task_ref in self._task_type_cache:
+            cached_type = self._task_type_cache[task_ref]
             # Если тип "unknown", пытаемся переопределить его
             if cached_type != 'unknown':
                 logger.debug(f"[_get_task_type] Используем кэшированный тип для {task_ref}: {cached_type}")
@@ -3081,9 +3024,9 @@ class AdaptiveSessionManager:
         
         # ИСПРАВЛЕНИЕ: Обновляем кэш только если тип не "unknown" или если в кэше уже был "unknown"
         # Это позволяет обновить кэш, если тип был определен позже
-        if task_type != 'unknown' or (task_ref in self.task_meta_cache and self.task_meta_cache[task_ref] == 'unknown'):
-            old_cached = self.task_meta_cache.get(task_ref, 'not_cached')
-            self.task_meta_cache[task_ref] = task_type
+        if task_type != 'unknown' or self._task_type_cache.get(task_ref) == 'unknown':
+            old_cached = self._task_type_cache.get(task_ref, 'not_cached')
+            self._task_type_cache[task_ref] = task_type
             if old_cached == 'unknown' and task_type != 'unknown':
                 logger.info(f"[_get_task_type] ✓ Обновлен кэш типа задания {task_ref}: unknown -> {task_type}")
         

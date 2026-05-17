@@ -173,6 +173,10 @@ class ComplexSession(BaseModel):
     deferred_retry_tasks: List[QueuedTask] = Field(default_factory=list)
 
     is_active: bool = True
+    is_completed: bool = Field(
+        default=False,
+        description="Все задания выполнены на максимальной сложности, комплекс завершён",
+    )
     paused: bool = Field(default=False, description="Сессия приостановлена пользователем")
     paused_at: Optional[datetime] = Field(default=None, description="Время последней паузы")
     total_pause_seconds: float = Field(default=0.0, description="Суммарное время пауз в секундах")
