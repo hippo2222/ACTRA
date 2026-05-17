@@ -132,6 +132,13 @@ class ComplexSessionController:
         task_ref: str,
         failed_indices: list[int],
     ) -> list[int]:
+        """Convert failed question indices from original-space to shuffled-space if needed.
+
+        API contract: the client sends indices in shuffled-space (the order questions were
+        displayed on screen). Values stored in test_failed_subtests are also in shuffled-space.
+        Conversion is only performed when an index falls outside the valid shuffled range,
+        which signals that the client sent original-space indices (e.g., a legacy or buggy client).
+        """
         if not failed_indices or session is None:
             return failed_indices
 
@@ -159,21 +166,20 @@ class ComplexSessionController:
         if not isinstance(question_order, list) or not question_order:
             return normalized_failed
 
-        if all(0 <= idx < len(question_order) for idx in normalized_failed):
+        # Indices already in shuffled-space (the normal API-contract case).
+        max_q_idx = len(question_order) - 1
+        needs_conversion = any(idx > max_q_idx for idx in normalized_failed)
+        if not needs_conversion:
             return normalized_failed
 
+        # At least one index is out of the shuffled range — treat all as original-space
+        # and convert to shuffled-space positions.
         original_to_shuffled: Dict[int, int] = {}
         for shuffled_idx, original_idx in enumerate(question_order):
             try:
-                original_idx_int = int(original_idx)
+                original_to_shuffled[int(original_idx)] = shuffled_idx
             except Exception:
                 continue
-            if original_idx_int in original_to_shuffled:
-                continue
-            original_to_shuffled[original_idx_int] = shuffled_idx
-
-        if not original_to_shuffled:
-            return normalized_failed
 
         return [original_to_shuffled.get(idx, idx) for idx in normalized_failed]
 
@@ -716,12 +722,6 @@ class ComplexSessionController:
         completed_iteration = session.iteration
 
         if iteration_completed:
-            # Для синтетических daily_mix сессий не генерируем следующую итерацию — завершаем сразу.
-            if getattr(session, "complex_id", None) == "daily_mix":
-                logger.info("[ComplexSessionController._load_next_task] daily_mix итерация завершена, завершаем сессию")
-                self._handle_session_completion()
-                return
-
             # Если результаты этой итерации уже были показаны, пропускаем показ и генерируем следующую итерацию
             if self._last_shown_iteration == completed_iteration:
                 logger.info(f"[ComplexSessionController._load_next_task] Результаты итерации {completed_iteration} уже были показаны, генерируем следующую итерацию")
@@ -730,60 +730,7 @@ class ComplexSessionController:
                 # Продолжаем выполнение - генерируем следующую итерацию через get_next_task()
             else:
                 logger.info(f"[ComplexSessionController._load_next_task] Итерация {completed_iteration} завершена, показываем результаты итерации")
-                # ИСПРАВЛЕНИЕ: Сначала генерируем следующую итерацию, затем показываем результаты
-                # Это гарантирует, что следующая итерация будет готова после нажатия "Продолжить"
-                logger.debug(f"[ComplexSessionController._load_next_task] Генерируем следующую итерацию перед показом результатов")
-                
-                # Генерируем следующую итерацию (для всех complex_id, включая synthetic daily_mix)
-                complex_obj = self.complex_service.get_complex(session.complex_id)
-                if not complex_obj:
-                    logger.error(f"[ComplexSessionController._load_next_task] Complex {session.complex_id} not found")
-                    self._handle_session_completion()
-                    return
-            
-                # Сохраняем текущий индекс перед генерацией (он уже >= len(queue))
-                old_index = session.current_task_index
-                old_iteration = session.iteration
-                logger.info(f"[ComplexSessionController._load_next_task] Перед генерацией следующей итерации: "
-                           f"old_index={old_index}, old_iteration={old_iteration}, "
-                           f"queue_length={len(session.queue) if session.queue else 0}")
-            
-                # Генерируем следующую итерацию
-                logger.info("[ComplexSessionController._load_next_task] Вызываем _generate_next_iteration()")
-                try:
-                    self.session_manager._generate_next_iteration(session, complex_obj)
-                    
-                    # Восстанавливаем индекс на 0 (начало новой очереди)
-                    # Это нужно, чтобы при следующем вызове get_next_task() было получено первое задание
-                    session.current_task_index = 0
-                    
-                    logger.info(f"[ComplexSessionController._load_next_task] После генерации следующей итерации: "
-                               f"new_iteration={session.iteration}, new_index={session.current_task_index}, "
-                               f"new_queue_length={len(session.queue) if session.queue else 0}")
-                    
-                    # Сохраняем сессию после генерации следующей итерации
-                    logger.info(f"[ComplexSessionController._load_next_task] Сохраняем сессию после генерации итерации")
-                    self.session_manager.session_repository.save_session(session, session.user_id)
-                    
-                    # Проверяем, пуста ли очередь после генерации
-                    if not session.queue:
-                        # Проверяем, нужно ли показать финальные результаты
-                        if hasattr(session, '_should_show_final_results') and session._should_show_final_results:
-                            logger.info(f"[ComplexSessionController._load_next_task] Комплекс завершен - все задания на максимальной сложности")
-                            # Показываем финальные результаты вместо обычного завершения
-                            self._handle_complex_completion()
-                            return
-                        else:
-                            logger.info(f"[ComplexSessionController._load_next_task] Следующая итерация пуста, сессия завершена")
-                            self._handle_session_completion()
-                            return
-                except Exception as e:
-                    # ИСПРАВЛЕНИЕ: Обрабатываем ошибки при генерации следующей итерации
-                    # Логируем ошибку, но не прерываем показ результатов итерации
-                    logger.error(f"[ComplexSessionController._load_next_task] Ошибка при генерации следующей итерации: {e}", exc_info=True)
-                    logger.warning(f"[ComplexSessionController._load_next_task] Продолжаем показ результатов итерации {completed_iteration} несмотря на ошибку")
-                    # Не прерываем выполнение - показываем результаты итерации даже при ошибке
-                
+
                 # Критично фиксируем экран S2 до callback'а, чтобы результаты итерации переживали рестарт сервера.
                 logger.info(
                     "[ComplexSessionController._load_next_task] Сохраняем состояние UI: iteration_results, iteration=%s",
@@ -801,23 +748,15 @@ class ComplexSessionController:
                         e,
                         exc_info=True,
                     )
-                
-                # Следующая итерация сгенерирована, но мы еще не загружаем задание
-                # Сначала показываем результаты завершенной итерации
-                # Уведомляем UI о завершении итерации для показа результатов
+
                 if hasattr(self, 'on_iteration_completed') and self.on_iteration_completed:
                     iteration_summary = self.session_manager.get_iteration_summary(self.current_session_id, completed_iteration)
                     if iteration_summary:
                         logger.info(f"[ComplexSessionController._load_next_task] IterationSummary создан: iteration={iteration_summary.iteration}, "
                                   f"total_tasks={iteration_summary.total_tasks}, successful_tasks={iteration_summary.successful_tasks}, "
                                   f"failed_tasks={iteration_summary.failed_tasks}, success_rate={iteration_summary.success_rate:.2%}")
-                        logger.debug(f"[ComplexSessionController._load_next_task] Вызываем callback on_iteration_completed с summary типа {type(iteration_summary).__name__}")
-                        # Сохраняем номер итерации, результаты которой были показаны
                         self._last_shown_iteration = completed_iteration
                         self.on_iteration_completed(iteration_summary)
-                        # ВАЖНО: Не продолжаем загрузку следующего задания здесь
-                        # UI покажет экран результатов итерации, и только после нажатия "Продолжить" будет вызван _load_next_task() снова
-                        # Следующая итерация уже сгенерирована, поэтому при следующем вызове _load_next_task() будет загружено первое задание следующей итерации
                         return
                     else:
                         logger.warning(f"[ComplexSessionController._load_next_task] Не удалось создать IterationSummary для итерации {completed_iteration}")
@@ -830,9 +769,12 @@ class ComplexSessionController:
         next_task_info = self.session_manager.get_next_task(self.current_session_id)
         
         if not next_task_info:
-            # Сессия завершена - очередь пуста
             logger.info(f"[ComplexSessionController._load_next_task] get_next_task() вернул None, сессия завершена (очередь пуста)")
-            self._handle_session_completion()
+            session = self.session_manager.get_session(self.current_session_id)
+            if session and session.is_completed:
+                self._handle_complex_completion()
+            else:
+                self._handle_session_completion()
             return
         
         task_ref = next_task_info['task_ref']

@@ -58,7 +58,7 @@ def _setup_complex(complex_service, tasks):
 
 
 def _wire_task_meta(session_manager, difficulty_manager, task_refs, levels):
-    session_manager.task_meta_cache.update({ref: "test" for ref in task_refs})
+    session_manager._task_type_cache.update({ref: "test" for ref in task_refs})
     difficulty_manager.get_available_levels.side_effect = lambda task_type, task_ref: levels
     session_manager._check_task_file_exists = lambda task_ref: True
 
@@ -272,28 +272,27 @@ def test_submit_result_accepts_expected_iteration(session_manager, mock_services
 
 
 def test_submit_result_uses_expected_iteration_on_mismatch(session_manager, mock_services):
-    """Phase 3: submit_result() uses expected_iteration when it differs from current."""
+    """RELIABLE-01: on mismatch submit_result() records against server iteration."""
     complex_service, _, difficulty_manager = mock_services
     tasks = ["task1"]
     _setup_complex(complex_service, tasks)
     _wire_task_meta(session_manager, difficulty_manager, tasks, [1, 2])
-    
+
     session = session_manager.start_session("c1", "user1")
     t1 = session_manager.get_next_task(session.id)
-    
-    # Simulate network delay: session moved to iteration 2
+
+    # Simulate server already moved to iteration 2
     session.iteration = 2
-    
-    # Submit with expected_iteration=1 (original iteration)
+
+    # Client still thinks it's iteration 1 — server wins
     result = session_manager.submit_result(session.id, {
         "task_ref": t1["task_ref"],
         "success": True,
         "difficulty": 1,
-        "expected_iteration": 1  # ← Client's iteration
+        "expected_iteration": 1,
     })
-    
-    # Result should use client's iteration (1), not server's (2)
-    assert result.iteration_index == 1
+
+    assert result.iteration_index == 2
 
 
 def test_submit_result_logs_mismatch_warning(session_manager, mock_services, caplog):
@@ -320,7 +319,7 @@ def test_submit_result_logs_mismatch_warning(session_manager, mock_services, cap
     })
     
     # Check for warning log
-    assert any("ITERATION MISMATCH DETECTED" in record.message for record in caplog.records)
+    assert any("Iteration mismatch" in record.message for record in caplog.records)
 
 
 def test_submit_result_tracks_mismatch_count(session_manager, mock_services):
@@ -461,18 +460,17 @@ def test_full_session_with_timing_and_mismatch_protection(session_manager, mock_
         "expected_iteration": 1
     })
     
-    # Move to iteration 2
-    session_manager.get_next_task(session.id)
-    
+    # First get_next_task triggers iteration 2 generation; keep the result as t3
+    t3 = session_manager.get_next_task(session.id)
+
     # Verify iteration 1 has end timestamp
     assert session.iteration_timestamps[1]['end'] is not None
-    
+
     # Verify iteration 2 has start timestamp
     assert 2 in session.iteration_timestamps
     assert session.iteration_timestamps[2]['start'] is not None
-    
-    # Complete iteration 2
-    t3 = session_manager.get_next_task(session.id)
+
+    # Get second task of iteration 2
     t4 = session_manager.get_next_task(session.id)
     
     session_manager.submit_result(session.id, {

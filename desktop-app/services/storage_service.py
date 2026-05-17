@@ -1772,7 +1772,17 @@ class StorageService:
         }
         result = _ensure_route_context(result)
         return self._convert_datetime_to_str(result)
-    
+
+    def task_exists(self, module_id: str, topic_id: str, task_id: str) -> bool:
+        """Return True if task.json is present on disk — without loading its contents."""
+        self._validate_id(module_id, "module_id")
+        self._validate_id(topic_id, "topic_id")
+        self._validate_id(task_id, "task_id")
+        task_json = (
+            self.modules_dir / module_id / "topics" / topic_id / "tasks" / task_id / "task.json"
+        )
+        return task_json.exists()
+
     def _resolve_task_path(self, path: str) -> Path:
         """
         Преобразовать относительный путь к заданию в абсолютный.
