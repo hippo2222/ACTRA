@@ -61,7 +61,7 @@
 
         if (state === 'server_offline') {
             bannerEl.className = 'fixed top-0 left-0 right-0 z-[10000] flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium shadow-lg transition-transform duration-300 border-b bg-error text-white border-error';
-            bannerEl.innerHTML = '<span class="material-symbols-outlined text-base">cloud_off</span> Потеряна связь с локальным сервером';
+            bannerEl.innerHTML = '<span class="material-symbols-outlined text-base">cloud_off</span> ' + (window.i18n?.t('notify.server_offline') || 'Потеряна связь с локальным сервером');
             showBanner();
             return;
         }

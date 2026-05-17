@@ -140,7 +140,7 @@ window.NotificationUI = (function () {
             const secondsLeft = Math.max(1, Math.ceil((deadline - Date.now()) / 1000));
             timerEl.textContent = typeof options.timerFormatter === 'function'
                 ? String(options.timerFormatter(secondsLeft))
-                : `${secondsLeft} с`;
+                : `${secondsLeft} ${(window.i18n?.t('notify.timer_seconds') ?? 'с')}`;
         };
         const dismiss = () => {
             if (dismissed) return;
@@ -207,10 +207,10 @@ window.NotificationUI = (function () {
 
     // ── confirm dialog ──────────────────────────────────────────────────
     function confirm({
-        title = 'Подтверждение',
-        message = 'Вы уверены?',
-        confirmText = 'Подтвердить',
-        cancelText = 'Отмена',
+        title = (window.i18n?.t('notify.confirm_title') ?? 'Подтверждение'),
+        message = (window.i18n?.t('notify.confirm_message') ?? 'Вы уверены?'),
+        confirmText = (window.i18n?.t('notify.confirm_ok') ?? 'Подтвердить'),
+        cancelText = (window.i18n?.t('notify.confirm_cancel') ?? 'Отмена'),
         variant = 'error',
     } = {}) {
         return new Promise((resolve) => {

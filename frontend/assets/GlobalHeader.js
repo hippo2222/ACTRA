@@ -1,47 +1,47 @@
 (function () {
     'use strict';
 
-    const NAV_ITEMS = [
-        { section: 'main', label: 'Главная', icon: 'home', href: '/main' },
-        { section: 'catalog', label: 'Каталог', icon: 'travel_explore', href: '/catalog' },
-        { section: 'complexes', label: 'Комплексы', icon: 'inventory_2', href: '/complexes' },
-        { section: 'theory', label: 'Теория', icon: 'hub', href: '/theory-center' },
-        { section: 'editor', label: 'Редактор', icon: 'edit_document', href: '/editor' },
+    var _t = function (key) {
+        return (window.i18n && typeof window.i18n.t === 'function') ? window.i18n.t(key) : key;
+    };
+
+    var NAV_ITEMS = [
+        { section: 'main',      i18nKey: 'nav.home',      icon: 'home',           href: '/main' },
+        { section: 'catalog',   i18nKey: 'nav.catalog',   icon: 'travel_explore', href: '/catalog' },
+        { section: 'complexes', i18nKey: 'nav.complexes', icon: 'inventory_2',    href: '/complexes' },
+        { section: 'theory',    i18nKey: 'nav.theory',    icon: 'hub',            href: '/theory-center' },
+        { section: 'editor',    i18nKey: 'nav.editor',    icon: 'edit_document',  href: '/editor' },
     ];
 
-    const CREATE_ITEMS = [
+    var CREATE_ITEMS = [
         {
-            label: 'Задание',
-            copy: 'Открыть мастер создания задания',
+            i18nKey:     'create.task_label',
+            i18nCopyKey: 'create.task_copy',
             icon: 'add_task',
             href: '/editor?create=task',
         },
         {
-            label: 'Комплекс',
-            copy: 'Собрать новый учебный комплекс',
+            i18nKey:     'create.complex_label',
+            i18nCopyKey: 'create.complex_copy',
             icon: 'design_services',
             href: '/complexes/create',
         },
         {
-            label: 'Теория',
-            copy: 'Создать теоретический материал',
+            i18nKey:     'create.theory_label',
+            i18nCopyKey: 'create.theory_copy',
             icon: 'edit_square',
             href: '/editor/Theory_Editor.html',
         },
     ];
 
     function escapeHtml(value) {
-        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#39;',
-        }[char] || char));
+        return String(value ?? '').replace(/[&<>"']/g, function (char) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char] || char;
+        });
     }
 
     function getSectionFromPath() {
-        const path = window.location.pathname.replace(/\/+$/, '') || '/';
+        var path = window.location.pathname.replace(/\/+$/, '') || '/';
         if (path === '/main' || path === '/ui' || path === '/ui/main') return 'main';
         if (path === '/catalog' || path === '/ui/catalog') return 'catalog';
         if (path === '/complexes' || path === '/ui/complexes') return 'complexes';
@@ -61,85 +61,120 @@
     }
 
     function closeCreateMenu(root) {
-        const menu = root.querySelector('[data-global-create-menu]');
-        const button = root.querySelector('[data-global-create-toggle]');
+        var menu = root.querySelector('[data-global-create-menu]');
+        var button = root.querySelector('[data-global-create-toggle]');
+        if (menu) menu.classList.remove('is-open');
+        if (button) button.setAttribute('aria-expanded', 'false');
+    }
+
+    function closeLangMenu(root) {
+        var menu = root.querySelector('[data-global-lang-menu]');
+        var button = root.querySelector('[data-global-lang-toggle]');
         if (menu) menu.classList.remove('is-open');
         if (button) button.setAttribute('aria-expanded', 'false');
     }
 
     function renderHeader(root) {
-        const activeSection = root.dataset.appSection || document.body.dataset.appSection || getSectionFromPath();
-        const navHtml = NAV_ITEMS.map((item) => {
-            const active = item.section === activeSection;
-            return `
-                <a class="global-header__link${active ? ' is-active' : ''}" href="${escapeHtml(item.href)}" data-global-nav="${escapeHtml(item.href)}" ${active ? 'aria-current="page"' : ''}>
-                    <span class="material-symbols-outlined" aria-hidden="true">${escapeHtml(item.icon)}</span>
-                    <span>${escapeHtml(item.label)}</span>
-                </a>
-            `;
+        var activeSection = root.dataset.appSection || document.body.dataset.appSection || getSectionFromPath();
+
+        var navHtml = NAV_ITEMS.map(function (item) {
+            var active = item.section === activeSection;
+            return '<a class="global-header__link' + (active ? ' is-active' : '') + '"' +
+                ' href="' + escapeHtml(item.href) + '"' +
+                ' data-global-nav="' + escapeHtml(item.href) + '"' +
+                (active ? ' aria-current="page"' : '') + '>' +
+                '<span class="material-symbols-outlined" aria-hidden="true">' + escapeHtml(item.icon) + '</span>' +
+                '<span data-i18n="' + escapeHtml(item.i18nKey) + '">' + escapeHtml(_t(item.i18nKey)) + '</span>' +
+                '</a>';
         }).join('');
 
-        const createHtml = CREATE_ITEMS.map((item) => `
-            <button class="global-header__menu-item" type="button" data-global-nav="${escapeHtml(item.href)}">
-                <span class="global-header__menu-icon material-symbols-outlined" aria-hidden="true">${escapeHtml(item.icon)}</span>
-                <span>
-                    <span class="global-header__menu-title">${escapeHtml(item.label)}</span>
-                    <span class="global-header__menu-copy">${escapeHtml(item.copy)}</span>
-                </span>
-            </button>
-        `).join('');
+        var createHtml = CREATE_ITEMS.map(function (item) {
+            return '<button class="global-header__menu-item" type="button" data-global-nav="' + escapeHtml(item.href) + '">' +
+                '<span class="global-header__menu-icon material-symbols-outlined" aria-hidden="true">' + escapeHtml(item.icon) + '</span>' +
+                '<span>' +
+                '<span class="global-header__menu-title" data-i18n="' + escapeHtml(item.i18nKey) + '">' + escapeHtml(_t(item.i18nKey)) + '</span>' +
+                '<span class="global-header__menu-copy" data-i18n="' + escapeHtml(item.i18nCopyKey) + '">' + escapeHtml(_t(item.i18nCopyKey)) + '</span>' +
+                '</span>' +
+                '</button>';
+        }).join('');
 
-        root.innerHTML = `
-            <header class="global-header">
-                <div class="global-header__inner">
-                    <a class="global-header__brand" href="/main" data-global-nav="/main" aria-label="ACTRA, на главную">
-                        <span class="brand-logo global-header__brand-logo" aria-hidden="true"></span>
-                        <span class="global-header__brand-text">ACTRA</span>
-                    </a>
-                    <nav class="global-header__nav" aria-label="Основная навигация">
-                        ${navHtml}
-                    </nav>
-                    <div class="global-header__actions">
-                        <div class="global-header__create">
-                            <button class="global-header__menu-button" type="button" data-global-create-toggle aria-haspopup="menu" aria-expanded="false">
-                                <span class="material-symbols-outlined" aria-hidden="true">add_circle</span>
-                                <span>Создать</span>
-                                <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
-                            </button>
-                            <div class="global-header__menu" data-global-create-menu role="menu">
-                                ${createHtml}
-                            </div>
-                        </div>
-                        <button class="global-header__reference" type="button" data-global-reference title="Открыть справочник">
-                            <span class="material-symbols-outlined" aria-hidden="true">menu_book</span>
-                            <span>Справочник</span>
-                        </button>
-                        <button class="global-header__onboarding-help onboarding-help-button onboarding-help-button--icon" type="button" data-onboarding-help-button data-onboarding-help-mode="direct" hidden title="Показать обучение" aria-label="Показать обучение">
-                            <span class="material-symbols-outlined" aria-hidden="true">help</span>
-                        </button>
-                        <button class="global-header__profile" type="button" data-profile-menu-anchor aria-haspopup="menu" aria-expanded="false">
-                            <img src="/api/assets/avatars/1.png" class="global-header__avatar" alt="" id="headerAvatar" data-global-avatar>
-                            <span class="global-header__plan-badge" data-global-plan-badge hidden>Free</span>
-                            <span class="global-header__user-name" id="headerUserName" data-global-user-name>Загрузка...</span>
-                            <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
-                        </button>
-                    </div>
-                </div>
-            </header>
-        `;
+        var currentLang = (window.i18n && typeof window.i18n.getLang === 'function') ? window.i18n.getLang() : 'ru';
+
+        root.innerHTML =
+            '<header class="global-header">' +
+            '<div class="global-header__inner">' +
+            '<a class="global-header__brand" href="/main" data-global-nav="/main"' +
+            ' data-i18n-aria="header.brand_aria" aria-label="' + escapeHtml(_t('header.brand_aria')) + '">' +
+            '<span class="brand-logo global-header__brand-logo" aria-hidden="true"></span>' +
+            '<span class="global-header__brand-text">ACTRA</span>' +
+            '</a>' +
+            '<nav class="global-header__nav" data-i18n-aria="header.nav_aria" aria-label="' + escapeHtml(_t('header.nav_aria')) + '">' +
+            navHtml +
+            '</nav>' +
+            '<div class="global-header__actions">' +
+            '<div class="global-header__create">' +
+            '<button class="global-header__menu-button" type="button" data-global-create-toggle aria-haspopup="menu" aria-expanded="false">' +
+            '<span class="material-symbols-outlined" aria-hidden="true">add_circle</span>' +
+            '<span data-i18n="create.button">' + escapeHtml(_t('create.button')) + '</span>' +
+            '<span class="material-symbols-outlined" aria-hidden="true">expand_more</span>' +
+            '</button>' +
+            '<div class="global-header__menu" data-global-create-menu role="menu">' +
+            createHtml +
+            '</div>' +
+            '</div>' +
+            '<button class="global-header__reference" type="button" data-global-reference' +
+            ' data-i18n-title="header.reference_title" title="' + escapeHtml(_t('header.reference_title')) + '">' +
+            '<span class="material-symbols-outlined" aria-hidden="true">menu_book</span>' +
+            '<span data-i18n="header.reference">' + escapeHtml(_t('header.reference')) + '</span>' +
+            '</button>' +
+            '<button class="global-header__onboarding-help onboarding-help-button onboarding-help-button--icon"' +
+            ' type="button" data-onboarding-help-button data-onboarding-help-mode="direct" hidden' +
+            ' data-i18n-title="header.onboarding_title" data-i18n-aria="header.onboarding_aria"' +
+            ' title="' + escapeHtml(_t('header.onboarding_title')) + '"' +
+            ' aria-label="' + escapeHtml(_t('header.onboarding_aria')) + '">' +
+            '<span class="material-symbols-outlined" aria-hidden="true">help</span>' +
+            '</button>' +
+            '<div class="global-header__lang" data-global-lang>' +
+            '<button class="global-header__lang-btn" type="button" data-global-lang-toggle aria-haspopup="menu" aria-expanded="false"' +
+            ' data-i18n-aria="header.lang_aria" aria-label="' + escapeHtml(_t('header.lang_aria')) + '">' +
+            '<span class="material-symbols-outlined" aria-hidden="true">language</span>' +
+            '<span class="global-header__lang-code" data-lang-display>' + escapeHtml(currentLang.toUpperCase()) + '</span>' +
+            '<span class="material-symbols-outlined global-header__lang-chevron" aria-hidden="true">expand_more</span>' +
+            '</button>' +
+            '<div class="global-header__lang-menu" data-global-lang-menu role="menu">' +
+            '<button class="global-header__lang-item' + (currentLang === 'ru' ? ' is-active' : '') + '" type="button" data-lang-btn="ru" role="menuitem" aria-pressed="' + (currentLang === 'ru' ? 'true' : 'false') + '">' +
+            '<span class="global-header__lang-item-dot" aria-hidden="true"></span>Русский' +
+            '</button>' +
+            '<button class="global-header__lang-item' + (currentLang === 'en' ? ' is-active' : '') + '" type="button" data-lang-btn="en" role="menuitem" aria-pressed="' + (currentLang === 'en' ? 'true' : 'false') + '">' +
+            '<span class="global-header__lang-item-dot" aria-hidden="true"></span>English' +
+            '</button>' +
+            '<button class="global-header__lang-item' + (currentLang === 'uk' ? ' is-active' : '') + '" type="button" data-lang-btn="uk" role="menuitem" aria-pressed="' + (currentLang === 'uk' ? 'true' : 'false') + '">' +
+            '<span class="global-header__lang-item-dot" aria-hidden="true"></span>Українська' +
+            '</button>' +
+            '</div>' +
+            '</div>' +
+            '<button class="global-header__profile" type="button" data-profile-menu-anchor aria-haspopup="menu" aria-expanded="false">' +
+            '<img src="/api/assets/avatars/1.png" class="global-header__avatar" alt="" id="headerAvatar" data-global-avatar>' +
+            '<span class="global-header__plan-badge" data-global-plan-badge hidden>Free</span>' +
+            '<span class="global-header__user-name" id="headerUserName" data-global-user-name>' + escapeHtml(_t('header.profile_loading')) + '</span>' +
+            '<span class="material-symbols-outlined" aria-hidden="true">expand_more</span>' +
+            '</button>' +
+            '</div>' +
+            '</div>' +
+            '</header>';
     }
 
     async function hydrateUser(root) {
-        const avatar = root.querySelector('[data-global-avatar]');
-        const name = root.querySelector('[data-global-user-name]');
-        const planBadge = root.querySelector('[data-global-plan-badge]');
+        var avatar = root.querySelector('[data-global-avatar]');
+        var name = root.querySelector('[data-global-user-name]');
+        var planBadge = root.querySelector('[data-global-plan-badge]');
         try {
-            const response = await fetch('/api/users/current');
-            const data = await response.json();
-            const user = data && (data.user || data.profile || data);
-            const displayName = user?.display_name || user?.name || user?.username || user?.login || '';
-            const avatarSeed = user?.avatar_seed || user?.avatar || user?.avatarSeed || '1.png';
-            const effectivePlan = String(user?.effective_plan || user?.plan || 'free').trim().toLowerCase();
+            var response = await fetch('/api/users/current');
+            var data = await response.json();
+            var user = data && (data.user || data.profile || data);
+            var displayName = user?.display_name || user?.name || user?.username || user?.login || '';
+            var avatarSeed = user?.avatar_seed || user?.avatar || user?.avatarSeed || '1.png';
+            var effectivePlan = String(user?.effective_plan || user?.plan || 'free').trim().toLowerCase();
             if (name && displayName) name.textContent = displayName;
             if (planBadge) {
                 planBadge.hidden = false;
@@ -148,37 +183,64 @@
             }
             if (avatar) {
                 avatar.src = String(avatarSeed).includes('.')
-                    ? `/api/assets/avatars/${encodeURIComponent(String(avatarSeed))}`
+                    ? '/api/assets/avatars/' + encodeURIComponent(String(avatarSeed))
                     : '/api/assets/avatars/1.png';
             }
         } catch (_) {
             if (planBadge) planBadge.hidden = true;
-            if (name) name.textContent = 'Профиль';
+            if (name) name.textContent = (window.i18n && typeof window.i18n.t === 'function')
+                ? window.i18n.t('header.profile_fallback')
+                : 'Профиль';
         }
     }
 
     function bindHeader(root) {
-        root.addEventListener('click', (event) => {
-            const createToggle = event.target.closest('[data-global-create-toggle]');
+        root.addEventListener('click', function (event) {
+            var createToggle = event.target.closest('[data-global-create-toggle]');
             if (createToggle) {
                 event.preventDefault();
                 event.stopPropagation();
-                const menu = root.querySelector('[data-global-create-menu]');
-                const isOpen = menu && !menu.classList.contains('is-open');
+                closeLangMenu(root);
+                var menu = root.querySelector('[data-global-create-menu]');
+                var isOpen = menu && !menu.classList.contains('is-open');
                 if (menu) menu.classList.toggle('is-open', !!isOpen);
                 createToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
                 return;
             }
 
-            const reference = event.target.closest('[data-global-reference]');
+            var langToggle = event.target.closest('[data-global-lang-toggle]');
+            if (langToggle) {
+                event.preventDefault();
+                event.stopPropagation();
+                closeCreateMenu(root);
+                var langMenu = root.querySelector('[data-global-lang-menu]');
+                var langOpen = langMenu && !langMenu.classList.contains('is-open');
+                if (langMenu) langMenu.classList.toggle('is-open', !!langOpen);
+                langToggle.setAttribute('aria-expanded', langOpen ? 'true' : 'false');
+                return;
+            }
+
+            var langBtn = event.target.closest('[data-lang-btn]');
+            if (langBtn) {
+                event.preventDefault();
+                var lang = langBtn.getAttribute('data-lang-btn');
+                closeLangMenu(root);
+                if (window.i18n && typeof window.i18n.setLang === 'function') {
+                    window.i18n.setLang(lang);
+                }
+                return;
+            }
+
+            var reference = event.target.closest('[data-global-reference]');
             if (reference) {
                 event.preventDefault();
                 closeCreateMenu(root);
+                closeLangMenu(root);
                 navigate('/reference');
                 return;
             }
 
-            const profile = event.target.closest('[data-profile-menu-anchor]');
+            var profile = event.target.closest('[data-profile-menu-anchor]');
             if (profile) {
                 if (typeof window.openProfileMenu === 'function') {
                     window.openProfileMenu(event);
@@ -186,25 +248,32 @@
                 return;
             }
 
-            const nav = event.target.closest('[data-global-nav]');
+            var nav = event.target.closest('[data-global-nav]');
             if (nav) {
                 event.preventDefault();
                 closeCreateMenu(root);
+                closeLangMenu(root);
                 navigate(nav.getAttribute('data-global-nav') || nav.getAttribute('href'));
             }
         });
 
-        document.addEventListener('click', (event) => {
-            if (!root.contains(event.target)) closeCreateMenu(root);
+        document.addEventListener('click', function (event) {
+            if (!root.contains(event.target)) {
+                closeCreateMenu(root);
+                closeLangMenu(root);
+            }
         });
 
-        document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape') closeCreateMenu(root);
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') {
+                closeCreateMenu(root);
+                closeLangMenu(root);
+            }
         });
     }
 
     function initGlobalHeaders() {
-        document.querySelectorAll('[data-global-header]').forEach((root) => {
+        document.querySelectorAll('[data-global-header]').forEach(function (root) {
             if (root.dataset.globalHeaderReady === '1') return;
             root.dataset.globalHeaderReady = '1';
             renderHeader(root);
@@ -222,9 +291,21 @@
         });
     }
 
+    function reRenderAllHeaders() {
+        document.querySelectorAll('[data-global-header]').forEach(function (root) {
+            root.dataset.globalHeaderReady = '0';
+        });
+        initGlobalHeaders();
+    }
+
     window.GlobalHeader = {
         init: initGlobalHeaders,
+        reRender: reRenderAllHeaders,
     };
+
+    window.addEventListener('i18n:changed', function () {
+        reRenderAllHeaders();
+    });
 
     initGlobalHeaders();
     if (document.readyState === 'loading') {

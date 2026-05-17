@@ -7,7 +7,7 @@
     <script src="/assets/AppConfig.js"></script>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>Настройки — ACTRA</title>
+    <title data-i18n="page.settings">Настройки — ACTRA</title>
     <link rel="stylesheet" href="/assets/tailwind.css" />
     <link rel="stylesheet" href="/assets/fonts.css" />
     <link rel="stylesheet" href="/assets/lightB-variables.css" />
@@ -334,6 +334,40 @@
             display: inline-flex;
             align-items: center;
             font-weight: 600;
+        }
+
+        .settings-lang-group {
+            display: inline-flex;
+            gap: 0.375rem;
+            padding: 0.25rem;
+            border: 1px solid var(--color-border-subtle);
+            border-radius: 0.875rem;
+            background: var(--color-bg-secondary);
+        }
+
+        .settings-lang-opt {
+            padding: 0.375rem 1rem;
+            border-radius: 0.625rem;
+            border: 1px solid transparent;
+            font-size: 0.8125rem;
+            font-weight: 600;
+            color: var(--color-text-secondary);
+            cursor: pointer;
+            background: transparent;
+            transition: background 0.15s, color 0.15s, border-color 0.15s;
+            line-height: 1.4;
+        }
+
+        .settings-lang-opt:hover {
+            background: var(--color-surface-1);
+            color: var(--color-text-main);
+        }
+
+        .settings-lang-opt.is-active {
+            background: var(--color-surface-1);
+            border-color: var(--color-border-subtle);
+            color: var(--color-primary);
+            box-shadow: 0 1px 4px rgba(15, 23, 42, 0.07);
         }
 
         @media (max-width: 767px) {
@@ -715,6 +749,16 @@
                     <span id="theme-save-status" class="hidden"></span>
                 </div>
                 <p id="settings-footer-profile-note" class="hidden"></p>
+
+                <div class="mt-6 border-t border-border-subtle pt-5">
+                    <span id="settings-lang-label" class="mb-2 block text-sm font-semibold text-text-main">Язык интерфейса</span>
+                    <div role="group" id="settings-lang-group" aria-label="Выбор языка" class="settings-lang-group">
+                        <button type="button" data-lang-btn="ru" class="settings-lang-opt" aria-pressed="false">RU</button>
+                        <button type="button" data-lang-btn="en" class="settings-lang-opt" aria-pressed="false">EN</button>
+                        <button type="button" data-lang-btn="uk" class="settings-lang-opt" aria-pressed="false">UK</button>
+                    </div>
+                    <p id="settings-lang-note" class="mt-2 text-xs text-text-secondary">Язык применяется немедленно и сохраняется в браузере.</p>
+                </div>
             </div>
         </section>
 
@@ -838,6 +882,7 @@
         </div>
     </div>
 
+    <script src="../assets/i18n.js"></script>
     <script src="../assets/NotificationUI.js"></script>
     <script src="../assets/PremiumPromoModal.js"></script>
     <script src="/settings/settings.js"></script>

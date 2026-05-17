@@ -379,7 +379,7 @@
                 class="flex shrink-0 whitespace-nowrap h-9 min-w-[122px] max-w-[480px] cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-lg bg-primary px-5 text-sm font-bold leading-normal tracking-[0.015em] text-primary-fg disabled:cursor-default disabled:bg-bg-disabled focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 s1-btn"
                 type="button">
                 <span aria-hidden="true">←</span>
-                <span>К списку</span>
+                <span data-i18n="s1.back_to_list">К списку</span>
               </button>
               <div class="s1-toolbar-title">
                 <div class="s1-toolbar-heading-row">
@@ -447,10 +447,10 @@
                     <span class="material-symbols-outlined text-xl">pause</span>
                   </div>
                   <div class="flex-1">
-                    <h2 id="pause-confirm-title" class="text-lg font-semibold text-text-main">
+                    <h2 id="pause-confirm-title" class="text-lg font-semibold text-text-main" data-i18n="s1.pause_title">
                       Поставить на паузу и выйти?
                     </h2>
-                    <p class="mt-1 text-sm text-text-secondary">
+                    <p class="mt-1 text-sm text-text-secondary" data-i18n="s1.pause_message">
                       Прогресс будет сохранён. Вы сможете продолжить позже.
                     </p>
                   </div>
@@ -459,16 +459,16 @@
                   <div id="pause-confirm-spinner"
                     class="hidden h-10 w-10 animate-spin rounded-full border-2 border-primary-light border-t-primary">
                   </div>
-                  <button id="pause-confirm-continue" type="button"
+                  <button id="pause-confirm-continue" type="button" data-i18n="s1.pause_continue"
                     class="inline-flex items-center justify-center rounded-lg border border-border-strong bg-surface-2 px-4 py-2 text-sm font-semibold text-text-main transition hover:bg-bg-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 s1-btn">
                     Продолжить выполнение
                   </button>
-                  <button id="pause-confirm-submit" type="button"
+                  <button id="pause-confirm-submit" type="button" data-i18n="s1.pause_confirm"
                     class="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-fg transition hover:bg-primary-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 disabled:cursor-not-allowed disabled:opacity-70 s1-btn">
                     Поставить на паузу и выйти
                   </button>
 
-                  <button id="pause-confirm-discard" type="button"
+                  <button id="pause-confirm-discard" type="button" data-i18n="s1.pause_discard"
                     class="inline-flex items-center justify-center rounded-lg border-2 border-border-strong bg-error-dark px-4 py-2 text-sm font-semibold text-text-on-dark transition hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-error focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 disabled:cursor-not-allowed disabled:opacity-70 s1-btn">
                     Выйти без сохранения
                   </button>
@@ -485,10 +485,10 @@
                     <span class="material-symbols-outlined text-xl">play_arrow</span>
                   </div>
                   <div class="flex-1">
-                    <h2 id="resume-modal-title" class="text-lg font-semibold text-text-main">
+                    <h2 id="resume-modal-title" class="text-lg font-semibold text-text-main" data-i18n="s1.resume_title">
                       Сессия на паузе. Продолжить?
                     </h2>
-                    <p class="mt-1 text-sm text-text-secondary">
+                    <p class="mt-1 text-sm text-text-secondary" data-i18n="s1.resume_message">
                       Возобновите выполнение или вернитесь к списку комплексов.
                     </p>
                   </div>
@@ -497,11 +497,11 @@
                   <div id="resume-spinner"
                     class="hidden h-10 w-10 animate-spin rounded-full border-2 border-primary-light border-t-primary">
                   </div>
-                  <button id="resume-exit-btn" type="button"
+                  <button id="resume-exit-btn" type="button" data-i18n="s1.resume_exit"
                     class="inline-flex items-center justify-center rounded-lg border border-border-strong bg-surface-2 px-4 py-2 text-sm font-semibold text-text-main transition hover:bg-bg-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 s1-btn">
                     Выйти к списку
                   </button>
-                  <button id="resume-continue-btn" type="button"
+                  <button id="resume-continue-btn" type="button" data-i18n="s1.resume_continue"
                     class="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-fg transition hover:bg-primary-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 disabled:cursor-not-allowed disabled:opacity-70 s1-btn">
                     Возобновить
                   </button>
@@ -567,13 +567,13 @@
                       <button
                         id="result-decision-accept"
                         class="inline-flex items-center justify-center rounded-lg border border-success-light bg-success-light px-4 py-2.5 text-sm font-semibold text-success-dark transition hover:bg-success-light/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-success-dark focus-visible:ring-offset-2 focus-visible:ring-offset-surface-2"
-                        type="button">
+                        type="button" data-i18n="s1.result_accept">
                         Засчитать как верное
                       </button>
                       <button
                         id="result-decision-reject"
                         class="inline-flex items-center justify-center rounded-lg border border-border-strong bg-surface-1 px-4 py-2.5 text-sm font-semibold text-text-main transition hover:bg-bg-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-2"
-                        type="button">
+                        type="button" data-i18n="s1.result_reject">
                         Оставить как неверное
                       </button>
                     </div>
@@ -628,6 +628,7 @@
       });
     </script>
 
+    <script src="/assets/i18n.js"></script>
     <script src="/assets/NotificationUI.js"></script>
     <script src="/assets/ConnectionMonitor.js"></script>
 </body>

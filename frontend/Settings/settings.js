@@ -2320,6 +2320,130 @@
         renderThemeOptions(themeId);
     }
 
+    function _applySettingsI18n() {
+        if (!window.i18n || typeof window.i18n.t !== 'function') return;
+        var t = function (k) { return window.i18n.t(k); };
+
+        var pv = t('page.settings');
+        if (pv !== 'page.settings') document.title = pv;
+
+        var topbarBack = document.querySelector('.settings-topbar a span:last-child');
+        if (topbarBack) { var nh = t('settings.nav_home'); if (nh !== 'settings.nav_home') topbarBack.textContent = nh; }
+
+        var topbarH1 = document.querySelector('.settings-topbar h1');
+        if (topbarH1) { var st = t('settings.title'); if (st !== 'settings.title') topbarH1.textContent = st; }
+
+        var accountActions = Array.from(document.querySelectorAll('.settings-main-link-label'));
+        if (accountActions[0]) { var al = t('settings.nav_home'); if (al !== 'settings.nav_home') accountActions[0].textContent = al; }
+
+        var idMap = [
+            ['settings-account-subline', 'settings.account_subline'],
+            ['settings-premium-description', 'settings.premium_description'],
+            ['settings-profile-title', 'settings.profile_title'],
+            ['settings-profile-description', 'settings.profile_description'],
+            ['settings-avatar-preview-name', 'settings.avatar_title'],
+            ['settings-avatar-preview-note', 'settings.avatar_note'],
+            ['settings-email-note', 'settings.email_note'],
+            ['settings-email-pending-title', 'settings.email_pending_title'],
+            ['settings-email-pending-hint', 'settings.email_pending_hint'],
+            ['settings-security-title', 'settings.security_title'],
+            ['settings-security-description', 'settings.security_description'],
+            ['settings-admin-title', 'settings.admin_title'],
+            ['settings-admin-description', 'settings.admin_description'],
+            ['settings-appearance-title', 'settings.appearance_title'],
+            ['settings-ai-description', 'settings.ai_description'],
+            ['settings-draft-banner-text', 'settings.draft_hint'],
+            ['settings-lang-label', 'settings.lang_label'],
+            ['settings-lang-note', 'settings.lang_note'],
+        ];
+        idMap.forEach(function (pair) {
+            var el = document.getElementById(pair[0]);
+            if (!el) return;
+            var val = t(pair[1]);
+            if (val !== pair[1]) el.textContent = val;
+        });
+
+        var langGroup = document.getElementById('settings-lang-group');
+        if (langGroup) { var lga = t('settings.lang_group_aria'); if (lga !== 'settings.lang_group_aria') langGroup.setAttribute('aria-label', lga); }
+
+        var nameLabel = document.getElementById('settings-name-input') && document.getElementById('settings-name-input').previousElementSibling;
+        if (nameLabel && nameLabel.tagName === 'SPAN') { var nl = t('settings.name_label'); if (nl !== 'settings.name_label') nameLabel.textContent = nl; }
+
+        var nameInput = document.getElementById('settings-name-input');
+        if (nameInput) { var np = t('settings.name_placeholder'); if (np !== 'settings.name_placeholder') nameInput.setAttribute('placeholder', np); }
+
+        var emailTitle = document.getElementById('settings-email-value') && document.getElementById('settings-email-value').previousElementSibling;
+        if (emailTitle && emailTitle.tagName === 'P') { var et = t('settings.email_label'); if (et !== 'settings.email_label') emailTitle.textContent = et; }
+
+        var emailNewLabel = document.getElementById('settings-email-input') && document.getElementById('settings-email-input').previousElementSibling;
+        if (emailNewLabel && emailNewLabel.tagName === 'SPAN') { var enl = t('settings.email_new_label'); if (enl !== 'settings.email_new_label') emailNewLabel.textContent = enl; }
+
+        var pwTitle = document.getElementById('settings-password-state') && document.getElementById('settings-password-state').previousElementSibling;
+        if (pwTitle && pwTitle.tagName === 'P') { var pwt = t('settings.password_label'); if (pwt !== 'settings.password_label') pwTitle.textContent = pwt; }
+
+        var pwCurLabel = document.querySelector('label[for="settings-password-current"] span');
+        if (pwCurLabel) { var pcl = t('settings.password_current_label'); if (pcl !== 'settings.password_current_label') pwCurLabel.textContent = pcl; }
+
+        var pwCurInput = document.getElementById('settings-password-current');
+        if (pwCurInput) { var pcp = t('settings.password_current_placeholder'); if (pcp !== 'settings.password_current_placeholder') pwCurInput.setAttribute('placeholder', pcp); }
+
+        var pwNewLabel = document.getElementById('settings-password-new') && document.getElementById('settings-password-new').closest('label') && document.getElementById('settings-password-new').closest('label').querySelector('span');
+        if (pwNewLabel) { var pnl = t('settings.password_new_label'); if (pnl !== 'settings.password_new_label') pwNewLabel.textContent = pnl; }
+
+        var pwNewInput = document.getElementById('settings-password-new');
+        if (pwNewInput) { var pnp = t('settings.password_new_placeholder'); if (pnp !== 'settings.password_new_placeholder') pwNewInput.setAttribute('placeholder', pnp); }
+
+        var pwConfLabel = document.getElementById('settings-password-confirm') && document.getElementById('settings-password-confirm').closest('label') && document.getElementById('settings-password-confirm').closest('label').querySelector('span');
+        if (pwConfLabel) { var pcfl = t('settings.password_confirm_label'); if (pcfl !== 'settings.password_confirm_label') pwConfLabel.textContent = pcfl; }
+
+        var pwConfInput = document.getElementById('settings-password-confirm');
+        if (pwConfInput) { var pcfp = t('settings.password_confirm_placeholder'); if (pcfp !== 'settings.password_confirm_placeholder') pwConfInput.setAttribute('placeholder', pcfp); }
+
+        var draftBanner = document.getElementById('settings-draft-banner');
+        if (draftBanner) {
+            var draftTitleEl = draftBanner.querySelector('.text-sm.font-semibold');
+            if (draftTitleEl) { var dtt = t('settings.draft_title'); if (dtt !== 'settings.draft_title') draftTitleEl.textContent = dtt; }
+        }
+
+        var restoreBtn = document.getElementById('settings-draft-restore-btn');
+        if (restoreBtn) { var rb = t('settings.draft_restore'); if (rb !== 'settings.draft_restore') restoreBtn.textContent = rb; }
+
+        var discardBtn = document.getElementById('settings-draft-discard-btn');
+        if (discardBtn) { var db = t('settings.draft_discard'); if (db !== 'settings.draft_discard') discardBtn.textContent = db; }
+
+        var saveKeysBtn = document.getElementById('save-keys-btn');
+        if (saveKeysBtn) { var sk = t('settings.save_keys'); if (sk !== 'settings.save_keys') saveKeysBtn.textContent = sk; }
+
+        var validateAllBtn = document.getElementById('validate-all-btn');
+        if (validateAllBtn) { var va = t('settings.validate_keys'); if (va !== 'settings.validate_keys') validateAllBtn.textContent = va; }
+
+        var adminSearchLabel = document.querySelector('#settings-admin-section label > span.mb-2');
+        if (adminSearchLabel) { var asl = t('settings.admin_search_label'); if (asl !== 'settings.admin_search_label') adminSearchLabel.textContent = asl; }
+
+        var adminSearchInput = document.getElementById('settings-admin-search-input');
+        if (adminSearchInput) { var asp = t('settings.admin_search_placeholder'); if (asp !== 'settings.admin_search_placeholder') adminSearchInput.setAttribute('placeholder', asp); }
+
+        var iconBtns = [
+            ['settings-avatar-upload-btn', 'upload', 'settings.avatar_upload'],
+            ['settings-name-save-btn', 'save', 'settings.name_save'],
+            ['settings-email-toggle-btn', 'mail', 'settings.email_change'],
+            ['settings-email-save-btn', 'check', 'settings.email_save'],
+            ['settings-email-cancel-btn', 'close', 'settings.cancel'],
+            ['settings-email-pending-resend-btn', 'forward_to_inbox', 'settings.email_resend'],
+            ['settings-password-toggle-btn', 'password', 'settings.password_change'],
+            ['settings-password-save-btn', 'check', 'settings.password_save'],
+            ['settings-password-cancel-btn', 'close', 'settings.cancel'],
+            ['settings-admin-search-btn', 'search', 'settings.admin_search'],
+            ['settings-logout-btn', 'logout', 'settings.logout'],
+        ];
+        iconBtns.forEach(function (row) {
+            var val = t(row[2]);
+            if (val !== row[2]) setButtonLabel(row[0], row[1], val);
+        });
+
+        window.i18n.updateDOM();
+    }
+
     function bootstrapSettingsPage() {
         if (document.body && document.body.dataset.settingsInitialized === '1') {
             return;
@@ -2329,6 +2453,7 @@
         }
 
         applyStaticCopy();
+        _applySettingsI18n();
 
         const restoreBtn = document.getElementById('settings-draft-restore-btn');
         if (restoreBtn) {
@@ -2565,6 +2690,8 @@
         window.addEventListener('themechanged', (event) => {
             renderThemeOptions(event.detail?.themeId);
         });
+
+        window.addEventListener('i18n:changed', _applySettingsI18n);
 
         void loadProfileThemeContext();
         loadKeys();
