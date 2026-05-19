@@ -24,6 +24,14 @@
     }
 }(typeof self !== 'undefined' ? self : this, function (SessionState, api, UIHelpers, TaskRenderer, SessionControls, SessionRoutes, SessionValidation) {
 
+    function wt(key, fallback) {
+        if (typeof window !== 'undefined' && window.i18n && typeof window.i18n.t === 'function') {
+            const result = window.i18n.t(key);
+            return result !== key ? result : fallback;
+        }
+        return fallback;
+    }
+
     const state = SessionState && SessionState.state ? SessionState.state : SessionState;
     const {
         showStatus,
@@ -82,7 +90,7 @@
             const validation = SessionValidation.validateSessionId(rawId);
             if (!validation.valid) {
                 console.error('Invalid session ID:', validation.error);
-                showStatus(`Ошибка: ${validation.error}`, 'error');
+                showStatus(wt('s1.err_validation', 'Ошибка: {err}').replace('{err}', validation.error), 'error');
 
                 setTimeout(() => {
                     window.navigateWithTransition(SessionRoutes.MAIN);
@@ -133,7 +141,7 @@
         const theoryId = String(context?.theoryId || '').trim();
         if (!theoryId) {
             banner.classList.add('hidden');
-            titleEl.textContent = 'Теория';
+            titleEl.textContent = wt('s1.theory_label', 'Теория');
             metaEl.textContent = '';
             state.theoryContext = null;
             return;
@@ -144,17 +152,17 @@
         const origin = String(context?.origin || '').trim();
         const metaParts = [];
 
-        if (complexId) metaParts.push(`Комплекс: ${complexId}`);
+        if (complexId) metaParts.push(wt('s1.meta_complex', 'Комплекс: {id}').replace('{id}', complexId));
         if (origin === 'editor_theory_hub') {
-            metaParts.push('Сессия запущена из Theory Hub.');
+            metaParts.push(wt('s1.meta_theory_hub', 'Сессия запущена из Theory Hub.'));
         } else if (origin === 'complex_theory_link') {
-            metaParts.push('Контекст подтянут из theory_link комплекса.');
+            metaParts.push(wt('s1.meta_theory_link', 'Контекст подтянут из theory_link комплекса.'));
         } else {
-            metaParts.push('Текущая сессия привязана к этой теории.');
+            metaParts.push(wt('s1.meta_theory_default', 'Текущая сессия привязана к этой теории.'));
         }
-        metaParts.push('После завершения можно вернуться к связанному theory-контексту на экране итогов.');
+        metaParts.push(wt('s1.meta_theory_footer', 'После завершения можно вернуться к связанному theory-контексту на экране итогов.'));
 
-        titleEl.textContent = `Теория: ${theoryTitle}`;
+        titleEl.textContent = wt('s1.theory_title_label', 'Теория: {title}').replace('{title}', theoryTitle);
         metaEl.textContent = metaParts.join(' ');
         banner.classList.remove('hidden');
         state.theoryContext = {
@@ -215,7 +223,7 @@
 
         try {
             setLoading(true);
-            showStatus('Загружаем текущее задание...');
+            showStatus(wt('s1.loading_task', 'Загружаем текущее задание...'));
             const hadRenderedTask = !!state.currentTask;
             const pendingUnloadPauseRestore =
                 typeof consumePendingUnloadPauseMarker === 'function'
@@ -224,7 +232,7 @@
             let { status, data } = await api.getCurrentTask(sessionId);
 
             if (status === 404) {
-                showStatus('Сессия не найдена', 'error');
+                showStatus(wt('s1.err_session_not_found', 'Сессия не найдена'), 'error');
                 setTimeout(() => {
                     window.navigateWithTransition('/main');
                 }, 2000);
@@ -234,7 +242,7 @@
             }
 
             if (status === 410) {
-                showStatus('Сессия завершена', 'success');
+                showStatus(wt('s1.session_completed', 'Сессия завершена'), 'success');
                 setTimeout(() => {
                     navigateWithoutPrompt(SessionRoutes.SESSION_RESULTS(sessionId));
                 }, 1000);
@@ -266,7 +274,7 @@
 
             const response = data;
             if (!response.ok) {
-                showStatus(response.error || 'Не удалось загрузить задание', 'error');
+                showStatus(response.error || wt('s1.err_load_task', 'Не удалось загрузить задание'), 'error');
                 if (!hadRenderedTask) {
                     renderTask(null);
                 }
@@ -354,7 +362,7 @@
             if (typeof showRetryOption === 'function') {
                 showRetryOption(loadInitialTask);
             } else {
-                showStatus('Не удалось загрузить задание. Попробуйте снова', 'error');
+                showStatus(wt('s1.err_load_task_retry', 'Не удалось загрузить задание. Попробуйте снова'), 'error');
             }
             if (!state.currentTask) {
                 renderTask(null);

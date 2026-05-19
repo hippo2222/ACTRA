@@ -1,6 +1,12 @@
 (function (root) {
   "use strict";
 
+  function wt(key, fallback) {
+    if (!window.i18n || typeof window.i18n.t !== 'function') return fallback;
+    var v = window.i18n.t(key);
+    return v !== key ? v : fallback;
+  }
+
   const state = {
     initialized: false,
     sessionId: null,
@@ -89,7 +95,7 @@
 
   function formatErrorCount(count) {
     const value = Math.max(0, Number(count) || 0);
-    return `${value} ${formatPlural(value, "ошибка", "ошибки", "ошибок")}`;
+    return `${value} ${formatPlural(value, wt('s2.error_one', 'ошибка'), wt('s2.error_few', 'ошибки'), wt('s2.error_many', 'ошибок'))}`;
   }
 
   function compactText(value, maxLength) {
@@ -289,10 +295,10 @@
     const note = compactText(source.note || source.explanation || explanation, 220);
 
     return {
-      title: humanLabel(source.title || taskName, taskName || "Задание", 96),
+      title: humanLabel(source.title || taskName, taskName || wt('s2.task_fallback_label', 'Задание'), 96),
       prompt: reviewPrompt,
-      userLabel: compactText(source.user_label || source.userLabel, 48) || "Твоё решение",
-      referenceLabel: compactText(source.reference_label || source.referenceLabel, 48) || "Референс",
+      userLabel: compactText(source.user_label || source.userLabel, 48) || wt('s2.user_label', 'Твоё решение'),
+      referenceLabel: compactText(source.reference_label || source.referenceLabel, 48) || wt('s2.reference_label', 'Референс'),
       userLines,
       referenceLines,
       userItems,
@@ -365,7 +371,7 @@
         details.title ||
         taskData.name ||
         taskData.title,
-      `Задание ${Number(index) + 1}`,
+      wt('s2.task_number', 'Задание {n}').replace('{n}', Number(index) + 1),
       84
     );
     const prompt = compactText(
@@ -495,7 +501,7 @@
 
     appendReviewAnswerContent(
       target,
-      review.userLabel || "Твоё решение",
+      review.userLabel || wt('s2.user_label', 'Твоё решение'),
       Array.isArray(review.userLines) ? review.userLines : [],
       Array.isArray(review.userItems) ? review.userItems : [],
       review.status === "correct" ? "s2-review-answer--success" : "s2-review-answer--error"
@@ -503,7 +509,7 @@
 
     appendReviewAnswerContent(
       target,
-      review.referenceLabel || "Референс",
+      review.referenceLabel || wt('s2.reference_label', 'Референс'),
       Array.isArray(review.referenceLines) ? review.referenceLines : [],
       Array.isArray(review.referenceItems) ? review.referenceItems : [],
       "s2-review-answer--success"
@@ -531,7 +537,7 @@
             details.name ||
             details.title,
           96
-        ) || `Задание ${index + 1}`;
+        ) || wt('s2.task_number', 'Задание {n}').replace('{n}', index + 1);
       })
       .filter(Boolean)
       .join(", ");
@@ -595,7 +601,7 @@
     return {
       sessionId: String(source.session_id || state.sessionId || ""),
       iteration: toNumberOrNull(source.iteration ?? source.iteration_index ?? state.iteration) || 1,
-      complexName: humanLabel(source.complex_name || source.complex_title, "Комплекс", 40),
+      complexName: humanLabel(source.complex_name || source.complex_title, wt('s2.complex_fallback', 'Комплекс'), 40),
       total,
       success,
       failed,
@@ -619,54 +625,54 @@
     if (summary.total === 0) {
       return {
         tone: "neutral",
-        status: "результат готов",
-        summary: "Сводка загрузилась не полностью. Можно открыть итоги и проверить детали.",
-        focusLabel: "Внимание",
-        focusTitle: "Проверь сводку",
-        focusCopy: "Данных по этой итерации меньше, чем обычно.",
-        recommendationTitle: "Открой итоги",
-        recommendationCopy: "Если всё на месте, переходи дальше.",
+        status: wt('s2.outcome_neutral_status', 'результат готов'),
+        summary: wt('s2.outcome_neutral_summary', 'Сводка загрузилась не полностью. Можно открыть итоги и проверить детали.'),
+        focusLabel: wt('s2.outcome_neutral_focus_label', 'Внимание'),
+        focusTitle: wt('s2.outcome_neutral_focus_title', 'Проверь сводку'),
+        focusCopy: wt('s2.outcome_neutral_focus_copy', 'Данных по этой итерации меньше, чем обычно.'),
+        recommendationTitle: wt('s2.outcome_neutral_rec_title', 'Открой итоги'),
+        recommendationCopy: wt('s2.outcome_neutral_rec_copy', 'Если всё на месте, переходи дальше.'),
       };
     }
 
     if (failed === 0 && rate >= 95) {
       return {
         tone: "success",
-        status: "без ошибок",
-        summary: "Все задания этой итерации решены верно.",
-        focusLabel: "Чисто",
-        focusTitle: "Ошибок нет",
-        focusCopy: "Ничего критичного учитывать не нужно.",
-        recommendationTitle: "Следующая итерация готова",
-        recommendationCopy: "Можно сразу переходить дальше.",
+        status: wt('s2.outcome_clean_status', 'без ошибок'),
+        summary: wt('s2.outcome_clean_summary_perfect', 'Все задания этой итерации решены верно.'),
+        focusLabel: wt('s2.outcome_clean_focus_label', 'Чисто'),
+        focusTitle: wt('s2.outcome_clean_focus_title', 'Ошибок нет'),
+        focusCopy: wt('s2.outcome_clean_focus_copy', 'Ничего критичного учитывать не нужно.'),
+        recommendationTitle: wt('s2.outcome_clean_rec_title_perfect', 'Следующая итерация готова'),
+        recommendationCopy: wt('s2.outcome_clean_rec_copy_perfect', 'Можно сразу переходить дальше.'),
       };
     }
 
     if (failed === 0) {
       return {
         tone: "success",
-        status: "без ошибок",
-        summary: "Итерация пройдена без ошибок.",
-        focusLabel: "Чисто",
-        focusTitle: "Ошибок нет",
-        focusCopy: "Ничего критичного учитывать не нужно.",
-        recommendationTitle: "Можно идти дальше",
-        recommendationCopy: "Ничего дополнительно разбирать не нужно.",
+        status: wt('s2.outcome_clean_status', 'без ошибок'),
+        summary: wt('s2.outcome_clean_summary', 'Итерация пройдена без ошибок.'),
+        focusLabel: wt('s2.outcome_clean_focus_label', 'Чисто'),
+        focusTitle: wt('s2.outcome_clean_focus_title', 'Ошибок нет'),
+        focusCopy: wt('s2.outcome_clean_focus_copy', 'Ничего критичного учитывать не нужно.'),
+        recommendationTitle: wt('s2.outcome_clean_rec_title', 'Можно идти дальше'),
+        recommendationCopy: wt('s2.outcome_clean_rec_copy', 'Ничего дополнительно разбирать не нужно.'),
       };
     }
 
     if (failed === 1 && rate >= 80) {
       return {
         tone: "error",
-        status: "1 ошибка",
-        summary: "В целом хорошо, осталась одна точная правка.",
-        focusLabel: "Критично",
-        focusTitle: "Есть 1 ошибка",
+        status: wt('s2.outcome_one_error_status', '1 ошибка'),
+        summary: wt('s2.outcome_one_error_summary', 'В целом хорошо, осталась одна точная правка.'),
+        focusLabel: wt('s2.outcome_error_focus_label', 'Критично'),
+        focusTitle: wt('s2.outcome_one_error_focus_title', 'Есть 1 ошибка'),
         focusCopy: firstFailed
-          ? `Перед следующим раундом вернись к заданию «${firstFailed.name}».`
-          : "Перед следующим раундом стоит коротко разобрать ошибку.",
-        recommendationTitle: "Разбери ошибку и переходи дальше",
-        recommendationCopy: "Сначала посмотри ошибку выше, затем запускай следующую итерацию.",
+          ? wt('s2.outcome_one_error_focus_copy_named', 'Перед следующим раундом вернись к заданию «{name}».').replace('{name}', firstFailed.name)
+          : wt('s2.outcome_one_error_focus_copy', 'Перед следующим раундом стоит коротко разобрать ошибку.'),
+        recommendationTitle: wt('s2.outcome_one_error_rec_title', 'Разбери ошибку и переходи дальше'),
+        recommendationCopy: wt('s2.outcome_one_error_rec_copy', 'Сначала посмотри ошибку выше, затем запускай следующую итерацию.'),
       };
     }
 
@@ -674,24 +680,24 @@
       return {
         tone: "error",
         status: formatErrorCount(failed),
-        summary: "Есть несколько ошибок, их стоит разобрать перед следующей попыткой.",
-        focusLabel: "Критично",
-        focusTitle: `Есть ${formatErrorCount(failed)}`,
-        focusCopy: "Лучше учесть ошибки до следующей итерации.",
-        recommendationTitle: "Короткий разбор перед продолжением",
-        recommendationCopy: "Посмотри, где сбился ответ, и переходи дальше увереннее.",
+        summary: wt('s2.outcome_few_errors_summary', 'Есть несколько ошибок, их стоит разобрать перед следующей попыткой.'),
+        focusLabel: wt('s2.outcome_error_focus_label', 'Критично'),
+        focusTitle: `${wt('s2.outcome_errors_focus_prefix', 'Есть')} ${formatErrorCount(failed)}`,
+        focusCopy: wt('s2.outcome_few_errors_focus_copy', 'Лучше учесть ошибки до следующей итерации.'),
+        recommendationTitle: wt('s2.outcome_few_errors_rec_title', 'Короткий разбор перед продолжением'),
+        recommendationCopy: wt('s2.outcome_few_errors_rec_copy', 'Посмотри, где сбился ответ, и переходи дальше увереннее.'),
       };
     }
 
     return {
       tone: "error",
       status: formatErrorCount(failed),
-      summary: "Много ошибок: сначала лучше восстановить слабые места.",
-      focusLabel: "Критично",
-      focusTitle: `Есть ${formatErrorCount(failed)}`,
-      focusCopy: "Сейчас важнее понять ошибки, чем ускоряться.",
-      recommendationTitle: "Начни с разбора",
-      recommendationCopy: "Разбери ошибки выше, затем запускай следующую попытку.",
+      summary: wt('s2.outcome_many_errors_summary', 'Много ошибок: сначала лучше восстановить слабые места.'),
+      focusLabel: wt('s2.outcome_error_focus_label', 'Критично'),
+      focusTitle: `${wt('s2.outcome_errors_focus_prefix', 'Есть')} ${formatErrorCount(failed)}`,
+      focusCopy: wt('s2.outcome_many_errors_focus_copy', 'Сейчас важнее понять ошибки, чем ускоряться.'),
+      recommendationTitle: wt('s2.outcome_many_errors_rec_title', 'Начни с разбора'),
+      recommendationCopy: wt('s2.outcome_many_errors_rec_copy', 'Разбери ошибки выше, затем запускай следующую попытку.'),
     };
   }
 
@@ -849,7 +855,7 @@
       wrapper.className = "s2-meta-inline";
       const label = document.createElement("span");
       label.className = "s2-meta-pill-label";
-      label.textContent = "Сложность";
+      label.textContent = wt('s2.meta_difficulty', 'Сложность');
       statEl = document.createElement("strong");
       statEl.id = "stat-difficulty";
       statEl.textContent = "—";
@@ -903,7 +909,7 @@
     if (failedChip) {
       failedChip.classList.toggle("s2-count-chip--error", summary.failed > 0);
       failedChip.classList.toggle("s2-count-chip--calm", summary.failed === 0);
-      failedChip.innerHTML = `<strong id="hero-failed-count">${summary.failed}</strong> ${formatPlural(summary.failed, "ошибка", "ошибки", "ошибок")}`;
+      failedChip.innerHTML = `<strong id="hero-failed-count">${summary.failed}</strong> ${formatPlural(summary.failed, wt('s2.error_one', 'ошибка'), wt('s2.error_few', 'ошибки'), wt('s2.error_many', 'ошибок'))}`;
       animateNumber(getById("hero-failed-count"), summary.failed);
     }
     syncArc(summary.ratePercent, outcome.tone);
@@ -919,20 +925,20 @@
     setHidden("result-review-copy", summary.failed === 0);
     const reviewEyebrow = document.querySelector("#result-review-panel .s2-eyebrow");
     if (reviewEyebrow) {
-      reviewEyebrow.textContent = summary.failed === 0 ? "Итог итерации" : "Разбор ошибок";
+      reviewEyebrow.textContent = summary.failed === 0 ? wt('s2.eyebrow_iteration_result', 'Итог итерации') : wt('s2.eyebrow_review', 'Разбор ошибок');
     }
     setText(
       "result-review-title",
       summary.failed === 0
-        ? "Чистая итерация"
+        ? wt('s2.review_title_clean', 'Чистая итерация')
         : summary.failed === 1
-          ? "1 ошибка требует короткого разбора"
-          : `${formatErrorCount(summary.failed)} требуют короткого разбора`
+          ? wt('s2.review_title_one_error', '1 ошибка требует короткого разбора')
+          : `${formatErrorCount(summary.failed)} ${wt('s2.review_title_n_errors_suffix', 'требуют короткого разбора')}`
     );
     setText(
       "result-review-copy",
       summary.failed > 0
-        ? "Показываем твое решение рядом с референсом, чтобы быстро понять, что поправить перед следующей итерацией."
+        ? wt('s2.review_copy', 'Показываем твое решение рядом с референсом, чтобы быстро понять, что поправить перед следующей итерацией.')
         : ""
     );
     setText("recommendation-title", outcome.recommendationTitle);
@@ -961,11 +967,11 @@
 
       const title = document.createElement("p");
       title.className = "s2-dialog-item-title";
-      title.textContent = "Все задания приняты";
+      title.textContent = wt('s2.all_tasks_accepted', 'Все задания приняты');
 
       const copy = document.createElement("p");
       copy.className = "s2-dialog-item-copy";
-      copy.textContent = "В этой итерации ошибок не было.";
+      copy.textContent = wt('s2.no_errors_in_iteration', 'В этой итерации ошибок не было.');
 
       card.appendChild(title);
       card.appendChild(copy);
@@ -985,7 +991,7 @@
       copy.className = "s2-dialog-item-copy";
       copy.textContent = task.explanation
         ? compactText(task.explanation, 180)
-        : "Есть ошибка, к которой стоит вернуться перед следующим раундом.";
+        : wt('s2.task_error_hint', 'Есть ошибка, к которой стоит вернуться перед следующим раундом.');
 
       card.appendChild(title);
       card.appendChild(copy);
@@ -1262,11 +1268,11 @@
 
     const badge = document.createElement("div");
     badge.className = "s2-review-empty-badge";
-    badge.textContent = "Без ошибок";
+    badge.textContent = wt('s2.no_errors_badge', 'Без ошибок');
 
     const title = document.createElement("p");
     title.className = "s2-review-empty-title";
-    title.textContent = "Все ответы приняты";
+    title.textContent = wt('s2.all_answers_accepted', 'Все ответы приняты');
 
     const rail = document.createElement("div");
     rail.className = "s2-review-empty-rail";
@@ -1277,7 +1283,7 @@
 
     const copy = document.createElement("p");
     copy.className = "s2-review-empty-copy";
-    copy.textContent = "Точный проход без замечаний.";
+    copy.textContent = wt('s2.clean_pass_copy', 'Точный проход без замечаний.');
 
     hero.appendChild(icon);
     hero.appendChild(badge);
@@ -1297,12 +1303,12 @@
 
     if (reviewBtn) {
       reviewBtn.textContent = state.reviewExpanded
-        ? "Свернуть разбор"
+        ? wt('s2.review_btn_collapse', 'Свернуть разбор')
         : reviewTasks.length > 1
-          ? `Показать ${reviewTasks.length} ошибки`
+          ? wt('s2.review_btn_show_n', 'Показать {n} ошибки').replace('{n}', reviewTasks.length)
           : reviewTasks.length === 1
-            ? "Показать 1 ошибку"
-            : "Разбор не нужен";
+            ? wt('s2.review_btn_show_one', 'Показать 1 ошибку')
+            : wt('s2.review_btn_none', 'Разбор не нужен');
       reviewBtn.setAttribute("aria-expanded", state.reviewExpanded && summary.failed > 0 ? "true" : "false");
       setHidden(reviewBtn, summary.failed === 0);
     }
@@ -1360,7 +1366,7 @@
 
       appendReviewAnswerContent(
         card,
-        task.review && task.review.userLabel ? task.review.userLabel : "Твоё решение",
+        task.review && task.review.userLabel ? task.review.userLabel : wt('s2.user_label', 'Твоё решение'),
         task.review && Array.isArray(task.review.userLines) ? task.review.userLines : [],
         task.review && Array.isArray(task.review.userItems) ? task.review.userItems : [],
         "s2-review-answer--error"
@@ -1368,7 +1374,7 @@
 
       appendReviewAnswerContent(
         card,
-        task.review && task.review.referenceLabel ? task.review.referenceLabel : "Референс",
+        task.review && task.review.referenceLabel ? task.review.referenceLabel : wt('s2.reference_label', 'Референс'),
         task.review && Array.isArray(task.review.referenceLines) ? task.review.referenceLines : [],
         task.review && Array.isArray(task.review.referenceItems) ? task.review.referenceItems : [],
         "s2-review-answer--success"
@@ -1389,11 +1395,11 @@
     if (dialogTitle) {
       dialogTitle.textContent = reviewTasks.length === 1
         ? reviewTasks[0].name
-        : "Что учесть перед следующим раундом";
+        : wt('s2.review_dialog_title', 'Что учесть перед следующим раундом');
     }
     subtitle.textContent = summary.failed
-      ? "Короткий снимок ошибки перед следующей итерацией."
-      : "Критичных замечаний нет.";
+      ? wt('s2.review_subtitle_errors', 'Короткий снимок ошибки перед следующей итерацией.')
+      : wt('s2.review_subtitle_no_errors', 'Критичных замечаний нет.');
     body.innerHTML = "";
 
     if (!summary.failedTasks.length) {
@@ -1402,11 +1408,11 @@
 
       const title = document.createElement("p");
       title.className = "s2-dialog-item-title";
-      title.textContent = "Все задания приняты";
+      title.textContent = wt('s2.all_tasks_accepted', 'Все задания приняты');
 
       const copy = document.createElement("p");
       copy.className = "s2-dialog-item-copy";
-      copy.textContent = "Можно переходить дальше.";
+      copy.textContent = wt('s2.can_continue', 'Можно переходить дальше.');
 
       item.appendChild(title);
       item.appendChild(copy);
@@ -1427,14 +1433,14 @@
 
       const question = document.createElement("p");
       question.className = "s2-review-question";
-      question.textContent = task.prompt || "Формулировка задания появится в полном разборе.";
+      question.textContent = task.prompt || wt('s2.prompt_not_available', 'Формулировка задания появится в полном разборе.');
       item.appendChild(question);
 
       const note = document.createElement("p");
       note.className = "s2-review-note";
       note.textContent = task.explanation
         ? compactText(task.explanation, 220)
-        : "Ошибка точечная: достаточно быстро свериться с ответом и идти дальше.";
+        : wt('s2.error_note_fallback', 'Ошибка точечная: достаточно быстро свериться с ответом и идти дальше.');
       item.appendChild(note);
 
       const answers = document.createElement("div");
@@ -1445,11 +1451,11 @@
 
       const userAnswerLabel = document.createElement("p");
       userAnswerLabel.className = "s2-review-answer-label";
-      userAnswerLabel.textContent = "Твой ответ";
+      userAnswerLabel.textContent = wt('s2.your_answer_label', 'Твой ответ');
 
       const userAnswerCopy = document.createElement("p");
       userAnswerCopy.className = "s2-review-answer-copy";
-      userAnswerCopy.textContent = task.userAnswer || "Ответ не был зафиксирован.";
+      userAnswerCopy.textContent = task.userAnswer || wt('s2.answer_not_recorded', 'Ответ не был зафиксирован.');
 
       userAnswerCard.appendChild(userAnswerLabel);
       userAnswerCard.appendChild(userAnswerCopy);
@@ -1460,11 +1466,11 @@
 
       const correctAnswerLabel = document.createElement("p");
       correctAnswerLabel.className = "s2-review-answer-label";
-      correctAnswerLabel.textContent = "Правильный ответ";
+      correctAnswerLabel.textContent = wt('s2.correct_answer_label', 'Правильный ответ');
 
       const correctAnswerCopy = document.createElement("p");
       correctAnswerCopy.className = "s2-review-answer-copy";
-      correctAnswerCopy.textContent = task.correctAnswer || "Появится в полном разборе.";
+      correctAnswerCopy.textContent = task.correctAnswer || wt('s2.correct_answer_not_available', 'Появится в полном разборе.');
 
       correctAnswerCard.appendChild(correctAnswerLabel);
       correctAnswerCard.appendChild(correctAnswerCopy);
@@ -1664,7 +1670,7 @@
       });
 
       if (!response.ok) {
-        showToast("Не удалось поставить сессию на паузу.", "error");
+        showToast(wt('s2.pause_failed', 'Не удалось поставить сессию на паузу.'), "error");
         return;
       }
 
@@ -1678,10 +1684,10 @@
     if (!state.sessionId) return;
 
     const confirmed = await showConfirm({
-      title: "Завершить комплекс?",
-      message: "Сессия закроется, а комплекс завершится досрочно. Продолжить?",
-      confirmText: "Завершить",
-      cancelText: "Отмена",
+      title: wt('s2.cancel_title', 'Завершить комплекс?'),
+      message: wt('s2.cancel_message', 'Сессия закроется, а комплекс завершится досрочно. Продолжить?'),
+      confirmText: wt('s2.cancel_confirm', 'Завершить'),
+      cancelText: wt('s2.cancel_cancel', 'Отмена'),
       variant: "error",
     });
 
@@ -1701,7 +1707,7 @@
       });
 
       if (!response.ok || (payload && payload.ok === false)) {
-        showToast("Не удалось завершить комплекс.", "error");
+        showToast(wt('s2.cancel_failed', 'Не удалось завершить комплекс.'), "error");
         return;
       }
 
@@ -1731,7 +1737,7 @@
             source.title ||
             details.name ||
             details.title,
-          `Задание ${index + 1}`,
+          wt('s2.task_number', 'Задание {n}').replace('{n}', index + 1),
           96
         );
       })
@@ -1775,7 +1781,7 @@
         .catch(function () {});
     }
 
-    const continueLabel = summary.hasNextIteration ? "К следующей итерации" : "К итогам комплекса";
+    const continueLabel = summary.hasNextIteration ? wt('s2.continue_btn_label', 'К следующей итерации') : wt('s2.finish_btn_label', 'К итогам комплекса');
     if (state.sessionId) {
       const legacyQuery = new URLSearchParams();
       if (summary.iteration) {
@@ -1824,14 +1830,14 @@
       });
 
       if (!response.ok || !payload || payload.ok === false || !isObject(payload.results)) {
-        showToast("Не удалось загрузить результаты итерации.", "error");
+        showToast(wt('s2.load_failed', 'Не удалось загрузить результаты итерации.'), "error");
         return null;
       }
 
       renderIterationResults(payload.results);
       return payload.results;
     } catch (_) {
-      showToast("Не удалось загрузить результаты итерации.", "error");
+      showToast(wt('s2.load_failed', 'Не удалось загрузить результаты итерации.'), "error");
       return null;
     }
   }

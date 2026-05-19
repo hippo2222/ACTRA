@@ -1,6 +1,12 @@
 (function () {
     window.__mainOwnsGlobalHeaderHydration = true;
 
+    function wt(key, fallback) {
+        if (!window.i18n || typeof window.i18n.t !== 'function') return fallback;
+        const v = window.i18n.t(key);
+        return v !== key ? v : fallback;
+    }
+
     let currentUser = null;
 
     // --- Abort Controllers for Race Condition Prevention (7.4) ---
@@ -58,7 +64,7 @@
     }
 
     window.showReferencePlaceholder = function () {
-        const msg = window.i18n?.t('main.reference_wip') || 'Справочник в разработке';
+        const msg = wt('main.reference_wip', 'Справочник в разработке');
         if (typeof NotificationUI !== 'undefined' && typeof NotificationUI.toast === 'function') {
             NotificationUI.toast(msg, 'warning', 2200);
             return;
@@ -273,23 +279,23 @@
         {
             key: 'complexes',
             icon: 'inventory_2',
-            forms: ['комплекс', 'комплекса', 'комплексов'],
+            forms: [wt('main.form_complex_1', 'комплекс'), wt('main.form_complex_2', 'комплекса'), wt('main.form_complex_5', 'комплексов')],
             target: '/complexes?filter=archived',
-            actionLabel: 'Открыть комплексы',
+            actionLabel: wt('main.qa_open_complexes', 'Открыть комплексы'),
         },
         {
             key: 'tasks',
             icon: 'edit_document',
-            forms: ['задание', 'задания', 'заданий'],
+            forms: [wt('main.form_task_1', 'задание'), wt('main.form_task_2', 'задания'), wt('main.form_task_5', 'заданий')],
             target: '/editor',
-            actionLabel: 'Открыть задания',
+            actionLabel: wt('main.editor_task_cta', 'Открыть задания'),
         },
         {
             key: 'theories',
             icon: 'hub',
-            forms: ['теория', 'теории', 'теорий'],
+            forms: [wt('main.form_theory_1', 'теория'), wt('main.form_theory_2', 'теории'), wt('main.form_theory_5', 'теорий')],
             target: '/theory-center',
-            actionLabel: 'Открыть теории',
+            actionLabel: wt('main.theory_center_cta', 'Открыть теории'),
         },
     ]);
 
@@ -350,7 +356,7 @@
             return {
                 icon: 'inventory_2',
                 target: '/complexes?filter=archived',
-                actionLabel: 'Разобрать архив',
+                actionLabel: wt('main.archive_default_label', 'Разобрать архив'),
             };
         }
         return segments[0];
@@ -369,8 +375,8 @@
         premiumBtn?.addEventListener('click', () => {
             if (window.PremiumPromo && typeof window.PremiumPromo.open === 'function') {
                 window.PremiumPromo.open({
-                    title: 'Верните материалы из архива Premium',
-                    lead: 'Premium снова откроет редактирование, запуск, публикацию и копирование материалов, которые сейчас доступны только для просмотра или удаления.',
+                    title: wt('main.archive_return_title', 'Верните материалы из архива Premium'),
+                    lead: wt('main.archive_return_lead', 'Premium снова откроет редактирование, запуск, публикацию и копирование материалов, которые сейчас доступны только для просмотра или удаления.'),
                 });
                 return;
             }
@@ -398,11 +404,17 @@
         const openBtn = document.getElementById('main-premium-archive-open');
         const openIcon = document.getElementById('main-premium-archive-open-icon');
         const openLabel = document.getElementById('main-premium-archive-open-label');
-        const totalText = formatMainArchiveCount(total, ['материал', 'материала', 'материалов']);
+        const totalText = formatMainArchiveCount(total, [
+            wt('main.archive_material_1', 'материал'),
+            wt('main.archive_material_2', 'материала'),
+            wt('main.archive_material_5', 'материалов'),
+        ]);
         const breakdownText = segments.map((segment) => segment.text).join(', ');
 
         if (copy) {
-            copy.textContent = `В архиве ${totalText}${breakdownText ? `: ${breakdownText}` : ''}. Они не удалены: можно открыть для просмотра, удалить лишнее и освободить лимит, либо продлить Premium и вернуть редактирование, запуск, публикацию и копирование.`;
+            const breakdown = breakdownText ? `: ${breakdownText}` : '';
+            copy.textContent = wt('main.archive_copy', 'В архиве {total}{breakdown}. Они не удалены: можно открыть для просмотра, удалить лишнее и освободить лимит, либо продлить Premium и вернуть редактирование, запуск, публикацию и копирование.')
+                .replace('{total}', totalText).replace('{breakdown}', breakdown);
         }
 
         if (breakdown) {
@@ -428,7 +440,7 @@
             openIcon.textContent = action.icon;
         }
         if (openLabel) {
-            openLabel.textContent = action.actionLabel || 'Разобрать архив';
+            openLabel.textContent = action.actionLabel || wt('main.archive_default_label', 'Разобрать архив');
         }
     }
 
@@ -481,7 +493,7 @@
 
         const eyebrow = document.createElement('p');
         eyebrow.className = 'text-[10px] font-bold uppercase tracking-[0.18em] text-primary';
-        eyebrow.textContent = 'Лучший следующий шаг';
+        eyebrow.textContent = wt('main.next_step_eyebrow', 'Лучший следующий шаг');
 
         const title = document.createElement('p');
         title.id = 'mainNextStepTitle';
@@ -526,9 +538,9 @@
     function getMainFallbackRecommendation() {
         if (mainRecommendationState.calendarHasData && mainRecommendationState.calendarMixCount > 0) {
             return {
-                title: 'Откройте план на сегодня',
-                reason: 'На сегодня уже есть готовый учебный шаг. Это самый быстрый способ войти в рабочий ритм.',
-                label: 'Открыть календарь',
+                title: wt('main.next_step_calendar_title', 'Откройте план на сегодня'),
+                reason: wt('main.next_step_calendar_reason', 'На сегодня уже есть готовый учебный шаг. Это самый быстрый способ войти в рабочий ритм.'),
+                label: wt('main.next_step_calendar_label', 'Открыть календарь'),
                 icon: 'calendar_month',
                 action: () => window.navigateWithTransition('/calendar'),
             };
@@ -536,9 +548,9 @@
 
         if (mainRecommendationState.microcardsDue > 0) {
             return {
-                title: 'Сделайте короткое повторение',
-                reason: `Сейчас к повторению ждут ${mainRecommendationState.microcardsDue} карточек. Это самый короткий путь вернуться в обучение.`,
-                label: 'Открыть микрокарточки',
+                title: wt('main.next_step_mc_due_title', 'Сделайте короткое повторение'),
+                reason: wt('main.next_step_mc_due_reason', 'Сейчас к повторению ждут {n} карточек. Это самый короткий путь вернуться в обучение.').replace('{n}', mainRecommendationState.microcardsDue),
+                label: wt('main.next_step_mc_due_label', 'Открыть микрокарточки'),
                 icon: 'style',
                 action: () => window.navigateWithTransition('/microcards'),
             };
@@ -546,9 +558,9 @@
 
         if (mainRecommendationState.statsEmpty === true) {
             return {
-                title: 'Запустите первый комплекс',
-                reason: 'После первого прохождения здесь появятся прогресс, календарь и понятная статистика.',
-                label: 'Открыть комплексы',
+                title: wt('main.next_step_first_title', 'Запустите первый комплекс'),
+                reason: wt('main.next_step_first_reason', 'После первого прохождения здесь появятся прогресс, календарь и понятная статистика.'),
+                label: wt('main.next_step_first_label', 'Открыть комплексы'),
                 icon: 'playlist_play',
                 action: () => window.navigateWithTransition('/complexes'),
             };
@@ -556,18 +568,18 @@
 
         if (mainRecommendationState.microcardsHasDecks && !mainRecommendationState.microcardsDisabled) {
             return {
-                title: 'Вернитесь через лёгкое повторение',
-                reason: 'Если нет времени на длинную сессию, начните с микрокарточек и быстро вернитесь в ритм.',
-                label: 'Открыть микрокарточки',
+                title: wt('main.next_step_mc_return_title', 'Вернитесь через лёгкое повторение'),
+                reason: wt('main.next_step_mc_return_reason', 'Если нет времени на длинную сессию, начните с микрокарточек и быстро вернитесь в ритм.'),
+                label: wt('main.next_step_mc_return_label', 'Открыть микрокарточки'),
                 icon: 'style',
                 action: () => window.navigateWithTransition('/microcards'),
             };
         }
 
         return {
-            title: 'Продолжите обучение',
-            reason: 'Откройте комплексы и выберите следующий шаг без лишних поисков.',
-            label: 'Открыть комплексы',
+            title: wt('main.next_step_continue_title', 'Продолжите обучение'),
+            reason: wt('main.next_step_continue_reason', 'Откройте комплексы и выберите следующий шаг без лишних поисков.'),
+            label: wt('main.next_step_continue_label', 'Открыть комплексы'),
             icon: 'arrow_forward',
             action: () => window.navigateWithTransition('/complexes'),
         };
@@ -668,13 +680,13 @@
     window.openMainLegalDocument = async function (docType) {
         const loaded = await ensureLegalDocumentsLoaded();
         if (!loaded) {
-            NotificationUI.toast('Не удалось загрузить юридические документы', 'error');
+            NotificationUI.toast(wt('main.toast_legal_load_error', 'Не удалось загрузить юридические документы'), 'error');
             return;
         }
 
         const { ok, data } = await apiFetch(`/api/legal/document/${docType}`);
         if (!ok || !data?.document) {
-            NotificationUI.toast('Не удалось открыть документ', 'error');
+            NotificationUI.toast(wt('main.toast_legal_open_error', 'Не удалось открыть документ'), 'error');
             return;
         }
 
@@ -682,8 +694,8 @@
         const titleEl = document.getElementById('mainLegalDocTitle');
         const metaEl = document.getElementById('mainLegalDocMeta');
         const contentEl = document.getElementById('mainLegalDocContent');
-        if (titleEl) titleEl.textContent = doc.title || 'Документ';
-        if (metaEl) metaEl.textContent = `Версия: ${doc.version || '-'} | Действует с: ${doc.effective_at || '-'}`;
+        if (titleEl) titleEl.textContent = doc.title || wt('main.legal_doc_title', 'Документ');
+        if (metaEl) metaEl.textContent = `${wt('main.legal_version_prefix', 'Версия')}: ${doc.version || '-'} | ${wt('main.legal_effective_prefix', 'Действует с')}: ${doc.effective_at || '-'}`;
         if (contentEl) contentEl.textContent = doc.content || '';
         openModal('mainLegalDocModal');
     };
@@ -742,13 +754,13 @@
 
     window.submitMainConsentGate = async function () {
         if (!mainConsentGateUserId) {
-            showMainConsentGateError('Не выбран профиль');
+            showMainConsentGateError(wt('main.toast_consent_no_profile', 'Не выбран профиль'));
             return;
         }
 
         const consent = collectConsent('mainConsentGateAcceptTerms', 'mainConsentGateAcceptPrivacy', 'mainConsentGateAcceptRefund');
         if (!consent.accepted) {
-            showMainConsentGateError('Подтвердите оба документа');
+            showMainConsentGateError(wt('main.toast_consent_docs_required', 'Подтвердите оба документа'));
             return;
         }
 
@@ -763,7 +775,7 @@
         });
 
         if (!ok) {
-            showMainConsentGateError((data && (data.message || data.error)) || 'Не удалось сохранить согласие');
+            showMainConsentGateError((data && (data.message || data.error)) || wt('main.toast_consent_save_error', 'Не удалось сохранить согласие'));
             return;
         }
 
@@ -782,13 +794,13 @@
             apiFetch(`/api/consent/status?user_id=${encodeURIComponent(userId)}`),
         ]);
         if (!loaded) {
-            NotificationUI.toast('Не удалось загрузить юридические документы', 'error');
+            NotificationUI.toast(wt('main.toast_legal_load_error', 'Не удалось загрузить юридические документы'), 'error');
             return false;
         }
 
         const { ok, data } = consentResponse;
         if (!ok || !data) {
-            NotificationUI.toast('Не удалось проверить согласие с условиями', 'error');
+            NotificationUI.toast(wt('main.toast_consent_check_error', 'Не удалось проверить согласие с условиями'), 'error');
             return false;
         }
         if (data.status === 'up_to_date') return true;
@@ -1329,7 +1341,7 @@
 
     async function loadProfilesList() {
         const listEl = document.getElementById('profilesList');
-        listEl.innerHTML = '<div class="text-center py-8 text-text-muted">Загрузка...</div>';
+        listEl.innerHTML = `<div class="text-center py-8 text-text-muted">${wt('main.profiles_loading', 'Загрузка...')}</div>`;
 
         const { ok, data } = await apiFetch('/api/users');
 
@@ -1347,11 +1359,11 @@
                                 ${safeUserName}
                                 ${user.has_password ? '<span class="material-symbols-outlined text-[14px] text-text-muted">lock</span>' : ''}
                             </div>
-                            <div class="text-[10px] text-text-main font-medium uppercase">Нажмите для выбора</div>
+                            <div class="text-[10px] text-text-main font-medium uppercase">${wt('main.profiles_click_select', 'Нажмите для выбора')}</div>
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
-                        <button onclick="openEditProfile('${userIdLiteral}')" class="size-8 flex items-center justify-center rounded-xl bg-transparent border border-transparent text-text-muted hover:bg-surface-2 hover:text-text-main transition-all" title="Редактировать">
+                        <button onclick="openEditProfile('${userIdLiteral}')" class="size-8 flex items-center justify-center rounded-xl bg-transparent border border-transparent text-text-muted hover:bg-surface-2 hover:text-text-main transition-all" title="${wt('main.profiles_edit_title', 'Редактировать')}">
                             <span class="material-symbols-outlined text-[18px]">edit</span>
                         </button>
                         ${currentUser?.user_id === user.user_id ? '<span class="text-primary material-symbols-outlined">check_circle</span>' : ''}
@@ -1360,7 +1372,7 @@
             `;
             }).join('');
         } else {
-            listEl.innerHTML = '<div class="text-center py-8 text-error">Ошибка загрузки</div>';
+            listEl.innerHTML = `<div class="text-center py-8 text-error">${wt('main.profiles_inline_error', 'Ошибка загрузки')}</div>`;
         }
     }
 
@@ -1370,21 +1382,21 @@
 
         // Валидация на пустоту
         if (!name) {
-            NotificationUI.toast('Введите имя профиля', 'warning');
+            NotificationUI.toast(wt('main.profile_name_empty', 'Введите имя профиля'), 'warning');
             input.focus();
             return;
         }
 
         // Проверка минимальной длины
         if (name.length < 2) {
-            NotificationUI.toast('Имя должно содержать минимум 2 символа', 'warning');
+            NotificationUI.toast(wt('main.profile_name_min', 'Имя должно содержать минимум 2 символа'), 'warning');
             input.focus();
             return;
         }
 
         // Проверка максимальной длины
         if (name.length > 50) {
-            NotificationUI.toast('Имя не может быть длиннее 50 символов', 'warning');
+            NotificationUI.toast(wt('main.profile_name_max', 'Имя не может быть длиннее 50 символов'), 'warning');
             input.focus();
             return;
         }
@@ -1394,20 +1406,20 @@
         const hasForbidden = forbiddenChars.some(char => name.includes(char));
 
         if (hasForbidden) {
-            NotificationUI.toast(`Имя не может содержать символы: ${forbiddenChars.join(', ')}`, 'warning');
+            NotificationUI.toast(wt('main.profile_name_forbidden', 'Имя не может содержать символы: {chars}').replace('{chars}', forbiddenChars.join(', ')), 'warning');
             input.focus();
             return;
         }
 
         const legalLoaded = await ensureLegalDocumentsLoaded();
         if (!legalLoaded) {
-            NotificationUI.toast('Не удалось загрузить документы для согласия', 'error');
+            NotificationUI.toast(wt('main.consent_docs_load_error', 'Не удалось загрузить документы для согласия'), 'error');
             return;
         }
 
         const consent = collectConsent('newProfileAcceptTerms', 'newProfileAcceptPrivacy', 'newProfileAcceptRefund');
         if (!consent.accepted) {
-            NotificationUI.toast('Подтвердите согласие с условиями и политикой приватности', 'warning');
+            NotificationUI.toast(wt('main.consent_required', 'Подтвердите согласие с условиями и политикой приватности'), 'warning');
             return;
         }
 
@@ -1422,7 +1434,7 @@
             await selectProfile(data.user.user_id);
         } else {
             // Показать ошибку пользователю
-            const errorMessage = data.message || data.error || 'Не удалось создать профиль';
+            const errorMessage = data.message || data.error || wt('main.profile_create_error', 'Не удалось создать профиль');
             NotificationUI.toast(errorMessage, 'error');
             input.focus();
         }
@@ -1446,13 +1458,13 @@
             closeModal('profileModal');
 
             if (typeof NotificationUI !== 'undefined') {
-                NotificationUI.toast('Профиль переключён', 'success', 1500);
+                NotificationUI.toast(wt('main.profile_switched', 'Профиль переключён'), 'success', 1500);
             }
             setTimeout(() => window.location.reload(), 400);
             return;
         }
 
-        const errorMessage = data?.message || data?.error || 'Не удалось переключить профиль';
+        const errorMessage = data?.message || data?.error || wt('main.profile_switch_error', 'Не удалось переключить профиль');
         NotificationUI.toast(errorMessage, 'error');
     }
 
@@ -1487,7 +1499,7 @@
         // Check if edit is protected
         if (user.has_password && user.security_settings?.require_password_on_edit) {
             passwordPromptUserId = userId;
-            const verified = await showPasswordPrompt(`Защита настроек: ${user.name}`);
+            const verified = await showPasswordPrompt(wt('main.settings_protection', 'Защита настроек: {name}').replace('{name}', user.name));
             if (!verified) return;
         }
 
@@ -1529,7 +1541,7 @@
         }
 
         if (!html) {
-            html = `<div class="col-span-4 text-center text-[11px] text-text-muted py-4">Нет загруженных аватаров</div>`;
+            html = `<div class="col-span-4 text-center text-[11px] text-text-muted py-4">${wt('main.no_avatars', 'Нет загруженных аватаров')}</div>`;
         }
 
         gallery.innerHTML = html;
@@ -1544,18 +1556,18 @@
     window.confirmDeleteProfile = async function () {
         if (!editingUserId) return;
         const firstCheck = await NotificationUI.confirm({
-            title: 'Удалить профиль?',
-            message: 'Вся статистика и прогресс будут безвозвратно удалены.',
-            confirmText: 'Удалить',
-            cancelText: 'Отмена',
+            title: wt('main.profile_delete_title', 'Удалить профиль?'),
+            message: wt('main.profile_delete_message', 'Вся статистика и прогресс будут безвозвратно удалены.'),
+            confirmText: wt('main.profile_delete_confirm', 'Удалить'),
+            cancelText: wt('main.profile_delete_cancel', 'Отмена'),
             variant: 'error'
         });
         if (!firstCheck) return;
         const secondCheck = await NotificationUI.confirm({
-            title: 'Последнее предупреждение',
-            message: 'Это действие нельзя отменить. Профиль будет удалён навсегда.',
-            confirmText: 'Да, удалить',
-            cancelText: 'Отмена',
+            title: wt('main.delete_warning_title', 'Последнее предупреждение'),
+            message: wt('main.delete_warning_message', 'Это действие нельзя отменить. Профиль будет удалён навсегда.'),
+            confirmText: wt('main.delete_confirm_text', 'Да, удалить'),
+            cancelText: wt('main.delete_cancel_text', 'Отмена'),
             variant: 'error'
         });
         if (!secondCheck) return;
@@ -1567,7 +1579,7 @@
 
         if (user && user.has_password) {
             passwordPromptUserId = editingUserId;
-            const verified = await showPasswordPrompt(`Подтверждение удаления: ${user.name}`);
+            const verified = await showPasswordPrompt(wt('main.delete_pw_prompt', 'Подтверждение удаления: {name}').replace('{name}', user.name));
             if (!verified) return;
             verificationPassword = verified;
         }
@@ -1579,7 +1591,7 @@
         });
 
         if (ok) {
-            NotificationUI.toast('Профиль успешно удалён', 'success');
+            NotificationUI.toast(wt('main.delete_success', 'Профиль успешно удалён'), 'success');
             closeModal('editProfileModal');
             window.location.reload();
         }
@@ -1609,11 +1621,11 @@
             else await loadProfilesList();
         } else {
             // Error handling with user-friendly messages
-            let errorMsg = 'Ошибка сохранения профиля';
+            let errorMsg = wt('main.profile_save_error', 'Ошибка сохранения профиля');
             if (data.error === 'invalid_name_length') {
-                errorMsg = 'Имя должно содержать от 2 до 50 символов';
+                errorMsg = wt('main.profile_name_short', 'Имя должно содержать от 2 до 50 символов');
             } else if (data.error === 'invalid_name_chars') {
-                errorMsg = 'Имя содержит недопустимые символы (/, \\, <, >, :, ", |, ?, *)';
+                errorMsg = wt('main.profile_name_chars', 'Имя содержит недопустимые символы (/, \\, <, >, :, ", |, ?, *)');
             } else if (data.message) {
                 errorMsg = data.message;
             }
@@ -1621,7 +1633,8 @@
         }
     }
 
-    async function showPasswordPrompt(title = "Вход в профиль") {
+    async function showPasswordPrompt(title = null) {
+        title = title ?? wt('main.pw_default_title', 'Вход в профиль');
         document.getElementById('passPromptTitle').textContent = title;
         document.getElementById('promptPasswordInput').value = '';
         openModal('passwordPromptModal');
@@ -1638,7 +1651,7 @@
         // We need to verify this password.
         if (passwordPromptResolve) {
             if (!passwordPromptUserId) {
-                NotificationUI.toast('Не определён профиль для проверки пароля', 'error');
+                NotificationUI.toast(wt('main.pw_no_user', 'Не определён профиль для проверки пароля'), 'error');
                 return;
             }
             const { ok, data } = await apiFetch('/api/users/verify-password', {
@@ -1652,7 +1665,7 @@
                 cleanupPrompt();
                 if (resolver) resolver(password);
             } else {
-                NotificationUI.toast('Неверный пароль', 'error');
+                NotificationUI.toast(wt('main.pw_wrong', 'Неверный пароль'), 'error');
                 document.getElementById('promptPasswordInput').value = '';
             }
         }
@@ -1664,14 +1677,14 @@
         const usersResp = await apiFetch('/api/users');
         const users = Array.isArray(usersResp.data?.items) ? usersResp.data.items : null;
         if (!usersResp.ok || !users) {
-            NotificationUI.toast('Не удалось загрузить список профилей', 'error');
+            NotificationUI.toast(wt('main.profiles_load_error', 'Не удалось загрузить список профилей'), 'error');
             return;
         }
         const user = users.find(u => u.user_id === userId);
 
         if (user && user.has_password && user.security_settings?.require_password_on_login) {
             passwordPromptUserId = userId;
-            const verified = await showPasswordPrompt(`Вход в профиль: ${user.name}`);
+            const verified = await showPasswordPrompt(wt('main.pw_login_title', 'Вход в профиль: {name}').replace('{name}', user.name));
             if (verified) return originalSelectProfile(userId);
             return;
         }
@@ -1959,8 +1972,8 @@
             document.getElementById('statSuccessRate').textContent = `${Math.round((s.success_rate || 0) * 100)}%`;
             if (statComplexesLabel) {
                 statComplexesLabel.textContent = currentStatsPeriod === 1
-                    ? 'Комплексов сегодня'
-                    : 'Комплексов пройдено';
+                    ? wt('main.stat_complexes_today', 'Комплексов сегодня')
+                    : wt('main.stat_complexes_period', 'Комплексов пройдено');
             }
             document.getElementById('statTodayCount').textContent = completedComplexesMetric;
 
@@ -1970,7 +1983,7 @@
             const mins = Math.round(combinedSeconds / 60);
             const h = Math.floor(mins / 60);
             const m = mins % 60;
-            document.getElementById('statTimeSpent').textContent = `${h}ч ${m}м`;
+            document.getElementById('statTimeSpent').textContent = wt('main.time_hm', '{h}ч {m}м').replace('{h}', h).replace('{m}', m);
 
             // UX-30: Show welcome message if all stats are zero
             const isEmpty = !(s.tasks_mastered || s.success_rate || s.total_time_spent || completedComplexesMetric);
@@ -1981,7 +1994,7 @@
                     welcomeEl = document.createElement('div');
                     welcomeEl.id = 'statsWelcomeMessage';
                     welcomeEl.className = 'p-3 bg-primary-lighter/40 border border-primary-light rounded-lg text-center mb-2';
-                    welcomeEl.innerHTML = '<p class="text-sm font-medium text-primary-dark">Запустите первый комплекс: после него здесь появятся прогресс, время и ежедневная динамика.</p>';
+                    welcomeEl.innerHTML = `<p class="text-sm font-medium text-primary-dark">${wt('main.stats_first_run', 'Запустите первый комплекс: после него здесь появятся прогресс, время и ежедневная динамика.')}</p>`;
                     statsContent.prepend(welcomeEl);
                 }
             } else if (welcomeEl) {
@@ -1992,13 +2005,13 @@
             const statRows = statsContent ? Array.from(statsContent.querySelectorAll('.main-stats-row')) : [];
             if (isEmpty && statsContent && welcomeEl) {
                 const emptyCopy = currentStatsPeriod === 1
-                    ? 'Сегодня активности пока нет.'
-                    : 'Запустите первый комплекс, и здесь появится прогресс.';
+                    ? wt('main.stats_empty_today', 'Сегодня активности пока нет.')
+                    : wt('main.stats_empty_period', 'Запустите первый комплекс, и здесь появится прогресс.');
                 welcomeEl.className = 'main-stats-empty-state';
                 welcomeEl.innerHTML = `
                     <span class="material-symbols-outlined main-stats-empty-state__icon">bar_chart</span>
                     <div class="main-stats-empty-state__copy">
-                        <p class="main-stats-empty-state__title">Статистика появится после первой активности</p>
+                        <p class="main-stats-empty-state__title">${wt('main.stats_empty_title', 'Статистика появится после первой активности')}</p>
                         <p class="main-stats-empty-state__text">${emptyCopy}</p>
                     </div>
                 `;
@@ -2062,7 +2075,7 @@
             errorEl = document.createElement('div');
             errorEl.id = 'statsErrorMessage';
             errorEl.className = 'main-stats-error-state';
-            errorEl.innerHTML = `<div class="flex flex-col gap-2"><span class="material-symbols-outlined text-status-error text-[24px]">error</span><p class="text-sm font-semibold text-text-main">Статистика временно недоступна</p><p class="text-xs text-text-secondary">Ваш прогресс не потерян. Попробуйте загрузить блок ещё раз.</p><button onclick="retryLoadStatistics()" class="text-xs font-medium text-status-error hover:text-text-main underline">Загрузить снова</button></div>`;
+            errorEl.innerHTML = `<div class="flex flex-col gap-2"><span class="material-symbols-outlined text-status-error text-[24px]">error</span><p class="text-sm font-semibold text-text-main">${wt('main.stats_error_title', 'Статистика временно недоступна')}</p><p class="text-xs text-text-secondary">${wt('main.stats_error_desc', 'Ваш прогресс не потерян. Попробуйте загрузить блок ещё раз.')}</p><button onclick="retryLoadStatistics()" class="text-xs font-medium text-status-error hover:text-text-main underline">${wt('main.stats_reload_link', 'Загрузить снова')}</button></div>`;
             statsContent.prepend(errorEl);
         }
 
@@ -2163,10 +2176,10 @@
                 const secondaryIcon = secondaryCtaEl?.querySelector('.material-symbols-outlined');
                 const secondaryText = secondaryCtaEl?.querySelector('span:last-child');
                 if (dueBadgeCount) dueBadgeCount.textContent = '—';
-                if (ctaText) ctaText.textContent = 'Функционал в разработке';
+                if (ctaText) ctaText.textContent = wt('main.mc_wip_cta', 'Функционал в разработке');
                 if (ctaIcon) ctaIcon.textContent = 'construction';
                 if (secondaryIcon) secondaryIcon.textContent = 'schedule';
-                if (secondaryText) secondaryText.textContent = 'Скоро вернём';
+                if (secondaryText) secondaryText.textContent = wt('main.mc_wip_coming', 'Скоро вернём');
             } else {
                 setMainRecommendationState({ microcardsDisabled: false, microcardsHasDecks: false, microcardsDue: 0 });
                 if (dueBadgeEl) dueBadgeEl.hidden = true;
@@ -2175,8 +2188,8 @@
                     emptyState.classList.remove('hidden');
                     const titleEl = emptyState.querySelector('p.text-sm');
                     const descEl = emptyState.querySelector('p.text-\\[10px\\]');
-                    if (titleEl) titleEl.textContent = 'Сводка временно недоступна';
-                    if (descEl) descEl.textContent = 'Открыть режим можно позже: сама карточка никуда не исчезнет.';
+                    if (titleEl) titleEl.textContent = wt('main.mc_error_title', 'Сводка временно недоступна');
+                    if (descEl) descEl.textContent = wt('main.mc_error_desc', 'Открыть режим можно позже: сама карточка никуда не исчезнет.');
                 }
             }
             return;
@@ -2202,8 +2215,8 @@
             if (emptyState) {
                 const titleEl = emptyState.querySelector('p.text-sm');
                 const descEl = emptyState.querySelector('p.text-\\[10px\\]');
-                if (titleEl) titleEl.textContent = 'Пока нет колод';
-                if (descEl) descEl.textContent = 'Когда появятся колоды, здесь будет самый быстрый вход в повторение.';
+                if (titleEl) titleEl.textContent = wt('main.mc_no_decks_title', 'Пока нет колод');
+                if (descEl) descEl.textContent = wt('main.mc_no_decks_desc', 'Когда появятся колоды, здесь будет самый быстрый вход в повторение.');
             }
             if (contentState) contentState.classList.add('hidden');
             return;
@@ -2253,10 +2266,10 @@
         const ctaIcon = document.getElementById('microcardsCTAIcon');
         if (ctaText && ctaIcon) {
             if (dueTotal > 0) {
-                ctaText.textContent = 'Продолжить повторение';
+                ctaText.textContent = wt('main.mc_cta_resume', 'Продолжить повторение');
                 ctaIcon.textContent = 'play_arrow';
             } else {
-                ctaText.textContent = 'Открыть микрокарточки';
+                ctaText.textContent = wt('main.mc_cta_open', 'Открыть микрокарточки');
                 ctaIcon.textContent = 'arrow_forward';
             }
         }
@@ -2265,10 +2278,10 @@
     function _pluralizeReviews(n) {
         const abs = Math.abs(n) % 100;
         const lastDigit = abs % 10;
-        if (abs > 10 && abs < 20) return 'повторений';
-        if (lastDigit > 1 && lastDigit < 5) return 'повторения';
-        if (lastDigit === 1) return 'повторение';
-        return 'повторений';
+        if (abs > 10 && abs < 20) return wt('main.review_form_many', 'повторений');
+        if (lastDigit > 1 && lastDigit < 5) return wt('main.review_form_few', 'повторения');
+        if (lastDigit === 1) return wt('main.review_form_one', 'повторение');
+        return wt('main.review_form_many', 'повторений');
     }
 
     // --- Calendar Widget (enhanced) ---
@@ -2322,8 +2335,8 @@
             if (emptyState) emptyState.classList.remove('hidden');
             if (emptyState) {
                 const textNodes = emptyState.querySelectorAll('p');
-                if (textNodes[0]) textNodes[0].textContent = 'Начните с первого учебного шага';
-                if (textNodes[1]) textNodes[1].textContent = 'После первого комплекса или повторения здесь появится ваш план на день.';
+                if (textNodes[0]) textNodes[0].textContent = wt('main.calendar_empty_first_title', 'Начните с первого учебного шага');
+                if (textNodes[1]) textNodes[1].textContent = wt('main.calendar_empty_first_desc', 'После первого комплекса или повторения здесь появится ваш план на день.');
             }
             if (contentState) contentState.classList.add('hidden');
             return;
@@ -2340,13 +2353,13 @@
         const timeEl = document.getElementById('calendarDailyMixTime');
 
         if (mixCount === 0) {
-            if (countEl) countEl.innerHTML = '<span class="text-sm font-semibold text-text-secondary">Нет задач</span>';
+            if (countEl) countEl.innerHTML = `<span class="text-sm font-semibold text-text-secondary">${wt('main.calendar_no_tasks', 'Нет задач')}</span>`;
             if (timeEl) timeEl.parentElement.classList.add('hidden');
         } else {
-            if (countEl) countEl.innerHTML = `<span class="text-3xl font-black text-text-main">${mixCount}</span><span class="ml-1 text-sm font-bold text-text-secondary">задач</span>`;
+            if (countEl) countEl.innerHTML = `<span class="text-3xl font-black text-text-main">${mixCount}</span><span class="ml-1 text-sm font-bold text-text-secondary">${wt('main.calendar_tasks_word', 'задач')}</span>`;
             if (timeEl) {
                 timeEl.parentElement.classList.remove('hidden');
-                timeEl.textContent = `~${mixMinutes} мин`;
+                timeEl.textContent = `~${mixMinutes} ${wt('main.calendar_min', 'мин')}`;
             }
         }
 
@@ -2381,11 +2394,11 @@
 
     function describeMiniHeatmapLevel(level) {
         switch (level) {
-            case 'peak': return 'Пиковый день';
-            case 'high': return 'Сильная активность';
-            case 'mid': return 'Хорошая активность';
-            case 'low': return 'Небольшая активность';
-            default: return 'Нет активности';
+            case 'peak': return wt('main.heatmap_day_peak', 'Пиковый день');
+            case 'high': return wt('main.heatmap_day_high', 'Сильная активность');
+            case 'mid': return wt('main.heatmap_day_mid', 'Хорошая активность');
+            case 'low': return wt('main.heatmap_day_low', 'Небольшая активность');
+            default: return wt('main.heatmap_day_none', 'Нет активности');
         }
     }
 
@@ -2402,13 +2415,13 @@
         }
 
         legend.innerHTML = `
-            <span class="main-heatmap-legend-copy">Интенсивность за 14 дней</span>
+            <span class="main-heatmap-legend-copy">${wt('main.heatmap_legend', 'Интенсивность за 14 дней')}</span>
             <div class="main-heatmap-legend-scale" aria-hidden="true">
                 <span class="main-heatmap-legend-item"><span class="main-heatmap-legend-swatch" data-level="empty"></span>0</span>
-                <span class="main-heatmap-legend-item"><span class="main-heatmap-legend-swatch" data-level="low"></span>Низко</span>
-                <span class="main-heatmap-legend-item"><span class="main-heatmap-legend-swatch" data-level="mid"></span>Нормально</span>
-                <span class="main-heatmap-legend-item"><span class="main-heatmap-legend-swatch" data-level="high"></span>Сильно</span>
-                <span class="main-heatmap-legend-item"><span class="main-heatmap-legend-swatch" data-level="peak"></span>Пик</span>
+                <span class="main-heatmap-legend-item"><span class="main-heatmap-legend-swatch" data-level="low"></span>${wt('main.heatmap_low', 'Низко')}</span>
+                <span class="main-heatmap-legend-item"><span class="main-heatmap-legend-swatch" data-level="mid"></span>${wt('main.heatmap_mid', 'Нормально')}</span>
+                <span class="main-heatmap-legend-item"><span class="main-heatmap-legend-swatch" data-level="high"></span>${wt('main.heatmap_high', 'Сильно')}</span>
+                <span class="main-heatmap-legend-item"><span class="main-heatmap-legend-swatch" data-level="peak"></span>${wt('main.heatmap_peak', 'Пик')}</span>
             </div>
         `;
     }
@@ -2454,32 +2467,32 @@
         });
 
         container.innerHTML = days.map(day => {
-            let statusText = 'Нет активности';
+            let statusText = wt('main.heatmap_no_activity', 'Нет активности');
             if (day.is_today && !day.has_activity) {
-                statusText = 'Сегодня, активности пока нет';
+                statusText = wt('main.heatmap_today_no_activity', 'Сегодня, активности пока нет');
             } else if (day.has_activity) {
                 const parts = [describeMiniHeatmapLevel(day.level)];
                 if (day.completed_complexes > 0) {
-                    parts.push(`Комплексы: ${day.completed_complexes}`);
+                    parts.push(wt('main.heatmap_complexes', 'Комплексы: {n}').replace('{n}', day.completed_complexes));
                 }
                 if (day.task_attempts > 0) {
-                    parts.push(`Попытки: ${day.task_attempts}`);
+                    parts.push(wt('main.heatmap_attempts', 'Попытки: {n}').replace('{n}', day.task_attempts));
                 }
                 if (day.microcards_reviews > 0) {
-                    parts.push(`Микрокарточки: ${day.microcards_reviews}`);
+                    parts.push(wt('main.heatmap_microcards', 'Микрокарточки: {n}').replace('{n}', day.microcards_reviews));
                 }
                 if (day.study_minutes > 0) {
-                    parts.push(`Время: ${day.study_minutes} мин`);
+                    parts.push(wt('main.heatmap_time', 'Время: {n} мин').replace('{n}', day.study_minutes));
                 }
                 if (day.has_tasks && day.success_rate != null) {
-                    parts.push(`Успешность: ${Math.round(day.success_rate * 100)}%`);
+                    parts.push(wt('main.heatmap_success', 'Успешность: {n}%').replace('{n}', Math.round(day.success_rate * 100)));
                 }
                 statusText = parts.join('\n');
                 if (day.is_today) {
-                    statusText = `Сегодня\n${statusText}`;
+                    statusText = `${wt('main.heatmap_today', 'Сегодня')}\n${statusText}`;
                 }
             } else if (day.is_today) {
-                statusText = 'Сегодня';
+                statusText = wt('main.heatmap_today', 'Сегодня');
             }
             const tooltip = `${day.date}\n${statusText}`;
             const todayAttr = day.is_today ? ' data-today="true"' : '';
@@ -2512,7 +2525,7 @@
             });
 
         if (toReview.length === 0) {
-            container.innerHTML = '<p class="text-[11px] text-text-secondary text-center py-1">Критичных комплексов нет</p>';
+            container.innerHTML = `<p class="text-[11px] text-text-secondary text-center py-1">${wt('main.health_no_critical', 'Критичных комплексов нет')}</p>`;
             return;
         }
 
@@ -2520,10 +2533,10 @@
         const extraCount = Math.max(0, toReview.length - 1);
         const extraNames = toReview.slice(1, 6).map(c => c.name).filter(Boolean);
         const tooltipParts = [
-            primary.message ? `${primary.hint_title || ''}\n${primary.message}`.trim() : `Здоровье: ${primary.health_percent}%`,
+            primary.message ? `${primary.hint_title || ''}\n${primary.message}`.trim() : `${primary.health_percent}%`,
         ];
         if (extraCount > 0) {
-            tooltipParts.push(`Ещё к повторению: ${extraNames.join(', ')}${extraCount > extraNames.length ? ` и ещё ${extraCount - extraNames.length}` : ''}`);
+            tooltipParts.push(`${wt('main.health_extra', 'Ещё {n}').replace('{n}', extraCount)}: ${extraNames.join(', ')}${extraCount > extraNames.length ? ` (+${extraCount - extraNames.length})` : ''}`);
         }
         const tooltip = tooltipParts.filter(Boolean).join('\n\n');
 
@@ -2531,10 +2544,10 @@
             <div class="main-health-row panel-row" title="${escapeHtml(tooltip)}">
                 <div class="main-health-meta">
                     <div class="w-1.5 h-1.5 rounded-full ${primary.is_critical ? 'bg-status-error' : 'bg-accent'}"></div>
-                    <span class="main-health-name">Повторить: ${escapeHtml(primary.name || 'комплекс')}</span>
+                    <span class="main-health-name">${wt('main.health_repeat_prefix', 'Повторить: {name}').replace('{name}', escapeHtml(primary.name || wt('main.session_continue_label', 'комплекс')))}</span>
                 </div>
                 ${extraCount > 0
-                    ? `<span class="main-health-extra" title="${escapeHtml(`Ещё ${extraCount} ${pluralizeComplexes(extraCount)}`)}">+${extraCount}</span>`
+                    ? `<span class="main-health-extra" title="${escapeHtml(wt('main.health_extra', 'Ещё {n}').replace('{n}', extraCount) + ' ' + pluralizeComplexes(extraCount))}">+${extraCount}</span>`
                     : `<span class="shrink-0 font-bold ${primary.is_critical ? 'text-status-error' : 'text-accent'}">${escapeHtml(String(primary.health_percent ?? 0))}%</span>`}
             </div>`;
     }
@@ -2542,10 +2555,10 @@
     function pluralizeComplexes(n) {
         const abs = Math.abs(Number(n) || 0) % 100;
         const lastDigit = abs % 10;
-        if (abs > 10 && abs < 20) return 'комплексов';
-        if (lastDigit > 1 && lastDigit < 5) return 'комплекса';
-        if (lastDigit === 1) return 'комплекс';
-        return 'комплексов';
+        if (abs > 10 && abs < 20) return wt('main.complex_form_many', 'комплексов');
+        if (lastDigit > 1 && lastDigit < 5) return wt('main.complex_form_few', 'комплекса');
+        if (lastDigit === 1) return wt('main.complex_form_one', 'комплекс');
+        return wt('main.complex_form_many', 'комплексов');
     }
 
     // --- Navigation & Quick Access ---
@@ -2566,7 +2579,7 @@
                 </div>
             </div>
             <div class="main-quick-access-toolbar">
-                <span class="main-quick-access-count" id="quick-access-count" title="Комплексов в быстром доступе">0</span>
+                <span class="main-quick-access-count" id="quick-access-count" title="${wt('main.qa_count_title', 'Комплексов в быстром доступе')}">0</span>
                 <div class="main-quick-access-nav" id="quick-access-nav" hidden>
                     <button type="button" class="main-quick-access-nav-btn icon-button-muted" id="quick-access-prev" aria-label="Previous complex">
                         <span class="material-symbols-outlined text-[16px]">chevron_left</span>
@@ -2585,13 +2598,13 @@
         if (!el) return;
         if (!Number.isFinite(total) || total < 0) {
             el.textContent = '\u2014';
-            el.title = 'Количество комплексов неизвестно';
+            el.title = wt('main.qa_count_unknown', 'Количество комплексов неизвестно');
             return;
         }
         el.textContent = String(total);
         el.title = total > previewLimit
-            ? `Показаны ${Math.min(total, previewLimit)} из ${total}`
-            : `Комплексов в быстром доступе: ${total}`;
+            ? wt('main.qa_count_preview', 'Показаны {shown} из {total}').replace('{shown}', Math.min(total, previewLimit)).replace('{total}', total)
+            : wt('main.qa_count_full', 'Комплексов в быстром доступе: {n}').replace('{n}', total);
     }
 
     function setupQuickAccessRail(totalItems = 0) {
@@ -2614,7 +2627,7 @@
             next.disabled = true;
             if (count && Number(totalItems) === 1) {
                 count.textContent = '1';
-                count.title = 'Комплексов в быстром доступе: 1';
+                count.title = wt('main.qa_count_full', 'Комплексов в быстром доступе: {n}').replace('{n}', 1);
             }
             return;
         }
@@ -2634,7 +2647,7 @@
             next.disabled = list.scrollLeft >= maxScrollLeft;
             if (count) {
                 count.textContent = `${currentIndex}/${totalItems}`;
-                count.title = `Карточка ${currentIndex} из ${totalItems} в быстром доступе`;
+                count.title = wt('main.qa_count_current', 'Карточка {current} из {total} в быстром доступе').replace('{current}', currentIndex).replace('{total}', totalItems);
             }
         };
 
@@ -2726,15 +2739,15 @@
         const buildQuickAccessRecommendation = (item) => {
             if (!item || !item.complex || !item.complex.id) return null;
             const complexId = item.complex.id;
-            const complexName = item.complex.name || 'текущий комплекс';
+            const complexName = item.complex.name || wt('main.session_continue_label', 'текущий комплекс');
             const pausedSession = pausedMap.get(complexId) || item.paused_session || null;
             const isPaused = !!(pausedSession && pausedSession.paused);
 
             if (isPaused && pausedSession.session_id) {
                 return {
-                    title: 'Вернитесь к сессии на паузе',
-                    reason: `Незавершённая сессия по комплексу «${complexName}» уже ждёт вас.`,
-                    label: 'Продолжить сессию',
+                    title: wt('main.session_paused_title', 'Вернитесь к сессии на паузе'),
+                    reason: wt('main.session_paused_reason', 'Незавершённая сессия по комплексу «{name}» уже ждёт вас.').replace('{name}', complexName),
+                    label: wt('main.session_paused_label', 'Продолжить сессию'),
                     icon: 'restart_alt',
                     action: () => window.handleStartSession(
                         complexId,
@@ -2747,16 +2760,16 @@
             }
 
             return {
-                title: 'Продолжите активный комплекс',
-                reason: `Комплекс «${complexName}» уже под рукой — можно продолжить с него.`,
-                label: 'Открыть комплекс',
+                title: wt('main.session_continue_title', 'Продолжите активный комплекс'),
+                reason: wt('main.session_continue_reason', 'Комплекс «{name}» уже под рукой — можно продолжить с него.').replace('{name}', complexName),
+                label: wt('main.session_continue_label', 'Открыть комплекс'),
                 icon: 'play_arrow',
                 action: () => window.handleStartSession(complexId),
             };
         };
 
         if (!ok) {
-            container.innerHTML = `<div class="p-4 text-center"><p class="text-sm text-text-secondary">Не удалось загрузить</p><button onclick="window._retryQuickAccess()" class="mt-1 text-xs font-semibold text-primary hover:underline">Попробовать снова</button></div>`;
+            container.innerHTML = `<div class="p-4 text-center"><p class="text-sm text-text-secondary">${wt('main.qa_load_error', 'Не удалось загрузить')}</p><button onclick="window._retryQuickAccess()" class="mt-1 text-xs font-semibold text-primary hover:underline">${wt('main.qa_retry', 'Попробовать снова')}</button></div>`;
             setQuickAccessEmptyVisible(false);
             if (showAllBtn) showAllBtn.hidden = false;
             updateQuickAccessCount(NaN, quickAccessPreviewLimit);
@@ -2776,7 +2789,7 @@
                     cta.type = 'button';
                     cta.id = 'quick-access-empty-cta';
                     cta.className = 'qa-empty-cta btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm font-bold';
-                    cta.textContent = 'Открыть комплексы';
+                    cta.textContent = wt('main.qa_open_complexes', 'Открыть комплексы');
                     cta.addEventListener('click', () => window.navigateWithTransition('/complexes'));
                     emptyActions.appendChild(cta);
                 }
@@ -3081,16 +3094,20 @@
 
             let statusLine = '';
             if (isPaused) {
-                const pauseText = pausedAtLabel ? `На паузе с ${pausedAtLabel}` : "На паузе";
-                const progressText = (pausedProgress && pausedTotal) ? ` Шаг ${pausedProgress}/${pausedTotal}` : "";
+                const pauseText = pausedAtLabel
+                    ? wt('main.card_status_paused_since', 'На паузе с {date}').replace('{date}', pausedAtLabel)
+                    : wt('main.card_status_paused', 'На паузе');
+                const progressText = (pausedProgress && pausedTotal) ? ` ${wt('main.card_step', 'Шаг {n}/{total}').replace('{n}', pausedProgress).replace('{total}', pausedTotal)}` : '';
                 statusLine = `${pauseText}${progressText}`;
             } else if (item.is_pinned) {
-                statusLine = 'Закреплено';
+                statusLine = wt('main.card_status_mastered', 'Закреплено');
             } else {
                 if (health.days_since_last !== null && health.days_since_last !== undefined) {
-                    statusLine = health.days_since_last === 0 ? 'Сегодня' : `${health.days_since_last} дн. назад`;
+                    statusLine = health.days_since_last === 0
+                        ? wt('main.card_today', 'Сегодня')
+                        : wt('main.card_days_ago', '{n} дн. назад').replace('{n}', health.days_since_last);
                 } else {
-                    statusLine = complex.description || 'Нет описания';
+                    statusLine = complex.description || wt('main.card_no_desc', 'Нет описания');
                 }
             }
 
@@ -3124,7 +3141,7 @@
 
             const removeBtn = document.createElement("button");
             removeBtn.className = "absolute top-1 right-1 w-6 h-6 flex items-center justify-center rounded-full bg-surface-1 text-text-secondary opacity-0 group-hover:opacity-100 transition hover:bg-error-lighter hover:text-error";
-            removeBtn.title = "Убрать";
+            removeBtn.title = wt('main.qa_card_remove', 'Убрать');
             removeBtn.onclick = (e) => {
                 e.stopPropagation();
                 window._removeFromQuickAccess(complexId);
@@ -3195,7 +3212,7 @@
         const { ok, data, cancelled } = response;
         if (cancelled) return false;
         if (!ok || !data?.ok) {
-            NotificationUI.toast(`Ошибка при возобновлении: ${data?.error || 'Неизвестная ошибка'}`, 'error');
+            NotificationUI.toast(wt('main.resume_error', 'Ошибка при возобновлении: {error}').replace('{error}', data?.error || wt('main.unknown_error', 'Неизвестная ошибка')), 'error');
             return false;
         }
         await markRecentComplex(complexId);
@@ -3221,10 +3238,10 @@
 
         if (!ok && data?.error === "paused_session_exists" && data?.session_id) {
             const resume = await NotificationUI.confirm({
-                title: 'Найдена сессия на паузе',
-                message: 'Для этого комплекса уже есть сессия на паузе.\nПродолжить её или начать заново?',
-                confirmText: 'Продолжить',
-                cancelText: 'Начать заново',
+                title: wt('main.session_paused_dialog_title', 'Найдена сессия на паузе'),
+                message: wt('main.session_paused_dialog_message', 'Для этого комплекса уже есть сессия на паузе. Продолжить её или начать заново?'),
+                confirmText: wt('main.session_paused_dialog_confirm', 'Продолжить'),
+                cancelText: wt('main.session_paused_dialog_cancel', 'Начать заново'),
                 variant: 'primary'
             });
             if (resume) {
@@ -3234,8 +3251,8 @@
         }
 
         if (!ok || !data?.session_id) {
-            const errorMsg = data?.error || data?.message || "Неизвестная ошибка";
-            NotificationUI.toast(`Ошибка при запуске: ${errorMsg}`, 'error');
+            const errorMsg = data?.error || data?.message || wt('main.unknown_error', 'Неизвестная ошибка');
+            NotificationUI.toast(wt('main.start_error', 'Ошибка при запуске: {error}').replace('{error}', errorMsg), 'error');
             return false;
         }
 
@@ -3257,7 +3274,7 @@
             return;
         } catch (error) {
             console.error("Session start exception:", error);
-            NotificationUI.toast('Ошибка подключения. Проверьте интернет', 'error');
+            NotificationUI.toast(wt('main.conn_error', 'Ошибка подключения. Проверьте интернет'), 'error');
         }
     }
 
@@ -3280,4 +3297,12 @@
     } else {
         document.addEventListener("DOMContentLoaded", initialize);
     }
+
+    window.addEventListener('i18n:changed', () => {
+        if (window.i18n) window.i18n.updateDOM();
+        // Re-render pure-logic widgets (no server round-trip needed)
+        renderMainNextStepBanner();
+        // Server-data widgets (stats, microcards, calendar, QA) will pick up
+        // fresh translations on their next scheduled data refresh.
+    });
 })();

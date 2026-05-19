@@ -269,8 +269,8 @@
                 <div class="flex items-center gap-3">
                     <span class="brand-logo size-8" style="color:var(--color-primary)" aria-hidden="true"></span>
                     <div class="flex flex-col">
-                        <h1 class="text-lg font-bold leading-tight tracking-tight text-text-main">Микрокарточки</h1>
-                        <p class="text-xs text-text-secondary" id="mcHeaderSubtitle">Повторение и обучение</p>
+                        <h1 class="text-lg font-bold leading-tight tracking-tight text-text-main" data-i18n="microcards.page_heading">Микрокарточки</h1>
+                        <p class="text-xs text-text-secondary" id="mcHeaderSubtitle" data-i18n="microcards.subtitle_default">Повторение и обучение</p>
                     </div>
                 </div>
             </div>
@@ -286,16 +286,16 @@
                 </div>
                 <!-- Streak badge -->
                 <div class="flex items-center gap-1 px-2.5 py-1 rounded-full border border-primary-light transition-all"
-                    id="mcStreakBadge" role="status" aria-label="Серия активности">
+                    id="mcStreakBadge" role="status" aria-label="Серия активности" data-i18n-aria="microcards.streak_aria">
                     <span class="material-symbols-outlined text-primary text-[14px]"
                         aria-hidden="true">local_fire_department</span>
                     <span class="text-[11px] font-bold text-text-main" id="mcStreakDays">—</span>
                 </div>
                 <a href="/editor"
                     class="hidden md:flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-text-secondary rounded-lg border border-border-strong hover:bg-bg-hover hover:text-primary transition-colors"
-                    title="Открыть в редакторе">
+                    title="Открыть в редакторе" data-i18n-title="microcards.editor_title">
                     <span class="material-symbols-outlined text-[16px]">edit_note</span>
-                    Редактор
+                    <span data-i18n="microcards.editor_btn">Редактор</span>
                 </a>
                 <!-- User profile widget (same as Statistics/Calendar) -->
                 <div class="flex items-center gap-2 px-3 py-1.5 bg-surface-1 rounded-lg border border-border-subtle cursor-pointer hover:bg-bg-hover transition-colors"
@@ -318,8 +318,7 @@
                     <div class="flex items-center gap-2 px-3 py-2 bg-surface-1 rounded-xl border border-border-strong">
                         <span class="material-symbols-outlined text-primary text-[18px]">pending_actions</span>
                         <div class="flex flex-col">
-                            <span class="text-[10px] font-bold text-text-secondary uppercase tracking-wider">К
-                                повтору</span>
+                            <span class="text-[10px] font-bold text-text-secondary uppercase tracking-wider" data-i18n="microcards.stat_due_label">К повтору</span>
                             <span class="text-base font-black text-text-main leading-tight" id="mcSummaryDue">—</span>
                         </div>
                     </div>
@@ -327,7 +326,7 @@
                         <span class="material-symbols-outlined text-info text-[18px]">fiber_new</span>
                         <div class="flex flex-col">
                             <span
-                                class="text-[10px] font-bold text-text-secondary uppercase tracking-wider">Новых</span>
+                                class="text-[10px] font-bold text-text-secondary uppercase tracking-wider" data-i18n="microcards.stat_new_label">Новых</span>
                             <span class="text-base font-black text-text-main leading-tight" id="mcSummaryNew">—</span>
                         </div>
                     </div>
@@ -335,7 +334,7 @@
                         <span class="material-symbols-outlined text-success text-[18px]">check_circle</span>
                         <div class="flex flex-col min-w-0">
                             <span
-                                class="text-[10px] font-bold text-text-secondary uppercase tracking-wider whitespace-nowrap">Сегодня</span>
+                                class="text-[10px] font-bold text-text-secondary uppercase tracking-wider whitespace-nowrap" data-i18n="microcards.stat_today_label">Сегодня</span>
                             <span class="text-base font-black text-text-main leading-tight whitespace-nowrap"
                                 id="mcSummaryToday">—</span>
                         </div>
@@ -343,7 +342,7 @@
                     <button type="button" onclick="mcApp.refreshDecks()"
                         class="ml-auto flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-text-secondary rounded-lg border border-border-strong hover:bg-bg-hover transition-colors">
                         <span class="material-symbols-outlined text-[16px]">refresh</span>
-                        Обновить
+                        <span data-i18n="microcards.refresh_btn">Обновить</span>
                     </button>
                 </div>
 
@@ -356,41 +355,43 @@
                             </span>
                             <input id="mcDeckQuery" type="search" autocomplete="off" spellcheck="false"
                                 class="w-full rounded-lg border border-border-strong bg-bg-main py-2.5 pl-10 pr-4 text-sm text-text-main outline-none transition-colors placeholder:text-text-muted focus:border-primary focus:ring-2 focus:ring-primary-light"
-                                placeholder="Найти колоду по названию или теме" aria-label="Поиск по колодам">
+                                placeholder="Найти колоду по названию или теме" aria-label="Поиск по колодам"
+                                data-i18n-placeholder="microcards.search_placeholder" data-i18n-aria="microcards.search_aria">
                         </label>
-                        <div class="flex flex-wrap gap-2" role="tablist" aria-label="Фильтры колод">
+                        <div class="flex flex-wrap gap-2" role="tablist" aria-label="Фильтры колод" data-i18n-aria="microcards.filter_list_aria">
                             <button type="button"
                                 class="mc-deck-filter-chip rounded-lg border px-3 py-2 text-xs font-semibold transition-colors"
-                                data-filter="all">Все</button>
+                                data-filter="all" data-i18n="microcards.filter_all">Все</button>
                             <button type="button"
                                 class="mc-deck-filter-chip rounded-lg border px-3 py-2 text-xs font-semibold transition-colors"
-                                data-filter="urgent">Срочно</button>
+                                data-filter="urgent" data-i18n="microcards.filter_urgent">Срочно</button>
                             <button type="button"
                                 class="mc-deck-filter-chip rounded-lg border px-3 py-2 text-xs font-semibold transition-colors"
-                                data-filter="new">Есть новые</button>
+                                data-filter="new" data-i18n="microcards.filter_new">Есть новые</button>
                             <button type="button"
                                 class="mc-deck-filter-chip rounded-lg border px-3 py-2 text-xs font-semibold transition-colors"
-                                data-filter="recent">Недавние</button>
+                                data-filter="recent" data-i18n="microcards.filter_recent">Недавние</button>
                         </div>
                     </div>
                     <div class="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <div class="flex items-center gap-2">
                             <span
-                                class="text-[10px] font-bold uppercase tracking-wider text-text-muted">Принадлежность</span>
+                                class="text-[10px] font-bold uppercase tracking-wider text-text-muted" data-i18n="microcards.ownership_label">Принадлежность</span>
                             <div class="flex flex-wrap gap-2" role="tablist" aria-label="Фильтры ownership колод"
+                                data-i18n-aria="microcards.ownership_list_aria"
                                 id="mcDeckOwnershipFilters">
                                 <button type="button"
                                     class="mc-deck-ownership-chip rounded-lg border px-3 py-2 text-xs font-semibold transition-colors"
-                                    data-ownership-filter="all">Все</button>
+                                    data-ownership-filter="all" data-i18n="microcards.own_all">Все</button>
                                 <button type="button"
                                     class="mc-deck-ownership-chip rounded-lg border px-3 py-2 text-xs font-semibold transition-colors"
-                                    data-ownership-filter="mine">Моё</button>
+                                    data-ownership-filter="mine" data-i18n="microcards.own_mine">Моё</button>
                                 <button type="button"
                                     class="mc-deck-ownership-chip rounded-lg border px-3 py-2 text-xs font-semibold transition-colors"
-                                    data-ownership-filter="shared">Общее</button>
+                                    data-ownership-filter="shared" data-i18n="microcards.own_shared">Общее</button>
                                 <button type="button"
                                     class="mc-deck-ownership-chip rounded-lg border px-3 py-2 text-xs font-semibold transition-colors"
-                                    data-ownership-filter="imported">Импорт</button>
+                                    data-ownership-filter="imported" data-i18n="microcards.own_imported">Импорт</button>
                             </div>
                         </div>
                         <p id="mcDeckOwnershipHint" class="text-xs text-text-muted">Колоды живут в общей библиотеке, а
@@ -407,7 +408,7 @@
                 <!-- Loading state -->
                 <div id="mcDeckLoading" class="hidden flex flex-col items-center justify-center py-12 gap-2">
                     <div class="h-6 w-6 animate-spin rounded-full border-2 border-primary-light border-t-primary"></div>
-                    <p class="text-sm text-text-muted">Загрузка колод...</p>
+                    <p class="text-sm text-text-muted" data-i18n="microcards.loading_decks">Загрузка колод...</p>
                 </div>
                 <!-- Empty state -->
                 <div id="mcDeckEmpty" class="hidden flex flex-col items-center justify-center py-16 text-center">
@@ -418,15 +419,16 @@
                     <a href="/editor"
                         class="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-fg rounded-lg text-sm font-bold hover:bg-primary-hover transition-colors">
                         <span class="material-symbols-outlined text-[18px]">edit_note</span>
-                        Открыть редактор
+                        <span data-i18n="microcards.editor_link_btn">Открыть редактор</span>
                     </a>
                 </div>
                 <!-- Error state -->
                 <div id="mcDeckError" class="hidden flex flex-col items-center justify-center py-12 text-center">
                     <span class="material-symbols-outlined text-error text-[36px] mb-2">error_outline</span>
-                    <p class="text-sm font-semibold text-error-text" id="mcDeckErrorText">Ошибка загрузки</p>
+                    <p class="text-sm font-semibold text-error-text" id="mcDeckErrorText" data-i18n="microcards.error_load_decks_text">Ошибка загрузки</p>
                     <button type="button" onclick="mcApp.refreshDecks()"
-                        class="mt-3 px-4 py-2 text-xs font-semibold text-primary border border-primary rounded-lg hover:bg-primary hover:text-primary-fg transition-colors">
+                        class="mt-3 px-4 py-2 text-xs font-semibold text-primary border border-primary rounded-lg hover:bg-primary hover:text-primary-fg transition-colors"
+                        data-i18n="microcards.retry_btn">
                         Повторить
                     </button>
                 </div>
@@ -440,14 +442,14 @@
                         <button type="button" onclick="mcApp.backToDecks()"
                             class="flex items-center gap-1.5 text-sm font-semibold text-text-secondary hover:text-primary transition-colors">
                             <span class="material-symbols-outlined text-[18px]">arrow_back</span>
-                            К колодам
+                            <span data-i18n="microcards.back_btn">К колодам</span>
                         </button>
                         <div class="flex items-center gap-2">
                             <button type="button" onclick="mcApp.restartSession()"
                                 class="flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold text-warning-text bg-warning-lighter border border-warning-light rounded-lg hover:bg-warning-light transition-colors"
-                                title="Начать сессию заново">
+                                title="Начать сессию заново" data-i18n-title="microcards.restart_title">
                                 <span class="material-symbols-outlined text-[14px]">restart_alt</span>
-                                Заново
+                                <span data-i18n="microcards.restart_btn">Заново</span>
                             </button>
                         </div>
                     </div>
@@ -466,7 +468,7 @@
                         <div id="mcReviewRequeueInfo" class="hidden mt-1">
                             <span class="text-[10px] font-semibold text-warning-text">
                                 <span class="material-symbols-outlined text-[12px] align-middle">replay</span>
-                                Ошибки в очереди: <span id="mcReviewRequeueCount">0</span>
+                                <span data-i18n="microcards.requeue_label">Ошибки в очереди:</span> <span id="mcReviewRequeueCount">0</span>
                             </span>
                         </div>
                     </div>
@@ -474,7 +476,7 @@
                     <!-- Card area -->
                     <div id="mcCardArea"
                         class="rounded-2xl border border-border-strong bg-surface-1 shadow-sm overflow-hidden"
-                        role="region" aria-label="Карточка" aria-live="polite">
+                        role="region" aria-label="Карточка" aria-live="polite" data-i18n-aria="microcards.card_area_aria">
                         <!-- Card loading -->
                         <div id="mcCardLoading" class="hidden flex items-center justify-center py-16">
                             <div
@@ -491,7 +493,7 @@
                                 <span id="mcCardRequeueBadge"
                                     class="hidden px-2 py-0.5 rounded-full text-[10px] font-bold border border-warning-light bg-warning-lighter text-warning-text">
                                     <span class="material-symbols-outlined text-[10px] align-middle">replay</span>
-                                    повтор
+                                    <span data-i18n="microcards.deck_due_suffix">к повтору</span>
                                 </span>
                             </div>
 
@@ -513,7 +515,7 @@
                                 <div id="mcCardBack" class="hidden px-5 py-4">
                                     <div
                                         class="text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1">
-                                        Ответ</div>
+                                        <span data-i18n="microcards.answer_label">Ответ</span></div>
                                     <div id="mcCardBackText"
                                         class="text-base text-text-main leading-relaxed whitespace-pre-line"></div>
                                 </div>
@@ -521,7 +523,7 @@
                                 <div id="mcPairResult" class="hidden px-5 py-4">
                                     <div class="flex items-center gap-2 mb-2">
                                         <span
-                                            class="text-[10px] font-bold text-text-secondary uppercase tracking-wider">Результат</span>
+                                            class="text-[10px] font-bold text-text-secondary uppercase tracking-wider" data-i18n="microcards.result_label">Результат</span>
                                         <span id="mcPairScoreBadge"
                                             class="px-2 py-0.5 rounded-full text-[10px] font-bold border"></span>
                                     </div>
@@ -535,37 +537,37 @@
                                 <div id="mcActionsPreReveal" class="flex justify-center">
                                     <button type="button" id="mcBtnReveal" onclick="mcApp.reveal()"
                                         class="px-6 py-2.5 text-sm font-bold rounded-xl bg-primary text-primary-fg hover:bg-primary-hover shadow-sm shadow-primary-light transition-all active:scale-[0.98]">
-                                        Показать ответ
+                                        <span data-i18n="microcards.reveal_btn">Показать ответ</span>
                                     </button>
                                 </div>
                                 <!-- Post-reveal: rating buttons -->
                                 <div id="mcActionsPostReveal" class="hidden">
                                     <div
                                         class="text-[10px] font-bold text-text-secondary text-center mb-2 uppercase tracking-wider">
-                                        Оцените знание</div>
-                                    <div class="grid grid-cols-4 gap-2" role="group" aria-label="Оценка знания">
+                                        <span data-i18n="microcards.rate_prompt">Оцените знание</span></div>
+                                    <div class="grid grid-cols-4 gap-2" role="group" aria-label="Оценка знания" data-i18n-aria="microcards.rate_group_aria">
                                         <button type="button" onclick="mcApp.submitRating('again')"
                                             class="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl border border-error-light bg-error-lighter text-error-text hover:bg-error-light transition-all active:scale-[0.97] disabled:opacity-50"
-                                            id="mcBtnAgain" aria-label="Снова — не знаю (клавиша 1)">
-                                            <span class="text-sm font-bold">Снова</span>
+                                            id="mcBtnAgain" aria-label="Снова — не знаю (клавиша 1)" data-i18n-aria="microcards.btn_again_aria">
+                                            <span class="text-sm font-bold" data-i18n="microcards.btn_again">Снова</span>
                                             <span class="text-[10px]">1</span>
                                         </button>
                                         <button type="button" onclick="mcApp.submitRating('hard')"
                                             class="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl border border-warning-light bg-warning-lighter text-warning-text hover:bg-warning-light transition-all active:scale-[0.97] disabled:opacity-50"
-                                            id="mcBtnHard" aria-label="Сложно — трудно вспомнить (клавиша 2)">
-                                            <span class="text-sm font-bold">Сложно</span>
+                                            id="mcBtnHard" aria-label="Сложно — трудно вспомнить (клавиша 2)" data-i18n-aria="microcards.btn_hard_aria">
+                                            <span class="text-sm font-bold" data-i18n="microcards.btn_hard">Сложно</span>
                                             <span class="text-[10px]">2</span>
                                         </button>
                                         <button type="button" onclick="mcApp.submitRating('good')"
                                             class="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl border border-success-light bg-success-lighter text-success-text hover:bg-success-light transition-all active:scale-[0.97] disabled:opacity-50"
-                                            id="mcBtnGood" aria-label="Хорошо — вспомнил (клавиша 3)">
-                                            <span class="text-sm font-bold">Хорошо</span>
+                                            id="mcBtnGood" aria-label="Хорошо — вспомнил (клавиша 3)" data-i18n-aria="microcards.btn_good_aria">
+                                            <span class="text-sm font-bold" data-i18n="microcards.btn_good">Хорошо</span>
                                             <span class="text-[10px]">3</span>
                                         </button>
                                         <button type="button" onclick="mcApp.submitRating('easy')"
                                             class="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl border border-info-light bg-info-lighter text-info-text hover:bg-info-light transition-all active:scale-[0.97] disabled:opacity-50"
-                                            id="mcBtnEasy" aria-label="Легко — очень просто (клавиша 4)">
-                                            <span class="text-sm font-bold">Легко</span>
+                                            id="mcBtnEasy" aria-label="Легко — очень просто (клавиша 4)" data-i18n-aria="microcards.btn_easy_aria">
+                                            <span class="text-sm font-bold" data-i18n="microcards.btn_easy">Легко</span>
                                             <span class="text-[10px]">4</span>
                                         </button>
                                     </div>
@@ -577,8 +579,8 @@
                         <div id="mcCardEmpty" class="hidden px-5 py-10 text-center">
                             <span
                                 class="material-symbols-outlined text-border-strong text-[40px] mb-2">check_circle</span>
-                            <p class="text-sm font-semibold text-text-main">Нет карточек к повторению</p>
-                            <p class="text-xs text-text-secondary mt-1">В этой колоде сейчас нет доступных карточек.</p>
+                            <p class="text-sm font-semibold text-text-main" data-i18n="microcards.no_cards_title">Нет карточек к повторению</p>
+                            <p class="text-xs text-text-secondary mt-1" data-i18n="microcards.no_cards_desc">В этой колоде сейчас нет доступных карточек.</p>
                         </div>
                     </div>
 
@@ -587,7 +589,7 @@
                         <p class="text-[10px] text-text-muted">
                             <kbd
                                 class="px-1.5 py-0.5 rounded border border-border-strong bg-surface-2 text-[10px] font-mono">Space</kbd>
-                            показать ответ
+                            <span data-i18n="microcards.kbd_reveal">показать ответ</span>
                             &nbsp;&middot;&nbsp;
                             <kbd
                                 class="px-1.5 py-0.5 rounded border border-border-strong bg-surface-2 text-[10px] font-mono">1</kbd>
@@ -597,11 +599,11 @@
                                 class="px-1.5 py-0.5 rounded border border-border-strong bg-surface-2 text-[10px] font-mono">3</kbd>
                             <kbd
                                 class="px-1.5 py-0.5 rounded border border-border-strong bg-surface-2 text-[10px] font-mono">4</kbd>
-                            оценка
+                            <span data-i18n="microcards.kbd_rate">оценка</span>
                             &nbsp;&middot;&nbsp;
                             <kbd
                                 class="px-1.5 py-0.5 rounded border border-border-strong bg-surface-2 text-[10px] font-mono">Esc</kbd>
-                            назад
+                            <span data-i18n="microcards.kbd_back">назад</span>
                         </p>
                     </div>
                 </div>
@@ -614,7 +616,7 @@
                         <div class="mb-4">
                             <span class="material-symbols-outlined text-success text-[48px]">celebration</span>
                         </div>
-                        <h2 class="text-xl font-black text-text-main mb-1">Сессия завершена!</h2>
+                        <h2 class="text-xl font-black text-text-main mb-1" data-i18n="microcards.summary_title">Сессия завершена!</h2>
                         <p class="text-sm text-text-secondary mb-5" id="mcSummaryDeckName">Колода</p>
 
                         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
@@ -622,25 +624,25 @@
                                 class="mc-sum-stat flex flex-col items-center px-3 py-3 bg-surface-2 rounded-xl border border-border-subtle">
                                 <span class="text-2xl font-black text-text-main" id="mcSumTotal">0</span>
                                 <span
-                                    class="text-[10px] font-bold text-text-secondary uppercase tracking-wider mt-1">Всего</span>
+                                    class="text-[10px] font-bold text-text-secondary uppercase tracking-wider mt-1" data-i18n="microcards.stat_total">Всего</span>
                             </div>
                             <div
                                 class="mc-sum-stat flex flex-col items-center px-3 py-3 bg-success-lighter rounded-xl border border-success-light">
                                 <span class="text-2xl font-black text-success-text" id="mcSumCorrect">0</span>
                                 <span
-                                    class="text-[10px] font-bold text-text-secondary uppercase tracking-wider mt-1">Верно</span>
+                                    class="text-[10px] font-bold text-text-secondary uppercase tracking-wider mt-1" data-i18n="microcards.stat_correct">Верно</span>
                             </div>
                             <div
                                 class="mc-sum-stat flex flex-col items-center px-3 py-3 bg-error-lighter rounded-xl border border-error-light">
                                 <span class="text-2xl font-black text-error-text" id="mcSumErrors">0</span>
                                 <span
-                                    class="text-[10px] font-bold text-text-secondary uppercase tracking-wider mt-1">Ошибок</span>
+                                    class="text-[10px] font-bold text-text-secondary uppercase tracking-wider mt-1" data-i18n="microcards.stat_errors">Ошибок</span>
                             </div>
                             <div
                                 class="mc-sum-stat flex flex-col items-center px-3 py-3 bg-surface-2 rounded-xl border border-border-subtle">
                                 <span class="text-2xl font-black text-text-main" id="mcSumTime">0:00</span>
                                 <span
-                                    class="text-[10px] font-bold text-text-secondary uppercase tracking-wider mt-1">Время</span>
+                                    class="text-[10px] font-bold text-text-secondary uppercase tracking-wider mt-1" data-i18n="microcards.stat_time">Время</span>
                             </div>
                         </div>
 
@@ -649,32 +651,33 @@
                             <div
                                 class="flex items-center gap-1 px-2 py-1 rounded-lg bg-error-lighter border border-error-light">
                                 <span class="text-xs font-bold text-error-text" id="mcSumRAgain">0</span>
-                                <span class="text-[10px] text-error-text">Снова</span>
+                                <span class="text-[10px] text-error-text" data-i18n="microcards.rating_again">Снова</span>
                             </div>
                             <div
                                 class="flex items-center gap-1 px-2 py-1 rounded-lg bg-warning-lighter border border-warning-light">
                                 <span class="text-xs font-bold text-warning-text" id="mcSumRHard">0</span>
-                                <span class="text-[10px] text-warning-text">Сложно</span>
+                                <span class="text-[10px] text-warning-text" data-i18n="microcards.rating_hard">Сложно</span>
                             </div>
                             <div
                                 class="flex items-center gap-1 px-2 py-1 rounded-lg bg-success-lighter border border-success-light">
                                 <span class="text-xs font-bold text-success-text" id="mcSumRGood">0</span>
-                                <span class="text-[10px] text-success-text">Хорошо</span>
+                                <span class="text-[10px] text-success-text" data-i18n="microcards.rating_good">Хорошо</span>
                             </div>
                             <div
                                 class="flex items-center gap-1 px-2 py-1 rounded-lg bg-info-lighter border border-info-light">
                                 <span class="text-xs font-bold text-info-text" id="mcSumREasy">0</span>
-                                <span class="text-[10px] text-info-text">Легко</span>
+                                <span class="text-[10px] text-info-text" data-i18n="microcards.rating_easy">Легко</span>
                             </div>
                         </div>
 
                         <div class="flex flex-col sm:flex-row items-center justify-center gap-2">
                             <button type="button" onclick="mcApp.backToDecks()"
                                 class="px-5 py-2.5 text-sm font-bold rounded-xl border border-border-strong text-text-main hover:bg-bg-hover transition-colors">
-                                К колодам
+                                <span data-i18n="microcards.summary_back_btn">К колодам</span>
                             </button>
                             <button type="button" onclick="mcApp.restartSession()"
-                                class="px-5 py-2.5 text-sm font-bold rounded-xl bg-primary text-primary-fg hover:bg-primary-hover shadow-sm shadow-primary-light transition-colors">
+                                class="px-5 py-2.5 text-sm font-bold rounded-xl bg-primary text-primary-fg hover:bg-primary-hover shadow-sm shadow-primary-light transition-colors"
+                                data-i18n="microcards.summary_restart_btn">
                                 Повторить колоду
                             </button>
                         </div>

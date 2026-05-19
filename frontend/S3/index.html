@@ -6,7 +6,7 @@
   <script src="/assets/ThemeManager.js"></script>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Итоговые результаты комплекса</title>
+  <title data-i18n="s3.page_title">Итоговые результаты комплекса</title>
 
   <link href="/assets/tailwind.css" rel="stylesheet" />
   <link href="/assets/fonts.css" rel="stylesheet" />
@@ -26,28 +26,28 @@
       <header class="s3-toolbar">
 
         <div class="s3-toolbar-identity">
-          <p class="s3-kicker">Комплекс</p>
+          <p class="s3-kicker" data-i18n="s3.kicker_complex">Комплекс</p>
           <h1 class="s3-toolbar-title" id="complex-name">Комплекс</h1>
         </div>
 
-        <nav class="s3-toolbar-nav" id="results-nav" aria-label="Навигация после сессии" hidden>
+        <nav class="s3-toolbar-nav" id="results-nav" aria-label="Навигация после сессии" data-i18n-aria="s3.nav_aria" hidden>
           <button id="to-main-btn" class="btn-primary s3-btn s3-btn--wide">
             <span class="material-symbols-outlined" aria-hidden="true">home</span>
-            <span class="s3-btn-label">На главную</span>
+            <span class="s3-btn-label" data-i18n="s3.btn_to_main">На главную</span>
           </button>
 
           <button id="to-complexes-btn" class="btn-secondary s3-btn s3-btn--wide">
             <span class="material-symbols-outlined" aria-hidden="true">list</span>
-            <span class="s3-btn-label">К комплексам</span>
+            <span class="s3-btn-label" data-i18n="s3.btn_to_complexes">К комплексам</span>
           </button>
 
           <button id="to-theory-hub-btn" class="btn-secondary s3-btn s3-btn--wide s3-btn--theory hidden">
             <span class="material-symbols-outlined" aria-hidden="true">edit_square</span>
-            <span class="s3-btn-label">К теории</span>
+            <span class="s3-btn-label" data-i18n="s3.btn_to_theory">К теории</span>
           </button>
         </nav>
 
-        <button id="close-btn" class="s3-icon-btn" aria-label="Закрыть">
+        <button id="close-btn" class="s3-icon-btn" aria-label="Закрыть" data-i18n-aria="s3.btn_close_aria">
           <span class="material-symbols-outlined">close</span>
         </button>
 
@@ -57,46 +57,46 @@
       <main class="s3-main">
 
         <!-- Summary hero -->
-        <section class="s3-hero card-elevated" aria-label="Итоги сессии">
+        <section class="s3-hero card-elevated" aria-label="Итоги сессии" data-i18n-aria="s3.hero_aria">
 
           <div class="s3-hero-head">
             <div class="s3-hero-copy">
-              <span class="pill pill--neutral text-xs" id="results-badge">Итоги</span>
-              <h2 class="s3-hero-title" id="results-title">Результаты комплекса</h2>
+              <span class="pill pill--neutral text-xs" id="results-badge" data-i18n="s3.badge_results">Итоги</span>
+              <h2 class="s3-hero-title" id="results-title" data-i18n="s3.hero_title">Результаты комплекса</h2>
             </div>
           </div>
 
           <div class="s3-stat-grid">
 
-            <div class="s3-stat-card s3-stat" aria-label="Количество итераций">
+            <div class="s3-stat-card s3-stat" aria-label="Количество итераций" data-i18n-aria="s3.stat_iterations_aria">
               <div class="s3-stat-label-row">
                 <span class="material-symbols-outlined s3-stat-icon" aria-hidden="true">sync</span>
-                <span class="s3-stat-label">Итераций</span>
+                <span class="s3-stat-label" data-i18n="s3.stat_label_iterations">Итераций</span>
               </div>
               <p class="s3-stat-value" id="summary-iterations">—</p>
             </div>
 
-            <div class="s3-stat-card s3-stat" aria-label="Всего заданий">
+            <div class="s3-stat-card s3-stat" aria-label="Всего заданий" data-i18n-aria="s3.stat_tasks_aria">
               <div class="s3-stat-label-row">
                 <span class="material-symbols-outlined s3-stat-icon" aria-hidden="true">list_alt</span>
-                <span class="s3-stat-label">Всего заданий</span>
+                <span class="s3-stat-label" data-i18n="s3.stat_label_tasks">Всего заданий</span>
               </div>
               <p class="s3-stat-value" id="summary-unique-tasks">—</p>
             </div>
 
-            <div class="s3-stat-card s3-stat-card--success s3-stat" aria-label="Верных ответов">
+            <div class="s3-stat-card s3-stat-card--success s3-stat" aria-label="Верных ответов" data-i18n-aria="s3.stat_success_aria">
               <div class="s3-stat-label-row">
                 <span class="material-symbols-outlined s3-stat-icon" aria-hidden="true">check_circle</span>
-                <span class="s3-stat-label">Верных ответов</span>
+                <span class="s3-stat-label" data-i18n="s3.stat_label_success">Верных ответов</span>
               </div>
               <p class="s3-stat-value" id="summary-completed-tasks">—</p>
               <p class="s3-stat-sub" id="summary-success-rate">—</p>
             </div>
 
-            <div class="s3-stat-card s3-stat" aria-label="Затраченное время">
+            <div class="s3-stat-card s3-stat" aria-label="Затраченное время" data-i18n-aria="s3.stat_time_aria">
               <div class="s3-stat-label-row">
                 <span class="material-symbols-outlined s3-stat-icon" aria-hidden="true">schedule</span>
-                <span class="s3-stat-label">Время</span>
+                <span class="s3-stat-label" data-i18n="s3.stat_label_time">Время</span>
               </div>
               <p class="s3-stat-value" id="summary-total-time">—</p>
             </div>
@@ -109,41 +109,42 @@
         <div class="s3-content-grid s3-section-enter">
 
           <!-- Iterations panel -->
-          <section class="s3-panel card-elevated" id="iterations-card" aria-label="Динамика по итерациям">
+          <section class="s3-panel card-elevated" id="iterations-card" aria-label="Динамика по итерациям" data-i18n-aria="s3.iterations_panel_aria">
 
             <header class="s3-panel-head">
               <div class="s3-panel-copy">
-                <h3 class="s3-panel-title">Динамика по итерациям</h3>
+                <h3 class="s3-panel-title" data-i18n="s3.iterations_panel_title">Динамика по итерациям</h3>
               </div>
             </header>
 
             <!-- Empty placeholder (shown by default, hidden when data arrives) -->
             <div class="s3-empty-state" id="iterations-placeholder">
               <span class="material-symbols-outlined s3-empty-icon">trending_up</span>
-              <p class="s3-empty-title">Динамика ещё не собрана</p>
-              <p class="s3-empty-sub">Здесь появится прогресс по итерациям</p>
+              <p class="s3-empty-title" data-i18n="s3.iterations_empty_title">Динамика ещё не собрана</p>
+              <p class="s3-empty-sub" data-i18n="s3.iterations_empty_sub">Здесь появится прогресс по итерациям</p>
             </div>
 
-            <p class="s3-hint hidden" id="iterations-empty-hint">Данных по итерациям нет.</p>
+            <p class="s3-hint hidden" id="iterations-empty-hint" data-i18n="s3.iterations_no_data">Данных по итерациям нет.</p>
 
             <div class="s3-iteration-grid" id="iterations-grid" aria-live="polite"></div>
 
           </section>
 
           <!-- Problem tasks panel -->
-          <section class="s3-panel card-elevated" id="problem-card" aria-label="Проблемные задания">
+          <section class="s3-panel card-elevated" id="problem-card" aria-label="Проблемные задания" data-i18n-aria="s3.problems_panel_aria">
 
             <header class="s3-panel-head">
               <div class="s3-panel-copy">
-                <h3 class="s3-panel-title">Проблемные задания</h3>
+                <h3 class="s3-panel-title" data-i18n="s3.problems_panel_title">Проблемные задания</h3>
               </div>
               <div class="s3-panel-actions">
                 <button
                   id="problem-review-open-btn"
                   class="btn-secondary s3-btn hidden"
-                  aria-label="Открыть полный разбор ошибок">
+                  aria-label="Открыть полный разбор ошибок"
+                  data-i18n-aria="s3.review_btn_aria">
                   <span class="material-symbols-outlined text-sm" aria-hidden="true">fact_check</span>
-                  <span>Разобрать ошибки</span>
+                  <span data-i18n="s3.btn_review">Разобрать ошибки</span>
                 </button>
               </div>
             </header>
@@ -151,7 +152,7 @@
             <!-- Empty success state -->
             <div class="s3-empty-state s3-empty-state--success" id="problem-empty-hint">
               <span class="material-symbols-outlined s3-empty-icon s3-empty-icon--success">check_circle</span>
-              <p class="s3-empty-title" id="problem-empty-copy">Все задания выполнены без ошибок!</p>
+              <p class="s3-empty-title" id="problem-empty-copy" data-i18n="s3.problems_all_correct">Все задания выполнены без ошибок!</p>
             </div>
 
             <ul class="s3-problem-list" id="problem-tasks-list" aria-live="polite"></ul>
@@ -167,15 +168,15 @@
 
 
   <!-- ── PROBLEM REVIEW DIALOG ─────────────────────────── -->
-  <div class="s3-backdrop" id="problem-review-backdrop" role="dialog" aria-modal="true" aria-label="Разбор ошибок" hidden>
+  <div class="s3-backdrop" id="problem-review-backdrop" role="dialog" aria-modal="true" aria-label="Разбор ошибок" data-i18n-aria="s3.dialog_review_aria" hidden>
     <div class="s3-dialog">
 
       <header class="s3-dialog-head">
         <div class="s3-dialog-copy">
-          <h2 class="s3-dialog-title">Разбор ошибок</h2>
-          <p class="s3-dialog-sub">Задания с наибольшим количеством неверных ответов</p>
+          <h2 class="s3-dialog-title" data-i18n="s3.dialog_review_title">Разбор ошибок</h2>
+          <p class="s3-dialog-sub" data-i18n="s3.dialog_review_sub">Задания с наибольшим количеством неверных ответов</p>
         </div>
-        <button class="s3-icon-btn" id="problem-review-close-btn" aria-label="Закрыть">
+        <button class="s3-icon-btn" id="problem-review-close-btn" aria-label="Закрыть" data-i18n-aria="s3.btn_close_aria">
           <span class="material-symbols-outlined">close</span>
         </button>
       </header>
@@ -187,7 +188,14 @@
 
 
   <!-- ── SCRIPTS ───────────────────────────────────────── -->
+  <script src="/assets/i18n.js"></script>
   <script>
+
+    function wt(key, fallback) {
+        if (!window.i18n || typeof window.i18n.t !== 'function') return fallback;
+        var v = window.i18n.t(key);
+        return v !== key ? v : fallback;
+    }
 
     /* ─── API ────────────────────────────────────────────────── */
     const api = {
@@ -306,11 +314,11 @@
       }
 
       theoryBtn.classList.remove("hidden");
-      theoryBtn.title = `Открыть теорию: ${theoryBridge.theoryId}`;
+      theoryBtn.title = wt('s3.theory_btn_title', 'Открыть теорию: {id}').replace('{id}', theoryBridge.theoryId);
 
       const label = theoryBtn.querySelector(".s3-btn-label");
       const theoryLabel = String(theoryBridge.theoryTitle || theoryBridge.theoryId || "").trim() || theoryBridge.theoryId;
-      if (label) label.textContent = `К теории ${theoryLabel}`;
+      if (label) label.textContent = `${wt('s3.btn_to_theory_prefix', 'К теории')} ${theoryLabel}`;
     }
 
     async function hydrateTheoryBridgeFromResults(summary) {
@@ -331,7 +339,7 @@
         state.complexMeta = {
           complexId,
           rawName: String(rawComplexName || "").trim() || complexId,
-          displayName: buildDisplayLabel(rawComplexName || complexId, "Комплекс", 84),
+          displayName: buildDisplayLabel(rawComplexName || complexId, wt('s3.fallback_complex', "Комплекс"), 84),
         };
 
         const theoryId = String(theoryLink?.theory_id || "").trim();
@@ -362,20 +370,20 @@
 
       const failedAttempts = Math.max(0, Number(summary?.failedAttempts || 0));
 
-      let message = "Следующий лучший шаг — вернуться на главную: там проще выбрать, что делать дальше без лишних поисков.";
+      let message = wt('s3.guidance_default', "Следующий лучший шаг — вернуться на главную: там проще выбрать, что делать дальше без лишних поисков.");
 
       if (failedAttempts > 0) {
-        message = "Комплекс завершён. Вернитесь на главную, чтобы выбрать следующее действие, а затем закрепите слабые места через календарь или повторение.";
+        message = wt('s3.guidance_with_errors', "Комплекс завершён. Вернитесь на главную, чтобы выбрать следующее действие, а затем закрепите слабые места через календарь или повторение.");
       } else if ((successRate || 0) >= 90) {
-        message = "Сильный проход. На главной вы быстрее всего выберете, продолжать ли новым комплексом или коротким повторением.";
+        message = wt('s3.guidance_high_rate', "Сильный проход. На главной вы быстрее всего выберете, продолжать ли новым комплексом или коротким повторением.");
       } else if ((successRate || 0) > 0) {
-        message = "Результат уже есть. Следующий разумный шаг — открыть главную и выбрать, что закрепить сегодня.";
+        message = wt('s3.guidance_some_progress', "Результат уже есть. Следующий разумный шаг — открыть главную и выбрать, что закрепить сегодня.");
       }
 
       if (state.theoryBridge && state.theoryBridge.theoryId) {
         message = failedAttempts > 0
-          ? "Комплекс завершён. Вернитесь к теории, чтобы сверить ошибки с нужным материалом и сразу продолжить цикл."
-          : "Комплекс завершён. Связанный материал уже известен, поэтому можно сразу вернуться к нужной теории.";
+          ? wt('s3.guidance_theory_with_errors', "Комплекс завершён. Вернитесь к теории, чтобы сверить ошибки с нужным материалом и сразу продолжить цикл.")
+          : wt('s3.guidance_theory_no_errors', "Комплекс завершён. Связанный материал уже известен, поэтому можно сразу вернуться к нужной теории.");
       }
 
       if (motEl && motText) {
@@ -383,8 +391,8 @@
         motEl.classList.remove("hidden");
       }
 
-      if (mainBtnLabel) mainBtnLabel.textContent = "Вернуться на главную";
-      if (complexesBtnLabel) complexesBtnLabel.textContent = "К другим комплексам";
+      if (mainBtnLabel) mainBtnLabel.textContent = wt('s3.btn_return_main', "Вернуться на главную");
+      if (complexesBtnLabel) complexesBtnLabel.textContent = wt('s3.btn_to_other_complexes', "К другим комплексам");
     }
 
     /* ─── UTILS ──────────────────────────────────────────────── */
@@ -542,10 +550,10 @@
 
     function formatErrorCountLabel(errors) {
       const n = Math.max(0, Number(errors) || 0);
-      if (n === 0) return "нет ошибок";
-      if (n === 1) return "1 ошибка";
-      if (n >= 2 && n <= 4) return `${n} ошибки`;
-      return `${n} ошибок`;
+      if (n === 0) return wt('s3.errors_none', "нет ошибок");
+      if (n === 1) return wt('s3.errors_one', "1 ошибка");
+      if (n >= 2 && n <= 4) return wt('s3.errors_few', "{n} ошибки").replace('{n}', n);
+      return wt('s3.errors_many', "{n} ошибок").replace('{n}', n);
     }
 
     function getSuccessColorClasses(rate) {
@@ -557,10 +565,10 @@
 
     function buildProblemTaskPresentation(task, errors) {
       const rawName = String(task?.task_name || task?.name || task?.title || task?.id || "—").trim();
-      const label = buildDisplayLabel(rawName, "Задание", 72);
+      const label = buildDisplayLabel(rawName, wt('s3.fallback_task', "Задание"), 72);
       const hint = errors > 0
-        ? `Ошибок за все итерации: ${errors}`
-        : "Задание вызвало затруднения";
+        ? wt('s3.task_hint_errors', "Ошибок за все итерации: {n}").replace('{n}', errors)
+        : wt('s3.task_hint_difficulties', "Задание вызвало затруднения");
       return { rawName, label, hint };
     }
 
@@ -737,10 +745,10 @@
       const note = compactText(source.note || source.explanation || explanation, 220);
 
       return {
-        title: buildDisplayLabel(source.title || taskName, taskName || "Задание", 96),
+        title: buildDisplayLabel(source.title || taskName, taskName || wt('s3.fallback_task', "Задание"), 96),
         prompt: reviewPrompt,
-        userLabel: compactText(source.user_label || source.userLabel, 48) || "Твоё решение",
-        referenceLabel: compactText(source.reference_label || source.referenceLabel, 48) || "Референс",
+        userLabel: compactText(source.user_label || source.userLabel, 48) || wt('s3.review_user_label', "Твоё решение"),
+        referenceLabel: compactText(source.reference_label || source.referenceLabel, 48) || wt('s3.review_reference_label', "Референс"),
         userLines,
         referenceLines,
         userItems,
@@ -809,7 +817,7 @@
         taskData.title;
       const name = buildDisplayLabel(
         taskName,
-        `Задание ${Number(index) + 1}`,
+        wt('s3.task_number', "Задание {n}").replace('{n}', Number(index) + 1),
         84
       );
       const prompt = compactText(
@@ -988,7 +996,7 @@
               group = {
                 key,
                 name: task.rawName || task.name,
-                label: buildDisplayLabel(task.rawName || task.name, "Задание", 72),
+                label: buildDisplayLabel(task.rawName || task.name, wt('s3.fallback_task', 'Задание'), 72),
                 totalErrors: 0,
                 entries: [],
                 order: Number.MAX_SAFE_INTEGER,
@@ -1052,7 +1060,7 @@
         const image = document.createElement("img");
         image.className = "s3-review-media-image";
         image.src = item.imageUrl;
-        image.alt = titleText || fallbackText || "Вариант ответа";
+        image.alt = titleText || fallbackText || wt('s3.answer_option_alt', 'Вариант ответа');
         image.loading = "lazy";
         card.appendChild(image);
       }
@@ -1134,9 +1142,9 @@
       if (complexNameEl) {
         const name =
           state.complexMeta?.displayName ||
-          buildDisplayLabel(summary.complexName || "Комплекс", "Комплекс", 84);
+          buildDisplayLabel(summary.complexName || wt('s3.fallback_complex', "Комплекс"), wt('s3.fallback_complex', "Комплекс"), 84);
         complexNameEl.textContent = name;
-        document.title = `Итоги — ${name}`;
+        document.title = `${wt('s3.title_results_prefix', 'Итоги —')} ${name}`;
       }
 
       // Stats
@@ -1153,7 +1161,7 @@
         if (iterationsEl) iterationsEl.textContent = "1";
         if (tasksEl) tasksEl.textContent = String(totalTasksNum ?? "—");
         if (completedEl) completedEl.textContent = String(successfulTasksNumber ?? "—");
-        if (successRateEl) successRateEl.textContent = successRate != null ? `${successRate}% успеха` : "—";
+        if (successRateEl) successRateEl.textContent = successRate != null ? `${successRate}${wt('s3.success_rate_suffix', '% успеха')}` : "—";
       } else {
         const iterationsEl = document.getElementById("summary-iterations");
         const tasksEl = document.getElementById("summary-unique-tasks");
@@ -1162,7 +1170,7 @@
         if (iterationsEl) iterationsEl.textContent = String(iterationsNum ?? "—");
         if (tasksEl) tasksEl.textContent = String(totalTasksNum ?? "—");
         if (completedEl) completedEl.textContent = String(successfulTasksNumber ?? "—");
-        if (successRateEl) successRateEl.textContent = successRate != null ? `${successRate}% успеха` : "—";
+        if (successRateEl) successRateEl.textContent = successRate != null ? `${successRate}${wt('s3.success_rate_suffix', '% успеха')}` : "—";
       }
 
       const totalTimeEl = document.getElementById("summary-total-time");
@@ -1224,7 +1232,7 @@
           card.className = "s3-iteration-card";
           card.innerHTML = `
             <div class="s3-iteration-head">
-              <p class="s3-iteration-name">Итерация ${escapeHtml(iterNumber)}</p>
+              <p class="s3-iteration-name">${wt('s3.iteration_label', 'Итерация {n}').replace('{n}', escapeHtml(iterNumber))}</p>
               <span class="s3-badge ${colorClasses.badge}">${iterationRate ?? "—"}%</span>
             </div>
             <div class="s3-progress-track" role="progressbar" aria-valuenow="${iterationRate ?? 0}" aria-valuemin="0" aria-valuemax="100">
@@ -1232,11 +1240,11 @@
             </div>
             <div class="s3-iteration-kpi-row">
               <div class="s3-kpi">
-                <p class="s3-kpi-label">Время</p>
+                <p class="s3-kpi-label">${wt('s3.kpi_time', 'Время')}</p>
                 <p class="s3-kpi-value">${escapeHtml(durationText)}</p>
               </div>
               <div class="s3-kpi">
-                <p class="s3-kpi-label">Счёт</p>
+                <p class="s3-kpi-label">${wt('s3.kpi_score', 'Счёт')}</p>
                 <p class="s3-kpi-value">${escapeHtml(scoreText)}</p>
               </div>
             </div>
@@ -1312,8 +1320,8 @@
 
       renderProblemReviewStatus(
         list,
-        "Собираем ошибки со всех итераций",
-        "Подтягиваем те же разборы, которые показываются на S2 после ошибочных ответов."
+        wt('s3.review_loading_title', 'Собираем ошибки со всех итераций'),
+        wt('s3.review_loading_sub', 'Подтягиваем те же разборы, которые показываются после ошибочных ответов.')
       );
 
       backdrop.hidden = false;
@@ -1329,8 +1337,8 @@
       if (!Array.isArray(groups) || !groups.length) {
         renderProblemReviewStatus(
           list,
-          "Разбор ошибок пока недоступен",
-          "Ошибки в списке есть, но подробные материалы для разбора не были сохранены."
+          wt('s3.review_unavailable_title', 'Разбор ошибок пока недоступен'),
+          wt('s3.review_unavailable_sub', 'Ошибки в списке есть, но подробные материалы для разбора не были сохранены.')
         );
         return;
       }
@@ -1344,7 +1352,7 @@
 
         const title = document.createElement("h3");
         title.className = "s3-review-card-title";
-        title.textContent = group.label || buildDisplayLabel(group.name, "Задание", 72);
+        title.textContent = group.label || buildDisplayLabel(group.name, wt('s3.fallback_task', 'Задание'), 72);
         meta.appendChild(title);
 
         const badge = document.createElement("span");
@@ -1355,13 +1363,13 @@
 
         const note = document.createElement("p");
         note.className = "s3-review-note";
-        note.textContent = "Разбор собран по всем итерациям комплекса.";
+        note.textContent = wt('s3.review_card_note', 'Разбор собран по всем итерациям комплекса.');
         card.appendChild(note);
 
         if (!group.entries.length) {
           const emptyCopy = document.createElement("p");
           emptyCopy.className = "s3-review-note";
-          emptyCopy.textContent = "Для этого задания сохранился счётчик ошибок, но не сохранились подробные ответы.";
+          emptyCopy.textContent = wt('s3.review_no_details', 'Для этого задания сохранился счётчик ошибок, но не сохранились подробные ответы.');
           card.appendChild(emptyCopy);
           list.appendChild(card);
           return;
@@ -1374,8 +1382,8 @@
           const attemptMeta = document.createElement("div");
           attemptMeta.className = "s3-review-attempt-meta";
           attemptMeta.textContent = group.entries.length > 1
-            ? `Итерация ${entry.iteration || "—"} · ошибка ${entryIndex + 1}`
-            : `Итерация ${entry.iteration || "—"}`;
+            ? wt('s3.review_attempt_label', 'Итерация {iter} · ошибка {n}').replace('{iter}', entry.iteration || '—').replace('{n}', entryIndex + 1)
+            : wt('s3.review_iteration_label', 'Итерация {iter}').replace('{iter}', entry.iteration || '—');
           section.appendChild(attemptMeta);
 
           const fullTestEntries = entry.review?.kind === "full_test" && Array.isArray(entry.review.entries)
@@ -1402,14 +1410,14 @@
 
               appendProblemReviewAnswerContent(
                 answers,
-                reviewEntry.userLabel || "Твоё решение",
+                reviewEntry.userLabel || wt('s3.review_user_label', 'Твоё решение'),
                 reviewEntry.userLines || [],
                 reviewEntry.userItems || [],
                 reviewEntry.status === "correct" ? "s3-review-answer--reference" : "s3-review-answer--user"
               );
               appendProblemReviewAnswerContent(
                 answers,
-                reviewEntry.referenceLabel || "Референс",
+                reviewEntry.referenceLabel || wt('s3.review_reference_label', 'Референс'),
                 reviewEntry.referenceLines || [],
                 reviewEntry.referenceItems || [],
                 "s3-review-answer--reference"
@@ -1440,14 +1448,14 @@
 
           appendProblemReviewAnswerContent(
             answers,
-            entry.review?.userLabel || "Твоё решение",
+            entry.review?.userLabel || wt('s3.review_user_label', 'Твоё решение'),
             entry.review?.userLines || [],
             entry.review?.userItems || [],
             "s3-review-answer--user"
           );
           appendProblemReviewAnswerContent(
             answers,
-            entry.review?.referenceLabel || "Референс",
+            entry.review?.referenceLabel || wt('s3.review_reference_label', 'Референс'),
             entry.review?.referenceLines || [],
             entry.review?.referenceItems || [],
             "s3-review-answer--reference"
@@ -1479,7 +1487,7 @@
 
       if (!sessionId) {
         console.error("sessionId отсутствует в URL");
-        NotificationUI.toast("Экран итогов открыт без sessionId. Вернитесь в сессию и откройте результаты заново.", "error");
+        NotificationUI.toast(wt('s3.toast_no_session', 'Экран итогов открыт без sessionId. Вернитесь в сессию и откройте результаты заново.'), "error");
         return;
       }
 
@@ -1487,14 +1495,14 @@
         const response = await api.getFinalResults(sessionId);
         if (!response.ok) {
           console.error("Ошибка получения финальных результатов", response);
-          NotificationUI.toast("Итоговые результаты временно недоступны. Попробуйте открыть экран ещё раз.", "error");
+          NotificationUI.toast(wt('s3.toast_results_unavailable', 'Итоговые результаты временно недоступны. Попробуйте открыть экран ещё раз.'), "error");
           return;
         }
         await hydrateTheoryBridgeFromResults(response.results);
         renderSessionResultsModern(response.results);
       } catch (e) {
         console.error("Неожиданная ошибка при загрузке финальных результатов", e);
-        NotificationUI.toast("Итоговые результаты временно недоступны. Попробуйте открыть экран ещё раз.", "error");
+        NotificationUI.toast(wt('s3.toast_results_unavailable', 'Итоговые результаты временно недоступны. Попробуйте открыть экран ещё раз.'), "error");
       }
     }
 
@@ -1542,6 +1550,12 @@
       });
 
       loadSessionResults();
+    });
+
+    window.addEventListener('i18n:changed', function () {
+      if (window.i18n && typeof window.i18n.updateDOM === 'function') {
+        window.i18n.updateDOM();
+      }
     });
 
   </script>

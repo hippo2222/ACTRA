@@ -31,6 +31,14 @@
 }(typeof self !== 'undefined' ? self : this, function (SessionState, SessionAPI, UIHelpers, TaskRenderer, DraftStorage, SessionRoutes, SessionFlow) {
     'use strict';
 
+    function wt(key, fallback) {
+        if (typeof window !== 'undefined' && window.i18n && typeof window.i18n.t === 'function') {
+            const result = window.i18n.t(key);
+            return result !== key ? result : fallback;
+        }
+        return fallback;
+    }
+
     const {
         showStatus,
         showRetryOption,
@@ -281,7 +289,7 @@
         if (checkBtn) {
             checkBtn.removeAttribute("data-test-force-mode");
             if (restoreLabel) {
-                setCheckButtonLabel("Проверить");
+                setCheckButtonLabel(wt('s1.check_btn', 'Проверить'));
             }
         }
 
@@ -311,7 +319,7 @@
         const checkBtn = getCheckButton();
         if (checkBtn) {
             checkBtn.setAttribute("data-test-force-mode", "true");
-            setCheckButtonLabel("Всё равно проверить");
+            setCheckButtonLabel(wt('s1.check_btn_force', 'Всё равно проверить'));
         }
 
         const toolbar = getCheckButtonToolbar(checkBtn);
@@ -521,12 +529,12 @@
         checkBtn.setAttribute("data-test-incomplete", "true");
         if (progress && Number.isFinite(progress.answeredCount) && Number.isFinite(progress.totalQuestions) && progress.totalQuestions > 0) {
             checkBtn.title = isPendingIncompleteTestSubmitActive()
-                ? `Есть вопросы без ответа. Повторное нажатие проверит как есть (${progress.answeredCount}/${progress.totalQuestions})`
-                : `Есть вопросы без ответа (${progress.answeredCount}/${progress.totalQuestions})`;
+                ? wt('s1.check_btn_incomplete_with_count', 'Есть вопросы без ответа. Повторное нажатие проверит как есть ({answered}/{total})').replace('{answered}', progress.answeredCount).replace('{total}', progress.totalQuestions)
+                : wt('s1.check_btn_has_unanswered_with_count', 'Есть вопросы без ответа ({answered}/{total})').replace('{answered}', progress.answeredCount).replace('{total}', progress.totalQuestions);
         } else {
             checkBtn.title = isPendingIncompleteTestSubmitActive()
-                ? "Есть вопросы без ответа. Повторное нажатие проверит как есть"
-                : "Есть вопросы без ответа";
+                ? wt('s1.check_btn_incomplete_no_count', 'Есть вопросы без ответа. Повторное нажатие проверит как есть')
+                : wt('s1.check_btn_has_unanswered_no_count', 'Есть вопросы без ответа');
         }
     }
 
@@ -547,7 +555,7 @@
                 checkBtn.disabled = true;
                 checkBtn.setAttribute("aria-disabled", "true");
                 checkBtn.removeAttribute("data-test-incomplete");
-                checkBtn.setAttribute("title", "Задание уже проверено");
+                checkBtn.setAttribute("title", wt('s1.check_already_checked', 'Задание уже проверено'));
             }
             return null;
         }
@@ -559,7 +567,7 @@
                 checkBtn.disabled = true;
                 checkBtn.setAttribute("aria-disabled", "true");
                 checkBtn.removeAttribute("data-test-incomplete");
-                checkBtn.setAttribute("title", "Сначала выберите итог проверки");
+                checkBtn.setAttribute("title", wt('s1.check_pending_judgement', 'Сначала выберите итог проверки'));
             }
             return null;
         }
@@ -592,7 +600,7 @@
                 event.preventDefault();
                 event.stopPropagation();
             }
-            showStatus("Сначала выберите, считать ли ответ верным");
+            showStatus(wt('s1.err_choose_verdict', 'Сначала выберите, считать ли ответ верным'));
             return;
         }
 
@@ -607,7 +615,7 @@
                 }
                 if (!isPendingIncompleteTestSubmitActive()) {
                     armPendingIncompleteTestSubmit(progress);
-                    showStatus(`Ответьте на все вопросы перед проверкой (${progress.answeredCount}/${progress.totalQuestions})`);
+                    showStatus(wt('s1.err_answer_all_with_count', 'Ответьте на все вопросы перед проверкой ({answered}/{total})').replace('{answered}', progress.answeredCount).replace('{total}', progress.totalQuestions));
                     showEvaluationResult(null);
                     return;
                 }
@@ -644,7 +652,7 @@
                 if (target.getAttribute("data-test-incomplete") !== "true") return;
                 const progress = getCurrentTestProgress();
                 if (progress && progress.totalQuestions > 0 && !progress.allAnswered) {
-                    showStatus(`Ответьте на все вопросы перед проверкой (${progress.answeredCount}/${progress.totalQuestions})`);
+                    showStatus(wt('s1.err_answer_all_with_count', 'Ответьте на все вопросы перед проверкой ({answered}/{total})').replace('{answered}', progress.answeredCount).replace('{total}', progress.totalQuestions));
                 }
             });
         }
@@ -701,7 +709,7 @@
     // Pause/Resume Logic
     // -------------------------------------------------------------------
     async function handlePausedConflict() {
-        showStatus("Сессия на паузе. Возобновите её, чтобы продолжить", "error");
+        showStatus(wt('s1.paused_msg', 'Сессия на паузе. Возобновите её, чтобы продолжить'), "error");
         showResumeModal();
     }
 
@@ -741,11 +749,11 @@
                     window.location.reload();
                 }
             } else {
-                showStatus((resp && resp.error) || "Не удалось возобновить сессию", "error");
+                showStatus((resp && resp.error) || wt('s1.err_resume_fail', 'Не удалось возобновить сессию'), "error");
             }
         } catch (e) {
             console.error("Resume failed", e);
-            showStatus("Не удалось возобновить сессию. Попробуйте снова", "error");
+            showStatus(wt('s1.err_resume_fail_retry', 'Не удалось возобновить сессию. Попробуйте снова'), "error");
         } finally {
             if (spinner) spinner.classList.add("hidden");
         }
@@ -753,7 +761,7 @@
 
     async function handlePauseConfirm() {
         if (!SessionState.sessionId) {
-            showStatus("Сессия не найдена. Обновите страницу", "error");
+            showStatus(wt('s1.err_session_missing', 'Сессия не найдена. Обновите страницу'), "error");
             return;
         }
         clearPendingUiStateAutosave();
@@ -783,14 +791,14 @@
             if (!resp || resp.ok !== true) {
                 const message =
                     (resp && (resp.error || resp.message)) ||
-                    "Не удалось поставить сессию на паузу. Попробуйте ещё раз";
+                    wt('s1.err_pause_fail', 'Не удалось поставить сессию на паузу. Попробуйте ещё раз');
                 showStatus(message, "error");
                 return;
             }
             navigateWithoutPrompt(SessionRoutes.COMPLEXES || SessionRoutes.MAIN || "/complexes");
         } catch (err) {
             console.error("Pause request failed", err);
-            showStatus("Не удалось поставить сессию на паузу. Проверьте соединение и попробуйте снова", "error");
+            showStatus(wt('s1.err_pause_fail_network', 'Не удалось поставить сессию на паузу. Проверьте соединение и попробуйте снова'), "error");
         } finally {
             setPauseInFlight(false);
         }
@@ -808,7 +816,7 @@
         try {
             const response = await fetch(SessionRoutes.API.CANCEL(SessionState.sessionId), { method: "POST" });
             if (!response.ok) {
-                let message = "Не удалось завершить попытку без сохранения.";
+                let message = wt('s1.err_discard_fail', 'Не удалось завершить попытку без сохранения.');
                 try {
                     const data = await response.json();
                     if (data && (data.error || data.message)) {
@@ -824,7 +832,7 @@
             navigateWithoutPrompt(SessionRoutes.COMPLEXES || SessionRoutes.MAIN || "/complexes");
         } catch (err) {
             console.error("Discard session failed", err);
-            showStatus("Не удалось выйти без сохранения. Попробуйте снова", "error");
+            showStatus(wt('s1.err_discard_fail_retry', 'Не удалось выйти без сохранения. Попробуйте снова'), "error");
         } finally {
             setPauseInFlight(false);
         }
@@ -950,7 +958,7 @@
 
             const response = data;
             if (!response || !response.ok || !response.result) {
-                showStatus((response && (response.error || response.message)) || "Не удалось сохранить ваш выбор", "error");
+                showStatus((response && (response.error || response.message)) || wt('s1.err_save_verdict', 'Не удалось сохранить ваш выбор'), "error");
                 return;
             }
 
@@ -958,7 +966,7 @@
             finalizeCheckedResult(response.result, getCurrentEffectiveTaskType());
         } catch (err) {
             console.error(err);
-            showStatus("Не удалось сохранить ваш выбор. Попробуйте ещё раз", "error");
+            showStatus(wt('s1.err_save_verdict_retry', 'Не удалось сохранить ваш выбор. Попробуйте ещё раз'), "error");
         } finally {
             setLoading(false);
             refreshCheckButtonState();
@@ -1015,7 +1023,7 @@
             if (currentTaskType === "sequence_assembly" && typeof SequenceUI !== "undefined" && typeof SequenceUI.validateBeforeSubmit === "function") {
                 const validation = SequenceUI.validateBeforeSubmit();
                 if (validation && validation.valid === false) {
-                    showStatus(validation.message || "Проверьте уровни перед проверкой", "error");
+                    showStatus(validation.message || wt('s1.err_check_levels', 'Проверьте уровни перед проверкой'), "error");
                     showEvaluationResult(null);
                     return;
                 }
@@ -1026,7 +1034,7 @@
                     ? !!OpenAnswerUI.isAnswerValid()
                     : !!(answer && typeof answer.answer === "string" && answer.answer.trim().length > 0);
                 if (!isValid) {
-                    showStatus("Введите ответ перед проверкой", "error");
+                    showStatus(wt('s1.err_enter_answer', 'Введите ответ перед проверкой'), "error");
                     showEvaluationResult(null);
                     return;
                 }
@@ -1045,10 +1053,10 @@
                 const hasAnyBlock = levels.some((l) => Array.isArray(l && l.blocks) && l.blocks.some((x) => x != null));
                 if (!hasAnyBlock) {
                     const emptyMessage = difficulty >= 3
-                        ? "Сначала создайте уровень и введите хотя бы одно название элемента"
+                        ? wt('s1.err_add_level_name', 'Сначала создайте уровень и введите хотя бы одно название элемента')
                         : difficulty >= 2
-                            ? "Сначала создайте уровень и разместите хотя бы один элемент"
-                            : "Сначала разместите хотя бы один элемент перед проверкой";
+                            ? wt('s1.err_add_level_element', 'Сначала создайте уровень и разместите хотя бы один элемент')
+                            : wt('s1.err_add_element', 'Сначала разместите хотя бы один элемент перед проверкой');
                     showStatus(emptyMessage, "error");
                     showEvaluationResult(null);
                     return;
@@ -1085,7 +1093,7 @@
                     (answer.text_answers && Object.keys(answer.text_answers).length > 0);
 
                 if (!hasAnyAnswer && !allowIncompleteTest) {
-                    showStatus("Ответьте хотя бы на один вопрос перед проверкой", "error");
+                    showStatus(wt('s1.err_answer_at_least_one', 'Ответьте хотя бы на один вопрос перед проверкой'), "error");
                     showEvaluationResult(null);
                     return;
                 }
@@ -1106,7 +1114,7 @@
                     });
 
                     if (progress.unansweredCount > 0 && !allowIncompleteTest) {
-                        showStatus(`Ответьте на все вопросы перед проверкой (${progress.answeredCount}/${totalQuestions})`);
+                        showStatus(wt('s1.err_answer_all_with_count', 'Ответьте на все вопросы перед проверкой ({answered}/{total})').replace('{answered}', progress.answeredCount).replace('{total}', totalQuestions));
                         showEvaluationResult(null);
                         return;
                     }
@@ -1227,7 +1235,7 @@
                         hasDrawInteraction;
 
                     if (!hasAnyInteraction) {
-                        showStatus('Сделайте хотя бы одно действие (клик или подпись) перед проверкой', 'error');
+                        showStatus(wt('s1.err_make_action', 'Сделайте хотя бы одно действие (клик или подпись) перед проверкой'), 'error');
                         showEvaluationResult(null);
                         return;
                     }
@@ -1238,7 +1246,7 @@
                         lines: lines.length,
                         drawing: drawing.length,
                     }, SessionState.currentTask)) {
-                        showStatus('Заполните названия для всех отметок перед проверкой', 'error');
+                        showStatus(wt('s1.err_fill_labels', 'Заполните названия для всех отметок перед проверкой'), 'error');
                         showEvaluationResult(null);
                         return;
                     }
@@ -1252,7 +1260,7 @@
                 // Check if DrawUI has validation method
                 if (typeof DrawUI !== 'undefined' && typeof DrawUI.hasAnyDrawing === 'function') {
                     if (!DrawUI.hasAnyDrawing()) {
-                        showStatus('Нарисуйте хотя бы одну метку перед проверкой', 'error');
+                        showStatus(wt('s1.err_draw_mark', 'Нарисуйте хотя бы одну метку перед проверкой'), 'error');
                         showEvaluationResult(null);
                         return;
                     }
@@ -1266,7 +1274,7 @@
                         (answer.lines && Array.isArray(answer.lines) && answer.lines.length > 0);
 
                     if (!hasDrawing) {
-                        showStatus('Нарисуйте хотя бы одну метку перед проверкой', 'error');
+                        showStatus(wt('s1.err_draw_mark', 'Нарисуйте хотя бы одну метку перед проверкой'), 'error');
                         showEvaluationResult(null);
                         return;
                     }
@@ -1281,7 +1289,7 @@
                     lines: lines.length,
                     drawing: drawing.length,
                 }, SessionState.currentTask)) {
-                    showStatus('Заполните названия для всех отметок перед проверкой', 'error');
+                    showStatus(wt('s1.err_fill_labels', 'Заполните названия для всех отметок перед проверкой'), 'error');
                     showEvaluationResult(null);
                     return;
                 }
@@ -1298,7 +1306,7 @@
 
         try {
             setLoading(true);
-            setButtonBusy("check-answer-btn", true, { label: "Проверяем" });
+            setButtonBusy("check-answer-btn", true, { label: wt('s1.btn_checking', 'Проверяем') });
             showStatus("");
 
             const { status, data } = await SessionAPI.submitAnswer(
@@ -1314,7 +1322,7 @@
 
             const response = data;
             if (!response.ok) {
-                showStatus(response.error || "Не удалось отправить ответ", "error");
+                showStatus(response.error || wt('s1.err_send_answer', 'Не удалось отправить ответ'), "error");
                 showEvaluationResult(null);
                 setCanGoNext(false);
                 return;
@@ -1358,13 +1366,13 @@
             return;
         }
         if (!SessionState.currentTaskChecked || !SessionState.canGoNext) {
-            showStatus("Сначала проверьте задание", "error");
+            showStatus(wt('s1.err_check_first', 'Сначала проверьте задание'), "error");
             return;
         }
         clearPendingUiStateAutosave(true);
         try {
             setLoading(true);
-            setButtonBusy("next-task-btn", true, { label: "Загрузка" });
+            setButtonBusy("next-task-btn", true, { label: wt('s1.btn_loading', 'Загрузка') });
             showStatus("");
 
             const prevTask = SessionState.currentTask || null;
@@ -1393,11 +1401,11 @@
 
             if (!response.ok) {
                 if (response.error === "task_not_checked") {
-                    showStatus("Сначала проверьте задание", "error");
+                    showStatus(wt('s1.err_check_first', 'Сначала проверьте задание'), "error");
                     return;
                 }
                 const redirected = await maybeRedirectToResults();
-                if (!redirected) showStatus(response.error || "Следующее задание не найдено", "error");
+                if (!redirected) showStatus(response.error || wt('s1.err_no_more_tasks', 'Следующее задание не найдено'), "error");
                 return;
             }
 
@@ -1425,7 +1433,7 @@
 
             if (isSameTask) {
                 const redirected = await maybeRedirectToResults();
-                if (!redirected) showStatus("Больше нет заданий в этой итерации", "error");
+                if (!redirected) showStatus(wt('s1.err_no_iteration_tasks', 'Больше нет заданий в этой итерации'), "error");
                 return;
             }
 
@@ -1435,7 +1443,7 @@
 
         } catch (err) {
             console.error(err);
-            showStatus("Неожиданная ошибка при загрузке следующего задания", "error");
+            showStatus(wt('s1.err_next_task_fail', 'Неожиданная ошибка при загрузке следующего задания'), "error");
         } finally {
             setButtonBusy("next-task-btn", false);
             setLoading(false);
@@ -1448,16 +1456,16 @@
     // -------------------------------------------------------------------
     async function handleCancelSession() {
         if (!SessionState.sessionId) {
-            showStatus("Сессия не найдена. Обновите страницу", "error");
+            showStatus(wt('s1.err_session_missing', 'Сессия не найдена. Обновите страницу'), "error");
             return;
         }
         clearPendingUiStateAutosave();
 
         const confirmed = await NotificationUI.confirm({
-            title: 'Прервать комплекс?',
-            message: 'Вы уверены, что хотите прервать выполнение комплекса и вернуться в меню?',
-            confirmText: 'Прервать',
-            cancelText: 'Продолжить',
+            title: wt('s1.confirm_cancel_title', 'Прервать комплекс?'),
+            message: wt('s1.confirm_cancel_message', 'Вы уверены, что хотите прервать выполнение комплекса и вернуться в меню?'),
+            confirmText: wt('s1.confirm_cancel_confirm', 'Прервать'),
+            cancelText: wt('s1.confirm_cancel_cancel', 'Продолжить'),
             variant: 'error'
         });
         if (!confirmed) return;
@@ -1468,7 +1476,7 @@
         try {
             const response = await fetch(SessionRoutes.API.CANCEL(SessionState.sessionId), { method: "POST" });
             if (!response.ok) {
-                let message = "Не удалось завершить комплекс. Попробуйте ещё раз";
+                let message = wt('s1.err_cancel_fail', 'Не удалось завершить комплекс. Попробуйте ещё раз');
                 try {
                     const data = await response.json();
                     if (data && (data.error || data.message)) {
@@ -1484,7 +1492,7 @@
             navigateWithoutPrompt(SessionRoutes.MAIN);
         } catch (err) {
             console.error("Cancel session failed", err);
-            showStatus("Не удалось завершить комплекс. Попробуйте ещё раз", "error");
+            showStatus(wt('s1.err_cancel_fail', 'Не удалось завершить комплекс. Попробуйте ещё раз'), "error");
             if (finishBtn) finishBtn.removeAttribute("disabled");
         }
     }

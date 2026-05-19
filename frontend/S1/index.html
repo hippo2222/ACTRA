@@ -416,17 +416,17 @@
                 <button id="check-answer-btn"
                   class="flex h-9 min-w-[118px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden whitespace-nowrap rounded-lg border-2 border-border-strong bg-primary px-5 text-sm font-bold leading-normal tracking-[0.015em] text-primary-fg disabled:cursor-default disabled:border-border-strong disabled:bg-primary-light disabled:text-text-main dark:disabled:text-primary-fg disabled:opacity-100 s1-btn"
                   type="button">
-                  <span class="truncate">Проверить</span>
+                  <span class="truncate" data-i18n="s1.check_btn">Проверить</span>
                 </button>
                 <button id="next-task-btn"
                   class="hidden flex h-9 min-w-[132px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg border-2 border-border-strong bg-surface-2 px-5 text-sm font-bold leading-normal tracking-[0.015em] text-text-main disabled:cursor-default disabled:border-border-strong disabled:bg-primary-light disabled:text-text-main dark:disabled:text-primary-fg disabled:opacity-100 s1-btn"
                   type="button">
-                  <span class="truncate">Следующее</span>
+                  <span class="truncate" data-i18n="s1.next_btn">Следующее</span>
                 </button>
                 <button id="finish-complex-btn"
                   class="flex h-9 min-w-[206px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg border-2 border-border-strong bg-primary px-5 text-sm font-bold leading-normal tracking-[0.015em] text-primary-fg disabled:cursor-default disabled:border-border-strong disabled:bg-primary-light disabled:text-text-main dark:disabled:text-primary-fg disabled:opacity-100 s1-btn"
                   type="button">
-                  <span class="truncate">Завершить комплекс</span>
+                  <span class="truncate" data-i18n="s1.finish_btn">Завершить комплекс</span>
                 </button>
               </div>
             </div>
@@ -613,6 +613,15 @@
     <script src="/S1/session-controls.js"></script>
     <script src="/S1/main.js"></script>
     <script>
+      function wt(key, fallback) {
+        if (!window.i18n) return fallback;
+        const result = window.i18n.t(key);
+        return result !== key ? result : fallback;
+      }
+      function _applyS1I18n() {
+        if (window.i18n) window.i18n.updateDOM();
+      }
+      document.addEventListener('i18n:changed', _applyS1I18n);
       window.addEventListener("DOMContentLoaded", () => {
         if (typeof Main !== 'undefined') {
           Main.init();
@@ -621,7 +630,7 @@
           console.error("Main module not loaded");
           const banner = document.getElementById("status-banner");
           if (banner) {
-            banner.textContent = "Не удалось инициализировать экран сессии. Обновите страницу.";
+            banner.textContent = wt('s1.init_error', 'Не удалось инициализировать экран сессии. Обновите страницу.');
             banner.classList.remove("hidden");
           }
         }

@@ -19,42 +19,43 @@
     <div data-global-header data-app-section="reference"></div>
 
     <main class="reference-shell" data-reference-root>
-        <section class="reference-hero" aria-label="Обучение ACTRA">
+        <section class="reference-hero" aria-label="Обучение ACTRA" data-i18n-aria="reference.hero_aria">
             <p>
-                <strong>Обучение ACTRA</strong> - Найдите функцию проекта, прочитайте шаги обучения и откройте уменьшенное живое превью нужного экрана.
+                <strong data-i18n="reference.hero_heading">Обучение ACTRA</strong><span data-i18n="reference.hero_body"> - Найдите функцию проекта, прочитайте шаги обучения и откройте уменьшенное живое превью нужного экрана.</span>
             </p>
         </section>
 
-        <section class="reference-workspace" aria-label="Справочник туров">
-            <aside class="reference-sidebar" aria-label="Оглавление">
+        <section class="reference-workspace" aria-label="Справочник туров" data-i18n-aria="reference.workspace_aria">
+            <aside class="reference-sidebar" aria-label="Оглавление" data-i18n-aria="reference.sidebar_aria">
                 <label class="reference-search" for="referenceSearch">
                     <span class="material-symbols-outlined" aria-hidden="true">search</span>
-                    <input id="referenceSearch" type="search" placeholder="Поиск по функциям и шагам" autocomplete="off" data-reference-search />
+                    <input id="referenceSearch" type="search" placeholder="Поиск по функциям и шагам" data-i18n-placeholder="reference.search_placeholder" autocomplete="off" data-reference-search />
                 </label>
 
                 <div class="reference-sidebar__meta" aria-live="polite" data-reference-result-count></div>
                 <nav class="reference-toc" data-reference-toc></nav>
             </aside>
 
-            <aside class="reference-preview" aria-label="Живое превью тура">
+            <aside class="reference-preview" aria-label="Живое превью тура" data-i18n-aria="reference.preview_aria">
                 <div class="reference-preview__header">
                     <div>
-                        <p class="reference-preview__eyebrow">Живое превью</p>
-                        <h2 data-reference-preview-title>Выберите тур</h2>
+                        <p class="reference-preview__eyebrow" data-i18n="reference.preview_eyebrow">Живое превью</p>
+                        <h2 data-reference-preview-title data-i18n="reference.preview_title">Выберите тур</h2>
                     </div>
                 </div>
                 <div class="reference-preview__notice" hidden data-reference-preview-notice></div>
                 <div class="reference-preview__viewport">
                     <div class="reference-preview__welcome" data-reference-preview-empty>
                         <div>
-                            <p class="reference-preview__welcome-kicker">Добро пожаловать в обучение ACTRA</p>
-                            <h3>Выберите раздел, тур или конкретное состояние</h3>
-                            <p>Здесь появится уменьшенное живое превью нужного экрана с тем же шагом обучения, который выбран в справочнике.</p>
+                            <p class="reference-preview__welcome-kicker" data-i18n="reference.welcome_kicker">Добро пожаловать в обучение ACTRA</p>
+                            <h3 data-i18n="reference.welcome_heading">Выберите раздел, тур или конкретное состояние</h3>
+                            <p data-i18n="reference.welcome_body">Здесь появится уменьшенное живое превью нужного экрана с тем же шагом обучения, который выбран в справочнике.</p>
                         </div>
                     </div>
                     <div class="reference-preview__scale">
                         <iframe
                             title="Превью выбранного тура"
+                            data-i18n-title="reference.iframe_title"
                             data-reference-preview-frame
                             loading="lazy"
                             referrerpolicy="same-origin"

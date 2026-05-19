@@ -2501,14 +2501,14 @@
     data-onboarding-target="complex-editor-header">
     <div class="cx-editor-header__left">
       <a href="/complexes"
-        class="cx-editor-header__back cursor-pointer" title="Назад к списку">
+        class="cx-editor-header__back cursor-pointer" title="Назад к списку" data-i18n-title="create.back_title">
         <span class="material-symbols-outlined">arrow_back</span>
       </a>
       <div class="cx-editor-header__title-stack">
         <div class="cx-editor-header__title-row">
-          <h1 id="page-title-text" class="cx-editor-header__title">Создание комплекса</h1>
+          <h1 id="page-title-text" class="cx-editor-header__title" data-i18n="create.page_title_create">Создание комплекса</h1>
           <div class="cx-editor-header__state-pills">
-            <span id="draft-state-badge" class="cx-header-pill cx-mini-pill cx-mini-pill--muted" hidden>Новый комплекс</span>
+            <span id="draft-state-badge" class="cx-header-pill cx-mini-pill cx-mini-pill--muted" hidden data-i18n="create.badge_new_complex">Новый комплекс</span>
             <span id="publish-status-badge" class="cx-header-pill cx-mini-pill cx-mini-pill--muted" hidden></span>
             <span id="complex-limit-badge" class="cx-header-pill cx-mini-pill cx-mini-pill--muted" hidden></span>
           </div>
@@ -2517,7 +2517,7 @@
         <div class="cx-editor-header__meta-row">
           <span id="save-status" class="cx-editor-header__meta-text transition-opacity duration-300" hidden></span>
           <div id="last-saved-meta" class="cx-editor-header__last-saved" hidden>
-            <span class="cx-editor-header__last-saved-label">Последнее сохранение</span>
+            <span class="cx-editor-header__last-saved-label" data-i18n="create.last_saved_label">Последнее сохранение</span>
             <span id="last-saved-label" class="cx-editor-header__last-saved-value">—</span>
           </div>
         </div>
@@ -2533,7 +2533,9 @@
         data-onboarding-tour-id="complex-editor-authoring"
         hidden
         title="Показать обучение"
-        aria-label="Показать обучение">
+        aria-label="Показать обучение"
+        data-i18n-title="create.show_tutorial_title"
+        data-i18n-aria="create.show_tutorial_aria">
         <span class="material-symbols-outlined" aria-hidden="true">help</span>
       </button>
 
@@ -2543,9 +2545,10 @@
           data-onboarding-target="complex-editor-quality"
           class="h-9 px-3 flex items-center gap-2 rounded-lg border border-border-subtle bg-surface-1 transition-all hover:bg-bg-hover"
           title="Анализ состава"
+          data-i18n-title="create.quality_title"
           onclick="toggleQualityDropdown(event)">
           <span id="builder-quality-status-icon" class="material-symbols-outlined text-[18px] text-text-muted">verified_user</span>
-          <span id="builder-quality-status-text" class="hidden sm:inline text-xs font-semibold">Готовность</span>
+          <span id="builder-quality-status-text" class="hidden sm:inline text-xs font-semibold" data-i18n="create.quality_status_text">Готовность</span>
           <span id="builder-quality-status-dot" class="status-draft"></span>
         </button>
 
@@ -2554,7 +2557,7 @@
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
               <span class="material-symbols-outlined text-text-muted text-[18px]">analytics</span>
-              <h3 class="text-sm font-bold text-text-main">Анализ комплекса</h3>
+              <h3 class="text-sm font-bold text-text-main" data-i18n="create.quality_panel_title">Анализ комплекса</h3>
             </div>
             <span id="builder-quality-status-badge" class="cx-status-pill cx-status-pill--muted px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">В работе</span>
           </div>
@@ -2562,7 +2565,7 @@
           <div id="builder-quality-metrics" class="grid grid-cols-2 gap-2"></div>
 
           <div>
-            <p class="text-[10px] font-bold text-text-muted uppercase mb-2 tracking-widest">Типы задач</p>
+            <p class="text-[10px] font-bold text-text-muted uppercase mb-2 tracking-widest" data-i18n="create.task_types_label">Типы задач</p>
             <div id="builder-quality-types" class="flex flex-wrap gap-1.5"></div>
           </div>
 
@@ -2572,22 +2575,24 @@
 
       <button id="history-btn"
         class="hidden h-9 inline-flex items-center gap-1.5 rounded-lg border border-border-subtle bg-surface-1 px-3 text-text-secondary hover:text-primary hover:border-primary hover:bg-bg-hover transition-colors"
-        title="История изменений">
+        title="История изменений"
+        data-i18n-title="create.history_title">
         <span class="material-symbols-outlined text-[18px]">history</span>
-        <span class="hidden sm:inline text-xs font-semibold">История</span>
+        <span class="hidden sm:inline text-xs font-semibold" data-i18n="create.history_btn">История</span>
       </button>
 
       <button id="publish-btn"
         data-onboarding-target="complex-editor-publish"
         class="h-9 inline-flex items-center gap-1.5 rounded-lg border border-border-subtle bg-surface-1 px-3 text-text-secondary hover:text-primary hover:border-primary hover:bg-bg-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:text-text-secondary disabled:hover:border-border-subtle disabled:hover:bg-surface-1"
-        title="Публикация комплекса">
+        title="Публикация комплекса"
+        data-i18n-title="create.publish_title">
         <span class="material-symbols-outlined text-[18px]">public</span>
-        <span class="hidden sm:inline text-xs font-semibold">Публикация</span>
+        <span class="hidden sm:inline text-xs font-semibold" data-i18n="create.publish_btn">Публикация</span>
       </button>
 
       <!-- Save Button -->
       <button id="save-btn" class="btn-primary flex items-center gap-2" data-onboarding-target="complex-editor-save">
-        <span>Сохранить</span>
+        <span data-i18n="create.save_btn">Сохранить</span>
       </button>
     </div>
   </header>
@@ -2609,9 +2614,9 @@
 
               <div class="flex-1">
 
-                <p class="font-bold">Не удалось сохранить</p>
+                <p class="font-bold" data-i18n="create.save_failed_title">Не удалось сохранить</p>
 
-                <p id="global-alert-text" class="text-sm mt-1">Ошибка</p>
+                <p id="global-alert-text" class="text-sm mt-1" data-i18n="create.error_default">Ошибка</p>
 
               </div>
 
@@ -2632,22 +2637,22 @@
               class="card-section-premium p-5 flex flex-col gap-4 relative before:absolute before:left-0 before:top-4 before:bottom-4 before:w-1 before:bg-primary before:rounded-r">
               <div class="flex items-center gap-2">
                 <span class="material-symbols-outlined text-primary text-[20px]">info</span>
-                <h2 class="text-base font-bold text-text-main">Информация</h2>
+                <h2 class="text-base font-bold text-text-main" data-i18n="create.info_panel_title">Информация</h2>
               </div>
 
               <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div class="flex flex-col gap-1.5">
                   <label class="text-sm font-medium text-text-secondary">
-                    Название комплекса <span class="text-error-text">*</span>
+                    <span data-i18n="create.name_label">Название комплекса</span> <span class="text-error-text">*</span>
                   </label>
-                  <input id="name" class="form-field form-field-input" placeholder="Введите название" type="text" />
+                  <input id="name" class="form-field form-field-input" placeholder="Введите название" data-i18n-placeholder="create.name_placeholder" type="text" />
                   <p id="name-error" class="text-xs text-status-error min-h-[16px] invisible" aria-hidden="true"></p>
                 </div>
 
                 <div class="flex flex-col gap-1.5">
-                  <label class="text-sm font-medium text-text-secondary">Описание</label>
+                  <label class="text-sm font-medium text-text-secondary" data-i18n="create.description_label">Описание</label>
                   <textarea id="description" class="form-field form-field-textarea resize-none"
-                    placeholder="Краткое описание..."></textarea>
+                    placeholder="Краткое описание..." data-i18n-placeholder="create.description_placeholder"></textarea>
                 </div>
               </div>
             </section>
@@ -2663,8 +2668,8 @@
                 onclick="toggleTheorySection()">
                 <div class="flex items-center gap-2">
                   <span class="material-symbols-outlined text-info text-[20px]">menu_book</span>
-                  <h2 class="text-base font-bold text-text-main">Теория</h2>
-                  <span class="text-xs text-text-muted font-normal" id="theory-status-label">Добавить теорию</span>
+                  <h2 class="text-base font-bold text-text-main" data-i18n="create.theory_panel_title">Теория</h2>
+                  <span class="text-xs text-text-muted font-normal" id="theory-status-label" data-i18n="create.theory_add_label">Добавить теорию</span>
                 </div>
                 <span class="material-symbols-outlined text-text-muted text-[20px]"
                   id="theory-header-chevron">add</span>
@@ -2676,18 +2681,18 @@
 
                   <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <div class="flex flex-col gap-1.5" data-onboarding-target="complex-editor-theory-source">
-                      <label class="text-sm font-medium text-text-secondary">Источник теории</label>
+                      <label class="text-sm font-medium text-text-secondary" data-i18n="create.theory_source_label">Источник теории</label>
                       <div class="theory-select-shell">
                         <select id="theory-mode" class="form-field form-field-input">
-                          <option value="none">Наследовать из тем</option>
-                          <option value="new">Новая теория</option>
-                          <option value="link">Привязать существующую</option>
+                          <option value="none" data-i18n="create.theory_opt_inherit">Наследовать из тем</option>
+                          <option value="new" data-i18n="create.theory_opt_new">Новая теория</option>
+                          <option value="link" data-i18n="create.theory_opt_link">Привязать существующую</option>
                         </select>
                       </div>
-                      <p id="theory-mode-help" class="text-xs text-text-muted">Теория будет браться из тем, на которые ссылаются задания комплекса.</p>
+                      <p id="theory-mode-help" class="text-xs text-text-muted" data-i18n="create.theory_mode_help_default">Теория будет браться из тем, на которые ссылаются задания комплекса.</p>
                     </div>
                     <div id="theory-link-picker-wrap" class="flex flex-col gap-1.5 hidden">
-                      <label class="text-sm font-medium text-text-secondary">Существующая теория</label>
+                      <label class="text-sm font-medium text-text-secondary" data-i18n="create.theory_existing_label">Существующая теория</label>
                       <div class="flex gap-2">
                         <div class="theory-select-shell flex-1">
                           <select id="theory-link-picker" class="form-field form-field-input w-full"></select>
@@ -2695,7 +2700,7 @@
                         <button id="theory-reload-list" type="button" class="btn-secondary h-12 px-3">↻</button>
                       </div>
                       <button id="theory-create-copy" type="button"
-                        class="btn-secondary h-10 px-3 hidden self-start">Создать копию теории</button>
+                        class="btn-secondary h-10 px-3 hidden self-start" data-i18n="create.theory_copy_btn">Создать копию теории</button>
                     </div>
                   </div>
 
@@ -2703,13 +2708,13 @@
                     <div class="flex flex-col gap-3">
                       <div class="flex flex-wrap items-start justify-between gap-3">
                         <div class="min-w-0 flex-1">
-                          <p id="theory-preview-kicker" class="text-[11px] uppercase tracking-wide font-semibold text-text-muted">Контекст теории</p>
-                          <h3 id="theory-preview-title" class="text-[1.05rem] font-semibold text-text-main">Теория пока не выбрана</h3>
+                          <p id="theory-preview-kicker" class="text-[11px] uppercase tracking-wide font-semibold text-text-muted" data-i18n="create.theory_preview_kicker">Контекст теории</p>
+                          <h3 id="theory-preview-title" class="text-[1.05rem] font-semibold text-text-main" data-i18n="create.theory_not_selected">Теория пока не выбрана</h3>
                           <p id="theory-preview-meta" class="mt-1 text-sm leading-6 text-text-secondary">
                             Здесь будет показано, какая теория используется комплексом и что с ней можно сделать.
                           </p>
                         </div>
-                        <span id="theory-preview-badge" class="cx-mini-pill inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold">Только просмотр</span>
+                        <span id="theory-preview-badge" class="cx-mini-pill inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold" data-i18n="create.theory_readonly_badge">Только просмотр</span>
                       </div>
                       <div id="theory-preview-details" class="hidden flex flex-wrap gap-2"></div>
                     </div>
@@ -2719,48 +2724,48 @@
 
                   <div id="theory-editor-wrap" class="flex flex-col gap-3" hidden data-onboarding-target="complex-editor-theory-content">
                     <div id="theory-title-wrap" class="flex flex-col gap-1.5" hidden>
-                      <label class="text-sm font-medium text-text-secondary">Название теории</label>
+                      <label class="text-sm font-medium text-text-secondary" data-i18n="create.theory_name_label">Название теории</label>
                       <input id="theory-title" class="form-field form-field-input"
-                        placeholder="Например: КТ грудной клетки" type="text" />
+                        placeholder="Например: КТ грудной клетки" data-i18n-placeholder="create.theory_name_placeholder" type="text" />
                     </div>
                     <div id="theory-toolbar-row" class="flex flex-wrap items-center gap-1" hidden>
-                      <button id="theory-bold" type="button" class="theory-toolbar-btn" title="Жирный (Ctrl+B)">
+                      <button id="theory-bold" type="button" class="theory-toolbar-btn" title="Жирный (Ctrl+B)" data-i18n-title="create.fmt_bold">
                         <span class="material-symbols-outlined">format_bold</span>
                       </button>
-                      <button id="theory-italic" type="button" class="theory-toolbar-btn" title="Курсив (Ctrl+I)">
+                      <button id="theory-italic" type="button" class="theory-toolbar-btn" title="Курсив (Ctrl+I)" data-i18n-title="create.fmt_italic">
                         <span class="material-symbols-outlined">format_italic</span>
                       </button>
-                      <button id="theory-underline" type="button" class="theory-toolbar-btn" title="Подчёркнутый (Ctrl+U)">
+                      <button id="theory-underline" type="button" class="theory-toolbar-btn" title="Подчёркнутый (Ctrl+U)" data-i18n-title="create.fmt_underline">
                         <span class="material-symbols-outlined">format_underlined</span>
                       </button>
                       <span class="theory-toolbar-sep"></span>
                       <button id="theory-h1" type="button" class="theory-toolbar-btn theory-toolbar-btn--text"
-                        title="Заголовок 1">H1</button>
+                        title="Заголовок 1" data-i18n-title="create.fmt_h1">H1</button>
                       <button id="theory-h2" type="button" class="theory-toolbar-btn theory-toolbar-btn--text"
-                        title="Заголовок 2">H2</button>
+                        title="Заголовок 2" data-i18n-title="create.fmt_h2">H2</button>
                       <span class="theory-toolbar-sep"></span>
-                      <button id="theory-ul" type="button" class="theory-toolbar-btn" title="Маркированный список">
+                      <button id="theory-ul" type="button" class="theory-toolbar-btn" title="Маркированный список" data-i18n-title="create.fmt_ul">
                         <span class="material-symbols-outlined">format_list_bulleted</span>
                       </button>
-                      <button id="theory-ol" type="button" class="theory-toolbar-btn" title="Нумерованный список">
+                      <button id="theory-ol" type="button" class="theory-toolbar-btn" title="Нумерованный список" data-i18n-title="create.fmt_ol">
                         <span class="material-symbols-outlined">format_list_numbered</span>
                       </button>
                       <span class="theory-toolbar-sep"></span>
-                      <button id="theory-align-left" type="button" class="theory-toolbar-btn" title="По левому краю">
+                      <button id="theory-align-left" type="button" class="theory-toolbar-btn" title="По левому краю" data-i18n-title="create.fmt_align_left">
                         <span class="material-symbols-outlined">format_align_left</span>
                       </button>
-                      <button id="theory-align-center" type="button" class="theory-toolbar-btn" title="По центру">
+                      <button id="theory-align-center" type="button" class="theory-toolbar-btn" title="По центру" data-i18n-title="create.fmt_align_center">
                         <span class="material-symbols-outlined">format_align_center</span>
                       </button>
-                      <button id="theory-align-right" type="button" class="theory-toolbar-btn" title="По правому краю">
+                      <button id="theory-align-right" type="button" class="theory-toolbar-btn" title="По правому краю" data-i18n-title="create.fmt_align_right">
                         <span class="material-symbols-outlined">format_align_right</span>
                       </button>
-                      <button id="theory-align-justify" type="button" class="theory-toolbar-btn" title="По ширине">
+                      <button id="theory-align-justify" type="button" class="theory-toolbar-btn" title="По ширине" data-i18n-title="create.fmt_align_justify">
                         <span class="material-symbols-outlined">format_align_justify</span>
                       </button>
                       <span class="theory-toolbar-sep"></span>
                       <div id="theory-color-picker-host" class="relative">
-                        <button id="theory-color-btn" type="button" class="theory-toolbar-btn relative" title="Цвет текста">
+                        <button id="theory-color-btn" type="button" class="theory-toolbar-btn relative" title="Цвет текста" data-i18n-title="create.fmt_color">
                           <span class="material-symbols-outlined">format_color_text</span>
                           <span id="theory-color-indicator"
                             style="position:absolute;bottom:3px;left:5px;right:5px;height:3px;border-radius:2px;background:var(--color-text-main)"></span>
@@ -2771,7 +2776,7 @@
                       </div>
                       <span class="theory-toolbar-sep"></span>
                       <button id="theory-image-btn" type="button" class="theory-toolbar-btn"
-                        title="Вставить изображение">
+                        title="Вставить изображение" data-i18n-title="create.fmt_image">
                         <span class="material-symbols-outlined">add_photo_alternate</span>
                       </button>
                       <input id="theory-image-input" type="file" accept=".png,.jpg,.jpeg,.gif,.webp,.svg"
@@ -2779,46 +2784,46 @@
                       <div id="theory-image-controls">
                         <span class="theory-toolbar-sep"></span>
                         <input id="theory-image-width-slider" type="range" min="10" max="100" value="100"
-                          aria-label="Ширина изображения" />
+                          aria-label="Ширина изображения" data-i18n-aria="create.fmt_img_width" />
                         <span id="theory-image-width-label"
                           class="w-10 text-xs font-medium text-text-secondary">100%</span>
                         <span class="theory-toolbar-sep"></span>
                         <button type="button" class="theory-toolbar-btn theory-image-align-btn" data-align="left"
-                          title="По левому краю">
+                          title="По левому краю" data-i18n-title="create.fmt_align_left">
                           <span class="material-symbols-outlined">align_horizontal_left</span>
                         </button>
                         <button type="button" class="theory-toolbar-btn theory-image-align-btn" data-align="center"
-                          title="По центру">
+                          title="По центру" data-i18n-title="create.fmt_align_center">
                           <span class="material-symbols-outlined">align_horizontal_center</span>
                         </button>
                         <button type="button" class="theory-toolbar-btn theory-image-align-btn" data-align="right"
-                          title="По правому краю">
+                          title="По правому краю" data-i18n-title="create.fmt_align_right">
                           <span class="material-symbols-outlined">align_horizontal_right</span>
                         </button>
                         <span class="theory-toolbar-sep"></span>
                         <button type="button" class="theory-toolbar-btn theory-image-float-btn" data-float="none"
-                          title="Без обтекания">
+                          title="Без обтекания" data-i18n-title="create.fmt_img_no_wrap">
                           <span class="material-symbols-outlined">vertical_align_center</span>
                         </button>
                         <button type="button" class="theory-toolbar-btn theory-image-float-btn" data-float="left"
-                          title="Обтекание справа">
+                          title="Обтекание справа" data-i18n-title="create.fmt_img_wrap_right">
                           <span class="material-symbols-outlined">wrap_text</span>
                         </button>
                         <button type="button" class="theory-toolbar-btn theory-image-float-btn" data-float="right"
-                          title="Обтекание слева">
+                          title="Обтекание слева" data-i18n-title="create.fmt_img_wrap_left">
                           <span class="material-symbols-outlined">wrap_text</span>
                         </button>
                         <span class="theory-toolbar-sep"></span>
                         <button type="button" id="theory-image-rotate-left" class="theory-toolbar-btn"
-                          title="Повернуть влево">
+                          title="Повернуть влево" data-i18n-title="create.fmt_rotate_left">
                           <span class="material-symbols-outlined">rotate_90_degrees_ccw</span>
                         </button>
                         <button type="button" id="theory-image-rotate-right" class="theory-toolbar-btn"
-                          title="Повернуть вправо">
+                          title="Повернуть вправо" data-i18n-title="create.fmt_rotate_right">
                           <span class="material-symbols-outlined">rotate_90_degrees_cw</span>
                         </button>
                         <button type="button" id="theory-image-flip" class="theory-toolbar-btn"
-                          title="Отразить по горизонтали">
+                          title="Отразить по горизонтали" data-i18n-title="create.fmt_flip_h">
                           <span class="material-symbols-outlined">flip</span>
                         </button>
                       </div>
@@ -2827,9 +2832,7 @@
                   <div id="theory-editor"
                     class="w-full min-h-[240px] rounded-xl border border-border-subtle bg-surface-1 p-4 text-sm text-text-main focus:outline-none focus:ring-2 focus:ring-primary-light"
                     contenteditable="true"></div>
-                  <p class="text-xs text-text-muted">Формат хранения: Delta JSON. Изображения сохраняются вместе с
-                    файлами
-                    комплексов.</p>
+                  <p class="text-xs text-text-muted" data-i18n="create.theory_storage_info">Формат хранения: Delta JSON. Изображения сохраняются вместе с файлами комплексов.</p>
                 </div>
               </div>
           </div>
@@ -2839,7 +2842,7 @@
             <!-- Premium Header with Buttons -->
             <div class="section-header-premium flex items-center justify-between p-4">
               <div class="flex items-center gap-3">
-                <h3 class="text-base font-bold text-text-main">
+                <h3 class="text-base font-bold text-text-main" data-i18n="create.tasks_section_title">
                   Задания в комплексе
                 </h3>
                 <span
@@ -2853,7 +2856,7 @@
 
                 <button id="remove-selected" class="btn-secondary btn-danger flex items-center gap-1.5">
                   <span class="material-symbols-outlined text-[16px]">delete_outline</span>
-                  <span class="hidden sm:inline">Удалить</span>
+                  <span class="hidden sm:inline" data-i18n="create.delete_btn">Удалить</span>
                 </button>
               </div>
             </div>
@@ -2869,9 +2872,9 @@
                 <div class="cx-empty-state-icon w-16 h-16 rounded-full flex items-center justify-center">
                   <span class="material-symbols-outlined text-primary text-3xl">playlist_add</span>
                 </div>
-                <p class="text-text-main font-semibold">Комплекс пуст</p>
+                <p class="text-text-main font-semibold" data-i18n="create.tasks_empty_title">Комплекс пуст</p>
                 <p class="text-text-muted text-sm flex items-center gap-1">
-                  Выберите задания из каталога
+                  <span data-i18n="create.tasks_empty_copy">Выберите задания из каталога</span>
                   <span class="material-symbols-outlined text-primary text-lg">arrow_forward</span>
                 </p>
               </div>
@@ -2891,7 +2894,7 @@
             <div class="flex items-center justify-between p-4 border-b border-border-subtle">
               <div class="flex items-center gap-2">
                 <span class="material-symbols-outlined text-primary text-[20px]">link</span>
-                <h3 class="text-base font-bold text-text-main">Сцепки</h3>
+                <h3 class="text-base font-bold text-text-main" data-i18n="create.chains_title">Сцепки</h3>
               </div>
             </div>
             <div id="chains-content-wrapper" class="px-4 pb-4 pt-3">
@@ -2909,12 +2912,14 @@
       <div
         class="flex border-b border-border-subtle shrink-0 px-4 gap-6 sidebar-header sidebar-tabs sticky top-0 z-30 bg-surface-2">
         <button id="tab-tasks"
-          class="py-2 text-sm font-medium text-text-main border-b-2 border-primary transition-all active-tab">
+          class="py-2 text-sm font-medium text-text-main border-b-2 border-primary transition-all active-tab"
+          data-i18n="create.tab_tasks">
           Задания
         </button>
         <button id="tab-complexes"
           data-onboarding-target="complex-editor-complexes-tab"
-          class="py-2 text-sm font-medium text-text-muted border-b-2 border-transparent hover:text-text-secondary transition-all">
+          class="py-2 text-sm font-medium text-text-muted border-b-2 border-transparent hover:text-text-secondary transition-all"
+          data-i18n="create.tab_complexes">
           Комплексы
         </button>
       </div>
@@ -2929,13 +2934,13 @@
 
                 <span class="material-symbols-outlined text-text-muted text-[18px]">library_books</span>
 
-                Каталог заданий
+                <span data-i18n="create.catalog_title">Каталог заданий</span>
 
               </h2>
 
               <div class="flex items-center gap-2">
 
-                <span class="text-xs text-text-secondary" id="catalog-total">Всего: —</span>
+                <span class="text-xs text-text-secondary" id="catalog-total" data-i18n="create.catalog_total_default">Всего: —</span>
 
                 <span class="px-2 py-0.5 rounded text-xs font-medium" id="catalog-selected" data-count="0">Выбрано:
                   0</span>
@@ -2952,7 +2957,7 @@
               <input id="catalog-search"
                 data-onboarding-target="complex-editor-task-search"
                 class="peer w-full pl-9 pr-3 py-2 bg-bg-tertiary border border-transparent rounded-lg text-sm focus:outline-none focus:border-transparent focus:ring-2 focus:ring-primary transition-all placeholder:text-text-muted text-text-main"
-                placeholder="Поиск по названию, ID или тегу..." type="text" aria-label="Поиск заданий" />
+                placeholder="Поиск по названию, ID или тегу..." data-i18n-placeholder="create.search_placeholder" type="text" aria-label="Поиск заданий" data-i18n-aria="create.search_aria" />
 
             </div>
 
@@ -2971,11 +2976,12 @@
             <button id="add-from-catalog"
               data-onboarding-target="complex-editor-add-selected"
               class="add-btn-premium w-full h-11 rounded-lg font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2 disabled:cursor-not-allowed"
-              aria-label="Добавить выбранные задания (0)">
+              aria-label="Добавить выбранные задания (0)"
+              data-i18n-aria="create.add_selected_aria">
 
               <span class="material-symbols-outlined text-xl">add_circle</span>
 
-              Добавить выбранные
+              <span data-i18n="create.add_selected_btn">Добавить выбранные</span>
 
               <span id="add-counter"
                 class="counter-glass inline-flex items-center justify-center min-w-[1.5rem] h-6 rounded-full text-xs font-bold px-2 ml-2">0</span>
@@ -2983,7 +2989,7 @@
             </button>
 
             <button id="reload-catalog"
-              class="mt-2 w-full h-9 rounded-lg text-text-secondary hover:bg-bg-secondary hover:text-text-main text-sm transition-colors border border-transparent hover:border-border-subtle">Обновить</button>
+              class="mt-2 w-full h-9 rounded-lg text-text-secondary hover:bg-bg-secondary hover:text-text-main text-sm transition-colors border border-transparent hover:border-border-subtle" data-i18n="create.refresh_btn">Обновить</button>
           </div>
         </div>
 
@@ -2996,7 +3002,7 @@
               class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-disabled text-[20px]">search</span>
             <input id="complex-search"
               class="w-full pl-10 pr-4 py-2.5 bg-bg-tertiary border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-light focus:border-primary transition-all placeholder:text-text-muted text-text-main"
-              placeholder="Поиск комплексов..." type="text" />
+              placeholder="Поиск комплексов..." data-i18n-placeholder="create.complexes_search_placeholder" type="text" />
           </div>
         </div>
 
@@ -3006,7 +3012,7 @@
           <a href="/complexes/create"
             class="w-full h-10 bg-bg-secondary border border-border-subtle text-text-secondary hover:bg-bg-tertiary rounded-lg font-semibold text-sm transition-all flex items-center justify-center gap-2">
             <span class="material-symbols-outlined text-[20px]">add</span>
-            Создать новый
+            <span data-i18n="create.create_new_btn">Создать новый</span>
           </a>
         </div>
 
@@ -3022,20 +3028,18 @@
   <div id="task-context-menu"
     class="fixed z-[200] hidden min-w-[280px] rounded-xl border border-border-subtle bg-bg-secondary shadow-xl overflow-hidden py-1.5">
 
-    <div class="px-4 py-2 text-[11px] font-semibold text-text-muted uppercase tracking-wide">Сцепки</div>
+    <div class="px-4 py-2 text-[11px] font-semibold text-text-muted uppercase tracking-wide" data-i18n="create.chains_title">Сцепки</div>
 
     <button id="ctx-chain"
       class="w-full px-4 py-3 text-left text-sm hover:bg-bg-tertiary text-text-main flex items-center justify-between transition-colors">
 
-      <span>Создать новую из выделенных</span>
+      <span data-i18n="create.chain_create_from_selected">Создать новую из выделенных</span>
 
       <span class="text-xs text-text-muted" id="ctx-chain-hint"></span>
 
     </button>
 
-    <div class="px-4 pt-2 pb-1 text-[11px] font-semibold text-text-muted uppercase tracking-wide">Добавить в
-
-      сцепку</div>
+    <div class="px-4 pt-2 pb-1 text-[11px] font-semibold text-text-muted uppercase tracking-wide" data-i18n="create.chain_add_to">Добавить в сцепку</div>
 
     <div id="ctx-add-to-chain" class="pb-2"></div>
 
@@ -3044,7 +3048,7 @@
     <button id="ctx-unlink"
       class="w-full px-4 py-3 text-left text-sm hover:bg-bg-tertiary text-text-main flex items-center justify-between transition-colors">
 
-      <span>Изъять из сцепки</span>
+      <span data-i18n="create.chain_remove">Изъять из сцепки</span>
 
       <span class="text-xs text-text-muted" id="ctx-unlink-hint"></span>
 
@@ -3057,7 +3061,7 @@
     <button id="ctx-complex-import"
       class="w-full px-4 py-3 text-left text-sm hover:bg-bg-tertiary text-text-main flex items-center gap-3 transition-colors">
       <span class="material-symbols-outlined text-[20px] text-primary">download</span>
-      <span id="ctx-complex-import-text">Импортировать задания</span>
+      <span id="ctx-complex-import-text" data-i18n="create.import_tasks_btn">Импортировать задания</span>
     </button>
   </div>
 
@@ -3071,6 +3075,18 @@
       chains: [],        // [[ref1, ref2], [ref3, ref4]]
       complexSettings: {}
     };
+
+          function wt(key, fallback) {
+            if (!window.i18n) return fallback;
+            const result = window.i18n.t(key);
+            return result !== key ? result : fallback;
+          }
+
+          function _applyCreateI18n() {
+            if (window.i18n) window.i18n.updateDOM();
+          }
+
+          document.addEventListener('i18n:changed', _applyCreateI18n);
 
     function createEmptyTheoryState() {
       return {
@@ -3091,13 +3107,13 @@
     }
 
     const COMPLEX_VOICE = Object.freeze({
-      saveCreateSuccess: 'Комплекс создан. Данные сохранены в библиотеке.',
-      saveUpdateSuccess: 'Комплекс сохранён. Изменения записаны в библиотеке.',
-      saveFailed: 'Сохранение не выполнено. Проверьте данные и попробуйте ещё раз.',
-      inheritSyncSuccess: 'Наследуемая теория синхронизирована.',
-      inheritSyncComposite: 'Собрана составная теория комплекса.',
-      inheritSyncUnchanged: 'Синхронизация не требуется: контекст уже актуален.',
-      inheritSyncFailed: 'Синхронизация не выполнена. Проверьте сеть и повторите действие.',
+      saveCreateSuccess: wt('create.save_create_success', 'Комплекс создан. Данные сохранены в библиотеке.'),
+      saveUpdateSuccess: wt('create.save_update_success', 'Комплекс сохранён. Изменения записаны в библиотеке.'),
+      saveFailed: wt('create.save_failed', 'Сохранение не выполнено. Проверьте данные и попробуйте ещё раз.'),
+      inheritSyncSuccess: wt('create.inherit_sync_success', 'Наследуемая теория синхронизирована.'),
+      inheritSyncComposite: wt('create.inherit_sync_composite', 'Собрана составная теория комплекса.'),
+      inheritSyncUnchanged: wt('create.inherit_sync_unchanged', 'Синхронизация не требуется: контекст уже актуален.'),
+      inheritSyncFailed: wt('create.inherit_sync_failed', 'Синхронизация не выполнена. Проверьте сеть и повторите действие.'),
     });
 
     function toggleTheorySection(forceState) {
@@ -3155,7 +3171,7 @@
     });
 
 
-    const ERROR_DETECTION_TOOLTIP = 'Задание на поиск ошибок';
+    const ERROR_DETECTION_TOOLTIP = wt('create.error_detection_tooltip', 'Задание на поиск ошибок');
 
     const ERROR_DETECTION_BADGE_CLASS = 'inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full border border-warning-light bg-warning-light text-warning-darker';
 
@@ -3183,7 +3199,7 @@
 
       badge.title = ERROR_DETECTION_TOOLTIP;
 
-      badge.innerHTML = `${ERROR_DETECTION_BADGE_ICON} Ошибки`;
+      badge.innerHTML = `${ERROR_DETECTION_BADGE_ICON} ${wt('create.errors_label', 'Ошибки')}`;
 
       target.appendChild(badge);
 
@@ -3193,7 +3209,7 @@
 
     function errorDetectionBadgeHtml() {
 
-      return `<span class="${ERROR_DETECTION_BADGE_CLASS}" title="${ERROR_DETECTION_TOOLTIP}">${ERROR_DETECTION_BADGE_ICON} Ошибки</span>`;
+      return `<span class="${ERROR_DETECTION_BADGE_CLASS}" title="${ERROR_DETECTION_TOOLTIP}">${ERROR_DETECTION_BADGE_ICON} ${wt('create.errors_label', 'Ошибки')}</span>`;
 
     }
 
@@ -3216,7 +3232,7 @@
 
       if (!alertEl || !textEl) return;
 
-      textEl.textContent = message || 'Ошибка';
+      textEl.textContent = message || wt('create.error_default', 'Ошибка');
 
       alertEl.hidden = false;
 
@@ -3296,13 +3312,13 @@
       const libraryCount = Number(summary.library_total_count || 0);
       const libraryLimit = Number(summary.library_limit || 0);
       if (Number(summary.remaining_personal || 0) <= 0 && Number(summary.remaining_library || 0) <= 0) {
-        return `Лимит комплексов достигнут: свои ${personalCount}/${personalLimit}, библиотека ${libraryCount}/${libraryLimit}. Удалите лишнее или перейдите на Premium.`;
+        return wt('create.limit_both', `Лимит комплексов достигнут: свои ${personalCount}/${personalLimit}, библиотека ${libraryCount}/${libraryLimit}. Удалите лишнее или перейдите на Premium.`).replace('{pc}', personalCount).replace('{pl}', personalLimit).replace('{lc}', libraryCount).replace('{ll}', libraryLimit) || `Лимит комплексов достигнут: свои ${personalCount}/${personalLimit}, библиотека ${libraryCount}/${libraryLimit}. Удалите лишнее или перейдите на Premium.`;
       }
       if (Number(summary.remaining_personal || 0) <= 0) {
-        return `Лимит своих комплексов достигнут: ${personalCount}/${personalLimit}. Удалите один из личных комплексов или перейдите на Premium.`;
+        return wt('create.limit_personal', `Лимит своих комплексов достигнут: ${personalCount}/${personalLimit}. Удалите один из личных комплексов или перейдите на Premium.`).replace('{pc}', personalCount).replace('{pl}', personalLimit) || `Лимит своих комплексов достигнут: ${personalCount}/${personalLimit}. Удалите один из личных комплексов или перейдите на Premium.`;
       }
       if (Number(summary.remaining_library || 0) <= 0) {
-        return `Библиотека комплексов заполнена: ${libraryCount}/${libraryLimit}. Удалите лишний комплекс или перейдите на Premium.`;
+        return wt('create.limit_library', `Библиотека комплексов заполнена: ${libraryCount}/${libraryLimit}. Удалите лишний комплекс или перейдите на Premium.`).replace('{lc}', libraryCount).replace('{ll}', libraryLimit) || `Библиотека комплексов заполнена: ${libraryCount}/${libraryLimit}. Удалите лишний комплекс или перейдите на Premium.`;
       }
       return '';
     }
@@ -3343,13 +3359,13 @@
           badge.hidden = false;
           badge.className = 'cx-header-pill cx-mini-pill';
           setPremiumPromoTrigger(badge, false);
-          badge.textContent = 'Premium · без лимита';
+          badge.textContent = wt('create.premium_unlimited', 'Premium · без лимита');
         } else {
           badge.hidden = false;
           badge.className = blocked
             ? 'cx-header-pill cx-mini-pill cx-mini-pill--warning'
             : 'cx-header-pill cx-mini-pill cx-mini-pill--muted';
-          badge.textContent = `Мои комплексы ${Number(summary.personal_count || 0)}/${Number(summary.personal_limit || 0)} · Библиотека ${Number(summary.library_total_count || 0)}/${Number(summary.library_limit || 0)}`;
+          badge.textContent = `${wt('create.badge_my_complexes', 'Мои комплексы')} ${Number(summary.personal_count || 0)}/${Number(summary.personal_limit || 0)} · ${wt('create.badge_library', 'Библиотека')} ${Number(summary.library_total_count || 0)}/${Number(summary.library_limit || 0)}`;
         }
       }
       if (badge && summary && !isComplexPremiumPlan()) {
@@ -3462,17 +3478,17 @@
 
         case 'access_code':
 
-          return 'По коду';
+          return wt('create.vis_by_code', 'По коду');
 
         case 'private':
 
-          return 'Приватный';
+          return wt('create.vis_private', 'Приватный');
 
         case 'public':
 
         default:
 
-          return 'Общий доступ';
+          return wt('create.vis_public', 'Общий доступ');
 
       }
 
@@ -3506,17 +3522,17 @@
 
         case 'access_code':
 
-          return 'Не видно в общем каталоге. Добавить можно только по коду доступа.';
+          return wt('create.vis_desc_code', 'Не видно в общем каталоге. Добавить можно только по коду доступа.');
 
         case 'private':
 
-          return 'Не видно никому, кроме автора. Другие пользователи не увидят публикацию в каталоге и не смогут открыть её по коду.';
+          return wt('create.vis_desc_private', 'Не видно никому, кроме автора. Другие пользователи не увидят публикацию в каталоге и не смогут открыть её по коду.');
 
         case 'public':
 
         default:
 
-          return 'Виден в общем каталоге и доступен для добавления в библиотеку.';
+          return wt('create.vis_desc_public', 'Виден в общем каталоге и доступен для добавления в библиотеку.');
 
       }
 
@@ -3562,7 +3578,7 @@
 
       if (message.includes('premium_archived_content')) {
 
-        return 'Источник находится в архиве Premium. Сужение доступа доступно, а публикация новой версии и расширение доступа вернутся после восстановления Premium.';
+        return wt('create.premium_archived_err', 'Источник находится в архиве Premium. Сужение доступа доступно, а публикация новой версии и расширение доступа вернутся после восстановления Premium.');
 
       }
 
@@ -3574,7 +3590,7 @@
 
       const raw = asCleanString(value);
 
-      if (!raw) return 'ещё не публиковался';
+      if (!raw) return wt('create.never_published', 'ещё не публиковался');
 
       const date = new Date(raw);
 
@@ -3637,7 +3653,7 @@
       if (!asCleanString(state.editingId)) {
         return {
           kind: 'hidden',
-          tooltip: 'Сначала сохраните комплекс',
+          tooltip: wt('create.save_first', 'Сначала сохраните комплекс'),
           saveMessage: '',
         };
       }
@@ -3645,9 +3661,9 @@
       if (!currentPublication) {
         return {
           kind: 'unpublished',
-          badgeText: 'Не опубликован',
-          tooltip: 'Комплекс сохранён только в рабочей версии. Чтобы его увидели другие пользователи, откройте публикацию.',
-          saveMessage: 'Комплекс сохранён. Чтобы его увидели другие пользователи, откройте публикацию.',
+          badgeText: wt('create.not_published', 'Не опубликован'),
+          tooltip: wt('create.unpublished_tooltip', 'Комплекс сохранён только в рабочей версии. Чтобы его увидели другие пользователи, откройте публикацию.'),
+          saveMessage: wt('create.unpublished_save_msg', 'Комплекс сохранён. Чтобы его увидели другие пользователи, откройте публикацию.'),
         };
       }
 
@@ -3656,9 +3672,9 @@
       if (savedTimestamp && publishedTimestamp && savedTimestamp > publishedTimestamp) {
         return {
           kind: 'stale',
-          badgeText: 'Нужна публикация',
-          tooltip: 'Есть сохранённые изменения, которые ещё не попали в публикацию. Опубликуйте новую версию, чтобы их увидели другие пользователи.',
-          saveMessage: 'Комплекс сохранён. Чтобы другие пользователи увидели изменения, обновите публикацию.',
+          badgeText: wt('create.needs_publish', 'Нужна публикация'),
+          tooltip: wt('create.stale_tooltip', 'Есть сохранённые изменения, которые ещё не попали в публикацию. Опубликуйте новую версию, чтобы их увидели другие пользователи.'),
+          saveMessage: wt('create.stale_save_msg', 'Комплекс сохранён. Чтобы другие пользователи увидели изменения, обновите публикацию.'),
         };
       }
 
@@ -3666,7 +3682,7 @@
         kind: 'current',
         badgeText: '',
         tooltip: currentPublication
-          ? `Управление публикацией: ${getCatalogVisibilityLabel(currentPublication.catalog_visibility)}`
+          ? `${wt('create.manage_pub_prefix', 'Управление публикацией')}: ${getCatalogVisibilityLabel(currentPublication.catalog_visibility)}`
           : '',
         saveMessage: '',
       };
@@ -3693,15 +3709,15 @@
 
       if (labelEl) {
 
-        labelEl.textContent = publication ? 'Публикация' : 'Опубликовать';
+        labelEl.textContent = publication ? wt('create.publication_btn', 'Публикация') : wt('create.publish_btn', 'Опубликовать');
 
       }
 
       btn.title = !complexId
-        ? 'Сначала сохраните комплекс'
+        ? wt('create.save_first', 'Сначала сохраните комплекс')
         : publication
-          ? `Управление публикацией: ${getCatalogVisibilityLabel(publication.catalog_visibility)}`
-          : 'Опубликовать сохранённый комплекс';
+          ? `${wt('create.manage_pub_prefix', 'Управление публикацией')}: ${getCatalogVisibilityLabel(publication.catalog_visibility)}`
+          : wt('create.publish_saved_complex', 'Опубликовать сохранённый комплекс');
 
       badge.className = 'cx-header-pill cx-mini-pill cx-mini-pill--muted';
 
@@ -3721,7 +3737,7 @@
 
         badge.classList.add('cx-mini-pill--muted');
 
-        badge.textContent = 'Не опубликован';
+        badge.textContent = wt('create.not_published', 'Не опубликован');
 
         return;
 
@@ -3757,22 +3773,22 @@
 
       if (labelEl) {
         labelEl.textContent = archivedSource && !publication
-          ? 'Архив Premium'
+          ? wt('create.premium_archive_btn', 'Архив Premium')
           : notice.kind === 'stale'
-          ? 'Обновить'
-          : (publication ? 'Публикация' : 'Опубликовать');
+          ? wt('create.update_btn', 'Обновить')
+          : (publication ? wt('create.publication_btn', 'Публикация') : wt('create.publish_btn', 'Опубликовать'));
       }
 
       btn.title = !complexId
-        ? 'Сначала сохраните комплекс'
+        ? wt('create.save_first', 'Сначала сохраните комплекс')
         : archivedSource && !publication
-          ? 'Комплекс находится в архиве Premium. Опубликовать его можно после восстановления Premium.'
+          ? wt('create.premium_archive_no_pub_title', 'Комплекс находится в архиве Premium. Опубликовать его можно после восстановления Premium.')
         : notice.kind === 'stale'
           ? notice.tooltip
           : publication
             ? archivedSource
-              ? `Источник в архиве Premium. Можно сузить доступ текущей публикации: ${getCatalogVisibilityLabel(publication.catalog_visibility)}`
-              : `Управление публикацией: ${getCatalogVisibilityLabel(publication.catalog_visibility)}`
+              ? `${wt('create.archive_narrow_title', 'Источник в архиве Premium. Можно сузить доступ текущей публикации')}: ${getCatalogVisibilityLabel(publication.catalog_visibility)}`
+              : `${wt('create.manage_pub_prefix', 'Управление публикацией')}: ${getCatalogVisibilityLabel(publication.catalog_visibility)}`
             : notice.tooltip;
 
       badge.className = 'cx-header-pill cx-mini-pill cx-mini-pill--muted';
@@ -3793,7 +3809,7 @@
 
       if (!publication) {
         badge.className = 'cx-header-pill cx-mini-pill cx-mini-pill--muted';
-        badge.textContent = notice.badgeText;
+        badge.textContent = notice.badgeText || wt('create.not_published', 'Не опубликован');
         return;
       }
 
@@ -3909,7 +3925,7 @@
 
           await navigator.clipboard.writeText(code);
 
-          notifyComplexToast('Код доступа скопирован.', 'success', 2400);
+          notifyComplexToast(wt('create.access_code_copied', 'Код доступа скопирован.'), 'success', 2400);
 
           return;
 
@@ -3921,7 +3937,7 @@
 
       }
 
-      notifyComplexToast(`Код доступа: ${code}`, 'info', 3200);
+      notifyComplexToast(wt('create.code_access_prefix', 'Код доступа') + ': ' + code, 'info', 3200);
 
     }
 
@@ -3931,7 +3947,7 @@
 
       if (!complexId) {
 
-        notifyComplexToast('Сначала сохраните комплекс, чтобы управлять публикацией.', 'info', 3200);
+        notifyComplexToast(wt('create.save_first_to_manage_pub', 'Сначала сохраните комплекс, чтобы управлять публикацией.'), 'info', 3200);
 
         return;
 
@@ -3942,7 +3958,7 @@
 
       if (archivedSource && !publication) {
 
-        notifyComplexToast('Комплекс находится в архиве Premium. Опубликовать его можно после восстановления Premium.', 'warning', 3600);
+        notifyComplexToast(wt('create.premium_archive_no_publish', 'Комплекс находится в архиве Premium. Опубликовать его можно после восстановления Premium.'), 'warning', 3600);
 
         return;
 
@@ -3956,37 +3972,37 @@
 
       const publishIntroText = hasPublication
         ? archivedSource
-          ? 'Источник комплекса находится в архиве Premium. Опубликованная версия остаётся доступной, но новую версию и расширение доступа можно сделать только после восстановления Premium. Сузить доступ или скрыть публикацию можно сейчас.'
-          : 'Опубликовывается последняя сохранённая версия комплекса. Смена режима доступа влияет на текущую публикацию, а новые изменения из редактора станут видны другим пользователям только после публикации новой версии.'
-        : 'Будет опубликована последняя сохранённая версия комплекса. Выберите режим доступа, с которым комплекс появится для других пользователей.';
+          ? wt('create.pub_intro_archived', 'Источник комплекса находится в архиве Premium. Опубликованная версия остаётся доступной, но новую версию и расширение доступа можно сделать только после восстановления Premium. Сузить доступ или скрыть публикацию можно сейчас.')
+          : wt('create.pub_intro_existing', 'Опубликовывается последняя сохранённая версия комплекса. Смена режима доступа влияет на текущую публикацию, а новые изменения из редактора станут видны другим пользователям только после публикации новой версии.')
+        : wt('create.pub_intro_new', 'Будет опубликована последняя сохранённая версия комплекса. Выберите режим доступа, с которым комплекс появится для других пользователей.');
 
       const visibilityHelpText = hasPublication
         ? archivedSource
-          ? 'Можно выбрать только текущий или более закрытый режим доступа. Расширение доступа вернётся после Premium.'
-          : 'Если публикация уже существует, доступ можно поменять отдельно от публикации новой версии.'
-        : 'Этот режим будет применён сразу после первой публикации комплекса.';
+          ? wt('create.vis_help_archived', 'Можно выбрать только текущий или более закрытый режим доступа. Расширение доступа вернётся после Premium.')
+          : wt('create.vis_help_existing', 'Если публикация уже существует, доступ можно поменять отдельно от публикации новой версии.')
+        : wt('create.vis_help_new', 'Этот режим будет применён сразу после первой публикации комплекса.');
 
       const publicationInfoTitle = hasPublication
-        ? archivedSource ? 'Архив Premium и публикация' : 'Что произойдёт после изменения доступа'
-        : 'Что произойдёт после публикации';
+        ? archivedSource ? wt('create.pub_info_title_archived', 'Архив Premium и публикация') : wt('create.pub_info_title_existing', 'Что произойдёт после изменения доступа')
+        : wt('create.pub_info_title_new', 'Что произойдёт после публикации');
 
       const publicationInfoItems = hasPublication
         ? archivedSource
           ? [
-          'Текущая опубликованная версия остаётся доступной в выбранном сейчас режиме.',
-          'Можно сузить доступ, например с общего каталога до доступа по коду или приватного режима.',
-          'Опубликовать новую версию или расширить доступ можно после восстановления Premium.',
+          wt('create.pub_info_archived_1', 'Текущая опубликованная версия остаётся доступной в выбранном сейчас режиме.'),
+          wt('create.pub_info_archived_2', 'Можно сузить доступ, например с общего каталога до доступа по коду или приватного режима.'),
+          wt('create.pub_info_archived_3', 'Опубликовать новую версию или расширить доступ можно после восстановления Premium.'),
         ]
           : [
-          'Новые пользователи будут видеть публикацию только в рамках выбранного режима доступа.',
-          'Изменение доступа не публикует новую версию автоматически и не меняет содержимое текущей опубликованной версии.',
-          'Чтобы другие пользователи увидели новые правки из редактора, опубликуйте новую версию.',
-          'Новая публикация делает актуальной последнюю сохранённую версию комплекса для каталога и доступа по коду.',
+          wt('create.pub_info_existing_1', 'Новые пользователи будут видеть публикацию только в рамках выбранного режима доступа.'),
+          wt('create.pub_info_existing_2', 'Изменение доступа не публикует новую версию автоматически и не меняет содержимое текущей опубликованной версии.'),
+          wt('create.pub_info_existing_3', 'Чтобы другие пользователи увидели новые правки из редактора, опубликуйте новую версию.'),
+          wt('create.pub_info_existing_4', 'Новая публикация делает актуальной последнюю сохранённую версию комплекса для каталога и доступа по коду.'),
         ]
         : [
-          'Комплекс станет доступен другим пользователям в рамках выбранного режима доступа.',
-          'Для режима по коду будет создан код доступа, который можно скопировать после публикации.',
-          'Если после публикации вы измените комплекс в редакторе, эти правки станут видны другим пользователям только после публикации новой версии.',
+          wt('create.pub_info_new_1', 'Комплекс станет доступен другим пользователям в рамках выбранного режима доступа.'),
+          wt('create.pub_info_new_2', 'Для режима по коду будет создан код доступа, который можно скопировать после публикации.'),
+          wt('create.pub_info_new_3', 'Если после публикации вы измените комплекс в редакторе, эти правки станут видны другим пользователям только после публикации новой версии.'),
         ];
 
       const modal = document.createElement('div');
@@ -4000,9 +4016,9 @@
             <div class="space-y-1 max-w-3xl">
               <div class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-text-muted">
                 <span class="material-symbols-outlined text-[16px]">public</span>
-                Публикация комплекса
+                ${wt('create.publication_complex_title', 'Публикация комплекса')}
               </div>
-              <h3 class="text-xl font-bold text-text-main">${escapeHtml(asCleanString(document.getElementById('name')?.value) || 'Без названия')}</h3>
+              <h3 class="text-xl font-bold text-text-main">${escapeHtml(asCleanString(document.getElementById('name')?.value) || wt('create.no_title', 'Без названия'))}</h3>
               <p class="text-sm text-text-secondary">${escapeHtml(publishIntroText)}</p>
             </div>
             <button type="button" data-action="close" class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-text-muted hover:bg-bg-tertiary hover:text-text-main transition-colors">
@@ -4014,17 +4030,17 @@
               <div class="rounded-xl border border-border-subtle bg-bg-secondary p-4">
                 <div class="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <div class="text-xs font-semibold uppercase tracking-[0.16em] text-text-muted">Текущий статус</div>
-                    <div id="complex-publish-current-status" class="mt-1 text-base font-semibold text-text-main">${publication ? escapeHtml(getCatalogVisibilityLabel(currentVisibility)) : 'Не опубликован'}</div>
-                    <div id="complex-publish-current-meta" class="mt-1 text-sm text-text-secondary">${publication ? `Последняя публикация: ${escapeHtml(formatPublicationTimestamp(publication.latest_published_at))}` : 'После первой публикации комплекс появится в каталожной системе.'}</div>
+                    <div class="text-xs font-semibold uppercase tracking-[0.16em] text-text-muted">${wt('create.current_status', 'Текущий статус')}</div>
+                    <div id="complex-publish-current-status" class="mt-1 text-base font-semibold text-text-main">${publication ? escapeHtml(getCatalogVisibilityLabel(currentVisibility)) : wt('create.not_published', 'Не опубликован')}</div>
+                    <div id="complex-publish-current-meta" class="mt-1 text-sm text-text-secondary">${publication ? `${wt('create.last_pub_prefix', 'Последняя публикация')}: ${escapeHtml(formatPublicationTimestamp(publication.latest_published_at))}` : wt('create.first_pub_note', 'После первой публикации комплекс появится в каталожной системе.')}</div>
                   </div>
-                  <span id="complex-publish-current-badge" class="cx-mini-pill ${publication ? getCatalogVisibilityToneClass(currentVisibility) : 'cx-mini-pill--muted'} px-2.5 py-1 text-xs font-semibold rounded-full">${publication ? escapeHtml(getCatalogVisibilityLabel(currentVisibility)) : 'Не опубликован'}</span>
+                  <span id="complex-publish-current-badge" class="cx-mini-pill ${publication ? getCatalogVisibilityToneClass(currentVisibility) : 'cx-mini-pill--muted'} px-2.5 py-1 text-xs font-semibold rounded-full">${publication ? escapeHtml(getCatalogVisibilityLabel(currentVisibility)) : wt('create.not_published', 'Не опубликован')}</span>
                 </div>
               </div>
 
               <div class="space-y-3">
                 <div>
-                  <div class="text-sm font-semibold text-text-main">Кому будет доступен комплекс</div>
+                  <div class="text-sm font-semibold text-text-main">${wt('create.who_has_access', 'Кому будет доступен комплекс')}</div>
                   <p class="mt-1 text-sm text-text-secondary">${escapeHtml(visibilityHelpText)}</p>
                 </div>
                 <div class="cx-publish-visibility-grid grid gap-3">
@@ -4047,12 +4063,12 @@
               <div id="complex-publish-access-box" class="rounded-xl border border-border-subtle bg-bg-secondary p-4 ${accessCode ? '' : 'hidden'}">
                 <div class="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <div class="text-xs font-semibold uppercase tracking-[0.16em] text-text-muted">Код доступа</div>
-                    <div id="complex-publish-access-code" class="mt-1 text-base font-semibold tracking-[0.12em] text-text-main">${escapeHtml(accessCode ? formatAccessCodeDisplay(accessCode) : 'Код будет создан после публикации')}</div>
+                    <div class="text-xs font-semibold uppercase tracking-[0.16em] text-text-muted">${wt('create.access_code_label', 'Код доступа')}</div>
+                    <div id="complex-publish-access-code" class="mt-1 text-base font-semibold tracking-[0.12em] text-text-main">${escapeHtml(accessCode ? formatAccessCodeDisplay(accessCode) : wt('create.code_will_be_created', 'Код будет создан после публикации'))}</div>
                   </div>
                   <button type="button" data-action="copy-access-code" class="btn-secondary inline-flex items-center gap-2 px-3 py-2 text-sm">
                     <span class="material-symbols-outlined text-[18px]">content_copy</span>
-                    <span>Копировать</span>
+                    <span>${wt('create.copy_btn', 'Копировать')}</span>
                   </button>
                 </div>
               </div>
@@ -4067,7 +4083,7 @@
               </div>
 
               <div id="complex-publish-unsaved-note" class="${state.isDirty ? '' : 'hidden'} rounded-xl border border-warning-light bg-warning-light/40 px-4 py-3 text-sm text-warning-darker">
-                Есть несохранённые изменения. В публикацию попадёт последняя сохранённая версия комплекса.
+                ${wt('create.unsaved_pub_note', 'Есть несохранённые изменения. В публикацию попадёт последняя сохранённая версия комплекса.')}
               </div>
 
               <div id="complex-publish-feedback" class="hidden rounded-xl border px-4 py-3 text-sm"></div>
@@ -4076,16 +4092,16 @@
           <div class="cx-publish-modal-footer flex flex-wrap items-center justify-between gap-3 border-t border-border-subtle bg-surface-1 px-6 py-4">
             <button type="button" data-action="close" class="btn-secondary inline-flex items-center gap-2 px-4 py-2 text-sm">
               <span class="material-symbols-outlined text-[18px]">close</span>
-              <span>Закрыть</span>
+              <span>${wt('create.close_btn', 'Закрыть')}</span>
             </button>
             <div class="cx-publish-modal-actions flex flex-wrap items-center gap-2">
               <button type="button" data-action="update-visibility" class="btn-secondary inline-flex items-center gap-2 px-4 py-2 text-sm ${hasPublication ? '' : 'hidden'}">
                 <span class="material-symbols-outlined text-[18px]">tune</span>
-                <span>Сохранить доступ</span>
+                <span>${wt('create.save_access_btn', 'Сохранить доступ')}</span>
               </button>
               <button type="button" data-action="publish-version" class="btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm">
                 <span class="material-symbols-outlined text-[18px]">publish</span>
-                <span data-role="publish-version-label">${hasPublication ? 'Опубликовать версию' : 'Опубликовать'}</span>
+                <span data-role="publish-version-label">${hasPublication ? wt('create.publish_version_btn', 'Опубликовать версию') : wt('create.publish_btn', 'Опубликовать')}</span>
               </button>
             </div>
           </div>
@@ -4179,15 +4195,15 @@
 
         if (currentBox) {
 
-          currentBox.textContent = currentItem ? getCatalogVisibilityLabel(currentItem.catalog_visibility) : 'Не опубликован';
+          currentBox.textContent = currentItem ? getCatalogVisibilityLabel(currentItem.catalog_visibility) : wt('create.not_published', 'Не опубликован');
 
         }
 
         if (currentMeta) {
 
           currentMeta.textContent = currentItem
-            ? `Последняя публикация: ${formatPublicationTimestamp(currentItem.latest_published_at)}`
-            : 'После первой публикации комплекс появится в каталожной системе.';
+            ? `${wt('create.last_pub_prefix', 'Последняя публикация')}: ${formatPublicationTimestamp(currentItem.latest_published_at)}`
+            : wt('create.first_pub_note', 'После первой публикации комплекс появится в каталожной системе.');
 
         }
 
@@ -4195,7 +4211,7 @@
 
           currentBadge.className = `cx-mini-pill px-2.5 py-1 text-xs font-semibold rounded-full ${currentItem ? getCatalogVisibilityToneClass(currentItem.catalog_visibility) : 'cx-mini-pill--muted'}`;
 
-          currentBadge.textContent = currentItem ? getCatalogVisibilityLabel(currentItem.catalog_visibility) : 'Не опубликован';
+          currentBadge.textContent = currentItem ? getCatalogVisibilityLabel(currentItem.catalog_visibility) : wt('create.not_published', 'Не опубликован');
 
         }
 
@@ -4209,7 +4225,7 @@
 
           accessCodeEl.textContent = activeCode
             ? formatAccessCodeDisplay(activeCode)
-            : (selectedVisibility === 'access_code' ? 'Код будет создан после публикации' : '');
+            : (selectedVisibility === 'access_code' ? wt('create.code_will_be_created', 'Код будет создан после публикации') : '');
 
         }
 
@@ -4227,20 +4243,20 @@
 
           updateBtn.classList.toggle('opacity-60', !canUpdateVisibility);
           updateBtn.title = blockedByArchive
-            ? 'Расширение доступа для архива Premium недоступно до восстановления Premium.'
+            ? wt('create.archive_expand_blocked', 'Расширение доступа для архива Premium недоступно до восстановления Premium.')
             : '';
 
         }
 
         if (publishVersionLabel) {
-          publishVersionLabel.textContent = currentItem ? 'Опубликовать версию' : 'Опубликовать';
+          publishVersionLabel.textContent = currentItem ? wt('create.publish_version_btn', 'Опубликовать версию') : wt('create.publish_btn', 'Опубликовать');
         }
 
         if (publishVersionBtn) {
           publishVersionBtn.disabled = modalBusy || archivedSource;
           publishVersionBtn.classList.toggle('opacity-60', archivedSource);
           publishVersionBtn.title = archivedSource
-            ? 'Новая версия недоступна, пока источник находится в архиве Premium.'
+            ? wt('create.new_version_blocked_archive', 'Новая версия недоступна, пока источник находится в архиве Premium.')
             : '';
         }
 
@@ -4300,7 +4316,7 @@
 
         if (nextVisibility === asCleanString(currentItem.catalog_visibility).toLowerCase()) {
 
-          setFeedback('Режим доступа уже выбран и сохранён.', 'info');
+          setFeedback(wt('create.access_mode_already_saved', 'Режим доступа уже выбран и сохранён.'), 'info');
 
           return;
 
@@ -4308,7 +4324,7 @@
 
         if (archivedSource && isCatalogVisibilityExpansion(currentItem.catalog_visibility, nextVisibility)) {
 
-          setFeedback('Источник находится в архиве Premium: можно только сузить доступ или скрыть публикацию.', 'error');
+          setFeedback(wt('create.archive_narrow_only', 'Источник находится в архиве Premium: можно только сузить доступ или скрыть публикацию.'), 'error');
 
           return;
 
@@ -4343,15 +4359,15 @@
 
           syncModalState(data.item);
 
-          setFeedback(`Доступ обновлён: ${getCatalogVisibilityLabel(data.item.catalog_visibility)}.`, 'success');
+          setFeedback(`${wt('create.access_updated', 'Доступ обновлён')}: ${getCatalogVisibilityLabel(data.item.catalog_visibility)}.`, 'success');
 
-          notifyComplexToast('Статус публикации обновлён.', 'success', 2600);
+          notifyComplexToast(wt('create.pub_status_updated', 'Статус публикации обновлён.'), 'success', 2600);
 
         } catch (error) {
 
           console.error('[Complex Builder] Visibility update failed', error);
 
-          setFeedback(`Не удалось изменить доступ: ${getPremiumArchivedPublicationErrorMessage(error)}`, 'error');
+          setFeedback(`${wt('create.access_change_failed', 'Не удалось изменить доступ')}: ${getPremiumArchivedPublicationErrorMessage(error)}`, 'error');
 
         } finally {
 
@@ -4366,7 +4382,7 @@
 
         if (archivedSource) {
 
-          setFeedback('Новая версия недоступна, пока источник находится в архиве Premium. Сузить доступ можно кнопкой «Сохранить доступ».', 'error');
+          setFeedback(wt('create.new_version_blocked_archive_detail', 'Новая версия недоступна, пока источник находится в архиве Premium. Сузить доступ можно кнопкой «Сохранить доступ».'), 'error');
 
           return;
 
@@ -4405,15 +4421,15 @@
 
           const visibilityLabel = getCatalogVisibilityLabel(data.item.catalog_visibility);
 
-          setFeedback(`${hasPublication ? 'Публикация обновлена' : 'Комплекс опубликован'}. Режим доступа: ${visibilityLabel}.`, 'success');
+          setFeedback(`${hasPublication ? wt('create.pub_updated', 'Публикация обновлена') : wt('create.complex_published', 'Комплекс опубликован')}. ${wt('create.access_mode_prefix', 'Режим доступа')}: ${visibilityLabel}.`, 'success');
 
-          notifyComplexToast(`Комплекс опубликован: ${visibilityLabel}.`, 'success', 2800);
+          notifyComplexToast(`${wt('create.complex_published', 'Комплекс опубликован')}: ${visibilityLabel}.`, 'success', 2800);
 
         } catch (error) {
 
           console.error('[Complex Builder] Publish failed', error);
 
-          setFeedback(`Не удалось опубликовать комплекс: ${getPremiumArchivedPublicationErrorMessage(error, 'catalog_publish_failed')}`, 'error');
+          setFeedback(`${wt('create.publish_failed_prefix', 'Не удалось опубликовать комплекс')}: ${getPremiumArchivedPublicationErrorMessage(error, 'catalog_publish_failed')}`, 'error');
 
         } finally {
 
@@ -4455,10 +4471,10 @@
       const mode = resolveComplexTheoryMode(item);
       const syncStatus = resolveComplexTheorySyncStatus(item);
       const modeBadge = mode === 'inherit'
-        ? `<span class="cx-complex-badge cx-complex-badge--muted inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"><span class="material-symbols-outlined text-[12px]">account_tree</span>наследование</span>`
-        : `<span class="cx-complex-badge cx-complex-badge--primary inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"><span class="material-symbols-outlined text-[12px]">tune</span>локально</span>`;
+        ? `<span class="cx-complex-badge cx-complex-badge--muted inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"><span class="material-symbols-outlined text-[12px]">account_tree</span>${wt('create.theory_mode_inherit', 'наследование')}</span>`
+        : `<span class="cx-complex-badge cx-complex-badge--primary inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"><span class="material-symbols-outlined text-[12px]">tune</span>${wt('create.theory_mode_local', 'локально')}</span>`;
       const compositeBadge = syncStatus === 'composite'
-        ? `<span class="cx-complex-badge cx-complex-badge--success inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"><span class="material-symbols-outlined text-[12px]">layers</span>составная теория</span>`
+        ? `<span class="cx-complex-badge cx-complex-badge--success inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"><span class="material-symbols-outlined text-[12px]">layers</span>${wt('create.theory_mode_composite', 'составная теория')}</span>`
         : '';
       return `${modeBadge}${compositeBadge}`;
     }
@@ -4521,7 +4537,7 @@
       }
       const cached = normalizedTheoryId ? String(state.theoryTitleCache[normalizedTheoryId] || '').trim() : '';
       if (cached) return cached;
-      return normalizedTheoryId ? 'Теория без названия' : 'Теория пока не выбрана';
+      return normalizedTheoryId ? wt('create.theory_no_title', 'Теория без названия') : wt('create.theory_not_selected', 'Теория пока не выбрана');
     }
 
     function isTechnicalTheoryId(value) {
@@ -4630,9 +4646,9 @@
         .map((row) => formatInheritedTopicLabel(row))
         .filter(Boolean);
       if (!labels.length) return '';
-      if (labels.length === 1) return `Источник: ${labels[0]}`;
-      if (labels.length === 2) return `Источники: ${labels[0]} и ${labels[1]}`;
-      return `Источники: ${labels[0]}, ${labels[1]} и ещё ${labels.length - 2}`;
+      if (labels.length === 1) return `${wt('create.source_prefix', 'Источник')}: ${labels[0]}`;
+      if (labels.length === 2) return `${wt('create.sources_prefix', 'Источники')}: ${labels[0]}${wt('create.and_connector', ' и ')}${labels[1]}`;
+      return `${wt('create.sources_prefix', 'Источники')}: ${labels[0]}, ${labels[1]}${wt('create.and_more_prefix', ' и ещё ').replace('{n}', labels.length - 2)}`;
     }
 
     function renderInheritedTheoryPreviews() {
@@ -4661,7 +4677,7 @@
               <div class="theory-inherited-preview-card__title truncate" title="${title}">${title}</div>
               ${sourceSummary ? `<div class="theory-inherited-preview-card__meta truncate" title="${sourceSummary}">${sourceSummary}</div>` : ''}
             </div>
-            <span class="cx-mini-pill cx-mini-pill--muted inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold">Предпросмотр</span>
+            <span class="cx-mini-pill cx-mini-pill--muted inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold">${wt('create.preview_badge', 'Предпросмотр')}</span>
           </div>
           <div class="theory-inherited-preview-card__body">${bodyHtml}</div>
         `;
@@ -4775,7 +4791,7 @@
 
     function formatInheritedTopicLabel(row) {
       if (!row || typeof row !== 'object') return '';
-      const topicPart = row.topicTitle || row.topicId || 'Без названия';
+      const topicPart = row.topicTitle || row.topicId || wt('create.no_title', 'Без названия');
       const modulePart = row.moduleTitle || row.moduleId || '';
       return modulePart ? `${modulePart} / ${topicPart}` : topicPart;
     }
@@ -4784,10 +4800,10 @@
       const labels = (Array.isArray(topicRows) ? topicRows : [])
         .map((row) => formatInheritedTopicLabel(row))
         .filter(Boolean);
-      if (!labels.length) return 'из связанных тем комплекса';
-      if (labels.length === 1) return `из темы «${labels[0]}»`;
-      if (labels.length === 2) return `из тем «${labels[0]}» и «${labels[1]}»`;
-      return `из тем «${labels[0]}», «${labels[1]}» и ещё ${labels.length - 2}`;
+      if (!labels.length) return wt('create.from_linked_topics', 'из связанных тем комплекса');
+      if (labels.length === 1) return wt('create.from_topic_prefix', 'из темы «{n}»').replace('{n}', labels[0]);
+      if (labels.length === 2) return wt('create.from_topics_two', 'из тем «{a}» и «{b}»').replace('{a}', labels[0]).replace('{b}', labels[1]);
+      return wt('create.from_topics_many', 'из тем «{a}», «{b}» и ещё {n}').replace('{a}', labels[0]).replace('{b}', labels[1]).replace('{n}', String(labels.length - 2));
     }
 
     function buildInheritedTheoryPreviewMeta(topicRows, topicCount) {
@@ -4795,15 +4811,15 @@
         .map((row) => formatInheritedTopicLabel(row))
         .filter(Boolean);
       if (labels.length === 1) {
-        return `Из темы «${labels[0]}». Теория наследуется автоматически.`;
+        return wt('create.from_topic_auto', 'Из темы «{n}». Теория наследуется автоматически.').replace('{n}', labels[0]);
       }
       if (labels.length > 1) {
-        return `Из ${labels.length} связанных тем. Теория наследуется автоматически.`;
+        return wt('create.from_n_topics_auto', 'Из {n} связанных тем. Теория наследуется автоматически.').replace('{n}', String(labels.length));
       }
       if (topicCount > 0) {
-        return `Из ${topicCount} связанных тем. Теория наследуется автоматически.`;
+        return wt('create.from_n_topics_auto', 'Из {n} связанных тем. Теория наследуется автоматически.').replace('{n}', String(topicCount));
       }
-      return 'Теория наследуется автоматически из связанных тем.';
+      return wt('create.theory_auto_inherit', 'Теория наследуется автоматически из связанных тем.');
     }
 
     function resolveInheritedTheoryTitle(topicRows) {
@@ -4816,7 +4832,7 @@
         .find(Boolean);
       if (fromTopicRow && !isTechnicalTheoryId(fromTopicRow)) return fromTopicRow;
 
-      return 'Теория из связанной темы';
+      return wt('create.theory_from_linked_topic', 'Теория из связанной темы');
     }
 
     function formatInheritedTheoryLabel(link) {
@@ -4824,30 +4840,30 @@
       if (!String(link?.theory_id || '').trim()) return '';
       const readable = getReadableTheoryTitle(link?.theory_id, link?.title_cache || '');
       if (readable && !isTechnicalTheoryId(readable)) return readable;
-      return 'Теория без названия';
+      return wt('create.theory_no_title', 'Теория без названия');
     }
 
     function buildTheoryCollapsedStatusLabel() {
       const mode = String(state.theory?.mode || 'none');
-      if (mode === 'new') return 'Локальная теория';
+      if (mode === 'new') return wt('create.theory_local', 'Локальная теория');
       if (mode === 'link') {
         const linkedTitle = getReadableTheoryTitle(state.theory?.theoryId, state.theory?.title || '');
-        return linkedTitle ? `Привязана: ${linkedTitle}` : 'Привязана теория';
+        return linkedTitle ? `${wt('create.theory_linked_prefix', 'Привязана')}: ${linkedTitle}` : wt('create.theory_linked', 'Привязана теория');
       }
 
       const syncStatus = String(state.complexTheoryContext?.syncStatus || 'none');
-      if (syncStatus === 'composite') return 'Составная теория из тем';
+      if (syncStatus === 'composite') return wt('create.theory_composite_from_topics', 'Составная теория из тем');
       if (syncStatus === 'none') {
         const topicRows = resolveInheritedTheoryTopicRows();
         const topicCount = Number(state.complexTheoryContext?.syncMeta?.topic_count || topicRows.length || 0);
-        if (topicCount > 0) return 'В связанных темах нет теории';
-        return 'Наследование из тем';
+        if (topicCount > 0) return wt('create.theory_no_in_linked', 'В связанных темах нет теории');
+        return wt('create.theory_inherit_from_topics', 'Наследование из тем');
       }
 
       const inheritedTheoryLink = resolveInheritedTheoryLinkForBuilder();
       const inheritedLabel = formatInheritedTheoryLabel(inheritedTheoryLink);
-      if (inheritedLabel) return `Наследуется: ${inheritedLabel}`;
-      return 'Наследование из тем';
+      if (inheritedLabel) return `${wt('create.theory_inherited_prefix', 'Наследуется')}: ${inheritedLabel}`;
+      return wt('create.theory_inherit_from_topics', 'Наследование из тем');
     }
 
     function hasVisibleTheoryPreviewContext() {
@@ -4890,14 +4906,14 @@
       if (!helpEl) return;
       const mode = String(state.theory?.mode || 'none');
       if (mode === 'new') {
-        helpEl.textContent = 'Создаётся отдельная теория внутри этого комплекса. Её можно редактировать прямо здесь.';
+        helpEl.textContent = wt('create.theory_help_new', 'Создаётся отдельная теория внутри этого комплекса. Её можно редактировать прямо здесь.');
         return;
       }
       if (mode === 'link') {
-        helpEl.textContent = 'Комплекс использует уже существующую теорию. Здесь она доступна только для просмотра.';
+        helpEl.textContent = wt('create.theory_help_link', 'Комплекс использует уже существующую теорию. Здесь она доступна только для просмотра.');
         return;
       }
-      helpEl.textContent = 'Теория будет браться из тем, на которые ссылаются задания комплекса.';
+      helpEl.textContent = wt('create.theory_help_inherit', 'Теория будет браться из тем, на которые ссылаются задания комплекса.');
     }
 
     function isTheoryEditingEnabled() {
@@ -4947,23 +4963,23 @@
 
       if (mode === 'link') {
         shell.classList.remove('hidden');
-        kickerEl.textContent = 'Привязанная теория';
+        kickerEl.textContent = wt('create.theory_kicker_link', 'Привязанная теория');
         titleEl.textContent = getReadableTheoryTitle(state.theory?.theoryId, state.theory?.title || '');
-        badgeEl.textContent = 'Только просмотр';
+        badgeEl.textContent = wt('create.theory_readonly_badge', 'Только просмотр');
         badgeEl.classList.add('bg-info-lighter', 'text-info-text');
-        metaEl.textContent = 'Комплекс использует эту теорию как внешний источник. Здесь доступен только просмотр.';
+        metaEl.textContent = wt('create.theory_link_meta', 'Комплекс использует эту теорию как внешний источник. Здесь доступен только просмотр.');
         return;
       }
 
       if (effectiveSyncStatus === 'composite') {
         shell.classList.remove('hidden');
-        kickerEl.textContent = 'Наследование из тем';
-        titleEl.textContent = 'Составная теория из нескольких тем';
-        badgeEl.textContent = 'Составная теория';
+        kickerEl.textContent = wt('create.theory_kicker_inherit', 'Наследование из тем');
+        titleEl.textContent = wt('create.theory_composite_title', 'Составная теория из нескольких тем');
+        badgeEl.textContent = wt('create.theory_composite_badge', 'Составная теория');
         badgeEl.classList.add('bg-warning-light', 'text-warning-darker');
-        metaEl.textContent = 'Источник: несколько связанных тем с разными теориями.';
+        metaEl.textContent = wt('create.theory_composite_meta', 'Источник: несколько связанных тем с разными теориями.');
         detailsEl.classList.remove('hidden');
-        appendDetailChip(`Теорий: ${compositeTheoryLinks.length || 0}`, ['border-info-light', 'bg-white', 'text-info-text']);
+        appendDetailChip(wt('create.theory_count_chip', 'Теорий: {n}').replace('{n}', String(compositeTheoryLinks.length || 0)), ['border-info-light', 'bg-white', 'text-info-text']);
         topicRows.slice(0, 2).forEach((topicRow) => {
           appendDetailChip(formatInheritedTopicLabel(topicRow), ['border-info-light', 'bg-white', 'text-info-text']);
         });
@@ -4972,15 +4988,15 @@
 
       if (effectiveSyncStatus === 'ok') {
         shell.classList.remove('hidden');
-        kickerEl.textContent = 'Наследование из тем';
+        kickerEl.textContent = wt('create.theory_kicker_inherit', 'Наследование из тем');
         const theoryLabel = resolveInheritedTheoryTitle(topicRows);
         titleEl.textContent = theoryLabel;
-        badgeEl.textContent = 'Наследование';
+        badgeEl.textContent = wt('create.theory_inherit_badge', 'Наследование');
         badgeEl.classList.add('bg-success-lighter', 'text-success-darker');
         metaEl.textContent = buildInheritedTheoryPreviewMeta(topicRows, topicCount);
         detailsEl.classList.remove('hidden');
         if (topicCount > 0) {
-          appendDetailChip(`Связанных тем: ${topicCount}`, ['border-success-light', 'bg-white', 'text-success-darker']);
+          appendDetailChip(wt('create.theory_linked_topics_chip', 'Связанных тем: {n}').replace('{n}', String(topicCount)), ['border-success-light', 'bg-white', 'text-success-darker']);
         }
         topicRows.slice(0, 2).forEach((topicRow) => {
           appendDetailChip(formatInheritedTopicLabel(topicRow), ['border-success-light', 'bg-white', 'text-success-darker']);
@@ -5088,7 +5104,7 @@
     function buildCompositeTheorySummaryText() {
       const theoryLinks = resolveCompositeTheoryLinksForBuilder();
       if (!theoryLinks.length) {
-        return 'В темах найдено несколько теорий. Комплекс использует составной набор материалов.';
+        return wt('create.composite_theory_generic', 'В темах найдено несколько теорий. Комплекс использует составной набор материалов.');
       }
 
       const previewLabels = theoryLinks
@@ -5096,8 +5112,8 @@
         .map((link) => getReadableTheoryTitle(link?.theory_id, link?.title_cache || ''))
         .filter(Boolean);
       const extraCount = Math.max(0, theoryLinks.length - previewLabels.length);
-      const suffix = extraCount > 0 ? ` и ещё ${extraCount}` : '';
-      return `Комплекс собран из нескольких теорий: ${previewLabels.join(', ')}${suffix}. Это нормальный многотемный сценарий.`;
+      const suffix = extraCount > 0 ? wt('create.and_more_prefix', ' и ещё {n}').replace('{n}', String(extraCount)) : '';
+      return wt('create.composite_theory_detail', 'Комплекс собран из нескольких теорий: {list}. Это нормальный многотемный сценарий.').replace('{list}', previewLabels.join(', ') + suffix);
     }
 
     function resolveWorkspaceTheoryLink() {
@@ -5121,16 +5137,16 @@
       if (!helpEl) return;
       const mode = String(state.theory?.mode || 'none');
       if (mode === 'new') {
-        helpEl.textContent = 'Создаётся отдельная теория внутри этого комплекса. Её можно редактировать прямо здесь.';
+        helpEl.textContent = wt('create.theory_help_new', 'Создаётся отдельная теория внутри этого комплекса. Её можно редактировать прямо здесь.');
         return;
       }
       if (mode === 'link') {
         helpEl.textContent = state.theory?.sourceKind === 'linked_library'
-          ? 'Комплекс использует связанную теорию из каталога. Здесь она доступна только для просмотра.'
-          : 'Комплекс использует уже существующую локальную теорию. Здесь она доступна только для просмотра.';
+          ? wt('create.theory_help_link_catalog', 'Комплекс использует связанную теорию из каталога. Здесь она доступна только для просмотра.')
+          : wt('create.theory_help_link_local', 'Комплекс использует уже существующую локальную теорию. Здесь она доступна только для просмотра.');
         return;
       }
-      helpEl.textContent = 'Теория будет браться из тем, на которые ссылаются задания комплекса.';
+      helpEl.textContent = wt('create.theory_help_inherit', 'Теория будет браться из тем, на которые ссылаются задания комплекса.');
     }
 
     function updateTheoryPreviewPresentation() {
@@ -5177,35 +5193,35 @@
       if (mode === 'link') {
         const isLinkedCatalogTheory = state.theory?.sourceKind === 'linked_library';
         shell.classList.remove('hidden');
-        kickerEl.textContent = isLinkedCatalogTheory ? 'Связанная теория из каталога' : 'Привязанная локальная теория';
+        kickerEl.textContent = isLinkedCatalogTheory ? wt('create.theory_kicker_catalog', 'Связанная теория из каталога') : wt('create.theory_kicker_local_link', 'Привязанная локальная теория');
         titleEl.textContent = isLinkedCatalogTheory
-          ? (state.theory?.title || 'Теория из каталога')
+          ? (state.theory?.title || wt('create.theory_from_catalog', 'Теория из каталога'))
           : getReadableTheoryTitle(state.theory?.theoryId, state.theory?.title || '');
-        badgeEl.textContent = 'Только просмотр';
+        badgeEl.textContent = wt('create.theory_readonly_badge', 'Только просмотр');
         badgeEl.classList.add('bg-info-lighter', 'text-info-text');
         metaEl.textContent = isLinkedCatalogTheory
-          ? 'Комплекс использует связанную публикацию из каталога. Теория открывается только на чтение и не копируется в рабочее пространство.'
-          : 'Комплекс использует эту теорию как внешний источник. Здесь доступен только просмотр.';
+          ? wt('create.theory_catalog_link_meta', 'Комплекс использует связанную публикацию из каталога. Теория открывается только на чтение и не копируется в рабочее пространство.')
+          : wt('create.theory_link_meta', 'Комплекс использует эту теорию как внешний источник. Здесь доступен только просмотр.');
         detailsEl.classList.remove('hidden');
         appendDetailChip(
-          isLinkedCatalogTheory ? 'Источник: каталог' : 'Источник: рабочее пространство',
+          isLinkedCatalogTheory ? wt('create.source_catalog_chip', 'Источник: каталог') : wt('create.source_workspace_chip', 'Источник: рабочее пространство'),
           ['border-info-light', 'bg-white', 'text-info-text']
         );
         if (isLinkedCatalogTheory && state.theory?.accessState) {
-          appendDetailChip(`Доступ: ${state.theory.accessState}`, ['border-info-light', 'bg-white', 'text-info-text']);
+          appendDetailChip(`${wt('create.access_chip_prefix', 'Доступ')}: ${state.theory.accessState}`, ['border-info-light', 'bg-white', 'text-info-text']);
         }
         return;
       }
 
       if (effectiveSyncStatus === 'composite') {
         shell.classList.remove('hidden');
-        kickerEl.textContent = 'Наследование из тем';
-        titleEl.textContent = 'Составная теория из нескольких тем';
-        badgeEl.textContent = 'Составная теория';
+        kickerEl.textContent = wt('create.theory_kicker_inherit', 'Наследование из тем');
+        titleEl.textContent = wt('create.theory_composite_title', 'Составная теория из нескольких тем');
+        badgeEl.textContent = wt('create.theory_composite_badge', 'Составная теория');
         badgeEl.classList.add('bg-warning-light', 'text-warning-darker');
-        metaEl.textContent = 'Источник: несколько связанных тем с разными теориями.';
+        metaEl.textContent = wt('create.theory_composite_meta', 'Источник: несколько связанных тем с разными теориями.');
         detailsEl.classList.remove('hidden');
-        appendDetailChip(`Теорий: ${compositeTheoryLinks.length || 0}`, ['border-info-light', 'bg-white', 'text-info-text']);
+        appendDetailChip(wt('create.theory_count_chip', 'Теорий: {n}').replace('{n}', String(compositeTheoryLinks.length || 0)), ['border-info-light', 'bg-white', 'text-info-text']);
         topicRows.slice(0, 2).forEach((topicRow) => {
           appendDetailChip(formatInheritedTopicLabel(topicRow), ['border-info-light', 'bg-white', 'text-info-text']);
         });
@@ -5214,14 +5230,14 @@
 
       if (effectiveSyncStatus === 'ok') {
         shell.classList.remove('hidden');
-        kickerEl.textContent = 'Наследование из тем';
+        kickerEl.textContent = wt('create.theory_kicker_inherit', 'Наследование из тем');
         titleEl.textContent = resolveInheritedTheoryTitle(topicRows);
-        badgeEl.textContent = 'Наследование';
+        badgeEl.textContent = wt('create.theory_inherit_badge', 'Наследование');
         badgeEl.classList.add('bg-success-lighter', 'text-success-darker');
         metaEl.textContent = buildInheritedTheoryPreviewMeta(topicRows, topicCount);
         detailsEl.classList.remove('hidden');
         if (topicCount > 0) {
-          appendDetailChip(`Связанных тем: ${topicCount}`, ['border-success-light', 'bg-white', 'text-success-darker']);
+          appendDetailChip(wt('create.theory_linked_topics_chip', 'Связанных тем: {n}').replace('{n}', String(topicCount)), ['border-success-light', 'bg-white', 'text-success-darker']);
         }
         topicRows.slice(0, 2).forEach((topicRow) => {
           appendDetailChip(formatInheritedTopicLabel(topicRow), ['border-success-light', 'bg-white', 'text-success-darker']);
@@ -5287,7 +5303,7 @@
       if (!state.editingId) return;
       if (state.theorySyncInFlight) return;
       if (resolveEffectiveComplexTheoryMode() !== 'inherit' || state.theory.mode !== 'none') {
-        notifyComplexToast('Синхронизация доступна только для режима наследования.', 'info', 3200);
+        notifyComplexToast(wt('create.sync_inherit_only', 'Синхронизация доступна только для режима наследования.'), 'info', 3200);
         return;
       }
 
@@ -5331,11 +5347,11 @@
         } else if (reason === 'unchanged') {
           notifyComplexToast(COMPLEX_VOICE.inheritSyncUnchanged, 'info', 3000);
         } else if (reason === 'no_topic_refs') {
-          notifyComplexToast('В комплексе нет корректных ссылок на темы для синхронизации.', 'warning', 3600);
+          notifyComplexToast(wt('create.sync_no_topic_refs', 'В комплексе нет корректных ссылок на темы для синхронизации.'), 'warning', 3600);
         } else if (reason === 'mode_override') {
-          notifyComplexToast('Режим локальной теории блокирует синхронизацию.', 'warning', 3200);
+          notifyComplexToast(wt('create.sync_mode_blocked', 'Режим локальной теории блокирует синхронизацию.'), 'warning', 3200);
         } else {
-          notifyComplexToast('Синхронизация завершена без изменений.', 'info', 3000);
+          notifyComplexToast(wt('create.sync_no_changes', 'Синхронизация завершена без изменений.'), 'info', 3000);
         }
       } catch (error) {
         console.error('Inherited theory sync failed', error);
@@ -5351,19 +5367,19 @@
 
       const translations = {
 
-        'open_answer': 'Открытый ответ',
+        'open_answer': wt('create.task_type_open', 'Открытый ответ'),
 
-        'click': 'Клик',
+        'click': wt('create.task_type_click', 'Клик'),
 
-        'test': 'Тест',
+        'test': wt('create.task_type_test', 'Тест'),
 
-        'draw': 'Рисование',
+        'draw': wt('create.task_type_draw', 'Рисование'),
 
-        'sequence_assembly': 'Последовательность'
+        'sequence_assembly': wt('create.task_type_sequence', 'Последовательность')
 
       };
 
-      return translations[type] || type || 'Задание';
+      return translations[type] || type || wt('create.task_fallback', 'Задание');
 
     }
 
@@ -5375,11 +5391,11 @@
 
       const type = translateTaskType(item.task_type);
 
-      const suffix = isErrorDetectionEntry(item) ? ' · Ошибки' : '';
+      const suffix = isErrorDetectionEntry(item) ? wt('create.task_errors_suffix', ' · Ошибки') : '';
 
       if (name) return `${name} (${type}${suffix})`;
 
-      return `${name || 'Задание'}${suffix}`;
+      return `${name || wt('create.task_fallback', 'Задание')}${suffix}`;
 
     }
 
@@ -5471,37 +5487,37 @@
 
       if (taskCount === 0) {
 
-        warnings.push('Комплекс пуст. Добавьте хотя бы одно задание перед сохранением.');
+        warnings.push(wt('create.warn_empty', 'Комплекс пуст. Добавьте хотя бы одно задание перед сохранением.'));
 
       } else {
 
         if (taskCount < 3) {
 
-          warnings.push('В комплексе меньше трёх заданий. Для первого прохождения он может ощущаться слишком коротким.');
+          warnings.push(wt('create.warn_few_tasks', 'В комплексе меньше трёх заданий. Для первого прохождения он может ощущаться слишком коротким.'));
 
         }
 
         if (!hasTheory) {
 
-          warnings.push('Теория не добавлена. Новому пользователю может не хватить контекста перед стартом.');
+          warnings.push(wt('create.warn_no_theory', 'Теория не добавлена. Новому пользователю может не хватить контекста перед стартом.'));
 
         }
 
         if (theoryMode === 'link' && !hasTheoryLink) {
 
-          warnings.push('Вы выбрали привязку к теории, но ещё не указали конкретную теорию.');
+          warnings.push(wt('create.warn_theory_not_set', 'Вы выбрали привязку к теории, но ещё не указали конкретную теорию.'));
 
         }
 
         if (typeCounts.size <= 1 && taskCount > 1) {
 
-          warnings.push('Сейчас здесь только один тип заданий. Комплекс может ощущаться слишком однообразным.');
+          warnings.push(wt('create.warn_one_type', 'Сейчас здесь только один тип заданий. Комплекс может ощущаться слишком однообразным.'));
 
         }
 
         if (shortChainCount > 0) {
 
-          warnings.push('Есть незавершённая сцепка. В каждой сцепке должно быть минимум два задания.');
+          warnings.push(wt('create.warn_short_chain', 'Есть незавершённая сцепка. В каждой сцепке должно быть минимум два задания.'));
 
         }
 
@@ -5509,13 +5525,13 @@
 
       const theoryLabel = theoryMode === 'none'
         ? (inheritedSyncStatus === 'composite'
-          ? 'Подборка из тем'
-          : (inheritedTheoryId ? 'Наследуется из тем' : 'Без теории'))
+          ? wt('create.theory_status_collection', 'Подборка из тем')
+          : (inheritedTheoryId ? wt('create.theory_status_inherited', 'Наследуется из тем') : wt('create.theory_status_none', 'Без теории')))
         : (theoryMode === 'link' && !hasTheoryLink)
-          ? 'Связь не завершена'
+          ? wt('create.theory_status_link_incomplete', 'Связь не завершена')
           : theoryMode === 'new'
-            ? 'Новая теория'
-            : 'Теория привязана';
+            ? wt('create.theory_status_new', 'Новая теория')
+            : wt('create.theory_status_linked', 'Теория привязана');
 
       const looksReady =
         taskCount >= 3 &&
@@ -5574,10 +5590,10 @@
       const snapshot = getBuilderQualitySnapshot();
 
       metricsRoot.replaceChildren();
-      metricsRoot.appendChild(createBuilderMetric('Заданий', String(snapshot.taskCount)));
-      metricsRoot.appendChild(createBuilderMetric('Типов', String(snapshot.typeCounts.size || 0)));
-      metricsRoot.appendChild(createBuilderMetric('Теория', snapshot.theoryLabel));
-      metricsRoot.appendChild(createBuilderMetric('Сцепок', String(snapshot.chainCount)));
+      metricsRoot.appendChild(createBuilderMetric(wt('create.metric_tasks', 'Заданий'), String(snapshot.taskCount)));
+      metricsRoot.appendChild(createBuilderMetric(wt('create.metric_types', 'Типов'), String(snapshot.typeCounts.size || 0)));
+      metricsRoot.appendChild(createBuilderMetric(wt('create.metric_theory', 'Теория'), snapshot.theoryLabel));
+      metricsRoot.appendChild(createBuilderMetric(wt('create.metric_chains', 'Сцепок'), String(snapshot.chainCount)));
 
       if (statusBadge && statusDot && statusIcon) {
         statusBadge.className = 'cx-status-pill px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider transition-colors';
@@ -5585,19 +5601,19 @@
 
         if (snapshot.looksReady) {
           statusBadge.classList.add('cx-status-pill--success');
-          statusBadge.textContent = 'Готово';
+          statusBadge.textContent = wt('create.status_ready', 'Готово');
           statusDot.classList.add('status-ready');
           statusIcon.textContent = 'verified_user';
           statusIcon.className = 'material-symbols-outlined text-[18px] text-text-main';
         } else if (snapshot.warningCount > 0) {
           statusBadge.classList.add('cx-status-pill--warning');
-          statusBadge.textContent = 'Есть риски';
+          statusBadge.textContent = wt('create.status_risks', 'Есть риски');
           statusDot.classList.add('status-warning');
           statusIcon.textContent = 'report_problem';
           statusIcon.className = 'material-symbols-outlined text-[18px] text-text-main';
         } else {
           statusBadge.classList.add('cx-status-pill--muted');
-          statusBadge.textContent = 'В работе';
+          statusBadge.textContent = wt('create.status_in_progress', 'В работе');
           statusDot.classList.add('status-draft');
           statusIcon.textContent = 'edit_note';
           statusIcon.className = 'material-symbols-outlined text-[18px] text-text-main';
@@ -5608,7 +5624,7 @@
       if (!snapshot.typeCounts.size) {
         const emptyType = document.createElement('span');
         emptyType.className = 'text-[10px] text-text-muted italic';
-        emptyType.textContent = 'Добавьте задачи для анализа';
+        emptyType.textContent = wt('create.add_tasks_for_analysis', 'Добавьте задачи для анализа');
         typesRoot.appendChild(emptyType);
       } else {
         Array.from(snapshot.typeCounts.entries())
@@ -5625,7 +5641,7 @@
       if (!snapshot.warningCount) {
         const okBox = document.createElement('div');
         okBox.className = 'cx-state-box cx-state-box--success rounded-lg px-3 py-2 text-xs flex items-center gap-2';
-        okBox.innerHTML = '<span class="material-symbols-outlined text-[14px]">check_circle</span> Готов к сохранению';
+        okBox.innerHTML = `<span class="material-symbols-outlined text-[14px]">check_circle</span> ${wt('create.ready_to_save', 'Готов к сохранению')}`;
         warningsRoot.appendChild(okBox);
       } else {
         snapshot.warnings.forEach((warningText) => {
@@ -5835,7 +5851,7 @@
 
       const canChain = selectedRefs.length >= 2;
 
-      chainHint.textContent = canChain ? `(${selectedRefs.length})` : '(нужно 2+)';
+      chainHint.textContent = canChain ? `(${selectedRefs.length})` : wt('create.chain_need_2plus', '(нужно 2+)');
 
       chainBtn.disabled = !canChain;
 
@@ -5859,7 +5875,7 @@
 
         stub.className = 'px-4 py-2 text-sm text-text-muted';
 
-        stub.textContent = 'Сцепок пока нет';
+        stub.textContent = wt('create.no_chains_yet', 'Сцепок пока нет');
 
         addToChainRoot.appendChild(stub);
 
@@ -5885,7 +5901,7 @@
 
           label.className = 'truncate';
 
-          label.textContent = `Сцепка #${idx + 1}`;
+          label.textContent = `${wt('create.chain_label', 'Сцепка')} #${idx + 1}`;
 
           left.appendChild(dot);
 
@@ -5907,7 +5923,7 @@
 
             if (alreadyRefs.length) {
 
-              showGlobalError(`Нельзя добавить: задание уже находится в другой сцепке (${alreadyRefs[0]}).`);
+              showGlobalError(`${wt('create.chain_add_conflict', 'Нельзя добавить: задание уже находится в другой сцепке')} (${alreadyRefs[0]}).`);
 
               return;
 
@@ -5935,7 +5951,7 @@
 
       const canUnlink = chainIdx >= 0;
 
-      unlinkHint.textContent = canUnlink ? `(#${chainIdx + 1})` : '(нет сцепки)';
+      unlinkHint.textContent = canUnlink ? `(#${chainIdx + 1})` : `(${wt('create.no_chain', 'нет сцепки')})`;
 
       unlinkBtn.disabled = !canUnlink;
 
@@ -5977,7 +5993,7 @@
 
         if (conflict.length) {
 
-          showGlobalError(`Нельзя создать сцепку: задание уже находится в другой сцепке (${conflict[0]}).`);
+          showGlobalError(`${wt('create.chain_create_conflict', 'Нельзя создать сцепку: задание уже находится в другой сцепке')} (${conflict[0]}).`);
 
           return;
 
@@ -6025,7 +6041,7 @@
       return state.chains
         .map((chain, idx) => ({
           index: idx,
-          label: `СЦЕПКА ${idx + 1}`,
+          label: `${wt('create.chain_card_label', 'СЦЕПКА')} ${idx + 1}`,
           tasksCount: chain.length,
           isInChain: chain.includes(taskRef)
         }))
@@ -6104,14 +6120,14 @@
         card.className = `task-card-premium group ${isSelected ? 'selected' : ''}`;
 
         // Get meta chips
-        const metaLabel = t.topic_name || (t.module_name ? `${t.module_name.replace(/_/g, ' ')}` : 'Задание');
+        const metaLabel = t.topic_name || (t.module_name ? `${t.module_name.replace(/_/g, ' ')}` : wt('create.task_fallback', 'Задание'));
         const safeMetaLabel = escapeHtml(metaLabel);
         const safeTaskLabel = escapeHtml(t.label);
         const safeTaskTypeLabel = escapeHtml(taskTypeLabel);
         const testModeHtml = isTestTask ? `
-          <div class="test-mode-control flex shrink-0 items-center gap-0.5 rounded-md border border-border-subtle bg-surface-soft p-0.5" data-test-mode-control data-onboarding-target="complex-editor-test-mode-control" title="${isInChain ? 'В цепочках тесты всегда показываются вместе' : 'Режим показа вопросов теста'}">
-            <button type="button" class="px-2 py-1 text-[11px] font-semibold rounded ${testMode === 'together' || isInChain ? 'bg-white text-text-main shadow-sm' : 'text-text-muted hover:text-text-main'}" data-mode="together" ${isInChain ? 'disabled' : ''}>Вместе</button>
-            <button type="button" class="px-2 py-1 text-[11px] font-semibold rounded ${testMode === 'scattered' && !isInChain ? 'bg-white text-text-main shadow-sm' : 'text-text-muted hover:text-text-main'}" data-mode="scattered" ${isInChain ? 'disabled' : ''}>Вразброс</button>
+          <div class="test-mode-control flex shrink-0 items-center gap-0.5 rounded-md border border-border-subtle bg-surface-soft p-0.5" data-test-mode-control data-onboarding-target="complex-editor-test-mode-control" title="${isInChain ? wt('create.test_mode_chain_title', 'В цепочках тесты всегда показываются вместе') : wt('create.test_mode_title', 'Режим показа вопросов теста')}">
+            <button type="button" class="px-2 py-1 text-[11px] font-semibold rounded ${testMode === 'together' || isInChain ? 'bg-white text-text-main shadow-sm' : 'text-text-muted hover:text-text-main'}" data-mode="together" ${isInChain ? 'disabled' : ''}>${wt('create.test_mode_together', 'Вместе')}</button>
+            <button type="button" class="px-2 py-1 text-[11px] font-semibold rounded ${testMode === 'scattered' && !isInChain ? 'bg-white text-text-main shadow-sm' : 'text-text-muted hover:text-text-main'}" data-mode="scattered" ${isInChain ? 'disabled' : ''}>${wt('create.test_mode_scattered', 'Вразброс')}</button>
           </div>
         ` : '';
 
@@ -6150,7 +6166,7 @@
           ${testModeHtml}
 
           <!-- Delete Button -->
-          <button class="delete-task-btn p-1 text-text-muted hover:text-status-error hover:bg-error-lighter rounded-md transition-colors opacity-0 group-hover:opacity-100" title="Удалить задание">
+          <button class="delete-task-btn p-1 text-text-muted hover:text-status-error hover:bg-error-lighter rounded-md transition-colors opacity-0 group-hover:opacity-100" title="${wt('create.delete_task_title', 'Удалить задание')}">
               <span class="material-symbols-outlined text-[16px] text-text-main">delete</span>
           </button>
         `;
@@ -6389,7 +6405,7 @@
 
         if (totalEl) {
 
-          totalEl.textContent = `Всего: ${state.catalog.length}`;
+          totalEl.textContent = `${wt('create.total_prefix', 'Всего')}: ${state.catalog.length}`;
 
         }
 
@@ -6409,7 +6425,7 @@
 
         stateEl.className = 'mt-3 text-sm text-text-secondary';
 
-        stateEl.textContent = 'Загрузка каталога…';
+        stateEl.textContent = wt('create.catalog_loading', 'Загрузка каталога…');
 
       }
 
@@ -6431,7 +6447,7 @@
 
           if (totalEl) {
 
-            totalEl.textContent = `Всего: ${state.catalog.length}`;
+            totalEl.textContent = `${wt('create.total_prefix', 'Всего')}: ${state.catalog.length}`;
 
           }
 
@@ -6449,7 +6465,7 @@
 
         if (totalEl) {
 
-          totalEl.textContent = `Всего: ${state.catalog.length}`;
+          totalEl.textContent = `${wt('create.total_prefix', 'Всего')}: ${state.catalog.length}`;
 
         }
 
@@ -6469,7 +6485,7 @@
 
           stateEl.className = 'mt-3 text-sm text-error';
 
-          stateEl.textContent = 'Не удалось загрузить каталог заданий.';
+          stateEl.textContent = wt('create.catalog_load_failed', 'Не удалось загрузить каталог заданий.');
 
         }
 
@@ -6619,7 +6635,7 @@
       if (selectedEl) {
         const inComplex = (typeof state !== 'undefined' && state.selectedTasks) ? state.selectedTasks.length : 0;
         const total = selected.size + inComplex;
-        selectedEl.textContent = `Выбрано: ${total}`;
+        selectedEl.textContent = `${wt('create.selected_prefix', 'Выбрано')}: ${total}`;
         selectedEl.setAttribute('data-count', total.toString());
 
         // Update visual state based on count
@@ -6638,7 +6654,7 @@
         // Button enabled only if there are NEW selections
         const disabled = selected.size === 0;
         addBtn.toggleAttribute('disabled', disabled);
-        addBtn.setAttribute('aria-label', `Добавить выбранные задания (${selected.size})`);
+        addBtn.setAttribute('aria-label', `${wt('create.add_selected_tasks', 'Добавить выбранные задания')} (${selected.size})`);
 
         if (addCounter) {
           addCounter.textContent = selected.size.toString();
@@ -6703,7 +6719,7 @@
 
         empty.className = 'p-4 text-sm text-text-secondary';
 
-        empty.textContent = 'Ничего не найдено.';
+        empty.textContent = wt('create.nothing_found', 'Ничего не найдено.');
 
         root.appendChild(empty);
 
@@ -6732,7 +6748,7 @@
             <span class="material-symbols-outlined module-icon">${iconName}</span>
             <div>
               <h3 class="module-name">${safeModuleName}</h3>
-              <p class="module-meta">${topicCount} ${topicCount === 1 ? 'тема' : topicCount < 5 ? 'темы' : 'тем'} · ${taskCount} ${taskCount === 1 ? 'задание' : taskCount < 5 ? 'задания' : 'заданий'}</p>
+              <p class="module-meta">${topicCount} ${topicCount === 1 ? wt('create.topic_1', 'тема') : topicCount < 5 ? wt('create.topic_2_4', 'темы') : wt('create.topic_5plus', 'тем')} · ${taskCount} ${taskCount === 1 ? wt('create.task_count_1', 'задание') : taskCount < 5 ? wt('create.task_count_2_4', 'задания') : wt('create.task_count_5plus', 'заданий')}</p>
             </div>
           </div>
           <button class="module-expand" data-action="toggle">
@@ -6782,7 +6798,7 @@
           topicHeader.innerHTML = `
             <span class="topic-name">${safeTopicName}</span>
             <div class="flex shrink-0 items-center gap-2">
-              <span class="topic-count">${taskCountInTopic} ${taskCountInTopic === 1 ? 'задание' : taskCountInTopic < 5 ? 'задания' : 'заданий'}</span>
+              <span class="topic-count">${taskCountInTopic} ${taskCountInTopic === 1 ? wt('create.task_count_1', 'задание') : taskCountInTopic < 5 ? wt('create.task_count_2_4', 'задания') : wt('create.task_count_5plus', 'заданий')}</span>
               <span class="material-symbols-outlined topic-expand" data-topic-chevron>expand_more</span>
             </div>
           `;
@@ -6829,7 +6845,7 @@
                 <span class="chip-number">${safeTaskName}</span>
                 ${isErrorDetection ? '<span class="material-symbols-outlined" style="font-size: 0.875rem;">error</span>' : ''}
                 <span class="material-symbols-outlined chip-type" title="${safeTypeLabel}" style="font-size: 1rem;">${getTaskTypeIcon(task.task_type)}</span>
-                ${alreadyAdded ? '<span class="chip-added-badge">В комплексе</span>' : ''}
+                ${alreadyAdded ? `<span class="chip-added-badge">${wt('create.in_complex_badge', 'В комплексе')}</span>` : ''}
               </label>
             `;
 
@@ -7002,7 +7018,7 @@
 
       if (refs.length < 2) {
 
-        showGlobalError('Для сцепки выберите минимум 2 задания в списке слева.');
+        showGlobalError(wt('create.chain_min2_error', 'Для сцепки выберите минимум 2 задания в списке слева.'));
 
         return;
 
@@ -7016,7 +7032,7 @@
 
       if (conflict.length) {
 
-        showGlobalError(`Некоторые задания уже в сцепках: ${conflict.join(', ')}`);
+        showGlobalError(`${wt('create.chain_tasks_already_in', 'Некоторые задания уже в сцепках')}: ${conflict.join(', ')}`);
 
         return;
 
@@ -8167,14 +8183,14 @@
         const resp = await fetch("/api/theories");
         const data = await resp.json();
         if (!resp.ok || !data.ok) {
-          picker.innerHTML = '<option value="">Не удалось загрузить теории</option>';
+          picker.innerHTML = `<option value="">${wt('create.theory_load_failed_opt', 'Не удалось загрузить теории')}</option>`;
           if (typeof NotificationUI !== "undefined") {
-            NotificationUI.toast("Не удалось загрузить список теорий", "warning", 2200);
+            NotificationUI.toast(wt('create.theory_list_load_failed', 'Не удалось загрузить список теорий'), "warning", 2200);
           }
           return;
         }
         const items = Array.isArray(data.items) ? data.items : [];
-        picker.innerHTML = '<option value="">Выберите теорию</option>';
+        picker.innerHTML = `<option value="">${wt('create.theory_pick_placeholder', 'Выберите теорию')}</option>`;
         items.forEach((item) => {
           const opt = document.createElement("option");
           opt.value = item.id;
@@ -8183,9 +8199,9 @@
         });
       } catch (e) {
         console.error("Failed to load theories catalog", e);
-        picker.innerHTML = '<option value="">Не удалось загрузить теории</option>';
+        picker.innerHTML = `<option value="">${wt('create.theory_load_failed_opt', 'Не удалось загрузить теории')}</option>`;
         if (typeof NotificationUI !== "undefined") {
-          NotificationUI.toast("Не удалось загрузить список теорий", "warning", 2200);
+          NotificationUI.toast(wt('create.theory_list_load_failed', 'Не удалось загрузить список теорий'), "warning", 2200);
         }
       }
     }
@@ -8266,12 +8282,12 @@
         if (picker) picker.value = item.id;
         updateTheoryCopyButtonState();
         if (typeof NotificationUI !== "undefined") {
-          NotificationUI.toast("Копия теории создана", "success", 1800);
+          NotificationUI.toast(wt('create.theory_copy_created', 'Копия теории создана'), "success", 1800);
         }
         markDirty();
       } catch (e) {
         console.error("Theory copy failed", e);
-        showGlobalError("Не удалось создать копию теории");
+        showGlobalError(wt('create.theory_copy_failed', 'Не удалось создать копию теории'));
       } finally {
         if (copyBtn) copyBtn.removeAttribute("disabled");
       }
@@ -8375,7 +8391,7 @@
         }
       } catch (e) {
         console.error("Theory image upload failed", e);
-        showGlobalError("Не удалось загрузить изображение в теорию");
+        showGlobalError(wt('create.theory_img_upload_failed', 'Не удалось загрузить изображение в теорию'));
       } finally {
         if (input) input.value = "";
       }
@@ -8482,7 +8498,7 @@
         selectTheoryImage(img);
       } catch (e) {
         console.error("Theory image upload failed", e);
-        showGlobalError("Не удалось загрузить изображение в теорию");
+        showGlobalError(wt('create.theory_img_upload_failed', 'Не удалось загрузить изображение в теорию'));
       } finally {
         if (input) input.value = "";
       }
@@ -8545,11 +8561,11 @@
     }
 
     function buildTheoryPickerOptionLabel(item) {
-      if (!item || typeof item !== 'object') return 'Теория';
+      if (!item || typeof item !== 'object') return wt('create.theory_fallback', 'Теория');
       const sourceKind = normalizeTheorySourceKind(item.source_kind || item.sourceKind);
       if (sourceKind === 'linked_library') {
         const accessState = String(item.access_state || item.accessState || '').trim().toLowerCase();
-        const baseTitle = String(item.title || item.name || item.item_title || '').trim() || 'Теория из каталога';
+        const baseTitle = String(item.title || item.name || item.item_title || '').trim() || wt('create.theory_from_catalog', 'Теория из каталога');
         return accessState && accessState !== 'active' ? `${baseTitle} (${accessState})` : baseTitle;
       }
       return getReadableTheoryTitle(item.id, item.title || '');
@@ -8592,12 +8608,12 @@
         picker.innerHTML = '';
         const placeholder = document.createElement('option');
         placeholder.value = '';
-        placeholder.textContent = 'Выберите теорию';
+        placeholder.textContent = wt('create.theory_pick_placeholder', 'Выберите теорию');
         picker.appendChild(placeholder);
 
         if (workspaceItems.length) {
           const workspaceGroup = document.createElement('optgroup');
-          workspaceGroup.label = 'Свои теории';
+          workspaceGroup.label = wt('create.theory_group_own', 'Свои теории');
           workspaceItems.forEach((item) => {
             const opt = document.createElement('option');
             opt.value = buildTheoryPickerValue('workspace', item.id);
@@ -8609,7 +8625,7 @@
 
         if (linkedEntries.length) {
           const linkedGroup = document.createElement('optgroup');
-          linkedGroup.label = 'Связанные из каталога';
+          linkedGroup.label = wt('create.theory_group_linked', 'Связанные из каталога');
           linkedEntries.forEach((entry) => {
             const opt = document.createElement('option');
             opt.value = buildTheoryPickerValue('linked_library', entry.library_entry_id);
@@ -8625,13 +8641,13 @@
         }
 
         if (!workspaceItems.length && !linkedEntries.length && typeof NotificationUI !== "undefined") {
-          NotificationUI.toast("Список теорий пока пуст", "info", 2200);
+          NotificationUI.toast(wt('create.theory_list_empty', 'Список теорий пока пуст'), "info", 2200);
         }
       } catch (e) {
         console.error("Failed to load theories catalog", e);
-        picker.innerHTML = '<option value="">Не удалось загрузить теории</option>';
+        picker.innerHTML = `<option value="">${wt('create.theory_load_failed_opt', 'Не удалось загрузить теории')}</option>`;
         if (typeof NotificationUI !== "undefined") {
-          NotificationUI.toast("Не удалось загрузить список теорий", "warning", 2200);
+          NotificationUI.toast(wt('create.theory_list_load_failed', 'Не удалось загрузить список теорий'), "warning", 2200);
         }
       }
     }
@@ -8820,7 +8836,7 @@
 
       if (!payload.name || !payload.name.trim()) {
 
-        setFieldError('name-error', 'Название обязательно');
+        setFieldError('name-error', wt('create.validate_name_required', 'Название обязательно'));
 
         ok = false;
 
@@ -8835,7 +8851,7 @@
 
       if (!Array.isArray(payload.tasks) || payload.tasks.length === 0) {
 
-        setFieldError('tasks-error', 'Добавьте хотя бы одно задание');
+        setFieldError('tasks-error', wt('create.validate_tasks_empty', 'Добавьте хотя бы одно задание'));
 
         ok = false;
 
@@ -8849,7 +8865,7 @@
 
         if (!validateTaskRefFormat(ref)) {
 
-          setFieldError('tasks-error', `Неверный формат task_ref: ${ref}`);
+          setFieldError('tasks-error', `${wt('create.validate_task_bad_format', 'Неверный формат task_ref')}: ${ref}`);
 
           ok = false;
 
@@ -8859,7 +8875,7 @@
 
         if (seen.has(ref)) {
 
-          setFieldError('tasks-error', `Дубликат task_ref: ${ref}`);
+          setFieldError('tasks-error', `${wt('create.validate_task_duplicate', 'Дубликат task_ref')}: ${ref}`);
 
           ok = false;
 
@@ -8879,7 +8895,7 @@
 
         if (!Array.isArray(ch) || ch.length < 2) {
 
-          setFieldError('chains-error', 'Сцепка должна содержать минимум 2 задания');
+          setFieldError('chains-error', wt('create.validate_chain_min2', 'Сцепка должна содержать минимум 2 задания'));
 
           ok = false;
 
@@ -8891,7 +8907,7 @@
 
           if (!seen.has(ref)) {
 
-            setFieldError('chains-error', `Задание в сцепке отсутствует в tasks: ${ref}`);
+            setFieldError('chains-error', `${wt('create.validate_chain_task_missing', 'Задание в сцепке отсутствует в tasks')}: ${ref}`);
 
             ok = false;
 
@@ -8901,7 +8917,7 @@
 
           if (inChains.has(ref)) {
 
-            setFieldError('chains-error', `Задание встречается в нескольких сцепках: ${ref}`);
+            setFieldError('chains-error', `${wt('create.validate_chain_task_multi', 'Задание встречается в нескольких сцепках')}: ${ref}`);
 
             ok = false;
 
@@ -8939,21 +8955,21 @@
 
           <h2 class="text-xl font-bold text-text-main mb-4">
 
-            ⚠️ Конфликт версий
+            ⚠️ ${escapeHtml(wt('create.conflict_title', 'Конфликт версий'))}
 
           </h2>
 
           <p class="text-text-secondary dark:text-text-muted mb-4">
 
-            Этот комплекс был изменён другим пользователем или в другой вкладке.
+            ${escapeHtml(wt('create.conflict_desc', 'Этот комплекс был изменён другим пользователем или в другой вкладке.'))}
 
           </p>
 
           <div class="bg-surface-2 dark:bg-surface-2 rounded p-3 mb-4 text-sm">
 
-            <p><strong>Ваша версия:</strong> ${safeExpectedVersion}</p>
+            <p><strong>${escapeHtml(wt('create.conflict_your_version', 'Ваша версия'))}:</strong> ${safeExpectedVersion}</p>
 
-            <p><strong>Текущая версия:</strong> ${safeCurrentVersion}</p>
+            <p><strong>${escapeHtml(wt('create.conflict_current_version', 'Текущая версия'))}:</strong> ${safeCurrentVersion}</p>
 
           </div>
 
@@ -8961,19 +8977,19 @@
 
             <button id="conflict-reload" class="w-full px-4 py-2 bg-primary text-primary-fg rounded hover:bg-primary-hover transition-colors">
 
-              🔄 Перезагрузить данные (потеряю свои изменения)
+              🔄 ${escapeHtml(wt('create.conflict_reload_btn', 'Перезагрузить данные (потеряю свои изменения)'))}
 
             </button>
 
             <button id="conflict-force" class="w-full px-4 py-2 bg-error text-text-contrast rounded hover:bg-error-dark transition-colors">
 
-              💪 Перезаписать (потеряются чужие изменения)
+              💪 ${escapeHtml(wt('create.conflict_force_btn', 'Перезаписать (потеряются чужие изменения)'))}
 
             </button>
 
             <button id="conflict-cancel" class="w-full px-4 py-2 bg-bg-tertiary text-text-secondary rounded hover:bg-bg-hover transition-colors">
 
-              ❌ Отмена
+              ❌ ${escapeHtml(wt('create.conflict_cancel_btn', 'Отмена'))}
 
             </button>
 
@@ -8993,7 +9009,7 @@
 
         modal.remove();
 
-        showGlobalError('Данные перезагружены. Ваши изменения потеряны.');
+        showGlobalError(wt('create.conflict_reloaded', 'Данные перезагружены. Ваши изменения потеряны.'));
 
       });
 
@@ -9029,13 +9045,13 @@
 
           }
 
-          showGlobalError('Комплекс сохранён (перезаписаны чужие изменения)');
+          showGlobalError(wt('create.conflict_force_saved', 'Комплекс сохранён (перезаписаны чужие изменения)'));
 
           setTimeout(() => window.navigateWithTransition('/complexes'), 1500);
 
         } else {
 
-          showGlobalError('Ошибка при принудительном сохранении');
+          showGlobalError(wt('create.conflict_force_failed', 'Ошибка при принудительном сохранении'));
 
         }
 
@@ -9053,7 +9069,7 @@
 
     function formatVersion(isoString) {
 
-      if (!isoString) return 'неизвестно';
+      if (!isoString) return wt('create.version_unknown', 'неизвестно');
 
       try {
 
@@ -9161,7 +9177,7 @@
       const validation = validateAutosavePayload(payload);
       if (!validation.ok) {
         updateComplexSaveStatus({
-          message: 'Автосохранение в историю ждёт корректные данные',
+          message: wt('create.autosave_waiting', 'Автосохранение в историю ждёт корректные данные'),
           tone: 'warning',
         });
         return false;
@@ -9187,14 +9203,14 @@
         state.autosave.lastSignature = signature;
         state.autosave.lastSavedAt = savedAt;
         updateComplexSaveStatus({
-          message: `Автосохранено в историю: ${formatVersion(savedAt)}`,
+          message: `${wt('create.autosaved_prefix', 'Автосохранено в историю')}: ${formatVersion(savedAt)}`,
           tone: 'success',
         });
         return true;
       } catch (error) {
         console.error('History autosave failed', error);
         updateComplexSaveStatus({
-          message: 'Автосохранение в историю не выполнено',
+          message: wt('create.autosave_failed_msg', 'Автосохранение в историю не выполнено'),
           tone: 'error',
         });
         return false;
@@ -9221,7 +9237,7 @@
       hideGlobalError();
 
       if (!state.editingId && isComplexCreationBlocked()) {
-        const message = getComplexLimitMessage() || 'Лимит комплексов достигнут';
+        const message = getComplexLimitMessage() || wt('create.complex_limit_reached', 'Лимит комплексов достигнут');
         const btn = document.getElementById('save-btn');
         showGlobalError(message);
         notifyComplexToast(message, 'warning', 3600);
@@ -9243,7 +9259,7 @@
       try {
 
         if (state.theory.mode === "link" && !hasSelectedTheoryTarget()) {
-          showGlobalError("Выберите теорию для привязки");
+          showGlobalError(wt('create.select_theory_for_link', 'Выберите теорию для привязки'));
           if (btn) btn.removeAttribute('disabled');
           return;
         }
@@ -9253,7 +9269,7 @@
             await ensureTheoryPersisted();
           } catch (theoryErr) {
             console.error("Theory save failed", theoryErr);
-            showGlobalError(`Ошибка сохранения теории: ${theoryErr?.message || theoryErr}`);
+            showGlobalError(`${wt('create.theory_save_failed_prefix', 'Ошибка сохранения теории')}: ${theoryErr?.message || theoryErr}`);
             if (btn) btn.removeAttribute('disabled');
             return;
           }
@@ -9309,7 +9325,7 @@
 
         if (resp.status === 409 && data?.error === 'workspace_limit_reached') {
           await loadComplexWorkspaceLimits();
-          const message = getComplexLimitMessage() || 'Лимит комплексов достигнут';
+          const message = getComplexLimitMessage() || wt('create.complex_limit_reached', 'Лимит комплексов достигнут');
           showGlobalError(message);
           notifyComplexToast(message, 'warning', 3600);
           if (btn) btn.removeAttribute('disabled');
@@ -9350,7 +9366,7 @@
 
               } else {
 
-                setFieldError(target, err.reason || 'Ошибка валидации');
+                setFieldError(target, err.reason || wt('create.validation_error', 'Ошибка валидации'));
 
               }
 
@@ -9358,11 +9374,11 @@
 
             const first = details[0];
 
-            showGlobalError(`Ошибка валидации: ${first.field}: ${first.reason}`);
+            showGlobalError(`${wt('create.validation_error_prefix', 'Ошибка валидации')}: ${first.field}: ${first.reason}`);
 
           } else {
 
-            showGlobalError(`Ошибка: ${data.error || 'save_failed'}`);
+            showGlobalError(`${wt('create.save_error_prefix', 'Ошибка')}: ${data.error || 'save_failed'}`);
 
           }
 
@@ -9383,7 +9399,7 @@
         updateLastSaveTimestamp(state.currentVersion || null);
         state.autosave.lastSignature = '';
         updateComplexSaveStatus({
-          message: `Сохранено: ${formatVersion(state.currentVersion || null)}`,
+          message: `${wt('create.saved_prefix', 'Сохранено')}: ${formatVersion(state.currentVersion || null)}`,
           tone: 'success',
         });
 
@@ -9466,7 +9482,7 @@
 
     function updateComplexEditorHeader(isEditing) {
 
-      const titleText = isEditing ? 'Редактирование комплекса' : 'Создание комплекса';
+      const titleText = isEditing ? wt('create.page_title_edit', 'Редактирование комплекса') : wt('create.page_title_create', 'Создание комплекса');
 
       const titleEl = document.getElementById('page-title-text');
 
@@ -9515,7 +9531,7 @@
 
         badge.hidden = false;
 
-        badge.textContent = 'Новый комплекс';
+        badge.textContent = wt('create.badge_new_complex', 'Новый комплекс');
 
         return;
 
@@ -9527,7 +9543,7 @@
 
         badge.hidden = false;
 
-        badge.textContent = 'Есть несохранённые';
+        badge.textContent = wt('create.badge_unsaved', 'Есть несохранённые');
 
         return;
 
@@ -9557,7 +9573,7 @@
 
       if (state.editingId) {
         updateComplexSaveStatus({
-          message: 'Есть несохранённые изменения',
+          message: wt('create.unsaved_changes_msg', 'Есть несохранённые изменения'),
           tone: 'warning',
         });
       }
@@ -9693,7 +9709,7 @@
           markDirty();
         } catch (e) {
           console.error("Failed to switch linked theory", e);
-          showGlobalError("Не удалось загрузить выбранную теорию");
+          showGlobalError(wt('create.theory_load_selected_failed', 'Не удалось загрузить выбранную теорию'));
         }
       });
 
@@ -9905,7 +9921,7 @@
 
         if (bad || dup) {
 
-          showGlobalError(`Добавление завершено: добавлено ${ok}, дубликатов ${dup}, неверный формат ${bad}.`);
+          showGlobalError(`${wt('create.import_done_prefix', 'Добавление завершено')}: ${wt('create.import_done_added', 'добавлено')} ${ok}, ${wt('create.import_done_dup', 'дубликатов')} ${dup}, ${wt('create.import_done_bad', 'неверный формат')} ${bad}.`);
 
         }
 
@@ -10072,7 +10088,7 @@
           }
         } catch (e) {
           console.error("Failed to load linked theory", e);
-          showGlobalError("Не удалось загрузить связанную теорию");
+          showGlobalError(wt('create.theory_load_linked_failed', 'Не удалось загрузить связанную теорию'));
         }
       } else {
         state.theory = createEmptyTheoryState();
@@ -10107,7 +10123,7 @@
 
         if (!data.ok) {
 
-          showGlobalError(`Не удалось загрузить данные комплекса: ${data.error}`);
+          showGlobalError(`${wt('create.complex_load_failed_prefix', 'Не удалось загрузить данные комплекса')}: ${data.error}`);
 
           return;
 
@@ -10119,7 +10135,7 @@
 
         console.error('Failed to load complex data', e);
 
-        showGlobalError('Ошибка при загрузке данных комплекса.');
+        showGlobalError(wt('create.complex_load_error', 'Ошибка при загрузке данных комплекса.'));
 
       }
 
@@ -10137,7 +10153,7 @@
 
         if (!data.ok) {
 
-          showGlobalError('Не удалось загрузить историю изменений');
+          showGlobalError(wt('create.history_load_failed', 'Не удалось загрузить историю изменений'));
 
           return;
 
@@ -10147,7 +10163,7 @@
 
         if (history.length === 0) {
 
-          NotificationUI.toast('История изменений пуста', 'info');
+          NotificationUI.toast(wt('create.history_empty', 'История изменений пуста'), 'info');
 
           return;
 
@@ -10182,7 +10198,7 @@
 
                 <span class="material-symbols-outlined text-text-muted">history</span>
 
-                История изменений
+                ${escapeHtml(wt('create.history_title', 'История изменений'))}
 
               </h2>
 
@@ -10212,7 +10228,7 @@
 
           const chainCount = (snapshot.chains || []).length;
 
-          const name = snapshot.name || 'Без названия';
+          const name = snapshot.name || wt('create.no_title', 'Без названия');
           const safeName = escapeHtml(name);
           const safeDateStr = escapeHtml(dateStr);
           const safeTimeStr = escapeHtml(timeStr);
@@ -10222,8 +10238,8 @@
           const badgeClass = isAutosave
             ? 'bg-info-lighter text-info-text border-info-light'
             : 'bg-surface-1 text-text-secondary border-border-subtle';
-          const badgeLabel = isAutosave ? 'Автосохранение' : 'Сохранение';
-          const actionLabel = isAutosave ? 'Открыть' : 'Восстановить';
+          const badgeLabel = isAutosave ? wt('create.history_badge_autosave', 'Автосохранение') : wt('create.history_badge_save', 'Сохранение');
+          const actionLabel = isAutosave ? wt('create.history_action_open', 'Открыть') : wt('create.history_action_restore', 'Восстановить');
 
           return `
 
@@ -10245,9 +10261,9 @@
 
                       <div class="text-xs text-text-secondary flex gap-3">
 
-                        <span>Заданий: ${taskCount}</span>
+                        <span>${escapeHtml(wt('create.history_tasks_prefix', 'Заданий'))}: ${taskCount}</span>
 
-                        <span>Сцепок: ${chainCount}</span>
+                        <span>${escapeHtml(wt('create.history_chains_prefix', 'Сцепок'))}: ${chainCount}</span>
 
                       </div>
 
@@ -10275,7 +10291,7 @@
 
             <div class="p-4 border-t border-border-subtle bg-surface-1 rounded-b-xl text-center text-xs text-text-muted">
 
-              Показаны последние 10 версий
+              ${escapeHtml(wt('create.history_footer', 'Показаны последние 10 версий'))}
 
             </div>
 
@@ -10289,7 +10305,7 @@
 
         console.error('History fetch failed', e);
 
-        showGlobalError('Ошибка при загрузке истории');
+        showGlobalError(wt('create.history_fetch_failed', 'Ошибка при загрузке истории'));
 
       }
 
@@ -10301,10 +10317,10 @@
 
       if (entryKind === 'autosave') {
         const restoreConfirmed = await NotificationUI.confirm({
-          title: 'Открыть автосохранённую версию?',
-          message: 'Эта версия не заменит текущую сохранённую публикацию. Она откроется в редакторе как несохранённые изменения.',
-          confirmText: 'Открыть в редакторе',
-          cancelText: 'Отмена',
+          title: wt('create.history_open_autosave_title', 'Открыть автосохранённую версию?'),
+          message: wt('create.history_open_autosave_msg', 'Эта версия не заменит текущую сохранённую публикацию. Она откроется в редакторе как несохранённые изменения.'),
+          confirmText: wt('create.history_open_autosave_confirm', 'Открыть в редакторе'),
+          cancelText: wt('create.cancel_btn', 'Отмена'),
           variant: 'info'
         });
 
@@ -10315,18 +10331,18 @@
           await applyDataToEditor(entry);
           markDirty();
           updateComplexSaveStatus({
-            message: 'Автосохранённая версия открыта в редакторе',
+            message: wt('create.history_autosave_opened_msg', 'Автосохранённая версия открыта в редакторе'),
             tone: 'info',
           });
-          NotificationUI.toast('Автосохранённая версия открыта в редакторе', 'success');
+          NotificationUI.toast(wt('create.history_autosave_opened_msg', 'Автосохранённая версия открыта в редакторе'), 'success');
         } catch (error) {
           console.error('Autosave history restore failed', error);
-          showGlobalError('Не удалось открыть автосохранённую версию');
+          showGlobalError(wt('create.history_autosave_open_failed', 'Не удалось открыть автосохранённую версию'));
         }
         return;
       }
 
-      const restoreConfirmed = await NotificationUI.confirm({ title: 'Восстановить версию?', message: 'Текущие несохраненные изменения будут потеряны.\nТекущее состояние будет сохранено в новой версии истории.', confirmText: 'Восстановить', cancelText: 'Отмена', variant: 'warning' });
+      const restoreConfirmed = await NotificationUI.confirm({ title: wt('create.history_restore_title', 'Восстановить версию?'), message: wt('create.history_restore_msg', 'Текущие несохраненные изменения будут потеряны.\nТекущее состояние будет сохранено в новой версии истории.'), confirmText: wt('create.history_action_restore', 'Восстановить'), cancelText: wt('create.cancel_btn', 'Отмена'), variant: 'warning' });
 
       if (!restoreConfirmed) return;
 
@@ -10350,11 +10366,11 @@
 
           state.isDirty = false; // Reset dirty state
 
-          NotificationUI.toast('Версия успешно восстановлена', 'success');
+          NotificationUI.toast(wt('create.history_restored', 'Версия успешно восстановлена'), 'success');
 
         } else {
 
-          showGlobalError(`Ошибка восстановления: ${data.error}`);
+          showGlobalError(`${wt('create.history_restore_error_prefix', 'Ошибка восстановления')}: ${data.error}`);
 
         }
 
@@ -10362,7 +10378,7 @@
 
         console.error('Restore failed', e);
 
-        showGlobalError('Ошибка при восстановлении версии');
+        showGlobalError(wt('create.history_restore_failed', 'Ошибка при восстановлении версии'));
 
       }
 
@@ -10413,9 +10429,9 @@
       const count = state.selectedComplexes.has(id) ? state.selectedComplexes.size : 1;
 
       if (state.selectedComplexes.has(id) && count > 1) {
-        importText.textContent = `Импортировать из ${count} комплексов`;
+        importText.textContent = wt('create.import_from_n_complexes', 'Импортировать из {n} комплексов').replace('{n}', String(count));
       } else {
-        importText.textContent = 'Импортировать задания';
+        importText.textContent = wt('create.import_tasks_btn', 'Импортировать задания');
       }
 
       const rect = e.target.getBoundingClientRect();
@@ -10450,7 +10466,7 @@
       let addedCount = 0;
       let dupCount = 0;
 
-      showGlobalError('Импорт заданий...');
+      showGlobalError(wt('create.import_in_progress', 'Импорт заданий...'));
 
       try {
         const refsToAdd = new Set();
@@ -10473,14 +10489,14 @@
           renderSelectedList();
           renderChains();
           applyCatalogFilter();
-          showGlobalError(`Импортировано ${addedCount} заданий. Пропущено дубликатов: ${dupCount}`);
+          showGlobalError(`${wt('create.import_success_prefix', 'Импортировано')} ${addedCount} ${wt('create.import_tasks_count_suffix', 'заданий')}. ${wt('create.import_skipped_dup', 'Пропущено дубликатов')}: ${dupCount}`);
         } else {
-          showGlobalError(`Ничего не добавлено. Дубликатов: ${dupCount}`);
+          showGlobalError(`${wt('create.import_nothing_added', 'Ничего не добавлено')}. ${wt('create.import_skipped_dup', 'Пропущено дубликатов')}: ${dupCount}`);
         }
 
       } catch (e) {
         console.error(e);
-        showGlobalError('Ошибка импорта');
+        showGlobalError(wt('create.import_error', 'Ошибка импорта'));
       }
 
       state.selectedComplexes.clear();
@@ -10540,7 +10556,7 @@
 
     async function loadComplexesList() {
       if (!complexesList) return;
-      complexesList.innerHTML = '<div class="p-4 text-center text-text-secondary text-sm">Загрузка...</div>';
+      complexesList.innerHTML = `<div class="p-4 text-center text-text-secondary text-sm">${escapeHtml(wt('create.loading', 'Загрузка...'))}</div>`;
       try {
         const resp = await fetch('/api/complexes');
         if (!resp.ok) throw new Error('Failed to load');
@@ -10553,8 +10569,8 @@
                 <div class="cx-empty-state-icon w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-3">
                   <span class="material-symbols-outlined text-primary text-3xl">folder_off</span>
                 </div>
-                <p class="text-text-main font-semibold mb-1">Нет сохранённых комплексов</p>
-                <p class="text-text-muted text-sm">Создайте первый комплекс, чтобы он появился здесь</p>
+                <p class="text-text-main font-semibold mb-1">${escapeHtml(wt('create.no_saved_complexes', 'Нет сохранённых комплексов'))}</p>
+                <p class="text-text-muted text-sm">${escapeHtml(wt('create.no_saved_complexes_hint', 'Создайте первый комплекс, чтобы он появился здесь'))}</p>
               </div>
             `;
           } else {
@@ -10566,7 +10582,7 @@
       } catch (e) {
         console.error('[Complexes Tab] Error:', e);
         const safeErrorMessage = escapeHtml(e?.message || 'unknown_error');
-        complexesList.innerHTML = `<div class="p-4 text-center text-status-error text-sm">Ошибка загрузки: ${safeErrorMessage}</div>`;
+        complexesList.innerHTML = `<div class="p-4 text-center text-status-error text-sm">${escapeHtml(wt('create.complexes_load_error_prefix', 'Ошибка загрузки'))}: ${safeErrorMessage}</div>`;
       }
     }
 
@@ -10600,16 +10616,16 @@
       if (normalized === 'archive_import') return 'Legacy import';
       switch (String(createdVia || '').trim().toLowerCase()) {
         case 'complex_builder':
-          return 'Конструктор';
+          return wt('create.via_builder', 'Конструктор');
         case 'manual_editor':
-          return 'Редактор';
+          return wt('create.via_editor', 'Редактор');
         case 'analysis_auto':
-          return 'AI генерация';
+          return wt('create.via_ai', 'AI генерация');
         case 'workspace_import':
         case 'archive_import':
           return 'Legacy import';
         default:
-          return String(createdVia || '').trim() || 'Источник';
+          return String(createdVia || '').trim() || wt('create.via_source', 'Источник');
       }
     }
 
@@ -10618,21 +10634,21 @@
       const badges = [];
       if (ownership.isOwnedByCurrentUser) {
         badges.push(`
-          <span class="inline-flex items-center gap-1 rounded-full border border-success-light bg-success-lighter px-2 py-0.5 text-[10px] font-semibold text-success-darker" title="Создано из текущего профиля">
+          <span class="inline-flex items-center gap-1 rounded-full border border-success-light bg-success-lighter px-2 py-0.5 text-[10px] font-semibold text-success-darker" title="${escapeHtml(wt('create.badge_my_title', 'Создано из текущего профиля'))}">
             <span class="material-symbols-outlined text-[13px]">person</span>
-            Моё
+            ${escapeHtml(wt('create.badge_my', 'Моё'))}
           </span>
         `);
       } else if (ownership.hasOwner) {
         badges.push(`
-          <span class="inline-flex max-w-full items-center gap-1 rounded-full border border-border-subtle bg-surface-1 px-2 py-0.5 text-[10px] font-semibold text-text-secondary" title="Автор комплекса">
+          <span class="inline-flex max-w-full items-center gap-1 rounded-full border border-border-subtle bg-surface-1 px-2 py-0.5 text-[10px] font-semibold text-text-secondary" title="${escapeHtml(wt('create.badge_author_title', 'Автор комплекса'))}">
             <span class="material-symbols-outlined text-[13px]">badge</span>
-            Автор: ${escapeHtml(ownership.createdByUserName || ownership.createdByUserId)}
+            ${escapeHtml(wt('create.badge_author_prefix', 'Автор'))}: ${escapeHtml(ownership.createdByUserName || ownership.createdByUserId)}
           </span>
         `);
       }
       badges.push(`
-        <span class="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-1 px-2 py-0.5 text-[10px] font-semibold text-text-secondary" title="Источник контента">
+        <span class="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-1 px-2 py-0.5 text-[10px] font-semibold text-text-secondary" title="${escapeHtml(wt('create.badge_source_title', 'Источник контента'))}">
           <span class="material-symbols-outlined text-[13px]">inventory_2</span>
           ${escapeHtml(getComplexCreatedViaLabelForCreateList(ownership.createdVia))}
         </span>
@@ -10695,7 +10711,7 @@
       return;
       const request = buildWorkspaceImportRequestFromCreateList(complex);
       if (!request.source_complex_id || !request.source_catalog_item_id || !request.source_catalog_version_id) {
-        notifyComplexToast('Legacy import request недоступен: не удалось собрать internal import request.', 'error', 3600);
+        notifyComplexToast(wt('create.legacy_import_unavailable', 'Legacy import request недоступен: не удалось собрать internal import request.'), 'error', 3600);
         return;
       }
       try {
@@ -10735,14 +10751,14 @@
         const taskCount = window.WorkspaceImportClient && typeof window.WorkspaceImportClient.resolveTaskCount === 'function'
           ? window.WorkspaceImportClient.resolveTaskCount(executeData)
           : Number(executeData?.summary?.total_nodes?.tasks || executeData?.result?.tasks?.length || 0);
-        notifyComplexToast(`Рабочая версия добавлена. Заданий в workspace: ${taskCount}.`, 'success', 3600);
+        notifyComplexToast(`${wt('create.workspace_imported', 'Рабочая версия добавлена')}. ${wt('create.workspace_tasks_prefix', 'Заданий в workspace')}: ${taskCount}.`, 'success', 3600);
         await fetchComplexes();
         if (importedComplexId) {
           window.navigateWithTransition(`/complexes/create?id=${encodeURIComponent(importedComplexId)}`);
         }
       } catch (error) {
         console.error('[Complex Builder] Workspace import failed', error);
-        notifyComplexToast(`Workspace-импорт завершился ошибкой: ${String(error?.message || 'workspace_import_failed')}`, 'error', 4200);
+        notifyComplexToast(`${wt('create.workspace_import_failed', 'Workspace-импорт завершился ошибкой')}: ${String(error?.message || 'workspace_import_failed')}`, 'error', 4200);
       }
     }
 
@@ -10756,7 +10772,7 @@
       return;
       const complex = getComplexByIdForCreateList(complexId);
       if (!complex) {
-        notifyComplexToast('Не удалось найти комплекс для legacy import.', 'warning', 3200);
+        notifyComplexToast(wt('create.legacy_complex_not_found', 'Не удалось найти комплекс для legacy import.'), 'warning', 3200);
         return;
       }
       await executeWorkspaceImportFromCreateList(complex);
@@ -10765,7 +10781,7 @@
     function renderComplexes(items) {
       if (!complexesList) return;
       if (items.length === 0) {
-        complexesList.innerHTML = '<div class="p-4 text-center text-text-muted text-sm">Нет комплексов</div>';
+        complexesList.innerHTML = `<div class="p-4 text-center text-text-muted text-sm">${escapeHtml(wt('create.no_complexes', 'Нет комплексов'))}</div>`;
         return;
       }
 
@@ -10782,7 +10798,7 @@
         const isSelected = state.selectedComplexes.has(item.id);
         const safeItemIdLiteral = escapeInlineJsString(rawId);
         const editUrlLiteral = escapeInlineJsString(`/complexes/create?id=${encodeURIComponent(rawId)}`);
-        const safeName = escapeHtml(item.name || 'Без названия');
+        const safeName = escapeHtml(item.name || wt('create.no_title', 'Без названия'));
         const safeDate = escapeHtml(date);
         const theoryContextBadges = buildComplexTheoryMiniBadges(item);
         const ownershipBadges = buildComplexOwnershipMiniBadges(item);
@@ -10797,12 +10813,12 @@
                  <div class="flex-1 min-w-0 cursor-pointer" ${!isActive ? `data-complex-edit-url="${editUrlLiteral}"` : ''}>
                    <div class="flex items-start justify-between mb-1">
                      <div class="font-medium text-text-main ${isActive ? 'text-primary' : ''} line-clamp-2 text-sm" title="${safeName}">${safeName}</div>
-                     ${isActive ? '<div class="flex items-center gap-1 text-primary"><span class="text-[10px] uppercase font-bold tracking-wider">Редактируется</span><span class="material-symbols-outlined text-[16px]">edit</span></div>' : ''}
+                     ${isActive ? `<div class="flex items-center gap-1 text-primary"><span class="text-[10px] uppercase font-bold tracking-wider">${escapeHtml(wt('create.complex_editing_badge', 'Редактируется'))}</span><span class="material-symbols-outlined text-[16px]">edit</span></div>` : ''}
                    </div>
                    <div class="flex items-center flex-wrap gap-1 mb-1">${ownershipBadges}</div>
                    <div class="flex items-center flex-wrap gap-1 mb-1">${theoryContextBadges}</div>
                     <div class="flex items-center justify-between text-xs cx-elevated-meta mt-2">
-                      <span>${count} заданий</span>
+                      <span>${count} ${escapeHtml(count === 1 ? wt('create.task_count_1', 'задание') : count < 5 ? wt('create.task_count_2_4', 'задания') : wt('create.task_count_5plus', 'заданий'))}</span>
                       <span>${safeDate}</span>
                     </div>
                  </div>
@@ -11303,8 +11319,8 @@
             <span class="material-symbols-outlined text-warning text-2xl">warning</span>
           </div>
           <div>
-            <h3 class="text-lg font-bold text-text-main">Несохраненные изменения</h3>
-            <p class="text-sm text-text-secondary">Вы уверены, что хотите покинуть страницу?</p>
+            <h3 class="text-lg font-bold text-text-main" data-i18n="create.unsaved_modal_title">Несохраненные изменения</h3>
+            <p class="text-sm text-text-secondary" data-i18n="create.unsaved_modal_subtitle">Вы уверены, что хотите покинуть страницу?</p>
           </div>
         </div>
       </div>
@@ -11312,7 +11328,7 @@
       <!-- Content -->
       <div class="px-6 py-5">
         <p class="text-text-main text-sm leading-relaxed">
-          У вас есть несохраненные изменения. Если вы покинете эту страницу, все изменения будут потеряны.
+          <span data-i18n="create.unsaved_modal_body">У вас есть несохраненные изменения. Если вы покинете эту страницу, все изменения будут потеряны.</span>
         </p>
       </div>
 
@@ -11320,11 +11336,11 @@
       <div class="px-6 py-4 bg-bg-secondary border-t border-border-subtle flex gap-3 justify-end">
         <button id="modal-cancel"
           class="px-4 py-2.5 rounded-lg text-sm font-semibold text-text-main bg-bg-tertiary hover:bg-bg-hover transition-colors">
-          Остаться
+          <span data-i18n="create.unsaved_modal_stay">Остаться</span>
         </button>
         <button id="modal-leave"
           class="px-4 py-2.5 rounded-lg text-sm font-semibold text-primary-fg bg-warning hover:bg-warning-dark transition-colors shadow-md shadow-warning-light">
-          Покинуть страницу
+          <span data-i18n="create.unsaved_modal_leave">Покинуть страницу</span>
         </button>
       </div>
     </div>
@@ -11355,9 +11371,9 @@
            <div class="cx-empty-state-icon inline-flex items-center justify-center w-12 h-12 rounded-full text-primary mb-3">
              <span class="material-symbols-outlined text-[24px]">lightbulb</span>
            </div>
-           <p class="text-sm font-bold text-text-main mb-1">Создание сцепок</p>
+           <p class="text-sm font-bold text-text-main mb-1">${escapeHtml(wt('create.chains_empty_title', 'Создание сцепок'))}</p>
            <p class="text-xs text-text-muted max-w-[280px] mx-auto leading-relaxed">
-             Выделите 2 или более заданий в списке выше (Ctrl+Click), затем кликните ПКМ по одному из них для создания сцепки.
+             ${escapeHtml(wt('create.chains_empty_hint', 'Выделите 2 или более заданий в списке выше (Ctrl+Click), затем кликните ПКМ по одному из них для создания сцепки.'))}
            </p>
          `;
         root.appendChild(emptyState);
@@ -11375,7 +11391,7 @@
           // Fallback: extract last segment and format
           const parts = ref.split('/');
           const taskId = parts[parts.length - 1];
-          return taskId.replace(/_/g, ' ').replace(/task\s*/i, 'Задание ');
+          return taskId.replace(/_/g, ' ').replace(/task\s*/i, `${wt('create.task_fallback', 'Задание')} `);
         };
 
         // Card container - Flat relative to section, but Distinct
@@ -11400,11 +11416,11 @@
         // Badge
         const badge = document.createElement('span');
         badge.className = 'cx-chain-badge h-6 px-2.5 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center';
-        badge.textContent = `Сцепка ${idx + 1}`;
+        badge.textContent = `${wt('create.chain_badge_label', 'Сцепка')} ${idx + 1}`;
 
         const count = document.createElement('span');
         count.className = 'cx-chain-count text-xs font-medium px-2 py-0.5 rounded-md';
-        count.textContent = `Заданий: ${ch.length}`;
+        count.textContent = `${wt('create.history_tasks_prefix', 'Заданий')}: ${ch.length}`;
 
         headerLeft.appendChild(badge);
         headerLeft.appendChild(count);
@@ -11456,13 +11472,13 @@
         const deleteAction = document.createElement('button');
         // w-12 width, subtle red bg, hover full red, no border
         deleteAction.className = 'cx-chain-delete w-12 flex items-center justify-center transition-all cursor-pointer';
-        deleteAction.title = 'Удалить сцепку';
+        deleteAction.title = wt('create.chain_delete_title', 'Удалить сцепку');
         deleteAction.innerHTML = `
           <span class="material-symbols-outlined text-[24px]">delete_outline</span>
         `;
 
         deleteAction.addEventListener('click', async (e) => {
-          const ok = await NotificationUI.confirm({ title: 'Удалить сцепку?', message: 'Это действие нельзя отменить.', confirmText: 'Удалить', cancelText: 'Отмена', variant: 'error' });
+          const ok = await NotificationUI.confirm({ title: wt('create.chain_delete_confirm_title', 'Удалить сцепку?'), message: wt('create.chain_delete_confirm_msg', 'Это действие нельзя отменить.'), confirmText: wt('create.delete_btn', 'Удалить'), cancelText: wt('create.cancel_btn', 'Отмена'), variant: 'error' });
           if (ok) {
             state.chains.splice(idx, 1);
             renderSelectedList();

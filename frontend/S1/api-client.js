@@ -13,6 +13,14 @@
 }(typeof self !== 'undefined' ? self : this, function (SessionRoutes) {
     'use strict';
 
+    function wt(key, fallback) {
+        if (typeof window !== 'undefined' && window.i18n && typeof window.i18n.t === 'function') {
+            const result = window.i18n.t(key);
+            return result !== key ? result : fallback;
+        }
+        return fallback;
+    }
+
     const FETCH_TIMEOUT_MS = 30000;
     const CURRENT_USER_ENDPOINT = "/api/users/current";
     let cachedCurrentUserId = null;
@@ -37,7 +45,7 @@
         } catch (e) {
             return {
                 ok: false,
-                error: 'Не удалось прочитать ответ сервера'
+                error: wt('s1.err_read_response', 'Не удалось прочитать ответ сервера')
             };
         }
 
@@ -57,7 +65,7 @@
         } catch (e) {
             return {
                 ok: false,
-                error: res.ok ? 'Сервер вернул некорректный ответ' : `Сервер вернул ошибку (${res.status})`
+                error: res.ok ? wt('s1.err_server_bad_response', 'Сервер вернул некорректный ответ') : wt('s1.err_server_error', 'Сервер вернул ошибку ({status})').replace('{status}', res.status)
             };
         }
     }

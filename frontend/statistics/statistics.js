@@ -21,16 +21,22 @@ const createInitialState = () => ({
     previousDynamicsCache: {}
 });
 
+function wt(key, fallback) {
+    if (!window.i18n || typeof window.i18n.t !== 'function') return fallback;
+    const v = window.i18n.t(key);
+    return v !== key ? v : fallback;
+}
+
 const StatisticsApp = {
     state: createInitialState(),
 
     metricOptions: {
         attempts: {
             id: 'attempts',
-            title: 'Учебная активность',
-            shortLabel: 'Активность',
-            legendPrimary: 'Все действия',
-            legendTrend: 'Средний темп',
+            title: wt('stats.metric_attempts_title', 'Учебная активность'),
+            shortLabel: wt('stats.metric_attempts_short', 'Активность'),
+            legendPrimary: wt('stats.metric_attempts_primary', 'Все действия'),
+            legendTrend: wt('stats.metric_trend', 'Средний темп'),
             aggregator: 'sum',
             valueType: 'count',
             // M8: combined activity (tasks + microcards)
@@ -41,10 +47,10 @@ const StatisticsApp = {
         },
         study: {
             id: 'study',
-            title: 'Время обучения',
-            shortLabel: 'Время',
-            legendPrimary: 'Минуты обучения',
-            legendTrend: 'Средний темп',
+            title: wt('stats.metric_study_title', 'Время обучения'),
+            shortLabel: wt('stats.metric_study_short', 'Время'),
+            legendPrimary: wt('stats.metric_study_primary', 'Минуты обучения'),
+            legendTrend: wt('stats.metric_trend', 'Средний темп'),
             aggregator: 'sum',
             valueType: 'minutes',
             // M8: combined study time (tasks + microcards)
@@ -104,7 +110,8 @@ const StatisticsApp = {
         );
     },
 
-    renderComplexesEmptyState(message = 'Статистика по комплексам появится, когда в библиотеке будут живые комплексы с сессиями.') {
+    renderComplexesEmptyState(message = null) {
+        message = message ?? wt('stats.complexes_empty_default', 'Статистика по комплексам появится, когда в библиотеке будут живые комплексы с сессиями.');
         const container = document.getElementById('complexes-grid');
         if (!container) {
             return;
@@ -124,7 +131,7 @@ const StatisticsApp = {
             <div class="stats-complexes-empty">
                 <span class="material-symbols-outlined stats-complexes-empty__icon" aria-hidden="true">history_toggle_off</span>
                 <div class="stats-complexes-empty__copy">
-                    <p class="stats-complexes-empty__title">Пока без данных по комплексам</p>
+                    <p class="stats-complexes-empty__title">${wt('stats.complexes_empty_title', 'Пока без данных по комплексам')}</p>
                     <p class="stats-complexes-empty__text">${this.escapeHtml(message)}</p>
                 </div>
             </div>
@@ -133,13 +140,15 @@ const StatisticsApp = {
 
     renderSidebarEmptyState(container, {
         icon = 'analytics',
-        title = 'Пока без данных',
-        text = 'Данные появятся после первых сессий.',
+        title = null,
+        text = null,
         className = ''
     } = {}) {
         if (!container) {
             return;
         }
+        title = title ?? wt('stats.sidebar_empty_title', 'Пока без данных');
+        text = text ?? wt('stats.sidebar_empty_text', 'Данные появятся после первых сессий.');
 
         const safeClassName = String(className || '').trim();
         container.innerHTML = `
@@ -217,7 +226,7 @@ const StatisticsApp = {
         });
         const formatted = formatter.format(numeric);
         if (config.valueType === 'minutes') {
-            return `${formatted} мин`;
+            return `${formatted}${wt('stats.unit_min', ' мин')}`;
         }
         if (isPercent) {
             return `${formatted}%`;
@@ -369,17 +378,18 @@ const StatisticsApp = {
 
     updateLegendLabels() {
         const config = this.getMetricConfig();
+        const metricId = this.state.currentMetric;
         const primaryLabel = document.getElementById('legend-primary-label');
         const trendLabel = document.getElementById('legend-trend-label');
-        if (primaryLabel) primaryLabel.textContent = config.legendPrimary;
-        if (trendLabel) trendLabel.textContent = config.legendTrend;
+        if (primaryLabel) primaryLabel.textContent = wt(`stats.metric_${metricId}_legend`, config.legendPrimary);
+        if (trendLabel) trendLabel.textContent = wt('stats.metric_trend', config.legendTrend);
     },
 
     updateChartTitle() {
         const titleEl = document.getElementById('chart-title');
         if (!titleEl) return;
         const metricId = this.state.currentMetric;
-        titleEl.textContent = metricId === 'study' ? 'Время обучения' : 'Твоя активность';
+        titleEl.textContent = metricId === 'study' ? wt('stats.chart_title_study', 'Время обучения') : wt('stats.chart_title_attempts', 'Твоя активность');
     },
 
     updateChartSummary() {
@@ -411,46 +421,46 @@ const StatisticsApp = {
             const avgPerDay = activeDays > 0 ? Math.round(totalMinutes / activeDays) : 0;
 
             if (totalMinutes === 0) {
-                message = 'Начни заниматься, чтобы увидеть статистику';
+                message = wt('stats.summary_no_data_study', 'Начни заниматься, чтобы увидеть статистику');
             } else if (activeDays === 0) {
-                message = `${totalMinutes} мин — нет активных дней`;
+                message = wt('stats.summary_no_active_days_study', '{total} мин — нет активных дней').replace('{total}', totalMinutes);
             } else if (totalMinutes < studyThreshold) {
-                message = `${totalMinutes} мин за ${activeDays} дн. — попробуй заниматься чаще`;
+                message = wt('stats.summary_low_study', '{total} мин за {days} дн. — попробуй заниматься чаще').replace('{total}', totalMinutes).replace('{days}', activeDays);
             } else if (activeRatio <= 0.3) {
-                message = `${totalMinutes} мин за ${activeDays} дн. — хорошее начало, добавь регулярности`;
+                message = wt('stats.summary_good_start_study', '{total} мин за {days} дн. — хорошее начало, добавь регулярности').replace('{total}', totalMinutes).replace('{days}', activeDays);
             } else if (totalMinutes >= studyThreshold * 1.5 && activeRatio >= 0.7) {
-                message = `${totalMinutes} мин за ${activeDays} дн. — отличный результат! 🔥`;
+                message = wt('stats.summary_great_study', '{total} мин за {days} дн. — отличный результат! 🔥').replace('{total}', totalMinutes).replace('{days}', activeDays);
             } else if (activeDays === period) {
-                message = `${totalMinutes} мин за ${activeDays} дн. — отличная регулярность! 🔥`;
+                message = wt('stats.summary_regular_study', '{total} мин за {days} дн. — отличная регулярность! 🔥').replace('{total}', totalMinutes).replace('{days}', activeDays);
             } else if (activeDays >= period * 0.7) {
-                message = `${totalMinutes} мин за ${activeDays} дн. — хороший темп!`;
+                message = wt('stats.summary_good_pace_study', '{total} мин за {days} дн. — хороший темп!').replace('{total}', totalMinutes).replace('{days}', activeDays);
             } else if (avgPerDay >= 20) {
-                message = `${totalMinutes} мин за ${activeDays} дн. — продолжай в том же духе`;
+                message = wt('stats.summary_keep_going_study', '{total} мин за {days} дн. — продолжай в том же духе').replace('{total}', totalMinutes).replace('{days}', activeDays);
             } else {
-                message = `${totalMinutes} мин за ${activeDays} дн.`;
+                message = wt('stats.summary_basic_study', '{total} мин за {days} дн.').replace('{total}', totalMinutes).replace('{days}', activeDays);
             }
         } else {
             // M8: для метрики attempts (комбинированная активность)
             const totalActions = Math.round(totalValue);
 
             if (totalActions === 0) {
-                message = 'Начни заниматься, чтобы увидеть прогресс';
+                message = wt('stats.summary_no_data_attempts', 'Начни заниматься, чтобы увидеть прогресс');
             } else if (activeDays === 0) {
-                message = `${totalActions} действий — нет активных дней`;
+                message = wt('stats.summary_no_active_days_attempts', '{total} действий — нет активных дней').replace('{total}', totalActions);
             } else if (totalActions < attemptsThreshold) {
-                message = `${totalActions} действий за ${activeDays} дн. — попробуй заниматься чаще`;
+                message = wt('stats.summary_low_attempts', '{total} действий за {days} дн. — попробуй заниматься чаще').replace('{total}', totalActions).replace('{days}', activeDays);
             } else if (activeRatio <= 0.3) {
-                message = `${totalActions} действий за ${activeDays} дн. — хорошее начало, занимайся регулярнее`;
+                message = wt('stats.summary_good_start_attempts', '{total} действий за {days} дн. — хорошее начало, занимайся регулярнее').replace('{total}', totalActions).replace('{days}', activeDays);
             } else if (totalActions >= attemptsThreshold * 1.5 && activeRatio >= 0.7) {
-                message = `${totalActions} действий за ${activeDays} дн. — отличный результат! 🔥`;
+                message = wt('stats.summary_great_attempts', '{total} действий за {days} дн. — отличный результат! 🔥').replace('{total}', totalActions).replace('{days}', activeDays);
             } else if (activeDays === period) {
-                message = `${totalActions} действий за ${activeDays} дн. — ты занимаешься каждый день! 🔥`;
+                message = wt('stats.summary_daily_attempts', '{total} действий за {days} дн. — ты занимаешься каждый день! 🔥').replace('{total}', totalActions).replace('{days}', activeDays);
             } else if (activeDays >= period * 0.7) {
-                message = `${totalActions} действий за ${activeDays} дн. — отличная активность!`;
+                message = wt('stats.summary_active_attempts', '{total} действий за {days} дн. — отличная активность!').replace('{total}', totalActions).replace('{days}', activeDays);
             } else if (activeDays > 0) {
-                message = `${totalActions} действий за ${activeDays} дн.`;
+                message = wt('stats.summary_basic_attempts', '{total} действий за {days} дн.').replace('{total}', totalActions).replace('{days}', activeDays);
             } else {
-                message = `${totalActions} действий`;
+                message = wt('stats.summary_total_attempts', '{total} действий').replace('{total}', totalActions);
             }
         }
 
@@ -620,7 +630,7 @@ const StatisticsApp = {
             this.state.currentUser = null;
             console.error('[Statistics] Failed to load user profile:', error);
             this.updateUserDisplay();
-            this.showToast('Не удалось загрузить профиль. Продолжаем без данных профиля.', 'warning');
+            this.showToast(wt('stats.toast_profile_error', 'Не удалось загрузить профиль. Продолжаем без данных профиля.'), 'warning');
         }
     },
 
@@ -651,7 +661,7 @@ const StatisticsApp = {
                 avatarEl.src = avatarUrl;
             }
             if (nameEl) {
-                nameEl.textContent = user.name || 'Гость';
+                nameEl.textContent = user.name || wt('stats.guest_name', 'Гость');
             }
         }
 
@@ -661,7 +671,7 @@ const StatisticsApp = {
                 avatarEl.src = this.getAvatarUrl(null, null);
             }
             if (nameEl) {
-                nameEl.textContent = 'Гость';
+                nameEl.textContent = wt('stats.guest_name', 'Гость');
             }
         }
 
@@ -978,7 +988,7 @@ const StatisticsApp = {
                 this.applyStatisticsOnboardingDemo(true);
             }
             if (hadPartialLoadError) {
-                this.showToast('Не удалось полностью обновить статистику. Показаны доступные данные.', 'warning');
+                this.showToast(wt('stats.toast_stats_partial', 'Не удалось полностью обновить статистику. Показаны доступные данные.'), 'warning');
             }
         } catch (error) {
             console.error('[Statistics] Failed to load data:', error);
@@ -996,7 +1006,7 @@ const StatisticsApp = {
             if (document.body?.dataset.onboardingTourId === 'statistics-learning-signals') {
                 this.applyStatisticsOnboardingDemo(true);
             }
-            this.showToast('Не удалось загрузить статистику', 'error');
+            this.showToast(wt('stats.toast_stats_error', 'Не удалось загрузить статистику'), 'error');
         }
     },
 
@@ -1070,7 +1080,7 @@ const StatisticsApp = {
         this.state.hasData = statsHasData || dynamicsHasData;
 
         if (hadPeriodLoadError) {
-            this.showToast('Не удалось полностью обновить график. Показаны доступные данные.', 'warning');
+            this.showToast(wt('stats.toast_chart_error', 'Не удалось полностью обновить график. Показаны доступные данные.'), 'warning');
         }
 
         this.render();
@@ -1138,7 +1148,7 @@ const StatisticsApp = {
             if (hasTimeData && taskTimeSec > 0 && mcTimeSec > 0) {
                 const taskMin = Math.round(taskTimeSec / 60);
                 const mcMin = Math.round(mcTimeSec / 60);
-                timeHint.textContent = `(${taskMin} + ${mcMin} мин)`;
+                timeHint.textContent = wt('stats.time_hint_combined', '({task} + {mc} мин)').replace('{task}', taskMin).replace('{mc}', mcMin);
             } else {
                 timeHint.textContent = '';
             }
@@ -1164,7 +1174,7 @@ const StatisticsApp = {
             if (hasMcData) {
                 const rate = mcStats.correct_rate || 0;
                 const pct = Math.round(rate * 100);
-                mcBadge.textContent = `${mcStats.decks_active || 0} колод`;
+                mcBadge.textContent = wt('stats.mc_decks_label', '{n} колод').replace('{n}', mcStats.decks_active || 0);
                 mcBadge.classList.remove('hidden');
                 mcBadge.className = `pill-sm ${pct >= 80 ? 'pill-success' : pct >= 50 ? 'pill-warning' : 'pill-danger'}`;
             } else {
@@ -1475,14 +1485,14 @@ const StatisticsApp = {
 
     formatDateLabel(dateStr) {
         const date = new Date(dateStr);
-        const days = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+        const days = [wt('stats.day_sun','Вс'), wt('stats.day_mon','Пн'), wt('stats.day_tue','Вт'), wt('stats.day_wed','Ср'), wt('stats.day_thu','Чт'), wt('stats.day_fri','Пт'), wt('stats.day_sat','Сб')];
         return days[date.getDay()];
     },
 
     getDayLabelInfo(dateStr) {
         const date = new Date(dateStr);
         const isToday = this.isToday(dateStr);
-        const dayNames = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+        const dayNames = [wt('stats.day_sun','Вс'), wt('stats.day_mon','Пн'), wt('stats.day_tue','Вт'), wt('stats.day_wed','Ср'), wt('stats.day_thu','Чт'), wt('stats.day_fri','Пт'), wt('stats.day_sat','Сб')];
         const label = `${dayNames[date.getDay()]} ${date.getDate()}`;
         return { label, isToday };
     },
@@ -1512,7 +1522,6 @@ const StatisticsApp = {
         }
 
         const metricId = this.state.currentMetric;
-        const metricLabel = metricId === 'study' ? 'времени' : 'активности';
         const activeDays = series.filter((day) => this.getMetricValue(day, metricId) > 0).length;
         const period = this.state.currentPeriod || series.length;
         const delta = this.calculatePeriodDelta();
@@ -1520,22 +1529,22 @@ const StatisticsApp = {
 
         if (!delta.hasPrevious) {
             text = activeDays > 0
-                ? `Это первый ${period}-дневный срез: смотри в первую очередь на регулярность, а не только на сумму.`
-                : 'Как только появится активность, здесь будет подсказка по текущему ритму.';
+                ? wt('stats.insight_first_period_active', 'Это первый {n}-дневный срез: смотри в первую очередь на регулярность, а не только на сумму.').replace('{n}', period)
+                : wt('stats.insight_no_activity', 'Как только появится активность, здесь будет подсказка по текущему ритму.');
         } else {
             const deltaPercent = Math.round(Math.abs(delta.deltaPercent || 0));
             if (delta.direction === 'up') {
                 text = deltaPercent > 0
-                    ? `${metricLabel[0].toUpperCase()}${metricLabel.slice(1)} стало больше на ${deltaPercent}% относительно прошлого периода. Удерживай текущий темп.`
-                    : 'Темп выше прошлого периода. Продолжай в том же ритме.';
+                    ? wt(`stats.insight_${metricId}_up_pct`, '{n}% — темп выше прошлого периода.').replace('{n}', deltaPercent)
+                    : wt(`stats.insight_${metricId}_up_flat`, 'Темп выше прошлого периода. Продолжай в том же ритме.');
             } else if (delta.direction === 'down') {
                 text = deltaPercent > 0
-                    ? `${metricLabel[0].toUpperCase()}${metricLabel.slice(1)} стало меньше на ${deltaPercent}% относительно прошлого периода. Верни хотя бы одну короткую сессию в день.`
-                    : 'Темп просел относительно прошлого периода. Верни короткую ежедневную практику.';
+                    ? wt(`stats.insight_${metricId}_down_pct`, '{n}% — темп ниже прошлого периода.').replace('{n}', deltaPercent)
+                    : wt(`stats.insight_${metricId}_down_flat`, 'Темп просел относительно прошлого периода. Верни короткую ежедневную практику.');
             } else if (activeDays <= Math.max(1, Math.floor(period * 0.4))) {
-                text = `Ритм ровный, но активных дней только ${activeDays} из ${period}. Добавь ещё 1-2 короткие сессии в неделю.`;
+                text = wt('stats.insight_sparse', 'Ритм ровный, но активных дней только {active} из {period}. Добавь ещё 1-2 короткие сессии в неделю.').replace('{active}', activeDays).replace('{period}', period);
             } else {
-                text = `Ритм стабильный: ${activeDays} активных дней из ${period}. Теперь важнее держать регулярность, чем гнаться за пиком.`;
+                text = wt('stats.insight_stable', 'Ритм стабильный: {active} активных дней из {period}. Теперь важнее держать регулярность, чем гнаться за пиком.').replace('{active}', activeDays).replace('{period}', period);
             }
         }
 
@@ -1547,15 +1556,21 @@ const StatisticsApp = {
         if (!event || !event.type) return '';
         switch (event.type) {
             case 'perfect_day':
-                return 'Идеальный день';
+                return wt('stats.event_perfect_day', 'Идеальный день');
             case 'long_study':
-                return '60+ мин';
+                return wt('stats.event_long_study', '60+ мин');
             case 'streak_break':
-                return event.gap_days ? `Перерыв ${event.gap_days} дн.` : 'Перерыв';
+                return event.gap_days
+                    ? wt('stats.event_streak_break', 'Перерыв {n} дн.').replace('{n}', event.gap_days)
+                    : wt('stats.event_streak_break_simple', 'Перерыв');
             case 'big_improvement':
-                return event.delta ? `Прирост +${Math.round(event.delta * 100)} п.п.` : 'Уверенный рост';
+                return event.delta
+                    ? wt('stats.event_big_improvement', 'Прирост +{n} п.п.').replace('{n}', Math.round(event.delta * 100))
+                    : wt('stats.event_big_improvement_default', 'Уверенный рост');
             case 'drop':
-                return event.delta ? `Снижение ${Math.round(event.delta * 100)} п.п.` : 'Спад';
+                return event.delta
+                    ? wt('stats.event_drop', 'Снижение {n} п.п.').replace('{n}', Math.round(event.delta * 100))
+                    : wt('stats.event_drop_default', 'Спад');
             default:
                 return '';
         }
@@ -1709,20 +1724,20 @@ const StatisticsApp = {
         const activityTotal = day.activity_attempts_total ?? (totalAttempts + mcReviews);
         const labelInfo = this.getDayLabelInfo(day.date);
 
-        let html = `<div class="chart-tooltip-date">${this.formatFullDate(day.date)}${labelInfo.isToday ? ' \u00b7 \u0421\u0435\u0433\u043e\u0434\u043d\u044f' : ''}</div>`;
+        let html = `<div class="chart-tooltip-date">${this.formatFullDate(day.date)}${labelInfo.isToday ? wt('stats.tooltip_today', ' \u00b7 \u0421\u0435\u0433\u043e\u0434\u043d\u044f') : ''}</div>`;
 
         if (totalAttempts > 0 || mcReviews > 0) {
-            html += `<div class="chart-tooltip-row"><span>\u0412\u0441\u0435\u0433\u043e \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0439:</span><span>${activityTotal}</span></div>`;
+            html += `<div class="chart-tooltip-row"><span>${wt('stats.tooltip_total_actions', '\u0412\u0441\u0435\u0433\u043e \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0439:')}</span><span>${activityTotal}</span></div>`;
         }
         if (totalAttempts > 0) {
-            html += `<div class="chart-tooltip-row"><span>\u0417\u0430\u0434\u0430\u0447\u0438:</span><span>${attempts} \u0443\u043d\u0438\u043a. / ${totalAttempts} \u043f\u043e\u043f.</span></div>`;
+            html += `<div class="chart-tooltip-row"><span>${wt('stats.tooltip_tasks', '\u0417\u0430\u0434\u0430\u0447\u0438:')}</span><span>${wt('stats.tooltip_tasks_detail', '{unique} \u0443\u043d\u0438\u043a. / {total} \u043f\u043e\u043f.').replace('{unique}', attempts).replace('{total}', totalAttempts)}</span></div>`;
         }
         if (mcReviews > 0) {
             const mcRate = day.microcards_correct_rate ?? 0;
             const ratePct = Math.round(mcRate * 100);
-            html += `<div class="chart-tooltip-row"><span>\u041a\u0430\u0440\u0442\u043e\u0447\u043a\u0438:</span><span>${mcReviews} (${ratePct}%)</span></div>`;
+            html += `<div class="chart-tooltip-row"><span>${wt('stats.tooltip_cards', '\u041a\u0430\u0440\u0442\u043e\u0447\u043a\u0438:')}</span><span>${mcReviews} (${ratePct}%)</span></div>`;
         }
-        html += `<div class="chart-tooltip-row"><span>\u0412\u0440\u0435\u043c\u044f:</span><span>${combinedStudy} \u043c\u0438\u043d</span></div>`;
+        html += `<div class="chart-tooltip-row"><span>${wt('stats.tooltip_time', '\u0412\u0440\u0435\u043c\u044f:')}</span><span>${combinedStudy} ${wt('stats.tooltip_min', '\u043c\u0438\u043d')}</span></div>`;
 
         return html;
     },
@@ -1755,12 +1770,12 @@ const StatisticsApp = {
         const hasMicrocardsData = (this.state.stats?.microcards?.reviews_total || 0) > 0;
 
         const typeConfig = {
-            click: { name: 'Клик', color: 'indigo', order: 1 },
-            draw: { name: 'Рисование', color: 'cyan', order: 2 },
-            open_answer: { name: 'Открытый ответ', color: 'rose', order: 3 },
-            sequence: { name: 'Последовательность', color: 'emerald', order: 4 },
-            test: { name: 'Тест', color: 'amber', order: 5 },
-            unknown: { name: 'Без категории', color: 'slate', order: 99 }
+            click: { name: wt('stats.task_type_click', 'Клик'), color: 'indigo', order: 1 },
+            draw: { name: wt('stats.task_type_draw', 'Рисование'), color: 'cyan', order: 2 },
+            open_answer: { name: wt('stats.task_type_open_answer', 'Открытый ответ'), color: 'rose', order: 3 },
+            sequence: { name: wt('stats.task_type_sequence', 'Последовательность'), color: 'emerald', order: 4 },
+            test: { name: wt('stats.task_type_test', 'Тест'), color: 'amber', order: 5 },
+            unknown: { name: wt('stats.task_type_unknown', 'Без категории'), color: 'slate', order: 99 }
         };
 
         const typeSet = new Set([
@@ -1778,7 +1793,7 @@ const StatisticsApp = {
             });
 
         const formatLabel = (type) => {
-            if (!type || type === 'unknown') return 'Без категории';
+            if (!type || type === 'unknown') return wt('stats.task_type_unknown', 'Без категории');
             const label = type.replace(/_/g, ' ');
             return label.replace(/\b\w/g, char => char.toUpperCase());
         };
@@ -1789,17 +1804,17 @@ const StatisticsApp = {
         if (!hasLiveComplexStats) {
             this.renderSidebarEmptyState(container, {
                 icon: 'pie_chart',
-                title: 'Пока без производительности',
+                title: wt('stats.performance_empty_title', 'Пока без производительности'),
                 className: 'stats-side-empty--fill',
                 text: hasMicrocardsData
-                    ? 'Статистика по типам задач появится, когда будут живые сессии по актуальным комплексам из библиотеки.'
-                    : 'Когда появятся живые сессии по актуальным комплексам из библиотеки, здесь покажется распределение по типам задач.'
+                    ? wt('stats.performance_empty_with_mc', 'Статистика по типам задач появится, когда будут живые сессии по актуальным комплексам из библиотеки.')
+                    : wt('stats.performance_empty_no_mc', 'Когда появятся живые сессии по актуальным комплексам из библиотеки, здесь покажется распределение по типам задач.')
             });
             return;
         }
 
         if (!hasAnyAttempts) {
-            container.innerHTML = '<p class="stats-empty-copy text-sm text-center py-3">Пока нет данных по типам задач. Пройдите несколько заданий, чтобы увидеть статистику.</p>';
+            container.innerHTML = `<p class="stats-empty-copy text-sm text-center py-3">${wt('stats.performance_no_task_types', 'Пока нет данных по типам задач. Пройдите несколько заданий, чтобы увидеть статистику.')}</p>`;
             return;
         }
 
@@ -1826,7 +1841,7 @@ const StatisticsApp = {
         }).filter(Boolean);
 
         if (rows.length === 0) {
-            container.innerHTML = '<p class="stats-empty-copy text-sm text-center py-3">Пока нет данных по типам задач.</p>';
+            container.innerHTML = `<p class="stats-empty-copy text-sm text-center py-3">${wt('stats.performance_no_types_short', 'Пока нет данных по типам задач.')}</p>`;
             return;
         }
 
@@ -1871,12 +1886,13 @@ const StatisticsApp = {
         const now = new Date();
         const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
 
+        const timeStr = `${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
         if (diffDays === 0) {
-            return `Сегодня, ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
+            return `${wt('stats.date_today', 'Сегодня')}, ${timeStr}`;
         } else if (diffDays === 1) {
-            return `Вчера, ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
+            return `${wt('stats.date_yesterday', 'Вчера')}, ${timeStr}`;
         } else {
-            const months = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'];
+            const months = [wt('stats.month_jan','Янв'), wt('stats.month_feb','Фев'), wt('stats.month_mar','Мар'), wt('stats.month_apr','Апр'), wt('stats.month_may','Май'), wt('stats.month_jun','Июн'), wt('stats.month_jul','Июл'), wt('stats.month_aug','Авг'), wt('stats.month_sep','Сен'), wt('stats.month_oct','Окт'), wt('stats.month_nov','Ноя'), wt('stats.month_dec','Дек')];
             return `${date.getDate()} ${months[date.getMonth()]}`;
         }
     },
@@ -1902,7 +1918,7 @@ const StatisticsApp = {
                 const aggregated = complexStats[id].aggregated || {};
                 return {
                     id,
-                    name: names[id] || `Комплекс ${id.slice(0, 8)}`,
+                    name: names[id] || wt('stats.complex_fallback_name', 'Комплекс {id}').replace('{id}', id.slice(0, 8)),
                     lastEndTime,
                     attempts: aggregated.attempts || 0,
                     successRate: aggregated.success_rate || 0,
@@ -1914,7 +1930,7 @@ const StatisticsApp = {
             .slice(0, 12);
 
         if (recentComplexes.length === 0) {
-            this.renderComplexesEmptyState('Когда начнутся сессии по актуальным комплексам из вашей библиотеки, здесь появятся последние результаты.');
+            this.renderComplexesEmptyState(wt('stats.complexes_empty_no_sessions', 'Когда начнутся сессии по актуальным комплексам из вашей библиотеки, здесь появятся последние результаты.'));
             return;
         }
 
@@ -1935,7 +1951,7 @@ const StatisticsApp = {
                     </div>
                       <div class="stats-complex-meta-row mb-2">
                           <span class="text-[10px] text-text-secondary">${safeDateLabel}</span>
-                          <span class="text-[10px] text-text-muted">${complex.attempts} попыток</span>
+                          <span class="text-[10px] text-text-muted">${wt('stats.complex_attempts', '{n} попыток').replace('{n}', complex.attempts)}</span>
                       </div>
                     <div class="h-1 w-full bg-bg-secondary rounded-full overflow-hidden">
                         <div class="h-full ${barColor} rounded-full" style="width:${rate}%"></div>
@@ -2033,8 +2049,8 @@ const StatisticsApp = {
         section.classList.remove('hidden');
 
         const typeConfig = {
-            fact_recall: { name: 'Вопрос-ответ', color: 'indigo', order: 1 },
-            pair_match: { name: 'Сопоставление', color: 'cyan', order: 2 }
+            fact_recall: { name: wt('stats.mc_type_fact_recall', 'Вопрос-ответ'), color: 'indigo', order: 1 },
+            pair_match: { name: wt('stats.mc_type_pair_match', 'Сопоставление'), color: 'cyan', order: 2 }
         };
 
         const types = Object.keys(byCardType)
@@ -2046,7 +2062,7 @@ const StatisticsApp = {
             container.innerHTML = `
                 <div>
                     <div class="flex justify-between text-sm mb-1">
-                        <span class="text-text-main font-medium">Точность</span>
+                        <span class="text-text-main font-medium">${wt('stats.mc_accuracy_label', 'Точность')}</span>
                         <span class="text-text-main font-bold">${overallRate}%</span>
                     </div>
                     <div class="h-2 w-full bg-bg-secondary rounded-full overflow-hidden">
@@ -2067,7 +2083,7 @@ const StatisticsApp = {
 
             let rateLabel = `${rate}%`;
             if (perfectRate != null && type === 'pair_match') {
-                rateLabel += ` (ид. ${perfectRate}%)`;
+                rateLabel += wt('stats.mc_perfect_suffix', ' (ид. {n}%)').replace('{n}', perfectRate);
             }
 
             return `
@@ -2091,19 +2107,19 @@ const StatisticsApp = {
             container.innerHTML += `
                 <div class="mt-2">
                     <div class="flex justify-between text-[10px] font-semibold text-text-secondary mb-1">
-                        <span>Распределение оценок</span>
+                        <span>${wt('stats.mc_ratings_label', 'Распределение оценок')}</span>
                     </div>
                     <div class="flex h-2 w-full rounded-full overflow-hidden">
-                        <div class="bg-error h-full" style="width:${pct('again')}%" title="Снова: ${ratings.again || 0}"></div>
-                        <div class="bg-warning h-full" style="width:${pct('hard')}%" title="Трудно: ${ratings.hard || 0}"></div>
-                        <div class="bg-success h-full" style="width:${pct('good')}%" title="Хорошо: ${ratings.good || 0}"></div>
-                        <div class="bg-info h-full" style="width:${pct('easy')}%" title="Легко: ${ratings.easy || 0}"></div>
+                        <div class="bg-error h-full" style="width:${pct('again')}%" title="${wt('stats.mc_rating_again','Снова')}: ${ratings.again || 0}"></div>
+                        <div class="bg-warning h-full" style="width:${pct('hard')}%" title="${wt('stats.mc_rating_hard','Трудно')}: ${ratings.hard || 0}"></div>
+                        <div class="bg-success h-full" style="width:${pct('good')}%" title="${wt('stats.mc_rating_good','Хорошо')}: ${ratings.good || 0}"></div>
+                        <div class="bg-info h-full" style="width:${pct('easy')}%" title="${wt('stats.mc_rating_easy','Легко')}: ${ratings.easy || 0}"></div>
                     </div>
                     <div class="flex justify-between text-[9px] text-text-secondary mt-0.5">
-                        <span>Снова</span>
-                        <span>Трудно</span>
-                        <span>Хорошо</span>
-                        <span>Легко</span>
+                        <span>${wt('stats.mc_rating_again','Снова')}</span>
+                        <span>${wt('stats.mc_rating_hard','Трудно')}</span>
+                        <span>${wt('stats.mc_rating_good','Хорошо')}</span>
+                        <span>${wt('stats.mc_rating_easy','Легко')}</span>
                     </div>
                 </div>
             `;
@@ -2133,6 +2149,10 @@ const StatisticsApp = {
         }
     }
 };
+
+if (typeof window !== 'undefined') {
+    window.addEventListener('i18n:changed', () => StatisticsApp.render());
+}
 
 const shouldAutoInit = !(typeof window !== 'undefined' && window.__STATISTICS_APP_AUTO_INIT_DISABLED__);
 if (shouldAutoInit) {

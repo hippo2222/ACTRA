@@ -1209,7 +1209,7 @@
                 if (hostedVerificationState) {
                     const status = hostedVerificationState.status || 'pending';
                     if (kicker) {
-                        kicker.textContent = status === 'verified' ? 'Email confirmed' : wt('welcome.header_verify_kicker_pending', 'Подтверждение почты');
+                        kicker.textContent = status === 'verified' ? wt('welcome.header_verified_kicker', 'Почта подтверждена') : wt('welcome.header_verify_kicker_pending', 'Подтверждение почты');
                         kicker.classList.remove('hidden');
                     }
                     if (status === 'verified') {

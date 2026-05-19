@@ -2729,7 +2729,7 @@
 
 <body
     class="main-is-booting bg-bg-main font-display text-text-main antialiased overflow-x-hidden selection:bg-primary selection:text-primary-fg">
-    <div class="main-boot-screen" role="status" aria-live="polite" aria-label="Загрузка ACTRA">
+    <div class="main-boot-screen" role="status" aria-live="polite" aria-label="Загрузка ACTRA" data-i18n-aria="main.boot_loading">
         <div class="main-boot-card">
             <img class="main-boot-logo" src="/assets/logo_animated.svg" alt="ACTRA" />
         </div>
@@ -2744,29 +2744,29 @@
                 <div class="main-dashboard-grid">
                     <div class="main-primary-column">
                         <section class="main-entry-grid">
-                            <article class="main-entry-card main-entry-card--catalog interactive-card" role="link" tabindex="0" data-nav="/catalog" data-onboarding-target="main-catalog-card" aria-label="Открыть каталог материалов">
+                            <article class="main-entry-card main-entry-card--catalog interactive-card" role="link" tabindex="0" data-nav="/catalog" data-onboarding-target="main-catalog-card" aria-label="Открыть каталог материалов" data-i18n-aria="main.catalog_aria">
                                 <div class="flex flex-col gap-3">
-                                    <span class="main-entry-kicker"><span class="material-symbols-outlined text-[16px]">travel_explore</span>Главный вход</span>
+                                    <span class="main-entry-kicker"><span class="material-symbols-outlined text-[16px]">travel_explore</span><span data-i18n="main.catalog_kicker">Главный вход</span></span>
                                     <div class="flex flex-col gap-2">
-                                        <h2 class="main-entry-title">Каталог учебных материалов</h2>
-                                        <p class="main-entry-description">Публичные комплексы и теории в одном месте. Быстро находите готовые материалы, добавляйте в библиотеку и переходите к обучению.</p>
+                                        <h2 class="main-entry-title" data-i18n="main.catalog_title">Каталог учебных материалов</h2>
+                                        <p class="main-entry-description" data-i18n="main.catalog_desc">Публичные комплексы и теории в одном месте. Быстро находите готовые материалы, добавляйте в библиотеку и переходите к обучению.</p>
                                     </div>
                                 </div>
                                 <div class="main-entry-footer">
-                                    <span class="text-sm font-bold text-text-main">Перейти в каталог</span>
+                                    <span class="text-sm font-bold text-text-main" data-i18n="main.catalog_cta">Перейти в каталог</span>
                                     <span class="main-entry-action" aria-hidden="true"><span class="material-symbols-outlined text-[28px]">arrow_forward</span></span>
                                 </div>
                             </article>
-                            <article class="main-entry-card main-entry-card--practice interactive-card" role="link" tabindex="0" data-nav="/complexes" data-onboarding-target="main-complexes-card" aria-label="Открыть список комплексов">
+                            <article class="main-entry-card main-entry-card--practice interactive-card" role="link" tabindex="0" data-nav="/complexes" data-onboarding-target="main-complexes-card" aria-label="Открыть список комплексов" data-i18n-aria="main.practice_aria">
                                 <div class="flex flex-col gap-3">
-                                    <span class="main-entry-kicker"><span class="material-symbols-outlined text-[16px]">play_circle</span>Практика</span>
+                                    <span class="main-entry-kicker"><span class="material-symbols-outlined text-[16px]">play_circle</span><span data-i18n="main.practice_kicker">Практика</span></span>
                                     <div class="flex flex-col gap-2">
-                                        <h2 class="main-entry-title">Проходить комплексы</h2>
-                                        <p class="main-entry-description">Возвращайтесь к своим комплексам, продолжайте сессии и следите за учебным прогрессом.</p>
+                                        <h2 class="main-entry-title" data-i18n="main.practice_title">Проходить комплексы</h2>
+                                        <p class="main-entry-description" data-i18n="main.practice_desc">Возвращайтесь к своим комплексам, продолжайте сессии и следите за учебным прогрессом.</p>
                                     </div>
                                 </div>
                                 <div class="main-entry-footer">
-                                    <span class="text-sm font-bold text-text-main">К списку комплексов</span>
+                                    <span class="text-sm font-bold text-text-main" data-i18n="main.practice_cta">К списку комплексов</span>
                                     <span class="main-entry-action" aria-hidden="true"><span class="material-symbols-outlined text-[28px]">play_arrow</span></span>
                                 </div>
                             </article>
@@ -2790,14 +2790,14 @@
                                 </button>
                                 <button type="button" class="btn-secondary inline-flex items-center justify-center gap-2" id="main-premium-archive-premium">
                                     <span class="material-symbols-outlined text-[18px]">workspace_premium</span>
-                                    <span>Продлить Premium</span>
+                                    <span data-i18n="main.archive_renew">Продлить Premium</span>
                                 </button>
                             </div>
                         </section>
                         <section class="main-editor-panel">
                             <div class="main-section-heading">
                                 <div>
-                                    <h3 class="main-section-title">Инструменты авторов</h3>
+                                    <h3 class="main-section-title" data-i18n="main.author_tools_title">Инструменты авторов</h3>
                                 </div>
                             </div>
                             <div class="main-editor-grid">
@@ -2806,34 +2806,34 @@
                                         <span class="material-symbols-outlined">edit_document</span>
                                     </span>
                                     <div>
-                                        <h4 class="text-sm font-black text-text-main">Редактор заданий</h4>
-                                        <p class="mt-1 text-xs leading-relaxed text-text-secondary">Библиотека, модули, импорт и ручное создание.</p>
+                                        <h4 class="text-sm font-black text-text-main" data-i18n="main.editor_task_title">Редактор заданий</h4>
+                                        <p class="mt-1 text-xs leading-relaxed text-text-secondary" data-i18n="main.editor_task_desc">Библиотека, модули, импорт и ручное создание.</p>
                                     </div>
-                                    <div class="main-editor-card-footer"><span class="text-xs font-bold text-primary">Открыть</span><span class="material-symbols-outlined text-[18px] text-text-muted">arrow_forward</span></div>
+                                    <div class="main-editor-card-footer"><span class="text-xs font-bold text-primary" data-i18n="main.editor_task_cta">Открыть</span><span class="material-symbols-outlined text-[18px] text-text-muted">arrow_forward</span></div>
                                 </article>
                                 <article class="main-editor-card interactive-card" role="link" tabindex="0" data-nav="/complexes/create" data-onboarding-target="main-author-complex-editor-card">
                                     <span class="main-editor-icon" aria-hidden="true">
                                         <span class="material-symbols-outlined">design_services</span>
                                     </span>
                                     <div>
-                                        <h4 class="text-sm font-black text-text-main">Редактор комплексов</h4>
-                                        <p class="mt-1 text-xs leading-relaxed text-text-secondary">Собирайте сценарии обучения из задач и теории.</p>
+                                        <h4 class="text-sm font-black text-text-main" data-i18n="main.editor_complex_title">Редактор комплексов</h4>
+                                        <p class="mt-1 text-xs leading-relaxed text-text-secondary" data-i18n="main.editor_complex_desc">Собирайте сценарии обучения из задач и теории.</p>
                                     </div>
-                                    <div class="main-editor-card-footer"><span class="text-xs font-bold text-primary">Создать</span><span class="material-symbols-outlined text-[18px] text-text-muted">arrow_forward</span></div>
+                                    <div class="main-editor-card-footer"><span class="text-xs font-bold text-primary" data-i18n="main.editor_complex_cta">Создать</span><span class="material-symbols-outlined text-[18px] text-text-muted">arrow_forward</span></div>
                                 </article>
                                 <article class="main-editor-card interactive-card" role="link" tabindex="0" data-nav="/theory-center" data-onboarding-target="main-author-theory-center-card">
                                     <span class="main-editor-icon" aria-hidden="true">
                                         <span class="material-symbols-outlined">hub</span>
                                     </span>
                                     <div>
-                                        <h4 class="text-sm font-black text-text-main">Центр теории</h4>
-                                        <p class="mt-1 text-xs leading-relaxed text-text-secondary">Управляйте теоретическими материалами и связями.</p>
+                                        <h4 class="text-sm font-black text-text-main" data-i18n="main.theory_center_title">Центр теории</h4>
+                                        <p class="mt-1 text-xs leading-relaxed text-text-secondary" data-i18n="main.theory_center_desc">Управляйте теоретическими материалами и связями.</p>
                                     </div>
-                                    <div class="main-editor-card-footer"><span class="text-xs font-bold text-primary">Перейти</span><span class="material-symbols-outlined text-[18px] text-text-muted">arrow_forward</span></div>
+                                    <div class="main-editor-card-footer"><span class="text-xs font-bold text-primary" data-i18n="main.theory_center_cta">Перейти</span><span class="material-symbols-outlined text-[18px] text-text-muted">arrow_forward</span></div>
                                 </article>
                             </div>
                         </section>
-                        <section class="main-continuity-grid" aria-label="Быстрые рабочие состояния">
+                        <section class="main-continuity-grid" aria-label="Быстрые рабочие состояния" data-i18n-aria="main.continuity_aria">
                             <article class="main-continuity-card main-continuity-card--microcards transition-all" data-onboarding-target="main-microcards-card"
                                 id="microcardsCard">
                                 <div class="main-continuity-card__head">
@@ -2842,8 +2842,8 @@
                                             <span class="material-symbols-outlined">style</span>
                                         </span>
                                         <div class="main-continuity-copy">
-                                            <h3 class="main-continuity-title">Микрокарточки</h3>
-                                            <p class="main-continuity-subtitle">Быстрое обучение короткими подходами.</p>
+                                            <h3 class="main-continuity-title" data-i18n="main.microcards_title">Микрокарточки</h3>
+                                            <p class="main-continuity-subtitle" data-i18n="main.microcards_subtitle">Быстрое обучение короткими подходами.</p>
                                         </div>
                                     </div>
                                     <div class="flex items-center gap-1 main-widget-badge pill-neutral pill-sm"
@@ -2859,43 +2859,43 @@
                                         <div
                                             class="h-5 w-5 animate-spin rounded-full border-2 border-primary-light border-t-primary">
                                         </div>
-                                        <p class="main-widget-loading-copy text-[11px]">Загрузка...</p>
+                                        <p class="main-widget-loading-copy text-[11px]" data-i18n="main.loading">Загрузка...</p>
                                     </div>
                                     <div id="microcardsEmptyState"
                                         class="hidden flex-1 flex flex-col items-center justify-center py-4 text-center gap-2">
                                         <span
                                             class="material-symbols-outlined text-border-strong text-[32px]">style</span>
                                         <div class="main-widget-inline-copy">
-                                            <p class="text-sm font-medium text-text-main">Нет колод</p>
-                                            <p class="main-widget-empty-copy text-[11px] mt-1 max-w-sm">Когда появятся колоды, здесь будет быстрый вход в повторение.</p>
+                                            <p class="text-sm font-medium text-text-main" data-i18n="main.mc_empty_title">Нет колод</p>
+                                            <p class="main-widget-empty-copy text-[11px] mt-1 max-w-sm" data-i18n="main.mc_empty_desc">Когда появятся колоды, здесь будет быстрый вход в повторение.</p>
                                         </div>
                                     </div>
                                     <div id="microcardsDisabledState"
                                         class="hidden flex-1 flex flex-col items-center justify-center py-4 text-center gap-2">
                                         <span class="material-symbols-outlined text-border-strong text-[32px]">construction</span>
                                         <div class="main-widget-inline-copy">
-                                            <p class="text-sm font-medium text-text-main">Пока на паузе</p>
-                                            <p class="main-widget-empty-copy text-[11px] mt-1 max-w-sm">Вернём микрокарточки после следующего этапа доработки.</p>
+                                            <p class="text-sm font-medium text-text-main" data-i18n="main.mc_disabled_title">Пока на паузе</p>
+                                            <p class="main-widget-empty-copy text-[11px] mt-1 max-w-sm" data-i18n="main.mc_disabled_desc">Вернём микрокарточки после следующего этапа доработки.</p>
                                         </div>
                                     </div>
                                     <div id="microcardsContentState" class="hidden flex-col gap-2">
                                         <div class="grid grid-cols-3 gap-1.5">
                                             <div class="flex flex-col px-2 py-1.5 bg-surface-2 rounded-lg">
                                                 <span
-                                                    class="text-[11px] text-text-secondary font-bold uppercase tracking-wider">К
+                                                    class="text-[11px] text-text-secondary font-bold uppercase tracking-wider" data-i18n="main.mc_label_due">К
                                                     повтору</span>
                                                 <span class="text-xl font-black text-text-main leading-tight"
                                                     id="microcardsDueCards">0</span>
                                             </div>
                                             <div class="flex flex-col px-2 py-1.5 bg-surface-2 rounded-lg">
                                                 <span
-                                                    class="text-[11px] text-text-secondary font-bold uppercase tracking-wider">Новых</span>
+                                                    class="text-[11px] text-text-secondary font-bold uppercase tracking-wider" data-i18n="main.mc_label_new">Новых</span>
                                                 <span class="text-xl font-black text-text-main leading-tight"
                                                     id="microcardsNewCards">0</span>
                                             </div>
                                             <div class="flex flex-col px-2 py-1.5 bg-surface-2 rounded-lg">
                                                 <span
-                                                    class="text-[11px] text-text-secondary font-bold uppercase tracking-wider">Сегодня</span>
+                                                    class="text-[11px] text-text-secondary font-bold uppercase tracking-wider" data-i18n="main.mc_label_today">Сегодня</span>
                                                 <span class="text-base font-black text-text-main leading-tight"
                                                     id="microcardsTodayReviews">0 повторений</span>
                                             </div>
@@ -2903,7 +2903,7 @@
                                         <div class="flex items-center justify-between px-2 py-1.5 bg-surface-2 rounded-lg">
                                             <div class="flex flex-col">
                                                 <span
-                                                    class="text-[11px] text-text-secondary font-bold uppercase tracking-wider">Точность</span>
+                                                    class="text-[11px] text-text-secondary font-bold uppercase tracking-wider" data-i18n="main.mc_label_accuracy">Точность</span>
                                                 <span class="text-base font-black text-text-main leading-tight"
                                                     id="microcardsTodayAccuracy">—</span>
                                             </div>
@@ -2924,7 +2924,7 @@
                                             class="w-full inline-flex items-center justify-center gap-2 main-secondary-cta text-sm font-bold py-1.5 px-3 rounded-lg transition-all"
                                             disabled>
                                             <span class="material-symbols-outlined text-[14px]">schedule</span>
-                                            <span>Создать вручную</span>
+                                            <span data-i18n="main.mc_create_manual">Создать вручную</span>
                                         </button>
                                     </div>
                                 </div>
@@ -2936,17 +2936,17 @@
                                             <span class="material-symbols-outlined text-[20px]">bolt</span>
                                         </div>
                                         <div class="min-w-0">
-                                            <p class="main-quick-access-kicker">Продолжить</p>
-                                            <h3 class="text-base font-bold text-text-main">Быстрый доступ</h3>
+                                            <p class="main-quick-access-kicker" data-i18n="main.qa_kicker">Продолжить</p>
+                                            <h3 class="text-base font-bold text-text-main" data-i18n="main.qa_title">Быстрый доступ</h3>
                                         </div>
                                     </div>
                                     <div class="main-quick-access-toolbar">
-                                        <span class="main-quick-access-count" id="quick-access-count" title="Комплексов в быстром доступе">0</span>
+                                        <span class="main-quick-access-count" id="quick-access-count" title="Комплексов в быстром доступе" data-i18n-title="main.qa_count_title">0</span>
                                         <div class="main-quick-access-nav" id="quick-access-nav" hidden>
-                                            <button type="button" class="main-quick-access-nav-btn icon-button-muted" id="quick-access-prev" aria-label="Предыдущий комплекс">
+                                            <button type="button" class="main-quick-access-nav-btn icon-button-muted" id="quick-access-prev" aria-label="Предыдущий комплекс" data-i18n-aria="main.qa_prev_aria">
                                                 <span class="material-symbols-outlined text-[16px]">chevron_left</span>
                                             </button>
-                                            <button type="button" class="main-quick-access-nav-btn icon-button-muted" id="quick-access-next" aria-label="Следующий комплекс">
+                                            <button type="button" class="main-quick-access-nav-btn icon-button-muted" id="quick-access-next" aria-label="Следующий комплекс" data-i18n-aria="main.qa_next_aria">
                                                 <span class="material-symbols-outlined text-[16px]">chevron_right</span>
                                             </button>
                                         </div>
@@ -2959,9 +2959,9 @@
                                         <span class="material-symbols-outlined">history_toggle_off</span>
                                     </div>
                                     <div class="main-quick-access-empty-copy">
-                                        <p class="main-quick-access-empty-kicker">Пока пусто</p>
-                                        <p class="main-quick-access-empty-title">Быстрый доступ появится после выбранных комплексов</p>
-                                        <p class="main-quick-access-empty-description qa-empty-text">Закрепите комплекс или начните сессию, чтобы быстро вернуться к нему с главной.</p>
+                                        <p class="main-quick-access-empty-kicker" data-i18n="main.qa_empty_kicker">Пока пусто</p>
+                                        <p class="main-quick-access-empty-title" data-i18n="main.qa_empty_title">Быстрый доступ появится после выбранных комплексов</p>
+                                        <p class="main-quick-access-empty-description qa-empty-text" data-i18n="main.qa_empty_desc">Закрепите комплекс или начните сессию, чтобы быстро вернуться к нему с главной.</p>
                                         <div class="main-quick-access-empty-actions" id="quick-access-empty-actions"></div>
                                     </div>
                                 </div>
@@ -2974,7 +2974,7 @@
                             <!-- Header with Streak -->
                             <div class="flex items-center justify-between mb-1.5">
                                 <h3 class="text-sm font-bold text-text-main flex items-center gap-1.5"><span
-                                        class="material-symbols-outlined text-primary text-[18px]">calendar_month</span>Календарь
+                                        class="material-symbols-outlined text-primary text-[18px]">calendar_month</span><span data-i18n="main.calendar_title">Календарь</span>
                                 </h3>
                                 <div class="flex items-center gap-1 main-widget-badge pill-neutral pill-sm"
                                     id="calendarStreak"><span
@@ -2994,9 +2994,9 @@
                             <div id="calendarEmptyState"
                                 class="hidden flex-1 flex flex-col items-center justify-center py-2 text-center"><span
                                     class="material-symbols-outlined text-border-strong text-[32px] mb-2">event_available</span>
-                                <p class="text-sm font-medium text-text-main">Начните
+                                <p class="text-sm font-medium text-text-main" data-i18n="main.calendar_empty_title">Начните
                                     обучение</p>
-                                <p class="main-widget-empty-copy text-[11px] mt-1">Здесь появится
+                                <p class="main-widget-empty-copy text-[11px] mt-1" data-i18n="main.calendar_empty_desc">Здесь появится
                                     ваш план на день</p>
                             </div>
                             <!-- Content State (shown when has data) -->
@@ -3012,7 +3012,7 @@
                                         <div class="flex items-center gap-2">
                                             <div id="calendarDailyMixCount" class="flex items-center gap-1">
                                                 <span class="text-sm font-black text-text-main">0</span><span
-                                                    class="text-[11px] text-text-secondary">задач</span>
+                                                    class="text-[11px] text-text-secondary" data-i18n="main.calendar_tasks_label">задач</span>
                                             </div><span class="text-[10px] text-border-strong">•</span><span
                                                 class="text-[11px] text-text-secondary" id="calendarDailyMixTime">~0
                                                 мин</span>
@@ -3033,8 +3033,8 @@
                                 <button type="button" data-nav="/calendar"
                                     class="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary-hover text-primary-fg text-xs font-bold py-1.5 px-3 rounded-lg transition-all shadow-sm shadow-primary-light"
                                     onclick="event.stopPropagation(); window.navigateWithTransition('/calendar');"><span
-                                        class="material-symbols-outlined text-[16px]">arrow_forward</span>Открыть
-                                    календарь </button>
+                                        class="material-symbols-outlined text-[16px]">arrow_forward</span><span data-i18n="main.calendar_open">Открыть
+                                    календарь</span> </button>
                             </div>
                         </div>
                         <div
@@ -3042,7 +3042,7 @@
                             id="statsCard" role="link" tabindex="0" data-nav="/statistics" data-onboarding-target="main-stats-card">
                             <div class="flex items-center justify-between mb-1.5">
                                 <h3 class="text-sm font-bold text-text-main flex items-center gap-1.5"><span
-                                        class="material-symbols-outlined main-stats-heading-icon text-[16px]">bar_chart</span>Статистика
+                                        class="material-symbols-outlined main-stats-heading-icon text-[16px]">bar_chart</span><span data-i18n="main.stats_title">Статистика</span>
                                 </h3>
                                 <div class="main-period-toggle segmented-control flex rounded-lg p-0.5">
                                     <button type="button"
@@ -3059,16 +3059,16 @@
                             <div class="transition-all duration-300 ease-in-out hidden" id="statsContent">
                                 <div class="main-stats-row panel-row flex items-center justify-between bg-surface-2 rounded-lg">
                                     <div class="flex flex-col"><span
-                                            class="main-stats-label text-[11px] font-bold uppercase tracking-wider">Пройдено
+                                            class="main-stats-label text-[11px] font-bold uppercase tracking-wider" data-i18n="main.stat_tasks_label">Пройдено
                                             заданий</span><span
                                             class="text-base font-black text-text-main leading-tight"
                                             id="statSolvedTasks">0</span></div>
-                                    <div class="text-xs text-text-secondary">из <span id="statTotalAvailable">0</span>
+                                    <div class="text-xs text-text-secondary"><span data-i18n="main.stat_of_prefix">из</span> <span id="statTotalAvailable">0</span>
                                     </div>
                                 </div>
                                 <div class="main-stats-row panel-row flex items-center justify-between bg-surface-2 rounded-lg">
                                     <div class="flex flex-col"><span
-                                            class="main-stats-label text-[11px] font-bold uppercase tracking-wider">Успешность</span><span
+                                            class="main-stats-label text-[11px] font-bold uppercase tracking-wider" data-i18n="main.stat_success_label">Успешность</span><span
                                             class="text-base font-black text-text-main leading-tight"
                                             id="statSuccessRate">0%</span>
                                     </div><span
@@ -3076,14 +3076,14 @@
                                 </div>
                                 <div class="main-stats-row panel-row flex items-center justify-between bg-surface-2 rounded-lg">
                                     <div class="flex flex-col"><span
-                                            class="main-stats-label text-[11px] font-bold uppercase tracking-wider">Время обучения</span><span
+                                            class="main-stats-label text-[11px] font-bold uppercase tracking-wider" data-i18n="main.stat_time_label">Время обучения</span><span
                                             class="text-base font-black text-text-main leading-tight"
                                             id="statTimeSpent">0ч 0м</span>
                                     </div><span class="material-symbols-outlined text-info text-[20px]">schedule</span>
                                 </div>
                                 <div class="main-stats-row panel-row flex items-center justify-between bg-surface-2 rounded-lg">
                                     <div class="flex flex-col"><span
-                                            class="main-stats-label text-[11px] font-bold uppercase tracking-wider" id="statComplexesLabel">Комплексов
+                                            class="main-stats-label text-[11px] font-bold uppercase tracking-wider" id="statComplexesLabel" data-i18n="main.stat_complexes_today">Комплексов
                                             сегодня</span><span
                                             class="text-base font-black text-text-main leading-tight"
                                             id="statTodayCount">0</span></div><span
@@ -3126,8 +3126,8 @@
                                 </div>
                             </div>
                             <div class="mt-0.5 pt-0.5 border-t border-border-subtle text-center"><span
-                                    class="main-widget-footer-link text-xs font-semibold flex items-center justify-center gap-1 w-full">Подробная
-                                    статистика <span
+                                    class="main-widget-footer-link text-xs font-semibold flex items-center justify-center gap-1 w-full"><span data-i18n="main.stats_footer_link">Подробная
+                                    статистика</span> <span
                                         class="material-symbols-outlined text-[16px]">arrow_forward</span></span>
                             </div>
                         </div>
@@ -3142,13 +3142,13 @@
             class="w-full max-w-lg transform rounded-3xl bg-surface-1 p-0 shadow-2xl transition-all border border-border-subtle overflow-hidden">
             <div class="p-4 border-b border-border-subtle bg-surface-2 flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                    <h3 class="text-xl font-black text-text-main">Профили</h3>
+                    <h3 class="text-xl font-black text-text-main" data-i18n="main.profiles_title">Профили</h3>
                 </div>
                 <div class="flex items-center gap-2">
                     <a href="/settings"
                         class="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border-strong bg-surface-1 text-xs font-bold text-text-main hover:text-primary transition-all active:scale-95">
                         <span class="material-symbols-outlined text-[18px]">settings</span>
-                        Общие настройки
+                        <span data-i18n="main.profiles_settings_link">Общие настройки</span>
                     </a>
                     <button onclick="closeProfileModal()"
                         class="size-8 flex items-center justify-center rounded-full hover:bg-surface-1 transition-colors">
@@ -3160,23 +3160,23 @@
                 <!-- User cards -->
             </div>
             <div class="p-6 border-t border-border-subtle bg-surface-2">
-                <p class="text-[10px] font-bold text-text-secondary uppercase tracking-widest mb-3">Создать новый
+                <p class="text-[10px] font-bold text-text-secondary uppercase tracking-widest mb-3" data-i18n="main.profiles_create_section">Создать новый
                     профиль
                 </p>
                 <div class="space-y-3">
                     <div class="flex gap-2">
-                        <input type="text" id="newUserName" placeholder="Введите имя..."
+                        <input type="text" id="newUserName" placeholder="Введите имя..." data-i18n-placeholder="main.profiles_name_placeholder"
                             class="flex-1 bg-surface-1 border border-border-strong rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all placeholder:text-text-secondary"
                             onkeydown="if(event.key==='Enter'){event.preventDefault();createNewProfile()}">
                         <button id="createProfileBtn" onclick="createNewProfile()"
                             class="bg-primary hover:bg-primary-hover text-primary-fg px-5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                             disabled>
-                            <span class="material-symbols-outlined text-[18px]">person_add</span>Создать
+                            <span class="material-symbols-outlined text-[18px]">person_add</span><span data-i18n="main.profiles_create_btn">Создать</span>
                         </button>
                     </div>
 
                     <div class="rounded-xl border border-border-subtle bg-surface-1 p-3">
-                        <p class="text-[11px] font-semibold text-text-secondary mb-2">
+                        <p class="text-[11px] font-semibold text-text-secondary mb-2" data-i18n="main.profiles_consent_label">
                             Для создания профиля подтвердите согласие:
                         </p>
                         <label class="flex items-start gap-2 text-xs text-text-main mb-2 cursor-pointer">
@@ -3184,9 +3184,9 @@
                                 class="mt-0.5 rounded text-primary focus:ring-primary"
                                 onchange="updateNewProfileConsentState()">
                             <span>
-                                Я принимаю
+                                <span data-i18n="main.profiles_accept_terms">Я принимаю</span>
                                 <button type="button" class="text-primary hover:underline font-semibold"
-                                    onclick="openMainLegalDocument('terms'); return false;">Условия пользования</button>
+                                    onclick="openMainLegalDocument('terms'); return false;"><span data-i18n="main.profiles_terms_link">Условия пользования</span></button>
                             </span>
                         </label>
                         <label class="flex items-start gap-2 text-xs text-text-main mb-2 cursor-pointer">
@@ -3194,10 +3194,10 @@
                                 class="mt-0.5 rounded text-primary focus:ring-primary"
                                 onchange="updateNewProfileConsentState()">
                             <span>
-                                Я ознакомился(ась) с
+                                <span data-i18n="main.profiles_accept_privacy">Я ознакомился(ась) с</span>
                                 <button type="button" class="text-primary hover:underline font-semibold"
-                                    onclick="openMainLegalDocument('privacy'); return false;">Политикой
-                                    приватности</button>
+                                    onclick="openMainLegalDocument('privacy'); return false;"><span data-i18n="main.profiles_privacy_link">Политикой
+                                    приватности</span></button>
                             </span>
                         </label>
                         <label class="flex items-start gap-2 text-xs text-text-main cursor-pointer">
@@ -3205,10 +3205,10 @@
                                 class="mt-0.5 rounded text-primary focus:ring-primary"
                                 onchange="updateNewProfileConsentState()">
                             <span>
-                                Я ознакомился(ась) с
+                                <span data-i18n="main.profiles_accept_privacy">Я ознакомился(ась) с</span>
                                 <button type="button" class="text-primary hover:underline font-semibold"
-                                    onclick="openMainLegalDocument('refund'); return false;">Политикой
-                                    возвратов</button>
+                                    onclick="openMainLegalDocument('refund'); return false;"><span data-i18n="main.profiles_refund_link">Политикой
+                                    возвратов</span></button>
                             </span>
                         </label>
                     </div>
@@ -3221,7 +3221,7 @@
         <div
             class="w-full max-w-lg transform rounded-3xl bg-surface-1 p-0 shadow-2xl transition-all border border-border-subtle overflow-hidden">
             <div class="p-6 border-b border-border-subtle flex items-center justify-between bg-surface-2">
-                <h3 class="text-xl font-black text-text-main">Редактировать профиль</h3><button
+                <h3 class="text-xl font-black text-text-main" data-i18n="main.edit_profile_title">Редактировать профиль</h3><button
                     onclick="closeModal('editProfileModal')"
                     class="size-8 flex items-center justify-center rounded-full hover:bg-surface-2 transition-colors"><span
                         class="material-symbols-outlined text-text-muted">close</span></button>
@@ -3230,14 +3230,14 @@
                 <div class="flex items-center gap-6 mb-2"><img id="editAvatarPreview" src=""
                         class="w-20 h-20 rounded-2xl bg-surface-2 object-cover shadow-inner border-2 border-primary">
                     <div class="flex-1 space-y-2"><label
-                            class="block text-[10px] font-black text-text-muted uppercase tracking-widest">Имя
+                            class="block text-[10px] font-black text-text-muted uppercase tracking-widest" data-i18n="main.edit_name_label">Имя
                             профиля</label><input type="text" id="editName"
                             class="w-full bg-surface-2 border border-border-strong rounded-xl px-4 py-2.5 text-sm font-bold focus:ring-2 focus:ring-primary outline-none transition-all">
                     </div>
                 </div>
                 <div class="space-y-3">
                     <div class="flex items-center justify-between"><label
-                            class="block text-[10px] font-black text-text-muted uppercase tracking-widest">Выбор
+                            class="block text-[10px] font-black text-text-muted uppercase tracking-widest" data-i18n="main.edit_avatar_label">Выбор
                             аватара</label></div>
                     <div id="avatarGallery"
                         class="grid grid-cols-4 sm:grid-cols-5 gap-2 max-h-[160px] overflow-y-auto p-2 bg-surface-2 rounded-2xl border border-border-subtle">
@@ -3245,20 +3245,20 @@
                     </div><input type="hidden" id="editAvatarSeed">
                 </div>
                 <div class="pt-2"><label
-                        class="block text-[10px] font-black text-text-muted uppercase tracking-widest mb-2">Безопасность</label>
+                        class="block text-[10px] font-black text-text-muted uppercase tracking-widest mb-2" data-i18n="main.edit_security_label">Безопасность</label>
                     <div class="bg-surface-2 rounded-2xl p-4 border border-border-subtle space-y-3">
                         <form onsubmit="return false;"><input type="password" id="editPassword"
-                                placeholder="Новый пароль..."
+                                placeholder="Новый пароль..." data-i18n-placeholder="main.edit_pw_placeholder"
                                 class="w-full bg-surface-1 border border-border-strong rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-primary outline-none mb-3">
                         </form>
                         <div class="space-y-2"><label class="flex items-center gap-3 cursor-pointer group"><input
                                     type="checkbox" id="requirePassLogin"
                                     class="rounded text-primary focus:ring-primary"><span
-                                    class="text-xs font-medium text-text-secondary">Пароль при
+                                    class="text-xs font-medium text-text-secondary" data-i18n="main.edit_pw_on_login">Пароль при
                                     входе</span></label><label
                                 class="flex items-center gap-3 cursor-pointer group"><input type="checkbox"
                                     id="requirePassEdit" class="rounded text-primary focus:ring-primary"><span
-                                    class="text-xs font-medium text-text-secondary">Пароль при
+                                    class="text-xs font-medium text-text-secondary" data-i18n="main.edit_pw_on_edit">Пароль при
                                     редактировании</span></label></div>
                     </div>
                 </div>
@@ -3266,11 +3266,11 @@
             <div class="p-6 border-t border-border-subtle flex justify-between gap-3 bg-surface-1">
                 <button onclick="confirmDeleteProfile()"
                     class="px-6 py-2.5 rounded-xl text-sm font-bold text-status-error hover:bg-surface-2 transition-all flex items-center gap-2"><span
-                        class="material-symbols-outlined text-[18px]">delete</span>Удалить </button>
+                        class="material-symbols-outlined text-[18px]">delete</span><span data-i18n="main.edit_delete_btn">Удалить</span> </button>
                 <div class="flex gap-3"><button onclick="closeModal('editProfileModal')"
-                        class="px-6 py-2.5 rounded-xl text-sm font-bold text-text-muted hover:bg-surface-2 transition-all">Отмена
+                        class="px-6 py-2.5 rounded-xl text-sm font-bold text-text-muted hover:bg-surface-2 transition-all" data-i18n="main.edit_cancel_btn">Отмена
                     </button><button onclick="saveProfileChanges()"
-                        class="bg-primary hover:bg-primary-hover text-primary-fg px-8 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-primary-light transition-all">Сохранить
+                        class="bg-primary hover:bg-primary-hover text-primary-fg px-8 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-primary-light transition-all" data-i18n="main.edit_save_btn">Сохранить
                     </button></div>
             </div>
         </div>
@@ -3282,18 +3282,18 @@
                 <div class="size-16 bg-primary-lighter rounded-full flex items-center justify-center mx-auto mb-4">
                     <span class="material-symbols-outlined text-primary text-3xl">lock</span>
                 </div>
-                <h3 class="text-xl font-bold text-text-main" id="passPromptTitle">Вход в
+                <h3 class="text-xl font-bold text-text-main" id="passPromptTitle" data-i18n="main.pw_default_title">Вход в
                     профиль</h3>
-                <p class="text-xs text-text-muted mt-2">Введите пароль для продолжения</p>
+                <p class="text-xs text-text-muted mt-2" data-i18n="main.pw_prompt_subtitle">Введите пароль для продолжения</p>
             </div>
             <form onsubmit="event.preventDefault();submitPasswordPrompt()"><input type="password"
-                    id="promptPasswordInput" placeholder="Ваш пароль..."
+                    id="promptPasswordInput" placeholder="Ваш пароль..." data-i18n-placeholder="main.pw_prompt_placeholder"
                     class="w-full bg-surface-2 border border-border-strong rounded-xl px-5 py-3 text-center text-lg focus:ring-2 focus:ring-primary outline-none mb-4">
             </form>
             <div class="flex flex-col gap-2"><button onclick="submitPasswordPrompt()"
-                    class="w-full bg-primary hover:bg-primary-hover text-primary-fg py-3 rounded-xl font-bold shadow-lg transition-all">Подтвердить</button><button
+                    class="w-full bg-primary hover:bg-primary-hover text-primary-fg py-3 rounded-xl font-bold shadow-lg transition-all" data-i18n="main.pw_prompt_confirm">Подтвердить</button><button
                     onclick="closePasswordPrompt()"
-                    class="w-full py-2 text-text-muted text-sm hover:text-text-main transition-all">Отмена</button>
+                    class="w-full py-2 text-text-muted text-sm hover:text-text-main transition-all" data-i18n="main.pw_prompt_cancel">Отмена</button>
             </div>
         </div>
     </div>
@@ -3304,8 +3304,8 @@
             class="w-full max-w-xl transform rounded-3xl bg-surface-1 p-0 shadow-2xl border border-border-subtle overflow-hidden">
             <div class="p-6 border-b border-border-subtle flex items-center justify-between bg-surface-2">
                 <div>
-                    <h3 class="text-xl font-black text-text-main">&#1054;&#1073;&#1088;&#1072;&#1090;&#1085;&#1072;&#1103; &#1089;&#1074;&#1103;&#1079;&#1100;</h3>
-                    <p class="text-xs text-text-secondary mt-1">&#1057;&#1086;&#1086;&#1073;&#1097;&#1077;&#1085;&#1080;&#1077; &#1088;&#1072;&#1079;&#1088;&#1072;&#1073;&#1086;&#1090;&#1095;&#1080;&#1082;&#1091;: &#1073;&#1072;&#1075;, &#1080;&#1076;&#1077;&#1103; &#1080;&#1083;&#1080; &#1087;&#1088;&#1077;&#1076;&#1083;&#1086;&#1078;&#1077;&#1085;&#1080;&#1077;.</p>
+                    <h3 class="text-xl font-black text-text-main" data-i18n="main.feedback_title">&#1054;&#1073;&#1088;&#1072;&#1090;&#1085;&#1072;&#1103; &#1089;&#1074;&#1103;&#1079;&#1100;</h3>
+                    <p class="text-xs text-text-secondary mt-1" data-i18n="main.feedback_subtitle">&#1057;&#1086;&#1086;&#1073;&#1097;&#1077;&#1085;&#1080;&#1077; &#1088;&#1072;&#1079;&#1088;&#1072;&#1073;&#1086;&#1090;&#1095;&#1080;&#1082;&#1091;: &#1073;&#1072;&#1075;, &#1080;&#1076;&#1077;&#1103; &#1080;&#1083;&#1080; &#1087;&#1088;&#1077;&#1076;&#1083;&#1086;&#1078;&#1077;&#1085;&#1080;&#1077;.</p>
                 </div>
                 <button onclick="closeFeedbackModal()"
                     class="size-8 flex items-center justify-center rounded-full hover:bg-surface-1 transition-colors">
@@ -3315,47 +3315,47 @@
             <div class="p-6 space-y-4">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <label class="flex flex-col gap-1.5">
-                        <span class="text-[11px] font-bold text-text-secondary uppercase tracking-wider">&#1058;&#1080;&#1087;</span>
+                        <span class="text-[11px] font-bold text-text-secondary uppercase tracking-wider" data-i18n="main.feedback_type_label">&#1058;&#1080;&#1087;</span>
                         <select id="feedbackType"
                             class="bg-surface-2 border border-border-strong rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-primary outline-none placeholder:text-text-secondary">
-                            <option value="bug">&#1041;&#1072;&#1075;</option>
-                            <option value="idea">&#1048;&#1076;&#1077;&#1103;</option>
-                            <option value="improvement">&#1059;&#1083;&#1091;&#1095;&#1096;&#1077;&#1085;&#1080;&#1077;</option>
-                            <option value="question">&#1042;&#1086;&#1087;&#1088;&#1086;&#1089;</option>
+                            <option value="bug" data-i18n="main.feedback_type_bug">&#1041;&#1072;&#1075;</option>
+                            <option value="idea" data-i18n="main.feedback_type_idea">&#1048;&#1076;&#1077;&#1103;</option>
+                            <option value="improvement" data-i18n="main.feedback_type_improvement">&#1059;&#1083;&#1091;&#1095;&#1096;&#1077;&#1085;&#1080;&#1077;</option>
+                            <option value="question" data-i18n="main.feedback_type_question">&#1042;&#1086;&#1087;&#1088;&#1086;&#1089;</option>
                         </select>
                     </label>
                     <label class="flex flex-col gap-1.5">
                         <span
-                            class="text-[11px] font-bold text-text-secondary uppercase tracking-wider">&#1050;&#1088;&#1080;&#1090;&#1080;&#1095;&#1085;&#1086;&#1089;&#1090;&#1100;</span>
+                            class="text-[11px] font-bold text-text-secondary uppercase tracking-wider" data-i18n="main.feedback_severity_label">&#1050;&#1088;&#1080;&#1090;&#1080;&#1095;&#1085;&#1086;&#1089;&#1090;&#1100;</span>
                         <select id="feedbackSeverity"
                             class="bg-surface-2 border border-border-strong rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-primary outline-none placeholder:text-text-secondary">
-                            <option value="medium">&#1057;&#1088;&#1077;&#1076;&#1085;&#1103;&#1103;</option>
-                            <option value="low">&#1053;&#1080;&#1079;&#1082;&#1072;&#1103;</option>
-                            <option value="high">&#1042;&#1099;&#1089;&#1086;&#1082;&#1072;&#1103;</option>
-                            <option value="critical">&#1050;&#1088;&#1080;&#1090;&#1080;&#1095;&#1085;&#1072;&#1103;</option>
+                            <option value="medium" data-i18n="main.feedback_severity_medium">&#1057;&#1088;&#1077;&#1076;&#1085;&#1103;&#1103;</option>
+                            <option value="low" data-i18n="main.feedback_severity_low">&#1053;&#1080;&#1079;&#1082;&#1072;&#1103;</option>
+                            <option value="high" data-i18n="main.feedback_severity_high">&#1042;&#1099;&#1089;&#1086;&#1082;&#1072;&#1103;</option>
+                            <option value="critical" data-i18n="main.feedback_severity_critical">&#1050;&#1088;&#1080;&#1090;&#1080;&#1095;&#1085;&#1072;&#1103;</option>
                         </select>
                     </label>
                 </div>
                 <label class="flex flex-col gap-1.5">
-                    <span class="text-[11px] font-bold text-text-secondary uppercase tracking-wider">&#1058;&#1077;&#1084;&#1072;</span>
-                    <input id="feedbackTitle" type="text" maxlength="180" placeholder="&#1050;&#1088;&#1072;&#1090;&#1082;&#1086; &#1086;&#1087;&#1080;&#1096;&#1080;&#1090;&#1077; &#1089;&#1091;&#1090;&#1100;"
+                    <span class="text-[11px] font-bold text-text-secondary uppercase tracking-wider" data-i18n="main.feedback_subject_label">&#1058;&#1077;&#1084;&#1072;</span>
+                    <input id="feedbackTitle" type="text" maxlength="180" placeholder="&#1050;&#1088;&#1072;&#1090;&#1082;&#1086; &#1086;&#1087;&#1080;&#1096;&#1080;&#1090;&#1077; &#1089;&#1091;&#1090;&#1100;" data-i18n-placeholder="main.feedback_subject_placeholder"
                         class="bg-surface-2 border border-border-strong rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-primary outline-none placeholder:text-text-secondary">
                 </label>
                 <label class="flex flex-col gap-1.5">
-                    <span class="text-[11px] font-bold text-text-secondary uppercase tracking-wider">&#1054;&#1087;&#1080;&#1089;&#1072;&#1085;&#1080;&#1077;</span>
+                    <span class="text-[11px] font-bold text-text-secondary uppercase tracking-wider" data-i18n="main.feedback_desc_label">&#1054;&#1087;&#1080;&#1089;&#1072;&#1085;&#1080;&#1077;</span>
                     <textarea id="feedbackDescription" rows="6" maxlength="10000"
-                        placeholder="&#1063;&#1090;&#1086; &#1087;&#1088;&#1086;&#1080;&#1079;&#1086;&#1096;&#1083;&#1086;, &#1082;&#1072;&#1082; &#1074;&#1086;&#1089;&#1087;&#1088;&#1086;&#1080;&#1079;&#1074;&#1077;&#1089;&#1090;&#1080;, &#1095;&#1090;&#1086; &#1086;&#1078;&#1080;&#1076;&#1072;&#1083;&#1080; &#1087;&#1086;&#1083;&#1091;&#1095;&#1080;&#1090;&#1100;..."
+                        placeholder="&#1063;&#1090;&#1086; &#1087;&#1088;&#1086;&#1080;&#1079;&#1086;&#1096;&#1083;&#1086;, &#1082;&#1072;&#1082; &#1074;&#1086;&#1089;&#1087;&#1088;&#1086;&#1080;&#1079;&#1074;&#1077;&#1089;&#1090;&#1080;, &#1095;&#1090;&#1086; &#1086;&#1078;&#1080;&#1076;&#1072;&#1083;&#1080; &#1087;&#1086;&#1083;&#1091;&#1095;&#1080;&#1090;&#1100;..." data-i18n-placeholder="main.feedback_desc_placeholder"
                         class="bg-surface-2 border border-border-strong rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-primary outline-none resize-y placeholder:text-text-secondary"></textarea>
                 </label>
                 <label class="flex items-start gap-2 text-sm text-text-main cursor-pointer">
                     <input type="checkbox" id="feedbackIncludeTechnical"
                         class="mt-0.5 rounded text-primary focus:ring-primary">
-                    <span>&#1055;&#1088;&#1080;&#1083;&#1086;&#1078;&#1080;&#1090;&#1100; &#1090;&#1077;&#1093;&#1085;&#1080;&#1095;&#1077;&#1089;&#1082;&#1080;&#1077; &#1076;&#1072;&#1085;&#1085;&#1099;&#1077; (&#1074;&#1077;&#1088;&#1089;&#1080;&#1103;, &#1087;&#1083;&#1072;&#1090;&#1092;&#1086;&#1088;&#1084;&#1072;, user agent)</span>
+                    <span data-i18n="main.feedback_include_tech">&#1055;&#1088;&#1080;&#1083;&#1086;&#1078;&#1080;&#1090;&#1100; &#1090;&#1077;&#1093;&#1085;&#1080;&#1095;&#1077;&#1089;&#1082;&#1080;&#1077; &#1076;&#1072;&#1085;&#1085;&#1099;&#1077; (&#1074;&#1077;&#1088;&#1089;&#1080;&#1103;, &#1087;&#1083;&#1072;&#1090;&#1092;&#1086;&#1088;&#1084;&#1072;, user agent)</span>
                 </label>
                 <label class="flex items-start gap-2 text-sm text-text-main cursor-pointer">
                     <input type="checkbox" id="feedbackIncludeLogs"
                         class="mt-0.5 rounded text-primary focus:ring-primary">
-                    <span>&#1055;&#1088;&#1080;&#1083;&#1086;&#1078;&#1080;&#1090;&#1100; &#1092;&#1088;&#1072;&#1075;&#1084;&#1077;&#1085;&#1090;&#1099; &#1083;&#1086;&#1075;&#1086;&#1074; &#1080;&#1079; &#1087;&#1072;&#1087;&#1082;&#1080; <code>logs</code> (&#1076;&#1083;&#1103; &#1088;&#1072;&#1079;&#1073;&#1086;&#1088;&#1072; &#1073;&#1072;&#1075;&#1072;)</span>
+                    <span data-i18n="main.feedback_include_logs">&#1055;&#1088;&#1080;&#1083;&#1086;&#1078;&#1080;&#1090;&#1100; &#1092;&#1088;&#1072;&#1075;&#1084;&#1077;&#1085;&#1090;&#1099; &#1083;&#1086;&#1075;&#1086;&#1074; &#1080;&#1079; &#1087;&#1072;&#1087;&#1082;&#1080; <code>logs</code> (&#1076;&#1083;&#1103; &#1088;&#1072;&#1079;&#1073;&#1086;&#1088;&#1072; &#1073;&#1072;&#1075;&#1072;)</span>
                 </label>
                 <p id="feedbackNetworkStatus"
                     class="hidden text-xs rounded-lg px-3 py-2 border border-border-strong bg-surface-2 text-text-secondary">
@@ -3366,11 +3366,11 @@
             <div class="p-6 border-t border-border-subtle bg-surface-2 flex justify-end gap-2">
                 <button onclick="closeFeedbackModal()"
                     class="px-4 py-2 rounded-lg border border-border-strong text-text-secondary hover:bg-surface-1 transition-colors text-sm font-semibold">
-                    &#1054;&#1090;&#1084;&#1077;&#1085;&#1072;
+                    <span data-i18n="main.feedback_cancel">&#1054;&#1090;&#1084;&#1077;&#1085;&#1072;</span>
                 </button>
                 <button id="feedbackSubmitBtn" onclick="submitFeedback()"
                     class="px-4 py-2 rounded-lg bg-primary text-primary-fg hover:bg-primary-hover transition-colors text-sm font-semibold">
-                    &#1054;&#1090;&#1087;&#1088;&#1072;&#1074;&#1080;&#1090;&#1100;
+                    <span data-i18n="main.feedback_submit">&#1054;&#1090;&#1087;&#1088;&#1072;&#1074;&#1080;&#1090;&#1100;</span>
                 </button>
             </div>
         </div>
@@ -3381,7 +3381,7 @@
         <div class="w-full max-w-3xl rounded-2xl bg-surface-1 border border-border-subtle shadow-2xl overflow-hidden">
             <div class="px-5 py-4 border-b border-border-subtle bg-surface-2 flex items-center justify-between">
                 <div>
-                    <h3 id="mainLegalDocTitle" class="text-lg font-bold text-text-main">Документ</h3>
+                    <h3 id="mainLegalDocTitle" class="text-lg font-bold text-text-main" data-i18n="main.legal_doc_title">Документ</h3>
                     <p id="mainLegalDocMeta" class="text-xs text-text-secondary mt-1"></p>
                 </div>
                 <button type="button" onclick="closeMainLegalDocument()"
@@ -3395,7 +3395,7 @@
             </div>
             <div class="px-5 py-3 border-t border-border-subtle bg-surface-2 flex justify-end">
                 <button type="button" onclick="closeMainLegalDocument()"
-                    class="px-4 py-2 rounded-lg bg-primary text-primary-fg hover:bg-primary-hover transition-colors text-sm font-semibold">
+                    class="px-4 py-2 rounded-lg bg-primary text-primary-fg hover:bg-primary-hover transition-colors text-sm font-semibold" data-i18n="main.legal_close">
                     Закрыть
                 </button>
             </div>
@@ -3406,36 +3406,36 @@
     <div class="modal fixed inset-0 z-[90] flex items-center justify-center bg-scrim p-4" id="mainConsentGateModal">
         <div class="w-full max-w-lg rounded-2xl bg-surface-1 border border-border-subtle shadow-2xl overflow-hidden">
             <div class="px-5 py-4 border-b border-border-subtle bg-surface-2">
-                <h3 class="text-lg font-bold text-text-main">Требуется согласие с условиями</h3>
-                <p class="text-xs text-text-secondary mt-1">Перед продолжением подтвердите актуальные документы.</p>
+                <h3 class="text-lg font-bold text-text-main" data-i18n="main.consent_gate_title">Требуется согласие с условиями</h3>
+                <p class="text-xs text-text-secondary mt-1" data-i18n="main.consent_gate_subtitle">Перед продолжением подтвердите актуальные документы.</p>
             </div>
             <div class="p-5">
                 <div class="rounded-xl border border-border-subtle bg-surface-2 p-4 mb-4">
-                    <p class="text-xs text-text-secondary mb-2">Текущие версии:</p>
+                    <p class="text-xs text-text-secondary mb-2" data-i18n="main.consent_gate_versions_label">Текущие версии:</p>
                     <p id="mainConsentGateVersions" class="text-sm font-medium text-text-main"></p>
                 </div>
                 <label class="flex items-start gap-3 text-sm text-text-main mb-3 cursor-pointer">
                     <input type="checkbox" id="mainConsentGateAcceptTerms"
                         class="mt-0.5 rounded text-primary focus:ring-primary" onchange="updateMainConsentGateState()">
-                    <span>Я принимаю
+                    <span><span data-i18n="main.consent_gate_accept_terms">Я принимаю</span>
                         <button type="button" class="text-primary hover:underline font-semibold"
-                            onclick="openMainLegalDocument('terms'); return false;">Условия пользования</button>
+                            onclick="openMainLegalDocument('terms'); return false;"><span data-i18n="main.profiles_terms_link">Условия пользования</span></button>
                     </span>
                 </label>
                 <label class="flex items-start gap-3 text-sm text-text-main cursor-pointer">
                     <input type="checkbox" id="mainConsentGateAcceptPrivacy"
                         class="mt-0.5 rounded text-primary focus:ring-primary" onchange="updateMainConsentGateState()">
-                    <span>Я ознакомился(ась) с
+                    <span><span data-i18n="main.consent_gate_accept_privacy">Я ознакомился(ась) с</span>
                         <button type="button" class="text-primary hover:underline font-semibold"
-                            onclick="openMainLegalDocument('privacy'); return false;">Политикой приватности</button>
+                            onclick="openMainLegalDocument('privacy'); return false;"><span data-i18n="main.profiles_privacy_link">Политикой приватности</span></button>
                     </span>
                 </label>
                 <label class="flex items-start gap-3 text-sm text-text-main cursor-pointer">
                     <input type="checkbox" id="mainConsentGateAcceptRefund"
                         class="mt-0.5 rounded text-primary focus:ring-primary" onchange="updateMainConsentGateState()">
-                    <span>Я ознакомился(ась) с
+                    <span><span data-i18n="main.consent_gate_accept_privacy">Я ознакомился(ась) с</span>
                         <button type="button" class="text-primary hover:underline font-semibold"
-                            onclick="openMainLegalDocument('refund'); return false;">Политикой возвратов</button>
+                            onclick="openMainLegalDocument('refund'); return false;"><span data-i18n="main.profiles_refund_link">Политикой возвратов</span></button>
                     </span>
                 </label>
                 <p id="mainConsentGateError"
@@ -3443,23 +3443,23 @@
             </div>
             <div class="px-5 py-4 border-t border-border-subtle bg-surface-2 flex justify-end gap-2">
                 <button type="button" onclick="cancelMainConsentGate()"
-                    class="px-4 py-2 rounded-lg border border-border-strong text-text-main hover:bg-surface-1 transition-colors text-sm font-semibold">
+                    class="px-4 py-2 rounded-lg border border-border-strong text-text-main hover:bg-surface-1 transition-colors text-sm font-semibold" data-i18n="main.consent_gate_cancel">
                     Отмена
                 </button>
                 <button type="button" id="mainConsentGateSubmitBtn" onclick="submitMainConsentGate()"
                     class="px-4 py-2 rounded-lg bg-primary text-primary-fg hover:bg-primary-hover transition-colors text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled>
+                    disabled data-i18n="main.consent_gate_confirm">
                     Подтвердить и продолжить
                 </button>
             </div>
         </div>
     </div>
 
+    <script src="/assets/i18n.js"></script>
     <script src="/assets/NotificationUI.js"></script>
     <script src="/assets/PremiumPromoModal.js"></script>
     <script src="/assets/MainLogic.js"></script>
     <script src="/assets/SharedProfileModal.js"></script>
-    <script src="/assets/i18n.js"></script>
     <script src="/assets/GlobalHeader.js?v=onboarding-help-1"></script>
     <script src="/assets/ThemeSwitcherUI.js"></script>
     <script src="/assets/ConnectionMonitor.js"></script>

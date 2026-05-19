@@ -437,7 +437,7 @@
                         <a id="settings-main-btn" href="/main"
                             class="btn-secondary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold">
                             <span class="material-symbols-outlined text-[18px]">dashboard</span>
-                            Главная
+                            <span data-i18n="settings.nav_home">Главная</span>
                         </a>
                         <button id="settings-logout-btn" type="button"
                             class="btn-secondary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold">
@@ -778,8 +778,8 @@
                     <div class="flex items-start gap-3">
                         <span class="material-symbols-outlined mt-0.5 text-[22px] text-warning-dark">construction</span>
                         <div class="min-w-0">
-                            <p class="text-base font-semibold text-text-main">Функционал в разработке</p>
-                            <p class="mt-2 text-sm text-text-secondary">
+                            <p class="text-base font-semibold text-text-main" data-i18n="settings.ai_placeholder_title">Функционал в разработке</p>
+                            <p class="mt-2 text-sm text-text-secondary" data-i18n="settings.ai_placeholder_desc">
                                 Настройки AI API временно прикрыты в hosted-версии, чтобы не оставлять полуживой контур.
                             </p>
                         </div>
@@ -815,8 +815,8 @@
                 <div class="settings-action-bar mt-8 px-4 py-4 sm:px-5">
                     <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                         <div class="min-w-0">
-                            <p class="text-base font-semibold text-text-main">Сохранение и проверка ключей</p>
-                            <p class="mt-1 text-sm text-text-secondary">
+                            <p class="text-base font-semibold text-text-main" data-i18n="settings.keys_save_title">Сохранение и проверка ключей</p>
+                            <p class="mt-1 text-sm text-text-secondary" data-i18n="settings.keys_save_desc">
                                 Сохраните текущий набор и при необходимости проверьте все ключи одним действием.
                             </p>
                         </div>
@@ -843,11 +843,11 @@
         <div class="settings-avatar-crop-panel p-5 sm:p-6">
             <div class="flex items-start justify-between gap-4">
                 <div>
-                    <h2 id="settings-avatar-crop-title" class="text-xl font-bold text-text-main">Кадрирование аватара</h2>
-                    <p class="mt-1 text-sm text-text-secondary">Выберите квадратную область 1:1. После подтверждения загрузится именно этот фрагмент.</p>
+                    <h2 id="settings-avatar-crop-title" class="text-xl font-bold text-text-main" data-i18n="settings.crop_title">Кадрирование аватара</h2>
+                    <p class="mt-1 text-sm text-text-secondary" data-i18n="settings.crop_desc">Выберите квадратную область 1:1. После подтверждения загрузится именно этот фрагмент.</p>
                 </div>
                 <button id="settings-avatar-crop-cancel-icon-btn" type="button"
-                    class="btn-secondary inline-flex h-10 w-10 items-center justify-center rounded-xl" aria-label="Закрыть кадрирование">
+                    class="btn-secondary inline-flex h-10 w-10 items-center justify-center rounded-xl" aria-label="Закрыть кадрирование" data-i18n-aria="settings.crop_close_aria">
                     <span class="material-symbols-outlined text-[18px]">close</span>
                 </button>
             </div>
@@ -861,21 +861,21 @@
 
             <div class="mt-5">
                 <div class="flex items-center justify-between gap-3 text-sm text-text-secondary">
-                    <span>Масштаб</span>
-                    <button id="settings-avatar-crop-reset-btn" type="button" class="btn-secondary rounded-xl px-3 py-2 text-xs font-semibold">
+                    <span data-i18n="settings.crop_zoom_label">Масштаб</span>
+                    <button id="settings-avatar-crop-reset-btn" type="button" class="btn-secondary rounded-xl px-3 py-2 text-xs font-semibold" data-i18n="settings.crop_reset">
                         Сбросить
                     </button>
                 </div>
                 <input id="settings-avatar-crop-zoom" type="range" min="100" max="300" step="1" value="100"
                     class="mt-3 w-full accent-primary" />
-                <p class="mt-3 text-xs text-text-secondary">Потяните изображение внутри рамки, чтобы выбрать нужную область.</p>
+                <p class="mt-3 text-xs text-text-secondary" data-i18n="settings.crop_hint">Потяните изображение внутри рамки, чтобы выбрать нужную область.</p>
             </div>
 
             <div class="mt-6 flex flex-wrap items-center justify-end gap-3">
-                <button id="settings-avatar-crop-cancel-btn" type="button" class="btn-secondary rounded-xl px-4 py-2.5 text-sm font-semibold">
+                <button id="settings-avatar-crop-cancel-btn" type="button" class="btn-secondary rounded-xl px-4 py-2.5 text-sm font-semibold" data-i18n="settings.cancel">
                     Отмена
                 </button>
-                <button id="settings-avatar-crop-apply-btn" type="button" class="btn-primary rounded-xl px-4 py-2.5 text-sm font-semibold">
+                <button id="settings-avatar-crop-apply-btn" type="button" class="btn-primary rounded-xl px-4 py-2.5 text-sm font-semibold" data-i18n="settings.crop_apply">
                     Использовать фрагмент
                 </button>
             </div>

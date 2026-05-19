@@ -13,6 +13,14 @@
 }(typeof self !== 'undefined' ? self : this, function (SessionState) {
     'use strict';
 
+    function wt(key, fallback) {
+        if (typeof window !== 'undefined' && window.i18n && typeof window.i18n.t === 'function') {
+            const result = window.i18n.t(key);
+            return result !== key ? result : fallback;
+        }
+        return fallback;
+    }
+
     let statusAutoHideTimer = null;
 
     function ensureState() {
@@ -51,7 +59,7 @@
             return;
         }
 
-        const busyLabel = String(options && options.label ? options.label : "Загрузка");
+        const busyLabel = String(options && options.label ? options.label : wt('s1.busy_loading', 'Загрузка'));
         if (labelEl) {
             labelEl.textContent = busyLabel;
         }
@@ -129,8 +137,8 @@
             closeBtn.type = "button";
             closeBtn.className =
                 "inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-border-subtle bg-transparent text-text-secondary transition-colors hover:bg-bg-hover";
-            closeBtn.setAttribute("aria-label", "Закрыть уведомление");
-            closeBtn.title = "Закрыть уведомление";
+            closeBtn.setAttribute("aria-label", wt('s1.close_notification', 'Закрыть уведомление'));
+            closeBtn.title = wt('s1.close_notification', 'Закрыть уведомление');
 
             const icon = document.createElement("span");
             icon.className = "material-symbols-outlined text-[14px] leading-none";
@@ -171,10 +179,10 @@
         const textWrap = document.createElement("div");
         const title = document.createElement("p");
         title.className = "font-semibold";
-        title.textContent = "Ошибка отправки ответа";
+        title.textContent = wt('s1.retry_title', 'Ошибка отправки ответа');
         const text = document.createElement("p");
         text.className = "text-sm mt-1";
-        text.textContent = "Проверьте подключение к сети и попробуйте снова";
+        text.textContent = wt('s1.retry_message', 'Проверьте подключение к сети и попробуйте снова');
         textWrap.appendChild(title);
         textWrap.appendChild(text);
 
@@ -183,7 +191,7 @@
         btn.id = "retry-submit-btn";
         btn.className =
             "shrink-0 px-4 py-2 bg-surface-1 dark:bg-surface-2 border border-current rounded-lg font-semibold hover:bg-bg-hover dark:hover:bg-bg-hover transition disabled:opacity-60 disabled:cursor-not-allowed";
-        btn.textContent = "Повторить";
+        btn.textContent = wt('s1.retry_btn', 'Повторить');
         btn.disabled = typeof retryCallback !== "function";
 
         row.appendChild(textWrap);
@@ -338,7 +346,7 @@
 
         // Also clear title etc to avoid mixed state
         const titleEl = document.getElementById("task-title");
-        if (titleEl) titleEl.textContent = "Загрузка...";
+        if (titleEl) titleEl.textContent = wt('s1.skeleton_loading', 'Загрузка...');
     }
 
     return {

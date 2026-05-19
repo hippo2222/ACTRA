@@ -20,6 +20,12 @@
 (function () {
     'use strict';
 
+    function wt(key, fallback) {
+        if (!window.i18n || typeof window.i18n.t !== 'function') return fallback;
+        var v = window.i18n.t(key);
+        return v !== key ? v : fallback;
+    }
+
     const MENU_MODE = {
         HOSTED: 'hosted',
         LEGACY: 'legacy',
@@ -116,7 +122,7 @@
     }
 
     function getHostedAccountCaption() {
-        return 'Личный кабинет ACTRA';
+        return wt('profile_modal.hosted_account_caption', 'Личный кабинет ACTRA');
     }
 
     function formatPremiumDate(value) {
@@ -302,7 +308,7 @@
             <div class="px-4 py-8 text-center text-text-secondary">
                 <div class="inline-flex items-center gap-2">
                     <span class="material-symbols-outlined animate-spin text-primary">progress_activity</span>
-                    <span class="text-sm">Загрузка меню...</span>
+                    <span class="text-sm">${wt('profile_modal.loading_menu', 'Загрузка меню...')}</span>
                 </div>
             </div>
         `;
@@ -315,26 +321,26 @@
 
         panel.innerHTML = `
             <div class="border-b border-border-subtle bg-surface-2 px-4 py-3">
-                <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-text-secondary">Текущий профиль</p>
+                <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-text-secondary">${wt('profile_modal.legacy_header', 'Текущий профиль')}</p>
                 <div id="sharedProfileMenuCurrent" class="mt-3 flex items-center gap-3">
-                    <div class="text-sm text-text-secondary">Загрузка...</div>
+                    <div class="text-sm text-text-secondary">${wt('profile_modal.legacy_loading', 'Загрузка...')}</div>
                 </div>
             </div>
             <div class="px-2 py-2">
                 <div class="flex items-center justify-between gap-3 px-2 pb-2">
-                    <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-text-secondary">Быстрое переключение</p>
+                    <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-text-secondary">${wt('profile_modal.legacy_switch_label', 'Быстрое переключение')}</p>
                     <a href="/settings"
                         id="sharedProfileSettings"
                         class="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-primary transition-colors hover:bg-bg-hover">
                         <span class="material-symbols-outlined text-[16px]">settings</span>
-                        Настройки профиля
+                        ${wt('profile_modal.legacy_settings', 'Настройки профиля')}
                     </a>
                 </div>
                 <div id="sharedProfileList" class="max-h-[320px] overflow-y-auto space-y-1 px-1 pb-1">
                     <div class="text-center text-text-secondary py-6">
                         <div class="inline-flex items-center gap-2">
                             <span class="material-symbols-outlined animate-spin text-primary">progress_activity</span>
-                            <span class="text-sm">Загрузка профилей...</span>
+                            <span class="text-sm">${wt('profile_modal.legacy_loading_profiles', 'Загрузка профилей...')}</span>
                         </div>
                     </div>
                 </div>
@@ -343,7 +349,7 @@
                 <button id="sharedProfileManage" type="button"
                     class="flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-text-main transition-colors hover:bg-surface-1 hover:text-primary">
                     <span class="material-symbols-outlined text-[18px]">manage_accounts</span>
-                    Управление профилями
+                    ${wt('profile_modal.legacy_manage', 'Управление профилями')}
                 </button>
             </div>
         `;
@@ -371,24 +377,26 @@
         if (!panel) return;
 
         const currentThemeMeta = getCurrentThemeMeta();
-        const currentThemeLabel = currentThemeMeta?.name || 'Тема';
+        const currentThemeLabel = currentThemeMeta?.name || wt('profile_modal.hosted_theme_title', 'Оформление');
         const spoilerIcon = isThemeSectionExpanded ? 'expand_less' : 'expand_more';
         const effectivePlan = String(currentHostedUser?.effective_plan || currentHostedUser?.plan || 'free').trim().toLowerCase();
         const premiumExpiresAt = String(currentHostedUser?.premium_expires_at || '').trim();
         const planLabel = effectivePlan === 'premium'
-            ? (premiumExpiresAt ? `Premium до ${formatPremiumDate(premiumExpiresAt)}` : 'Premium активен')
-            : 'Free план';
+            ? (premiumExpiresAt
+                ? wt('profile_modal.hosted_premium_until', 'Premium до {date}').replace('{date}', formatPremiumDate(premiumExpiresAt))
+                : wt('profile_modal.hosted_premium_active', 'Premium активен'))
+            : wt('profile_modal.hosted_free_plan', 'Free план');
 
         panel.innerHTML = `
             <div class="border-b border-border-subtle px-4 py-4">
                 <div class="flex items-center justify-between gap-3">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Аккаунт</p>
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">${wt('profile_modal.hosted_header', 'Аккаунт')}</p>
                     <span class="inline-flex items-center rounded-full border border-border-subtle bg-bg-secondary px-3 py-1 text-xs font-semibold text-text-secondary">
                         Hosted
                     </span>
                 </div>
                 <div id="sharedProfileMenuCurrent" class="mt-4 flex items-center gap-3">
-                    <div class="text-sm text-text-secondary">Загрузка аккаунта...</div>
+                    <div class="text-sm text-text-secondary">${wt('profile_modal.hosted_loading', 'Загрузка аккаунта...')}</div>
                 </div>
             </div>
             <div class="px-4 py-4 space-y-3">
@@ -400,8 +408,8 @@
                             <span class="material-symbols-outlined text-[20px]">settings_account_box</span>
                         </span>
                         <div>
-                            <div class="text-sm font-semibold text-text-main">Настройки аккаунта</div>
-                            <div class="text-sm text-text-secondary">Профиль, аватар и персональные параметры</div>
+                            <div class="text-sm font-semibold text-text-main">${wt('profile_modal.hosted_settings_title', 'Настройки аккаунта')}</div>
+                            <div class="text-sm text-text-secondary">${wt('profile_modal.hosted_settings_desc', 'Профиль, аватар и персональные параметры')}</div>
                         </div>
                     </div>
                     <span class="material-symbols-outlined text-text-secondary">arrow_forward</span>
@@ -415,7 +423,7 @@
                         </span>
                         <div>
                             <div class="text-sm font-semibold text-text-main">${escapeHtml(planLabel)}</div>
-                            <div class="text-sm text-text-secondary">Premium и будущая оплата</div>
+                            <div class="text-sm text-text-secondary">${wt('profile_modal.hosted_premium_desc', 'Premium и будущая оплата')}</div>
                         </div>
                     </div>
                     <span class="material-symbols-outlined text-text-secondary">arrow_forward</span>
@@ -431,7 +439,7 @@
                                 <span class="material-symbols-outlined text-[20px]">palette</span>
                             </span>
                             <div class="min-w-0">
-                                <div class="text-sm font-semibold text-text-main">Оформление</div>
+                                <div class="text-sm font-semibold text-text-main">${wt('profile_modal.hosted_theme_title', 'Оформление')}</div>
                                 <div class="mt-0.5 text-sm text-text-secondary">
                                     <span class="truncate">${escapeHtml(currentThemeLabel)}</span>
                                 </div>
@@ -440,10 +448,10 @@
                         <span class="material-symbols-outlined text-text-secondary">${spoilerIcon}</span>
                     </button>
                     <div id="sharedProfileThemeSection" class="${isThemeSectionExpanded ? 'block' : 'hidden'} overflow-x-hidden border-t border-border-subtle px-4 pb-4 pt-3">
-                        <p class="text-sm text-text-secondary">Подберите палитру. Изменение применяется сразу и сохраняется для аккаунта.</p>
+                        <p class="text-sm text-text-secondary">${wt('profile_modal.hosted_theme_hint', 'Подберите палитру. Изменение применяется сразу и сохраняется для аккаунта.')}</p>
                         <div id="sharedProfileThemeList" class="mt-3 grid min-w-0 grid-cols-1 gap-2 overflow-x-hidden">
                             <div class="rounded-xl border border-border-subtle bg-bg-secondary px-3 py-4 text-center text-sm text-text-secondary">
-                                Загружаем темы...
+                                ${wt('profile_modal.hosted_themes_loading', 'Загружаем темы...')}
                             </div>
                         </div>
                     </div>
@@ -453,7 +461,7 @@
                 <button id="sharedProfileLogout" type="button"
                     class="shared-profile-focus-target flex w-full items-center justify-center gap-2 rounded-xl border border-border-subtle bg-surface-1 px-3 py-2.5 text-sm font-semibold text-text-main transition-colors hover:border-error hover:bg-bg-hover hover:text-error">
                     <span class="material-symbols-outlined text-[18px]">logout</span>
-                    <span>${isLogoutPending ? 'Выходим...' : 'Выйти'}</span>
+                    <span>${isLogoutPending ? wt('profile_modal.hosted_logout_busy', 'Выходим...') : wt('profile_modal.hosted_logout', 'Выйти')}</span>
                 </button>
             </div>
         `;
@@ -472,8 +480,8 @@
                 closeProfileMenu();
                 if (window.PremiumPromo && typeof window.PremiumPromo.open === 'function') {
                     window.PremiumPromo.open({
-                        title: 'Откройте ACTRA Premium',
-                        lead: 'Оплата Premium сейчас подключается. Пока можно посмотреть тарифы и возможности, а checkout появится после завершения интеграции.',
+                        title: wt('profile_modal.premium_promo_title', 'Откройте ACTRA Premium'),
+                        lead: wt('profile_modal.premium_promo_lead', 'Оплата Premium сейчас подключается. Пока можно посмотреть тарифы и возможности, а checkout появится после завершения интеграции.'),
                     });
                     return;
                 }
@@ -517,15 +525,15 @@
         if (!current) return;
 
         if (!user) {
-            current.innerHTML = `<div class="text-sm text-text-secondary">${currentMode === MENU_MODE.HOSTED ? 'Аккаунт не найден' : 'Текущий профиль не найден'}</div>`;
+            current.innerHTML = `<div class="text-sm text-text-secondary">${currentMode === MENU_MODE.HOSTED ? wt('profile_modal.hosted_not_found', 'Аккаунт не найден') : wt('profile_modal.legacy_not_found', 'Текущий профиль не найден')}</div>`;
             return;
         }
 
-        const safeName = escapeHtml(user.name || 'Гость');
+        const safeName = escapeHtml(user.name || wt('profile_modal.guest_name', 'Гость'));
         const safeAvatar = escapeHtml(getAvatarUrl(user.avatar_seed));
         const subtitle = currentMode === MENU_MODE.HOSTED
             ? getHostedAccountCaption()
-            : 'Тема и ключи сохраняются для этого профиля';
+            : wt('profile_modal.legacy_profile_caption', 'Тема и ключи сохраняются для этого профиля');
 
         current.innerHTML = `
             <div class="relative">
@@ -559,7 +567,7 @@
         if (!themes.length) {
             container.innerHTML = `
                 <div class="rounded-xl border border-border-subtle bg-bg-secondary px-3 py-4 text-center text-sm text-text-secondary">
-                    Темы недоступны
+                    ${wt('profile_modal.themes_unavailable', 'Темы недоступны')}
                 </div>
             `;
             return;
@@ -587,7 +595,7 @@
                     </span>
                     <span class="min-w-0 flex-1">
                         <span class="block truncate text-sm font-semibold text-text-main">${escapeHtml(theme.name || theme.id)}</span>
-                        <span class="mt-0.5 block text-xs text-text-secondary">${theme.isDark ? 'Тёмная палитра' : 'Светлая палитра'}</span>
+                        <span class="mt-0.5 block text-xs text-text-secondary">${theme.isDark ? wt('profile_modal.theme_dark', 'Тёмная палитра') : wt('profile_modal.theme_light', 'Светлая палитра')}</span>
                     </span>
                     <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border shadow-sm" style="background:${swatch};border-color:${border};color:${accentInk}">
                         <span class="material-symbols-outlined text-[16px] ${isActive ? 'text-primary' : ''}">
@@ -669,7 +677,7 @@
             if (window.ThemeManager && typeof window.ThemeManager.setTheme === 'function') {
                 window.ThemeManager.setTheme(previousThemeId);
             }
-            showToast('Не удалось сохранить тему');
+            showToast(wt('profile_modal.toast_theme_failed', 'Не удалось сохранить тему'));
         } finally {
             isThemeSaving = false;
             renderHostedShell();
@@ -745,8 +753,8 @@
                 list.innerHTML = `
                     <div class="text-center py-8">
                         <span class="material-symbols-outlined text-text-secondary text-[32px] mb-2">person_off</span>
-                        <p class="text-sm text-text-secondary">Нет профилей</p>
-                        <p class="text-xs text-text-muted mt-1">Перейдите на главную для создания профиля</p>
+                        <p class="text-sm text-text-secondary">${wt('profile_modal.legacy_no_profiles', 'Нет профилей')}</p>
+                        <p class="text-xs text-text-muted mt-1">${wt('profile_modal.legacy_no_profiles_hint', 'Перейдите на главную для создания профиля')}</p>
                     </div>`;
                 return;
             }
@@ -754,10 +762,10 @@
             list.innerHTML = usersData.items.map((user) => {
                 const isActive = currentUserId === user.user_id;
                 const safeAvatar = escapeHtml(getAvatarUrl(user.avatar_seed));
-                const safeName = escapeHtml(user.name || 'Гость');
+                const safeName = escapeHtml(user.name || wt('profile_modal.guest_name', 'Гость'));
                 const meta = isActive
-                    ? 'Активный профиль'
-                    : (user.has_password ? 'Пароль при входе' : 'Переключить');
+                    ? wt('profile_modal.legacy_profile_active', 'Активный профиль')
+                    : (user.has_password ? wt('profile_modal.legacy_profile_password', 'Пароль при входе') : wt('profile_modal.legacy_profile_switch', 'Переключить'));
 
                 return `
                     <button type="button"
@@ -796,7 +804,7 @@
             list.innerHTML = `
                 <div class="text-center py-8 text-text-secondary">
                     <span class="material-symbols-outlined text-[32px] mb-2">error</span>
-                    <p class="text-sm">Не удалось загрузить профили</p>
+                    <p class="text-sm">${wt('profile_modal.legacy_load_failed', 'Не удалось загрузить профили')}</p>
                 </div>`;
         }
     }
@@ -852,7 +860,7 @@
             navigateTo('/welcome');
         } catch (error) {
             console.error('[SharedProfileMenu] Failed to logout:', error);
-            showToast('Не удалось выйти из аккаунта');
+            showToast(wt('profile_modal.toast_logout_failed', 'Не удалось выйти из аккаунта'));
         } finally {
             isLogoutPending = false;
             if (currentMode === MENU_MODE.HOSTED && isMenuOpen()) {
@@ -921,15 +929,15 @@
 
             if (data.ok) {
                 closeProfileMenu();
-                showToast('Профиль переключен', 'success', 1500);
+                showToast(wt('profile_modal.toast_profile_switched', 'Профиль переключен'), 'success', 1500);
                 setTimeout(() => window.location.reload(), 400);
                 return;
             }
 
-            showToast('Не удалось переключить профиль');
+            showToast(wt('profile_modal.toast_switch_failed', 'Не удалось переключить профиль'));
         } catch (error) {
             console.error('[SharedProfileMenu] Failed to select profile:', error);
-            showToast('Ошибка сети при переключении профиля');
+            showToast(wt('profile_modal.toast_switch_network', 'Ошибка сети при переключении профиля'));
         }
     }
 
@@ -948,4 +956,16 @@
     if (!window.getAvatarUrl) {
         window.getAvatarUrl = getAvatarUrl;
     }
+
+    window.addEventListener('i18n:changed', function () {
+        if (isMenuOpen()) {
+            if (currentMode === MENU_MODE.HOSTED) {
+                renderHostedShell();
+                renderCurrentProfile(currentHostedUser);
+                if (isThemeSectionExpanded) renderHostedThemeOptions(getCurrentThemeId());
+            } else {
+                renderLegacyShell();
+            }
+        }
+    });
 })();

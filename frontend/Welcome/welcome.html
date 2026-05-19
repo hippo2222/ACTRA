@@ -5775,20 +5775,20 @@
             <img src="/assets/logo.svg" alt="" aria-hidden="true">
             <span>ACTRA</span>
         </a>
-        <nav class="welcome-public-links" aria-label="Навигация по странице">
-            <a href="#workflow" data-welcome-nav-link>Как это работает</a>
-            <a href="#showcase" data-welcome-nav-link>Примеры</a>
-            <a href="#benefits" data-welcome-nav-link>Преимущества</a>
+        <nav class="welcome-public-links" aria-label="Навигация по странице" data-i18n-aria="welcome.nav_aria">
+            <a href="#workflow" data-welcome-nav-link data-i18n="welcome.nav_workflow">Как это работает</a>
+            <a href="#showcase" data-welcome-nav-link data-i18n="welcome.nav_showcase">Примеры</a>
+            <a href="#benefits" data-welcome-nav-link data-i18n="welcome.nav_benefits">Преимущества</a>
             <a href="#premium" data-welcome-nav-link>Premium</a>
             <a href="/pricing?lang=ru">Pricing</a>
             <a href="/refund?lang=ru">Refund</a>
             <a href="/terms?lang=ru">Terms</a>
         </nav>
         <div class="flex items-center gap-2">
-            <button type="button" class="welcome-pill-light" onclick="window.welcomeShowAuthLogin && window.welcomeShowAuthLogin()">
+            <button type="button" class="welcome-pill-light" onclick="window.welcomeShowAuthLogin && window.welcomeShowAuthLogin()" data-i18n="welcome.btn_login">
                 Войти
             </button>
-            <button type="button" class="welcome-pill" onclick="window.welcomeShowAuthRegister && window.welcomeShowAuthRegister()">
+            <button type="button" class="welcome-pill" onclick="window.welcomeShowAuthRegister && window.welcomeShowAuthRegister()" data-i18n="welcome.nav_btn_start">
                 Начать
             </button>
         </div>
@@ -5829,23 +5829,23 @@
                 </h1>
 
                 <div class="welcome-hero-copy">
-                    <p>
+                    <p data-i18n="welcome.hero_copy">
                         Превращайте учебную теорию в практику: создавайте задания, проходите тесты, разбирайте ошибки
                         и собирайте личную библиотеку знаний в одном рабочем пространстве.
                     </p>
                     <div class="welcome-hero-actions">
                         <button type="button" class="welcome-pill"
                             onclick="window.welcomeShowAuthRegister && window.welcomeShowAuthRegister()">
-                            Создать аккаунт
+                            <span data-i18n="welcome.btn_create_account">Создать аккаунт</span>
                             <span class="material-symbols-outlined text-[18px]" aria-hidden="true">arrow_forward</span>
                         </button>
                         <button type="button" class="welcome-pill-light"
-                            onclick="window.welcomeShowAuthLogin && window.welcomeShowAuthLogin()">
+                            onclick="window.welcomeShowAuthLogin && window.welcomeShowAuthLogin()" data-i18n="welcome.btn_login">
                             Войти
                         </button>
                         <a class="welcome-pill-light welcome-pill-discover"
                             href="#workflow">
-                            Узнать подробнее
+                            <span data-i18n="welcome.nav_learn_more">Узнать подробнее</span>
                             <span class="material-symbols-outlined text-[18px]" aria-hidden="true">south</span>
                         </a>
                     </div>
@@ -5890,7 +5890,7 @@
                                 <div id="onboardingNameField" class="w-full text-center">
                                     <span id="onboardingNameIcon"
                                         class="hidden absolute left-4 top-3.5 text-text-secondary material-symbols-outlined">person</span>
-                                    <input type="text" id="onboardingName" placeholder="Ваше имя"
+                                    <input type="text" id="onboardingName" placeholder="Ваше имя" data-i18n-placeholder="welcome.placeholder_name_desktop"
                                         class="welcome-name-input w-full text-center bg-transparent border-b-2 border-border-subtle focus:border-primary px-4 py-2 text-2xl font-bold text-text-main outline-none transition-colors placeholder:text-text-secondary"
                                         maxlength="50"
                                         onkeydown="if(event.key==='Enter'){event.preventDefault();window.welcomeCreateProfile()}">
@@ -5909,15 +5909,15 @@
                                     <span class="registration-promo-card__icon material-symbols-outlined"
                                         aria-hidden="true">workspace_premium</span>
                                     <div>
-                                        <p class="registration-promo-card__title">21 день Premium бесплатно</p>
-                                        <p class="registration-promo-card__copy">
+                                        <p class="registration-promo-card__title" data-i18n="welcome.promo_title">21 день Premium бесплатно</p>
+                                        <p class="registration-promo-card__copy" data-i18n="welcome.promo_copy">
                                             Зарегистрируйтесь до 1 июня 2026 включительно — Premium включится автоматически сразу после создания аккаунта.
                                         </p>
                                     </div>
                                 </div>
                                 <div id="onboardingLoginField" class="relative">
                                     <span class="absolute left-4 top-3.5 text-text-secondary material-symbols-outlined">alternate_email</span>
-                                    <input type="text" id="onboardingLogin" placeholder="Логин"
+                                    <input type="text" id="onboardingLogin" placeholder="Логин" data-i18n-placeholder="welcome.placeholder_login"
                                         class="w-full pl-12 pr-4 py-3.5 bg-surface-2 border border-border-strong rounded-xl outline-none focus:ring-2 focus:ring-primary transition-all font-medium text-base placeholder:text-text-secondary"
                                         maxlength="32"
                                         onkeydown="if(event.key==='Enter'){event.preventDefault();window.welcomeCreateProfile()}">
@@ -5930,10 +5930,10 @@
                                 </div>
                                 <div class="relative">
                                     <span class="absolute left-4 top-3.5 text-text-secondary material-symbols-outlined">lock</span>
-                                    <input type="password" id="onboardingPassword" placeholder="Пароль"
+                                    <input type="password" id="onboardingPassword" placeholder="Пароль" data-i18n-placeholder="welcome.placeholder_password"
                                         class="w-full pl-12 pr-12 py-3.5 bg-surface-2 border border-border-strong rounded-xl outline-none focus:ring-2 focus:ring-primary transition-all font-medium text-base placeholder:text-text-secondary"
                                         onkeydown="if(event.key==='Enter'){event.preventDefault();window.welcomeCreateProfile()}">
-                                    <button type="button" class="password-toggle" aria-label="Показать пароль"
+                                    <button type="button" class="password-toggle" aria-label="Показать пароль" data-i18n-aria="welcome.pw_toggle_show"
                                         onmousedown="event.preventDefault()"
                                         onclick="window.welcomeTogglePassword('onboardingPassword', this)">
                                         <span class="material-symbols-outlined">visibility</span>
@@ -5941,10 +5941,10 @@
                                 </div>
                                 <div class="relative">
                                     <span class="absolute left-4 top-3.5 text-text-secondary material-symbols-outlined">verified_user</span>
-                                    <input type="password" id="onboardingPasswordConfirm" placeholder="Повторите пароль"
+                                    <input type="password" id="onboardingPasswordConfirm" placeholder="Повторите пароль" data-i18n-placeholder="welcome.forgot_confirm_password_label"
                                         class="w-full pl-12 pr-12 py-3.5 bg-surface-2 border border-border-strong rounded-xl outline-none focus:ring-2 focus:ring-primary transition-all font-medium text-base placeholder:text-text-secondary"
                                         onkeydown="if(event.key==='Enter'){event.preventDefault();window.welcomeCreateProfile()}">
-                                    <button type="button" class="password-toggle" aria-label="Показать пароль"
+                                    <button type="button" class="password-toggle" aria-label="Показать пароль" data-i18n-aria="welcome.pw_toggle_show"
                                         onmousedown="event.preventDefault()"
                                         onclick="window.welcomeTogglePassword('onboardingPasswordConfirm', this)">
                                         <span class="material-symbols-outlined">visibility</span>
@@ -5954,7 +5954,7 @@
 
                             <div id="onboardingConsentBox"
                                 class="mt-4 rounded-2xl border border-border-subtle bg-surface-2 p-3">
-                                <p class="text-xs font-semibold text-text-secondary mb-3">
+                                <p class="text-xs font-semibold text-text-secondary mb-3" data-i18n="welcome.consent_header">
                                     Для создания профиля подтвердите согласие с документами:
                                 </p>
                                 <label class="flex items-start gap-3 text-sm text-text-main mb-2 cursor-pointer">
@@ -5962,9 +5962,9 @@
                                         class="mt-0.5 rounded text-primary focus:ring-primary"
                                         onchange="window.welcomeUpdateConsentState('onboarding')">
                                     <span>
-                                        Я принимаю
+                                        <span data-i18n="welcome.consent_i_accept">Я принимаю</span>
                                         <button type="button" class="text-primary hover:underline font-semibold"
-                                            onclick="window.welcomeOpenLegalDocument('terms'); return false;">
+                                            onclick="window.welcomeOpenLegalDocument('terms'); return false;" data-i18n="welcome.terms_label">
                                             Условия пользования
                                         </button>
                                     </span>
@@ -5974,9 +5974,9 @@
                                         class="mt-0.5 rounded text-primary focus:ring-primary"
                                         onchange="window.welcomeUpdateConsentState('onboarding')">
                                     <span>
-                                        Я ознакомился(ась) с
+                                        <span data-i18n="welcome.consent_i_read">Я ознакомился(ась) с</span>
                                         <button type="button" class="text-primary hover:underline font-semibold"
-                                            onclick="window.welcomeOpenLegalDocument('privacy'); return false;">
+                                            onclick="window.welcomeOpenLegalDocument('privacy'); return false;" data-i18n="welcome.privacy_label">
                                             Политикой приватности
                                         </button>
                                     </span>
@@ -5986,9 +5986,9 @@
                                         class="mt-0.5 rounded text-primary focus:ring-primary"
                                         onchange="window.welcomeUpdateConsentState('onboarding')">
                                     <span>
-                                        Я ознакомился(ась) с
+                                        <span data-i18n="welcome.consent_i_read">Я ознакомился(ась) с</span>
                                         <button type="button" class="text-primary hover:underline font-semibold"
-                                            onclick="window.welcomeOpenLegalDocument('refund'); return false;">
+                                            onclick="window.welcomeOpenLegalDocument('refund'); return false;" data-i18n="welcome.refund_label">
                                             Политикой возвратов
                                         </button>
                                     </span>
@@ -6014,7 +6014,7 @@
                                     </p>
                                     <div
                                         class="mt-4 rounded-2xl border border-border-subtle bg-surface-2 px-4 py-3">
-                                        <p class="text-[11px] font-bold uppercase tracking-[0.22em] text-text-secondary">
+                                        <p class="text-[11px] font-bold uppercase tracking-[0.22em] text-text-secondary" data-i18n="welcome.verify_address_label">
                                             Адрес
                                         </p>
                                         <p id="onboardingVerificationEmail"
@@ -6047,7 +6047,7 @@
                         </div>
 
                         <div id="onboardingSocialAuth" class="hidden space-y-3">
-                            <div class="auth-divider">или</div>
+                            <div class="auth-divider" data-i18n="welcome.or_divider">или</div>
                             <button type="button"
                                 onclick="window.welcomeStartGoogleAuth()"
                                 data-google-auth-button
@@ -6071,7 +6071,7 @@
                             <span class="material-symbols-outlined">arrow_forward</span>
                         </button>
                         <button type="button" id="onboardingSecondaryAction" onclick="window.welcomeReturnToHero()"
-                            class="hidden w-full border border-border-strong text-text-main font-semibold py-3 rounded-2xl hover:bg-surface-1 transition-colors">
+                            class="hidden w-full border border-border-strong text-text-main font-semibold py-3 rounded-2xl hover:bg-surface-1 transition-colors" data-i18n="welcome.btn_back">
                             Назад
                         </button>
                     </div>
@@ -6086,13 +6086,13 @@
                                         <div class="auth-choice-card__icon">
                                             <span class="material-symbols-outlined text-[2.4rem]">login</span>
                                         </div>
-                                        <p class="auth-choice-card__eyebrow">Для существующего аккаунта</p>
-                                        <p class="auth-choice-card__title">Войти</p>
-                                        <p class="auth-choice-card__copy">Откройте библиотеку, вернитесь к своему прогрессу и продолжите работу с публикациями.</p>
+                                        <p class="auth-choice-card__eyebrow" data-i18n="welcome.choice_login_eyebrow">Для существующего аккаунта</p>
+                                        <p class="auth-choice-card__title" data-i18n="welcome.btn_login">Войти</p>
+                                        <p class="auth-choice-card__copy" data-i18n="welcome.choice_login_copy">Откройте библиотеку, вернитесь к своему прогрессу и продолжите работу с публикациями.</p>
                                     </div>
                                     <div class="auth-choice-card__bottom">
-                                        <p class="auth-choice-card__footer-note">Логин или email и пароль</p>
-                                        <span class="auth-choice-card__footer">Продолжить <span class="material-symbols-outlined">arrow_forward</span></span>
+                                        <p class="auth-choice-card__footer-note" data-i18n="welcome.choice_login_note">Логин или email и пароль</p>
+                                        <span class="auth-choice-card__footer"><span data-i18n="welcome.choice_login_cta">Продолжить</span> <span class="material-symbols-outlined">arrow_forward</span></span>
                                     </div>
                                 </button>
                                 <button type="button" onclick="window.welcomeShowAuthRegister()"
@@ -6101,17 +6101,17 @@
                                         <div class="auth-choice-card__icon">
                                             <span class="material-symbols-outlined text-[2.4rem]">person_add</span>
                                         </div>
-                                        <p class="auth-choice-card__eyebrow">Для нового доступа</p>
-                                        <p class="auth-choice-card__title">Создать аккаунт</p>
-                                        <p class="auth-choice-card__copy">Создайте отдельный аккаунт для библиотеки, прогресса, календаря и собственных публикаций.</p>
+                                        <p class="auth-choice-card__eyebrow" data-i18n="welcome.choice_register_eyebrow">Для нового доступа</p>
+                                        <p class="auth-choice-card__title" data-i18n="welcome.btn_create_account">Создать аккаунт</p>
+                                        <p class="auth-choice-card__copy" data-i18n="welcome.choice_register_copy">Создайте отдельный аккаунт для библиотеки, прогресса, календаря и собственных публикаций.</p>
                                         <p class="auth-choice-card__promo" data-registration-premium-promo>
                                             <span class="material-symbols-outlined" aria-hidden="true">workspace_premium</span>
-                                            21 день Premium до 1 июня
+                                            <span data-i18n="welcome.choice_register_promo">21 день Premium до 1 июня</span>
                                         </p>
                                     </div>
                                     <div class="auth-choice-card__bottom">
-                                        <p class="auth-choice-card__footer-note">Имя, email и пароль</p>
-                                        <span class="auth-choice-card__footer">Создать и войти <span class="material-symbols-outlined">arrow_forward</span></span>
+                                        <p class="auth-choice-card__footer-note" data-i18n="welcome.choice_register_note">Имя, email и пароль</p>
+                                        <span class="auth-choice-card__footer"><span data-i18n="welcome.choice_register_cta">Создать и войти</span> <span class="material-symbols-outlined">arrow_forward</span></span>
                                     </div>
                                 </button>
                             </div>
@@ -6143,9 +6143,9 @@
                                     <div class="relative mb-4">
                                         <span
                                             class="absolute left-4 top-3.5 text-text-secondary material-symbols-outlined">lock</span>
-                                        <input type="password" id="passwordInlineInput" placeholder="Введите пароль..."
+                                        <input type="password" id="passwordInlineInput" placeholder="Введите пароль..." data-i18n-placeholder="welcome.placeholder_password"
                                             class="w-full pl-12 pr-12 py-3.5 bg-surface-2 border border-border-strong rounded-xl outline-none focus:ring-2 focus:ring-primary transition-all font-medium text-lg placeholder:text-text-secondary">
-                                        <button type="button" class="password-toggle" aria-label="Показать пароль"
+                                        <button type="button" class="password-toggle" aria-label="Показать пароль" data-i18n-aria="welcome.pw_toggle_show"
                                             onmousedown="event.preventDefault()"
                                             onclick="window.welcomeTogglePassword('passwordInlineInput', this)">
                                             <span class="material-symbols-outlined">visibility</span>
@@ -6156,9 +6156,9 @@
                                     </p>
                                     <div class="grid grid-cols-2 gap-4">
                                         <button type="button" onclick="window.welcomeCancelPassword()"
-                                            class="py-3 rounded-xl font-bold text-text-secondary hover:bg-surface-2 transition-colors">Отмена</button>
+                                            class="py-3 rounded-xl font-bold text-text-secondary hover:bg-surface-2 transition-colors" data-i18n="welcome.btn_cancel">Отмена</button>
                                         <button type="submit"
-                                            class="py-3 rounded-xl font-bold bg-primary text-primary-fg hover:bg-primary-hover shadow-lg transition-all transform hover:scale-[1.02]">Войти</button>
+                                            class="py-3 rounded-xl font-bold bg-primary text-primary-fg hover:bg-primary-hover shadow-lg transition-all transform hover:scale-[1.02]" data-i18n="welcome.btn_login">Войти</button>
                                     </div>
                                 </form>
                             </div>
@@ -6184,26 +6184,26 @@
                                 <div id="loginIdentifierWrap" class="hidden relative">
                                     <span
                                         class="absolute left-4 top-3.5 text-text-secondary material-symbols-outlined">alternate_email</span>
-                                    <input type="text" id="loginIdentifier" placeholder="Логин или email"
+                                    <input type="text" id="loginIdentifier" placeholder="Логин или email" data-i18n-placeholder="welcome.placeholder_identifier"
                                         class="w-full pl-12 pr-4 py-4 bg-surface-2 border border-border-strong rounded-xl outline-none focus:ring-2 focus:ring-primary focus:border-border-normal transition-all font-medium text-lg placeholder:text-text-secondary">
                                 </div>
                                 <div class="relative">
                                     <span
                                         class="absolute left-4 top-3.5 text-text-secondary material-symbols-outlined">lock</span>
-                                    <input type="password" id="loginPassword" placeholder="Пароль" autofocus
+                                    <input type="password" id="loginPassword" placeholder="Пароль" autofocus data-i18n-placeholder="welcome.placeholder_password"
                                         class="w-full pl-12 pr-12 py-4 bg-surface-2 border border-border-strong rounded-xl outline-none focus:ring-2 focus:ring-primary focus:border-border-normal transition-all font-medium text-lg placeholder:text-text-secondary">
-                                    <button type="button" class="password-toggle" aria-label="Показать пароль"
+                                    <button type="button" class="password-toggle" aria-label="Показать пароль" data-i18n-aria="welcome.pw_toggle_show"
                                         onmousedown="event.preventDefault()"
                                         onclick="window.welcomeTogglePassword('loginPassword', this)">
                                         <span class="material-symbols-outlined">visibility</span>
                                     </button>
                                 </div>
                                 <button type="button" id="forgotPasswordLink" onclick="window.welcomeOpenForgotPasswordModal()"
-                                    class="hidden -mt-1 text-sm font-semibold text-primary hover:underline">
+                                    class="hidden -mt-1 text-sm font-semibold text-primary hover:underline" data-i18n="welcome.forgot_link">
                                     Забыли пароль?
                                 </button>
                                 <div id="loginSocialAuth" class="hidden space-y-3">
-                                    <div class="auth-divider">или</div>
+                                    <div class="auth-divider" data-i18n="welcome.or_divider">или</div>
                                     <button type="button"
                                         onclick="window.welcomeStartGoogleAuth()"
                                         data-google-auth-button
@@ -6223,7 +6223,7 @@
                                     <span class="material-symbols-outlined">login</span>
                                 </button>
                                 <button type="button" id="loginBackBtn" onclick="window.welcomeReturnToHero()"
-                                    class="hidden w-full py-3 rounded-xl font-semibold border border-border-strong text-text-main hover:bg-surface-2 transition-colors">
+                                    class="hidden w-full py-3 rounded-xl font-semibold border border-border-strong text-text-main hover:bg-surface-2 transition-colors" data-i18n="welcome.btn_back">
                                     Назад
                                 </button>
                             </form>
@@ -6911,7 +6911,7 @@
     </section>
 
     <button type="button" class="welcome-scroll-top" data-welcome-scroll-top
-        onclick="window.welcomeScrollToTop && window.welcomeScrollToTop()" aria-label="Наверх">
+        onclick="window.welcomeScrollToTop && window.welcomeScrollToTop()" aria-label="Наверх" data-i18n-aria="welcome.scroll_top_aria">
         <span class="material-symbols-outlined" aria-hidden="true">arrow_upward</span>
     </button>
 
@@ -6935,7 +6935,7 @@
             </div>
             <div class="px-5 py-3 border-t border-border-subtle bg-surface-2 flex justify-end">
                 <button type="button" onclick="window.welcomeCloseLegalDocument()"
-                    class="px-4 py-2 rounded-lg bg-primary text-primary-fg hover:bg-primary-hover transition-colors text-sm font-semibold">
+                    class="px-4 py-2 rounded-lg bg-primary text-primary-fg hover:bg-primary-hover transition-colors text-sm font-semibold" data-i18n="welcome.btn_close">
                     Закрыть
                 </button>
             </div>
@@ -6951,18 +6951,18 @@
                     <span class="consent-gate-icon-mark">✓</span>
                 </div>
                 <div>
-                    <h3 class="consent-gate-title">Подтвердите актуальные условия ACTRA</h3>
-                    <p class="consent-gate-copy">Мы обновили юридические документы. Чтобы продолжить работу с аккаунтом,
+                    <h3 class="consent-gate-title" data-i18n="welcome.consent_gate_title">Подтвердите актуальные условия ACTRA</h3>
+                    <p class="consent-gate-copy" data-i18n="welcome.consent_gate_copy">Мы обновили юридические документы. Чтобы продолжить работу с аккаунтом,
                         отметьте все пункты ниже.</p>
                 </div>
                 <button type="button" class="consent-gate-close" onclick="window.welcomeCancelConsentGate()"
-                    aria-label="Закрыть окно подтверждения">
+                    aria-label="Закрыть окно подтверждения" data-i18n-aria="welcome.consent_gate_close_aria">
                     <span aria-hidden="true">×</span>
                 </button>
             </div>
             <div class="consent-gate-body">
                 <div class="consent-gate-version-card">
-                    <p class="consent-gate-version-label">Актуальные версии</p>
+                    <p class="consent-gate-version-label" data-i18n="welcome.consent_gate_versions_label">Актуальные версии</p>
                     <p id="consentGateVersions"></p>
                 </div>
                 <div class="consent-gate-checklist" aria-label="Подтверждение документов">
@@ -6970,10 +6970,10 @@
                     <input type="checkbox" id="consentGateAcceptTerms"
                         onchange="window.welcomeUpdateConsentState('gate')">
                     <span>
-                        <strong>Условия пользования</strong>
-                        <span>Правила доступа к ACTRA, аккаунту и учебным материалам.</span>
+                        <strong data-i18n="welcome.terms_label">Условия пользования</strong>
+                        <span data-i18n="welcome.consent_gate_terms_copy">Правила доступа к ACTRA, аккаунту и учебным материалам.</span>
                         <button type="button" class="consent-gate-link"
-                            onclick="window.welcomeOpenLegalDocument('terms'); return false;">
+                            onclick="window.welcomeOpenLegalDocument('terms'); return false;" data-i18n="welcome.consent_gate_open_doc">
                             Открыть документ
                         </button>
                     </span>
@@ -6982,10 +6982,10 @@
                     <input type="checkbox" id="consentGateAcceptPrivacy"
                         onchange="window.welcomeUpdateConsentState('gate')">
                     <span>
-                        <strong>Политика приватности</strong>
-                        <span>Как мы обрабатываем данные аккаунта, входа и обучения.</span>
+                        <strong data-i18n="welcome.privacy_label">Политика приватности</strong>
+                        <span data-i18n="welcome.consent_gate_privacy_copy">Как мы обрабатываем данные аккаунта, входа и обучения.</span>
                         <button type="button" class="consent-gate-link"
-                            onclick="window.welcomeOpenLegalDocument('privacy'); return false;">
+                            onclick="window.welcomeOpenLegalDocument('privacy'); return false;" data-i18n="welcome.consent_gate_open_doc">
                             Открыть документ
                         </button>
                     </span>
@@ -6994,10 +6994,10 @@
                     <input type="checkbox" id="consentGateAcceptRefund"
                         onchange="window.welcomeUpdateConsentState('gate')">
                     <span>
-                        <strong>Политика возвратов</strong>
-                        <span>Условия refund для подписки Premium и способы связи.</span>
+                        <strong data-i18n="welcome.refund_label">Политика возвратов</strong>
+                        <span data-i18n="welcome.consent_gate_refund_copy">Условия refund для подписки Premium и способы связи.</span>
                         <button type="button" class="consent-gate-link"
-                            onclick="window.welcomeOpenLegalDocument('refund'); return false;">
+                            onclick="window.welcomeOpenLegalDocument('refund'); return false;" data-i18n="welcome.consent_gate_open_doc">
                             Открыть документ
                         </button>
                     </span>
@@ -7007,11 +7007,12 @@
                     class="consent-gate-error hidden text-xs text-error bg-error/10 border border-error/20 px-3 py-2"></p>
             </div>
             <div class="consent-gate-actions">
-                <button type="button" class="consent-gate-secondary" onclick="window.welcomeCancelConsentGate()">
+                <button type="button" class="consent-gate-secondary" onclick="window.welcomeCancelConsentGate()" data-i18n="welcome.consent_gate_dismiss">
                     Позже
                 </button>
                 <button type="button" id="consentGateSubmitBtn" onclick="window.welcomeSubmitConsentGate()"
                     class="consent-gate-primary disabled:cursor-not-allowed"
+                    data-i18n="welcome.consent_confirm_all"
                     disabled>
                     Подтвердить и продолжить
                 </button>
@@ -7024,8 +7025,8 @@
         <div class="w-full max-w-lg rounded-2xl bg-surface-1 border border-border-subtle shadow-2xl overflow-hidden">
             <div class="px-5 py-4 border-b border-border-subtle bg-surface-2 flex items-center justify-between">
                 <div>
-                    <h3 class="text-lg font-bold text-text-main">Восстановление пароля</h3>
-                    <p class="text-sm text-text-secondary mt-1">Этот web-flow запланирован следующим этапом.</p>
+                    <h3 class="text-lg font-bold text-text-main" data-i18n="welcome.forgot_title_request">Восстановление пароля</h3>
+                    <p class="text-sm text-text-secondary mt-1" data-i18n="welcome.forgot_stub_subtitle">Этот web-flow запланирован следующим этапом.</p>
                 </div>
                 <button type="button" onclick="window.welcomeCloseForgotPasswordStub()"
                     class="size-8 flex items-center justify-center rounded-full hover:bg-surface-1 transition-colors">
@@ -7033,13 +7034,13 @@
                 </button>
             </div>
             <div class="p-5">
-                <div class="rounded-2xl border border-border-subtle bg-surface-2 p-4 text-sm text-text-main leading-relaxed">
+                <div class="rounded-2xl border border-border-subtle bg-surface-2 p-4 text-sm text-text-main leading-relaxed" data-i18n="welcome.forgot_stub_body">
                     Пока восстановление пароля по email ещё не подключено. Если доступ нужен срочно, используйте другой тестовый аккаунт или выдайте новый временный пароль через локальный dev-инструмент.
                 </div>
             </div>
             <div class="px-5 py-4 border-t border-border-subtle bg-surface-2 flex justify-end">
                 <button type="button" onclick="window.welcomeCloseForgotPasswordStub()"
-                    class="px-4 py-2 rounded-lg bg-primary text-primary-fg hover:bg-primary-hover transition-colors text-sm font-semibold">
+                    class="px-4 py-2 rounded-lg bg-primary text-primary-fg hover:bg-primary-hover transition-colors text-sm font-semibold" data-i18n="welcome.btn_understood">
                     Понятно
                 </button>
             </div>
@@ -7062,26 +7063,26 @@
             <div class="p-5">
                 <div id="forgotPasswordRequestPanel" class="space-y-4">
                     <label class="block">
-                        <span class="mb-2 block text-sm font-semibold text-text-main">Логин или email</span>
+                        <span class="mb-2 block text-sm font-semibold text-text-main" data-i18n="welcome.forgot_identifier_label">Логин или email</span>
                         <input type="text" id="forgotPasswordIdentifierInput" placeholder="reader@example.com"
                             class="w-full rounded-xl border border-border-strong bg-surface-2 px-4 py-3 outline-none focus:ring-2 focus:ring-primary focus:border-border-normal transition-all font-medium text-base placeholder:text-text-secondary">
                     </label>
-                    <div class="rounded-2xl border border-border-subtle bg-surface-2 p-4 text-sm text-text-main leading-relaxed">
+                    <div class="rounded-2xl border border-border-subtle bg-surface-2 p-4 text-sm text-text-main leading-relaxed" data-i18n="welcome.forgot_request_hint">
                         Мы отправим письмо со ссылкой для сброса. Если аккаунт с такими данными существует, письмо придёт на привязанную почту.
                     </div>
                     <p id="forgotPasswordRequestStatus"
                         class="hidden rounded-xl border px-3 py-2 text-sm font-semibold"></p>
                 </div>
                 <div id="forgotPasswordResetPanel" class="hidden space-y-4">
-                    <div class="rounded-2xl border border-border-subtle bg-surface-2 p-4 text-sm text-text-main leading-relaxed">
+                    <div class="rounded-2xl border border-border-subtle bg-surface-2 p-4 text-sm text-text-main leading-relaxed" data-i18n="welcome.forgot_reset_hint">
                         Придумайте новый пароль для этого аккаунта. Ссылка из письма действует ограниченное время.
                     </div>
                     <label class="block">
-                        <span class="mb-2 block text-sm font-semibold text-text-main">Новый пароль</span>
+                        <span class="mb-2 block text-sm font-semibold text-text-main" data-i18n="welcome.forgot_new_password_label">Новый пароль</span>
                         <div class="relative">
-                            <input type="password" id="forgotPasswordNewPassword" placeholder="Минимум 8 символов"
+                            <input type="password" id="forgotPasswordNewPassword" placeholder="Минимум 8 символов" data-i18n-placeholder="welcome.placeholder_min8"
                                 class="w-full rounded-xl border border-border-strong bg-surface-2 px-4 py-3 pr-12 outline-none focus:ring-2 focus:ring-primary focus:border-border-normal transition-all font-medium text-base placeholder:text-text-secondary">
-                            <button type="button" class="password-toggle" aria-label="Показать пароль"
+                            <button type="button" class="password-toggle" aria-label="Показать пароль" data-i18n-aria="welcome.pw_toggle_show"
                                 onmousedown="event.preventDefault()"
                                 onclick="window.welcomeTogglePassword('forgotPasswordNewPassword', this)">
                                 <span class="material-symbols-outlined">visibility</span>
@@ -7089,11 +7090,11 @@
                         </div>
                     </label>
                     <label class="block">
-                        <span class="mb-2 block text-sm font-semibold text-text-main">Повторите пароль</span>
+                        <span class="mb-2 block text-sm font-semibold text-text-main" data-i18n="welcome.forgot_confirm_password_label">Повторите пароль</span>
                         <div class="relative">
-                            <input type="password" id="forgotPasswordConfirmPassword" placeholder="Ещё раз новый пароль"
+                            <input type="password" id="forgotPasswordConfirmPassword" placeholder="Ещё раз новый пароль" data-i18n-placeholder="welcome.placeholder_confirm_password"
                                 class="w-full rounded-xl border border-border-strong bg-surface-2 px-4 py-3 pr-12 outline-none focus:ring-2 focus:ring-primary focus:border-border-normal transition-all font-medium text-base placeholder:text-text-secondary">
-                            <button type="button" class="password-toggle" aria-label="Показать пароль"
+                            <button type="button" class="password-toggle" aria-label="Показать пароль" data-i18n-aria="welcome.pw_toggle_show"
                                 onmousedown="event.preventDefault()"
                                 onclick="window.welcomeTogglePassword('forgotPasswordConfirmPassword', this)">
                                 <span class="material-symbols-outlined">visibility</span>
@@ -7107,7 +7108,7 @@
             <div class="px-5 py-4 border-t border-border-subtle bg-surface-2 flex justify-end">
                 <div class="flex w-full justify-end gap-2">
                     <button type="button" onclick="window.welcomeCloseForgotPasswordModal()"
-                        class="px-4 py-2 rounded-lg border border-border-strong text-text-main hover:bg-surface-1 transition-colors text-sm font-semibold">
+                        class="px-4 py-2 rounded-lg border border-border-strong text-text-main hover:bg-surface-1 transition-colors text-sm font-semibold" data-i18n="welcome.btn_close">
                         Закрыть
                     </button>
                     <button type="button" id="forgotPasswordRequestBtn" onclick="window.welcomeSubmitForgotPassword()"
@@ -7130,7 +7131,7 @@
             <img id="loadingLogoAnimated" src="/assets/logo_animated.svg" alt="ACTRA" class="loading-logo">
             <img id="loadingLogoStatic" src="/assets/logo.svg" alt="" aria-hidden="true" class="loading-logo">
         </div>
-        <p class="mt-6 text-sm font-bold text-text-secondary tracking-widest uppercase animate-pulse">Загрузка...</p>
+        <p class="mt-6 text-sm font-bold text-text-secondary tracking-widest uppercase animate-pulse" data-i18n="welcome.loading_text">Загрузка...</p>
     </div>
 
     <script>

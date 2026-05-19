@@ -55,7 +55,7 @@
 
                 <div class="flex items-center gap-3">
 
-                    <a href="/main" class="icon-button-muted" title="На главную">
+                    <a href="/main" class="icon-button-muted" title="На главную" data-i18n-title="calendar.back_home">
                         <span class="material-symbols-outlined">arrow_back</span>
                     </a>
 
@@ -67,11 +67,7 @@
 
                             <div class="flex items-center gap-2">
 
-                                <h1 class="text-lg font-bold leading-tight tracking-tight text-text-main">
-
-                                    Сегодняшний
-
-                                    план</h1>
+                                <h1 class="text-lg font-bold leading-tight tracking-tight text-text-main" data-i18n="calendar.title">Сегодняшний план</h1>
 
                             </div>
 
@@ -95,7 +91,9 @@
                         data-onboarding-help-mode="direct"
                         hidden
                         title="Показать обучение"
-                        aria-label="Показать обучение">
+                        aria-label="Показать обучение"
+                        data-i18n-title="calendar.onboarding_help_title"
+                        data-i18n-aria="calendar.onboarding_help_title">
                         <span class="material-symbols-outlined" aria-hidden="true">help</span>
                     </button>
 
@@ -248,15 +246,15 @@
 
                         <div class="calendar-control-card__section">
 
-                            <span class="calendar-control-card__eyebrow">Время на сегодня</span>
+                            <span class="calendar-control-card__eyebrow" data-i18n="calendar.time_today">Время на сегодня</span>
 
-                            <div id="time-controller" class="calendar-time-controller" role="group" aria-label="Время на сегодняшний план" title="Влияет на объём плана на сегодня">
+                            <div id="time-controller" class="calendar-time-controller" role="group" aria-label="Время на сегодняшний план" title="Влияет на объём плана на сегодня" data-i18n-aria="calendar.time_controller_label" data-i18n-title="calendar.time_controller_title">
 
-                                <button type="button" onclick="setTimeLimit(20)" data-time="20" class="time-btn" title="План на 20 минут">20 мин</button>
+                                <button type="button" onclick="setTimeLimit(20)" data-time="20" class="time-btn" title="План на 20 минут" data-i18n-title="calendar.time_btn_20_title" data-i18n="calendar.time_btn_20">20 мин</button>
 
-                                <button type="button" onclick="setTimeLimit(30)" data-time="30" class="time-btn" title="План на 30 минут">30 мин</button>
+                                <button type="button" onclick="setTimeLimit(30)" data-time="30" class="time-btn" title="План на 30 минут" data-i18n-title="calendar.time_btn_30_title" data-i18n="calendar.time_btn_30">30 мин</button>
 
-                                <button type="button" onclick="setTimeLimit(45)" data-time="45" class="time-btn" title="План на 45 минут">45 мин</button>
+                                <button type="button" onclick="setTimeLimit(45)" data-time="45" class="time-btn" title="План на 45 минут" data-i18n-title="calendar.time_btn_45_title" data-i18n="calendar.time_btn_45">45 мин</button>
 
                             </div>
 
@@ -276,7 +274,7 @@
 
                     <div class="schedule-toolbar__copy">
 
-                        <h3 class="text-text-main text-base font-bold">Расписание</h3>
+                        <h3 class="text-text-main text-base font-bold" data-i18n="calendar.schedule_title">Расписание</h3>
 
                         <span id="schedule-header-meta" class="schedule-toolbar__meta">Ближайшие дни</span>
 
@@ -285,13 +283,13 @@
                 </div>
 
                 <div class="schedule-strip-shell">
-                    <button id="schedule-scroll-prev" onclick="scrollSchedule(-1)" class="icon-button-muted schedule-scroll-button schedule-scroll-button--side" aria-label="Назад">
+                    <button id="schedule-scroll-prev" onclick="scrollSchedule(-1)" class="icon-button-muted schedule-scroll-button schedule-scroll-button--side" aria-label="Назад" data-i18n-aria="calendar.scroll_prev">
                         <span class="material-symbols-outlined">chevron_left</span>
                     </button>
 
                     <div id="schedule-strip" class="schedule-strip flex overflow-x-auto hide-scrollbar drag-scroll" data-onboarding-target="calendar-schedule-strip"></div>
 
-                    <button id="schedule-scroll-next" onclick="scrollSchedule(1)" class="icon-button-muted schedule-scroll-button schedule-scroll-button--side" aria-label="Вперёд">
+                    <button id="schedule-scroll-next" onclick="scrollSchedule(1)" class="icon-button-muted schedule-scroll-button schedule-scroll-button--side" aria-label="Вперёд" data-i18n-aria="calendar.scroll_next">
                         <span class="material-symbols-outlined">chevron_right</span>
                     </button>
                 </div>
@@ -310,11 +308,11 @@
 
                         <div class="flex justify-between items-center mb-3">
 
-                            <h3 class="text-text-main font-bold text-base">Активность</h3>
+                            <h3 class="text-text-main font-bold text-base" data-i18n="calendar.activity_title">Активность</h3>
 
                             <div class="flex items-center gap-2 text-text-secondary text-sm">
 
-                                <span>Меньше</span>
+                                <span data-i18n="calendar.activity_less">Меньше</span>
 
                                 <div class="flex gap-1">
 
@@ -325,7 +323,7 @@
 
                                 </div>
 
-                                <span>Больше</span>
+                                <span data-i18n="calendar.activity_more">Больше</span>
 
                             </div>
 
@@ -371,7 +369,7 @@
 
                                 <div class="memory-health-overview-copy">
 
-                                    <h3 class="memory-health-title">Здоровье памяти</h3>
+                                    <h3 class="memory-health-title" data-i18n="calendar.health_title">Здоровье памяти</h3>
 
                                     <span id="memory-health-status" class="memory-health-status">—</span>
 
@@ -983,12 +981,12 @@
 
             if (id) {
                 if (!state.fallbackComplexNameById.has(id)) {
-                    state.fallbackComplexNameById.set(id, `Комплекс ${state.fallbackComplexNameById.size + 1}`);
+                    state.fallbackComplexNameById.set(id, `${wt('calendar.complex_fallback', 'Комплекс')} ${state.fallbackComplexNameById.size + 1}`);
                 }
                 return state.fallbackComplexNameById.get(id);
             }
 
-            return 'Комплекс';
+            return wt('calendar.complex_fallback', 'Комплекс');
         }
 
         function rewriteTitleWithoutIds(title, complexId, displayName, healthPercent) {
@@ -1050,7 +1048,7 @@
                 } else if (Array.isArray(day.tasks)) {
                     day.tasks = day.tasks.map((task, index) => {
                         if (!isRawDisplayId(task)) return task;
-                        return `Комплекс ${index + 1}`;
+                        return `${wt('calendar.complex_fallback', 'Комплекс')} ${index + 1}`;
                     });
                 }
             });
@@ -1138,7 +1136,7 @@
 
                     console.error('Calendar API returned error:', calendarRes.status);
 
-                    showScheduleError('Не удалось загрузить данные календаря');
+                    showScheduleError(wt('calendar.err_load_calendar', 'Не удалось загрузить данные календаря'));
 
                     return;
 
@@ -1202,7 +1200,7 @@
 
                     console.error('Calendar API returned error:', calendarData.error);
 
-                    showScheduleError(calendarData.error || 'Ошибка загрузки данных');
+                    showScheduleError(calendarData.error || wt('calendar.err_load_data', 'Ошибка загрузки данных'));
 
                 }
 
@@ -1377,7 +1375,7 @@
 
                 console.error('Failed to fetch data:', e);
 
-                showScheduleError('Не удалось подключиться к серверу');
+                showScheduleError(wt('calendar.err_no_connection', 'Не удалось подключиться к серверу'));
 
             } finally {
 
@@ -1440,7 +1438,7 @@
 
         <div class="flex-1">
 
-            <p class="text-sm font-medium text-error-text">Ошибка загрузки расписания</p>
+            <p class="text-sm font-medium text-error-text">${wt('calendar.schedule_load_error', 'Ошибка загрузки расписания')}</p>
 
             <p class="text-xs text-error-text opacity-80">${escapeHtml(message)}</p>
 
@@ -1490,7 +1488,7 @@
 
                 if (nameEl && !nameEl.textContent.trim()) {
 
-                    nameEl.textContent = 'Гость';
+                    nameEl.textContent = wt('calendar.guest_name', 'Гость');
 
                 }
 
@@ -1534,7 +1532,7 @@
 
                 const today = new Date();
 
-                const dayNames = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+                const dayNames = [wt('calendar.day_sun','Вс'), wt('calendar.day_mon','Пн'), wt('calendar.day_tue','Вт'), wt('calendar.day_wed','Ср'), wt('calendar.day_thu','Чт'), wt('calendar.day_fri','Пт'), wt('calendar.day_sat','Сб')];
 
                 for (let i = 0; i < 7; i++) {
 
@@ -1544,11 +1542,11 @@
 
                     let dayName;
 
-                    if (i === -1) dayName = 'Вчера';
+                    if (i === -1) dayName = wt('calendar.day_yesterday','Вчера');
 
-                    else if (i === 0) dayName = 'Сегодня';
+                    else if (i === 0) dayName = wt('calendar.day_today','Сегодня');
 
-                    else if (i === 1) dayName = 'Завтра';
+                    else if (i === 1) dayName = wt('calendar.day_tomorrow','Завтра');
 
                     else dayName = dayNames[d.getDay()];
 
@@ -1566,7 +1564,7 @@
 
                         tasks: [],
 
-                        badges: ['Нет данных'],
+                        badges: [wt('calendar.badge_no_data','Нет данных')],
 
                         is_today: i === 0,
 
@@ -1633,7 +1631,7 @@
 
                 const ok = data.ok ?? data.success ?? response.ok;
                 if (!response.ok || !ok) {
-                    showNotification('Не удалось сохранить настройки календаря', 'error');
+                    showNotification(wt('calendar.err_save_settings', 'Не удалось сохранить настройки календаря'), 'error');
                     return false;
                 }
 
@@ -1642,7 +1640,7 @@
             } catch (e) {
 
                 console.error('Settings update failed:', e);
-                showNotification('Ошибка сети при сохранении настроек календаря', 'error');
+                showNotification(wt('calendar.err_network_settings', 'Ошибка сети при сохранении настроек календаря'), 'error');
                 return false;
 
             }
@@ -1653,7 +1651,7 @@
 
             if (!complexId) {
 
-                showNotification('Комплекс не найден', 'error');
+                showNotification(wt('calendar.err_complex_not_found', 'Комплекс не найден'), 'error');
 
                 return false;
 
@@ -1691,13 +1689,13 @@
 
                 }
 
-                showNotification(`Не удалось запустить комплекс: ${data.error || 'неизвестная ошибка'}`, 'error');
+                showNotification(wt('calendar.err_start_complex', 'Не удалось запустить комплекс: {error}').replace('{error}', data.error || wt('calendar.unknown_error', 'неизвестная ошибка')), 'error');
 
             } catch (e) {
 
                 console.error('Failed to start session:', e);
 
-                showNotification('Ошибка сети при запуске комплекса', 'error');
+                showNotification(wt('calendar.err_network_complex', 'Ошибка сети при запуске комплекса'), 'error');
 
             }
 
@@ -1735,13 +1733,13 @@
 
                     }
 
-                    showNotification(`Не удалось запустить Daily Mix: ${data.error || data.message || 'неизвестная ошибка'}`, 'error');
+                    showNotification(wt('calendar.err_start_daily_mix', 'Не удалось запустить Daily Mix: {error}').replace('{error}', data.error || data.message || wt('calendar.unknown_error', 'неизвестная ошибка')), 'error');
                     return;
 
                 } catch (e) {
 
                     console.error('Failed to start Daily Mix:', e);
-                    showNotification('Ошибка сети при запуске Daily Mix', 'error');
+                    showNotification(wt('calendar.err_network_daily_mix', 'Ошибка сети при запуске Daily Mix'), 'error');
                     return;
 
                 }
@@ -1750,7 +1748,7 @@
 
                 if (state.complexes.length === 0) {
 
-                    showNotification('Нет доступных комплексов. Откройте список комплексов и выберите подходящий.', 'error');
+                    showNotification(wt('calendar.err_no_complexes', 'Нет доступных комплексов. Откройте список комплексов и выберите подходящий.'), 'error');
 
                     setTimeout(() => {
 
@@ -1778,7 +1776,7 @@
 
             if (!state.hasData) {
 
-                showNotification('Для начала обучения создайте или откройте комплекс.', 'error');
+                showNotification(wt('calendar.err_open_complex_first', 'Для начала обучения создайте или откройте комплекс.'), 'error');
 
                 setTimeout(() => {
 
@@ -1788,7 +1786,7 @@
 
             } else {
 
-                showNotification('Не удалось запустить сессию. Попробуйте позже.', 'error');
+                showNotification(wt('calendar.err_start_session', 'Не удалось запустить сессию. Попробуйте позже.'), 'error');
 
             }
 
@@ -1808,15 +1806,15 @@
 
             if (!state.hasData) {
 
-                subtitle.textContent = 'Начните проходить комплексы, чтобы увидеть персональный план';
+                subtitle.textContent = wt('calendar.subtitle_no_data', 'Начните проходить комплексы, чтобы увидеть персональный план');
 
             } else if (state.daily_plan.is_adapted) {
 
-                subtitle.textContent = 'План обучения обновлен с учетом пропуска';
+                subtitle.textContent = wt('calendar.subtitle_adapted', 'План обучения обновлен с учетом пропуска');
 
             } else {
 
-                subtitle.textContent = 'Оптимальный план обучения, адаптированный под вас';
+                subtitle.textContent = wt('calendar.subtitle_default', 'Оптимальный план обучения, адаптированный под вас');
 
             }
 
@@ -1856,7 +1854,7 @@
 
             <span class="material-symbols-outlined text-text-secondary text-[18px]">local_fire_department</span>
 
-            <span class="text-xs font-medium text-text-secondary">Начните серию</span>
+            <span class="text-xs font-medium text-text-secondary">${wt('calendar.streak_start', 'Начните серию')}</span>
 
         `;
 
@@ -1968,11 +1966,11 @@
                 <div class="empty-state-card__icon">
                     <span class="material-symbols-outlined">cached</span>
                 </div>
-                <p class="empty-state-card__title">Нет активных комплексов</p>
-                <p class="empty-state-card__copy text-sm">Запустите любой комплекс, чтобы появилась подборка повторения.</p>
+                <p class="empty-state-card__title">${wt('calendar.empty_no_complexes', 'Нет активных комплексов')}</p>
+                <p class="empty-state-card__copy text-sm">${wt('calendar.empty_daily_mix_hint', 'Запустите любой комплекс, чтобы появилась подборка повторения.')}</p>
                 <div class="empty-state-card__actions">
                     <button type="button" data-nav-target="/complexes" class="btn-secondary text-xs">
-                        Перейти к комплексам
+                        ${wt('calendar.go_to_complexes', 'Перейти к комплексам')}
                         <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
                     </button>
                 </div>
@@ -1993,43 +1991,43 @@
 
                 const dailyMixReasonEl = document.getElementById('daily-mix-reason');
 
-                document.getElementById('daily-mix-badge').textContent = 'Повторение';
+                document.getElementById('daily-mix-badge').textContent = wt('calendar.badge_review', 'Повторение');
 
-                document.getElementById('daily-mix-desc').textContent = 'Персонализированная подборка для закрепления материала.';
+                document.getElementById('daily-mix-desc').textContent = wt('calendar.daily_mix_desc', 'Персонализированная подборка для закрепления материала.');
 
-                document.getElementById('daily-mix-btn-text').textContent = 'Начать';
+                document.getElementById('daily-mix-btn-text').textContent = wt('calendar.btn_start', 'Начать');
 
                 document.getElementById('daily-mix-count').textContent = plan.daily_mix_count || 0;
 
-                document.getElementById('daily-mix-time').textContent = `задач (~${plan.daily_mix_minutes || 0} мин)`;
+                document.getElementById('daily-mix-time').textContent = wt('calendar.tasks_time', 'задач (~{minutes} мин)').replace('{minutes}', plan.daily_mix_minutes || 0);
 
                 if (dailyMixReasonEl) {
 
                     dailyMixReasonEl.textContent = document.body.dataset.calendarOnboardingDemo === 'true'
 
-                        ? 'Сначала закрываем повторы, пока память не начала проседать.'
+                        ? wt('calendar.daily_mix_reason_demo', 'Сначала закрываем повторы, пока память не начала проседать.')
 
                         : activeComplexes.length > 1
 
-                        ? 'Подборка собрана из активных комплексов, чтобы не копить отложенные повторы.'
+                        ? wt('calendar.daily_mix_reason_multi', 'Подборка собрана из активных комплексов, чтобы не копить отложенные повторы.')
 
-                        : 'Сначала закрываем повторы по активному комплексу, чтобы не терять свежий материал.';
+                        : wt('calendar.daily_mix_reason_single', 'Сначала закрываем повторы по активному комплексу, чтобы не терять свежий материал.');
 
                 }
 
                 if (plan.is_adapted) {
 
-                    document.getElementById('daily-mix-badge').textContent = 'Адаптация очереди';
+                    document.getElementById('daily-mix-badge').textContent = wt('calendar.badge_adapted', 'Адаптация очереди');
 
-                    document.getElementById('daily-mix-desc').textContent = 'Очередь адаптирована, но эта подборка остается обязательной для прогресса.';
+                    document.getElementById('daily-mix-desc').textContent = wt('calendar.daily_mix_adapted_desc', 'Очередь адаптирована, но эта подборка остается обязательной для прогресса.');
 
-                    document.getElementById('daily-mix-btn-text').textContent = 'Возобновить';
+                    document.getElementById('daily-mix-btn-text').textContent = wt('calendar.btn_resume', 'Возобновить');
 
-                    document.getElementById('subtitle').textContent = 'План обучения обновлен с учетом пропуска.';
+                    document.getElementById('subtitle').textContent = wt('calendar.subtitle_adapted', 'План обучения обновлен с учетом пропуска');
 
                     if (dailyMixReasonEl) {
 
-                        dailyMixReasonEl.textContent = 'Сначала закрываем накопившиеся повторы, чтобы мягко вернуть план в рабочий ритм.';
+                        dailyMixReasonEl.textContent = wt('calendar.daily_mix_adapted_reason', 'Сначала закрываем накопившиеся повторы, чтобы мягко вернуть план в рабочий ритм.');
 
                     }
 
@@ -2037,15 +2035,15 @@
 
                 if (!hasDailyMix) {
 
-                    document.getElementById('daily-mix-desc').textContent = 'Пока нет задач на повторение. Начните проходить комплексы!';
+                    document.getElementById('daily-mix-desc').textContent = wt('calendar.daily_mix_no_tasks', 'Пока нет задач на повторение. Начните проходить комплексы!');
 
                     if (dailyMixReasonEl) {
 
                         dailyMixReasonEl.textContent = isTodayRestDay
 
-                            ? 'Сегодня отмечен день отдыха, поэтому обязательных повторов нет.'
+                            ? wt('calendar.daily_mix_rest_day_reason', 'Сегодня отмечен день отдыха, поэтому обязательных повторов нет.')
 
-                            : 'Срочных повторов нет: можно перейти к основному фокусу или в микрокарточки.';
+                            : wt('calendar.daily_mix_clear_reason', 'Срочных повторов нет: можно перейти к основному фокусу или в микрокарточки.');
 
                     }
 
@@ -2064,11 +2062,11 @@
                 <div class="empty-state-card__icon">
                     <span class="material-symbols-outlined">school</span>
                 </div>
-                <p class="empty-state-card__title">Нет активных комплексов</p>
-                <p class="empty-state-card__copy text-sm">Запустите комплекс, чтобы появилась подборка "Изучение".</p>
+                <p class="empty-state-card__title">${wt('calendar.empty_no_complexes', 'Нет активных комплексов')}</p>
+                <p class="empty-state-card__copy text-sm">${wt('calendar.empty_main_focus_hint', 'Запустите комплекс, чтобы появилась подборка «Изучение».')}</p>
                 <div class="empty-state-card__actions">
                     <button type="button" data-nav-target="/complexes" class="btn-secondary text-xs">
-                        Перейти к комплексам
+                        ${wt('calendar.go_to_complexes', 'Перейти к комплексам')}
                         <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
                     </button>
                 </div>
@@ -2083,7 +2081,7 @@
 
                 // Normal Main Focus
 
-                const focusName = mainFocusName || (state.complexes[0]?.name || 'Новый комплекс');
+                const focusName = mainFocusName || (state.complexes[0]?.name || wt('calendar.new_complex', 'Новый комплекс'));
 
                 const focusCount = mainFocusCount || (state.complexes[0]?.tasks?.length || 0);
 
@@ -2093,7 +2091,9 @@
 
                 document.getElementById('main-focus-count').textContent = focusCount;
 
-                document.getElementById('main-focus-time').textContent = `${focusCount > 0 ? 'задач' : 'новых кейса'} (~${focusMinutes} мин)`;
+                document.getElementById('main-focus-time').textContent = (focusCount > 0
+                    ? wt('calendar.tasks_time', 'задач (~{minutes} мин)')
+                    : wt('calendar.cases_time', 'новых кейса (~{minutes} мин)')).replace('{minutes}', focusMinutes);
 
             }
 
@@ -2173,7 +2173,7 @@
 
                 <span class="material-symbols-outlined text-text-secondary text-[32px]">event_busy</span>
 
-                <p class="text-sm text-text-secondary">Расписание недоступно</p>
+                <p class="text-sm text-text-secondary">${wt('calendar.schedule_empty', 'Расписание недоступно')}</p>
 
             </div>
 
@@ -2234,10 +2234,10 @@
                 const abs = Math.abs(count) % 100;
                 const mod = abs % 10;
 
-                if (abs > 10 && abs < 20) return 'комплексов';
-                if (mod > 1 && mod < 5) return 'комплекса';
-                if (mod === 1) return 'комплекс';
-                return 'комплексов';
+                if (abs > 10 && abs < 20) return wt('calendar.complex_word_many', 'комплексов');
+                if (mod > 1 && mod < 5) return wt('calendar.complex_word_few', 'комплекса');
+                if (mod === 1) return wt('calendar.complex_word_one', 'комплекс');
+                return wt('calendar.complex_word_many', 'комплексов');
 
             };
 
@@ -2246,10 +2246,10 @@
                 const abs = Math.abs(count) % 100;
                 const mod = abs % 10;
 
-                if (abs > 10 && abs < 20) return 'повторов';
-                if (mod > 1 && mod < 5) return 'повтора';
-                if (mod === 1) return 'повтор';
-                return 'повторов';
+                if (abs > 10 && abs < 20) return wt('calendar.repeat_word_many', 'повторов');
+                if (mod > 1 && mod < 5) return wt('calendar.repeat_word_few', 'повтора');
+                if (mod === 1) return wt('calendar.repeat_word_one', 'повтор');
+                return wt('calendar.repeat_word_many', 'повторов');
 
             };
 
@@ -2267,7 +2267,7 @@
             if (isScheduleEmpty) {
 
                 const today = new Date();
-                const dayNames = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+                const dayNames = [wt('calendar.day_sun','Вс'), wt('calendar.day_mon','Пн'), wt('calendar.day_tue','Вт'), wt('calendar.day_wed','Ср'), wt('calendar.day_thu','Чт'), wt('calendar.day_fri','Пт'), wt('calendar.day_sat','Сб')];
                 renderedSchedule = Array.from({ length: 7 }, (_, i) => {
                     const d = new Date(today);
                     d.setDate(today.getDate() + i);
@@ -2278,7 +2278,7 @@
                     ].join('-');
                     return {
                         date: isoDate,
-                        day_name: i === 0 ? 'Сегодня' : i === 1 ? 'Завтра' : dayNames[d.getDay()],
+                        day_name: i === 0 ? wt('calendar.day_today','Сегодня') : i === 1 ? wt('calendar.day_tomorrow','Завтра') : dayNames[d.getDay()],
                         day_num: d.getDate(),
                         month: d.toLocaleDateString('ru', { month: 'short' }),
                         is_today: i === 0,
@@ -2304,8 +2304,8 @@
             const headerMeta = document.getElementById('schedule-header-meta');
             if (headerMeta) {
                 headerMeta.textContent = plannedDays > 0
-                    ? `${plannedDays} дней с повторами · ${totalItems} ${getRepeatWord(totalItems)}`
-                    : 'Повторов на неделю нет';
+                    ? wt('calendar.schedule_meta', '{days} дней с повторами · {items} {word}').replace('{days}', plannedDays).replace('{items}', totalItems).replace('{word}', getRepeatWord(totalItems))
+                    : wt('calendar.schedule_no_reviews', 'Повторов на неделю нет');
             }
 
             container.innerHTML = renderedSchedule.map((day) => {
@@ -2357,7 +2357,7 @@
                 const hiddenDotCount = Math.max(0, taskCount - visibleDots);
                 const detailTitle = complexNames.length > 0
                     ? complexNames.join(', ')
-                    : (isMissed ? 'План не выполнен' : 'Повторов нет');
+                    : (isMissed ? wt('calendar.plan_missed', 'План не выполнен') : wt('calendar.no_reviews', 'Повторов нет'));
 
                 const compactBadgeLabel = (badge) => {
                     const normalized = String(badge || '').trim();
@@ -2382,7 +2382,7 @@
                 const visibleBadgeLabels = compactBadges.slice(0, visibleBadgeLimit);
                 const hiddenBadgeCount = Math.max(0, compactBadges.length - visibleBadgeLabels.length);
                 const completedLabel = completedCount > 0
-                    ? `${completedCount}/${taskCount} готово`
+                    ? wt('calendar.ready_fraction', '{done}/{total} готово').replace('{done}', completedCount).replace('{total}', taskCount)
                     : '';
                 const metaSegments = [];
                 if (!isMissed) {
@@ -2396,22 +2396,22 @@
                     : (taskCount >= 3 ? 'schedule-card-v2--stacked' : '');
 
                 const statusMeta = (() => {
-                    if (isEmptyPlaceholder && isToday) return { icon: 'play_circle', label: 'Начать', tone: 'active' };
-                    if (isEmptyPlaceholder && day.is_future) return { icon: 'lock', label: 'Будет доступно', tone: 'muted' };
-                    if (isEmptyPlaceholder) return { icon: 'lock_open', label: 'Нет плана', tone: 'muted' };
-                    if (isRestDay) return { icon: 'event_busy', label: 'Выходной', tone: 'muted' };
-                    if (isMissed) return { icon: 'warning', label: 'Пропущено', tone: 'danger' };
-                    if (taskCount > 0 && completedCount >= taskCount) return { icon: 'check_circle', label: 'Готово', tone: 'good' };
-                    if (isToday && taskCount > 0) return { icon: 'play_circle', label: 'Сегодня', tone: 'active' };
-                    if (taskCount > 0) return { icon: 'schedule', label: day.is_future ? 'План' : 'Было в плане', tone: 'planned' };
-                    return { icon: 'event_available', label: day.is_future ? 'Свободно' : 'Нет задач', tone: 'muted' };
+                    if (isEmptyPlaceholder && isToday) return { icon: 'play_circle', label: wt('calendar.status_start', 'Начать'), tone: 'active' };
+                    if (isEmptyPlaceholder && day.is_future) return { icon: 'lock', label: wt('calendar.status_available_soon', 'Будет доступно'), tone: 'muted' };
+                    if (isEmptyPlaceholder) return { icon: 'lock_open', label: wt('calendar.status_no_plan', 'Нет плана'), tone: 'muted' };
+                    if (isRestDay) return { icon: 'event_busy', label: wt('calendar.status_rest_day', 'Выходной'), tone: 'muted' };
+                    if (isMissed) return { icon: 'warning', label: wt('calendar.status_missed', 'Пропущено'), tone: 'danger' };
+                    if (taskCount > 0 && completedCount >= taskCount) return { icon: 'check_circle', label: wt('calendar.status_done', 'Готово'), tone: 'good' };
+                    if (isToday && taskCount > 0) return { icon: 'play_circle', label: wt('calendar.status_today', 'Сегодня'), tone: 'active' };
+                    if (taskCount > 0) return { icon: 'schedule', label: day.is_future ? wt('calendar.status_planned', 'План') : wt('calendar.status_was_planned', 'Было в плане'), tone: 'planned' };
+                    return { icon: 'event_available', label: day.is_future ? wt('calendar.status_free', 'Свободно') : wt('calendar.status_no_tasks', 'Нет задач'), tone: 'muted' };
                 })();
 
                 const restToggleHtml = canToggleRest ? `
 
             <button onclick="event.stopPropagation(); toggleRestDay('${safeDayDate}')"
                     class="rest-day-toggle ${isRestDay ? 'active' : ''} p-1 rounded hover:bg-bg-hover transition-colors"
-                    title="${isRestDay ? 'Снять отметку выходного' : 'Отметить как выходной'}">
+                    title="${isRestDay ? wt('calendar.rest_remove_title','Снять отметку выходного') : wt('calendar.rest_add_title','Отметить как выходной')}">
 
                 <span class="material-symbols-outlined text-[16px] ${isRestDay ? 'text-text-main' : 'text-text-secondary'}">
 
@@ -2450,7 +2450,7 @@
 
                         <div class="schedule-plan-kind">
                             <span class="material-symbols-outlined">replay</span>
-                            <span>Повтор</span>
+                            <span>${wt('calendar.review_label', 'Повтор')}</span>
                         </div>
 
                         <div class="schedule-plan-dots" aria-label="${escapeHtml(`${taskCount} ${getComplexWord(taskCount)}`)}">
@@ -2466,8 +2466,8 @@
                     ` : `
                         <div class="schedule-plan-empty">
                             ${isEmptyPlaceholder && isToday
-                                ? `<button type="button" data-nav-target="/complexes" class="schedule-plan-empty__action">Запустить комплекс</button>`
-                                : `<span>${isRestDay ? 'День без нагрузки' : isMissed ? 'План не выполнен' : isEmptyPlaceholder && day.is_future ? 'Будет доступно' : 'Повторов нет'}</span>`}
+                                ? `<button type="button" data-nav-target="/complexes" class="schedule-plan-empty__action">${wt('calendar.start_complex_btn','Запустить комплекс')}</button>`
+                                : `<span>${isRestDay ? wt('calendar.day_rest','День без нагрузки') : isMissed ? wt('calendar.plan_missed','План не выполнен') : isEmptyPlaceholder && day.is_future ? wt('calendar.status_available_soon','Будет доступно') : wt('calendar.no_reviews','Повторов нет')}</span>`}
                         </div>
                     `}
 
@@ -2626,35 +2626,35 @@
                 if (day.is_today) {
 
                     const parts = [dateLabel];
-                    if (tasksSolved > 0) parts.push(`Задачи: ${tasksSolved}`);
-                    if (mcReviews > 0) parts.push(`Карточки: ${mcReviews}`);
-                    if (minutesSpent > 0) parts.push(`${minutesSpent} мин`);
-                    tooltip = `Сегодня\n${parts.join('\n')}`;
+                    if (tasksSolved > 0) parts.push(`${wt('calendar.tooltip_tasks', 'Задачи:')} ${tasksSolved}`);
+                    if (mcReviews > 0) parts.push(`${wt('calendar.tooltip_cards', 'Карточки:')} ${mcReviews}`);
+                    if (minutesSpent > 0) parts.push(`${minutesSpent} ${wt('calendar.min_suffix', 'мин')}`);
+                    tooltip = `${wt('calendar.day_today', 'Сегодня')}\n${parts.join('\n')}`;
 
                 } else if (day.is_future) {
 
-                    tooltip = `Будущее (${dateLabel})`;
+                    tooltip = `${wt('calendar.tooltip_future', 'Будущее')} (${dateLabel})`;
 
                 } else if (day.is_rest_day) {
 
-                    tooltip = `Выходной (${dateLabel})`;
+                    tooltip = `${wt('calendar.status_rest_day', 'Выходной')} (${dateLabel})`;
 
                 } else if (actTotal === 0) {
 
-                    tooltip = day.is_missed ? `Пропуск (${dateLabel})` : `Нет активности (${dateLabel})`;
+                    tooltip = day.is_missed ? `${wt('calendar.tooltip_skip', 'Пропуск')} (${dateLabel})` : `${wt('calendar.tooltip_no_activity', 'Нет активности')} (${dateLabel})`;
 
                 } else {
 
                     const parts = [dateLabel];
                     if (tasksSolved > 0) {
                         const accuracy = tasksAttempted > 0 ? Math.round((tasksSolved / tasksAttempted) * 100) : 0;
-                        parts.push(`Задачи: ${tasksSolved}${accuracy > 0 ? ` (${accuracy}%)` : ''}`);
+                        parts.push(`${wt('calendar.tooltip_tasks', 'Задачи:')} ${tasksSolved}${accuracy > 0 ? ` (${accuracy}%)` : ''}`);
                     }
                     if (mcReviews > 0) {
                         const mcAcc = mcReviews > 0 ? Math.round((mcCorrect / mcReviews) * 100) : 0;
-                        parts.push(`Карточки: ${mcReviews}${mcAcc > 0 ? ` (${mcAcc}%)` : ''}`);
+                        parts.push(`${wt('calendar.tooltip_cards', 'Карточки:')} ${mcReviews}${mcAcc > 0 ? ` (${mcAcc}%)` : ''}`);
                     }
-                    if (minutesSpent > 0) parts.push(`${minutesSpent} мин`);
+                    if (minutesSpent > 0) parts.push(`${minutesSpent} ${wt('calendar.min_suffix', 'мин')}`);
                     tooltip = parts.join('\n');
 
                 }
@@ -2692,11 +2692,11 @@
 
                 <div class="flex flex-col gap-1">
 
-                    <p class="text-sm text-text-main font-bold">Добро пожаловать в Календарь!</p>
+                    <p class="text-sm text-text-main font-bold">${wt('calendar.welcome_title', 'Добро пожаловать в Календарь!')}</p>
 
                     <p class="text-xs text-text-secondary leading-relaxed">
 
-                        Здесь будет отображаться ваша активность. Начните проходить комплексы, чтобы отслеживать прогресс.
+                        ${wt('calendar.welcome_text', 'Здесь будет отображаться ваша активность. Начните проходить комплексы, чтобы отслеживать прогресс.')}
 
                     </p>
 
@@ -2734,13 +2734,13 @@
 
                 <div class="activity-alert__copy">
 
-                    <p class="activity-alert__title">Пропустили день? Это нормально!</p>
+                    <p class="activity-alert__title">${wt('calendar.missed_title', 'Пропустили день? Это нормально!')}</p>
 
-                    <p class="activity-alert__text">План уже перестроен. Вернитесь коротким повтором, без накопления долга.</p>
+                    <p class="activity-alert__text">${wt('calendar.missed_text', 'План уже перестроен. Вернитесь коротким повтором, без накопления долга.')}</p>
 
                 </div>
 
-                <button type="button" class="activity-alert__dismiss" onclick="dismissActivityMissBanner()" aria-label="Скрыть уведомление">
+                <button type="button" class="activity-alert__dismiss" onclick="dismissActivityMissBanner()" aria-label="${wt('calendar.dismiss_banner', 'Скрыть уведомление')}">
                     <span class="material-symbols-outlined">close</span>
                 </button>
 
@@ -2806,7 +2806,7 @@
 
             <button onclick="handleNotificationAction('${safeActionType}')" class="calendar-alert-rail__action">
 
-                ${notif.action_type === 'fix' ? 'Исправить' : 'Обновить'}
+                ${notif.action_type === 'fix' ? wt('calendar.notif_action_fix', 'Исправить') : wt('calendar.notif_action_update', 'Обновить')}
 
             </button>
 
@@ -2841,10 +2841,10 @@
                 const abs = Math.abs(count) % 100;
                 const mod = abs % 10;
 
-                if (abs > 10 && abs < 20) return 'комплексов';
-                if (mod > 1 && mod < 5) return 'комплекса';
-                if (mod === 1) return 'комплекс';
-                return 'комплексов';
+                if (abs > 10 && abs < 20) return wt('calendar.complex_word_many', 'комплексов');
+                if (mod > 1 && mod < 5) return wt('calendar.complex_word_few', 'комплекса');
+                if (mod === 1) return wt('calendar.complex_word_one', 'комплекс');
+                return wt('calendar.complex_word_many', 'комплексов');
 
             };
 
@@ -2859,54 +2859,55 @@
             const getStatusMeta = (overallPercent, criticalCount, activeCount) => {
 
                 if (criticalCount > 0) {
+                    const cWord = getComplexWord(criticalCount);
                     return {
                         tone: overallPercent >= 70 ? 'steady' : 'alert',
-                        label: overallPercent >= 70 ? 'Нужно внимание' : 'Нужен повтор',
-                        headline: `${criticalCount} ${getComplexWord(criticalCount)} проседают`,
-                        compactHeadline: criticalCount === 1 ? 'Один комплекс проседает' : `${criticalCount} в зоне риска`,
+                        label: overallPercent >= 70 ? wt('calendar.health_status_attention', 'Нужно внимание') : wt('calendar.health_status_needs_review', 'Нужен повтор'),
+                        headline: wt('calendar.health_headline_critical', '{n} {word} проседают').replace('{n}', criticalCount).replace('{word}', cWord),
+                        compactHeadline: criticalCount === 1 ? wt('calendar.health_compact_one_critical', 'Один комплекс проседает') : wt('calendar.health_compact_n_critical', '{n} в зоне риска').replace('{n}', criticalCount),
                         subline: criticalCount === activeCount
-                            ? 'Короткий повтор вернёт ритм.'
-                            : 'Эти комплексы просят короткий повтор.',
+                            ? wt('calendar.health_subline_all_critical', 'Короткий повтор вернёт ритм.')
+                            : wt('calendar.health_subline_some_critical', 'Эти комплексы просят короткий повтор.'),
                     };
                 }
 
                 if (overallPercent >= 90) {
                     return {
                         tone: 'good',
-                        label: 'Отличная форма',
-                        headline: 'Память держится уверенно',
-                        compactHeadline: 'Все держится уверенно',
-                        subline: 'Можно идти в обычном темпе и не форсировать лишние повторы.',
+                        label: wt('calendar.health_status_great', 'Отличная форма'),
+                        headline: wt('calendar.health_headline_great', 'Память держится уверенно'),
+                        compactHeadline: wt('calendar.health_compact_great', 'Все держится уверенно'),
+                        subline: wt('calendar.health_subline_great', 'Можно идти в обычном темпе и не форсировать лишние повторы.'),
                     };
                 }
 
                 if (overallPercent >= 75) {
                     return {
                         tone: 'steady',
-                        label: 'Стабильный ритм',
-                        headline: 'Темп повторения в норме',
-                        compactHeadline: 'Темп в норме',
-                        subline: 'Есть небольшой спад, но без критичных зон. Хватит короткой поддержки.',
+                        label: wt('calendar.health_status_steady', 'Стабильный ритм'),
+                        headline: wt('calendar.health_headline_steady', 'Темп повторения в норме'),
+                        compactHeadline: wt('calendar.health_compact_steady', 'Темп в норме'),
+                        subline: wt('calendar.health_subline_steady', 'Есть небольшой спад, но без критичных зон. Хватит короткой поддержки.'),
                     };
                 }
 
                 return {
                     tone: 'alert',
-                    label: 'Нужен апдейт',
-                    headline: 'Материал пора освежить',
-                    compactHeadline: 'Пора освежить материал',
-                    subline: 'Лучше запланировать короткий повтор по самым слабым комплексам.',
+                    label: wt('calendar.health_status_needs_update', 'Нужен апдейт'),
+                    headline: wt('calendar.health_headline_needs_update', 'Материал пора освежить'),
+                    compactHeadline: wt('calendar.health_compact_needs_update', 'Пора освежить материал'),
+                    subline: wt('calendar.health_subline_needs_update', 'Лучше запланировать короткий повтор по самым слабым комплексам.'),
                 };
 
             };
 
             const getFrequencyLabel = (healthPercent) => {
 
-                if (healthPercent < 50) return 'Лучше повторять каждый день';
-                if (healthPercent < 70) return 'Лучше вернуться через 1-2 дня';
-                if (healthPercent < 85) return 'Достаточно двух коротких повторов в неделю';
-                if (healthPercent < 95) return 'Достаточно одного повтора в неделю';
-                return 'Повтор можно держать редким';
+                if (healthPercent < 50) return wt('calendar.freq_daily', 'Лучше повторять каждый день');
+                if (healthPercent < 70) return wt('calendar.freq_1_2_days', 'Лучше вернуться через 1-2 дня');
+                if (healthPercent < 85) return wt('calendar.freq_twice_week', 'Достаточно двух коротких повторов в неделю');
+                if (healthPercent < 95) return wt('calendar.freq_once_week', 'Достаточно одного повтора в неделю');
+                return wt('calendar.freq_rare', 'Повтор можно держать редким');
 
             };
 
@@ -2951,13 +2952,13 @@
                 setRing(0, 'var(--color-bg-tertiary)');
                 setOverview({
                     percentText: '—',
-                    status: 'Без данных',
+                    status: wt('calendar.health_status_no_data', 'Без данных'),
                     statusTone: 'muted',
                     headline,
                     subline,
                     stats: [
-                        { value: '0', label: 'активно' },
-                        { value: '0', label: 'в фокусе' },
+                        { value: '0', label: wt('calendar.health_stat_active', 'активно') },
+                        { value: '0', label: wt('calendar.health_stat_focus', 'в фокусе') },
                     ],
                 });
                 metricsEl.classList.add('is-hidden');
@@ -2968,17 +2969,17 @@
             if (complexes.length === 0) {
 
                 setHealthEmptyState({
-                    headline: 'Пока без истории',
-                    subline: 'Как только появятся повторения, здесь соберётся понятная картина по памяти.',
+                    headline: wt('calendar.health_empty_headline', 'Пока без истории'),
+                    subline: wt('calendar.health_empty_subline', 'Как только появятся повторения, здесь соберётся понятная картина по памяти.'),
                     listHtml: `
 
             <div class="memory-health-empty">
 
                 <span class="material-symbols-outlined memory-health-empty__icon">psychology</span>
 
-                <p class="memory-health-empty__title">Нет данных о прогрессе</p>
+                <p class="memory-health-empty__title">${wt('calendar.health_no_data_title', 'Нет данных о прогрессе')}</p>
 
-                <p class="memory-health-empty__text">Пройдите комплекс, чтобы увидеть, где память проседает сильнее всего.</p>
+                <p class="memory-health-empty__text">${wt('calendar.health_no_data_text', 'Пройдите комплекс, чтобы увидеть, где память проседает сильнее всего.')}</p>
 
             </div>
 
@@ -3003,17 +3004,17 @@
             if (visibleComplexes.length === 0) {
 
                 setHealthEmptyState({
-                    headline: 'Нет активных комплексов',
-                    subline: 'Сейчас анализировать нечего: блок оживёт, когда вернутся активные комплексы.',
+                    headline: wt('calendar.health_no_active_headline', 'Нет активных комплексов'),
+                    subline: wt('calendar.health_no_active_subline', 'Сейчас анализировать нечего: блок оживёт, когда вернутся активные комплексы.'),
                     listHtml: `
 
             <div class="memory-health-empty memory-health-empty--dashed">
 
                 <span class="material-symbols-outlined memory-health-empty__icon">psychology_alt</span>
 
-                <p class="memory-health-empty__title">Нет активных данных</p>
+                <p class="memory-health-empty__title">${wt('calendar.health_no_active_title', 'Нет активных данных')}</p>
 
-                <p class="memory-health-empty__text">Начните обучение, чтобы увидеть рекомендации по повторению.</p>
+                <p class="memory-health-empty__text">${wt('calendar.health_no_active_text', 'Начните обучение, чтобы увидеть рекомендации по повторению.')}</p>
 
             </div>
 
@@ -3035,7 +3036,7 @@
             healthShell.classList.toggle('memory-health-shell--sparse', !compactHealthLayout && visibleComplexes.length <= 2);
             healthShell.classList.toggle('memory-health-shell--single', !compactHealthLayout && visibleComplexes.length === 1);
             healthShell.classList.toggle('memory-health-shell--short', shortHealthLayout);
-            allActionEl.textContent = '\u0412\u0441\u0435';
+            allActionEl.textContent = wt('calendar.health_all', '\u0412\u0441\u0435');
             allActionEl.classList.remove('memory-health-overflow-action', 'memory-health-overflow-action--compact-sibling');
             allActionEl.classList.toggle('is-hidden', compactHealthLayout);
             if (!compactHealthLayout) {
@@ -3070,17 +3071,17 @@
                 statusTone: statusMeta.tone,
                 headline: compactHealthLayout
                     ? statusMeta.compactHeadline
-                    : (criticalCount === 1 ? 'Один комплекс проседает' : statusMeta.headline),
+                    : (criticalCount === 1 ? wt('calendar.health_compact_one_critical', 'Один комплекс проседает') : statusMeta.headline),
                 subline: compactHealthLayout
                     ? (criticalCount > 0
-                        ? 'Лучше быстро освежить самый слабый комплекс.'
-                        : 'Достаточно поддерживать текущий ритм.')
+                        ? wt('calendar.health_compact_subline_critical', 'Лучше быстро освежить самый слабый комплекс.')
+                        : wt('calendar.health_compact_subline_ok', 'Достаточно поддерживать текущий ритм.'))
                     : (visibleComplexes.length === 1 && criticalCount > 0
-                        ? 'Повтор вернёт ритм.'
+                        ? wt('calendar.health_single_critical_subline', 'Повтор вернёт ритм.')
                         : statusMeta.subline),
                 stats: [
-                    { value: String(visibleComplexes.length), label: 'активно' },
-                    { value: String(weakCount), label: 'в фокусе' },
+                    { value: String(visibleComplexes.length), label: wt('calendar.health_stat_active', 'активно') },
+                    { value: String(weakCount), label: wt('calendar.health_stat_focus', 'в фокусе') },
                 ],
             });
 
@@ -3088,7 +3089,7 @@
                 const tone = getTone(complex.health_percent || 0, complex.is_critical);
                 const healthPercent = Math.max(0, Math.min(100, Math.round(complex.health_percent || 0)));
                 const safeComplexId = escapeHtml(complex.complex_id || '');
-                const rawComplexName = complex.name || 'Комплекс';
+                const rawComplexName = complex.name || wt('calendar.complex_fallback', 'Комплекс');
                 const displayComplexName = hiddenComplexCount > 0 && rawComplexName.includes(':')
                     ? rawComplexName.split(':')[0]
                     : rawComplexName;
@@ -3096,13 +3097,13 @@
                 const safeFullComplexName = escapeHtml(rawComplexName);
                 const safePercent = escapeHtml(healthPercent);
                 const actionLabel = complex.is_critical
-                    ? 'Срочный повтор'
+                    ? wt('calendar.action_urgent_review', 'Срочный повтор')
                     : hiddenComplexCount > 0
-                    ? `Повторить первым, ещё ${hiddenComplexCount}`
-                    : 'Рекомендуемый повтор';
+                    ? wt('calendar.action_review_first', 'Повторить первым, ещё {n}').replace('{n}', hiddenComplexCount)
+                    : wt('calendar.action_recommended_review', 'Рекомендуемый повтор');
                 const toneText = complex.recovery_time
                     ? escapeHtml(complex.recovery_time)
-                    : escapeHtml((complex.health_percent || 0) < 80 ? 'поддержать ритм' : 'держится стабильно');
+                    : escapeHtml((complex.health_percent || 0) < 80 ? wt('calendar.tone_support_rhythm', 'поддержать ритм') : wt('calendar.tone_holding_steady', 'держится стабильно'));
                 const meterWidth = Math.max(4, Math.min(100, healthPercent));
 
                 return `
@@ -3138,7 +3139,7 @@
                 const tone = getTone(complex.health_percent || 0, complex.is_critical);
                 const healthPercent = Math.max(0, Math.min(100, Math.round(complex.health_percent || 0)));
                 const safeComplexId = escapeHtml(complex.complex_id || '');
-                const rawComplexName = complex.name || '\u041a\u043e\u043c\u043f\u043b\u0435\u043a\u0441';
+                const rawComplexName = complex.name || wt('calendar.complex_fallback', '\u041a\u043e\u043c\u043f\u043b\u0435\u043a\u0441');
                 let displayComplexName = rawComplexName.includes(':')
                     ? rawComplexName.split(':')[0]
                     : rawComplexName;
@@ -3152,11 +3153,11 @@
                 const safeFullComplexName = escapeHtml(rawComplexName);
                 const safePercent = escapeHtml(healthPercent);
                 const actionLabel = complex.is_critical
-                    ? '\u0421\u0440\u043e\u0447\u043d\u044b\u0439 \u043f\u043e\u0432\u0442\u043e\u0440'
-                    : '\u041f\u043e\u0432\u0442\u043e\u0440';
+                    ? wt('calendar.action_urgent_review', '\u0421\u0440\u043e\u0447\u043d\u044b\u0439 \u043f\u043e\u0432\u0442\u043e\u0440')
+                    : wt('calendar.action_review_short', '\u041f\u043e\u0432\u0442\u043e\u0440');
                 const toneText = complex.recovery_time
                     ? escapeHtml(complex.recovery_time)
-                    : escapeHtml((complex.health_percent || 0) < 80 ? '\u0441\u0435\u0433\u043e\u0434\u043d\u044f' : '\u0434\u0435\u0440\u0436\u0438\u0442\u0441\u044f');
+                    : escapeHtml((complex.health_percent || 0) < 80 ? wt('calendar.tone_today', '\u0441\u0435\u0433\u043e\u0434\u043d\u044f') : wt('calendar.tone_holding', '\u0434\u0435\u0440\u0436\u0438\u0442\u0441\u044f'));
                 const meterWidth = Math.max(4, Math.min(100, healthPercent));
 
                 return `
@@ -3192,7 +3193,7 @@
                 const tone = getTone(complex.health_percent || 0, complex.is_critical);
                 const healthPercent = Math.max(0, Math.min(100, Math.round(complex.health_percent || 0)));
                 const safeComplexId = escapeHtml(complex.complex_id || '');
-                const safeComplexName = escapeHtml(complex.name || 'Комплекс');
+                const safeComplexName = escapeHtml(complex.name || wt('calendar.complex_fallback', 'Комплекс'));
 
                 return `
 
@@ -3200,7 +3201,7 @@
 
                 <div class="memory-health-action__copy">
 
-                    <span class="memory-health-action__label">Повтор</span>
+                    <span class="memory-health-action__label">${wt('calendar.action_review_short', 'Повтор')}</span>
 
                     <span class="memory-health-action__name">${safeComplexName}</span>
 
@@ -3210,7 +3211,7 @@
 
                     <span class="memory-health-action__percent">${escapeHtml(healthPercent)}%</span>
 
-                    <span class="memory-health-action__meta">Освежить</span>
+                    <span class="memory-health-action__meta">${wt('calendar.action_refresh', 'Освежить')}</span>
 
                 </div>
 
@@ -3221,9 +3222,9 @@
 
             const renderCompactOverflowAction = (count) => `
 
-            <button type="button" class="memory-health-overflow-action" data-open-health-details="true" title="Открыть все комплексы">
+            <button type="button" class="memory-health-overflow-action" data-open-health-details="true" title="${wt('calendar.open_all_complexes', 'Открыть все комплексы')}">
 
-                +${escapeHtml(count)} ещё
+                +${escapeHtml(count)} ${wt('calendar.health_more_suffix', 'ещё')}
 
             </button>
 
@@ -3233,7 +3234,7 @@
                 const tone = getTone(complex.health_percent || 0, complex.is_critical);
                 const healthPercent = Math.max(0, Math.min(100, Math.round(complex.health_percent || 0)));
                 const safeComplexId = escapeHtml(complex.complex_id || '');
-                const rawName = complex.name || 'Комплекс';
+                const rawName = complex.name || wt('calendar.complex_fallback', 'Комплекс');
                 let shortName = rawName.includes(':') ? rawName.split(':')[0] : rawName;
                 if (shortName.length > 16) {
                     shortName = shortName.split(' ')[0] || shortName.slice(0, 16);
@@ -3255,10 +3256,10 @@
 
             const renderGuidance = () => {
                 const message = criticalCount > 0
-                    ? 'Короткий повтор сегодня удержит комплекс в рабочем ритме.'
+                    ? wt('calendar.guidance_critical', 'Короткий повтор сегодня удержит комплекс в рабочем ритме.')
                     : hiddenComplexCount > 0
-                    ? 'Сначала разберите самый слабый комплекс, остальные можно поддерживать следом.'
-                    : 'Память держится ровно. Достаточно не выпадать из ритма повторений.';
+                    ? wt('calendar.guidance_multi', 'Сначала разберите самый слабый комплекс, остальные можно поддерживать следом.')
+                    : wt('calendar.guidance_stable', 'Память держится ровно. Достаточно не выпадать из ритма повторений.');
 
                 return `
 
@@ -3280,7 +3281,7 @@
 
                 list.innerHTML = compactVisible.map(renderCompactAction).join('');
                 if (remainingCompactCount > 0) {
-                    allActionEl.textContent = `+${remainingCompactCount} \u0435\u0449\u0451`;
+                    allActionEl.textContent = `+${remainingCompactCount} ${wt('calendar.health_more_suffix', '\u0435\u0449\u0451')}`;
                     allActionEl.classList.remove('is-hidden');
                     allActionEl.classList.add('memory-health-overflow-action', 'memory-health-overflow-action--compact-sibling');
                 } else {
@@ -3389,7 +3390,7 @@
                 if (state.settings.daily_time_limit_minutes !== minutes) {
                     state.settings.daily_time_limit_minutes = previousMinutes;
                 } else {
-                    showNotification('Время сохранено, но план не удалось обновить сразу', 'warning');
+                    showNotification(wt('calendar.warn_time_saved', 'Время сохранено, но план не удалось обновить сразу'), 'warning');
                 }
 
             }
@@ -3555,7 +3556,7 @@
                 }
 
                 if (!response.ok || !data.success) {
-                    showNotification('Не удалось изменить статус дня', 'error');
+                    showNotification(wt('calendar.err_change_rest', 'Не удалось изменить статус дня'), 'error');
                     return;
                 }
 
@@ -3583,9 +3584,9 @@
 
                         isCurrentlyRest
 
-                            ? 'Отметка выходного снята'
+                            ? wt('calendar.rest_removed', 'Отметка выходного снята')
 
-                            : 'День отмечен как выходной'
+                            : wt('calendar.rest_added', 'День отмечен как выходной')
 
                     );
 
@@ -3595,7 +3596,7 @@
 
                 console.error('Failed to toggle rest day:', e);
 
-                showNotification('Ошибка при изменении статуса дня', 'error');
+                showNotification(wt('calendar.err_toggle_rest', 'Ошибка при изменении статуса дня'), 'error');
 
             }
 
@@ -3757,20 +3758,20 @@
                         <div>
                             <div class="flex items-center gap-2 mb-2">
                                 <span class="material-symbols-outlined text-primary text-[20px]">cached</span>
-                                <span id="daily-mix-badge" class="pill-kicker pill-sm pill-neutral">Повторение</span>
+                                <span id="daily-mix-badge" class="pill-kicker pill-sm pill-neutral">${wt('calendar.badge_review', 'Повторение')}</span>
                             </div>
                             <h3 class="text-lg font-bold text-text-main mb-1">Daily Mix</h3>
-                            <p id="daily-mix-desc" class="text-text-secondary text-sm">Персонализированная подборка для закрепления материала.</p>
-                            <p id="daily-mix-reason" class="mt-2 text-xs font-medium text-text-muted">Сначала закрываем повторы, чтобы не копить просадки по памяти.</p>
+                            <p id="daily-mix-desc" class="text-text-secondary text-sm">${wt('calendar.daily_mix_desc', 'Персонализированная подборка для закрепления материала.')}</p>
+                            <p id="daily-mix-reason" class="mt-2 text-xs font-medium text-text-muted">${wt('calendar.daily_mix_reason_demo', 'Сначала закрываем повторы, пока память не начала проседать.')}</p>
                         </div>
                         <div class="flex items-end justify-between">
                             <div class="flex flex-col">
                                 <span id="daily-mix-count" class="text-xl font-bold text-text-main">0</span>
-                                <span id="daily-mix-time" class="text-xs text-text-secondary">задач (~0 мин)</span>
+                                <span id="daily-mix-time" class="text-xs text-text-secondary">${wt('calendar.tasks_time', 'задач (~{minutes} мин)').replace('{minutes}', 0)}</span>
                             </div>
                             <button class="btn-secondary flex items-center gap-2 text-sm">
                                 <span class="material-symbols-outlined text-[18px]">play_circle</span>
-                                <span id="daily-mix-btn-text">Начать</span>
+                                <span id="daily-mix-btn-text">${wt('calendar.btn_start', 'Начать')}</span>
                             </button>
                         </div>
                     </div>
@@ -3786,19 +3787,19 @@
                         <div>
                             <div class="flex items-center gap-2 mb-2">
                                 <span class="material-symbols-outlined text-accent text-[20px]">school</span>
-                                <span id="main-focus-badge" class="pill-kicker pill-sm pill-neutral">Изучение</span>
+                                <span id="main-focus-badge" class="pill-kicker pill-sm pill-neutral">${wt('calendar.badge_study', 'Изучение')}</span>
                             </div>
-                            <h3 id="main-focus-title" class="text-lg font-bold text-text-main mb-1">Новый комплекс</h3>
-                            <p id="main-focus-desc" class="text-text-secondary text-sm">Сегодняшние задачи вашего комплекса.</p>
+                            <h3 id="main-focus-title" class="text-lg font-bold text-text-main mb-1">${wt('calendar.new_complex', 'Новый комплекс')}</h3>
+                            <p id="main-focus-desc" class="text-text-secondary text-sm">${wt('calendar.main_focus_default_desc', 'Сегодняшние задачи вашего комплекса.')}</p>
                         </div>
                         <div class="flex items-end justify-between">
                             <div class="flex flex-col">
                                 <span id="main-focus-count" class="text-xl font-bold text-text-main">0</span>
-                                <span id="main-focus-time" class="text-xs text-text-secondary">задач (~0 мин)</span>
+                                <span id="main-focus-time" class="text-xs text-text-secondary">${wt('calendar.tasks_time', 'задач (~{minutes} мин)').replace('{minutes}', 0)}</span>
                             </div>
                             <button class="btn-secondary flex items-center gap-2 text-sm">
                                 <span class="material-symbols-outlined text-[18px]">play_circle</span>
-                                Начать
+                                ${wt('calendar.btn_start', 'Начать')}
                             </button>
                         </div>
                     </div>
@@ -3973,15 +3974,34 @@
 
             const n1 = abs % 10;
 
-            if (abs > 10 && abs < 20) return 'дней';
+            if (abs > 10 && abs < 20) return wt('calendar.days_many', 'дней');
 
-            if (n1 > 1 && n1 < 5) return 'дня';
+            if (n1 > 1 && n1 < 5) return wt('calendar.days_few', 'дня');
 
-            if (n1 === 1) return 'день';
+            if (n1 === 1) return wt('calendar.days_one', 'день');
 
-            return 'дней';
+            return wt('calendar.days_many', 'дней');
 
         }
+
+        // =============================================================================
+
+        // I18N
+
+        // =============================================================================
+
+        function wt(key, fallback) {
+            if (!window.i18n) return fallback;
+            const result = window.i18n.t(key);
+            return result !== key ? result : fallback;
+        }
+
+        function _applyCalendarI18n() {
+            if (window.i18n) window.i18n.updateDOM();
+            renderAll();
+        }
+
+        document.addEventListener('i18n:changed', _applyCalendarI18n);
 
         // =============================================================================
 

@@ -1,8 +1,14 @@
-/**
+﻿/**
  * Settings page - AI Keys management.
  */
 (function () {
     'use strict';
+
+    function wt(key, fallback) {
+        if (!window.i18n || typeof window.i18n.t !== 'function') return fallback;
+        const v = window.i18n.t(key);
+        return v !== key ? v : fallback;
+    }
 
     const PROVIDERS_ORDER = ['openrouter', 'gemini', 'groq'];
 
@@ -39,32 +45,21 @@
     const PASSWORD_MIN_LENGTH = 8;
     const AVATAR_CROP_VIEW_SIZE = 304;
     const AVATAR_CROP_OUTPUT_SIZE = 512;
-    const THEME_COPY = {
-        'light-a': {
-            name: '\u041a\u043e\u043d\u0442\u0440\u0430\u0441\u0442',
-            description: '\u0421\u0432\u0435\u0442\u043b\u0430\u044f \u0442\u0435\u043c\u0430 \u0441 \u0445\u043e\u043b\u043e\u0434\u043d\u044b\u043c \u0430\u043a\u0446\u0435\u043d\u0442\u043e\u043c',
-        },
-        'light-b': {
-            name: '\u0422\u0435\u043f\u043b\u043e',
-            description: '\u041c\u044f\u0433\u043a\u0430\u044f \u0441\u0432\u0435\u0442\u043b\u0430\u044f \u043f\u0430\u043b\u0438\u0442\u0440\u0430 \u0441 \u0442\u0451\u043f\u043b\u044b\u043c\u0438 \u043e\u0442\u0442\u0435\u043d\u043a\u0430\u043c\u0438',
-        },
-        'neutral-a': {
-            name: '\u0417\u0435\u043c\u043b\u044f',
-            description: '\u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f \u043f\u0430\u043b\u0438\u0442\u0440\u0430 \u0432 \u043f\u0440\u0438\u0440\u043e\u0434\u043d\u044b\u0445 \u0442\u043e\u043d\u0430\u0445',
-        },
-        'neutral-b': {
-            name: '\u0421\u0443\u043c\u0435\u0440\u043a\u0438',
-            description: '\u0421\u043f\u043e\u043a\u043e\u0439\u043d\u0430\u044f \u043d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f \u0442\u0435\u043c\u0430 \u0441 \u043c\u044f\u0433\u043a\u0438\u043c \u043a\u043e\u043d\u0442\u0440\u0430\u0441\u0442\u043e\u043c',
-        },
-        'dark-a': {
-            name: '\u041d\u043e\u0447\u044c',
-            description: '\u0422\u0451\u043c\u043d\u0430\u044f \u0442\u0435\u043c\u0430 \u0441 \u0442\u0451\u043f\u043b\u044b\u043c\u0438 \u0430\u043a\u0446\u0435\u043d\u0442\u0430\u043c\u0438',
-        },
-        'dark-b': {
-            name: '\u041a\u043e\u0441\u043c\u043e\u0441',
-            description: '\u0413\u043b\u0443\u0431\u043e\u043a\u0430\u044f \u0442\u0451\u043c\u043d\u0430\u044f \u043f\u0430\u043b\u0438\u0442\u0440\u0430 \u0434\u043b\u044f \u0432\u0435\u0447\u0435\u0440\u043d\u0435\u0439 \u0440\u0430\u0431\u043e\u0442\u044b',
-        },
-    };
+    function getThemeCopy(themeId) {
+        const map = {
+            'light-a':   { nameKey: 'settings.theme_contrast', descKey: 'settings.theme_contrast_desc', nameFb: '\u041a\u043e\u043d\u0442\u0440\u0430\u0441\u0442',  descFb: '\u0421\u0432\u0435\u0442\u043b\u0430\u044f \u0442\u0435\u043c\u0430 \u0441 \u0445\u043e\u043b\u043e\u0434\u043d\u044b\u043c \u0430\u043a\u0446\u0435\u043d\u0442\u043e\u043c' },
+            'light-b':   { nameKey: 'settings.theme_warm',     descKey: 'settings.theme_warm_desc',     nameFb: '\u0422\u0435\u043f\u043b\u043e',     descFb: '\u041c\u044f\u0433\u043a\u0430\u044f \u0441\u0432\u0435\u0442\u043b\u0430\u044f \u043f\u0430\u043b\u0438\u0442\u0440\u0430 \u0441 \u0442\u0451\u043f\u043b\u044b\u043c\u0438 \u043e\u0442\u0442\u0435\u043d\u043a\u0430\u043c\u0438' },
+            'neutral-a': { nameKey: 'settings.theme_earth',    descKey: 'settings.theme_earth_desc',    nameFb: '\u0417\u0435\u043c\u043b\u044f',     descFb: '\u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f \u043f\u0430\u043b\u0438\u0442\u0440\u0430 \u0432 \u043f\u0440\u0438\u0440\u043e\u0434\u043d\u044b\u0445 \u0442\u043e\u043d\u0430\u0445' },
+            'neutral-b': { nameKey: 'settings.theme_slate',    descKey: 'settings.theme_slate_desc',    nameFb: '\u0421\u0443\u043c\u0435\u0440\u043a\u0438',   descFb: '\u0421\u043f\u043e\u043a\u043e\u0439\u043d\u0430\u044f \u043d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f \u0442\u0435\u043c\u0430 \u0441 \u043c\u044f\u0433\u043a\u0438\u043c \u043a\u043e\u043d\u0442\u0440\u0430\u0441\u0442\u043e\u043c' },
+            'dark-a':    { nameKey: 'settings.theme_night',    descKey: 'settings.theme_night_desc',    nameFb: '\u041d\u043e\u0447\u044c',      descFb: '\u0422\u0451\u043c\u043d\u0430\u044f \u0442\u0435\u043c\u0430 \u0441 \u0442\u0451\u043f\u043b\u044b\u043c\u0438 \u0430\u043a\u0446\u0435\u043d\u0442\u0430\u043c\u0438' },
+            'dark-b':    { nameKey: 'settings.theme_cosmos',   descKey: 'settings.theme_cosmos_desc',   nameFb: '\u041a\u043e\u0441\u043c\u043e\u0441',    descFb: '\u0413\u043b\u0443\u0431\u043e\u043a\u0430\u044f \u0442\u0451\u043c\u043d\u0430\u044f \u043f\u0430\u043b\u0438\u0442\u0440\u0430 \u0434\u043b\u044f \u0432\u0435\u0447\u0435\u0440\u043d\u0435\u0439 \u0440\u0430\u0431\u043e\u0442\u044b' },
+        };
+        const entry = map[String(themeId)] || {};
+        return {
+            name: entry.nameKey ? wt(entry.nameKey, entry.nameFb) : undefined,
+            description: entry.descKey ? wt(entry.descKey, entry.descFb) : undefined,
+        };
+    }
 
     let _providersData = {};
     let _validationState = {}; // provider -> 'idle' | 'validating' | 'valid' | 'invalid'
@@ -178,7 +173,7 @@
 
     function formatDraftTime(savedAt) {
         const date = new Date(Number(savedAt || 0));
-        if (Number.isNaN(date.getTime())) return '\u043d\u0435 \u0438\u0437\u0432\u0435\u0441\u0442\u043d\u043e';
+        if (Number.isNaN(date.getTime())) return wt('settings.date_unknown', '\u043d\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043d\u043e');
         return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
     }
 
@@ -266,7 +261,7 @@
         banner.classList.remove('hidden');
         banner.hidden = false;
         banner.style.display = '';
-        bannerText.textContent = `\u0427\u0435\u0440\u043d\u043e\u0432\u0438\u043a \u043e\u0442 ${formatDraftTime(draft.savedAt)}.`;
+        bannerText.textContent = wt('settings.draft_time_label', '\u0427\u0435\u0440\u043d\u043e\u0432\u0438\u043a \u043e\u0442 {time}.').replace('{time}', formatDraftTime(draft.savedAt));
     }
 
     function sanitizeThemeColor(value, fallback) {
@@ -464,7 +459,7 @@
         if (window.ThemeManager && typeof window.ThemeManager.setTheme === 'function') {
             window.ThemeManager.setTheme(themeId);
         }
-        setThemeSaveStatus('\u0421\u043e\u0445\u0440\u0430\u043d\u044f\u0435\u043c \u0442\u0435\u043c\u0443...', 'neutral');
+        setThemeSaveStatus(wt('settings.theme_saving', '\u0421\u043e\u0445\u0440\u0430\u043d\u044f\u0435\u043c \u0442\u0435\u043c\u0443...'), 'neutral');
         try {
             const response = await fetch('/api/ui/settings', {
                 method: 'POST',
@@ -475,11 +470,11 @@
             if (!response.ok || !data?.ok) {
                 throw new Error(data?.error || 'theme_save_failed');
             }
-            setThemeSaveStatus('\u0422\u0435\u043c\u0430 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0430', 'success');
+            setThemeSaveStatus(wt('settings.theme_saved', '\u0422\u0435\u043c\u0430 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0430'), 'success');
             renderThemeOptions(themeId);
         } catch (error) {
             console.error('[Settings] Failed to save theme:', error);
-            setThemeSaveStatus('\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u0442\u0435\u043c\u0443', 'error');
+            setThemeSaveStatus(wt('settings.theme_save_error', '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u0442\u0435\u043c\u0443'), 'error');
         }
     }
 
@@ -493,18 +488,18 @@
         if (!themes.length) {
             container.innerHTML = `
                 <div class="rounded-2xl border border-border-subtle bg-surface-1 px-4 py-5 text-sm text-text-secondary">
-                    \u0422\u0435\u043c\u044b \u043f\u043e\u043a\u0430 \u043d\u0435\u0434\u043e\u0441\u0442\u0443\u043f\u043d\u044b.
+                    ${wt('settings.theme_unavailable', '\u0422\u0435\u043c\u044b \u043f\u043e\u043a\u0430 \u043d\u0435\u0434\u043e\u0441\u0442\u0443\u043f\u043d\u044b.')}
                 </div>
             `;
             return;
         }
         container.innerHTML = themes.map((theme) => {
             const active = theme.id === currentThemeId;
-            const themeCopy = THEME_COPY[String(theme.id)] || {};
+            const themeCopy = getThemeCopy(String(theme.id));
             const swatch = sanitizeThemeColor(theme.swatch, '#d1d5db');
             const border = sanitizeThemeColor(theme.border, swatch);
             const name = escapeHtml(themeCopy.name || theme.name || theme.id);
-            const description = escapeHtml(themeCopy.description || theme.description || '\u041f\u0430\u043b\u0438\u0442\u0440\u0430 \u0438\u043d\u0442\u0435\u0440\u0444\u0435\u0439\u0441\u0430');
+            const description = escapeHtml(themeCopy.description || theme.description || wt('settings.theme_palette_default', '\u041f\u0430\u043b\u0438\u0442\u0440\u0430 \u0438\u043d\u0442\u0435\u0440\u0444\u0435\u0439\u0441\u0430'));
             return `
                 <button type="button"
                     data-theme-option="${String(theme.id)}"
@@ -526,7 +521,7 @@
                         <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold ${active
                             ? 'border-primary-light bg-surface-1 text-primary'
                             : 'border-border-subtle bg-bg-secondary text-text-secondary'}">
-                            ${active ? '\u0410\u043a\u0442\u0438\u0432\u043d\u0430' : '\u0412\u044b\u0431\u0440\u0430\u0442\u044c'}
+                            ${active ? wt('settings.theme_active', '\u0410\u043a\u0442\u0438\u0432\u043d\u0430') : wt('settings.theme_select', '\u0412\u044b\u0431\u0440\u0430\u0442\u044c')}
                         </span>
                     </div>
                     <div class="mt-4 grid grid-cols-3 gap-2" aria-hidden="true">
@@ -704,9 +699,9 @@
             console.error('[Settings] Failed to logout:', error);
             showVoiceToast({
                 severity: 'error',
-                what: '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0432\u044b\u0439\u0442\u0438 \u0438\u0437 \u0430\u043a\u043a\u0430\u0443\u043d\u0442\u0430.',
-                impact: '\u0422\u0435\u043a\u0443\u0449\u0430\u044f \u0441\u0435\u0441\u0441\u0438\u044f \u043e\u0441\u0442\u0430\u043b\u0430\u0441\u044c \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0439.',
-                next: '\u041f\u043e\u043f\u0440\u043e\u0431\u0443\u0439\u0442\u0435 \u043f\u043e\u0432\u0442\u043e\u0440\u0438\u0442\u044c \u0432\u044b\u0445\u043e\u0434 \u0447\u0443\u0442\u044c \u043f\u043e\u0437\u0436\u0435.',
+                what: wt('settings.logout_error_what', '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0432\u044b\u0439\u0442\u0438 \u0438\u0437 \u0430\u043a\u043a\u0430\u0443\u043d\u0442\u0430.'),
+                impact: wt('settings.logout_error_impact', '\u0422\u0435\u043a\u0443\u0449\u0430\u044f \u0441\u0435\u0441\u0441\u0438\u044f \u043e\u0441\u0442\u0430\u043b\u0430\u0441\u044c \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0439.'),
+                next: wt('settings.logout_error_next', '\u041f\u043e\u043f\u0440\u043e\u0431\u0443\u0439\u0442\u0435 \u043f\u043e\u0432\u0442\u043e\u0440\u0438\u0442\u044c \u0432\u044b\u0445\u043e\u0434 \u0447\u0443\u0442\u044c \u043f\u043e\u0437\u0436\u0435.'),
             });
         } finally {
             _isLogoutPending = false;
@@ -715,14 +710,14 @@
     }
 
     async function confirmAccountDeletion() {
-        const title = '\u0423\u0434\u0430\u043b\u0438\u0442\u044c \u0430\u043a\u043a\u0430\u0443\u043d\u0442?';
-        const message = '\u0411\u0443\u0434\u0443\u0442 \u0443\u0434\u0430\u043b\u0435\u043d\u044b \u043f\u043e\u0447\u0442\u0430, \u0437\u0430\u0434\u0430\u043d\u0438\u044f, \u043a\u043e\u043c\u043f\u043b\u0435\u043a\u0441\u044b \u0438 \u0434\u0440\u0443\u0433\u0438\u0435 \u0441\u0432\u044f\u0437\u0430\u043d\u043d\u044b\u0435 \u0434\u0430\u043d\u043d\u044b\u0435. \u041f\u043e\u0441\u043b\u0435 \u044d\u0442\u043e\u0433\u043e \u043c\u043e\u0436\u043d\u043e \u0431\u0443\u0434\u0435\u0442 \u0437\u0430\u0440\u0435\u0433\u0438\u0441\u0442\u0440\u0438\u0440\u043e\u0432\u0430\u0442\u044c\u0441\u044f \u0441\u043d\u043e\u0432\u0430 \u0441 \u0442\u043e\u0439 \u0436\u0435 \u043f\u043e\u0447\u0442\u043e\u0439.';
+        const title = wt('settings.delete_dialog_title', '\u0423\u0434\u0430\u043b\u0438\u0442\u044c \u0430\u043a\u043a\u0430\u0443\u043d\u0442?');
+        const message = wt('settings.delete_dialog_message', '\u0411\u0443\u0434\u0443\u0442 \u0443\u0434\u0430\u043b\u0435\u043d\u044b \u043f\u043e\u0447\u0442\u0430, \u0437\u0430\u0434\u0430\u043d\u0438\u044f, \u043a\u043e\u043c\u043f\u043b\u0435\u043a\u0441\u044b \u0438 \u0434\u0440\u0443\u0433\u0438\u0435 \u0441\u0432\u044f\u0437\u0430\u043d\u043d\u044b\u0435 \u0434\u0430\u043d\u043d\u044b\u0435. \u041f\u043e\u0441\u043b\u0435 \u044d\u0442\u043e\u0433\u043e \u043c\u043e\u0436\u043d\u043e \u0431\u0443\u0434\u0435\u0442 \u0437\u0430\u0440\u0435\u0433\u0438\u0441\u0442\u0440\u0438\u0440\u043e\u0432\u0430\u0442\u044c\u0441\u044f \u0441\u043d\u043e\u0432\u0430 \u0441 \u0442\u043e\u0439 \u0436\u0435 \u043f\u043e\u0447\u0442\u043e\u0439.');
         if (typeof NotificationUI !== 'undefined' && typeof NotificationUI.confirm === 'function') {
             return NotificationUI.confirm({
                 title,
                 message,
-                confirmText: '\u0423\u0434\u0430\u043b\u0438\u0442\u044c \u043d\u0430\u0432\u0441\u0435\u0433\u0434\u0430',
-                cancelText: '\u041e\u0442\u043c\u0435\u043d\u0430',
+                confirmText: wt('settings.delete_confirm', '\u0423\u0434\u0430\u043b\u0438\u0442\u044c \u043d\u0430\u0432\u0441\u0435\u0433\u0434\u0430'),
+                cancelText: wt('settings.cancel', '\u041e\u0442\u043c\u0435\u043d\u0430'),
                 variant: 'error',
             });
         }
@@ -734,25 +729,25 @@
 
     function getAccountDisplayName(user) {
         const candidate = String(user?.name || '').trim();
-        return candidate || 'Аккаунт ACTRA';
+        return candidate || wt('settings.account_name_fallback', 'Аккаунт ACTRA');
     }
 
     function getAccountCaption(user) {
-        if (user?.pending_email) return '\u0421\u043c\u0435\u043d\u0430 \u043f\u043e\u0447\u0442\u044b \u0436\u0434\u0451\u0442 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f';
-        if (user?.email_verified) return '\u041f\u043e\u0447\u0442\u0430 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0430';
-        if (user?.email) return '\u041f\u043e\u0447\u0442\u0430 \u043d\u0435 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0430';
-        if (user?.login) return '\u041f\u0440\u043e\u0444\u0438\u043b\u044c \u0430\u043a\u0442\u0438\u0432\u0435\u043d';
-        return '\u041b\u043e\u043a\u0430\u043b\u044c\u043d\u044b\u0439 \u043f\u0440\u043e\u0444\u0438\u043b\u044c';
+        if (user?.pending_email) return wt('settings.caption_pending_email', '\u0421\u043c\u0435\u043d\u0430 \u043f\u043e\u0447\u0442\u044b \u0436\u0434\u0451\u0442 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f');
+        if (user?.email_verified) return wt('settings.caption_email_verified', '\u041f\u043e\u0447\u0442\u0430 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0430');
+        if (user?.email) return wt('settings.caption_email_unverified', '\u041f\u043e\u0447\u0442\u0430 \u043d\u0435 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0430');
+        if (user?.login) return wt('settings.caption_active', '\u041f\u0440\u043e\u0444\u0438\u043b\u044c \u0430\u043a\u0442\u0438\u0432\u0435\u043d');
+        return wt('settings.caption_local', '\u041b\u043e\u043a\u0430\u043b\u044c\u043d\u044b\u0439 \u043f\u0440\u043e\u0444\u0438\u043b\u044c');
     }
 
     function getAccountSubline(user) {
         if (user?.pending_email) {
-            return '\u041d\u043e\u0432\u0430\u044f \u043f\u043e\u0447\u0442\u0430 \u0443\u0436\u0435 \u0436\u0434\u0451\u0442 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f. \u0422\u0435\u043a\u0443\u0449\u0438\u0439 \u0430\u0434\u0440\u0435\u0441 \u043e\u0441\u0442\u0430\u043d\u0435\u0442\u0441\u044f \u0430\u043a\u0442\u0438\u0432\u043d\u044b\u043c, \u043f\u043e\u043a\u0430 \u0432\u044b \u043d\u0435 \u043f\u0435\u0440\u0435\u0439\u0434\u0451\u0442\u0435 \u043f\u043e \u0441\u0441\u044b\u043b\u043a\u0435 \u0438\u0437 \u043f\u0438\u0441\u044c\u043c\u0430.';
+            return wt('settings.subline_pending_email', '\u041d\u043e\u0432\u0430\u044f \u043f\u043e\u0447\u0442\u0430 \u0443\u0436\u0435 \u0436\u0434\u0451\u0442 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f. \u0422\u0435\u043a\u0443\u0449\u0438\u0439 \u0430\u0434\u0440\u0435\u0441 \u043e\u0441\u0442\u0430\u043d\u0435\u0442\u0441\u044f \u0430\u043a\u0442\u0438\u0432\u043d\u044b\u043c, \u043f\u043e\u043a\u0430 \u0432\u044b \u043d\u0435 \u043f\u0435\u0440\u0435\u0439\u0434\u0451\u0442\u0435 \u043f\u043e \u0441\u0441\u044b\u043b\u043a\u0435 \u0438\u0437 \u043f\u0438\u0441\u044c\u043c\u0430.');
         }
         if (user?.email && !user?.email_verified) {
-            return '\u041f\u043e\u0447\u0442\u0430 \u0443\u0436\u0435 \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u0435\u0442\u0441\u044f \u0434\u043b\u044f \u0432\u0445\u043e\u0434\u0430, \u043d\u043e \u0435\u0449\u0451 \u043d\u0435 \u0441\u0447\u0438\u0442\u0430\u0435\u0442\u0441\u044f \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0451\u043d\u043d\u043e\u0439. \u0417\u0430\u0432\u0435\u0440\u0448\u0438\u0442\u0435 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u0435 \u0438\u0437 \u043f\u0438\u0441\u044c\u043c\u0430, \u0447\u0442\u043e\u0431\u044b \u0437\u0430\u043a\u0440\u0435\u043f\u0438\u0442\u044c \u044d\u0442\u043e\u0442 \u0430\u0434\u0440\u0435\u0441.';
+            return wt('settings.subline_email_unverified', '\u041f\u043e\u0447\u0442\u0430 \u0443\u0436\u0435 \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u0435\u0442\u0441\u044f \u0434\u043b\u044f \u0432\u0445\u043e\u0434\u0430, \u043d\u043e \u0435\u0449\u0451 \u043d\u0435 \u0441\u0447\u0438\u0442\u0430\u0435\u0442\u0441\u044f \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0451\u043d\u043d\u043e\u0439. \u0417\u0430\u0432\u0435\u0440\u0448\u0438\u0442\u0435 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u0435 \u0438\u0437 \u043f\u0438\u0441\u044c\u043c\u0430, \u0447\u0442\u043e\u0431\u044b \u0437\u0430\u043a\u0440\u0435\u043f\u0438\u0442\u044c \u044d\u0442\u043e\u0442 \u0430\u0434\u0440\u0435\u0441.');
         }
-        return '\u0418\u043c\u044f, \u043f\u043e\u0447\u0442\u0430, \u043f\u0430\u0440\u043e\u043b\u044c \u0438 \u0432\u043d\u0435\u0448\u043d\u0438\u0439 \u0432\u0438\u0434 \u0441\u043e\u0445\u0440\u0430\u043d\u044f\u044e\u0442\u0441\u044f \u0434\u043b\u044f \u0442\u0435\u043a\u0443\u0449\u0435\u0433\u043e \u0430\u043a\u043a\u0430\u0443\u043d\u0442\u0430.';
+        return wt('settings.account_subline', '\u0418\u043c\u044f, \u043f\u043e\u0447\u0442\u0430, \u043f\u0430\u0440\u043e\u043b\u044c \u0438 \u0432\u043d\u0435\u0448\u043d\u0438\u0439 \u0432\u0438\u0434 \u0441\u043e\u0445\u0440\u0430\u043d\u044f\u044e\u0442\u0441\u044f \u0434\u043b\u044f \u0442\u0435\u043a\u0443\u0449\u0435\u0433\u043e \u0430\u043a\u043a\u0430\u0443\u043d\u0442\u0430.');
     }
 
     function getAccountEmail(user, options = {}) {
@@ -760,20 +755,20 @@
         const email = String(user?.email || '').trim();
         if (email) return email;
         return hosted
-            ? '\u0415\u0449\u0451 \u043d\u0435 \u0443\u043a\u0430\u0437\u0430\u043d\u0430'
-            : '\u0415\u0449\u0451 \u043d\u0435 \u043d\u0443\u0436\u043d\u0430 \u0434\u043b\u044f \u043b\u043e\u043a\u0430\u043b\u044c\u043d\u043e\u0433\u043e \u043f\u0440\u043e\u0444\u0438\u043b\u044f';
+            ? wt('settings.email_not_specified_hosted', '\u0415\u0449\u0451 \u043d\u0435 \u0443\u043a\u0430\u0437\u0430\u043d\u0430')
+            : wt('settings.email_not_specified_local', '\u0415\u0449\u0451 \u043d\u0435 \u043d\u0443\u0436\u043d\u0430 \u0434\u043b\u044f \u043b\u043e\u043a\u0430\u043b\u044c\u043d\u043e\u0433\u043e \u043f\u0440\u043e\u0444\u0438\u043b\u044f');
     }
 
     function getRoleLabel(role) {
         return String(role || '').trim().toLowerCase() === 'admin'
-            ? '\u0420\u043e\u043b\u044c: \u0430\u0434\u043c\u0438\u043d'
-            : '\u0420\u043e\u043b\u044c: \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044c';
+            ? wt('settings.role_admin', '\u0420\u043e\u043b\u044c: \u0430\u0434\u043c\u0438\u043d')
+            : wt('settings.role_user', '\u0420\u043e\u043b\u044c: \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044c');
     }
 
     function getPlanLabel(plan) {
         return String(plan || '').trim().toLowerCase() === 'premium'
-            ? '\u041f\u043b\u0430\u043d: premium'
-            : '\u041f\u043b\u0430\u043d: free';
+            ? wt('settings.plan_premium', '\u041f\u043b\u0430\u043d: premium')
+            : wt('settings.plan_free', '\u041f\u043b\u0430\u043d: free');
     }
 
     function getRawPlan(user) {
@@ -791,7 +786,7 @@
         const effectivePlan = getEffectivePlan(user);
         const role = String(user?.role || '').trim().toLowerCase();
         if (role === 'admin' && effectivePlan === 'premium' && rawPlan !== 'premium') {
-            return '\u041f\u043b\u0430\u043d: premium (admin)';
+            return wt('settings.plan_premium_admin', '\u041f\u043b\u0430\u043d: premium (admin)');
         }
         return getPlanLabel(effectivePlan);
     }
@@ -816,9 +811,9 @@
         const pendingEmail = String(user?.pending_email || '').trim();
         if (!pendingEmail) return '';
         if (String(user?.pending_email_verification_sent_at || '').trim()) {
-            return '\u041f\u0438\u0441\u044c\u043c\u043e \u0434\u043b\u044f \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f \u0443\u0436\u0435 \u0432 \u043f\u0443\u0442\u0438. \u041d\u043e\u0432\u044b\u0439 \u0430\u0434\u0440\u0435\u0441 \u0430\u043a\u0442\u0438\u0432\u0438\u0440\u0443\u0435\u0442\u0441\u044f \u043f\u043e\u0441\u043b\u0435 \u043f\u0435\u0440\u0435\u0445\u043e\u0434\u0430 \u043f\u043e \u0441\u0441\u044b\u043b\u043a\u0435.';
+            return wt('settings.pending_email_sent', '\u041f\u0438\u0441\u044c\u043c\u043e \u0434\u043b\u044f \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f \u0443\u0436\u0435 \u0432 \u043f\u0443\u0442\u0438. \u041d\u043e\u0432\u044b\u0439 \u0430\u0434\u0440\u0435\u0441 \u0430\u043a\u0442\u0438\u0432\u0438\u0440\u0443\u0435\u0442\u0441\u044f \u043f\u043e\u0441\u043b\u0435 \u043f\u0435\u0440\u0435\u0445\u043e\u0434\u0430 \u043f\u043e \u0441\u0441\u044b\u043b\u043a\u0435.');
         }
-        return '\u041d\u043e\u0432\u0430\u044f \u043f\u043e\u0447\u0442\u0430 \u0443\u0436\u0435 \u0437\u0430\u043f\u0438\u0441\u0430\u043d\u0430. \u041e\u0442\u043f\u0440\u0430\u0432\u044c\u0442\u0435 \u043f\u0438\u0441\u044c\u043c\u043e \u0434\u043b\u044f \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f.';
+        return wt('settings.pending_email_unsent', '\u041d\u043e\u0432\u0430\u044f \u043f\u043e\u0447\u0442\u0430 \u0443\u0436\u0435 \u0437\u0430\u043f\u0438\u0441\u0430\u043d\u0430. \u041e\u0442\u043f\u0440\u0430\u0432\u044c\u0442\u0435 \u043f\u0438\u0441\u044c\u043c\u043e \u0434\u043b\u044f \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f.');
     }
 
     function getSearchParam(name) {
@@ -845,17 +840,17 @@
     function describePendingEmailVerificationError(code) {
         switch (String(code || '').trim()) {
             case 'token_already_used':
-                return '\u042d\u0442\u0430 \u0441\u0441\u044b\u043b\u043a\u0430 \u0443\u0436\u0435 \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u043d\u0430. \u0415\u0441\u043b\u0438 \u043f\u043e\u0447\u0442\u0430 \u0435\u0449\u0451 \u043d\u0435 \u0441\u043c\u0435\u043d\u0438\u043b\u0430\u0441\u044c, \u0437\u0430\u043f\u0440\u043e\u0441\u0438\u0442\u0435 \u043d\u043e\u0432\u043e\u0435 \u043f\u0438\u0441\u044c\u043c\u043e \u0432 \u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0430\u0445.';
+                return wt('settings.pending_token_used', '\u042d\u0442\u0430 \u0441\u0441\u044b\u043b\u043a\u0430 \u0443\u0436\u0435 \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u043d\u0430. \u0415\u0441\u043b\u0438 \u043f\u043e\u0447\u0442\u0430 \u0435\u0449\u0451 \u043d\u0435 \u0441\u043c\u0435\u043d\u0438\u043b\u0430\u0441\u044c, \u0437\u0430\u043f\u0440\u043e\u0441\u0438\u0442\u0435 \u043d\u043e\u0432\u043e\u0435 \u043f\u0438\u0441\u044c\u043c\u043e \u0432 \u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0430\u0445.');
             case 'invalid_or_expired_token':
-                return '\u0421\u0441\u044b\u043b\u043a\u0430 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f \u0443\u0441\u0442\u0430\u0440\u0435\u043b\u0430 \u0438\u043b\u0438 \u0443\u0436\u0435 \u043d\u0435 \u0440\u0430\u0431\u043e\u0442\u0430\u0435\u0442. \u0417\u0430\u043f\u0440\u043e\u0441\u0438\u0442\u0435 \u043d\u043e\u0432\u043e\u0435 \u043f\u0438\u0441\u044c\u043c\u043e \u0434\u043b\u044f \u0432\u0445\u043e\u0434\u0430.';
+                return wt('settings.pending_token_expired', '\u0421\u0441\u044b\u043b\u043a\u0430 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f \u0443\u0441\u0442\u0430\u0440\u0435\u043b\u0430 \u0438\u043b\u0438 \u0443\u0436\u0435 \u043d\u0435 \u0440\u0430\u0431\u043e\u0442\u0430\u0435\u0442. \u0417\u0430\u043f\u0440\u043e\u0441\u0438\u0442\u0435 \u043d\u043e\u0432\u043e\u0435 \u043f\u0438\u0441\u044c\u043c\u043e \u0434\u043b\u044f \u0432\u0445\u043e\u0434\u0430.');
             case 'email_changed':
-                return '\u041f\u043e\u0447\u0442\u0430 \u0443\u0441\u043f\u0435\u0448\u043d\u043e \u0441\u043c\u0435\u043d\u0435\u043d\u0430. \u041e\u0431\u043d\u043e\u0432\u0438\u0442\u0435 \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0443 \u0438\u043b\u0438 \u0432\u043e\u0439\u0434\u0438\u0442\u0435 \u0441\u043d\u043e\u0432\u0430.';
+                return wt('settings.pending_email_confirmed', '\u041f\u043e\u0447\u0442\u0430 \u0443\u0441\u043f\u0435\u0448\u043d\u043e \u0441\u043c\u0435\u043d\u0435\u043d\u0430. \u041e\u0431\u043d\u043e\u0432\u0438\u0442\u0435 \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0443 \u0438\u043b\u0438 \u0432\u043e\u0439\u0434\u0438\u0442\u0435 \u0441\u043d\u043e\u0432\u0430.');
             case 'pending_email_missing':
-                return '\u041d\u0435\u0442 \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0439 \u0437\u0430\u044f\u0432\u043a\u0438 \u043d\u0430 \u0441\u043c\u0435\u043d\u0443 \u043f\u043e\u0447\u0442\u044b.';
+                return wt('settings.pending_email_no_change', '\u041d\u0435\u0442 \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0439 \u0437\u0430\u044f\u0432\u043a\u0438 \u043d\u0430 \u0441\u043c\u0435\u043d\u0443 \u043f\u043e\u0447\u0442\u044b.');
             case 'confirm_pending_email_failed':
-                return '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044c \u043d\u043e\u0432\u0443\u044e \u043f\u043e\u0447\u0442\u0443. \u041f\u043e\u043f\u0440\u043e\u0431\u0443\u0439\u0442\u0435 \u0435\u0449\u0451 \u0440\u0430\u0437 \u0447\u0443\u0442\u044c \u043f\u043e\u0437\u0436\u0435.';
+                return wt('settings.pending_email_confirm_failed', '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044c \u043d\u043e\u0432\u0443\u044e \u043f\u043e\u0447\u0442\u0443. \u041f\u043e\u043f\u0440\u043e\u0431\u0443\u0439\u0442\u0435 \u0435\u0449\u0451 \u0440\u0430\u0437 \u0447\u0443\u0442\u044c \u043f\u043e\u0437\u0436\u0435.');
             default:
-                return '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044c \u043d\u043e\u0432\u0443\u044e \u043f\u043e\u0447\u0442\u0443. \u0417\u0430\u043f\u0440\u043e\u0441\u0438\u0442\u0435 \u043f\u043e\u0432\u0442\u043e\u0440\u043d\u043e\u0435 \u043f\u0438\u0441\u044c\u043c\u043e \u0434\u043b\u044f \u0432\u0445\u043e\u0434\u0430.';
+                return wt('settings.pending_email_confirm_error', '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044c \u043d\u043e\u0432\u0443\u044e \u043f\u043e\u0447\u0442\u0443. \u0417\u0430\u043f\u0440\u043e\u0441\u0438\u0442\u0435 \u043f\u043e\u0432\u0442\u043e\u0440\u043d\u043e\u0435 \u043f\u0438\u0441\u044c\u043c\u043e \u0434\u043b\u044f \u0432\u0445\u043e\u0434\u0430.');
         }
     }
 
@@ -880,10 +875,10 @@
         }
 
         if (hasPending) {
-            if (titleEl) titleEl.textContent = '\u0421\u043c\u0435\u043d\u0430 \u043f\u043e\u0447\u0442\u044b \u0436\u0434\u0451\u0442 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f';
+            if (titleEl) titleEl.textContent = wt('settings.email_pending_title', '\u0421\u043c\u0435\u043d\u0430 \u043f\u043e\u0447\u0442\u044b \u0436\u0434\u0451\u0442 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f');
             if (valueEl) valueEl.textContent = pendingEmail;
             if (hintEl) {
-                hintEl.textContent = '\u041f\u043e\u043a\u0430 \u043d\u043e\u0432\u0430\u044f \u043f\u043e\u0447\u0442\u0430 \u043d\u0435 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0430, \u0432\u0445\u043e\u0434 \u0438 \u0443\u0432\u0435\u0434\u043e\u043c\u043b\u0435\u043d\u0438\u044f \u043e\u0441\u0442\u0430\u044e\u0442\u0441\u044f \u043d\u0430 \u0442\u0435\u043a\u0443\u0449\u0435\u043c \u0430\u0434\u0440\u0435\u0441\u0435.';
+                hintEl.textContent = wt('settings.email_pending_hint', '\u041f\u043e\u043a\u0430 \u043d\u043e\u0432\u0430\u044f \u043f\u043e\u0447\u0442\u0430 \u043d\u0435 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0430, \u0432\u0445\u043e\u0434 \u0438 \u0443\u0432\u0435\u0434\u043e\u043c\u043b\u0435\u043d\u0438\u044f \u043e\u0441\u0442\u0430\u044e\u0442\u0441\u044f \u043d\u0430 \u0442\u0435\u043a\u0443\u0449\u0435\u043c \u0430\u0434\u0440\u0435\u0441\u0435.');
             }
             if (resendBtn) {
                 resendBtn.classList.remove('hidden');
@@ -899,13 +894,13 @@
         }
 
         if (titleEl) titleEl.textContent = feedback?.tone === 'success'
-            ? '\u041d\u043e\u0432\u0430\u044f \u043f\u043e\u0447\u0442\u0430 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0430'
-            : '\u041f\u0440\u043e\u0431\u043b\u0435\u043c\u0430 \u0441\u043e \u0441\u043c\u0435\u043d\u043e\u0439 \u043f\u043e\u0447\u0442\u044b';
+            ? wt('settings.email_change_ok_title', '\u041d\u043e\u0432\u0430\u044f \u043f\u043e\u0447\u0442\u0430 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0430')
+            : wt('settings.email_change_err_title', '\u041f\u0440\u043e\u0431\u043b\u0435\u043c\u0430 \u0441\u043e \u0441\u043c\u0435\u043d\u043e\u0439 \u043f\u043e\u0447\u0442\u044b');
         if (valueEl) valueEl.textContent = String(user?.email || '').trim() || '\u2014';
         if (hintEl) {
             hintEl.textContent = feedback?.tone === 'success'
-                ? '\u0422\u0435\u043f\u0435\u0440\u044c \u0432\u0445\u043e\u0434 \u0438 \u0432\u0441\u0435 \u0443\u0432\u0435\u0434\u043e\u043c\u043b\u0435\u043d\u0438\u044f \u0438\u0434\u0443\u0442 \u043d\u0430 \u043d\u043e\u0432\u044b\u0439 \u0430\u0434\u0440\u0435\u0441.'
-                : '\u041f\u043e\u043a\u0430 \u0441\u043c\u0435\u043d\u0430 \u043f\u043e\u0447\u0442\u044b \u043d\u0435 \u0443\u0434\u0430\u043b\u0430\u0441\u044c, \u043f\u0440\u043e\u0434\u043e\u043b\u0436\u0430\u0439\u0442\u0435 \u0432\u0445\u043e\u0434\u0438\u0442\u044c \u043d\u0430 \u0442\u0435\u043a\u0443\u0449\u0438\u0439 \u0430\u0434\u0440\u0435\u0441.';
+                ? wt('settings.email_change_ok_hint', '\u0422\u0435\u043f\u0435\u0440\u044c \u0432\u0445\u043e\u0434 \u0438 \u0432\u0441\u0435 \u0443\u0432\u0435\u0434\u043e\u043c\u043b\u0435\u043d\u0438\u044f \u0438\u0434\u0443\u0442 \u043d\u0430 \u043d\u043e\u0432\u044b\u0439 \u0430\u0434\u0440\u0435\u0441.')
+                : wt('settings.email_change_err_hint', '\u041f\u043e\u043a\u0430 \u0441\u043c\u0435\u043d\u0430 \u043f\u043e\u0447\u0442\u044b \u043d\u0435 \u0443\u0434\u0430\u043b\u0430\u0441\u044c, \u043f\u0440\u043e\u0434\u043e\u043b\u0436\u0430\u0439\u0442\u0435 \u0432\u0445\u043e\u0434\u0438\u0442\u044c \u043d\u0430 \u0442\u0435\u043a\u0443\u0449\u0438\u0439 \u0430\u0434\u0440\u0435\u0441.');
         }
         if (resendBtn) {
             resendBtn.classList.add('hidden');
@@ -963,24 +958,29 @@
     function formatPremiumAccessLabel(user) {
         const effectivePlan = getEffectivePlan(user);
         const expiresAt = String(user?.premium_expires_at || '').trim();
+        const dayForms = [wt('settings.premium_days_1', 'день'), wt('settings.premium_days_2', 'дня'), wt('settings.premium_days_5', 'дней')];
         if (effectivePlan !== 'premium') {
             const expiredDate = expiresAt ? formatPremiumDate(expiresAt) : '';
-            return expiredDate ? `Premium истёк ${expiredDate}` : 'Premium: нет';
+            return expiredDate
+                ? wt('settings.premium_expired_on', 'Premium истёк {date}').replace('{date}', expiredDate)
+                : wt('settings.premium_none', 'Premium: нет');
         }
         if (!expiresAt) {
-            return 'Premium: без ограничения';
+            return wt('settings.premium_unlimited', 'Premium: без ограничения');
         }
 
         const expiryDate = new Date(expiresAt);
         if (Number.isNaN(expiryDate.getTime())) {
-            return 'Premium: срок не распознан';
+            return wt('settings.premium_unknown', 'Premium: срок не распознан');
         }
         const msLeft = expiryDate.getTime() - Date.now();
         if (msLeft <= 0) {
-            return `Premium истёк ${formatPremiumDate(expiresAt)}`;
+            return wt('settings.premium_expired_on', 'Premium истёк {date}').replace('{date}', formatPremiumDate(expiresAt));
         }
         const daysLeft = Math.ceil(msLeft / (24 * 60 * 60 * 1000));
-        return `Premium: осталось ${formatRuCount(daysLeft, ['день', 'дня', 'дней'])} (до ${formatPremiumDate(expiresAt)})`;
+        return wt('settings.premium_days_left', 'Premium: осталось {n} (до {date})')
+            .replace('{n}', formatRuCount(daysLeft, dayForms))
+            .replace('{date}', formatPremiumDate(expiresAt));
     }
 
     function getPremiumPeriodLabel(days) {
@@ -988,10 +988,8 @@
             return window.PremiumPromo.formatPeriod(days);
         }
         const n = Number(days || 0);
-        if (n === 14) return '14 дней';
-        if (n === 30) return '30 дней';
-        if (n === 90) return '90 дней';
-        return `${n} дней`;
+        const dayForms = [wt('settings.premium_days_1', 'день'), wt('settings.premium_days_2', 'дня'), wt('settings.premium_days_5', 'дней')];
+        return formatRuCount(n, dayForms);
     }
 
     function getPremiumPeriodPrice(days) {
@@ -1016,36 +1014,47 @@
         const isPremium = effectivePlan === 'premium';
 
         pill.textContent = isPremium
-            ? (premiumExpiresAt ? `Premium до ${formatPremiumDate(premiumExpiresAt)}` : 'Premium активен')
+            ? (premiumExpiresAt
+                ? wt('settings.premium_active_until', 'Premium до {date}').replace('{date}', formatPremiumDate(premiumExpiresAt))
+                : wt('settings.premium_active', 'Premium активен'))
             : 'Free';
 
+        const periodBtnTitle = wt('settings.premium_action_status', 'Оплата Premium скоро появится здесь.');
         const periodButtons = periods.map((days) => `
             <button type="button"
                 data-premium-period="${Number(days)}"
                 class="btn-secondary inline-flex cursor-default items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold opacity-80"
                 disabled aria-disabled="true"
-                title="Оплата Premium скоро появится здесь">
+                title="${escapeHtml(periodBtnTitle)}">
                 <span class="material-symbols-outlined text-[18px]">workspace_premium</span>
                 <span>${escapeHtml(getPremiumPeriodLabel(days))}</span>
                 ${getPremiumPeriodPrice(days) ? `<span class="text-text-secondary">${escapeHtml(getPremiumPeriodPrice(days))}</span>` : ''}
             </button>
         `).join('');
 
+        const premiumHeading = isPremium
+            ? wt('settings.premium_btn_open', 'Premium открыт')
+            : wt('settings.premium_btn_activate', 'Откройте Premium');
+        const premiumDesc = isPremium
+            ? (premiumExpiresAt
+                ? wt('settings.premium_active_desc_until', 'Доступ действует до {date}.').replace('{date}', escapeHtml(formatPremiumDate(premiumExpiresAt)))
+                : wt('settings.premium_active_desc_no_date', 'Доступ действует без даты окончания.'))
+            : wt('settings.premium_inactive_desc', 'Полные страницы Календаря и Статистики доступны после активации Premium. Виджеты на главной остаются доступны всем.');
+        const billingNotice = wt('settings.premium_pay_notice', 'Механизм оплаты Premium сейчас подключается. Тарифы уже можно посмотреть, но покупка временно недоступна: безопасный checkout появится здесь после завершения интеграции.');
+
         body.innerHTML = `
             ${!isPremium ? `
                 <div class="mb-4 rounded-2xl border border-info-light bg-info-lighter/60 p-4 text-sm leading-6 text-text-main">
-                    Механизм оплаты Premium сейчас подключается. Тарифы уже можно посмотреть, но покупка временно недоступна: безопасный checkout появится здесь после завершения интеграции.
+                    ${escapeHtml(billingNotice)}
                 </div>
             ` : ''}
             <div class="grid gap-4 lg:grid-cols-[1fr,auto] lg:items-center">
                 <div>
                     <p class="text-base font-semibold text-text-main">
-                        ${isPremium ? 'Premium открыт' : 'Откройте Premium'}
+                        ${escapeHtml(premiumHeading)}
                     </p>
                     <p class="mt-2 text-sm leading-6 text-text-secondary">
-                        ${isPremium
-                            ? (premiumExpiresAt ? `Доступ действует до ${escapeHtml(formatPremiumDate(premiumExpiresAt))}.` : 'Доступ действует без даты окончания.')
-                            : 'Полные страницы Календаря и Статистики доступны после активации Premium. Виджеты на главной остаются доступны всем.'}
+                        ${premiumDesc}
                     </p>
                 </div>
                 <div class="flex flex-wrap gap-3">${periodButtons}</div>
@@ -1066,7 +1075,7 @@
         } catch (error) {
             console.error('[Settings] Failed to load billing status:', error);
             if (body) {
-                body.innerHTML = '<div class="text-sm text-text-secondary">Premium temporarily unavailable.</div>';
+                body.innerHTML = `<div class="text-sm text-text-secondary">${escapeHtml(wt('settings.premium_unavailable', 'Premium временно недоступен.'))}</div>`;
             }
         }
     }
@@ -1075,7 +1084,7 @@
         if (_isPremiumOrderSaving) return;
         _isPremiumOrderSaving = true;
         renderPremiumSection();
-        setInlineStatus('settings-premium-action-status', 'Оплата Premium скоро появится здесь.', 'neutral');
+        setInlineStatus('settings-premium-action-status', wt('settings.premium_action_status', 'Оплата Premium скоро появится здесь.'), 'neutral');
         _isPremiumOrderSaving = false;
         renderPremiumSection();
     }
@@ -1094,7 +1103,7 @@
         if (_isAdminUsersLoading) {
             listEl.innerHTML = `
                 <div class="rounded-xl border border-border-subtle bg-bg-secondary px-4 py-4 text-sm text-text-secondary">
-                    Загружаем список пользователей...
+                    ${escapeHtml(wt('settings.admin_users_loading_spinner', 'Загружаем список пользователей...'))}
                 </div>
             `;
             return;
@@ -1103,7 +1112,7 @@
         if (!_adminUsers.length) {
             listEl.innerHTML = `
                 <div class="rounded-xl border border-border-subtle bg-bg-secondary px-4 py-4 text-sm text-text-secondary">
-                    Пользователи по текущему запросу не найдены.
+                    ${escapeHtml(wt('settings.admin_users_empty', 'Пользователи по текущему запросу не найдены.'))}
                 </div>
             `;
             return;
@@ -1121,17 +1130,20 @@
             const expiresAt = String(user.premium_expires_at || '').trim();
             const premiumAccessText = formatPremiumAccessLabel(user);
             const isUnlimitedPremium = rawPlan === 'premium' && !expiresAt;
+            const adminRoleLocked = wt('settings.admin_role_locked', '\u0410\u0434\u043c\u0438\u043d\u0438\u0441\u0442\u0440\u0430\u0442\u043e\u0440 \u0432\u0441\u0435\u0433\u0434\u0430 \u0438\u043c\u0435\u0435\u0442 effective premium');
+            const adminAlreadyUnlimited = wt('settings.admin_already_unlimited', '\u0423 \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044f \u0443\u0436\u0435 premium \u0431\u0435\u0437 \u0441\u0440\u043e\u043a\u0430');
             const buttonLabel = rawPlan === 'premium'
-                ? '\u0421\u0434\u0435\u043b\u0430\u0442\u044c free'
-                : '\u0421\u0434\u0435\u043b\u0430\u0442\u044c premium';
+                ? wt('settings.admin_make_free', '\u0421\u0434\u0435\u043b\u0430\u0442\u044c free')
+                : wt('settings.admin_make_premium', '\u0421\u0434\u0435\u043b\u0430\u0442\u044c premium');
             const buttonDisabledAttrs = isAdminRow
-                ? ' disabled title="\u0410\u0434\u043c\u0438\u043d \u0432\u0441\u0435\u0433\u0434\u0430 \u0438\u043c\u0435\u0435\u0442 effective premium"'
+                ? ` disabled title="${escapeHtml(adminRoleLocked)}"`
                 : '';
+            const grantDisabledTitle = isAdminRow ? adminRoleLocked : adminAlreadyUnlimited;
             const grantDisabledAttrs = isAdminRow || isUnlimitedPremium
-                ? ` disabled title="${isAdminRow ? '\u0410\u0434\u043c\u0438\u043d \u0432\u0441\u0435\u0433\u0434\u0430 \u0438\u043c\u0435\u0435\u0442 effective premium' : '\u0423 \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044f \u0443\u0436\u0435 premium \u0431\u0435\u0437 \u0441\u0440\u043e\u043a\u0430'}"`
+                ? ` disabled title="${escapeHtml(grantDisabledTitle)}"`
                 : '';
             const unlimitedDisabledAttrs = isAdminRow || isUnlimitedPremium
-                ? ` disabled title="${isAdminRow ? '\u0410\u0434\u043c\u0438\u043d \u0432\u0441\u0435\u0433\u0434\u0430 \u0438\u043c\u0435\u0435\u0442 effective premium' : '\u0423 \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044f \u0443\u0436\u0435 premium \u0431\u0435\u0437 \u0441\u0440\u043e\u043a\u0430'}"`
+                ? ` disabled title="${escapeHtml(grantDisabledTitle)}"`
                 : '';
             return `
                 <article class="rounded-2xl border border-border-subtle bg-surface-1 px-4 py-4">
@@ -1152,21 +1164,21 @@
                                     class="btn-secondary inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold"
                                     data-admin-grant-user="${userId}"
                                     data-admin-grant-days="${days}"${grantDisabledAttrs}>
-                                    +${days}д
+                                    ${escapeHtml(wt('settings.admin_days_label', '+{n}д').replace('{n}', days))}
                                 </button>
                             `).join('')}
                             <button type="button"
                                 class="btn-secondary inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold"
                                 data-admin-unlimited-user="${userId}"${unlimitedDisabledAttrs}>
                                 <span class="material-symbols-outlined text-[18px]">all_inclusive</span>
-                                Без срока
+                                ${escapeHtml(wt('settings.admin_unlimited_btn', 'Без срока'))}
                             </button>
                             <button type="button"
                                 class="btn-secondary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold"
                                 data-admin-plan-user="${userId}"
                                 data-admin-next-plan="${nextPlan}"${buttonDisabledAttrs}>
                                 <span class="material-symbols-outlined text-[18px]">workspace_premium</span>
-                                ${isAdminRow ? '\u041f\u043b\u0430\u043d \u0437\u0430\u0434\u0430\u0451\u0442\u0441\u044f \u0440\u043e\u043b\u044c\u044e' : buttonLabel}
+                                ${isAdminRow ? escapeHtml(wt('settings.admin_plan_by_role', '\u041f\u043b\u0430\u043d \u0437\u0430\u0434\u0430\u0451\u0442\u0441\u044f \u0440\u043e\u043b\u044c\u044e')) : escapeHtml(buttonLabel)}
                             </button>
                         </div>
                     </div>
@@ -1205,7 +1217,7 @@
 
         _isAdminUsersLoading = true;
         _adminUsersQuery = String(query || '').trim();
-        setInlineStatus('settings-admin-status', '\u0417\u0430\u0433\u0440\u0443\u0436\u0430\u0435\u043c \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u0435\u0439...', 'neutral');
+        setInlineStatus('settings-admin-status', wt('settings.admin_loading_status', '\u0417\u0430\u0433\u0440\u0443\u0436\u0430\u0435\u043c \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u0435\u0439...'), 'neutral');
         renderAdminUsersList();
 
         try {
@@ -1215,11 +1227,11 @@
                 throw new Error(data?.error || 'admin_users_load_failed');
             }
             _adminUsers = data.users;
-            setInlineStatus('settings-admin-status', _adminUsersQuery ? '\u0421\u043f\u0438\u0441\u043e\u043a \u043e\u0431\u043d\u043e\u0432\u043b\u0451\u043d' : '', 'success');
+            setInlineStatus('settings-admin-status', _adminUsersQuery ? wt('settings.admin_list_updated', '\u0421\u043f\u0438\u0441\u043e\u043a \u043e\u0431\u043d\u043e\u0432\u043b\u0451\u043d') : '', 'success');
         } catch (error) {
             console.error('[Settings] Failed to load admin users:', error);
             _adminUsers = [];
-            setInlineStatus('settings-admin-status', '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c \u0441\u043f\u0438\u0441\u043e\u043a пользователей', 'error');
+            setInlineStatus('settings-admin-status', wt('settings.admin_list_error', 'Не удалось загрузить список пользователей'), 'error');
         } finally {
             _isAdminUsersLoading = false;
             renderAdminUsersList();
@@ -1236,7 +1248,7 @@
         const makeUnlimited = options && options.unlimited === true;
         setInlineStatus(
             'settings-admin-status',
-            makeUnlimited ? 'Выдаём Premium без срока...' : '\u0421\u043e\u0445\u0440\u0430\u043d\u044f\u0435\u043c \u043d\u043e\u0432\u044b\u0439 \u043f\u043b\u0430\u043d...',
+            makeUnlimited ? wt('settings.admin_saving_unlimited', 'Выдаём Premium без срока...') : wt('settings.admin_saving_plan', 'Сохраняем новый план...'),
             'neutral'
         );
         try {
@@ -1263,38 +1275,14 @@
                 updateAccountSummary(_accountContext.user, { hosted: _accountContext?.hosted === true });
                 await loadBillingStatus();
             }
-            setInlineStatus('settings-admin-status', makeUnlimited ? 'Premium без срока выдан' : '\u041f\u043b\u0430\u043d \u043e\u0431\u043d\u043e\u0432\u043b\u0451\u043d', 'success');
+            setInlineStatus('settings-admin-status', makeUnlimited ? wt('settings.admin_unlimited_granted', 'Premium без срока выдан') : wt('settings.admin_plan_updated', 'План обновлён'), 'success');
         } catch (error) {
             console.error('[Settings] Failed to update user plan:', error);
-            setInlineStatus('settings-admin-status', '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043e\u0431\u043d\u043e\u0432\u0438\u0442\u044c \u043f\u043b\u0430\u043d', 'error');
+            setInlineStatus('settings-admin-status', wt('settings.admin_plan_error', 'Не удалось обновить план'), 'error');
         } finally {
             _isAdminPlanSaving = false;
             renderAdminUsersList();
         }
-    }
-
-    function setSectionOpen(sectionId, open) {
-        const section = document.getElementById(sectionId);
-        if (!section) return;
-        section.classList.toggle('hidden', !open);
-    }
-
-    function resetEmailForm() {
-        const input = document.getElementById('settings-email-input');
-        if (input) {
-            input.value = String(_accountContext?.user?.pending_email || _accountContext?.user?.email || '').trim();
-        }
-        setInlineStatus('settings-email-save-status');
-    }
-
-    function resetPasswordForm() {
-        const current = document.getElementById('settings-password-current');
-        const next = document.getElementById('settings-password-new');
-        const confirm = document.getElementById('settings-password-confirm');
-        if (current) current.value = '';
-        if (next) next.value = '';
-        if (confirm) confirm.value = '';
-        setInlineStatus('settings-password-save-status');
     }
 
     async function grantAdminUserPremium(userId, periodDays) {
@@ -1303,7 +1291,7 @@
         if (_isAdminPlanSaving || !cleanUserId || !days) return;
         _isAdminPlanSaving = true;
         renderAdminUsersList();
-        setInlineStatus('settings-admin-status', 'Выдаём Premium...', 'neutral');
+        setInlineStatus('settings-admin-status', wt('settings.admin_granting_premium', 'Выдаём Premium...'), 'neutral');
         try {
             const response = await fetch(`/api/admin/users/${encodeURIComponent(cleanUserId)}/premium/grant`, {
                 method: 'POST',
@@ -1320,10 +1308,10 @@
                 updateAccountSummary(_accountContext.user, { hosted: _accountContext?.hosted === true });
                 await loadBillingStatus();
             }
-            setInlineStatus('settings-admin-status', 'Premium выдан', 'success');
+            setInlineStatus('settings-admin-status', wt('settings.admin_premium_granted', 'Premium выдан'), 'success');
         } catch (error) {
             console.error('[Settings] Failed to grant premium:', error);
-            setInlineStatus('settings-admin-status', 'Не удалось выдать Premium', 'error');
+            setInlineStatus('settings-admin-status', wt('settings.admin_premium_error', 'Не удалось выдать Premium'), 'error');
         } finally {
             _isAdminPlanSaving = false;
             renderAdminUsersList();
@@ -1508,12 +1496,12 @@
         const allowedTypes = ['image/png', 'image/jpeg', 'image/webp'];
         if (file.type && !allowedTypes.includes(file.type)) {
             clearAvatarFileInput();
-            setAvatarSaveStatus('Поддерживаются PNG, JPG и WEBP', 'error');
+            setAvatarSaveStatus(wt('settings.avatar_format_error', 'Поддерживаются PNG, JPG и WEBP'), 'error');
             showVoiceToast({
                 severity: 'error',
-                what: 'Не удалось открыть изображение для кадрирования.',
-                impact: 'Поддерживаются только PNG, JPG и WEBP.',
-                next: 'Выберите другой файл и попробуйте снова.',
+                what: wt('settings.avatar_open_error_what', 'Не удалось открыть изображение для кадрирования.'),
+                impact: wt('settings.avatar_open_error_impact', 'Поддерживаются только PNG, JPG и WEBP.'),
+                next: wt('settings.avatar_open_error_next', 'Выберите другой файл и попробуйте снова.'),
             });
             return;
         }
@@ -1575,12 +1563,12 @@
             revokeAvatarCropObjectUrl();
             _avatarCropState = null;
             clearAvatarFileInput();
-            setAvatarSaveStatus('Не удалось подготовить изображение для кадрирования', 'error');
+            setAvatarSaveStatus(wt('settings.avatar_prepare_error', 'Не удалось подготовить изображение для кадрирования'), 'error');
             showVoiceToast({
                 severity: 'error',
-                what: 'Не удалось подготовить изображение.',
-                impact: 'Кадрирование аватара не открылось.',
-                next: 'Выберите другой файл и попробуйте снова.',
+                what: wt('settings.avatar_prepare_error_what', 'Не удалось подготовить изображение.'),
+                impact: wt('settings.avatar_prepare_error_impact', 'Кадрирование аватара не открылось.'),
+                next: wt('settings.avatar_prepare_error_next', 'Выберите другой файл и попробуйте снова.'),
             });
         }
     }
@@ -1668,12 +1656,12 @@
             await saveAvatarUpload(croppedFile);
         } catch (error) {
             console.error('[Settings] Failed to apply avatar crop:', error);
-            setAvatarSaveStatus('Не удалось подготовить квадратный аватар', 'error');
+            setAvatarSaveStatus(wt('settings.avatar_apply_error', 'Не удалось подготовить квадратный аватар'), 'error');
             showVoiceToast({
                 severity: 'error',
-                what: 'Не удалось применить кадрирование.',
-                impact: 'Аватар остался без изменений.',
-                next: 'Попробуйте выбрать другое изображение или повторите попытку позже.',
+                what: wt('settings.avatar_apply_error_what', 'Не удалось применить кадрирование.'),
+                impact: wt('settings.avatar_apply_error_impact', 'Аватар остался без изменений.'),
+                next: wt('settings.avatar_apply_error_next', 'Попробуйте выбрать другое изображение или повторите попытку позже.'),
             });
             closeAvatarCropper({ preserveStatus: true });
         } finally {
@@ -1699,13 +1687,13 @@
         }
         if (emailNote) {
             if (!canEdit) {
-                emailNote.textContent = '\u041f\u043e\u0447\u0442\u0430 \u0432 \u043b\u043e\u043a\u0430\u043b\u044c\u043d\u043e\u043c \u043f\u0440\u043e\u0444\u0438\u043b\u0435 \u043d\u0443\u0436\u043d\u0430 \u0442\u043e\u043b\u044c\u043a\u043e \u0434\u043b\u044f \u0432\u0445\u043e\u0434\u0430 \u0438 \u0441\u0438\u043d\u0445\u0440\u043e\u043d\u0438\u0437\u0430\u0446\u0438\u0438.';
+                emailNote.textContent = wt('settings.email_note_local', '\u041f\u043e\u0447\u0442\u0430 \u0432 \u043b\u043e\u043a\u0430\u043b\u044c\u043d\u043e\u043c \u043f\u0440\u043e\u0444\u0438\u043b\u0435 \u043d\u0443\u0436\u043d\u0430 \u0442\u043e\u043b\u044c\u043a\u043e \u0434\u043b\u044f \u0432\u0445\u043e\u0434\u0430 \u0438 \u0441\u0438\u043d\u0445\u0440\u043e\u043d\u0438\u0437\u0430\u0446\u0438\u0438.');
             } else if (user?.pending_email) {
-                emailNote.textContent = '\u041d\u043e\u0432\u0430\u044f \u043f\u043e\u0447\u0442\u0430 \u0443\u0436\u0435 \u0436\u0434\u0451\u0442 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f. \u0422\u0435\u043a\u0443\u0449\u0438\u0439 \u0430\u0434\u0440\u0435\u0441 \u0431\u0443\u0434\u0435\u0442 \u0437\u0430\u043c\u0435\u043d\u0451\u043d \u0442\u043e\u043b\u044c\u043a\u043e \u043f\u043e\u0441\u043b\u0435 \u043f\u0435\u0440\u0435\u0445\u043e\u0434\u0430 \u043f\u043e \u0441\u0441\u044b\u043b\u043a\u0435 \u0438\u0437 \u043f\u0438\u0441\u044c\u043c\u0430.';
+                emailNote.textContent = wt('settings.email_note_pending', '\u041d\u043e\u0432\u0430\u044f \u043f\u043e\u0447\u0442\u0430 \u0443\u0436\u0435 \u0436\u0434\u0451\u0442 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f. \u0422\u0435\u043a\u0443\u0449\u0438\u0439 \u0430\u0434\u0440\u0435\u0441 \u0431\u0443\u0434\u0435\u0442 \u0437\u0430\u043c\u0435\u043d\u0451\u043d \u0442\u043e\u043b\u044c\u043a\u043e \u043f\u043e\u0441\u043b\u0435 \u043f\u0435\u0440\u0435\u0445\u043e\u0434\u0430 \u043f\u043e \u0441\u0441\u044b\u043b\u043a\u0435 \u0438\u0437 \u043f\u0438\u0441\u044c\u043c\u0430.');
             } else if (user?.email && !user?.email_verified) {
-                emailNote.textContent = '\u041f\u043e\u0447\u0442\u0430 \u0443\u0436\u0435 \u043f\u0440\u0438\u0432\u044f\u0437\u0430\u043d\u0430 \u043a \u0430\u043a\u043a\u0430\u0443\u043d\u0442\u0443, \u043d\u043e \u0435\u0449\u0451 \u043d\u0435 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0430. \u041f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 \u043f\u0438\u0441\u044c\u043c\u043e \u0438 \u043f\u0435\u0440\u0435\u0439\u0434\u0438\u0442\u0435 \u043f\u043e \u0441\u0441\u044b\u043b\u043a\u0435, \u0447\u0442\u043e\u0431\u044b \u0437\u0430\u0432\u0435\u0440\u0448\u0438\u0442\u044c \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u0435.';
+                emailNote.textContent = wt('settings.email_note_unverified', '\u041f\u043e\u0447\u0442\u0430 \u0443\u0436\u0435 \u043f\u0440\u0438\u0432\u044f\u0437\u0430\u043d\u0430 \u043a \u0430\u043a\u043a\u0430\u0443\u043d\u0442\u0443, \u043d\u043e \u0435\u0449\u0451 \u043d\u0435 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0430. \u041f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 \u043f\u0438\u0441\u044c\u043c\u043e \u0438 \u043f\u0435\u0440\u0435\u0439\u0434\u0438\u0442\u0435 \u043f\u043e \u0441\u0441\u044b\u043b\u043a\u0435, \u0447\u0442\u043e\u0431\u044b \u0437\u0430\u0432\u0435\u0440\u0448\u0438\u0442\u044c \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u0435.');
             } else {
-                emailNote.textContent = '\u041f\u043e\u0447\u0442\u0430 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0430. \u041f\u0440\u0438 \u0441\u043c\u0435\u043d\u0435 \u0430\u0434\u0440\u0435\u0441\u0430 \u043d\u043e\u0432\u044b\u0439 email \u0441\u043d\u0430\u0447\u0430\u043b\u0430 \u043d\u0443\u0436\u043d\u043e \u0431\u0443\u0434\u0435\u0442 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044c \u043f\u043e \u043f\u0438\u0441\u044c\u043c\u0443.';
+                emailNote.textContent = wt('settings.email_note_verified', '\u041f\u043e\u0447\u0442\u0430 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0430. \u041f\u0440\u0438 \u0441\u043c\u0435\u043d\u0435 \u0430\u0434\u0440\u0435\u0441\u0430 \u043d\u043e\u0432\u044b\u0439 email \u0441\u043d\u0430\u0447\u0430\u043b\u0430 \u043d\u0443\u0436\u043d\u043e \u0431\u0443\u0434\u0435\u0442 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044c \u043f\u043e \u043f\u0438\u0441\u044c\u043c\u0443.');
             }
         }
         if (emailToggle) {
@@ -1720,22 +1708,22 @@
         }
         if (passwordState) {
             if (!canEdit) {
-                passwordState.textContent = '\u041f\u0430\u0440\u043e\u043b\u044c \u043d\u0430\u0441\u0442\u0440\u0430\u0438\u0432\u0430\u0435\u0442\u0441\u044f \u0442\u043e\u043b\u044c\u043a\u043e \u0432 hosted-\u0432\u0435\u0440\u0441\u0438\u0438.';
+                passwordState.textContent = wt('settings.password_not_hosted', '\u041f\u0430\u0440\u043e\u043b\u044c \u043d\u0430\u0441\u0442\u0440\u0430\u0438\u0432\u0430\u0435\u0442\u0441\u044f \u0442\u043e\u043b\u044c\u043a\u043e \u0432 hosted-\u0432\u0435\u0440\u0441\u0438\u0438.');
             } else if (user?.has_password || user?.password_hash) {
-                passwordState.textContent = '\u041f\u0430\u0440\u043e\u043b\u044c \u0443\u0436\u0435 \u043d\u0430\u0441\u0442\u0440\u043e\u0435\u043d. \u0414\u043b\u044f \u0441\u043c\u0435\u043d\u044b \u043f\u043e\u043d\u0430\u0434\u043e\u0431\u0438\u0442\u0441\u044f \u0442\u0435\u043a\u0443\u0449\u0438\u0439 \u043f\u0430\u0440\u043e\u043b\u044c.';
+                passwordState.textContent = wt('settings.password_note_set', '\u041f\u0430\u0440\u043e\u043b\u044c \u0443\u0436\u0435 \u043d\u0430\u0441\u0442\u0440\u043e\u0435\u043d. \u0414\u043b\u044f \u0441\u043c\u0435\u043d\u044b \u043f\u043e\u043d\u0430\u0434\u043e\u0431\u0438\u0442\u0441\u044f \u0442\u0435\u043a\u0443\u0449\u0438\u0439 \u043f\u0430\u0440\u043e\u043b\u044c.');
             } else {
-                passwordState.textContent = `\u041f\u0430\u0440\u043e\u043b\u044f \u0435\u0449\u0451 \u043d\u0435\u0442. \u041c\u043e\u0436\u043d\u043e \u0437\u0430\u0434\u0430\u0442\u044c \u043d\u043e\u0432\u044b\u0439 \u043c\u0438\u043d\u0438\u043c\u0443\u043c \u0438\u0437 ${PASSWORD_MIN_LENGTH} \u0441\u0438\u043c\u0432\u043e\u043b\u043e\u0432.`;
+                passwordState.textContent = wt('settings.password_note_unset', '\u041f\u0430\u0440\u043e\u043b\u044f \u0435\u0449\u0451 \u043d\u0435\u0442. \u041c\u043e\u0436\u043d\u043e \u0437\u0430\u0434\u0430\u0442\u044c \u043d\u043e\u0432\u044b\u0439 \u043c\u0438\u043d\u0438\u043c\u0443\u043c \u0438\u0437 {n} \u0441\u0438\u043c\u0432\u043e\u043b\u043e\u0432.').replace('{n}', PASSWORD_MIN_LENGTH);
             }
         }
         if (currentPasswordInput) {
             currentPasswordInput.placeholder = (user?.has_password || user?.password_hash)
-                ? '\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0442\u0435\u043a\u0443\u0449\u0438\u0439 \u043f\u0430\u0440\u043e\u043b\u044c'
-                : '\u041c\u043e\u0436\u043d\u043e \u043e\u0441\u0442\u0430\u0432\u0438\u0442\u044c \u043f\u0443\u0441\u0442\u044b\u043c, \u0435\u0441\u043b\u0438 \u043f\u0430\u0440\u043e\u043b\u044f \u0435\u0449\u0451 \u043d\u0435 \u0431\u044b\u043b\u043e';
+                ? wt('settings.password_current_placeholder', '\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0442\u0435\u043a\u0443\u0449\u0438\u0439 \u043f\u0430\u0440\u043e\u043b\u044c')
+                : wt('settings.password_optional_placeholder', '\u041c\u043e\u0436\u043d\u043e \u043e\u0441\u0442\u0430\u0432\u0438\u0442\u044c \u043f\u0443\u0441\u0442\u044b\u043c, \u0435\u0441\u043b\u0438 \u043f\u0430\u0440\u043e\u043b\u044f \u0435\u0449\u0451 \u043d\u0435 \u0431\u044b\u043b\u043e');
         }
         if (currentPasswordLabel) {
             currentPasswordLabel.textContent = (user?.has_password || user?.password_hash)
-                ? '\u0422\u0435\u043a\u0443\u0449\u0438\u0439 \u043f\u0430\u0440\u043e\u043b\u044c'
-                : '\u0422\u0435\u043a\u0443\u0449\u0438\u0439 \u043f\u0430\u0440\u043e\u043b\u044c (\u0435\u0441\u043b\u0438 \u043e\u043d \u0435\u0441\u0442\u044c)';
+                ? wt('settings.password_current_label', '\u0422\u0435\u043a\u0443\u0449\u0438\u0439 \u043f\u0430\u0440\u043e\u043b\u044c')
+                : wt('settings.password_optional_label', '\u0422\u0435\u043a\u0443\u0449\u0438\u0439 \u043f\u0430\u0440\u043e\u043b\u044c (\u0435\u0441\u043b\u0438 \u043e\u043d \u0435\u0441\u0442\u044c)');
         }
 
         updateDeleteControls(user, { hosted });
@@ -1763,17 +1751,17 @@
 
         if (note) {
             if (!canDelete) {
-                note.textContent = '\u0423\u0434\u0430\u043b\u0435\u043d\u0438\u0435 \u0430\u043a\u043a\u0430\u0443\u043d\u0442\u0430 \u0434\u043e\u0441\u0442\u0443\u043f\u043d\u043e \u0442\u043e\u043b\u044c\u043a\u043e \u0434\u043b\u044f hosted-\u0430\u043a\u043a\u0430\u0443\u043d\u0442\u0430.';
+                note.textContent = wt('settings.delete_note_local', '\u0423\u0434\u0430\u043b\u0435\u043d\u0438\u0435 \u0430\u043a\u043a\u0430\u0443\u043d\u0442\u0430 \u0434\u043e\u0441\u0442\u0443\u043f\u043d\u043e \u0442\u043e\u043b\u044c\u043a\u043e \u0434\u043b\u044f hosted-\u0430\u043a\u043a\u0430\u0443\u043d\u0442\u0430.');
             } else if (requiresPassword) {
-                note.textContent = '\u0410\u043a\u043a\u0430\u0443\u043d\u0442, \u043f\u043e\u0447\u0442\u0430, \u0437\u0430\u0434\u0430\u043d\u0438\u044f, \u043a\u043e\u043c\u043f\u043b\u0435\u043a\u0441\u044b \u0438 \u0434\u0440\u0443\u0433\u0438\u0435 \u0434\u0430\u043d\u043d\u044b\u0435 \u0431\u0443\u0434\u0443\u0442 \u0443\u0434\u0430\u043b\u0435\u043d\u044b. \u0414\u043b\u044f \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f \u043d\u0443\u0436\u0435\u043d \u0442\u0435\u043a\u0443\u0449\u0438\u0439 \u043f\u0430\u0440\u043e\u043b\u044c.';
+                note.textContent = wt('settings.delete_note_with_password', '\u0410\u043a\u043a\u0430\u0443\u043d\u0442, \u043f\u043e\u0447\u0442\u0430, \u0437\u0430\u0434\u0430\u043d\u0438\u044f, \u043a\u043e\u043c\u043f\u043b\u0435\u043a\u0441\u044b \u0438 \u0434\u0440\u0443\u0433\u0438\u0435 \u0434\u0430\u043d\u043d\u044b\u0435 \u0431\u0443\u0434\u0443\u0442 \u0443\u0434\u0430\u043b\u0435\u043d\u044b. \u0414\u043b\u044f \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f \u043d\u0443\u0436\u0435\u043d \u0442\u0435\u043a\u0443\u0449\u0438\u0439 \u043f\u0430\u0440\u043e\u043b\u044c.');
             } else {
-                note.textContent = '\u0410\u043a\u043a\u0430\u0443\u043d\u0442, \u043f\u043e\u0447\u0442\u0430, \u0437\u0430\u0434\u0430\u043d\u0438\u044f, \u043a\u043e\u043c\u043f\u043b\u0435\u043a\u0441\u044b \u0438 \u0434\u0440\u0443\u0433\u0438\u0435 \u0434\u0430\u043d\u043d\u044b\u0435 \u0431\u0443\u0434\u0443\u0442 \u0443\u0434\u0430\u043b\u0435\u043d\u044b \u0431\u0435\u0437\u0432\u043e\u0437\u0432\u0440\u0430\u0442\u043d\u043e.';
+                note.textContent = wt('settings.delete_note_no_password', '\u0410\u043a\u043a\u0430\u0443\u043d\u0442, \u043f\u043e\u0447\u0442\u0430, \u0437\u0430\u0434\u0430\u043d\u0438\u044f, \u043a\u043e\u043c\u043f\u043b\u0435\u043a\u0441\u044b \u0438 \u0434\u0440\u0443\u0433\u0438\u0435 \u0434\u0430\u043d\u043d\u044b\u0435 \u0431\u0443\u0434\u0443\u0442 \u0443\u0434\u0430\u043b\u0435\u043d\u044b \u0431\u0435\u0437\u0432\u043e\u0437\u0432\u0440\u0430\u0442\u043d\u043e.');
             }
         }
         if (warning) {
             warning.textContent = canDelete
-                ? '\u041f\u043e\u0441\u043b\u0435 \u0443\u0434\u0430\u043b\u0435\u043d\u0438\u044f \u043c\u043e\u0436\u043d\u043e \u0431\u0443\u0434\u0435\u0442 \u0437\u0430\u043d\u043e\u0432\u043e \u0437\u0430\u0440\u0435\u0433\u0438\u0441\u0442\u0440\u0438\u0440\u043e\u0432\u0430\u0442\u044c\u0441\u044f \u0441 \u0442\u043e\u0439 \u0436\u0435 \u043f\u043e\u0447\u0442\u043e\u0439.'
-                : '\u041b\u043e\u043a\u0430\u043b\u044c\u043d\u044b\u0435 \u043f\u0440\u043e\u0444\u0438\u043b\u0438 \u0437\u0434\u0435\u0441\u044c \u043d\u0435 \u0443\u0434\u0430\u043b\u044f\u044e\u0442\u0441\u044f.';
+                ? wt('settings.delete_warning_can', '\u041f\u043e\u0441\u043b\u0435 \u0443\u0434\u0430\u043b\u0435\u043d\u0438\u044f \u043c\u043e\u0436\u043d\u043e \u0431\u0443\u0434\u0435\u0442 \u0437\u0430\u043d\u043e\u0432\u043e \u0437\u0430\u0440\u0435\u0433\u0438\u0441\u0442\u0440\u0438\u0440\u043e\u0432\u0430\u0442\u044c\u0441\u044f \u0441 \u0442\u043e\u0439 \u0436\u0435 \u043f\u043e\u0447\u0442\u043e\u0439.')
+                : wt('settings.delete_warning_local', '\u041b\u043e\u043a\u0430\u043b\u044c\u043d\u044b\u0435 \u043f\u0440\u043e\u0444\u0438\u043b\u0438 \u0437\u0434\u0435\u0441\u044c \u043d\u0435 \u0443\u0434\u0430\u043b\u044f\u044e\u0442\u0441\u044f.');
         }
         if (passwordWrap) {
             passwordWrap.classList.toggle('hidden', !requiresPassword);
@@ -1781,13 +1769,13 @@
         if (passwordInput) {
             passwordInput.disabled = !canDelete || _isDeletePending || !requiresPassword;
             passwordInput.setAttribute('aria-disabled', (!canDelete || _isDeletePending || !requiresPassword) ? 'true' : 'false');
-            passwordInput.placeholder = '\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0442\u0435\u043a\u0443\u0449\u0438\u0439 \u043f\u0430\u0440\u043e\u043b\u044c';
+            passwordInput.placeholder = wt('settings.password_current_placeholder', '\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0442\u0435\u043a\u0443\u0449\u0438\u0439 \u043f\u0430\u0440\u043e\u043b\u044c');
             if (!requiresPassword) {
                 passwordInput.value = '';
             }
         }
         if (passwordLabel) {
-            passwordLabel.textContent = '\u0422\u0435\u043a\u0443\u0449\u0438\u0439 \u043f\u0430\u0440\u043e\u043b\u044c';
+            passwordLabel.textContent = wt('settings.password_current_label', '\u0422\u0435\u043a\u0443\u0449\u0438\u0439 \u043f\u0430\u0440\u043e\u043b\u044c');
         }
         if (toggle) {
             toggle.disabled = !canDelete || _isDeletePending;
@@ -1821,7 +1809,7 @@
         const verificationPassword = String(passwordInput?.value || '').trim();
 
         if (requiresPassword && !verificationPassword) {
-            setInlineStatus('settings-delete-status', '\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0442\u0435\u043a\u0443\u0449\u0438\u0439 \u043f\u0430\u0440\u043e\u043b\u044c, \u0447\u0442\u043e\u0431\u044b \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044c \u0443\u0434\u0430\u043b\u0435\u043d\u0438\u0435', 'error');
+            setInlineStatus('settings-delete-status', wt('settings.delete_password_required', '\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0442\u0435\u043a\u0443\u0449\u0438\u0439 \u043f\u0430\u0440\u043e\u043b\u044c, \u0447\u0442\u043e\u0431\u044b \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044c \u0443\u0434\u0430\u043b\u0435\u043d\u0438\u0435'), 'error');
             passwordInput?.focus?.();
             return;
         }
@@ -1831,7 +1819,7 @@
 
         _isDeletePending = true;
         updateDeleteControls(user, { hosted });
-        setInlineStatus('settings-delete-status', '\u0423\u0434\u0430\u043b\u044f\u0435\u043c \u0430\u043a\u043a\u0430\u0443\u043d\u0442 \u0438 \u043e\u0447\u0438\u0449\u0430\u0435\u043c \u0441\u0432\u044f\u0437\u0430\u043d\u043d\u044b\u0435 \u0434\u0430\u043d\u043d\u044b\u0435...', 'neutral');
+        setInlineStatus('settings-delete-status', wt('settings.delete_deleting', '\u0423\u0434\u0430\u043b\u044f\u0435\u043c \u0430\u043a\u043a\u0430\u0443\u043d\u0442 \u0438 \u043e\u0447\u0438\u0449\u0430\u0435\u043c \u0441\u0432\u044f\u0437\u0430\u043d\u043d\u044b\u0435 \u0434\u0430\u043d\u043d\u044b\u0435...'), 'neutral');
 
         try {
             const payload = requiresPassword ? { verification_password: verificationPassword } : {};
@@ -1846,29 +1834,29 @@
             }
 
             resetDeleteForm();
-            setInlineStatus('settings-delete-status', '\u0410\u043a\u043a\u0430\u0443\u043d\u0442 \u0443\u0434\u0430\u043b\u0451\u043d', 'success');
+            setInlineStatus('settings-delete-status', wt('settings.delete_deleted', '\u0410\u043a\u043a\u0430\u0443\u043d\u0442 \u0443\u0434\u0430\u043b\u0451\u043d'), 'success');
             showVoiceToast({
                 severity: 'success',
-                what: '\u0410\u043a\u043a\u0430\u0443\u043d\u0442 \u0443\u0434\u0430\u043b\u0451\u043d.',
-                impact: '\u041f\u043e\u0447\u0442\u0430 \u0438 \u0441\u0432\u044f\u0437\u0430\u043d\u043d\u044b\u0435 \u0434\u0430\u043d\u043d\u044b\u0435 \u043e\u0441\u0432\u043e\u0431\u043e\u0436\u0434\u0435\u043d\u044b.',
-                next: '\u041c\u043e\u0436\u043d\u043e \u0437\u0430\u0440\u0435\u0433\u0438\u0441\u0442\u0440\u0438\u0440\u043e\u0432\u0430\u0442\u044c\u0441\u044f \u0441\u043d\u043e\u0432\u0430 \u0441 \u0442\u043e\u0439 \u0436\u0435 \u043f\u043e\u0447\u0442\u043e\u0439.',
+                what: wt('settings.delete_success_what', '\u0410\u043a\u043a\u0430\u0443\u043d\u0442 \u0443\u0434\u0430\u043b\u0451\u043d.'),
+                impact: wt('settings.delete_success_impact', '\u041f\u043e\u0447\u0442\u0430 \u0438 \u0441\u0432\u044f\u0437\u0430\u043d\u043d\u044b\u0435 \u0434\u0430\u043d\u043d\u044b\u0435 \u043e\u0441\u0432\u043e\u0431\u043e\u0436\u0434\u0435\u043d\u044b.'),
+                next: wt('settings.delete_success_next', '\u041c\u043e\u0436\u043d\u043e \u0437\u0430\u0440\u0435\u0433\u0438\u0441\u0442\u0440\u0438\u0440\u043e\u0432\u0430\u0442\u044c\u0441\u044f \u0441\u043d\u043e\u0432\u0430 \u0441 \u0442\u043e\u0439 \u0436\u0435 \u043f\u043e\u0447\u0442\u043e\u0439.'),
             });
             navigateTo('/welcome');
         } catch (error) {
             const code = String(error?.message || '');
             const message = code === 'password_required_for_delete'
-                ? '\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0442\u0435\u043a\u0443\u0449\u0438\u0439 \u043f\u0430\u0440\u043e\u043b\u044c, \u0447\u0442\u043e\u0431\u044b \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044c \u0443\u0434\u0430\u043b\u0435\u043d\u0438\u0435'
+                ? wt('settings.delete_password_required', '\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0442\u0435\u043a\u0443\u0449\u0438\u0439 \u043f\u0430\u0440\u043e\u043b\u044c, \u0447\u0442\u043e\u0431\u044b \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044c \u0443\u0434\u0430\u043b\u0435\u043d\u0438\u0435')
                 : code === 'invalid_password'
-                    ? '\u0422\u0435\u043a\u0443\u0449\u0438\u0439 \u043f\u0430\u0440\u043e\u043b\u044c \u0443\u043a\u0430\u0437\u0430\u043d \u043d\u0435\u0432\u0435\u0440\u043d\u043e'
+                    ? wt('settings.delete_invalid_password', '\u0422\u0435\u043a\u0443\u0449\u0438\u0439 \u043f\u0430\u0440\u043e\u043b\u044c \u0443\u043a\u0430\u0437\u0430\u043d \u043d\u0435\u0432\u0435\u0440\u043d\u043e')
                     : code === 'authentication_required'
-                        ? '\u0421\u0435\u0441\u0441\u0438\u044f \u0438\u0441\u0442\u0435\u043a\u043b\u0430. \u0412\u043e\u0439\u0434\u0438\u0442\u0435 \u0441\u043d\u043e\u0432\u0430.'
-                        : '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0443\u0434\u0430\u043b\u0438\u0442\u044c \u0430\u043a\u043a\u0430\u0443\u043d\u0442. \u041f\u043e\u043f\u0440\u043e\u0431\u0443\u0439\u0442\u0435 \u0435\u0449\u0451 \u0440\u0430\u0437 \u0447\u0443\u0442\u044c \u043f\u043e\u0437\u0436\u0435.';
+                        ? wt('settings.delete_session_expired', '\u0421\u0435\u0441\u0441\u0438\u044f \u0438\u0441\u0442\u0435\u043a\u043b\u0430. \u0412\u043e\u0439\u0434\u0438\u0442\u0435 \u0441\u043d\u043e\u0432\u0430.')
+                        : wt('settings.delete_error', '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0443\u0434\u0430\u043b\u0438\u0442\u044c \u0430\u043a\u043a\u0430\u0443\u043d\u0442. \u041f\u043e\u043f\u0440\u043e\u0431\u0443\u0439\u0442\u0435 \u0435\u0449\u0451 \u0440\u0430\u0437 \u0447\u0443\u0442\u044c \u043f\u043e\u0437\u0436\u0435.');
             console.error('[Settings] Failed to delete account:', error);
             setInlineStatus('settings-delete-status', message, 'error');
             showVoiceToast({
                 severity: 'error',
-                what: '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0443\u0434\u0430\u043b\u0438\u0442\u044c \u0430\u043a\u043a\u0430\u0443\u043d\u0442.',
-                impact: '\u0414\u0430\u043d\u043d\u044b\u0435 \u0438 \u0441\u0435\u0441\u0441\u0438\u044f \u043f\u043e\u043a\u0430 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u044b.',
+                what: wt('settings.delete_error_what', '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0443\u0434\u0430\u043b\u0438\u0442\u044c \u0430\u043a\u043a\u0430\u0443\u043d\u0442.'),
+                impact: wt('settings.delete_error_impact', '\u0414\u0430\u043d\u043d\u044b\u0435 \u0438 \u0441\u0435\u0441\u0441\u0438\u044f \u043f\u043e\u043a\u0430 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u044b.'),
                 next: message,
             });
         } finally {
@@ -1909,13 +1897,13 @@
 
         if (previewImage) {
             previewImage.src = imageUrl;
-            previewImage.alt = 'Фото профиля';
+            previewImage.alt = wt('settings.avatar_title', 'Фото профиля');
         }
         if (previewName) {
-            previewName.textContent = 'Фото профиля';
+            previewName.textContent = wt('settings.avatar_title', 'Фото профиля');
         }
         if (previewNote) {
-            previewNote.textContent = 'Загрузите своё изображение. Оно сразу появится в меню и на странице настроек.';
+            previewNote.textContent = wt('settings.avatar_note', 'Загрузите своё изображение. Оно сразу появится в меню и на странице настроек.');
         }
     }
 
@@ -1939,7 +1927,7 @@
         if (sublineEl) {
             sublineEl.textContent = hosted
                 ? getAccountSubline(user)
-                : 'Для локального профиля доступны имя, фото и оформление интерфейса.';
+                : wt('settings.profile_local_desc', 'Для локального профиля доступны имя, фото и оформление интерфейса.');
         }
 
         updateAccountAxes(user);
@@ -1953,8 +1941,8 @@
 
         const name = String(user?.name || '').trim();
         captionEl.textContent = name
-            ? `Палитра интерфейса сохраняется для аккаунта «${name}».`
-            : 'Палитра интерфейса сохраняется для текущего аккаунта.';
+            ? wt('settings.profile_appearance_for', 'Палитра интерфейса сохраняется для аккаунта «{name}».').replace('{name}', name)
+            : wt('settings.appearance_description', 'Палитра интерфейса сохраняется для текущего аккаунта.');
     }
 
     async function loadAvatarOptions() {
@@ -1970,19 +1958,19 @@
 
         const allowedTypes = ['image/png', 'image/jpeg', 'image/webp'];
         if (file.type && !allowedTypes.includes(file.type)) {
-            setAvatarSaveStatus('Поддерживаются PNG, JPG и WEBP', 'error');
+            setAvatarSaveStatus(wt('settings.avatar_format_error', 'Поддерживаются PNG, JPG и WEBP'), 'error');
             showVoiceToast({
                 severity: 'error',
-                what: 'Не удалось загрузить изображение.',
-                impact: 'Поддерживаются только PNG, JPG и WEBP.',
-                next: 'Выберите другой файл и попробуйте снова.',
+                what: wt('settings.avatar_upload_format_what', 'Не удалось загрузить изображение.'),
+                impact: wt('settings.avatar_upload_format_impact', 'Поддерживаются только PNG, JPG и WEBP.'),
+                next: wt('settings.avatar_upload_format_next', 'Выберите другой файл и попробуйте снова.'),
             });
             return;
         }
 
         _isAvatarSaving = true;
         setButtonBusyState('settings-avatar-upload-btn', true);
-        setAvatarSaveStatus('Загружаем изображение...', 'neutral');
+        setAvatarSaveStatus(wt('settings.avatar_uploading', 'Загружаем изображение...'), 'neutral');
 
         try {
             const formData = typeof FormData !== 'undefined' ? new FormData() : new window.FormData();
@@ -2003,15 +1991,15 @@
                 hosted: _accountContext?.hosted === true,
             };
             updateAccountSummary(_accountContext.user, { hosted: _accountContext.hosted === true });
-            setAvatarSaveStatus('Фото профиля обновлено', 'success');
+            setAvatarSaveStatus(wt('settings.avatar_updated', 'Фото профиля обновлено'), 'success');
         } catch (error) {
             console.error('[Settings] Failed to upload avatar:', error);
-            setAvatarSaveStatus('Не удалось загрузить изображение', 'error');
+            setAvatarSaveStatus(wt('settings.avatar_upload_error', 'Не удалось загрузить изображение'), 'error');
             showVoiceToast({
                 severity: 'error',
-                what: 'Не удалось обновить фото профиля.',
-                impact: 'Текущее изображение осталось без изменений.',
-                next: 'Попробуйте выбрать другой файл или повторите попытку позже.',
+                what: wt('settings.avatar_upload_error_what', 'Не удалось обновить фото профиля.'),
+                impact: wt('settings.avatar_upload_error_impact', 'Текущее изображение осталось без изменений.'),
+                next: wt('settings.avatar_upload_error_next', 'Попробуйте выбрать другой файл или повторите попытку позже.'),
             });
         } finally {
             _isAvatarSaving = false;
@@ -2032,21 +2020,21 @@
         const forbiddenChars = ['/', '\\', '<', '>', ':', '"', '|', '?', '*'];
 
         if (!name || name.length < 2 || name.length > 50) {
-            setInlineStatus('settings-name-save-status', 'Имя должно содержать от 2 до 50 символов', 'error');
+            setInlineStatus('settings-name-save-status', wt('settings.name_length_error', 'Имя должно содержать от 2 до 50 символов'), 'error');
             return;
         }
         if (forbiddenChars.some((char) => name.includes(char))) {
-            setInlineStatus('settings-name-save-status', 'В имени есть недопустимые символы', 'error');
+            setInlineStatus('settings-name-save-status', wt('settings.name_chars_error', 'В имени есть недопустимые символы'), 'error');
             return;
         }
         if (name === String(_accountContext?.user?.name || '').trim()) {
-            setInlineStatus('settings-name-save-status', 'Имя уже сохранено', 'neutral');
+            setInlineStatus('settings-name-save-status', wt('settings.name_unchanged', 'Имя уже сохранено'), 'neutral');
             return;
         }
 
         _isNameSaving = true;
         setButtonBusyState('settings-name-save-btn', true);
-        setInlineStatus('settings-name-save-status', 'Сохраняем имя...', 'neutral');
+        setInlineStatus('settings-name-save-status', wt('settings.name_saving', 'Сохраняем имя...'), 'neutral');
 
         try {
             const response = await fetch('/api/users/update', {
@@ -2066,10 +2054,10 @@
             };
             updateAccountSummary(_accountContext.user, { hosted: _accountContext.hosted === true });
             updateProfileCaption(_accountContext.user, { hosted: _accountContext.hosted === true });
-            setInlineStatus('settings-name-save-status', 'Имя обновлено', 'success');
+            setInlineStatus('settings-name-save-status', wt('settings.name_saved', 'Имя обновлено'), 'success');
         } catch (error) {
             console.error('[Settings] Failed to save name:', error);
-            setInlineStatus('settings-name-save-status', 'Не удалось сохранить имя', 'error');
+            setInlineStatus('settings-name-save-status', wt('settings.name_save_error', 'Не удалось сохранить имя'), 'error');
         } finally {
             _isNameSaving = false;
             setButtonBusyState('settings-name-save-btn', false);
@@ -2088,18 +2076,18 @@
         const pendingEmail = String(_accountContext?.user?.pending_email || '').trim().toLowerCase();
         const emailPattern = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
         if (!email || !emailPattern.test(email)) {
-            setInlineStatus('settings-email-save-status', '\u0423\u043a\u0430\u0436\u0438\u0442\u0435 \u043a\u043e\u0440\u0440\u0435\u043a\u0442\u043d\u044b\u0439 email', 'error');
+            setInlineStatus('settings-email-save-status', wt('settings.email_invalid', '\u0423\u043a\u0430\u0436\u0438\u0442\u0435 \u043a\u043e\u0440\u0440\u0435\u043a\u0442\u043d\u044b\u0439 email'), 'error');
             return;
         }
         if (email === currentEmail && email !== pendingEmail) {
-            setInlineStatus('settings-email-save-status', '\u042d\u0442\u043e\u0442 email \u0443\u0436\u0435 \u0441\u043e\u0445\u0440\u0430\u043d\u0451\u043d', 'neutral');
+            setInlineStatus('settings-email-save-status', wt('settings.email_unchanged', '\u042d\u0442\u043e\u0442 email \u0443\u0436\u0435 \u0441\u043e\u0445\u0440\u0430\u043d\u0451\u043d'), 'neutral');
             return;
         }
 
         _isEmailSaving = true;
         setButtonBusyState('settings-email-save-btn', true);
         renderPendingEmailPanel(_accountContext?.user, { hosted: _accountContext?.hosted === true });
-        setInlineStatus('settings-email-save-status', '\u041e\u0442\u043f\u0440\u0430\u0432\u043b\u044f\u0435\u043c \u043f\u0438\u0441\u044c\u043c\u043e \u0434\u043b\u044f \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f...', 'neutral');
+        setInlineStatus('settings-email-save-status', wt('settings.email_sending', '\u041e\u0442\u043f\u0440\u0430\u0432\u043b\u044f\u0435\u043c \u043f\u0438\u0441\u044c\u043c\u043e \u0434\u043b\u044f \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f...'), 'neutral');
 
         try {
             const response = await fetch('/api/users/update', {
@@ -2114,7 +2102,7 @@
 
             _pendingEmailFeedback = {
                 tone: 'success',
-                message: '\u041f\u043e\u0447\u0442\u0430 \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0430. \u041d\u043e\u0432\u044b\u0439 \u0430\u0434\u0440\u0435\u0441 \u0441\u0442\u0430\u043d\u0435\u0442 \u0430\u043a\u0442\u0438\u0432\u043d\u044b\u043c \u043f\u043e\u0441\u043b\u0435 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f.',
+                message: wt('settings.email_updated', '\u041f\u043e\u0447\u0442\u0430 \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0430. \u041d\u043e\u0432\u044b\u0439 \u0430\u0434\u0440\u0435\u0441 \u0441\u0442\u0430\u043d\u0435\u0442 \u0430\u043a\u0442\u0438\u0432\u043d\u044b\u043c \u043f\u043e\u0441\u043b\u0435 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f.'),
             };
             _accountContext = {
                 ...(typeof _accountContext === 'object' && _accountContext ? _accountContext : {}),
@@ -2122,21 +2110,21 @@
                 hosted: _accountContext?.hosted === true,
             };
             updateAccountSummary(_accountContext.user, { hosted: _accountContext.hosted === true });
-            setInlineStatus('settings-email-save-status', '\u041f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 \u043f\u043e\u0447\u0442\u0443: \u043f\u0438\u0441\u044c\u043c\u043e \u0441 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u0435\u043c \u0443\u0436\u0435 \u0432 \u043f\u0443\u0442\u0438.', 'success');
+            setInlineStatus('settings-email-save-status', wt('settings.email_check_inbox', '\u041f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 \u043f\u043e\u0447\u0442\u0443: \u043f\u0438\u0441\u044c\u043c\u043e \u0441 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u0435\u043c \u0443\u0436\u0435 \u0432 \u043f\u0443\u0442\u0438.'), 'success');
             setSectionOpen('settings-email-form', false);
         } catch (error) {
             const code = String(error?.message || '');
             const message = code === 'email_change_unavailable'
-                ? '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0438\u0437\u043c\u0435\u043d\u0438\u0442\u044c \u0442\u0435\u043a\u0443\u0449\u0443\u044e \u043f\u043e\u0447\u0442\u0443. \u0417\u0430\u0434\u0435\u0439\u0441\u0442\u0432\u0443\u0439\u0442\u0435 \u0434\u0440\u0443\u0433\u043e\u0439 email \u0438\u043b\u0438 \u043f\u043e\u0432\u0442\u043e\u0440\u0438\u0442\u0435 \u043f\u043e\u0437\u0436\u0435.'
+                ? wt('settings.email_change_unavailable', '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0438\u0437\u043c\u0435\u043d\u0438\u0442\u044c \u0442\u0435\u043a\u0443\u0449\u0443\u044e \u043f\u043e\u0447\u0442\u0443. \u0417\u0430\u0434\u0435\u0439\u0441\u0442\u0432\u0443\u0439\u0442\u0435 \u0434\u0440\u0443\u0433\u043e\u0439 email \u0438\u043b\u0438 \u043f\u043e\u0432\u0442\u043e\u0440\u0438\u0442\u0435 \u043f\u043e\u0437\u0436\u0435.')
                 : code === 'email_already_exists'
-                ? '\u042d\u0442\u043e\u0442 email \u0443\u0436\u0435 \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u0435\u0442\u0441\u044f'
+                ? wt('settings.email_already_exists', '\u042d\u0442\u043e\u0442 email \u0443\u0436\u0435 \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u0435\u0442\u0441\u044f')
                 : code === 'too_many_requests'
-                    ? '\u0421\u043b\u0438\u0448\u043a\u043e\u043c \u0447\u0430\u0441\u0442\u043e. \u041f\u043e\u043f\u0440\u043e\u0431\u0443\u0439\u0442\u0435 \u043f\u043e\u0432\u0442\u043e\u0440\u0438\u0442\u044c \u0447\u0443\u0442\u044c \u043f\u043e\u0437\u0436\u0435.'
+                    ? wt('settings.email_too_many_requests', '\u0421\u043b\u0438\u0448\u043a\u043e\u043c \u0447\u0430\u0441\u0442\u043e. \u041f\u043e\u043f\u0440\u043e\u0431\u0443\u0439\u0442\u0435 \u043f\u043e\u0432\u0442\u043e\u0440\u0438\u0442\u044c \u0447\u0443\u0442\u044c \u043f\u043e\u0437\u0436\u0435.')
                 : code === 'disabled' || code === 'not_configured' || code === 'missing_base_url'
-                    ? '\u041f\u043e\u0447\u0442\u043e\u0432\u044b\u0439 \u0441\u0435\u0440\u0432\u0438\u0441 \u043f\u043e\u043a\u0430 \u043d\u0435 \u043d\u0430\u0441\u0442\u0440\u043e\u0435\u043d'
+                    ? wt('settings.email_service_unavailable', '\u041f\u043e\u0447\u0442\u043e\u0432\u044b\u0439 \u0441\u0435\u0440\u0432\u0438\u0441 \u043f\u043e\u043a\u0430 \u043d\u0435 \u043d\u0430\u0441\u0442\u0440\u043e\u0435\u043d')
                     : code === 'send_failed'
-                        ? '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u044c \u043f\u0438\u0441\u044c\u043c\u043e \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f'
-                        : '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0438\u0437\u043c\u0435\u043d\u0438\u0442\u044c email';
+                        ? wt('settings.email_send_failed', '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u044c \u043f\u0438\u0441\u044c\u043c\u043e \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f')
+                        : wt('settings.email_change_error', '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0438\u0437\u043c\u0435\u043d\u0438\u0442\u044c email');
             console.error('[Settings] Failed to save email:', error);
             _pendingEmailFeedback = { tone: 'error', message };
             renderPendingEmailPanel(_accountContext?.user, { hosted: _accountContext?.hosted === true });
@@ -2154,7 +2142,7 @@
 
         _isEmailSaving = true;
         renderPendingEmailPanel(_accountContext?.user, { hosted: _accountContext?.hosted === true });
-        setInlineStatus('settings-email-pending-status', '\u041e\u0442\u043f\u0440\u0430\u0432\u043b\u044f\u0435\u043c \u043f\u0438\u0441\u044c\u043c\u043e \u0435\u0449\u0451 \u0440\u0430\u0437...', 'neutral');
+        setInlineStatus('settings-email-pending-status', wt('settings.email_resend_sending', '\u041e\u0442\u043f\u0440\u0430\u0432\u043b\u044f\u0435\u043c \u043f\u0438\u0441\u044c\u043c\u043e \u0435\u0449\u0451 \u0440\u0430\u0437...'), 'neutral');
 
         try {
             const response = await fetch('/api/users/resend-email-change', {
@@ -2169,7 +2157,7 @@
 
             _pendingEmailFeedback = {
                 tone: 'success',
-                message: '\u041f\u0438\u0441\u044c\u043c\u043e \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f \u043e\u0442\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u043e \u043f\u043e\u0432\u0442\u043e\u0440\u043d\u043e. \u041f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 \u0432\u0445\u043e\u0434\u044f\u0449\u0438\u0435.',
+                message: wt('settings.email_resend_sent', '\u041f\u0438\u0441\u044c\u043c\u043e \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f \u043e\u0442\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u043e \u043f\u043e\u0432\u0442\u043e\u0440\u043d\u043e. \u041f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 \u0432\u0445\u043e\u0434\u044f\u0449\u0438\u0435.'),
             };
             _accountContext = {
                 ...(typeof _accountContext === 'object' && _accountContext ? _accountContext : {}),
@@ -2180,12 +2168,12 @@
         } catch (error) {
             const code = String(error?.message || '');
             const message = code === 'pending_email_missing'
-                ? '\u0421\u0435\u0439\u0447\u0430\u0441 \u043d\u0435\u0442 \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0439 \u0441\u043c\u0435\u043d\u044b \u043f\u043e\u0447\u0442\u044b'
+                ? wt('settings.pending_email_no_change', '\u0421\u0435\u0439\u0447\u0430\u0441 \u043d\u0435\u0442 \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0439 \u0441\u043c\u0435\u043d\u044b \u043f\u043e\u0447\u0442\u044b')
                 : code === 'too_many_requests'
-                    ? '\u0421\u043b\u0438\u0448\u043a\u043e\u043c \u0447\u0430\u0441\u0442\u043e. \u041f\u043e\u043f\u0440\u043e\u0431\u0443\u0439\u0442\u0435 \u043f\u043e\u0432\u0442\u043e\u0440\u0438\u0442\u044c \u0447\u0443\u0442\u044c \u043f\u043e\u0437\u0436\u0435.'
+                    ? wt('settings.email_resend_rate', '\u0421\u043b\u0438\u0448\u043a\u043e\u043c \u0447\u0430\u0441\u0442\u043e. \u041f\u043e\u043f\u0440\u043e\u0431\u0443\u0439\u0442\u0435 \u043f\u043e\u0432\u0442\u043e\u0440\u0438\u0442\u044c \u0447\u0443\u0442\u044c \u043f\u043e\u0437\u0436\u0435.')
                 : code === 'disabled' || code === 'not_configured' || code === 'missing_base_url'
-                    ? '\u041f\u043e\u0447\u0442\u043e\u0432\u044b\u0439 \u0441\u0435\u0440\u0432\u0438\u0441 \u043f\u043e\u043a\u0430 \u043d\u0435 \u043d\u0430\u0441\u0442\u0440\u043e\u0435\u043d'
-                    : '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u044c \u043f\u0438\u0441\u044c\u043c\u043e \u0435\u0449\u0451 \u0440\u0430\u0437';
+                    ? wt('settings.email_service_unavailable', '\u041f\u043e\u0447\u0442\u043e\u0432\u044b\u0439 \u0441\u0435\u0440\u0432\u0438\u0441 \u043f\u043e\u043a\u0430 \u043d\u0435 \u043d\u0430\u0441\u0442\u0440\u043e\u0435\u043d')
+                    : wt('settings.email_resend_error', '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u044c \u043f\u0438\u0441\u044c\u043c\u043e \u0435\u0449\u0451 \u0440\u0430\u0437');
             console.error('[Settings] Failed to resend pending email verification:', error);
             _pendingEmailFeedback = { tone: 'error', message };
             renderPendingEmailPanel(_accountContext?.user, { hosted: _accountContext?.hosted === true });
@@ -2209,7 +2197,7 @@
 
             _pendingEmailFeedback = {
                 tone: 'success',
-                message: '\u041d\u043e\u0432\u0430\u044f \u043f\u043e\u0447\u0442\u0430 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0430 \u0438 \u0443\u0436\u0435 \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u0435\u0442\u0441\u044f \u0434\u043b\u044f \u0432\u0445\u043e\u0434\u0430.',
+                message: wt('settings.pending_email_verified', '\u041d\u043e\u0432\u0430\u044f \u043f\u043e\u0447\u0442\u0430 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0430 \u0438 \u0443\u0436\u0435 \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u0435\u0442\u0441\u044f \u0434\u043b\u044f \u0432\u0445\u043e\u0434\u0430.'),
             };
             return { user: data.user, hosted: true };
         } catch (error) {
@@ -2236,17 +2224,17 @@
         const confirmPassword = String(confirmInput.value || '');
 
         if (nextPassword.length < PASSWORD_MIN_LENGTH) {
-            setInlineStatus('settings-password-save-status', `Пароль должен содержать минимум ${PASSWORD_MIN_LENGTH} символов`, 'error');
+            setInlineStatus('settings-password-save-status', wt('settings.password_length_error', 'Пароль должен содержать минимум {n} символов').replace('{n}', PASSWORD_MIN_LENGTH), 'error');
             return;
         }
         if (nextPassword !== confirmPassword) {
-            setInlineStatus('settings-password-save-status', 'Новый пароль и подтверждение не совпадают', 'error');
+            setInlineStatus('settings-password-save-status', wt('settings.password_mismatch', 'Новый пароль и подтверждение не совпадают'), 'error');
             return;
         }
 
         _isPasswordSaving = true;
         setButtonBusyState('settings-password-save-btn', true);
-        setInlineStatus('settings-password-save-status', 'Сохраняем пароль...', 'neutral');
+        setInlineStatus('settings-password-save-status', wt('settings.password_saving', 'Сохраняем пароль...'), 'neutral');
 
         try {
             const payload = { new_password: nextPassword };
@@ -2268,18 +2256,18 @@
                 _accountContext.user.has_password = true;
             }
             updateCredentialControls(_accountContext?.user, { hosted: _accountContext?.hosted === true });
-            setInlineStatus('settings-password-save-status', 'Пароль обновлён', 'success');
+            setInlineStatus('settings-password-save-status', wt('settings.password_saved', 'Пароль обновлён'), 'success');
             resetPasswordForm();
             setSectionOpen('settings-password-form', false);
         } catch (error) {
             const code = String(error?.message || '');
             const message = code === 'current_password_required'
-                ? 'Введите текущий пароль'
+                ? wt('settings.password_current_wrong', 'Введите текущий пароль')
                 : code === 'current_password_invalid'
-                    ? 'Текущий пароль указан неверно'
+                    ? wt('settings.password_wrong_current', 'Текущий пароль указан неверно')
                     : code === 'invalid_password'
-                        ? `Пароль должен содержать минимум ${PASSWORD_MIN_LENGTH} символов`
-                        : 'Не удалось обновить пароль';
+                        ? wt('settings.password_length_error', 'Пароль должен содержать минимум {n} символов').replace('{n}', PASSWORD_MIN_LENGTH)
+                        : wt('settings.password_error', 'Не удалось обновить пароль');
             console.error('[Settings] Failed to save password:', error);
             setInlineStatus('settings-password-save-status', message, 'error');
         } finally {
@@ -2348,6 +2336,9 @@
             ['settings-email-pending-hint', 'settings.email_pending_hint'],
             ['settings-security-title', 'settings.security_title'],
             ['settings-security-description', 'settings.security_description'],
+            ['settings-delete-title', 'settings.delete_title'],
+            ['settings-delete-note', 'settings.delete_note'],
+            ['settings-delete-warning', 'settings.delete_warning'],
             ['settings-admin-title', 'settings.admin_title'],
             ['settings-admin-description', 'settings.admin_description'],
             ['settings-appearance-title', 'settings.appearance_title'],
@@ -2423,6 +2414,12 @@
         var adminSearchInput = document.getElementById('settings-admin-search-input');
         if (adminSearchInput) { var asp = t('settings.admin_search_placeholder'); if (asp !== 'settings.admin_search_placeholder') adminSearchInput.setAttribute('placeholder', asp); }
 
+        var deletePasswordLabel = document.getElementById('settings-delete-password')?.closest('label')?.querySelector('span');
+        if (deletePasswordLabel) { var dpl = t('settings.delete_password_label'); if (dpl !== 'settings.delete_password_label') deletePasswordLabel.textContent = dpl; }
+
+        var deletePasswordInput = document.getElementById('settings-delete-password');
+        if (deletePasswordInput) { var dpp = t('settings.delete_password_placeholder'); if (dpp !== 'settings.delete_password_placeholder') deletePasswordInput.setAttribute('placeholder', dpp); }
+
         var iconBtns = [
             ['settings-avatar-upload-btn', 'upload', 'settings.avatar_upload'],
             ['settings-name-save-btn', 'save', 'settings.name_save'],
@@ -2433,6 +2430,9 @@
             ['settings-password-toggle-btn', 'password', 'settings.password_change'],
             ['settings-password-save-btn', 'check', 'settings.password_save'],
             ['settings-password-cancel-btn', 'close', 'settings.cancel'],
+            ['settings-delete-toggle-btn', 'delete_forever', 'settings.delete_toggle'],
+            ['settings-delete-confirm-btn', 'delete_forever', 'settings.delete_confirm'],
+            ['settings-delete-cancel-btn', 'close', 'settings.cancel'],
             ['settings-admin-search-btn', 'search', 'settings.admin_search'],
             ['settings-logout-btn', 'logout', 'settings.logout'],
         ];
@@ -2440,6 +2440,18 @@
             var val = t(row[2]);
             if (val !== row[2]) setButtonLabel(row[0], row[1], val);
         });
+
+        // Crop image alt (data-i18n-alt not supported by updateDOM)
+        var cropImg = document.getElementById('settings-avatar-crop-image');
+        if (cropImg) { var cia = t('settings.crop_image_alt'); if (cia !== 'settings.crop_image_alt') cropImg.alt = cia; }
+
+        // Account avatar alt (dynamic, not in data-i18n)
+        var accountAvatar = document.getElementById('settings-account-avatar');
+        if (accountAvatar) { var aaa = t('settings.account_alt'); if (aaa !== 'settings.account_alt') accountAvatar.alt = aaa; }
+
+        // Re-render theme options to pick up translated theme names
+        var currentTheme = window.ThemeManager ? window.ThemeManager.getTheme() : 'light-a';
+        renderThemeOptions(currentTheme);
 
         window.i18n.updateDOM();
     }
@@ -2510,7 +2522,7 @@
             avatarFileInput.addEventListener('change', () => {
                 const file = avatarFileInput.files && avatarFileInput.files[0];
                 if (file) {
-                    setAvatarSaveStatus('Подготовьте квадратный кадр 1:1 и подтвердите загрузку', 'neutral');
+                    setAvatarSaveStatus(wt('settings.avatar_crop_square_hint', 'Подготовьте квадратный кадр 1:1 и подтвердите загрузку'), 'neutral');
                     void openAvatarCropper(file);
                 }
             });

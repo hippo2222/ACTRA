@@ -56,6 +56,12 @@
         return m + ':' + String(s).padStart(2, '0');
     }
 
+    function wt(key, fallback) {
+        if (!window.i18n) return fallback;
+        const result = window.i18n.t(key);
+        return result !== key ? result : fallback;
+    }
+
     function normalizeDeckSearch(value) {
         return String(value ?? '')
             .toLocaleLowerCase('ru-RU')
@@ -130,22 +136,22 @@
 
     function getDeckCreatedViaLabel(createdVia) {
         const normalized = String(createdVia || '').trim().toLowerCase();
-        if (normalized === 'manual_editor') return 'Редактор';
-        if (normalized === 'analysis_auto') return 'ИИ';
-        if (normalized === 'text_import') return 'Импорт';
-        return 'Система';
+        if (normalized === 'manual_editor') return wt('microcards.source_editor', 'Редактор');
+        if (normalized === 'analysis_auto') return wt('microcards.source_ai', 'ИИ');
+        if (normalized === 'text_import') return wt('microcards.source_import', 'Импорт');
+        return wt('microcards.source_system', 'Система');
     }
 
     function formatOwnerDisplayName(userId) {
         if (!userId) return '';
         // Hide technical IDs like user_7f4b075b5365
-        if (/^user_[a-f0-9]{8,}$/i.test(userId)) return 'Другой профиль';
+        if (/^user_[a-f0-9]{8,}$/i.test(userId)) return wt('microcards.owner_other_profile', 'Другой профиль');
         return userId;
     }
 
     function getCardTypeLabel(cardType) {
-        if (cardType === 'fact_recall') return 'Запомни';
-        if (cardType === 'pair_match') return 'Пары';
+        if (cardType === 'fact_recall') return wt('microcards.card_type_recall', 'Запомни');
+        if (cardType === 'pair_match') return wt('microcards.card_type_pairs', 'Пары');
         return cardType;
     }
 
@@ -156,7 +162,7 @@
         const rawOwnerId = escHtml(ownership.createdByUserId);
         const sourceLabel = escHtml(getDeckCreatedViaLabel(ownership.createdVia));
         if (ownership.isOwnedByCurrentUser) {
-            chips.push('<span class="inline-flex items-center gap-1 rounded-full border border-success-light bg-surface-1 px-2 py-0.5 text-[10px] font-semibold text-text-main">моё</span>');
+            chips.push('<span class="inline-flex items-center gap-1 rounded-full border border-success-light bg-surface-1 px-2 py-0.5 text-[10px] font-semibold text-text-main">' + escHtml(wt('microcards.badge_mine', 'моё')) + '</span>');
         } else if (ownership.hasOwner && displayName) {
             chips.push(`<span class="mc-owner-chip inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-2 px-2 py-0.5 text-[10px] font-semibold text-text-secondary" title="${rawOwnerId}">${displayName}</span>`);
         }
@@ -244,44 +250,45 @@
         if (!hint) return;
         if (ownershipHint) {
             if (state.deckOwnershipFilter === 'mine') {
-                ownershipHint.textContent = 'Показываем колоды, созданные из текущего профиля. Они всё равно живут в общей библиотеке.';
+                ownershipHint.textContent = wt('microcards.ownership_mine', 'Показываем колоды, созданные из текущего профиля. Они всё равно живут в общей библиотеке.');
             } else if (state.deckOwnershipFilter === 'shared') {
-                ownershipHint.textContent = 'Показываем общие колоды, созданные вне текущего профиля и не пришедшие через отдельный импорт.';
+                ownershipHint.textContent = wt('microcards.ownership_shared', 'Показываем общие колоды, созданные вне текущего профиля и не пришедшие через отдельный импорт.');
             } else if (state.deckOwnershipFilter === 'imported') {
-                ownershipHint.textContent = 'Показываем колоды, пришедшие через текстовый импорт.';
+                ownershipHint.textContent = wt('microcards.ownership_imported', 'Показываем колоды, пришедшие через текстовый импорт.');
             } else {
-                ownershipHint.textContent = 'Колоды живут в общей библиотеке, а прогресс по ним остаётся личным.';
+                ownershipHint.textContent = wt('microcards.ownership_all', 'Колоды живут в общей библиотеке, а прогресс по ним остаётся личным.');
             }
         }
         if (!totalCount) {
-            hint.textContent = 'Когда появятся колоды, здесь можно будет быстро выбрать, что повторять первым.';
+            hint.textContent = wt('microcards.hint_no_decks', 'Когда появятся колоды, здесь можно будет быстро выбрать, что повторять первым.');
             return;
         }
         if (state.deckListFilter === 'urgent') {
             hint.textContent = visibleCount
-                ? `${visibleCount} колод с ближайшим повторением. Сверху — самая срочная.`
-                : 'Срочных повторений по текущему фильтру нет.';
+                ? wt('microcards.hint_urgent_some', '{n} колод с ближайшим повторением. Сверху — самая срочная.').replace('{n}', visibleCount)
+                : wt('microcards.hint_urgent_none', 'Срочных повторений по текущему фильтру нет.');
             return;
         }
         if (state.deckListFilter === 'new') {
             hint.textContent = visibleCount
-                ? `${visibleCount} колод с новыми карточками. Хороший режим для короткого входа.`
-                : 'Новых карточек по текущему запросу нет.';
+                ? wt('microcards.hint_new_some', '{n} колод с новыми карточками. Хороший режим для короткого входа.').replace('{n}', visibleCount)
+                : wt('microcards.hint_new_none', 'Новых карточек по текущему запросу нет.');
             return;
         }
         if (state.deckListFilter === 'recent') {
             hint.textContent = visibleCount
-                ? `${visibleCount} колод, к которым ты возвращался недавно.`
-                : 'Недавних колод по текущему запросу не найдено.';
+                ? wt('microcards.hint_recent_some', '{n} колод, к которым ты возвращался недавно.').replace('{n}', visibleCount)
+                : wt('microcards.hint_recent_none', 'Недавних колод по текущему запросу не найдено.');
             return;
         }
         if (state.deckListQuery) {
-            hint.textContent = `Найдено ${visibleCount} из ${totalCount}. Поиск работает по названию и теме колоды.`;
+            hint.textContent = wt('microcards.hint_search', 'Найдено {visible} из {total}. Поиск работает по названию и теме колоды.')
+                .replace('{visible}', visibleCount).replace('{total}', totalCount);
             return;
         }
-        hint.textContent = 'Сначала показываем колоды с самым срочным повторением.';
+        hint.textContent = wt('microcards.hint_default', 'Сначала показываем колоды с самым срочным повторением.');
         if (!state.deckListQuery && state.deckListFilter === 'all' && totalCount > 0) {
-            hint.textContent = 'Колоды живут в общей локальной библиотеке, а прогресс по ним остаётся личным. Сначала показываем самые срочные колоды.';
+            hint.textContent = wt('microcards.hint_local', 'Колоды живут в общей локальной библиотеке, а прогресс по ним остаётся личным. Сначала показываем самые срочные колоды.');
         }
     }
 
@@ -443,9 +450,9 @@
         // Header subtitle
         const subtitle = $('mcHeaderSubtitle');
         if (subtitle) {
-            if (v === 'review') subtitle.textContent = state.activeDeckName || 'Сессия повторения';
-            else if (v === 'summary') subtitle.textContent = 'Результаты сессии';
-            else subtitle.textContent = 'Повторение и обучение';
+            if (v === 'review') subtitle.textContent = state.activeDeckName || wt('microcards.subtitle_session', 'Сессия повторения');
+            else if (v === 'summary') subtitle.textContent = wt('microcards.subtitle_summary', 'Результаты сессии');
+            else subtitle.textContent = wt('microcards.subtitle_default', 'Повторение и обучение');
         }
     }
 
@@ -566,7 +573,7 @@
 
     function showModeInProgress() {
         const subtitle = $('mcHeaderSubtitle');
-        if (subtitle) subtitle.textContent = 'Функционал в разработке';
+        if (subtitle) subtitle.textContent = wt('microcards.mode_wip_title', 'Функционал в разработке');
         const grid = $('mcDeckGrid');
         const loading = $('mcDeckLoading');
         const error = $('mcDeckError');
@@ -577,8 +584,8 @@
         if (empty) {
             const textBlocks = empty.querySelectorAll('p');
             const editorLink = empty.querySelector('a[href="/editor"]');
-            if (textBlocks[0]) textBlocks[0].textContent = 'Функционал в разработке';
-            if (textBlocks[1]) textBlocks[1].textContent = 'Микрокарточки временно скрыты из продукта. Вернём этот режим после следующего этапа доработки.';
+            if (textBlocks[0]) textBlocks[0].textContent = wt('microcards.mode_wip_title', 'Функционал в разработке');
+            if (textBlocks[1]) textBlocks[1].textContent = wt('microcards.mode_wip_desc', 'Микрокарточки временно скрыты из продукта. Вернём этот режим после следующего этапа доработки.');
             if (editorLink) editorLink.classList.add('hidden');
             show(empty);
         }
@@ -597,12 +604,12 @@
                 state.decksError = '';
             } else {
                 state.decks = [];
-                state.decksError = data.message || data.error || 'Не удалось загрузить колоды';
+                state.decksError = data.message || data.error || wt('microcards.error_load_decks', 'Не удалось загрузить колоды');
             }
         } catch (e) {
             console.error('[Microcards] loadDecks failed:', e);
             state.decks = [];
-            state.decksError = 'Ошибка сети при загрузке колод';
+            state.decksError = wt('microcards.error_network_decks', 'Ошибка сети при загрузке колод');
         } finally {
             state.decksLoading = false;
             renderDeckListState();
@@ -631,14 +638,14 @@
             if (errText) errText.textContent = state.decksError;
         } else if (!state.decks.length) {
             setDeckEmptyMessage(
-                'Нет колод микрокарточек',
-                'Создайте колоду из анализа теории в редакторе или воспользуйтесь ручным созданием.',
+                wt('microcards.empty_title', 'Нет колод микрокарточек'),
+                wt('microcards.empty_desc', 'Создайте колоду из анализа теории в редакторе или воспользуйтесь ручным созданием.'),
             );
             show(empty);
         } else if (!filteredDecks.length) {
             setDeckEmptyMessage(
-                'По этому фильтру колод нет',
-                'Снимите часть ограничений или измените поисковый запрос, чтобы увидеть другие колоды.',
+                wt('microcards.empty_filter_title', 'По этому фильтру колод нет'),
+                wt('microcards.empty_filter_desc', 'Снимите часть ограничений или измените поисковый запрос, чтобы увидеть другие колоды.'),
             );
             show(empty);
         } else {
@@ -659,10 +666,20 @@
 
         const mostUrgentDeckId = getMostUrgentDeckId(decks);
 
+        // Pre-compute translations for use inside map (avoid repeated wt() calls)
+        const tDueSuffix = escHtml(wt('microcards.deck_due_suffix', 'к повтору'));
+        const tDoneBadge = escHtml(wt('microcards.deck_done_badge', 'всё пройдено'));
+        const tUrgentBadge = escHtml(wt('microcards.deck_urgent_badge', 'Самое срочное'));
+        const tNewSuffix = escHtml(wt('microcards.deck_new_suffix', 'новых'));
+        const tBtnRepeat = escHtml(wt('microcards.deck_btn_repeat', 'Повторять'));
+        const tBtnOpen = escHtml(wt('microcards.deck_btn_open', 'Открыть'));
+        const tRestartTitle = escHtml(wt('microcards.deck_restart_title', 'Начать сессию заново'));
+        const tUpdatedRecently = wt('microcards.deck_updated_recently', 'обновлена недавно');
+
         grid.innerHTML = decks.map(deck => {
             const rawId = String(deck.id || '');
             const idJs = escJsString(rawId);
-            const name = escHtml(String(deck.name || deck.id || 'Колода'));
+            const name = escHtml(String(deck.name || deck.id || wt('microcards.deck_name_fallback', 'Колода')));
             const stats = deck.stats || {};
             const due = Number(stats.cards_due ?? 0);
             const newCards = Number(stats.cards_new ?? 0);
@@ -674,16 +691,16 @@
             const ownershipBadges = renderDeckOwnershipBadges(deck);
             const metaHintParts = [];
             if (topicLabel) metaHintParts.push(topicLabel);
-            if (isDeckRecent(deck)) metaHintParts.push('обновлена недавно');
+            if (isDeckRecent(deck)) metaHintParts.push(tUpdatedRecently);
             const metaHint = escHtml(metaHintParts.join(' · '));
             const dueBadge = hasDue
-                ? `<span class="inline-flex self-start shrink-0 items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary-lighter text-primary border border-primary-light">${due + newCards} к повтору</span>`
-                : `<span class="inline-flex self-start shrink-0 items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-2 text-text-secondary border border-border-subtle">всё пройдено</span>`;
+                ? `<span class="inline-flex self-start shrink-0 items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary-lighter text-primary border border-primary-light">${due + newCards} ${tDueSuffix}</span>`
+                : `<span class="inline-flex self-start shrink-0 items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-2 text-text-secondary border border-border-subtle">${tDoneBadge}</span>`;
 
             const urgentBadge = isMostUrgent
                 ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-warning-lighter text-warning-text border border-warning-light">
                         <span class="material-symbols-outlined text-[12px]">priority_high</span>
-                        Самое срочное
+                        ${tUrgentBadge}
                    </span>`
                 : '';
 
@@ -702,11 +719,11 @@
                     <div class="mc-deck-stats flex flex-wrap items-center gap-2 text-[11px] text-text-secondary">
                         <span class="flex items-center gap-1">
                             <span class="material-symbols-outlined text-[14px]">pending_actions</span>
-                            ${escHtml(due)} к повтору
+                            ${escHtml(due)} ${tDueSuffix}
                         </span>
                         <span class="flex items-center gap-1">
                             <span class="material-symbols-outlined text-[14px]">fiber_new</span>
-                            ${escHtml(newCards)} новых
+                            ${escHtml(newCards)} ${tNewSuffix}
                         </span>
                         <span class="flex items-center gap-1">
                             <span class="material-symbols-outlined text-[14px]">layers</span>
@@ -718,12 +735,12 @@
                             onclick="event.stopPropagation(); mcApp.openDeck('${idJs}')"
                             class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold rounded-lg ${hasDue ? 'bg-primary text-primary-fg hover:bg-primary-hover' : 'bg-surface-2 text-text-secondary hover:bg-bg-hover'} transition-colors">
                             <span class="material-symbols-outlined text-[16px]">play_arrow</span>
-                            ${hasDue ? 'Повторять' : 'Открыть'}
+                            ${hasDue ? tBtnRepeat : tBtnOpen}
                         </button>
                         <button type="button"
                             onclick="event.stopPropagation(); mcApp.openDeck('${idJs}', { restart: true })"
                             class="flex items-center justify-center gap-1 px-2.5 py-2 text-xs font-semibold rounded-lg border border-border-strong text-text-secondary hover:bg-bg-hover transition-colors"
-                            title="Начать сессию заново">
+                            title="${tRestartTitle}">
                             <span class="material-symbols-outlined text-[14px]">restart_alt</span>
                         </button>
                     </div>
@@ -777,12 +794,12 @@
 
                 renderCurrentCard();
             } else {
-                showToast(data.message || data.error || 'Не удалось открыть колоду', 'error');
+                showToast(data.message || data.error || wt('microcards.error_open_deck', 'Не удалось открыть колоду'), 'error');
                 backToDecks();
             }
         } catch (e) {
             console.error('[Microcards] openDeck failed:', e);
-            showToast('Ошибка сети при открытии колоды', 'error');
+            showToast(wt('microcards.error_network_open', 'Ошибка сети при открытии колоды'), 'error');
             backToDecks();
         }
     }
@@ -826,7 +843,7 @@
         const isPair = cardType === 'pair_match' && state.featureFlags.microcards_pair_match;
         const front = (card.front && typeof card.front === 'object') ? card.front : {};
         const back = (card.back && typeof card.back === 'object') ? card.back : {};
-        const frontText = String(front.text || '').trim() || 'Карточка';
+        const frontText = String(front.text || '').trim() || wt('microcards.card_fallback', 'Карточка');
 
         // Type badge
         const badge = $('mcCardTypeBadge');
@@ -866,7 +883,7 @@
         // Update reveal button text
         const revealBtn = $('mcBtnReveal');
         if (revealBtn) {
-            revealBtn.textContent = isPair ? 'Проверить пары' : 'Показать ответ';
+            revealBtn.textContent = isPair ? wt('microcards.btn_check_pairs', 'Проверить пары') : wt('microcards.btn_reveal', 'Показать ответ');
             // M13: auto-focus reveal button for keyboard flow
             requestAnimationFrame(() => revealBtn.focus({ preventScroll: true }));
         }
@@ -911,7 +928,7 @@
         const rightItems = Array.isArray(frontPayload.right_items) ? frontPayload.right_items : [];
 
         if (!leftItems.length || !rightItems.length) {
-            grid.innerHTML = '<p class="text-xs text-text-secondary">pair_match данные пусты.</p>';
+            grid.innerHTML = '<p class="text-xs text-text-secondary">' + escHtml(wt('microcards.pair_empty', 'pair_match данные пусты.')) + '</p>';
             return;
         }
 
@@ -1174,15 +1191,15 @@
             } else {
                 const err = String(data.error || '');
                 if (err.startsWith('session_')) {
-                    showToast('Сессия устарела. Возвращаемся к колодам.', 'warning');
+                    showToast(wt('microcards.session_expired', 'Сессия устарела. Возвращаемся к колодам.'), 'warning');
                     backToDecks();
                 } else {
-                    showToast(data.message || data.error || 'Ошибка сохранения review', 'error');
+                    showToast(data.message || data.error || wt('microcards.error_save_review', 'Ошибка сохранения review'), 'error');
                 }
             }
         } catch (e) {
             console.error('[Microcards] submitRating failed:', e);
-            showToast('Ошибка сети при отправке оценки', 'error');
+            showToast(wt('microcards.error_network_review', 'Ошибка сети при отправке оценки'), 'error');
         } finally {
             state.submitting = false;
             if (state.revealed) setRatingButtonsEnabled(true);
@@ -1314,13 +1331,31 @@
             if (avatarEl && user.avatar_seed) {
                 const seed = String(user.avatar_seed);
                 avatarEl.src = seed.includes('.') ? `/api/assets/avatars/${encodeURIComponent(seed)}` : '/api/assets/avatars/1.png';
-                avatarEl.alt = user.name || 'Пользователь';
+                avatarEl.alt = user.name || wt('microcards.user_avatar_alt', 'Пользователь');
             }
-            if (nameEl) nameEl.textContent = user.name || 'Гость';
+            if (nameEl) nameEl.textContent = user.name || wt('microcards.user_guest', 'Гость');
         } catch (e) {
             /* non-critical, keep defaults */
         }
     }
+
+    // ── i18n ─────────────────────────────────────────────────────────────
+    function _applyMicrocardsI18n() {
+        if (window.i18n) window.i18n.updateDOM();
+        // Re-render dynamic elements that may currently be visible
+        const subtitle = $('mcHeaderSubtitle');
+        if (subtitle && subtitle.textContent) {
+            const v = state.view;
+            if (v === 'review') subtitle.textContent = state.activeDeckName || wt('microcards.subtitle_session', 'Сессия повторения');
+            else if (v === 'summary') subtitle.textContent = wt('microcards.subtitle_summary', 'Результаты сессии');
+            else subtitle.textContent = wt('microcards.subtitle_default', 'Повторение и обучение');
+        }
+        if (state.decks !== undefined) {
+            renderDeckListState();
+            renderDeckGrid();
+        }
+    }
+    document.addEventListener('i18n:changed', _applyMicrocardsI18n);
 
     // ── Init ──────────────────────────────────────────────────────────────
     async function init() {

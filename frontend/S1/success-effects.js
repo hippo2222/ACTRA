@@ -17,6 +17,14 @@
 }(typeof self !== 'undefined' ? self : this, function () {
     'use strict';
 
+    function wt(key, fallback) {
+        if (typeof window !== 'undefined' && window.i18n && typeof window.i18n.t === 'function') {
+            const result = window.i18n.t(key);
+            return result !== key ? result : fallback;
+        }
+        return fallback;
+    }
+
     // =========================================================================
     //  STREAK TRACKER
     // =========================================================================
@@ -402,7 +410,7 @@
         }
 
         inner.appendChild(fireWrap);
-        inner.appendChild(document.createTextNode(` ${streak} подряд!`));
+        inner.appendChild(document.createTextNode(wt('s1.streak_badge', ' {streak} подряд!').replace('{streak}', streak)));
         badge.appendChild(inner);
         header.appendChild(badge);
         return;

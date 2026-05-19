@@ -8,6 +8,12 @@
  * - CalendarInteractions - обработка событий
  */
 
+function wt(key, fallback) {
+    if (!window.i18n || typeof window.i18n.t !== 'function') return fallback;
+    const v = window.i18n.t(key);
+    return v !== key ? v : fallback;
+}
+
 // =============================================================================
 // CALENDAR STATE
 // =============================================================================
@@ -167,16 +173,16 @@ class CalendarUI {
         const plan = this.state.daily_plan;
 
         elements.count.textContent = plan.daily_mix_count || 0;
-        elements.time.textContent = `задач (~${plan.daily_mix_minutes || 0} мин)`;
+        elements.time.textContent = wt('calendar.tasks_time', 'задач (~{minutes} мин)').replace('{minutes}', plan.daily_mix_minutes || 0);
 
         if (plan.is_adapted) {
-            elements.badge.textContent = 'Адаптация очереди';
-            elements.desc.textContent = 'Очередь адаптирована, но эта подборка остается обязательной.';
-            elements.btnText.textContent = 'Возобновить';
+            elements.badge.textContent = wt('calendar.badge_adapted', 'Адаптация очереди');
+            elements.desc.textContent = wt('calendar.daily_mix_adapted_desc', 'Очередь адаптирована, но эта подборка остается обязательной для прогресса.');
+            elements.btnText.textContent = wt('calendar.btn_resume', 'Возобновить');
         } else {
-            elements.badge.textContent = 'Повторение';
-            elements.desc.textContent = 'Персонализированная подборка для закрепления материала.';
-            elements.btnText.textContent = 'Начать';
+            elements.badge.textContent = wt('calendar.badge_review', 'Повторение');
+            elements.desc.textContent = wt('calendar.daily_mix_desc', 'Персонализированная подборка для закрепления материала.');
+            elements.btnText.textContent = wt('calendar.btn_start', 'Начать');
         }
     }
 
@@ -184,16 +190,16 @@ class CalendarUI {
         const plan = this.state.daily_plan;
         const limit = this.state.settings.daily_time_limit_minutes || 0;
 
-        elements.title.textContent = plan.main_focus_name || 'Нет нового материала';
+        elements.title.textContent = plan.main_focus_name || wt('calendar.no_new_material', 'Нет нового материала');
         elements.count.textContent = plan.main_focus_count || 0;
-        elements.time.textContent = `новых кейса (~${plan.main_focus_minutes || 0} мин)`;
+        elements.time.textContent = wt('calendar.cases_time', 'новых кейса (~{minutes} мин)').replace('{minutes}', plan.main_focus_minutes || 0);
 
         // Короткое описание с учетом выбранного времени на день
         const descEl = document.getElementById('main-focus-desc');
         if (descEl) {
             descEl.textContent = plan.main_focus_name
-                ? `На сегодня, план на ${limit} мин.`
-                : 'Нет активного комплекса.';
+                ? wt('calendar.main_focus_plan_hint', 'На сегодня, план на {limit} мин.').replace('{limit}', limit)
+                : wt('calendar.no_active_complex', 'Нет активного комплекса.');
         }
     }
 
@@ -244,7 +250,7 @@ class CalendarUI {
                     <div class="h-px w-full bg-border-subtle"></div>
                     <div class="schedule-task-list flex flex-col gap-2">
                         ${tasksHtml}
-                        ${badgesHtml || '<div class="px-2 py-0.5 rounded bg-bg-secondary border border-border-subtle w-fit"><span class="text-[10px] text-text-secondary uppercase">План</span></div>'}
+                        ${badgesHtml || `<div class="px-2 py-0.5 rounded bg-bg-secondary border border-border-subtle w-fit"><span class="text-[10px] text-text-secondary uppercase">${wt('calendar.status_planned', 'План')}</span></div>`}
                     </div>
                 </div>
             `;
@@ -285,18 +291,18 @@ class CalendarUI {
             // Улучшенный tooltip с деталями
             let tooltip = '';
             if (day.is_today) {
-                tooltip = `Сегодня: ${tasksSolved} задач${minutesSpent > 0 ? `, ${minutesSpent} мин` : ''}`;
+                tooltip = wt('calendar.tooltip_today_tasks', 'Сегодня: {tasks} задач').replace('{tasks}', tasksSolved) + (minutesSpent > 0 ? `, ${minutesSpent} ${wt('calendar.min_suffix', 'мин')}` : '');
             } else if (day.is_future) {
-                tooltip = 'Будущее';
+                tooltip = wt('calendar.tooltip_future', 'Будущее');
             } else if (day.is_rest_day) {
-                tooltip = 'Выходной';
+                tooltip = wt('calendar.status_rest_day', 'Выходной');
             } else if (day.is_missed) {
-                tooltip = 'Пропуск (0 задач)';
+                tooltip = wt('calendar.tooltip_missed_zero', 'Пропуск (0 задач)');
             } else if (tasksSolved > 0) {
                 const accuracy = tasksAttempted > 0 ? Math.round((tasksSolved / tasksAttempted) * 100) : 0;
-                tooltip = `${tasksSolved} задач${minutesSpent > 0 ? `, ${minutesSpent} мин` : ''}${accuracy > 0 ? `, ${accuracy}%` : ''}`;
+                tooltip = wt('calendar.tooltip_tasks_count', '{tasks} задач').replace('{tasks}', tasksSolved) + (minutesSpent > 0 ? `, ${minutesSpent} ${wt('calendar.min_suffix', 'мин')}` : '') + (accuracy > 0 ? `, ${accuracy}%` : '');
             } else {
-                tooltip = '0 задач';
+                tooltip = wt('calendar.tooltip_tasks_count', '{tasks} задач').replace('{tasks}', 0);
             }
 
             return `<div class="aspect-square rounded ${bgClass} ${extraClass} tooltip" data-tooltip="${tooltip}"></div>`;
@@ -328,10 +334,10 @@ class CalendarUI {
                 <div class="relative z-10 flex flex-col gap-3">
                     <div class="flex items-center gap-2 text-secondary-text">
                         <span class="material-symbols-outlined">celebration</span>
-                        <h4 class="font-bold text-lg">${streak} дней подряд!</h4>
+                        <h4 class="font-bold text-lg">${wt('calendar.congrats_heading', '{streak} дней подряд!').replace('{streak}', streak)}</h4>
                     </div>
                     <p class="text-sm text-text-muted leading-relaxed max-w-[90%]">
-                        Вы отлично держитесь! Продолжайте в том же духе — регулярность важнее интенсивности.
+                        ${wt('calendar.congrats_text', 'Вы отлично держитесь! Продолжайте в том же духе — регулярность важнее интенсивности.')}
                     </p>
                 </div>
             </div>
@@ -345,9 +351,9 @@ class CalendarUI {
                     <span class="material-symbols-outlined">event_busy</span>
                 </div>
                 <div class="flex flex-col gap-1">
-                    <p class="text-sm text-text-main font-bold">Пропустили день? Это нормально!</p>
+                    <p class="text-sm text-text-main font-bold">${wt('calendar.missed_title', 'Пропустили день? Это нормально!')}</p>
                     <p class="text-xs text-text-muted leading-relaxed">
-                        Ваш план уже перестроен. Мы распределили нагрузку на ближайшие дни.
+                        ${wt('calendar.missed_text', 'Ваш план уже перестроен. Мы распределили нагрузку на ближайшие дни.')}
                     </p>
                 </div>
             </div>
@@ -359,9 +365,9 @@ class CalendarUI {
             <div class="panel-row panel-row--soft items-start gap-3">
                 <span class="material-symbols-outlined text-text-muted mt-0.5">info</span>
                 <div class="flex flex-col gap-1">
-                    <p class="text-sm text-text-main font-medium">Это нормально — пропускать дни</p>
+                    <p class="text-sm text-text-main font-medium">${wt('calendar.default_banner_title', 'Это нормально — пропускать дни')}</p>
                     <p class="text-xs text-text-muted leading-relaxed">
-                        Ваш прогресс сохраняется. Можно выбрать меньше времени на день, если график стал слишком плотным.
+                        ${wt('calendar.default_banner_text', 'Ваш прогресс сохраняется. Можно выбрать меньше времени на день, если график стал слишком плотным.')}
                     </p>
                 </div>
             </div>
@@ -388,7 +394,7 @@ class CalendarUI {
                     </div>
                 </div>
                 <button data-action="notification-action" data-type="${notif.action_type}" class="btn-secondary text-xs px-3 py-1.5 rounded-md font-bold">
-                    ${notif.action_type === 'fix' ? 'Исправить' : 'Обновить'}
+                    ${notif.action_type === 'fix' ? wt('calendar.notif_action_fix', 'Исправить') : wt('calendar.notif_action_update', 'Обновить')}
                 </button>
             </div>
         `;
@@ -433,10 +439,10 @@ class CalendarUI {
     getDaysWord(n) {
         const abs = Math.abs(n) % 100;
         const n1 = abs % 10;
-        if (abs > 10 && abs < 20) return 'дней';
-        if (n1 > 1 && n1 < 5) return 'дня';
-        if (n1 === 1) return 'день';
-        return 'дней';
+        if (abs > 10 && abs < 20) return wt('calendar.days_many', 'дней');
+        if (n1 > 1 && n1 < 5) return wt('calendar.days_few', 'дня');
+        if (n1 === 1) return wt('calendar.days_one', 'день');
+        return wt('calendar.days_many', 'дней');
     }
 }
 

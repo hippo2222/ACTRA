@@ -13,6 +13,14 @@
 }(typeof self !== 'undefined' ? self : this, function (SessionState, UIHelpers, DraftStorage) {
     'use strict';
 
+    function wt(key, fallback) {
+        if (typeof window !== 'undefined' && window.i18n && typeof window.i18n.t === 'function') {
+            const result = window.i18n.t(key);
+            return result !== key ? result : fallback;
+        }
+        return fallback;
+    }
+
     // Constants
     const VALID_TASK_TYPES = new Set([
         "click",
@@ -323,21 +331,21 @@
         const visibleTaskType = rawType || effectiveTaskType;
         const subtype = getTaskSubtype(task);
         if (visibleTaskType === "click" && subtype === "error_detection") {
-            return "Поиск ошибок";
+            return wt('s1.task_type_error_detection', 'Поиск ошибок');
         }
         switch (visibleTaskType) {
             case "test":
-                return "Тест";
+                return wt('s1.task_type_test', 'Тест');
             case "sequence_assembly":
-                return "Последовательность";
+                return wt('s1.task_type_sequence', 'Последовательность');
             case "click":
-                return "Клик";
+                return wt('s1.task_type_click', 'Клик');
             case "draw":
-                return "Рисование";
+                return wt('s1.task_type_draw', 'Рисование');
             case "open_answer":
-                return "Открытый ответ";
+                return wt('s1.task_type_open_answer', 'Открытый ответ');
             default:
-                return "Задание";
+                return wt('s1.task_type_default', 'Задание');
         }
     }
 
@@ -504,23 +512,23 @@
 
             const heading = document.createElement("p");
             heading.className = "text-xs font-bold uppercase tracking-wider text-warning-dark";
-            heading.textContent = `Название ${mismatchIdx + 1}`;
+            heading.textContent = wt('s1.mismatch_name', 'Название {n}').replace('{n}', mismatchIdx + 1);
             card.appendChild(heading);
 
             const userLine = document.createElement("p");
             userLine.className = "mt-2 text-sm font-medium text-text-main";
-            userLine.textContent = `Ваш ответ: ${userAnswer || "—"}`;
+            userLine.textContent = wt('s1.mismatch_your_answer', 'Ваш ответ: {answer}').replace('{answer}', userAnswer || '—');
             card.appendChild(userLine);
 
             const referenceLine = document.createElement("p");
             referenceLine.className = "mt-1 text-sm text-text-secondary leading-relaxed";
-            referenceLine.textContent = `Эталон: ${correctAnswer || "—"}`;
+            referenceLine.textContent = wt('s1.mismatch_reference', 'Эталон: {ref}').replace('{ref}', correctAnswer || '—');
             card.appendChild(referenceLine);
 
             if (omittedPhrase) {
                 const omittedLine = document.createElement("p");
                 omittedLine.className = "mt-2 text-sm text-warning-darker leading-relaxed";
-                omittedLine.textContent = `Пропущено: ${omittedPhrase}`;
+                omittedLine.textContent = wt('s1.mismatch_omitted', 'Пропущено: {phrase}').replace('{phrase}', omittedPhrase);
                 card.appendChild(omittedLine);
             }
 
@@ -578,12 +586,12 @@
         const title = document.createElement("h3");
         title.className =
             "mt-3 text-lg font-semibold text-error-darker dark:text-error-lighter";
-        title.textContent = "Ошибка отображения задания";
+        title.textContent = wt('s1.unsupported_task_title', 'Ошибка отображения задания');
 
         const text = document.createElement("p");
         text.className = "mt-2 text-sm text-error-text dark:text-error";
         text.textContent =
-            `Тип задания "${taskType || "unknown"}" не поддерживается или UI-компонент не загружен.`;
+            wt('s1.unsupported_task_msg', 'Тип задания "{type}" не поддерживается или UI-компонент не загружен.').replace('{type}', taskType || 'unknown');
 
         const idLine = document.createElement("p");
         idLine.className = "mt-1 text-xs text-error dark:text-error";
@@ -753,10 +761,10 @@
                         : `${kindLabels.slice(0, -1).join(", ")} и ${kindLabels[kindLabels.length - 1]}`
                 : "текста";
 
-            if (toleranceType === "typo") return "Ответ засчитан с учетом опечатки.";
-            if (toleranceType === "ending") return "Ответ засчитан с учетом формы слова.";
-            if (toleranceType === "both") return "Ответ засчитан с учетом формы слова и опечатки.";
-            if (toleranceType === "normalized") return `Ответ засчитан после нормализации ${normalizedSuffix}.`;
+            if (toleranceType === "typo") return wt('s1.tolerance_typo', 'Ответ засчитан с учетом опечатки.');
+            if (toleranceType === "ending") return wt('s1.tolerance_ending', 'Ответ засчитан с учетом формы слова.');
+            if (toleranceType === "both") return wt('s1.tolerance_both', 'Ответ засчитан с учетом формы слова и опечатки.');
+            if (toleranceType === "normalized") return wt('s1.tolerance_normalized', 'Ответ засчитан после нормализации {suffix}.').replace('{suffix}', normalizedSuffix);
             return "";
         }
 
@@ -909,7 +917,7 @@
 
         if (title) {
             title.textContent = pendingUserJudgement
-                ? "Нужно ваше решение"
+                ? wt('s1.result_pending_judgement', 'Нужно ваше решение')
                 : success
                     ? "\u041e\u0442\u0432\u0435\u0442 \u043f\u0440\u0438\u043d\u044f\u0442"
                     : "\u041e\u0442\u0432\u0435\u0442 \u043d\u0435\u0432\u0435\u0440\u043d\u044b\u0439";
@@ -946,9 +954,9 @@
                 const incorrectCount = Math.max(0, totalCount - correctCount);
                 if (totalCount > 0) {
                     if (correctCount >= totalCount) {
-                        messageText = `✅ Правильно! ${correctCount}/${totalCount} ответов`;
+                        messageText = wt('s1.test_result_correct', '✅ Правильно! {correct}/{total} ответов').replace('{correct}', correctCount).replace('{total}', totalCount);
                     } else {
-                        messageText = `❌ Есть ошибки: ${incorrectCount} из ${totalCount} с ошибкой, верно ${correctCount}`;
+                        messageText = wt('s1.test_result_errors', '❌ Есть ошибки: {incorrect} из {total} с ошибкой, верно {correct}').replace('{incorrect}', incorrectCount).replace('{total}', totalCount).replace('{correct}', correctCount);
                     }
                 }
             }
@@ -979,7 +987,7 @@
                 if (!messageText) {
                     messageText = review && review.message
                         ? String(review.message)
-                        : "В одном или нескольких названиях пропущено 1–2 слова. Решите, считать ли ответ верным.";
+                        : wt('s1.draw_judgement_message', 'В одном или нескольких названиях пропущено 1–2 слова. Решите, считать ли ответ верным.');
                 }
             }
         } catch (e) {
@@ -1141,7 +1149,7 @@
                 currentTaskTitleToggleEl.classList.add("hidden");
                 currentTaskTitleToggleEl.setAttribute("aria-expanded", "false");
             }
-            if (taskHeaderLabelEl) taskHeaderLabelEl.textContent = "Что нужно сделать";
+            if (taskHeaderLabelEl) taskHeaderLabelEl.textContent = wt('s1.task_instruction_label', 'Что нужно сделать');
             if (imgEl) {
                 imgEl.style.backgroundImage = "none";
             }
@@ -1221,13 +1229,13 @@
             normalizedTitle ||
             (!keepPromptInsideTaskSurface ? normalizedQuestion : "") ||
             String(task.task_name || task.name || task.task_id || "").trim() ||
-            "Задание";
+            wt('s1.task_type_default', 'Задание');
         const headerTitle = preferredTitle;
         const headerMeta = isOpenAnswerTask
             ? (normalizedTitle && normalizedTitle !== normalizedQuestion
                 ? normalizedTitle
-                : "Открытый ответ")
-            : `Итерация ${task.iteration ?? "?"}`;
+                : wt('s1.open_answer_label', 'Открытый ответ'))
+            : wt('s1.iteration_label', 'Итерация {iter}').replace('{iter}', task.iteration ?? '?');
         const headerDescription = isOpenAnswerTask
             ? ((normalizedDescription && normalizedDescription !== normalizedQuestion)
                 ? normalizedDescription
@@ -1307,8 +1315,8 @@
         }
         if (taskProgressMetaEl) {
             const metaParts = [];
-            if (total && index != null) metaParts.push(`Задание ${index + 1} из ${total}`);
-            metaParts.push(`Итерация ${task.iteration ?? "?"}`);
+            if (total && index != null) metaParts.push(wt('s1.task_n_of_total', 'Задание {n} из {total}').replace('{n}', index + 1).replace('{total}', total));
+            metaParts.push(wt('s1.iteration_label', 'Итерация {iter}').replace('{iter}', task.iteration ?? '?'));
             taskProgressMetaEl.textContent = metaParts.join(" • ");
             taskProgressMetaEl.textContent = "";
             taskProgressMetaEl.classList.add("hidden");
@@ -1318,7 +1326,7 @@
             taskHeaderBlock.classList.toggle("hidden", !shouldShowInstructionBlock || shouldInlineClickInstruction);
         }
         if (taskHeaderLabelEl) {
-            taskHeaderLabelEl.textContent = shouldShowInstructionBlock ? "Что нужно сделать" : "Задание";
+            taskHeaderLabelEl.textContent = shouldShowInstructionBlock ? wt('s1.task_instruction_label', 'Что нужно сделать') : wt('s1.task_type_default', 'Задание');
         }
         if (shouldShowInstructionBlock) {
             if (titleEl) titleEl.textContent = normalizedQuestion;
@@ -1531,7 +1539,7 @@
         if (checkBtn) {
             checkBtn.disabled = true;
             checkBtn.setAttribute("aria-disabled", "true");
-            checkBtn.setAttribute("title", pendingUserJudgement ? "Сначала выберите итог проверки" : "Задание уже проверено");
+            checkBtn.setAttribute("title", pendingUserJudgement ? wt('s1.check_pending_judgement', 'Сначала выберите итог проверки') : wt('s1.check_already_checked', 'Задание уже проверено'));
         }
 
         try {

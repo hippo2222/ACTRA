@@ -1,6 +1,14 @@
 (function () {
     'use strict';
 
+    function wt(key, fallback) {
+        if (typeof window !== 'undefined' && window.i18n && typeof window.i18n.t === 'function') {
+            const result = window.i18n.t(key);
+            return result !== key ? result : fallback;
+        }
+        return fallback;
+    }
+
     const LOCAL_SEEN_KEY = 'actra_onboarding_seen_v1';
     const LOCAL_DISABLED_KEY = 'actra_onboarding_disabled_v1';
     const LOCAL_FIRST_RUN_PROMPT_KEY = 'actra_onboarding_first_run_prompt_v1';
@@ -430,16 +438,16 @@
                     <span class="material-symbols-outlined">tips_and_updates</span>
                 </div>
                 <div class="onboarding-first-run-copy">
-                    <p class="onboarding-first-run-kicker">Первый вход</p>
-                    <h2 class="onboarding-first-run-title" id="onboarding-first-run-title">Показать короткое обучение?</h2>
-                    <p class="onboarding-first-run-body">Подсказки будут появляться только при первом посещении страниц. Можно отключить их сразу для всего продукта.</p>
+                    <p class="onboarding-first-run-kicker">${wt('onboarding.first_run_kicker', 'Первый вход')}</p>
+                    <h2 class="onboarding-first-run-title" id="onboarding-first-run-title">${wt('onboarding.first_run_title', 'Показать короткое обучение?')}</h2>
+                    <p class="onboarding-first-run-body">${wt('onboarding.first_run_body', 'Подсказки будут появляться только при первом посещении страниц. Можно отключить их сразу для всего продукта.')}</p>
                 </div>
                 <div class="onboarding-first-run-actions">
                     <button type="button" class="onboarding-tour-button" data-onboarding-first-run-action="disable">
-                        Убрать обучение
+                        ${wt('onboarding.btn_disable', 'Убрать обучение')}
                     </button>
                     <button type="button" class="onboarding-tour-button onboarding-tour-button--primary" data-onboarding-first-run-action="start">
-                        Показать подсказки
+                        ${wt('onboarding.btn_start', 'Показать подсказки')}
                     </button>
                 </div>
             </section>
@@ -1066,17 +1074,17 @@
         tooltipEl.innerHTML = `
             <div class="onboarding-tour-kicker">
                 <span class="material-symbols-outlined text-[15px]" aria-hidden="true">tips_and_updates</span>
-                <span>${escapeHtml(step.kicker || activeTour?.title || 'Обучение')}</span>
+                <span>${escapeHtml(step.kicker || activeTour?.title || wt('onboarding.kicker_fallback', 'Обучение'))}</span>
             </div>
             <h2 class="onboarding-tour-title">${escapeHtml(step.title || '')}</h2>
             ${step.body ? `<p class="onboarding-tour-body">${escapeHtml(step.body)}</p>` : ''}
             ${listHtml}
             <div class="onboarding-tour-footer">
-                <span class="onboarding-tour-progress">${stepCount > 1 ? `${activeStepIndex + 1} / ${stepCount}` : 'Главная'}</span>
+                <span class="onboarding-tour-progress">${stepCount > 1 ? `${activeStepIndex + 1} / ${stepCount}` : wt('onboarding.progress_main', 'Главная')}</span>
                 <span class="onboarding-tour-actions">
-                    <button type="button" class="onboarding-tour-button" data-onboarding-action="skip">Закрыть</button>
+                    <button type="button" class="onboarding-tour-button" data-onboarding-action="skip">${wt('onboarding.btn_close', 'Закрыть')}</button>
                     <button type="button" class="onboarding-tour-button onboarding-tour-button--primary" data-onboarding-action="${isLastStep ? 'done' : 'next'}">
-                        ${isLastStep ? 'Понятно' : 'Далее'}
+                        ${isLastStep ? wt('onboarding.btn_done', 'Понятно') : wt('onboarding.btn_next', 'Далее')}
                     </button>
                 </span>
             </div>
@@ -1111,13 +1119,13 @@
             if (startTourId) {
                 node.setAttribute('data-onboarding-action', 'start-tour');
                 node.setAttribute('data-onboarding-start-tour', startTourId);
-                node.setAttribute('aria-label', beacon.label || 'Открыть следующий режим обучения');
-                node.setAttribute('title', beacon.label || 'Открыть следующий режим обучения');
+                node.setAttribute('aria-label', beacon.label || wt('onboarding.beacon_next_mode', 'Открыть следующий режим обучения'));
+                node.setAttribute('title', beacon.label || wt('onboarding.beacon_next_mode', 'Открыть следующий режим обучения'));
             } else if (stepVariant) {
                 node.setAttribute('data-onboarding-action', 'set-step-variant');
                 node.setAttribute('data-onboarding-step-variant', stepVariant);
-                node.setAttribute('aria-label', beacon.label || 'Открыть дополнительную подсказку');
-                node.setAttribute('title', beacon.label || 'Открыть дополнительную подсказку');
+                node.setAttribute('aria-label', beacon.label || wt('onboarding.beacon_extra_hint', 'Открыть дополнительную подсказку'));
+                node.setAttribute('title', beacon.label || wt('onboarding.beacon_extra_hint', 'Открыть дополнительную подсказку'));
             } else {
                 node.setAttribute('aria-hidden', 'true');
             }
@@ -1280,19 +1288,19 @@
             ? 'variant-back'
             : (isLastVisualStep ? 'done' : (hasImplementedNextStep ? 'next' : 'pending-next'));
         let nextLabel = isVariantBranch
-            ? (step.variantBackLabel || 'Вернуться')
+            ? (step.variantBackLabel || wt('onboarding.btn_back', 'Вернуться'))
             : (isLastVisualStep
-            ? 'Понятно'
-            : (hasImplementedNextStep ? 'Далее' : (activeTour?.pendingNextLabel || 'Дальше позже')));
+            ? wt('onboarding.btn_done', 'Понятно')
+            : (hasImplementedNextStep ? wt('onboarding.btn_next', 'Далее') : (activeTour?.pendingNextLabel || wt('onboarding.btn_later', 'Дальше позже'))));
         if (activeReferencePreviewMode && isLastVisualStep && !isVariantBranch) {
             nextAction = hasPreviousStep ? 'prev' : 'pending-next';
-            nextLabel = 'Вернуться';
+            nextLabel = wt('onboarding.btn_back', 'Вернуться');
         }
         const nextDisabledAttr = nextAction === 'pending-next' ? ' disabled aria-disabled="true"' : '';
         const returnTourId = String(step.returnTourId || activeTour?.returnTourId || '').trim();
-        const returnLabel = step.returnLabel || activeTour?.returnLabel || 'Вернуться';
+        const returnLabel = step.returnLabel || activeTour?.returnLabel || wt('onboarding.btn_back', 'Вернуться');
         const branchTourId = String(step.branchTourId || '').trim();
-        const branchLabel = step.branchLabel || 'Открыть';
+        const branchLabel = step.branchLabel || wt('onboarding.btn_open', 'Открыть');
         const returnToUrl = activePreviewMode ? resolveReturnToUrl() : '';
         const showPreviousButton = hasPreviousStep && !(activeReferencePreviewMode && isLastVisualStep && !isVariantBranch);
         const showReturnPageButton = Boolean(returnToUrl && !activeReferencePreviewMode);
@@ -1306,14 +1314,14 @@
             <span class="onboarding-tour-control-label">${activeStepIndex + 1}/${visualStepCount}</span>
             <span class="onboarding-tour-actions">
                 ${showPreviousButton ? `
-                    <button type="button" class="onboarding-tour-button onboarding-tour-button--icon" data-onboarding-action="prev" aria-label="Вернуться к предыдущему состоянию">
+                    <button type="button" class="onboarding-tour-button onboarding-tour-button--icon" data-onboarding-action="prev" aria-label="${wt('onboarding.btn_prev_aria', 'Вернуться к предыдущему состоянию')}">
                         <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
                     </button>
                 ` : ''}
                 ${returnTourId ? `<button type="button" class="onboarding-tour-button" data-onboarding-action="return-tour" data-onboarding-return-tour="${escapeHtml(returnTourId)}">${escapeHtml(returnLabel)}</button>` : ''}
                 ${branchTourId ? `<button type="button" class="onboarding-tour-button" data-onboarding-action="start-tour" data-onboarding-start-tour="${escapeHtml(branchTourId)}">${escapeHtml(branchLabel)}</button>` : ''}
-                ${showReturnPageButton ? '<button type="button" class="onboarding-tour-button" data-onboarding-action="return-page">К заданию</button>' : ''}
-                ${showSkipButton ? '<button type="button" class="onboarding-tour-button" data-onboarding-action="skip">Закрыть</button>' : ''}
+                ${showReturnPageButton ? `<button type="button" class="onboarding-tour-button" data-onboarding-action="return-page">${wt('onboarding.btn_return_page', 'К заданию')}</button>` : ''}
+                ${showSkipButton ? `<button type="button" class="onboarding-tour-button" data-onboarding-action="skip">${wt('onboarding.btn_close', 'Закрыть')}</button>` : ''}
                 ${showPrimaryButton ? `
                 <button type="button" class="onboarding-tour-button onboarding-tour-button--primary" data-onboarding-action="${nextAction}"${nextDisabledAttr}>
                     ${nextLabel}

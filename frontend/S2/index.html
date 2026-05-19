@@ -5,7 +5,7 @@
   <script src="/assets/ThemeManager.js"></script>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Результаты итерации</title>
+  <title data-i18n="s2.page_title">Результаты итерации</title>
 
   <link href="/assets/tailwind.css" rel="stylesheet" />
   <link href="/assets/fonts.css" rel="stylesheet" />
@@ -22,14 +22,14 @@
             <p class="s2-toolbar-context">
               <span id="complex-name">Комплекс</span>
               <span class="s2-toolbar-separator">·</span>
-              <span>Итерация <span id="iteration-number-label">?</span></span>
+              <span><span data-i18n="s2.iteration_label">Итерация</span> <span id="iteration-number-label">?</span></span>
             </p>
           </div>
         </div>
 
         <div class="s2-toolbar-actions">
-          <button id="pause-btn-inline" class="s2-btn s2-ghost-btn s2-toolbar-action-btn" type="button">Пауза</button>
-          <button id="finish-complex-btn-inline" class="s2-btn s2-danger-btn s2-toolbar-action-btn" type="button">Завершить комплекс</button>
+          <button id="pause-btn-inline" class="s2-btn s2-ghost-btn s2-toolbar-action-btn" type="button" data-i18n="s2.btn_pause">Пауза</button>
+          <button id="finish-complex-btn-inline" class="s2-btn s2-danger-btn s2-toolbar-action-btn" type="button" data-i18n="s2.btn_finish">Завершить комплекс</button>
           <div id="toolbar-menu-wrap" class="s2-menu-wrap">
             <button
               id="toolbar-menu-btn"
@@ -39,13 +39,14 @@
               aria-expanded="false"
               aria-controls="toolbar-menu-panel"
               aria-label="Дополнительные действия"
+              data-i18n-aria="s2.menu_aria"
             >
               <span class="material-symbols-outlined" aria-hidden="true">more_horiz</span>
             </button>
 
             <div id="toolbar-menu-panel" class="s2-menu-panel hidden" role="menu" aria-hidden="true">
-              <button id="pause-btn" class="s2-menu-item" type="button" role="menuitem">Поставить на паузу</button>
-              <button id="finish-complex-btn" class="s2-menu-item s2-menu-item--danger" type="button" role="menuitem">Завершить комплекс</button>
+              <button id="pause-btn" class="s2-menu-item" type="button" role="menuitem" data-i18n="s2.menu_pause">Поставить на паузу</button>
+              <button id="finish-complex-btn" class="s2-menu-item s2-menu-item--danger" type="button" role="menuitem" data-i18n="s2.btn_finish">Завершить комплекс</button>
             </div>
           </div>
         </div>
@@ -56,7 +57,7 @@
         <section class="s2-panel s2-result-panel" aria-labelledby="result-heading">
           <div class="s2-result-head">
             <div class="s2-result-copy">
-              <p class="s2-eyebrow">Результат</p>
+              <p class="s2-eyebrow" data-i18n="s2.eyebrow_result">Результат</p>
 
               <div class="s2-hero-line">
                 <div class="s2-score-stack">
@@ -66,7 +67,7 @@
                 </div>
               </div>
 
-              <p id="hero-summary" class="s2-hero-summary">Короткая сводка появится сразу после загрузки.</p>
+              <p id="hero-summary" class="s2-hero-summary" data-i18n="s2.hero_loading">Короткая сводка появится сразу после загрузки.</p>
             </div>
           </div>
 
@@ -78,15 +79,15 @@
               </div>
 
               <div class="s2-progress-counts">
-                <span class="s2-count-chip s2-count-chip--success"><strong id="hero-success-count">—</strong> верно</span>
-                <span id="hero-failed-chip" class="s2-count-chip s2-count-chip--error"><strong id="hero-failed-count">—</strong> ошибок</span>
+                <span class="s2-count-chip s2-count-chip--success"><strong id="hero-success-count">—</strong> <span data-i18n="s2.correct_label">верно</span></span>
+                <span id="hero-failed-chip" class="s2-count-chip s2-count-chip--error"><strong id="hero-failed-count">—</strong> <span data-i18n="s2.errors_label">ошибок</span></span>
               </div>
             </div>
 
-            <div class="s2-meta-strip" aria-label="Контекст итерации">
-              <span class="s2-meta-inline"><span class="s2-meta-pill-label">Задачи</span><strong id="stat-total-tasks">—</strong></span>
-              <span class="s2-meta-inline"><span class="s2-meta-pill-label">Сложность</span><strong id="stat-difficulty">—</strong></span>
-              <span class="s2-meta-inline"><span class="s2-meta-pill-label">Время</span><strong id="stat-iteration-time">—</strong></span>
+            <div class="s2-meta-strip" aria-label="Контекст итерации" data-i18n-aria="s2.meta_aria">
+              <span class="s2-meta-inline"><span class="s2-meta-pill-label" data-i18n="s2.meta_tasks">Задачи</span><strong id="stat-total-tasks">—</strong></span>
+              <span class="s2-meta-inline"><span class="s2-meta-pill-label" data-i18n="s2.meta_difficulty">Сложность</span><strong id="stat-difficulty">—</strong></span>
+              <span class="s2-meta-inline"><span class="s2-meta-pill-label" data-i18n="s2.meta_time">Время</span><strong id="stat-iteration-time">—</strong></span>
             </div>
           </div>
 
@@ -99,12 +100,13 @@
             role="button"
             tabindex="0"
             aria-label="К следующей итерации"
+          data-i18n-aria="s2.continue_btn_aria"
           >
-            <p class="s2-eyebrow">Следующий шаг</p>
+            <p class="s2-eyebrow" data-i18n="s2.eyebrow_next_step">Следующий шаг</p>
             <h2 id="recommendation-title" class="s2-action-title">—</h2>
             <p id="recommendation-copy" class="s2-action-copy">—</p>
             <div class="s2-next-cta" aria-hidden="true">
-              <span id="continue-btn-label" class="truncate s2-next-cta-text">К следующей итерации</span>
+              <span id="continue-btn-label" class="truncate s2-next-cta-text" data-i18n="s2.continue_btn_label">К следующей итерации</span>
             </div>
           </article>
         </section>
@@ -112,11 +114,11 @@
         <section id="result-review-panel" class="s2-result-review hidden" aria-hidden="true">
           <div class="s2-result-review-head">
             <div class="s2-result-review-copy">
-              <p class="s2-eyebrow">Разбор ошибок</p>
+              <p class="s2-eyebrow" data-i18n="s2.eyebrow_review">Разбор ошибок</p>
               <h2 id="result-review-title" class="s2-review-panel-title">—</h2>
               <p id="result-review-copy" class="s2-action-copy">—</p>
             </div>
-            <button id="review-btn" class="s2-btn s2-secondary-btn hidden" type="button">Показать разбор</button>
+            <button id="review-btn" class="s2-btn s2-secondary-btn hidden" type="button" data-i18n="s2.btn_show_review">Показать разбор</button>
           </div>
           <div id="review-inline" class="s2-inline-review hidden" aria-hidden="true"></div>
         </section>
@@ -134,29 +136,29 @@
     <div class="s2-dialog-panel" role="dialog" aria-modal="true" aria-labelledby="details-dialog-title">
       <div class="s2-dialog-header">
         <div>
-          <p class="s2-eyebrow">Детали</p>
-          <h2 id="details-dialog-title" class="s2-dialog-title">Детали итерации</h2>
+          <p class="s2-eyebrow" data-i18n="s2.dialog_eyebrow">Детали</p>
+          <h2 id="details-dialog-title" class="s2-dialog-title" data-i18n="s2.dialog_title">Детали итерации</h2>
           <p id="details-dialog-subtitle" class="s2-dialog-subtitle">—</p>
         </div>
-        <button id="details-dialog-close-btn" class="s2-btn s2-ghost-btn" type="button">Закрыть</button>
+        <button id="details-dialog-close-btn" class="s2-btn s2-ghost-btn" type="button" data-i18n="s2.btn_close">Закрыть</button>
       </div>
 
       <div class="s2-dialog-body">
         <div class="s2-dialog-metrics">
           <div class="s2-dialog-metric">
-            <span class="s2-meta-pill-label">Точность</span>
+            <span class="s2-meta-pill-label" data-i18n="s2.meta_accuracy">Точность</span>
             <strong id="details-rate">—</strong>
           </div>
           <div class="s2-dialog-metric">
-            <span class="s2-meta-pill-label">Верно</span>
+            <span class="s2-meta-pill-label" data-i18n="s2.meta_correct">Верно</span>
             <strong id="details-success">—</strong>
           </div>
           <div class="s2-dialog-metric">
-            <span class="s2-meta-pill-label">Ошибки</span>
+            <span class="s2-meta-pill-label" data-i18n="s2.meta_errors">Ошибки</span>
             <strong id="details-failed">—</strong>
           </div>
           <div class="s2-dialog-metric">
-            <span class="s2-meta-pill-label">Время</span>
+            <span class="s2-meta-pill-label" data-i18n="s2.meta_time">Время</span>
             <strong id="details-time">—</strong>
           </div>
         </div>
@@ -171,6 +173,7 @@
     </div>
   </div>
 
+  <script src="/assets/i18n.js"></script>
   <script src="/assets/NotificationUI.js"></script>
   <script src="/assets/ThemeSwitcherUI.js"></script>
   <script src="/assets/ConnectionMonitor.js"></script>
