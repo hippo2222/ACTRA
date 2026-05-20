@@ -1,6 +1,12 @@
 (function (global) {
   const ClickUI = {};
 
+  function wt(key, fallback) {
+    if (!window.i18n || typeof window.i18n.t !== "function") return fallback;
+    const v = window.i18n.t(key);
+    return v !== key ? v : fallback;
+  }
+
   const CLICKUI_BUILD_ID = "2025-12-18T20:52:00Z";
   try {
     if (global && global.console && typeof global.console.log === "function") {
@@ -163,13 +169,13 @@
     const clicksLimit =
       Number.isFinite(state.maxClicks) && state.maxClicks > 0 ? state.maxClicks : total;
     const usedClicks = Math.min(Array.isArray(state.clicks) ? state.clicks.length : 0, clicksLimit || 0);
-    let titleText = "Прогресс поиска";
-    let labelText = total ? `Найдено ${found} из ${total}` : "Цели отсутствуют";
+    let titleText = wt("clickui.progress_search", "Прогресс поиска");
+    let labelText = total ? wt("clickui.found_of", "Найдено {found} из {total}").replace("{found}", found).replace("{total}", total) : wt("clickui.no_targets", "Цели отсутствуют");
     let percent = total ? Math.min(100, Math.round((found / total) * 100)) : 0;
 
     if (!isConfirmedProgress && !isDrawingTask) {
-      titleText = "Доступные клики";
-      labelText = clicksLimit ? `Использовано ${usedClicks} из ${clicksLimit}` : "Клики отсутствуют";
+      titleText = wt("clickui.available_clicks", "Доступные клики");
+      labelText = clicksLimit ? wt("clickui.used_of", "Использовано {used} из {limit}").replace("{used}", usedClicks).replace("{limit}", clicksLimit) : wt("clickui.no_clicks", "Клики отсутствуют");
       percent = clicksLimit ? Math.min(100, Math.round((usedClicks / clicksLimit) * 100)) : 0;
     }
     if (state.targetsProgress.titleEl) {
@@ -184,8 +190,8 @@
     return;
     if (state.targetsProgress.labelEl) {
       state.targetsProgress.labelEl.textContent = total
-        ? `Найдено ${found} из ${total}`
-        : "Цели отсутствуют";
+        ? wt("clickui.found_of", "Найдено {found} из {total}").replace("{found}", found).replace("{total}", total)
+        : wt("clickui.no_targets", "Цели отсутствуют");
     }
     if (state.targetsProgress.barEl) {
       const percent = total ? Math.min(100, Math.round((found / total) * 100)) : 0;
@@ -287,7 +293,7 @@
         if (statusPill) {
           statusPill.className =
             "inline-flex items-center rounded-full border border-success-light bg-success-lighter px-2 py-0.5 text-[11px] font-semibold text-success-text";
-          statusPill.textContent = "Найдена";
+          statusPill.textContent = wt("clickui.status_found", "Найдена");
         }
       } else {
         if (badge) badge.textContent = String(idx + 1);
@@ -299,7 +305,7 @@
           if (statusPill) {
             statusPill.className =
               "inline-flex items-center rounded-full border border-error-light bg-error-lighter px-2 py-0.5 text-[11px] font-semibold text-error-text";
-            statusPill.textContent = "Проверь";
+            statusPill.textContent = wt("clickui.status_check", "Проверь");
           }
         }
       }
@@ -330,9 +336,9 @@
   }
 
   function _getActionKindLabel(kind) {
-    if (kind === "click") return "Клик";
-    if (kind === "polygon") return "Контур";
-    return "Штрих";
+    if (kind === "click") return wt("clickui.kind_click", "Клик");
+    if (kind === "polygon") return wt("clickui.kind_polygon", "Контур");
+    return wt("clickui.kind_line", "Штрих");
   }
 
   function _getTargetLabelByIndex(targetIndex) {
@@ -432,15 +438,15 @@
       if (isChecked) {
         return {
           tone: "neutral",
-          statusText: "Не сопоставлено",
-          detailText: "Система не нашла явного совпадения с целью.",
+          statusText: wt("clickui.not_matched_status", "Не сопоставлено"),
+          detailText: wt("clickui.not_matched_detail", "Система не нашла явного совпадения с целью."),
           color: null,
         };
       }
       return {
         tone: "pending",
-        statusText: "Ожидает проверки",
-        detailText: "Интерпретация появится после проверки.",
+        statusText: wt("clickui.pending_status", "Ожидает проверки"),
+        detailText: wt("clickui.pending_detail", "Интерпретация появится после проверки."),
         color: null,
       };
     }
@@ -456,15 +462,15 @@
       const targetText = targetLabel ? `${targetRef} "${targetLabel}"` : targetRef;
       parts.push(targetText);
     } else {
-      parts.push("Цель не определена");
+      parts.push(wt("clickui.target_undefined", "Цель не определена"));
     }
 
     const coverageText = _formatPercentValue(interpretation.coverage);
     const thresholdText = _formatPercentValue(interpretation.threshold);
     if (coverageText && thresholdText) {
-      parts.push(`Совпадение ${coverageText} из ${thresholdText}`);
+      parts.push(wt("clickui.coverage_of", "Совпадение {coverage} из {threshold}").replace("{coverage}", coverageText).replace("{threshold}", thresholdText));
     } else if (coverageText) {
-      parts.push(`Совпадение ${coverageText}`);
+      parts.push(wt("clickui.coverage_only", "Совпадение {coverage}").replace("{coverage}", coverageText));
     }
 
     const success =
@@ -478,10 +484,10 @@
       tone,
       statusText:
         targetIndex == null
-          ? "Не сопоставлено"
+          ? wt("clickui.not_matched_status", "Не сопоставлено")
           : success
-            ? "Засчитано"
-            : "Не засчитано",
+            ? wt("clickui.status_counted", "Засчитано")
+            : wt("clickui.status_not_counted", "Не засчитано"),
       detailText: parts.join(". "),
       color: targetIndex != null ? _getTargetColor(targetIndex) : null,
     };
@@ -611,7 +617,7 @@
       const emptyText = _createEl(
         "div",
         "text-[12px] leading-5 text-text-secondary dark:text-text-secondary",
-        "Пока нет действий. Первые клики, контуры и штрихи появятся здесь автоматически."
+        wt("clickui.no_actions_yet", "Пока нет действий. Первые клики, контуры и штрихи появятся здесь автоматически.")
       );
       empty.appendChild(emptyIcon);
       empty.appendChild(emptyText);
@@ -707,14 +713,14 @@
       _createEl(
         "div",
         "text-[12px] font-bold uppercase tracking-[0.08em] text-text-main dark:text-text-on-dark",
-        "Ваши действия"
+        wt("clickui.your_actions", "Ваши действия")
       )
     );
     titleWrap.appendChild(
       _createEl(
         "div",
         "mt-1 text-[12px] leading-5 text-text-secondary dark:text-text-secondary",
-        "Что вы сделали и результат системной проверки."
+        wt("clickui.your_actions_desc", "Что вы сделали и результат системной проверки.")
       )
     );
     header.appendChild(headerIcon);
@@ -818,18 +824,18 @@
     const isDrawTask = _taskRequiresDrawing(taskDto);
 
     if (shape === "freehand" || shape === "line") {
-      return { shape, icon: "gesture", label: "Линия", actionFamily: "line" };
+      return { shape, icon: "gesture", label: wt("clickui.shape_line", "Линия"), actionFamily: "line" };
     }
 
     if (shape === "point") {
-      return { shape, icon: "gps_fixed", label: "Точка", actionFamily: "point" };
+      return { shape, icon: "gps_fixed", label: wt("clickui.shape_point", "Точка"), actionFamily: "point" };
     }
 
     if (isDrawTask) {
-      return { shape: shape || "polygon", icon: "interests", label: "Контур", actionFamily: "outline" };
+      return { shape: shape || "polygon", icon: "interests", label: wt("clickui.shape_polygon", "Контур"), actionFamily: "outline" };
     }
 
-    return { shape: shape || "polygon", icon: "interests", label: "Область", actionFamily: "click" };
+    return { shape: shape || "polygon", icon: "interests", label: wt("clickui.shape_area", "Область"), actionFamily: "click" };
   }
 
   function _summarizeTargetInteractions(taskDto, targets) {
@@ -886,7 +892,7 @@
     const displayIndexes = _buildTargetDisplayIndexes(taskDto, targets);
     const displayIndex = Number.isInteger(displayIndexes[targetIndex]) ? displayIndexes[targetIndex] : targetIndex + 1;
     const meta = _getTargetInteractionMeta(taskDto, target);
-    const baseLabel = meta && meta.label ? meta.label : "Цель";
+    const baseLabel = meta && meta.label ? meta.label : wt("clickui.target_fallback", "Цель");
     return `${baseLabel} #${displayIndex}`;
   }
 
@@ -934,48 +940,48 @@
     const { hasClick, hasOutline, hasLine, hasPoint } = _summarizeTargetInteractions(taskDto, targets);
 
     if (hasOutline && hasLine) {
-      return "Список ниже показывает, что искать: цели с типом «Контур» нужно обвести по границе, а цели с типом «Линия» провести по нужному фрагменту. Номер и цвет помогают сопоставить цель и результат.";
+      return wt("clickui.desc_outline_line", "Список ниже показывает, что искать: цели с типом «Контур» нужно обвести по границе, а цели с типом «Линия» провести по нужному фрагменту. Номер и цвет помогают сопоставить цель и результат.");
     }
     if (hasOutline) {
-      return "Список ниже показывает, что искать. Для каждой цели обведи нужную область на изображении и замкни контур. Номер и цвет помогают сопоставить цель и результат.";
+      return wt("clickui.desc_outline", "Список ниже показывает, что искать. Для каждой цели обведи нужную область на изображении и замкни контур. Номер и цвет помогают сопоставить цель и результат.");
     }
     if (hasLine && !hasClick && !hasPoint) {
-      return "Список ниже показывает, что искать. Для каждой цели проведи линию по нужному фрагменту изображения. Номер и цвет помогают сопоставить цель и результат.";
+      return wt("clickui.desc_line", "Список ниже показывает, что искать. Для каждой цели проведи линию по нужному фрагменту изображения. Номер и цвет помогают сопоставить цель и результат.");
     }
     if (hasClick && hasLine) {
-      return "Список ниже показывает, что искать: цели с типом «Область» нужно кликать, а цели с типом «Линия» проводить по изображению. Номер и цвет помогают сопоставить цель и результат.";
+      return wt("clickui.desc_click_line", "Список ниже показывает, что искать: цели с типом «Область» нужно кликать, а цели с типом «Линия» проводить по изображению. Номер и цвет помогают сопоставить цель и результат.");
     }
     if (hasPoint && !hasClick && !hasLine) {
-      return "Список ниже показывает, что искать. Затем для каждой цели кликни по соответствующей точке на изображении. Номер и цвет помогают сопоставить цель и результат.";
+      return wt("clickui.desc_point", "Список ниже показывает, что искать. Затем для каждой цели кликни по соответствующей точке на изображении. Номер и цвет помогают сопоставить цель и результат.");
     }
     if (hasClick || hasPoint) {
-      return "Список ниже показывает, что искать. Затем для каждой цели кликни по соответствующей области на изображении. Номер и цвет помогают сопоставить цель и результат.";
+      return wt("clickui.desc_click", "Список ниже показывает, что искать. Затем для каждой цели кликни по соответствующей области на изображении. Номер и цвет помогают сопоставить цель и результат.");
     }
-    return "Прочитай названия целей ниже и отмечай на изображении только те фрагменты, которые соответствуют строкам списка.";
+    return wt("clickui.desc_default", "Прочитай названия целей ниже и отмечай на изображении только те фрагменты, которые соответствуют строкам списка.");
   }
 
   function _buildTargetsStatusInstruction(taskDto, targets) {
     const { hasClick, hasOutline, hasLine, hasPoint } = _summarizeTargetInteractions(taskDto, targets);
 
     if (hasOutline && hasLine) {
-      return "Сверяйся со списком целей: контуры нужно обводить, а линии проводить по изображению.";
+      return wt("clickui.status_outline_line", "Сверяйся со списком целей: контуры нужно обводить, а линии проводить по изображению.");
     }
     if (hasOutline) {
-      return "Сверяйся со списком целей и обводи только нужные области.";
+      return wt("clickui.status_outline", "Сверяйся со списком целей и обводи только нужные области.");
     }
     if (hasLine && !hasClick && !hasPoint) {
-      return "Сверяйся со списком целей и проводи только нужные линии.";
+      return wt("clickui.status_line", "Сверяйся со списком целей и проводи только нужные линии.");
     }
     if (hasClick && hasLine) {
-      return "Сверяйся со списком целей: области кликай, а линии проводи по изображению.";
+      return wt("clickui.status_click_line", "Сверяйся со списком целей: области кликай, а линии проводи по изображению.");
     }
     if (hasPoint && !hasClick && !hasLine) {
-      return "Сверяйся со списком целей и кликай только по нужным точкам.";
+      return wt("clickui.status_point", "Сверяйся со списком целей и кликай только по нужным точкам.");
     }
     if (hasClick || hasPoint) {
-      return "Сверяйся со списком целей и кликай только по подходящим областям.";
+      return wt("clickui.status_click", "Сверяйся со списком целей и кликай только по подходящим областям.");
     }
-    return "Сверяйся со списком целей и отмечай только подходящие фрагменты.";
+    return wt("clickui.status_default", "Сверяйся со списком целей и отмечай только подходящие фрагменты.");
   }
 
   function _pointInPolygon(x, y, points) {
@@ -1051,7 +1057,7 @@
     const title = _createEl(
       "h3",
       "text-sm font-semibold text-text-main dark:text-text-on-dark",
-      _taskRequiresDrawing(taskDto) ? "Что нужно отметить" : "Цели для поиска"
+      _taskRequiresDrawing(taskDto) ? wt("clickui.what_to_mark", "Что нужно отметить") : wt("clickui.targets_to_find", "Цели для поиска")
     );
     const subtitle = _createEl(
       "p",
@@ -1112,7 +1118,7 @@
       const label = _createEl(
         "div",
         "text-sm font-semibold text-text-main truncate dark:text-text-on-dark",
-        t.label || `Цель ${idx + 1}`
+        t.label || wt("clickui.target_n", "Цель {n}").replace("{n}", idx + 1)
       );
       const metaRow = _createEl("div", "mt-0.5 flex items-center gap-2 text-xs text-text-secondary dark:text-text-secondary", "");
       const iconEl = _createEl(
@@ -1147,14 +1153,14 @@
     const labelsTitle = _createEl(
       "div",
       "text-xs font-semibold uppercase tracking-wide text-text-main dark:text-text-on-dark",
-      "Подписи"
+      wt("clickui.labels_title", "Подписи")
     );
     labelsControls.appendChild(labelsTitle);
 
     const labelsButtons = _createEl("div", "flex gap-2 rounded-xl border border-border-subtle bg-surface-1 p-1", "");
     const labelModes = [
-      { key: "off", label: "Скрыть" },
-      { key: "compact", label: "Компактно" },
+      { key: "off", label: wt("clickui.labels_hide", "Скрыть") },
+      { key: "compact", label: wt("clickui.labels_compact", "Компактно") },
     ];
     labelModes.forEach((mode) => {
       const btn = document.createElement("button");
@@ -1404,7 +1410,7 @@
       const label = _createEl(
         "div",
         "text-[13px] font-semibold leading-5 text-text-main dark:text-text-on-dark",
-        target.label || `Цель ${idx + 1}`
+        target.label || wt("clickui.target_n", "Цель {n}").replace("{n}", idx + 1)
       );
       // Meta row: mt-1.5 below label — not too close, not too far
       const metaRow = _createEl(
@@ -1431,7 +1437,7 @@
         const actionChip = _createEl(
           "span",
           "inline-flex items-center rounded-full border border-warning-light bg-warning-lighter px-2.5 py-0.5 text-[11px] font-semibold text-warning-darker transition-transform dark:border-warning-light dark:bg-warning-light dark:text-warning-lighter",
-          "Обвести"
+          wt("clickui.verb_outline", "Обвести")
         );
         actionChip.setAttribute("data-clickui", "target-verb-outline");
         metaRow.appendChild(actionChip);
@@ -1445,7 +1451,7 @@
         "flex shrink-0 flex-col items-end gap-1.5 self-start",
         ""
       );
-      sideInfo.appendChild(_createEl("span", "sr-only", "Цвет цели"));
+      sideInfo.appendChild(_createEl("span", "sr-only", wt("clickui.target_color_sr", "Цвет цели")));
 
       const statusPill = _createEl("div", "hidden", "");
       sideInfo.appendChild(statusPill);
@@ -1690,7 +1696,7 @@
       ""
     );
     closeBtn.setAttribute("type", "button");
-    closeBtn.setAttribute("aria-label", "Закрыть полноэкранное изображение");
+    closeBtn.setAttribute("aria-label", wt("clickui.close_fullscreen_aria", "Закрыть полноэкранное изображение"));
     const closeIcon = _createEl("span", "material-symbols-outlined text-2xl", "close");
     closeBtn.appendChild(closeIcon);
 
@@ -1886,7 +1892,7 @@
         "library_books"
       )
     );
-    header.appendChild(_createEl("span", "", "Доп. материалы"));
+    header.appendChild(_createEl("span", "", wt("clickui.extra_materials", "Доп. материалы")));
     card.appendChild(header);
 
     const body = _createEl("div", "flex flex-col gap-2.5 px-4 py-3", "");
@@ -1913,7 +1919,7 @@
 
         const img = document.createElement("img");
         img.src = url;
-        img.alt = info.text ? `Доп. изображение ${idx + 1}` : "Дополнительное изображение";
+        img.alt = info.text ? wt("clickui.extra_img_n", "Доп. изображение {n}").replace("{n}", idx + 1) : wt("clickui.extra_img_default", "Дополнительное изображение");
         img.className = "h-full w-full object-cover transition duration-200 group-hover:scale-105";
 
         const overlay = _createEl(
@@ -1937,7 +1943,7 @@
         _createEl(
           "div",
           "text-[13px] text-text-muted dark:text-text-muted",
-          "Дополнительные материалы отсутствуют"
+          wt("clickui.no_extra_materials", "Дополнительные материалы отсутствуют")
         )
       );
     }
@@ -2226,12 +2232,12 @@
     const safeParts = Array.isArray(parts)
       ? parts.filter((part) => typeof part === "string" && part.trim())
       : [];
-    return safeParts.length ? safeParts.join(" • ") : "Без отметок";
+    return safeParts.length ? safeParts.join(" • ") : wt("clickui.no_marks", "Без отметок");
   }
 
   function _normalizeReviewLabelText(value) {
     const text = String(value == null ? "" : value).trim();
-    return text || "Без названия";
+    return text || wt("clickui.no_name", "Без названия");
   }
 
   function _buildReviewLabelsBlock(titleText, items, dataTestUi) {
@@ -2251,7 +2257,7 @@
       _createEl(
         "div",
         "text-xs font-semibold uppercase tracking-wide text-text-secondary dark:text-text-muted",
-        titleText || "Названия"
+        titleText || wt("clickui.labels_default", "Названия")
       )
     );
 
@@ -2264,12 +2270,12 @@
       );
       const fallbackTitle =
         item && item.kind === "freehand"
-          ? `Линия ${idx + 1}`
+          ? wt("clickui.shape_line_n", "Линия {n}").replace("{n}", idx + 1)
           : item && item.kind === "point"
-            ? `Точка ${idx + 1}`
+            ? wt("clickui.shape_point_n", "Точка {n}").replace("{n}", idx + 1)
             : item && item.kind === "click"
-              ? `Область ${idx + 1}`
-              : `Контур ${idx + 1}`;
+              ? wt("clickui.shape_area_n", "Область {n}").replace("{n}", idx + 1)
+              : wt("clickui.shape_polygon_n", "Контур {n}").replace("{n}", idx + 1);
       row.textContent = `${item && item.title ? item.title : fallbackTitle}: ${_normalizeReviewLabelText(item && item.label)}`;
       list.appendChild(row);
     });
@@ -2310,13 +2316,13 @@
       zoomBtn.type = "button";
       zoomBtn.className =
         "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border-strong bg-surface-1 text-text-main shadow-sm transition-colors hover:bg-bg-hover dark:border-border-strong dark:bg-surface-1 dark:text-text-on-dark dark:hover:bg-bg-hover";
-      zoomBtn.title = "Открыть изображение";
-      zoomBtn.setAttribute("aria-label", "Открыть изображение");
+      zoomBtn.title = wt("clickui.open_img", "Открыть изображение");
+      zoomBtn.setAttribute("aria-label", wt("clickui.open_img", "Открыть изображение"));
       zoomBtn.setAttribute("data-clickui", `${opts.dataTestUi || "review"}-zoom`);
       const icon = _createEl("span", "material-symbols-outlined text-[18px]", "zoom_in");
       zoomBtn.appendChild(icon);
       zoomBtn.addEventListener("click", () => {
-        opts.openImage(imageUrl, opts.title || "Разбор ответа");
+        opts.openImage(imageUrl, opts.title || wt("clickui.review_title", "Разбор ответа"));
       });
       header.appendChild(zoomBtn);
     }
@@ -2343,7 +2349,7 @@
       const placeholder = _createEl(
         "div",
         "absolute inset-0 flex items-center justify-center px-6 text-center text-sm text-text-muted dark:text-text-muted",
-        "Исходное изображение недоступно"
+        wt("clickui.orig_img_unavail", "Исходное изображение недоступно")
       );
       frame.appendChild(placeholder);
     }
@@ -2378,13 +2384,13 @@
   function _buildUserReviewPreviewCard(imageUrl, naturalW, naturalH) {
     const parts = [];
     if (Array.isArray(state.clicks) && state.clicks.length) {
-      parts.push(state.clicks.length === 1 ? "1 клик" : `${state.clicks.length} клика`);
+      parts.push(state.clicks.length === 1 ? wt("clickui.one_click", "1 клик") : wt("clickui.n_clicks", "{n} клика").replace("{n}", state.clicks.length));
     }
     if (Array.isArray(state.polygons) && state.polygons.length) {
-      parts.push(state.polygons.length === 1 ? "1 контур" : `${state.polygons.length} контура`);
+      parts.push(state.polygons.length === 1 ? wt("clickui.one_polygon", "1 контур") : wt("clickui.n_polygons", "{n} контура").replace("{n}", state.polygons.length));
     }
     if (Array.isArray(state.lines) && state.lines.length) {
-      parts.push(state.lines.length === 1 ? "1 линия" : `${state.lines.length} линии`);
+      parts.push(state.lines.length === 1 ? wt("clickui.one_line", "1 линия") : wt("clickui.n_lines", "{n} линии").replace("{n}", state.lines.length));
     }
 
     const shouldShowLabels = _requiresLabels() || _requiresDrawing();
@@ -2394,30 +2400,30 @@
       (state.clicks || []).forEach((_, idx) => {
         labelItems.push({
           kind: "click",
-          title: `Область ${idx + 1}`,
+          title: wt("clickui.shape_area_n", "Область {n}").replace("{n}", idx + 1),
           label: state.labelsClicks && state.labelsClicks[idx],
         });
       });
       (state.polygons || []).forEach((_, idx) => {
         labelItems.push({
           kind: "polygon",
-          title: `Контур ${idx + 1}`,
+          title: wt("clickui.shape_polygon_n", "Контур {n}").replace("{n}", idx + 1),
           label: state.labelsPolygons && state.labelsPolygons[idx],
         });
       });
       (state.lines || []).forEach((_, idx) => {
         labelItems.push({
           kind: "freehand",
-          title: `Линия ${idx + 1}`,
+          title: wt("clickui.shape_line_n", "Линия {n}").replace("{n}", idx + 1),
           label: state.labelsLines && state.labelsLines[idx],
         });
       });
-      labelsBlock = _buildReviewLabelsBlock("Названия пользователя", labelItems, "review-user-labels");
+      labelsBlock = _buildReviewLabelsBlock(wt("clickui.user_labels", "Названия пользователя"), labelItems, "review-user-labels");
     }
 
     return _createReviewPreviewCard({
       dataTestUi: "review-user-preview",
-      title: "Ваш ответ",
+      title: wt("clickui.your_answer", "Ваш ответ"),
       description: _buildReviewSummary(parts),
       imageUrl,
       naturalW,
@@ -2471,13 +2477,13 @@
     const lines = targets.filter((target) => _getTargetShape(target) === "freehand").length;
     const parts = [];
     if (points) {
-      parts.push(points === 1 ? "1 точка" : `${points} точки`);
+      parts.push(points === 1 ? wt("clickui.one_point", "1 точка") : wt("clickui.n_points", "{n} точки").replace("{n}", points));
     }
     if (outlines) {
-      parts.push(outlines === 1 ? "1 контур" : `${outlines} контура`);
+      parts.push(outlines === 1 ? wt("clickui.one_polygon", "1 контур") : wt("clickui.n_polygons", "{n} контура").replace("{n}", outlines));
     }
     if (lines) {
-      parts.push(lines === 1 ? "1 линия" : `${lines} линии`);
+      parts.push(lines === 1 ? wt("clickui.one_line", "1 линия") : wt("clickui.n_lines", "{n} линии").replace("{n}", lines));
     }
 
     const shouldShowLabels = _requiresLabels() || _requiresDrawing();
@@ -2487,16 +2493,16 @@
         const meta = _getTargetInteractionMeta(state.taskDto, target);
         return {
           kind: _getTargetShape(target),
-          title: `${meta && meta.label ? meta.label : "Цель"} ${idx + 1}`,
+          title: `${meta && meta.label ? meta.label : wt("clickui.target_fallback", "Цель")} ${idx + 1}`,
           label: target && target.label,
         };
       });
-      labelsBlock = _buildReviewLabelsBlock("Эталонные названия", labelItems, "review-reference-labels");
+      labelsBlock = _buildReviewLabelsBlock(wt("clickui.ref_labels", "Эталонные названия"), labelItems, "review-reference-labels");
     }
 
     return _createReviewPreviewCard({
       dataTestUi: "review-reference-preview",
-      title: "Эталон",
+      title: wt("clickui.reference", "Эталон"),
       description: _buildReviewSummary(parts),
       imageUrl,
       naturalW,
@@ -2560,14 +2566,14 @@
     const title = _createEl(
       "div",
       "text-base font-semibold text-text-main dark:text-text-on-dark",
-      result && result.success === true ? "Разбор ответа" : "Разбор ошибок"
+      result && result.success === true ? wt("clickui.review_success_title", "Разбор ответа") : wt("clickui.review_error_title", "Разбор ошибок")
     );
     const note = _createEl(
       "div",
       "mt-1 text-sm leading-6 text-text-secondary dark:text-text-muted",
       result && result.success === true
-        ? "Показываем, что вы отметили на изображении, и рядом оставляем эталон для быстрой сверки."
-        : "Слева сохранён ваш ответ, справа показан эталон на том же изображении, чтобы различия считывались визуально."
+        ? wt("clickui.review_success_desc", "Показываем, что вы отметили на изображении, и рядом оставляем эталон для быстрой сверки.")
+        : wt("clickui.review_error_desc", "Слева сохранён ваш ответ, справа показан эталон на том же изображении, чтобы различия считывались визуально.")
     );
     const grid = _createEl("div", "mt-4 grid gap-3 xl:grid-cols-2", "");
     grid.appendChild(_buildUserReviewPreviewCard(imageUrl, canvasSize.width, canvasSize.height));
@@ -3159,7 +3165,7 @@
       dot.textContent = String(idx + 1);
       dot.style.left = `${c.x}px`;
       dot.style.top = `${c.y}px`;
-      dot.title = `Клик ${idx + 1}: (${Math.round(c.x)}, ${Math.round(c.y)})`;
+      dot.title = wt("clickui.click_coord_title", "Клик {n}: ({x}, {y})").replace("{n}", idx + 1).replace("{x}", Math.round(c.x)).replace("{y}", Math.round(c.y));
       dot.style.backgroundColor = color;
       dot.style.borderColor = textOnDark;
       dot.style.color = textOnDark;
@@ -3530,7 +3536,7 @@
       _createEl(
         "div",
         "text-[12px] font-bold uppercase tracking-[0.08em] text-text-main dark:text-text-on-dark",
-        "Ваши действия"
+        wt("clickui.your_actions", "Ваши действия")
       )
     );
     header.appendChild(
@@ -3539,7 +3545,7 @@
         labelsInSideColumn
           ? "hidden"
           : "text-[13px] leading-5 text-text-secondary dark:text-text-on-dark",
-        "Подпиши отмеченные цели перед проверкой ответа."
+        wt("clickui.label_targets_prompt", "Подпиши отмеченные цели перед проверкой ответа.")
       )
     );
     card.appendChild(header);
@@ -3570,10 +3576,10 @@
       );
       const labelText =
         kind === "click"
-          ? `Клик ${idx1based}`
+          ? wt("clickui.click_n", "Клик {n}").replace("{n}", idx1based)
           : kind === "polygon"
-            ? `Контур ${idx1based}`
-            : `Штрих ${idx1based}`;
+            ? wt("clickui.polygon_n", "Контур {n}").replace("{n}", idx1based)
+            : wt("clickui.line_n", "Штрих {n}").replace("{n}", idx1based);
 
       const lbl = document.createElement("label");
       lbl.setAttribute("for", id);
@@ -3652,8 +3658,8 @@
       const input = document.createElement("input");
       input.id = id;
       input.type = "text";
-      input.setAttribute("aria-label", `Название для ${labelText}`);
-      input.placeholder = "Введите название...";
+      input.setAttribute("aria-label", wt("clickui.name_for", "Название для {label}").replace("{label}", labelText));
+      input.placeholder = wt("clickui.enter_name_placeholder", "Введите название...");
       input.disabled = state.locked;
       const baseInputClass =
         "block min-h-[44px] w-full rounded-xl border border-border-strong bg-surface-2 px-3.5 py-2.5 text-[14px] leading-5 text-text-main transition-colors placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-light disabled:cursor-not-allowed disabled:bg-bg-disabled disabled:text-text-secondary dark:border-border-strong dark:bg-surface-2 dark:text-text-on-dark dark:placeholder:text-text-secondary";
@@ -3942,7 +3948,7 @@
     const imgError = _createEl(
       "div",
       "hidden absolute inset-0 flex items-center justify-center text-sm text-text-muted dark:text-text-muted",
-      "Не удалось загрузить изображение"
+      wt("clickui.img_load_fail", "Не удалось загрузить изображение")
     );
 
     const refLayer = _createEl("div", "pointer-events-none absolute inset-0 z-10", "");
@@ -4041,7 +4047,7 @@
     }
 
     const selectBtn = _iconBtn({
-      title: "Режим клика",
+      title: wt("clickui.mode_click_title", "Режим клика"),
       icon: "arrow_selector_tool",
       sizeClass: "text-[18px]",
       kind: "tool",
@@ -4050,7 +4056,7 @@
     selectBtn.dataset.icon = "arrow_selector_tool";
 
     const brushBtn = _iconBtn({
-      title: "Режим рисования",
+      title: wt("clickui.mode_draw_title", "Режим рисования"),
       icon: "edit",
       sizeClass: "text-[20px]",
       kind: "tool",
@@ -4062,7 +4068,7 @@
     brushBtn.dataset.icon = "edit";
 
     const panBtn = _iconBtn({
-      title: "Перемещение",
+      title: wt("clickui.mode_pan_title", "Перемещение"),
       icon: "pan_tool",
       sizeClass: "text-[20px]",
       kind: "tool",
@@ -4074,7 +4080,7 @@
     panBtn.dataset.icon = "pan_tool";
 
     const undoBtn = _iconBtn({
-      title: "Отменить",
+      title: wt("clickui.undo_title", "Отменить"),
       icon: "undo",
       sizeClass: "text-[20px]",
       kind: "tool",
@@ -4132,14 +4138,14 @@
     toolGroup.appendChild(undoBtn);
 
     const zoomInBtn = _iconBtn({
-      title: "Увеличить",
+      title: wt("clickui.zoom_in_title", "Увеличить"),
       icon: "add",
       sizeClass: "text-[20px]",
       kind: "zoom",
       onClick: () => _zoomAtClientPoint(state.zoom * 1.15, null, null),
     });
     const zoomOutBtn = _iconBtn({
-      title: "Уменьшить",
+      title: wt("clickui.zoom_out_title", "Уменьшить"),
       icon: "remove",
       sizeClass: "text-[20px]",
       kind: "zoom",
@@ -4151,7 +4157,7 @@
     const clearWrap = _createEl("div", "pt-0.5", "");
     const clearBtn = document.createElement("button");
     clearBtn.type = "button";
-    clearBtn.title = "Очистить";
+    clearBtn.title = wt("clickui.clear_title", "Очистить");
     clearBtn.className =
       "flex h-10 w-full items-center justify-center rounded-xl border border-border-strong bg-error-light/95 text-error-text shadow-md transition-colors duration-150 hover:bg-error-light/85 focus:outline-none dark:border-border-strong dark:bg-error-light dark:text-error-lighter sm:h-11";
     const clearIcon = document.createElement("span");
@@ -4233,7 +4239,7 @@
     });
     const lblShowRef = _createEl("label", "flex items-center gap-2", "");
     lblShowRef.appendChild(chkShowRef);
-    lblShowRef.appendChild(_createEl("span", "", "Референс"));
+    lblShowRef.appendChild(_createEl("span", "", wt("clickui.reference_toggle", "Референс")));
 
     const chkUserMarks = document.createElement("input");
     chkUserMarks.type = "checkbox";
@@ -4246,7 +4252,7 @@
     });
     const lblUserMarks = _createEl("label", "flex items-center gap-2", "");
     lblUserMarks.appendChild(chkUserMarks);
-    lblUserMarks.appendChild(_createEl("span", "", "Мои отметки"));
+    lblUserMarks.appendChild(_createEl("span", "", wt("clickui.user_marks_toggle", "Мои отметки")));
     const chkContours = document.createElement("input");
     chkContours.type = "checkbox";
     chkContours.className = "rounded border-border-subtle text-primary focus:ring-0";
@@ -4258,7 +4264,7 @@
     });
     const lblContours = _createEl("label", "flex items-center gap-2", "");
     lblContours.appendChild(chkContours);
-    lblContours.appendChild(_createEl("span", "", "Полигоны"));
+    lblContours.appendChild(_createEl("span", "", wt("clickui.polygons_toggle", "Полигоны")));
 
     const chkLines = document.createElement("input");
     chkLines.type = "checkbox";
@@ -4271,7 +4277,7 @@
     });
     const lblLines = _createEl("label", "flex items-center gap-2", "");
     lblLines.appendChild(chkLines);
-    lblLines.appendChild(_createEl("span", "", "Линии"));
+    lblLines.appendChild(_createEl("span", "", wt("clickui.lines_toggle", "Линии")));
 
     const chkLabels = document.createElement("input");
     chkLabels.type = "checkbox";
@@ -4283,7 +4289,7 @@
     });
     const lblLabels = _createEl("label", "flex items-center gap-2", "");
     lblLabels.appendChild(chkLabels);
-    lblLabels.appendChild(_createEl("span", "", "Названия"));
+    lblLabels.appendChild(_createEl("span", "", wt("clickui.labels_toggle_checkbox", "Названия")));
 
     refToggles.appendChild(lblShowRef);
     refToggles.appendChild(lblUserMarks);
@@ -4415,7 +4421,7 @@
       "fixed right-3 bottom-24 z-50 rounded-full bg-primary text-primary-fg text-xs font-semibold px-3 py-2.5 shadow-lg hover:bg-primary-hover transition-colors opacity-0 pointer-events-none";
     labelsIndicator.style.opacity = "0";
     labelsIndicator.style.transition = "opacity 160ms ease-out";
-    labelsIndicator.textContent = "Ваши действия ↓";
+    labelsIndicator.textContent = wt("clickui.your_actions_down", "Ваши действия ↓");
     labelsIndicator.addEventListener("click", () => {
       try {
         if (state.labelsCardEl && typeof state.labelsCardEl.scrollIntoView === "function") {
@@ -4553,10 +4559,10 @@
         const done = Math.min(Array.isArray(state.clicks) ? state.clicks.length : 0, total || 0);
         const progressHtml =
           total > 0
-            ? `<span class="font-semibold text-text-main dark:text-text-on-dark">Сделано ${done} кликов из ${total} доступных.</span>`
-            : `<span class="font-semibold text-text-main dark:text-text-on-dark">Сделано ${done} кликов.</span>`;
+            ? wt("clickui.progress_clicks_limit", "<span class=\"font-semibold text-text-main dark:text-text-on-dark\">Сделано {done} кликов из {total} доступных.</span>").replace("{done}", done).replace("{total}", total)
+            : wt("clickui.progress_clicks", "<span class=\"font-semibold text-text-main dark:text-text-on-dark\">Сделано {done} кликов.</span>").replace("{done}", done);
         const extraHtml = _hasAnyUserMarks()
-          ? "<div class=\"mt-0.5 leading-snug\">Введи названия для отмеченных целей и нажми «Проверить ответ».</div>"
+          ? wt("clickui.enter_names_prompt", "<div class=\"mt-0.5 leading-snug\">Введи названия для отмеченных целей и нажми «Проверить ответ».</div>")
           : "";
         const progressMarkup = _requiresDrawing()
           ? (() => {
@@ -4565,15 +4571,15 @@
               const totalPoly = state.maxPolygons;
               const totalLines = state.maxStrokes;
               if (totalPoly > 0 && totalLines > 0) {
-                return `<span class="font-semibold text-text-main dark:text-text-on-dark">Контуры ${donePoly} из ${totalPoly}. Линии ${doneLines} из ${totalLines}.</span>`;
+                return wt("clickui.progress_poly_and_lines", "<span class=\"font-semibold text-text-main dark:text-text-on-dark\">Контуры {donePoly} из {totalPoly}. Линии {doneLines} из {totalLines}.</span>").replace("{donePoly}", donePoly).replace("{totalPoly}", totalPoly).replace("{doneLines}", doneLines).replace("{totalLines}", totalLines);
               }
               if (totalPoly > 0) {
-                return `<span class="font-semibold text-text-main dark:text-text-on-dark">Контуры ${donePoly} из ${totalPoly}.</span>`;
+                return wt("clickui.progress_poly_only", "<span class=\"font-semibold text-text-main dark:text-text-on-dark\">Контуры {donePoly} из {totalPoly}.</span>").replace("{donePoly}", donePoly).replace("{totalPoly}", totalPoly);
               }
               if (totalLines > 0) {
-                return `<span class="font-semibold text-text-main dark:text-text-on-dark">Линии ${doneLines} из ${totalLines}.</span>`;
+                return wt("clickui.progress_lines_only", "<span class=\"font-semibold text-text-main dark:text-text-on-dark\">Линии {doneLines} из {totalLines}.</span>").replace("{doneLines}", doneLines).replace("{totalLines}", totalLines);
               }
-              return `<span class="font-semibold text-text-main dark:text-text-on-dark">Отметь нужные фрагменты.</span>`;
+              return wt("clickui.progress_mark_fragments", "<span class=\"font-semibold text-text-main dark:text-text-on-dark\">Отметь нужные фрагменты.</span>");
             })()
           : progressHtml;
         state.targetsInstructionEl.innerHTML =
@@ -4609,19 +4615,19 @@
           const totalPoly = state.maxPolygons;
           const left =
             totalPoly > 0
-              ? `Контуры: ${donePoly}/${totalPoly}. `
-              : `Контуры: ${donePoly}. `;
+              ? wt("clickui.status_poly_limit", "Контуры: {done}/{total}. ").replace("{done}", donePoly).replace("{total}", totalPoly)
+              : wt("clickui.status_poly", "Контуры: {done}. ").replace("{done}", donePoly);
           const right =
             totalLines > 0
-              ? `Штрихи: ${doneLines}/${totalLines}. `
-              : `Штрихи: ${doneLines}. `;
-          _setLiveStatus("neutral", `${left}${right}Зажми и веди мышью по границе.`);
+              ? wt("clickui.status_lines_limit", "Штрихи: {done}/{total}. ").replace("{done}", doneLines).replace("{total}", totalLines)
+              : wt("clickui.status_lines", "Штрихи: {done}. ").replace("{done}", doneLines);
+          _setLiveStatus("neutral", `${left}${right}${wt("clickui.drag_border_guidance", "Зажми и веди мышью по границе.")}`);
         } else {
           _setLiveStatus(
             "neutral",
             totalLines > 0
-              ? `Нарисовано ${doneLines} штрихов из ${totalLines}. Зажми и веди мышью по границе.`
-              : `Нарисовано ${doneLines} штрихов. Зажми и веди мышью по границе.`
+              ? wt("clickui.drawn_lines_limit", "Нарисовано {done} штрихов из {total}. Зажми и веди мышью по границе.").replace("{done}", doneLines).replace("{total}", totalLines)
+              : wt("clickui.drawn_lines", "Нарисовано {done} штрихов. Зажми и веди мышью по границе.").replace("{done}", doneLines)
           );
         }
         return;
@@ -4635,11 +4641,11 @@
         "neutral",
         isConfirmedProgress
           ? total > 0
-            ? `Найдено целей: ${found}/${total}`
-            : `Найдено целей: ${found}`
+            ? wt("clickui.found_targets_limit", "Найдено целей: {found}/{total}").replace("{found}", found).replace("{total}", total)
+            : wt("clickui.found_targets", "Найдено целей: {found}").replace("{found}", found)
           : total > 0
-            ? `Использовано кликов: ${usedClicks}/${total}`
-            : `Использовано кликов: ${usedClicks}`
+            ? wt("clickui.used_clicks_limit", "Использовано кликов: {used}/{total}").replace("{used}", usedClicks).replace("{total}", total)
+            : wt("clickui.used_clicks", "Использовано кликов: {used}").replace("{used}", usedClicks)
       );
     }
 
@@ -4757,8 +4763,8 @@
         const linesFull = state.maxStrokes > 0 && state.lines.length >= state.maxStrokes;
         const polygonsFull = state.maxPolygons > 0 && state.polygons.length >= state.maxPolygons;
         if ((!drawingTask && linesFull) || (drawingTask && linesFull && polygonsFull)) {
-          _flashHint("Достигнут лимит штрихов. Нажми «Проверить» для завершения.");
-          _setLiveStatus("bad", "Лимит штрихов");
+          _flashHint(wt("clickui.limit_lines_hint", "Достигнут лимит штрихов. Нажми «Проверить» для завершения."));
+          _setLiveStatus("bad", wt("clickui.limit_lines_status", "Лимит штрихов"));
           _flashUndoButtonAttention();
           return;
         }
@@ -4889,8 +4895,8 @@
             if (isClosed) {
               pts = closedStrokePoints;
               if (_requiresDrawing() && state.maxPolygons > 0 && state.polygons.length >= state.maxPolygons) {
-                _flashHint("Достигнут лимит контуров. Нарисуй штрихи (фрихенд) или нажми «Проверить». ");
-                _setLiveStatus("bad", "Лимит контуров");
+                _flashHint(wt("clickui.limit_polygons_hint", "Достигнут лимит контуров. Нарисуй штрихи (фрихенд) или нажми «Проверить». "));
+                _setLiveStatus("bad", wt("clickui.limit_polygons_status", "Лимит контуров"));
               } else {
                 state.polygons = Array.isArray(state.polygons) ? state.polygons : [];
                 state.polygons.push({ points: pts });
@@ -4913,8 +4919,8 @@
                 });
               }
             } else if (drawingTask && state.maxStrokes > 0 && state.lines.length >= state.maxStrokes) {
-              _flashHint("Достигнут лимит штрихов. Нажми «Проверить» для завершения или «Отменить», чтобы убрать последний штрих. ");
-              _setLiveStatus("bad", "Лимит штрихов");
+              _flashHint(wt("clickui.limit_lines_hint_undo", "Достигнут лимит штрихов. Нажми «Проверить» для завершения или «Отменить», чтобы убрать последний штрих. "));
+              _setLiveStatus("bad", wt("clickui.limit_lines_status", "Лимит штрихов"));
               _flashUndoButtonAttention();
             } else {
               state.lines = Array.isArray(state.lines) ? state.lines : [];
@@ -4994,9 +5000,9 @@
           state.autoBrushFromClicks = true;
           _setMode("brush");
         }
-        _flashHint("Достигнут лимит кликов. Нажми «Проверить» для завершения или «Отменить», чтобы убрать последний клик.");
+        _flashHint(wt("clickui.limit_clicks_hint", "Достигнут лимит кликов. Нажми «Проверить» для завершения или «Отменить», чтобы убрать последний клик."));
         _flashUndoButtonAttention();
-        _setLiveStatus("bad", "Лимит кликов");
+        _setLiveStatus("bad", wt("clickui.limit_clicks_status", "Лимит кликов"));
         return;
       }
       const click = _getClickFromEvent(ev);
@@ -5005,17 +5011,17 @@
       const hit = _checkClickHit(click.x, click.y);
       if (hit.hit) {
         if (state.foundClickTargets && state.foundClickTargets.has(hit.targetIndex)) {
-          _flashHint("Эта цель уже была найдена.");
-          _setLiveStatus("bad", `Уже найдено (${_getTargetDisplayReference(state.taskDto, hit.targetIndex)})`);
+          _flashHint(wt("clickui.already_found_hint", "Эта цель уже была найдена."));
+          _setLiveStatus("bad", wt("clickui.already_found_status", "Уже найдено ({ref})").replace("{ref}", _getTargetDisplayReference(state.taskDto, hit.targetIndex)));
           return;
         }
         if (state.foundClickTargets) {
           state.foundClickTargets.add(hit.targetIndex);
           _syncFoundTargetsUI();
         }
-        _setLiveStatus("ok", `Попадание (${_getTargetDisplayReference(state.taskDto, hit.targetIndex)})`);
+        _setLiveStatus("ok", wt("clickui.hit_status", "Попадание ({ref})").replace("{ref}", _getTargetDisplayReference(state.taskDto, hit.targetIndex)));
       } else {
-        _setLiveStatus("bad", "Мимо");
+        _setLiveStatus("bad", wt("clickui.miss_status", "Мимо"));
       }
 
       state.clicks.push(click);
@@ -5077,7 +5083,7 @@
         _inactiveBtn(brushBtn, "text-[20px]");
         _inactiveBtn(panBtn, "text-[20px]");
         _syncUndoButtonState();
-        clearBtn.title = "Очистить все клики";
+        clearBtn.title = wt("clickui.clear_clicks", "Очистить все клики");
         clearIcon.textContent = "delete";
 
         hint.className = hintBaseClass;
@@ -5091,11 +5097,11 @@
             `<div class="leading-snug">${_escapeHtml(_buildTargetsStatusInstruction(state.taskDto, targets))}</div>`;
           const baseHtml =
             total > 0
-              ? `<span class="font-semibold text-text-main dark:text-text-on-dark">Сделано ${done} кликов из ${total} доступных.</span>`
-              : `<span class="font-semibold text-text-main dark:text-text-on-dark">Сделано ${done} кликов.</span>`;
+              ? wt("clickui.progress_clicks_limit", "<span class=\"font-semibold text-text-main dark:text-text-on-dark\">Сделано {done} кликов из {total} доступных.</span>").replace("{done}", done).replace("{total}", total)
+              : wt("clickui.progress_clicks", "<span class=\"font-semibold text-text-main dark:text-text-on-dark\">Сделано {done} кликов.</span>").replace("{done}", done);
           const extraHtml =
             _requiresLabels() && _hasAnyUserMarks()
-              ? "<div class=\"mt-0.5 leading-snug\">Введи названия для отмеченных целей и нажми «Проверить ответ».</div>"
+              ? wt("clickui.enter_names_prompt", "<div class=\"mt-0.5 leading-snug\">Введи названия для отмеченных целей и нажми «Проверить ответ».</div>")
               : "";
           _setHintHtml(instructionHtml + `<div class="mt-1">${baseHtml}</div>` + extraHtml);
         }
@@ -5105,8 +5111,8 @@
         _inactiveBtn(panBtn, "text-[20px]");
         _syncUndoButtonState();
         clearBtn.title = _requiresDrawing()
-          ? "Очистить контуры и линии"
-          : "Очистить штрихи";
+          ? wt("clickui.clear_contours_lines", "Очистить контуры и линии")
+          : wt("clickui.clear_lines", "Очистить штрихи");
         clearIcon.textContent = "ink_eraser";
 
         hint.className = hintBaseClass;
@@ -5122,27 +5128,27 @@
             const donePoly = state.polygons.length + (hasActive && willBePoly ? 1 : 0);
             const totalPoly = state.maxPolygons;
             if (totalPoly > 0 && totalLines > 0) {
-              const polyText = `Контуры ${donePoly} из ${totalPoly}.`;
-              const lineText = `Линии ${doneLines} из ${totalLines}.`;
-              baseHtml = `<span class=\"font-semibold text-text-main dark:text-text-on-dark\">${polyText} ${lineText}</span> Замкнутый штрих засчитывается как контур, незамкнутый — как линия.`;
+              const polyText = wt("clickui.drawn_poly_limit", "Контуры {done} из {total}.").replace("{done}", donePoly).replace("{total}", totalPoly);
+              const lineText = wt("clickui.drawn_lines_limit_no_guide", "Линии {done} из {total}.").replace("{done}", doneLines).replace("{total}", totalLines);
+              baseHtml = `<span class=\"font-semibold text-text-main dark:text-text-on-dark\">${polyText} ${lineText}</span> ` + wt("clickui.closed_stroke_info", "Замкнутый штрих засчитывается как контур, незамкнутый — как линия.");
             } else if (totalPoly > 0) {
-              baseHtml = `<span class=\"font-semibold text-text-main dark:text-text-on-dark\">Контуры ${donePoly} из ${totalPoly}.</span> Обведи нужную область и замкни линию.`;
+              baseHtml = wt("clickui.draw_poly_guidance", `<span class=\"font-semibold text-text-main dark:text-text-on-dark\">Контуры {done} из {total}.</span> Обведи нужную область и замкни линию.`).replace("{done}", donePoly).replace("{total}", totalPoly);
             } else if (totalLines > 0) {
-              baseHtml = `<span class=\"font-semibold text-text-main dark:text-text-on-dark\">Линии ${doneLines} из ${totalLines}.</span> Проведи линию по нужному фрагменту изображения.`;
+              baseHtml = wt("clickui.draw_lines_guidance", `<span class=\"font-semibold text-text-main dark:text-text-on-dark\">Линии {done} из {total}.</span> Проведи линию по нужному фрагменту изображения.`).replace("{done}", doneLines).replace("{total}", totalLines);
             } else {
-              baseHtml = `<span class=\"font-semibold text-text-main dark:text-text-on-dark\">Отметь нужные фрагменты.</span> Рисуй только по тем строкам, которые показаны в списке целей.`;
+              baseHtml = wt("clickui.draw_mark_fragments_guidance", `<span class=\"font-semibold text-text-main dark:text-text-on-dark\">Отметь нужные фрагменты.</span> Рисуй только по тем строкам, которые показаны в списке целей.`);
             }
           } else {
             if (totalLines > 0) {
-              baseHtml = `<span class=\"font-semibold text-text-main dark:text-text-on-dark\">Линии ${doneLines} из ${totalLines}.</span> Проведи линию по нужному фрагменту изображения.`;
+              baseHtml = wt("clickui.draw_lines_guidance", `<span class=\"font-semibold text-text-main dark:text-text-on-dark\">Линии {done} из {total}.</span> Проведи линию по нужному фрагменту изображения.`).replace("{done}", doneLines).replace("{total}", totalLines);
             } else {
-              baseHtml = `<span class=\"font-semibold text-text-main dark:text-text-on-dark\">Линии ${doneLines}.</span> Проведи линию по нужному фрагменту изображения.`;
+              baseHtml = wt("clickui.draw_lines_guidance_no_limit", `<span class=\"font-semibold text-text-main dark:text-text-on-dark\">Линии {done}.</span> Проведи линию по нужному фрагменту изображения.`).replace("{done}", doneLines);
             }
           }
 
           const extraHtml =
             _requiresLabels() && _hasAnyUserMarks()
-              ? "<div class=\"mt-0.5 leading-snug\">Введи названия для отмеченных целей и нажми «Проверить ответ».</div>"
+              ? wt("clickui.enter_names_prompt", "<div class=\"mt-0.5 leading-snug\">Введи названия для отмеченных целей и нажми «Проверить ответ».</div>")
               : "";
           _setHintHtml(baseHtml + extraHtml);
         }
@@ -5151,7 +5157,7 @@
         _inactiveBtn(brushBtn, "text-[20px]");
         _activeBtn(panBtn, "text-[20px]");
         _syncUndoButtonState();
-        clearBtn.title = "Очистить всё";
+        clearBtn.title = wt("clickui.clear_all", "Очистить всё");
         clearIcon.textContent = "delete";
 
         hint.className = hintBaseClass;

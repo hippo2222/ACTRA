@@ -1,6 +1,12 @@
 (function (global) {
   const TaskMetadataPanel = {};
 
+  function wt(key, fallback) {
+    if (!window.i18n || typeof window.i18n.t !== "function") return fallback;
+    const v = window.i18n.t(key);
+    return v !== key ? v : fallback;
+  }
+
   function _createEl(tag, className, text) {
     const el = document.createElement(tag);
     if (className) el.className = className;
@@ -161,7 +167,7 @@
     const header = _createEl(
       "div",
       "text-xs font-semibold uppercase tracking-wide text-text-muted dark:text-text-muted",
-      "Доп. материалы"
+      wt("metadata.extra_materials", "Доп. материалы")
     );
     card.appendChild(header);
 
@@ -187,8 +193,8 @@
         const img = document.createElement("img");
         img.src = url;
         img.alt = info.text
-          ? `Доп. изображение ${idx + 1}`
-          : "Дополнительное изображение";
+          ? wt("metadata.extra_img_n", "Доп. изображение {n}").replace("{n}", idx + 1)
+          : wt("metadata.extra_img_default", "Дополнительное изображение");
         img.className =
           "h-full w-full object-cover transition duration-200 group-hover:scale-105";
 
@@ -287,7 +293,7 @@
     const promptLabel = _createEl(
       "label",
       "text-xs font-semibold uppercase tracking-wide text-text-muted dark:text-text-muted",
-      "Вопрос / инструкция"
+      wt("metadata.question_instruction", "Вопрос / инструкция")
     );
     promptLabel.setAttribute("for", "taskmeta-prompt");
     const promptTextarea = document.createElement("textarea");
@@ -295,7 +301,7 @@
     promptTextarea.className =
       "mt-3 w-full rounded-xl border border-border-subtle bg-surface-1 px-3 py-2 text-sm text-text-main shadow-inner focus:border-primary focus:ring-2 focus:ring-primary dark:border-border-strong dark:bg-surface-2 dark:text-text-on-dark";
     promptTextarea.rows = 4;
-    promptTextarea.placeholder = "Опишите, что нужно сделать пользователю…";
+    promptTextarea.placeholder = wt("metadata.prompt_placeholder", "Опишите, что нужно сделать пользователю…");
     promptTextarea.value = state.prompt || "";
     promptTextarea.disabled = state.locked;
 
@@ -307,13 +313,13 @@
     const promptHint = _createEl(
       "span",
       "",
-      "Можно использовать Markdown и переносы строк."
+      wt("metadata.markdown_hint", "Можно использовать Markdown и переносы строк.")
     );
     const promptCounter = _createEl("span", "font-semibold", "");
 
     function updatePromptCounter() {
       const length = (promptTextarea.value || "").length;
-      promptCounter.textContent = `${length} символов`;
+      promptCounter.textContent = wt("metadata.symbols_count", "{length} символов").replace("{length}", length);
     }
     updatePromptCounter();
 
@@ -341,13 +347,13 @@
       ""
     );
     thresholdHead.appendChild(
-      _createEl("div", "font-semibold", "Порог успеха")
+      _createEl("div", "font-semibold", wt("metadata.success_threshold", "Порог успеха"))
     );
     thresholdHead.appendChild(
       _createEl(
         "div",
         "text-[11px] normal-case text-text-muted dark:text-text-muted",
-        "Сколько аннотаций нужно найти/нарисовать для зачёта. Оставьте пустым, если нужны все."
+        wt("metadata.success_threshold_desc", "Сколько аннотаций нужно найти/нарисовать для зачёта. Оставьте пустым, если нужны все.")
       )
     );
 
@@ -362,7 +368,7 @@
     thresholdInput.inputMode = "numeric";
     thresholdInput.className =
       "w-full rounded-xl border border-border-subtle bg-surface-1 px-3 py-2 text-sm font-semibold text-text-main shadow-inner focus:border-primary focus:ring-2 focus:ring-primary-light dark:border-border-strong dark:bg-surface-2 dark:text-text-on-dark sm:max-w-[180px]";
-    thresholdInput.placeholder = "Напр. 3";
+    thresholdInput.placeholder = wt("metadata.threshold_placeholder", "Напр. 3");
     thresholdInput.value =
       state.successThreshold != null ? state.successThreshold : "";
     thresholdInput.disabled = state.locked;
@@ -370,7 +376,7 @@
     const thresholdInfo = _createEl(
       "div",
       "text-xs text-text-muted dark:text-text-muted",
-      "из ? аннотаций"
+      wt("metadata.of_unknown_annotations", "из ? аннотаций")
     );
 
     function computeTotalAnnotations() {
@@ -408,8 +414,8 @@
     function updateThresholdInfo() {
       const total = computeTotalAnnotations();
       thresholdInfo.textContent = total
-        ? `из ${total} аннотаций`
-        : "из ? аннотаций";
+        ? wt("metadata.of_n_annotations", "из {total} аннотаций").replace("{total}", total)
+        : wt("metadata.of_unknown_annotations", "из ? аннотаций");
     }
     updateThresholdInfo();
 
@@ -442,13 +448,13 @@
       ""
     );
     additionalHeader.appendChild(
-      _createEl("div", "font-semibold", "Дополнительные материалы")
+      _createEl("div", "font-semibold", wt("metadata.extra_materials_title", "Дополнительные материалы"))
     );
     additionalHeader.appendChild(
       _createEl(
         "div",
         "text-[11px] normal-case text-text-muted dark:text-text-muted",
-        "Покажите пользователю подсказки в виде текста, изображений или их сочетания."
+        wt("metadata.extra_materials_desc", "Покажите пользователю подсказки в виде текста, изображений или их сочетания.")
       )
     );
 
@@ -460,17 +466,17 @@
     const typeLabel = _createEl(
       "div",
       "text-xs font-semibold uppercase tracking-wide text-text-muted dark:text-text-muted",
-      "Формат"
+      wt("metadata.format", "Формат")
     );
 
     const typeSelect = document.createElement("select");
     typeSelect.className =
       "w-full rounded-xl border border-border-subtle bg-surface-1 px-3 py-2 text-sm text-text-main shadow-sm focus:border-primary focus:ring-2 focus:ring-primary-light dark:border-border-strong dark:bg-surface-2 dark:text-text-on-dark sm=max-w-[240px]";
     [
-      { value: "none", label: "Нет" },
-      { value: "text", label: "Только текст" },
-      { value: "image", label: "Только изображения" },
-      { value: "combined", label: "Текст + изображения" },
+      { value: "none", label: wt("metadata.format_none", "Нет") },
+      { value: "text", label: wt("metadata.format_text", "Только текст") },
+      { value: "image", label: wt("metadata.format_image", "Только изображения") },
+      { value: "combined", label: wt("metadata.format_combined", "Текст + изображения") },
     ].forEach((opt) => {
       const option = document.createElement("option");
       option.value = opt.value;
@@ -484,7 +490,7 @@
     textArea.className =
       "mt-4 w-full rounded-xl border border-border-subtle bg-surface-1 px-3 py-2 text-sm text-text-main shadow-inner focus:border-primary focus:ring-2 focus:ring-primary-light dark:border-border-strong dark:bg-surface-2 dark:text-text-on-dark";
     textArea.rows = 3;
-    textArea.placeholder = "Введите дополнительный текст…";
+    textArea.placeholder = wt("metadata.enter_extra_text_placeholder", "Введите дополнительный текст…");
     textArea.value = state.additional.text || "";
     textArea.disabled = state.locked;
 
@@ -498,7 +504,7 @@
     addImageBtn.type = "button";
     addImageBtn.className =
       "mt-3 inline-flex items-center justify-center rounded-xl border border-dashed border-border-subtle px-3 py-2 text-sm font-medium text-text-muted transition hover:border-primary hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary-light dark:border-border-strong dark:text-text-muted dark:hover:border-primary dark:hover:text-primary";
-    addImageBtn.textContent = "Добавить изображение";
+    addImageBtn.textContent = wt("metadata.add_image", "Добавить изображение");
     addImageBtn.disabled =
       state.locked || (state.additional.images || []).length >= 3;
 
@@ -546,7 +552,7 @@
         if (url) {
           const img = document.createElement("img");
           img.src = url;
-          img.alt = `Доп. изображение ${idx + 1}`;
+          img.alt = wt("metadata.extra_img_n", "Доп. изображение {n}").replace("{n}", idx + 1);
           img.className = "h-full w-full object-cover";
           figure.appendChild(img);
         } else {
@@ -554,7 +560,7 @@
             _createEl(
               "div",
               "text-xs text-text-muted dark:text-text-muted",
-              "Путь не задан"
+              wt("metadata.path_not_set", "Путь не задан")
             )
           );
         }
@@ -568,7 +574,7 @@
         replaceBtn.type = "button";
         replaceBtn.className =
           "rounded-lg bg-surface-1 px-2 py-1 text-[11px] font-semibold text-text-main shadow hover:bg-surface-1";
-        replaceBtn.textContent = "Заменить";
+        replaceBtn.textContent = wt("metadata.replace", "Заменить");
         replaceBtn.disabled = state.locked;
         replaceBtn.addEventListener("click", () => {
           if (state.locked) return;
@@ -586,7 +592,7 @@
         removeBtn.type = "button";
         removeBtn.className =
           "rounded-lg bg-surface-1 px-2 py-1 text-[11px] font-semibold text-text-main shadow hover:bg-surface-1";
-        removeBtn.textContent = "Удалить";
+        removeBtn.textContent = wt("metadata.remove", "Удалить");
         removeBtn.disabled = state.locked;
         removeBtn.addEventListener("click", () => {
           if (state.locked) return;
