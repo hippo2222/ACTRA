@@ -1,6 +1,12 @@
 (function (global) {
   const DrawUI = {};
 
+  function wt(key, fallback) {
+    if (!window.i18n || typeof window.i18n.t !== "function") return fallback;
+    const v = window.i18n.t(key);
+    return v !== key ? v : fallback;
+  }
+
   const DRAWUI_BUILD_ID = "2025-12-18T22:30:00Z";
   try {
     if (global && global.console && typeof global.console.log === "function") {
@@ -462,7 +468,7 @@
       ""
     );
     closeBtn.setAttribute("type", "button");
-    closeBtn.setAttribute("aria-label", "Закрыть полноэкранное изображение");
+    closeBtn.setAttribute("aria-label", wt("drawui.close_fullscreen_aria", "Закрыть полноэкранное изображение"));
     const closeIcon = _createEl("span", "material-symbols-outlined text-2xl", "close");
     closeBtn.appendChild(closeIcon);
 
@@ -766,12 +772,12 @@
     const safeParts = Array.isArray(parts)
       ? parts.filter((part) => typeof part === "string" && part.trim())
       : [];
-    return safeParts.length ? safeParts.join(" • ") : "Без разметки";
+    return safeParts.length ? safeParts.join(" • ") : wt("drawui.no_marks", "Без разметки");
   }
 
   function _normalizeReviewLabelText(value) {
     const text = String(value == null ? "" : value).trim();
-    return text || "Без названия";
+    return text || wt("drawui.no_name", "Без названия");
   }
 
   function _buildReviewLabelsBlock(titleText, items, dataTestUi) {
@@ -791,7 +797,7 @@
       _createEl(
         "div",
         "text-xs font-semibold uppercase tracking-wide text-text-secondary dark:text-text-muted",
-        titleText || "Названия"
+        titleText || wt("drawui.labels_default", "Названия")
       )
     );
 
@@ -802,7 +808,7 @@
         "rounded-xl border border-border-subtle bg-surface-2 px-3 py-2 text-sm text-text-main dark:border-border-subtle dark:bg-surface-2 dark:text-text-on-dark",
         ""
       );
-      const prefix = item && item.kind === "freehand" ? "Линия" : "Контур";
+      const prefix = item && item.kind === "freehand" ? wt("drawui.shape_line", "Линия") : wt("drawui.shape_polygon", "Контур");
       row.textContent = `${prefix} ${idx + 1}: ${_normalizeReviewLabelText(item && item.label)}`;
       list.appendChild(row);
     });
@@ -843,12 +849,12 @@
       zoomBtn.type = "button";
       zoomBtn.className =
         "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border-strong bg-surface-1 text-text-main shadow-sm transition-colors hover:bg-bg-hover dark:border-border-strong dark:bg-surface-1 dark:text-text-on-dark dark:hover:bg-bg-hover";
-      zoomBtn.title = "Открыть изображение";
-      zoomBtn.setAttribute("aria-label", "Открыть изображение");
+      zoomBtn.title = wt("drawui.open_img", "Открыть изображение");
+      zoomBtn.setAttribute("aria-label", wt("drawui.open_img", "Открыть изображение"));
       zoomBtn.setAttribute("data-drawui", `${opts.dataTestUi || "review"}-zoom`);
       zoomBtn.appendChild(_createEl("span", "material-symbols-outlined text-[18px]", "zoom_in"));
       zoomBtn.addEventListener("click", () => {
-        opts.openImage(imageUrl, opts.title || "Разбор ответа");
+        opts.openImage(imageUrl, opts.title || wt("drawui.review_title", "Разбор ответа"));
       });
       header.appendChild(zoomBtn);
     }
@@ -876,7 +882,7 @@
         _createEl(
           "div",
           "absolute inset-0 flex items-center justify-center px-6 text-center text-sm text-text-muted dark:text-text-muted",
-          "Исходное изображение недоступно"
+          wt("drawui.orig_img_unavail", "Исходное изображение недоступно")
         )
       );
     }
@@ -912,10 +918,10 @@
   function _buildUserReviewPreviewCard(imageUrl, naturalW, naturalH) {
     const parts = [];
     if (Array.isArray(state.polygons) && state.polygons.length) {
-      parts.push(state.polygons.length === 1 ? "1 контур" : `${state.polygons.length} контура`);
+      parts.push(state.polygons.length === 1 ? wt("drawui.one_polygon", "1 контур") : wt("drawui.n_polygons", "{n} контура").replace("{n}", state.polygons.length));
     }
     if (Array.isArray(state.lines) && state.lines.length) {
-      parts.push(state.lines.length === 1 ? "1 линия" : `${state.lines.length} линии`);
+      parts.push(state.lines.length === 1 ? wt("drawui.one_line", "1 линия") : wt("drawui.n_lines", "{n} линии").replace("{n}", state.lines.length));
     }
 
     const labelItems = [];
@@ -928,13 +934,13 @@
 
     return _createReviewPreviewCard({
       dataTestUi: "review-user-preview",
-      title: "Ваш ответ",
+      title: wt("drawui.your_answer", "Ваш ответ"),
       description: _buildReviewSummary(parts),
       imageUrl,
       naturalW,
       naturalH,
       openImage: _openMetadataModal,
-      labelsBlock: _buildReviewLabelsBlock("Названия пользователя", labelItems, "review-user-labels"),
+      labelsBlock: _buildReviewLabelsBlock(wt("drawui.user_labels", "Названия пользователя"), labelItems, "review-user-labels"),
       renderSvg(svg) {
         (state.polygons || []).forEach((poly, idx) => {
           const color = idx % 2 === 0
@@ -972,18 +978,18 @@
     const polygons = targets.filter((target) => target.shape === "polygon").length;
     const lines = targets.filter((target) => target.shape === "freehand").length;
     const parts = [];
-    if (polygons) parts.push(polygons === 1 ? "1 контур" : `${polygons} контура`);
-    if (lines) parts.push(lines === 1 ? "1 линия" : `${lines} линии`);
+    if (polygons) parts.push(polygons === 1 ? wt("drawui.one_polygon", "1 контур") : wt("drawui.n_polygons", "{n} контура").replace("{n}", polygons));
+    if (lines) parts.push(lines === 1 ? wt("drawui.one_line", "1 линия") : wt("drawui.n_lines", "{n} линии").replace("{n}", lines));
 
     return _createReviewPreviewCard({
       dataTestUi: "review-reference-preview",
-      title: "Эталон",
+      title: wt("drawui.reference", "Эталон"),
       description: _buildReviewSummary(parts),
       imageUrl,
       naturalW,
       naturalH,
       openImage: _openMetadataModal,
-      labelsBlock: _buildReviewLabelsBlock("Эталонные названия", targets, "review-reference-labels"),
+      labelsBlock: _buildReviewLabelsBlock(wt("drawui.ref_labels", "Эталонные названия"), targets, "review-reference-labels"),
       renderSvg(svg) {
         targets.forEach((target, idx) => {
           const isBad = state.badRefTargets instanceof Set && state.badRefTargets.has(idx);
@@ -1025,7 +1031,7 @@
       _createEl(
         "div",
         "text-base font-semibold text-text-main dark:text-text-on-dark",
-        result && result.success === true ? "Разбор ответа" : "Разбор ошибок"
+        result && result.success === true ? wt("drawui.review_success_title", "Разбор ответа") : wt("drawui.review_error_title", "Разбор ошибок")
       )
     );
     section.appendChild(
@@ -1033,8 +1039,8 @@
         "div",
         "mt-1 text-sm leading-6 text-text-secondary dark:text-text-muted",
         result && result.success === true
-          ? "Сохраняем рядом ваш рисунок и эталон, чтобы можно было быстро сверить форму и направление линий."
-          : "Показываем ваш рисунок и эталон прямо поверх исходного изображения, чтобы различия были видны без текстовых описаний."
+          ? wt("drawui.review_success_desc", "Сохраняем рядом ваш рисунок и эталон, чтобы можно было быстро сверить форму и направление линий.")
+          : wt("drawui.review_error_desc", "Показываем ваш рисунок и эталон прямо поверх исходного изображения, чтобы различия были видны без текстовых описаний.")
       )
     );
 
@@ -1539,8 +1545,8 @@
         softByOrderedIndex.set(
           orderedIndex,
           omittedPhrase
-            ? `Пропущено: ${omittedPhrase}. Эталон: ${correctAnswer}`
-            : `Эталон: ${correctAnswer}`
+            ? wt("drawui.review_omitted_and_ref", "Пропущено: {omittedPhrase}. Эталон: {correctAnswer}").replace("{omittedPhrase}", omittedPhrase).replace("{correctAnswer}", correctAnswer)
+            : wt("drawui.review_ref_only", "Эталон: {correctAnswer}").replace("{correctAnswer}", correctAnswer)
         );
       });
     }
@@ -1554,7 +1560,7 @@
         const correctAnswer = String(item && item[2] ? item[2] : "").trim();
         unmatchedByOrderedIndex.set(
           orderedIndex,
-          correctAnswer ? `Эталон: ${correctAnswer}` : "Это название не совпало с эталоном."
+          correctAnswer ? wt("drawui.review_ref_only", "Эталон: {correctAnswer}").replace("{correctAnswer}", correctAnswer) : wt("drawui.review_mismatch_generic", "Это название не совпало с эталоном.")
         );
       });
     }
@@ -1615,7 +1621,7 @@
       _createEl(
         "div",
         "text-base font-semibold text-warning-dark",
-        "Нужно решить, засчитывать ли ответ"
+        wt("drawui.needs_grading_title", "Нужно решить, засчитывать ли ответ")
       )
     );
 
@@ -1623,7 +1629,7 @@
       _createEl(
         "div",
         "mt-1 text-sm leading-6 text-warning-darker",
-        String(review.message || "В названии цели пропущено 1–2 слова. Оцените ответ сами.").trim()
+        String(review.message || wt("drawui.grading_default_msg", "В названии цели пропущено 1–2 слова. Оцените ответ сами.")).trim()
       )
     );
 
@@ -1642,18 +1648,18 @@
         _createEl(
           "div",
           "text-xs font-semibold uppercase tracking-wide text-warning-dark",
-          `Название ${mismatchIdx + 1}`
+          wt("drawui.label_n", "Название {n}").replace("{n}", mismatchIdx + 1)
         )
       );
       card.appendChild(
-        _createEl("div", "mt-1 text-sm font-medium text-text-main dark:text-text-on-dark", `Ваш ответ: ${userAnswer}`)
+        _createEl("div", "mt-1 text-sm font-medium text-text-main dark:text-text-on-dark", wt("drawui.your_answer_val", "Ваш ответ: {val}").replace("{val}", userAnswer))
       );
       card.appendChild(
-        _createEl("div", "mt-1 text-sm text-text-secondary dark:text-text-muted", `Эталон: ${correctAnswer}`)
+        _createEl("div", "mt-1 text-sm text-text-secondary dark:text-text-muted", wt("drawui.ref_answer_val", "Эталон: {val}").replace("{val}", correctAnswer))
       );
       if (omittedPhrase) {
         card.appendChild(
-          _createEl("div", "mt-2 text-sm text-warning-darker", `Пропущено: ${omittedPhrase}`)
+          _createEl("div", "mt-2 text-sm text-warning-darker", wt("drawui.omitted_phrase_val", "Пропущено: {val}").replace("{val}", omittedPhrase))
         );
       }
       list.appendChild(card);
@@ -1664,12 +1670,12 @@
     const acceptBtn = _createEl(
       "button",
       "flex-1 rounded-xl border border-success-light bg-success-light px-4 py-3 text-sm font-semibold text-success-dark transition-colors hover:bg-success-light/80",
-      "Засчитать как верное"
+      wt("drawui.grade_correct", "Засчитать как верное")
     );
     const rejectBtn = _createEl(
       "button",
       "flex-1 rounded-xl border border-border-strong bg-surface-1 px-4 py-3 text-sm font-semibold text-text-main transition-colors hover:bg-surface-2 dark:text-text-on-dark",
-      "Оставить как неверное"
+      wt("drawui.grade_incorrect", "Оставить как неверное")
     );
 
     acceptBtn.addEventListener("click", () => {
@@ -1727,11 +1733,11 @@
     );
 
     const titleRow = _createEl("div", "flex items-center justify-between gap-2", "");
-    const title = _createEl("div", "text-sm font-semibold text-text-main dark:text-text-on-dark", "Названия");
+    const title = _createEl("div", "text-sm font-semibold text-text-main dark:text-text-on-dark", wt("drawui.labels_title", "Названия"));
     const sub = _createEl(
       "div",
       "text-xs font-medium text-text-secondary dark:text-text-on-dark",
-      state.stage === "polygons" ? "Контуры ↓" : "Штрихи ↓"
+      state.stage === "polygons" ? wt("drawui.stage_contours", "Контуры ↓") : wt("drawui.stage_lines", "Штрихи ↓")
     );
     titleRow.appendChild(title);
     titleRow.appendChild(sub);
@@ -1741,11 +1747,11 @@
 
     function addField(kind, idx) {
       const wrap = _createEl("div", "flex flex-col gap-1", "");
-      const labelText = kind === "polygon" ? `Контур ${idx + 1}` : `Штрих ${idx + 1}`;
+      const labelText = kind === "polygon" ? wt("drawui.contour_n", "Контур {n}").replace("{n}", idx + 1) : wt("drawui.stroke_n", "Штрих {n}").replace("{n}", idx + 1);
       const lbl = _createEl("div", "text-xs font-semibold text-text-muted dark:text-text-muted", labelText);
       const input = document.createElement("input");
       input.type = "text";
-      input.placeholder = "Название";
+      input.placeholder = wt("drawui.enter_name_placeholder", "Название");
       input.className =
         "w-full rounded-lg border border-border-subtle bg-surface-1 px-3 py-2 text-sm text-text-main shadow-sm focus:border-primary focus:ring-primary dark:border-border-strong dark:bg-surface-2 dark:text-text-on-dark";
 
@@ -2008,8 +2014,8 @@
       ""
     );
 
-    const brushBtnWrap = toolBtn("edit", "Режим рисования");
-    const panBtnWrap = toolBtn("pan_tool", "Перемещение");
+    const brushBtnWrap = toolBtn("edit", wt("drawui.mode_draw_title", "Режим рисования"));
+    const panBtnWrap = toolBtn("pan_tool", wt("drawui.mode_pan_title", "Перемещение"));
     topGroup.appendChild(brushBtnWrap.b);
     topGroup.appendChild(panBtnWrap.b);
 
@@ -2019,16 +2025,16 @@
       ""
     );
 
-    const zoomInWrap = toolBtn("add", "Увеличить");
-    const zoomOutWrap = toolBtn("remove", "Уменьшить");
-    const resetWrap = toolBtn("restart_alt", "Сбросить вид");
+    const zoomInWrap = toolBtn("add", wt("drawui.zoom_in_title", "Увеличить"));
+    const zoomOutWrap = toolBtn("remove", wt("drawui.zoom_out_title", "Уменьшить"));
+    const resetWrap = toolBtn("restart_alt", wt("drawui.reset_view_title", "Сбросить вид"));
     midGroup.appendChild(zoomInWrap.b);
     midGroup.appendChild(zoomOutWrap.b);
     midGroup.appendChild(resetWrap.b);
 
     const botGroup = _createEl("div", "mt-auto flex flex-col gap-3", "");
 
-    const undoWrap = toolBtn("arrow_undo", "Отменить");
+    const undoWrap = toolBtn("arrow_undo", wt("drawui.undo_title", "Отменить"));
     undoWrap.b.className =
       "flex items-center justify-center w-full h-12 sm:h-14 overflow-hidden border border-border-strong bg-surface-2 text-text-main dark:border-border-strong dark:bg-surface-2 dark:text-text-on-dark hover:bg-bg-hover dark:hover:bg-bg-hover hover:text-primary transition-colors focus:outline-none";
     if (undoWrap.s) {
@@ -2045,7 +2051,7 @@
       "flex flex-col items-center justify-center w-full h-14 overflow-hidden bg-error-light dark:bg-error-light rounded-xl border-2 border-border-strong dark:border-border-strong text-error-text dark:text-error-lighter shadow-sm hover:bg-error-light dark:hover:bg-error-light transition-all hover:-translate-y-[1px]",
       ""
     );
-    clearBtn.title = "Очистить";
+    clearBtn.title = wt("drawui.clear_title", "Очистить");
     const clearIcon = _createEl("span", "material-symbols-outlined", "delete");
     clearIcon.style.fontSize = "22px";
     clearBtn.appendChild(clearIcon);
@@ -2188,15 +2194,15 @@
       if (state.stage === "polygons") {
         const done = state.polygons.length;
         const total = state.maxPolygons;
-        const base = total > 0 ? `Контуры ${done} из ${total}.` : `Контуры ${done}.`;
-        const extra = state.maxLines > 0 ? ` Далее штрихи.` : "";
-        _setHint("info", `<span class=\"font-semibold text-text-main dark:text-text-on-dark\">${_escapeHtml(base)}</span> Нарисуй контур и замкни линию.${extra}`);
+        const base = total > 0 ? wt("drawui.drawn_poly_limit", "Контуры {done} из {total}.").replace("{done}", done).replace("{total}", total) : wt("drawui.drawn_poly_no_limit", "Контуры {done}.").replace("{done}", done);
+        const extra = state.maxLines > 0 ? wt("drawui.drawn_poly_next_strokes", " Далее штрихи.") : "";
+        _setHint("info", `<span class=\"font-semibold text-text-main dark:text-text-on-dark\">${_escapeHtml(base)}</span> ` + wt("drawui.draw_poly_instruction", "Нарисуй контур и замкни линию.") + extra);
       } else {
         const done = state.lines.length;
         const total = state.maxLines;
-        const base = total > 0 ? `Штрихи ${done} из ${total}.` : `Штрихи ${done}.`;
-        const extra = _requiresLabels() && _hasAnyUserMarks() ? "<div class=\"mt-0.5 leading-snug\">Введи названия и нажми «Проверить ответ».</div>" : "";
-        _setHint("info", `<span class=\"font-semibold text-text-main dark:text-text-on-dark\">${_escapeHtml(base)}</span> Зажми и веди мышью по линии.${extra}`);
+        const base = total > 0 ? wt("drawui.drawn_strokes_limit", "Штрихи {done} из {total}.").replace("{done}", done).replace("{total}", total) : wt("drawui.drawn_strokes_no_limit", "Штрихи {done}.").replace("{done}", done);
+        const extra = _requiresLabels() && _hasAnyUserMarks() ? wt("drawui.enter_names_prompt", "<div class=\"mt-0.5 leading-snug\">Введи названия и нажми «Проверить ответ».</div>") : "";
+        _setHint("info", `<span class=\"font-semibold text-text-main dark:text-text-on-dark\">${_escapeHtml(base)}</span> ` + wt("drawui.draw_stroke_instruction", "Зажми и веди мышью по линии.") + extra);
       }
     }
 
@@ -2306,12 +2312,12 @@
 
         if (state.stage === "polygons") {
           if (!isClosed) {
-            _flashHint("Контур должен быть замкнут. Замкни линию и отпусти мышь.");
+            _flashHint(wt("drawui.error_close_contour", "Контур должен быть замкнут. Замкни линию и отпусти мышь."));
             return;
           }
           pts = closedStrokePoints;
           if (state.maxPolygons > 0 && state.polygons.length >= state.maxPolygons) {
-            _flashHint("Достигнут лимит контуров. Перейди к штрихам или нажми «Проверить». ");
+            _flashHint(wt("drawui.error_contour_limit", "Достигнут лимит контуров. Перейди к штрихам или нажми «Проверить». "));
             if (state.maxLines > 0) _setStage("lines");
             return;
           }
@@ -2332,7 +2338,7 @@
 
         if (state.stage === "lines") {
           if (state.maxLines > 0 && state.lines.length >= state.maxLines) {
-            _flashHint("Достигнут лимит штрихов. Нажми «Проверить» для завершения или «Отменить», чтобы убрать последний штрих. ");
+            _flashHint(wt("drawui.error_stroke_limit", "Достигнут лимит штрихов. Нажми «Проверить» для завершения или «Отменить», чтобы убрать последний штрих. "));
             _flashUndoButtonAttention();
             return;
           }
