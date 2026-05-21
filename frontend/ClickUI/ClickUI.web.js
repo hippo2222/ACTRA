@@ -83,6 +83,7 @@
     reviewHost: null,
     reviewComparisonEl: null,
     runtimeMode: false,
+    globalHoveredInfo: null,
   };
 
   function _getThemeColor(varName, fallback) {
@@ -498,6 +499,9 @@
     state.userActionRows.forEach((entry) => {
       if (!entry || !entry.el) return;
       entry.el.classList.remove("ring-1", "ring-primary", "shadow-md");
+      if (state.hoveredActionKey === entry.key) {
+        entry.el.classList.add("ring-1", "ring-primary", "shadow-md");
+      }
     });
   }
 
@@ -508,6 +512,13 @@
     _syncUserActionRowsState();
     _renderMarkers();
     _renderDrawing();
+    if (nextKey) {
+      const parts = nextKey.split(":");
+      const targetIndex = _findTargetIndex(state.taskDto, parts[0], Number(parts[1]));
+      _setGlobalHover({ targetIndex, actionKey: nextKey });
+    } else {
+      _setGlobalHover(null);
+    }
   }
 
   function _buildActionInterpretationMap(details) {
@@ -2310,6 +2321,71 @@
     return block;
   }
 
+  function _setGlobalHover(hoverInfo) {
+    state.globalHoveredInfo = hoverInfo;
+    _updateGlobalHoverOpacities();
+  }
+
+  function _updateGlobalHoverOpacities() {
+    const hoverInfo = state.globalHoveredInfo;
+    const elements = [];
+
+    if (state.refLayer) {
+      elements.push(...state.refLayer.querySelectorAll("[data-target-index]"));
+    }
+    if (state.drawLayer) {
+      elements.push(...state.drawLayer.querySelectorAll("[data-target-index], [data-clickui-action-key]"));
+    }
+    if (state.markerLayer) {
+      elements.push(...state.markerLayer.querySelectorAll("[data-target-index], [data-clickui-action-key]"));
+    }
+    if (Array.isArray(state.targetRows)) {
+      state.targetRows.forEach(r => { if (r.el) elements.push(r.el); });
+    }
+    if (Array.isArray(state.userActionRows)) {
+      state.userActionRows.forEach(r => { if (r.el) elements.push(r.el); });
+    }
+    // Include labels-panel rows (Level 2/3 input rows with data-target-index)
+    if (state.labelsContainer) {
+      elements.push(...state.labelsContainer.querySelectorAll("[data-target-index]"));
+    }
+
+    if (!hoverInfo) {
+      elements.forEach(el => {
+        el.style.opacity = "";
+      });
+      return;
+    }
+
+    const { targetIndex, actionKey } = hoverInfo;
+
+    elements.forEach(el => {
+      el.style.transition = "opacity 0.15s ease-in-out";
+
+      const elTargetIdxAttr = el.getAttribute("data-target-index");
+      const elTargetIdx = (elTargetIdxAttr !== null && elTargetIdxAttr !== "") ? Number(elTargetIdxAttr) : null;
+      const elActionKey = el.getAttribute("data-clickui-action-key");
+
+      let shouldKeep = false;
+
+      if (targetIndex !== null && targetIndex !== undefined) {
+        if (elTargetIdx === targetIndex) {
+          shouldKeep = true;
+        }
+      } else if (actionKey) {
+        if (elActionKey === actionKey) {
+          shouldKeep = true;
+        }
+      }
+
+      if (shouldKeep) {
+        el.style.opacity = "1";
+      } else {
+        el.style.opacity = "0.08";
+      }
+    });
+  }
+
   function _setupReviewHoverEffects(card) {
     const hoverables = Array.from(card.querySelectorAll("[data-target-index]"));
     if (!hoverables.length) return;
@@ -2780,6 +2856,10 @@
 
       let labelPos = null;
 
+      const isBad = bad ? bad.has(idx) : false;
+      const baseColor = isBad ? errorStroke : _getTargetColor(idx);
+      const baseFill = _withAlpha(baseColor, isBad ? 0.1 : 0.18);
+
       if (state.showRefContours) {
         if (
           state.showRefPolygons &&
@@ -2787,7 +2867,6 @@
           Array.isArray(t.points) &&
           t.points.length >= 3
         ) {
-          const isBad = bad ? bad.has(idx) : false;
           const norm = t.points.map((p) => _normalizeXY(p)).filter(Boolean);
           const isNorm = _isLikelyNormalized(norm);
           let minX = Infinity;
@@ -2823,20 +2902,26 @@
             const poly = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
             poly.setAttribute("data-clickui-ref", "polygon");
             poly.setAttribute("points", pts);
-            poly.setAttribute("fill", isBad ? errorFill : fillPoly);
-            poly.setAttribute("stroke", isBad ? errorStroke : strokePoly);
+            poly.setAttribute("fill", baseFill);
+            poly.setAttribute("stroke", baseColor);
             poly.setAttribute("stroke-width", isBad ? "6" : "4");
             poly.setAttribute("stroke-opacity", "0.75");
+            poly.setAttribute("data-target-index", String(idx));
+            poly.setAttribute("pointer-events", "visiblePainted");
 
             // Also set inline styles to prevent any external CSS from overriding SVG attributes.
-            poly.style.stroke = isBad ? errorStroke : strokePoly;
+            poly.style.stroke = baseColor;
             poly.style.strokeWidth = isBad ? "6" : "4";
             poly.style.strokeOpacity = "0.75";
-            poly.style.fill = isBad ? errorFill : fillPoly;
+            poly.style.fill = baseFill;
+            poly.style.pointerEvents = "visiblePainted";
 
             if (isBad) {
               poly.classList.add("clickui-bad-target");
             }
+            poly.addEventListener("mouseenter", () => _setGlobalHover({ targetIndex: idx }));
+            poly.addEventListener("mouseleave", () => _setGlobalHover(null));
+
             (isBad ? badEls : normalEls).push(poly);
             appendedPolygons += 1;
             labelPos = _centroid(t.points);
@@ -2847,7 +2932,6 @@
           Array.isArray(t.points) &&
           t.points.length >= 2
         ) {
-          const isBad = bad ? bad.has(idx) : false;
           const norm = t.points.map((p) => _normalizeXY(p)).filter(Boolean);
           const isNorm = _isLikelyNormalized(norm);
           const d = norm
@@ -2862,22 +2946,28 @@
             path.setAttribute("data-clickui-ref", "freehand");
             path.setAttribute("d", d);
             path.setAttribute("fill", "none");
-            path.setAttribute("stroke", isBad ? errorStroke : strokeLine);
+            path.setAttribute("stroke", baseColor);
             path.setAttribute("stroke-width", isBad ? "6" : "4");
             path.setAttribute("stroke-linecap", "round");
             path.setAttribute("stroke-linejoin", "round");
             path.setAttribute("stroke-opacity", "0.85");
             path.setAttribute("stroke-dasharray", "10 6");
+            path.setAttribute("data-target-index", String(idx));
+            path.setAttribute("pointer-events", "visibleStroke");
 
             // Inline styles as well.
-            path.style.stroke = isBad ? errorStroke : strokeLine;
+            path.style.stroke = baseColor;
             path.style.strokeWidth = isBad ? "6" : "4";
             path.style.strokeOpacity = "0.85";
             path.style.strokeDasharray = "10 6";
+            path.style.pointerEvents = "visibleStroke";
 
             if (isBad) {
               path.classList.add("clickui-bad-target");
             }
+            path.addEventListener("mouseenter", () => _setGlobalHover({ targetIndex: idx }));
+            path.addEventListener("mouseleave", () => _setGlobalHover(null));
+
             (isBad ? badEls : normalEls).push(path);
             appendedLines += 1;
             labelPos = _centroid(t.points);
@@ -2892,9 +2982,16 @@
             circle.setAttribute("cx", String(x));
             circle.setAttribute("cy", String(y));
             circle.setAttribute("r", "10");
-            circle.setAttribute("fill", fillPoly);
-            circle.setAttribute("stroke", strokePoly);
+            circle.setAttribute("fill", baseFill);
+            circle.setAttribute("stroke", baseColor);
             circle.setAttribute("stroke-width", "2");
+            circle.setAttribute("data-target-index", String(idx));
+            circle.setAttribute("pointer-events", "auto");
+            circle.style.pointerEvents = "auto";
+
+            circle.addEventListener("mouseenter", () => _setGlobalHover({ targetIndex: idx }));
+            circle.addEventListener("mouseleave", () => _setGlobalHover(null));
+
             (bad && bad.has(idx) ? badEls : normalEls).push(circle);
             appendedPoints += 1;
             labelPos = { x, y };
@@ -2926,8 +3023,15 @@
           text.setAttribute("font-family", "Inter, system-ui, sans-serif");
           text.setAttribute("text-anchor", "middle");
           text.setAttribute("dominant-baseline", "middle");
+          text.setAttribute("data-target-index", String(idx));
+          text.setAttribute("pointer-events", "auto");
+          text.style.pointerEvents = "auto";
+          text.style.cursor = "pointer";
 
           text.textContent = textValue;
+          text.addEventListener("mouseenter", () => _setGlobalHover({ targetIndex: idx }));
+          text.addEventListener("mouseleave", () => _setGlobalHover(null));
+
           (bad && bad.has(idx) ? badEls : normalEls).push(text);
         }
       }
@@ -3513,6 +3617,57 @@
     if (typeof state._updateLiveProgress === "function") state._updateLiveProgress();
   }
 
+  /**
+   * Maps a label-row (kind + 0-based sequential index) to the corresponding
+   * answer_key.targets index, for use in hover isolation.
+   *
+   * For Level 2 (click rows): click i -> target that was hit by click i.
+   * We look this up from state.lastTargetsInfo if available (set during
+   * applyCheckFeedback), or fall back to a direct 1:1 mapping.
+   *
+   * For Level 3 (polygon/line rows): polygon i -> target index i.
+   */
+  function _findLabelRowTargetIndex(kind, idx0based) {
+    try {
+      const targets = _getTargets(state.taskDto);
+      if (!targets.length) return null;
+
+      if (kind === \"polygon\" || kind === \"line\") {
+        // L3: polygons map 1:1 to targets; lines come after polygons.
+        if (kind === \"polygon\") {
+          return idx0based < targets.length ? idx0based : null;
+        }
+        // line: offset by number of polygon targets
+        const polyCount = targets.filter((t) => _getTargetShape(t) === \"polygon\").length;
+        const lineIdx = polyCount + idx0based;
+        return lineIdx < targets.length ? lineIdx : null;
+      }
+
+      if (kind === \"click\") {
+        // L2: try to use the last targets_info mapping from the evaluator.
+        const targetsInfo = Array.isArray(state.lastTargetsInfo) ? state.lastTargetsInfo : [];
+        if (targetsInfo.length) {
+          // targetsInfo[targetIdx].matched_click_idx tells us which click hit which target.
+          // Build click_idx -> target_idx map.
+          const clickToTarget = {};
+          targetsInfo.forEach((info) => {
+            if (info && typeof info.matched_click_idx === \"number\" && info.matched_click_idx !== null) {
+              clickToTarget[info.matched_click_idx] = info.index;
+            }
+          });
+          if (typeof clickToTarget[idx0based] === \"number\") {
+            return clickToTarget[idx0based];
+          }
+        }
+        // Fallback: direct 1:1 mapping (click i -> target i)
+        return idx0based < targets.length ? idx0based : null;
+      }
+    } catch (e) {
+      // ignore
+    }
+    return null;
+  }
+
   function _renderLabelsInputs(foundTargets) {
     if (!state.labelsContainer) return;
 
@@ -3806,6 +3961,21 @@
         wrap.appendChild(top);
         wrap.appendChild(input);
       }
+
+      // Attach hover isolation: resolve which target this row belongs to and
+      // wire mouseenter/mouseleave to the global hover system.
+      try {
+        const targetIdx = _findLabelRowTargetIndex(kind, idx1based - 1);
+        if (targetIdx !== null && targetIdx !== undefined) {
+          wrap.setAttribute("data-target-index", String(targetIdx));
+          wrap.style.transition = "opacity 0.15s ease-in-out";
+          wrap.addEventListener("mouseenter", () => _setGlobalHover({ targetIndex: targetIdx }));
+          wrap.addEventListener("mouseleave", () => _setGlobalHover(null));
+        }
+      } catch (e) {
+        // ignore
+      }
+
       return { wrap, input };
     }
 
@@ -5483,6 +5653,8 @@
     try {
       const clickResults = Array.isArray(details.click_results) ? details.click_results : [];
       const lineResults = Array.isArray(details.line_results) ? details.line_results : [];
+      // Level 2: backend returns targets_info instead of click_results/line_results
+      const targetsInfo = Array.isArray(details.targets_info) ? details.targets_info : [];
 
       const taskDto = state.taskDto;
       const answerKey = (taskDto && taskDto.answer_key) || {};
@@ -5515,11 +5687,29 @@
         const shape = _inferShapeLower(targets[idx]);
         if (shape === "freehand") bad.add(idx);
       });
+
+      // Level 2: parse targets_info (found: false => mark as bad)
+      if (!clickResults.length && !lineResults.length && targetsInfo.length) {
+        targetsInfo.forEach((info) => {
+          if (!info || typeof info !== "object") return;
+          if (info.found === false) {
+            const idx = typeof info.index === "number" ? info.index : null;
+            if (idx == null) return;
+            bad.add(idx);
+          }
+        });
+      }
     } catch (e) {
       // ignore
     }
 
     state.badRefTargets = bad.size ? bad : null;
+    // Store targets_info for _findLabelRowTargetIndex (hover mapping in Level 2).
+    try {
+      state.lastTargetsInfo = Array.isArray(details.targets_info) ? details.targets_info : [];
+    } catch (e) {
+      state.lastTargetsInfo = [];
+    }
     if (stage === "lines" || error === "lines_missing") {
       state.locked = false;
       _setMode("brush");
@@ -5656,6 +5846,8 @@
 
     _renderMarkers();
     _renderDrawing();
+    // Re-assign palette so _renderReference uses fresh colors (important for Level 2).
+    _assignTargetColors(state.taskDto);
     _renderReference();
     _renderReviewComparison(result);
 
