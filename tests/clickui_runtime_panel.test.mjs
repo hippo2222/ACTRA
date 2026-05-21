@@ -1,4 +1,4 @@
-﻿import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { JSDOM } from "jsdom";
 import fs from "fs";
 import path from "path";
@@ -1141,6 +1141,89 @@ describe("ClickUI runtime targets panel", () => {
     expect(userLabels?.textContent || "").toContain("Линия пользователя");
     expect(refLabels?.textContent || "").toContain("Контур мишени");
     expect(refLabels?.textContent || "").toContain("Линия ориентира");
+  });
+
+  it("isolates hovered review target/label and fades others to 0.08 opacity", () => {
+    const task = createDrawTaskFixture([
+      {
+        label: "Контур мишени",
+        shape: "polygon",
+        points: [[10, 10], [20, 10], [20, 20], [10, 20]],
+      },
+      {
+        label: "Линия ориентира",
+        shape: "freehand",
+        points: [[40, 40], [55, 40], [70, 42]],
+      },
+    ]);
+    const container = document.getElementById("app");
+
+    dom.window.ClickUI.render(container, task, { runtimeMode: false });
+    dom.window.ClickUI.restoreInput({
+      polygons: [{ points: [[10, 10], [20, 10], [20, 20], [10, 20]] }],
+      lines: [{ points: [[40, 40], [55, 40], [70, 42]] }],
+      labels_polygons: ["Контур пользователя"],
+      labels_lines: ["Линия пользователя"],
+      action_history: [{ kind: "polygon" }, { kind: "line" }],
+    });
+
+    dom.window.ClickUI.applyCheckFeedback({
+      success: false,
+      details: {
+        polygon_results: [
+          {
+            target_index: 0,
+            polygon_success: true,
+            coverage: 95,
+            threshold: 75,
+            matched_polygon_idx: 0,
+          },
+        ],
+        line_results: [
+          {
+            target_index: 1,
+            line_success: false,
+            coverage: 60,
+            threshold: 75,
+            matched_line_idx: 0,
+          },
+        ],
+        found_targets: [0],
+      },
+    });
+
+    const userPreview = container.querySelector('[data-clickui="review-user-preview"]');
+    expect(userPreview).toBeTruthy();
+
+    const hoverables = Array.from(userPreview.querySelectorAll('[data-target-index]'));
+    expect(hoverables.length).toBeGreaterThan(0);
+
+    const target0Elements = hoverables.filter(el => el.getAttribute('data-target-index') === '0');
+    const target1Elements = hoverables.filter(el => el.getAttribute('data-target-index') === '1');
+
+    expect(target0Elements.length).toBeGreaterThan(0);
+    expect(target1Elements.length).toBeGreaterThan(0);
+
+    target1Elements.forEach(el => {
+      expect(el.style.opacity).not.toBe("0.08");
+    });
+
+    const eventEnter = new dom.window.MouseEvent("mouseenter", { bubbles: true });
+    target0Elements[0].dispatchEvent(eventEnter);
+
+    target1Elements.forEach(el => {
+      expect(el.style.opacity).toBe("0.08");
+    });
+    target0Elements.forEach(el => {
+      expect(el.style.opacity).toBe("1");
+    });
+
+    const eventLeave = new dom.window.MouseEvent("mouseleave", { bubbles: true });
+    target0Elements[0].dispatchEvent(eventLeave);
+
+    hoverables.forEach(el => {
+      expect(el.style.opacity).toBe("");
+    });
   });
 });
 

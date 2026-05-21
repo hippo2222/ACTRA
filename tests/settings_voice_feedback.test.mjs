@@ -131,6 +131,22 @@ describe('Settings voice feedback on load failures', () => {
                 };
             }
 
+            if (url === '/api/editor/theory/rollout/status') {
+                return {
+                    ok: true,
+                    status: 200,
+                    json: async () => ({ ok: true, rollout: { feature_flags: { ai_mode: true } } }),
+                };
+            }
+
+            if (url === '/api/billing/status') {
+                return {
+                    ok: true,
+                    status: 200,
+                    json: async () => ({ ok: true, status: { premium: false } }),
+                };
+            }
+
             return {
                 ok: true,
                 status: 200,
@@ -168,6 +184,20 @@ describe('Settings voice feedback on load failures', () => {
                     ok: true,
                     status: 200,
                     json: async () => ({ ok: true, settings: { theme: 'light-a' } }),
+                };
+            }
+            if (url === '/api/editor/theory/rollout/status') {
+                return {
+                    ok: true,
+                    status: 200,
+                    json: async () => ({ ok: true, rollout: { feature_flags: { ai_mode: true } } }),
+                };
+            }
+            if (url === '/api/billing/status') {
+                return {
+                    ok: true,
+                    status: 200,
+                    json: async () => ({ ok: true, status: { premium: false } }),
                 };
             }
             throw new Error('network down');

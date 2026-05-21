@@ -1,6 +1,12 @@
 const SequenceUI = (function () {
   let currentInstance = null;
 
+  function wt(key, fallback) {
+    if (!window.i18n || typeof window.i18n.t !== "function") return fallback;
+    const v = window.i18n.t(key);
+    return v !== key ? v : fallback;
+  }
+
   function shuffleInPlace(arr) {
     for (let i = arr.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -516,8 +522,8 @@ const SequenceUI = (function () {
     const addLevelBtn = document.createElement("button");
     addLevelBtn.type = "button";
     addLevelBtn.className = "hidden items-center justify-center gap-1.5 px-3 py-1.5 border border-border-strong bg-primary text-primary-fg hover:bg-primary-hover rounded text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 dark:focus-visible:ring-offset-surface-2";
-    addLevelBtn.setAttribute("aria-label", "\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u0443\u0440\u043e\u0432\u0435\u043d\u044c");
-    addLevelBtn.innerHTML = '<span class="material-symbols-outlined text-sm">add</span> \u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u0443\u0440\u043e\u0432\u0435\u043d\u044c';
+    addLevelBtn.setAttribute("aria-label", wt("sequenceui.create_level_btn", "Создать уровень"));
+    addLevelBtn.innerHTML = '<span class="material-symbols-outlined text-sm">add</span> ' + wt("sequenceui.create_level_btn", "Создать уровень");
 
     const clearBtn = document.createElement("button");
     clearBtn.type = "button";
@@ -575,7 +581,7 @@ const SequenceUI = (function () {
     const referenceViewBtn = document.createElement("button");
     referenceViewBtn.type = "button";
     referenceViewBtn.dataset.sequenceui = "comparison-view-reference";
-    referenceViewBtn.textContent = "\u042d\u0442\u0430\u043b\u043e\u043d";
+    referenceViewBtn.textContent = wt("sequenceui.reference_badge", "Эталон");
 
     comparisonToggle.appendChild(userViewBtn);
     comparisonToggle.appendChild(referenceViewBtn);
@@ -927,7 +933,7 @@ const SequenceUI = (function () {
         return {
           valid: false,
           reason: "missing_level_name",
-          message: "Добавьте название уровня перед проверкой",
+          message: wt("sequenceui.validation_add_level_name", "Добавьте название уровня перед проверкой"),
         };
       }
       invalidLevelNameIds.clear();
@@ -1114,7 +1120,7 @@ const SequenceUI = (function () {
         ? buildAvailableFromPlacements(renderModel.placements)
         : state.available.slice();
       const groups = getAvailableGroups(ids);
-      availableCount.textContent = `${ids.length} ${pluralRu(ids.length, "\u044d\u043b\u0435\u043c\u0435\u043d\u0442", "\u044d\u043b\u0435\u043c\u0435\u043d\u0442\u0430", "\u044d\u043b\u0435\u043c\u0435\u043d\u0442\u043e\u0432")}`;
+      availableCount.textContent = `${ids.length} ${pluralRu(ids.length, wt("sequenceui.plural_element_one", "элемент"), wt("sequenceui.plural_element_few", "элемента"), wt("sequenceui.plural_element_many", "элементов"))}`;
 
       if (ids.length === 0) {
         const empty = document.createElement("div");
@@ -1131,7 +1137,7 @@ const SequenceUI = (function () {
 
         const btn = document.createElement("button");
         btn.type = "button";
-        btn.setAttribute("aria-label", `Выбрать элемент: ${label}`);
+        btn.setAttribute("aria-label", wt("sequenceui.select_element_aria", "Выбрать элемент: {label}").replace("{label}", label));
         btn.dataset.sequenceui = "available-item";
         btn.className =
           "w-full text-left rounded-lg border px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 dark:focus-visible:ring-offset-surface-2 " +
@@ -1255,16 +1261,16 @@ const SequenceUI = (function () {
 
         const title = document.createElement("div");
         title.className = "text-sm font-bold text-text-main dark:text-text-on-dark";
-        title.textContent = "Добавьте первый уровень";
+        title.textContent = wt("sequenceui.add_first_level_title", "Добавьте первый уровень");
 
         const desc = document.createElement("div");
         desc.className = "mt-2 text-xs text-text-muted dark:text-text-muted";
-        desc.textContent = "Создайте уровни, дайте им названия и распределите по ним элементы.";
+        desc.textContent = wt("sequenceui.add_first_level_desc", "Создайте уровни, дайте им названия и распределите по ним элементы.");
 
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = "mt-4 inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-primary-fg rounded-lg shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 dark:focus-visible:ring-offset-surface-2";
-        btn.innerHTML = '<span class="material-symbols-outlined">add_circle</span><span class="font-bold text-xs">Создать уровень</span>';
+        btn.innerHTML = '<span class="material-symbols-outlined">add_circle</span><span class="font-bold text-xs">' + wt("sequenceui.create_level_btn", "Создать уровень") + '</span>';
         btn.addEventListener("click", () => {
           addUserLevel();
         });
@@ -1459,7 +1465,7 @@ const SequenceUI = (function () {
         // For difficulty=2 (user creates levels) empty-state is handled above.
         const empty = document.createElement("div");
         empty.className = "text-sm text-text-muted dark:text-text-muted";
-        empty.textContent = "В задаче нет уровней";
+        empty.textContent = wt("sequenceui.empty_task_levels", "В задаче нет уровней");
         levelsContainer.appendChild(empty);
         return;
       }
@@ -1490,7 +1496,7 @@ const SequenceUI = (function () {
 
             const input = document.createElement("input");
             input.type = "text";
-            input.placeholder = "Название уровня...";
+            input.placeholder = wt("sequenceui.level_name_placeholder", "Название уровня...");
             input.value = lvl.label || "";
             const levelInputId = String(lvl.level_id || idx);
             const isMissingLevelName =
@@ -1518,7 +1524,7 @@ const SequenceUI = (function () {
           } else {
             const h3 = document.createElement("h3");
             h3.className = "text-sm font-bold text-text-main dark:text-text-on-dark";
-            const levelTitle = lvl.label || "Без названия";
+            const levelTitle = lvl.label || wt("sequenceui.level_no_name", "Без названия");
             h3.textContent = levelTitle;
             h3.title = levelTitle;
             leftHeader.appendChild(h3);
@@ -1540,7 +1546,7 @@ const SequenceUI = (function () {
           "text-[10px] font-bold text-text-main dark:text-text-on-dark uppercase tracking-widest";
         slotsLabel.textContent =
           expectedCount > 0
-            ? `${expectedCount} ${pluralRu(expectedCount, "слот", "слота", "слотов")}`
+            ? `${expectedCount} ${pluralRu(expectedCount, wt("sequenceui.plural_slot_one", "слот"), wt("sequenceui.plural_slot_few", "слота"), wt("sequenceui.plural_slot_many", "слотов"))}`
             : "";
 
         if (difficulty === 1 && levelOrderMatters && !referenceView) {
@@ -1601,8 +1607,8 @@ const SequenceUI = (function () {
         if (userCreatesLevels && !referenceView) {
           const delBtn = document.createElement("button");
           delBtn.type = "button";
-          delBtn.setAttribute("aria-label", "Удалить уровень");
-          delBtn.title = "Удалить уровень";
+          delBtn.setAttribute("aria-label", wt("sequenceui.delete_level_aria", "Удалить уровень"));
+          delBtn.title = wt("sequenceui.delete_level_aria", "Удалить уровень");
           delBtn.className = "text-error hover:text-error p-1.5 rounded hover:bg-error-lighter dark:hover:bg-error-light transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 dark:focus-visible:ring-offset-surface-2";
           delBtn.innerHTML = '<span class="material-symbols-outlined text-lg">delete</span>';
 
@@ -1638,7 +1644,7 @@ const SequenceUI = (function () {
           const badge = document.createElement("span");
           badge.className = "ml-2 inline-flex items-center gap-1 text-xs font-semibold text-success-text dark:text-success-light";
           badge.appendChild(makeIconSvg("correct"));
-          badge.appendChild(document.createTextNode("Позиция верная"));
+          badge.appendChild(document.createTextNode(wt("sequenceui.pos_correct", "Позиция верная")));
           headerRow.appendChild(badge);
         } else if (levelOrderVerdict === "incorrect") {
           panel.className =
@@ -1646,7 +1652,7 @@ const SequenceUI = (function () {
           const badge = document.createElement("span");
           badge.className = "ml-2 inline-flex items-center gap-1 text-xs font-semibold text-error-text dark:text-error-light";
           badge.appendChild(makeIconSvg("incorrect"));
-          badge.appendChild(document.createTextNode("Неверная позиция"));
+          badge.appendChild(document.createTextNode(wt("sequenceui.pos_incorrect", "Неверная позиция")));
           headerRow.appendChild(badge);
         }
 
@@ -1656,7 +1662,7 @@ const SequenceUI = (function () {
           const badge = document.createElement("span");
           badge.className = "ml-2 inline-flex items-center gap-1 text-xs font-semibold text-success-text dark:text-success-light";
           badge.appendChild(makeIconSvg("correct"));
-          badge.appendChild(document.createTextNode("Название верное"));
+          badge.appendChild(document.createTextNode(wt("sequenceui.name_correct", "Название верное")));
           headerRow.appendChild(badge);
         } else if (levelOrderVerdict == null && levelNameVerdict === "incorrect") {
           panel.className =
@@ -1664,13 +1670,13 @@ const SequenceUI = (function () {
           const badge = document.createElement("span");
           badge.className = "ml-2 inline-flex items-center gap-1 text-xs font-semibold text-error-text dark:text-error-light";
           badge.appendChild(makeIconSvg("incorrect"));
-          badge.appendChild(document.createTextNode("Название неверное"));
+          badge.appendChild(document.createTextNode(wt("sequenceui.name_incorrect", "Название неверное")));
           headerRow.appendChild(badge);
         } else if (levelOrderVerdict == null && levelNameVerdict == null && referenceView) {
           const badge = document.createElement("span");
           badge.className = "ml-2 inline-flex items-center gap-1 text-xs font-semibold text-success-text dark:text-success-light";
           badge.appendChild(makeIconSvg("correct"));
-          badge.appendChild(document.createTextNode("Эталон"));
+          badge.appendChild(document.createTextNode(wt("sequenceui.reference_badge", "Эталон")));
           headerRow.appendChild(badge);
         }
 
@@ -1723,7 +1729,7 @@ const SequenceUI = (function () {
 
             const input = document.createElement("input");
             input.type = "text";
-            input.placeholder = "Название элемента...";
+            input.placeholder = wt("sequenceui.element_name_placeholder", "Название элемента...");
             input.value =
               blockNamesSource && typeof blockNamesSource === "object"
                 ? String(blockNamesSource[slotId] || "")
@@ -1776,7 +1782,7 @@ const SequenceUI = (function () {
 
             const btn = document.createElement("button");
             btn.type = "button";
-            btn.setAttribute("aria-label", `Убрать элемент: ${label}`);
+            btn.setAttribute("aria-label", wt("sequenceui.remove_element_aria", "Убрать элемент: {label}").replace("{label}", label));
 
             const basePlaced =
               "h-14 flex-1 min-w-[180px] rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 dark:focus-visible:ring-offset-surface-2 relative overflow-hidden ";
@@ -1838,12 +1844,12 @@ const SequenceUI = (function () {
               slot.className =
                 slotBase +
                 "bg-surface-1 dark:bg-surface-2 border-2 border-dashed border-border-strong dark:border-border-strong text-text-muted select-none pointer-events-none";
-              slot.textContent = "[ Пусто ]";
+              slot.textContent = wt("sequenceui.slot_empty_label", "[ Пусто ]");
               slotsWrap.appendChild(slot);
             } else {
               const slot = document.createElement("button");
               slot.type = "button";
-              slot.setAttribute("aria-label", "Разместить выбранный элемент в этот слот");
+              slot.setAttribute("aria-label", wt("sequenceui.place_selected_element_aria", "Разместить выбранный элемент в этот слот"));
               slot.className =
                 slotBase +
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 dark:focus-visible:ring-offset-surface-2 ";
@@ -1852,7 +1858,7 @@ const SequenceUI = (function () {
               if (editable) {
                 slot.className +=
                   "bg-surface-1 dark:bg-surface-2 border-2 border-dashed border-border-strong dark:border-border-strong text-text-muted cursor-pointer hover:border-primary hover:bg-primary-lighter";
-                slot.textContent = "Разместить";
+                slot.textContent = wt("sequenceui.place_btn", "Разместить");
                 slot.addEventListener("click", () => {
                   placeSelectedIntoLevel(idx, i);
                 });
@@ -1860,7 +1866,7 @@ const SequenceUI = (function () {
                 slot.className +=
                   "bg-surface-1 dark:bg-surface-2 border-2 border-dashed border-border-strong dark:border-border-strong text-text-muted cursor-default";
                 slot.disabled = true;
-                slot.textContent = "[ Пусто ]";
+                slot.textContent = wt("sequenceui.slot_empty_label", "[ Пусто ]");
               }
 
               slotsWrap.appendChild(slot);
@@ -1871,7 +1877,7 @@ const SequenceUI = (function () {
         if (userCreatesLevels && !referenceView) {
           const addSlotBtn = document.createElement("button");
           addSlotBtn.type = "button";
-          addSlotBtn.setAttribute("aria-label", "Добавить слот в уровень");
+          addSlotBtn.setAttribute("aria-label", wt("sequenceui.add_slot_aria", "Добавить слот в уровень"));
           addSlotBtn.className = "h-14 w-12 shrink-0 rounded-lg border border-border-strong dark:border-border-strong flex items-center justify-center hover:bg-bg-hover dark:hover:bg-bg-hover transition-colors text-text-muted hover:text-text-muted dark:hover:text-text-on-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 dark:focus-visible:ring-offset-surface-2";
           addSlotBtn.innerHTML = '<span class="material-symbols-outlined">add</span>';
 
@@ -1976,8 +1982,8 @@ const SequenceUI = (function () {
 
       comparisonStatus.textContent =
         activeView === "reference"
-          ? "Показан эталонный вариант."
-          : "Показан ваш ответ с отметками проверки.";
+          ? wt("sequenceui.ref_shown_desc", "Показан эталонный вариант.")
+          : wt("sequenceui.user_answer_shown_desc", "Показан ваш ответ с отметками проверки.");
     }
 
     function refreshScrollablePanels() {
@@ -2331,28 +2337,28 @@ const SequenceUI = (function () {
             const d = state.lastRawResultDetails;
             const orderOk = d && typeof d === "object" ? d.levels_in_correct_order === true : null;
             if (!success && orderOk === false) {
-              levelsHint.textContent = "Порядок уровней неверный. Переставьте уровни и проверьте снова.";
+              levelsHint.textContent = wt("sequenceui.level_order_incorrect_hint", "Порядок уровней неверный. Переставьте уровни и проверьте снова.");
             } else {
               // Восстанавливаем базовую подсказку (как при инициализации)
               levelsHint.textContent = "";
               if (requiresBlockNames || difficulty === 3) {
-                levelsHint.appendChild(document.createTextNode("Введите названия элементов и уровней."));
+                levelsHint.appendChild(document.createTextNode(wt("sequenceui.base_prompt_enter_names", "Введите названия элементов и уровней.")));
               } else {
                 levelsHint.appendChild(
-                  document.createTextNode("Выберите элемент справа, затем кликните на пустой слот для размещения.")
+                  document.createTextNode(wt("sequenceui.base_prompt_select_and_click", "Выберите элемент справа, затем кликните на пустой слот для размещения."))
                 );
               }
               if (sequenceWithinLevelMatters) {
                 levelsHint.appendChild(document.createTextNode(" "));
                 const strong = document.createElement("strong");
                 strong.className = "font-bold text-text-secondary dark:text-text-on-dark";
-                strong.textContent = "Порядок элементов важен.";
+                strong.textContent = wt("sequenceui.settings_elements_order_matters", "Порядок элементов важен.");
                 levelsHint.appendChild(strong);
               }
               levelsHint.appendChild(document.createTextNode(" "));
               const strong = document.createElement("strong");
               strong.className = "font-bold text-text-secondary dark:text-text-on-dark";
-              strong.textContent = "Порядок уровней важен.";
+              strong.textContent = wt("sequenceui.settings_level_order_matters", "Порядок уровней важен.");
               levelsHint.appendChild(strong);
             }
           }

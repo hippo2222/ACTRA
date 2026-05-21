@@ -39,6 +39,7 @@ function setupGlobalDom() {
 
     // Load dependencies in order via eval
     dom.window.eval(loadScript('frontend/Editor/undo_manager.js') + "\n;window.UndoManager = UndoManager;");
+    dom.window.wt = (key, fallback) => fallback;
     dom.window.eval(loadScript('frontend/Editor/base_editor.js') + "\n;window.BaseEditor = BaseEditor;");
     dom.window.eval(loadScript('frontend/Editor/autosave_manager.js') + "\n;window.AutoSaveManager = AutoSaveManager;");
     dom.window.eval(loadScript('frontend/Editor/open_answer_editor.js') + "\n;window.OpenAnswerEditor = OpenAnswerEditor;");

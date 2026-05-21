@@ -20,6 +20,9 @@
     reviewOpen: false,
     reviewExpanded: false,
     imagePreviewOpen: false,
+    toggledProblems: {},
+    failedCount: 0,
+    problemOpen: false,
   };
 
   function isObject(value) {
@@ -1283,7 +1286,7 @@
 
     const copy = document.createElement("p");
     copy.className = "s2-review-empty-copy";
-    copy.textContent = wt('s2.clean_pass_copy', 'Точный проход без замечаний.');
+    copy.textContent = wt('s2.clean_pass_copy', 'Точный проход без замечаний. Разбор ошибок не нужен.');
 
     hero.appendChild(icon);
     hero.appendChild(badge);
@@ -1553,6 +1556,11 @@
     if (kind === "review") {
       state.reviewOpen = true;
       setHidden("review-dialog-backdrop", false);
+      return;
+    }
+    if (kind === "problem") {
+      state.problemOpen = true;
+      setHidden("problem-dialog-backdrop", false);
     }
   }
 
@@ -1565,6 +1573,11 @@
     if (kind === "review") {
       state.reviewOpen = false;
       setHidden("review-dialog-backdrop", true);
+      return;
+    }
+    if (kind === "problem") {
+      state.problemOpen = false;
+      setHidden("problem-dialog-backdrop", true);
     }
   }
 
@@ -1757,6 +1770,8 @@
     renderSummary(summary);
     renderDetailsDialog(summary);
     renderReviewDialog(summary);
+    renderProblemPreview(summary);
+    updateIterationNextStepGuidance();
     if (
       state.sessionId &&
       (!rawFailedTaskNames || /^Задание \d+(,\s*Задание \d+)*$/.test(rawFailedTaskNames))
@@ -1773,9 +1788,10 @@
           });
         })
         .then(function (payload) {
-          const enriched = payload && payload.ok ? extractLegacyFailedTaskNames(payload.results || payload) : "";
-          if (enriched) {
-            setText("trigger-tasks-list", enriched);
+          if (payload && payload.ok) {
+            const enrichedSummary = normalizeIterationResults(payload.results || payload);
+            state.latestSummary = enrichedSummary;
+            renderProblemPreview(enrichedSummary);
           }
         })
         .catch(function () {});
@@ -1795,9 +1811,10 @@
           });
         })
         .then(function (payload) {
-          const enriched = payload && payload.ok ? extractLegacyFailedTaskNames(payload.results || payload) : "";
-          if (enriched) {
-            setText("trigger-tasks-list", enriched);
+          if (payload && payload.ok) {
+            const enrichedSummary = normalizeIterationResults(payload.results || payload);
+            state.latestSummary = enrichedSummary;
+            renderProblemPreview(enrichedSummary);
           }
         })
         .catch(function () {});
@@ -1844,7 +1861,7 @@
 
   function getSessionAndIterationFromLocation() {
     const pathname = String((root.location && root.location.pathname) || "");
-    const match = pathname.match(/\/ui\/session\/([^/]+)\/iteration\/([^/?#]+)/i);
+    const match = pathname.match(/\/(?:ui\/)?session\/([^/]+)\/iteration\/([^/?#]+)/i);
     if (!match) {
       return { sessionId: null, iteration: null };
     }
@@ -1943,7 +1960,27 @@
       });
     }
 
-    ["details"].forEach(function (kind) {
+    const toComplexListBtn = getById("to-complex-list-btn");
+    const openProblemDialogBtn = getById("open-problem-dialog-btn");
+
+    if (toComplexListBtn) {
+      toComplexListBtn.addEventListener("click", function () {
+        closeMenu();
+        pauseAndReturnToComplexes();
+      });
+    }
+
+    if (openProblemDialogBtn) {
+      openProblemDialogBtn.addEventListener("click", function () {
+        closeMenu();
+        if (state.latestSummary) {
+          renderProblemDialog(state.latestSummary);
+        }
+        openDialog("problem");
+      });
+    }
+
+    ["details", "problem"].forEach(function (kind) {
       const backdrop = getById(`${kind}-dialog-backdrop`);
       const closeBtn = getById(`${kind}-dialog-close-btn`);
       if (backdrop) {
@@ -1988,10 +2025,173 @@
         }
         if (state.detailsOpen) {
           closeDialog("details");
+          return;
+        }
+        if (state.problemOpen) {
+          closeDialog("problem");
         }
       }
     });
 
+  }
+
+  function updateIterationNextStepGuidance() {
+    const continueLabel = state.hasNextIteration
+      ? wt('s2.continue_btn_label', 'К следующей итерации')
+      : wt('s2.finish_btn_label', 'К итогам комплекса');
+
+    const continueBtnLabel = getById("continue-btn-label");
+    if (continueBtnLabel) {
+      continueBtnLabel.textContent = continueLabel;
+    }
+    const continueBtn = getById("continue-btn");
+    if (continueBtn) {
+      continueBtn.setAttribute("aria-label", continueLabel);
+    }
+
+    const pauseBtnLabel = document.querySelector("#to-complex-list-btn .truncate");
+    if (pauseBtnLabel) {
+      pauseBtnLabel.textContent = wt('s2.pause_btn_label', 'Сделать паузу');
+    }
+
+    const hint = getById("next-step-hint");
+    if (hint) {
+      hint.textContent = state.hasNextIteration
+        ? wt('s2.next_step_hint_iteration', 'Следующий шаг — новая итерация в этой же сессии.')
+        : wt('s2.next_step_hint_finish', 'Следующий шаг — просмотр итогов комплекса.');
+    }
+
+    const pauseCard = getById("to-complex-list-btn");
+    if (pauseCard) {
+      setHidden("to-complex-list-btn", !state.hasNextIteration);
+    }
+  }
+
+  function renderProblemPreview(summary) {
+    const listEl = getById("trigger-tasks-list");
+    const previewNoteEl = getById("problem-preview-note");
+    const emptyStateEl = getById("problem-empty-state");
+    const failedStateEl = getById("problem-failed-state");
+    const openBtnEl = getById("open-problem-dialog-btn");
+
+    if (!listEl) return;
+    listEl.innerHTML = "";
+
+    const failedTasks = summary.failedTasks || [];
+    const N = failedTasks.length;
+
+    if (N === 0) {
+      if (emptyStateEl) emptyStateEl.classList.remove("hidden");
+      if (failedStateEl) failedStateEl.classList.add("hidden");
+      if (openBtnEl) openBtnEl.classList.add("hidden");
+      if (previewNoteEl) previewNoteEl.textContent = "";
+      return;
+    }
+
+    if (emptyStateEl) emptyStateEl.classList.add("hidden");
+    if (failedStateEl) failedStateEl.classList.remove("hidden");
+    if (openBtnEl) openBtnEl.classList.remove("hidden");
+
+    const previewCount = Math.min(3, N);
+    for (let i = 0; i < previewCount; i++) {
+      const task = failedTasks[i];
+      const li = document.createElement("li");
+      li.className = "s2-dialog-item";
+
+      const title = document.createElement("p");
+      title.className = "s2-dialog-item-title";
+      title.textContent = task.name;
+
+      const copy = document.createElement("p");
+      copy.className = "s2-dialog-item-copy";
+      copy.textContent = task.explanation
+        ? compactText(task.explanation, 180)
+        : wt('s2.task_error_hint', 'Есть ошибка, к которой стоит вернуться перед следующим раундом.');
+
+      li.appendChild(title);
+      li.appendChild(copy);
+      listEl.appendChild(li);
+    }
+
+    if (previewNoteEl) {
+      if (N > 3) {
+        previewNoteEl.textContent = `Показаны 3 из ${N} ошибок`;
+      } else {
+        previewNoteEl.textContent = "";
+      }
+    }
+  }
+
+  function renderProblemDialog(summary) {
+    const listEl = getById("problem-dialog-list");
+    if (!listEl) return;
+    listEl.innerHTML = "";
+
+    const failedTasks = summary.failedTasks || [];
+    failedTasks.forEach(function (task) {
+      const li = document.createElement("li");
+      li.className = "s2-dialog-item";
+
+      const title = document.createElement("p");
+      title.className = "s2-dialog-item-title";
+      title.textContent = task.name;
+
+      const copy = document.createElement("p");
+      copy.className = "s2-dialog-item-copy";
+      copy.textContent = task.explanation
+        ? compactText(task.explanation, 180)
+        : wt('s2.task_error_hint', 'Есть ошибка, к которой стоит вернуться перед следующим раундом.');
+
+      li.appendChild(title);
+      li.appendChild(copy);
+
+      const isToggled = Boolean(state.toggledProblems[task.key]);
+      const toggleBtn = document.createElement("button");
+      toggleBtn.className = "s2-answer-toggle s2-btn s2-ghost-btn mt-2";
+      toggleBtn.type = "button";
+      toggleBtn.textContent = isToggled
+        ? wt('s2.hide_answer', 'Скрыть')
+        : wt('s2.show_answer', 'Показать');
+
+      toggleBtn.addEventListener("click", function () {
+        state.toggledProblems[task.key] = !isToggled;
+        renderProblemDialog(summary);
+      });
+      li.appendChild(toggleBtn);
+
+      if (isToggled) {
+        const detailDiv = document.createElement("div");
+        detailDiv.className = "s2-answer-detail mt-2 p-3 bg-bg-surface-neutral-subtle rounded-md border border-border-subtle";
+
+        const correctLabel = document.createElement("strong");
+        correctLabel.textContent = wt('s2.correct_answer_label', 'Правильный ответ: ');
+
+        const correctVal = document.createElement("span");
+        correctVal.textContent = task.correctAnswer || "—";
+
+        detailDiv.appendChild(correctLabel);
+        detailDiv.appendChild(correctVal);
+
+        if (task.userAnswer) {
+          const userBlock = document.createElement("div");
+          userBlock.className = "mt-1 text-sm text-text-secondary";
+
+          const userLabel = document.createElement("strong");
+          userLabel.textContent = wt('s2.user_answer_label', 'Ваш ответ: ');
+
+          const userVal = document.createElement("span");
+          userVal.textContent = task.userAnswer;
+
+          userBlock.appendChild(userLabel);
+          userBlock.appendChild(userVal);
+          detailDiv.appendChild(userBlock);
+        }
+
+        li.appendChild(detailDiv);
+      }
+
+      listEl.appendChild(li);
+    });
   }
 
   function init() {
@@ -2013,6 +2213,7 @@
     normalizeIterationResults,
     renderIterationResults,
     loadIterationResults,
+    updateIterationNextStepGuidance,
     init,
   };
 

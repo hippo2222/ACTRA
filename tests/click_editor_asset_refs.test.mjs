@@ -38,6 +38,7 @@ function setupDom() {
 
     dom.window.eval(loadScript("frontend/Editor/undo_manager.js") + "\n;window.UndoManager = UndoManager;");
     dom.window.eval(loadScript("frontend/Editor/click_editor_helpers.js"));
+    dom.window.wt = (key, fallback) => fallback;
     dom.window.eval(loadScript("frontend/Editor/base_editor.js") + "\n;window.BaseEditor = BaseEditor;");
     dom.window.eval(loadScript("frontend/Editor/autosave_manager.js") + "\n;window.AutoSaveManager = AutoSaveManager;");
     dom.window.eval(loadScript("frontend/Editor/click_editor.js") + "\n;window.ClickEditor = ClickEditor;");

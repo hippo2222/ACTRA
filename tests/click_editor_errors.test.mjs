@@ -32,6 +32,7 @@ function setupDom() {
     // Load dependencies in order
     dom.window.eval(loadScript("frontend/Editor/undo_manager.js") + "\n;window.UndoManager = UndoManager;");
     dom.window.eval(loadScript("frontend/Editor/click_editor_helpers.js"));
+    dom.window.wt = (key, fallback) => fallback;
     dom.window.eval(loadScript("frontend/Editor/base_editor.js") + "\n;window.BaseEditor = BaseEditor;");
     dom.window.eval(loadScript("frontend/Editor/autosave_manager.js") + "\n;window.AutoSaveManager = AutoSaveManager;");
     dom.window.eval(loadScript("frontend/Editor/click_editor.js") + "\n;window.ClickEditor = ClickEditor;");
@@ -484,7 +485,7 @@ describe("ClickEditor additional materials", () => {
         const editor = createEditorInstance();
         const fetchMock = vi.fn().mockResolvedValue({
             ok: true,
-            json: async () => ({ ok: true })
+            json: async () => ({ ok: true, meta: { authoring_enabled: false } })
         });
 
         window.fetch = fetchMock;
@@ -621,7 +622,7 @@ describe("ClickEditor annotations", () => {
         expect(editor.enforceRequiredCorrectBounds).toHaveBeenCalledWith({ clampToMax: true });
         expect(editor.markUnsaved).toHaveBeenCalled();
         expect(editor.statusBadge.textContent).toContain("Порог");
-        expect(editor.statusBadge.textContent).toContain("Контур");
+        expect(editor.statusBadge.textContent.toLowerCase()).toContain("контур");
     });
 
     it("shows the completion hint when polygon has enough points", () => {
@@ -635,7 +636,7 @@ describe("ClickEditor annotations", () => {
 
         expect(editor.finishBtn.disabled).toBe(false);
         expect(editor.finishBtn.classList.contains("bg-primary")).toBe(true);
-        expect(editor.statusBadge.textContent).toContain("Завершить контур");
+        expect(editor.statusBadge.textContent).toContain("Контур готов");
     });
 
     it("offers toast undo after deleting an annotation", () => {
@@ -873,7 +874,7 @@ describe("ClickEditor choice prompt (errors text_choice)", () => {
     it("saves choice_prompt separately and falls back to main prompt when empty", async () => {
         const fetchMock = vi.fn().mockResolvedValue({
             ok: true,
-            json: async () => ({ ok: true })
+            json: async () => ({ ok: true, meta: { authoring_enabled: false } })
         });
 
         createEditorWithTask({
@@ -904,7 +905,7 @@ describe("ClickEditor choice prompt (errors text_choice)", () => {
     it("shows warning feedback instead of plain success when semantic warnings are present", async () => {
         const fetchMock = vi.fn().mockResolvedValue({
             ok: true,
-            json: async () => ({ ok: true })
+            json: async () => ({ ok: true, meta: { authoring_enabled: false } })
         });
 
         createEditorWithTask({

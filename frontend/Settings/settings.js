@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Settings page - AI Keys management.
  */
 (function () {
@@ -933,6 +933,11 @@
         statusEl.className = classMap[tone] || classMap.neutral;
     }
 
+    function setSectionOpen(sectionId, isOpen) {
+        const el = document.getElementById(sectionId);
+        if (el) el.classList.toggle('hidden', !isOpen);
+    }
+
     function setButtonBusyState(buttonId, isBusy) {
         const button = document.getElementById(buttonId);
         if (!button) return;
@@ -1283,6 +1288,24 @@
             _isAdminPlanSaving = false;
             renderAdminUsersList();
         }
+    }
+
+    function resetEmailForm() {
+        const input = document.getElementById('settings-email-input');
+        if (input) {
+            input.value = String(_accountContext?.user?.pending_email || _accountContext?.user?.email || '').trim();
+        }
+        setInlineStatus('settings-email-save-status');
+    }
+
+    function resetPasswordForm() {
+        const current = document.getElementById('settings-password-current');
+        const next = document.getElementById('settings-password-new');
+        const confirm = document.getElementById('settings-password-confirm');
+        if (current) current.value = '';
+        if (next) next.value = '';
+        if (confirm) confirm.value = '';
+        setInlineStatus('settings-password-save-status');
     }
 
     async function grantAdminUserPremium(userId, periodDays) {

@@ -1,4 +1,11 @@
 services:
+  app:
+    volumes:
+      - ./desktop-app:/app/desktop-app
+      - ./frontend:/app/frontend
+      - ./task_system:/app/task_system
+      - ./common:/app/common
+
   postgres:
     ports:
       - "5432:5432"

@@ -70,6 +70,7 @@ describe('Save System (Autosave & Undo/Redo)', () => {
         const clickHelpersCode = loadScript('frontend/Editor/click_editor_helpers.js');
         dom.window.eval(clickHelpersCode); // Helpers usually attach to window or define globals directly
 
+        dom.window.wt = (key, fallback) => fallback;
         dom.window.eval(baseEditorCode + "\n;window.BaseEditor = BaseEditor;");
         dom.window.eval(autoSaveCode + "\n;window.AutoSaveManager = AutoSaveManager;");
     });

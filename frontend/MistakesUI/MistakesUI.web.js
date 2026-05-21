@@ -1,8 +1,14 @@
 (function (global) {
   const MistakesUI = {};
 
+  function wt(key, fallback) {
+    if (!window.i18n || typeof window.i18n.t !== "function") return fallback;
+    const v = window.i18n.t(key);
+    return v !== key ? v : fallback;
+  }
+
   const STYLE_ID = "mistakes-ui-styles";
-  const DEFAULT_CHOICE_PROMPT = "Выберите правильный вариант текста";
+  const DEFAULT_CHOICE_PROMPT = wt("mistakesui.default_choice_prompt", "Выберите правильный вариант текста");
 
   const state = {
     taskDto: null,
@@ -151,7 +157,7 @@
 
     const title = document.createElement("h3");
     title.className = "text-xs font-bold uppercase tracking-wider text-text-muted dark:text-text-muted";
-    title.textContent = "Статус анализа";
+    title.textContent = wt("mistakesui.analysis_status_title", "Статус анализа");
     wrap.appendChild(title);
 
     const stack = document.createElement("div");
@@ -166,7 +172,7 @@
     dotWrap.appendChild(dot);
     const pulseText = document.createElement("p");
     pulseText.className = "text-sm leading-relaxed text-text-secondary dark:text-text-muted";
-    pulseText.textContent = completed ? "Ошибки отмечены" : "Продолжайте изучение текста...";
+    pulseText.textContent = completed ? wt("mistakesui.status_errors_marked", "Ошибки отмечены") : wt("mistakesui.status_continue_reading", "Продолжайте изучение текста...");
     pulseRow.appendChild(dotWrap);
     pulseRow.appendChild(pulseText);
     stack.appendChild(pulseRow);
@@ -176,7 +182,7 @@
     const statRow = document.createElement("div");
     statRow.className = "flex justify-between text-xs text-text-muted";
     const label = document.createElement("span");
-    label.textContent = "Ошибок найдено";
+    label.textContent = wt("mistakesui.errors_found_label", "Ошибок найдено");
     const value = document.createElement("span");
     value.className = "font-bold text-text-secondary dark:text-text-on-dark";
     const showTotal = completed && totalKnown;
@@ -202,11 +208,11 @@
     hintText.className = "text-xs text-info-dark dark:text-info-light leading-normal";
     const hintPrefix = document.createElement("span");
     hintPrefix.className = "font-bold";
-    hintPrefix.textContent = "Подсказка:";
+    hintPrefix.textContent = wt("mistakesui.hint_label", "Подсказка:");
     hintText.appendChild(hintPrefix);
     hintText.appendChild(
       document.createTextNode(
-        " Кликайте на слова, которые кажутся вам клинически неверными в данном контексте."
+        wt("mistakesui.hint_text_errors", " Кликайте на слова, которые кажутся вам клинически неверными в данном контексте.")
       )
     );
     hint.appendChild(hintText);
@@ -309,7 +315,7 @@
     headerBlock.className = "mb-6";
     const title = document.createElement("h2");
     title.className = "text-text-main dark:text-text-on-dark text-xl font-bold leading-tight tracking-[-0.015em]";
-    title.textContent = "Отметьте ошибки в тексте";
+    title.textContent = wt("mistakesui.mark_errors_title", "Отметьте ошибки в тексте");
     headerBlock.appendChild(title);
 
     const divider = document.createElement("div");
@@ -366,7 +372,7 @@
       "mistakes-ref mt-6 rounded-xl border border-success-light bg-success-lighter p-4 dark:border-success-dark dark:bg-success-light";
     const refTitle = document.createElement("div");
     refTitle.className = "text-sm font-bold text-success-text dark:text-success-light mb-2";
-    refTitle.textContent = "Референсный текст";
+    refTitle.textContent = wt("mistakesui.reference_text_title", "Референсный текст");
     const refBody = document.createElement("div");
     refBody.className = "text-base leading-loose tracking-wide text-text-main dark:text-text-on-dark";
     referenceCard.appendChild(refTitle);
@@ -406,11 +412,10 @@
     refButton.type = "button";
     refButton.className =
       "hidden px-4 py-2 rounded-xl border border-success text-success-text font-semibold text-sm bg-success-lighter hover:bg-success-light dark:border-success-dark dark:text-success-light dark:bg-success-light dark:hover:bg-success-light shadow-sm transition";
-    refButton.textContent = "Показать референсный текст";
+    refButton.textContent = wt("mistakesui.show_reference_btn", "Показать референсный текст");
     const refHint = document.createElement("p");
     refHint.className = "hidden text-sm text-text-muted dark:text-text-muted leading-relaxed";
-    refHint.textContent =
-      "Вы нашли минимально необходимое число ошибок. Можно открыть референс или продолжить поиск.";
+    refHint.textContent = wt("mistakesui.min_errors_found_hint", "Вы нашли минимально необходимое число ошибок. Можно открыть референс или продолжить поиск.");
     referenceControls.appendChild(refButton);
     referenceControls.appendChild(refHint);
 
@@ -484,7 +489,7 @@
         icon.textContent = "task_alt";
         const text = document.createElement("span");
         text.className = "text-sm font-medium text-success-text dark:text-success";
-        text.textContent = "Задание выполнено";
+        text.textContent = wt("mistakesui.task_completed", "Задание выполнено");
         chip.appendChild(icon);
         chip.appendChild(text);
         badgesBox.appendChild(chip);
@@ -573,7 +578,7 @@
       const warning = document.createElement("div");
       warning.className =
         "rounded-lg border border-error-light bg-error-lighter text-error-text px-4 py-3 text-sm";
-      warning.textContent = "Проверьте настройки задания: минимум 2 варианта, один отмечен как правильный, у всех есть текст.";
+      warning.textContent = wt("mistakesui.settings_warning", "Проверьте настройки задания: минимум 2 варианта, один отмечен как правильный, у всех есть текст.");
       wrap.appendChild(warning);
       container.appendChild(wrap);
       notifyState();
@@ -600,7 +605,7 @@
         const pill = card.querySelector(".choice-pill");
         if (btn) {
           btn.classList.toggle("selected", isSelected);
-          btn.textContent = isSelected ? "Выбрано" : "Выбрать";
+          btn.textContent = isSelected ? wt("mistakesui.option_selected", "Выбрано") : wt("mistakesui.option_select", "Выбрать");
         }
         if (pill) {
           pill.classList.toggle("success", isSelected);
@@ -621,7 +626,7 @@
       const changed = prevId !== state.selectedOptionId || prevIdx !== state.selectedOptionIndex;
       if (changed) {
         const isCorrect = option?.is_correct === true;
-        showToast(isCorrect ? "Верно" : "Неверно");
+        showToast(isCorrect ? wt("mistakesui.toast_correct", "Верно") : wt("mistakesui.toast_incorrect", "Неверно"));
       }
       notifyState();
     }
@@ -653,9 +658,9 @@
       pillIcon.className = "material-symbols-outlined text-[16px]";
       pillIcon.textContent = "article";
       const pillText = document.createElement("span");
-      const alphaLabels = "АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЭЮЯ";
-      const label = alphaLabels[idx] || `Вариант ${idx + 1}`;
-      const baseLabel = `Вариант ${label}`;
+      const alphaLabels = wt("mistakesui.alpha_labels", "АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЭЮЯ");
+      const label = alphaLabels[idx] || String(idx + 1);
+      const baseLabel = wt("mistakesui.option_label", "Вариант {label}").replace("{label}", label);
       pillText.textContent = baseLabel;
       card.dataset.optionLabel = baseLabel;
       pill.dataset.optionLabel = baseLabel;
@@ -672,7 +677,7 @@
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "choice-btn";
-      btn.textContent = "Выбрать";
+      btn.textContent = wt("mistakesui.option_select", "Выбрать");
       btn.addEventListener("click", () => updateSelection(opt));
       card.appendChild(btn);
 
@@ -690,7 +695,7 @@
       refIcon.className = "material-symbols-outlined text-[18px]";
       refIcon.textContent = "menu_book";
       const refTitle = document.createElement("span");
-      refTitle.textContent = "Подсказка";
+      refTitle.textContent = wt("mistakesui.hint_title", "Подсказка");
       refHeader.appendChild(refIcon);
       refHeader.appendChild(refTitle);
       const refBody = document.createElement("div");

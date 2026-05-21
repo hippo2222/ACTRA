@@ -42,6 +42,7 @@ function setupGlobalDom() {
     dom.window.eval(undoManagerCode + "\n;window.UndoManager = UndoManager;");
 
     const baseEditorCode = loadScript('frontend/Editor/base_editor.js');
+    dom.window.wt = (key, fallback) => fallback;
     dom.window.eval(baseEditorCode + "\n;window.BaseEditor = BaseEditor;");
 
     const autoSaveCode = loadScript('frontend/Editor/autosave_manager.js');

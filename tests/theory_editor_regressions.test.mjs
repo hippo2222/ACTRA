@@ -118,7 +118,7 @@ describe("Theory editor regressions", () => {
         expect(colorIndicator?.getAttribute("style")).toContain("background:var(--color-text-main)");
         expect(complexesBtn?.className).not.toContain("disabled:cursor-not-allowed");
         expect(aside?.className).toContain("overflow-visible");
-        expect(theoryEditorHtml).toContain("padding-top: 0.35rem;");
+        expect(theoryEditorHtml).toContain("padding-top: 0.55rem;");
         expect(theoryEditorHtml).toContain("color: var(--color-text-main);");
         expect(theoryEditorHtml).toContain("caret-color: var(--color-text-main);");
         expect(theoryEditorHtml).toContain(".theory-form-field::placeholder");

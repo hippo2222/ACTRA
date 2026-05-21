@@ -1,6 +1,12 @@
 (function (global) {
   const OpenAnswerUI = {};
 
+  function wt(key, fallback) {
+    if (!window.i18n || typeof window.i18n.t !== "function") return fallback;
+    const v = window.i18n.t(key);
+    return v !== key ? v : fallback;
+  }
+
   const state = {
     taskDto: null,
     container: null,
@@ -209,13 +215,13 @@
     resetBtn.type = "button";
     resetBtn.className =
       "inline-flex items-center justify-center rounded-lg border border-border-subtle bg-surface-1 px-2 py-1 text-xs font-semibold text-text-secondary shadow-sm hover:bg-bg-hover";
-    resetBtn.textContent = "Сброс";
+    resetBtn.textContent = wt("openanswerui.reset_btn", "Сброс");
 
     const closeBtn = document.createElement("button");
     closeBtn.type = "button";
     closeBtn.className =
       "inline-flex items-center justify-center rounded-lg border border-border-subtle bg-surface-1 px-2 py-1 text-xs font-semibold text-text-secondary shadow-sm hover:bg-bg-hover";
-    closeBtn.textContent = "Закрыть";
+    closeBtn.textContent = wt("openanswerui.close_btn", "Закрыть");
 
     btnRow.appendChild(resetBtn);
     btnRow.appendChild(closeBtn);
@@ -385,7 +391,7 @@
     );
 
     const fitBtn = makeToolbarButton(
-      "\u041f\u043e\u0434\u043e\u0433\u043d\u0430\u0442\u044c",
+      wt("openanswerui.fit_btn", "Подогнать"),
       "",
       "Fit to screen"
     );
@@ -394,7 +400,7 @@
     closeBtn.type = "button";
     closeBtn.className =
       "inline-flex items-center justify-center rounded-lg border border-border-subtle bg-surface-1 px-3 py-1.5 text-xs font-semibold text-text-secondary shadow-sm transition-colors hover:bg-bg-hover";
-    closeBtn.textContent = "\u0417\u0430\u043a\u0440\u044b\u0442\u044c";
+    closeBtn.textContent = wt("openanswerui.close_btn", "Закрыть");
     closeBtn.setAttribute("aria-label", "Close image viewer");
     closeBtn.title = "Close image viewer";
 
@@ -741,7 +747,7 @@
       const promptLabel = _createEl(
         "div",
         "oa-task-prompt-label mb-1 text-[11px] font-bold uppercase tracking-[0.09em]",
-        "Текст задания"
+        wt("openanswerui.task_text_label", "Текст задания")
       );
       const q = _createEl(
         "div",

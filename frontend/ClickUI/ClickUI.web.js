@@ -896,7 +896,20 @@
     return `${baseLabel} #${displayIndex}`;
   }
 
+  function _findTargetIndex(taskDto, kind, actionIndex) {
+    const key = _getActionKey(kind, actionIndex);
+    const interpretation = _getActionInterpretation(key);
+    if (interpretation && typeof interpretation.targetIndex === "number" && interpretation.targetIndex >= 0) {
+      return interpretation.targetIndex;
+    }
+    return null;
+  }
+
   function _getActionDisplayColor(taskDto, kind, actionIndex) {
+    const targetIdx = _findTargetIndex(taskDto, kind, actionIndex);
+    if (targetIdx !== null) {
+      return _getTargetColor(targetIdx);
+    }
     if (kind === "polygon") return _getThemeColor("--color-success", "#22c55e");
     if (kind === "line") return _getThemeColor("--color-primary", "#1349ec");
     return _getThemeColor("--color-accent-strong", "#d97706");
@@ -2190,6 +2203,10 @@
     if (opts.strokeDasharray) path.setAttribute("stroke-dasharray", opts.strokeDasharray);
     if (opts.strokeOpacity != null) path.setAttribute("stroke-opacity", String(opts.strokeOpacity));
     if (opts.fillOpacity != null) path.setAttribute("fill-opacity", String(opts.fillOpacity));
+    if (opts.targetIndex != null) {
+      path.setAttribute("data-target-index", String(opts.targetIndex));
+      path.style.pointerEvents = "auto";
+    }
     svg.appendChild(path);
     return scaled;
   }
@@ -2201,6 +2218,12 @@
     const scaled = _scaleReviewPoint(_normalizeXY(point), naturalW, naturalH);
     if (!scaled) return null;
 
+    const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    if (opts.targetIndex != null) {
+      g.setAttribute("data-target-index", String(opts.targetIndex));
+      g.style.pointerEvents = "auto";
+    }
+
     const outer = document.createElementNS("http://www.w3.org/2000/svg", "circle");
     outer.setAttribute("cx", String(scaled.x));
     outer.setAttribute("cy", String(scaled.y));
@@ -2209,7 +2232,7 @@
     outer.setAttribute("fill-opacity", String(opts.fillOpacity != null ? opts.fillOpacity : 0.94));
     outer.setAttribute("stroke", opts.stroke || "#ffffff");
     outer.setAttribute("stroke-width", String(opts.strokeWidth || 3));
-    svg.appendChild(outer);
+    g.appendChild(outer);
 
     if (opts.label) {
       const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
@@ -2222,9 +2245,10 @@
       text.setAttribute("text-anchor", "middle");
       text.setAttribute("dominant-baseline", "middle");
       text.textContent = String(opts.label);
-      svg.appendChild(text);
+      g.appendChild(text);
     }
 
+    svg.appendChild(g);
     return scaled;
   }
 
@@ -2268,6 +2292,9 @@
         "rounded-xl border border-border-subtle bg-surface-2 px-3 py-2 text-sm text-text-main dark:border-border-subtle dark:bg-surface-2 dark:text-text-on-dark",
         ""
       );
+      if (item && item.targetIndex != null) {
+        row.setAttribute("data-target-index", String(item.targetIndex));
+      }
       const fallbackTitle =
         item && item.kind === "freehand"
           ? wt("clickui.shape_line_n", "Линия {n}").replace("{n}", idx + 1)
@@ -2281,6 +2308,36 @@
     });
     block.appendChild(list);
     return block;
+  }
+
+  function _setupReviewHoverEffects(card) {
+    const hoverables = Array.from(card.querySelectorAll("[data-target-index]"));
+    if (!hoverables.length) return;
+
+    hoverables.forEach((el) => {
+      el.style.transition = "opacity 0.2s ease-in-out";
+    });
+
+    hoverables.forEach((el) => {
+      const targetIndexStr = el.getAttribute("data-target-index");
+      if (targetIndexStr === null || targetIndexStr === undefined) return;
+
+      el.addEventListener("mouseenter", () => {
+        hoverables.forEach((other) => {
+          if (other.getAttribute("data-target-index") !== targetIndexStr) {
+            other.style.opacity = "0.08";
+          } else {
+            other.style.opacity = "1";
+          }
+        });
+      });
+
+      el.addEventListener("mouseleave", () => {
+        hoverables.forEach((other) => {
+          other.style.opacity = "";
+        });
+      });
+    });
   }
 
   function _createReviewPreviewCard(config) {
@@ -2368,6 +2425,7 @@
     if (opts.labelsBlock) {
       card.appendChild(opts.labelsBlock);
     }
+    _setupReviewHoverEffects(card);
     return card;
   }
 
@@ -2402,6 +2460,7 @@
           kind: "click",
           title: wt("clickui.shape_area_n", "Область {n}").replace("{n}", idx + 1),
           label: state.labelsClicks && state.labelsClicks[idx],
+          targetIndex: _findTargetIndex(state.taskDto, "click", idx),
         });
       });
       (state.polygons || []).forEach((_, idx) => {
@@ -2409,6 +2468,7 @@
           kind: "polygon",
           title: wt("clickui.shape_polygon_n", "Контур {n}").replace("{n}", idx + 1),
           label: state.labelsPolygons && state.labelsPolygons[idx],
+          targetIndex: _findTargetIndex(state.taskDto, "polygon", idx),
         });
       });
       (state.lines || []).forEach((_, idx) => {
@@ -2416,6 +2476,7 @@
           kind: "freehand",
           title: wt("clickui.shape_line_n", "Линия {n}").replace("{n}", idx + 1),
           label: state.labelsLines && state.labelsLines[idx],
+          targetIndex: _findTargetIndex(state.taskDto, "line", idx),
         });
       });
       labelsBlock = _buildReviewLabelsBlock(wt("clickui.user_labels", "Названия пользователя"), labelItems, "review-user-labels");
@@ -2433,6 +2494,7 @@
       renderSvg(svg) {
         (state.polygons || []).forEach((poly, idx) => {
           const color = _getActionDisplayColor(state.taskDto, "polygon", idx);
+          const targetIndex = _findTargetIndex(state.taskDto, "polygon", idx);
           _appendReviewPath(svg, poly && poly.points, {
             closed: true,
             naturalW,
@@ -2440,11 +2502,13 @@
             stroke: color,
             fill: _withAlpha(color, 0.16),
             strokeWidth: 4,
+            targetIndex: targetIndex !== null ? targetIndex : undefined,
           });
         });
 
         (state.lines || []).forEach((line, idx) => {
           const color = _getActionDisplayColor(state.taskDto, "line", idx);
+          const targetIndex = _findTargetIndex(state.taskDto, "line", idx);
           _appendReviewPath(svg, line && line.points, {
             closed: false,
             naturalW,
@@ -2453,10 +2517,12 @@
             strokeWidth: 4,
             strokeDasharray: "10 6",
             strokeOpacity: 0.92,
+            targetIndex: targetIndex !== null ? targetIndex : undefined,
           });
         });
 
         (state.clicks || []).forEach((click, idx) => {
+          const targetIndex = _findTargetIndex(state.taskDto, "click", idx);
           _appendReviewMarker(svg, [click && click.x, click && click.y], {
             naturalW,
             naturalH,
@@ -2464,6 +2530,7 @@
             fill: _getActionDisplayColor(state.taskDto, "click", idx),
             stroke: "#ffffff",
             label: idx + 1,
+            targetIndex: targetIndex !== null ? targetIndex : undefined,
           });
         });
       },
@@ -2495,6 +2562,7 @@
           kind: _getTargetShape(target),
           title: `${meta && meta.label ? meta.label : wt("clickui.target_fallback", "Цель")} ${idx + 1}`,
           label: target && target.label,
+          targetIndex: idx,
         };
       });
       labelsBlock = _buildReviewLabelsBlock(wt("clickui.ref_labels", "Эталонные названия"), labelItems, "review-reference-labels");
@@ -2523,6 +2591,7 @@
               stroke: baseColor,
               fill: _withAlpha(baseColor, isBad ? 0.12 : 0.18),
               strokeWidth: isBad ? 5 : 4,
+              targetIndex: idx,
             });
           } else if (shape === "freehand") {
             _appendReviewPath(svg, target && target.points, {
@@ -2533,6 +2602,7 @@
               strokeWidth: isBad ? 5 : 4,
               strokeDasharray: "10 6",
               strokeOpacity: 0.92,
+              targetIndex: idx,
             });
           } else if (shape === "point") {
             _appendReviewMarker(svg, target && target.point, {
@@ -2542,6 +2612,7 @@
               fill: baseColor,
               stroke: "#ffffff",
               label: idx + 1,
+              targetIndex: idx,
             });
           }
         });

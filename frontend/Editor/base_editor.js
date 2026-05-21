@@ -271,7 +271,7 @@ class BaseEditor {
 
         if (!this.moduleId || !this.topicId || !this.taskId) {
             console.error('Missing task parameters in URL');
-            this.showFatalError('Неверная ссылка: отсутствуют параметры задания (module, topic, task)');
+            this.showFatalError(wt('editor_base.error_invalid_link', 'Неверная ссылка: отсутствуют параметры задания (module, topic, task)'));
             return false;
         }
 
@@ -295,7 +295,7 @@ class BaseEditor {
                 return true;
             }
             if (response.status && response.status !== 404) {
-                this.showFatalError(data?.error || 'Не удалось загрузить задание');
+                this.showFatalError(data?.error || wt('editor_base.error_load_task', 'Не удалось загрузить задание'));
                 return false;
             }
         } catch (error) {
@@ -311,7 +311,7 @@ class BaseEditor {
         );
 
         if (!bootstrap) {
-            this.showFatalError('Черновик не найден. Откройте создание задания заново.');
+            this.showFatalError(wt('editor_base.error_draft_not_found', 'Черновик не найден. Откройте создание задания заново.'));
             return false;
         }
 
@@ -353,11 +353,11 @@ class BaseEditor {
             if (data.ok) {
                 this.applyLoadedTask(data.task, { persisted: true });
             } else {
-                this.showFatalError(data.error || "Ошибка загрузки задания");
+                this.showFatalError(data.error || wt('editor_base.error_load_task_failed', 'Ошибка загрузки задания'));
             }
         } catch (error) {
             console.error("Error loading task:", error);
-            this.showFatalError("Ошибка сети: " + error.message);
+            this.showFatalError(wt('editor_base.error_network_prefix', 'Ошибка сети:') + ' ' + error.message);
         }
     }
 
@@ -393,7 +393,7 @@ class BaseEditor {
                 });
                 this.initTheoryGroundingPanel();
                 this.bootstrapTheoryGroundingPanel().catch((e) => console.warn('[P8] bootstrap failed', e));
-                this.showToast('Несохранённые изменения восстановлены', 'success');
+                this.showToast(wt('editor_base.toast_changes_restored', 'Несохранённые изменения восстановлены'), 'success');
                 this.autoSaveManager.start();
             },
             onCancel: () => {
@@ -660,7 +660,7 @@ class BaseEditor {
                 meta = await this.loadDifficultyAuthoringMeta(taskData);
             } catch (error) {
                 if (showValidationToast) {
-                    this.showToast('Не удалось загрузить параметры уровней сложности. Повторите попытку сохранения.', 'error');
+                    this.showToast(wt('editor_base.toast_levels_load_failed', 'Не удалось загрузить параметры уровней сложности. Повторите попытку сохранения.'), 'error');
                 }
                 return false;
             }
@@ -670,7 +670,7 @@ class BaseEditor {
         const { mode, selectedLevels } = this._resolveDifficultyAuthoringSelection(meta);
         if (meta?.authoring_enabled && mode === 'custom' && !selectedLevels.length) {
             if (showValidationToast) {
-                this.showToast('Выберите хотя бы один доступный уровень сложности.', 'warning');
+                this.showToast(wt('editor_base.toast_select_at_least_one_level', 'Выберите хотя бы один доступный уровень сложности.'), 'warning');
             }
             return false;
         }
@@ -690,9 +690,9 @@ class BaseEditor {
 
         return {
             code: 'difficulty_levels_required',
-            message: '! Требуется правка',
-            detail: 'Выберите хотя бы один уровень сложности. Пока набор пустой, задание нельзя сохранить и использовать.',
-            draftDetail: 'Черновик сохранён локально, но задание нельзя сохранить и использовать, пока не выбран хотя бы один уровень сложности.',
+            message: wt('editor_base.msg_needs_editing', '! Требуется правка'),
+            detail: wt('editor_base.msg_select_level_detail', 'Выберите хотя бы один уровень сложности. Пока набор пустой, задание нельзя сохранить и использовать.'),
+            draftDetail: wt('editor_base.msg_select_level_draft_detail', 'Черновик сохранён локально, но задание нельзя сохранить и использовать, пока не выбран хотя бы один уровень сложности.'),
         };
     }
 
@@ -706,7 +706,7 @@ class BaseEditor {
         }
         return {
             type: 'blocking',
-            message: blockingState.message || '! Требуется правка',
+            message: blockingState.message || wt('editor_base.status.needs_editing', '! Требуется правка'),
             detail: blockingState.detail || '',
         };
     }
@@ -754,10 +754,10 @@ class BaseEditor {
         const supportedLevels = this._normalizeDifficultyLevels(meta?.supported_levels || []);
         const { mode, selectedLevels } = this._resolveDifficultyAuthoringSelection(meta);
         if (mode !== 'custom') {
-            return supportedLevels.length ? 'Все уровни типа' : 'По умолчанию';
+            return supportedLevels.length ? wt('editor_base.lbl_all_levels_of_type', 'Все уровни типа') : wt('editor_base.lbl_by_default', 'По умолчанию');
         }
         if (!selectedLevels.length) {
-            return 'Нужно выбрать уровни';
+            return wt('editor_base.lbl_need_to_select_levels', 'Нужно выбрать уровни');
         }
         return selectedLevels.map((level) => `L${level}`).join(', ');
     }
@@ -775,7 +775,7 @@ class BaseEditor {
 
         this.validationFeedbackState.lastBlockingToastKey = key;
         this.showToast(
-            blockingState.draftDetail || blockingState.detail || 'Черновик требует правки.',
+            blockingState.draftDetail || blockingState.detail || wt('editor_base.lbl_draft_needs_editing', 'Черновик требует правки.'),
             'warning',
             5200
         );
@@ -858,13 +858,13 @@ class BaseEditor {
 
     getDifficultyAuthoringUiCopy() {
         return {
-            title: 'Доступные уровни сложности',
-            intro: 'В стандартном комплексе 3 итерации. Выберите, на каких из них появится это Click-задание.',
-            allTitle: 'Все уровни типа',
-            allDescription: 'Показывать задание на всех 3 итерациях Click.',
-            customTitle: 'Только выбранные уровни',
-            customDescription: 'Показывать задание только на выбранных итерациях.',
-            warning: 'Нужно оставить хотя бы один уровень, иначе задание нельзя будет сохранить.',
+            title: wt('editor_base.difficulty.title', 'Доступные уровни сложности'),
+            intro: wt('editor_base.difficulty.intro', 'В стандартном комплексе 3 итерации. Выберите, на каких из них появится это Click-задание.'),
+            allTitle: wt('editor_base.difficulty.all_title', 'Все уровни типа'),
+            allDescription: wt('editor_base.difficulty.all_description', 'Показывать задание на всех 3 итерациях Click.'),
+            customTitle: wt('editor_base.difficulty.custom_title', 'Только выбранные уровни'),
+            customDescription: wt('editor_base.difficulty.custom_description', 'Показывать задание только на выбранных итерациях.'),
+            warning: wt('editor_base.difficulty.warning', 'Нужно оставить хотя бы один уровень, иначе задание нельзя будет сохранить.'),
         };
     }
 
@@ -876,29 +876,29 @@ class BaseEditor {
         const subtype = this._getDifficultyAuthoringSubtype(this.task?.task_data);
         const descriptions = {
             test: {
-                1: 'Пользователь выбирает правильный вариант из готовых ответов.',
-                2: 'Пользователь сам вводит короткий текстовый ответ.',
+                1: wt('editor_base.difficulty.test.1', 'Пользователь выбирает правильный вариант из готовых ответов.'),
+                2: wt('editor_base.difficulty.test.2', 'Пользователь сам вводит короткий текстовый ответ.'),
             },
             click: {
                 default: {
-                    1: 'Итерация 1: пользователь видит изображение и нажимает нужную область. Это проверка узнавания.',
-                    2: 'Итерация 2: пользователь находит область и выбирает её название. Это проверка связи места и термина.',
-                    3: 'Итерация 3: пользователь сам обводит область и вводит название. Это самостоятельная разметка.',
+                    1: wt('editor_base.difficulty.click.1', 'Итерация 1: пользователь видит изображение и нажимает нужную область. Это проверка узнавания.'),
+                    2: wt('editor_base.difficulty.click.2', 'Итерация 2: пользователь находит область и выбирает её название. Это проверка связи места и термина.'),
+                    3: wt('editor_base.difficulty.click.3', 'Итерация 3: пользователь сам обводит область и вводит название. Это самостоятельная разметка.'),
                 },
             },
             draw: {
-                1: 'Итерация 1: пользователь обводит нужную область. Это проверка формы и границ.',
-                2: 'Итерация 2: пользователь обводит область и подписывает её. Это проверка формы и названия.',
+                1: wt('editor_base.difficulty.draw.1', 'Итерация 1: пользователь обводит нужную область. Это проверка формы и границ.'),
+                2: wt('editor_base.difficulty.draw.2', 'Итерация 2: пользователь обводит область и подписывает её. Это проверка формы и названия.'),
             },
             sequence: {
-                1: 'Пользователь раскладывает элементы по уровням или группам.',
-                2: 'Пользователь раскладывает элементы и подписывает уровни.',
-                3: 'Пользователь раскладывает элементы и подписывает и уровни, и элементы.',
+                1: wt('editor_base.difficulty.sequence.1', 'Пользователь раскладывает элементы по уровням или группам.'),
+                2: wt('editor_base.difficulty.sequence.2', 'Пользователь раскладывает элементы и подписывает уровни.'),
+                3: wt('editor_base.difficulty.sequence.3', 'Пользователь раскладывает элементы и подписывает и уровни, и элементы.'),
             },
             sequence_assembly: {
-                1: 'Пользователь раскладывает элементы по уровням или группам.',
-                2: 'Пользователь раскладывает элементы и подписывает уровни.',
-                3: 'Пользователь раскладывает элементы и подписывает и уровни, и элементы.',
+                1: wt('editor_base.difficulty.sequence.1', 'Пользователь раскладывает элементы по уровням или группам.'),
+                2: wt('editor_base.difficulty.sequence.2', 'Пользователь раскладывает элементы и подписывает уровни.'),
+                3: wt('editor_base.difficulty.sequence.3', 'Пользователь раскладывает элементы и подписывает и уровни, и элементы.'),
             },
         };
 
@@ -914,7 +914,7 @@ class BaseEditor {
         const fallbackRole = String(roleEntry?.role || '').trim();
         if (fallbackRole) return fallbackRole;
 
-        return `Что делает пользователь на уровне ${normalizedLevel}`;
+        return wt('editor_base.difficulty.fallback', 'Что делает пользователь на уровне {level}').replace('{level}', normalizedLevel);
     }
 
     applyDifficultyAuthoringUiCopy(container, meta = this.difficultyAuthoring.activeMeta) {
@@ -950,7 +950,7 @@ class BaseEditor {
 
             const title = label.querySelector('span.text-sm.font-semibold.text-text-main');
             if (title) {
-                title.textContent = `Уровень ${level}`;
+                title.textContent = wt('editor_base.difficulty.level_title', 'Уровень {level}').replace('{level}', level);
             }
 
             const description = label.querySelector('span.block.mt-1.text-xs.text-text-secondary.leading-relaxed');
@@ -1034,9 +1034,9 @@ class BaseEditor {
                                     <span class="min-w-0">
                                         <span class="flex items-center gap-2">
                                             <span class="difficulty-authoring__level-pill inline-flex items-center rounded-full bg-primary-lighter px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary">L${level}</span>
-                                            <span class="text-sm font-semibold text-text-main">Уровень ${level}</span>
+                                            <span class="text-sm font-semibold text-text-main">${wt('editor_base.difficulty.level_title', 'Уровень {level}').replace('{level}', level)}</span>
                                         </span>
-                                        <span class="block mt-1 text-[11px] leading-relaxed text-text-secondary">${this.escapeHtml(this.getDifficultyAuthoringLevelDescription(level, meta) || (roles.get(level) || `Уровень ${level}`))}</span>
+                                        <span class="block mt-1 text-[11px] leading-relaxed text-text-secondary">${this.escapeHtml(this.getDifficultyAuthoringLevelDescription(level, meta) || (roles.get(level) || wt('editor_base.difficulty.level_title', 'Уровень {level}').replace('{level}', level)))}</span>
                                     </span>
                                 </label>
                             `;
@@ -1078,39 +1078,39 @@ class BaseEditor {
             <div class="space-y-1">
                 <div class="flex items-center gap-2">
                     <span class="material-symbols-outlined text-[18px] text-text-disabled">stairs</span>
-                    <h3 class="text-sm font-bold text-text-main">Уровни сложности</h3>
+                    <h3 class="text-sm font-bold text-text-main">${wt('editor_base.difficulty.title_short', 'Уровни сложности')}</h3>
                 </div>
                 <p class="text-xs text-text-secondary leading-relaxed">
-                    Определите, какие уровни будут доступны именно в этом задании.
+                    ${wt('editor_base.difficulty.subtitle', 'Определите, какие уровни будут доступны именно в этом задании.')}
                 </p>
             </div>
             <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <label class="difficulty-authoring__mode-card flex items-start gap-3 rounded-xl border border-border-subtle bg-surface-1 px-3 py-3 cursor-pointer">
                     <input type="radio" name="difficulty-authoring-mode" value="all" ${customMode ? '' : 'checked'} class="mt-0.5 h-4 w-4 border-border-subtle text-primary focus:ring-primary">
                     <span class="min-w-0">
-                        <span class="block text-sm font-semibold text-text-main">Все поддерживаемые уровни</span>
-                        <span class="block mt-1 text-xs text-text-secondary">Пользователь проходит полную лестницу этого типа задания.</span>
+                        <span class="block text-sm font-semibold text-text-main">${wt('editor_base.difficulty.all_supported', 'Все поддерживаемые уровни')}</span>
+                        <span class="block mt-1 text-xs text-text-secondary">${wt('editor_base.difficulty.all_supported_desc', 'Пользователь проходит полную лестницу этого типа задания.')}</span>
                     </span>
                 </label>
                 <label class="difficulty-authoring__mode-card flex items-start gap-3 rounded-xl border border-border-subtle bg-surface-1 px-3 py-3 cursor-pointer">
                     <input type="radio" name="difficulty-authoring-mode" value="custom" ${customMode ? 'checked' : ''} class="mt-0.5 h-4 w-4 border-border-subtle text-primary focus:ring-primary">
                     <span class="min-w-0">
-                        <span class="block text-sm font-semibold text-text-main">Выбрать конкретные уровни</span>
-                        <span class="block mt-1 text-xs text-text-secondary">Оставьте только те шаги сложности, которые подходят этой формулировке.</span>
+                        <span class="block text-sm font-semibold text-text-main">${wt('editor_base.difficulty.select_specific', 'Выбрать конкретные уровни')}</span>
+                        <span class="block mt-1 text-xs text-text-secondary">${wt('editor_base.difficulty.select_specific_desc', 'Оставьте только те шаги сложности, которые подходят этой формулировке.')}</span>
                     </span>
                 </label>
             </div>
             <div class="space-y-2">
                 ${supportedLevels.map((level) => {
                     const checked = selectedLevels.includes(level);
-                    const role = roles.get(level) || `Уровень ${level}`;
+                    const role = roles.get(level) || wt('editor_base.difficulty.level_title', 'Уровень {level}').replace('{level}', level);
                     return `
                         <label class="difficulty-authoring__level-card flex items-start gap-3 rounded-xl border border-border-subtle bg-surface-1 px-3 py-3 ${customMode ? 'cursor-pointer' : 'opacity-70'}">
                             <input type="checkbox" data-difficulty-level="${level}" ${checked ? 'checked' : ''} ${customMode ? '' : 'disabled'} class="mt-0.5 h-4 w-4 rounded border-border-subtle text-primary focus:ring-primary">
                             <span class="min-w-0">
                                 <span class="inline-flex items-center gap-2">
                                     <span class="difficulty-authoring__level-pill inline-flex items-center rounded-full bg-primary-lighter px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary">L${level}</span>
-                                    <span class="text-sm font-semibold text-text-main">Уровень ${level}</span>
+                                    <span class="text-sm font-semibold text-text-main">${wt('editor_base.difficulty.level_title', 'Уровень {level}').replace('{level}', level)}</span>
                                 </span>
                                 <span class="block mt-1 text-xs text-text-secondary leading-relaxed">${this.escapeHtml(role)}</span>
                             </span>
@@ -1120,7 +1120,7 @@ class BaseEditor {
             </div>
             ${customMode && !selectedLevels.length ? `
                 <div class="difficulty-authoring__warning rounded-xl border border-warning-light bg-warning-lighter px-3 py-2 text-xs text-warning-text">
-                    Нужно оставить хотя бы один уровень, иначе задание нельзя будет сохранить.
+                    ${wt('editor_base.difficulty.warning', 'Нужно оставить хотя бы один уровень, иначе задание нельзя будет сохранить.')}
                 </div>
             ` : ''}
         `;
@@ -1173,7 +1173,7 @@ class BaseEditor {
         this.updateSaveStatus({ type: 'saving' });
 
         if (!this.task) {
-            this.showToast("Задание не загружено", 'error');
+            this.showToast(wt('editor_base.toast_task_not_loaded', 'Задание не загружено'), 'error');
             return;
         }
 
@@ -1228,14 +1228,14 @@ class BaseEditor {
             if (response.status === 409 && result?.error === 'workspace_limit_reached') {
                 this.updateSaveStatus({
                     type: 'warning',
-                    message: 'Лимит заданий достигнут',
-                    detail: 'Черновик можно продолжать редактировать, но сохранить новый task.json пока нельзя.',
+                    message: wt('editor_base.status.limit_reached_title', 'Лимит заданий достигнут'),
+                    detail: wt('editor_base.status.limit_reached_detail', 'Черновик можно продолжать редактировать, но сохранить новый task.json пока нельзя.'),
                 });
-                this.showToast('Лимит заданий достигнут. Черновик можно продолжать редактировать, но сохранить новый task.json пока нельзя.', 'warning');
+                this.showToast(wt('editor_base.toast_limit_reached', 'Лимит заданий достигнут. Черновик можно продолжать редактировать, но сохранить новый task.json пока нельзя.'), 'warning');
             } else if (result.ok) {
                 const semanticWarnings = this.getSemanticWarnings();
                 if (!semanticWarnings.length) {
-                    this.showToast("Задание сохранено", 'success');
+                    this.showToast(wt('editor_base.toast_task_saved', 'Задание сохранено'), 'success');
                 }
                 this.hasPersistedTask = true;
                 this.isNewTaskParam = false;
@@ -1254,17 +1254,17 @@ class BaseEditor {
                 if (semanticWarnings.length) {
                     this.updateSaveStatus({
                         type: 'warning',
-                        message: 'Сохранено с предупреждениями',
+                        message: wt('editor_base.status.saved_with_warnings', 'Сохранено с предупреждениями'),
                         detail: this.buildSemanticWarningsDetail(semanticWarnings)
                     });
                     this.showToast(this.buildSemanticWarningsToast(semanticWarnings), 'warning', 5200);
                 }
             } else {
-                this.showToast(result.error || "Ошибка сохранения", 'error');
+                this.showToast(result.error || wt('editor_base.toast_save_error', 'Ошибка сохранения'), 'error');
             }
         } catch (error) {
             console.error("Error saving task:", error);
-            this.showToast("Ошибка сети: " + error.message, 'error');
+            this.showToast(wt('editor_base.toast_network_error', 'Ошибка сети:') + ' ' + error.message, 'error');
         }
     }
 
@@ -1311,13 +1311,13 @@ class BaseEditor {
             // Fallback for older layouts or if elements not found
             const legacyIndicator = document.querySelector('.save-status');            if (legacyIndicator && !container) {
                 if (type === 'blocking') {
-                    legacyIndicator.textContent = resolvedOptions.message || '! Требуется правка';
+                    legacyIndicator.textContent = resolvedOptions.message || wt('editor_base.status.needs_editing', '! Требуется правка');
                     legacyIndicator.className = 'save-status unsaved text-xs font-bold text-error-dark';
                 } else if (this.hasUnsavedChanges) {
-                    legacyIndicator.textContent = 'Не сохранено';
+                    legacyIndicator.textContent = wt('editor_base.status.unsaved', 'Не сохранено');
                     legacyIndicator.className = 'save-status unsaved text-xs font-bold text-warning-dark';
                 } else {
-                    legacyIndicator.textContent = 'Сохранено';
+                    legacyIndicator.textContent = wt('editor_base.status.saved', 'Сохранено');
                     legacyIndicator.className = 'save-status saved text-xs font-bold text-success-dark';
                 }
             }
@@ -1418,20 +1418,20 @@ class BaseEditor {
             return options.message;
         }
         const messageMap = {
-            saving: 'Сохранение...',
-            dirty: 'Изменения не сохранены',
-            saved: 'Сохранено',
-            draft: 'Черновик сохранён',
-            error: 'Ошибка сохранения',
-            blocking: 'Действие заблокировано',
-            warning: 'Сохранено с предупреждениями',
+            saving: wt('editor_base.status.saving', 'Сохранение...'),
+            dirty: wt('editor_base.status.unsaved_changes', 'Изменения не сохранены'),
+            saved: wt('editor_base.status.saved', 'Сохранено'),
+            draft: wt('editor_base.status.draft_saved', 'Черновик сохранён'),
+            error: wt('editor_base.status.save_error', 'Ошибка сохранения'),
+            blocking: wt('editor_base.status.action_blocked', 'Действие заблокировано'),
+            warning: wt('editor_base.status.saved_with_warnings', 'Сохранено с предупреждениями'),
         };
-        return messageMap[type] || 'Состояние обновлено';
+        return messageMap[type] || wt('editor_base.status.state_updated', 'Состояние обновлено');
     }
 
     getSaveStatusDetail(type = 'saved', options = {}) {
         if (type === 'draft' && options.time) {
-            return `Локально: ${options.time}`;
+            return wt('editor_base.status.local_time', 'Локально: {time}').replace('{time}', options.time);
         }
         if ((type === 'warning' || type === 'blocking') && options.detail) {
             return options.detail;
@@ -1505,13 +1505,14 @@ class BaseEditor {
 
     buildSemanticWarningsToast(warnings = []) {
         if (!Array.isArray(warnings) || !warnings.length) {
-            return 'Сохранено.';
+            return wt('editor_base.warning.saved_success', 'Сохранено.');
         }
         const first = String(warnings[0] || '').trim();
         if (warnings.length === 1) {
-            return `Сохранено, но проверьте: ${first}`;
+            return wt('editor_base.warning.saved_with_single_warning', 'Сохранено, но проверьте: {warning}').replace('{warning}', first);
         }
-        return `Сохранено, но есть ${warnings.length} замечания. Сначала проверьте: ${first}`;
+        const count = warnings.length;
+        return wt('editor_base.warning.saved_with_multiple_warnings', 'Сохранено, но есть {count} замечания. Сначала проверьте: {warning}').replace('{count}', count).replace('{warning}', first);
     }
 
     buildSemanticWarningsDetail(warnings = []) {
@@ -1522,7 +1523,8 @@ class BaseEditor {
         if (warnings.length === 1) {
             return first;
         }
-        return `${warnings.length} замечания. Первое: ${first}`;
+        const count = warnings.length;
+        return wt('editor_base.warning.multiple_warnings_detail', '{count} замечания. Первое: {warning}').replace('{count}', count).replace('{warning}', first);
     }
 
     /**
@@ -1530,7 +1532,7 @@ class BaseEditor {
      * @param {boolean} show - Show or hide loading
      * @param {string} message - Loading message
      */
-    toggleLoading(show, message = 'Загрузка...') {
+    toggleLoading(show, message = wt('editor_base.lbl_loading', 'Загрузка...')) {
         let overlay = document.getElementById('loading-overlay');
 
         if (show) {
@@ -1596,11 +1598,11 @@ class BaseEditor {
         overlay.innerHTML = `
             <div class="card-elevated empty-state-card w-full max-w-md p-8">
                 <span class="empty-state-card__icon h-16 w-16 border border-error-light bg-error-lighter text-error-text"><span class="material-symbols-outlined text-4xl">error</span></span>
-                <h3 class="text-xl font-bold text-text-main mb-2">Ошибка загрузки</h3>
+                <h3 class="text-xl font-bold text-text-main mb-2">${wt('editor_base.error_load_title', 'Ошибка загрузки')}</h3>
                 <p class="text-text-secondary mb-6">${safeMessage}</p>
                 <button id="fatal-error-back-btn" class="btn-secondary inline-flex w-full items-center justify-center gap-2">
                     <span class="material-symbols-outlined">arrow_back</span>
-                    Вернуться в меню
+                    ${wt('editor_base.btn_back_to_menu', 'Вернуться в меню')}
                 </button>
             </div>
         `;
@@ -1632,18 +1634,18 @@ class BaseEditor {
 
         const icon = 'history';
         const colorClass = 'text-primary';
-        title = this.escapeHtml(title || 'Подтверждение');
-        message = this.escapeHtml(message || 'Вы уверены?');
-        confirmText = this.escapeHtml(confirmText || 'Подтвердить');
-        cancelText = this.escapeHtml(cancelText || 'Отмена');
+        title = this.escapeHtml(title || wt('editor_base.modal.confirm_title', 'Подтверждение'));
+        message = this.escapeHtml(message || wt('editor_base.modal.confirm_message', 'Вы уверены?'));
+        confirmText = this.escapeHtml(confirmText || wt('editor_base.modal.confirm_btn', 'Подтвердить'));
+        cancelText = this.escapeHtml(cancelText || wt('editor_base.modal.cancel_btn', 'Отмена'));
 
         overlay.innerHTML = `
             <div class="bg-surface-1 rounded-2xl p-8 max-w-md w-full border border-border-subtle shadow-xl transform transition-all scale-100 animate-slide-up">
                 <div class="mb-5 flex justify-center">
                     <span class="material-symbols-outlined text-4xl ${colorClass} p-4 bg-primary-lighter rounded-full">${icon}</span>
                 </div>
-                <h3 class="text-xl font-bold mb-3 text-text-main">${title || 'Подтверждение'}</h3>
-                <p class="text-text-secondary mb-8 leading-relaxed">${message || 'Вы уверены?'}</p>
+                <h3 class="text-xl font-bold mb-3 text-text-main">${title || wt('editor_base.modal.confirm_title', 'Подтверждение')}</h3>
+                <p class="text-text-secondary mb-8 leading-relaxed">${message || wt('editor_base.modal.confirm_message', 'Вы уверены?')}</p>
                 <div class="flex flex-col gap-3">
                     <button id="confirm-modal-btn" class="w-full py-3 px-4 bg-primary text-primary-fg rounded-lg shadow-md font-semibold hover:bg-primary-dark transition-all flex items-center justify-center gap-2 active:scale-[0.98]">
                         ${confirmText || 'Подтвердить'}
@@ -1726,8 +1728,8 @@ class BaseEditor {
 
     getAutoRestoreDraftToastMessage() {
         return this.restoreDraftIntent
-            ? 'Открыты несохранённые изменения'
-            : 'Восстановлены несохранённые изменения';
+            ? wt('editor_base.draft.opened_unsaved_changes', 'Открыты несохранённые изменения')
+            : wt('editor_base.draft.restored_unsaved_changes', 'Восстановлены несохранённые изменения');
     }
 
     formatDraftTimestamp(value) {
@@ -1775,22 +1777,22 @@ class BaseEditor {
 
         if (hasSavedVersion) {
             return {
-                title: 'Вернуть несохранённые изменения?',
+                title: wt('editor_base.draft.recover_title', 'Вернуть несохранённые изменения?'),
                 message: draftTime
-                    ? `На этом устройстве есть несохранённые изменения этой задачи от ${draftTime}. Они новее последней сохранённой версии${savedTime ? ` от ${savedTime}` : ''}. Что открыть?`
-                    : `На этом устройстве есть несохранённые изменения этой задачи. Они новее последней сохранённой версии${savedTime ? ` от ${savedTime}` : ''}. Что открыть?`,
-                confirmText: 'Вернуть изменения',
-                cancelText: 'Открыть сохранённую версию',
+                    ? wt('editor_base.draft.recover_message_newer_with_time', 'На этом устройстве есть несохранённые изменения этой задачи от {draftTime}. Они новее последней сохранённой версии{savedTime}. Что открыть?').replace('{draftTime}', draftTime).replace('{savedTime}', savedTime ? ` от ${savedTime}` : '')
+                    : wt('editor_base.draft.recover_message_newer', 'На этом устройстве есть несохранённые изменения этой задачи. Они новее последней сохранённой версии{savedTime}. Что открыть?').replace('{savedTime}', savedTime ? ` от ${savedTime}` : ''),
+                confirmText: wt('editor_base.draft.recover_confirm', 'Вернуть изменения'),
+                cancelText: wt('editor_base.draft.recover_cancel', 'Открыть сохранённую версию'),
             };
         }
 
         return {
-            title: 'Вернуть несохранённые изменения?',
+            title: wt('editor_base.draft.recover_title', 'Вернуть несохранённые изменения?'),
             message: draftTime
-                ? `На этом устройстве есть несохранённые изменения этой задачи от ${draftTime}. Вернуть их и продолжить работу?`
-                : 'На этом устройстве есть несохранённые изменения этой задачи. Вернуть их и продолжить работу?',
-            confirmText: 'Вернуть изменения',
-            cancelText: 'Не возвращать',
+                ? wt('editor_base.draft.recover_message_with_time', 'На этом устройстве есть несохранённые изменения этой задачи от {draftTime}. Вернуть их и продолжить работу?').replace('{draftTime}', draftTime)
+                : wt('editor_base.draft.recover_message', 'На этом устройстве есть несохранённые изменения этой задачи. Вернуть их и продолжить работу?'),
+            confirmText: wt('editor_base.draft.recover_confirm', 'Вернуть изменения'),
+            cancelText: wt('editor_base.draft.recover_cancel_new', 'Не возвращать'),
         };
     }
 
@@ -1832,17 +1834,17 @@ class BaseEditor {
         overlay.setAttribute('role', 'dialog');
         overlay.setAttribute('aria-modal', 'true');
 
-        title = this.escapeHtml(title || 'Подтверждение');
-        message = this.escapeHtml(message || 'Вы уверены?');
-        confirmText = this.escapeHtml(confirmText || 'Подтвердить');
-        cancelText = this.escapeHtml(cancelText || 'Отмена');
+        title = this.escapeHtml(title || wt('editor_base.modal.confirm_title', 'Подтверждение'));
+        message = this.escapeHtml(message || wt('editor_base.modal.confirm_message', 'Вы уверены?'));
+        confirmText = this.escapeHtml(confirmText || wt('editor_base.modal.confirm_btn', 'Подтвердить'));
+        cancelText = this.escapeHtml(cancelText || wt('editor_base.modal.cancel_btn', 'Отмена'));
 
         overlay.innerHTML = `
             <div class="card-elevated rounded-[24px] p-6 sm:p-7 max-w-lg w-full shadow-2xl transform transition-all scale-100 animate-slide-up" style="background: var(--color-surface-1);">
                 <div class="mb-5 flex items-center gap-4 text-left">
                     <span class="material-symbols-outlined text-3xl sm:text-4xl ${theme.iconText} p-3 ${theme.iconBg} rounded-2xl">${theme.icon}</span>
                     <div class="min-w-0">
-                        <h3 class="text-lg sm:text-xl font-bold text-text-main">${title || 'Подтверждение'}</h3>
+                        <h3 class="text-lg sm:text-xl font-bold text-text-main">${title || wt('editor_base.modal.confirm_title', 'Подтверждение')}</h3>
                         <p class="mt-1 text-sm leading-relaxed text-text-main opacity-90">${message || 'Вы уверены?'}</p>
                     </div>
                 </div>
@@ -1993,18 +1995,18 @@ class BaseEditor {
         const meta = taskMeta || this._getTaskTheoryLinkMeta();
         const bridgeContext = bridge !== null ? bridge : this._readEditorTheoryBridgeContext();
         if (bridgeContext?.ai_run_id) {
-            return 'Есть контекст отчёта';
+            return wt('editor_base.theory.has_report_context', 'Есть контекст отчёта');
         }
         if (String(meta?.aiRunId || '').trim() || meta?.sourceGrounding) {
-            return 'Есть привязка к анализу';
+            return wt('editor_base.theory.has_analysis_link', 'Есть привязка к анализу');
         }
         if ((meta?.unitIds?.length || 0) || (meta?.chunkIds?.length || 0)) {
-            return 'Есть выбранные привязки';
+            return wt('editor_base.theory.has_selected_links', 'Есть выбранные привязки');
         }
         if (Array.isArray(warnings) && warnings.length) {
-            return 'Есть замечания';
+            return wt('editor_base.theory.has_remarks', 'Есть замечания');
         }
-        return 'Анализ не подключён';
+        return wt('editor_base.theory.analysis_not_connected', 'Анализ не подключён');
     }
 
     _theoryGroundingBeaconCopy(taskMeta = null, bridge = null, warnings = []) {
@@ -2021,25 +2023,25 @@ class BaseEditor {
 
         if (hasBridge && !hasSavedLink) {
             return {
-                label: 'Есть контекст анализа',
-                hint: 'Для этого редактора найден временный контекст анализа. Его можно посмотреть и при необходимости применить к задаче.',
+                label: wt('editor_base.theory.has_analysis_context', 'Есть контекст анализа'),
+                hint: wt('editor_base.theory.analysis_context_hint', 'Для этого редактора найден временный контекст анализа. Его можно посмотреть и при необходимости применить к задаче.'),
             };
         }
         if (hasSavedLink) {
             return {
-                label: 'Есть связь с анализом',
-                hint: 'У этой задачи уже есть сохранённая связь с анализом теории. Можно открыть детали и проверить привязки.',
+                label: wt('editor_base.theory.has_analysis_connection', 'Есть связь с анализом'),
+                hint: wt('editor_base.theory.analysis_connection_hint', 'У этой задачи уже есть сохранённая связь с анализом теории. Можно открыть детали и проверить привязки.'),
             };
         }
         if (hasWarnings) {
             return {
-                label: 'Есть замечания анализа',
-                hint: 'Для этой задачи есть замечания по связи с анализом. Откройте панель, чтобы посмотреть подробности.',
+                label: wt('editor_base.theory.has_analysis_remarks', 'Есть замечания анализа'),
+                hint: wt('editor_base.theory.analysis_remarks_hint', 'Для этой задачи есть замечания по связи с анализом. Откройте панель, чтобы посмотреть подробности.'),
             };
         }
         return {
-            label: 'Связь с анализом',
-            hint: 'Открыть панель связи задания с анализом теории.',
+            label: wt('editor_base.theory.analysis_connection', 'Связь с анализом'),
+            hint: wt('editor_base.theory.open_panel_hint', 'Открыть панель связи задания с анализом теории.'),
         };
     }
 
@@ -2051,7 +2053,7 @@ class BaseEditor {
         const saveStatus = document.getElementById('save-status-container');
         const saveButton = document.getElementById('save-task-btn');
         const host = saveStatus?.parentElement || saveButton?.parentElement || document.querySelector('header');
-        if (!host) {
+        if (!host || !this._hasTheoryGroundingContext(meta, bridgeContext)) {
             if (beacon) beacon.remove();
             return;
         }
@@ -2135,7 +2137,7 @@ class BaseEditor {
             || analysisPayload?.human_summary
             || analysisPayload?.ai_run_id
             || id
-            || 'Анализ без названия'
+            || wt('editor_base.theory.untitled_analysis', 'Анализ без названия')
         );
         const rawSummary = String(
             extra.summary
@@ -2146,7 +2148,7 @@ class BaseEditor {
             source,
             id: String(id || '').trim(),
             composite_id: this._theoryGroundingCompositeId(source, id),
-            title: this._sanitizeTheoryAnalysisText(rawTitle, 'Анализ без названия'),
+            title: this._sanitizeTheoryAnalysisText(rawTitle, wt('editor_base.theory.untitled_analysis', 'Анализ без названия')),
             summary: this._sanitizeTheoryAnalysisText(rawSummary, ''),
             updated_at: String(
                 extra.updated_at
@@ -2226,15 +2228,15 @@ class BaseEditor {
     _theoryGroundingTaskTypeLabel(taskType) {
         const normalized = String(taskType || '').trim().toUpperCase();
         const labels = {
-            OPEN_ANSWER: 'Открытый ответ',
-            SEQUENCE: 'Последовательность',
-            TEST: 'Тест',
-            CLICK: 'Клик',
-            CLICK_TEXT: 'Клик/Ошибки (тексты)',
-            CLICK_WORDS: 'Клик/Ошибки (слова)',
-            DRAW: 'Рисование по изображению',
+            OPEN_ANSWER: wt('editor_base.task_type.open_answer', 'Открытый ответ'),
+            SEQUENCE: wt('editor_base.task_type.sequence', 'Последовательность'),
+            TEST: wt('editor_base.task_type.test', 'Тест'),
+            CLICK: wt('editor_base.task_type.click', 'Клик'),
+            CLICK_TEXT: wt('editor_base.task_type.click_text', 'Клик/Ошибки (тексты)'),
+            CLICK_WORDS: wt('editor_base.task_type.click_words', 'Клик/Ошибки (слова)'),
+            DRAW: wt('editor_base.task_type.draw', 'Рисование по изображению'),
         };
-        return labels[normalized] || normalized || 'Тип не определён';
+        return labels[normalized] || normalized || wt('editor_base.task_type.undefined', 'Тип не определён');
     }
 
     _theoryGroundingTypeRecommendation(payload, taskType) {
@@ -2692,8 +2694,8 @@ class BaseEditor {
         this.renderTheoryGroundingPanel();
         const msgKey = next.trustLevel === 'low_trust' ? 'p8.trust.saved_low_trust' : 'p8.trust.saved_normal';
         const fallback = next.trustLevel === 'low_trust'
-            ? 'Анализ помечен как низкое доверие. Подсказки будут подаваться мягче.'
-            : 'Для анализа установлен обычный уровень доверия.';
+            ? wt('editor_base.theory.low_trust_toast', 'Анализ помечен как низкое доверие. Подсказки будут подаваться мягче.')
+            : wt('editor_base.theory.normal_trust_toast', 'Для анализа установлен обычный уровень доверия.');
         this.showToast(this.aiUxMessage(msgKey, fallback), 'info');
     }
 
@@ -2715,7 +2717,7 @@ class BaseEditor {
         const bridge = this._readEditorTheoryBridgeContext();
         this.theoryGrounding.bridgeContext = bridge;
         if (!bridge || typeof bridge !== 'object') {
-            this.showToast(this.aiUxMessage('p8.bridge.context_not_found', 'Контекст из отчёта не найден. Можно выбрать анализ вручную.'), 'warning');
+            this.showToast(this.aiUxMessage('p8.bridge.context_not_found', wt('p8.bridge.context_not_found', 'Контекст из отчёта не найден. Можно выбрать анализ вручную.')), 'warning');
             return;
         }
         const rid = String(bridge.ai_run_id || '').trim();
@@ -2725,7 +2727,7 @@ class BaseEditor {
         if (rid) this.theoryGrounding.selectedRunId = rid;
         this._syncTheoryGroundingRunPrefsState(rid);
         this.renderTheoryGroundingPanel();
-        this.showToast(this.aiUxMessage('p8.bridge.context_loaded', 'Контекст отчёта загружен в панель связи с анализом.'), 'info');
+        this.showToast(this.aiUxMessage('p8.bridge.context_loaded', wt('p8.bridge.context_loaded', 'Контекст отчёта загружен в панель связи с анализом.')), 'info');
         if (rid && (!this.theoryGrounding.analysisData || String(this.theoryGrounding.analysisData.ai_run_id || '') !== rid)) {
             this.openTheoryGroundingAnalysis(rid).catch(() => {});
         }
@@ -2759,7 +2761,7 @@ class BaseEditor {
             ? (this._normalizeIntIdList(bridge.refs.unit_ids).length || this._normalizeStrIdList(bridge.refs.chunk_ids).length)
             : 0;
         if (bridgeRefs && !taskMeta.unitIds.length && !taskMeta.chunkIds.length) {
-            warnings.push(this.aiUxMessage('p8.soft.bridge_refs_available', 'В контексте отчёта уже есть готовые привязки. Их можно применить в один клик.'));
+            warnings.push(this.aiUxMessage('p8.soft.bridge_refs_available', wt('p8.soft.bridge_refs_available', 'В контексте отчёта уже есть готовые привязки. Их можно применить в один клик.')));
         }
         return warnings;
     }
@@ -2792,6 +2794,8 @@ class BaseEditor {
         this.renderTheoryGroundingBeacon();
 
         const state = this.theoryGrounding;
+        const bridge = state.bridgeContext || this._readEditorTheoryBridgeContext();
+        state.bridgeContext = bridge;
         const warnings = this._computeTheoryGroundingWarnings();
         const { header } = this._theoryGroundingHeaderHost();
         let panel = document.getElementById(this._theoryGroundingContainerId());
@@ -2822,7 +2826,7 @@ class BaseEditor {
         const currentTypeLabel = this._theoryGroundingTaskTypeLabel(currentType);
         const currentRec = payload ? this._theoryGroundingTypeRecommendation(payload, currentType) : null;
         const shownUnits = payload ? this._theoryGroundingRelatedUnits(payload, currentRec) : [];
-        const sourceLabel = selectedItem?.source === 'manual_archive' ? 'Локальный архив' : 'AI-анализ';
+        const sourceLabel = selectedItem?.source === 'manual_archive' ? wt('editor_base.theory.source_manual_archive', 'Локальный архив') : wt('editor_base.theory.source_ai_analysis', 'AI-анализ');
         const formattedDate = selectedItem?.updated_at ? new Date(selectedItem.updated_at).toLocaleString('ru-RU') : '';
         const sanitizeLabel = (value, fallback = '') => this._sanitizeTheoryAnalysisText(value, fallback || '');
 
@@ -2842,10 +2846,10 @@ class BaseEditor {
             if (!manualAuthoring || typeof manualAuthoring !== 'object') return '';
             return `
                 <div class="rounded-lg border border-warning-light bg-surface-2 p-3 space-y-1">
-                    <div class="text-[11px] font-semibold text-text-main">Визуальный ориентир</div>
-                    ${Array.isArray(manualAuthoring.figure_refs) && manualAuthoring.figure_refs.length ? `<div class="text-[11px] text-text-secondary"><span class="font-semibold text-text-main">Рисунки:</span> ${this.escapeHtml(manualAuthoring.figure_refs.slice(0, 3).join(', '))}</div>` : ''}
-                    ${Array.isArray(manualAuthoring.target_objects) && manualAuthoring.target_objects.length ? `<div class="text-[11px] text-text-secondary"><span class="font-semibold text-text-main">Что распознать:</span> ${this.escapeHtml(manualAuthoring.target_objects.slice(0, 3).join('; '))}</div>` : ''}
-                    ${manualAuthoring.task_stem_example ? `<div class="text-[11px] text-text-secondary"><span class="font-semibold text-text-main">Пример формулировки:</span> ${this.escapeHtml(String(manualAuthoring.task_stem_example))}</div>` : ''}
+                    <div class="text-[11px] font-semibold text-text-main">${wt('editor_base.theory.visual_anchor', 'Визуальный ориентир')}</div>
+                    ${Array.isArray(manualAuthoring.figure_refs) && manualAuthoring.figure_refs.length ? `<div class="text-[11px] text-text-secondary"><span class="font-semibold text-text-main">${wt('editor_base.theory.figures', 'Рисунки')}:</span> ${this.escapeHtml(manualAuthoring.figure_refs.slice(0, 3).join(', '))}</div>` : ''}
+                    ${Array.isArray(manualAuthoring.target_objects) && manualAuthoring.target_objects.length ? `<div class="text-[11px] text-text-secondary"><span class="font-semibold text-text-main">${wt('editor_base.theory.what_to_recognize', 'Что распознать')}:</span> ${this.escapeHtml(manualAuthoring.target_objects.slice(0, 3).join('; '))}</div>` : ''}
+                    ${manualAuthoring.task_stem_example ? `<div class="text-[11px] text-text-secondary"><span class="font-semibold text-text-main">${wt('editor_base.theory.task_stem_example', 'Пример формулировки')}:</span> ${this.escapeHtml(String(manualAuthoring.task_stem_example))}</div>` : ''}
                 </div>
             `;
         };
@@ -2858,74 +2862,80 @@ class BaseEditor {
                 <div class="rounded-xl border border-border-subtle bg-surface-2 p-3 space-y-3">
                     <div class="flex flex-wrap items-center gap-2">
                         <div class="text-sm font-semibold text-text-main">${this.escapeHtml(editorLabel)}</div>
-                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-1 text-text-main border border-primary-light">текущий тип</span>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-1 text-text-main border border-primary-light">${wt('editor_base.theory.current_type', 'текущий тип')}</span>
                     </div>
-                    ${rec?.coverage_role ? `<div class="text-[11px] text-text-secondary"><span class="font-semibold text-text-main">Что проверяем:</span> ${this.escapeHtml(String(rec.coverage_role))}</div>` : ''}
-                    ${rec?.generation_focus ? `<div class="text-[11px] text-text-secondary"><span class="font-semibold text-text-main">Фокус:</span> ${this.escapeHtml(String(rec.generation_focus))}</div>` : ''}
-                    ${anchors.length ? `<div><div class="text-[11px] font-semibold text-text-main mb-1">Опоры</div>${renderTextList(anchors, '', 4)}</div>` : ''}
-                    ${candidates.length ? `<div><div class="text-[11px] font-semibold text-text-main mb-1">Идеи заданий</div>${renderTextList(candidates, '', 2)}</div>` : ''}
+                    ${rec?.coverage_role ? `<div class="text-[11px] text-text-secondary"><span class="font-semibold text-text-main">${wt('editor_base.theory.what_we_check', 'Что проверяем')}:</span> ${this.escapeHtml(String(rec.coverage_role))}</div>` : ''}
+                    ${rec?.generation_focus ? `<div class="text-[11px] text-text-secondary"><span class="font-semibold text-text-main">${wt('editor_base.theory.focus', 'Фокус')}:</span> ${this.escapeHtml(String(rec.generation_focus))}</div>` : ''}
+                    ${anchors.length ? `<div><div class="text-[11px] font-semibold text-text-main mb-1">${wt('editor_base.theory.anchors', 'Опоры')}</div>${renderTextList(anchors, '', 4)}</div>` : ''}
+                    ${candidates.length ? `<div><div class="text-[11px] font-semibold text-text-main mb-1">${wt('editor_base.theory.candidates', 'Идеи заданий')}</div>${renderTextList(candidates, '', 2)}</div>` : ''}
                     ${renderManualAuthoring(rec?.manual_authoring)}
                 </div>
             `;
         };
 
         panel.innerHTML = `
-            <button type="button" data-role="theory-grounding-backdrop" onclick="window.editor && window.editor.toggleTheoryGroundingPanel(false)" class="absolute inset-0 bg-scrim/35 backdrop-blur-[1px]" style="pointer-events:auto;" aria-label="Закрыть рекомендации"></button>
+            <button type="button" data-role="theory-grounding-backdrop" onclick="window.editor && window.editor.toggleTheoryGroundingPanel(false)" class="absolute inset-0 bg-scrim/35 backdrop-blur-[1px]" style="pointer-events:auto;" aria-label="${wt('editor_base.theory.close_recommendations', 'Закрыть рекомендации')}"></button>
             <div data-role="theory-grounding-card" class="rounded-2xl border border-border-subtle bg-surface-1 shadow-2xl" style="pointer-events:auto; overflow:hidden;">
                 <div class="px-5 py-4">
                     <div class="flex flex-wrap items-center justify-between gap-3">
                         <div class="min-w-0 flex items-center gap-2">
                             <span class="material-symbols-outlined text-[18px] text-primary">hub</span>
-                            <h3 class="text-sm font-bold text-text-main">Рекомендации</h3>
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border border-border-subtle bg-surface-2 text-text-secondary">${this.escapeHtml(currentTypeLabel || 'Тип не определён')}</span>
+                            <h3 class="text-sm font-bold text-text-main">${wt('editor_base.theory.analysis_connection', 'Связь с анализом')}</h3>
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border border-border-subtle bg-surface-2 text-text-secondary">${this.escapeHtml(currentTypeLabel || wt('editor_base.task_type.undefined', 'Тип не определён'))}</span>
                             ${selectedItem ? `<span class="hidden md:inline text-[11px] text-text-secondary truncate">${this.escapeHtml(sourceLabel)}${formattedDate ? ` · ${this.escapeHtml(formattedDate)}` : ''}</span>` : ''}
                         </div>
                         <div class="flex items-center gap-2 max-w-full">
                             <label class="min-w-[18rem] max-w-[38rem] w-[min(100%,38rem)]">
-                                <span class="sr-only">Выбранный анализ</span>
+                                <span class="sr-only">${wt('editor_base.theory.selected_analysis', 'Выбранный анализ')}</span>
                                 <select onchange="window.editor && window.editor.setTheoryGroundingSelectedRun(this.value)" class="w-full rounded-lg border-border-subtle bg-surface-2 py-2 pl-3 pr-10 text-xs text-text-main focus:ring-2 focus:ring-primary appearance-none" style="text-overflow:ellipsis;">
-                                    <option value="">Выберите анализ...</option>
+                                    <option value="">${wt('editor_base.theory.select_analysis', 'Выберите анализ...')}</option>
                                     ${items.map((item) => {
-                                        const itemSourceLabel = item.source === 'manual_archive' ? 'Локальный' : 'Сервер';
+                                        const itemSourceLabel = item.source === 'manual_archive' ? wt('editor_base.theory.source_local', 'Локальный') : wt('editor_base.theory.source_server', 'Сервер');
                                         const selectedAttr = item.composite_id === String(state.selectedAnalysisId || '') ? 'selected' : '';
-                                        const label = `${itemSourceLabel} · ${sanitizeLabel(item.title, 'Анализ без названия')}`;
+                                        const label = `${itemSourceLabel} · ${sanitizeLabel(item.title, wt('editor_base.theory.untitled_analysis', 'Анализ без названия'))}`;
                                         return `<option value="${this.escapeHtml(item.composite_id)}" ${selectedAttr}>${this.escapeHtml(label)}</option>`;
                                     }).join('')}
                                 </select>
                             </label>
                             <button type="button" onclick="window.editor && window.editor.loadTheoryGroundingAnalyses()" class="px-3 py-1.5 rounded-lg border border-border-subtle bg-surface-1 text-xs font-medium text-text-secondary hover:bg-bg-hover">
-                                ${state.itemsLoading ? '...' : 'Обновить'}
+                                ${state.itemsLoading ? '...' : wt('editor_base.theory.refresh_btn', 'Обновить')}
                             </button>
-                            <button type="button" onclick="window.editor && window.editor.toggleTheoryGroundingPanel(false)" class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border-subtle bg-surface-1 text-text-secondary hover:bg-bg-hover" aria-label="Закрыть рекомендации">
+                            <button type="button" onclick="window.editor && window.editor.toggleTheoryGroundingPanel(false)" class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border-subtle bg-surface-1 text-text-secondary hover:bg-bg-hover" aria-label="${wt('editor_base.theory.close_panel_aria', 'Закрыть рекомендации')}">
                                 <span class="material-symbols-outlined text-[18px]">close</span>
                             </button>
                         </div>
                     </div>
+                    ${bridge?.ai_run_id ? `
+                        <div class="mt-2 p-2 rounded-lg border border-info-light bg-info-lighter" style="pointer-events:auto;">
+                            <div class="text-[11px] text-info-text">${wt('editor_base.theory.bridge_report_context', 'Контекст из отчёта')}: <span class="font-mono">${this.escapeHtml(String(bridge.ai_run_id))}</span>${bridge?.source_block?.title ? ` · ${this.escapeHtml(bridge.source_block.title)}` : ''}</div>
+                            <button type="button" onclick="window.editor && window.editor.applyTheoryBridgeContextToTask()" class="mt-1 px-2 py-1 rounded-md border border-info-light bg-info-light text-info-text text-[11px] hover:opacity-90">${wt('editor_base.theory.apply_bridge_refs', 'Применить привязки из отчёта')}</button>
+                        </div>
+                    ` : ''}
 
                     <div class="mt-3 rounded-xl border border-border-subtle bg-surface-1 p-3" style="max-height:min(36vh, 22rem); overflow-y:auto; overscroll-behavior:contain;">
                         <div class="space-y-3">
                             ${warnings.length ? `
                                 <div class="rounded-lg border border-warning-light bg-surface-2 p-3 space-y-1">
-                                    <div class="text-[11px] font-semibold text-text-main">Замечания</div>
+                                    <div class="text-[11px] font-semibold text-text-main">${wt('editor_base.theory.remarks', 'Замечания')}</div>
                                     ${warnings.map((warning) => `<div class="text-[11px] text-text-secondary">${this.escapeHtml(String(warning))}</div>`).join('')}
                                 </div>
                             ` : ''}
                             ${state.itemsError ? `<div class="text-[11px] text-error-text">${this.escapeHtml(state.itemsError)}</div>` : ''}
                             ${state.analysisError ? `<div class="text-[11px] text-error-text">${this.escapeHtml(state.analysisError)}</div>` : ''}
-                            ${items.length === 0 && !state.itemsLoading ? `<div class="rounded-lg border border-border-subtle bg-surface-2 p-4 text-sm text-text-secondary">Архив пока пуст. Сохранить анализ можно через раздел «Анализ теории».</div>` : ''}
-                            ${state.analysisLoading ? `<div class="rounded-lg border border-border-subtle bg-surface-2 p-4 text-sm text-text-secondary">Загрузка анализа...</div>` : ''}
-                            ${!selectedItem && !state.analysisLoading ? `<div class="rounded-lg border border-border-subtle bg-surface-2 p-4 text-sm text-text-secondary">Выберите анализ в выпадающем списке, чтобы увидеть рекомендации для текущего типа задания.</div>` : ''}
-                            ${selectedItem && !payload && !state.analysisLoading ? `<div class="rounded-lg border border-border-subtle bg-surface-2 p-4 text-sm text-text-secondary">Для этой записи пока недоступно полное содержимое анализа.</div>` : ''}
+                            ${items.length === 0 && !state.itemsLoading ? `<div class="rounded-lg border border-border-subtle bg-surface-2 p-4 text-sm text-text-secondary">${wt('editor_base.theory.archive_empty', 'Архив пока пуст. Сохранить анализ можно через раздел «Анализ теории».')}</div>` : ''}
+                            ${state.analysisLoading ? `<div class="rounded-lg border border-border-subtle bg-surface-2 p-4 text-sm text-text-secondary">${wt('editor_base.theory.loading_analysis', 'Загрузка анализа...')}</div>` : ''}
+                            ${!selectedItem && !state.analysisLoading ? `<div class="rounded-lg border border-border-subtle bg-surface-2 p-4 text-sm text-text-secondary">${wt('editor_base.theory.select_analysis_hint', 'Выберите анализ в выпадающем списке, чтобы увидеть рекомендации для текущего типа задания.')}</div>` : ''}
+                            ${selectedItem && !payload && !state.analysisLoading ? `<div class="rounded-lg border border-border-subtle bg-surface-2 p-4 text-sm text-text-secondary">${wt('editor_base.theory.no_full_content', 'Для этой записи пока недоступно полное содержимое анализа.')}</div>` : ''}
                             ${payload ? `
                                 <div class="space-y-3">
                                     ${currentRec ? renderRecommendationCard(currentRec) : `
                                         <div class="rounded-lg border border-border-subtle bg-surface-2 p-4">
-                                            <div class="text-sm font-semibold text-text-main">Для этого типа нет отдельной рекомендации</div>
-                                            <div class="text-[11px] text-text-secondary mt-1">Выберите другой анализ из архива или откройте полный разбор в разделе «Анализ теории».</div>
+                                            <div class="text-sm font-semibold text-text-main">${wt('editor_base.theory.no_specific_rec', 'Для этого типа нет отдельной рекомендации')}</div>
+                                            <div class="text-[11px] text-text-secondary mt-1">${wt('editor_base.theory.select_other_rec_hint', 'Выберите другой анализ из архива или откройте полный разбор в разделе «Анализ теории».')}</div>
                                         </div>
                                     `}
                                     <div class="rounded-lg border border-border-subtle bg-surface-2 p-3">
-                                        <div class="text-[11px] font-semibold text-text-main mb-2">Связанные единицы</div>
+                                        <div class="text-[11px] font-semibold text-text-main mb-2">${wt('editor_base.theory.related_units', 'Связанные единицы')}</div>
                                         ${shownUnits.length ? `
                                             <div class="space-y-1">
                                                 ${shownUnits.slice(0, 3).map((unit) => `
@@ -2935,7 +2945,7 @@ class BaseEditor {
                                                     </div>
                                                 `).join('')}
                                             </div>
-                                        ` : `<div class="text-[11px] text-text-secondary">Для текущего типа нет отдельного списка единиц.</div>`}
+                                        ` : `<div class="text-[11px] text-text-secondary">${wt('editor_base.theory.no_units_for_type', 'Для текущего типа нет отдельного списка единиц.')}</div>`}
                                     </div>
                                 </div>
                             ` : ''}
@@ -2955,10 +2965,10 @@ class BaseEditor {
     goBack() {
         if (this.hasUnsavedChanges) {
             this.showConfirmModal({
-                title: 'Несохранённые изменения',
-                message: 'У вас есть несохранённые изменения. Вы уверены, что хотите выйти без сохранения?',
-                confirmText: 'Выйти',
-                cancelText: 'Остаться',
+                title: wt('editor_base.modal.unsaved_changes_title', 'Несохранённые изменения'),
+                message: wt('editor_base.modal.unsaved_changes_message', 'У вас есть несохранённые изменения. Вы уверены, что хотите выйти без сохранения?'),
+                confirmText: wt('editor_base.modal.exit_btn', 'Выйти'),
+                cancelText: wt('editor_base.modal.stay_btn', 'Остаться'),
                 onConfirm: () => {
                     this.hasUnsavedChanges = false;
                     window.removeEventListener('beforeunload', this._beforeUnloadHandler);
@@ -3073,15 +3083,15 @@ class BaseEditor {
         if (undoBtn) {
             undoBtn.disabled = !this.undoManager.canUndo();
             undoBtn.title = this.undoManager.canUndo()
-                ? 'Отменить (Ctrl+Z)'
-                : 'Нет действий для отмены';
+                ? wt('editor_base.undo.can_undo', 'Отменить (Ctrl+Z)')
+                : wt('editor_base.undo.nothing_to_undo', 'Нет действий для отмены');
         }
 
         if (redoBtn) {
             redoBtn.disabled = !this.undoManager.canRedo();
             redoBtn.title = this.undoManager.canRedo()
-                ? 'Повторить (Ctrl+Y)'
-                : 'Нет действий для повтора';
+                ? wt('editor_base.undo.can_redo', 'Повторить (Ctrl+Y)')
+                : wt('editor_base.undo.nothing_to_redo', 'Нет действий для повтора');
         }
     }
 
@@ -3140,10 +3150,10 @@ class BaseEditor {
     goBack() {
         if (this.hasUnsavedChanges) {
             this.showConfirmModal({
-                title: 'Несохранённые изменения',
-                message: 'У вас есть несохранённые изменения. Вы уверены, что хотите выйти без сохранения?',
-                confirmText: 'Выйти',
-                cancelText: 'Остаться',
+                title: wt('editor_base.modal.unsaved_changes_title', 'Несохранённые изменения'),
+                message: wt('editor_base.modal.unsaved_changes_message', 'У вас есть несохранённые изменения. Вы уверены, что хотите выйти без сохранения?'),
+                confirmText: wt('editor_base.modal.exit_btn', 'Выйти'),
+                cancelText: wt('editor_base.modal.stay_btn', 'Остаться'),
                 onConfirm: () => {
                     this.hasUnsavedChanges = false;
                     this.teardownNavigationGuards();
@@ -3195,10 +3205,10 @@ class BaseEditor {
             if (this.hasUnsavedChanges) {
                 this._historyGuardPromptOpen = true;
                 this.showConfirmModal({
-                    title: 'Несохранённые изменения',
-                    message: 'У вас есть несохранённые изменения. Вы уверены, что хотите выйти без сохранения?',
-                    confirmText: 'Выйти',
-                    cancelText: 'Остаться',
+                    title: wt('editor_base.modal.unsaved_changes_title', 'Несохранённые изменения'),
+                    message: wt('editor_base.modal.unsaved_changes_message', 'У вас есть несохранённые изменения. Вы уверены, что хотите выйти без сохранения?'),
+                    confirmText: wt('editor_base.modal.exit_btn', 'Выйти'),
+                    cancelText: wt('editor_base.modal.stay_btn', 'Остаться'),
                     onConfirm: () => {
                         this._historyGuardPromptOpen = false;
                         this.hasUnsavedChanges = false;

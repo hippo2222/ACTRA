@@ -171,6 +171,22 @@ describe('settings draft banner', () => {
         };
       }
 
+      if (url === '/api/editor/theory/rollout/status') {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ ok: true, rollout: { feature_flags: { ai_mode: true } } }),
+        };
+      }
+
+      if (url === '/api/billing/status') {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ ok: true, status: { premium: false } }),
+        };
+      }
+
       throw new Error(`Unexpected fetch: ${method} ${url}`);
     }));
     dom.window.fetch = global.fetch;

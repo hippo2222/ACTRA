@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <link rel="icon" href="../assets/actra_white.ico" type="image/x-icon" />
+    <link rel="icon" href="/assets/actra_white.ico" type="image/x-icon" />
   <script src="/assets/ThemeManager.js"></script>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -109,6 +109,23 @@
               <span id="continue-btn-label" class="truncate s2-next-cta-text" data-i18n="s2.continue_btn_label">К следующей итерации</span>
             </div>
           </article>
+
+          <article
+            id="to-complex-list-btn"
+            class="s2-action-card s2-action-card--pause"
+            role="button"
+            tabindex="0"
+            aria-label="Сделать паузу"
+          >
+            <p class="s2-eyebrow">Пауза</p>
+            <h2 class="s2-action-title">Сделать паузу</h2>
+            <p class="s2-action-copy">Вы можете приостановить сессию и вернуться к ней позже.</p>
+            <div class="s2-next-cta" aria-hidden="true">
+              <span class="truncate s2-next-cta-text">Сделать паузу</span>
+            </div>
+          </article>
+
+          <p id="next-step-hint" class="s2-action-hint w-full text-center text-xs text-text-secondary mt-2"></p>
         </section>
 
         <section id="result-review-panel" class="s2-result-review hidden" aria-hidden="true">
@@ -120,12 +137,29 @@
             </div>
             <button id="review-btn" class="s2-btn s2-secondary-btn hidden" type="button" data-i18n="s2.btn_show_review">Показать разбор</button>
           </div>
+
+          <div id="problem-preview-section" class="mt-4 border-t border-border-subtle pt-4">
+            <div id="problem-empty-state" class="s2-review-empty hidden">
+              <div class="s2-review-empty-hero">
+                <span class="material-symbols-outlined s2-review-empty-icon">check_circle</span>
+                <span class="s2-review-empty-badge" data-i18n="s2.clean_badge">Чисто</span>
+                <h3 class="s2-review-empty-title" data-i18n="s2.clean_title">Все отлично!</h3>
+              </div>
+              <p class="s2-review-empty-copy" data-i18n="s2.clean_copy">Ни одной ошибки в этой итерации.</p>
+            </div>
+
+            <div id="problem-failed-state">
+              <ul id="trigger-tasks-list" class="s2-dialog-list my-2"></ul>
+              <p id="problem-preview-note" class="s2-review-note my-2 text-sm text-text-secondary"></p>
+              <button id="open-problem-dialog-btn" class="s2-btn s2-secondary-btn mt-2" type="button">Посмотреть все ошибки</button>
+            </div>
+          </div>
+
           <div id="review-inline" class="s2-inline-review hidden" aria-hidden="true"></div>
         </section>
         <div hidden aria-hidden="true">
           <strong id="stat-total-tasks-main">—</strong>
           <strong id="stat-failed-tasks">—</strong>
-          <div id="trigger-tasks-list"></div>
         </div>
       </main>
       </div>
@@ -169,6 +203,22 @@
         </div>
 
         <div id="details-errors" class="s2-dialog-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="problem-dialog-backdrop" class="s2-dialog-backdrop hidden" aria-hidden="true">
+    <div class="s2-dialog-panel" role="dialog" aria-modal="true" aria-labelledby="problem-dialog-title">
+      <div class="s2-dialog-header">
+        <div>
+          <p class="s2-eyebrow" data-i18n="s2.problem_dialog_eyebrow">Ошибки</p>
+          <h2 id="problem-dialog-title" class="s2-dialog-title" data-i18n="s2.problem_dialog_title">Допущенные ошибки</h2>
+          <p id="problem-dialog-subtitle" class="s2-dialog-subtitle" data-i18n="s2.problem_dialog_subtitle">Список заданий с неверными ответами</p>
+        </div>
+        <button id="problem-dialog-close-btn" class="s2-btn s2-ghost-btn" type="button" data-i18n="s2.btn_close">Закрыть</button>
+      </div>
+      <div class="s2-dialog-body">
+        <div id="problem-dialog-list" class="s2-dialog-list"></div>
       </div>
     </div>
   </div>

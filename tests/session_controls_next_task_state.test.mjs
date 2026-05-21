@@ -53,6 +53,7 @@ describe("SessionControls next task state", () => {
       setLoading: vi.fn(),
       showTaskSkeleton: vi.fn(),
       setPausedUI: vi.fn(),
+      setButtonBusy: vi.fn(),
     };
     window.TaskRenderer = {
       renderTask: vi.fn(),
@@ -84,7 +85,7 @@ describe("SessionControls next task state", () => {
     await SessionControls.handleNextTask();
 
     expect(window.UIHelpers.showTaskSkeleton).not.toHaveBeenCalled();
-    expect(window.UIHelpers.showStatus).toHaveBeenCalledWith("Загружаем следующее задание...");
+    expect(window.UIHelpers.showStatus).toHaveBeenCalledWith("");
     expect(window.UIHelpers.showStatus).toHaveBeenCalledWith("network", "error");
     expect(window.TaskRenderer.renderTask).not.toHaveBeenCalled();
   });

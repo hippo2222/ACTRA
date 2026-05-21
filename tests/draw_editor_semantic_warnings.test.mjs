@@ -23,6 +23,7 @@ function setupDom() {
     dom.window.__DRAW_EDITOR_AUTO_INIT_DISABLED__ = true;
 
     dom.window.eval(loadScript("frontend/Editor/undo_manager.js") + "\n;window.UndoManager = UndoManager;");
+    dom.window.wt = (key, fallback) => fallback;
     dom.window.eval(loadScript("frontend/Editor/base_editor.js") + "\n;window.BaseEditor = BaseEditor;");
     dom.window.eval(loadScript("frontend/Editor/draw_editor.js") + "\n;window.DrawEditor = DrawEditor;");
 

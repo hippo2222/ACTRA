@@ -188,7 +188,6 @@ describe('settings pending email verification', () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
-    vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   it('shows unverified email status across the account summary and email section', async () => {
