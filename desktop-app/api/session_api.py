@@ -2555,8 +2555,28 @@ class SessionAPI:
                 ctrl_task_data = getattr(controller_task, "task_data", None)
                 # full_id in Task is module/topic/task_id
                 if ctrl_ref == current_task_ref and isinstance(ctrl_task_data, dict):
-                    task_data = copy.deepcopy(ctrl_task_data)
-                    reused_controller_task_data = True
+                    # Guard: only reuse if the cached task_data was enhanced for the
+                    # same difficulty level as the current queued task.
+                    # Without this check, a Level-2 task_data (requires_labels=True)
+                    # would be served for a Level-1 retry of the same task_ref,
+                    # skipping the enhance_task_for_level(level=1) call below.
+                    ctrl_difficulty = ctrl_task_data.get("_difficulty_level")
+                    difficulty_matches = (
+                        ctrl_difficulty is None  # task was never enhanced — safe to reuse
+                        or resolved_queue_difficulty is None  # no queued difficulty — safe to reuse
+                        or int(ctrl_difficulty) == int(resolved_queue_difficulty)
+                    )
+                    if difficulty_matches:
+                        task_data = copy.deepcopy(ctrl_task_data)
+                        reused_controller_task_data = True
+                    else:
+                        logger.info(
+                            "[SessionAPI.get_current_task] Skipping TaskController task_data reuse: "
+                            "cached difficulty=%s != queued difficulty=%s for %s — will re-enhance.",
+                            ctrl_difficulty,
+                            resolved_queue_difficulty,
+                            current_task_ref,
+                        )
         except Exception:
             logger.exception("[SessionAPI.get_current_task] Failed to reuse enhanced task_data from TaskController")
 
