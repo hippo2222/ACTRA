@@ -3,6 +3,12 @@
  * Provides common functionality for loading, saving, validation, and UI updates
  */
 
+function wt(key, fallback) {
+    if (!window.i18n || typeof window.i18n.t !== 'function') return fallback;
+    const v = window.i18n.t(key);
+    return v !== key ? v : fallback;
+}
+
 function isReferencePreviewMode() {
     const params = new URLSearchParams(window.location.search || '');
     return params.get('reference_embed') === '1' || params.get('reference_preview') === '1';
