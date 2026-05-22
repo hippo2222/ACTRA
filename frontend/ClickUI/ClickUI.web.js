@@ -605,6 +605,21 @@
       });
     });
 
+    // L1/L2: backend returns targets_info with matched_click_idx instead of click_results.
+    // Parse it so click markers get the correct target index (color + hover).
+    const targetsInfoItems = Array.isArray(details && details.targets_info) ? details.targets_info : [];
+    targetsInfoItems.forEach((info) => {
+      if (!info || typeof info !== "object") return;
+      const targetIdx = typeof info.index === "number" ? info.index : null;
+      const clickIdx = typeof info.matched_click_idx === "number" ? info.matched_click_idx : null;
+      if (targetIdx == null || clickIdx == null) return;
+      if (hasAssignment("click", clickIdx)) return;
+      assign("click", clickIdx, {
+        targetIndex: targetIdx,
+        success: info.found === true,
+      });
+    });
+
     return map;
   }
 
@@ -2699,7 +2714,8 @@
   function _renderReviewComparison(result) {
     _clearReviewComparison();
     if (!state.reviewHost) return;
-    if (state.runtimeMode && (_requiresLabels() || _requiresDrawing())) return;
+    // Разбор ответа показывается для всех уровней сложности (L1, L2, L3).
+    // Убрана старая проверка, которая скрывала блок для L2/L3.
 
     const imageUrl = _resolveImageUrl(state.taskDto);
     const canvasSize = _getReviewCanvasSize();
@@ -2800,7 +2816,15 @@
     const naturalH = state.img.naturalHeight || 1;
 
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    svg.setAttribute("class", "absolute inset-0 h-full w-full pointer-events-none z-10");
+    svg.setAttribute("class", "absolute inset-0 h-full w-full z-10");
+    // ВАЖНО: pointer-events задаём через inline-стиль, а не через Tailwind-класс.
+    // Tailwind-класс pointer-events-none на SVG-элементе блокирует события
+    // у всех дочерних элементов на уровне браузера, не давая им переопределить
+    // pointer-events своими собственными значениями (visiblePainted и т.п.).
+    // Inline-стиль none на SVG-рутовом элементе — прозрачные зоны пропускают
+    // клики, но дочерние polygon/path/circle с явным pointer-events могут
+    // получать события мыши.
+    svg.style.pointerEvents = "none";
     // Do not rely only on Tailwind classes for sizing; make overlay sizing explicit.
     svg.setAttribute("width", String(naturalW));
     svg.setAttribute("height", String(naturalH));
@@ -3329,6 +3353,7 @@
 
     state.clicks.forEach((c, idx) => {
       const actionKey = _getActionKey("click", idx);
+      const targetIdx = _findTargetIndex(state.taskDto, "click", idx);
       const color = _getActionDisplayColor(state.taskDto, "click", idx);
       const isHovered = state.hoveredActionKey === actionKey;
       const dot = _createEl(
@@ -3355,6 +3380,9 @@
       dot.style.zIndex = isHovered ? "3" : "1";
       dot.tabIndex = 0;
       dot.setAttribute("data-clickui-action-key", actionKey);
+      if (targetIdx !== null) {
+        dot.setAttribute("data-target-index", String(targetIdx));
+      }
       dot.addEventListener("mouseenter", () => _setHoveredActionKey(actionKey));
       dot.addEventListener("mouseleave", () => _setHoveredActionKey(null));
       dot.addEventListener("focus", () => _setHoveredActionKey(actionKey));
@@ -3632,18 +3660,18 @@
       const targets = _getTargets(state.taskDto);
       if (!targets.length) return null;
 
-      if (kind === \"polygon\" || kind === \"line\") {
+      if (kind === "polygon" || kind === "line") {
         // L3: polygons map 1:1 to targets; lines come after polygons.
-        if (kind === \"polygon\") {
+        if (kind === "polygon") {
           return idx0based < targets.length ? idx0based : null;
         }
         // line: offset by number of polygon targets
-        const polyCount = targets.filter((t) => _getTargetShape(t) === \"polygon\").length;
+        const polyCount = targets.filter((t) => _getTargetShape(t) === "polygon").length;
         const lineIdx = polyCount + idx0based;
         return lineIdx < targets.length ? lineIdx : null;
       }
 
-      if (kind === \"click\") {
+      if (kind === "click") {
         // L2: try to use the last targets_info mapping from the evaluator.
         const targetsInfo = Array.isArray(state.lastTargetsInfo) ? state.lastTargetsInfo : [];
         if (targetsInfo.length) {
@@ -3651,11 +3679,11 @@
           // Build click_idx -> target_idx map.
           const clickToTarget = {};
           targetsInfo.forEach((info) => {
-            if (info && typeof info.matched_click_idx === \"number\" && info.matched_click_idx !== null) {
+            if (info && typeof info.matched_click_idx === "number" && info.matched_click_idx !== null) {
               clickToTarget[info.matched_click_idx] = info.index;
             }
           });
-          if (typeof clickToTarget[idx0based] === \"number\") {
+          if (typeof clickToTarget[idx0based] === "number") {
             return clickToTarget[idx0based];
           }
         }
@@ -4192,7 +4220,10 @@
       wt("clickui.img_load_fail", "Не удалось загрузить изображение")
     );
 
-    const refLayer = _createEl("div", "pointer-events-none absolute inset-0 z-10", "");
+    // refLayer: убираем pointer-events-none из Tailwind-класса и выставляем
+    // через inline-стиль, чтобы дочерние SVG-элементы (polygon, path, circle)
+    // с явным pointer-events: visiblePainted могли получать события мыши.
+    const refLayer = _createEl("div", "absolute inset-0 z-10", "");
     const drawLayer = _createEl("div", "pointer-events-none absolute inset-0 z-20", "");
     const markerLayer = _createEl("div", "pointer-events-none absolute inset-0 z-30", "");
 
@@ -4203,6 +4234,7 @@
     refLayer.style.right = "0";
     refLayer.style.bottom = "0";
     refLayer.style.zIndex = "10";
+    refLayer.style.pointerEvents = "none";
 
     drawLayer.style.position = "absolute";
     drawLayer.style.left = "0";
