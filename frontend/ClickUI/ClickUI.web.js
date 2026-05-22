@@ -659,6 +659,10 @@
         "task-chip flex w-full items-start gap-2.5 rounded-xl border border-border-strong bg-surface-1 px-3 py-2.5 text-left shadow-sm dark:border-border-strong dark:bg-surface-1";
       row.setAttribute("data-clickui", "user-action-row");
       row.setAttribute("data-clickui-action-key", action.key);
+      const _actionTargetIdx = _findTargetIndex(state.taskDto, action.kind, action.index);
+      if (_actionTargetIdx !== null) {
+        row.setAttribute("data-target-index", String(_actionTargetIdx));
+      }
 
       const badge = _createEl(
         "div",
@@ -1495,6 +1499,7 @@
       const statusPill = _createEl("div", "hidden", "");
       sideInfo.appendChild(statusPill);
 
+      item.setAttribute("data-target-index", String(idx));
       item.appendChild(badge);
       item.appendChild(info);
       item.appendChild(sideInfo);
@@ -2211,7 +2216,6 @@
       y: isNorm ? xy[1] * naturalH : xy[1],
     }));
     if (!scaled.length) return null;
-    if (opts.closed && scaled.length < 3) return null;
     if (!opts.closed && scaled.length < 2) return null;
 
     const d = scaled
@@ -2503,9 +2507,10 @@
     }
 
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    svg.setAttribute("class", "absolute inset-0 h-full w-full pointer-events-none");
+    svg.setAttribute("class", "absolute inset-0 h-full w-full");
+    svg.style.pointerEvents = "none";
     svg.setAttribute("viewBox", `0 0 ${opts.naturalW || 1} ${opts.naturalH || 1}`);
-    svg.setAttribute("preserveAspectRatio", "none");
+    svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
     frame.appendChild(svg);
 
     if (typeof opts.renderSvg === "function") {
@@ -2705,6 +2710,31 @@
               label: idx + 1,
               targetIndex: idx,
             });
+          } else if (Array.isArray(target && target.points) && target.points.length >= 2) {
+            const inferClosed = target.points.length >= 3;
+            _appendReviewPath(svg, target.points, {
+              closed: inferClosed,
+              naturalW,
+              naturalH,
+              stroke: baseColor,
+              fill: inferClosed ? _withAlpha(baseColor, isBad ? 0.12 : 0.18) : undefined,
+              strokeWidth: isBad ? 5 : 4,
+              strokeDasharray: inferClosed ? undefined : "10 6",
+              targetIndex: idx,
+            });
+          } else if (target && (target.point || target.coordinates || target.x != null)) {
+            const pt = target.point || (target.x != null ? [target.x, target.y] : null);
+            if (pt) {
+              _appendReviewMarker(svg, pt, {
+                naturalW,
+                naturalH,
+                radius: 15,
+                fill: baseColor,
+                stroke: "#ffffff",
+                label: idx + 1,
+                targetIndex: idx,
+              });
+            }
           }
         });
       },
@@ -2814,6 +2844,7 @@
 
     const naturalW = state.img.naturalWidth || 1;
     const naturalH = state.img.naturalHeight || 1;
+    const zoom = state.zoom || 1;
 
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     svg.setAttribute("class", "absolute inset-0 h-full w-full z-10");
@@ -2854,6 +2885,7 @@
 
     const normalEls = [];
     const badEls = [];
+    const labelEls = [];
 
     function _isLikelyNormalized(pointsXY) {
       // If coordinates are in [0..1] (or a bit above due to rounding), treat as normalized.
@@ -2928,14 +2960,14 @@
             poly.setAttribute("points", pts);
             poly.setAttribute("fill", baseFill);
             poly.setAttribute("stroke", baseColor);
-            poly.setAttribute("stroke-width", isBad ? "6" : "4");
+            poly.setAttribute("stroke-width", String((isBad ? 3 : 2) / zoom));
             poly.setAttribute("stroke-opacity", "0.75");
             poly.setAttribute("data-target-index", String(idx));
             poly.setAttribute("pointer-events", "visiblePainted");
 
             // Also set inline styles to prevent any external CSS from overriding SVG attributes.
             poly.style.stroke = baseColor;
-            poly.style.strokeWidth = isBad ? "6" : "4";
+            poly.style.strokeWidth = String((isBad ? 3 : 2) / zoom);
             poly.style.strokeOpacity = "0.75";
             poly.style.fill = baseFill;
             poly.style.pointerEvents = "visiblePainted";
@@ -2971,19 +3003,19 @@
             path.setAttribute("d", d);
             path.setAttribute("fill", "none");
             path.setAttribute("stroke", baseColor);
-            path.setAttribute("stroke-width", isBad ? "6" : "4");
+            path.setAttribute("stroke-width", String((isBad ? 3 : 2) / zoom));
             path.setAttribute("stroke-linecap", "round");
             path.setAttribute("stroke-linejoin", "round");
             path.setAttribute("stroke-opacity", "0.85");
-            path.setAttribute("stroke-dasharray", "10 6");
+            path.setAttribute("stroke-dasharray", `${10 / zoom} ${6 / zoom}`);
             path.setAttribute("data-target-index", String(idx));
             path.setAttribute("pointer-events", "visibleStroke");
 
             // Inline styles as well.
             path.style.stroke = baseColor;
-            path.style.strokeWidth = isBad ? "6" : "4";
+            path.style.strokeWidth = String((isBad ? 3 : 2) / zoom);
             path.style.strokeOpacity = "0.85";
-            path.style.strokeDasharray = "10 6";
+            path.style.strokeDasharray = `${10 / zoom} ${6 / zoom}`;
             path.style.pointerEvents = "visibleStroke";
 
             if (isBad) {
@@ -3005,10 +3037,10 @@
             const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
             circle.setAttribute("cx", String(x));
             circle.setAttribute("cy", String(y));
-            circle.setAttribute("r", "10");
+            circle.setAttribute("r", String(10 / zoom));
             circle.setAttribute("fill", baseFill);
             circle.setAttribute("stroke", baseColor);
-            circle.setAttribute("stroke-width", "2");
+            circle.setAttribute("stroke-width", String(2 / zoom));
             circle.setAttribute("data-target-index", String(idx));
             circle.setAttribute("pointer-events", "auto");
             circle.style.pointerEvents = "auto";
@@ -3040,10 +3072,10 @@
           // High-contrast label: dark fill with light stroke, readable on any background.
           text.setAttribute("fill", labelFill);
           text.setAttribute("stroke", labelStroke);
-          text.setAttribute("stroke-width", "3");
+          text.setAttribute("stroke-width", String(3 / zoom));
           text.setAttribute("paint-order", "stroke fill");
           text.setAttribute("stroke-linejoin", "round");
-          text.setAttribute("font-size", "13");
+          text.setAttribute("font-size", String(13 / zoom));
           text.setAttribute("font-family", "Inter, system-ui, sans-serif");
           text.setAttribute("text-anchor", "middle");
           text.setAttribute("dominant-baseline", "middle");
@@ -3056,13 +3088,14 @@
           text.addEventListener("mouseenter", () => _setGlobalHover({ targetIndex: idx }));
           text.addEventListener("mouseleave", () => _setGlobalHover(null));
 
-          (bad && bad.has(idx) ? badEls : normalEls).push(text);
+          labelEls.push(text);
         }
       }
     });
 
     for (const el of normalEls) svg.appendChild(el);
     for (const el of badEls) svg.appendChild(el);
+    for (const el of labelEls) svg.appendChild(el);
 
     state.refLayer.appendChild(svg);
 
@@ -3166,6 +3199,7 @@
     svg.setAttribute("viewBox", `0 0 ${naturalW} ${naturalH}`);
     svg.setAttribute("preserveAspectRatio", "none");
 
+    const zoom = state.zoom || 1;
     const primaryStroke = _getThemeColor("--color-primary", "#1349ec");
     const errorStroke = _getThemeColor("--color-error", "#ef4444");
     const successStroke = _getThemeColor("--color-success", "#22c55e");
@@ -3200,7 +3234,7 @@
         preview.setAttribute("d", d);
         preview.setAttribute("fill", "none");
         preview.setAttribute("stroke", _requiresDrawing() ? successStroke : strokeColor);
-        preview.setAttribute("stroke-width", "3.5");
+        preview.setAttribute("stroke-width", String(3.5 / zoom));
         preview.setAttribute("stroke-linecap", "round");
         preview.setAttribute("stroke-linejoin", "round");
         preview.setAttribute("stroke-opacity", "0.55");
@@ -3232,7 +3266,7 @@
       path.setAttribute("d", `${d} Z`);
       path.setAttribute("fill", "none");
       path.setAttribute("stroke", mappedColor);
-      path.setAttribute("stroke-width", isHovered ? "5" : "3.5");
+      path.setAttribute("stroke-width", String((isHovered ? 5 : 3.5) / zoom));
       path.setAttribute("stroke-linecap", "round");
       path.setAttribute("stroke-linejoin", "round");
       path.setAttribute("stroke-opacity", pathOpacity);
@@ -3249,17 +3283,17 @@
         g.setAttribute("tabindex", "0");
         attachActionHover(g, actionKey);
         const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        circle.setAttribute("r", "11");
+        circle.setAttribute("r", String(11 / zoom));
         circle.setAttribute("fill", mappedColor);
         circle.setAttribute("stroke", textOnDark);
-        circle.setAttribute("stroke-width", "2");
+        circle.setAttribute("stroke-width", String(2 / zoom));
         circle.setAttribute("opacity", state.userLinesCheckedStyle ? "0.6" : isHovered ? "1" : "0.95");
 
         const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
         text.setAttribute("x", "0");
         text.setAttribute("y", "1");
         text.setAttribute("fill", textOnDark);
-        text.setAttribute("font-size", "11");
+        text.setAttribute("font-size", String(11 / zoom));
         text.setAttribute("font-family", "Inter, system-ui, sans-serif");
         text.setAttribute("text-anchor", "middle");
         text.setAttribute("dominant-baseline", "middle");
@@ -3295,7 +3329,7 @@
       path.setAttribute("d", d);
       path.setAttribute("fill", "none");
       path.setAttribute("stroke", mappedColor);
-      path.setAttribute("stroke-width", isHovered ? "5" : "3.5");
+      path.setAttribute("stroke-width", String((isHovered ? 5 : 3.5) / zoom));
       path.setAttribute("stroke-linecap", "round");
       path.setAttribute("stroke-linejoin", "round");
       path.setAttribute("stroke-opacity", isHovered ? "1" : strokeOpacity);
@@ -3314,17 +3348,17 @@
         attachActionHover(g, actionKey);
 
         const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        circle.setAttribute("r", "11");
+        circle.setAttribute("r", String(11 / zoom));
         circle.setAttribute("fill", mappedColor);
         circle.setAttribute("stroke", textOnDark);
-        circle.setAttribute("stroke-width", "2");
+        circle.setAttribute("stroke-width", String(2 / zoom));
         circle.setAttribute("opacity", state.userLinesCheckedStyle ? "0.6" : isHovered ? "1" : "0.95");
 
         const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
         text.setAttribute("x", "0");
         text.setAttribute("y", "1");
         text.setAttribute("fill", textOnDark);
-        text.setAttribute("font-size", "11");
+        text.setAttribute("font-size", String(11 / zoom));
         text.setAttribute("font-family", "Inter, system-ui, sans-serif");
         text.setAttribute("text-anchor", "middle");
         text.setAttribute("dominant-baseline", "middle");
@@ -3346,6 +3380,10 @@
     if (state.soloDuringDraw) return;
 
     const textOnDark = _getThemeColor("--color-text-on-dark", "#ffffff");
+    const zoom = state.zoom || 1;
+    const markerPx = Math.max(18, Math.round(32 / zoom));
+    const markerFontPx = Math.max(9, Math.round(11 / zoom));
+    const markerBorderPx = Math.max(1, Math.round(2 / zoom));
 
     const rect = state.img.getBoundingClientRect();
     const naturalW = state.img.naturalWidth || rect.width || 1;
@@ -3358,9 +3396,14 @@
       const isHovered = state.hoveredActionKey === actionKey;
       const dot = _createEl(
         "div",
-        "absolute flex size-8 items-center justify-center -translate-x-1/2 -translate-y-1/2 rounded-full border-2 text-[11px] font-bold shadow-md clickui-marker-entry",
+        "absolute flex items-center justify-center -translate-x-1/2 -translate-y-1/2 rounded-full font-bold shadow-md clickui-marker-entry",
         ""
       );
+      dot.style.width = `${markerPx}px`;
+      dot.style.height = `${markerPx}px`;
+      dot.style.fontSize = `${markerFontPx}px`;
+      dot.style.borderWidth = `${markerBorderPx}px`;
+      dot.style.borderStyle = "solid";
 
       dot.textContent = String(idx + 1);
       dot.style.left = `${c.x}px`;
@@ -3435,6 +3478,8 @@
     const z = Math.max(0.25, Math.min(6, Number(nextZoom) || 1));
     state.zoom = z;
     _applyTransform();
+    _renderMarkers();
+    _renderDrawing();
   }
 
   function _zoomAtClientPoint(nextZoom, clientX, clientY) {
@@ -3460,6 +3505,8 @@
     state.panX = anchorX - worldX * state.zoom;
     state.panY = anchorY - worldY * state.zoom;
     _applyTransform();
+    _renderMarkers();
+    _renderDrawing();
   }
 
   function _resetView() {
