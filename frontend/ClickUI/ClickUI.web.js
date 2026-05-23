@@ -1,4 +1,5 @@
 (function (global) {
+  console.log('[ClickUI] v20260523-2 loaded');
   const ClickUI = {};
 
   function wt(key, fallback) {
@@ -2379,6 +2380,7 @@
   }
 
   function _setGlobalHover(hoverInfo) {
+    console.log('[ClickUI] _setGlobalHover', JSON.stringify(hoverInfo));
     state.globalHoveredInfo = hoverInfo;
     _updateGlobalHoverOpacities();
   }
@@ -2387,6 +2389,10 @@
     const hoverInfo = state.globalHoveredInfo;
     const svgElements = [];
     const panelElements = [];
+    console.log('[ClickUI] _updateGlobalHoverOpacities hoverInfo=', JSON.stringify(hoverInfo),
+      'labelOverlay=', !!state.labelOverlay,
+      'targetRows=', Array.isArray(state.targetRows) ? state.targetRows.map(r => r.el ? r.el.getAttribute('data-target-index') : 'no-el') : 'N/A'
+    );
 
     if (state.refLayer) {
       svgElements.push(...state.refLayer.querySelectorAll("[data-target-index]"));
