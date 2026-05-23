@@ -983,6 +983,19 @@
   function _buildTargetsInstruction(taskDto, targets) {
     const { hasClick, hasOutline, hasLine, hasPoint } = _summarizeTargetInteractions(taskDto, targets);
 
+    // L2+: targets list is hidden, user clicks areas and labels them
+    if (_shouldHideTargetsList(taskDto)) {
+      if (hasClick || hasPoint) {
+        return wt("clickui.desc_click_label", "Кликай по нужным областям на изображении и вводи название каждой области в появившееся поле.");
+      }
+      if (hasOutline) {
+        return wt("clickui.desc_outline_label", "Обведи нужные области на изображении и давай каждой название.");
+      }
+      if (hasLine) {
+        return wt("clickui.desc_line_label", "Проведи линии по нужным фрагментам изображения и давай каждой линии название.");
+      }
+    }
+
     if (hasOutline && hasLine) {
       return wt("clickui.desc_outline_line", "Список ниже показывает, что искать: цели с типом «Контур» нужно обвести по границе, а цели с типом «Линия» провести по нужному фрагменту. Номер и цвет помогают сопоставить цель и результат.");
     }
@@ -1006,6 +1019,19 @@
 
   function _buildTargetsStatusInstruction(taskDto, targets) {
     const { hasClick, hasOutline, hasLine, hasPoint } = _summarizeTargetInteractions(taskDto, targets);
+
+    // L2+: targets list is hidden, user clicks areas and labels them
+    if (_shouldHideTargetsList(taskDto)) {
+      if (hasClick || hasPoint) {
+        return wt("clickui.status_click_label", "Кликай по областям и давай каждой название.");
+      }
+      if (hasOutline) {
+        return wt("clickui.status_outline_label", "Обводи области и давай каждой название.");
+      }
+      if (hasLine) {
+        return wt("clickui.status_line_label", "Проводи линии и давай каждой название.");
+      }
+    }
 
     if (hasOutline && hasLine) {
       return wt("clickui.status_outline_line", "Сверяйся со списком целей: контуры нужно обводить, а линии проводить по изображению.");
