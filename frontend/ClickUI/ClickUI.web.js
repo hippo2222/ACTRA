@@ -55,6 +55,7 @@
     userMarksCheckedStyle: false,
     badRefTargets: null,
     labelsContainer: null,
+    labelOverlay: null,
     labelsInputs: [],
     labelsClicks: [],
     labelsPolygons: [],
@@ -613,7 +614,12 @@
       const targetIdx = typeof info.index === "number" ? info.index : null;
       const clickIdx = typeof info.matched_click_idx === "number" ? info.matched_click_idx : null;
       if (targetIdx == null || clickIdx == null) return;
-      if (hasAssignment("click", clickIdx)) return;
+      // Skip only if existing assignment already has a valid targetIndex.
+      // If click_results assigned targetIndex:null first, targets_info should still override.
+      if (hasAssignment("click", clickIdx)) {
+        const existingKey = _getActionKey("click", clickIdx);
+        if (map[existingKey] && map[existingKey].targetIndex != null) return;
+      }
       assign("click", clickIdx, {
         targetIndex: targetIdx,
         success: info.found === true,
@@ -2385,6 +2391,9 @@
     if (state.refLayer) {
       svgElements.push(...state.refLayer.querySelectorAll("[data-target-index]"));
     }
+    if (state.labelOverlay) {
+      svgElements.push(...state.labelOverlay.querySelectorAll("[data-target-index]"));
+    }
     if (state.drawLayer) {
       svgElements.push(...state.drawLayer.querySelectorAll("[data-target-index], [data-clickui-action-key]"));
     }
@@ -2450,12 +2459,13 @@
     });
 
     // Bring hovered label text to front (last in SVG = rendered on top)
-    if (targetIndex !== null && targetIndex !== undefined && state.refLayer) {
-      const svg = state.refLayer.querySelector("svg");
-      if (svg) {
-        const hoveredLabel = svg.querySelector(`text[data-target-index="${targetIndex}"]`);
-        if (hoveredLabel) {
-          svg.appendChild(hoveredLabel);
+    if (targetIndex !== null && targetIndex !== undefined) {
+      const labelContainer = state.labelOverlay || state.refLayer;
+      if (labelContainer) {
+        const labelSvg = labelContainer.querySelector("svg");
+        if (labelSvg) {
+          const hoveredLabel = labelSvg.querySelector(`text[data-target-index="${targetIndex}"]`);
+          if (hoveredLabel) labelSvg.appendChild(hoveredLabel);
         }
       }
     }
@@ -3151,9 +3161,26 @@
 
     for (const el of normalEls) svg.appendChild(el);
     for (const el of badEls) svg.appendChild(el);
-    for (const el of labelEls) svg.appendChild(el);
 
     state.refLayer.appendChild(svg);
+
+    // Labels rendered in a dedicated overlay above markerLayer (z-40) so they
+    // are never occluded by click-marker HTML divs at z-30.
+    if (state.labelOverlay) {
+      state.labelOverlay.innerHTML = "";
+      if (labelEls.length) {
+        const labelSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        labelSvg.setAttribute("viewBox", `0 0 ${naturalW} ${naturalH}`);
+        labelSvg.setAttribute("preserveAspectRatio", "none");
+        labelSvg.style.pointerEvents = "none";
+        labelSvg.style.position = "absolute";
+        labelSvg.style.inset = "0";
+        labelSvg.style.width = "100%";
+        labelSvg.style.height = "100%";
+        for (const el of labelEls) labelSvg.appendChild(el);
+        state.labelOverlay.appendChild(labelSvg);
+      }
+    }
 
     if (_debugEnabled()) {
       try {
@@ -4329,6 +4356,7 @@
     const refLayer = _createEl("div", "absolute inset-0 z-10", "");
     const drawLayer = _createEl("div", "pointer-events-none absolute inset-0 z-20", "");
     const markerLayer = _createEl("div", "pointer-events-none absolute inset-0 z-30", "");
+    const labelOverlay = _createEl("div", "pointer-events-none absolute inset-0 z-40", "");
 
     // Fallback styles (do not rely only on Tailwind classes for positioning/z-index).
     refLayer.style.position = "absolute";
@@ -4353,11 +4381,20 @@
     markerLayer.style.bottom = "0";
     markerLayer.style.zIndex = "30";
 
+    labelOverlay.style.position = "absolute";
+    labelOverlay.style.left = "0";
+    labelOverlay.style.top = "0";
+    labelOverlay.style.right = "0";
+    labelOverlay.style.bottom = "0";
+    labelOverlay.style.zIndex = "40";
+    labelOverlay.style.pointerEvents = "none";
+
     contentLayer.appendChild(img);
     contentLayer.appendChild(imgError);
     contentLayer.appendChild(refLayer);
     contentLayer.appendChild(drawLayer);
     contentLayer.appendChild(markerLayer);
+    contentLayer.appendChild(labelOverlay);
     viewport.appendChild(contentLayer);
     wrapper.appendChild(viewport);
 
@@ -5435,6 +5472,7 @@
     state.markerLayer = markerLayer;
     state.drawLayer = drawLayer;
     state.refLayer = refLayer;
+    state.labelOverlay = labelOverlay;
     state.labelsContainer = labelsContainer;
     state.labelsInputs = [];
     state.reviewHost = reviewHost;
