@@ -1179,7 +1179,12 @@ def serve_clickui_static(filename: str) -> Any:
         logger.error("[HTTP] CLICKUI_DIR does not exist: %s", CLICKUI_DIR)
         return jsonify({"ok": False, "error": "clickui_not_found"}), 500
 
-    return send_from_directory(CLICKUI_DIR, filename)
+    resp = send_from_directory(CLICKUI_DIR, filename)
+    try:
+        resp.headers["Cache-Control"] = "no-store"
+    except Exception:
+        pass
+    return resp
 
 
 @static_bp.route("/ui/ClickUI/<path:filename>", methods=["GET"])

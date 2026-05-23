@@ -664,6 +664,8 @@
       if (_actionTargetIdx !== null) {
         row.setAttribute("data-target-index", String(_actionTargetIdx));
       }
+      row.addEventListener("mouseenter", () => _setGlobalHover({ targetIndex: _actionTargetIdx, actionKey: action.key }));
+      row.addEventListener("mouseleave", () => _setGlobalHover(null));
 
       const badge = _createEl(
         "div",
@@ -1528,6 +1530,8 @@
 
       item.setAttribute("data-target-index", String(idx));
       item.setAttribute("data-clickui-panel-row", "target");
+      item.addEventListener("mouseenter", () => _setGlobalHover({ targetIndex: idx }));
+      item.addEventListener("mouseleave", () => _setGlobalHover(null));
       item.appendChild(badge);
       item.appendChild(info);
       item.appendChild(sideInfo);
