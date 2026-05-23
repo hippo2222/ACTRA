@@ -1676,7 +1676,12 @@ def serve_session_ui(session_id: str) -> Any:
     S1_UI_DIR = dirs.get("S1_UI_DIR")
     if not S1_UI_DIR or not S1_UI_DIR.exists():
         return jsonify({"ok": False, "error": "s1_ui_not_found"}), 500
-    return send_from_directory(S1_UI_DIR, "index.html")
+    resp = send_from_directory(S1_UI_DIR, "index.html")
+    try:
+        resp.headers["Cache-Control"] = "no-store"
+    except Exception:
+        pass
+    return resp
 
 
 @static_bp.route("/ui/session/<string:session_id>", methods=["GET"])
