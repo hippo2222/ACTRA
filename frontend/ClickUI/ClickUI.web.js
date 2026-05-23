@@ -659,6 +659,7 @@
         "task-chip flex w-full items-start gap-2.5 rounded-xl border border-border-strong bg-surface-1 px-3 py-2.5 text-left shadow-sm dark:border-border-strong dark:bg-surface-1";
       row.setAttribute("data-clickui", "user-action-row");
       row.setAttribute("data-clickui-action-key", action.key);
+      row.setAttribute("data-clickui-panel-row", "action");
       const _actionTargetIdx = _findTargetIndex(state.taskDto, action.kind, action.index);
       if (_actionTargetIdx !== null) {
         row.setAttribute("data-target-index", String(_actionTargetIdx));
@@ -1500,6 +1501,7 @@
       sideInfo.appendChild(statusPill);
 
       item.setAttribute("data-target-index", String(idx));
+      item.setAttribute("data-clickui-panel-row", "target");
       item.appendChild(badge);
       item.appendChild(info);
       item.appendChild(sideInfo);
@@ -2347,62 +2349,86 @@
 
   function _updateGlobalHoverOpacities() {
     const hoverInfo = state.globalHoveredInfo;
-    const elements = [];
+    const svgElements = [];
+    const panelElements = [];
 
     if (state.refLayer) {
-      elements.push(...state.refLayer.querySelectorAll("[data-target-index]"));
+      svgElements.push(...state.refLayer.querySelectorAll("[data-target-index]"));
     }
     if (state.drawLayer) {
-      elements.push(...state.drawLayer.querySelectorAll("[data-target-index], [data-clickui-action-key]"));
+      svgElements.push(...state.drawLayer.querySelectorAll("[data-target-index], [data-clickui-action-key]"));
     }
     if (state.markerLayer) {
-      elements.push(...state.markerLayer.querySelectorAll("[data-target-index], [data-clickui-action-key]"));
+      svgElements.push(...state.markerLayer.querySelectorAll("[data-target-index], [data-clickui-action-key]"));
     }
     if (Array.isArray(state.targetRows)) {
-      state.targetRows.forEach(r => { if (r.el) elements.push(r.el); });
+      state.targetRows.forEach(r => { if (r.el) panelElements.push(r.el); });
     }
     if (Array.isArray(state.userActionRows)) {
-      state.userActionRows.forEach(r => { if (r.el) elements.push(r.el); });
+      state.userActionRows.forEach(r => { if (r.el) panelElements.push(r.el); });
     }
-    // Include labels-panel rows (Level 2/3 input rows with data-target-index)
     if (state.labelsContainer) {
-      elements.push(...state.labelsContainer.querySelectorAll("[data-target-index]"));
+      svgElements.push(...state.labelsContainer.querySelectorAll("[data-target-index]"));
     }
 
     if (!hoverInfo) {
-      elements.forEach(el => {
+      svgElements.forEach(el => { el.style.opacity = ""; });
+      panelElements.forEach(el => {
         el.style.opacity = "";
+        el.style.boxShadow = "";
+        el.style.transform = "";
       });
       return;
     }
 
     const { targetIndex, actionKey } = hoverInfo;
 
-    elements.forEach(el => {
-      el.style.transition = "opacity 0.15s ease-in-out";
-
+    function _elMatches(el) {
       const elTargetIdxAttr = el.getAttribute("data-target-index");
       const elTargetIdx = (elTargetIdxAttr !== null && elTargetIdxAttr !== "") ? Number(elTargetIdxAttr) : null;
       const elActionKey = el.getAttribute("data-clickui-action-key");
-
-      let shouldKeep = false;
-
       if (targetIndex !== null && targetIndex !== undefined) {
-        if (elTargetIdx === targetIndex) {
-          shouldKeep = true;
-        }
+        if (elTargetIdx === targetIndex) return true;
+        if (actionKey && elActionKey === actionKey) return true;
       } else if (actionKey) {
-        if (elActionKey === actionKey) {
-          shouldKeep = true;
-        }
+        if (elActionKey === actionKey) return true;
       }
+      return false;
+    }
 
-      if (shouldKeep) {
+    // SVG / canvas elements: opacity dim approach
+    svgElements.forEach(el => {
+      el.style.transition = "opacity 0.15s ease-in-out";
+      el.style.opacity = _elMatches(el) ? "1" : "0.08";
+    });
+
+    // Panel rows: ring-highlight on match, subtle dim otherwise
+    panelElements.forEach(el => {
+      el.style.transition = "opacity 0.15s ease-in-out, box-shadow 0.15s ease-in-out, transform 0.15s ease-in-out";
+      if (_elMatches(el)) {
+        const elTargetIdxAttr = el.getAttribute("data-target-index");
+        const elTargetIdx = (elTargetIdxAttr !== null && elTargetIdxAttr !== "") ? Number(elTargetIdxAttr) : null;
+        const ringColor = elTargetIdx !== null ? _getTargetColor(elTargetIdx) : _getThemeColor("--color-accent", "#d97706");
         el.style.opacity = "1";
+        el.style.boxShadow = `0 0 0 2px ${ringColor}, 0 2px 10px ${_withAlpha(ringColor, 0.22)}`;
+        el.style.transform = "translateX(2px)";
       } else {
-        el.style.opacity = "0.08";
+        el.style.opacity = "0.45";
+        el.style.boxShadow = "";
+        el.style.transform = "";
       }
     });
+
+    // Bring hovered label text to front (last in SVG = rendered on top)
+    if (targetIndex !== null && targetIndex !== undefined && state.refLayer) {
+      const svg = state.refLayer.querySelector("svg");
+      if (svg) {
+        const hoveredLabel = svg.querySelector(`text[data-target-index="${targetIndex}"]`);
+        if (hoveredLabel) {
+          svg.appendChild(hoveredLabel);
+        }
+      }
+    }
   }
 
   function _setupReviewHoverEffects(card) {
