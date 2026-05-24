@@ -1,6 +1,12 @@
 (function () {
     'use strict';
 
+    function wt(key, fallback) {
+        if (!window.i18n || typeof window.i18n.t !== 'function') return fallback;
+        var v = window.i18n.t(key);
+        return v !== key ? v : fallback;
+    }
+
     window.ACTRA_ONBOARDING_TOURS = [
         {
             tourId: 'main-dashboard-work-contour',
@@ -12,8 +18,8 @@
             autoStart: true,
             autoStartDelay: 1500,
             totalStates: 3,
-            title: 'Главная: основной рабочий контур',
-            summary: 'Первое знакомство с блоками, через которые пользователь начинает обучение.',
+            title: wt('tours.main_dashboard_work_contour.title', 'Главная: основной рабочий контур'),
+            summary: wt('tours.main_dashboard_work_contour.summary', 'Первое знакомство с блоками, через которые пользователь начинает обучение.'),
             steps: [
                 {
                     id: 'work-contour',
@@ -25,7 +31,7 @@
                         '[data-global-nav="/complexes"]'
                     ],
                     placement: 'bottom',
-                    kicker: 'С чего начать',
+                    kicker: wt('tours.main_dashboard_work_contour.work_contour.kicker', 'С чего начать'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="main-catalog-card"]',
@@ -33,24 +39,24 @@
                             keepPlacement: true,
                             offsetX: -80,
                             offsetY: 10,
-                            title: 'Каталог учебных материалов',
-                            body: 'Здесь можно смотреть открытые материалы других авторов, выбирать подходящие комплексы или теорию и добавлять их в свою библиотеку.'
+                            title: wt('tours.main_dashboard_work_contour.work_contour.c0_title', 'Каталог учебных материалов'),
+                            body: wt('tours.main_dashboard_work_contour.work_contour.c0_body', 'Здесь можно смотреть открытые материалы других авторов, выбирать подходящие комплексы или теорию и добавлять их в свою библиотеку.')
                         },
                         {
                             target: '[data-onboarding-target="main-complexes-card"]',
                             placement: 'bottom',
                             offsetX: 60,
                             offsetY: 18,
-                            title: 'Проходить комплексы',
-                            body: 'Это основной рабочий раздел: здесь видно, какие комплексы уже есть в библиотеке, что можно запустить, продолжить или повторить.'
+                            title: wt('tours.main_dashboard_work_contour.work_contour.c1_title', 'Проходить комплексы'),
+                            body: wt('tours.main_dashboard_work_contour.work_contour.c1_body', 'Это основной рабочий раздел: здесь видно, какие комплексы уже есть в библиотеке, что можно запустить, продолжить или повторить.')
                         },
                         {
                             target: '[data-onboarding-target="main-microcards-card"]',
                             placement: 'right',
                             offsetX: 24,
                             offsetY: -10,
-                            title: 'Микрокарточки',
-                            body: 'Быстрый режим повторения через карточки и пары вроде "термин - определение". Раздел ещё дорабатывается.'
+                            title: wt('tours.main_dashboard_work_contour.work_contour.c2_title', 'Микрокарточки'),
+                            body: wt('tours.main_dashboard_work_contour.work_contour.c2_body', 'Быстрый режим повторения через карточки и пары вроде "термин - определение". Раздел ещё дорабатывается.')
                         }
                     ]
                 },
@@ -64,7 +70,7 @@
                         '[data-global-nav="/editor"]'
                     ],
                     placement: 'bottom',
-                    kicker: 'Инструменты авторов',
+                    kicker: wt('tours.main_dashboard_work_contour.author_tools.kicker', 'Инструменты авторов'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="main-author-task-editor-card"]',
@@ -74,8 +80,8 @@
                             width: 260,
                             offsetX: 0,
                             offsetY: 20,
-                            title: 'Редактор заданий',
-                            body: 'В редакторе заданий создаются учебные задачи: тесты, клики, открытые ответы и другие форматы для будущих комплексов.'
+                            title: wt('tours.main_dashboard_work_contour.author_tools.c0_title', 'Редактор заданий'),
+                            body: wt('tours.main_dashboard_work_contour.author_tools.c0_body', 'В редакторе заданий создаются учебные задачи: тесты, клики, открытые ответы и другие форматы для будущих комплексов.')
                         },
                         {
                             target: '[data-onboarding-target="main-author-complex-editor-card"]',
@@ -85,8 +91,8 @@
                             width: 225,
                             offsetX: 0,
                             offsetY: 20,
-                            title: 'Редактор комплексов',
-                            body: 'Редактор комплексов собирает задания в полноценный сценарий обучения: порядок, повторы, связанная теория и публикация.'
+                            title: wt('tours.main_dashboard_work_contour.author_tools.c1_title', 'Редактор комплексов'),
+                            body: wt('tours.main_dashboard_work_contour.author_tools.c1_body', 'Редактор комплексов собирает задания в полноценный сценарий обучения: порядок, повторы, связанная теория и публикация.')
                         },
                         {
                             target: '[data-onboarding-target="main-author-theory-center-card"]',
@@ -96,8 +102,8 @@
                             width: 270,
                             offsetX: 18,
                             offsetY: 20,
-                            title: 'Центр теории',
-                            body: 'Центр теории помогает хранить материалы, связывать их с темами и прикреплять к комплексам как учебный контекст.'
+                            title: wt('tours.main_dashboard_work_contour.author_tools.c2_title', 'Центр теории'),
+                            body: wt('tours.main_dashboard_work_contour.author_tools.c2_body', 'Центр теории помогает хранить материалы, связывать их с темами и прикреплять к комплексам как учебный контекст.')
                         }
                     ]
                 },
@@ -109,14 +115,14 @@
                         '[data-onboarding-target="main-stats-card"]'
                     ],
                     placement: 'bottom',
-                    kicker: 'После первых действий',
+                    kicker: wt('tours.main_dashboard_work_contour.activity_widgets.kicker', 'После первых действий'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="main-stats-card"]',
                             placement: 'left',
                             offsetX: 36,
                             offsetY: -136,
-                            body: 'Календарь и статистика оживают после учебной активности: здесь появятся план на день, повторы, точность, динамика и слабые места.'
+                            body: wt('tours.main_dashboard_work_contour.activity_widgets.c0_body', 'Календарь и статистика оживают после учебной активности: здесь появятся план на день, повторы, точность, динамика и слабые места.')
                         },
                         {
                             target: '[data-onboarding-target="main-quick-access-card"]',
@@ -125,7 +131,7 @@
                             width: 320,
                             offsetX: 36,
                             offsetY: -18,
-                            body: 'Быстрый доступ собирает комплексы, к которым пользователь возвращается чаще всего: закреплённые, недавние и активные.'
+                            body: wt('tours.main_dashboard_work_contour.activity_widgets.c1_body', 'Быстрый доступ собирает комплексы, к которым пользователь возвращается чаще всего: закреплённые, недавние и активные.')
                         }
                     ]
                 }
@@ -141,8 +147,8 @@
             autoStart: true,
             autoStartDelay: 900,
             totalStates: 3,
-            title: 'Комплексы: поиск и фильтрация',
-            summary: 'Первое знакомство с библиотекой комплексов: поиск, фильтры, сортировка и текущая сводка.',
+            title: wt('tours.complexes_library_navigation.title', 'Комплексы: поиск и фильтрация'),
+            summary: wt('tours.complexes_library_navigation.summary', 'Первое знакомство с библиотекой комплексов: поиск, фильтры, сортировка и текущая сводка.'),
             steps: [
                 {
                     id: 'search-and-filters',
@@ -150,7 +156,7 @@
                         '[data-onboarding-target="complexes-library-navigation"]'
                     ],
                     placement: 'bottom',
-                    kicker: 'Навигация по комплексам',
+                    kicker: wt('tours.complexes_library_navigation.search_and_filters.kicker', 'Навигация по комплексам'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="complexes-search"]',
@@ -158,16 +164,16 @@
                             offsetX: 0,
                             offsetY: -18,
                             gap: 22,
-                            title: 'Поиск по библиотеке',
-                            body: 'Поиск помогает быстро найти комплекс по названию, описанию или конкретному заданию внутри него.'
+                            title: wt('tours.complexes_library_navigation.search_and_filters.c0_title', 'Поиск по библиотеке'),
+                            body: wt('tours.complexes_library_navigation.search_and_filters.c0_body', 'Поиск помогает быстро найти комплекс по названию, описанию или конкретному заданию внутри него.')
                         },
                         {
                             target: '.cx-controls-section--combined',
                             placement: 'bottom',
                             offsetX: 0,
                             offsetY: 18,
-                            title: 'Фильтры и сортировка',
-                            body: 'Оставьте нужные комплексы: авторские, из каталога, на паузе или для повтора. Рядом сортировка и сводка результата.'
+                            title: wt('tours.complexes_library_navigation.search_and_filters.c1_title', 'Фильтры и сортировка'),
+                            body: wt('tours.complexes_library_navigation.search_and_filters.c1_body', 'Оставьте нужные комплексы: авторские, из каталога, на паузе или для повтора. Рядом сортировка и сводка результата.')
                         }
                     ]
                 },
@@ -183,7 +189,7 @@
                     scrollWaitMs: 420,
                     scrollOffsetY: 20,
                     forceAutoScroll: true,
-                    kicker: 'Карточка комплекса',
+                    kicker: wt('tours.complexes_library_navigation.complex_card_actions.kicker', 'Карточка комплекса'),
                     calloutGap: 70,
                     callouts: [
                         {
@@ -194,8 +200,8 @@
                             gap: 24,
                             keepPlacement: true,
                             skipOverlapPush: true,
-                            title: 'Учебный сценарий',
-                            body: 'Карточка показывает, что это за комплекс: описание, количество заданий, статус обучения, пауза и связь с теорией.'
+                            title: wt('tours.complexes_library_navigation.complex_card_actions.c0_title', 'Учебный сценарий'),
+                            body: wt('tours.complexes_library_navigation.complex_card_actions.c0_body', 'Карточка показывает, что это за комплекс: описание, количество заданий, статус обучения, пауза и связь с теорией.')
                         },
                         {
                             target: '[data-onboarding-target="complexes-start-action"]',
@@ -205,8 +211,8 @@
                             gap: 22,
                             keepPlacement: true,
                             skipOverlapPush: true,
-                            title: 'Запуск или продолжение',
-                            body: 'Главная кнопка запускает новый прогон. Если комплекс уже на паузе, она возвращает пользователя в сохранённую сессию.'
+                            title: wt('tours.complexes_library_navigation.complex_card_actions.c1_title', 'Запуск или продолжение'),
+                            body: wt('tours.complexes_library_navigation.complex_card_actions.c1_body', 'Главная кнопка запускает новый прогон. Если комплекс уже на паузе, она возвращает пользователя в сохранённую сессию.')
                         },
                         {
                             target: '[data-onboarding-target="complexes-card-secondary-actions"]',
@@ -216,8 +222,8 @@
                             gap: 22,
                             keepPlacement: true,
                             skipOverlapPush: true,
-                            title: 'Рабочие действия',
-                            body: 'Здесь комплекс можно закрепить в быстром доступе, экспортировать, открыть для редактирования или удалить из библиотеки.'
+                            title: wt('tours.complexes_library_navigation.complex_card_actions.c2_title', 'Рабочие действия'),
+                            body: wt('tours.complexes_library_navigation.complex_card_actions.c2_body', 'Здесь комплекс можно закрепить в быстром доступе, экспортировать, открыть для редактирования или удалить из библиотеки.')
                         }
                     ]
                 },
@@ -227,23 +233,23 @@
                         '[data-onboarding-target="complexes-toolbar-actions"]'
                     ],
                     placement: 'bottom',
-                    kicker: 'Пополнение библиотеки',
+                    kicker: wt('tours.complexes_library_navigation.complex_library_actions.kicker', 'Пополнение библиотеки'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="complexes-create"]',
                             placement: 'bottom',
                             offsetX: 48,
                             offsetY: 18,
-                            title: 'Создать комплекс',
-                            body: 'Создание открывает редактор комплексов, где задания собираются в учебный маршрут с теорией, порядком прохождения и публикацией.'
+                            title: wt('tours.complexes_library_navigation.complex_library_actions.c0_title', 'Создать комплекс'),
+                            body: wt('tours.complexes_library_navigation.complex_library_actions.c0_body', 'Создание открывает редактор комплексов, где задания собираются в учебный маршрут с теорией, порядком прохождения и публикацией.')
                         },
                         {
                             target: '[data-onboarding-target="complexes-add-by-code"]',
                             placement: 'bottom',
                             offsetX: -320,
                             offsetY: 56,
-                            title: 'Импорт и код доступа',
-                            body: 'Импорт переносит комплекс из файла. Код доступа добавляет закрытую публикацию из каталога прямо в библиотеку.'
+                            title: wt('tours.complexes_library_navigation.complex_library_actions.c1_title', 'Импорт и код доступа'),
+                            body: wt('tours.complexes_library_navigation.complex_library_actions.c1_body', 'Импорт переносит комплекс из файла. Код доступа добавляет закрытую публикацию из каталога прямо в библиотеку.')
                         }
                     ]
                 }
@@ -260,8 +266,8 @@
             autoStartDelay: 900,
             totalStates: 5,
             persistControl: true,
-            title: 'Редактор комплексов: сценарий обучения',
-            summary: 'Как собрать комплекс из заданий, добавить теорию, настроить порядок прохождения, связать задания в сцепки, проверить готовность и сохранить результат.',
+            title: wt('tours.complex_editor_authoring.title', 'Редактор комплексов: сценарий обучения'),
+            summary: wt('tours.complex_editor_authoring.summary', 'Как собрать комплекс из заданий, добавить теорию, настроить порядок прохождения, связать задания в сцепки, проверить готовность и сохранить результат.'),
             steps: [
                 {
                     id: 'complex-editor-core-info',
@@ -273,7 +279,7 @@
                     controlPlacement: 'bottom-right',
                     controlPlacementLocked: true,
                     skipAutoScroll: true,
-                    kicker: 'Основа комплекса',
+                    kicker: wt('tours.complex_editor_authoring.complex_editor_core_info.kicker', 'Основа комплекса'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="complex-editor-info"]',
@@ -282,8 +288,8 @@
                             offsetY: 18,
                             gap: 24,
                             keepPlacement: true,
-                            title: 'Название и описание',
-                            body: 'Это карточка сценария: название помогает найти комплекс в библиотеке, а описание объясняет, чему он учит и когда его запускать.'
+                            title: wt('tours.complex_editor_authoring.complex_editor_core_info.c0_title', 'Название и описание'),
+                            body: wt('tours.complex_editor_authoring.complex_editor_core_info.c0_body', 'Это карточка сценария: название помогает найти комплекс в библиотеке, а описание объясняет, чему он учит и когда его запускать.')
                         },
                         {
                             target: '[data-onboarding-target="complex-editor-header"]',
@@ -292,8 +298,8 @@
                             offsetY: 36,
                             gap: 22,
                             keepPlacement: true,
-                            title: 'Панель редактора',
-                            body: 'Верхняя панель показывает статус работы, готовность состава, публикацию и сохранение текущей версии комплекса.'
+                            title: wt('tours.complex_editor_authoring.complex_editor_core_info.c1_title', 'Панель редактора'),
+                            body: wt('tours.complex_editor_authoring.complex_editor_core_info.c1_body', 'Верхняя панель показывает статус работы, готовность состава, публикацию и сохранение текущей версии комплекса.')
                         }
                     ]
                 },
@@ -309,7 +315,7 @@
                     controlPlacementLocked: true,
                     scrollTarget: '[data-onboarding-target="complex-editor-theory"]',
                     scrollBlock: 'center',
-                    kicker: 'Теория как контекст',
+                    kicker: wt('tours.complex_editor_authoring.complex_editor_theory_context.kicker', 'Теория как контекст'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="complex-editor-theory"]',
@@ -317,8 +323,8 @@
                             offsetX: 24,
                             offsetY: -76,
                             gap: 24,
-                            title: 'Связанная теория',
-                            body: 'Комплекс может наследовать теорию из тем, привязать существующий материал или создать отдельный текст. Это даёт ученику контекст для задач.'
+                            title: wt('tours.complex_editor_authoring.complex_editor_theory_context.c0_title', 'Связанная теория'),
+                            body: wt('tours.complex_editor_authoring.complex_editor_theory_context.c0_body', 'Комплекс может наследовать теорию из тем, привязать существующий материал или создать отдельный текст. Это даёт ученику контекст для задач.')
                         },
                         {
                             target: '[data-onboarding-target="complex-editor-theory-source"]',
@@ -328,8 +334,8 @@
                             gap: 24,
                             keepPlacement: true,
                             skipOverlapPush: true,
-                            title: 'Источник теории',
-                            body: 'Здесь выбирается, откуда брать теорию: из тем комплекса, из существующего материала или из нового текста внутри редактора.'
+                            title: wt('tours.complex_editor_authoring.complex_editor_theory_context.c1_title', 'Источник теории'),
+                            body: wt('tours.complex_editor_authoring.complex_editor_theory_context.c1_body', 'Здесь выбирается, откуда брать теорию: из тем комплекса, из существующего материала или из нового текста внутри редактора.')
                         },
                         {
                             target: '[data-onboarding-target="complex-editor-theory-content"]',
@@ -338,8 +344,8 @@
                             offsetY: 18,
                             gap: 24,
                             keepPlacement: true,
-                            title: 'Содержимое теории',
-                            body: 'В демо показан вариант с новой теорией: можно задать заголовок, оформить текст, добавить изображения и сохранить всё вместе с комплексом.'
+                            title: wt('tours.complex_editor_authoring.complex_editor_theory_context.c2_title', 'Содержимое теории'),
+                            body: wt('tours.complex_editor_authoring.complex_editor_theory_context.c2_body', 'В демо показан вариант с новой теорией: можно задать заголовок, оформить текст, добавить изображения и сохранить всё вместе с комплексом.')
                         }
                     ]
                 },
@@ -355,7 +361,7 @@
                     scrollTarget: '[data-onboarding-target="complex-editor-selected-tasks"]',
                     scrollBlock: 'center',
                     forceAutoScroll: true,
-                    kicker: 'Сборка задач',
+                    kicker: wt('tours.complex_editor_authoring.complex_editor_task_selection.kicker', 'Сборка задач'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="complex-editor-selected-tasks"]',
@@ -364,8 +370,8 @@
                             offsetY: 10,
                             gap: 28,
                             keepPlacement: true,
-                            title: 'Задания в комплексе',
-                            body: 'Здесь собирается рабочий маршрут. Порядок и состав важны: комплекс должен вести ученика от проверки базовых вещей к закреплению.'
+                            title: wt('tours.complex_editor_authoring.complex_editor_task_selection.c0_title', 'Задания в комплексе'),
+                            body: wt('tours.complex_editor_authoring.complex_editor_task_selection.c0_body', 'Здесь собирается рабочий маршрут. Порядок и состав важны: комплекс должен вести ученика от проверки базовых вещей к закреплению.')
                         },
                         {
                             target: '[data-onboarding-target="complex-editor-complexes-tab"]',
@@ -375,7 +381,7 @@
                             gap: 44,
                             keepPlacement: true,
                             width: 560,
-                            body: 'Во вкладке «Комплексы» можно выбрать уже созданный комплекс и открыть его для редактирования.'
+                            body: wt('tours.complex_editor_authoring.complex_editor_task_selection.c1_body', 'Во вкладке «Комплексы» можно выбрать уже созданный комплекс и открыть его для редактирования.')
                         },
                         {
                             target: '[data-onboarding-target="complex-editor-task-library"]',
@@ -384,8 +390,8 @@
                             offsetY: -250,
                             gap: 28,
                             keepPlacement: true,
-                            title: 'Библиотека заданий',
-                            body: 'Справа выбираются задания из рабочей библиотеки. Поиск помогает быстро найти нужный модуль, тему, ID или тег.'
+                            title: wt('tours.complex_editor_authoring.complex_editor_task_selection.c2_title', 'Библиотека заданий'),
+                            body: wt('tours.complex_editor_authoring.complex_editor_task_selection.c2_body', 'Справа выбираются задания из рабочей библиотеки. Поиск помогает быстро найти нужный модуль, тему, ID или тег.')
                         },
                         {
                             target: '[data-onboarding-target="complex-editor-add-selected"]',
@@ -394,15 +400,15 @@
                             offsetY: 250,
                             gap: 28,
                             keepPlacement: true,
-                            title: 'Добавить выбранные',
-                            body: 'После выбора задания попадают в комплекс. Счётчик показывает, сколько элементов будет добавлено за один шаг.'
+                            title: wt('tours.complex_editor_authoring.complex_editor_task_selection.c3_title', 'Добавить выбранные'),
+                            body: wt('tours.complex_editor_authoring.complex_editor_task_selection.c3_body', 'После выбора задания попадают в комплекс. Счётчик показывает, сколько элементов будет добавлено за один шаг.')
                         }
                     ],
                     beacons: [
                         {
                             target: '[data-onboarding-target="complex-editor-test-mode-control"]',
                             stepVariant: 'test-mode-control',
-                            label: 'Показать подсказку про режим тестового задания',
+                            label: wt('tours.complex_editor_authoring.complex_editor_task_selection.c4_label', 'Показать подсказку про режим тестового задания'),
                             placement: 'right',
                             gap: 10,
                             offsetX: 4,
@@ -415,7 +421,7 @@
                         ]
                     },
                     variantBackVariants: ['test-mode-control'],
-                    variantBackLabel: 'К сборке',
+                    variantBackLabel: wt('tours.complex_editor_authoring.complex_editor_task_selection.variantBackLabel', 'К сборке'),
                     calloutVariants: {
                         'test-mode-control': [
                             {
@@ -426,8 +432,8 @@
                                 gap: 28,
                                 keepPlacement: true,
                                 width: 430,
-                                title: 'Вместе / Вразброс',
-                                body: '«Вместе» означает, что все вопросы тестового задания будут идти рядом друг с другом. «Вразброс» замешивает вопросы теста между другими заданиями комплекса. Если тест входит в сцепку, вопросы принудительно идут вместе, чтобы связанный блок не распадался.'
+                                title: wt('tours.complex_editor_authoring.complex_editor_task_selection.c5_title', 'Вместе / Вразброс'),
+                                body: wt('tours.complex_editor_authoring.complex_editor_task_selection.c5_body', '«Вместе» означает, что все вопросы тестового задания будут идти рядом друг с другом. «Вразброс» замешивает вопросы теста между другими заданиями комплекса. Если тест входит в сцепку, вопросы принудительно идут вместе, чтобы связанный блок не распадался.')
                             }
                         ]
                     }
@@ -443,7 +449,7 @@
                     controlPlacementLocked: true,
                     scrollTarget: '[data-onboarding-target="complex-editor-chains"]',
                     scrollBlock: 'center',
-                    kicker: 'Сцепки',
+                    kicker: wt('tours.complex_editor_authoring.complex_editor_chains.kicker', 'Сцепки'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="complex-editor-selected-tasks"]',
@@ -453,8 +459,8 @@
                             gap: 26,
                             keepPlacement: true,
                             width: 420,
-                            title: 'Связанные задания',
-                            body: 'Сцепка влияет не только на разметку в редакторе: при запуске комплекса эти задания попадут в очередь как один блок, а не как разрозненные элементы.'
+                            title: wt('tours.complex_editor_authoring.complex_editor_chains.c0_title', 'Связанные задания'),
+                            body: wt('tours.complex_editor_authoring.complex_editor_chains.c0_body', 'Сцепка влияет не только на разметку в редакторе: при запуске комплекса эти задания попадут в очередь как один блок, а не как разрозненные элементы.')
                         },
                         {
                             target: '[data-onboarding-target="complex-editor-chains"]',
@@ -464,8 +470,8 @@
                             gap: 24,
                             keepPlacement: true,
                             width: 430,
-                            title: 'Порядок внутри сцепки',
-                            body: 'Генератор очереди сначала группирует сцепку в chunk, а уже потом балансирует очередь. Поэтому порядок внутри блока сохраняется при прохождении.'
+                            title: wt('tours.complex_editor_authoring.complex_editor_chains.c1_title', 'Порядок внутри сцепки'),
+                            body: wt('tours.complex_editor_authoring.complex_editor_chains.c1_body', 'Генератор очереди сначала группирует сцепку в chunk, а уже потом балансирует очередь. Поэтому порядок внутри блока сохраняется при прохождении.')
                         }
                     ]
                 },
@@ -480,7 +486,7 @@
                     controlPlacement: 'bottom-right',
                     controlPlacementLocked: true,
                     skipAutoScroll: true,
-                    kicker: 'Готовность и выпуск',
+                    kicker: wt('tours.complex_editor_authoring.complex_editor_readiness_and_release.kicker', 'Готовность и выпуск'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="complex-editor-quality"]',
@@ -488,8 +494,8 @@
                             offsetX: -220,
                             offsetY: 12,
                             gap: 22,
-                            title: 'Готовность состава',
-                            body: 'Индикатор проверяет, достаточно ли заданий, типов и структуры для нормального прохождения. Это быстрый контроль перед сохранением.'
+                            title: wt('tours.complex_editor_authoring.complex_editor_readiness_and_release.c0_title', 'Готовность состава'),
+                            body: wt('tours.complex_editor_authoring.complex_editor_readiness_and_release.c0_body', 'Индикатор проверяет, достаточно ли заданий, типов и структуры для нормального прохождения. Это быстрый контроль перед сохранением.')
                         },
                         {
                             target: '[data-onboarding-target="complex-editor-publish"]',
@@ -497,8 +503,8 @@
                             offsetX: -80,
                             offsetY: 12,
                             gap: 22,
-                            title: 'Публикация',
-                            body: 'Публикация делает комплекс доступным через каталог или выбранный режим доступа. Черновик можно продолжать редактировать отдельно.'
+                            title: wt('tours.complex_editor_authoring.complex_editor_readiness_and_release.c1_title', 'Публикация'),
+                            body: wt('tours.complex_editor_authoring.complex_editor_readiness_and_release.c1_body', 'Публикация делает комплекс доступным через каталог или выбранный режим доступа. Черновик можно продолжать редактировать отдельно.')
                         },
                         {
                             target: '[data-onboarding-target="complex-editor-save"]',
@@ -506,8 +512,8 @@
                             offsetX: 0,
                             offsetY: 12,
                             gap: 22,
-                            title: 'Сохранение',
-                            body: 'Сохранение фиксирует текущую версию редактора: название, теорию, выбранные задания, порядок и сцепки.'
+                            title: wt('tours.complex_editor_authoring.complex_editor_readiness_and_release.c2_title', 'Сохранение'),
+                            body: wt('tours.complex_editor_authoring.complex_editor_readiness_and_release.c2_body', 'Сохранение фиксирует текущую версию редактора: название, теорию, выбранные задания, порядок и сцепки.')
                         }
                     ]
                 }
@@ -524,8 +530,8 @@
             autoStartDelay: 900,
             totalStates: 3,
             persistControl: true,
-            title: 'Календарь: план обучения',
-            summary: 'Как читать дневной план, расписание, активность и здоровье памяти.',
+            title: wt('tours.calendar_daily_plan.title', 'Календарь: план обучения'),
+            summary: wt('tours.calendar_daily_plan.summary', 'Как читать дневной план, расписание, активность и здоровье памяти.'),
             steps: [
                 {
                     id: 'calendar-today-plan',
@@ -537,7 +543,7 @@
                     placement: 'bottom',
                     controlPlacement: 'bottom-right',
                     controlPlacementLocked: true,
-                    kicker: 'Что делать сегодня',
+                    kicker: wt('tours.calendar_daily_plan.calendar_today_plan.kicker', 'Что делать сегодня'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="calendar-daily-mix-card"]',
@@ -545,23 +551,23 @@
                             offsetX: -32,
                             offsetY: 18,
                             title: 'Daily Mix',
-                            body: 'Короткая подборка повторов: ошибки, слабые места и материал, который пора освежить.'
+                            body: wt('tours.calendar_daily_plan.calendar_today_plan.c0_body', 'Короткая подборка повторов: ошибки, слабые места и материал, который пора освежить.')
                         },
                         {
                             target: '[data-onboarding-target="calendar-main-focus-card"]',
                             placement: 'bottom',
                             offsetX: 20,
                             offsetY: 18,
-                            title: 'Фокус дня',
-                            body: 'Главный комплекс на сегодня. Он помогает не выбирать вручную, что учить дальше.'
+                            title: wt('tours.calendar_daily_plan.calendar_today_plan.c1_title', 'Фокус дня'),
+                            body: wt('tours.calendar_daily_plan.calendar_today_plan.c1_body', 'Главный комплекс на сегодня. Он помогает не выбирать вручную, что учить дальше.')
                         },
                         {
                             target: '[data-onboarding-target="calendar-time-controller"]',
                             placement: 'bottom',
                             offsetX: 0,
                             offsetY: 18,
-                            title: 'Лимит времени',
-                            body: 'План подстраивается под доступные минуты и не предлагает больше, чем реально пройти.'
+                            title: wt('tours.calendar_daily_plan.calendar_today_plan.c2_title', 'Лимит времени'),
+                            body: wt('tours.calendar_daily_plan.calendar_today_plan.c2_body', 'План подстраивается под доступные минуты и не предлагает больше, чем реально пройти.')
                         }
                     ]
                 },
@@ -574,23 +580,23 @@
                     placement: 'bottom',
                     controlPlacement: 'bottom-right',
                     controlPlacementLocked: true,
-                    kicker: 'Ритм недели',
+                    kicker: wt('tours.calendar_daily_plan.calendar_rhythm.kicker', 'Ритм недели'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="calendar-schedule-panel"]',
                             placement: 'top',
                             offsetX: 260,
                             offsetY: 22,
-                            title: 'Ближайшие дни',
-                            body: 'Лента показывает, где стоят повторы и сколько учебных действий запланировано на неделю.'
+                            title: wt('tours.calendar_daily_plan.calendar_rhythm.c0_title', 'Ближайшие дни'),
+                            body: wt('tours.calendar_daily_plan.calendar_rhythm.c0_body', 'Лента показывает, где стоят повторы и сколько учебных действий запланировано на неделю.')
                         },
                         {
                             target: '[data-onboarding-target="calendar-activity-panel"]',
                             placement: 'right',
                             offsetX: 28,
                             offsetY: -6,
-                            title: 'Активность',
-                            body: 'Тепловая карта быстро показывает регулярность: где был темп, а где появились пропуски.'
+                            title: wt('tours.calendar_daily_plan.calendar_rhythm.c1_title', 'Активность'),
+                            body: wt('tours.calendar_daily_plan.calendar_rhythm.c1_body', 'Тепловая карта быстро показывает регулярность: где был темп, а где появились пропуски.')
                         }
                     ]
                 },
@@ -603,15 +609,15 @@
                     placement: 'top',
                     controlPlacement: 'bottom-left',
                     controlPlacementLocked: true,
-                    kicker: 'Что проседает',
+                    kicker: wt('tours.calendar_daily_plan.calendar_memory_health.kicker', 'Что проседает'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="calendar-memory-notification"]',
                             placement: 'top',
                             offsetX: -120,
                             offsetY: 18,
-                            title: 'Сигнал к повтору',
-                            body: 'Если комплекс проседает, календарь сразу показывает, что лучше освежить сегодня.'
+                            title: wt('tours.calendar_daily_plan.calendar_memory_health.c0_title', 'Сигнал к повтору'),
+                            body: wt('tours.calendar_daily_plan.calendar_memory_health.c0_body', 'Если комплекс проседает, календарь сразу показывает, что лучше освежить сегодня.')
                         },
                         {
                             target: '[data-onboarding-target="calendar-memory-health-panel"]',
@@ -620,8 +626,8 @@
                             offsetY: 0,
                             gap: 28,
                             keepPlacement: true,
-                            title: 'Здоровье памяти',
-                            body: 'Здесь видно, какие комплексы держатся уверенно, а какие лучше повторить первыми.'
+                            title: wt('tours.calendar_daily_plan.calendar_memory_health.c1_title', 'Здоровье памяти'),
+                            body: wt('tours.calendar_daily_plan.calendar_memory_health.c1_body', 'Здесь видно, какие комплексы держатся уверенно, а какие лучше повторить первыми.')
                         }
                     ]
                 }
@@ -638,8 +644,8 @@
             autoStartDelay: 900,
             totalStates: 3,
             persistControl: true,
-            title: 'Статистика: сигналы обучения',
-            summary: 'Как читать общие метрики и отличать полезные учебные сигналы от справочных цифр.',
+            title: wt('tours.statistics_learning_signals.title', 'Статистика: сигналы обучения'),
+            summary: wt('tours.statistics_learning_signals.summary', 'Как читать общие метрики и отличать полезные учебные сигналы от справочных цифр.'),
             steps: [
                 {
                     id: 'statistics-overall-metrics',
@@ -653,23 +659,23 @@
                     placement: 'bottom',
                     controlPlacement: 'bottom-right',
                     controlPlacementLocked: true,
-                    kicker: 'Общие метрики',
+                    kicker: wt('tours.statistics_learning_signals.statistics_overall_metrics.kicker', 'Общие метрики'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="statistics-metrics-progress-anchor"]',
                             placement: 'bottom',
                             offsetX: -80,
                             offsetY: 18,
-                            title: 'Сколько уже сделано',
-                            body: 'Здесь видно, сколько задач освоено и сколько времени ушло на обучение. Это общий прогресс, но он сам по себе не говорит, что учить дальше.'
+                            title: wt('tours.statistics_learning_signals.statistics_overall_metrics.c0_title', 'Сколько уже сделано'),
+                            body: wt('tours.statistics_learning_signals.statistics_overall_metrics.c0_body', 'Здесь видно, сколько задач освоено и сколько времени ушло на обучение. Это общий прогресс, но он сам по себе не говорит, что учить дальше.')
                         },
                         {
                             target: '[data-onboarding-target="statistics-metrics-repeat-anchor"]',
                             placement: 'bottom',
                             offsetX: 80,
                             offsetY: 18,
-                            title: 'Как держится ритм',
-                            body: 'Карточки показывают точность коротких повторов, а серия - занимались ли вы регулярно. Эти метрики помогают понять, где стоит освежить материал.'
+                            title: wt('tours.statistics_learning_signals.statistics_overall_metrics.c1_title', 'Как держится ритм'),
+                            body: wt('tours.statistics_learning_signals.statistics_overall_metrics.c1_body', 'Карточки показывают точность коротких повторов, а серия - занимались ли вы регулярно. Эти метрики помогают понять, где стоит освежить материал.')
                         }
                     ]
                 },
@@ -683,7 +689,7 @@
                     placement: 'top',
                     controlPlacement: 'bottom-right',
                     controlPlacementLocked: true,
-                    kicker: 'Динамика времени',
+                    kicker: wt('tours.statistics_learning_signals.statistics_time_dynamics.kicker', 'Динамика времени'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="statistics-time-dynamics-card"]',
@@ -691,16 +697,16 @@
                             offsetX: 0,
                             offsetY: 80,
                             gap: 28,
-                            title: 'Ритм по дням',
-                            body: 'График показывает, в какие дни было обучение. Смотрите на регулярность, а не только на самый высокий столбик.'
+                            title: wt('tours.statistics_learning_signals.statistics_time_dynamics.c0_title', 'Ритм по дням'),
+                            body: wt('tours.statistics_learning_signals.statistics_time_dynamics.c0_body', 'График показывает, в какие дни было обучение. Смотрите на регулярность, а не только на самый высокий столбик.')
                         },
                         {
                             target: '[data-onboarding-target="statistics-chart-controls"]',
                             placement: 'top',
                             offsetX: 70,
                             offsetY: 18,
-                            title: 'Переключатели графика',
-                            body: 'Здесь можно выбрать, что смотреть: время или активность, а потом сравнить период за 7, 30 или 90 дней.'
+                            title: wt('tours.statistics_learning_signals.statistics_time_dynamics.c1_title', 'Переключатели графика'),
+                            body: wt('tours.statistics_learning_signals.statistics_time_dynamics.c1_body', 'Здесь можно выбрать, что смотреть: время или активность, а потом сравнить период за 7, 30 или 90 дней.')
                         }
                     ]
                 },
@@ -713,7 +719,7 @@
                     placement: 'left',
                     controlPlacement: 'bottom-right',
                     controlPlacementLocked: true,
-                    kicker: 'Детальная статистика',
+                    kicker: wt('tours.statistics_learning_signals.statistics_performance_and_complexes.kicker', 'Детальная статистика'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="statistics-performance-card"]',
@@ -721,8 +727,8 @@
                             offsetX: 8,
                             offsetY: -72,
                             gap: 28,
-                            title: 'Производительность',
-                            body: 'Здесь видно, какие типы задач даются легче или сложнее. Низкий процент подсказывает, что этот формат стоит потренировать.'
+                            title: wt('tours.statistics_learning_signals.statistics_performance_and_complexes.c0_title', 'Производительность'),
+                            body: wt('tours.statistics_learning_signals.statistics_performance_and_complexes.c0_body', 'Здесь видно, какие типы задач даются легче или сложнее. Низкий процент подсказывает, что этот формат стоит потренировать.')
                         },
                         {
                             target: '[data-onboarding-target="statistics-recent-complex-card"]',
@@ -730,8 +736,8 @@
                             offsetX: 8,
                             offsetY: 34,
                             gap: 28,
-                            title: 'Последние комплексы',
-                            body: 'Здесь видны недавние прохождения комплексов. Так проще понять, что закрепилось, а к чему стоит вернуться.'
+                            title: wt('tours.statistics_learning_signals.statistics_performance_and_complexes.c1_title', 'Последние комплексы'),
+                            body: wt('tours.statistics_learning_signals.statistics_performance_and_complexes.c1_body', 'Здесь видны недавние прохождения комплексов. Так проще понять, что закрепилось, а к чему стоит вернуться.')
                         }
                     ]
                 }
@@ -748,8 +754,8 @@
             autoStartDelay: 900,
             totalStates: 2,
             persistControl: true,
-            title: 'Каталог: поиск и отбор материалов',
-            summary: 'Как найти публикацию, отсортировать выдачу, оценить детали и добавить подходящий материал в свою библиотеку.',
+            title: wt('tours.catalog_discovery_library.title', 'Каталог: поиск и отбор материалов'),
+            summary: wt('tours.catalog_discovery_library.summary', 'Как найти публикацию, отсортировать выдачу, оценить детали и добавить подходящий материал в свою библиотеку.'),
             steps: [
                 {
                     id: 'catalog-search-and-filters',
@@ -760,7 +766,7 @@
                     controlPlacement: 'bottom-right',
                     controlPlacementLocked: true,
                     readySelector: '[data-onboarding-target="catalog-detail-panel"] .catalog-detail__breakdown',
-                    kicker: 'Поиск, фильтры и порядок',
+                    kicker: wt('tours.catalog_discovery_library.catalog_search_and_filters.kicker', 'Поиск, фильтры и порядок'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="catalog-search"]',
@@ -769,8 +775,8 @@
                             offsetX: 0,
                             offsetY: 0,
                             gap: 22,
-                            title: 'Поиск по каталогу',
-                            body: 'Введите название, тему или автора. Поиск сужает выдачу без смены раздела: удобно быстро проверить, есть ли готовый материал под текущую задачу.'
+                            title: wt('tours.catalog_discovery_library.catalog_search_and_filters.c0_title', 'Поиск по каталогу'),
+                            body: wt('tours.catalog_discovery_library.catalog_search_and_filters.c0_body', 'Введите название, тему или автора. Поиск сужает выдачу без смены раздела: удобно быстро проверить, есть ли готовый материал под текущую задачу.')
                         },
                         {
                             target: '[data-onboarding-target="catalog-filters"]',
@@ -778,8 +784,8 @@
                             offsetX: 0,
                             offsetY: 12,
                             gap: 26,
-                            title: 'Тип материала',
-                            body: 'Фильтры разделяют все публикации, комплексы, теории и уже сохранённые материалы. Это первый грубый отсев перед сортировкой и просмотром карточек.'
+                            title: wt('tours.catalog_discovery_library.catalog_search_and_filters.c1_title', 'Тип материала'),
+                            body: wt('tours.catalog_discovery_library.catalog_search_and_filters.c1_body', 'Фильтры разделяют все публикации, комплексы, теории и уже сохранённые материалы. Это первый грубый отсев перед сортировкой и просмотром карточек.')
                         },
                         {
                             target: '[data-onboarding-target="catalog-sort-toggle"]',
@@ -788,8 +794,8 @@
                             offsetY: 12,
                             arrowOffsetX: 70,
                             gap: 26,
-                            title: 'Сортировка',
-                            body: 'Сортировка меняет порядок карточек: сначала новые, по алфавиту, по типу контента или по объёму. Рядом сводка показывает, сколько публикаций осталось после поиска и фильтров.'
+                            title: wt('tours.catalog_discovery_library.catalog_search_and_filters.c2_title', 'Сортировка'),
+                            body: wt('tours.catalog_discovery_library.catalog_search_and_filters.c2_body', 'Сортировка меняет порядок карточек: сначала новые, по алфавиту, по типу контента или по объёму. Рядом сводка показывает, сколько публикаций осталось после поиска и фильтров.')
                         }
                     ]
                 },
@@ -804,7 +810,7 @@
                     controlPlacementLocked: true,
                     readySelector: '[data-onboarding-target="catalog-detail-panel"] .catalog-detail__breakdown',
                     scrollOffsetY: 150,
-                    kicker: 'Выбор',
+                    kicker: wt('tours.catalog_discovery_library.catalog_card_and_detail.kicker', 'Выбор'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="catalog-selected-card"]',
@@ -821,8 +827,8 @@
                                     offsetY: 0
                                 }
                             ],
-                            title: 'Карточка и детали',
-                            body: 'Карточка даёт быстрый обзор, а панель деталей показывает состав, связанные материалы и помогает решить, стоит ли сохранять публикацию.'
+                            title: wt('tours.catalog_discovery_library.catalog_card_and_detail.c0_title', 'Карточка и детали'),
+                            body: wt('tours.catalog_discovery_library.catalog_card_and_detail.c0_body', 'Карточка даёт быстрый обзор, а панель деталей показывает состав, связанные материалы и помогает решить, стоит ли сохранять публикацию.')
                         },
                         {
                             target: '[data-onboarding-target="catalog-add-action"]',
@@ -830,8 +836,8 @@
                             offsetX: 0,
                             offsetY: 12,
                             gap: 24,
-                            title: 'Добавить в библиотеку',
-                            body: 'Каталог не запускает обучение напрямую. Сначала сохраните материал: комплекс появится в комплексах, а теория - в центре теории.'
+                            title: wt('tours.catalog_discovery_library.catalog_card_and_detail.c1_title', 'Добавить в библиотеку'),
+                            body: wt('tours.catalog_discovery_library.catalog_card_and_detail.c1_body', 'Каталог не запускает обучение напрямую. Сначала сохраните материал: комплекс появится в комплексах, а теория - в центре теории.')
                         }
                     ]
                 }
@@ -848,8 +854,8 @@
             autoStartDelay: 900,
             totalStates: 2,
             persistControl: true,
-            title: 'Центр теории: библиотека и связи',
-            summary: 'Как найти теорию, проверить привязки к темам и комплексам и быстро открыть нужный материал.',
+            title: wt('tours.theory_center_library.title', 'Центр теории: библиотека и связи'),
+            summary: wt('tours.theory_center_library.summary', 'Как найти теорию, проверить привязки к темам и комплексам и быстро открыть нужный материал.'),
             steps: [
                 {
                     id: 'theory-center-find-and-filter',
@@ -862,7 +868,7 @@
                     controlPlacementLocked: true,
                     readySelector: '[data-onboarding-target="theory-selected-row"] [data-onboarding-target="theory-open-action"]',
                     scrollOffsetY: 0,
-                    kicker: 'Поиск и срезы',
+                    kicker: wt('tours.theory_center_library.theory_center_find_and_filter.kicker', 'Поиск и срезы'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="theory-summary-grid"]',
@@ -870,8 +876,8 @@
                             offsetX: 0,
                             offsetY: 0,
                             gap: 18,
-                            title: 'Быстрые подборки',
-                            body: 'Верхний блок собирает проблемные и полезные срезы: темы без теории, комплексы с одной теорией, подборки и материалы без привязки.'
+                            title: wt('tours.theory_center_library.theory_center_find_and_filter.c0_title', 'Быстрые подборки'),
+                            body: wt('tours.theory_center_library.theory_center_find_and_filter.c0_body', 'Верхний блок собирает проблемные и полезные срезы: темы без теории, комплексы с одной теорией, подборки и материалы без привязки.')
                         },
                         {
                             target: '[data-onboarding-target="theory-search"]',
@@ -879,8 +885,8 @@
                             offsetX: 12,
                             offsetY: 12,
                             gap: 24,
-                            title: 'Поиск по центру',
-                            body: 'Поиск работает по названиям тем, комплексов и теорий. Это самый быстрый способ проверить, есть ли уже нужный материал.'
+                            title: wt('tours.theory_center_library.theory_center_find_and_filter.c1_title', 'Поиск по центру'),
+                            body: wt('tours.theory_center_library.theory_center_find_and_filter.c1_body', 'Поиск работает по названиям тем, комплексов и теорий. Это самый быстрый способ проверить, есть ли уже нужный материал.')
                         },
                         {
                             target: '[data-onboarding-target="theory-scope-filters"]',
@@ -888,8 +894,8 @@
                             offsetX: 0,
                             offsetY: 12,
                             gap: 24,
-                            title: 'Разделы и фильтры',
-                            body: 'Переключатели меняют тип выдачи: все теории, темы, комплексы, материалы без привязки и теории только с заголовком.'
+                            title: wt('tours.theory_center_library.theory_center_find_and_filter.c2_title', 'Разделы и фильтры'),
+                            body: wt('tours.theory_center_library.theory_center_find_and_filter.c2_body', 'Переключатели меняют тип выдачи: все теории, темы, комплексы, материалы без привязки и теории только с заголовком.')
                         }
                     ]
                 },
@@ -903,7 +909,7 @@
                     controlPlacementLocked: true,
                     readySelector: '[data-onboarding-target="theory-selected-row"] [data-onboarding-target="theory-open-action"]',
                     scrollOffsetY: 210,
-                    kicker: 'Карточка теории',
+                    kicker: wt('tours.theory_center_library.theory_center_card_and_actions.kicker', 'Карточка теории'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="theory-selected-row"]',
@@ -911,8 +917,8 @@
                             offsetX: 0,
                             offsetY: 8,
                             gap: 28,
-                            title: 'Связи и статус',
-                            body: 'Карточка показывает автора, публикацию в каталоге, связи с темами и комплексами, а также дату обновления.'
+                            title: wt('tours.theory_center_library.theory_center_card_and_actions.c0_title', 'Связи и статус'),
+                            body: wt('tours.theory_center_library.theory_center_card_and_actions.c0_body', 'Карточка показывает автора, публикацию в каталоге, связи с темами и комплексами, а также дату обновления.')
                         },
                         {
                             target: '[data-onboarding-target="theory-open-action"]',
@@ -920,8 +926,8 @@
                             offsetX: 0,
                             offsetY: 0,
                             gap: 24,
-                            title: 'Открыть материал',
-                            body: 'Кнопка открывает теорию: свои материалы попадают в редактор, а теории других авторов из каталога открываются в режиме просмотра.'
+                            title: wt('tours.theory_center_library.theory_center_card_and_actions.c1_title', 'Открыть материал'),
+                            body: wt('tours.theory_center_library.theory_center_card_and_actions.c1_body', 'Кнопка открывает теорию: свои материалы попадают в редактор, а теории других авторов из каталога открываются в режиме просмотра.')
                         }
                     ]
                 }
@@ -938,8 +944,8 @@
             autoStartDelay: 900,
             totalStates: 3,
             persistControl: true,
-            title: 'Редактор теории: создание материала',
-            summary: 'Как выбрать теорию, оформить текст, добавить изображения, сохранить и подготовить материал к публикации.',
+            title: wt('tours.theory_editor_authoring.title', 'Редактор теории: создание материала'),
+            summary: wt('tours.theory_editor_authoring.summary', 'Как выбрать теорию, оформить текст, добавить изображения, сохранить и подготовить материал к публикации.'),
             steps: [
                 {
                     id: 'theory-editor-library-and-title',
@@ -953,7 +959,7 @@
                     readySelector: '[data-onboarding-target="theory-editor-active-library-item"]',
                     skipAutoScroll: true,
                     scrollY: 0,
-                    kicker: 'Выбор материала',
+                    kicker: wt('tours.theory_editor_authoring.theory_editor_library_and_title.kicker', 'Выбор материала'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="theory-editor-library-panel"]',
@@ -961,8 +967,8 @@
                             offsetX: 0,
                             offsetY: -24,
                             gap: 26,
-                            title: 'Библиотека теорий',
-                            body: 'Слева список ваших теорий. Можно быстро найти материал по названию или ID и переключиться между сохранёнными теориями.'
+                            title: wt('tours.theory_editor_authoring.theory_editor_library_and_title.c0_title', 'Библиотека теорий'),
+                            body: wt('tours.theory_editor_authoring.theory_editor_library_and_title.c0_body', 'Слева список ваших теорий. Можно быстро найти материал по названию или ID и переключиться между сохранёнными теориями.')
                         },
                         {
                             target: '[data-onboarding-target="theory-editor-header"]',
@@ -970,8 +976,8 @@
                             offsetX: 360,
                             offsetY: 10,
                             gap: 22,
-                            title: 'Статусы выбранной теории',
-                            body: 'Верхняя панель относится к теории, выбранной в библиотеке: здесь видны публикация, лимит библиотеки, быстрые переходы, создание новой теории и сохранение.'
+                            title: wt('tours.theory_editor_authoring.theory_editor_library_and_title.c1_title', 'Статусы выбранной теории'),
+                            body: wt('tours.theory_editor_authoring.theory_editor_library_and_title.c1_body', 'Верхняя панель относится к теории, выбранной в библиотеке: здесь видны публикация, лимит библиотеки, быстрые переходы, создание новой теории и сохранение.')
                         }
                     ]
                 },
@@ -988,7 +994,7 @@
                     scrollTarget: '[data-onboarding-target="theory-editor-content"]',
                     scrollBlock: 'nearest',
                     scrollOffsetY: 80,
-                    kicker: 'Текст теории',
+                    kicker: wt('tours.theory_editor_authoring.theory_editor_body_and_text_tools.kicker', 'Текст теории'),
                     variantBackVariants: ['image-tools'],
                     callouts: [
                         {
@@ -997,8 +1003,8 @@
                             offsetX: 0,
                             offsetY: 0,
                             gap: 24,
-                            title: 'Инструменты текста',
-                            body: 'Пока выбран текст, здесь доступны жирность, курсив, заголовки, списки, выравнивание, цвет и кнопка добавления изображения.'
+                            title: wt('tours.theory_editor_authoring.theory_editor_body_and_text_tools.c0_title', 'Инструменты текста'),
+                            body: wt('tours.theory_editor_authoring.theory_editor_body_and_text_tools.c0_body', 'Пока выбран текст, здесь доступны жирность, курсив, заголовки, списки, выравнивание, цвет и кнопка добавления изображения.')
                         },
                         {
                             target: '[data-onboarding-target="theory-editor-content"]',
@@ -1006,8 +1012,8 @@
                             offsetX: 0,
                             offsetY: -10,
                             gap: 28,
-                            title: 'Текстовое поле',
-                            body: 'В этой области пишется основной материал. В тексте можно смешивать заголовки, списки, пояснения и изображения теории.'
+                            title: wt('tours.theory_editor_authoring.theory_editor_body_and_text_tools.c1_title', 'Текстовое поле'),
+                            body: wt('tours.theory_editor_authoring.theory_editor_body_and_text_tools.c1_body', 'В этой области пишется основной материал. В тексте можно смешивать заголовки, списки, пояснения и изображения теории.')
                         }
                     ],
                     calloutVariants: {
@@ -1019,8 +1025,8 @@
                                 offsetY: -8,
                                 arrowLengthExtra: 18,
                                 gap: 28,
-                                title: 'Выбранное изображение',
-                                body: 'После клика изображение получает рамку выделения. Теперь изменения из панели инструментов применяются именно к нему.'
+                                title: wt('tours.theory_editor_authoring.theory_editor_body_and_text_tools.c2_title', 'Выбранное изображение'),
+                                body: wt('tours.theory_editor_authoring.theory_editor_body_and_text_tools.c2_body', 'После клика изображение получает рамку выделения. Теперь изменения из панели инструментов применяются именно к нему.')
                             },
                             {
                                 target: '[data-onboarding-target="theory-editor-image-controls"]',
@@ -1028,8 +1034,8 @@
                                 offsetX: 0,
                                 offsetY: 0,
                                 gap: 24,
-                                title: 'Инструменты изображения',
-                                body: 'Здесь можно менять размер, выравнивание, обтекание, поворот и отражение изображения прямо внутри материала.'
+                                title: wt('tours.theory_editor_authoring.theory_editor_body_and_text_tools.c3_title', 'Инструменты изображения'),
+                                body: wt('tours.theory_editor_authoring.theory_editor_body_and_text_tools.c3_body', 'Здесь можно менять размер, выравнивание, обтекание, поворот и отражение изображения прямо внутри материала.')
                             }
                         ]
                     }
@@ -1045,7 +1051,7 @@
                     controlPlacementLocked: true,
                     readySelector: '[data-onboarding-target="theory-editor-save-action"]',
                     scrollY: 0,
-                    kicker: 'Сохранение',
+                    kicker: wt('tours.theory_editor_authoring.theory_editor_save_and_publish.kicker', 'Сохранение'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="theory-editor-save-action"]',
@@ -1053,8 +1059,8 @@
                             offsetX: 0,
                             offsetY: 14,
                             gap: 24,
-                            title: 'Сохранить',
-                            body: 'Сохранение обновляет личную версию теории. Если есть несохранённые изменения, кнопка заметно подсвечивается.'
+                            title: wt('tours.theory_editor_authoring.theory_editor_save_and_publish.c0_title', 'Сохранить'),
+                            body: wt('tours.theory_editor_authoring.theory_editor_save_and_publish.c0_body', 'Сохранение обновляет личную версию теории. Если есть несохранённые изменения, кнопка заметно подсвечивается.')
                         },
                         {
                             target: '[data-onboarding-target="theory-editor-publish-action"]',
@@ -1062,8 +1068,8 @@
                             offsetX: 0,
                             offsetY: 14,
                             gap: 24,
-                            title: 'Публикация',
-                            body: 'После сохранения можно управлять публикацией: оставить теорию личной, открыть для всех или выдать доступ по коду.'
+                            title: wt('tours.theory_editor_authoring.theory_editor_save_and_publish.c1_title', 'Публикация'),
+                            body: wt('tours.theory_editor_authoring.theory_editor_save_and_publish.c1_body', 'После сохранения можно управлять публикацией: оставить теорию личной, открыть для всех или выдать доступ по коду.')
                         }
                     ]
                 }
@@ -1087,8 +1093,8 @@
             autoStartDelay: 900,
             totalStates: 5,
             persistControl: true,
-            title: 'Редактор теста: вопросы и ответы',
-            summary: 'Как собрать тест: добавить вопросы, написать формулировку, отметить правильные ответы, настроить обратную связь и сохранить.',
+            title: wt('tours.test_editor_authoring.title', 'Редактор теста: вопросы и ответы'),
+            summary: wt('tours.test_editor_authoring.summary', 'Как собрать тест: добавить вопросы, написать формулировку, отметить правильные ответы, настроить обратную связь и сохранить.'),
             steps: [
                 {
                     id: 'test-editor-question-structure',
@@ -1100,9 +1106,9 @@
                     controlPlacementLocked: true,
                     readySelector: '[data-onboarding-target="test-editor-active-question"]',
                     skipAutoScroll: true,
-                    kicker: 'Структура теста',
+                    kicker: wt('tours.test_editor_authoring.test_editor_question_structure.kicker', 'Структура теста'),
                     variantBackVariants: ['import-tools'],
-                    variantBackLabel: 'Вернуться к 1/5',
+                    variantBackLabel: wt('tours.test_editor_authoring.test_editor_question_structure.variantBackLabel', 'Вернуться к 1/5'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="test-editor-active-question"]',
@@ -1111,8 +1117,8 @@
                             offsetY: 0,
                             gap: 24,
                             variant: 'test-editor-compact',
-                            title: 'Список вопросов',
-                            body: 'Слева видны все вопросы теста. Активный вопрос открыт в рабочей области, а индикатор показывает готовность ответа.'
+                            title: wt('tours.test_editor_authoring.test_editor_question_structure.c0_title', 'Список вопросов'),
+                            body: wt('tours.test_editor_authoring.test_editor_question_structure.c0_body', 'Слева видны все вопросы теста. Активный вопрос открыт в рабочей области, а индикатор показывает готовность ответа.')
                         },
                         {
                             target: '[data-onboarding-target="test-editor-add-question"], [data-onboarding-target="test-editor-import-export"]',
@@ -1122,8 +1128,8 @@
                             offsetY: 6,
                             gap: 24,
                             variant: 'test-editor-compact',
-                            title: 'Добавление и импорт',
-                            body: 'Новый вопрос добавляется вручную. Импорт открывает окно загрузки вопросов из файла или текста. Экспорт без отдельного окна сразу сохраняет текущее тестовое задание в файл.'
+                            title: wt('tours.test_editor_authoring.test_editor_question_structure.c1_title', 'Добавление и импорт'),
+                            body: wt('tours.test_editor_authoring.test_editor_question_structure.c1_body', 'Новый вопрос добавляется вручную. Импорт открывает окно загрузки вопросов из файла или текста. Экспорт без отдельного окна сразу сохраняет текущее тестовое задание в файл.')
                         }
                     ],
                     calloutVariants: {
@@ -1136,8 +1142,8 @@
                                 offsetY: 4,
                                 gap: 28,
                                 variant: 'test-editor-import-branch',
-                                title: 'Способ импорта',
-                                body: 'Вверху выберите источник: файл с вопросами или текстовую заготовку. Активная вкладка подсвечивает, какой сценарий сейчас открыт.'
+                                title: wt('tours.test_editor_authoring.test_editor_question_structure.c2_title', 'Способ импорта'),
+                                body: wt('tours.test_editor_authoring.test_editor_question_structure.c2_body', 'Вверху выберите источник: файл с вопросами или текстовую заготовку. Активная вкладка подсвечивает, какой сценарий сейчас открыт.')
                             },
                             {
                                 target: '[data-onboarding-target="test-editor-import-parse-panel"], [data-onboarding-target="test-editor-import-choose-file"]',
@@ -1147,8 +1153,8 @@
                                 offsetY: -6,
                                 gap: 28,
                                 variant: 'test-editor-import-branch',
-                                title: 'Проверка данных',
-                                body: 'Здесь показываются выбранный файл, количество найденных вопросов, статус разбора и предпросмотр. Кнопка «Выбрать файл» запускает загрузку.'
+                                title: wt('tours.test_editor_authoring.test_editor_question_structure.c3_title', 'Проверка данных'),
+                                body: wt('tours.test_editor_authoring.test_editor_question_structure.c3_body', 'Здесь показываются выбранный файл, количество найденных вопросов, статус разбора и предпросмотр. Кнопка «Выбрать файл» запускает загрузку.')
                             },
                             {
                                 target: '[data-onboarding-target="test-editor-import-preview"], [data-onboarding-target="test-editor-import-mode"], [data-onboarding-target="test-editor-import-modal-actions"]',
@@ -1158,8 +1164,8 @@
                                 offsetY: 4,
                                 gap: 28,
                                 variant: 'test-editor-import-branch',
-                                title: 'Применение к тесту',
-                                body: 'После проверки выберите, добавить вопросы к текущим или заменить тест целиком, затем подтвердите импорт нижней кнопкой.'
+                                title: wt('tours.test_editor_authoring.test_editor_question_structure.c4_title', 'Применение к тесту'),
+                                body: wt('tours.test_editor_authoring.test_editor_question_structure.c4_body', 'После проверки выберите, добавить вопросы к текущим или заменить тест целиком, затем подтвердите импорт нижней кнопкой.')
                             }
                         ]
                     },
@@ -1182,7 +1188,7 @@
                     readySelector: '[data-onboarding-target="test-editor-question-text"]',
                     scrollTarget: '[data-onboarding-target="test-editor-question-card"]',
                     scrollBlock: 'nearest',
-                    kicker: 'Формулировка вопроса',
+                    kicker: wt('tours.test_editor_authoring.test_editor_question_body.kicker', 'Формулировка вопроса'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="test-editor-question-text"]',
@@ -1192,8 +1198,8 @@
                             offsetY: 18,
                             gap: 24,
                             variant: 'test-editor-wide',
-                            title: 'Текст вопроса',
-                            body: 'Здесь пишется сама формулировка. Лучше делать её короткой и проверять один конкретный факт, правило или различие.'
+                            title: wt('tours.test_editor_authoring.test_editor_question_body.c0_title', 'Текст вопроса'),
+                            body: wt('tours.test_editor_authoring.test_editor_question_body.c0_body', 'Здесь пишется сама формулировка. Лучше делать её короткой и проверять один конкретный факт, правило или различие.')
                         },
                         {
                             target: '[data-onboarding-target="test-editor-question-image"]',
@@ -1203,8 +1209,8 @@
                             offsetY: 18,
                             gap: 24,
                             variant: 'test-editor-compact',
-                            title: 'Изображение к вопросу',
-                            body: 'К вопросу можно прикрепить до трёх иллюстраций. Они относятся только к текущему вопросу.'
+                            title: wt('tours.test_editor_authoring.test_editor_question_body.c1_title', 'Изображение к вопросу'),
+                            body: wt('tours.test_editor_authoring.test_editor_question_body.c1_body', 'К вопросу можно прикрепить до трёх иллюстраций. Они относятся только к текущему вопросу.')
                         }
                     ]
                 },
@@ -1223,7 +1229,7 @@
                     readySelector: '[data-onboarding-target="test-editor-first-option"]',
                     scrollTarget: '[data-onboarding-target="test-editor-options-card"]',
                     scrollBlock: 'nearest',
-                    kicker: 'Варианты ответа',
+                    kicker: wt('tours.test_editor_authoring.test_editor_options.kicker', 'Варианты ответа'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="test-editor-first-option"]',
@@ -1232,8 +1238,8 @@
                             offsetY: 0,
                             gap: 76,
                             variant: 'test-editor-wide',
-                            title: 'Варианты ответа',
-                            body: 'Каждая строка — отдельный вариант ответа. Вариант может содержать текст, изображение или оба элемента сразу; кнопка справа добавляет изображение именно к этому варианту.'
+                            title: wt('tours.test_editor_authoring.test_editor_options.c0_title', 'Варианты ответа'),
+                            body: wt('tours.test_editor_authoring.test_editor_options.c0_body', 'Каждая строка — отдельный вариант ответа. Вариант может содержать текст, изображение или оба элемента сразу; кнопка справа добавляет изображение именно к этому варианту.')
                         },
                         {
                             target: '[data-onboarding-target="test-editor-correct-toggle"]',
@@ -1242,8 +1248,8 @@
                             offsetY: 4,
                             gap: 84,
                             variant: 'test-editor-compact',
-                            title: 'Правильный ответ',
-                            body: 'Нажатие на букву варианта делает его правильным или снимает отметку. Если отметить несколько букв, вопрос автоматически становится вопросом с несколькими правильными ответами.'
+                            title: wt('tours.test_editor_authoring.test_editor_options.c1_title', 'Правильный ответ'),
+                            body: wt('tours.test_editor_authoring.test_editor_options.c1_body', 'Нажатие на букву варианта делает его правильным или снимает отметку. Если отметить несколько букв, вопрос автоматически становится вопросом с несколькими правильными ответами.')
                         },
                         {
                             target: '[data-onboarding-target="test-editor-add-option"]',
@@ -1252,8 +1258,8 @@
                             offsetY: 8,
                             gap: 20,
                             variant: 'test-editor-compact',
-                            title: 'Добавить вариант',
-                            body: 'Эта кнопка добавляет ещё один вариант ответа к текущему вопросу.'
+                            title: wt('tours.test_editor_authoring.test_editor_options.c2_title', 'Добавить вариант'),
+                            body: wt('tours.test_editor_authoring.test_editor_options.c2_body', 'Эта кнопка добавляет ещё один вариант ответа к текущему вопросу.')
                         },
                         {
                             target: '[data-onboarding-target="test-editor-image-bank"]',
@@ -1262,8 +1268,8 @@
                             offsetY: 0,
                             gap: 18,
                             variant: 'test-editor-compact',
-                            title: 'Банк изображений',
-                            body: 'Здесь собраны изображения задания. Уже загруженную картинку можно повторно использовать в других вопросах и вариантах.'
+                            title: wt('tours.test_editor_authoring.test_editor_options.c3_title', 'Банк изображений'),
+                            body: wt('tours.test_editor_authoring.test_editor_options.c3_body', 'Здесь собраны изображения задания. Уже загруженную картинку можно повторно использовать в других вопросах и вариантах.')
                         }
                     ]
                 },
@@ -1279,7 +1285,7 @@
                     readySelector: '[data-onboarding-target="test-editor-answer-type"]',
                     scrollTarget: '[data-onboarding-target="test-editor-answer-type"]',
                     scrollBlock: 'center',
-                    kicker: 'Инспектор вопроса',
+                    kicker: wt('tours.test_editor_authoring.test_editor_inspector.kicker', 'Инспектор вопроса'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="test-editor-answer-type"]',
@@ -1288,8 +1294,8 @@
                             offsetY: 0,
                             gap: 28,
                             variant: 'test-editor-compact',
-                            title: 'Тип ответа',
-                            body: 'Определяется автоматически: один правильный вариант — одиночный выбор, несколько — множественный.'
+                            title: wt('tours.test_editor_authoring.test_editor_inspector.c0_title', 'Тип ответа'),
+                            body: wt('tours.test_editor_authoring.test_editor_inspector.c0_body', 'Определяется автоматически: один правильный вариант — одиночный выбор, несколько — множественный.')
                         },
                         {
                             target: '[data-onboarding-target="test-editor-feedback"]',
@@ -1298,8 +1304,8 @@
                             offsetY: 0,
                             gap: 28,
                             variant: 'test-editor-compact',
-                            title: 'Обратная связь',
-                            body: 'Комментарий показывается после ответа и помогает объяснить, почему ответ верный.'
+                            title: wt('tours.test_editor_authoring.test_editor_inspector.c1_title', 'Обратная связь'),
+                            body: wt('tours.test_editor_authoring.test_editor_inspector.c1_body', 'Комментарий показывается после ответа и помогает объяснить, почему ответ верный.')
                         }
                     ],
                     calloutVariants: {
@@ -1311,8 +1317,8 @@
                                 offsetY: 0,
                                 gap: 30,
                                 variant: 'test-editor-compact',
-                                title: 'Тип ответа',
-                                body: 'Один правильный вариант — одиночный выбор, несколько — множественный.'
+                                title: wt('tours.test_editor_authoring.test_editor_inspector.c2_title', 'Тип ответа'),
+                                body: wt('tours.test_editor_authoring.test_editor_inspector.c2_body', 'Один правильный вариант — одиночный выбор, несколько — множественный.')
                             },
                             {
                                 target: '[data-onboarding-target="test-editor-feedback"]',
@@ -1321,8 +1327,8 @@
                                 offsetY: 0,
                                 gap: 30,
                                 variant: 'test-editor-compact',
-                                title: 'Обратная связь',
-                                body: 'Комментарий показывается после ответа и объясняет, почему ответ верный.'
+                                title: wt('tours.test_editor_authoring.test_editor_inspector.c3_title', 'Обратная связь'),
+                                body: wt('tours.test_editor_authoring.test_editor_inspector.c3_body', 'Комментарий показывается после ответа и объясняет, почему ответ верный.')
                             }
                         ]
                     }
@@ -1340,7 +1346,7 @@
                     controlPlacementLocked: true,
                     readySelector: '[data-onboarding-target="test-editor-save-action"]',
                     scrollY: 0,
-                    kicker: 'Сохранение',
+                    kicker: wt('tours.test_editor_authoring.test_editor_save.kicker', 'Сохранение'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="test-editor-history-actions"]',
@@ -1360,8 +1366,8 @@
                                     startY: -6
                                 }
                             ],
-                            title: 'Отмена и повтор',
-                            body: 'Кнопки работают с историей редактора: можно откатить добавленные элементы и вернуть отменённое действие.'
+                            title: wt('tours.test_editor_authoring.test_editor_save.c0_title', 'Отмена и повтор'),
+                            body: wt('tours.test_editor_authoring.test_editor_save.c0_body', 'Кнопки работают с историей редактора: можно откатить добавленные элементы и вернуть отменённое действие.')
                         },
                         {
                             target: '[data-onboarding-target="test-editor-save-action"]',
@@ -1370,8 +1376,8 @@
                             offsetY: 14,
                             gap: 24,
                             variant: 'test-editor-save-row',
-                            title: 'Сохранить тест',
-                            body: 'Перед сохранением редактор проверит, что есть текст вопроса, минимум два варианта и хотя бы один правильный ответ.'
+                            title: wt('tours.test_editor_authoring.test_editor_save.c1_title', 'Сохранить тест'),
+                            body: wt('tours.test_editor_authoring.test_editor_save.c1_body', 'Перед сохранением редактор проверит, что есть текст вопроса, минимум два варианта и хотя бы один правильный ответ.')
                         },
                         {
                             target: '[data-onboarding-target="test-editor-save-status"]',
@@ -1391,8 +1397,8 @@
                                     startY: -6
                                 }
                             ],
-                            title: 'Статус изменений',
-                            body: 'Индикатор показывает, сохранён ли тест или есть несохранённые правки.'
+                            title: wt('tours.test_editor_authoring.test_editor_save.c2_title', 'Статус изменений'),
+                            body: wt('tours.test_editor_authoring.test_editor_save.c2_body', 'Индикатор показывает, сохранён ли тест или есть несохранённые правки.')
                         }
                     ]
                 }
@@ -1409,8 +1415,8 @@
             autoStartDelay: 900,
             totalStates: 5,
             persistControl: true,
-            title: 'Редактор открытого ответа',
-            summary: 'Как собрать задание со свободным ответом: вопрос, эталон, ключевые слова, подсказка, требования и изображения.',
+            title: wt('tours.open_answer_authoring.title', 'Редактор открытого ответа'),
+            summary: wt('tours.open_answer_authoring.summary', 'Как собрать задание со свободным ответом: вопрос, эталон, ключевые слова, подсказка, требования и изображения.'),
             steps: [
                 {
                     id: 'open-answer-header-save',
@@ -1422,7 +1428,7 @@
                     controlPlacementLocked: true,
                     readySelector: '[data-onboarding-target="open-answer-save-action"]',
                     scrollY: 0,
-                    kicker: 'Шапка редактора',
+                    kicker: wt('tours.open_answer_authoring.open_answer_header_save.kicker', 'Шапка редактора'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="open-answer-title"]',
@@ -1431,8 +1437,8 @@
                             offsetY: 16,
                             gap: 24,
                             variant: 'open-answer-compact',
-                            title: 'Название задания',
-                            body: 'В шапке видно, какое задание открыто и в каком редакторе вы работаете.'
+                            title: wt('tours.open_answer_authoring.open_answer_header_save.c0_title', 'Название задания'),
+                            body: wt('tours.open_answer_authoring.open_answer_header_save.c0_body', 'В шапке видно, какое задание открыто и в каком редакторе вы работаете.')
                         },
                         {
                             target: '[data-onboarding-target="open-answer-save-status"]',
@@ -1454,8 +1460,8 @@
                                 }
                             ],
                             variant: 'open-answer-compact',
-                            title: 'Статус изменений',
-                            body: 'Индикатор показывает, сохранены ли текущие правки.'
+                            title: wt('tours.open_answer_authoring.open_answer_header_save.c1_title', 'Статус изменений'),
+                            body: wt('tours.open_answer_authoring.open_answer_header_save.c1_body', 'Индикатор показывает, сохранены ли текущие правки.')
                         },
                         {
                             target: '[data-onboarding-target="open-answer-save-action"]',
@@ -1464,8 +1470,8 @@
                             offsetY: 14,
                             gap: 24,
                             variant: 'open-answer-compact',
-                            title: 'Сохранить',
-                            body: 'Перед сохранением редактор проверит вопрос, эталонный ответ и выбранные ключевые слова.'
+                            title: wt('tours.open_answer_authoring.open_answer_header_save.c2_title', 'Сохранить'),
+                            body: wt('tours.open_answer_authoring.open_answer_header_save.c2_body', 'Перед сохранением редактор проверит вопрос, эталонный ответ и выбранные ключевые слова.')
                         }
                     ]
                 },
@@ -1480,7 +1486,7 @@
                     readySelector: '[data-onboarding-target="open-answer-question-text"]',
                     scrollTarget: '[data-onboarding-target="open-answer-question-block"]',
                     scrollBlock: 'center',
-                    kicker: 'Формулировка',
+                    kicker: wt('tours.open_answer_authoring.open_answer_question.kicker', 'Формулировка'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="open-answer-question-block"]',
@@ -1489,8 +1495,8 @@
                             offsetY: 16,
                             gap: 22,
                             variant: 'open-answer-wide',
-                            title: 'Вопрос',
-                            body: 'Здесь формулируется задача для ответа своими словами. Делайте вопрос так, чтобы в эталоне можно было выделить один или несколько обязательных смысловых признаков: именно выбранные ключевые слова затем проверяются в ответе.'
+                            title: wt('tours.open_answer_authoring.open_answer_question.c0_title', 'Вопрос'),
+                            body: wt('tours.open_answer_authoring.open_answer_question.c0_body', 'Здесь формулируется задача для ответа своими словами. Делайте вопрос так, чтобы в эталоне можно было выделить один или несколько обязательных смысловых признаков: именно выбранные ключевые слова затем проверяются в ответе.')
                         }
                     ]
                 },
@@ -1505,7 +1511,7 @@
                     readySelector: '[data-onboarding-target="open-answer-reference-text"]',
                     scrollTarget: '[data-onboarding-target="open-answer-reference-block"]',
                     scrollBlock: 'center',
-                    kicker: 'Эталон',
+                    kicker: wt('tours.open_answer_authoring.open_answer_reference.kicker', 'Эталон'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="open-answer-reference-block"]',
@@ -1514,8 +1520,8 @@
                             offsetY: 16,
                             gap: 22,
                             variant: 'open-answer-wide',
-                            title: 'Эталонный ответ',
-                            body: 'Это правильный смысловой ответ. По нему редактор подготавливает слова и фразы, которые затем можно отметить как обязательные.'
+                            title: wt('tours.open_answer_authoring.open_answer_reference.c0_title', 'Эталонный ответ'),
+                            body: wt('tours.open_answer_authoring.open_answer_reference.c0_body', 'Это правильный смысловой ответ. По нему редактор подготавливает слова и фразы, которые затем можно отметить как обязательные.')
                         },
                         {
                             target: '[data-onboarding-target="open-answer-split-keywords"]',
@@ -1524,8 +1530,8 @@
                             offsetY: 16,
                             gap: 22,
                             variant: 'open-answer-compact',
-                            title: 'Разбить на ключевые слова',
-                            body: 'Кнопка извлекает кандидаты из эталонного ответа. После этого выберите, какие из них действительно важны для проверки.'
+                            title: wt('tours.open_answer_authoring.open_answer_reference.c1_title', 'Разбить на ключевые слова'),
+                            body: wt('tours.open_answer_authoring.open_answer_reference.c1_body', 'Кнопка извлекает кандидаты из эталонного ответа. После этого выберите, какие из них действительно важны для проверки.')
                         }
                     ]
                 },
@@ -1540,7 +1546,7 @@
                     readySelector: '[data-onboarding-target="open-answer-keywords-container"]',
                     scrollTarget: '[data-onboarding-target="open-answer-keywords-hint-block"]',
                     scrollBlock: 'center',
-                    kicker: 'Проверка ответа',
+                    kicker: wt('tours.open_answer_authoring.open_answer_keywords_hint.kicker', 'Проверка ответа'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="open-answer-keywords-container"]',
@@ -1549,8 +1555,8 @@
                             offsetY: 12,
                             gap: 26,
                             variant: 'open-answer-wide',
-                            title: 'Ключевые слова',
-                            body: 'Нажатие на слово включает или выключает его как обязательное. Счётчик показывает, сколько признаков ответа выбрано для проверки.'
+                            title: wt('tours.open_answer_authoring.open_answer_keywords_hint.c0_title', 'Ключевые слова'),
+                            body: wt('tours.open_answer_authoring.open_answer_keywords_hint.c0_body', 'Нажатие на слово включает или выключает его как обязательное. Счётчик показывает, сколько признаков ответа выбрано для проверки.')
                         },
                         {
                             target: '[data-onboarding-target="open-answer-hint-block"]',
@@ -1572,8 +1578,8 @@
                                 }
                             ],
                             variant: 'open-answer-compact',
-                            title: 'Подсказка',
-                            body: 'Подсказка необязательна. Она помогает пользователю вспомнить направление ответа, не раскрывая полностью эталон.'
+                            title: wt('tours.open_answer_authoring.open_answer_keywords_hint.c1_title', 'Подсказка'),
+                            body: wt('tours.open_answer_authoring.open_answer_keywords_hint.c1_body', 'Подсказка необязательна. Она помогает пользователю вспомнить направление ответа, не раскрывая полностью эталон.')
                         }
                     ]
                 },
@@ -1589,7 +1595,7 @@
                     skipAutoScroll: true,
                     scrollTarget: '[data-onboarding-target="open-answer-sidebar"]',
                     scrollBlock: 'center',
-                    kicker: 'Дополнительные условия',
+                    kicker: wt('tours.open_answer_authoring.open_answer_sidebar.kicker', 'Дополнительные условия'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="open-answer-requirements"]',
@@ -1598,8 +1604,8 @@
                             offsetY: -8,
                             gap: 30,
                             variant: 'open-answer-compact',
-                            title: 'Требования к ответу',
-                            body: 'Можно требовать порядок ключевых слов и ограничить максимальную длину ответа. Если лимит задан, в тренажёре появится ограничение ввода.'
+                            title: wt('tours.open_answer_authoring.open_answer_sidebar.c0_title', 'Требования к ответу'),
+                            body: wt('tours.open_answer_authoring.open_answer_sidebar.c0_body', 'Можно требовать порядок ключевых слов и ограничить максимальную длину ответа. Если лимит задан, в тренажёре появится ограничение ввода.')
                         },
                         {
                             target: '[data-onboarding-target="open-answer-images-panel"]',
@@ -1608,8 +1614,8 @@
                             offsetY: 8,
                             gap: 30,
                             variant: 'open-answer-compact',
-                            title: 'Изображения',
-                            body: 'К открытому ответу можно прикрепить до трёх изображений. Они сохраняются вместе с заданием и помогают задать контекст.'
+                            title: wt('tours.open_answer_authoring.open_answer_sidebar.c1_title', 'Изображения'),
+                            body: wt('tours.open_answer_authoring.open_answer_sidebar.c1_body', 'К открытому ответу можно прикрепить до трёх изображений. Они сохраняются вместе с заданием и помогают задать контекст.')
                         }
                     ]
                 }
@@ -1626,8 +1632,8 @@
             autoStartDelay: 900,
             totalStates: 6,
             persistControl: true,
-            title: 'Редактор Click',
-            summary: 'Как собрать задание, где пользователь кликом отмечает нужные области на изображении.',
+            title: wt('tours.click_editor_authoring.title', 'Редактор Click'),
+            summary: wt('tours.click_editor_authoring.summary', 'Как собрать задание, где пользователь кликом отмечает нужные области на изображении.'),
             steps: [
                 {
                     id: 'click-header-save',
@@ -1639,7 +1645,7 @@
                     controlPlacementLocked: true,
                     readySelector: '[data-onboarding-target="click-save-action"]',
                     scrollY: 0,
-                    kicker: 'Шапка редактора',
+                    kicker: wt('tours.click_editor_authoring.click_header_save.kicker', 'Шапка редактора'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="click-title"]',
@@ -1661,8 +1667,8 @@
                                 }
                             ],
                             variant: 'click-header-row',
-                            title: 'Название задания',
-                            body: 'В шапке видно, какое Click-задание открыто для редактирования.'
+                            title: wt('tours.click_editor_authoring.click_header_save.c0_title', 'Название задания'),
+                            body: wt('tours.click_editor_authoring.click_header_save.c0_body', 'В шапке видно, какое Click-задание открыто для редактирования.')
                         },
                         {
                             target: '[data-onboarding-target="click-mode-switch"]',
@@ -1674,8 +1680,8 @@
                             offsetY: 14,
                             gap: 22,
                             variant: 'click-header-row',
-                            title: 'Режим задания',
-                            body: 'Режим Click используется для разметки областей на изображении. Режим ошибок открывает отдельный сценарий проверки текста.'
+                            title: wt('tours.click_editor_authoring.click_header_save.c1_title', 'Режим задания'),
+                            body: wt('tours.click_editor_authoring.click_header_save.c1_body', 'Режим Click используется для разметки областей на изображении. Режим ошибок открывает отдельный сценарий проверки текста.')
                         },
                         {
                             target: '[data-onboarding-target="click-save-action"]',
@@ -1687,8 +1693,8 @@
                             offsetY: 14,
                             gap: 22,
                             variant: 'click-header-row',
-                            title: 'Сохранить',
-                            body: 'Перед сохранением редактор проверит изображение, формулировку и количество нужных контуров.'
+                            title: wt('tours.click_editor_authoring.click_header_save.c2_title', 'Сохранить'),
+                            body: wt('tours.click_editor_authoring.click_header_save.c2_body', 'Перед сохранением редактор проверит изображение, формулировку и количество нужных контуров.')
                         }
                     ]
                 },
@@ -1702,7 +1708,7 @@
                     controlPlacementLocked: true,
                     readySelector: '[data-onboarding-target="click-prompt"]',
                     skipAutoScroll: true,
-                    kicker: 'Условие задания',
+                    kicker: wt('tours.click_editor_authoring.click_prompt_rules.kicker', 'Условие задания'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="click-prompt"]',
@@ -1711,8 +1717,8 @@
                             offsetY: 4,
                             gap: 30,
                             variant: 'click-wide',
-                            title: 'Формулировка',
-                            body: 'Здесь пишется инструкция для пользователя: что именно нужно найти и отметить на изображении.'
+                            title: wt('tours.click_editor_authoring.click_prompt_rules.c0_title', 'Формулировка'),
+                            body: wt('tours.click_editor_authoring.click_prompt_rules.c0_body', 'Здесь пишется инструкция для пользователя: что именно нужно найти и отметить на изображении.')
                         },
                         {
                             target: '[data-onboarding-target="click-required-correct"]',
@@ -1721,8 +1727,8 @@
                             offsetY: 8,
                             gap: 30,
                             variant: 'click-compact',
-                            title: 'Критерий успеха',
-                            body: 'Поле задаёт, сколько правильных областей пользователь должен отметить, чтобы ответ был засчитан.'
+                            title: wt('tours.click_editor_authoring.click_prompt_rules.c1_title', 'Критерий успеха'),
+                            body: wt('tours.click_editor_authoring.click_prompt_rules.c1_body', 'Поле задаёт, сколько правильных областей пользователь должен отметить, чтобы ответ был засчитан.')
                         }
                     ]
                 },
@@ -1738,7 +1744,7 @@
                     controlPlacementLocked: true,
                     readySelector: '[data-onboarding-target="click-canvas"]',
                     skipAutoScroll: true,
-                    kicker: 'Рабочая область',
+                    kicker: wt('tours.click_editor_authoring.click_image_workspace.kicker', 'Рабочая область'),
                     callouts: [
                         {
                             target: '#canvas-stage',
@@ -1749,8 +1755,8 @@
                             keepPlacement: true,
                             skipOverlapPush: true,
                             variant: 'click-wide',
-                            title: 'Изображение',
-                            body: 'На холсте размещается изображение, по которому пользователь будет выполнять клик-задание.'
+                            title: wt('tours.click_editor_authoring.click_image_workspace.c0_title', 'Изображение'),
+                            body: wt('tours.click_editor_authoring.click_image_workspace.c0_body', 'На холсте размещается изображение, по которому пользователь будет выполнять клик-задание.')
                         },
                         {
                             target: '[data-onboarding-target="click-change-image"]',
@@ -1760,8 +1766,8 @@
                             gap: 22,
                             keepPlacement: true,
                             variant: 'click-narrow',
-                            title: 'Сменить / добавить изображение',
-                            body: 'Этой кнопкой добавляют первую картинку задания или заменяют текущую.'
+                            title: wt('tours.click_editor_authoring.click_image_workspace.c1_title', 'Сменить / добавить изображение'),
+                            body: wt('tours.click_editor_authoring.click_image_workspace.c1_body', 'Этой кнопкой добавляют первую картинку задания или заменяют текущую.')
                         },
                         {
                             target: '[data-onboarding-target="click-zoom-controls"]',
@@ -1784,8 +1790,8 @@
                                 }
                             ],
                             variant: 'click-narrow',
-                            title: 'Масштаб',
-                            body: 'Плюс и минус помогают приблизить картинку, чтобы аккуратно поставить контур.'
+                            title: wt('tours.click_editor_authoring.click_image_workspace.c2_title', 'Масштаб'),
+                            body: wt('tours.click_editor_authoring.click_image_workspace.c2_body', 'Плюс и минус помогают приблизить картинку, чтобы аккуратно поставить контур.')
                         }
                     ]
                 },
@@ -1800,7 +1806,7 @@
                     controlPlacementLocked: true,
                     readySelector: '[data-onboarding-target="click-tool-choice"]',
                     skipAutoScroll: true,
-                    kicker: 'Инструменты разметки',
+                    kicker: wt('tours.click_editor_authoring.click_drawing_tools.kicker', 'Инструменты разметки'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="click-tool-choice"]',
@@ -1809,8 +1815,8 @@
                             offsetY: 16,
                             gap: 22,
                             variant: 'click-compact',
-                            title: 'Способ разметки',
-                            body: 'Лассо строит контур по точкам, свободное рисование позволяет провести линию рукой.'
+                            title: wt('tours.click_editor_authoring.click_drawing_tools.c0_title', 'Способ разметки'),
+                            body: wt('tours.click_editor_authoring.click_drawing_tools.c0_body', 'Лассо строит контур по точкам, свободное рисование позволяет провести линию рукой.')
                         },
                         {
                             target: '[data-onboarding-target="click-polygon-actions"]',
@@ -1819,8 +1825,8 @@
                             offsetY: 16,
                             gap: 22,
                             variant: 'click-wide',
-                            title: 'Работа с контуром',
-                            body: 'Текущий контур завершают кнопкой или двойным кликом левой кнопкой мыши. Здесь же удаляют последнюю точку или отменяют незавершённую разметку.'
+                            title: wt('tours.click_editor_authoring.click_drawing_tools.c1_title', 'Работа с контуром'),
+                            body: wt('tours.click_editor_authoring.click_drawing_tools.c1_body', 'Текущий контур завершают кнопкой или двойным кликом левой кнопкой мыши. Здесь же удаляют последнюю точку или отменяют незавершённую разметку.')
                         }
                     ]
                 },
@@ -1840,7 +1846,7 @@
                     scrollBehavior: 'smooth',
                     scrollWaitMs: 360,
                     forceAutoScroll: true,
-                    kicker: 'Сопровождение задания',
+                    kicker: wt('tours.click_editor_authoring.click_annotations_manage.kicker', 'Сопровождение задания'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="click-annotations-panel"]',
@@ -1850,8 +1856,8 @@
                             gap: 30,
                             skipOverlapPush: true,
                             variant: 'click-wide',
-                            title: 'Список контуров',
-                            body: 'После разметки здесь появляются все области. Контуры можно переименовывать прямо в списке; кнопка «Подсветить» временно выделяет область на изображении, а «Подпись» управляет отображением её названия.'
+                            title: wt('tours.click_editor_authoring.click_annotations_manage.c0_title', 'Список контуров'),
+                            body: wt('tours.click_editor_authoring.click_annotations_manage.c0_body', 'После разметки здесь появляются все области. Контуры можно переименовывать прямо в списке; кнопка «Подсветить» временно выделяет область на изображении, а «Подпись» управляет отображением её названия.')
                         },
                         {
                             target: '[data-onboarding-target="click-selected-annotation"]',
@@ -1862,8 +1868,8 @@
                             keepPlacement: true,
                             skipOverlapPush: true,
                             variant: 'click-wide',
-                            title: 'Редактирование точек',
-                            body: 'При выборе контура на изображении появляются его точки, и каждую точку можно сдвинуть, чтобы аккуратно поправить границу.'
+                            title: wt('tours.click_editor_authoring.click_annotations_manage.c1_title', 'Редактирование точек'),
+                            body: wt('tours.click_editor_authoring.click_annotations_manage.c1_body', 'При выборе контура на изображении появляются его точки, и каждую точку можно сдвинуть, чтобы аккуратно поправить границу.')
                         },
                         {
                             target: '[data-onboarding-target="click-additional-materials"]',
@@ -1872,8 +1878,8 @@
                             offsetY: 8,
                             gap: 30,
                             variant: 'click-compact',
-                            title: 'Дополнительные материалы',
-                            body: 'Можно добавить текст или изображения, если для Click-задания нужен контекст.'
+                            title: wt('tours.click_editor_authoring.click_annotations_manage.c2_title', 'Дополнительные материалы'),
+                            body: wt('tours.click_editor_authoring.click_annotations_manage.c2_body', 'Можно добавить текст или изображения, если для Click-задания нужен контекст.')
                         }
                     ]
                 },
@@ -1894,7 +1900,7 @@
                     scrollWaitMs: 360,
                     scrollContainerOffsetY: -12,
                     forceAutoScroll: true,
-                    kicker: 'Финальная настройка',
+                    kicker: wt('tours.click_editor_authoring.click_difficulty_levels.kicker', 'Финальная настройка'),
                     callouts: [
                         {
                             target: '#editor-difficulty-authoring',
@@ -1904,8 +1910,8 @@
                             gap: 30,
                             skipOverlapPush: true,
                             variant: 'click-compact',
-                            title: 'Уровни сложности',
-                            body: 'В обычном комплексе 3 итерации. Уровни помогают разложить одно задание по этой траектории: от простого шага в начале к более сложному в конце.'
+                            title: wt('tours.click_editor_authoring.click_difficulty_levels.c0_title', 'Уровни сложности'),
+                            body: wt('tours.click_editor_authoring.click_difficulty_levels.c0_body', 'В обычном комплексе 3 итерации. Уровни помогают разложить одно задание по этой траектории: от простого шага в начале к более сложному в конце.')
                         },
                         {
                             target: '#editor-difficulty-authoring .difficulty-authoring__mode-card',
@@ -1916,8 +1922,8 @@
                             gap: 30,
                             skipOverlapPush: true,
                             variant: 'click-wide',
-                            title: 'Все или выборочно',
-                            body: '«Все уровни типа» оставляет задание во всех итерациях Click. «Только выбранные» ограничивает, где оно появится: например, только в ранней тренировке или только в финальной проверке.'
+                            title: wt('tours.click_editor_authoring.click_difficulty_levels.c1_title', 'Все или выборочно'),
+                            body: wt('tours.click_editor_authoring.click_difficulty_levels.c1_body', '«Все уровни типа» оставляет задание во всех итерациях Click. «Только выбранные» ограничивает, где оно появится: например, только в ранней тренировке или только в финальной проверке.')
                         },
                         {
                             target: '#editor-difficulty-authoring .difficulty-authoring__level-card',
@@ -1928,8 +1934,8 @@
                             gap: 30,
                             skipOverlapPush: true,
                             variant: 'click-wide',
-                            title: 'Что делает пользователь',
-                            body: 'L1: нажать готовую область. L2: выбрать название найденной области. L3: обвести область и ввести название.'
+                            title: wt('tours.click_editor_authoring.click_difficulty_levels.c2_title', 'Что делает пользователь'),
+                            body: wt('tours.click_editor_authoring.click_difficulty_levels.c2_body', 'L1: нажать готовую область. L2: выбрать название найденной области. L3: обвести область и ввести название.')
                         }
                     ]
                 }
@@ -1946,8 +1952,8 @@
             autoStartDelay: 900,
             totalStates: 6,
             persistControl: true,
-            title: 'Редактор «Рисование»',
-            summary: 'Как собрать задание, где пользователь сам обводит области на изображении.',
+            title: wt('tours.draw_editor_authoring.title', 'Редактор «Рисование»'),
+            summary: wt('tours.draw_editor_authoring.summary', 'Как собрать задание, где пользователь сам обводит области на изображении.'),
             steps: [
                 {
                     id: 'draw-header-save',
@@ -1959,7 +1965,7 @@
                     controlPlacementLocked: true,
                     readySelector: '[data-onboarding-target="click-save-action"]',
                     scrollY: 0,
-                    kicker: 'Шапка редактора',
+                    kicker: wt('tours.draw_editor_authoring.draw_header_save.kicker', 'Шапка редактора'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="click-title"]',
@@ -1981,8 +1987,8 @@
                                 }
                             ],
                             variant: 'click-header-row',
-                            title: 'Название задания',
-                            body: 'Здесь видно, какое задание «Рисование» открыто для редактирования.'
+                            title: wt('tours.draw_editor_authoring.draw_header_save.c0_title', 'Название задания'),
+                            body: wt('tours.draw_editor_authoring.draw_header_save.c0_body', 'Здесь видно, какое задание «Рисование» открыто для редактирования.')
                         },
                         {
                             target: '[data-onboarding-target="click-save-action"]',
@@ -1994,8 +2000,8 @@
                             offsetY: 14,
                             gap: 22,
                             variant: 'click-header-row',
-                            title: 'Сохранить',
-                            body: 'Перед сохранением редактор проверит изображение, формулировку, контуры и подписи областей.'
+                            title: wt('tours.draw_editor_authoring.draw_header_save.c1_title', 'Сохранить'),
+                            body: wt('tours.draw_editor_authoring.draw_header_save.c1_body', 'Перед сохранением редактор проверит изображение, формулировку, контуры и подписи областей.')
                         }
                     ]
                 },
@@ -2009,7 +2015,7 @@
                     controlPlacementLocked: true,
                     readySelector: '[data-onboarding-target="click-prompt"]',
                     skipAutoScroll: true,
-                    kicker: 'Условие задания',
+                    kicker: wt('tours.draw_editor_authoring.draw_prompt_rules.kicker', 'Условие задания'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="click-prompt"]',
@@ -2018,8 +2024,8 @@
                             offsetY: 4,
                             gap: 30,
                             variant: 'click-wide',
-                            title: 'Формулировка',
-                            body: 'Напишите, что пользователь должен обвести. Если подпись нужна только на отдельном уровне, укажите это отдельно, а не как обязательное действие для всех.'
+                            title: wt('tours.draw_editor_authoring.draw_prompt_rules.c0_title', 'Формулировка'),
+                            body: wt('tours.draw_editor_authoring.draw_prompt_rules.c0_body', 'Напишите, что пользователь должен обвести. Если подпись нужна только на отдельном уровне, укажите это отдельно, а не как обязательное действие для всех.')
                         },
                         {
                             target: '[data-onboarding-target="click-required-correct"]',
@@ -2028,8 +2034,8 @@
                             offsetY: 8,
                             gap: 30,
                             variant: 'click-compact',
-                            title: 'Критерий успеха',
-                            body: 'Поле задаёт, сколько правильно размеченных областей нужно для зачёта.'
+                            title: wt('tours.draw_editor_authoring.draw_prompt_rules.c1_title', 'Критерий успеха'),
+                            body: wt('tours.draw_editor_authoring.draw_prompt_rules.c1_body', 'Поле задаёт, сколько правильно размеченных областей нужно для зачёта.')
                         }
                     ]
                 },
@@ -2045,7 +2051,7 @@
                     controlPlacementLocked: true,
                     readySelector: '[data-onboarding-target="click-canvas"]',
                     skipAutoScroll: true,
-                    kicker: 'Рабочая область',
+                    kicker: wt('tours.draw_editor_authoring.draw_image_workspace.kicker', 'Рабочая область'),
                     callouts: [
                         {
                             target: '#canvas-stage',
@@ -2056,8 +2062,8 @@
                             keepPlacement: true,
                             skipOverlapPush: true,
                             variant: 'click-wide',
-                            title: 'Изображение',
-                            body: 'На этом холсте пользователь будет обводить нужные области. Чем чище изображение, тем точнее получится разметка.'
+                            title: wt('tours.draw_editor_authoring.draw_image_workspace.c0_title', 'Изображение'),
+                            body: wt('tours.draw_editor_authoring.draw_image_workspace.c0_body', 'На этом холсте пользователь будет обводить нужные области. Чем чище изображение, тем точнее получится разметка.')
                         },
                         {
                             target: '[data-onboarding-target="click-change-image"]',
@@ -2067,8 +2073,8 @@
                             gap: 22,
                             keepPlacement: true,
                             variant: 'click-narrow',
-                            title: 'Сменить изображение',
-                            body: 'Этой кнопкой добавляют основу задания или заменяют текущую картинку.'
+                            title: wt('tours.draw_editor_authoring.draw_image_workspace.c1_title', 'Сменить изображение'),
+                            body: wt('tours.draw_editor_authoring.draw_image_workspace.c1_body', 'Этой кнопкой добавляют основу задания или заменяют текущую картинку.')
                         },
                         {
                             target: '[data-onboarding-target="click-zoom-controls"]',
@@ -2091,8 +2097,8 @@
                                 }
                             ],
                             variant: 'click-narrow',
-                            title: 'Масштаб',
-                            body: 'Приближайте изображение, чтобы аккуратно попасть в границы области.'
+                            title: wt('tours.draw_editor_authoring.draw_image_workspace.c2_title', 'Масштаб'),
+                            body: wt('tours.draw_editor_authoring.draw_image_workspace.c2_body', 'Приближайте изображение, чтобы аккуратно попасть в границы области.')
                         }
                     ]
                 },
@@ -2107,7 +2113,7 @@
                     controlPlacementLocked: true,
                     readySelector: '[data-onboarding-target="click-tool-choice"]',
                     skipAutoScroll: true,
-                    kicker: 'Инструменты рисования',
+                    kicker: wt('tours.draw_editor_authoring.draw_tools.kicker', 'Инструменты рисования'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="click-tool-choice"]',
@@ -2116,8 +2122,8 @@
                             offsetY: 16,
                             gap: 22,
                             variant: 'click-compact',
-                            title: 'Способ обведения',
-                            body: 'Прямолинейное лассо ставит точки по границе. Свободное рисование ведёт контур движением мыши.'
+                            title: wt('tours.draw_editor_authoring.draw_tools.c0_title', 'Способ обведения'),
+                            body: wt('tours.draw_editor_authoring.draw_tools.c0_body', 'Прямолинейное лассо ставит точки по границе. Свободное рисование ведёт контур движением мыши.')
                         },
                         {
                             target: '[data-onboarding-target="click-polygon-actions"]',
@@ -2126,8 +2132,8 @@
                             offsetY: 16,
                             gap: 22,
                             variant: 'click-wide',
-                            title: 'Работа с контуром',
-                            body: 'Контур можно завершить, удалить последнюю точку или отменить незавершённое рисование.'
+                            title: wt('tours.draw_editor_authoring.draw_tools.c1_title', 'Работа с контуром'),
+                            body: wt('tours.draw_editor_authoring.draw_tools.c1_body', 'Контур можно завершить, удалить последнюю точку или отменить незавершённое рисование.')
                         }
                     ]
                 },
@@ -2147,7 +2153,7 @@
                     scrollBehavior: 'smooth',
                     scrollWaitMs: 360,
                     forceAutoScroll: true,
-                    kicker: 'Области и подписи',
+                    kicker: wt('tours.draw_editor_authoring.draw_regions_manage.kicker', 'Области и подписи'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="click-annotations-panel"]',
@@ -2157,8 +2163,8 @@
                             gap: 30,
                             skipOverlapPush: true,
                             variant: 'click-wide',
-                            title: 'Список областей',
-                            body: 'Каждый нарисованный контур попадает сюда. Названия можно править прямо в списке.'
+                            title: wt('tours.draw_editor_authoring.draw_regions_manage.c0_title', 'Список областей'),
+                            body: wt('tours.draw_editor_authoring.draw_regions_manage.c0_body', 'Каждый нарисованный контур попадает сюда. Названия можно править прямо в списке.')
                         },
                         {
                             target: '[data-onboarding-target="click-selected-annotation"]',
@@ -2169,8 +2175,8 @@
                             keepPlacement: true,
                             skipOverlapPush: true,
                             variant: 'click-wide',
-                            title: 'Редактирование границы',
-                            body: 'Выберите область на изображении: появятся точки контура, которые можно сдвинуть для более точной границы.'
+                            title: wt('tours.draw_editor_authoring.draw_regions_manage.c1_title', 'Редактирование границы'),
+                            body: wt('tours.draw_editor_authoring.draw_regions_manage.c1_body', 'Выберите область на изображении: появятся точки контура, которые можно сдвинуть для более точной границы.')
                         },
                         {
                             target: '[data-onboarding-target="click-additional-materials"]',
@@ -2179,8 +2185,8 @@
                             offsetY: 8,
                             gap: 30,
                             variant: 'click-compact',
-                            title: 'Дополнительные материалы',
-                            body: 'Здесь можно оставить контекст для автора: текст или изображение-подсказку.'
+                            title: wt('tours.draw_editor_authoring.draw_regions_manage.c2_title', 'Дополнительные материалы'),
+                            body: wt('tours.draw_editor_authoring.draw_regions_manage.c2_body', 'Здесь можно оставить контекст для автора: текст или изображение-подсказку.')
                         }
                     ]
                 },
@@ -2201,7 +2207,7 @@
                     scrollWaitMs: 360,
                     scrollContainerOffsetY: -12,
                     forceAutoScroll: true,
-                    kicker: 'Финальная настройка',
+                    kicker: wt('tours.draw_editor_authoring.draw_difficulty_levels.kicker', 'Финальная настройка'),
                     callouts: [
                         {
                             target: '#editor-difficulty-authoring',
@@ -2211,8 +2217,8 @@
                             gap: 30,
                             skipOverlapPush: true,
                             variant: 'click-compact',
-                            title: 'Уровни сложности',
-                            body: 'В обычном комплексе 3 итерации. Для рисования уровни помогают выбрать, где появится задание: в тренировке границ или в проверке с подписью.'
+                            title: wt('tours.draw_editor_authoring.draw_difficulty_levels.c0_title', 'Уровни сложности'),
+                            body: wt('tours.draw_editor_authoring.draw_difficulty_levels.c0_body', 'В обычном комплексе 3 итерации. Для рисования уровни помогают выбрать, где появится задание: в тренировке границ или в проверке с подписью.')
                         },
                         {
                             target: '#editor-difficulty-authoring .difficulty-authoring__mode-card',
@@ -2223,8 +2229,8 @@
                             gap: 30,
                             skipOverlapPush: true,
                             variant: 'click-wide',
-                            title: 'Все или выборочно',
-                            body: 'Оставьте все уровни, если задание подходит для любой итерации рисования. Выберите отдельные уровни, если оно нужно только для обведения или только для обведения с названием.'
+                            title: wt('tours.draw_editor_authoring.draw_difficulty_levels.c1_title', 'Все или выборочно'),
+                            body: wt('tours.draw_editor_authoring.draw_difficulty_levels.c1_body', 'Оставьте все уровни, если задание подходит для любой итерации рисования. Выберите отдельные уровни, если оно нужно только для обведения или только для обведения с названием.')
                         },
                         {
                             target: '#editor-difficulty-authoring .difficulty-authoring__level-card',
@@ -2235,8 +2241,8 @@
                             gap: 30,
                             skipOverlapPush: true,
                             variant: 'click-wide',
-                            title: 'Что делает пользователь',
-                            body: 'L1: обвести нужную область. L2: обвести область и подписать её.'
+                            title: wt('tours.draw_editor_authoring.draw_difficulty_levels.c2_title', 'Что делает пользователь'),
+                            body: wt('tours.draw_editor_authoring.draw_difficulty_levels.c2_body', 'L1: обвести нужную область. L2: обвести область и подписать её.')
                         }
                     ]
                 }
@@ -2253,9 +2259,9 @@
             totalStates: 4,
             persistControl: true,
             returnTourId: 'click-editor-authoring',
-            returnLabel: 'К Click',
-            title: 'Режим ошибок Click',
-            summary: 'Как настроить Click-задание, где пользователь ищет ошибочные фрагменты внутри текста.',
+            returnLabel: wt('tours.click_editor_errors_authoring.returnLabel', 'К Click'),
+            title: wt('tours.click_editor_errors_authoring.title', 'Режим ошибок Click'),
+            summary: wt('tours.click_editor_errors_authoring.summary', 'Как настроить Click-задание, где пользователь ищет ошибочные фрагменты внутри текста.'),
             steps: [
                 {
                     id: 'click-errors-overview',
@@ -2273,14 +2279,14 @@
                         {
                             target: '[data-onboarding-target="click-errors-texts-mode"]',
                             startTourId: 'click-editor-errors-texts-authoring',
-                            label: 'Перейти к обучению режима «Тексты»',
+                            label: wt('tours.click_editor_errors_authoring.click_errors_overview.c0_label', 'Перейти к обучению режима «Тексты»'),
                             placement: 'right',
                             gap: 8,
                             offsetX: 0,
                             offsetY: 0
                         }
                     ],
-                    kicker: 'Режим ошибок',
+                    kicker: wt('tours.click_editor_errors_authoring.click_errors_overview.kicker', 'Режим ошибок'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="click-errors-mode-button"]',
@@ -2289,8 +2295,8 @@
                             offsetY: 18,
                             gap: 24,
                             variant: 'click-compact',
-                            title: 'Режим ошибок',
-                            body: 'Этот сценарий превращает Click-редактор в задание на поиск ошибок в тексте.'
+                            title: wt('tours.click_editor_errors_authoring.click_errors_overview.c1_title', 'Режим ошибок'),
+                            body: wt('tours.click_editor_errors_authoring.click_errors_overview.c1_body', 'Этот сценарий превращает Click-редактор в задание на поиск ошибок в тексте.')
                         },
                         {
                             target: '[data-onboarding-target="click-errors-kind-switch"]',
@@ -2299,8 +2305,8 @@
                             offsetY: 18,
                             gap: 24,
                             variant: 'click-wide',
-                            title: 'Слова и тексты',
-                            body: 'Сначала разберём режим «Слова»: пользователь ищет ошибочные фрагменты внутри одного текста. К режиму «Тексты» можно перейти после этого блока.'
+                            title: wt('tours.click_editor_errors_authoring.click_errors_overview.c2_title', 'Слова и тексты'),
+                            body: wt('tours.click_editor_errors_authoring.click_errors_overview.c2_body', 'Сначала разберём режим «Слова»: пользователь ищет ошибочные фрагменты внутри одного текста. К режиму «Тексты» можно перейти после этого блока.')
                         }
                     ]
                 },
@@ -2318,7 +2324,7 @@
                     controlPlacementLocked: true,
                     readySelector: '[data-onboarding-target="click-errors-span-list"]',
                     skipAutoScroll: true,
-                    kicker: 'Слова',
+                    kicker: wt('tours.click_editor_errors_authoring.click_errors_words_workflow.kicker', 'Слова'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="click-errors-primary-tab"], [data-onboarding-target="click-errors-reference-tab"]',
@@ -2329,8 +2335,8 @@
                             gap: 18,
                             skipOverlapPush: true,
                             variant: 'click-compact',
-                            title: 'Основной текст и референс',
-                            body: 'В «Основном тексте» размечаются ошибки. Во вкладке «Референс» хранится эталон или подсказочные фрагменты.'
+                            title: wt('tours.click_editor_errors_authoring.click_errors_words_workflow.c0_title', 'Основной текст и референс'),
+                            body: wt('tours.click_editor_errors_authoring.click_errors_words_workflow.c0_body', 'В «Основном тексте» размечаются ошибки. Во вкладке «Референс» хранится эталон или подсказочные фрагменты.')
                         },
                         {
                             target: '[data-onboarding-target="click-errors-text-card"]',
@@ -2340,8 +2346,8 @@
                             gap: 18,
                             skipOverlapPush: true,
                             variant: 'click-wide',
-                            title: 'Текст с ошибками',
-                            body: 'Здесь вводится текст, где пользователь должен найти ошибочные фрагменты.'
+                            title: wt('tours.click_editor_errors_authoring.click_errors_words_workflow.c1_title', 'Текст с ошибками'),
+                            body: wt('tours.click_editor_errors_authoring.click_errors_words_workflow.c1_body', 'Здесь вводится текст, где пользователь должен найти ошибочные фрагменты.')
                         },
                         {
                             target: '[data-onboarding-target="click-errors-add-span"]',
@@ -2353,8 +2359,8 @@
                             keepPlacement: true,
                             variant: 'click-narrow',
                             width: 220,
-                            title: 'Отметить ошибку',
-                            body: 'Выделите фрагмент текста и нажмите кнопку, чтобы сохранить его как ошибку.'
+                            title: wt('tours.click_editor_errors_authoring.click_errors_words_workflow.c2_title', 'Отметить ошибку'),
+                            body: wt('tours.click_editor_errors_authoring.click_errors_words_workflow.c2_body', 'Выделите фрагмент текста и нажмите кнопку, чтобы сохранить его как ошибку.')
                         },
                         {
                             target: '[data-onboarding-target="click-errors-span-list"]',
@@ -2364,8 +2370,8 @@
                             gap: 18,
                             skipOverlapPush: true,
                             variant: 'click-wide',
-                            title: 'Список ошибок',
-                            body: 'После отметки фрагменты попадают сюда. В списке видно каждую найденную ошибку, её подпись и действия для перехода или удаления.'
+                            title: wt('tours.click_editor_errors_authoring.click_errors_words_workflow.c3_title', 'Список ошибок'),
+                            body: wt('tours.click_editor_errors_authoring.click_errors_words_workflow.c3_body', 'После отметки фрагменты попадают сюда. В списке видно каждую найденную ошибку, её подпись и действия для перехода или удаления.')
                         }
                     ]
                 },
@@ -2380,7 +2386,7 @@
                     controlPlacementLocked: true,
                     readySelector: '[data-onboarding-target="click-errors-reference-section"]',
                     skipAutoScroll: true,
-                    kicker: 'Референс',
+                    kicker: wt('tours.click_editor_errors_authoring.click_errors_reference.kicker', 'Референс'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="click-errors-reference-title"]',
@@ -2392,8 +2398,8 @@
                             skipOverlapPush: true,
                             variant: 'click-narrow',
                             width: 210,
-                            title: 'Референс',
-                            body: 'Референс хранит эталонный текст и важные фрагменты. Его можно заполнить вручную или скопировать из основного текста, затем отметить опорные места.'
+                            title: wt('tours.click_editor_errors_authoring.click_errors_reference.c0_title', 'Референс'),
+                            body: wt('tours.click_editor_errors_authoring.click_errors_reference.c0_body', 'Референс хранит эталонный текст и важные фрагменты. Его можно заполнить вручную или скопировать из основного текста, затем отметить опорные места.')
                         }
                     ]
                 },
@@ -2413,7 +2419,7 @@
                     scrollBehavior: 'smooth',
                     scrollWaitMs: 120,
                     scrollContainerOffsetY: 34,
-                    kicker: 'Проверка и инструкция',
+                    kicker: wt('tours.click_editor_errors_authoring.click_errors_rules_instruction.kicker', 'Проверка и инструкция'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="click-errors-threshold"]',
@@ -2422,8 +2428,8 @@
                             offsetY: 12,
                             gap: 24,
                             variant: 'click-wide',
-                            title: 'Условие прохождения',
-                            body: 'Можно требовать найти все ошибки или указать минимальное количество для зачёта.'
+                            title: wt('tours.click_editor_errors_authoring.click_errors_rules_instruction.c0_title', 'Условие прохождения'),
+                            body: wt('tours.click_editor_errors_authoring.click_errors_rules_instruction.c0_body', 'Можно требовать найти все ошибки или указать минимальное количество для зачёта.')
                         },
                         {
                             target: '[data-onboarding-target="click-errors-instruction"]',
@@ -2436,8 +2442,8 @@
                             skipOverlapPush: true,
                             variant: 'click-narrow',
                             width: 250,
-                            title: 'Инструкция',
-                            body: 'Инструкция задаёт текст задания для пользователя. Если оставить её пустой, редактор подставит стандартную формулировку для поиска ошибок.'
+                            title: wt('tours.click_editor_errors_authoring.click_errors_rules_instruction.c1_title', 'Инструкция'),
+                            body: wt('tours.click_editor_errors_authoring.click_errors_rules_instruction.c1_body', 'Инструкция задаёт текст задания для пользователя. Если оставить её пустой, редактор подставит стандартную формулировку для поиска ошибок.')
                         }
                     ]
                 }
@@ -2454,9 +2460,9 @@
             totalStates: 2,
             persistControl: true,
             returnTourId: 'click-editor-authoring',
-            returnLabel: 'К Click',
-            title: 'Режим «Тексты» Click',
-            summary: 'Как настроить Click-задание, где пользователь выбирает правильный текст из вариантов.',
+            returnLabel: wt('tours.click_editor_errors_texts_authoring.returnLabel', 'К Click'),
+            title: wt('tours.click_editor_errors_texts_authoring.title', 'Режим «Тексты» Click'),
+            summary: wt('tours.click_editor_errors_texts_authoring.summary', 'Как настроить Click-задание, где пользователь выбирает правильный текст из вариантов.'),
             steps: [
                 {
                     id: 'click-errors-texts-mode',
@@ -2468,7 +2474,7 @@
                     controlPlacementLocked: true,
                     readySelector: '[data-onboarding-target="click-errors-texts-options"]',
                     skipAutoScroll: true,
-                    kicker: 'Режим «Тексты»',
+                    kicker: wt('tours.click_editor_errors_texts_authoring.click_errors_texts_mode.kicker', 'Режим «Тексты»'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="click-errors-texts-options"]',
@@ -2480,8 +2486,8 @@
                             skipOverlapPush: true,
                             variant: 'click-narrow',
                             width: 220,
-                            title: 'Варианты текстов',
-                            body: 'После переключения в «Тексты» создаются варианты текста. Один вариант отмечается правильным, остальные остаются ошибочными.'
+                            title: wt('tours.click_editor_errors_texts_authoring.click_errors_texts_mode.c0_title', 'Варианты текстов'),
+                            body: wt('tours.click_editor_errors_texts_authoring.click_errors_texts_mode.c0_body', 'После переключения в «Тексты» создаются варианты текста. Один вариант отмечается правильным, остальные остаются ошибочными.')
                         },
                         {
                             target: '[data-choice-add-option]',
@@ -2493,8 +2499,8 @@
                             skipOverlapPush: true,
                             variant: 'click-narrow',
                             width: 220,
-                            title: 'Добавить вариант',
-                            body: 'Нажмите, чтобы добавить ещё один вариант текста.'
+                            title: wt('tours.click_editor_errors_texts_authoring.click_errors_texts_mode.c1_title', 'Добавить вариант'),
+                            body: wt('tours.click_editor_errors_texts_authoring.click_errors_texts_mode.c1_body', 'Нажмите, чтобы добавить ещё один вариант текста.')
                         }
                     ]
                 },
@@ -2511,7 +2517,7 @@
                     scrollBlock: 'center',
                     scrollBehavior: 'smooth',
                     scrollWaitMs: 320,
-                    kicker: 'РРЅСЃС‚СЂСѓРєС†РёСЏ РґР»СЏ РІС‹Р±РѕСЂР°',
+                    kicker: wt('tours.click_editor_errors_texts_authoring.click_errors_texts_instruction.kicker', 'Инструкция для выбора'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="click-errors-texts-instruction"]',
@@ -2523,8 +2529,8 @@
                             skipOverlapPush: true,
                             variant: 'click-narrow',
                             width: 280,
-                            title: 'Инструкция для выбора',
-                            body: 'Эта инструкция объясняет пользователю, как выбрать верный текст. Если оставить её пустой, редактор подставит стандартную формулировку.'
+                            title: wt('tours.click_editor_errors_texts_authoring.click_errors_texts_instruction.c0_title', 'Инструкция для выбора'),
+                            body: wt('tours.click_editor_errors_texts_authoring.click_errors_texts_instruction.c0_body', 'Эта инструкция объясняет пользователю, как выбрать верный текст. Если оставить её пустой, редактор подставит стандартную формулировку.')
                         }
                     ]
                 }
@@ -2541,8 +2547,8 @@
             autoStartDelay: 900,
             totalStates: 5,
             persistControl: true,
-            title: 'Редактор последовательности',
-            summary: 'Как собрать задание, где элементы раскладываются по уровням и при необходимости упорядочиваются.',
+            title: wt('tours.sequence_editor_authoring.title', 'Редактор последовательности'),
+            summary: wt('tours.sequence_editor_authoring.summary', 'Как собрать задание, где элементы раскладываются по уровням и при необходимости упорядочиваются.'),
             steps: [
                 {
                     id: 'sequence-header-save',
@@ -2554,7 +2560,7 @@
                     controlPlacementLocked: true,
                     readySelector: '[data-onboarding-target="sequence-save-action"]',
                     scrollY: 0,
-                    kicker: 'Шапка редактора',
+                    kicker: wt('tours.sequence_editor_authoring.sequence_header_save.kicker', 'Шапка редактора'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="sequence-title"]',
@@ -2576,8 +2582,8 @@
                                 }
                             ],
                             variant: 'sequence-header-row',
-                            title: 'Название задания',
-                            body: 'В шапке видно, какая последовательность открыта для редактирования.'
+                            title: wt('tours.sequence_editor_authoring.sequence_header_save.c0_title', 'Название задания'),
+                            body: wt('tours.sequence_editor_authoring.sequence_header_save.c0_body', 'В шапке видно, какая последовательность открыта для редактирования.')
                         },
                         {
                             target: '[data-onboarding-target="sequence-history-actions"]',
@@ -2600,8 +2606,8 @@
                                 }
                             ],
                             variant: 'sequence-header-row',
-                            title: 'Отмена и повтор',
-                            body: 'Кнопки помогают откатить правки или вернуть отменённое действие при работе с уровнями и шагами.'
+                            title: wt('tours.sequence_editor_authoring.sequence_header_save.c1_title', 'Отмена и повтор'),
+                            body: wt('tours.sequence_editor_authoring.sequence_header_save.c1_body', 'Кнопки помогают откатить правки или вернуть отменённое действие при работе с уровнями и шагами.')
                         },
                         {
                             target: '[data-onboarding-target="sequence-save-action"]',
@@ -2613,8 +2619,8 @@
                             offsetY: 14,
                             gap: 22,
                             variant: 'sequence-header-row',
-                            title: 'Сохранить',
-                            body: 'Перед сохранением редактор проверит текст задания, уровни и минимум два заполненных шага.'
+                            title: wt('tours.sequence_editor_authoring.sequence_header_save.c2_title', 'Сохранить'),
+                            body: wt('tours.sequence_editor_authoring.sequence_header_save.c2_body', 'Перед сохранением редактор проверит текст задания, уровни и минимум два заполненных шага.')
                         }
                     ]
                 },
@@ -2629,7 +2635,7 @@
                     readySelector: '[data-onboarding-target="sequence-prompt-text"]',
                     scrollTarget: '[data-onboarding-target="sequence-prompt-block"]',
                     scrollBlock: 'center',
-                    kicker: 'Формулировка',
+                    kicker: wt('tours.sequence_editor_authoring.sequence_prompt.kicker', 'Формулировка'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="sequence-prompt-block"]',
@@ -2638,8 +2644,8 @@
                             offsetY: 16,
                             gap: 22,
                             variant: 'open-answer-wide',
-                            title: 'Текст задания',
-                            body: 'Здесь описывается, что пользователь должен собрать: процесс, этапы, классификацию или порядок действий.'
+                            title: wt('tours.sequence_editor_authoring.sequence_prompt.c0_title', 'Текст задания'),
+                            body: wt('tours.sequence_editor_authoring.sequence_prompt.c0_body', 'Здесь описывается, что пользователь должен собрать: процесс, этапы, классификацию или порядок действий.')
                         }
                     ]
                 },
@@ -2656,7 +2662,7 @@
                     scrollTarget: '[data-onboarding-target="sequence-add-level"]',
                     scrollBlock: 'nearest',
                     scrollContainerOffsetY: 24,
-                    kicker: 'Уровни',
+                    kicker: wt('tours.sequence_editor_authoring.sequence_levels.kicker', 'Уровни'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="sequence-first-level-title-edge"]',
@@ -2667,8 +2673,8 @@
                             skipOverlapPush: true,
                             keepPlacement: true,
                             variant: 'sequence-narrow',
-                            title: 'Название уровня',
-                            body: 'Уровень задаёт группу или этап. В тренажёре пользователь раскладывает элементы по этим уровням.'
+                            title: wt('tours.sequence_editor_authoring.sequence_levels.c0_title', 'Название уровня'),
+                            body: wt('tours.sequence_editor_authoring.sequence_levels.c0_body', 'Уровень задаёт группу или этап. В тренажёре пользователь раскладывает элементы по этим уровням.')
                         },
                         {
                             target: '[data-onboarding-target="sequence-add-level"]',
@@ -2678,8 +2684,8 @@
                             gap: 18,
                             skipOverlapPush: true,
                             variant: 'sequence-narrow',
-                            title: 'Добавить уровень',
-                            body: 'Кнопка создаёт ещё одну группу для элементов. Уровней может быть несколько, если задача требует классификации или этапов.'
+                            title: wt('tours.sequence_editor_authoring.sequence_levels.c1_title', 'Добавить уровень'),
+                            body: wt('tours.sequence_editor_authoring.sequence_levels.c1_body', 'Кнопка создаёт ещё одну группу для элементов. Уровней может быть несколько, если задача требует классификации или этапов.')
                         }
                     ]
                 },
@@ -2696,7 +2702,7 @@
                     readySelector: '[data-onboarding-target="sequence-first-step"]',
                     scrollTarget: '[data-onboarding-target="sequence-first-level"]',
                     scrollBlock: 'center',
-                    kicker: 'Шаги',
+                    kicker: wt('tours.sequence_editor_authoring.sequence_steps.kicker', 'Шаги'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="sequence-first-step"]',
@@ -2705,8 +2711,8 @@
                             offsetY: 0,
                             gap: 20,
                             variant: 'open-answer-wide',
-                            title: 'Элемент последовательности',
-                            body: 'Каждая карточка — отдельный шаг. Текст карточки сохраняется как элемент, который пользователь будет размещать в ответе.'
+                            title: wt('tours.sequence_editor_authoring.sequence_steps.c0_title', 'Элемент последовательности'),
+                            body: wt('tours.sequence_editor_authoring.sequence_steps.c0_body', 'Каждая карточка — отдельный шаг. Текст карточки сохраняется как элемент, который пользователь будет размещать в ответе.')
                         },
                         {
                             target: '[data-onboarding-target="sequence-first-step-actions"]',
@@ -2715,8 +2721,8 @@
                             offsetY: 18,
                             gap: 26,
                             variant: 'open-answer-compact',
-                            title: 'Порядок внутри уровня',
-                            body: 'Кнопки перемещают шаги влево и вправо. Если порядок внутри уровня важен, именно эта последовательность будет проверяться.'
+                            title: wt('tours.sequence_editor_authoring.sequence_steps.c1_title', 'Порядок внутри уровня'),
+                            body: wt('tours.sequence_editor_authoring.sequence_steps.c1_body', 'Кнопки перемещают шаги влево и вправо. Если порядок внутри уровня важен, именно эта последовательность будет проверяться.')
                         },
                         {
                             target: '[data-onboarding-target="sequence-first-level-add-step"]',
@@ -2725,8 +2731,8 @@
                             offsetY: 0,
                             gap: 22,
                             variant: 'open-answer-compact',
-                            title: 'Добавить шаг',
-                            body: 'Плюс добавляет новый элемент в текущий уровень. Для сохранения нужно минимум два заполненных элемента.'
+                            title: wt('tours.sequence_editor_authoring.sequence_steps.c2_title', 'Добавить шаг'),
+                            body: wt('tours.sequence_editor_authoring.sequence_steps.c2_body', 'Плюс добавляет новый элемент в текущий уровень. Для сохранения нужно минимум два заполненных элемента.')
                         }
                     ]
                 },
@@ -2740,7 +2746,7 @@
                     controlPlacementLocked: true,
                     readySelector: '[data-onboarding-target="sequence-settings-block"]',
                     skipAutoScroll: true,
-                    kicker: 'Проверка',
+                    kicker: wt('tours.sequence_editor_authoring.sequence_sidebar_settings.kicker', 'Проверка'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="sequence-logic-info"]',
@@ -2749,8 +2755,8 @@
                             offsetY: -4,
                             gap: 30,
                             variant: 'open-answer-compact',
-                            title: 'Логика проверки',
-                            body: 'Ответ оценивается по тому, попали ли элементы в нужные уровни и соблюдён ли включённый порядок.'
+                            title: wt('tours.sequence_editor_authoring.sequence_sidebar_settings.c0_title', 'Логика проверки'),
+                            body: wt('tours.sequence_editor_authoring.sequence_sidebar_settings.c0_body', 'Ответ оценивается по тому, попали ли элементы в нужные уровни и соблюдён ли включённый порядок.')
                         },
                         {
                             target: '[data-onboarding-target="sequence-settings-block"]',
@@ -2759,8 +2765,8 @@
                             offsetY: 18,
                             gap: 30,
                             variant: 'open-answer-wide',
-                            title: 'Настройки порядка',
-                            body: 'Можно отдельно включить проверку порядка шагов внутри уровня и порядка самих уровней. Подсказка ниже сразу объясняет выбранную комбинацию.'
+                            title: wt('tours.sequence_editor_authoring.sequence_sidebar_settings.c1_title', 'Настройки порядка'),
+                            body: wt('tours.sequence_editor_authoring.sequence_sidebar_settings.c1_body', 'Можно отдельно включить проверку порядка шагов внутри уровня и порядка самих уровней. Подсказка ниже сразу объясняет выбранную комбинацию.')
                         }
                     ]
                 }
@@ -2777,8 +2783,8 @@
             autoStartDelay: 900,
             totalStates: 5,
             persistControl: true,
-            title: 'Редактор заданий: рабочий центр',
-            summary: 'Как устроены модули, темы, задания, поиск, импорт и создание нового задания.',
+            title: wt('tours.editor_dashboard_authoring.title', 'Редактор заданий: рабочий центр'),
+            summary: wt('tours.editor_dashboard_authoring.summary', 'Как устроены модули, темы, задания, поиск, импорт и создание нового задания.'),
             steps: [
                 {
                     id: 'editor-dashboard-structure',
@@ -2791,7 +2797,7 @@
                     controlPlacementLocked: true,
                     readySelector: '[data-onboarding-target="editor-module-tree"]',
                     skipAutoScroll: true,
-                    kicker: 'Структура материалов',
+                    kicker: wt('tours.editor_dashboard_authoring.editor_dashboard_structure.kicker', 'Структура материалов'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="editor-task-limit-badge"]',
@@ -2799,8 +2805,8 @@
                             offsetX: 18,
                             offsetY: -50,
                             gap: 24,
-                            title: 'Лимит заданий',
-                            body: 'Счётчик показывает, сколько личных заданий уже создано. В Premium лимита нет.'
+                            title: wt('tours.editor_dashboard_authoring.editor_dashboard_structure.c0_title', 'Лимит заданий'),
+                            body: wt('tours.editor_dashboard_authoring.editor_dashboard_structure.c0_body', 'Счётчик показывает, сколько личных заданий уже создано. В Premium лимита нет.')
                         },
                         {
                             target: '[data-onboarding-target="editor-active-topic"]',
@@ -2808,8 +2814,8 @@
                             offsetX: 10,
                             offsetY: -4,
                             gap: 24,
-                            title: 'Текущий раздел',
-                            body: 'Активная тема подсвечена в дереве. Именно в неё по умолчанию попадёт новое задание.'
+                            title: wt('tours.editor_dashboard_authoring.editor_dashboard_structure.c1_title', 'Текущий раздел'),
+                            body: wt('tours.editor_dashboard_authoring.editor_dashboard_structure.c1_body', 'Активная тема подсвечена в дереве. Именно в неё по умолчанию попадёт новое задание.')
                         },
                         {
                             target: '[data-onboarding-target="editor-module-tree"]',
@@ -2817,8 +2823,8 @@
                             offsetX: 24,
                             offsetY: 66,
                             gap: 24,
-                            title: 'Модули и темы',
-                            body: 'Задания лежат внутри тем, а темы внутри модулей. Выбор темы меняет список заданий в рабочей области.'
+                            title: wt('tours.editor_dashboard_authoring.editor_dashboard_structure.c2_title', 'Модули и темы'),
+                            body: wt('tours.editor_dashboard_authoring.editor_dashboard_structure.c2_body', 'Задания лежат внутри тем, а темы внутри модулей. Выбор темы меняет список заданий в рабочей области.')
                         }
                     ]
                 },
@@ -2835,7 +2841,7 @@
                     controlPlacementLocked: true,
                     readySelector: '[data-onboarding-target="editor-new-module-action"]',
                     skipAutoScroll: true,
-                    kicker: 'Инструменты автора',
+                    kicker: wt('tours.editor_dashboard_authoring.editor_dashboard_author_tools.kicker', 'Инструменты автора'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="editor-new-module-action"]',
@@ -2846,20 +2852,20 @@
                             variant: 'action-list',
                             items: [
                                 {
-                                    title: 'Новый модуль',
-                                    body: 'Добавляет раздел курса, где затем создаются темы и задания.'
+                                    title: wt('tours.editor_dashboard_authoring.editor_dashboard_author_tools.c0_title', 'Новый модуль'),
+                                    body: wt('tours.editor_dashboard_authoring.editor_dashboard_author_tools.c0_body', 'Добавляет раздел курса, где затем создаются темы и задания.')
                                 },
                                 {
-                                    title: 'Импорт заданий',
-                                    body: 'Загружает файл, показывает список заданий и добавляет выбранные в библиотеку.'
+                                    title: wt('tours.editor_dashboard_authoring.editor_dashboard_author_tools.c0_title', 'Импорт заданий'),
+                                    body: wt('tours.editor_dashboard_authoring.editor_dashboard_author_tools.c0_body', 'Загружает файл, показывает список заданий и добавляет выбранные в библиотеку.')
                                 },
                                 {
-                                    title: 'Анализ теории',
-                                    body: 'Даёт промпт для внешнего ИИ: пользователь открывает ИИ-сервис, вставляет ответ сюда, а редактор строит учебные единицы, карту покрытия и рекомендации.'
+                                    title: wt('tours.editor_dashboard_authoring.editor_dashboard_author_tools.c0_title', 'Анализ теории'),
+                                    body: wt('tours.editor_dashboard_authoring.editor_dashboard_author_tools.c0_body', 'Даёт промпт для внешнего ИИ: пользователь открывает ИИ-сервис, вставляет ответ сюда, а редактор строит учебные единицы, карту покрытия и рекомендации.')
                                 },
                                 {
-                                    title: 'Черновики',
-                                    body: 'Показывает автосохранённые черновики заданий: открыть или удалить.'
+                                    title: wt('tours.editor_dashboard_authoring.editor_dashboard_author_tools.c0_title', 'Черновики'),
+                                    body: wt('tours.editor_dashboard_authoring.editor_dashboard_author_tools.c0_body', 'Показывает автосохранённые черновики заданий: открыть или удалить.')
                                 }
                             ],
                             extraArrows: [
@@ -2880,7 +2886,7 @@
                     controlPlacementLocked: true,
                     readySelector: '[data-onboarding-target="editor-workspace-toolbar"]',
                     skipAutoScroll: true,
-                    kicker: 'Навигация по заданиям',
+                    kicker: wt('tours.editor_dashboard_authoring.editor_dashboard_search_and_sort.kicker', 'Навигация по заданиям'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="editor-breadcrumbs"]',
@@ -2890,8 +2896,8 @@
                             offsetY: 0,
                             gap: 22,
                             variant: 'toolbar-breadcrumbs',
-                            title: 'Хлебные крошки',
-                            body: 'Верхняя строка показывает, какой модуль и тема сейчас открыты, и позволяет быстро вернуться выше.'
+                            title: wt('tours.editor_dashboard_authoring.editor_dashboard_search_and_sort.c0_title', 'Хлебные крошки'),
+                            body: wt('tours.editor_dashboard_authoring.editor_dashboard_search_and_sort.c0_body', 'Верхняя строка показывает, какой модуль и тема сейчас открыты, и позволяет быстро вернуться выше.')
                         },
                         {
                             target: '[data-onboarding-target="editor-search"]',
@@ -2902,8 +2908,8 @@
                             offsetY: 0,
                             gap: 22,
                             variant: 'toolbar-search',
-                            title: 'Поиск',
-                            body: 'Поиск помогает найти задание, модуль или файл без ручного просмотра всей структуры.'
+                            title: wt('tours.editor_dashboard_authoring.editor_dashboard_search_and_sort.c1_title', 'Поиск'),
+                            body: wt('tours.editor_dashboard_authoring.editor_dashboard_search_and_sort.c1_body', 'Поиск помогает найти задание, модуль или файл без ручного просмотра всей структуры.')
                         },
                         {
                             target: '[data-onboarding-target="editor-sort"]',
@@ -2914,8 +2920,8 @@
                             offsetY: 0,
                             gap: 22,
                             variant: 'toolbar-sort',
-                            title: 'Сортировка',
-                            body: 'Список можно упорядочить по дате изменения, алфавиту или типу задания.'
+                            title: wt('tours.editor_dashboard_authoring.editor_dashboard_search_and_sort.c2_title', 'Сортировка'),
+                            body: wt('tours.editor_dashboard_authoring.editor_dashboard_search_and_sort.c2_body', 'Список можно упорядочить по дате изменения, алфавиту или типу задания.')
                         }
                     ]
                 },
@@ -2932,7 +2938,7 @@
                     readySelector: '[data-onboarding-target="editor-existing-task-card"]',
                     scrollTarget: '[data-onboarding-target="editor-task-grid"]',
                     scrollBlock: 'nearest',
-                    kicker: 'Рабочая область',
+                    kicker: wt('tours.editor_dashboard_authoring.editor_dashboard_task_grid.kicker', 'Рабочая область'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="editor-existing-task-card"]',
@@ -2941,8 +2947,8 @@
                             offsetX: 0,
                             offsetY: 10,
                             gap: 26,
-                            title: 'Сохранённые задания',
-                            body: 'Карточки открывают созданные задания для просмотра или редактирования. Звёздочка добавляет задание в избранное.'
+                            title: wt('tours.editor_dashboard_authoring.editor_dashboard_task_grid.c0_title', 'Сохранённые задания'),
+                            body: wt('tours.editor_dashboard_authoring.editor_dashboard_task_grid.c0_body', 'Карточки открывают созданные задания для просмотра или редактирования. Звёздочка добавляет задание в избранное.')
                         },
                         {
                             target: '[data-onboarding-target="editor-create-task-card"]',
@@ -2950,8 +2956,8 @@
                             offsetX: 0,
                             offsetY: 10,
                             gap: 26,
-                            title: 'Новое задание',
-                            body: 'Эта карточка запускает создание задания в выбранной теме.'
+                            title: wt('tours.editor_dashboard_authoring.editor_dashboard_task_grid.c1_title', 'Новое задание'),
+                            body: wt('tours.editor_dashboard_authoring.editor_dashboard_task_grid.c1_body', 'Эта карточка запускает создание задания в выбранной теме.')
                         }
                     ]
                 },
@@ -2970,7 +2976,7 @@
                     controlPlacementLocked: true,
                     readySelector: '[data-onboarding-target="editor-create-task-modal"]',
                     skipAutoScroll: true,
-                    kicker: 'Создание задания',
+                    kicker: wt('tours.editor_dashboard_authoring.editor_dashboard_create_task.kicker', 'Создание задания'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="editor-create-task-context"]',
@@ -2980,8 +2986,8 @@
                             offsetY: -150,
                             gap: 30,
                             variant: 'create-task-context',
-                            title: 'Контекст задания',
-                            body: 'Перед созданием выбираются модуль, тема и понятное название, чтобы задание сразу попало в нужное место.'
+                            title: wt('tours.editor_dashboard_authoring.editor_dashboard_create_task.c0_title', 'Контекст задания'),
+                            body: wt('tours.editor_dashboard_authoring.editor_dashboard_create_task.c0_body', 'Перед созданием выбираются модуль, тема и понятное название, чтобы задание сразу попало в нужное место.')
                         },
                         {
                             target: '[data-onboarding-target="editor-create-task-type"]',
@@ -2991,8 +2997,8 @@
                             offsetY: 122,
                             gap: 30,
                             variant: 'create-task-type',
-                            title: 'Тип задания',
-                            body: 'Тип определяет, какой рабочий редактор откроется дальше: тест, клик, рисунок, последовательность или открытый ответ.'
+                            title: wt('tours.editor_dashboard_authoring.editor_dashboard_create_task.c1_title', 'Тип задания'),
+                            body: wt('tours.editor_dashboard_authoring.editor_dashboard_create_task.c1_body', 'Тип определяет, какой рабочий редактор откроется дальше: тест, клик, рисунок, последовательность или открытый ответ.')
                         },
                         {
                             target: '[data-onboarding-target="editor-create-task-submit"]',
@@ -3003,8 +3009,8 @@
                             gap: 30,
                             arrowOffsetY: 34,
                             variant: 'create-task-training',
-                            title: 'Обучение по типам',
-                            body: 'Подробные подсказки для конкретных типов заданий не запускаются принудительно. Их можно открыть из справочника или кнопки помощи внутри выбранного редактора.'
+                            title: wt('tours.editor_dashboard_authoring.editor_dashboard_create_task.c2_title', 'Обучение по типам'),
+                            body: wt('tours.editor_dashboard_authoring.editor_dashboard_create_task.c2_body', 'Подробные подсказки для конкретных типов заданий не запускаются принудительно. Их можно открыть из справочника или кнопки помощи внутри выбранного редактора.')
                         }
                     ]
                 }

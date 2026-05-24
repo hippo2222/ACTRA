@@ -2824,5 +2824,569 @@
     "forgot_reset_hint": "Set a new password for this account. The link from the email is valid for a limited time.",
     "loading_text": "Loading...",
     "scroll_top_aria": "Back to top"
+  },
+  "tours": {
+    "main_dashboard_work_contour": {
+      "title": "Home: main work flow",
+      "summary": "First introduction to the blocks through which the user starts learning.",
+      "work_contour": {
+        "kicker": "Where to start",
+        "c0_title": "Course catalogue",
+        "c0_body": "Browse open materials from other authors, pick suitable complexes or theory, and add them to your library.",
+        "c1_title": "Study complexes",
+        "c1_body": "This is the main working section: see which complexes are already in your library, and what you can start, continue, or repeat.",
+        "c2_title": "Microcards",
+        "c2_body": "Quick review mode using cards and pairs like \"term - definition\". This section is still being developed."
+      },
+      "author_tools": {
+        "kicker": "Author tools",
+        "c0_title": "Task editor",
+        "c0_body": "The task editor is where you create learning tasks: tests, clicks, open answers, and other formats for future complexes.",
+        "c1_title": "Complex editor",
+        "c1_body": "The complex editor assembles tasks into a full learning scenario: order, repetitions, linked theory, and publishing.",
+        "c2_title": "Theory centre",
+        "c2_body": "The theory centre helps store materials, link them to topics, and attach them to complexes as learning context."
+      },
+      "activity_widgets": {
+        "kicker": "After first actions",
+        "c0_body": "Calendar and statistics come alive after learning activity: your daily plan, repetitions, accuracy, dynamics, and weak spots will appear here.",
+        "c1_body": "Quick access collects the complexes the user returns to most often: pinned, recent, and active."
+      }
+    },
+    "complexes_library_navigation": {
+      "title": "Complexes: search and filtering",
+      "summary": "First introduction to the complex library: search, filters, sorting, and the current summary.",
+      "search_and_filters": {
+        "kicker": "Navigating complexes",
+        "c0_title": "Library search",
+        "c0_body": "Search helps you quickly find a complex by name, description, or a specific task inside it.",
+        "c1_title": "Filters and sorting",
+        "c1_body": "Keep only the complexes you need: authored, from catalogue, paused, or due for review. Sorting and a result summary are nearby."
+      },
+      "complex_card_actions": {
+        "kicker": "Complex card",
+        "c0_title": "Learning scenario",
+        "c0_body": "The card shows what this complex is: description, number of tasks, learning status, pause, and theory link.",
+        "c1_title": "Start or continue",
+        "c1_body": "The main button starts a new run. If the complex is already paused, it returns the user to their saved session.",
+        "c2_title": "Working actions",
+        "c2_body": "Here you can pin the complex to quick access, export it, open it for editing, or remove it from the library."
+      },
+      "complex_library_actions": {
+        "kicker": "Growing your library",
+        "c0_title": "Create a complex",
+        "c0_body": "Creating opens the complex editor where tasks are assembled into a learning path with theory, order, and publishing.",
+        "c1_title": "Import and access code",
+        "c1_body": "Import transfers a complex from a file. An access code adds a private catalogue publication directly to your library."
+      }
+    },
+    "complex_editor_authoring": {
+      "title": "Complex editor: learning scenario",
+      "summary": "How to assemble a complex from tasks, add theory, configure the study order, link tasks into chains, check readiness, and save.",
+      "complex_editor_core_info": {
+        "kicker": "Complex foundation",
+        "c0_title": "Name and description",
+        "c0_body": "This is the scenario card: the name helps find the complex in the library, and the description explains what it teaches and when to use it.",
+        "c1_title": "Editor toolbar",
+        "c1_body": "The top bar shows work status, composition readiness, publishing state, and saving of the current complex version."
+      },
+      "complex_editor_theory_context": {
+        "kicker": "Theory as context",
+        "c0_title": "Linked theory",
+        "c0_body": "A complex can inherit theory from topics, attach existing material, or create a separate text. This gives the learner context for tasks.",
+        "c1_title": "Theory source",
+        "c1_body": "Choose where to take the theory from: the complex's topics, existing material, or a new text created inside the editor.",
+        "c2_title": "Theory content",
+        "c2_body": "The demo shows the new-theory option: you can set a title, format text, add images, and save everything together with the complex."
+      },
+      "complex_editor_task_selection": {
+        "kicker": "Assembling tasks",
+        "c0_title": "Tasks in the complex",
+        "c0_body": "This is where you build the working path. Order and composition matter: the complex should lead the learner from basics to consolidation.",
+        "c1_body": "In the Complexes tab you can choose an already-created complex and open it for editing.",
+        "c2_title": "Task library",
+        "c2_body": "Select tasks from your working library on the right. Search helps quickly find a module, topic, ID, or tag.",
+        "c3_title": "Add selected",
+        "c3_body": "After selecting, tasks are added to the complex. The counter shows how many items will be added in one step.",
+        "c4_label": "Show hint about test task mode",
+        "variantBackLabel": "Back to assembly",
+        "c5_title": "Together / Shuffled",
+        "c5_body": "\"Together\" means all test questions will appear consecutively. \"Shuffled\" mixes test questions among other complex tasks. If a test is in a chain, questions are forced together so the linked block stays intact."
+      },
+      "complex_editor_chains": {
+        "kicker": "Chains",
+        "c0_title": "Linked tasks",
+        "c0_body": "A chain affects more than just the editor layout: when the complex runs, these tasks enter the queue as one block, not as separate elements.",
+        "c1_title": "Order within a chain",
+        "c1_body": "The queue generator first groups the chain into a chunk, then balances the queue. So the order within the block is preserved during the session."
+      },
+      "complex_editor_readiness_and_release": {
+        "kicker": "Readiness and release",
+        "c0_title": "Composition readiness",
+        "c0_body": "The indicator checks whether there are enough tasks, types, and structure for a normal run. It is a quick check before saving.",
+        "c1_title": "Publishing",
+        "c1_body": "Publishing makes the complex available via the catalogue or a chosen access mode. The draft can continue to be edited separately.",
+        "c2_title": "Save",
+        "c2_body": "Saving locks in the current editor version: name, theory, selected tasks, order, and chains."
+      }
+    },
+    "calendar_daily_plan": {
+      "title": "Calendar: learning plan",
+      "summary": "How to read the daily plan, schedule, activity, and memory health.",
+      "calendar_today_plan": {
+        "kicker": "What to do today",
+        "c0_body": "A short selection of reviews: mistakes, weak spots, and material that is due for a refresh.",
+        "c1_title": "Day focus",
+        "c1_body": "The main complex for today. It helps avoid manually choosing what to study next.",
+        "c2_title": "Time limit",
+        "c2_body": "The plan adapts to available minutes and does not suggest more than you can realistically complete."
+      },
+      "calendar_rhythm": {
+        "kicker": "Weekly rhythm",
+        "c0_title": "Upcoming days",
+        "c0_body": "The feed shows where repetitions are scheduled and how many learning actions are planned for the week.",
+        "c1_title": "Activity",
+        "c1_body": "The heat map quickly shows regularity: where the pace was kept and where gaps appeared."
+      },
+      "calendar_memory_health": {
+        "kicker": "What is slipping",
+        "c0_title": "Review signal",
+        "c0_body": "If a complex is slipping, the calendar immediately shows what is best to refresh today.",
+        "c1_title": "Memory health",
+        "c1_body": "See which complexes are holding strong and which should be repeated first."
+      }
+    },
+    "statistics_learning_signals": {
+      "title": "Statistics: learning signals",
+      "summary": "How to read general metrics and distinguish useful learning signals from reference numbers.",
+      "statistics_overall_metrics": {
+        "kicker": "Overall metrics",
+        "c0_title": "How much is done",
+        "c0_body": "See how many tasks have been mastered and how much time has been spent on learning. This is overall progress, but it alone does not tell you what to study next.",
+        "c1_title": "How the rhythm holds",
+        "c1_body": "Cards show the accuracy of short reviews, and the streak shows whether you have been studying regularly. These metrics help identify where material should be refreshed."
+      },
+      "statistics_time_dynamics": {
+        "kicker": "Time dynamics",
+        "c0_title": "Daily rhythm",
+        "c0_body": "The chart shows which days had learning activity. Focus on regularity, not just the tallest bar.",
+        "c1_title": "Chart toggles",
+        "c1_body": "Choose what to view: time or activity, then compare a period of 7, 30, or 90 days."
+      },
+      "statistics_performance_and_complexes": {
+        "kicker": "Detailed statistics",
+        "c0_title": "Performance",
+        "c0_body": "See which task types feel easier or harder. A low percentage suggests this format is worth more practice.",
+        "c1_title": "Recent complexes",
+        "c1_body": "View recent complex completions. This makes it easier to see what has been reinforced and what deserves a revisit."
+      }
+    },
+    "catalog_discovery_library": {
+      "title": "Catalogue: searching and selecting materials",
+      "summary": "How to find a publication, sort results, evaluate details, and add suitable material to your library.",
+      "catalog_search_and_filters": {
+        "kicker": "Search, filters and order",
+        "c0_title": "Catalogue search",
+        "c0_body": "Enter a name, topic, or author. Search narrows results without changing section: handy for quickly checking whether ready material exists for the current task.",
+        "c1_title": "Content type",
+        "c1_body": "Filters separate all publications, complexes, theories, and already-saved materials. This is a first coarse pass before sorting and browsing cards.",
+        "c2_title": "Sorting",
+        "c2_body": "Sorting changes the card order: newest first, alphabetically, by content type, or by volume. A nearby summary shows how many publications remain after search and filters."
+      },
+      "catalog_card_and_detail": {
+        "kicker": "Selection",
+        "c0_title": "Card and details",
+        "c0_body": "The card gives a quick overview, while the detail panel shows the composition, linked materials, and helps decide whether to save the publication.",
+        "c1_title": "Add to library",
+        "c1_body": "The catalogue does not start learning directly. First save the material: the complex will appear in complexes and the theory in the theory centre."
+      }
+    },
+    "theory_center_library": {
+      "title": "Theory centre: library and links",
+      "summary": "How to find theory, check topic and complex links, and quickly open the material you need.",
+      "theory_center_find_and_filter": {
+        "kicker": "Search and slices",
+        "c0_title": "Quick selections",
+        "c0_body": "The top block collects problem and useful slices: topics without theory, complexes with one theory, selections, and unlinked materials.",
+        "c1_title": "Centre search",
+        "c1_body": "Search works on topic, complex, and theory names. It is the fastest way to check whether the material you need already exists.",
+        "c2_title": "Sections and filters",
+        "c2_body": "Toggles change the result type: all theories, topics, complexes, unlinked materials, and theories with a title only."
+      },
+      "theory_center_card_and_actions": {
+        "kicker": "Theory card",
+        "c0_title": "Links and status",
+        "c0_body": "The card shows the author, catalogue publication, links to topics and complexes, and the last updated date.",
+        "c1_title": "Open material",
+        "c1_body": "The button opens the theory: your own materials open in the editor, while other authors' theories from the catalogue open in view mode."
+      }
+    },
+    "theory_editor_authoring": {
+      "title": "Theory editor: creating material",
+      "summary": "How to select theory, format text, add images, save, and prepare material for publishing.",
+      "theory_editor_library_and_title": {
+        "kicker": "Selecting material",
+        "c0_title": "Theory library",
+        "c0_body": "Your theories are listed on the left. Quickly find material by name or ID and switch between saved theories.",
+        "c1_title": "Selected theory status",
+        "c1_body": "The top bar refers to the theory selected in the library: publication status, library limit, quick links, creating a new theory, and saving."
+      },
+      "theory_editor_body_and_text_tools": {
+        "kicker": "Theory text",
+        "c0_title": "Text tools",
+        "c0_body": "While text is selected, bold, italic, headings, lists, alignment, colour, and the add-image button are available here.",
+        "c1_title": "Text area",
+        "c1_body": "This area is where you write the main material. You can mix headings, lists, explanations, and images in the text.",
+        "c2_title": "Selected image",
+        "c2_body": "After clicking, the image receives a selection frame. Changes from the toolbar now apply to it.",
+        "c3_title": "Image tools",
+        "c3_body": "Here you can change the size, alignment, wrapping, rotation, and reflection of the image directly inside the material."
+      },
+      "theory_editor_save_and_publish": {
+        "kicker": "Saving",
+        "c0_title": "Save",
+        "c0_body": "Saving updates your personal version of the theory. If there are unsaved changes, the button is clearly highlighted.",
+        "c1_title": "Publishing",
+        "c1_body": "After saving you can manage publishing: keep the theory private, open it to everyone, or grant access by code."
+      }
+    },
+    "test_editor_authoring": {
+      "title": "Test editor: questions and answers",
+      "summary": "How to build a test: add questions, write the wording, mark correct answers, configure feedback, and save.",
+      "test_editor_question_structure": {
+        "kicker": "Test structure",
+        "variantBackLabel": "Back to 1/5",
+        "c0_title": "Question list",
+        "c0_body": "All test questions are visible on the left. The active question is open in the workspace, and an indicator shows answer readiness.",
+        "c1_title": "Add and import",
+        "c1_body": "A new question is added manually. Import opens a dialog to load questions from a file or text. Export immediately saves the current test task to a file without a separate dialog.",
+        "c2_title": "Import method",
+        "c2_body": "Choose a source at the top: a file with questions or a text template. The active tab highlights which scenario is currently open.",
+        "c3_title": "Data check",
+        "c3_body": "Shows the selected file, number of questions found, parse status, and a preview. The Choose file button starts loading.",
+        "c4_title": "Apply to test",
+        "c4_body": "After checking, choose whether to add questions to the existing ones or replace the entire test, then confirm the import with the bottom button."
+      },
+      "test_editor_question_body": {
+        "kicker": "Question wording",
+        "c0_title": "Question text",
+        "c0_body": "Write the wording here. Keep it short and check one specific fact, rule, or distinction.",
+        "c1_title": "Image for question",
+        "c1_body": "Up to three illustrations can be attached to a question. They belong only to the current question."
+      },
+      "test_editor_options": {
+        "kicker": "Answer options",
+        "c0_title": "Answer options",
+        "c0_body": "Each row is a separate answer option. An option can contain text, an image, or both; the button on the right adds an image specifically to that option.",
+        "c1_title": "Correct answer",
+        "c1_body": "Clicking the option letter marks or unmarks it as correct. Marking multiple letters automatically makes the question a multiple-correct-answer question.",
+        "c2_title": "Add option",
+        "c2_body": "This button adds another answer option to the current question.",
+        "c3_title": "Image bank",
+        "c3_body": "Task images are collected here. An already-uploaded image can be reused in other questions and options."
+      },
+      "test_editor_inspector": {
+        "kicker": "Question inspector",
+        "c0_title": "Answer type",
+        "c0_body": "Determined automatically: one correct option — single choice; multiple — multiple choice.",
+        "c1_title": "Feedback",
+        "c1_body": "The comment is shown after the answer and helps explain why it is correct.",
+        "c2_title": "Answer type",
+        "c2_body": "One correct option — single choice; multiple — multiple choice.",
+        "c3_title": "Feedback",
+        "c3_body": "The comment is shown after the answer and explains why it is correct."
+      },
+      "test_editor_save": {
+        "kicker": "Saving",
+        "c0_title": "Undo and redo",
+        "c0_body": "The buttons work with editor history: roll back added elements or restore an undone action.",
+        "c1_title": "Save test",
+        "c1_body": "Before saving, the editor will verify that there is question text, at least two options, and at least one correct answer.",
+        "c2_title": "Change status",
+        "c2_body": "The indicator shows whether the test is saved or has unsaved edits."
+      }
+    },
+    "open_answer_authoring": {
+      "title": "Open answer editor",
+      "summary": "How to build a free-answer task: question, reference answer, keywords, hint, requirements, and images.",
+      "open_answer_header_save": {
+        "kicker": "Editor header",
+        "c0_title": "Task name",
+        "c0_body": "The header shows which task is open and which editor you are working in.",
+        "c1_title": "Change status",
+        "c1_body": "The indicator shows whether the current edits are saved.",
+        "c2_title": "Save",
+        "c2_body": "Before saving, the editor will check the question, reference answer, and selected keywords."
+      },
+      "open_answer_question": {
+        "kicker": "Wording",
+        "c0_title": "Question",
+        "c0_body": "Formulate the task for a free-text answer. Write the question so that one or more required semantic features can be identified in the reference; those selected keywords will then be checked in the answer."
+      },
+      "open_answer_reference": {
+        "kicker": "Reference",
+        "c0_title": "Reference answer",
+        "c0_body": "This is the correct semantic answer. The editor uses it to prepare words and phrases that can then be marked as required.",
+        "c1_title": "Extract keywords",
+        "c1_body": "The button extracts candidates from the reference answer. Then choose which of them are truly important for checking."
+      },
+      "open_answer_keywords_hint": {
+        "kicker": "Answer check",
+        "c0_title": "Keywords",
+        "c0_body": "Clicking a word toggles it as required. The counter shows how many answer features are selected for checking.",
+        "c1_title": "Hint",
+        "c1_body": "The hint is optional. It helps the user recall the direction of the answer without fully revealing the reference."
+      },
+      "open_answer_sidebar": {
+        "kicker": "Additional conditions",
+        "c0_title": "Answer requirements",
+        "c0_body": "You can require keyword order and set a maximum answer length. If a limit is set, an input restriction appears in the trainer.",
+        "c1_title": "Images",
+        "c1_body": "Up to three images can be attached to the open answer. They are saved with the task and help set context."
+      }
+    },
+    "click_editor_authoring": {
+      "title": "Click editor",
+      "summary": "How to build a task where the user clicks to mark areas on an image.",
+      "click_header_save": {
+        "kicker": "Editor header",
+        "c0_title": "Task name",
+        "c0_body": "The header shows which Click task is open for editing.",
+        "c1_title": "Task mode",
+        "c1_body": "Click mode is used to mark areas on an image. Error mode opens a separate text-checking scenario.",
+        "c2_title": "Save",
+        "c2_body": "Before saving, the editor will check the image, wording, and number of required outlines."
+      },
+      "click_prompt_rules": {
+        "kicker": "Task condition",
+        "c0_title": "Wording",
+        "c0_body": "Write the instruction for the user: exactly what to find and mark on the image.",
+        "c1_title": "Success criterion",
+        "c1_body": "The field sets how many correct areas the user must mark for the answer to count."
+      },
+      "click_image_workspace": {
+        "kicker": "Workspace",
+        "c0_title": "Image",
+        "c0_body": "The canvas holds the image on which the user will perform the click task.",
+        "c1_title": "Change / add image",
+        "c1_body": "Use this button to add the task's first image or replace the current one.",
+        "c2_title": "Zoom",
+        "c2_body": "Plus and minus help zoom in to place an outline precisely."
+      },
+      "click_drawing_tools": {
+        "kicker": "Markup tools",
+        "c0_title": "Markup method",
+        "c0_body": "Lasso builds an outline point by point; freehand drawing lets you trace a line by hand.",
+        "c1_title": "Working with an outline",
+        "c1_body": "Close the current outline with the button or a double left-click. Delete the last point or cancel an unfinished markup here."
+      },
+      "click_annotations_manage": {
+        "kicker": "Task accompaniment",
+        "c0_title": "Outline list",
+        "c0_body": "All areas appear here after markup. Outlines can be renamed directly in the list; the Highlight button temporarily highlights the area on the image, and Label controls the display of its name.",
+        "c1_title": "Point editing",
+        "c1_body": "Selecting an outline on the image reveals its points; each point can be moved to fine-tune the boundary.",
+        "c2_title": "Additional materials",
+        "c2_body": "Text or images can be added if the Click task needs context."
+      },
+      "click_difficulty_levels": {
+        "kicker": "Final configuration",
+        "c0_title": "Difficulty levels",
+        "c0_body": "A standard complex has 3 iterations. Levels help distribute a single task across that path: from a simple step at the start to a harder one at the end.",
+        "c1_title": "All or selected",
+        "c1_body": "\"All levels of type\" keeps the task in every Click iteration. \"Selected only\" limits where it appears — e.g. only in early practice or only in the final check.",
+        "c2_title": "What the user does",
+        "c2_body": "L1: click a ready-made area. L2: choose the name of the found area. L3: outline the area and enter its name."
+      }
+    },
+    "draw_editor_authoring": {
+      "title": "Draw editor",
+      "summary": "How to build a task where the user traces areas on an image themselves.",
+      "draw_header_save": {
+        "kicker": "Editor header",
+        "c0_title": "Task name",
+        "c0_body": "Shows which Draw task is open for editing.",
+        "c1_title": "Save",
+        "c1_body": "Before saving, the editor will check the image, wording, outlines, and area labels."
+      },
+      "draw_prompt_rules": {
+        "kicker": "Task condition",
+        "c0_title": "Wording",
+        "c0_body": "Write what the user should trace. If a label is needed only at a specific level, specify it separately rather than as a mandatory action for all.",
+        "c1_title": "Success criterion",
+        "c1_body": "The field sets how many correctly marked areas are needed to pass."
+      },
+      "draw_image_workspace": {
+        "kicker": "Workspace",
+        "c0_title": "Image",
+        "c0_body": "The user will trace the required areas on this canvas. The cleaner the image, the more precise the markup.",
+        "c1_title": "Change image",
+        "c1_body": "Use this button to add the task's base image or replace the current one.",
+        "c2_title": "Zoom",
+        "c2_body": "Zoom in to stay precisely within the area boundary."
+      },
+      "draw_tools": {
+        "kicker": "Drawing tools",
+        "c0_title": "Tracing method",
+        "c0_body": "Straight-line lasso places points along the boundary. Freehand drawing traces the outline with mouse movement.",
+        "c1_title": "Working with an outline",
+        "c1_body": "An outline can be completed, have its last point deleted, or have an unfinished drawing cancelled."
+      },
+      "draw_regions_manage": {
+        "kicker": "Areas and labels",
+        "c0_title": "Area list",
+        "c0_body": "Every drawn outline ends up here. Names can be edited directly in the list.",
+        "c1_title": "Boundary editing",
+        "c1_body": "Select an area on the image: the outline points appear and each can be moved for a more precise boundary.",
+        "c2_title": "Additional materials",
+        "c2_body": "Leave context for the author here: text or a hint image."
+      },
+      "draw_difficulty_levels": {
+        "kicker": "Final configuration",
+        "c0_title": "Difficulty levels",
+        "c0_body": "A standard complex has 3 iterations. For drawing, levels help choose where the task appears: in boundary practice or in the labelled check.",
+        "c1_title": "All or selected",
+        "c1_body": "Keep all levels if the task suits any drawing iteration. Select specific levels if it is needed only for tracing or only for tracing with a label.",
+        "c2_title": "What the user does",
+        "c2_body": "L1: trace the required area. L2: trace the area and label it."
+      }
+    },
+    "click_editor_errors_authoring": {
+      "returnLabel": "To Click",
+      "title": "Click error mode",
+      "summary": "How to configure a Click task where the user finds erroneous fragments inside text.",
+      "click_errors_overview": {
+        "c0_label": "Go to Texts mode tutorial",
+        "kicker": "Error mode",
+        "c1_title": "Error mode",
+        "c1_body": "This scenario turns the Click editor into a task for finding errors in text.",
+        "c2_title": "Words and Texts",
+        "c2_body": "First, let's cover Words mode: the user finds erroneous fragments within a single text. Texts mode can be accessed after this block."
+      },
+      "click_errors_words_workflow": {
+        "kicker": "Words",
+        "c0_title": "Main text and reference",
+        "c0_body": "Errors are marked in the Main text. The Reference tab stores the model answer or hint fragments.",
+        "c1_title": "Text with errors",
+        "c1_body": "Enter the text where the user must find erroneous fragments.",
+        "c2_title": "Mark error",
+        "c2_body": "Select a text fragment and click the button to save it as an error.",
+        "c3_title": "Error list",
+        "c3_body": "After marking, fragments appear here. The list shows each found error, its label, and actions to navigate or delete."
+      },
+      "click_errors_reference": {
+        "kicker": "Reference",
+        "c0_title": "Reference",
+        "c0_body": "The reference stores the model text and important fragments. It can be filled manually or copied from the main text, then key passages marked."
+      },
+      "click_errors_rules_instruction": {
+        "kicker": "Check and instruction",
+        "c0_title": "Completion condition",
+        "c0_body": "You can require finding all errors or set a minimum number to pass.",
+        "c1_title": "Instruction",
+        "c1_body": "The instruction sets the task text for the user. If left empty, the editor substitutes a standard error-finding wording."
+      }
+    },
+    "click_editor_errors_texts_authoring": {
+      "returnLabel": "To Click",
+      "title": "Click Texts mode",
+      "summary": "How to configure a Click task where the user selects the correct text from options.",
+      "click_errors_texts_mode": {
+        "kicker": "Texts mode",
+        "c0_title": "Text options",
+        "c0_body": "After switching to Texts, text options are created. One option is marked correct and the rest remain incorrect.",
+        "c1_title": "Add option",
+        "c1_body": "Press to add another text option."
+      },
+      "click_errors_texts_instruction": {
+        "kicker": "Selection instruction",
+        "c0_title": "Selection instruction",
+        "c0_body": "This instruction explains to the user how to choose the correct text. If left empty, the editor substitutes a standard wording."
+      }
+    },
+    "sequence_editor_authoring": {
+      "title": "Sequence editor",
+      "summary": "How to build a task where elements are placed into levels and optionally ordered.",
+      "sequence_header_save": {
+        "kicker": "Editor header",
+        "c0_title": "Task name",
+        "c0_body": "The header shows which sequence is open for editing.",
+        "c1_title": "Undo and redo",
+        "c1_body": "Buttons help roll back edits or restore an undone action when working with levels and steps.",
+        "c2_title": "Save",
+        "c2_body": "Before saving, the editor will check the task text, levels, and at least two filled steps."
+      },
+      "sequence_prompt": {
+        "kicker": "Wording",
+        "c0_title": "Task text",
+        "c0_body": "Describe what the user should assemble: a process, stages, classification, or order of actions."
+      },
+      "sequence_levels": {
+        "kicker": "Levels",
+        "c0_title": "Level name",
+        "c0_body": "A level defines a group or stage. In the trainer, the user places elements into these levels.",
+        "c1_title": "Add level",
+        "c1_body": "The button creates another group for elements. Multiple levels are possible if the task requires classification or stages."
+      },
+      "sequence_steps": {
+        "kicker": "Steps",
+        "c0_title": "Sequence element",
+        "c0_body": "Each card is a separate step. The card text is saved as the element the user will place in their answer.",
+        "c1_title": "Order within a level",
+        "c1_body": "Buttons move steps left and right. If order within the level matters, this sequence will be checked.",
+        "c2_title": "Add step",
+        "c2_body": "Plus adds a new element to the current level. At least two filled elements are required to save."
+      },
+      "sequence_sidebar_settings": {
+        "kicker": "Checking",
+        "c0_title": "Check logic",
+        "c0_body": "The answer is evaluated based on whether elements landed in the right levels and whether the enabled order was followed.",
+        "c1_title": "Order settings",
+        "c1_body": "Step order within a level and level order can each be enabled separately. A hint below immediately explains the chosen combination."
+      }
+    },
+    "editor_dashboard_authoring": {
+      "title": "Task editor: work centre",
+      "summary": "How modules, topics, tasks, search, import, and new-task creation are organised.",
+      "editor_dashboard_structure": {
+        "kicker": "Material structure",
+        "c0_title": "Task limit",
+        "c0_body": "The counter shows how many personal tasks have been created. Premium has no limit.",
+        "c1_title": "Current section",
+        "c1_body": "The active topic is highlighted in the tree. New tasks go into it by default.",
+        "c2_title": "Modules and topics",
+        "c2_body": "Tasks live inside topics, and topics inside modules. Selecting a topic changes the task list in the workspace."
+      },
+      "editor_dashboard_author_tools": {
+        "kicker": "Author tools",
+        "c0_title": "Drafts",
+        "c0_body": "Shows auto-saved task drafts: open or delete."
+      },
+      "editor_dashboard_search_and_sort": {
+        "kicker": "Task navigation",
+        "c0_title": "Breadcrumbs",
+        "c0_body": "The top row shows which module and topic are open and lets you quickly go back up.",
+        "c1_title": "Search",
+        "c1_body": "Search helps find a task, module, or file without manually browsing the whole structure.",
+        "c2_title": "Sorting",
+        "c2_body": "The list can be ordered by date modified, alphabetically, or by task type."
+      },
+      "editor_dashboard_task_grid": {
+        "kicker": "Workspace",
+        "c0_title": "Saved tasks",
+        "c0_body": "Cards open created tasks for viewing or editing. The star adds the task to favourites.",
+        "c1_title": "New task",
+        "c1_body": "This card starts creating a task in the selected topic."
+      },
+      "editor_dashboard_create_task": {
+        "kicker": "Creating a task",
+        "c0_title": "Task context",
+        "c0_body": "Before creating, choose the module, topic, and a clear name so the task goes to the right place immediately.",
+        "c1_title": "Task type",
+        "c1_body": "The type determines which editor opens next: test, click, draw, sequence, or open answer.",
+        "c2_title": "Type tutorials",
+        "c2_body": "Detailed hints for specific task types do not launch automatically. They can be opened from the reference or the help button inside the chosen editor."
+      }
+    }
   }
 }
