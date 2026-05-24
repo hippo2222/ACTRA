@@ -1,3 +1,10 @@
+// i18n helper
+function wt(key, fallback) {
+    if (!window.i18n || typeof window.i18n.t !== 'function') return fallback;
+    var v = window.i18n.t(key);
+    return v !== key ? v : fallback;
+}
+
 /**
  * ImportManager - Manages task import workflow
  */
@@ -198,15 +205,15 @@ class ImportManager {
     getEditorFacingTaskTypeLabel(taskType) {
         const normalized = String(taskType || '').trim().toUpperCase();
         const labels = {
-            OPEN_ANSWER: 'Открытый ответ',
-            SEQUENCE: 'Последовательность',
-            TEST: 'Тест (вопросы с вариантами ответов)',
-            CLICK_TEXT: 'Клик/Ошибки (текстовый выбор)',
-            CLICK_WORDS: 'Клик/Ошибки (поиск ошибок в тексте)',
-            CLICK: 'Клик по изображению',
-            DRAW: 'Рисование на изображении',
+            OPEN_ANSWER: wt('im.k001', 'Открытый ответ'),
+            SEQUENCE: wt('im.k002', 'Последовательность'),
+            TEST: wt('im.k003', 'Тест (вопросы с вариантами ответов)'),
+            CLICK_TEXT: wt('im.k004', 'Клик/Ошибки (текстовый выбор)'),
+            CLICK_WORDS: wt('im.k005', 'Клик/Ошибки (поиск ошибок в тексте)'),
+            CLICK: wt('im.k006', 'Клик по изображению'),
+            DRAW: wt('im.k007', 'Рисование на изображении'),
         };
-        return labels[normalized] || normalized || 'Тип задания';
+        return labels[normalized] || normalized || wt('im.k008', 'Тип задания');
     }
 
     getTaskTypeForAIAgentTemplateKey(templateKey) {
@@ -225,35 +232,35 @@ class ImportManager {
         const normalized = String(status || '').trim().toLowerCase();
         const meta = {
             not_started: {
-                label: 'не начато',
+                label: wt('im.k009', 'не начато'),
                 className: 'bg-surface-1 text-text-secondary border border-border-subtle',
             },
             selected: {
-                label: 'выбрано',
+                label: wt('im.k010', 'выбрано'),
                 className: 'bg-surface-2 text-text-main border border-info-light',
             },
             draft_generated: {
-                label: 'черновик готов',
+                label: wt('im.k011', 'черновик готов'),
                 className: 'bg-surface-2 text-text-main border border-primary-light',
             },
             imported: {
-                label: 'импортировано',
+                label: wt('im.k012', 'импортировано'),
                 className: 'bg-surface-2 text-text-main border border-success-light',
             },
             manual_only: {
-                label: 'только вручную',
+                label: wt('im.k013', 'только вручную'),
                 className: 'bg-surface-2 text-text-main border border-warning-light',
             },
             manual_done: {
-                label: 'сделано вручную',
+                label: wt('im.k014', 'сделано вручную'),
                 className: 'bg-surface-2 text-text-main border border-success-light',
             },
             skipped: {
-                label: 'пропущено',
+                label: wt('im.k015', 'пропущено'),
                 className: 'bg-surface-1 text-text-disabled border border-border-subtle',
             },
             not_recommended: {
-                label: 'не рекомендуется',
+                label: wt('im.k016', 'не рекомендуется'),
                 className: 'bg-surface-1 text-text-disabled border border-border-subtle',
             },
         };
@@ -576,7 +583,7 @@ class ImportManager {
         const normalizedTaskType = String(taskType || '').trim().toUpperCase();
         const templateKey = this.getAIAgentTemplateKeyForTaskType(normalizedTaskType);
         if (!templateKey) {
-            this.showToast('Этот тип нельзя открыть через текстовый импорт. Его нужно создавать вручную в редакторе.', 'warning');
+            this.showToast(wt('im.k017', 'Этот тип нельзя открыть через текстовый импорт. Его нужно создавать вручную в редакторе.'), 'warning');
             return;
         }
         const draft = this.getManualAnalysisDraft(normalizedTaskType);
@@ -614,7 +621,7 @@ class ImportManager {
     resumeManualAnalysisSession() {
         const session = this.normalizeManualAnalysisSession(this.manualAnalysisSession);
         if (!session?.analysis?.ok) {
-            this.showToast('Сохранённая analysis session не найдена.', 'warning');
+            this.showToast(wt('im.k018', 'Сохранённая analysis session не найдена.'), 'warning');
             return;
         }
 
@@ -633,7 +640,7 @@ class ImportManager {
         this.currentStep = 2;
         this.theorySubMode = 'coverage_map';
         this.updateNavigationButtons();
-        this.showToast('Analysis session восстановлена. Можно продолжать работу по карте покрытия.', 'success');
+        this.showToast(wt('im.k019', 'Analysis session восстановлена. Можно продолжать работу по карте покрытия.'), 'success');
         this.renderTheoryAnalysisMode();
     }
 
@@ -678,7 +685,7 @@ class ImportManager {
     async archiveActiveManualAnalysisSession() {
         const session = this.normalizeManualAnalysisSession(this.manualAnalysisSession);
         if (!session?.analysis?.ok) {
-            this.showToast('Активный анализ не найден.', 'warning');
+            this.showToast(wt('im.k020', 'Активный анализ не найден.'), 'warning');
             return false;
         }
         this.upsertManualAnalysisArchiveEntry(session);
@@ -687,7 +694,7 @@ class ImportManager {
         this.parsedResult = null;
         this.aiTemplateType = 'material_analysis';
         this.theorySubMode = 'analysis';
-        this.showToast('Анализ сохранён в архив. Можно начать новый.', 'success');
+        this.showToast(wt('im.k021', 'Анализ сохранён в архив. Можно начать новый.'), 'success');
         if (this.modalPurpose === 'theory_analysis') {
             this.renderTheoryAnalysisMode();
         }
@@ -697,14 +704,14 @@ class ImportManager {
     async deleteActiveManualAnalysisSession() {
         const session = this.normalizeManualAnalysisSession(this.manualAnalysisSession);
         if (!session?.analysis?.ok) {
-            this.showToast('Активный анализ не найден.', 'warning');
+            this.showToast(wt('im.k022', 'Активный анализ не найден.'), 'warning');
             return false;
         }
         const confirmed = await this.confirmAction({
-            title: 'Удалить текущий анализ?',
-            message: 'Текущая analysis session и все локальные черновики по ней будут удалены. Уже импортированные задания в библиотеке останутся.',
-            confirmText: 'Удалить',
-            cancelText: 'Отмена',
+            title: wt('im.k023', 'Удалить текущий анализ?'),
+            message: wt('im.k024', 'Текущая analysis session и все локальные черновики по ней будут удалены. Уже импортированные задания в библиотеке останутся.'),
+            confirmText: wt('im.k025', 'Удалить'),
+            cancelText: wt('im.k026', 'Отмена'),
             variant: 'warning',
         });
         if (!confirmed) return false;
@@ -713,7 +720,7 @@ class ImportManager {
         this.parsedResult = null;
         this.aiTemplateType = 'material_analysis';
         this.theorySubMode = 'analysis';
-        this.showToast('Текущий анализ удалён.', 'success');
+        this.showToast(wt('im.k027', 'Текущий анализ удалён.'), 'success');
         if (this.modalPurpose === 'theory_analysis') {
             this.renderTheoryAnalysisMode();
         }
@@ -724,10 +731,10 @@ class ImportManager {
         const session = this.normalizeManualAnalysisSession(this.manualAnalysisSession);
         if (session?.analysis?.ok) {
             const confirmed = await this.confirmAction({
-                title: 'Начать новый анализ?',
-                message: 'Текущий активный анализ перестанет быть активным. Если его нужно сохранить, сначала отправьте его в архив.',
-                confirmText: 'Начать новый',
-                cancelText: 'Отмена',
+                title: wt('im.k028', 'Начать новый анализ?'),
+                message: wt('im.k029', 'Текущий активный анализ перестанет быть активным. Если его нужно сохранить, сначала отправьте его в архив.'),
+                confirmText: wt('im.k030', 'Начать новый'),
+                cancelText: wt('im.k031', 'Отмена'),
                 variant: 'warning',
             });
             if (!confirmed) return false;
@@ -755,7 +762,7 @@ class ImportManager {
         const entry = this.getManualAnalysisArchive().find((item) => String(item?.id || '') === String(entryId || ''));
         const session = this.normalizeManualAnalysisSession(entry?.session);
         if (!session?.analysis?.ok) {
-            this.showToast('Архивный анализ не найден.', 'warning');
+            this.showToast(wt('im.k032', 'Архивный анализ не найден.'), 'warning');
             return false;
         }
         this.manualAnalysisSession = session;
@@ -768,7 +775,7 @@ class ImportManager {
         this.aiTemplateType = 'material_analysis';
         this.currentStep = 2;
         this.theorySubMode = 'coverage_map';
-        this.showToast('Архивный анализ открыт.', 'success');
+        this.showToast(wt('im.k033', 'Архивный анализ открыт.'), 'success');
         if (this.modalPurpose === 'theory_analysis') {
             this.renderTheoryAnalysisMode();
         }
@@ -778,20 +785,20 @@ class ImportManager {
     async deleteArchivedManualAnalysisSession(entryId) {
         const entry = this.getManualAnalysisArchive().find((item) => String(item?.id || '') === String(entryId || ''));
         if (!entry) {
-            this.showToast('Архивный анализ не найден.', 'warning');
+            this.showToast(wt('im.k034', 'Архивный анализ не найден.'), 'warning');
             return false;
         }
         const confirmed = await this.confirmAction({
-            title: 'Удалить анализ из архива?',
-            message: 'Запись будет удалена из архива без возможности восстановления. Уже импортированные задания в библиотеке останутся.',
-            confirmText: 'Удалить',
-            cancelText: 'Отмена',
+            title: wt('im.k035', 'Удалить анализ из архива?'),
+            message: wt('im.k036', 'Запись будет удалена из архива без возможности восстановления. Уже импортированные задания в библиотеке останутся.'),
+            confirmText: wt('im.k037', 'Удалить'),
+            cancelText: wt('im.k038', 'Отмена'),
             variant: 'warning',
         });
         if (!confirmed) return false;
         this.manualAnalysisArchive = this.getManualAnalysisArchive().filter((item) => String(item?.id || '') !== String(entryId || ''));
         this.saveManualAnalysisArchive();
-        this.showToast('Запись удалена из архива.', 'success');
+        this.showToast(wt('im.k039', 'Запись удалена из архива.'), 'success');
         if (this.modalPurpose === 'theory_analysis') {
             this.renderTheoryAnalysisMode();
         }
@@ -874,11 +881,11 @@ class ImportManager {
         const targetUnits = ctx.targetUnits.map((unit) => {
             const description = String(unit?.description || '').trim();
             return `- #${unit.id} ${unit.title}${description ? ` — ${description}` : ''}`;
-        }).join('\n') || '- Нет выделенных образовательных единиц';
+        }).join('\n') || wt('im.k618', '- Нет выделенных образовательных единиц');
         const imported = ctx.importedSummaries.map((item) => {
             const units = item.units.length ? `; units: ${item.units.join(', ')}` : '';
             return `- ${item.label}: imported_count=${item.importedCount}${units}`;
-        }).join('\n') || '- Пока ничего не импортировано';
+        }).join('\n') || wt('im.k619', '- Пока ничего не импортировано');
         const remaining = ctx.remainingUnits.map((unit) => `- #${unit.id} ${unit.title}`).join('\n') || '- Все единицы уже покрыты хотя бы одним импортированным типом';
         const anchorsText = anchors.length ? anchors.map((item) => `- ${item}`).join('\n') : '- Нет дополнительных assessable anchors';
         const candidatesText = candidates.length ? candidates.map((item) => `- ${item}`).join('\n') : '- Нет отдельных design candidates';
@@ -951,12 +958,12 @@ ${remaining}
                     <div>
                         <div class="text-sm font-bold text-text-main">Текущий маршрут генерации</div>
                         <div class="text-xs text-text-secondary mt-1">
-                            ${this.escapeHtml(this.getEditorFacingTaskTypeLabel(ctx.taskType))} • сессия ${this.escapeHtml(ctx.session.id)}
+                            ${this.escapeHtml(this.getEditorFacingTaskTypeLabel(ctx.taskType))} • ${wt('im.k040', 'сессия')}${this.escapeHtml(ctx.session.id)}
                         </div>
                     </div>
                     <div class="text-right text-xs text-text-secondary">
-                        <div>Рекомендовано: <span class="font-bold text-text-main">${Number(recommendation?.count || 0)}</span></div>
-                        <div>Импортировано ранее: <span class="font-bold text-text-main">${Math.max(0, Number(ctx.selectedState?.imported_count || 0))}</span></div>
+                        <div>${wt('im.k041', 'Рекомендовано: <span class="font-bold text-text-main">')}${Number(recommendation?.count || 0)}</span></div>
+                        <div>${wt('im.k042', 'Импортировано ранее: <span class="font-bold text-text-main">')}${Math.max(0, Number(ctx.selectedState?.imported_count || 0))}</span></div>
                     </div>
                 </div>
                 ${recommendation?.generation_focus ? `
@@ -966,7 +973,7 @@ ${remaining}
                 ` : ''}
                 <div class="text-xs text-text-secondary">
                     <span class="font-semibold text-text-main">Целевые единицы:</span>
-                    ${this.escapeHtml(ctx.targetUnits.map((unit) => `#${unit.id} ${unit.title}`).join('; ') || 'нет')}
+                    ${this.escapeHtml(ctx.targetUnits.map((unit) => `#${unit.id} ${unit.title}`).join('; ') || wt('im.k043', 'нет'))}
                 </div>
                 ${anchors.length ? `
                     <div class="text-xs text-text-secondary">
@@ -976,7 +983,7 @@ ${remaining}
                 ` : ''}
                 <div class="text-xs text-text-secondary">
                     <span class="font-semibold text-text-main">Осталось без импорта:</span>
-                    ${this.escapeHtml(remainingUnits.map((unit) => `#${unit.id} ${unit.title}`).join('; ') || 'все единицы уже покрыты')}
+                    ${this.escapeHtml(remainingUnits.map((unit) => `#${unit.id} ${unit.title}`).join('; ') || wt('im.k044', 'все единицы уже покрыты'))}
                 </div>
             </div>
         `;
@@ -1107,10 +1114,10 @@ ${remaining}
 
         const unitRows = snapshot.rows.map((row) => {
             const statusMeta = row.status === 'covered_multi'
-                ? { label: 'покрыто 2+ типами', className: 'bg-success-lighter text-success-text border border-success-light' }
+                ? { label: wt('im.k045', 'покрыто 2+ типами'), className: 'bg-success-lighter text-success-text border border-success-light' }
                 : row.status === 'covered_once'
-                    ? { label: 'покрыто', className: 'bg-info-lighter text-info-text border border-info-light' }
-                    : { label: 'ещё не покрыто', className: 'bg-warning-lighter text-warning-text border border-warning-light' };
+                    ? { label: wt('im.k046', 'покрыто'), className: 'bg-info-lighter text-info-text border border-info-light' }
+                    : { label: wt('im.k047', 'ещё не покрыто'), className: 'bg-warning-lighter text-warning-text border border-warning-light' };
             const completed = row.completedBy.map((item) => item.label).join('; ');
             const pending = row.pendingBy.map((item) => item.label).join('; ');
             return `
@@ -1149,7 +1156,7 @@ ${remaining}
                     </div>
                 ` : `
                     <div class="rounded-lg border border-success-light bg-success-lighter p-3 text-xs text-success-text">
-                        Все образовательные единицы уже покрыты хотя бы одним импортированным или вручную завершённым типом.
+                        ${wt('im.k565', 'Все образовательные единицы уже покрыты хотя бы одним импортированным или вручную завершённым типом.')}
                     </div>
                 `}
                 <div class="space-y-2">
@@ -1161,7 +1168,7 @@ ${remaining}
 
     formatTheorySessionTimestamp(value) {
         const date = value ? new Date(value) : null;
-        if (!date || Number.isNaN(date.getTime())) return 'Без даты';
+        if (!date || Number.isNaN(date.getTime())) return wt('im.k048', 'Без даты');
         return date.toLocaleString('ru-RU', {
             day: '2-digit',
             month: '2-digit',
@@ -1173,12 +1180,12 @@ ${remaining}
 
     getManualAnalysisSessionHeadline(session) {
         const normalized = this.normalizeManualAnalysisSession(session);
-        if (!normalized) return 'Анализ без контекста';
+        if (!normalized) return wt('im.k049', 'Анализ без контекста');
         const parts = [
             normalized.module_name || normalized.module_id || '',
             normalized.topic_name || normalized.topic_id || '',
         ].filter(Boolean);
-        return parts.length ? parts.join(' / ') : 'Анализ без выбранной темы';
+        return parts.length ? parts.join(' / ') : wt('im.k050', 'Анализ без выбранной темы');
     }
 
     renderTheoryAnalysisHomeScreen() {
@@ -1201,7 +1208,7 @@ ${remaining}
                             <div class="text-xs font-semibold uppercase tracking-[0.08em] text-text-secondary">Активный анализ</div>
                             <h3 class="mt-1 text-lg font-bold text-text-main">${this.escapeHtml(this.getManualAnalysisSessionHeadline(session))}</h3>
                             <div class="mt-2 text-sm text-text-secondary">
-                                Последнее обновление: ${this.escapeHtml(this.formatTheorySessionTimestamp(session.updated_at))}
+                                ${wt('im.k051', 'Последнее обновление:')}${this.escapeHtml(this.formatTheorySessionTimestamp(session.updated_at))}
                             </div>
                             <div class="mt-1 text-sm text-text-secondary">
                                 ${this.escapeHtml(String(session.analysis?.human_summary || 'Открыт сохранённый анализ материала.'))}
@@ -1210,15 +1217,15 @@ ${remaining}
                         <div class="flex flex-wrap gap-2">
                             <button onclick="dashboard.importManager.resumeManualAnalysisSession()"
                                 class="px-4 py-2 text-sm font-semibold rounded-lg bg-primary text-primary-contrast hover:bg-primary-dark transition-colors">
-                                Продолжить
+                                ${wt('im.k052', 'Продолжить')}
                             </button>
                             <button onclick="dashboard.importManager.startFreshTheoryAnalysis()"
                                 class="px-4 py-2 text-sm font-semibold rounded-lg border border-border-subtle text-text-secondary hover:bg-bg-hover transition-colors">
-                                Новый анализ
+                                ${wt('im.k053', 'Новый анализ')}
                             </button>
                             <button onclick="dashboard.importManager.openTheoryAnalysisArchive()"
                                 class="px-4 py-2 text-sm font-semibold rounded-lg border border-border-subtle text-text-secondary hover:bg-bg-hover transition-colors">
-                                Архив (${archiveCount})
+                                ${wt('im.k054', 'Архив (')}${archiveCount})
                             </button>
                         </div>
                     </div>
@@ -1245,11 +1252,11 @@ ${remaining}
                 <div class="flex flex-wrap gap-3">
                     <button onclick="dashboard.importManager.archiveActiveManualAnalysisSession()"
                         class="px-4 py-2 text-sm font-medium rounded-lg border border-border-subtle text-text-secondary hover:bg-bg-hover transition-colors">
-                        Сохранить в архив
+                        ${wt('im.k055', 'Сохранить в архив')}
                     </button>
                     <button onclick="dashboard.importManager.deleteActiveManualAnalysisSession()"
                         class="px-4 py-2 text-sm font-medium rounded-lg border border-error-light text-error hover:bg-error-lighter transition-colors">
-                        Удалить текущий анализ
+                        ${wt('im.k056', 'Удалить текущий анализ')}
                     </button>
                 </div>
 
@@ -1266,17 +1273,17 @@ ${remaining}
                     <div>
                         <h3 class="text-lg font-bold text-text-main">Архив анализов</h3>
                         <div class="text-sm text-text-secondary mt-1">
-                            Здесь можно сохранить анализ даже без создания заданий и позже вернуться к нему.
+                            ${wt('im.k057', 'Здесь можно сохранить анализ даже без создания заданий и позже вернуться к нему.')}
                         </div>
                     </div>
                     <div class="flex flex-wrap gap-2">
                         <button onclick="dashboard.importManager.openTheoryAnalysisHome()"
                             class="px-4 py-2 text-sm font-medium rounded-lg border border-border-subtle text-text-secondary hover:bg-bg-hover transition-colors">
-                            Назад
+                            ${wt('im.k058', 'Назад')}
                         </button>
                         <button onclick="dashboard.importManager.startFreshTheoryAnalysis()"
                             class="px-4 py-2 text-sm font-semibold rounded-lg bg-primary text-primary-contrast hover:bg-primary-dark transition-colors">
-                            Новый анализ
+                            ${wt('im.k059', 'Новый анализ')}
                         </button>
                     </div>
                 </div>
@@ -1292,24 +1299,24 @@ ${remaining}
                                         <div class="min-w-0 flex-1">
                                             <div class="text-sm font-bold text-text-main">${this.escapeHtml(this.getManualAnalysisSessionHeadline(session))}</div>
                                             <div class="mt-1 text-xs text-text-secondary">
-                                                Архивирован: ${this.escapeHtml(this.formatTheorySessionTimestamp(entry.archived_at))}
+                                                ${wt('im.k060', 'Архивирован:')}${this.escapeHtml(this.formatTheorySessionTimestamp(entry.archived_at))}
                                             </div>
                                             <div class="mt-2 text-sm text-text-secondary">
                                                 ${this.escapeHtml(String(session?.analysis?.human_summary || ''))}
                                             </div>
                                             <div class="mt-2 text-xs text-text-secondary">
-                                                Единиц: <strong>${snapshot.rows.length}</strong>,
-                                                без покрытия: <strong>${snapshot.uncovered.length}</strong>
+                                                ${wt('im.k061', 'Единиц: <strong>')}${snapshot.rows.length}</strong>,
+                                                ${wt('im.k062', 'без покрытия: <strong>')}${snapshot.uncovered.length}</strong>
                                             </div>
                                         </div>
                                         <div class="flex flex-wrap gap-2">
                                             <button onclick="dashboard.importManager.restoreArchivedManualAnalysisSession('${this.escapeInlineJsString(String(entry.id))}')"
                                                 class="px-3 py-2 text-sm font-semibold rounded-lg bg-primary text-primary-contrast hover:bg-primary-dark transition-colors">
-                                                Открыть
+                                                ${wt('im.k063', 'Открыть')}
                                             </button>
                                             <button onclick="dashboard.importManager.deleteArchivedManualAnalysisSession('${this.escapeInlineJsString(String(entry.id))}')"
                                                 class="px-3 py-2 text-sm font-medium rounded-lg border border-error-light text-error hover:bg-error-lighter transition-colors">
-                                                Удалить
+                                                ${wt('im.k064', 'Удалить')}
                                             </button>
                                         </div>
                                     </div>
@@ -1321,7 +1328,7 @@ ${remaining}
                     <div class="rounded-2xl border border-border-subtle bg-surface-1 p-6 text-center">
                         <div class="text-base font-semibold text-text-main">Архив пока пуст</div>
                         <div class="mt-2 text-sm text-text-secondary">
-                            Сохраняйте полезные анализы в архив, чтобы возвращаться к ним позже даже без генерации заданий.
+                            ${wt('im.k566', 'Сохраняйте полезные анализы в архив, чтобы возвращаться к ним позже даже без генерации заданий.')}
                         </div>
                     </div>
                 `}
@@ -1343,10 +1350,10 @@ ${remaining}
 
         const unitRows = snapshot.rows.map((row) => {
             const statusMeta = row.status === 'covered_multi'
-                ? { label: 'покрыто 2+ типами', className: 'bg-surface-1 text-text-main border border-success-light' }
+                ? { label: wt('im.k065', 'покрыто 2+ типами'), className: 'bg-surface-1 text-text-main border border-success-light' }
                 : row.status === 'covered_once'
-                    ? { label: 'покрыто', className: 'bg-surface-1 text-text-main border border-info-light' }
-                    : { label: 'ещё не покрыто', className: 'bg-surface-1 text-text-main border border-warning-light' };
+                    ? { label: wt('im.k066', 'покрыто'), className: 'bg-surface-1 text-text-main border border-info-light' }
+                    : { label: wt('im.k067', 'ещё не покрыто'), className: 'bg-surface-1 text-text-main border border-warning-light' };
             const completed = row.completedBy.map((item) => item.label).join('; ');
             const pending = row.pendingBy.map((item) => item.label).join('; ');
             return `
@@ -1385,7 +1392,7 @@ ${remaining}
                     </div>
                 ` : `
                     <div class="rounded-lg border border-success-light bg-surface-2 p-3 text-xs text-text-secondary">
-                        Все образовательные единицы уже покрыты хотя бы одним импортированным или вручную завершённым типом.
+                        ${wt('im.k565', 'Все образовательные единицы уже покрыты хотя бы одним импортированным или вручную завершённым типом.')}
                     </div>
                 `}
                 <div class="space-y-2">
@@ -1397,7 +1404,7 @@ ${remaining}
 
     formatTheorySessionTimestamp(value) {
         const date = value ? new Date(value) : null;
-        if (!date || Number.isNaN(date.getTime())) return 'Без даты';
+        if (!date || Number.isNaN(date.getTime())) return wt('im.k068', 'Без даты');
         return date.toLocaleString('ru-RU', {
             day: '2-digit',
             month: '2-digit',
@@ -1409,12 +1416,12 @@ ${remaining}
 
     getManualAnalysisSessionHeadline(session) {
         const normalized = this.normalizeManualAnalysisSession(session);
-        if (!normalized) return 'Анализ без контекста';
+        if (!normalized) return wt('im.k069', 'Анализ без контекста');
         const parts = [
             normalized.module_name || normalized.module_id || '',
             normalized.topic_name || normalized.topic_id || '',
         ].filter(Boolean);
-        return parts.length ? parts.join(' / ') : 'Анализ без выбранной темы';
+        return parts.length ? parts.join(' / ') : wt('im.k070', 'Анализ без выбранной темы');
     }
 
     renderTheoryAnalysisHomeScreen() {
@@ -1437,7 +1444,7 @@ ${remaining}
                             <div class="text-xs font-semibold uppercase tracking-[0.08em] text-text-secondary">Активный анализ</div>
                             <h3 class="mt-1 text-lg font-bold text-text-main">${this.escapeHtml(this.getManualAnalysisSessionHeadline(session))}</h3>
                             <div class="mt-2 text-sm text-text-secondary">
-                                Последнее обновление: ${this.escapeHtml(this.formatTheorySessionTimestamp(session.updated_at))}
+                                ${wt('im.k071', 'Последнее обновление:')}${this.escapeHtml(this.formatTheorySessionTimestamp(session.updated_at))}
                             </div>
                             <div class="mt-1 text-sm text-text-secondary">
                                 ${this.escapeHtml(String(session.analysis?.human_summary || 'Открыт сохранённый анализ материала.'))}
@@ -1446,15 +1453,15 @@ ${remaining}
                         <div class="flex flex-wrap gap-2">
                             <button onclick="dashboard.importManager.resumeManualAnalysisSession()"
                                 class="px-4 py-2 text-sm font-semibold rounded-lg bg-primary text-primary-contrast hover:bg-primary-dark transition-colors">
-                                Продолжить
+                                ${wt('im.k072', 'Продолжить')}
                             </button>
                             <button onclick="dashboard.importManager.startFreshTheoryAnalysis()"
                                 class="px-4 py-2 text-sm font-semibold rounded-lg border border-border-subtle text-text-secondary hover:bg-bg-hover transition-colors">
-                                Новый анализ
+                                ${wt('im.k073', 'Новый анализ')}
                             </button>
                             <button onclick="dashboard.importManager.openTheoryAnalysisArchive()"
                                 class="px-4 py-2 text-sm font-semibold rounded-lg border border-border-subtle text-text-secondary hover:bg-bg-hover transition-colors">
-                                Архив (${archiveCount})
+                                ${wt('im.k074', 'Архив (')}${archiveCount})
                             </button>
                         </div>
                     </div>
@@ -1481,11 +1488,11 @@ ${remaining}
                 <div class="flex flex-wrap gap-3">
                     <button onclick="dashboard.importManager.archiveActiveManualAnalysisSession()"
                         class="px-4 py-2 text-sm font-medium rounded-lg border border-border-subtle text-text-secondary hover:bg-bg-hover transition-colors">
-                        Сохранить в архив
+                        ${wt('im.k075', 'Сохранить в архив')}
                     </button>
                     <button onclick="dashboard.importManager.deleteActiveManualAnalysisSession()"
                         class="px-4 py-2 text-sm font-medium rounded-lg border border-error-light text-error hover:bg-error-lighter transition-colors">
-                        Удалить текущий анализ
+                        ${wt('im.k076', 'Удалить текущий анализ')}
                     </button>
                 </div>
 
@@ -1502,17 +1509,17 @@ ${remaining}
                     <div>
                         <h3 class="text-lg font-bold text-text-main">Архив анализов</h3>
                         <div class="text-sm text-text-secondary mt-1">
-                            Здесь можно сохранить анализ даже без создания заданий и позже вернуться к нему.
+                            ${wt('im.k077', 'Здесь можно сохранить анализ даже без создания заданий и позже вернуться к нему.')}
                         </div>
                     </div>
                     <div class="flex flex-wrap gap-2">
                         <button onclick="dashboard.importManager.openTheoryAnalysisHome()"
                             class="px-4 py-2 text-sm font-medium rounded-lg border border-border-subtle text-text-secondary hover:bg-bg-hover transition-colors">
-                            Назад
+                            ${wt('im.k078', 'Назад')}
                         </button>
                         <button onclick="dashboard.importManager.startFreshTheoryAnalysis()"
                             class="px-4 py-2 text-sm font-semibold rounded-lg bg-primary text-primary-contrast hover:bg-primary-dark transition-colors">
-                            Новый анализ
+                            ${wt('im.k079', 'Новый анализ')}
                         </button>
                     </div>
                 </div>
@@ -1528,24 +1535,24 @@ ${remaining}
                                         <div class="min-w-0 flex-1">
                                             <div class="text-sm font-bold text-text-main">${this.escapeHtml(this.getManualAnalysisSessionHeadline(session))}</div>
                                             <div class="mt-1 text-xs text-text-secondary">
-                                                Архивирован: ${this.escapeHtml(this.formatTheorySessionTimestamp(entry.archived_at))}
+                                                ${wt('im.k080', 'Архивирован:')}${this.escapeHtml(this.formatTheorySessionTimestamp(entry.archived_at))}
                                             </div>
                                             <div class="mt-2 text-sm text-text-secondary">
                                                 ${this.escapeHtml(String(session?.analysis?.human_summary || ''))}
                                             </div>
                                             <div class="mt-2 text-xs text-text-secondary">
-                                                Единиц: <strong class="text-text-main">${snapshot.rows.length}</strong>,
-                                                без покрытия: <strong class="text-text-main">${snapshot.uncovered.length}</strong>
+                                                ${wt('im.k081', 'Единиц: <strong class="text-text-main">')}${snapshot.rows.length}</strong>,
+                                                ${wt('im.k082', 'без покрытия: <strong class="text-text-main">')}${snapshot.uncovered.length}</strong>
                                             </div>
                                         </div>
                                         <div class="flex flex-wrap gap-2">
                                             <button onclick="dashboard.importManager.restoreArchivedManualAnalysisSession('${this.escapeInlineJsString(String(entry.id))}')"
                                                 class="px-3 py-2 text-sm font-semibold rounded-lg bg-primary text-primary-contrast hover:bg-primary-dark transition-colors">
-                                                Открыть
+                                                ${wt('im.k083', 'Открыть')}
                                             </button>
                                             <button onclick="dashboard.importManager.deleteArchivedManualAnalysisSession('${this.escapeInlineJsString(String(entry.id))}')"
                                                 class="px-3 py-2 text-sm font-medium rounded-lg border border-error-light text-error hover:bg-error-lighter transition-colors">
-                                                Удалить
+                                                ${wt('im.k084', 'Удалить')}
                                             </button>
                                         </div>
                                     </div>
@@ -1557,7 +1564,7 @@ ${remaining}
                     <div class="rounded-2xl border border-border-subtle bg-surface-1 p-6 text-center">
                         <div class="text-base font-semibold text-text-main">Архив пока пуст</div>
                         <div class="mt-2 text-sm text-text-secondary">
-                            Сохраняйте полезные анализы в архив, чтобы возвращаться к ним позже даже без генерации заданий.
+                            ${wt('im.k566', 'Сохраняйте полезные анализы в архив, чтобы возвращаться к ним позже даже без генерации заданий.')}
                         </div>
                     </div>
                 `}
@@ -1744,7 +1751,7 @@ ${remaining}
         `;
     }
 
-    renderWorkspaceImportNodePreview(title, nodes = [], emptyText = 'Нет элементов.') {
+    renderWorkspaceImportNodePreview(title, nodes = [], emptyText = wt('im.k085', 'Нет элементов.')) {
         const normalizedNodes = Array.isArray(nodes) ? nodes : [];
         if (!normalizedNodes.length) {
             return `
@@ -1825,7 +1832,7 @@ ${remaining}
                         <div class="mt-4 flex flex-wrap gap-2">
                             <button type="button" onclick="dashboard.importManager.retryWorkspaceImportPreview()"
                                 class="px-4 py-2 rounded-lg bg-primary text-primary-fg text-sm font-semibold hover:bg-primary-hover transition-colors">
-                                Повторить preview
+                                ${wt('im.k086', 'Повторить preview')}
                             </button>
                         </div>
                     </div>
@@ -1988,7 +1995,7 @@ ${remaining}
                             class="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-fg shadow-sm transition hover:opacity-95"
                         >
                             <span class="material-symbols-outlined text-[18px]">open_in_new</span>
-                            Открыть copy
+                            ${wt('im.k567', 'Открыть copy')}
                         </button>
                         <button
                             type="button"
@@ -1996,7 +2003,7 @@ ${remaining}
                             class="inline-flex items-center gap-2 rounded-lg border border-border-subtle bg-surface-1 px-5 py-3 text-sm font-medium text-text-main transition hover:bg-surface-2"
                         >
                             <span class="material-symbols-outlined text-[18px]">close</span>
-                            Закрыть
+                            ${wt('im.k568', 'Закрыть')}
                         </button>
                     </div>
                 ` : ''}
@@ -2007,7 +2014,7 @@ ${remaining}
     async executeWorkspaceImportFlow() {
         const request = this.workspaceImportState?.request;
         if (!request) {
-            this.showToast('Нет запроса для workspace-импорта.', 'error');
+            this.showToast(wt('im.k087', 'Нет запроса для workspace-импорта.'), 'error');
             return { ok: false, error: 'workspace_import_request_missing' };
         }
 
@@ -2053,7 +2060,7 @@ ${remaining}
             || ''
         ).trim();
         if (!complexId) {
-            this.showToast('Не удалось определить созданную workspace-копию.', 'error');
+            this.showToast(wt('im.k088', 'Не удалось определить созданную workspace-копию.'), 'error');
             return;
         }
 
@@ -2072,7 +2079,7 @@ ${remaining}
             this.dashboard.openComplexBuilder(complexId);
             return;
         }
-        this.showToast('Рабочая версия создана, но переход к комплексу недоступен.', 'warning');
+        this.showToast(wt('im.k089', 'Рабочая версия создана, но переход к комплексу недоступен.'), 'warning');
     }
 
     setModalPurpose(purpose) {
@@ -2088,7 +2095,7 @@ ${remaining}
         const content = modal.querySelector('[data-role="import-content"]');
 
         if (titleEl) {
-            titleEl.textContent = this.modalPurpose === 'theory_analysis' ? 'Анализ теории' : 'Импорт заданий';
+            titleEl.textContent = this.modalPurpose === 'theory_analysis' ? wt('im.k559', 'Анализ теории') : wt('im.k560', 'Импорт заданий');
         }
         if (titleEl) {
             if (!subtitleEl) {
@@ -2098,8 +2105,8 @@ ${remaining}
                 titleEl.insertAdjacentElement('afterend', subtitleEl);
             }
             subtitleEl.textContent = this.modalPurpose === 'theory_analysis'
-                ? 'Стратегический workflow: анализ материала, карта покрытия и поэтапная генерация типов заданий.'
-                : 'Быстрый импорт готовых задач или прямой AI-import по конкретному типу.';
+                ? wt('im.k090', 'Стратегический workflow: анализ материала, карта покрытия и поэтапная генерация типов заданий.')
+                : wt('im.k091', 'Быстрый импорт готовых задач или прямой AI-import по конкретному типу.');
         }
         if (stepsPanel) {
             stepsPanel.classList.toggle('hidden', this.modalPurpose === 'theory_analysis');
@@ -2313,21 +2320,21 @@ ${remaining}
         if (this.hasActiveWorkspaceImportFlow()) {
             prevBtn.disabled = false;
             const executeReady = !!this.getWorkspaceImportExecutePayload()?.ok;
-            prevBtn.textContent = this.currentStep > 3 && !executeReady ? 'Назад' : 'Закрыть';
+            prevBtn.textContent = this.currentStep > 3 && !executeReady ? wt('im.k092', 'Назад') : wt('im.k093', 'Закрыть');
             const preview = this.getWorkspaceImportPreviewPayload();
             const previewReady = !!preview;
             const loadingPreview = this.workspaceImportState?.loadingPreview === true;
             const executing = this.workspaceImportState?.executing === true || this.importInProgress;
             if (this.currentStep >= 4) {
                 if (executeReady) {
-                    nextBtn.textContent = 'Открыть copy';
+                    nextBtn.textContent = wt('im.k094', 'Открыть copy');
                     nextBtn.disabled = false;
                 } else {
-                    nextBtn.textContent = executing ? 'Добавление...' : 'Добавить в workspace';
+                    nextBtn.textContent = executing ? wt('im.k095', 'Добавление...') : wt('im.k096', 'Добавить в workspace');
                     nextBtn.disabled = !previewReady || loadingPreview || executing;
                 }
             } else {
-                nextBtn.textContent = 'К подтверждению';
+                nextBtn.textContent = wt('im.k097', 'К подтверждению');
                 nextBtn.disabled = !previewReady || loadingPreview;
             }
             return;
@@ -2335,24 +2342,24 @@ ${remaining}
 
         // Prev button
         prevBtn.disabled = this.currentStep === 1;
-        prevBtn.textContent = 'Назад';
+        prevBtn.textContent = wt('im.k098', 'Назад');
 
         const nothingToImport = this.currentStep === 4 && this.getPreviewImportableTasks().length === 0;
 
         // Next button label
         if (this.currentStep === 4) {
-            nextBtn.textContent = this.importInProgress ? 'Импорт...' : 'Импортировать';
+            nextBtn.textContent = this.importInProgress ? wt('im.k099', 'Импорт...') : wt('im.k100', 'Импортировать');
         } else if (this.importMode === 'ai') {
-            if (this.currentStep === 1) nextBtn.textContent = 'К промптам';
-            else if (this.currentStep === 2) nextBtn.textContent = this.aiTemplateType === 'material_analysis' ? 'Разобрать анализ' : 'Проверить текст';
-            else if (this.currentStep === 3) nextBtn.textContent = 'К импорту';
-            else nextBtn.textContent = 'Далее';
+            if (this.currentStep === 1) nextBtn.textContent = wt('im.k101', 'К промптам');
+            else if (this.currentStep === 2) nextBtn.textContent = this.aiTemplateType === 'material_analysis' ? wt('im.k561', 'Разобрать анализ') : wt('im.k562', 'Проверить текст');
+            else if (this.currentStep === 3) nextBtn.textContent = wt('im.k102', 'К импорту');
+            else nextBtn.textContent = wt('im.k103', 'Далее');
         } else {
-            nextBtn.textContent = 'Далее';
+            nextBtn.textContent = wt('im.k104', 'Далее');
         }
 
         if (this.currentStep === 4 && nothingToImport && !this.importInProgress) {
-            nextBtn.textContent = 'Нечего импортировать';
+            nextBtn.textContent = wt('im.k105', 'Нечего импортировать');
         }
 
         // Disable next during AI processing
@@ -2472,10 +2479,10 @@ ${remaining}
     }
 
     async confirmAction({
-        title = 'Подтверждение',
-        message = 'Вы уверены?',
-        confirmText = 'Подтвердить',
-        cancelText = 'Отмена',
+        title = wt('im.k106', 'Подтверждение'),
+        message = wt('im.k107', 'Вы уверены?'),
+        confirmText = wt('im.k108', 'Подтвердить'),
+        cancelText = wt('im.k109', 'Отмена'),
         variant = 'error',
     } = {}) {
         if (typeof NotificationUI !== 'undefined' && typeof NotificationUI.confirm === 'function') {
@@ -2525,16 +2532,16 @@ ${remaining}
         if (!guard.hasMeaningfulState) return true;
 
         const title = guard.hasImportedProgress
-            ? 'Закрыть импорт и сбросить локальные данные?'
-            : 'Сбросить данные импорта?';
+            ? wt('im.k110', 'Закрыть импорт и сбросить локальные данные?')
+            : wt('im.k111', 'Сбросить данные импорта?');
         const message = guard.hasImportedProgress
             ? `Окно импорта будет закрыто. Черновики, карта покрытия и промежуточные данные будут сброшены. Уже импортированные задания останутся в библиотеке. Импортировано типов: ${guard.importedRecommendationTypes}.`
             : `Окно импорта будет закрыто. Все промежуточные данные будут удалены: введённый текст, результаты парсинга и черновики${guard.draftRecommendationTypes > 0 ? ` (${guard.draftRecommendationTypes})` : ''}.`;
         return await this.confirmAction({
             title,
             message,
-            confirmText: 'Закрыть и сбросить',
-            cancelText: 'Продолжить работу',
+            confirmText: wt('im.k112', 'Закрыть и сбросить'),
+            cancelText: wt('im.k113', 'Продолжить работу'),
             variant: 'warning',
         });
     }
@@ -2651,7 +2658,7 @@ ${remaining}
         const rows = items.slice(0, 4).map((item) => {
             const date = new Date(item.timestamp || Date.now());
             const dateText = Number.isNaN(date.getTime())
-                ? 'недавно'
+                ? wt('im.k114', 'недавно')
                 : `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
             const status = String(item.status || 'unknown');
             const tone = status === 'ok'
@@ -2679,7 +2686,7 @@ ${remaining}
         `;
     }
 
-    renderModuleOptions(modules, placeholderLabel = 'Выберите модуль...') {
+    renderModuleOptions(modules, placeholderLabel = wt('im.k115', 'Выберите модуль...')) {
         const options = [
             `<option value="">${this.escapeHtml(placeholderLabel)}</option>`,
         ];
@@ -2832,14 +2839,14 @@ ${remaining}
         const isMaterialAnalysisMode = isAiPromptMode && this.aiTemplateType === 'material_analysis';
         const manualAnalysisPreview = isAiPromptMode ? this.renderManualAnalysisPreviewCard() : '';
         const manualAnalysisPromptContext = isAiPromptMode ? this.renderManualAnalysisPromptContextCard() : '';
-        const stepTitle = isAiPromptMode ? 'Скопируйте промпт и вставьте ответ внешнего ИИ' : 'Вставьте текст с заданиями';
+        const stepTitle = isAiPromptMode ? wt('im.k116', 'Скопируйте промпт и вставьте ответ внешнего ИИ') : wt('im.k117', 'Вставьте текст с заданиями');
         const stepDescription = isAiPromptMode
-            ? 'Сгенерируйте задания во внешней нейросети, затем вставьте результат сюда для проверки и импорта.'
-            : 'Вставьте текст, содержащий задания в формате парсера';
+            ? wt('im.k118', 'Сгенерируйте задания во внешней нейросети, затем вставьте результат сюда для проверки и импорта.')
+            : wt('im.k119', 'Вставьте текст, содержащий задания в формате парсера');
         const showStepIntro = this.modalPurpose !== 'theory_analysis';
         const showTemplateSelector = this.modalPurpose !== 'theory_analysis';
         const fixedTheoryTemplateLabel = isMaterialAnalysisMode
-            ? 'Анализ материала'
+            ? wt('im.k120', 'Анализ материала')
             : this.getEditorFacingTaskTypeLabel(this.getTaskTypeForAIAgentTemplateKey(this.aiTemplateType) || activeTemplate.taskType || activeTemplate.title);
 
         return `
@@ -2857,7 +2864,7 @@ ${remaining}
                         </div>
                         <button id="ai-agent-copy-prompt-btn"
                             class="px-3 py-1.5 text-xs font-semibold text-primary border border-primary rounded hover:bg-primary hover:text-primary-fg transition-colors">
-                            Скопировать промпт
+                            ${wt('im.k121', 'Скопировать промпт')}
                         </button>
                     </div>
                     ${showTemplateSelector ? `
@@ -2912,14 +2919,14 @@ ${remaining}
                 <div class="mb-2 flex justify-end">
                     <button id="import-paste-clipboard-btn"
                         class="px-3 py-1.5 text-xs font-semibold text-text-secondary border border-border-subtle rounded hover:bg-bg-hover transition-colors">
-                        Вставить из буфера обмена
+                        ${wt('im.k122', 'Вставить из буфера обмена')}
                     </button>
                 </div>
 
                 <textarea id="import-text-area" 
                     class="block w-full rounded-lg border-border-subtle bg-surface-2 p-4 text-text-main placeholder:text-text-disabled focus:ring-2 focus:ring-primary sm:text-sm font-mono ${hasErrors ? 'border-error focus:ring-error' : ''}"
                     rows="15"
-                    placeholder="@OPEN_ANSWER&#10;# Опишите признаки пневмонии&#10;&#10;@SEQUENCE&#10;# Алгоритм диагностики&#10;element_1: Сбор анамнеза&#10;...&#10;&#10;@CLICK_TEXT&#10;# Выберите верные утверждения&#10;+ Верный вариант&#10;- Неверный вариант&#10;&#10;@TEST&#10;# Контрольные вопросы&#10;? Вопрос&#10;+ Верный ответ&#10;- Неверный ответ">${this.escapeHtml(this.sourceText)}</textarea>
+                    placeholder="@OPEN_ANSWER&#10;# ${wt('im.k123', 'Опишите признаки пневмонии&#10;&#10;@SEQUENCE&#10;# Алгоритм диагностики&#10;element_1: Сбор анамнеза&#10;...&#10;&#10;@CLICK_TEXT&#10;# Выберите верные утверждения&#10;+ Верный вариант&#10;- Неверный вариант&#10;&#10;@TEST&#10;# Контрольные вопросы&#10;? Вопрос&#10;+ Верный ответ&#10;- Неверный ответ">')}${this.escapeHtml(this.sourceText)}</textarea>
                 
                 <div id="import-live-counter" class="mt-2 flex flex-wrap gap-2 text-xs min-h-[24px]"></div>
                 
@@ -2957,7 +2964,7 @@ ${remaining}
         const normalizedTaskType = String(taskType || '').trim().toUpperCase();
         const templateKey = this.getAIAgentTemplateKeyForTaskType(normalizedTaskType);
         if (!templateKey) {
-            this.showToast('Этот тип нельзя продолжить через текстовый импорт. Его нужно создавать вручную в редакторе.', 'warning');
+            this.showToast(wt('im.k124', 'Этот тип нельзя продолжить через текстовый импорт. Его нужно создавать вручную в редакторе.'), 'warning');
             return;
         }
         const existingDraft = this.getManualAnalysisDraft(normalizedTaskType);
@@ -3030,14 +3037,14 @@ ${remaining}
                     </div>
                     <div class="flex flex-col items-end gap-2">
                         <div class="text-right text-xs text-text-secondary">
-                            <div>Единиц: <span class="font-bold text-text-main">${units.length}</span></div>
-                            <div>Рекомендаций: <span class="font-bold text-text-main">${recommendations.length}</span></div>
+                            <div>${wt('im.k125', 'Единиц: <span class="font-bold text-text-main">')}${units.length}</span></div>
+                            <div>${wt('im.k126', 'Рекомендаций: <span class="font-bold text-text-main">')}${recommendations.length}</span></div>
                         </div>
                         ${session ? `
                             <button
                                 onclick="dashboard.importManager.archiveActiveManualAnalysisSession()"
                                 class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-border-subtle text-text-secondary hover:bg-bg-hover transition-colors">
-                                Сохранить в архив
+                                ${wt('im.k569', 'Сохранить в архив')}
                             </button>
                         ` : ''}
                     </div>
@@ -3100,12 +3107,12 @@ ${remaining}
                             const isCurrentFocus = session?.selected_task_type === taskType;
                             const draftIsOpen = hasDraft && isCurrentFocus && !!this.parsedResult && this.currentStep === 3;
                             const buttonLabel = manualOnly
-                                ? 'Только вручную'
+                                ? wt('im.k127', 'Только вручную')
                                 : (hasDraft
-                                    ? (draftIsOpen ? 'Черновик открыт' : 'Открыть черновик')
-                                    : (isCurrentFocus ? 'Текущий тип' : (importedCount > 0 ? 'Сгенерировать ещё' : 'Выбрать этот тип')));
+                                    ? (draftIsOpen ? wt('im.k128', 'Черновик открыт') : wt('im.k129', 'Открыть черновик'))
+                                    : (isCurrentFocus ? wt('im.k556', 'Текущий тип') : (importedCount > 0 ? wt('im.k557', 'Сгенерировать ещё') : wt('im.k558', 'Выбрать этот тип'))));
                             const canReset = ['selected', 'draft_generated', 'manual_done', 'skipped'].includes(String(recState?.status || '').trim().toLowerCase());
-                            const skipButtonLabel = String(recState?.status || '').trim().toLowerCase() === 'skipped' ? 'Вернуть в план' : 'Пропустить';
+                            const skipButtonLabel = String(recState?.status || '').trim().toLowerCase() === 'skipped' ? wt('im.k563', 'Вернуть в план') : wt('im.k564', 'Пропустить');
                             const primaryAction = hasDraft ? 'openManualAnalysisDraft' : 'applyManualAnalysisRecommendation';
                             return `
                                 <div class="rounded-lg border border-border-subtle bg-surface-2 p-3">
@@ -3117,7 +3124,7 @@ ${remaining}
                                                 <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-1 text-text-secondary border border-border-subtle">${Number(rec?.count || 0)} шт.</span>
                                                 <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${statusMeta.className}">${this.escapeHtml(statusMeta.label)}</span>
                                                 ${importedCount > 0 ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-1 text-text-main border border-success-light">импортов: ${importedCount}</span>` : ''}
-                                                ${hasDraft ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-1 text-text-main border border-primary-light">черновик: ${draftCount || 'сохранён'}</span>` : ''}
+                                                ${hasDraft ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-1 text-text-main border border-primary-light">черновик: ${draftCount || wt('im.k130', 'сохранён')}</span>` : ''}
                                             </div>
                                             ${rec?.coverage_role ? `<div class="mt-2 text-xs text-text-secondary">${this.escapeHtml(String(rec.coverage_role))}</div>` : ''}
                                             ${rec?.generation_focus ? `<div class="mt-2 text-[11px] text-text-secondary"><span class="font-semibold text-text-main">Фокус генерации:</span> ${this.escapeHtml(String(rec.generation_focus))}</div>` : ''}
@@ -3172,7 +3179,7 @@ ${remaining}
                                                 <button
                                                     onclick="dashboard.importManager.setManualAnalysisRecommendationLifecycle('${this.escapeInlineJsString(taskType)}', 'reset')"
                                                     class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-border-subtle text-text-secondary hover:bg-bg-hover transition-colors">
-                                                    Сбросить статус
+                                                    ${wt('im.k131', 'Сбросить статус')}
                                                 </button>
                                             ` : ''}
                                         </div>
@@ -3305,13 +3312,13 @@ ${remaining}
                             onclick="dashboard.importManager.bulkExclude()"
                             class="px-3 py-1.5 text-xs font-medium text-text-secondary bg-surface-1 border border-border-subtle rounded hover:bg-bg-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             ${selectedCount === 0 ? 'disabled' : ''}>
-                            Исключить выбранные
+                            ${wt('im.k132', 'Исключить выбранные')}
                         </button>
                         <button 
                             onclick="dashboard.importManager.bulkInclude()"
                             class="px-3 py-1.5 text-xs font-medium text-text-secondary bg-surface-1 border border-border-subtle rounded hover:bg-bg-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             ${selectedCount === 0 ? 'disabled' : ''}>
-                            Включить выбранные
+                            ${wt('im.k133', 'Включить выбранные')}
                         </button>
                     </div>
                 </div>
@@ -3342,46 +3349,46 @@ ${remaining}
         const status = this.getArchiveTaskPreviewStatus(task);
         if (status === 'error') {
             return {
-                label: 'Ошибка',
+                label: wt('im.k134', 'Ошибка'),
                 badgeClass: 'border border-error-light bg-error-lighter text-error-text',
                 cardClass: 'border-error-light bg-error-lighter',
                 icon: 'error',
-                hint: String(task.error || 'Архив содержит ошибку, задача не может быть импортирована.'),
+                hint: String(task.error || wt('im.k135', 'Архив содержит ошибку, задача не может быть импортирована.')),
             };
         }
         if (status === 'conflict') {
             if (String(task.conflict_type || '').trim().toLowerCase() === 'duplicate') {
                 return {
-                    label: 'Дубликат',
+                    label: wt('im.k136', 'Дубликат'),
                     badgeClass: 'border border-info-light bg-info-lighter text-info-text',
                     cardClass: 'border-info-light bg-info-lighter',
                     icon: 'content_copy',
-                    hint: 'В библиотеке уже есть идентичное задание.',
+                    hint: wt('im.k137', 'В библиотеке уже есть идентичное задание.'),
                 };
             }
             return {
-                label: 'Конфликт',
+                label: wt('im.k138', 'Конфликт'),
                 badgeClass: 'border border-warning-light bg-warning-lighter text-warning-text',
                 cardClass: 'border-warning-light bg-warning-lighter',
                 icon: 'warning',
-                hint: 'Задание уже существует и отличается от версии в архиве.',
+                hint: wt('im.k139', 'Задание уже существует и отличается от версии в архиве.'),
             };
         }
         if (status === 'warning') {
             return {
-                label: 'Предупреждение',
+                label: wt('im.k140', 'Предупреждение'),
                 badgeClass: 'border border-warning-light bg-warning-lighter text-warning-text',
                 cardClass: 'border-warning-light bg-warning-lighter',
                 icon: 'warning',
-                hint: 'Задание можно импортировать, но архив требует внимания.',
+                hint: wt('im.k141', 'Задание можно импортировать, но архив требует внимания.'),
             };
         }
         return {
-            label: 'Готово',
+            label: wt('im.k142', 'Готово'),
             badgeClass: 'border border-success-light bg-success-lighter text-success-darker',
             cardClass: 'border-success-light bg-success-lighter',
             icon: 'check_circle',
-            hint: 'Задание можно импортировать без конфликта.',
+            hint: wt('im.k143', 'Задание можно импортировать без конфликта.'),
         };
     }
 
@@ -3407,8 +3414,8 @@ ${remaining}
         const taskName = String(task.name || task.id || `Задание ${index + 1}`);
         const taskId = String(task.id || '');
         const taskType = String(task.type || 'unknown');
-        const targetModule = String(task.target_module || this.selectedModuleName || this.selectedModule || 'из архива');
-        const targetTopic = String(task.target_topic || this.selectedTopicName || this.selectedTopic || 'из архива');
+        const targetModule = String(task.target_module || this.selectedModuleName || this.selectedModule || wt('im.k144', 'из архива'));
+        const targetTopic = String(task.target_topic || this.selectedTopicName || this.selectedTopic || wt('im.k145', 'из архива'));
         const warnings = Array.isArray(task.warnings) ? task.warnings.filter(Boolean) : [];
         const diffKeys = Array.isArray(task.diff_keys) ? task.diff_keys.filter(Boolean) : [];
         const existingPath = String(task.existing_path || '').trim();
@@ -3536,8 +3543,8 @@ ${remaining}
         const taskWarningsCount = tasks.filter((task) => Array.isArray(task?.warnings) && task.warnings.length > 0).length;
         const overrideMode = this.selectedModule || this.selectedTopic;
         const overrideLabel = overrideMode
-            ? `${this.selectedModuleName || this.selectedModule || 'Модуль не задан'} / ${this.selectedTopicName || this.selectedTopic || 'Тема из архива'}`
-            : 'Структура архива будет использована как источник модулей и тем.';
+            ? `${this.selectedModuleName || this.selectedModule || wt('im.k146', 'Модуль не задан')} / ${this.selectedTopicName || this.selectedTopic || wt('im.k147', 'Тема из архива')}`
+            : wt('im.k148', 'Структура архива будет использована как источник модулей и тем.');
         const archiveVersion = String(this.parsedResult.archive_version || '').trim();
         const blockedTasksCount = this.getPreviewBlockedTaskCount();
         const importableTasksCount = this.getPreviewImportableTasks().length;
@@ -3594,7 +3601,7 @@ ${remaining}
                         </div>
                         <div class="rounded-lg border border-border-subtle bg-surface-2 px-3 py-3">
                             <div class="text-xs uppercase tracking-wide text-text-secondary">Политика ошибок</div>
-                            <div class="mt-1 font-semibold text-text-main">${this.excludedTasks.size > 0 ? `Ручных исключений: ${this.excludedTasks.size}` : 'Исключений вручную пока нет.'}</div>
+                            <div class="mt-1 font-semibold text-text-main">${this.excludedTasks.size > 0 ? `Ручных исключений: ${this.excludedTasks.size}` : wt('im.k149', 'Исключений вручную пока нет.')}</div>
                         </div>
                     </div>
                 </div>
@@ -3622,7 +3629,7 @@ ${remaining}
                         <div class="mt-1">
                             ${blockedTasksCount > 0
                                 ? `Задания со статусом «Ошибка» не будут добавлены. Сейчас заблокировано: ${blockedTasksCount}. К импорту доступно: ${importableTasksCount}.`
-                                : 'Если при проверке находятся задания со статусом «Ошибка», они не добавляются и остаются только в списке предпросмотра.'}
+                                : wt('im.k150', 'Если при проверке находятся задания со статусом «Ошибка», они не добавляются и остаются только в списке предпросмотра.')}
                         </div>
                     </div>
                 </div>
@@ -3634,25 +3641,25 @@ ${remaining}
                             ${this.renderArchivePreviewIssueList(
                                 [
                                     ...duplicates.map((item) => ({
-                                        title: item.name || item.id || 'Дубликат',
-                                        detail: 'Идентичная версия уже есть в библиотеке.',
+                                        title: item.name || item.id || wt('im.k151', 'Дубликат'),
+                                        detail: wt('im.k152', 'Идентичная версия уже есть в библиотеке.'),
                                     })),
                                     ...overwrites.map((item) => ({
-                                        title: item.name || item.id || 'Конфликт',
+                                        title: item.name || item.id || wt('im.k153', 'Конфликт'),
                                         detail: `Требует решения по конфликту${Array.isArray(item.diff_keys) && item.diff_keys.length ? `, diff: ${item.diff_keys.join(', ')}` : '.'}`,
                                     })),
                                     ...brokenDeps.map((item) => ({
-                                        title: item.name || item.id || 'Проблема зависимостей',
-                                        detail: item.error || 'В архиве отсутствуют нужные ресурсы.',
+                                        title: item.name || item.id || wt('im.k154', 'Проблема зависимостей'),
+                                        detail: item.error || wt('im.k155', 'В архиве отсутствуют нужные ресурсы.'),
                                     })),
                                     ...errors.map((item) => ({
-                                        title: item.name || item.id || 'Ошибка',
-                                        detail: item.error || 'Не удалось проверить задание.',
+                                        title: item.name || item.id || wt('im.k156', 'Ошибка'),
+                                        detail: item.error || wt('im.k157', 'Не удалось проверить задание.'),
                                     })),
                                 ],
-                                'Проверка не нашла критичных конфликтов.',
+                                wt('im.k158', 'Проверка не нашла критичных конфликтов.'),
                                 (item) => `
-                                    <div class="font-medium text-text-main">${this.escapeHtml(item.title || 'Элемент архива')}</div>
+                                    <div class="font-medium text-text-main">${this.escapeHtml(item.title || wt('im.k159', 'Элемент архива'))}</div>
                                     <div class="text-xs text-text-secondary mt-1">${this.escapeHtml(item.detail || '')}</div>
                                 `,
                                 'archive-import-issues'
@@ -3662,7 +3669,7 @@ ${remaining}
                             <h4 class="text-sm font-bold text-text-main mb-2">Предупреждения</h4>
                             ${this.renderArchivePreviewIssueList(
                                 warnings.map((warning) => ({ warning })),
-                                'Дополнительных предупреждений нет.',
+                                wt('im.k160', 'Дополнительных предупреждений нет.'),
                                 (item) => `<div class="text-sm text-text-main">${this.escapeHtml(item.warning || '')}</div>`,
                                 'archive-import-warnings'
                             )}
@@ -3692,13 +3699,13 @@ ${remaining}
                                     onclick="dashboard.importManager.bulkExclude()"
                                     class="px-3 py-1.5 text-xs font-medium text-text-secondary bg-surface-1 border border-border-subtle rounded hover:bg-bg-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                     ${selectedCount === 0 ? 'disabled' : ''}>
-                                    Исключить выбранные
+                                    ${wt('im.k161', 'Исключить выбранные')}
                                 </button>
                                 <button
                                     onclick="dashboard.importManager.bulkInclude()"
                                     class="px-3 py-1.5 text-xs font-medium text-text-secondary bg-surface-1 border border-border-subtle rounded hover:bg-bg-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                     ${selectedCount === 0 ? 'disabled' : ''}>
-                                    Включить выбранные
+                                    ${wt('im.k162', 'Включить выбранные')}
                                 </button>
                             </div>
                         </div>
@@ -3727,7 +3734,7 @@ ${remaining}
                 </div>
                 
                 <h3 class="text-xl font-bold text-text-main mb-2">${nothingToImport ? 'Импорт недоступен' : 'Готово к импорту'}</h3>
-                <p class="text-text-secondary mb-6">${nothingToImport ? 'После проверки и фильтрации не осталось заданий, которые можно импортировать.' : `Будет импортировано ${validTasks.length} заданий`}</p>
+                <p class="text-text-secondary mb-6">${nothingToImport ? wt('im.k163', 'После проверки и фильтрации не осталось заданий, которые можно импортировать.') : `Будет импортировано ${validTasks.length} заданий`}</p>
                 
                 <div class="bg-surface-2 rounded-lg p-6 text-left">
                     <div class="space-y-2 text-sm">
@@ -3757,7 +3764,7 @@ ${remaining}
                     <div class="font-semibold">${nothingToImport ? 'Импорт отключён' : 'Что будет при импорте'}</div>
                     <div class="mt-1">
                         ${nothingToImport
-                            ? 'Кнопка импорта отключена, потому что все задания либо битые, либо исключены вручную.'
+                            ? wt('im.k164', 'Кнопка импорта отключена, потому что все задания либо битые, либо исключены вручную.')
                             : `Задания со статусом «Ошибка» не будут добавлены. Импорт продолжится только для оставшихся ${validTasks.length} заданий.`}
                     </div>
                 </div>
@@ -3800,10 +3807,10 @@ ${remaining}
         if (task.status === 'conflict') {
             if (task.conflict_type === 'duplicate') {
                 statusKey = 'conflict_duplicate';
-                statusLabel = 'Дубликат (идентичен)';
+                statusLabel = wt('im.k165', 'Дубликат (идентичен)');
             } else {
                 statusKey = 'conflict_overwrite';
-                statusLabel = 'Конфликт (изменен)';
+                statusLabel = wt('im.k166', 'Конфликт (изменен)');
             }
         }
 
@@ -3812,10 +3819,10 @@ ${remaining}
 
         // Type badges with icons
         const typeBadges = {
-            'open_answer': { icon: '📝', label: 'Открытый ответ', color: 'bg-info-light text-info-dark' },
-            'sequence_assembly': { icon: '🔢', label: 'Последовательность', color: 'bg-accent-light text-accent-dark' },
-            'click': { icon: '🎯', label: 'Клик', color: 'bg-secondary-light text-secondary-dark' },
-            'test': { icon: '❓', label: 'Тест', color: 'bg-warning-light text-warning-dark' }
+            'open_answer': { icon: '📝', label: wt('im.k167', 'Открытый ответ'), color: 'bg-info-light text-info-dark' },
+            'sequence_assembly': { icon: '🔢', label: wt('im.k168', 'Последовательность'), color: 'bg-accent-light text-accent-dark' },
+            'click': { icon: '🎯', label: wt('im.k169', 'Клик'), color: 'bg-secondary-light text-secondary-dark' },
+            'test': { icon: '❓', label: wt('im.k170', 'Тест'), color: 'bg-warning-light text-warning-dark' }
         };
         const typeBadge = typeBadges[task.type] || { icon: '\u2022', label: task.type, color: 'bg-surface-2 text-text-secondary' };
 
@@ -3846,7 +3853,7 @@ ${remaining}
                     
                     <!-- Task Name (editable) -->
                     <h4 class="font-bold text-text-main mb-1 text-base cursor-pointer hover:bg-surface-2 rounded px-1 -mx-1 transition-colors" 
-                        title="Нажмите для редактирования"
+                        ${wt('im.k171', 'title="Нажмите для редактирования"')}
                         onclick="dashboard.importManager.startEditName(${index}, this)">${this.escapeHtml(task.name)}</h4>
                     
                     <!-- Prompt Preview -->
@@ -3876,7 +3883,7 @@ ${remaining}
                             `).join('')}
                             ${task.validation.issues.length > 3 ? `
                                 <div class="text-xs text-text-muted font-medium">
-                                    +${task.validation.issues.length - 3} ещё...
+                                    +${task.validation.issues.length - 3} ${wt('im.k172', 'ещё...')}
                                 </div>
                             ` : ''}
                         </div>
@@ -3903,7 +3910,7 @@ ${remaining}
                     <button 
                         onclick="dashboard.importManager.showTaskDetails(${index})"
                         class="flex-1 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary hover:text-primary-fg rounded transition-colors border border-primary">
-                        Детали
+                        ${wt('im.k173', 'Детали')}
                     </button>
                     <button 
                         onclick="dashboard.importManager.toggleExclude(${index})"
@@ -4063,13 +4070,13 @@ ${remaining}
     getMicrocardsDeckCreatedViaLabel(createdVia) {
         switch (String(createdVia || '').trim().toLowerCase()) {
             case 'analysis_auto':
-                return 'ИИ';
+                return wt('im.k174', 'ИИ');
             case 'manual_editor':
-                return 'Редактор';
+                return wt('im.k175', 'Редактор');
             case 'text_import':
-                return 'Импорт';
+                return wt('im.k176', 'Импорт');
             default:
-                return 'Библиотека';
+                return wt('im.k177', 'Библиотека');
         }
     }
 
@@ -4077,10 +4084,10 @@ ${remaining}
         const ownership = this.getMicrocardsDeckOwnership(deck);
         const chips = [];
         if (ownership.isSharedLibrary) {
-            chips.push('<span class="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-1 px-2 py-0.5 text-[10px] font-semibold text-text-secondary">Общая библиотека</span>');
+            chips.push(wt('im.k178', '<span class="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-1 px-2 py-0.5 text-[10px] font-semibold text-text-secondary">Общая библиотека</span>'));
         }
         if (ownership.isOwnedByCurrentUser) {
-            chips.push('<span class="inline-flex items-center gap-1 rounded-full border border-primary-light bg-primary-lighter px-2 py-0.5 text-[10px] font-semibold text-primary-darker">Создано вами</span>');
+            chips.push(wt('im.k179', '<span class="inline-flex items-center gap-1 rounded-full border border-primary-light bg-primary-lighter px-2 py-0.5 text-[10px] font-semibold text-primary-darker">Создано вами</span>'));
         } else if (ownership.hasOwner) {
             chips.push(`<span class="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-1 px-2 py-0.5 text-[10px] font-semibold text-text-secondary">${this.escapeHtml(ownership.createdByUserId)}</span>`);
         }
@@ -4155,12 +4162,12 @@ ${remaining}
 
     syncEditorTheoryBridgeContext({ refs = null, sourceBlock = null, showToast = false, intent = '' } = {}) {
         if (!this.isTheoryFeatureEnabled('editor_analysis_report_link')) {
-            if (showToast) this.showToast('Связка отчёта с редактором отключена (feature flag).', 'warning');
+            if (showToast) this.showToast(wt('im.k180', 'Связка отчёта с редактором отключена (feature flag).'), 'warning');
             return false;
         }
         const aiRunId = String(this.aiRunId || this.analysisResult?.ai_run_id || '').trim();
         if (!aiRunId) {
-            if (showToast) this.showToast(this.aiUxMessage('theory_report.bridge.no_ai_run', 'Сначала откройте анализ, чтобы передать контекст в редактор.'), 'warning');
+            if (showToast) this.showToast(this.aiUxMessage('theory_report.bridge.no_ai_run', wt('im.k181', 'Сначала откройте анализ, чтобы передать контекст в редактор.')), 'warning');
             return false;
         }
         const a = this.analysisResult && typeof this.analysisResult === 'object' ? this.analysisResult : {};
@@ -4189,7 +4196,7 @@ ${remaining}
         const ok = this.writeEditorTheoryBridgeContext(payload);
         if (ok && showToast) {
             const msgKey = normalizedRefs ? 'theory_report.bridge.saved_block_context' : 'theory_report.bridge.saved_context';
-            this.showToast(this.aiUxMessage(msgKey, normalizedRefs ? 'Контекст блока отчёта сохранён для редактора.' : 'Контекст анализа сохранён для редактора.'), 'success');
+            this.showToast(this.aiUxMessage(msgKey, normalizedRefs ? wt('im.k182', 'Контекст блока отчёта сохранён для редактора.') : wt('im.k183', 'Контекст анализа сохранён для редактора.')), 'success');
         }
         return ok;
     }
@@ -4207,7 +4214,7 @@ ${remaining}
         const blocks = Array.isArray(this.analysisResult?.report_blocks) ? this.analysisResult.report_blocks : [];
         const block = blocks.find((b) => String(b?.id || '') === id);
         if (!block || typeof block !== 'object') {
-            this.showToast(this.aiUxMessage('theory_report.bridge.block_not_found', 'Не удалось найти выбранный блок отчёта. Попробуйте сохранить контекст анализа целиком.'), 'warning');
+            this.showToast(this.aiUxMessage('theory_report.bridge.block_not_found', wt('im.k184', 'Не удалось найти выбранный блок отчёта. Попробуйте сохранить контекст анализа целиком.')), 'warning');
             return;
         }
         this.syncEditorTheoryBridgeContext({
@@ -4232,7 +4239,7 @@ ${remaining}
         const routes = Array.isArray(this.analysisResult?.authoring_routes) ? this.analysisResult.authoring_routes : [];
         const route = routes.find((r) => String(r?.id || '') === id);
         if (!route || typeof route !== 'object') {
-            this.showToast(this.aiUxMessage('theory_report.bridge.route_not_found', 'Не удалось найти маршрут автора. Попробуйте сохранить контекст анализа целиком.'), 'warning');
+            this.showToast(this.aiUxMessage('theory_report.bridge.route_not_found', wt('im.k185', 'Не удалось найти маршрут автора. Попробуйте сохранить контекст анализа целиком.')), 'warning');
             return;
         }
         this.syncEditorTheoryBridgeContext({
@@ -4257,15 +4264,15 @@ ${remaining}
         if (!task) return;
 
         const typeLabels = {
-            open_answer: 'Открытый ответ',
-            sequence_assembly: 'Последовательность',
-            click: 'Клик',
-            test: 'Тест'
+            open_answer: wt('im.k186', 'Открытый ответ'),
+            sequence_assembly: wt('im.k187', 'Последовательность'),
+            click: wt('im.k188', 'Клик'),
+            test: wt('im.k189', 'Тест')
         };
         const statusLabels = {
-            valid: '<span class="text-success-text font-semibold">Валидно</span>',
-            warning: '<span class="text-warning-text font-semibold">Предупреждения</span>',
-            error: '<span class="text-error-text font-semibold">Ошибки</span>'
+            valid: wt('im.k190', '<span class="text-success-text font-semibold">Валидно</span>'),
+            warning: wt('im.k191', '<span class="text-warning-text font-semibold">Предупреждения</span>'),
+            error: wt('im.k192', '<span class="text-error-text font-semibold">Ошибки</span>')
         };
 
         const issuesHtml = (task.validation?.issues || []).map(issue => {
@@ -4297,7 +4304,7 @@ ${remaining}
         overlay.innerHTML = `
             <div class="bg-surface-1 rounded-2xl shadow-xl max-w-lg w-full mx-4 max-h-[80vh] overflow-y-auto" onclick="event.stopPropagation()">
                 <div class="flex items-center justify-between p-5 border-b border-border-subtle">
-                    <h3 class="text-lg font-bold text-text-main">Задание #${index + 1}</h3>
+                    <h3 class="text-lg font-bold text-text-main">${wt('im.k193', 'Задание #')}${index + 1}</h3>
                     <button onclick="document.getElementById('task-detail-overlay').remove()" class="w-8 h-8 rounded-full hover:bg-bg-hover flex items-center justify-center">
                         <span class="material-symbols-outlined text-text-muted">close</span>
                     </button>
@@ -4305,7 +4312,7 @@ ${remaining}
                 <div class="p-5 space-y-4">
                     <div class="grid grid-cols-2 gap-3 text-sm">
                         <div><span class="text-text-muted">\u0422\u0438\u043f:</span> <span class="font-medium text-text-main">${typeLabels[task.type] || task.type}</span></div>
-                        <div><span class="text-text-muted">Статус:</span> ${statusLabels[task.status] || task.status}</div>
+                        <div><span class="text-text-muted">${wt('im.k194', 'Статус:</span>')}${statusLabels[task.status] || task.status}</div>
                     </div>
                     <div>
                         <div class="text-xs font-semibold text-text-muted mb-1">Название</div>
@@ -4376,7 +4383,7 @@ ${remaining}
         // Update button text
         const btn = document.querySelector(`[data-task-exclude-btn="${index}"]`);
         if (btn) {
-            btn.textContent = this.excludedTasks.has(index) ? 'Включить' : 'Исключить';
+            btn.textContent = this.excludedTasks.has(index) ? wt('im.k195', 'Включить') : wt('im.k196', 'Исключить');
         }
     }
 
@@ -4548,8 +4555,8 @@ ${remaining}
 
         if (this.aiTemplateType === 'material_analysis') {
             const markers = [
-                { marker: '<human_summary>', label: 'Краткое резюме', color: 'bg-sky-100 text-sky-700' },
-                { marker: '<analysis_json>', label: 'Структурный JSON', color: 'bg-emerald-100 text-emerald-700' },
+                { marker: '<human_summary>', label: wt('im.k197', 'Краткое резюме'), color: 'bg-sky-100 text-sky-700' },
+                { marker: '<analysis_json>', label: wt('im.k198', 'Структурный JSON'), color: 'bg-emerald-100 text-emerald-700' },
             ];
             const badges = [];
             let total = 0;
@@ -4562,17 +4569,17 @@ ${remaining}
             if (total > 0) {
                 container.innerHTML = `<span class="text-text-muted py-0.5">Найдено:</span>${badges.join('')}`;
             } else {
-                container.innerHTML = text.trim() ? '<span class="text-text-disabled py-0.5">Маркеры анализа не найдены</span>' : '';
+                container.innerHTML = text.trim() ? wt('im.k199', '<span class="text-text-disabled py-0.5">Маркеры анализа не найдены</span>') : '';
             }
             return;
         }
 
         const markers = [
-            { marker: '@OPEN_ANSWER', label: 'Открытый ответ', color: 'bg-blue-100 text-blue-700' },
-            { marker: '@SEQUENCE', label: 'Последовательность', color: 'bg-purple-100 text-purple-700' },
-            { marker: '@CLICK_TEXT', label: 'Клик / Ошибки (выбор)', color: 'bg-amber-100 text-amber-700' },
-            { marker: '@CLICK_WORDS', label: 'Клик / Ошибки (текст)', color: 'bg-rose-100 text-rose-700' },
-            { marker: '@TEST', label: 'Тест', color: 'bg-orange-100 text-orange-700' }
+            { marker: '@OPEN_ANSWER', label: wt('im.k200', 'Открытый ответ'), color: 'bg-blue-100 text-blue-700' },
+            { marker: '@SEQUENCE', label: wt('im.k201', 'Последовательность'), color: 'bg-purple-100 text-purple-700' },
+            { marker: '@CLICK_TEXT', label: wt('im.k202', 'Клик / Ошибки (выбор)'), color: 'bg-amber-100 text-amber-700' },
+            { marker: '@CLICK_WORDS', label: wt('im.k203', 'Клик / Ошибки (текст)'), color: 'bg-rose-100 text-rose-700' },
+            { marker: '@TEST', label: wt('im.k204', 'Тест'), color: 'bg-orange-100 text-orange-700' }
         ];
 
         const badges = [];
@@ -4588,18 +4595,18 @@ ${remaining}
         if (total > 0) {
             container.innerHTML = `<span class="text-text-muted py-0.5">Найдено:</span>${badges.join('')}<span class="text-text-muted py-0.5 ml-1">Всего: ${total}</span>`;
         } else {
-            container.innerHTML = text.trim() ? '<span class="text-text-disabled py-0.5">Маркеры не найдены</span>' : '';
+            container.innerHTML = text.trim() ? wt('im.k205', '<span class="text-text-disabled py-0.5">Маркеры не найдены</span>') : '';
         }
     }
 
     getAIAgentTemplateOptions() {
         return {
             material_analysis: {
-                title: '🔍 Анализ материала (с чего начать)',
-                instructions: `1. Скопируйте промпт и отправьте его ИИ-агенту.
-2. Прикрепите файл с материалом (PDF, DOCX) или вставьте текст после промпта.
-3. Изучите рекомендации ИИ и выберите подходящий тип задания из списка выше.
-Этот промпт НЕ генерирует задания — он помогает выбрать оптимальную стратегию.`,
+                title: wt('im.k206', '🔍 Анализ материала (с чего начать)'),
+                instructions: `${wt('im.k570', '1. Скопируйте промпт и отправьте его ИИ-агенту.')}
+${wt('im.k207', '2. Прикрепите файл с материалом (PDF, DOCX) или вставьте текст после промпта.')}
+${wt('im.k208', '3. Изучите рекомендации ИИ и выберите подходящий тип задания из списка выше.')}
+${wt('im.k571', 'Этот промпт НЕ генерирует задания — он помогает выбрать оптимальную стратегию.')}`,
                 prompt: `Ты — старший методист и эксперт по педагогическому дизайну. Проанализируй учебный материал.
 
 <goal>
@@ -4755,10 +4762,10 @@ DRAW — обводка/выделение нужных зон на изобра
 </strictness_addendum>`
             },
             open_answer: {
-                title: 'Открытый ответ (@OPEN_ANSWER)',
-                instructions: `1. Скопируйте промпт и отправьте его ИИ-агенту.
-2. Прикрепите файл с материалом (PDF, DOCX) или вставьте текст после промпта.
-3. Скопируйте ответ ИИ без изменений и вставьте в поле ниже.`,
+                title: wt('im.k209', 'Открытый ответ (@OPEN_ANSWER)'),
+                instructions: `${wt('im.k570', '1. Скопируйте промпт и отправьте его ИИ-агенту.')}
+${wt('im.k210', '2. Прикрепите файл с материалом (PDF, DOCX) или вставьте текст после промпта.')}
+${wt('im.k572', '3. Скопируйте ответ ИИ без изменений и вставьте в поле ниже.')}`,
                 prompt: `Ты — генератор заданий для образовательной платформы.
 
 <task_context>
@@ -4803,10 +4810,10 @@ DRAW — обводка/выделение нужных зон на изобра
 </example>`
             },
             sequence_assembly: {
-                title: 'Последовательность (@SEQUENCE)',
-                instructions: `1. Скопируйте промпт и отправьте его ИИ-агенту.
-2. Прикрепите файл с материалом (PDF, DOCX) или вставьте текст после промпта.
-3. Скопируйте ответ ИИ без изменений и вставьте в поле ниже.`,
+                title: wt('im.k211', 'Последовательность (@SEQUENCE)'),
+                instructions: `${wt('im.k570', '1. Скопируйте промпт и отправьте его ИИ-агенту.')}
+${wt('im.k212', '2. Прикрепите файл с материалом (PDF, DOCX) или вставьте текст после промпта.')}
+${wt('im.k572', '3. Скопируйте ответ ИИ без изменений и вставьте в поле ниже.')}`,
                 prompt: `Ты — генератор заданий для образовательной платформы.
 
 <task_context>
@@ -4868,10 +4875,10 @@ level_5: element_5
 </example>`
             },
             test: {
-                title: 'Тест (@TEST)',
-                instructions: `1. Скопируйте промпт и отправьте его ИИ-агенту.
-2. Прикрепите файл с материалом (PDF, DOCX) или вставьте текст после промпта.
-3. Скопируйте ответ ИИ без изменений и вставьте в поле ниже.`,
+                title: wt('im.k213', 'Тест (@TEST)'),
+                instructions: `${wt('im.k570', '1. Скопируйте промпт и отправьте его ИИ-агенту.')}
+${wt('im.k214', '2. Прикрепите файл с материалом (PDF, DOCX) или вставьте текст после промпта.')}
+${wt('im.k572', '3. Скопируйте ответ ИИ без изменений и вставьте в поле ниже.')}`,
                 prompt: `Ты — генератор заданий для образовательной платформы.
 
 <task_context>
@@ -4925,10 +4932,10 @@ level_5: element_5
 </example>`
             },
             click_text: {
-                title: 'Ошибки — выбор из вариантов (@CLICK_TEXT)',
-                instructions: `1. Скопируйте промпт и отправьте его ИИ-агенту.
-2. Прикрепите файл с материалом (PDF, DOCX) или вставьте текст после промпта.
-3. Скопируйте ответ ИИ без изменений и вставьте в поле ниже.`,
+                title: wt('im.k215', 'Ошибки — выбор из вариантов (@CLICK_TEXT)'),
+                instructions: `${wt('im.k570', '1. Скопируйте промпт и отправьте его ИИ-агенту.')}
+${wt('im.k216', '2. Прикрепите файл с материалом (PDF, DOCX) или вставьте текст после промпта.')}
+${wt('im.k572', '3. Скопируйте ответ ИИ без изменений и вставьте в поле ниже.')}`,
                 prompt: `Ты — генератор заданий для образовательной платформы.
 
 <task_context>
@@ -4980,10 +4987,10 @@ level_5: element_5
 </example>`
             },
             click_words: {
-                title: 'Ошибки — поиск ошибок в тексте (@CLICK_WORDS)',
-                instructions: `1. Скопируйте промпт и отправьте его ИИ-агенту.
-2. Прикрепите файл с материалом (PDF, DOCX) или вставьте текст после промпта.
-3. Скопируйте ответ ИИ без изменений и вставьте в поле ниже.`,
+                title: wt('im.k217', 'Ошибки — поиск ошибок в тексте (@CLICK_WORDS)'),
+                instructions: `${wt('im.k570', '1. Скопируйте промпт и отправьте его ИИ-агенту.')}
+${wt('im.k218', '2. Прикрепите файл с материалом (PDF, DOCX) или вставьте текст после промпта.')}
+${wt('im.k572', '3. Скопируйте ответ ИИ без изменений и вставьте в поле ниже.')}`,
                 prompt: `Ты — генератор заданий для образовательной платформы.
 
 <task_context>
@@ -5049,9 +5056,9 @@ text: Сердце человека состоит из [трёх] камер. �
         try {
             const active = this.getActiveAIAgentTemplateConfig();
             await this.writeToClipboard(active.prompt);
-            this.showToast('Промпт для ИИ-агента скопирован в буфер обмена.', 'success');
+            this.showToast(wt('im.k219', 'Промпт для ИИ-агента скопирован в буфер обмена.'), 'success');
         } catch (error) {
-            this.showToast('Не удалось скопировать промпт. Скопируйте текст вручную.', 'error');
+            this.showToast(wt('im.k220', 'Не удалось скопировать промпт. Скопируйте текст вручную.'), 'error');
         }
     }
 
@@ -5062,7 +5069,7 @@ text: Сердце человека состоит из [трёх] камер. �
         try {
             const text = await this.readFromClipboard();
             if (typeof text !== 'string' || !text.length) {
-                this.showToast('Буфер обмена пуст.', 'warning');
+                this.showToast(wt('im.k221', 'Буфер обмена пуст.'), 'warning');
                 return;
             }
             textArea.value = text;
@@ -5071,9 +5078,9 @@ text: Сердце человека состоит из [трёх] камер. �
                 this.clearManualAnalysisSession({ preserveManualAnalysisResult: false });
             }
             this._updateLiveCounter(text);
-            this.showToast('Текст из буфера обмена вставлен.', 'success');
+            this.showToast(wt('im.k222', 'Текст из буфера обмена вставлен.'), 'success');
         } catch (error) {
-            this.showToast('Не удалось прочитать буфер обмена. Используйте Ctrl+V.', 'warning');
+            this.showToast(wt('im.k223', 'Не удалось прочитать буфер обмена. Используйте Ctrl+V.'), 'warning');
         }
     }
 
@@ -5115,7 +5122,7 @@ text: Сердце человека состоит из [трёх] камер. �
             topicSelect.innerHTML = '';
             const option = document.createElement('option');
             option.value = '';
-            option.textContent = 'Модуль не содержит тем...';
+            option.textContent = wt('im.k224', 'Модуль не содержит тем...');
             topicSelect.appendChild(option);
             return;
         }
@@ -5125,7 +5132,7 @@ text: Сердце человека состоит из [трёх] камер. �
 
         const placeholder = document.createElement('option');
         placeholder.value = '';
-        placeholder.textContent = 'Выберите тему...';
+        placeholder.textContent = wt('im.k225', 'Выберите тему...');
         topicSelect.appendChild(placeholder);
 
         (module.topics || []).forEach((topic) => {
@@ -5263,9 +5270,9 @@ text: Сердце человека состоит из [трёх] камер. �
                 if (!this.selectedModule || !this.selectedTopic) {
                     this.showVoiceToast({
                         severity: 'warning',
-                        what: 'Переход к промптам приостановлен.',
-                        impact: 'Модуль и тема не выбраны.',
-                        next: 'Выберите модуль и тему, затем продолжите.',
+                        what: wt('im.k226', 'Переход к промптам приостановлен.'),
+                        impact: wt('im.k227', 'Модуль и тема не выбраны.'),
+                        next: wt('im.k228', 'Выберите модуль и тему, затем продолжите.'),
                     });
                     return;
                 }
@@ -5278,9 +5285,9 @@ text: Сердце человека состоит из [трёх] камер. �
                 if (!this.selectedModule || !this.selectedTopic) {
                     this.showVoiceToast({
                         severity: 'warning',
-                        what: 'Переход к парсингу приостановлен.',
-                        impact: 'Модуль и тема не выбраны.',
-                        next: 'Выберите модуль и тему, затем продолжите импорт.',
+                        what: wt('im.k229', 'Переход к парсингу приостановлен.'),
+                        impact: wt('im.k230', 'Модуль и тема не выбраны.'),
+                        next: wt('im.k231', 'Выберите модуль и тему, затем продолжите импорт.'),
                     });
                     return;
                 }
@@ -5290,9 +5297,9 @@ text: Сердце человека состоит из [трёх] камер. �
                 if (!this.uploadedFile) {
                     this.showVoiceToast({
                         severity: 'warning',
-                        what: 'Проверка архива не запущена.',
-                        impact: 'Файл архива не выбран.',
-                        next: 'Выберите архив и повторите проверку.',
+                        what: wt('im.k232', 'Проверка архива не запущена.'),
+                        impact: wt('im.k233', 'Файл архива не выбран.'),
+                        next: wt('im.k234', 'Выберите архив и повторите проверку.'),
                     });
                     return;
                 }
@@ -5318,8 +5325,8 @@ text: Сердце человека состоит из [трёх] камер. �
                     } else {
                         this.showVoiceToast({
                             severity: 'error',
-                            what: 'Проверка архива завершилась ошибкой.',
-                            impact: 'Предпросмотр не сформирован.',
+                            what: wt('im.k235', 'Проверка архива завершилась ошибкой.'),
+                            impact: wt('im.k236', 'Предпросмотр не сформирован.'),
                             next: `Проверьте архив и повторите проверку. Детали: ${result.error || 'unknown_error'}`,
                         });
                         this.prevStep();
@@ -5327,8 +5334,8 @@ text: Сердце человека состоит из [трёх] камер. �
                 } catch (e) {
                     this.showVoiceToast({
                         severity: 'error',
-                        what: 'Проверка архива прервана сетью.',
-                        impact: 'Импорт не может перейти к предпросмотру.',
+                        what: wt('im.k237', 'Проверка архива прервана сетью.'),
+                        impact: wt('im.k238', 'Импорт не может перейти к предпросмотру.'),
                         next: `Проверьте соединение и повторите проверку. Детали: ${e.message}`,
                     });
                     this.prevStep();
@@ -5339,9 +5346,9 @@ text: Сердце человека состоит из [трёх] камер. �
                 if (!this.sourceText.trim()) {
                     this.showVoiceToast({
                         severity: 'warning',
-                        what: 'Разбор анализа не запущен.',
-                        impact: 'Поле с ответом ИИ пустое.',
-                        next: 'Вставьте ответ внешнего ИИ с блоками <human_summary> и <analysis_json>.',
+                        what: wt('im.k239', 'Разбор анализа не запущен.'),
+                        impact: wt('im.k240', 'Поле с ответом ИИ пустое.'),
+                        next: wt('im.k241', 'Вставьте ответ внешнего ИИ с блоками <human_summary> и <analysis_json>.'),
                     });
                     return;
                 }
@@ -5363,13 +5370,13 @@ text: Сердце человека состоит из [трёх] камер. �
                     if (this.modalPurpose === 'theory_analysis') {
                         this.theorySubMode = 'coverage_map';
                     }
-                    this.showToast('Анализ материала распознан. Можно выбрать тип задания ниже.', 'success');
+                    this.showToast(wt('im.k242', 'Анализ материала распознан. Можно выбрать тип задания ниже.'), 'success');
                     this.renderCurrentStep();
                 } catch (error) {
                     this.clearManualAnalysisSession({ preserveManualAnalysisResult: false });
                     this.manualAnalysisResult = null;
                     this.parsedResult = {
-                        parsing_errors: ['Ошибка разбора анализа: ' + error.message],
+                        parsing_errors: [wt('im.k243', 'Ошибка разбора анализа: ') + error.message],
                     };
                     this.renderCurrentStep();
                 }
@@ -5380,9 +5387,9 @@ text: Сердце человека состоит из [трёх] камер. �
             if (!this.sourceText.trim()) {
                 this.showVoiceToast({
                     severity: 'warning',
-                    what: 'Парсинг не запущен.',
-                    impact: 'Поле с исходным текстом пустое.',
-                    next: 'Вставьте текст заданий и повторите действие.',
+                    what: wt('im.k244', 'Парсинг не запущен.'),
+                    impact: wt('im.k245', 'Поле с исходным текстом пустое.'),
+                    next: wt('im.k246', 'Вставьте текст заданий и повторите действие.'),
                 });
                 return;
             }
@@ -5430,7 +5437,7 @@ text: Сердце человека состоит из [трёх] камер. �
             } catch (error) {
                 // Network or other error
                 this.parsedResult = {
-                    parsing_errors: ['Ошибка парсинга: ' + error.message]
+                    parsing_errors: [wt('im.k247', 'Ошибка парсинга: ') + error.message]
                 };
                 this.prevStep();
             }
@@ -5463,9 +5470,9 @@ text: Сердце человека состоит из [трёх] камер. �
                     });
                     this.showVoiceToast({
                         severity: 'success',
-                        what: 'Рабочая версия добавлена.',
+                        what: wt('im.k248', 'Рабочая версия добавлена.'),
                         impact: `Заданий в рабочей версии: ${taskCount}.`,
-                        next: 'Каталог будет обновлён, после чего можно открыть импортированную версию в рабочем пространстве.',
+                        next: wt('im.k249', 'Каталог будет обновлён, после чего можно открыть импортированную версию в рабочем пространстве.'),
                     });
                     try {
                         if (this.dashboard && typeof this.dashboard.loadCatalog === 'function') {
@@ -5486,8 +5493,8 @@ text: Сердце человека состоит из [трёх] камер. �
                     });
                     this.showVoiceToast({
                         severity: 'error',
-                        what: 'Workspace-импорт завершился ошибкой.',
-                        impact: 'Рабочая версия не была создана полностью.',
+                        what: wt('im.k250', 'Workspace-импорт завершился ошибкой.'),
+                        impact: wt('im.k251', 'Рабочая версия не была создана полностью.'),
                         next: `Проверьте source lineage и повторите добавление. Детали: ${result?.error || 'workspace_import_failed'}`,
                     });
                 }
@@ -5496,7 +5503,7 @@ text: Сердце человека состоит из [трёх] камер. �
             if (this.importMode === 'text' || this.importMode === 'ai') {
                 const validTasks = this.getPreviewImportableTasks();
                 if (validTasks.length === 0) {
-                    this.showToast('После проверки не осталось заданий, которые можно импортировать.', 'warning');
+                    this.showToast(wt('im.k252', 'После проверки не осталось заданий, которые можно импортировать.'), 'warning');
                     return;
                 }
                 if (!this.importRequestKey) {
@@ -5531,9 +5538,9 @@ text: Сердце человека состоит из [трёх] камер. �
                     if (this.importMode === 'ai' && activeSession && selectedTaskType) {
                         this.showVoiceToast({
                             severity: 'success',
-                            what: 'Импорт завершён.',
+                            what: wt('im.k253', 'Импорт завершён.'),
                             impact: `Добавлено: ${result.imported}.`,
-                            next: 'Сессия анализа сохранена. Можно выбрать следующий тип задания в карте покрытия.',
+                            next: wt('im.k254', 'Сессия анализа сохранена. Можно выбрать следующий тип задания в карте покрытия.'),
                         });
                         this.setManualAnalysisSelectedTaskType(selectedTaskType);
                         this.clearManualAnalysisDraft(selectedTaskType, {
@@ -5550,15 +5557,15 @@ text: Сердце человека состоит из [трёх] камер. �
                         this.currentStep = 2;
                         this.theorySubMode = 'coverage_map';
                         await this.dashboard.loadCatalog();
-                        this.showToast('Тип импортирован. Можно продолжить с другим типом в карте покрытия ниже.', 'success');
+                        this.showToast(wt('im.k255', 'Тип импортирован. Можно продолжить с другим типом в карте покрытия ниже.'), 'success');
                         this.renderCurrentStep();
                         this.updateNavigationButtons();
                     } else {
                         this.showVoiceToast({
                             severity: 'success',
-                            what: 'Импорт завершён.',
+                            what: wt('im.k256', 'Импорт завершён.'),
                             impact: `Добавлено: ${result.imported}.`,
-                            next: 'Каталог обновлён, можно переходить к редактуре.',
+                            next: wt('im.k257', 'Каталог обновлён, можно переходить к редактуре.'),
                         });
                         this.dashboard.closeImportModal({ skipConfirm: true });
                         this.dashboard.loadCatalog();
@@ -5573,8 +5580,8 @@ text: Сердце человека состоит из [трёх] камер. �
                     });
                     this.showVoiceToast({
                         severity: 'error',
-                        what: 'Импорт завершился ошибкой.',
-                        impact: 'Изменения в каталог не были применены полностью.',
+                        what: wt('im.k258', 'Импорт завершился ошибкой.'),
+                        impact: wt('im.k259', 'Изменения в каталог не были применены полностью.'),
                         next: `Проверьте источник и повторите импорт. Детали: ${result.error || 'unknown_error'}`,
                     });
                 }
@@ -5583,7 +5590,7 @@ text: Сердце человека состоит из [трёх] камер. �
                 const conflictRes = document.getElementById('conflict-resolution-select')?.value || 'skip';
                 const skipErrors = document.getElementById('skip-errors-checkbox')?.checked || false;
                 if (this.getPreviewImportableTasks().length === 0) {
-                    this.showToast('В архиве не осталось заданий, которые можно импортировать.', 'warning');
+                    this.showToast(wt('im.k260', 'В архиве не осталось заданий, которые можно импортировать.'), 'warning');
                     return;
                 }
                 if (!this.importRequestKey) {
@@ -5613,7 +5620,7 @@ text: Сердце человека состоит из [трёх] камер. �
                 const originalText = await this._getButtonContent(btn);
                 if (btn) {
                     btn.disabled = true;
-                    btn.textContent = 'Импорт...';
+                    btn.textContent = wt('im.k261', 'Импорт...');
                 }
 
                 // Create visual progress bar
@@ -5697,11 +5704,11 @@ text: Сердце человека состоит из [трёх] камер. �
                             });
                             this.showVoiceToast({
                                 severity: finalResult.errors > 0 ? 'warning' : 'success',
-                                what: 'Импорт архива завершён.',
+                                what: wt('im.k262', 'Импорт архива завершён.'),
                                 impact: `Добавлено: ${finalResult.imported}, пропущено: ${finalResult.skipped}, ошибок: ${finalResult.errors}.`,
                                 next: finalResult.errors > 0
-                                    ? 'Проверьте проблемные задания и при необходимости повторите импорт.'
-                                    : 'Каталог обновлён и готов к работе.',
+                                    ? wt('im.k263', 'Проверьте проблемные задания и при необходимости повторите импорт.')
+                                    : wt('im.k264', 'Каталог обновлён и готов к работе.'),
                             });
                             this.dashboard.closeImportModal({ skipConfirm: true });
                             this.dashboard.loadCatalog();
@@ -5718,18 +5725,18 @@ text: Сердце человека состоит из [трёх] камер. �
                             });
                             this.showVoiceToast({
                                 severity: 'error',
-                                what: 'Импорт архива завершился ошибкой.',
+                                what: wt('im.k265', 'Импорт архива завершился ошибкой.'),
                                 impact: finalResult.rollback
-                                    ? 'Откат выполнен, каталог сохранён в прежнем состоянии.'
-                                    : 'Часть изменений могла не примениться.',
-                                next: 'Исправьте проблему в архиве и повторите импорт.',
+                                    ? wt('im.k266', 'Откат выполнен, каталог сохранён в прежнем состоянии.')
+                                    : wt('im.k267', 'Часть изменений могла не примениться.'),
+                                next: wt('im.k268', 'Исправьте проблему в архиве и повторите импорт.'),
                             });
                         }
                     }
                 } finally {
                     if (btn) {
                         btn.disabled = false;
-                        btn.textContent = originalText || 'Импортировать';
+                        btn.textContent = originalText || wt('im.k269', 'Импортировать');
                     }
                     const pc = document.getElementById('import-progress-bar-container');
                     if (pc) pc.remove();
@@ -5745,8 +5752,8 @@ text: Сердце человека состоит из [трёх] камер. �
             });
             this.showVoiceToast({
                 severity: 'error',
-                what: 'Импорт прерван из-за ошибки.',
-                impact: 'Операция не завершена.',
+                what: wt('im.k270', 'Импорт прерван из-за ошибки.'),
+                impact: wt('im.k271', 'Операция не завершена.'),
                 next: `Проверьте соединение и входные данные. Детали: ${error.message}`,
             });
         }
@@ -5911,7 +5918,7 @@ text: Сердце человека состоит из [трёх] камер. �
         if (body) body.classList.toggle('hidden', !isOpen);
         if (collapsedNote) collapsedNote.classList.toggle('hidden', isOpen);
         if (toggleBtn) toggleBtn.setAttribute('aria-expanded', String(isOpen));
-        if (toggleLabel) toggleLabel.textContent = isOpen ? 'Свернуть отчёт' : 'Открыть отчёт';
+        if (toggleLabel) toggleLabel.textContent = isOpen ? wt('im.k272', 'Свернуть отчёт') : wt('im.k273', 'Открыть отчёт');
         if (toggleIcon) toggleIcon.textContent = isOpen ? 'expand_less' : 'expand_more';
         panel.classList.toggle('ring-1', isOpen);
         panel.classList.toggle('ring-primary/20', isOpen);
@@ -5945,16 +5952,16 @@ text: Сердце человека состоит из [трёх] камер. �
         const isManualEditor = this.theorySubMode === 'manual_editor';
         const isTextImport = this.theorySubMode === 'text_import';
         const titles = {
-            microcards: 'Режим микрокарточек (P9)',
-            manual_editor: 'Редактор микрокарточек',
-            text_import: 'Импорт микрокарточек из текста',
-            analysis: 'Отдельный режим анализа теории',
+            microcards: wt('im.k274', 'Режим микрокарточек (P9)'),
+            manual_editor: wt('im.k275', 'Редактор микрокарточек'),
+            text_import: wt('im.k276', 'Импорт микрокарточек из текста'),
+            analysis: wt('im.k277', 'Отдельный режим анализа теории'),
         };
         const subtitles = {
-            microcards: 'Повторение по колодам из анализа. Колоды общие на устройстве, прогресс — персональный.',
-            manual_editor: 'Создание и редактирование колод вручную. Колоды общие на устройстве, а прогресс повторения остаётся персональным.',
-            text_import: 'Импорт карточек из @MICROCARD или ответа внешнего ИИ-агента в общую библиотеку колод. Прогресс повторения остаётся персональным.',
-            analysis: 'Запуск анализа без генерации и импорта. История сохраняется по <code class="font-mono">ai_run_id</code>.',
+            microcards: wt('im.k278', 'Повторение по колодам из анализа. Колоды общие на устройстве, прогресс — персональный.'),
+            manual_editor: wt('im.k279', 'Создание и редактирование колод вручную. Колоды общие на устройстве, а прогресс повторения остаётся персональным.'),
+            text_import: wt('im.k280', 'Импорт карточек из @MICROCARD или ответа внешнего ИИ-агента в общую библиотеку колод. Прогресс повторения остаётся персональным.'),
+            analysis: wt('im.k281', 'Запуск анализа без генерации и импорта. История сохраняется по <code class="font-mono">ai_run_id</code>.'),
         };
         const currentMode = isTextImport ? 'text_import' : (isManualEditor ? 'manual_editor' : (isMicrocardsMode ? 'microcards' : 'analysis'));
         const isMcSubMode = isMicrocardsMode || isManualEditor || isTextImport;
@@ -5962,9 +5969,9 @@ text: Сердце человека состоит из [трёх] камер. �
 
         const mcNavButtons = (activeMode) => {
             const modes = [
-                { key: 'microcards', label: 'Повторение', fn: 'openTheoryMicrocardsMode()' },
-                { key: 'manual_editor', label: 'Редактор', fn: 'openManualMicrocardsEditor()' },
-                { key: 'text_import', label: 'Текстовый импорт', fn: 'openMicrocardsTextImport()' },
+                { key: 'microcards', label: wt('im.k282', 'Повторение'), fn: 'openTheoryMicrocardsMode()' },
+                { key: 'manual_editor', label: wt('im.k283', 'Редактор'), fn: 'openManualMicrocardsEditor()' },
+                { key: 'text_import', label: wt('im.k284', 'Текстовый импорт'), fn: 'openMicrocardsTextImport()' },
             ];
             return modes.filter(m => m.key !== activeMode).map(m =>
                 `<button onclick="dashboard.importManager.${m.fn}"
@@ -5985,12 +5992,12 @@ text: Сердце человека состоит из [трёх] камер. �
                         <div class="flex flex-wrap gap-2">
                             <button onclick="dashboard.importManager.enterTheorySubMode('analysis')"
                                 class="editor-flow-button-wrap px-3 py-2 text-sm font-medium text-text-secondary border border-border-subtle rounded-lg hover:bg-bg-hover transition-colors">
-                                К анализу
+                                ${wt('im.k574', 'К анализу')}
                             </button>
                             ${mcNavButtons(currentMode)}
                             <button onclick="dashboard.importManager.loadMicrocardsDecks()"
                                 class="editor-flow-button-wrap px-3 py-2 text-sm font-medium text-primary border border-primary rounded-lg hover:bg-primary hover:text-primary-fg transition-colors">
-                                Обновить колоды
+                                ${wt('im.k575', 'Обновить колоды')}
                             </button>
                         </div>
                     </div>
@@ -6032,15 +6039,15 @@ text: Сердце человека состоит из [трёх] камер. �
         const isImportStep = this.currentStep === 4;
         const isCoverageMap = this.aiTemplateType === 'material_analysis';
         const stageLabel = isImportStep
-            ? 'Шаг 3: импорт'
+            ? wt('im.k285', 'Шаг 3: импорт')
             : (isPreviewStep
-                ? 'Шаг 2: предпросмотр'
+                ? wt('im.k286', 'Шаг 2: предпросмотр')
                 : (isCoverageMap
-                    ? (hasSession ? 'Шаг 1: карта покрытия' : 'Шаг 1: анализ материала')
-                    : 'Шаг 2: генерация типа'));
+                    ? (hasSession ? wt('im.k287', 'Шаг 1: карта покрытия') : wt('im.k288', 'Шаг 1: анализ материала'))
+                    : wt('im.k289', 'Шаг 2: генерация типа')));
         const primaryActionLabel = isImportStep
-            ? (this.importInProgress ? 'Импорт...' : 'Импортировать')
-            : (isPreviewStep ? 'К импорту' : (isCoverageMap ? 'Разобрать анализ' : 'Проверить текст'));
+            ? (this.importInProgress ? wt('im.k290', 'Импорт...') : wt('im.k291', 'Импортировать'))
+            : (isPreviewStep ? wt('im.k292', 'К импорту') : (isCoverageMap ? wt('im.k293', 'Разобрать анализ') : wt('im.k294', 'Проверить текст')));
         const primaryActionDisabled = this.importInProgress || this.aiAnalyzing || this.aiGenerating;
 
         return `
@@ -6052,7 +6059,7 @@ text: Сердце человека состоит из [трёх] камер. �
                     ${hasSession && !isCoverageMap ? `
                         <button onclick="dashboard.importManager.returnToManualAnalysisCoverageMap()"
                             class="px-4 py-2 text-sm font-medium text-text-secondary border border-border-subtle rounded-lg hover:bg-bg-hover transition-colors">
-                            К карте покрытия
+                            ${wt('im.k576', 'К карте покрытия')}
                         </button>
                     ` : ''}
                 </div>
@@ -6062,12 +6069,12 @@ text: Сердце человека состоит из [трёх] камер. �
                         <div>
                             <div class="text-sm font-semibold text-text-main">В архиве есть сохранённые анализы</div>
                             <div class="text-xs text-text-secondary mt-1">
-                                Можно открыть предыдущий анализ вместо запуска нового.
+                                ${wt('im.k577', 'Можно открыть предыдущий анализ вместо запуска нового.')}
                             </div>
                         </div>
                         <button onclick="dashboard.importManager.openTheoryAnalysisArchive()"
                             class="px-4 py-2 text-sm font-medium text-text-secondary border border-border-subtle rounded-lg hover:bg-bg-hover transition-colors">
-                            Открыть архив
+                            ${wt('im.k578', 'Открыть архив')}
                         </button>
                     </div>
                 ` : ''}
@@ -6078,13 +6085,13 @@ text: Сердце человека состоит из [трёх] камер. �
                             <div>
                                 <div class="text-sm font-bold text-text-main">Целевой контекст</div>
                                 <div class="text-xs text-text-secondary mt-1">
-                                    Все созданные задания будут импортированы в выбранный модуль и тему.
+                                    ${wt('im.k579', 'Все созданные задания будут импортированы в выбранный модуль и тему.')}
                                 </div>
                             </div>
                             ${hasSession ? `
                                 <div class="text-xs text-text-secondary text-right">
                                     <div>Session: <span class="font-semibold text-text-main">${this.escapeHtml(session.id)}</span></div>
-                                    <div>Режим: <span class="font-semibold text-text-main">${this.escapeHtml(isCoverageMap ? 'анализ и карта покрытия' : this.getEditorFacingTaskTypeLabel(this.getTaskTypeForAIAgentTemplateKey(this.aiTemplateType)))}</span></div>
+                                    <div>${wt('im.k295', 'Режим: <span class="font-semibold text-text-main">')}${this.escapeHtml(isCoverageMap ? 'анализ и карта покрытия' : this.getEditorFacingTaskTypeLabel(this.getTaskTypeForAIAgentTemplateKey(this.aiTemplateType)))}</span></div>
                                 </div>
                             ` : ''}
                         </div>
@@ -6093,7 +6100,7 @@ text: Сердце человека состоит из [трёх] камер. �
                                 <label class="block text-sm font-semibold text-text-secondary mb-2">Целевой модуль</label>
                                 <select id="import-module-select"
                                     class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main focus:ring-2 focus:ring-primary sm:text-sm">
-                                    ${this.renderModuleOptions(this.dashboard.catalog || [], 'Выберите модуль...')}
+                                    ${this.renderModuleOptions(this.dashboard.catalog || [], wt('im.k296', 'Выберите модуль...'))}
                                 </select>
                             </div>
                             <div>
@@ -6115,7 +6122,7 @@ text: Сердце человека состоит из [трёх] камер. �
                         ${isPreviewStep || isImportStep ? `
                             <button onclick="dashboard.importManager.prevStep()"
                                 class="px-4 py-2 text-sm font-medium text-text-secondary border border-border-subtle rounded-lg hover:bg-bg-hover transition-colors">
-                                Назад
+                                ${wt('im.k580', 'Назад')}
                             </button>
                         ` : ''}
                     </div>
@@ -6135,12 +6142,12 @@ text: Сердце человека состоит из [трёх] камер. �
                 <div class="rounded-2xl border border-border-strong bg-surface-1 p-6 lg:p-8 shadow-sm">
                     <div class="w-full">
                         <div class="inline-flex items-center gap-2 rounded-full border border-warning-light bg-warning-lighter px-3 py-1 text-xs font-semibold uppercase tracking-[0.08em] text-warning-text">
-                            В разработке
+                            ${wt('im.k297', 'В разработке')}
                         </div>
                         <h3 class="mt-4 text-xl font-bold text-text-main">В разработке</h3>
                         <p class="mt-3 w-full max-w-none text-sm leading-6 text-text-secondary text-justify">
-                            Внутренняя ИИ-генерация и связанные сценарии временно прикрыты единым placeholder-состоянием.
-                            В этом разделе пока не доступны запуск анализа, история прогонов и остальные встроенные AI-потоки.
+                            ${wt('im.k298', 'Внутренняя ИИ-генерация и связанные сценарии временно прикрыты единым placeholder-состоянием.')}
+                            ${wt('im.k299', 'В этом разделе пока не доступны запуск анализа, история прогонов и остальные встроенные AI-потоки.')}
                         </p>
                     </div>
                 </div>
@@ -6155,7 +6162,7 @@ text: Сердце человека состоит из [трёх] камер. �
             this.openTheoryAiInProgressPlaceholder();
             return;
         }
-        if ((nextMode === 'microcards' || nextMode === 'manual_editor' || nextMode === 'text_import') && !this.ensureTheoryFeatureEnabled('microcards_mode', 'Режим микрокарточек отключён (feature flag).')) {
+        if ((nextMode === 'microcards' || nextMode === 'manual_editor' || nextMode === 'text_import') && !this.ensureTheoryFeatureEnabled('microcards_mode', wt('im.k581', 'Режим микрокарточек отключён (feature flag).'))) {
             return;
         }
         this.theorySubMode = nextMode;
@@ -6166,7 +6173,7 @@ text: Сердце человека состоит из [трёх] камер. �
         if (!this.isTheoryFeatureEnabled('ai_mode', false)) {
             return this.openTheoryAiInProgressPlaceholder();
         }
-        if (!this.ensureTheoryFeatureEnabled('microcards_mode', 'Режим микрокарточек отключён (feature flag).')) {
+        if (!this.ensureTheoryFeatureEnabled('microcards_mode', wt('im.k300', 'Режим микрокарточек отключён (feature flag).'))) {
             return { ok: false, error: 'microcards_mode_disabled' };
         }
         this.theorySubMode = 'microcards';
@@ -6189,13 +6196,13 @@ text: Сердце человека состоит из [трёх] камер. �
                 this.microcardsDecksError = '';
             } else {
                 this.microcardsDecks = [];
-                this.microcardsDecksError = data.message || data.error || 'Не удалось загрузить колоды';
+                this.microcardsDecksError = data.message || data.error || wt('im.k301', 'Не удалось загрузить колоды');
             }
             return data;
         } catch (e) {
             console.error('[Microcards] load decks failed:', e);
             this.microcardsDecks = [];
-            this.microcardsDecksError = 'Ошибка сети при загрузке колод';
+            this.microcardsDecksError = wt('im.k302', 'Ошибка сети при загрузке колод');
             return { ok: false, error: 'network_error' };
         } finally {
             this.microcardsDecksLoading = false;
@@ -6204,19 +6211,19 @@ text: Сердце человека состоит из [трёх] камер. �
     }
 
     async createMicrocardsDeckFromCurrentAnalysis(selector = {}, opts = {}) {
-        if (!this.ensureTheoryFeatureEnabled('microcards_mode', 'Режим микрокарточек отключён (feature flag).')) {
+        if (!this.ensureTheoryFeatureEnabled('microcards_mode', wt('im.k303', 'Режим микрокарточек отключён (feature flag).'))) {
             return { ok: false, error: 'microcards_mode_disabled' };
         }
-        if (selector?.pair_match_only && !this.ensureTheoryFeatureEnabled('microcards_pair_match', 'pair_match отключён (feature flag).')) {
+        if (selector?.pair_match_only && !this.ensureTheoryFeatureEnabled('microcards_pair_match', wt('im.k304', 'pair_match отключён (feature flag).'))) {
             return { ok: false, error: 'microcards_pair_match_disabled' };
         }
         const runId = String(this.aiRunId || this.analysisResult?.ai_run_id || '').trim();
         if (!runId) {
             this.showVoiceToast({
                 severity: 'warning',
-                what: 'Создание колоды приостановлено.',
-                impact: 'Не найден открытый анализ (ai_run_id).',
-                next: 'Сначала откройте анализ, затем повторите создание колоды.',
+                what: wt('im.k305', 'Создание колоды приостановлено.'),
+                impact: wt('im.k306', 'Не найден открытый анализ (ai_run_id).'),
+                next: wt('im.k307', 'Сначала откройте анализ, затем повторите создание колоды.'),
             });
             return { ok: false, error: 'ai_run_id_required' };
         }
@@ -6232,9 +6239,9 @@ text: Сердце человека состоит из [трёх] камер. �
             if (data.ok) {
                 this.showVoiceToast({
                     severity: 'success',
-                    what: 'Колода микрокарточек создана.',
+                    what: wt('im.k308', 'Колода микрокарточек создана.'),
                     impact: `Добавлено карточек: ${data.deck_summary?.cards_total || 0}.`,
-                    next: 'Можно открыть колоду и начать повторение.',
+                    next: wt('im.k309', 'Можно открыть колоду и начать повторение.'),
                 });
                 await this.loadMicrocardsDecks();
                 if (opts?.open !== false && data.deck?.id) {
@@ -6243,9 +6250,9 @@ text: Сердце человека состоит из [трёх] камер. �
             } else {
                 this.showVoiceToast({
                     severity: 'error',
-                    what: 'Создание колоды завершилось ошибкой.',
-                    impact: 'Новая колода не была сохранена.',
-                    next: data.message || data.error || 'Проверьте входные данные и повторите создание.',
+                    what: wt('im.k310', 'Создание колоды завершилось ошибкой.'),
+                    impact: wt('im.k311', 'Новая колода не была сохранена.'),
+                    next: data.message || data.error || wt('im.k312', 'Проверьте входные данные и повторите создание.'),
                 });
             }
             return data;
@@ -6253,9 +6260,9 @@ text: Сердце человека состоит из [трёх] камер. �
             console.error('[Microcards] create deck failed:', e);
             this.showVoiceToast({
                 severity: 'error',
-                what: 'Создание колоды недоступно из-за сетевой ошибки.',
-                impact: 'Операция не была завершена.',
-                next: 'Проверьте сеть и повторите попытку.',
+                what: wt('im.k313', 'Создание колоды недоступно из-за сетевой ошибки.'),
+                impact: wt('im.k314', 'Операция не была завершена.'),
+                next: wt('im.k315', 'Проверьте сеть и повторите попытку.'),
             });
             return { ok: false, error: 'network_error' };
         } finally {
@@ -6283,7 +6290,7 @@ text: Сердце человека состоит из [трёх] камер. �
     }
 
     createTheoryMicrocardsPairMatchDeck() {
-        if (!this.ensureTheoryFeatureEnabled('microcards_pair_match', 'pair_match отключён (feature flag).')) {
+        if (!this.ensureTheoryFeatureEnabled('microcards_pair_match', wt('im.k316', 'pair_match отключён (feature flag).'))) {
             return Promise.resolve({ ok: false, error: 'microcards_pair_match_disabled' });
         }
         return this.createMicrocardsDeckFromCurrentAnalysis({ scope: 'all', pair_match_only: true }, { open: true });
@@ -6297,9 +6304,9 @@ text: Сердце человека состоит из [трёх] камер. �
         if (!decks.length) {
             this.showVoiceToast({
                 severity: 'warning',
-                what: 'Добавление в существующую колоду недоступно.',
-                impact: 'Список колод пуст.',
-                next: 'Сначала создайте новую колоду из текущего анализа.',
+                what: wt('im.k317', 'Добавление в существующую колоду недоступно.'),
+                impact: wt('im.k318', 'Список колод пуст.'),
+                next: wt('im.k319', 'Сначала создайте новую колоду из текущего анализа.'),
             });
             return null;
         }
@@ -6313,19 +6320,19 @@ text: Сердце человека состоит из [трёх] камер. �
     }
 
     async appendMicrocardsToExistingDeckFromCurrentAnalysis(selector = {}, opts = {}) {
-        if (!this.ensureTheoryFeatureEnabled('microcards_mode', 'Режим микрокарточек отключён (feature flag).')) {
+        if (!this.ensureTheoryFeatureEnabled('microcards_mode', wt('im.k320', 'Режим микрокарточек отключён (feature flag).'))) {
             return { ok: false, error: 'microcards_mode_disabled' };
         }
-        if (selector?.pair_match_only && !this.ensureTheoryFeatureEnabled('microcards_pair_match', 'pair_match отключён (feature flag).')) {
+        if (selector?.pair_match_only && !this.ensureTheoryFeatureEnabled('microcards_pair_match', wt('im.k321', 'pair_match отключён (feature flag).'))) {
             return { ok: false, error: 'microcards_pair_match_disabled' };
         }
         const runId = String(this.aiRunId || this.analysisResult?.ai_run_id || '').trim();
         if (!runId) {
             this.showVoiceToast({
                 severity: 'warning',
-                what: 'Добавление карточек приостановлено.',
-                impact: 'Не найден открытый анализ (ai_run_id).',
-                next: 'Откройте анализ и повторите операцию.',
+                what: wt('im.k322', 'Добавление карточек приостановлено.'),
+                impact: wt('im.k323', 'Не найден открытый анализ (ai_run_id).'),
+                next: wt('im.k324', 'Откройте анализ и повторите операцию.'),
             });
             return { ok: false, error: 'ai_run_id_required' };
         }
@@ -6343,9 +6350,9 @@ text: Сердце человека состоит из [трёх] камер. �
             if (data.ok) {
                 this.showVoiceToast({
                     severity: 'success',
-                    what: 'Карточки добавлены в колоду.',
+                    what: wt('im.k325', 'Карточки добавлены в колоду.'),
                     impact: `Добавлено: ${data.added_cards || 0}, пропущено дублей: ${data.skipped_duplicates || 0}.`,
-                    next: 'Можно открыть очередь колоды и продолжить повторение.',
+                    next: wt('im.k326', 'Можно открыть очередь колоды и продолжить повторение.'),
                 });
                 await this.loadMicrocardsDecks();
                 if (opts?.open !== false) {
@@ -6354,9 +6361,9 @@ text: Сердце человека состоит из [трёх] камер. �
             } else {
                 this.showVoiceToast({
                     severity: 'error',
-                    what: 'Добавление карточек завершилось ошибкой.',
-                    impact: 'Колода не была обновлена.',
-                    next: data.message || data.error || 'Проверьте параметры и повторите попытку.',
+                    what: wt('im.k327', 'Добавление карточек завершилось ошибкой.'),
+                    impact: wt('im.k328', 'Колода не была обновлена.'),
+                    next: data.message || data.error || wt('im.k329', 'Проверьте параметры и повторите попытку.'),
                 });
             }
             return data;
@@ -6364,9 +6371,9 @@ text: Сердце человека состоит из [трёх] камер. �
             console.error('[Microcards] append to deck failed:', e);
             this.showVoiceToast({
                 severity: 'error',
-                what: 'Добавление карточек недоступно из-за сетевой ошибки.',
-                impact: 'Изменения в колоду не сохранены.',
-                next: 'Проверьте сеть и повторите попытку.',
+                what: wt('im.k330', 'Добавление карточек недоступно из-за сетевой ошибки.'),
+                impact: wt('im.k331', 'Изменения в колоду не сохранены.'),
+                next: wt('im.k332', 'Проверьте сеть и повторите попытку.'),
             });
             return { ok: false, error: 'network_error' };
         } finally {
@@ -6394,14 +6401,14 @@ text: Сердце человека состоит из [трёх] камер. �
     }
 
     appendTheoryMicrocardsPairMatchDeck() {
-        if (!this.ensureTheoryFeatureEnabled('microcards_pair_match', 'pair_match отключён (feature flag).')) {
+        if (!this.ensureTheoryFeatureEnabled('microcards_pair_match', wt('im.k333', 'pair_match отключён (feature flag).'))) {
             return Promise.resolve({ ok: false, error: 'microcards_pair_match_disabled' });
         }
         return this.appendMicrocardsToExistingDeckFromCurrentAnalysis({ scope: 'all', pair_match_only: true }, { open: true });
     }
 
     async openMicrocardsDeckQueue(deckId, options = {}) {
-        if (!this.ensureTheoryFeatureEnabled('microcards_mode', 'Режим микрокарточек отключён (feature flag).')) {
+        if (!this.ensureTheoryFeatureEnabled('microcards_mode', wt('im.k334', 'Режим микрокарточек отключён (feature flag).'))) {
             return { ok: false, error: 'microcards_mode_disabled' };
         }
         const id = String(deckId || '').trim();
@@ -6436,9 +6443,9 @@ text: Сердце человека состоит из [трёх] камер. �
             } else {
                 this.showVoiceToast({
                     severity: 'error',
-                    what: 'Очередь колоды не открыта.',
-                    impact: 'Сессию повторения нельзя начать.',
-                    next: data.message || data.error || 'Проверьте состояние колоды и повторите открытие.',
+                    what: wt('im.k335', 'Очередь колоды не открыта.'),
+                    impact: wt('im.k336', 'Сессию повторения нельзя начать.'),
+                    next: data.message || data.error || wt('im.k337', 'Проверьте состояние колоды и повторите открытие.'),
                 });
             }
             return data;
@@ -6446,9 +6453,9 @@ text: Сердце человека состоит из [трёх] камер. �
             console.error('[Microcards] open queue failed:', e);
             this.showVoiceToast({
                 severity: 'error',
-                what: 'Открытие колоды недоступно из-за сетевой ошибки.',
-                impact: 'Очередь карточек не загружена.',
-                next: 'Проверьте сеть и повторите открытие колоды.',
+                what: wt('im.k338', 'Открытие колоды недоступно из-за сетевой ошибки.'),
+                impact: wt('im.k339', 'Очередь карточек не загружена.'),
+                next: wt('im.k340', 'Проверьте сеть и повторите открытие колоды.'),
             });
             return { ok: false, error: 'network_error' };
         } finally {
@@ -6493,7 +6500,7 @@ text: Сердце человека состоит из [трёх] камер. �
                                     <button type="button"
                                         onclick="dashboard.importManager.openMicrocardsDeckQueue('${this.escapeInlineJsString(String(deck?.id || ''))}')"
                                         class="px-2.5 py-1.5 text-xs font-medium rounded-md border ${isActive ? 'border-primary text-primary bg-primary-lighter' : 'border-border-strong text-text-secondary hover:bg-bg-hover'}">
-                                        Повторять
+                                        ${wt('im.k582', 'Повторять')}
                                     </button>
                                 </div>
                             </div>
@@ -6521,19 +6528,19 @@ text: Сердце человека состоит из [трёх] камер. �
                                 onclick="dashboard.importManager.appendTheoryMicrocardsDeckAll()"
                                 ${this.microcardsCreateLoading ? 'disabled' : ''}
                                 class="px-3 py-1.5 text-xs font-medium rounded-lg border border-border-strong text-text-secondary hover:bg-bg-hover disabled:opacity-60">
-                                Добавить в колоду...
+                                ${wt('im.k341', 'Добавить в колоду...')}
                             </button>
                             <button type="button"
                                 onclick="dashboard.importManager.createTheoryMicrocardsPairMatchDeck()"
                                 ${this.microcardsCreateLoading ? 'disabled' : ''}
                                 class="px-3 py-1.5 text-xs font-medium rounded-lg border border-info-light text-info-text bg-info-lighter hover:bg-info-light disabled:opacity-60">
-                                pair_match колода
+                                ${wt('im.k342', 'pair_match колода')}
                             </button>
                             <button type="button"
                                 onclick="dashboard.importManager.appendTheoryMicrocardsPairMatchDeck()"
                                 ${this.microcardsCreateLoading ? 'disabled' : ''}
                                 class="px-3 py-1.5 text-xs font-medium rounded-lg border border-border-strong text-text-secondary hover:bg-bg-hover disabled:opacity-60">
-                                pair_match → в колоду...
+                                ${wt('im.k343', 'pair_match → в колоду...')}
                             </button>
                         </div>
                     </div>
@@ -6546,7 +6553,7 @@ text: Сердце человека состоит из [трёх] камер. �
                         <div>
                             <div class="text-sm font-semibold text-text-main">${this.escapeHtml(String(activeDeck?.name || 'Сессия повторения'))}</div>
                             <div class="text-xs text-text-secondary mt-1">
-                                ${activeDeck?.id ? `<span class="font-mono">${this.escapeHtml(String(activeDeck.id))}</span>` : 'Выберите колоду слева'}
+                                ${activeDeck?.id ? `<span class="font-mono">${this.escapeHtml(String(activeDeck.id))}</span>` : wt('im.k344', 'Выберите колоду слева')}
                                 ${queueCount ? ` · ${doneCount}/${queueCount} пройдено` : ''}
                                 ${remainingCount ? ` · осталось ${remainingCount}` : ''}
                             </div>
@@ -6557,13 +6564,13 @@ text: Сердце человека состоит из [трёх] камер. �
                                 onclick="dashboard.importManager.openMicrocardsDeckQueue('${this.escapeInlineJsString(String(activeDeck.id))}')"
                                 ${this.microcardsQueueLoading ? 'disabled' : ''}
                                 class="px-3 py-1.5 text-xs font-medium rounded-lg border border-border-strong text-text-secondary hover:bg-bg-hover disabled:opacity-60">
-                                ${this.microcardsQueueLoading ? 'Обновление...' : 'Продолжить / обновить'}
+                                ${this.microcardsQueueLoading ? wt('im.k345', 'Обновление...') : wt('im.k346', 'Продолжить / обновить')}
                             </button>
                             <button type="button"
                                 onclick="dashboard.importManager.openMicrocardsDeckQueue('${this.escapeInlineJsString(String(activeDeck.id))}', { restart: true })"
                                 ${this.microcardsQueueLoading ? 'disabled' : ''}
                                 class="px-3 py-1.5 text-xs font-medium rounded-lg border border-warning-light text-warning-text bg-warning-lighter hover:bg-warning-light disabled:opacity-60">
-                                Новая сессия
+                                ${wt('im.k583', 'Новая сессия')}
                             </button>
                         ` : ''}
                     </div>
@@ -6575,20 +6582,20 @@ text: Сердце человека состоит из [трёх] камер. �
 
     renderMicrocardsReviewArea(card) {
         if (this.microcardsQueueLoading) {
-            return '<div class="text-sm text-text-secondary">Загрузка очереди повторения...</div>';
+            return wt('im.k347', '<div class="text-sm text-text-secondary">Загрузка очереди повторения...</div>');
         }
         if (!this.microcardsActiveDeck?.id) {
-            return '<div class="text-sm text-text-secondary">Откройте колоду, чтобы начать повторение.</div>';
+            return wt('im.k348', '<div class="text-sm text-text-secondary">Откройте колоду, чтобы начать повторение.</div>');
         }
         if (!card) {
-            return '<div class="text-sm text-text-secondary">На сейчас нет карточек к повторению в выбранной колоде.</div>';
+            return wt('im.k349', '<div class="text-sm text-text-secondary">На сейчас нет карточек к повторению в выбранной колоде.</div>');
         }
 
         const cardType = String(card?.card_type || 'fact_recall');
         const front = (card && typeof card.front === 'object') ? card.front : {};
         const back = (card && typeof card.back === 'object') ? card.back : {};
-        const frontText = String(front.text || '').trim() || 'Карточка';
-        const backText = String(back.text || '').trim() || 'Ответ';
+        const frontText = String(front.text || '').trim() || wt('im.k584', 'Карточка');
+        const backText = String(back.text || '').trim() || wt('im.k585', 'Ответ');
         const isPair = cardType === 'pair_match';
         const evalData = this.microcardsReviewEvaluation || null;
 
@@ -6620,33 +6627,33 @@ text: Сердце человека состоит из [трёх] камер. �
                     ${!this.microcardsReviewReveal ? (isPair ? `
                         <button type="button" onclick="dashboard.importManager.revealCurrentMicrocardPairMatch()"
                             class="px-3 py-1.5 text-xs font-medium rounded-lg border border-primary text-primary hover:bg-primary hover:text-primary-fg">
-                            Проверить пары
+                            ${wt('im.k586', 'Проверить пары')}
                         </button>
                     ` : `
                         <button type="button" onclick="dashboard.importManager.revealCurrentMicrocard()"
                             class="px-3 py-1.5 text-xs font-medium rounded-lg border border-primary text-primary hover:bg-primary hover:text-primary-fg">
-                            Показать ответ
+                            ${wt('im.k587', 'Показать ответ')}
                         </button>
                     `) : `
                         <button type="button" onclick="dashboard.importManager.submitCurrentMicrocardRating('again')"
                             ${this.microcardsReviewSubmitting ? 'disabled' : ''}
                             class="px-3 py-1.5 text-xs font-medium rounded-lg border border-error-light text-error-text bg-error-lighter hover:bg-error-light disabled:opacity-60">
-                            Снова
+                            ${wt('im.k588', 'Снова')}
                         </button>
                         <button type="button" onclick="dashboard.importManager.submitCurrentMicrocardRating('hard')"
                             ${this.microcardsReviewSubmitting ? 'disabled' : ''}
                             class="px-3 py-1.5 text-xs font-medium rounded-lg border border-warning-light text-warning-text bg-warning-lighter hover:bg-warning-light disabled:opacity-60">
-                            Трудно
+                            ${wt('im.k589', 'Трудно')}
                         </button>
                         <button type="button" onclick="dashboard.importManager.submitCurrentMicrocardRating('good')"
                             ${this.microcardsReviewSubmitting ? 'disabled' : ''}
                             class="px-3 py-1.5 text-xs font-medium rounded-lg border border-success-light text-success-text bg-success-lighter hover:bg-success-light disabled:opacity-60">
-                            Хорошо
+                            ${wt('im.k590', 'Хорошо')}
                         </button>
                         <button type="button" onclick="dashboard.importManager.submitCurrentMicrocardRating('easy')"
                             ${this.microcardsReviewSubmitting ? 'disabled' : ''}
                             class="px-3 py-1.5 text-xs font-medium rounded-lg border border-info-light text-info-text bg-info-lighter hover:bg-info-light disabled:opacity-60">
-                            Легко
+                            ${wt('im.k591', 'Легко')}
                         </button>
                     `}
                 </div>
@@ -6659,7 +6666,7 @@ text: Сердце человека состоит из [трёх] камер. �
         const leftItems = Array.isArray(frontPayload.left_items) ? frontPayload.left_items : [];
         const rightItems = Array.isArray(frontPayload.right_items) ? frontPayload.right_items : [];
         if (!leftItems.length || !rightItems.length) {
-            return '<div class="text-xs text-text-secondary">pair_match payload пустой.</div>';
+            return wt('im.k350', '<div class="text-xs text-text-secondary">pair_match payload пустой.</div>');
         }
         const cardId = String(card?.id || '');
         const saved = (this.microcardsPairSelections && this.microcardsPairSelections[cardId]) ? this.microcardsPairSelections[cardId] : {};
@@ -6765,9 +6772,9 @@ text: Сердце человека состоит из [трёх] камер. �
         if (!this.microcardsReviewReveal) {
             this.showVoiceToast({
                 severity: 'warning',
-                what: 'Оценка карточки приостановлена.',
-                impact: 'Ответ ещё не открыт.',
-                next: 'Сначала откройте ответ или завершите проверку пар.',
+                what: wt('im.k351', 'Оценка карточки приостановлена.'),
+                impact: wt('im.k352', 'Ответ ещё не открыт.'),
+                next: wt('im.k353', 'Сначала откройте ответ или завершите проверку пар.'),
             });
             return { ok: false, error: 'reveal_required' };
         }
@@ -6810,9 +6817,9 @@ text: Сердце человека состоит из [трёх] камер. �
                 if (this.microcardsQueueIndex >= this.microcardsQueue.length) {
                     this.showVoiceToast({
                         severity: 'success',
-                        what: 'Сессия повторения завершена.',
-                        impact: 'Очередь текущей колоды пройдена полностью.',
-                        next: 'Можно запустить новую очередь или перейти к другой колоде.',
+                        what: wt('im.k354', 'Сессия повторения завершена.'),
+                        impact: wt('im.k355', 'Очередь текущей колоды пройдена полностью.'),
+                        next: wt('im.k356', 'Можно запустить новую очередь или перейти к другой колоде.'),
                     });
                     this.microcardsSession = null;
                     await this.loadMicrocardsDecks();
@@ -6822,16 +6829,16 @@ text: Сердце человека состоит из [трёх] камер. �
                 if (err.startsWith('session_')) {
                     this.showVoiceToast({
                         severity: 'warning',
-                        what: 'Текущая сессия устарела.',
-                        impact: 'Рейтинг не сохранён.',
-                        next: 'Откройте очередь колоды заново и повторите оценку.',
+                        what: wt('im.k357', 'Текущая сессия устарела.'),
+                        impact: wt('im.k358', 'Рейтинг не сохранён.'),
+                        next: wt('im.k359', 'Откройте очередь колоды заново и повторите оценку.'),
                     });
                 } else {
                     this.showVoiceToast({
                         severity: 'error',
-                        what: 'Оценка карточки не сохранена.',
-                        impact: 'Прогресс этой карточки не обновлён.',
-                        next: data.message || data.error || 'Повторите отправку оценки.',
+                        what: wt('im.k360', 'Оценка карточки не сохранена.'),
+                        impact: wt('im.k361', 'Прогресс этой карточки не обновлён.'),
+                        next: data.message || data.error || wt('im.k362', 'Повторите отправку оценки.'),
                     });
                 }
             }
@@ -6840,9 +6847,9 @@ text: Сердце человека состоит из [трёх] камер. �
             console.error('[Microcards] submit review failed:', e);
             this.showVoiceToast({
                 severity: 'error',
-                what: 'Сохранение оценки недоступно из-за сетевой ошибки.',
-                impact: 'Прогресс карточки не обновлён.',
-                next: 'Проверьте сеть и повторите отправку.',
+                what: wt('im.k363', 'Сохранение оценки недоступно из-за сетевой ошибки.'),
+                impact: wt('im.k364', 'Прогресс карточки не обновлён.'),
+                next: wt('im.k365', 'Проверьте сеть и повторите отправку.'),
             });
             return { ok: false, error: 'network_error' };
         } finally {
@@ -6857,7 +6864,7 @@ text: Сердце человека состоит из [трёх] камер. �
         if (!this.isTheoryFeatureEnabled('ai_mode', false)) {
             return this.openTheoryAiInProgressPlaceholder();
         }
-        if (!this.ensureTheoryFeatureEnabled('microcards_mode', 'Режим микрокарточек отключён (feature flag).')) {
+        if (!this.ensureTheoryFeatureEnabled('microcards_mode', wt('im.k366', 'Режим микрокарточек отключён (feature flag).'))) {
             return;
         }
         this.setModalPurpose('theory_analysis');
@@ -6881,11 +6888,11 @@ text: Сердце человека состоит из [трёх] камер. �
             if (data.ok && data.deck) {
                 this.manualEditorDeck = data.deck;
             } else {
-                this.showToast(data.error || 'Не удалось загрузить колоду', 'error');
+                this.showToast(data.error || wt('im.k367', 'Не удалось загрузить колоду'), 'error');
             }
         } catch (e) {
             console.error('[M11] load deck failed:', e);
-            this.showToast('Ошибка сети', 'error');
+            this.showToast(wt('im.k368', 'Ошибка сети'), 'error');
         } finally {
             this.manualEditorDeckLoading = false;
             if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
@@ -6895,7 +6902,7 @@ text: Сердце человека состоит из [трёх] камер. �
     async manualEditorCreateDeck() {
         const nameEl = document.getElementById('m11DeckNameInput');
         const name = String(nameEl?.value || '').trim();
-        if (!name) { this.showToast('Введите название колоды', 'warning'); return; }
+        if (!name) { this.showToast(wt('im.k369', 'Введите название колоды'), 'warning'); return; }
         this.manualEditorSaving = true;
         if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
         try {
@@ -6906,15 +6913,15 @@ text: Сердце человека состоит из [трёх] камер. �
             });
             const data = await resp.json();
             if (data.ok) {
-                this.showToast('Колода создана', 'success');
+                this.showToast(wt('im.k370', 'Колода создана'), 'success');
                 await this.loadMicrocardsDecks();
                 if (data.deck?.id) await this.manualEditorOpenDeck(data.deck.id);
             } else {
-                this.showToast(data.error || 'Не удалось создать колоду', 'error');
+                this.showToast(data.error || wt('im.k371', 'Не удалось создать колоду'), 'error');
             }
         } catch (e) {
             console.error('[M11] create deck failed:', e);
-            this.showToast('Ошибка сети', 'error');
+            this.showToast(wt('im.k372', 'Ошибка сети'), 'error');
         } finally {
             this.manualEditorSaving = false;
             if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
@@ -6924,7 +6931,7 @@ text: Сердце человека состоит из [трёх] камер. �
     async manualEditorRenameDeck(deckId) {
         const nameEl = document.getElementById('m11RenameInput');
         const name = String(nameEl?.value || '').trim();
-        if (!name) { this.showToast('Введите новое название', 'warning'); return; }
+        if (!name) { this.showToast(wt('im.k373', 'Введите новое название'), 'warning'); return; }
         this.manualEditorSaving = true;
         if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
         try {
@@ -6935,18 +6942,18 @@ text: Сердце человека состоит из [трёх] камер. �
             });
             const data = await resp.json();
             if (data.ok) {
-                this.showToast('Колода переименована', 'success');
+                this.showToast(wt('im.k374', 'Колода переименована'), 'success');
                 this.manualEditorRenamingDeckId = null;
                 await this.loadMicrocardsDecks();
                 if (this.manualEditorDeck?.id === deckId) {
                     this.manualEditorDeck.name = name;
                 }
             } else {
-                this.showToast(data.error || 'Не удалось переименовать', 'error');
+                this.showToast(data.error || wt('im.k375', 'Не удалось переименовать'), 'error');
             }
         } catch (e) {
             console.error('[M11] rename deck failed:', e);
-            this.showToast('Ошибка сети', 'error');
+            this.showToast(wt('im.k376', 'Ошибка сети'), 'error');
         } finally {
             this.manualEditorSaving = false;
             if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
@@ -6962,27 +6969,27 @@ text: Сердце человека состоит из [трёх] камер. �
             });
             const data = await resp.json();
             if (data.ok) {
-                this.showToast(archive ? 'Колода архивирована' : 'Колода восстановлена', 'success');
+                this.showToast(archive ? wt('im.k377', 'Колода архивирована') : wt('im.k378', 'Колода восстановлена'), 'success');
                 await this.loadMicrocardsDecks();
                 if (this.manualEditorDeck?.id === deckId) {
                     this.manualEditorDeck = null;
                 }
             } else {
-                this.showToast(data.error || 'Ошибка', 'error');
+                this.showToast(data.error || wt('im.k379', 'Ошибка'), 'error');
             }
         } catch (e) {
             console.error('[M11] archive deck failed:', e);
-            this.showToast('Ошибка сети', 'error');
+            this.showToast(wt('im.k380', 'Ошибка сети'), 'error');
         }
         if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
     }
 
     async manualEditorDeleteDeck(deckId) {
         const confirmed = await this.confirmAction({
-            title: 'Удалить колоду?',
-            message: 'Это действие необратимо.',
-            confirmText: 'Удалить',
-            cancelText: 'Отмена',
+            title: wt('im.k381', 'Удалить колоду?'),
+            message: wt('im.k382', 'Это действие необратимо.'),
+            confirmText: wt('im.k383', 'Удалить'),
+            cancelText: wt('im.k384', 'Отмена'),
             variant: 'error',
         });
         if (!confirmed) return;
@@ -6990,15 +6997,15 @@ text: Сердце человека состоит из [трёх] камер. �
             const resp = await fetch(`/api/editor/microcards/decks/${encodeURIComponent(deckId)}`, { method: 'DELETE' });
             const data = await resp.json();
             if (data.ok) {
-                this.showToast('Колода удалена', 'success');
+                this.showToast(wt('im.k385', 'Колода удалена'), 'success');
                 if (this.manualEditorDeck?.id === deckId) this.manualEditorDeck = null;
                 await this.loadMicrocardsDecks();
             } else {
-                this.showToast(data.error || 'Не удалось удалить', 'error');
+                this.showToast(data.error || wt('im.k386', 'Не удалось удалить'), 'error');
             }
         } catch (e) {
             console.error('[M11] delete deck failed:', e);
-            this.showToast('Ошибка сети', 'error');
+            this.showToast(wt('im.k387', 'Ошибка сети'), 'error');
         }
         if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
     }
@@ -7009,7 +7016,7 @@ text: Сердце человека состоит из [трёх] камер. �
             this.manualEditorShowCardForm('edit', parsed);
         } catch (error) {
             console.error('[M11] decode card payload failed:', error);
-            this.showToast('Не удалось открыть карточку для редактирования.', 'error');
+            this.showToast(wt('im.k388', 'Не удалось открыть карточку для редактирования.'), 'error');
         }
     }
 
@@ -7065,22 +7072,22 @@ text: Сердце человека состоит из [трёх] камер. �
 
         if (isPairMatch) {
             // M15: pair_match preview — read pairs from DOM
-            if (!ft) { this.showToast('Заполните инструкцию (лицевая сторона)', 'warning'); return; }
+            if (!ft) { this.showToast(wt('im.k389', 'Заполните инструкцию (лицевая сторона)'), 'warning'); return; }
             const pairs = this._m15ReadPairsFromDOM();
             const validPairs = pairs.filter(p => p.left && p.right);
-            if (validPairs.length < 2) { this.showToast('Заполните минимум 2 пары (левая и правая часть)', 'warning'); return; }
+            if (validPairs.length < 2) { this.showToast(wt('im.k390', 'Заполните минимум 2 пары (левая и правая часть)'), 'warning'); return; }
             const leftItems = validPairs.map((p, i) => ({ id: `l${i + 1}`, text: p.left }));
             const rightItems = validPairs.map((p, i) => ({ id: `r${i + 1}`, text: p.right }));
             const pairLinks = validPairs.map((_, i) => ({ left_id: `l${i + 1}`, right_id: `r${i + 1}` }));
             this.manualEditorPreviewCard = {
                 card_type: 'pair_match',
                 front: { text: ft, payload: { mode: 'pair_match', left_items: leftItems, right_items: rightItems, shuffle_right: true } },
-                back: { text: 'Правильные соответствия', payload: { mode: 'pair_match_solution', pairs: pairLinks, explanations: [] } },
+                back: { text: wt('im.k391', 'Правильные соответствия'), payload: { mode: 'pair_match_solution', pairs: pairLinks, explanations: [] } },
             };
         } else {
             const backEl = document.getElementById('m11CardBack');
             const bt = String(backEl?.value || '').trim();
-            if (!ft || !bt) { this.showToast('Заполните лицевую и обратную стороны', 'warning'); return; }
+            if (!ft || !bt) { this.showToast(wt('im.k392', 'Заполните лицевую и обратную стороны'), 'warning'); return; }
             this.manualEditorPreviewCard = {
                 card_type: 'fact_recall',
                 front: { text: ft },
@@ -7134,7 +7141,7 @@ text: Сердце человека состоит из [трёх] камер. �
         const form = this.manualEditorCardForm;
         if (!form) return;
         const deckId = String(this.manualEditorDeck?.id || '').trim();
-        if (!deckId) { this.showToast('Колода не выбрана', 'warning'); return; }
+        if (!deckId) { this.showToast(wt('im.k393', 'Колода не выбрана'), 'warning'); return; }
 
         const frontEl = document.getElementById('m11CardFront');
         const backEl = document.getElementById('m11CardBack');
@@ -7142,7 +7149,7 @@ text: Сердце человека состоит из [трёх] камер. �
         const diffEl = document.getElementById('m11CardDifficulty');
 
         const front_text = String(frontEl?.value || '').trim();
-        if (!front_text) { this.showToast('Заполните лицевую сторону', 'warning'); return; }
+        if (!front_text) { this.showToast(wt('im.k394', 'Заполните лицевую сторону'), 'warning'); return; }
 
         const tagsRaw = String(tagsEl?.value || '').trim();
         const tags = tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean) : [];
@@ -7155,15 +7162,15 @@ text: Сердце человека состоит из [трёх] камер. �
         let back_text = '';
         if (isPairMatch) {
             pairs = this._m15ReadPairsFromDOM().filter(p => p.left && p.right);
-            if (pairs.length < 2) { this.showToast('Заполните минимум 2 пары (левая и правая часть)', 'warning'); return; }
-            if (pairs.length > 5) { this.showToast('Максимум 5 пар', 'warning'); return; }
+            if (pairs.length < 2) { this.showToast(wt('im.k395', 'Заполните минимум 2 пары (левая и правая часть)'), 'warning'); return; }
+            if (pairs.length > 5) { this.showToast(wt('im.k396', 'Максимум 5 пар'), 'warning'); return; }
             const lefts = pairs.map(p => p.left);
             const rights = pairs.map(p => p.right);
-            if (new Set(lefts).size !== lefts.length) { this.showToast('Левые элементы пар не должны повторяться', 'warning'); return; }
-            if (new Set(rights).size !== rights.length) { this.showToast('Правые элементы пар не должны повторяться', 'warning'); return; }
+            if (new Set(lefts).size !== lefts.length) { this.showToast(wt('im.k397', 'Левые элементы пар не должны повторяться'), 'warning'); return; }
+            if (new Set(rights).size !== rights.length) { this.showToast(wt('im.k398', 'Правые элементы пар не должны повторяться'), 'warning'); return; }
         } else {
             back_text = String(backEl?.value || '').trim();
-            if (!back_text) { this.showToast('Заполните обратную сторону', 'warning'); return; }
+            if (!back_text) { this.showToast(wt('im.k399', 'Заполните обратную сторону'), 'warning'); return; }
         }
 
         this.manualEditorSaving = true;
@@ -7191,25 +7198,25 @@ text: Сердце человека состоит из [трёх] камер. �
             });
             const data = await resp.json();
             if (data.ok) {
-                this.showToast(form.mode === 'edit' ? 'Карточка обновлена' : 'Карточка создана', 'success');
+                this.showToast(form.mode === 'edit' ? wt('im.k592', 'Карточка обновлена') : wt('im.k593', 'Карточка создана'), 'success');
                 this.manualEditorCardForm = null;
                 this.manualEditorPreviewCard = null;
                 await this.manualEditorOpenDeck(deckId);
             } else {
                 const errMap = {
-                    duplicate_card: 'Такая карточка уже существует (дубликат)',
-                    pair_match_min_2_pairs: 'Минимум 2 пары',
-                    pair_match_max_5_pairs: 'Максимум 5 пар',
-                    pair_match_duplicate_left: 'Левые элементы пар не должны повторяться',
-                    pair_match_duplicate_right: 'Правые элементы пар не должны повторяться',
-                    not_pair_match_card: 'Эта карточка не является pair_match',
+                    duplicate_card: wt('im.k400', 'Такая карточка уже существует (дубликат)'),
+                    pair_match_min_2_pairs: wt('im.k401', 'Минимум 2 пары'),
+                    pair_match_max_5_pairs: wt('im.k402', 'Максимум 5 пар'),
+                    pair_match_duplicate_left: wt('im.k403', 'Левые элементы пар не должны повторяться'),
+                    pair_match_duplicate_right: wt('im.k404', 'Правые элементы пар не должны повторяться'),
+                    not_pair_match_card: wt('im.k405', 'Эта карточка не является pair_match'),
                 };
-                const msg = errMap[data.error] || data.error || 'Ошибка сохранения';
+                const msg = errMap[data.error] || data.error || wt('im.k406', 'Ошибка сохранения');
                 this.showToast(msg, 'error');
             }
         } catch (e) {
             console.error('[M15] save card failed:', e);
-            this.showToast('Ошибка сети', 'error');
+            this.showToast(wt('im.k407', 'Ошибка сети'), 'error');
         } finally {
             this.manualEditorSaving = false;
             if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
@@ -7220,10 +7227,10 @@ text: Сердце человека состоит из [трёх] камер. �
         const deckId = String(this.manualEditorDeck?.id || '').trim();
         if (!deckId || !cardId) return;
         const confirmed = await this.confirmAction({
-            title: 'Удалить карточку?',
-            message: 'Карточка будет удалена без возможности восстановления.',
-            confirmText: 'Удалить',
-            cancelText: 'Отмена',
+            title: wt('im.k408', 'Удалить карточку?'),
+            message: wt('im.k409', 'Карточка будет удалена без возможности восстановления.'),
+            confirmText: wt('im.k410', 'Удалить'),
+            cancelText: wt('im.k411', 'Отмена'),
             variant: 'error',
         });
         if (!confirmed) return;
@@ -7231,14 +7238,14 @@ text: Сердце человека состоит из [трёх] камер. �
             const resp = await fetch(`/api/editor/microcards/decks/${encodeURIComponent(deckId)}/cards/${encodeURIComponent(cardId)}`, { method: 'DELETE' });
             const data = await resp.json();
             if (data.ok) {
-                this.showToast('Карточка удалена', 'success');
+                this.showToast(wt('im.k412', 'Карточка удалена'), 'success');
                 await this.manualEditorOpenDeck(deckId);
             } else {
-                this.showToast(data.error || 'Ошибка удаления', 'error');
+                this.showToast(data.error || wt('im.k413', 'Ошибка удаления'), 'error');
             }
         } catch (e) {
             console.error('[M11] delete card failed:', e);
-            this.showToast('Ошибка сети', 'error');
+            this.showToast(wt('im.k414', 'Ошибка сети'), 'error');
         }
     }
 
@@ -7260,7 +7267,7 @@ text: Сердце человека состоит из [трёх] камер. �
             await this.manualEditorOpenDeck(deck.id);
         } catch (e) {
             console.error('[M11] reorder failed:', e);
-            this.showToast('Ошибка сети', 'error');
+            this.showToast(wt('im.k415', 'Ошибка сети'), 'error');
         }
     }
 
@@ -7270,7 +7277,7 @@ text: Сердце человека состоит из [трёх] камер. �
         if (!this.isTheoryFeatureEnabled('ai_mode', false)) {
             return this.openTheoryAiInProgressPlaceholder();
         }
-        if (!this.ensureTheoryFeatureEnabled('microcards_mode', 'Режим микрокарточек отключён (feature flag).')) {
+        if (!this.ensureTheoryFeatureEnabled('microcards_mode', wt('im.k416', 'Режим микрокарточек отключён (feature flag).'))) {
             return;
         }
         this.theorySubMode = 'text_import';
@@ -7285,10 +7292,10 @@ text: Сердце человека состоит из [трёх] камер. �
     getMcImportPromptTemplates() {
         return {
             qa_short: {
-                title: 'Q/A короткие (@MICROCARD)',
-                instructions: `1. Скопируйте промпт и отправьте его ИИ-агенту вместе с учебным материалом.
-2. Скопируйте ответ ИИ без изменений и вставьте в поле ниже.
-3. Нажмите «Распарсить» для предпросмотра карточек.`,
+                title: wt('im.k417', 'Q/A короткие (@MICROCARD)'),
+                instructions: `${wt('im.k616', '1. Скопируйте промпт и отправьте его ИИ-агенту вместе с учебным материалом.')}
+${wt('im.k418', '2. Скопируйте ответ ИИ без изменений и вставьте в поле ниже.')}
+${wt('im.k573', '3. Нажмите «Распарсить» для предпросмотра карточек.')}`,
                 prompt: `Ты — генератор микрокарточек для образовательной платформы.
 
 <task_context>
@@ -7338,10 +7345,10 @@ text: Сердце человека состоит из [трёх] камер. �
 </example>`
             },
             term_definition: {
-                title: 'Термин → определение (@MICROCARD)',
-                instructions: `1. Скопируйте промпт и отправьте его ИИ-агенту вместе с учебным материалом.
-2. Скопируйте ответ ИИ без изменений и вставьте в поле ниже.
-3. Нажмите «Распарсить» для предпросмотра карточек.`,
+                title: wt('im.k419', 'Термин → определение (@MICROCARD)'),
+                instructions: `${wt('im.k616', '1. Скопируйте промпт и отправьте его ИИ-агенту вместе с учебным материалом.')}
+${wt('im.k420', '2. Скопируйте ответ ИИ без изменений и вставьте в поле ниже.')}
+${wt('im.k573', '3. Нажмите «Распарсить» для предпросмотра карточек.')}`,
                 prompt: `Ты — генератор микрокарточек для образовательной платформы.
 
 <task>
@@ -7377,10 +7384,10 @@ text: Сердце человека состоит из [трёх] камер. �
 </example>`
             },
             definition_term: {
-                title: 'Определение → термин (@MICROCARD)',
-                instructions: `1. Скопируйте промпт и отправьте его ИИ-агенту вместе с учебным материалом.
-2. Скопируйте ответ ИИ без изменений и вставьте в поле ниже.
-3. Нажмите «Распарсить» для предпросмотра карточек.`,
+                title: wt('im.k421', 'Определение → термин (@MICROCARD)'),
+                instructions: `${wt('im.k616', '1. Скопируйте промпт и отправьте его ИИ-агенту вместе с учебным материалом.')}
+${wt('im.k422', '2. Скопируйте ответ ИИ без изменений и вставьте в поле ниже.')}
+${wt('im.k573', '3. Нажмите «Распарсить» для предпросмотра карточек.')}`,
                 prompt: `Ты — генератор микрокарточек для образовательной платформы.
 
 <task>
@@ -7416,10 +7423,10 @@ text: Сердце человека состоит из [трёх] камер. �
 </example>`
             },
             material_cards: {
-                title: 'Карточки по тезисам материала (@MICROCARD)',
-                instructions: `1. Скопируйте промпт и отправьте его ИИ-агенту вместе с учебным материалом.
-2. Скопируйте ответ ИИ без изменений и вставьте в поле ниже.
-3. Нажмите «Распарсить» для предпросмотра карточек.`,
+                title: wt('im.k423', 'Карточки по тезисам материала (@MICROCARD)'),
+                instructions: `${wt('im.k616', '1. Скопируйте промпт и отправьте его ИИ-агенту вместе с учебным материалом.')}
+${wt('im.k424', '2. Скопируйте ответ ИИ без изменений и вставьте в поле ниже.')}
+${wt('im.k573', '3. Нажмите «Распарсить» для предпросмотра карточек.')}`,
                 prompt: `Ты — генератор микрокарточек для образовательной платформы.
 
 <task>
@@ -7503,7 +7510,7 @@ text: Сердце человека состоит из [трёх] камер. �
                             </div>
                             <button onclick="dashboard.importManager.mcImportCopyPrompt()"
                                 class="px-3 py-1.5 text-xs font-semibold text-primary border border-primary rounded hover:bg-primary hover:text-primary-fg transition-colors shrink-0">
-                                Скопировать
+                                ${wt('im.k425', 'Скопировать')}
                             </button>
                         </div>
                         <div class="mb-3">
@@ -7549,7 +7556,7 @@ text: Сердце человека состоит из [трёх] камер. �
                         <textarea id="mcImportTextArea"
                             class="block w-full rounded-lg border ${hasErrors ? 'border-error' : 'border-border-strong'} bg-surface-2 p-3 text-sm text-text-main font-mono placeholder:text-text-disabled focus:ring-2 focus:ring-primary resize-y"
                             rows="14"
-                            placeholder="@MICROCARD&#10;@ tags: кардиология&#10;# Что такое синусовый ритм?&#10;= Ритм сердца, при котором импульсы исходят из синусового узла.&#10;&#10;@MICROCARD&#10;# Норма ЧСС у взрослого&#10;= 60–100 уд/мин."
+                            ${wt('im.k426', 'placeholder="@MICROCARD&#10;@ tags: кардиология&#10;# Что такое синусовый ритм?&#10;= Ритм сердца, при котором импульсы исходят из синусового узла.&#10;&#10;@MICROCARD&#10;# Норма ЧСС у взрослого&#10;= 60–100 уд/мин."')}
                             oninput="dashboard.importManager.mcImportText = this.value">${this.escapeHtml(this.mcImportText)}</textarea>
                         <div id="mcImportLiveCounter" class="mt-2 flex flex-wrap gap-2 text-xs min-h-[20px]"></div>
                         <div class="mt-3 flex items-center gap-3">
@@ -7585,9 +7592,9 @@ text: Сердце человека состоит из [трёх] камер. �
             <div class="space-y-4 animate-slide-up-fade">
                 <div class="rounded-xl border border-border-strong bg-surface-1 p-4">
                     <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
-                        <h4 class="text-sm font-bold text-text-main">Предпросмотр: ${summary.total || 0} карточек</h4>
+                        <h4 class="text-sm font-bold text-text-main">${wt('im.k427', 'Предпросмотр:')}${summary.total || 0} ${wt('im.k428', 'карточек</h4>')}
                         <div class="flex items-center gap-2 text-xs">
-                            <span class="px-2 py-1 rounded-md bg-success-lighter text-success-text border border-success-light font-bold">${summary.valid || 0} ок</span>
+                            <span class="px-2 py-1 rounded-md bg-success-lighter text-success-text border border-success-light font-bold">${summary.valid || 0} ${wt('im.k429', 'ок</span>')}
                             ${summary.warnings ? `<span class="px-2 py-1 rounded-md bg-warning-lighter text-warning-text border border-warning-light font-bold">${summary.warnings} предупр.</span>` : ''}
                             ${summary.errors ? `<span class="px-2 py-1 rounded-md bg-error-lighter text-error-text border border-error-light font-bold">${summary.errors} ошибок</span>` : ''}
                         </div>
@@ -7641,7 +7648,7 @@ text: Сердце человека состоит из [трёх] камер. �
                                 <input id="mcImportDeckName" type="text"
                                     value="${this.escapeHtmlAttr(this.mcImportDeckName || (items[0]?.metadata?.deck || ''))}"
                                     oninput="dashboard.importManager.mcImportDeckName = this.value"
-                                    placeholder="Из метаданных или укажите вручную"
+                                    placeholder=wt('im.k430', "Из метаданных или укажите вручную")
                                     class="w-full px-3 py-2 text-xs rounded-lg border border-border-strong bg-surface-1 text-text-main focus:outline-none focus:ring-1 focus:ring-primary" />
                             </div>
                         ` : `
@@ -7661,18 +7668,18 @@ text: Сердце человека состоит из [трёх] камер. �
                     ${targetDeck ? `
                         <div id="mcImportTargetDeckNote" class="mt-3 rounded-lg border border-border-subtle bg-bg-secondary px-3 py-2">
                             <div class="flex flex-wrap gap-1 mb-1.5">${this.renderMicrocardsDeckOwnershipBadges(targetDeck)}</div>
-                            <p class="text-[11px] text-text-secondary">Карточки будут добавлены в общую колоду <span class="font-semibold text-text-main">${this.escapeHtml(String(targetDeck.name || targetDeck.id || 'Колода'))}</span>. Прогресс повторения по ним останется персональным.</p>
+                            <p class="text-[11px] text-text-secondary">Карточки будут добавлены в общую колоду <span class="font-semibold text-text-main">${this.escapeHtml(String(targetDeck.name || targetDeck.id || wt('im.k431', 'Колода')))}</span>. Прогресс повторения по ним останется персональным.</p>
                         </div>
                     ` : ''}
                     <div class="flex flex-wrap items-center gap-2">
                         <button onclick="dashboard.importManager.mcImportExecute()"
                             class="px-5 py-2.5 text-sm font-bold rounded-lg bg-primary text-primary-fg hover:bg-primary-hover transition-colors disabled:opacity-50 shadow-sm"
                             ${this.mcImportExecuting || !(summary.valid > 0) ? 'disabled' : ''}>
-                            ${this.mcImportExecuting ? 'Импорт...' : `Импортировать ${summary.valid || 0} карточек`}
+                            ${this.mcImportExecuting ? wt('im.k432', 'Импорт...') : `Импортировать ${summary.valid || 0} карточек`}
                         </button>
                         <button onclick="dashboard.importManager.mcImportReset()"
                             class="px-4 py-2 text-sm font-semibold rounded-lg border border-border-strong text-text-secondary hover:bg-bg-hover transition-colors">
-                            Назад к вводу
+                            ${wt('im.k433', 'Назад к вводу')}
                         </button>
                     </div>
                 </div>
@@ -7697,22 +7704,22 @@ text: Сердце человека состоит из [трёх] камер. �
                         </div>
                         <p class="text-xs text-text-secondary mb-1">Колода: <span class="font-semibold text-text-main">${this.escapeHtml(result.deck_name || result.deck_id || '')}</span></p>
                     ` : `
-                        <p class="text-sm text-error-text">${this.escapeHtml(result.error || 'Неизвестная ошибка')}</p>
+                        <p class="text-sm text-error-text">${this.escapeHtml(result.error || wt('im.k434', 'Неизвестная ошибка'))}</p>
                     `}
                 </div>
                 <div class="flex flex-wrap justify-center gap-3">
                     <button onclick="dashboard.importManager.mcImportReset()"
                         class="px-5 py-2.5 text-sm font-bold rounded-lg bg-primary text-primary-fg hover:bg-primary-hover transition-colors shadow-sm">
-                        Новый импорт
+                        ${wt('im.k435', 'Новый импорт')}
                     </button>
                     ${ok && result.deck_id ? `
                         <button onclick="dashboard.importManager.manualEditorOpenDeck('${this.escapeInlineJsString(String(result.deck_id))}'); dashboard.importManager.enterTheorySubMode('manual_editor')"
                             class="px-4 py-2 text-sm font-semibold rounded-lg border border-border-strong text-text-secondary hover:bg-bg-hover transition-colors">
-                            Открыть в редакторе
+                            ${wt('im.k594', 'Открыть в редакторе')}
                         </button>
                         <button onclick="dashboard.importManager.openTheoryMicrocardsMode('${this.escapeInlineJsString(String(result.deck_id))}')"
                             class="px-4 py-2 text-sm font-semibold rounded-lg border border-primary text-primary hover:bg-primary hover:text-primary-fg transition-colors">
-                            Начать повторение
+                            ${wt('im.k595', 'Начать повторение')}
                         </button>
                     ` : ''}
                 </div>
@@ -7742,9 +7749,9 @@ text: Сердце человека состоит из [трёх] камер. �
             const templates = this.getMcImportPromptTemplates();
             const active = templates[this.mcImportTemplateType] || templates.qa_short;
             await this.writeToClipboard(active.prompt);
-            this.showToast('Промпт скопирован в буфер обмена.', 'success');
+            this.showToast(wt('im.k436', 'Промпт скопирован в буфер обмена.'), 'success');
         } catch (e) {
-            this.showToast('Не удалось скопировать промпт.', 'error');
+            this.showToast(wt('im.k437', 'Не удалось скопировать промпт.'), 'error');
         }
     }
 
@@ -7757,7 +7764,7 @@ text: Сердце человека состоит из [трёх] камер. �
                 this.mcImportText = text;
             }
         } catch (e) {
-            this.showToast('Не удалось прочитать буфер обмена.', 'warning');
+            this.showToast(wt('im.k438', 'Не удалось прочитать буфер обмена.'), 'warning');
         }
     }
 
@@ -7765,7 +7772,7 @@ text: Сердце человека состоит из [трёх] камер. �
         const textarea = document.getElementById('mcImportTextArea');
         if (textarea) this.mcImportText = textarea.value;
         if (!this.mcImportText.trim()) {
-            this.showToast('Вставьте текст с микрокарточками.', 'warning');
+            this.showToast(wt('im.k439', 'Вставьте текст с микрокарточками.'), 'warning');
             return;
         }
         this.mcImportParsing = true;
@@ -7781,13 +7788,13 @@ text: Сердце человека состоит из [трёх] камер. �
             const data = await resp.json();
             this.mcImportParsedResult = data;
             if (!data.ok && !data.items?.length) {
-                this.showToast(data.error || 'Ошибка парсинга', 'error');
+                this.showToast(data.error || wt('im.k440', 'Ошибка парсинга'), 'error');
             } else if (data.summary?.total === 0) {
-                this.showToast('Не найдено блоков @MICROCARD в тексте.', 'warning');
+                this.showToast(wt('im.k441', 'Не найдено блоков @MICROCARD в тексте.'), 'warning');
             }
         } catch (e) {
             console.error('[M12] parse failed:', e);
-            this.showToast('Ошибка сети при парсинге.', 'error');
+            this.showToast(wt('im.k442', 'Ошибка сети при парсинге.'), 'error');
         } finally {
             this.mcImportParsing = false;
             if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
@@ -7798,7 +7805,7 @@ text: Сердце человека состоит из [трёх] камер. �
         const parsed = this.mcImportParsedResult;
         if (!parsed?.items?.length) return;
         if (this.mcImportMode === 'append_to_deck' && !this.mcImportTargetDeckId) {
-            this.showToast('Выберите целевую колоду.', 'warning');
+            this.showToast(wt('im.k443', 'Выберите целевую колоду.'), 'warning');
             return;
         }
         const deckNameEl = document.getElementById('mcImportDeckName');
@@ -7822,12 +7829,12 @@ text: Сердце человека состоит из [трёх] камер. �
                 this.showToast(`Импортировано ${data.added_cards || 0} карточек.`, 'success');
                 this.loadMicrocardsDecks();
             } else {
-                this.showToast(data.error || 'Ошибка импорта', 'error');
+                this.showToast(data.error || wt('im.k444', 'Ошибка импорта'), 'error');
             }
         } catch (e) {
             console.error('[M12] execute failed:', e);
             this.mcImportExecuteResult = { ok: false, error: 'network_error' };
-            this.showToast('Ошибка сети при импорте.', 'error');
+            this.showToast(wt('im.k445', 'Ошибка сети при импорте.'), 'error');
         } finally {
             this.mcImportExecuting = false;
             if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
@@ -7852,7 +7859,7 @@ text: Сердце человека состоит из [трёх] камер. �
         const isArchived = deck?.meta?.archived === true;
 
         const deckListHtml = this.microcardsDecksLoading
-            ? '<div class="text-sm text-text-secondary py-4 text-center">Загрузка колод...</div>'
+            ? wt('im.k446', '<div class="text-sm text-text-secondary py-4 text-center">Загрузка колод...</div>')
             : (decks.length ? decks.map(d => {
                 const isActive = deck && String(d?.id) === String(deck?.id);
                 const archived = d?.meta?.archived === true;
@@ -7864,11 +7871,11 @@ text: Сердце человека состоит из [трёх] камер. �
                         <div class="min-w-0 flex-1">
                             <div class="text-xs font-bold text-text-main truncate">${this.escapeHtml(String(d?.name || d?.id || 'Колода'))}${archived ? ' <span class="text-text-muted">(архив)</span>' : ''}</div>
                             ${ownershipBadges ? `<div class="mt-1 flex flex-wrap gap-1">${ownershipBadges}</div>` : ''}
-                            <div class="text-[10px] text-text-secondary mt-1">${stats.cards_total ?? 0} карт.</div>
+                            <div class="text-[10px] text-text-secondary mt-1">${stats.cards_total ?? 0} ${wt('im.k447', 'карт.</div>')}
                         </div>
                         ${this.manualEditorRenamingDeckId === String(d?.id) ? '' : `
                             <button onclick="event.stopPropagation(); dashboard.importManager.manualEditorRenamingDeckId='${this.escapeInlineJsString(String(d?.id))}'; dashboard.importManager.renderTheoryAnalysisMode();"
-                                class="p-1 rounded text-text-muted hover:text-primary transition-colors" title="Переименовать">
+                                class="p-1 rounded text-text-muted hover:text-primary transition-colors" title=wt('im.k448', "Переименовать")>
                                 <span class="material-symbols-outlined text-[14px]">edit</span>
                             </button>
                         `}
@@ -7897,11 +7904,11 @@ text: Сердце человека состоит из [трёх] камер. �
                         <div class="flex rounded-lg border border-border-strong overflow-hidden text-[10px] font-bold">
                             <button onclick="dashboard.importManager.manualEditorCardForm.card_type='fact_recall'; dashboard.importManager.renderTheoryAnalysisMode();"
                                 class="px-3 py-1.5 transition-colors ${!isPairMatch ? 'bg-primary text-primary-fg' : 'bg-surface-1 text-text-secondary hover:bg-bg-hover'}">
-                                Вопрос/Ответ
+                                ${wt('im.k596', 'Вопрос/Ответ')}
                             </button>
                             <button onclick="dashboard.importManager.manualEditorCardForm.card_type='pair_match'; if(!dashboard.importManager.manualEditorCardForm.pairs||dashboard.importManager.manualEditorCardForm.pairs.length<2) dashboard.importManager.manualEditorCardForm.pairs=[{left:'',right:''},{left:'',right:''}]; dashboard.importManager.renderTheoryAnalysisMode();"
                                 class="px-3 py-1.5 transition-colors ${isPairMatch ? 'bg-primary text-primary-fg' : 'bg-surface-1 text-text-secondary hover:bg-bg-hover'}">
-                                Сопоставление
+                                ${wt('im.k597', 'Сопоставление')}
                             </button>
                         </div>
                     ` : (isPairMatch ? '<span class="px-2 py-0.5 rounded text-[9px] font-bold border border-primary-light bg-primary-lighter text-primary uppercase">pair_match</span>' : '')}
@@ -7910,7 +7917,7 @@ text: Сердце человека состоит из [трёх] камер. �
                     <label class="block text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1">${isPairMatch ? 'Инструкция (лицевая сторона)' : 'Лицевая сторона (вопрос)'}</label>
                     <textarea id="m11CardFront" rows="2"
                         class="w-full px-3 py-2 text-sm rounded-lg border border-border-strong bg-surface-1 text-text-main focus:outline-none focus:ring-1 focus:ring-primary resize-y"
-                        placeholder="${isPairMatch ? 'Сопоставьте термин и определение' : 'Что такое синусовый ритм?'}">${this.escapeHtml(form.front_text)}</textarea>
+                        placeholder="${isPairMatch ? wt('im.k598', 'Сопоставьте термин и определение') : wt('im.k599', 'Что такое синусовый ритм?')}">${this.escapeHtml(form.front_text)}</textarea>
                 </div>
                 ${isPairMatch ? `
                     <div>
@@ -7921,14 +7928,14 @@ text: Сердце человека состоит из [трёх] камер. �
                                     <span class="text-[10px] text-text-muted font-mono w-4 text-right shrink-0">${i + 1}.</span>
                                     <input id="m15PairLeft_${i}" type="text" value="${this.escapeHtmlAttr(String(p.left || ''))}"
                                         class="flex-1 min-w-0 px-2.5 py-1.5 text-xs rounded-lg border border-border-strong bg-surface-1 text-text-main focus:outline-none focus:ring-1 focus:ring-primary"
-                                        placeholder="Левый элемент" />
+                                        placeholder=wt('im.k600', "Левый элемент") />
                                     <span class="text-text-muted text-xs shrink-0">\u2192</span>
                                     <input id="m15PairRight_${i}" type="text" value="${this.escapeHtmlAttr(String(p.right || ''))}"
                                         class="flex-1 min-w-0 px-2.5 py-1.5 text-xs rounded-lg border border-border-strong bg-surface-1 text-text-main focus:outline-none focus:ring-1 focus:ring-primary"
-                                        placeholder="Правый элемент" />
+                                        placeholder=wt('im.k601', "Правый элемент") />
                                     ${formPairs.length > 2 ? `
                                         <button onclick="dashboard.importManager._m15RemovePair(${i})"
-                                            class="p-1 rounded text-text-muted hover:text-error transition-colors shrink-0" title="Удалить пару">
+                                            class="p-1 rounded text-text-muted hover:text-error transition-colors shrink-0" title=wt('im.k449', "Удалить пару")>
                                             <span class="material-symbols-outlined text-[14px]">close</span>
                                         </button>
                                     ` : '<div class="w-6 shrink-0"></div>'}
@@ -7948,7 +7955,7 @@ text: Сердце человека состоит из [трёх] камер. �
                         <label class="block text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1">Обратная сторона (ответ)</label>
                         <textarea id="m11CardBack" rows="2"
                             class="w-full px-3 py-2 text-sm rounded-lg border border-border-strong bg-surface-1 text-text-main focus:outline-none focus:ring-1 focus:ring-primary resize-y"
-                            placeholder="Ритм сердца, при котором импульсы исходят из синусового узла.">${this.escapeHtml(form.back_text)}</textarea>
+                            placeholder=wt('im.k450', "Ритм сердца, при котором импульсы исходят из синусового узла.")>${this.escapeHtml(form.back_text)}</textarea>
                     </div>
                 `}
                 <div class="grid grid-cols-2 gap-3">
@@ -7956,7 +7963,7 @@ text: Сердце человека состоит из [трёх] камер. �
                         <label class="block text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1">Теги (через запятую)</label>
                         <input id="m11CardTags" type="text" value="${this.escapeHtmlAttr(form.tags)}"
                             class="w-full px-3 py-2 text-xs rounded-lg border border-border-strong bg-surface-1 text-text-main focus:outline-none focus:ring-1 focus:ring-primary"
-                            placeholder="кардиология, ритм" />
+                            placeholder=wt('im.k602', "кардиология, ритм") />
                     </div>
                     <div>
                         <label class="block text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1">Сложность</label>
@@ -7977,11 +7984,11 @@ text: Сердце человека состоит из [трёх] камер. �
                     </button>
                     <button onclick="dashboard.importManager.manualEditorPreviewCurrentCard()"
                         class="px-4 py-2 text-xs font-bold rounded-lg border border-border-strong text-text-secondary hover:bg-bg-hover transition-colors">
-                        Предпросмотр
+                        ${wt('im.k451', 'Предпросмотр')}
                     </button>
                     <button onclick="dashboard.importManager.manualEditorCancelCardForm()"
                         class="px-4 py-2 text-xs font-bold rounded-lg border border-border-strong text-text-muted hover:bg-bg-hover transition-colors">
-                        Отмена
+                        ${wt('im.k452', 'Отмена')}
                     </button>
                 </div>
             </div>
@@ -8031,28 +8038,28 @@ text: Сердце человека состоит из [трёх] камер. �
                             <div class="min-w-0 flex-1">
                                 <div class="flex items-center gap-1.5 mb-1.5">
                                     <span class="px-1.5 py-0.5 rounded text-[9px] font-bold border border-border-strong bg-surface-1 text-text-muted uppercase tracking-tight">${this.escapeHtml(ctype === 'pair_match' ? 'сопост.' : 'вопр/отв')}</span>
-                                    ${isManual ? '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold border border-info-light bg-info-lighter text-info-text uppercase tracking-tight">ручная</span>' : ''}
+                                    ${isManual ? wt('im.k453', '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold border border-info-light bg-info-lighter text-info-text uppercase tracking-tight">ручная</span>') : ''}
                                     ${cstatus !== 'active' ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold border border-warning-light bg-warning-lighter text-warning-text uppercase tracking-tight">${this.escapeHtml(cstatus === 'archived' ? 'в архиве' : cstatus)}</span>` : ''}
                                 </div>
-                                <div class="text-xs font-bold text-text-main truncate">${this.escapeHtml(ft || 'Без текста')}</div>
+                                <div class="text-xs font-bold text-text-main truncate">${this.escapeHtml(ft || wt('im.k454', 'Без текста'))}</div>
                                 <div class="text-[11px] text-text-secondary truncate mt-0.5 italic">${this.escapeHtml(bt || '')}</div>
                             </div>
                             <div class="flex items-center gap-0.5 shrink-0 sm:opacity-0 group-hover:opacity-100 transition-opacity">
                                 ${idx > 0 ? `<button onclick="event.stopPropagation(); dashboard.importManager.manualEditorMoveCard('${this.escapeInlineJsString(cid)}', -1)"
-                                    class="p-1 rounded-md bg-surface-1 border border-border-subtle text-text-muted hover:text-primary hover:border-primary transition-all" title="Сдвинуть выше">
+                                    class="p-1 rounded-md bg-surface-1 border border-border-subtle text-text-muted hover:text-primary hover:border-primary transition-all" title=wt('im.k603', "Сдвинуть выше")>
                                     <span class="material-symbols-outlined text-[16px]">expand_less</span>
                                 </button>` : ''}
                                 ${idx < cards.length - 1 ? `<button onclick="event.stopPropagation(); dashboard.importManager.manualEditorMoveCard('${this.escapeInlineJsString(cid)}', 1)"
-                                    class="p-1 rounded-md bg-surface-1 border border-border-subtle text-text-muted hover:text-primary hover:border-primary transition-all" title="Сдвинуть ниже">
+                                    class="p-1 rounded-md bg-surface-1 border border-border-subtle text-text-muted hover:text-primary hover:border-primary transition-all" title=wt('im.k604', "Сдвинуть ниже")>
                                     <span class="material-symbols-outlined text-[16px]">expand_more</span>
                                 </button>` : ''}
                                 <div class="w-1"></div>
                                 <button onclick="event.stopPropagation(); dashboard.importManager.manualEditorEditCardFromEncoded('${this.serializeInlineJson(card)}')"
-                                    class="p-1 rounded-md bg-surface-1 border border-border-subtle text-text-muted hover:text-primary hover:border-primary transition-all" title="Редактировать">
+                                    class="p-1 rounded-md bg-surface-1 border border-border-subtle text-text-muted hover:text-primary hover:border-primary transition-all" title=wt('im.k455', "Редактировать")>
                                     <span class="material-symbols-outlined text-[16px]">edit</span>
                                 </button>
                                 <button onclick="event.stopPropagation(); dashboard.importManager.manualEditorDeleteCard('${this.escapeInlineJsString(cid)}')"
-                                    class="p-1 rounded-md bg-surface-1 border border-border-subtle text-text-muted hover:text-error hover:border-error transition-all" title="Удалить">
+                                    class="p-1 rounded-md bg-surface-1 border border-border-subtle text-text-muted hover:text-error hover:border-error transition-all" title=wt('im.k456', "Удалить")>
                                     <span class="material-symbols-outlined text-[16px]">delete</span>
                                 </button>
                             </div>
@@ -8060,7 +8067,7 @@ text: Сердце человека состоит из [трёх] камер. �
                     `;
                 }).join('')}
             </div>
-        ` : '<div class="text-sm text-text-secondary py-6 text-center">Карточек пока нет. Добавьте первую.</div>') : '';
+        ` : wt('im.k457', '<div class="text-sm text-text-secondary py-6 text-center">Карточек пока нет. Добавьте первую.</div>')) : '';
 
         return `
             <div class="grid grid-cols-1 xl:grid-cols-[0.85fr_1.35fr] gap-5">
@@ -8071,7 +8078,7 @@ text: Сердце человека состоит из [трёх] камер. �
                             <p class="text-[11px] text-text-secondary">Колоды живут в общей библиотеке устройства. Прогресс повторения и будущие review остаются персональными.</p>
                         </div>
                         <div class="flex gap-2 mb-3">
-                            <input id="m11DeckNameInput" type="text" placeholder="Название новой колоды"
+                            <input id="m11DeckNameInput" type="text" placeholder=wt('im.k605', "Название новой колоды")
                                 class="flex-1 min-w-0 px-3 py-2 text-xs rounded-lg border border-border-strong bg-surface-1 text-text-main focus:outline-none focus:ring-1 focus:ring-primary" />
                             <button onclick="dashboard.importManager.manualEditorCreateDeck()"
                                 class="px-3 py-2 text-xs font-bold rounded-lg bg-primary text-primary-fg hover:bg-primary-hover transition-colors disabled:opacity-50 shrink-0"
@@ -8088,7 +8095,7 @@ text: Сердце человека состоит из [трёх] камер. �
                         <div class="rounded-xl border border-border-strong bg-surface-1 p-4">
                             <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
                                 <div class="min-w-0">
-                                    <div class="text-sm font-bold text-text-main truncate">${this.escapeHtml(String(deck.name || deck.id || 'Колода'))}</div>
+                                    <div class="text-sm font-bold text-text-main truncate">${this.escapeHtml(String(deck.name || deck.id || wt('im.k458', 'Колода')))}</div>
                                     <div class="text-[10px] text-text-secondary font-mono mt-0.5">${this.escapeHtml(String(deck.id || ''))}</div>
                                     <div class="mt-2 flex flex-wrap gap-1">${this.renderMicrocardsDeckOwnershipBadges(deck)}</div>
                                 </div>
@@ -8101,12 +8108,12 @@ text: Сердце человека состоит из [трёх] камер. �
                                     ` : ''}
                                     <button onclick="dashboard.importManager.manualEditorArchiveDeck('${this.escapeInlineJsString(String(deck.id))}', ${!isArchived})"
                                         class="flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold rounded-lg border border-border-strong text-text-secondary hover:bg-bg-hover transition-colors"
-                                        title="${isArchived ? 'Разархивировать' : 'Архивировать'}">
+                                        title=wt('im.k461', "${isArchived ? wt('im.k459', 'Разархивировать') : wt('im.k460', 'Архивировать')}")>
                                         <span class="material-symbols-outlined text-[14px]">${isArchived ? 'unarchive' : 'archive'}</span>
                                     </button>
                                     <button onclick="dashboard.importManager.manualEditorDeleteDeck('${this.escapeInlineJsString(String(deck.id))}')"
                                         class="flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold rounded-lg border border-error-light text-error-text hover:bg-error-lighter transition-colors"
-                                        title="Удалить колоду">
+                                        title=wt('im.k462', "Удалить колоду")>
                                         <span class="material-symbols-outlined text-[14px]">delete</span>
                                     </button>
                                 </div>
@@ -8114,13 +8121,13 @@ text: Сердце человека состоит из [трёх] камер. �
                             <div class="flex items-center gap-3 text-[11px] text-text-secondary mb-3">
                                 <span>${cards.length} карт.</span>
                                 ${deck.meta?.source === 'manual_editor' ? '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold border border-info-light bg-info-lighter text-info-text">manual</span>' : ''}
-                                ${isArchived ? '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold border border-warning-light bg-warning-lighter text-warning-text">архив</span>' : ''}
+                                ${isArchived ? wt('im.k463', '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold border border-warning-light bg-warning-lighter text-warning-text">архив</span>') : ''}
                             </div>
                             <div class="mb-3 rounded-lg border border-border-subtle bg-bg-secondary px-3 py-2">
                                 <p class="text-[11px] text-text-secondary">Изменения в этой колоде увидят все профили устройства, а история повторения останется только у текущего пользователя.</p>
                             </div>
                             ${cardFormHtml}
-                            ${this.manualEditorDeckLoading ? '<div class="text-sm text-text-secondary py-4 text-center">Загрузка карточек...</div>' : cardListHtml}
+                            ${this.manualEditorDeckLoading ? wt('im.k464', '<div class="text-sm text-text-secondary py-4 text-center">Загрузка карточек...</div>') : cardListHtml}
                         </div>
                     ` : `
                         <div class="rounded-xl border border-border-strong bg-surface-1 p-8 text-center">
@@ -8152,11 +8159,11 @@ text: Сердце человека состоит из [трёх] камер. �
         const lint = (a && typeof a === 'object' && a.report_lint && typeof a.report_lint === 'object') ? a.report_lint : {};
         let reasonText = '';
         if (rendererError) {
-            reasonText = this.aiUxMessage('theory_report.fallback.renderer_error', 'Структурный renderer отчёта завершился ошибкой. Показан fallback-отчёт из analysis_json.');
+            reasonText = this.aiUxMessage('theory_report.fallback.renderer_error', wt('im.k465', 'Структурный renderer отчёта завершился ошибкой. Показан fallback-отчёт из analysis_json.'));
         } else if (!blocks.length) {
-            reasonText = this.aiUxMessage('theory_report.fallback.missing_blocks', 'Структурные report_blocks отсутствуют. Показан fallback-отчёт из analysis_json.');
+            reasonText = this.aiUxMessage('theory_report.fallback.missing_blocks', wt('im.k466', 'Структурные report_blocks отсутствуют. Показан fallback-отчёт из analysis_json.'));
         } else if (lint.fallback_renderer_recommended) {
-            reasonText = this.aiUxMessage('theory_report.fallback.lint_recommended', 'Backend пометил layout как рискованный/частично невалидный. Показан fallback-отчёт из analysis_json.');
+            reasonText = this.aiUxMessage('theory_report.fallback.lint_recommended', wt('im.k467', 'Backend пометил layout как рискованный/частично невалидный. Показан fallback-отчёт из analysis_json.'));
         }
 
         const noteHtml = reasonText ? `
@@ -8333,21 +8340,21 @@ text: Сердце человека состоит из [трёх] камер. �
                     <div>
                         <div class="text-xs font-semibold uppercase tracking-wide text-text-secondary">Метаданные отчёта</div>
                         <div class="text-[11px] text-text-secondary mt-1">
-                            ${a?.report_blocks_version ? `report_blocks v${this.escapeHtml(String(a.report_blocks_version))}` : 'устаревш.'}
+                            ${a?.report_blocks_version ? `report_blocks v${this.escapeHtml(String(a.report_blocks_version))}` : wt('im.k468', 'устаревш.')}
                             ${a?.analysis_schema_version ? ` · схема ${this.escapeHtml(String(a.analysis_schema_version))}` : ''}
                         </div>
                     </div>
                     ${compactMode ? `<span class="px-2 py-0.5 rounded-full text-[10px] border border-warning-light bg-warning-lighter text-warning-text">компактный</span>` : ''}
                 </div>
                 <div class="flex flex-wrap gap-2 text-xs">
-                    <div class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-surface-1 border border-border-strong text-text-secondary"><span class="material-symbols-outlined text-[14px]">school</span> Единиц <span class="font-semibold text-text-main">${units}</span></div>
-                    <div class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-surface-1 border border-border-strong text-text-secondary"><span class="material-symbols-outlined text-[14px]">segment</span> Фрагментов <span class="font-semibold text-text-main">${chunks}</span></div>
-                    <div class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-surface-1 border border-border-strong text-text-secondary"><span class="material-symbols-outlined text-[14px]">route</span> Маршрутов <span class="font-semibold text-text-main">${routes}</span></div>
+                    <div class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-surface-1 border border-border-strong text-text-secondary"><span class="material-symbols-outlined text-[14px]">school</span> ${wt('im.k469', 'Единиц <span class="font-semibold text-text-main">')}${units}</span></div>
+                    <div class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-surface-1 border border-border-strong text-text-secondary"><span class="material-symbols-outlined text-[14px]">segment</span> ${wt('im.k470', 'Фрагментов <span class="font-semibold text-text-main">')}${chunks}</span></div>
+                    <div class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-surface-1 border border-border-strong text-text-secondary"><span class="material-symbols-outlined text-[14px]">route</span> ${wt('im.k471', 'Маршрутов <span class="font-semibold text-text-main">')}${routes}</span></div>
                     ${lint.duplicate_content_signals ? `<div class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-warning-lighter border border-warning-light text-warning-text"><span class="material-symbols-outlined text-[14px]">content_copy</span> Дубли <span class="font-semibold">${this.escapeHtml(String(lint.duplicate_content_signals))}</span></div>` : ''}
                 </div>
                 <div class="mt-3 text-[11px] text-text-secondary flex flex-wrap gap-y-1 gap-x-3">
-                    <p>Язык контента: <span class="text-text-main">${this.escapeHtml(String(materialLang))}</span></p>
-                    <p>Язык анализа: <span class="text-text-main">${this.escapeHtml(String(outputLang))}</span></p>
+                    <p>${wt('im.k472', 'Язык контента: <span class="text-text-main">')}${this.escapeHtml(String(materialLang))}</span></p>
+                    <p>${wt('im.k473', 'Язык анализа: <span class="text-text-main">')}${this.escapeHtml(String(outputLang))}</span></p>
                     ${a?.provider_used ? `<p>ИИ-модель: <span class="text-text-main">${this.escapeHtml(String(a.provider_used))}${a?.provider_model ? ` (${this.escapeHtml(String(a.provider_model))})` : ''}</span></p>` : ''}
                 </div>
                 ${a?.human_summary ? `<p class="text-xs text-text-main mt-3 leading-relaxed border-t border-border-subtle pt-2">${this.escapeHtml(String(a.human_summary))}</p>` : ''}
@@ -8413,7 +8420,7 @@ text: Сердце человека состоит из [трёх] камер. �
         });
     }
 
-    theoryReportLevelRoleMapToHtml(levelRoleMap, { max = 4, lineClass = 'text-[11px] text-text-secondary', emptyText = 'Роли уровней не указаны.' } = {}) {
+    theoryReportLevelRoleMapToHtml(levelRoleMap, { max = 4, lineClass = 'text-[11px] text-text-secondary', emptyText = wt('im.k474', 'Роли уровней не указаны.') } = {}) {
         const rows = Array.isArray(levelRoleMap)
             ? levelRoleMap
                 .filter((row) => row && Number.isFinite(Number(row.level)) && String(row.role || '').trim())
@@ -8438,7 +8445,7 @@ text: Сердце человека состоит из [трёх] камер. �
         const fixedEntries = entries.filter(entry => entry?.progression_is_fixed);
         if (!fixedEntries.length) return '';
         const coreFixedCount = fixedEntries.filter(entry => String(entry?.complex_role || '').toLowerCase() === 'core').length;
-        const matrixSuffix = compact ? '' : ' Ниже уровни показаны как роли внутри progression каждого типа.';
+        const matrixSuffix = compact ? '' : wt('im.k606', ' Ниже уровни показаны как роли внутри progression каждого типа.');
         return `
             <div class="p-3 rounded-lg border border-border-strong bg-surface-1">
                 <div class="flex items-start gap-2">
@@ -8447,7 +8454,7 @@ text: Сердце человека состоит из [трёх] камер. �
                         <p class="text-xs font-semibold text-text-main uppercase tracking-wide">Как читать уровни</p>
                         <p class="text-xs text-text-main mt-1">
                             Для типов с <strong class="font-semibold">fixed progression</strong> уровни не выбираются как отдельная ручная опция.
-                            В комплексах это части одной progression; пользователь выбирает сам тип и приоритетные units/chunks.${matrixSuffix}
+                            ${wt('im.k475', 'В комплексах это части одной progression; пользователь выбирает сам тип и приоритетные units/chunks.')}${matrixSuffix}
                         </p>
                         <div class="flex flex-wrap gap-1 mt-2">
                             <span class="px-1.5 py-0.5 rounded-md text-[10px] font-medium text-text-main">fixed types: ${this.escapeHtml(String(fixedEntries.length))}</span>
@@ -8494,7 +8501,7 @@ text: Сердце человека состоит из [трёх] камер. �
                                 ${role && role !== 'none' ? `<span class="px-1 py-0.5 rounded-md text-[10px] text-text-secondary">${this.escapeHtml(role)}</span>` : ''}
                             </div>
                             ${levelLabels.length ? `<div class="text-[11px] text-text-secondary mt-1">Уровни в progression: ${this.escapeHtml(levelLabels.join(', '))}</div>` : ''}
-                            <div class="mt-2">${this.theoryReportLevelRoleMapToHtml(levelRoleMap, { max: 3, emptyText: 'Роли уровней не указаны в анализе.' })}</div>
+                            <div class="mt-2">${this.theoryReportLevelRoleMapToHtml(levelRoleMap, { max: 3, emptyText: wt('im.k476', 'Роли уровней не указаны в анализе.') })}</div>
                             ${iterativeNotes.length ? `<p class="text-[11px] text-text-secondary mt-2">${this.escapeHtml(String(iterativeNotes[0]))}</p>` : ''}
                             ${entry?.why ? `<p class="text-[11px] text-text-secondary mt-2">${this.escapeHtml(String(entry.why))}</p>` : ''}
                             ${seqIntents.length ? `<div class="flex flex-wrap gap-1 mt-2">${seqIntents.slice(0, 5).map(intent => `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-2 text-text-secondary">${this.escapeHtml(String(intent))}</span>`).join('')}</div>` : ''}
@@ -8611,7 +8618,7 @@ text: Сердце человека состоит из [трёх] камер. �
         };
         toggleBtn.setAttribute('aria-expanded', String(!nextCollapsed));
         if (toggleIcon) toggleIcon.textContent = nextCollapsed ? 'expand_more' : 'expand_less';
-        if (toggleLabel) toggleLabel.textContent = nextCollapsed ? 'Открыть' : 'Свернуть';
+        if (toggleLabel) toggleLabel.textContent = nextCollapsed ? wt('im.k477', 'Открыть') : wt('im.k478', 'Свернуть');
 
         if (content.__rpHideTimer) {
             window.clearTimeout(content.__rpHideTimer);
@@ -8848,7 +8855,7 @@ text: Сердце человека состоит из [трёх] камер. �
 
     renderTheoryReportTocBlock(block) {
         const items = Array.isArray(block?.body?.items) ? block.body.items : [];
-        if (!items.length) return '<div class="text-xs text-text-secondary">Пустое оглавление.</div>';
+        if (!items.length) return wt('im.k479', '<div class="text-xs text-text-secondary">Пустое оглавление.</div>');
         return `
             <div class="space-y-1">
                 ${items.map(item => this.renderTheoryReportJumpButton(item?.label || item?.anchor || 'section', item?.anchor, { compact: true })).join('')}
@@ -8861,7 +8868,7 @@ text: Сердце человека состоит из [трёх] камер. �
         const subanchors = Array.isArray(block?.body?.subanchors) ? block.body.subanchors : [];
         const summaryHtml = summary
             ? `<p class="text-sm text-text-main leading-relaxed whitespace-pre-line">${this.escapeHtml(summary)}</p>`
-            : '<p class="text-xs text-text-secondary">Раздел без описания.</p>';
+            : wt('im.k480', '<p class="text-xs text-text-secondary">Раздел без описания.</p>');
         const subanchorsHtml = subanchors.length ? `
             <div class="mt-3">
                 <div class="text-[11px] font-semibold uppercase tracking-wide text-text-secondary mb-2">Подразделы</div>
@@ -8889,7 +8896,7 @@ text: Сердце человека состоит из [трёх] камер. �
 
     renderTheoryReportListBlock(block) {
         const items = Array.isArray(block?.body?.items) ? block.body.items : [];
-        if (!items.length) return '<div class="text-xs text-text-secondary">Список пуст.</div>';
+        if (!items.length) return wt('im.k481', '<div class="text-xs text-text-secondary">Список пуст.</div>');
         return `
             <ul class="space-y-2">
                 ${items.map((item) => {
@@ -8914,7 +8921,7 @@ text: Сердце человека состоит из [трёх] камер. �
         const body = (block && typeof block.body === 'object') ? block.body : {};
         const chunkId = String(body.chunk_id || '').trim();
         const chunk = ctx?.chunkById?.get(chunkId);
-        if (!chunk) return '<div class="text-xs text-text-secondary">Chunk не найден.</div>';
+        if (!chunk) return wt('im.k482', '<div class="text-xs text-text-secondary">Chunk не найден.</div>');
 
         const unitIds = Array.isArray(chunk.unit_ids) ? chunk.unit_ids : [];
         const routeIds = Array.isArray(chunk.route_ids) ? chunk.route_ids : [];
@@ -8928,16 +8935,16 @@ text: Сердце человека состоит из [трёх] камер. �
                     <div class="flex flex-wrap items-center gap-2">
                         <div class="text-sm font-semibold text-text-main">${this.escapeHtml(chunk.title || chunkId)}</div>
                         ${chunk.chunk_type ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-1 text-text-secondary">${this.escapeHtml(chunk.chunk_type)}</span>` : ''}
-                        <span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-1 text-text-secondary">${unitIds.length} ед.</span>
+                        <span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-1 text-text-secondary">${unitIds.length} ${wt('im.k483', 'ед.</span>')}
                         <button type="button"
                             onclick="dashboard.importManager.createTheoryMicrocardsDeckForChunk('${this.escapeInlineJsString(chunkId)}')"
                             class="px-2 py-0.5 rounded-md text-[10px] font-medium border border-primary text-primary hover:bg-primary hover:text-primary-fg transition-colors">
-                            Колода по chunk
+                            ${wt('im.k484', 'Колода по chunk')}
                         </button>
                         <button type="button"
                             onclick="dashboard.importManager.appendTheoryMicrocardsDeckForChunk('${this.escapeInlineJsString(chunkId)}')"
                             class="px-2 py-0.5 rounded-md text-[10px] font-medium border border-border-strong text-text-secondary hover:bg-bg-hover transition-colors">
-                            + в колоду...
+                            ${wt('im.k617', '+ в колоду...')}
                         </button>
                     </div>
                     ${chunk.goal ? `<p class="text-xs text-text-secondary mt-1 leading-relaxed">${this.escapeHtml(chunk.goal)}</p>` : ''}
@@ -8956,12 +8963,12 @@ text: Сердце человека состоит из [трёх] камер. �
                                             <button type="button"
                                                 onclick="dashboard.importManager.createTheoryMicrocardsDeckForUnit('${this.escapeInlineJsString(String(unitId))}','${this.escapeInlineJsString(chunkId)}')"
                                                 class="px-2 py-0.5 rounded-md text-[10px] font-medium border border-info-light text-info-text bg-info-lighter hover:bg-info-light transition-colors">
-                                                Колода по unit
+                                                ${wt('im.k607', 'Колода по unit')}
                                             </button>
                                             <button type="button"
                                                 onclick="dashboard.importManager.appendTheoryMicrocardsDeckForUnit('${this.escapeInlineJsString(String(unitId))}','${this.escapeInlineJsString(chunkId)}')"
                                                 class="px-2 py-0.5 rounded-md text-[10px] font-medium border border-border-strong text-text-secondary hover:bg-bg-hover transition-colors">
-                                                + в колоду...
+                                                ${wt('im.k617', '+ в колоду...')}
                                             </button>
                                         </div>
                                     `;
@@ -9021,7 +9028,7 @@ text: Сердце человека состоит из [трёх] камер. �
 
     renderTheoryReportProgressionMatrixBlock(block, ctx) {
         const rows = Array.isArray(block?.body?.rows) ? block.body.rows : [];
-        if (!rows.length) return '<div class="text-xs text-text-secondary">Матрица пустая.</div>';
+        if (!rows.length) return wt('im.k486', '<div class="text-xs text-text-secondary">Матрица пустая.</div>');
         const typeEntries = Array.isArray(ctx?.typeEntries) ? ctx.typeEntries : [];
         const policyNoteHtml = this.renderTheoryReportFixedProgressionPolicyNote(typeEntries, { compact: true });
 
@@ -9044,7 +9051,7 @@ text: Сердце человека состоит из [трёх] камер. �
                     ${this.theoryReportLevelRoleMapToHtml(levelRoles, { max: 4, emptyText: 'Роли уровней не указаны.' })}
                 `
                 : (entry?.progression_is_fixed
-                    ? '<div class="text-[11px] text-text-secondary">Уровни у этого типа трактуются как fixed progression; отдельный выбор уровня не предлагается.</div>'
+                    ? wt('im.k487', '<div class="text-[11px] text-text-secondary">Уровни у этого типа трактуются как fixed progression; отдельный выбор уровня не предлагается.</div>')
                     : '<span class="text-[11px] text-text-secondary">—</span>');
             const notesHtml = iterativeNotes.length
                 ? `<div class="space-y-1">${iterativeNotes.slice(0, 3).map(note => `<div class="text-[11px] text-text-secondary">${this.escapeHtml(String(note))}</div>`).join('')}</div>`
@@ -9128,7 +9135,7 @@ text: Сердце человека состоит из [трёх] камер. �
                 <button type="button"
                     onclick="dashboard.importManager.pushTheoryAuthoringRouteContextForEditor('${this.escapeInlineJsString(routeId)}')"
                     class="${small} rounded-md font-medium border border-info-light bg-info-lighter text-info-text hover:bg-info-light transition-colors">
-                    В редактор (маршрут)
+                    ${wt('im.k488', 'В редактор (маршрут)')}
                 </button>
             ` : '',
             showMicrocardsActions ? `
@@ -9151,7 +9158,7 @@ text: Сердце человека состоит из [трёх] камер. �
                 <button type="button"
                     onclick="dashboard.importManager.openTheoryMicrocardsMode()"
                     class="${small} rounded-md font-medium border border-border-strong text-text-secondary hover:bg-bg-hover transition-colors">
-                    Открыть микрокарточки
+                    ${wt('im.k489', 'Открыть микрокарточки')}
                 </button>
             ` : '',
         ].filter(Boolean).join('');
@@ -9168,7 +9175,7 @@ text: Сердце человека состоит из [трёх] камер. �
         const body = (block && typeof block.body === 'object') ? block.body : {};
         const routeId = String(body.route_id || '').trim();
         const route = ctx?.routeById?.get(routeId);
-        if (!route) return '<div class="text-xs text-text-secondary">Route не найден.</div>';
+        if (!route) return wt('im.k490', '<div class="text-xs text-text-secondary">Route не найден.</div>');
 
         const steps = Array.isArray(route.steps) ? route.steps : [];
         const chunkIds = Array.isArray(route.chunk_ids) ? route.chunk_ids : [];
@@ -9182,7 +9189,7 @@ text: Сердце человека состоит из [трёх] камер. �
                         ${route.route_kind ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-1 text-text-secondary">${this.escapeHtml(String(route.route_kind))}</span>` : ''}
                         ${route.target_surface ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-1 text-text-secondary">${this.escapeHtml(String(route.target_surface))}</span>` : ''}
                         ${route.effort_estimate ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border ${this.theoryReportPriorityBadgeClass(route.effort_estimate)}">${this.escapeHtml(String(route.effort_estimate))} effort</span>` : ''}
-                        <span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-1 text-text-secondary">${steps.length} шагов</span>
+                        <span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-1 text-text-secondary">${steps.length} ${wt('im.k491', 'шагов</span>')}
                     </div>
                     ${route.expected_effect ? `<p class="text-xs text-text-secondary mt-2 leading-relaxed">${this.escapeHtml(String(route.expected_effect))}</p>` : ''}
                     <div class="mt-2">${this.renderTheoryRouteQuickActions(route)}</div>
@@ -9373,7 +9380,7 @@ text: Сердце человека состоит из [трёх] камер. �
 
     renderTheoryReportMicrocardsPreviewBlock(block, ctx) {
         if (!this.isTheoryFeatureEnabled('microcards_mode')) {
-            return '<div class="text-xs text-text-secondary">Режим микрокарточек отключён (feature flag).</div>';
+            return wt('im.k492', '<div class="text-xs text-text-secondary">Режим микрокарточек отключён (feature flag).</div>');
         }
         const body = (block && typeof block.body === 'object') ? block.body : {};
         const maxItems = Math.max(1, Math.min(20, Number(body.max_items) || 8));
@@ -9386,7 +9393,7 @@ text: Сердце человека состоит из [трёх] камер. �
         const totalBeforeLimit = candidates.length;
         candidates = candidates.slice(0, maxItems);
         if (!candidates.length) {
-            return '<div class="text-xs text-text-secondary">Нет кандидатов микрокарточек для текущего фильтра.</div>';
+            return wt('im.k493', '<div class="text-xs text-text-secondary">Нет кандидатов микрокарточек для текущего фильтра.</div>');
         }
 
         const groups = new Map();
@@ -9409,12 +9416,12 @@ text: Сердце человека состоит из [трёх] камер. �
                         <button type="button"
                             onclick="dashboard.importManager.createTheoryMicrocardsPairMatchDeck()"
                             class="px-2 py-0.5 rounded-md text-[10px] font-medium border border-primary text-primary hover:bg-primary hover:text-primary-fg transition-colors">
-                            Создать pair_match колоду
+                            ${wt('im.k609', 'Создать pair_match колоду')}
                         </button>
                         <button type="button"
                             onclick="dashboard.importManager.appendTheoryMicrocardsPairMatchDeck()"
                             class="px-2 py-0.5 rounded-md text-[10px] font-medium border border-border-strong text-text-secondary hover:bg-bg-hover transition-colors">
-                            pair_match + в колоду...
+                            ${wt('im.k610', 'pair_match + в колоду...')}
                         </button>
                     ` : ''}
                 </div>
@@ -9473,8 +9480,8 @@ text: Сердце человека состоит из [трёх] камер. �
                     <div class="p-3 bg-surface-2 rounded-lg border border-border-strong">
                         <div class="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-2">Сводка</div>
                         <div class="text-xs text-text-secondary space-y-1">
-                            <p><strong class="text-text-main">Язык материала:</strong> ${this.escapeHtml(materialLang)}</p>
-                            <p><strong class="text-text-main">Язык анализа:</strong> ${this.escapeHtml(outputLang)}</p>
+                            <p><strong class="text-text-main">${wt('im.k494', 'Язык материала:</strong>')}${this.escapeHtml(materialLang)}</p>
+                            <p><strong class="text-text-main">${wt('im.k495', 'Язык анализа:</strong>')}${this.escapeHtml(outputLang)}</p>
                             ${a.provider_used ? `<p><strong class="text-text-main">Провайдер:</strong> ${this.escapeHtml(a.provider_used)}${a.provider_model ? ` (${this.escapeHtml(a.provider_model)})` : ''}</p>` : ''}
                             ${a.analysis_schema_version ? `<p><strong class="text-text-main">Schema:</strong> ${this.escapeHtml(a.analysis_schema_version)}</p>` : ''}
                             ${a.report_blocks_version ? `<p><strong class="text-text-main">Report blocks:</strong> ${this.escapeHtml(a.report_blocks_version)}</p>` : ''}
@@ -9643,7 +9650,7 @@ text: Сердце человека состоит из [трёх] камер. �
                                 <p class="text-xs text-text-secondary">Для запуска анализа необходимо указать API-ключ. Ранее сохранённые анализы остаются доступны.</p>
                                 <a href="/settings" class="inline-flex items-center gap-1.5 mt-2 text-xs font-semibold text-primary hover:underline">
                                     <span class="material-symbols-outlined text-[14px]">settings</span>
-                                    Настроить API-ключи
+                                    ${wt('im.k611', 'Настроить API-ключи')}
                                 </a>
                             </div>
                         </div>
@@ -9683,11 +9690,11 @@ text: Сердце человека состоит из [трёх] камер. �
                 <div class="flex gap-4 mb-4 border-b border-border-subtle">
                     <button onclick="dashboard.importManager.switchAiComposerTab('text')" 
                         class="px-2 py-2 text-sm font-semibold border-b-2 transition-colors focus:outline-none ${this.aiComposerTab === 'text' ? 'border-primary text-primary' : 'border-transparent text-text-secondary hover:text-text-main'}">
-                        Вставить текст
+                        ${wt('im.k496', 'Вставить текст')}
                     </button>
                     <button onclick="dashboard.importManager.switchAiComposerTab('file')" 
                         class="px-2 py-2 text-sm font-semibold border-b-2 transition-colors focus:outline-none ${this.aiComposerTab === 'file' ? 'border-primary text-primary' : 'border-transparent text-text-secondary hover:text-text-main'}">
-                        Загрузить файл
+                        ${wt('im.k497', 'Загрузить файл')}
                     </button>
                 </div>
 
@@ -9699,7 +9706,7 @@ text: Сердце человека состоит из [трёх] камер. �
                                 ${this.aiUploadedFile ? `
                                     <span class="material-symbols-outlined text-3xl text-success-text mb-1">check_circle</span>
                                     <p class="text-sm font-bold text-success-text" id="ai-file-name">${this.escapeHtml(this.aiUploadedFile.name)}</p>
-                                    <p class="text-xs text-text-muted mt-1">${this.aiFileInfo ? `${this.aiFileInfo.word_count} слов` : 'Загружено'}</p>
+                                    <p class="text-xs text-text-muted mt-1">${this.aiFileInfo ? `${this.aiFileInfo.word_count} слов` : wt('im.k498', 'Загружено')}</p>
                                 ` : `
                                     <span class="material-symbols-outlined text-3xl text-text-disabled mb-1">upload_file</span>
                                     <p class="text-sm font-medium text-text-secondary" id="ai-file-name">Перетащите PDF, DOCX или TXT</p>
@@ -9715,7 +9722,7 @@ text: Сердце человека состоит из [трёх] камер. �
                     <div class="mb-4">
                         <textarea id="ai-material-textarea" rows="8"
                             class="block w-full rounded-lg border-border-subtle bg-surface-2 p-3 text-sm text-text-main placeholder:text-text-secondary focus:ring-2 focus:ring-primary resize-y"
-                            placeholder="Вставьте учебный материал сюда..." oninput="dashboard.importManager.onAiMaterialInput(event)">${this.escapeHtml(this.materialText)}</textarea>
+                            placeholder=wt('im.k499', "Вставьте учебный материал сюда...") oninput="dashboard.importManager.onAiMaterialInput(event)">${this.escapeHtml(this.materialText)}</textarea>
                         <div class="flex justify-between mt-1">
                             <span class="text-xs ${wordCount > 0 && wordCount < 50 ? 'text-error-text' : 'text-text-secondary'}" id="ai-word-count">${wordCount ? `${wordCount} слов` : ''}</span>
                             <span class="text-xs ${wordCount > 0 && wordCount < 50 ? 'text-error-text' : 'text-text-secondary'}" id="ai-word-count-text">Минимум 50 слов</span>
@@ -9729,7 +9736,7 @@ text: Сердце человека состоит из [трёх] камер. �
                         ${this.aiAnalyzing ? '<span class="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>' : ''}
                         <span>${this.aiAnalyzing ? 'Анализ...' : 'Запустить анализ'}</span>
                     </button>
-                    ${!isSubmitDisabled ? `<span class="editor-flow-wrap text-xs text-text-secondary ml-2">${this.aiRunId ? `Последний ai_run_id: ${this.escapeHtml(this.aiRunId)}` : 'Результат будет сохранён в истории анализов'}</span>` : ''}
+                    ${!isSubmitDisabled ? `<span class="editor-flow-wrap text-xs text-text-secondary ml-2">${this.aiRunId ? `Последний ai_run_id: ${this.escapeHtml(this.aiRunId)}` : wt('im.k500', 'Результат будет сохранён в истории анализов')}</span>` : ''}
                 </div>
             </div>
         `;
@@ -9750,7 +9757,7 @@ text: Сердце человека состоит из [трёх] камер. �
                 ${this.theoryRunsLoading ? `
                     <div class="py-6 text-center text-sm text-text-muted">
                         <span class="material-symbols-outlined animate-spin text-[18px] align-middle mr-1">progress_activity</span>
-                        Загрузка списка...
+                        ${wt('im.k612', 'Загрузка списка...')}
                     </div>
                 ` : ''}
 
@@ -9862,7 +9869,7 @@ text: Сердце человека состоит из [трёх] камер. �
                     </div>
                     ${item?.progression_is_fixed ? `<p class="text-[11px] text-text-secondary mt-2">Уровни показываются как роли внутри последовательности (progression), а не как произвольный выбор.</p>` : ''}
                     ${levelLabels.length ? `<p class="text-[11px] text-text-secondary mt-1">Уровни в последовательности: ${this.escapeHtml(levelLabels.join(', '))}</p>` : ''}
-                    ${levelRoleMap.length ? `<div class="mt-2">${this.theoryReportLevelRoleMapToHtml(levelRoleMap, { max: 3, emptyText: 'Роли уровней не указаны.' })}</div>` : ''}
+                    ${levelRoleMap.length ? `<div class="mt-2">${this.theoryReportLevelRoleMapToHtml(levelRoleMap, { max: 3, emptyText: wt('im.k501', 'Роли уровней не указаны.') })}</div>` : ''}
                     ${iterativeNotes.length ? `<p class="text-[11px] text-text-secondary mt-2">${this.escapeHtml(String(iterativeNotes[0]))}</p>` : ''}
                     ${item.why ? `<p class="text-[11px] text-text-secondary mt-2">${this.escapeHtml(item.why)}</p>` : ''}
                     ${seqIntents.length ? `<div class="flex flex-wrap gap-1 mt-2">${seqIntents.slice(0, 5).map(intent => `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-2 text-text-secondary">${this.escapeHtml(String(intent))}</span>`).join('')}</div>` : ''}
@@ -9885,7 +9892,7 @@ text: Сердце человека состоит из [трёх] камер. �
                             </div>
                         </div>
                         <div class="flex flex-wrap gap-1">
-                            <span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-2 text-text-secondary">${steps.length} шагов</span>
+                            <span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-2 text-text-secondary">${steps.length} ${wt('im.k502', 'шагов</span>')}
                             ${chunkIds.length ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-2 text-text-secondary">${chunkIds.length} фрагментов</span>` : ''}
                             ${unitIds.length ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-2 text-text-secondary">${unitIds.length} единиц</span>` : ''}
                         </div>
@@ -9897,7 +9904,7 @@ text: Сердце человека состоит из [трёх] камер. �
                             return `
                                 <div class="rounded-md border border-border-strong bg-surface-2 p-2">
                                     <div class="flex flex-wrap items-center gap-1">
-                                        <span class="text-[11px] font-semibold text-text-main">${idx + 1}. ${this.escapeHtml(String(step?.action_type || 'шаг'))}</span>
+                                        <span class="text-[11px] font-semibold text-text-main">${idx + 1}. ${this.escapeHtml(String(step?.action_type || wt('im.k503', 'шаг')))}</span>
                                         ${step?.task_type ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-info-light bg-info-lighter text-info-text">${this.escapeHtml(String(step.task_type))}</span>` : ''}
                                         ${step?.microcard_mode ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-info-light bg-info-lighter text-info-text">${this.escapeHtml(String(step.microcard_mode))}</span>` : ''}
                                         ${step?.progression_policy ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-1 text-text-secondary">${this.escapeHtml(String(step.progression_policy))}</span>` : ''}
@@ -9962,10 +9969,10 @@ text: Сердце человека состоит из [трёх] камер. �
                     </div>
                     <div class="flex flex-col gap-2 xl:items-end">
                         <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                            <div class="px-3 py-2 rounded-lg bg-surface-2 text-text-secondary">Единицы: <span class="font-bold text-text-main">${units.length}</span></div>
-                            <div class="px-3 py-2 rounded-lg bg-surface-2 text-text-secondary">Рекомендации: <span class="font-bold text-text-main">${recs.length}</span></div>
-                            <div class="px-3 py-2 rounded-lg bg-surface-2 text-text-secondary">Фрагменты: <span class="font-bold text-text-main">${chunks.length}</span></div>
-                            <div class="px-3 py-2 rounded-lg bg-surface-2 text-text-secondary">Маршруты: <span class="font-bold text-text-main">${routes.length}</span></div>
+                            <div class="px-3 py-2 rounded-lg bg-surface-2 text-text-secondary">${wt('im.k504', 'Единицы: <span class="font-bold text-text-main">')}${units.length}</span></div>
+                            <div class="px-3 py-2 rounded-lg bg-surface-2 text-text-secondary">${wt('im.k505', 'Рекомендации: <span class="font-bold text-text-main">')}${recs.length}</span></div>
+                            <div class="px-3 py-2 rounded-lg bg-surface-2 text-text-secondary">${wt('im.k506', 'Фрагменты: <span class="font-bold text-text-main">')}${chunks.length}</span></div>
+                            <div class="px-3 py-2 rounded-lg bg-surface-2 text-text-secondary">${wt('im.k507', 'Маршруты: <span class="font-bold text-text-main">')}${routes.length}</span></div>
                         </div>
                         <button type="button"
                             onclick="dashboard.importManager.pushTheoryAnalysisContextForEditor()"
@@ -10031,15 +10038,15 @@ text: Сердце человека состоит из [трёх] камер. �
         if (textarea) this.materialText = textarea.value;
 
         if (!this.materialText || this.materialText.split(/\s+/).filter(Boolean).length < 50) {
-            this.showToast('Загрузите файл или вставьте текст (минимум 50 слов)', 'warning');
+            this.showToast(wt('im.k508', 'Загрузите файл или вставьте текст (минимум 50 слов)'), 'warning');
             return { ok: false, error: 'material_too_short' };
         }
         if (this.aiOutputLanguageMode === 'custom' && !this.aiOutputLanguage) {
-            this.showToast('Выберите язык анализа', 'warning');
+            this.showToast(wt('im.k509', 'Выберите язык анализа'), 'warning');
             return { ok: false, error: 'output_language_required' };
         }
         if (this.aiStatus && this.aiStatus.ai_available === false) {
-            this.showToast('AI-сервис недоступен. Можно открыть сохранённые анализы из списка.', 'warning');
+            this.showToast(wt('im.k510', 'AI-сервис недоступен. Можно открыть сохранённые анализы из списка.'), 'warning');
             return { ok: false, error: 'ai_unavailable' };
         }
 
@@ -10106,14 +10113,14 @@ text: Сердце человека состоит из [трёх] камер. �
                 this.theoryRunsError = '';
             } else {
                 this.theoryRuns = [];
-                this.theoryRunsError = data.message || data.error || 'Не удалось загрузить список анализов';
+                this.theoryRunsError = data.message || data.error || wt('im.k511', 'Не удалось загрузить список анализов');
             }
             return data;
         } catch (e) {
             console.error('[AI] theory analyses list failed:', e);
             if (requestToken === this.theoryRunsRequestToken) {
                 this.theoryRuns = [];
-                this.theoryRunsError = 'Ошибка сети при загрузке списка анализов';
+                this.theoryRunsError = wt('im.k512', 'Ошибка сети при загрузке списка анализов');
             }
             return { ok: false, error: 'network_error' };
         } finally {
@@ -10157,12 +10164,12 @@ text: Сердце человека состоит из [трёх] камер. �
                 this.aiSelectedRecs.clear();
                 this.importRequestKey = null;
             } else {
-                this.showToast(data.message || data.error || 'Не удалось открыть анализ', 'error');
+                this.showToast(data.message || data.error || wt('im.k513', 'Не удалось открыть анализ'), 'error');
             }
             return data;
         } catch (e) {
             console.error('[AI] theory analysis open failed:', e);
-            this.showToast('Ошибка сети при открытии анализа', 'error');
+            this.showToast(wt('im.k514', 'Ошибка сети при открытии анализа'), 'error');
             return { ok: false, error: 'network_error' };
         } finally {
             this.theoryOpeningRunId = null;
@@ -10209,20 +10216,20 @@ text: Сердце человека состоит из [трёх] камер. �
                             <div class="text-sm text-info-text leading-relaxed">
                                 <div class="font-bold text-text-main mb-1">Найдена сохранённая analysis session</div>
                                 <div>
-                                    ${this.escapeHtml(savedSession.module_name || savedSession.module_id || 'Без модуля')}
+                                    ${this.escapeHtml(savedSession.module_name || savedSession.module_id || wt('im.k515', 'Без модуля'))}
                                     ${savedSession.topic_name || savedSession.topic_id ? ` / ${this.escapeHtml(savedSession.topic_name || savedSession.topic_id)}` : ''}
                                 </div>
                                 <div class="mt-1 text-xs">
                                     Покрыто единиц: <strong>${sessionSnapshot ? (sessionSnapshot.coveredOnce.length + sessionSnapshot.coveredMulti.length) : 0}</strong>,
                                     ещё без покрытия: <strong>${sessionSnapshot ? sessionSnapshot.uncovered.length : 0}</strong>,
                                     сохранённых черновиков: <strong>${savedDraftsCount}</strong>.
-                                    На шаге с промптами можно продолжить эту сессию, не начиная анализ заново.
+                                    ${wt('im.k613', 'На шаге с промптами можно продолжить эту сессию, не начиная анализ заново.')}
                                 </div>
                                 <div class="mt-3">
                                     <button
                                         onclick="dashboard.importManager.resumeManualAnalysisSession()"
                                         class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-info text-info hover:bg-info hover:text-white transition-colors">
-                                        Продолжить session
+                                        ${wt('im.k614', 'Продолжить session')}
                                     </button>
                                 </div>
                             </div>
@@ -10234,9 +10241,9 @@ text: Сердце человека состоит из [трёх] камер. �
                     <div class="flex items-start gap-2">
                         <span class="material-symbols-outlined text-[18px] text-primary mt-0.5">tips_and_updates</span>
                         <div class="text-sm text-text-secondary leading-relaxed">
-                            Встроенная автоматическая генерация в этом разделе больше не используется.
-                            Здесь остаётся только сценарий с выдачей промптов для самостоятельной работы
-                            с нейросетями "на стороне".
+                            ${wt('im.k516', 'Встроенная автоматическая генерация в этом разделе больше не используется.')}
+                            ${wt('im.k517', 'Здесь остаётся только сценарий с выдачей промптов для самостоятельной работы')}
+                            ${wt('im.k518', 'с нейросетями "на стороне".')}
                         </div>
                     </div>
                 </div>
@@ -10274,7 +10281,7 @@ text: Сердце человека состоит из [трёх] камер. �
         }
 
         if (!this.analysisResult) {
-            return this._renderAIError('Не удалось получить результат анализа.', true);
+            return this._renderAIError(wt('im.k519', 'Не удалось получить результат анализа.'), true);
         }
 
         const a = this.analysisResult;
@@ -10298,25 +10305,25 @@ text: Сердце человека состоит из [трёх] камер. �
         }
 
         const _TYPE_LABELS = {
-            'TEST': { icon: 'quiz', label: 'Тест', color: 'bg-warning-light text-warning-dark' },
-            'OPEN_ANSWER': { icon: 'edit_note', label: 'Открытый ответ', color: 'bg-info-light text-info-dark' },
-            'SEQUENCE': { icon: 'sort', label: 'Последовательность', color: 'bg-accent-light text-accent-dark' },
-            'CLICK_TEXT': { icon: 'touch_app', label: 'Выбор утверждений', color: 'bg-secondary-light text-secondary-dark' },
-            'CLICK_WORDS': { icon: 'spellcheck', label: 'Поиск ошибок', color: 'bg-error-light text-error-dark' },
-            'CLICK': { icon: 'image_search', label: 'Клик по изображению', color: 'bg-primary-lighter text-primary' },
-            'DRAW': { icon: 'gesture', label: 'Обводка на изображении', color: 'bg-success-light text-success-dark' },
+            'TEST': { icon: 'quiz', label: wt('im.k520', 'Тест'), color: 'bg-warning-light text-warning-dark' },
+            'OPEN_ANSWER': { icon: 'edit_note', label: wt('im.k521', 'Открытый ответ'), color: 'bg-info-light text-info-dark' },
+            'SEQUENCE': { icon: 'sort', label: wt('im.k522', 'Последовательность'), color: 'bg-accent-light text-accent-dark' },
+            'CLICK_TEXT': { icon: 'touch_app', label: wt('im.k523', 'Выбор утверждений'), color: 'bg-secondary-light text-secondary-dark' },
+            'CLICK_WORDS': { icon: 'spellcheck', label: wt('im.k524', 'Поиск ошибок'), color: 'bg-error-light text-error-dark' },
+            'CLICK': { icon: 'image_search', label: wt('im.k525', 'Клик по изображению'), color: 'bg-primary-lighter text-primary' },
+            'DRAW': { icon: 'gesture', label: wt('im.k526', 'Обводка на изображении'), color: 'bg-success-light text-success-dark' },
         };
         const _PRIORITY_BADGES = {
-            'high': '<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-error-light text-error-dark">Высокий</span>',
-            'medium': '<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-warning-light text-warning-dark">Средний</span>',
-            'low': '<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-surface-2 text-text-muted">Низкий</span>',
+            'high': wt('im.k527', '<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-error-light text-error-dark">Высокий</span>'),
+            'medium': wt('im.k528', '<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-warning-light text-warning-dark">Средний</span>'),
+            'low': wt('im.k529', '<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-surface-2 text-text-muted">Низкий</span>'),
         };
         const _SEQUENCE_INTENT_LABELS = {
-            ordering: 'порядок',
-            classification: 'классификация',
-            hierarchy: 'иерархия',
-            ranking: 'ранжирование',
-            grouping: 'группировка',
+            ordering: wt('im.k530', 'порядок'),
+            classification: wt('im.k531', 'классификация'),
+            hierarchy: wt('im.k532', 'иерархия'),
+            ranking: wt('im.k533', 'ранжирование'),
+            grouping: wt('im.k534', 'группировка'),
         };
         const futureCapabilities = Array.isArray(a.future_capabilities) ? a.future_capabilities : [];
         const pairMatchingFuture = futureCapabilities.find(fc => fc?.capability_id === 'pair_matching') || null;
@@ -10353,7 +10360,7 @@ text: Сердце человека состоит из [трёх] камер. �
                         <div class="p-3 bg-surface-1 border border-border-subtle rounded-lg">
                             <div class="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">Язык генерации</div>
                             <div class="text-xs text-text-secondary space-y-1">
-                                <p><strong class="text-text-main">Язык материала:</strong> ${this.escapeHtml(materialLang)}</p>
+                                <p><strong class="text-text-main">${wt('im.k535', 'Язык материала:</strong>')}${this.escapeHtml(materialLang)}</p>
                                 <p><strong class="text-text-main">Язык заданий:</strong> ${this.escapeHtml(outputLang)} ${outputLangMode === 'custom' ? '(выбран вручную)' : '(как в материале)'}</p>
                                 ${a.output_language_warning ? `<p class="text-warning-text">${this.escapeHtml(a.output_language_warning)}</p>` : ''}
                             </div>
@@ -10374,7 +10381,7 @@ text: Сердце человека состоит из [трёх] камер. �
                             <div class="p-3 bg-info-lighter border border-info-light rounded-lg">
                                 <div class="text-xs font-semibold text-info-text uppercase tracking-wide mb-2">Planned capability</div>
                                 <div class="text-xs text-info-text space-y-1">
-                                    <p><strong class="text-text-main">${this.escapeHtml(pairMatchingFuture.display_name || 'MATCH (сопоставление пар)')}</strong> · статус: ${this.escapeHtml(pairMatchingFuture.status || 'planned')}</p>
+                                    <p><strong class="text-text-main">${this.escapeHtml(pairMatchingFuture.display_name || wt('im.k536', 'MATCH (сопоставление пар)'))}</strong> · статус: ${this.escapeHtml(pairMatchingFuture.status || 'planned')}</p>
                                     ${pairMatchingFuture.suitability ? `<p>Пригодность: ${this.escapeHtml(pairMatchingFuture.suitability)}</p>` : ''}
                                     ${pairMatchingFuture.why ? `<p>${this.escapeHtml(pairMatchingFuture.why)}</p>` : ''}
                                 </div>
@@ -10413,7 +10420,7 @@ text: Сердце человека состоит из [трёх] камер. �
             const progressionMetaHtml = rec.progression_is_fixed ? `
                 <div class="mt-2 p-2 rounded-md bg-surface-2 border border-border-subtle">
                     <p class="text-[10px] font-semibold uppercase tracking-wide text-text-muted">Фиксированная прогрессия</p>
-                    <p class="text-[11px] text-text-secondary leading-relaxed mt-1">${this.escapeHtml(rec.fixed_progression_note || 'Уровни этого типа рассматриваются как часть progression.')}</p>
+                    <p class="text-[11px] text-text-secondary leading-relaxed mt-1">${this.escapeHtml(rec.fixed_progression_note || wt('im.k537', 'Уровни этого типа рассматриваются как часть progression.'))}</p>
                     ${supportedLevels.length ? `<p class="text-[10px] text-text-disabled mt-1">Поддерживаемые уровни: ${supportedLevels.map(l => `L${l}`).join(', ')}</p>` : ''}
                     ${levelRoleMap.length ? `
                         <div class="mt-2 space-y-1">
@@ -10445,7 +10452,7 @@ text: Сердце человека состоит из [трёх] камер. �
                                             <div class="flex items-center gap-2 mb-1">
                                                 <span class="font-bold text-sm text-text-main">${typeInfo.label}</span>
                                                 ${_PRIORITY_BADGES[rec.priority] || ''}
-                                                ${manualOnly ? '<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-info-lighter text-info-text">Вручную</span>' : ''}
+                                                ${manualOnly ? wt('im.k538', '<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-info-lighter text-info-text">Вручную</span>') : ''}
                                             </div>
                                             <!-- Truncate class removed below for full visibility -->
                                             <p class="text-xs text-text-muted leading-relaxed">${this.escapeHtml(rec.rationale || '')}</p>
@@ -10485,7 +10492,7 @@ text: Сердце человека состоит из [трёх] камер. �
         }
 
         if (!this.generationResult) {
-            return this._renderAIError('Не удалось сгенерировать задания.', true);
+            return this._renderAIError(wt('im.k539', 'Не удалось сгенерировать задания.'), true);
         }
 
         const gen = this.generationResult;
@@ -10519,8 +10526,8 @@ text: Сердце человека состоит из [трёх] камер. �
         this.importRequestKey = null;
 
         const _TYPE_LABELS = {
-            'TEST': 'Тест', 'OPEN_ANSWER': 'Открытый ответ', 'SEQUENCE': 'Последовательность',
-            'CLICK_TEXT': 'Выбор утверждений', 'CLICK_WORDS': 'Поиск ошибок',
+            'TEST': wt('im.k540', 'Тест'), 'OPEN_ANSWER': wt('im.k541', 'Открытый ответ'), 'SEQUENCE': wt('im.k542', 'Последовательность'),
+            'CLICK_TEXT': wt('im.k543', 'Выбор утверждений'), 'CLICK_WORDS': wt('im.k544', 'Поиск ошибок'),
         };
 
         // Group by type
@@ -10631,7 +10638,7 @@ text: Сердце человека состоит из [трёх] камер. �
                             </div>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                            ${coverageRows || '<div class="text-xs text-text-secondary">Нет данных о покрытии</div>'}
+                            ${coverageRows || wt('im.k545', '<div class="text-xs text-text-secondary">Нет данных о покрытии</div>')}
                         </div>
                     </div>
                 ` : ''}
@@ -10707,12 +10714,12 @@ text: Сердце человека состоит из [трёх] камер. �
                 <div class="flex gap-3 justify-center">
                     <button onclick="dashboard.importManager.prevStep()" 
                         class="px-4 py-2 text-sm font-medium text-text-secondary border border-border-subtle rounded-lg hover:bg-bg-hover transition-colors">
-                        Назад
+                        ${wt('im.k546', 'Назад')}
                     </button>
                     ${showManualBtn ? `
                         <button onclick="dashboard.importManager.setImportMode('text'); dashboard.importManager.goToStep(1)" 
                             class="px-4 py-2 text-sm font-medium text-primary border border-primary rounded-lg hover:bg-primary hover:text-primary-fg transition-colors">
-                            Ручной режим
+                            ${wt('im.k615', 'Ручной режим')}
                         </button>
                     ` : ''}
                 </div>
@@ -10767,12 +10774,12 @@ text: Сердце человека состоит из [трёх] камер. �
                     this.showToast(data.warnings[0], 'warning');
                 }
             } else {
-                this.showToast(data.message || data.error || 'Ошибка загрузки файла', 'error');
+                this.showToast(data.message || data.error || wt('im.k547', 'Ошибка загрузки файла'), 'error');
             }
             return data;
         } catch (e) {
             console.error('[AI] upload failed:', e);
-            this.showToast('Ошибка сети при загрузке файла', 'error');
+            this.showToast(wt('im.k548', 'Ошибка сети при загрузке файла'), 'error');
             return { ok: false, error: 'network_error' };
         }
     }
@@ -10828,9 +10835,9 @@ text: Сердце человека состоит из [трёх] камер. �
                 this.importRequestKey = null;
             } else {
                 if (data.fallback === 'manual') {
-                    this.showToast(data.message || 'ИИ-сервис недоступен', 'error');
+                    this.showToast(data.message || wt('im.k549', 'ИИ-сервис недоступен'), 'error');
                 } else {
-                    this.showToast(data.message || data.error || 'Ошибка анализа', 'error');
+                    this.showToast(data.message || data.error || wt('im.k550', 'Ошибка анализа'), 'error');
                 }
             }
             this.renderCurrentStep();
@@ -10838,7 +10845,7 @@ text: Сердце человека состоит из [трёх] камер. �
         } catch (e) {
             console.error('[AI] analyze failed:', e);
             this.aiAnalyzing = false;
-            this.showToast('Ошибка сети при анализе материала', 'error');
+            this.showToast(wt('im.k551', 'Ошибка сети при анализе материала'), 'error');
             this.renderCurrentStep();
             return { ok: false, error: 'network_error' };
         }
@@ -10867,7 +10874,7 @@ text: Сердце человека состоит из [трёх] камер. �
         });
 
         if (tasksToGenerate.length === 0) {
-            this.showToast('Выберите хотя бы один тип заданий', 'warning');
+            this.showToast(wt('im.k552', 'Выберите хотя бы один тип заданий'), 'warning');
             return { ok: false };
         }
 
@@ -10897,14 +10904,14 @@ text: Сердце человека состоит из [трёх] камер. �
                 this.excludedTasks.clear();
                 this.importRequestKey = null;
             } else {
-                this.showToast(data.message || data.error || 'Ошибка генерации', 'error');
+                this.showToast(data.message || data.error || wt('im.k553', 'Ошибка генерации'), 'error');
             }
             this.renderCurrentStep();
             return data;
         } catch (e) {
             console.error('[AI] generate failed:', e);
             this.aiGenerating = false;
-            this.showToast('Ошибка сети при генерации заданий', 'error');
+            this.showToast(wt('im.k554', 'Ошибка сети при генерации заданий'), 'error');
             this.renderCurrentStep();
             return { ok: false, error: 'network_error' };
         }
@@ -10959,7 +10966,7 @@ text: Сердце человека состоит из [трёх] камер. �
             return;
         }
         if (file.size > 18 * 1024 * 1024) {
-            this.showToast('Файл слишком большой (максимум 18 МБ).', 'error');
+            this.showToast(wt('im.k555', 'Файл слишком большой (максимум 18 МБ).'), 'error');
             return;
         }
         this.aiUploadedFile = file;
