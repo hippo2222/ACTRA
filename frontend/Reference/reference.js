@@ -1,6 +1,12 @@
 (function () {
     'use strict';
 
+    function wt(key, fallback) {
+        if (!window.i18n || typeof window.i18n.t !== 'function') return fallback;
+        var v = window.i18n.t(key);
+        return v !== key ? v : fallback;
+    }
+
     const CATEGORY_ORDER = [
         'Знакомимся с проектом',
         'Находим материалы',
@@ -52,7 +58,7 @@
 
     function getCategory(tour) {
         const category = String(tour?.referenceCategory || '').trim();
-        return category || 'Знакомимся с проектом';
+        return category || wt('reference.default_category', 'Знакомимся с проектом');
     }
 
     function getStepTitle(step, index) {
@@ -61,7 +67,7 @@
             step?.kicker
             || step?.title
             || firstCallout?.title
-            || `Шаг ${index + 1}`
+            || wt('reference.step_fallback', 'Шаг {n}').replace('{n}', index + 1)
         );
     }
 
@@ -269,15 +275,15 @@
         const shown = state.filteredTours.length;
         const shownStates = state.filteredTours.reduce((sum, tour) => sum + getMatchedStepCount(tour), 0);
         count.textContent = state.query
-            ? `Найдено: ${shown} из ${total} сценариев, ${shownStates} состояний`
-            : `Всего сценариев: ${total}, состояний: ${shownStates}`;
+            ? wt('reference.result_found', 'Найдено: {shown} из {total} сценариев, {states} состояний').replace('{shown}', shown).replace('{total}', total).replace('{states}', shownStates)
+            : wt('reference.result_total', 'Всего сценариев: {total}, состояний: {states}').replace('{total}', total).replace('{states}', shownStates);
     }
 
     function renderToc(root) {
         const toc = root.querySelector('[data-reference-toc]');
         if (!toc) return;
         if (!state.filteredTours.length) {
-            toc.innerHTML = '<div class="reference-empty">Ничего не найдено. Попробуйте другой запрос.</div>';
+            toc.innerHTML = `<div class="reference-empty">${wt('reference.empty_search', 'Ничего не найдено. Попробуйте другой запрос.')}</div>`;
             return;
         }
 
@@ -310,7 +316,7 @@
                                     class="reference-toc__toggle"
                                     type="button"
                                     data-reference-toggle-tour-id="${escapeHtml(tour.tourId)}"
-                                    aria-label="${expanded ? 'Свернуть состояния' : 'Развернуть состояния'}"
+                                    aria-label="${expanded ? wt('reference.collapse_steps', 'Свернуть состояния') : wt('reference.expand_steps', 'Развернуть состояния')}"
                                     aria-expanded="${expanded ? 'true' : 'false'}"
                                     aria-controls="${escapeHtml(stepsId)}"
                                 >
@@ -329,7 +335,7 @@
                             <div
                                 class="reference-toc__steps"
                                 id="${escapeHtml(stepsId)}"
-                                aria-label="Состояния тура ${escapeHtml(tour.title || tour.tourId)}"
+                                aria-label="${wt('reference.tour_steps_label', 'Состояния тура')} ${escapeHtml(tour.title || tour.tourId)}"
                                 ${expanded ? '' : 'hidden'}
                             >
                                 ${visibleSteps.map((step) => `
@@ -375,13 +381,13 @@
                 if (!hasTourLayer) {
                     setPreviewNotice(
                         root,
-                        'Текст справочника доступен здесь. Если живое превью не запустилось, откройте тур на полной странице.'
+                        wt('reference.preview_notice_no_layer', 'Текст справочника доступен здесь. Если живое превью не запустилось, откройте тур на полной странице.')
                     );
                 }
             } catch (_) {
                 setPreviewNotice(
                     root,
-                    'Не удалось проверить состояние превью. Полная страница откроет этот же сценарий.'
+                    wt('reference.preview_notice_check_failed', 'Не удалось проверить состояние превью. Полная страница откроет этот же сценарий.')
                 );
             }
         }, Number(tour?.autoStartDelay || 900) + 4500);
@@ -393,7 +399,7 @@
         if (title) {
             title.textContent = tour
                 ? `${tour.title || tour.tourId} · ${stepIndex + 1}/${asArray(tour.stepsMeta).length || 1}`
-                : 'Выберите тур';
+                : wt('reference.select_tour', 'Выберите тур');
         }
     }
 
@@ -424,7 +430,7 @@
         const previewUrl = buildPreviewUrl(tour, window.location.origin, step?.index || 0);
         if (!previewUrl) {
             frame.removeAttribute('src');
-            setPreviewNotice(root, 'Для этого сценария пока нет страницы живого превью.');
+            setPreviewNotice(root, wt('reference.preview_notice_no_url', 'Для этого сценария пока нет страницы живого превью.'));
             return;
         }
 

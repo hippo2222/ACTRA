@@ -3,6 +3,12 @@
  * Maintains draft state in localStorage
  */
 
+function wt(key, fallback) {
+    if (!window.i18n || typeof window.i18n.t !== 'function') return fallback;
+    var v = window.i18n.t(key);
+    return v !== key ? v : fallback;
+}
+
 class ComplexAutoSaveManager {
     constructor(callbacks, options = {}) {
         this.callbacks = callbacks; // { captureState, restoreState, updateStatus }
@@ -75,7 +81,7 @@ class ComplexAutoSaveManager {
             if (this.callbacks.updateStatus) {
                 this.callbacks.updateStatus({
                     error: true,
-                    message: 'Автосохранение не выполнено'
+                    message: wt('complex_autosave.save_failed', 'Автосохранение не выполнено')
                 });
             }
         }
@@ -166,7 +172,7 @@ class ComplexAutoSaveManager {
         if (this.callbacks.updateStatus && this.lastSaveTime) {
             this.callbacks.updateStatus({
                 time: new Date(this.lastSaveTime).toLocaleTimeString(),
-                message: 'Черновик сохранён'
+                message: wt('complex_autosave.draft_saved', 'Черновик сохранён')
             });
         }
     }

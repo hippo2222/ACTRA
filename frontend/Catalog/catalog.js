@@ -1,6 +1,12 @@
 (function initCatalogPage(global) {
   'use strict';
 
+  function wt(key, fallback) {
+    if (!window.i18n || typeof window.i18n.t !== 'function') return fallback;
+    var v = window.i18n.t(key);
+    return v !== key ? v : fallback;
+  }
+
   const state = {
     items: [],
     filteredItems: [],
@@ -21,28 +27,31 @@
     listRequestId: 0,
   };
 
-  const CATALOG_SORT_LABELS = {
-    date: 'Сначала новые',
-    alphabet: 'По алфавиту',
-    type: 'По типу контента',
-    volume: 'По объёму',
-  };
+  function getCatalogSortLabels() {
+    return {
+      date: wt('catalog.sort_date', 'Сначала новые'),
+      alphabet: wt('catalog.sort_alphabet', 'По алфавиту'),
+      type: wt('catalog.sort_type', 'По типу контента'),
+      volume: wt('catalog.sort_volume', 'По объёму'),
+    };
+  }
+  const CATALOG_SORT_LABELS = getCatalogSortLabels();
 
   const VALID_CATALOG_SORTS = Object.keys(CATALOG_SORT_LABELS);
   const catalogCollator = new Intl.Collator('ru-RU', { sensitivity: 'base', numeric: true });
 
   const TASK_TYPE_LABELS = {
-    click: 'Клик',
-    test: 'Тест',
-    open_answer: 'Открытый ответ',
-    sequence_assembly: 'Последовательность',
-    draw: 'Рисование',
-    video: 'Видео',
+    click: wt('catalog.type_click', 'Клик'),
+    test: wt('catalog.type_test', 'Тест'),
+    open_answer: wt('catalog.type_open_answer', 'Открытый ответ'),
+    sequence_assembly: wt('catalog.type_sequence_assembly', 'Последовательность'),
+    draw: wt('catalog.type_draw', 'Рисование'),
+    video: wt('catalog.type_video', 'Видео'),
   };
 
   function getTaskTypeLabel(type) {
     const key = String(type || '').trim().toLowerCase();
-    return TASK_TYPE_LABELS[key] || key || 'Другое';
+    return TASK_TYPE_LABELS[key] || key || wt('catalog.type_other', 'Другое');
   }
 
   function getTaskTypeBreakdown(snapshot) {
@@ -58,7 +67,7 @@
       if (rawType) {
         counts[rawType] = (counts[rawType] || 0) + 1;
         if (!namesByType[rawType]) namesByType[rawType] = [];
-        const taskName = cleanTaskDisplayName(getTaskPayloadName(taskPayload, ''), 'Задание');
+        const taskName = cleanTaskDisplayName(getTaskPayloadName(taskPayload, ''), wt('catalog.task_fallback_name', 'Задание'));
         namesByType[rawType].push(taskName);
       }
     });
@@ -236,7 +245,7 @@
       }
     }
     flushList();
-    return blocks.length ? blocks.join('') : '<p style="color:var(--color-text-secondary);">Теория пуста.</p>';
+    return blocks.length ? blocks.join('') : `<p style="color:var(--color-text-secondary);">${wt('catalog.theory_empty', 'Теория пуста.')}</p>`;
   }
 
   async function openTheoryModal(itemName, theoryId, options = {}) {
@@ -255,7 +264,7 @@
       if (!theoryItem) {
         const data = await fetchJson(`/api/theories/${encodeURIComponent(theoryId)}`);
         if (!data || !data.ok || !data.item) {
-          showToast('Теория не загружена.', 'error');
+          showToast(wt('catalog.theory_load_error', 'Теория не загружена.'), 'error');
           return;
         }
         theoryItem = data.item;
@@ -281,14 +290,14 @@
           <div style="min-width:0;flex:1;">
             <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.2rem;">
               <span class="material-symbols-outlined" style="font-size:17px;color:var(--color-primary);flex-shrink:0;">menu_book</span>
-              <p style="font-size:1.0625rem;font-weight:800;color:var(--color-text-main);margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-0.02em;">${escapeHtml(theoryItem.title || 'Теория')}</p>
+              <p style="font-size:1.0625rem;font-weight:800;color:var(--color-text-main);margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-0.02em;">${escapeHtml(theoryItem.title || wt('catalog.theory_fallback_title', 'Теория'))}</p>
             </div>
             <p style="font-size:0.7rem;color:var(--color-text-secondary);margin:0;display:flex;align-items:center;gap:0.3rem;flex-wrap:wrap;">
               <span class="material-symbols-outlined" style="font-size:13px;">inventory_2</span>
               <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px;">${escapeHtml(itemName || '—')}</span>
               <span>•</span>
               <span class="material-symbols-outlined" style="font-size:13px;">history</span>
-              <span>Обновлено: ${escapeHtml(updatedAt)}</span>
+              <span>${wt('catalog.theory_modal_updated', 'Обновлено:')} ${escapeHtml(updatedAt)}</span>
             </p>
           </div>
           <button type="button" class="theory-dialog-close" style="display:flex;align-items:center;justify-content:center;width:2.1rem;height:2.1rem;border-radius:0.5rem;border:none;background:transparent;color:var(--color-text-secondary);cursor:pointer;">
@@ -325,7 +334,7 @@
 
     } catch (err) {
       console.error('Failed to open theory modal', err);
-      showToast('Окно теории не открыто.', 'error');
+      showToast(wt('catalog.theory_modal_open_error', 'Окно теории не открыто.'), 'error');
     }
   }
 
@@ -432,14 +441,14 @@
 
   function formatRelativeDate(value) {
     const raw = asString(value);
-    if (!raw) return 'Дата не указана';
+    if (!raw) return wt('catalog.date_unknown', 'Дата не указана');
     const date = new Date(raw);
     if (Number.isNaN(date.getTime())) return raw;
     const deltaMs = Date.now() - date.getTime();
     const deltaDays = Math.round(deltaMs / 86400000);
-    if (Math.abs(deltaDays) < 1) return 'Сегодня';
-    if (deltaDays === 1) return 'Вчера';
-    if (deltaDays > 1 && deltaDays < 7) return `${deltaDays} дн. назад`;
+    if (Math.abs(deltaDays) < 1) return wt('catalog.date_today', 'Сегодня');
+    if (deltaDays === 1) return wt('catalog.date_yesterday', 'Вчера');
+    if (deltaDays > 1 && deltaDays < 7) return wt('catalog.date_days_ago', '{n} дн. назад').replace('{n}', deltaDays);
     return date.toLocaleDateString('ru-RU', {
       day: '2-digit',
       month: 'long',
@@ -555,23 +564,23 @@
   }
 
   function getDisplayOwnerLegacy(item) {
-    if (isOwnPublication(item)) return 'Вы';
-    return asString(item && item.owner_user_id) || 'Не указан';
+    if (isOwnPublication(item)) return wt('catalog.owner_you', 'Вы');
+    return asString(item && item.owner_user_id) || wt('catalog.owner_unknown', 'Не указан');
   }
 
   function getDescription(item) {
     const text = asString(item && item.description);
     if (text) return text;
     if (isSavedComplexItem(item)) {
-      return 'Связанная публикация сохраняется в каталоге и открывается только для чтения.';
+      return wt('catalog.desc_saved_complex', 'Связанная публикация сохраняется в каталоге и открывается только для чтения.');
     }
     return item && item.content_type === 'theory'
-      ? 'Можно добавить в Теоретический центр как связанную публикацию.'
-      : 'Можно сохранить в каталоге как связанную публикацию и просматривать без создания отдельной версии в workspace.';
+      ? wt('catalog.desc_theory_default', 'Можно добавить в Теоретический центр как связанную публикацию.')
+      : wt('catalog.desc_complex_default', 'Можно сохранить в каталоге как связанную публикацию и просматривать без создания отдельной версии в workspace.');
   }
 
   function getTypeLabel(item) {
-    return item && item.content_type === 'theory' ? 'Теория' : 'Комплекс';
+    return item && item.content_type === 'theory' ? wt('catalog.type_label_theory', 'Теория') : wt('catalog.type_label_complex', 'Комплекс');
   }
 
   function getTypeKey(item) {
@@ -590,25 +599,25 @@
 
   function getTheoryMetaText(item) {
     const theoryCount = getTheoryCount(item);
-    if (theoryCount > 2) return `${theoryCount} теории`;
-    if (theoryCount > 0) return 'Есть теория';
+    if (theoryCount > 2) return wt('catalog.theory_count', '{n} теории').replace('{n}', theoryCount);
+    if (theoryCount > 0) return wt('catalog.theory_present', 'Есть теория');
     return '';
   }
 
   function getCardStatusBadge(item) {
     if (isOwnPublication(item)) {
-      return { text: 'Моя публикация', icon: 'person', className: 'catalog-badge catalog-badge--primary' };
+      return { text: wt('catalog.badge_own', 'Моя публикация'), icon: 'person', className: 'catalog-badge catalog-badge--primary' };
     }
     const status = getStatus(item);
     if (status && status.library_status && status.library_status.already_in_library) {
       const accessState = asString(status.library_status.access_state);
       if (accessState === 'requires_access_code') {
-        return { text: 'Нужен код', icon: 'password', className: 'catalog-badge catalog-badge--warning' };
+        return { text: wt('catalog.badge_needs_code', 'Нужен код'), icon: 'password', className: 'catalog-badge catalog-badge--warning' };
       }
       if (accessState === 'revoked' || accessState === 'deleted_source') {
-        return { text: 'Доступ закрыт', icon: 'lock', className: 'catalog-badge catalog-badge--muted' };
+        return { text: wt('catalog.badge_access_closed', 'Доступ закрыт'), icon: 'lock', className: 'catalog-badge catalog-badge--muted' };
       }
-      return { text: 'Добавлен', icon: 'bookmark_added', className: 'catalog-badge catalog-badge--success' };
+      return { text: wt('catalog.badge_added', 'Добавлен'), icon: 'bookmark_added', className: 'catalog-badge catalog-badge--success' };
     }
     return null;
   }
@@ -616,10 +625,10 @@
   function getPrimaryAction(item) {
     const latestVersionId = asString(item && item.latest_version_id);
     if (!latestVersionId) {
-      return { key: 'unavailable', label: 'Нет версии', className: 'catalog-card__button catalog-card__button--ghost', disabled: true };
+      return { key: 'unavailable', label: wt('catalog.action_no_version', 'Нет версии'), className: 'catalog-card__button catalog-card__button--ghost', disabled: true };
     }
     if (!state.authenticated) {
-      return { key: 'login', label: 'Войти, чтобы добавить', className: 'btn-secondary catalog-card__button' };
+      return { key: 'login', label: wt('catalog.action_login', 'Войти, чтобы добавить'), className: 'btn-secondary catalog-card__button' };
     }
     if (isOwnPublication(item)) {
       return null;
@@ -628,18 +637,18 @@
     if (status && status.library_status && status.library_status.already_in_library) {
       const accessState = asString(status.library_status.access_state);
       if (accessState === 'requires_access_code') {
-        return { key: 'open-library', label: 'Ввести код', className: 'btn-secondary catalog-card__button' };
+        return { key: 'open-library', label: wt('catalog.action_enter_code', 'Ввести код'), className: 'btn-secondary catalog-card__button' };
       }
-      return { key: 'open-library', label: 'Открыть в библиотеке', className: 'btn-secondary catalog-card__button' };
+      return { key: 'open-library', label: wt('catalog.action_open_library', 'Открыть в библиотеке'), className: 'btn-secondary catalog-card__button' };
     }
-    return { key: 'preview', label: 'Добавить в библиотеку', className: 'btn-primary catalog-card__button' };
+    return { key: 'preview', label: wt('catalog.action_add_library', 'Добавить в библиотеку'), className: 'btn-primary catalog-card__button' };
   }
 
   function getRelationshipBadge(item) {
     if (!item || state.contentType === 'saved') return null;
     if (item.content_type === 'complex' && item.linked_theory_item && asString(item.linked_theory_item.item_id)) {
       return {
-        text: '\u0421\u0432\u044f\u0437\u0430\u043d\u043d\u0430\u044f \u0442\u0435\u043e\u0440\u0438\u044f',
+        text: wt('catalog.badge_linked_theory', '\u0421\u0432\u044f\u0437\u0430\u043d\u043d\u0430\u044f \u0442\u0435\u043e\u0440\u0438\u044f'),
         icon: 'hub',
         className: 'catalog-badge catalog-badge--linked',
       };
@@ -648,14 +657,14 @@
       const linkedComplexCount = normalizeCount(item.linked_complex_count);
       if (linkedComplexCount > 1) {
         return {
-          text: `\u0412 ${linkedComplexCount} \u043a\u043e\u043c\u043f\u043b\u0435\u043a\u0441\u0430\u0445`,
+          text: wt('catalog.badge_in_complexes', '\u0412 {n} \u043a\u043e\u043c\u043f\u043b\u0435\u043a\u0441\u0430\u0445').replace('{n}', linkedComplexCount),
           icon: 'hub',
           className: 'catalog-badge catalog-badge--linked',
         };
       }
       if (linkedComplexCount === 1) {
         return {
-          text: '\u0412\u0445\u043e\u0434\u0438\u0442 \u0432 \u043a\u043e\u043c\u043f\u043b\u0435\u043a\u0442',
+          text: wt('catalog.badge_in_complex', '\u0412\u0445\u043e\u0434\u0438\u0442 \u0432 \u043a\u043e\u043c\u043f\u043b\u0435\u043a\u0442'),
           icon: 'hub',
           className: 'catalog-badge catalog-badge--linked',
         };
@@ -668,8 +677,8 @@
     if (!action) return '';
     if (action.key !== 'preview') return action.label;
     return item && item.content_type === 'theory'
-      ? '\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u0442\u0435\u043e\u0440\u0438\u044e'
-      : '\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u043a\u043e\u043c\u043f\u043b\u0435\u043a\u0441';
+      ? wt('catalog.bundle_add_theory', '\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u0442\u0435\u043e\u0440\u0438\u044e')
+      : wt('catalog.bundle_add_complex', '\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u043a\u043e\u043c\u043f\u043b\u0435\u043a\u0441');
   }
 
   function fetchJson(url, options) {
@@ -964,19 +973,19 @@
 
   function getWorkspaceLimitMessage(entitySummary, options = {}) {
     if (!entitySummary || isPremiumWorkspacePlan()) return '';
-    const label = asString(options.label) || 'элементов';
+    const label = asString(options.label) || wt('catalog.limit_label_default', 'элементов');
     const personalCount = Number(entitySummary.personal_count || 0);
     const personalLimit = Number(entitySummary.personal_limit || 0);
     const libraryCount = Number(entitySummary.library_total_count || 0);
     const libraryLimit = Number(entitySummary.library_limit || 0);
     if (Number(entitySummary.remaining_personal || 0) <= 0 && Number(entitySummary.remaining_library || 0) <= 0) {
-      return `Лимит ${label} достигнут: свои ${personalCount}/${personalLimit}, библиотека ${libraryCount}/${libraryLimit}.`;
+      return wt('catalog.limit_reached_both', 'Лимит {label} достигнут: свои {personal}/{personal_limit}, библиотека {library}/{library_limit}.').replace('{label}', label).replace('{personal}', personalCount).replace('{personal_limit}', personalLimit).replace('{library}', libraryCount).replace('{library_limit}', libraryLimit);
     }
     if (Number(entitySummary.remaining_library || 0) <= 0) {
-      return `Библиотека ${label} заполнена: ${libraryCount}/${libraryLimit}.`;
+      return wt('catalog.limit_library_full', 'Библиотека {label} заполнена: {library}/{library_limit}.').replace('{label}', label).replace('{library}', libraryCount).replace('{library_limit}', libraryLimit);
     }
     if (Number(entitySummary.remaining_personal || 0) <= 0) {
-      return `Лимит своих ${label} достигнут: ${personalCount}/${personalLimit}.`;
+      return wt('catalog.limit_personal_reached', 'Лимит своих {label} достигнут: {personal}/{personal_limit}.').replace('{label}', label).replace('{personal}', personalCount).replace('{personal_limit}', personalLimit);
     }
     return '';
   }
@@ -987,27 +996,27 @@
       : null;
     const summary = evaluation && evaluation.summary ? evaluation.summary : state.workspaceLimits;
     if (!summary) return '';
-    if (isPremiumWorkspacePlan()) return 'Premium-план: лимиты библиотеки не применяются.';
+    if (isPremiumWorkspacePlan()) return wt('catalog.limit_premium_note', 'Premium-план: лимиты библиотеки не применяются.');
 
     const notes = [];
     const theories = summary && typeof summary.theories === 'object' ? summary.theories : null;
     const complexes = summary && typeof summary.complexes === 'object' ? summary.complexes : null;
     const createdCounts = preview?.summary?.created_counts || {};
     if (preview?.item?.content_type === 'theory' && theories) {
-      notes.push(`Теории в библиотеке: ${Number(theories.library_total_count || 0)}/${Number(theories.library_limit || 0)}.`);
-      if (Number(createdCounts.theories || 0) > 0) notes.push('После добавления будет занят 1 слот теории.');
+      notes.push(wt('catalog.limit_theories_slots', 'Теории в библиотеке: {count}/{limit}.').replace('{count}', Number(theories.library_total_count || 0)).replace('{limit}', Number(theories.library_limit || 0)));
+      if (Number(createdCounts.theories || 0) > 0) notes.push(wt('catalog.limit_theory_slot_added', 'После добавления будет занят 1 слот теории.'));
     }
     if (preview?.item?.content_type === 'complex' && complexes) {
-      notes.push(`Комплексы в библиотеке: ${Number(complexes.library_total_count || 0)}/${Number(complexes.library_limit || 0)}.`);
-      if (Number(createdCounts.complexes || 0) > 0) notes.push('После добавления будет занят 1 слот комплекса.');
+      notes.push(wt('catalog.limit_complexes_slots', 'Комплексы в библиотеке: {count}/{limit}.').replace('{count}', Number(complexes.library_total_count || 0)).replace('{limit}', Number(complexes.library_limit || 0)));
+      if (Number(createdCounts.complexes || 0) > 0) notes.push(wt('catalog.limit_complex_slot_added', 'После добавления будет занят 1 слот комплекса.'));
       if (Number(createdCounts.theories || 0) > 0 && theories) {
-        notes.push(`Связанная теория тоже займет слот: ${Number(theories.library_total_count || 0)}/${Number(theories.library_limit || 0)} сейчас.`);
+        notes.push(wt('catalog.limit_theory_also_slot', 'Связанная теория тоже займет слот: {count}/{limit} сейчас.').replace('{count}', Number(theories.library_total_count || 0)).replace('{limit}', Number(theories.library_limit || 0)));
       }
     }
     if (preview?.blocked && Array.isArray(evaluation?.errors) && evaluation.errors.length) {
       notes.push(getWorkspaceLimitMessage(
         preview.item?.content_type === 'theory' ? theories : complexes,
-        { label: preview.item?.content_type === 'theory' ? 'теорий' : 'комплексов' }
+        { label: preview.item?.content_type === 'theory' ? wt('catalog.summary_type_theory', 'теорий') : wt('catalog.summary_type_complex', 'комплексов') }
       ));
     }
     return notes.filter(Boolean).join(' ');
@@ -1062,8 +1071,8 @@
 
   function getDisplayOwner(item) {
     const ownerDisplayName = asString(item && (item.owner_display_name || item.owner_name));
-    if (isOwnPublication(item)) return '\u0412\u044b';
-    return ownerDisplayName || asString(item && item.owner_user_id) || '\u041d\u0435 \u0443\u043a\u0430\u0437\u0430\u043d';
+    if (isOwnPublication(item)) return wt('catalog.owner_you', '\u0412\u044b');
+    return ownerDisplayName || asString(item && item.owner_user_id) || wt('catalog.owner_unknown', '\u041d\u0435 \u0443\u043a\u0430\u0437\u0430\u043d');
   }
 
   async function loadCatalogItems() {
@@ -1292,13 +1301,13 @@
           </div>
         </div>
         <div>
-          <h2 class="catalog-card__title" title="${escapeHtml(asString(item.title) || 'Без названия')}">${escapeHtml(asString(item.title) || 'Без названия')}</h2>
+          <h2 class="catalog-card__title" title="${escapeHtml(asString(item.title) || wt('catalog.no_title', 'Без названия'))}">${escapeHtml(asString(item.title) || wt('catalog.no_title', 'Без названия'))}</h2>
           <p class="catalog-card__description" title="${escapeHtml(getDescription(item))}">${escapeHtml(getDescription(item))}</p>
         </div>
         <div class="catalog-card__meta">
           <span class="catalog-card__meta-item">
             <span class="material-symbols-outlined">task_alt</span>
-            ${item.content_type === 'complex' ? `${escapeHtml(String(getTaskCount(item)))} заданий` : `${escapeHtml(String(normalizeCount(getLatestManifest(item).image_count || 0)))} изображ.`}
+            ${item.content_type === 'complex' ? `${escapeHtml(String(getTaskCount(item)))} ${wt('catalog.tasks_count', 'заданий')}` : `${escapeHtml(String(normalizeCount(getLatestManifest(item).image_count || 0)))} ${wt('catalog.images_count', 'изображ.')}`}
           </span>
           ${theoryMeta ? `
             <span class="catalog-card__meta-item">
@@ -1358,7 +1367,7 @@
     bundle.innerHTML = `
       <div class="catalog-bundle__header">
         <div>
-          <p class="catalog-bundle__eyebrow">\u0421\u0432\u044f\u0437\u0430\u043d\u043d\u044b\u0435 \u043f\u0443\u0431\u043b\u0438\u043a\u0430\u0446\u0438\u0438</p>
+          <p class="catalog-bundle__eyebrow">${wt('catalog.bundle_related_pubs', '\u0421\u0432\u044f\u0437\u0430\u043d\u043d\u044b\u0435 \u043f\u0443\u0431\u043b\u0438\u043a\u0430\u0446\u0438\u0438')}</p>
         </div>
       </div>
       <div class="catalog-bundle__cards">
@@ -1647,8 +1656,8 @@
       const asyncBlockId = `catalog-detail-async-${Date.now()}`;
       const descriptionRowHtml = isComplex ? `
         <div class="catalog-detail__row">
-          <p class="catalog-detail__kicker">Описание комплекса</p>
-          <p class="catalog-detail__text ${!descriptionText ? 'catalog-detail__text--placeholder' : ''}">${escapeHtml(descriptionText || 'Описание отсутствует.')}</p>
+          <p class="catalog-detail__kicker">${wt('catalog.detail_desc_kicker', 'Описание комплекса')}</p>
+          <p class="catalog-detail__text ${!descriptionText ? 'catalog-detail__text--placeholder' : ''}">${escapeHtml(descriptionText || wt('catalog.detail_desc_placeholder', 'Описание отсутствует.'))}</p>
         </div>
       ` : '';
 
@@ -1659,7 +1668,7 @@
         <div id="${asyncBlockId}" class="catalog-detail__async">
           <div class="catalog-detail__loading">
             <span class="material-symbols-outlined catalog-detail__spinner">progress_activity</span>
-            <span>Загружаем подробности…</span>
+            <span>${wt('catalog.detail_loading', 'Загружаем подробности…')}</span>
           </div>
         </div>
         ${detailAction ? `
@@ -1695,8 +1704,8 @@
             if (isSavedComplexItem(item) && ['requires_access_code', 'revoked', 'deleted_source'].includes(accessState)) {
               asyncBlock.innerHTML = `
                 <div class="catalog-detail__row">
-                  <p class="catalog-detail__kicker">Доступ</p>
-                  <p class="catalog-detail__text">${escapeHtml(asString(status?.library_status?.access_reason || item.linked_access_reason || 'Содержимое публикации сейчас недоступно.'))}</p>
+                  <p class="catalog-detail__kicker">${wt('catalog.kicker_access', 'Доступ')}</p>
+                  <p class="catalog-detail__text">${escapeHtml(asString(status?.library_status?.access_reason || item.linked_access_reason || wt('catalog.content_unavailable', 'Содержимое публикации сейчас недоступно.')))}</p>
                 </div>
               `;
             } else {
@@ -1704,7 +1713,7 @@
               if (breakdown.length > 0) {
                 asyncBlock.innerHTML = `
                 <div class="catalog-detail__row">
-                  <p class="catalog-detail__kicker">Состав заданий</p>
+                  <p class="catalog-detail__kicker">${wt('catalog.detail_tasks_kicker', 'Состав заданий')}</p>
                   <div class="catalog-detail__breakdown">
                     ${breakdown.map((entry, idx) => `
                       <div class="catalog-detail__breakdown-group">
@@ -1743,8 +1752,8 @@
             } else {
               asyncBlock.innerHTML = `
                 <div class="catalog-detail__row">
-                  <p class="catalog-detail__kicker">Задания</p>
-                  <p class="catalog-detail__text catalog-detail__text--placeholder">Информация о структуре недоступна.</p>
+                  <p class="catalog-detail__kicker">${wt('catalog.detail_tasks_fallback_kicker', 'Задания')}</p>
+                  <p class="catalog-detail__text catalog-detail__text--placeholder">${wt('catalog.detail_tasks_no_info', 'Информация о структуре недоступна.')}</p>
                 </div>
               `;
             }
@@ -1757,8 +1766,8 @@
             if (previewHtml) {
               asyncBlock.innerHTML = `
                 <div class="catalog-detail__row">
-                  <p class="catalog-detail__kicker">Миниатюра содержания</p>
-                  <div class="catalog-detail__theory-preview" role="button" tabindex="0" title="Нажмите, чтобы открыть теорию">
+                  <p class="catalog-detail__kicker">${wt('catalog.detail_theory_preview_kicker', 'Миниатюра содержания')}</p>
+                  <div class="catalog-detail__theory-preview" role="button" tabindex="0" title="${wt('catalog.detail_theory_preview_title', 'Нажмите, чтобы открыть теорию')}">
                     <div class="catalog-detail__theory-preview-canvas">
                       <div class="catalog-detail__theory-preview-inner">
                         ${previewHtml}
@@ -1766,7 +1775,7 @@
                     </div>
                     <div class="catalog-detail__theory-preview-overlay">
                       <span class="material-symbols-outlined">open_in_full</span>
-                      <span>Открыть теорию</span>
+                      <span>${wt('catalog.detail_theory_open_btn', 'Открыть теорию')}</span>
                     </div>
                   </div>
                 </div>
@@ -1778,7 +1787,7 @@
                   asString(item.source_workspace_id),
                   {
                     item: {
-                      title: asString(item.title) || 'Теория',
+                      title: asString(item.title) || wt('catalog.theory_fallback_title', 'Теория'),
                       delta: { ops },
                       updated_at: asString(item.latest_published_at) || asString(version && version.created_at) || '',
                     },
@@ -1790,8 +1799,8 @@
             } else {
               asyncBlock.innerHTML = `
                 <div class="catalog-detail__row">
-                  <p class="catalog-detail__kicker">Содержание</p>
-                  <p class="catalog-detail__text catalog-detail__text--placeholder">Контент теории не доступен для предпросмотра.</p>
+                  <p class="catalog-detail__kicker">${wt('catalog.detail_theory_content_kicker', 'Содержание')}</p>
+                  <p class="catalog-detail__text catalog-detail__text--placeholder">${wt('catalog.detail_theory_no_preview', 'Контент теории не доступен для предпросмотра.')}</p>
                 </div>
               `;
             }
@@ -1807,7 +1816,7 @@
     els.error.classList.toggle('is-visible', !state.loading && !!state.error);
     els.empty.classList.toggle('is-visible', !state.loading && !state.error && !hasItems);
     els.grid.classList.toggle('catalog-hidden', state.loading || !!state.error || !hasItems);
-    els.error.textContent = state.error ? `Не удалось загрузить каталог: ${state.error}` : '';
+    els.error.textContent = state.error ? wt('catalog.detail_load_error', 'Не удалось загрузить каталог: {error}').replace('{error}', state.error) : '';
   }
 
   function render() {
@@ -1907,7 +1916,7 @@
     return { moduleId: parts[0], topicId: parts[1], taskId: parts[parts.length - 1], taskRef: raw };
   }
 
-  function cleanTaskDisplayName(rawName, fallback = 'Задание') {
+  function cleanTaskDisplayName(rawName, fallback = wt('catalog.task_fallback_name', 'Задание')) {
     const text = asString(rawName).trim();
     if (!text) return fallback;
     const cleaned = text
@@ -1922,7 +1931,7 @@
     const taskData = payload.task_data && typeof payload.task_data === 'object' ? payload.task_data : {};
     const taskMeta = taskData.meta && typeof taskData.meta === 'object' ? taskData.meta : {};
     const metadata = payload.metadata && typeof payload.metadata === 'object' ? payload.metadata : {};
-    return asString(taskData.name) || asString(taskData.title) || asString(taskMeta.name) || asString(metadata.name) || asString(fallbackRef) || 'Задание';
+    return asString(taskData.name) || asString(taskData.title) || asString(taskMeta.name) || asString(metadata.name) || asString(fallbackRef) || wt('catalog.task_fallback_name', 'Задание');
   }
 
   function getTaskPayloadType(taskPayload) {
@@ -2016,21 +2025,21 @@
   }
 
   function openAccessCodeDialog(title) {
-    const label = asString(title) || 'публикации';
+    const label = asString(title) || wt('catalog.access_code_default_label', 'публикации');
     return openModal(`
       <div class="w-full max-w-md overflow-hidden rounded-[28px] border border-border-subtle bg-surface-1 shadow-xl">
         <div class="border-b border-border-subtle px-5 py-4">
-          <p class="text-lg font-bold text-text-main">Код доступа</p>
-          <p class="mt-2 text-sm text-text-secondary">Введите код, чтобы снова открыть ${escapeHtml(label)} в библиотеке.</p>
+          <p class="text-lg font-bold text-text-main">${wt('catalog.access_code_title', 'Код доступа')}</p>
+          <p class="mt-2 text-sm text-text-secondary">${wt('catalog.access_code_hint', 'Введите код, чтобы снова открыть {label} в библиотеке.').replace('{label}', escapeHtml(label))}</p>
         </div>
         <form class="space-y-4 p-5" data-access-code-form>
           <label class="flex flex-col gap-2 text-sm font-semibold text-text-main">
-            Код доступа
-            <input name="access_code" type="text" class="h-11 rounded-2xl border border-border-subtle bg-surface-2 px-4 outline-none" placeholder="Например, AB12CD34" autocomplete="off">
+            ${wt('catalog.access_code_label', 'Код доступа')}
+            <input name="access_code" type="text" class="h-11 rounded-2xl border border-border-subtle bg-surface-2 px-4 outline-none" placeholder="${wt('catalog.access_code_placeholder', 'Например, AB12CD34')}" autocomplete="off">
           </label>
           <div class="flex justify-end gap-3 border-t border-border-subtle pt-4">
-            <button type="button" class="btn-secondary h-10 px-4" data-close>Закрыть</button>
-            <button type="submit" class="btn-primary h-10 px-4">Открыть</button>
+            <button type="button" class="btn-secondary h-10 px-4" data-close>${wt('catalog.btn_close', 'Закрыть')}</button>
+            <button type="submit" class="btn-primary h-10 px-4">${wt('catalog.btn_open', 'Открыть')}</button>
           </div>
         </form>
       </div>
@@ -2042,7 +2051,7 @@
         event.preventDefault();
         const value = asString(input && input.value);
         if (!value) {
-          showToast('Введите код доступа.', 'warning');
+          showToast(wt('catalog.access_code_empty_toast', 'Введите код доступа.'), 'warning');
           return;
         }
         close(value);
@@ -2054,8 +2063,8 @@
     const payload = taskNode && typeof taskNode === 'object' ? taskNode.payload || {} : {};
     const taskData = payload.task_data && typeof payload.task_data === 'object' ? payload.task_data : {};
     const meta = taskData.meta && typeof taskData.meta === 'object' ? taskData.meta : {};
-    const title = asString(taskNode && taskNode.title) || 'Задание';
-    const typeLabel = asString(taskNode && taskNode.typeLabel) || 'Другое';
+    const title = asString(taskNode && taskNode.title) || wt('catalog.task_fallback_name', 'Задание');
+    const typeLabel = asString(taskNode && taskNode.typeLabel) || wt('catalog.type_other', 'Другое');
     const subtitle = [
       asString(context.moduleTitle),
       asString(context.topicTitle),
@@ -2069,17 +2078,17 @@
         <div class="custom-scrollbar space-y-4 overflow-y-auto p-5">
           ${asString(meta.description || taskData.description || taskData.prompt || taskData.question) ? `
             <div class="catalog-detail__row">
-              <p class="catalog-detail__kicker">Кратко</p>
+              <p class="catalog-detail__kicker">${wt('catalog.task_kicker_brief', 'Кратко')}</p>
               <p class="catalog-detail__text">${escapeHtml(asString(meta.description || taskData.description || taskData.prompt || taskData.question))}</p>
             </div>
           ` : ''}
           <div class="catalog-detail__row">
-            <p class="catalog-detail__kicker">Данные задания</p>
+            <p class="catalog-detail__kicker">${wt('catalog.task_kicker_data', 'Данные задания')}</p>
             <pre style="margin:0;white-space:pre-wrap;word-break:break-word;font-size:0.78rem;line-height:1.5;color:var(--color-text-main);">${escapeHtml(prettyJson(taskData && Object.keys(taskData).length ? taskData : payload))}</pre>
           </div>
         </div>
         <div class="flex justify-end border-t border-border-subtle px-5 py-4">
-          <button type="button" class="btn-secondary h-10 px-4" data-close>Закрыть</button>
+          <button type="button" class="btn-secondary h-10 px-4" data-close>${wt('catalog.btn_close', 'Закрыть')}</button>
         </div>
       </div>
     `);
@@ -2100,28 +2109,28 @@
       <div class="flex max-h-[94vh] w-full max-w-6xl flex-col overflow-hidden rounded-[30px] border border-border-subtle bg-surface-1 shadow-xl">
         <div class="flex items-start justify-between gap-4 border-b border-border-subtle px-6 py-5">
           <div>
-            <p class="text-xl font-bold text-text-main">${escapeHtml(asString(item.title) || asString(complex.name) || 'Комплекс')}</p>
-            <p class="mt-2 text-sm text-text-secondary">${escapeHtml(asString(version.published_at) ? `Опубликовано ${formatRelativeDate(version.published_at)}` : (asString(libraryEntry.access_reason) || 'Связанная публикация только для чтения.'))}</p>
+            <p class="text-xl font-bold text-text-main">${escapeHtml(asString(item.title) || asString(complex.name) || wt('catalog.complex_fallback_title', 'Комплекс'))}</p>
+            <p class="mt-2 text-sm text-text-secondary">${escapeHtml(asString(version.published_at) ? wt('catalog.published_on', 'Опубликовано {date}').replace('{date}', formatRelativeDate(version.published_at)) : (asString(libraryEntry.access_reason) || wt('catalog.saved_pub_readonly', 'Связанная публикация только для чтения.')))}</p>
           </div>
-          <button type="button" class="btn-secondary h-10 px-4" data-close>Закрыть</button>
+          <button type="button" class="btn-secondary h-10 px-4" data-close>${wt('catalog.btn_close', 'Закрыть')}</button>
         </div>
         <div class="custom-scrollbar grid gap-5 overflow-y-auto px-6 py-5 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div class="space-y-4">
             ${locked ? `
               <div class="catalog-detail__row">
-                <p class="catalog-detail__kicker">Доступ</p>
-                <p class="catalog-detail__text">${escapeHtml(asString(libraryEntry.access_reason) || 'Содержимое публикации сейчас недоступно.')}</p>
+                <p class="catalog-detail__kicker">${wt('catalog.kicker_access', 'Доступ')}</p>
+                <p class="catalog-detail__text">${escapeHtml(asString(libraryEntry.access_reason) || wt('catalog.content_unavailable', 'Содержимое публикации сейчас недоступно.'))}</p>
               </div>
             ` : `
               ${asString(complex.description) ? `
                 <div class="catalog-detail__row">
-                  <p class="catalog-detail__kicker">Описание</p>
+                  <p class="catalog-detail__kicker">${wt('catalog.kicker_description', 'Описание')}</p>
                   <p class="catalog-detail__text">${escapeHtml(asString(complex.description))}</p>
                 </div>
               ` : ''}
               ${structure.modules.map((module) => `
                 <section class="catalog-detail__row">
-                  <p class="catalog-detail__kicker">Модуль</p>
+                  <p class="catalog-detail__kicker">${wt('catalog.kicker_module', 'Модуль')}</p>
                   <div>
                     <p class="catalog-detail__text" style="margin-top:0;">${escapeHtml(module.title)}</p>
                     ${module.description ? `<p class="catalog-detail__text" style="font-weight:600;color:var(--color-text-secondary);">${escapeHtml(module.description)}</p>` : ''}
@@ -2136,7 +2145,7 @@
                           </div>
                           ${topic.theoryLink && topic.theoryLink.theory_id ? `
                             <button type="button" class="btn-secondary h-9 px-3" data-open-theory-id="${escapeHtml(asString(topic.theoryLink.theory_id))}">
-                              Теория темы
+                              ${wt('catalog.kicker_topic_theory', 'Теория темы')}
                             </button>
                           ` : ''}
                         </div>
@@ -2158,7 +2167,7 @@
               `).join('')}
               ${structure.looseTasks.length ? `
                 <div class="catalog-detail__row">
-                  <p class="catalog-detail__kicker">Дополнительные задания</p>
+                  <p class="catalog-detail__kicker">${wt('catalog.kicker_loose_tasks', 'Дополнительные задания')}</p>
                   <div class="flex flex-col gap-2">
                     ${structure.looseTasks.map((task) => `
                       <button type="button" class="flex items-center justify-between gap-3 rounded-2xl border border-border-subtle bg-surface-1 px-4 py-3 text-left transition hover:border-primary-light hover:bg-bg-secondary" data-open-task-ref="${escapeHtml(task.taskRef)}">
@@ -2176,21 +2185,21 @@
           </div>
           <aside class="space-y-4">
             <div class="catalog-detail__row">
-              <p class="catalog-detail__kicker">Статус</p>
-              <p class="catalog-detail__text">${escapeHtml(locked ? (asString(libraryEntry.access_reason) || 'Доступ закрыт') : 'Связанная публикация в вашей библиотеке')}</p>
+              <p class="catalog-detail__kicker">${wt('catalog.kicker_status', 'Статус')}</p>
+              <p class="catalog-detail__text">${escapeHtml(locked ? (asString(libraryEntry.access_reason) || wt('catalog.badge_access_closed', 'Доступ закрыт')) : wt('catalog.status_in_library', 'Связанная публикация в вашей библиотеке'))}</p>
             </div>
             <div class="catalog-detail__row">
-              <p class="catalog-detail__kicker">Сводка</p>
+              <p class="catalog-detail__kicker">${wt('catalog.kicker_summary', 'Сводка')}</p>
               <div class="catalog-detail__breakdown">
-                <div class="catalog-detail__breakdown-group"><div class="catalog-detail__breakdown-row"><span class="catalog-detail__breakdown-label">Модули</span><span class="catalog-detail__breakdown-count">${escapeHtml(String(structure.modules.length))}</span></div></div>
-                <div class="catalog-detail__breakdown-group"><div class="catalog-detail__breakdown-row"><span class="catalog-detail__breakdown-label">Задания</span><span class="catalog-detail__breakdown-count">${escapeHtml(String(getTaskCount(item)))}</span></div></div>
-                <div class="catalog-detail__breakdown-group"><div class="catalog-detail__breakdown-row"><span class="catalog-detail__breakdown-label">Теории</span><span class="catalog-detail__breakdown-count">${escapeHtml(String(getTheoryCount(item)))}</span></div></div>
+                <div class="catalog-detail__breakdown-group"><div class="catalog-detail__breakdown-row"><span class="catalog-detail__breakdown-label">${wt('catalog.summary_modules_label', 'Модули')}</span><span class="catalog-detail__breakdown-count">${escapeHtml(String(structure.modules.length))}</span></div></div>
+                <div class="catalog-detail__breakdown-group"><div class="catalog-detail__breakdown-row"><span class="catalog-detail__breakdown-label">${wt('catalog.detail_tasks_fallback_kicker', 'Задания')}</span><span class="catalog-detail__breakdown-count">${escapeHtml(String(getTaskCount(item)))}</span></div></div>
+                <div class="catalog-detail__breakdown-group"><div class="catalog-detail__breakdown-row"><span class="catalog-detail__breakdown-label">${wt('catalog.summary_theories_label', 'Теории')}</span><span class="catalog-detail__breakdown-count">${escapeHtml(String(getTheoryCount(item)))}</span></div></div>
               </div>
             </div>
             ${complexTheoryId ? `
               <div class="catalog-detail__row">
-                <p class="catalog-detail__kicker">Связанная теория комплекса</p>
-                <button type="button" class="btn-secondary h-10 px-4" data-open-theory-id="${escapeHtml(complexTheoryId)}">Открыть теорию</button>
+                <p class="catalog-detail__kicker">${wt('catalog.kicker_linked_theory', 'Связанная теория комплекса')}</p>
+                <button type="button" class="btn-secondary h-10 px-4" data-open-theory-id="${escapeHtml(complexTheoryId)}">${wt('catalog.btn_open_theory', 'Открыть теорию')}</button>
               </div>
             ` : ''}
           </aside>
@@ -2220,7 +2229,7 @@
             ? theoryPayloads[theoryId]
             : null;
           openTheoryModal(
-            asString(item.title) || 'Комплекс',
+            asString(item.title) || wt('catalog.complex_fallback_title', 'Комплекс'),
             theoryId,
             theoryItem ? { item: theoryItem } : {},
           );
@@ -2232,12 +2241,13 @@
   function buildPreviewRows(item) {
     const manifest = getLatestManifest(item);
     const deps = manifest && typeof manifest.dependency_counts === 'object' ? manifest.dependency_counts : {};
+    const _catalogLabel = wt('catalog.preview_table_catalog', 'Каталог');
     const rows = [
-      ['Комплекс', 1, 'Linked', 'Каталог'],
-      ['Модули', normalizeCount(deps.modules), 'Read-only', 'Каталог'],
-      ['Темы', normalizeCount(deps.topics), 'Read-only', 'Каталог'],
-      ['Задания', getTaskCount(item), 'Read-only', 'Каталог'],
-      ['Теории', normalizeCount(deps.theories), 'Read-only', 'Каталог'],
+      [wt('catalog.complex_fallback_title', 'Комплекс'), 1, 'Linked', _catalogLabel],
+      [wt('catalog.summary_modules_label', 'Модули'), normalizeCount(deps.modules), 'Read-only', _catalogLabel],
+      [wt('catalog.preview_table_topics', 'Темы'), normalizeCount(deps.topics), 'Read-only', _catalogLabel],
+      [wt('catalog.detail_tasks_fallback_kicker', 'Задания'), getTaskCount(item), 'Read-only', _catalogLabel],
+      [wt('catalog.summary_theories_label', 'Теории'), normalizeCount(deps.theories), 'Read-only', _catalogLabel],
     ];
     return rows.map((row) => `
       <div class="catalog-dialog-list__row">
@@ -2252,37 +2262,37 @@
   async function openComplexPreview(preview) {
     const already = !!(preview && preview.library_status && preview.library_status.already_in_library);
     const item = preview && preview.item ? preview.item : {};
-    const accessReason = asString(preview?.library_status?.access_reason) || 'Комплекс сохранится в каталоге как связанная публикация без создания отдельной версии в workspace.';
-    const buttonLabel = already ? 'Открыть в библиотеке' : 'Продолжить';
+    const accessReason = asString(preview?.library_status?.access_reason) || wt('catalog.complex_preview_access_reason', 'Комплекс сохранится в каталоге как связанная публикация без создания отдельной версии в workspace.');
+    const buttonLabel = already ? wt('catalog.action_open_library', 'Открыть в библиотеке') : wt('catalog.btn_continue', 'Продолжить');
     return openModal(`
       <div class="flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-[30px] border border-border-subtle bg-surface-1 shadow-xl">
         <div class="flex items-start justify-between gap-4 border-b border-border-subtle px-5 py-4">
           <div>
-            <p class="text-lg font-bold text-text-main">Добавление комплекса в библиотеку</p>
-            <p class="mt-2 text-sm text-text-secondary">Комплекс сохранится в вашем личном linked-списке внутри каталога и будет открываться только для чтения.</p>
+            <p class="text-lg font-bold text-text-main">${wt('catalog.complex_preview_title', 'Добавление комплекса в библиотеку')}</p>
+            <p class="mt-2 text-sm text-text-secondary">${wt('catalog.complex_preview_body', 'Комплекс сохранится в вашем личном linked-списке внутри каталога и будет открываться только для чтения.')}</p>
           </div>
-          <button type="button" class="btn-secondary h-10 px-4" data-close>Закрыть</button>
+          <button type="button" class="btn-secondary h-10 px-4" data-close>${wt('catalog.btn_close', 'Закрыть')}</button>
         </div>
         <div class="custom-scrollbar space-y-4 overflow-y-auto p-5">
           <div class="rounded-2xl border border-border-subtle bg-bg-secondary px-4 py-3">
-            <div class="text-sm font-semibold text-text-main">${escapeHtml(asString(item.title) || 'Комплекс')}</div>
+            <div class="text-sm font-semibold text-text-main">${escapeHtml(asString(item.title) || wt('catalog.complex_fallback_title', 'Комплекс'))}</div>
             <div class="mt-1 text-xs text-text-secondary">${escapeHtml(asString(item.description) || accessReason)}</div>
           </div>
           <div class="catalog-dialog-list">
             <div class="catalog-dialog-list__row catalog-dialog-list__row--head">
-              <div>Сущность</div>
-              <div>Всего</div>
-              <div>Режим</div>
-              <div>Где открывается</div>
+              <div>${wt('catalog.preview_table_entity', 'Сущность')}</div>
+              <div>${wt('catalog.preview_table_total', 'Всего')}</div>
+              <div>${wt('catalog.preview_table_mode', 'Режим')}</div>
+              <div>${wt('catalog.preview_table_where', 'Где открывается')}</div>
             </div>
             ${buildPreviewRows(item)}
           </div>
           <div class="catalog-dialog-note">
-            Задания, темы и связанные теории не импортируются в workspace. Авторские обновления будут резолвиться через последнюю доступную версию публикации.
+            ${wt('catalog.complex_preview_note', 'Задания, темы и связанные теории не импортируются в workspace. Авторские обновления будут резолвиться через последнюю доступную версию публикации.')}
           </div>
         </div>
         <div class="flex justify-end gap-3 border-t border-border-subtle px-5 py-4">
-          <button type="button" class="btn-secondary h-10 px-4" data-action="close">Закрыть</button>
+          <button type="button" class="btn-secondary h-10 px-4" data-action="close">${wt('catalog.btn_close', 'Закрыть')}</button>
           <button type="button" class="${already ? 'btn-secondary' : 'btn-primary'} h-10 px-4" data-action-key="${already ? 'open' : 'confirm'}">${buttonLabel}</button>
         </div>
       </div>
@@ -2293,31 +2303,31 @@
     const already = !!(preview && preview.library_status && preview.library_status.already_in_library);
     const accessState = asString(preview?.library_status?.access_state);
     const actionLabel = already
-      ? (accessState === 'requires_access_code' ? 'Открыть в Теоретическом центре' : 'Открыть в библиотеке')
-      : 'Продолжить';
+      ? (accessState === 'requires_access_code' ? wt('catalog.btn_open_theory_center', 'Открыть в Теоретическом центре') : wt('catalog.action_open_library', 'Открыть в библиотеке'))
+      : wt('catalog.btn_continue', 'Продолжить');
     const bodyText = already
-      ? 'Эта теория уже есть у вас как связанная публикация и открывается через Теоретический центр.'
-      : 'Теория будет добавлена в Теоретический центр как связанная публикация и всегда сможет резолвить актуальную доступную версию автора.';
+      ? wt('catalog.theory_preview_body_already', 'Эта теория уже есть у вас как связанная публикация и открывается через Теоретический центр.')
+      : wt('catalog.theory_preview_body_new', 'Теория будет добавлена в Теоретический центр как связанная публикация и всегда сможет резолвить актуальную доступную версию автора.');
     return openModal(`
       <div class="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-[30px] border border-border-subtle bg-surface-1 shadow-xl">
         <div class="flex items-start justify-between gap-4 border-b border-border-subtle px-5 py-4">
           <div>
-            <p class="text-lg font-bold text-text-main">Превью добавления теории</p>
+            <p class="text-lg font-bold text-text-main">${wt('catalog.theory_preview_title', 'Превью добавления теории')}</p>
             <p class="mt-2 text-sm text-text-secondary">${escapeHtml(bodyText)}</p>
           </div>
-          <button type="button" class="btn-secondary h-10 px-4" data-close>Закрыть</button>
+          <button type="button" class="btn-secondary h-10 px-4" data-close>${wt('catalog.btn_close', 'Закрыть')}</button>
         </div>
         <div class="space-y-4 p-5">
           <div class="rounded-2xl border border-border-subtle bg-bg-secondary px-4 py-3">
-            <div class="text-sm font-semibold text-text-main">${escapeHtml(asString(preview?.item?.title) || 'Теория')}</div>
-            <div class="mt-1 text-xs text-text-secondary">${escapeHtml(asString(preview?.library_status?.access_reason) || 'Связанная публикация будет доступна через Теоретический центр.')}</div>
+            <div class="text-sm font-semibold text-text-main">${escapeHtml(asString(preview?.item?.title) || wt('catalog.theory_fallback_title', 'Теория'))}</div>
+            <div class="mt-1 text-xs text-text-secondary">${escapeHtml(asString(preview?.library_status?.access_reason) || wt('catalog.theory_preview_access_reason', 'Связанная публикация будет доступна через Теоретический центр.'))}</div>
           </div>
           <div class="catalog-dialog-note">
-            После добавления теория не появится в редакторе как отдельная рабочая версия. Она будет читаться в Теоретическом центре как общий linked-материал автора.
+            ${wt('catalog.theory_preview_note', 'После добавления теория не появится в редакторе как отдельная рабочая версия. Она будет читаться в Теоретическом центре как общий linked-материал автора.')}
           </div>
         </div>
         <div class="flex justify-end gap-3 border-t border-border-subtle px-5 py-4">
-          <button type="button" class="btn-secondary h-10 px-4" data-action="close">Закрыть</button>
+          <button type="button" class="btn-secondary h-10 px-4" data-action="close">${wt('catalog.btn_close', 'Закрыть')}</button>
           <button type="button" class="${already ? 'btn-secondary' : 'btn-primary'} h-10 px-4" data-action-key="${already ? 'open' : 'confirm'}">${escapeHtml(actionLabel)}</button>
         </div>
       </div>
@@ -2326,8 +2336,8 @@
 
   async function openSuccessDialog(resultPayload) {
     const entityLabel = resultPayload && resultPayload.item && resultPayload.item.content_type === 'theory'
-      ? 'Теория добавлена в библиотеку'
-      : 'Комплекс добавлен в библиотеку';
+      ? wt('catalog.success_theory_title', 'Теория добавлена в библиотеку')
+      : wt('catalog.success_complex_title', 'Комплекс добавлен в библиотеку');
     return openModal(`
       <div class="w-full max-w-xl overflow-hidden rounded-[30px] border border-border-subtle bg-surface-1 shadow-xl">
         <div class="p-6 text-center">
@@ -2336,11 +2346,11 @@
             <path d="M37 61.5L52.5 77L84 45.5" stroke="var(--color-success-darker)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"></path>
           </svg>
           <p class="text-xl font-bold text-text-main">${escapeHtml(entityLabel)}</p>
-          <p class="mt-2 text-sm text-text-secondary">${resultPayload && resultPayload.item && resultPayload.item.content_type === 'theory' ? 'Связанная публикация появилась в Теоретическом центре. Там её можно читать как общий материал автора.' : 'Связанная публикация сохранена в каталоге и открывается только для чтения без создания отдельной версии в workspace.'}</p>
+          <p class="mt-2 text-sm text-text-secondary">${resultPayload && resultPayload.item && resultPayload.item.content_type === 'theory' ? wt('catalog.success_theory_body', 'Связанная публикация появилась в Теоретическом центре. Там её можно читать как общий материал автора.') : wt('catalog.success_complex_body', 'Связанная публикация сохранена в каталоге и открывается только для чтения без создания отдельной версии в workspace.')}</p>
         </div>
         <div class="flex justify-end gap-3 border-t border-border-subtle px-5 py-4">
-          <button type="button" class="btn-secondary h-10 px-4" data-action="close">Закрыть</button>
-          <button type="button" class="btn-primary h-10 px-4" data-action-key="open">Открыть в библиотеке</button>
+          <button type="button" class="btn-secondary h-10 px-4" data-action="close">${wt('catalog.btn_close', 'Закрыть')}</button>
+          <button type="button" class="btn-primary h-10 px-4" data-action-key="open">${wt('catalog.action_open_library', 'Открыть в библиотеке')}</button>
         </div>
       </div>
     `);
@@ -2432,7 +2442,7 @@
           <div class="catalog-confirm-modal__summary">${summaryMarkup}</div>
         </div>
         <div class="catalog-confirm-modal__footer">
-          <button type="button" class="btn-secondary h-10 px-4" data-action="close">Отмена</button>
+          <button type="button" class="btn-secondary h-10 px-4" data-action="close">${wt('catalog.btn_cancel', 'Отмена')}</button>
           <button type="button" class="${already ? 'btn-secondary' : 'btn-primary'} h-10 px-4" data-action-key="${already ? 'open' : 'confirm'}">${escapeHtml(primaryLabel)}</button>
         </div>
       </div>
@@ -2477,17 +2487,17 @@
         </div>
         <div class="catalog-confirm-modal__body">
           <section class="catalog-confirm-modal__hero">
-            <p class="catalog-confirm-modal__item-title">${escapeHtml(asString(item.title) || 'Теория')}</p>
+            <p class="catalog-confirm-modal__item-title">${escapeHtml(asString(item.title) || wt('catalog.type_label_theory', 'Теория'))}</p>
             <div class="catalog-confirm-modal__meta">
-              <span class="catalog-confirm-modal__meta-item">Автор: ${escapeHtml(owner)}</span>
-              <span class="catalog-confirm-modal__meta-item">Раздел: Теоретический центр</span>
+              <span class="catalog-confirm-modal__meta-item">${wt('catalog.confirm_author', 'Автор: {name}').replace('{name}', escapeHtml(owner))}</span>
+              <span class="catalog-confirm-modal__meta-item">${wt('catalog.confirm_section_theory_center', 'Раздел: Теоретический центр')}</span>
             </div>
             ${asString(item.description) ? `<p class="catalog-confirm-modal__description">${escapeHtml(asString(item.description))}</p>` : ''}
           </section>
           <div class="catalog-confirm-modal__summary">${summaryMarkup}</div>
         </div>
         <div class="catalog-confirm-modal__footer">
-          <button type="button" class="btn-secondary h-10 px-4" data-action="close">Отмена</button>
+          <button type="button" class="btn-secondary h-10 px-4" data-action="close">${wt('catalog.btn_cancel', 'Отмена')}</button>
           <button type="button" class="${already ? 'btn-secondary' : 'btn-primary'} h-10 px-4" data-action-key="${already ? 'open' : 'confirm'}">${escapeHtml(primaryLabel)}</button>
         </div>
       </div>
@@ -2641,32 +2651,32 @@
   async function openCatalogComplexConfirmModal(preview) {
     const already = !!(preview && preview.library_status && preview.library_status.already_in_library);
     const item = preview && preview.item ? preview.item : {};
-    const owner = getDisplayOwner(item) || 'Автор не указан';
+    const owner = getDisplayOwner(item) || wt('catalog.owner_unknown_author', 'Автор не указан');
     const relatedTheoryName = asString(item?.linked_theory_item?.title);
     const primaryLabel = already
-      ? 'Открыть в библиотеке'
+      ? wt('catalog.action_open_library', 'Открыть в библиотеке')
       : preview?.blocked
-        ? 'Лимит достигнут'
-        : 'Добавить комплекс';
+        ? wt('catalog.confirm_limit_reached', 'Лимит достигнут')
+        : wt('catalog.bundle_add_complex', 'Добавить комплекс');
     const factsMarkup = buildConfirmFacts([
-      { label: 'Задания', value: String(getTaskCount(item)) },
-      ...(relatedTheoryName ? [{ label: 'Теория', value: relatedTheoryName }] : []),
+      { label: wt('catalog.detail_tasks_fallback_kicker', 'Задания'), value: String(getTaskCount(item)) },
+      ...(relatedTheoryName ? [{ label: wt('catalog.theory_fallback_title', 'Теория'), value: relatedTheoryName }] : []),
     ]);
     const summaryMarkup = buildConfirmSummaryItems([
       {
         icon: 'bookmark_added',
-        title: already ? 'Уже сохранен в вашей библиотеке каталога' : 'Появится в вашей библиотеке каталога',
-        text: already ? 'Можно открыть из каталога в любой момент.' : 'Материал сохранится рядом с другими вашими публикациями.',
+        title: already ? wt('catalog.confirm_already_saved', 'Уже сохранен в вашей библиотеке каталога') : wt('catalog.confirm_will_appear', 'Появится в вашей библиотеке каталога'),
+        text: already ? wt('catalog.confirm_open_anytime', 'Можно открыть из каталога в любой момент.') : wt('catalog.confirm_material_saved', 'Материал сохранится рядом с другими вашими публикациями.'),
       },
       {
         icon: 'visibility',
-        title: 'Открывается только для чтения',
-        text: 'Комплекс можно просматривать без редактирования авторского оригинала.',
+        title: wt('catalog.confirm_readonly_title', 'Открывается только для чтения'),
+        text: wt('catalog.confirm_complex_readonly_text', 'Комплекс можно просматривать без редактирования авторского оригинала.'),
       },
       ...(relatedTheoryName ? [{
         icon: 'menu_book',
-        title: 'Связанная теория добавится вместе с комплексом',
-        text: `${relatedTheoryName} будет доступна в библиотеке пользователя.`,
+        title: wt('catalog.confirm_theory_comes_with', 'Связанная теория добавится вместе с комплексом'),
+        text: wt('catalog.confirm_theory_available_user', '{theoryName} будет доступна в библиотеке пользователя.').replace('{theoryName}', relatedTheoryName),
       }] : []),
     ]);
     const limitNote = buildWorkspaceLimitNote(preview);
@@ -2674,17 +2684,17 @@
       <div class="catalog-confirm-modal custom-scrollbar">
         <div class="catalog-confirm-modal__header">
           <div>
-            <p class="catalog-confirm-modal__eyebrow">Комплекс</p>
-            <p class="catalog-confirm-modal__headline">${escapeHtml(already ? 'Комплекс уже в библиотеке' : 'Добавить комплекс в библиотеку')}</p>
+            <p class="catalog-confirm-modal__eyebrow">${wt('catalog.complex_fallback_title', 'Комплекс')}</p>
+            <p class="catalog-confirm-modal__headline">${escapeHtml(already ? wt('catalog.confirm_complex_already_title', 'Комплекс уже в библиотеке') : wt('catalog.confirm_complex_add_title', 'Добавить комплекс в библиотеку'))}</p>
           </div>
-          <button type="button" class="btn-secondary h-10 px-4" data-close>Отмена</button>
+          <button type="button" class="btn-secondary h-10 px-4" data-close>${wt('catalog.btn_cancel', 'Отмена')}</button>
         </div>
         <div class="catalog-confirm-modal__body">
           <section class="catalog-confirm-modal__hero">
-            <p class="catalog-confirm-modal__item-title">${escapeHtml(asString(item.title) || 'Комплекс')}</p>
+            <p class="catalog-confirm-modal__item-title">${escapeHtml(asString(item.title) || wt('catalog.complex_fallback_title', 'Комплекс'))}</p>
             <div class="catalog-confirm-modal__meta">
-              <span class="catalog-confirm-modal__meta-item">Автор: ${escapeHtml(owner)}</span>
-              <span class="catalog-confirm-modal__meta-item">Раздел: Каталог</span>
+              <span class="catalog-confirm-modal__meta-item">${wt('catalog.confirm_author', 'Автор: {name}').replace('{name}', escapeHtml(owner))}</span>
+              <span class="catalog-confirm-modal__meta-item">${wt('catalog.confirm_section_catalog', 'Раздел: Каталог')}</span>
             </div>
             ${asString(item.description) ? `<p class="catalog-confirm-modal__description">${escapeHtml(asString(item.description))}</p>` : ''}
           </section>
@@ -2693,7 +2703,7 @@
           <div class="catalog-confirm-modal__summary">${summaryMarkup}</div>
         </div>
         <div class="catalog-confirm-modal__footer">
-          <button type="button" class="btn-secondary h-10 px-4" data-action="close">Отмена</button>
+          <button type="button" class="btn-secondary h-10 px-4" data-action="close">${wt('catalog.btn_cancel', 'Отмена')}</button>
           <button type="button" class="${already || preview?.blocked ? 'btn-secondary' : 'btn-primary'} h-10 px-4" data-action-key="${already ? 'open' : 'confirm'}" ${preview?.blocked && !already ? 'disabled' : ''}>${escapeHtml(primaryLabel)}</button>
         </div>
       </div>
@@ -2703,28 +2713,28 @@
   async function openCatalogTheoryConfirmModal(preview) {
     const already = !!(preview && preview.library_status && preview.library_status.already_in_library);
     const item = preview && preview.item ? preview.item : {};
-    const owner = getDisplayOwner(item) || 'Автор не указан';
+    const owner = getDisplayOwner(item) || wt('catalog.owner_unknown_author', 'Автор не указан');
     const relatedComplexTitle = asString((Array.isArray(item?.linked_complex_items) ? item.linked_complex_items : [])[0]?.title);
     const primaryLabel = already
-      ? 'Открыть в Теоретическом центре'
+      ? wt('catalog.btn_open_theory_center', 'Открыть в Теоретическом центре')
       : preview?.blocked
-        ? 'Лимит достигнут'
-        : 'Добавить теорию';
+        ? wt('catalog.confirm_limit_reached', 'Лимит достигнут')
+        : wt('catalog.bundle_add_theory', 'Добавить теорию');
     const summaryMarkup = buildConfirmSummaryItems([
       {
         icon: 'bookmark_added',
-        title: already ? 'Уже сохранена в Теоретическом центре' : 'Появится в Теоретическом центре',
-        text: 'Материал будет доступен рядом с другими сохраненными теориями.',
+        title: already ? wt('catalog.confirm_theory_saved_title', 'Уже сохранена в Теоретическом центре') : wt('catalog.confirm_theory_appear_title', 'Появится в Теоретическом центре'),
+        text: wt('catalog.confirm_theory_material_text', 'Материал будет доступен рядом с другими сохраненными теориями.'),
       },
       {
         icon: 'library_add_check',
-        title: 'Можно привязывать к своим комплексам',
-        text: 'После добавления теория станет отдельной сущностью в вашей библиотеке.',
+        title: wt('catalog.confirm_theory_link_title', 'Можно привязывать к своим комплексам'),
+        text: wt('catalog.confirm_theory_link_text', 'После добавления теория станет отдельной сущностью в вашей библиотеке.'),
       },
       ...(relatedComplexTitle ? [{
         icon: 'account_tree',
-        title: 'Комплекс не добавится автоматически',
-        text: `${relatedComplexTitle} останется отдельной публикацией и добавляется отдельно.`,
+        title: wt('catalog.confirm_complex_no_auto', 'Комплекс не добавится автоматически'),
+        text: wt('catalog.confirm_complex_stays_sep', '{title} останется отдельной публикацией и добавляется отдельно.').replace('{title}', relatedComplexTitle),
       }] : []),
     ]);
     const limitNote = buildWorkspaceLimitNote(preview);
@@ -2732,17 +2742,17 @@
       <div class="catalog-confirm-modal catalog-confirm-modal--theory custom-scrollbar">
         <div class="catalog-confirm-modal__header">
           <div>
-            <p class="catalog-confirm-modal__eyebrow">Теория</p>
-            <p class="catalog-confirm-modal__headline">${escapeHtml(already ? 'Теория уже в библиотеке' : 'Добавить теорию')}</p>
+            <p class="catalog-confirm-modal__eyebrow">${wt('catalog.type_label_theory', 'Теория')}</p>
+            <p class="catalog-confirm-modal__headline">${escapeHtml(already ? wt('catalog.confirm_theory_already_title', 'Теория уже в библиотеке') : wt('catalog.bundle_add_theory', 'Добавить теорию'))}</p>
           </div>
-          <button type="button" class="btn-secondary h-10 px-4" data-close>Отмена</button>
+          <button type="button" class="btn-secondary h-10 px-4" data-close>${wt('catalog.btn_cancel', 'Отмена')}</button>
         </div>
         <div class="catalog-confirm-modal__body">
           <section class="catalog-confirm-modal__hero">
-            <p class="catalog-confirm-modal__item-title">${escapeHtml(asString(item.title) || 'Теория')}</p>
+            <p class="catalog-confirm-modal__item-title">${escapeHtml(asString(item.title) || wt('catalog.type_label_theory', 'Теория'))}</p>
             <div class="catalog-confirm-modal__meta">
-              <span class="catalog-confirm-modal__meta-item">Автор: ${escapeHtml(owner)}</span>
-              <span class="catalog-confirm-modal__meta-item">Раздел: Теоретический центр</span>
+              <span class="catalog-confirm-modal__meta-item">${wt('catalog.confirm_author', 'Автор: {name}').replace('{name}', escapeHtml(owner))}</span>
+              <span class="catalog-confirm-modal__meta-item">${wt('catalog.confirm_section_theory_center', 'Раздел: Теоретический центр')}</span>
             </div>
             ${asString(item.description) ? `<p class="catalog-confirm-modal__description">${escapeHtml(asString(item.description))}</p>` : ''}
           </section>
@@ -2750,7 +2760,7 @@
           <div class="catalog-confirm-modal__summary">${summaryMarkup}</div>
         </div>
         <div class="catalog-confirm-modal__footer">
-          <button type="button" class="btn-secondary h-10 px-4" data-action="close">Отмена</button>
+          <button type="button" class="btn-secondary h-10 px-4" data-action="close">${wt('catalog.btn_cancel', 'Отмена')}</button>
           <button type="button" class="${already || preview?.blocked ? 'btn-secondary' : 'btn-primary'} h-10 px-4" data-action-key="${already ? 'open' : 'confirm'}" ${preview?.blocked && !already ? 'disabled' : ''}>${escapeHtml(primaryLabel)}</button>
         </div>
       </div>
@@ -2797,7 +2807,7 @@
       if (error?.status === 409 && error?.payload?.error === 'workspace_limit_reached') {
         await loadWorkspaceLimits();
         const summary = getWorkspaceLimitEntity(item?.content_type === 'theory' ? 'theory' : 'complex');
-        showToast(getWorkspaceLimitMessage(summary, { label: item?.content_type === 'theory' ? 'теорий' : 'комплексов' }) || 'Лимит библиотеки достигнут.', 'warning', 4200);
+        showToast(getWorkspaceLimitMessage(summary, { label: item?.content_type === 'theory' ? wt('catalog.summary_type_theory', 'теорий') : wt('catalog.summary_type_complex', 'комплексов') }) || wt('catalog.toast_limit_reached', 'Лимит библиотеки достигнут.'), 'warning', 4200);
       }
       throw error;
     }
@@ -2813,7 +2823,7 @@
     }
     await loadWorkspaceLimits();
     render();
-    showToast(item && item.content_type === 'theory' ? 'Теория добавлена в Теоретический центр.' : 'Комплекс добавлен в сохранённые публикации каталога.', 'success', 2800);
+    showToast(item && item.content_type === 'theory' ? wt('catalog.toast_theory_added', 'Теория добавлена в Теоретический центр.') : wt('catalog.toast_complex_added', 'Комплекс добавлен в сохранённые публикации каталога.'), 'success', 2800);
     return payload;
   }
 
@@ -2871,7 +2881,7 @@
     const action = getPrimaryAction(item);
     if (!action || action.disabled) return;
     if (action.key === 'login') {
-      showToast('Войдите в аккаунт, чтобы добавлять публикации в библиотеку.', 'warning', 3400);
+      showToast(wt('catalog.toast_login_required', 'Войдите в аккаунт, чтобы добавлять публикации в библиотеку.'), 'warning', 3400);
       navigate('/welcome');
       return;
     }
@@ -2882,7 +2892,7 @@
         if (target) {
           navigate(target);
         } else {
-          showToast('Запись в библиотеке пока не найдена.', 'warning');
+          showToast(wt('catalog.toast_library_not_found', 'Запись в библиотеке пока не найдена.'), 'warning');
         }
         return;
       }
@@ -2894,11 +2904,11 @@
         await openPreviewFlow(item);
       } catch (error) {
         if (error && error.status === 403) {
-          showToast('Для добавления в библиотеку нужно войти в аккаунт.', 'warning');
+          showToast(wt('catalog.toast_need_login', 'Для добавления в библиотеку нужно войти в аккаунт.'), 'warning');
           navigate('/welcome');
           return;
         }
-        showToast(`Не удалось открыть превью: ${asString(error && error.message) || 'unknown_error'}`, 'error', 4200);
+        showToast(wt('catalog.toast_preview_error', 'Не удалось открыть превью: {msg}').replace('{msg}', asString(error && error.message) || 'unknown_error'), 'error', 4200);
       }
     }
   }
@@ -2906,28 +2916,32 @@
   function renderSummary() {
     const total = state.filteredItems.length;
     const typeLabel =
-      state.contentType === 'saved' ? 'сохраненных комплексов'
-        : state.contentType === 'complex' ? 'комплексов'
-        : state.contentType === 'theory' ? 'теорий'
-          : 'публикаций';
+      state.contentType === 'saved' ? wt('catalog.summary_type_saved', 'сохраненных комплексов')
+        : state.contentType === 'complex' ? wt('catalog.summary_type_complex', 'комплексов')
+        : state.contentType === 'theory' ? wt('catalog.summary_type_theory', 'теорий')
+          : wt('catalog.summary_type_default', 'публикаций');
     const theorySummary = getWorkspaceLimitEntity('theory');
     const complexSummary = getWorkspaceLimitEntity('complex');
     const slotsText = !state.authenticated || isPremiumWorkspacePlan() || (!theorySummary && !complexSummary)
       ? ''
-      : ` · Слоты: теории ${Number(theorySummary?.library_total_count || 0)}/${Number(theorySummary?.library_limit || 0)}, комплексы ${Number(complexSummary?.library_total_count || 0)}/${Number(complexSummary?.library_limit || 0)}`;
+      : wt('catalog.summary_slots', ' · Слоты: теории {t_count}/{t_limit}, комплексы {c_count}/{c_limit}')
+          .replace('{t_count}', Number(theorySummary?.library_total_count || 0))
+          .replace('{t_limit}', Number(theorySummary?.library_limit || 0))
+          .replace('{c_count}', Number(complexSummary?.library_total_count || 0))
+          .replace('{c_limit}', Number(complexSummary?.library_limit || 0));
     if (state.loading) {
-      els.summary.textContent = 'Загружаем каталог...';
+      els.summary.textContent = wt('catalog.summary_loading', 'Загружаем каталог...');
       return;
     }
     if (state.error) {
-      els.summary.textContent = 'Каталог сейчас недоступен';
+      els.summary.textContent = wt('catalog.summary_unavailable', 'Каталог сейчас недоступен');
       return;
     }
     if (!total) {
-      els.summary.textContent = `Пустой результат поиска${slotsText}`;
+      els.summary.textContent = wt('catalog.summary_empty', 'Пустой результат поиска') + slotsText;
       return;
     }
-    els.summary.textContent = `Найдено ${total} ${typeLabel}${slotsText}`;
+    els.summary.textContent = wt('catalog.summary_found', 'Найдено {total} {type}').replace('{total}', total).replace('{type}', typeLabel) + slotsText;
   }
 
   function updateCatalogSortControls() {
