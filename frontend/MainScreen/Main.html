@@ -2778,9 +2778,9 @@
                                 </span>
                                 <div class="min-w-0">
                                     <p class="main-premium-archive-kicker"><span class="material-symbols-outlined text-[15px]">workspace_premium</span>Premium</p>
-                                    <h3 class="main-premium-archive-title" id="main-premium-archive-title">Premium закончился — часть материалов в архиве</h3>
+                                    <h3 class="main-premium-archive-title" id="main-premium-archive-title" data-i18n="main.archive_expired_title">Premium закончился — часть материалов в архиве</h3>
                                     <p class="main-premium-archive-text" id="main-premium-archive-copy">Материалы не удалены: их можно открыть для просмотра, удалить лишнее или продлить Premium.</p>
-                                    <div class="main-premium-archive-breakdown" id="main-premium-archive-breakdown" aria-label="Материалы в архиве Premium"></div>
+                                    <div class="main-premium-archive-breakdown" id="main-premium-archive-breakdown" aria-label="Материалы в архиве Premium" data-i18n-aria="main.archive_breakdown_aria"></div>
                                 </div>
                             </div>
                             <div class="main-premium-archive-actions">
@@ -2988,7 +2988,7 @@
                                 <div
                                     class="h-5 w-5 animate-spin rounded-full border-2 border-primary-light border-t-primary">
                                 </div>
-                                <p class="main-widget-loading-copy text-[11px]">Загрузка...</p>
+                                <p class="main-widget-loading-copy text-[11px]" data-i18n="main.loading">Загрузка...</p>
                             </div>
                             <!-- Empty State (shown when no data) -->
                             <div id="calendarEmptyState"
@@ -3047,13 +3047,13 @@
                                 <div class="main-period-toggle segmented-control flex rounded-lg p-0.5">
                                     <button type="button"
                                         class="main-period-toggle__button segmented-control__button is-active"
-                                        onclick="selectStatsPeriod(event, 1, this); return false;" id="btnPeriod1">1д</button><button
+                                        onclick="selectStatsPeriod(event, 1, this); return false;" id="btnPeriod1" data-i18n="main.stat_period_1d">1д</button><button
                                         class="main-period-toggle__button segmented-control__button"
-                                        onclick="selectStatsPeriod(event, 7, this); return false;" id="btnPeriod7">7д</button><button
+                                        onclick="selectStatsPeriod(event, 7, this); return false;" id="btnPeriod7" data-i18n="main.stat_period_7d">7д</button><button
                                         class="main-period-toggle__button segmented-control__button"
-                                        onclick="selectStatsPeriod(event, 30, this); return false;" id="btnPeriod30">30д</button><button
+                                        onclick="selectStatsPeriod(event, 30, this); return false;" id="btnPeriod30" data-i18n="main.stat_period_30d">30д</button><button
                                         class="main-period-toggle__button segmented-control__button"
-                                        onclick="selectStatsPeriod(event, 0, this); return false;" id="btnPeriod0">Все</button>
+                                        onclick="selectStatsPeriod(event, 0, this); return false;" id="btnPeriod0" data-i18n="main.stat_period_all">Все</button>
                                 </div>
                             </div>
                             <div class="transition-all duration-300 ease-in-out hidden" id="statsContent">
