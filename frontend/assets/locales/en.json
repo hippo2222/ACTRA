@@ -1048,7 +1048,8 @@
     "chain_delete_confirm_msg": "This action cannot be undone.",
     "limit_library": "Complex library is full: {lc}/{ll}. Delete a complex or upgrade to Premium.",
     "limit_personal": "Personal complex limit reached: {lc}/{ll}. Delete one or upgrade to Premium.",
-    "limit_total": "Total workspace complex limit reached: {lc}/{ll}."
+    "limit_total": "Total workspace complex limit reached: {lc}/{ll}.",
+    "limit_both": "Complex limit reached: personal {pc}/{pl}, library {lc}/{ll}. Remove some or upgrade to Premium."
   },
   "drawui.clear_title": "Clear",
   "drawui.close_fullscreen_aria": "Close fullscreen image",
