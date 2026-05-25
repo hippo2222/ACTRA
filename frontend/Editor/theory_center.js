@@ -1,5 +1,13 @@
 ﻿(function () {
   'use strict';
+  function wt(key, fallback) {
+    if (window.i18n && typeof window.i18n.t === 'function') {
+      var v = window.i18n.t(key);
+      if (v !== key) return v;
+    }
+    return fallback;
+  }
+
 
   const state = {
     overview: null,
@@ -269,22 +277,22 @@
   }
 
   function theoryCenterConfirm(options) {
-    const fallbackMessage = String(options?.message || 'Подтвердите действие.').trim();
+    const fallbackMessage = String(options?.message || wt('tc.k001', 'Подтвердите действие.')).trim();
     if (typeof window.NotificationUI !== 'undefined' && typeof window.NotificationUI.confirm === 'function') {
       return window.NotificationUI.confirm({
-        title: String(options?.title || 'Подтвердите действие'),
+        title: String(options?.title || wt('tc.k002', 'Подтвердите действие')),
         message: fallbackMessage,
-        confirmText: String(options?.confirmText || 'Продолжить'),
-        cancelText: String(options?.cancelText || 'Отмена'),
+        confirmText: String(options?.confirmText || wt('tc.k003', 'Продолжить')),
+        cancelText: String(options?.cancelText || wt('tc.k004', 'Отмена')),
         variant: String(options?.variant || 'warning'),
       });
     }
     if (window.WorkspaceImportClient && typeof window.WorkspaceImportClient.confirmAction === 'function') {
       return window.WorkspaceImportClient.confirmAction({
-        title: String(options?.title || 'Подтвердите действие'),
+        title: String(options?.title || wt('tc.k002', 'Подтвердите действие')),
         message: fallbackMessage,
-        confirmText: String(options?.confirmText || 'Продолжить'),
-        cancelText: String(options?.cancelText || 'Отмена'),
+        confirmText: String(options?.confirmText || wt('tc.k003', 'Продолжить')),
+        cancelText: String(options?.cancelText || wt('tc.k004', 'Отмена')),
         variant: String(options?.variant || 'warning'),
       });
     }
@@ -448,9 +456,9 @@
     const selected = state.selectedTheoryIds.has(theoryId);
     const title = selectable
       ? (selected
-        ? 'Снять выделение'
-        : (state.selectionMode ? 'Выбрать теорию' : 'Начать массовые операции с этой теории'))
-      : 'Теория связана с темами или комплексами и недоступна для массового удаления';
+        ? wt('tc.k005', 'Снять выделение')
+        : (state.selectionMode ? wt('tc.k006', 'Выбрать теорию') : wt('tc.k007', 'Начать массовые операции с этой теории')))
+      : wt('tc.k008', 'Теория связана с темами или комплексами и недоступна для массового удаления');
     const toneClasses = selectable
       ? (selected
         ? 'border-primary bg-primary text-primary-contrast'
@@ -486,8 +494,8 @@
         class="theory-mini-btn rounded-2xl border border-error-light bg-error-lighter px-3 py-2 text-xs font-semibold text-error-text hover:border-error"
         data-action="delete-theory-record"
         data-theory-id="${escapeHtml(getTheoryRowId(row))}"
-        title="Удалить теорию без привязки">
-        Удалить
+        title="${wt('tc.k009', 'Удалить теорию без привязки')}">
+        ${wt('tc.k010', 'Удалить')}
       </button>
     `;
   }
@@ -584,7 +592,7 @@
       });
     });
     flushParagraph();
-    return html || '<p style="margin:0;color:var(--color-text-secondary);">Контент теории пока недоступен.</p>';
+    return html || `<p style="margin:0;color:var(--color-text-secondary);">${wt('tc.k011', 'Контент теории пока недоступен.')}</p>`;
   }
 
   function openTheoryCenterModal(markup, bind) {
@@ -631,12 +639,12 @@
   function getCatalogVisibilityLabel(value) {
     switch (String(value || '').trim().toLowerCase()) {
       case 'access_code':
-        return 'По коду';
+        return wt('tc.k012', 'По коду');
       case 'private':
-        return 'Приватная';
+        return wt('tc.k013', 'Приватная');
       case 'public':
       default:
-        return 'Общий доступ';
+        return wt('tc.k014', 'Общий доступ');
     }
   }
 
@@ -655,12 +663,12 @@
   function getTheoryCatalogVisibilityDescription(value) {
     switch (String(value || '').trim().toLowerCase()) {
       case 'access_code':
-        return 'Теория не видна в общем каталоге. Добавить её можно только по коду доступа.';
+        return wt('tc.k015', 'Теория не видна в общем каталоге. Добавить её можно только по коду доступа.');
       case 'private':
-        return 'Теория доступна только вам. Другие пользователи не увидят её в каталоге и не смогут открыть по коду.';
+        return wt('tc.k016', 'Теория доступна только вам. Другие пользователи не увидят её в каталоге и не смогут открыть по коду.');
       case 'public':
       default:
-        return 'Теория видна в общем каталоге и доступна для добавления в библиотеку.';
+        return wt('tc.k017', 'Теория видна в общем каталоге и доступна для добавления в библиотеку.');
     }
   }
 
@@ -694,28 +702,28 @@
       ? lock.complex_titles.filter((value) => String(value || '').trim())
       : [];
     if (complexTitles.length === 1) {
-      return `Теория привязана к публичному комплексу «${complexTitles[0]}», поэтому должна оставаться в общем доступе.`;
+      return `${wt('tc.k018', 'Теория привязана к публичному комплексу «')}${complexTitles[0]}${wt('tc.k018b', '», поэтому должна оставаться в общем доступе.')}`;
     }
     if (complexTitles.length > 1) {
-      return `Теория привязана к нескольким публичным комплексам, поэтому должна оставаться в общем доступе.`;
+      return wt('tc.k019', 'Теория привязана к нескольким публичным комплексам, поэтому должна оставаться в общем доступе.');
     }
-    return 'Теория привязана к опубликованному для всех комплексу, поэтому должна оставаться в общем доступе.';
+    return wt('tc.k020', 'Теория привязана к опубликованному для всех комплексу, поэтому должна оставаться в общем доступе.');
   }
 
   function getTheoryPublicationErrorMessage(error, fallback = '') {
     const message = String(error?.message || error || '').trim();
     if (message.includes('theory_catalog_visibility_locked_by_public_complex')) {
-      return 'Теория привязана к опубликованному для всех комплексу. Сначала измените публикацию комплекса.';
+      return wt('tc.k021', 'Теория привязана к опубликованному для всех комплексу. Сначала измените публикацию комплекса.');
     }
     if (message.includes('premium_archived_content')) {
-      return 'Источник находится в архиве Premium. Сужение доступа доступно, а публикация новой версии и расширение доступа вернутся после восстановления Premium.';
+      return wt('tc.k022', 'Источник находится в архиве Premium. Сужение доступа доступно, а публикация новой версии и расширение доступа вернутся после восстановления Premium.');
     }
     return message || fallback;
   }
 
   function formatPublicationTimestamp(value) {
     const raw = String(value || '').trim();
-    if (!raw) return 'ещё не публиковалась';
+    if (!raw) return wt('tc.k023', 'ещё не публиковалась');
     const date = new Date(raw);
     if (Number.isNaN(date.getTime())) return raw;
     return date.toLocaleString('ru-RU', {
@@ -795,7 +803,7 @@
       id: String(libraryEntry.library_entry_id || '').trim(),
       library_entry_id: String(libraryEntry.library_entry_id || '').trim(),
       catalog_item_id: String(item.item_id || libraryEntry.catalog_item_id || '').trim(),
-      title: String(item.title || 'Теория из каталога').trim() || 'Теория из каталога',
+      title: String(item.title || wt('tc.k160', 'Теория из каталога')).trim() || wt('tc.k160', 'Теория из каталога'),
       owner_user_id: String(item.owner_user_id || '').trim(),
       owner_display_name: String(item.owner_display_name || item.owner_name || '').trim(),
       catalog_visibility: String(item.catalog_visibility || '').trim(),
@@ -832,8 +840,8 @@
   function getTheoryAuthorLabel(row) {
     const meta = getTheoryAuthorMeta(row);
     if (meta.ownerName) return meta.ownerName;
-    if (meta.isOwnedByCurrentUser) return 'Вы';
-    return meta.ownerId || 'Автор не указан';
+    if (meta.isOwnedByCurrentUser) return wt('tc.k025', 'Вы');
+    return meta.ownerId || wt('tc.k026', 'Автор не указан');
   }
 
   function renderTheoryAuthorBadge(row) {
@@ -849,11 +857,11 @@
 
   function renderTheoryOriginBadge(row) {
     let icon = 'edit_note';
-    let label = 'Родная';
+    let label = wt('tc.k027', 'Родная');
     let toneClass = getTheoryToneClass('primary');
     if (row?.is_linked_publication) {
       icon = 'public';
-      label = 'Из каталога';
+      label = wt('tc.k028', 'Из каталога');
       toneClass = getTheoryToneClass('info');
     } else {
       const sourceItemId = String(
@@ -864,7 +872,7 @@
       ).trim();
       if (sourceItemId) {
         icon = 'download_done';
-        label = 'Добавлена из каталога';
+        label = wt('tc.k029', 'Добавлена из каталога');
         toneClass = getTheoryNeutralChipClass();
       }
     }
@@ -884,11 +892,11 @@
       || ''
     ).trim().toLowerCase();
     const hasPublication = !!visibility;
-    const label = hasPublication ? getCatalogVisibilityLabel(visibility) : 'Не опубликована';
+    const label = hasPublication ? getCatalogVisibilityLabel(visibility) : wt('tc.k030', 'Не опубликована');
     const toneClass = hasPublication ? getCatalogVisibilityToneClass(visibility) : getTheoryNeutralChipClass();
     const title = hasPublication
       ? getTheoryCatalogVisibilityDescription(visibility)
-      : 'Теория пока не опубликована в каталоге.';
+      : wt('tc.k031', 'Теория пока не опубликована в каталоге.');
     return `
       <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 font-semibold ${toneClass}" title="${escapeHtml(title)}">
         <span class="material-symbols-outlined text-[14px]">public</span>
@@ -921,10 +929,10 @@
     if (!names.length) return '';
     const preview = names.slice(0, 2).join(', ');
     const suffix = names.length > 2 ? ` +${names.length - 2}` : '';
-    const label = `${names.length === 1 ? 'Комплекс' : 'Комплексы'}: ${preview}${suffix}`;
+    const label = `${names.length === 1 ? wt('tc.k032', 'Комплекс') : wt('tc.k033', 'Комплексы')}: ${preview}${suffix}`;
     const title = names.length === 1
-      ? `Теория привязана к комплексу «${names[0]}» из раздела «Свои комплексы».`
-      : `Теория привязана к комплексам из раздела «Свои комплексы»: ${names.join(', ')}.`;
+      ? `${wt('tc.k034', 'Теория привязана к комплексу «')}${names[0]}${wt('tc.k034b', '» из раздела «Свои комплексы».')}`
+      : `${wt('tc.k035', 'Теория привязана к комплексам из раздела «Свои комплексы»: ')}${names.join(', ')}.`;
     return `
       <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 ${getTheoryNeutralChipClass()}" title="${escapeHtml(title)}">
         <span class="material-symbols-outlined text-[14px]">hub</span>
@@ -936,9 +944,9 @@
   function renderTheoryArchiveBadge(row) {
     if (!isTheoryPremiumArchived(row)) return '';
     return `
-      <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold ${getTheoryToneClass('warning')}" title="Архив Premium: редактирование, публикация и изменения заблокированы до продления Premium">
+      <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold ${getTheoryToneClass('warning')}" title="${wt('tc.k036', 'Архив Premium: редактирование, публикация и изменения заблокированы до продления Premium')}">
         <span class="material-symbols-outlined text-[14px]">inventory_2</span>
-        Архив Premium
+        ${wt('tc.k037', 'Архив Premium')}
       </span>
     `;
   }
@@ -952,21 +960,21 @@
   function getTheoryOpenMeta(row) {
     if (isTheoryPremiumArchived(row)) {
       return {
-        label: 'Просмотр',
-        title: 'Открыть теорию в режиме просмотра. Редактирование заблокировано, пока материал в архиве Premium.',
+        label: wt('tc.k038', 'Просмотр'),
+        title: wt('tc.k039', 'Открыть теорию в режиме просмотра. Редактирование заблокировано, пока материал в архиве Premium.'),
         opensEditor: false,
       };
     }
     if (canOpenTheoryInEditor(row)) {
       return {
-        label: 'Открыть',
-        title: 'Открыть теорию в редакторе',
+        label: wt('tc.k040', 'Открыть'),
+        title: wt('tc.k041', 'Открыть теорию в редакторе'),
         opensEditor: true,
       };
     }
     return {
-      label: 'Открыть',
-      title: `Открыть теорию в режиме просмотра. Редактирование доступно только автору ${getTheoryAuthorLabel(row)}.`,
+      label: wt('tc.k040', 'Открыть'),
+      title: `${wt('tc.k042', 'Открыть теорию в режиме просмотра. Редактирование доступно только автору ')}${getTheoryAuthorLabel(row)}.`,
       opensEditor: false,
     };
   }
@@ -993,14 +1001,14 @@
       if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
         await navigator.clipboard.writeText(code);
         if (typeof window.NotificationUI !== 'undefined' && typeof window.NotificationUI.toast === 'function') {
-          window.NotificationUI.toast('Код доступа скопирован.', 'success', 2500);
+          window.NotificationUI.toast(wt('tc.k043', 'Код доступа скопирован.'), 'success', 2500);
           return;
         }
       }
     } catch (error) {
       console.warn('[Theory Center] Failed to copy access code', error);
     }
-    setFlash(`Код доступа: ${code}`, 'info');
+    setFlash(`${wt('tc.k044', 'Код доступа: ')}${code}`, 'info');
   }
 
   function mergeTheoryCatalogIntoOverview(overview, theoryRows) {
@@ -1034,10 +1042,10 @@
       <div class="flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-[30px] border border-border-subtle bg-surface-1 shadow-xl">
         <div class="flex items-start justify-between gap-4 border-b border-border-subtle px-5 py-4">
           <div>
-            <p class="text-lg font-bold text-text-main">${escapeHtml(snapshot.title || data?.item?.title || 'Теория')}</p>
-            <p class="mt-2 text-sm text-text-secondary">${escapeHtml(entry.access_reason || 'Теория из каталога, созданная другим автором.')}</p>
+            <p class="text-lg font-bold text-text-main">${escapeHtml(snapshot.title || data?.item?.title || wt('tc.k045', 'Теория'))}</p>
+            <p class="mt-2 text-sm text-text-secondary">${escapeHtml(entry.access_reason || wt('tc.k046', 'Теория из каталога, созданная другим автором.'))}</p>
           </div>
-          <button type="button" class="btn-secondary h-10 px-4" data-close>Закрыть</button>
+          <button type="button" class="btn-secondary h-10 px-4" data-close>${wt('tc.k047', 'Закрыть')}</button>
         </div>
         <div class="custom-scrollbar overflow-y-auto p-5">
           <div style="max-width:820px;margin:0 auto;">${deltaHtml}</div>
@@ -1056,8 +1064,8 @@
         <div class="flex items-start justify-between gap-4 border-b border-border-subtle px-5 py-4">
           <div class="min-w-0 space-y-3">
             <div>
-              <p class="text-lg font-bold text-text-main">${escapeHtml(itemData.title || rowData.title || itemData.id || 'Теория')}</p>
-              <p class="mt-2 text-sm text-text-secondary">Просмотр без редактирования. Оригинал доступен для изменения только автору.</p>
+              <p class="text-lg font-bold text-text-main">${escapeHtml(itemData.title || rowData.title || itemData.id || wt('tc.k045', 'Теория'))}</p>
+              <p class="mt-2 text-sm text-text-secondary">${wt('tc.k048', 'Просмотр без редактирования. Оригинал доступен для изменения только автору.')}</p>
             </div>
             <div class="flex flex-wrap items-center gap-2 text-xs">
               ${renderTheoryAuthorBadge(rowData)}
@@ -1070,12 +1078,12 @@
               </span>
             </div>
           </div>
-          <button type="button" class="btn-secondary h-10 px-4 shrink-0" data-close>Закрыть</button>
+          <button type="button" class="btn-secondary h-10 px-4 shrink-0" data-close>${wt('tc.k047', 'Закрыть')}</button>
         </div>
         <div class="custom-scrollbar overflow-y-auto p-5 space-y-4">
           ${linkedComplexNames.length ? `
             <div class="rounded-[22px] border border-border-subtle bg-bg-secondary px-4 py-3">
-              <p class="text-xs font-bold uppercase tracking-[0.14em] text-text-secondary">Связанные комплексы</p>
+              <p class="text-xs font-bold uppercase tracking-[0.14em] text-text-secondary">${wt('tc.k049', 'Связанные комплексы')}</p>
               <p class="mt-2 text-sm text-text-main">${escapeHtml(linkedComplexNames.join(', '))}</p>
             </div>
           ` : ''}
@@ -1102,16 +1110,16 @@
     openTheoryCenterModal(`
       <div class="w-full max-w-lg overflow-hidden rounded-[28px] border border-border-subtle bg-surface-1 shadow-xl">
         <div class="border-b border-border-subtle px-5 py-4">
-          <p class="text-lg font-bold text-text-main">Код доступа</p>
-          <p class="mt-2 text-sm text-text-secondary">Введите код автора, чтобы открыть связанную теорию.</p>
+          <p class="text-lg font-bold text-text-main">${wt('tc.k050', 'Код доступа')}</p>
+          <p class="mt-2 text-sm text-text-secondary">${wt('tc.k051', 'Введите код автора, чтобы открыть связанную теорию.')}</p>
         </div>
         <div class="space-y-4 p-5">
-          <input id="theory-linked-access-code" type="text" class="w-full rounded-2xl border border-border-subtle bg-bg-secondary px-4 py-3 text-base text-text-main outline-none focus:border-primary" placeholder="Например, AB12CD34" />
+          <input id="theory-linked-access-code" type="text" class="w-full rounded-2xl border border-border-subtle bg-bg-secondary px-4 py-3 text-base text-text-main outline-none focus:border-primary" placeholder="${wt('tc.k052', 'Например, AB12CD34')}" />
           <div id="theory-linked-access-feedback" class="hidden rounded-2xl border border-error-light bg-error-lighter px-4 py-3 text-sm text-error-text"></div>
         </div>
         <div class="flex justify-end gap-3 border-t border-border-subtle px-5 py-4">
-          <button type="button" class="btn-secondary h-10 px-4" data-close>Отмена</button>
-          <button type="button" class="btn-primary h-10 px-4" data-role="submit-access-code">Открыть</button>
+          <button type="button" class="btn-secondary h-10 px-4" data-close>${wt('tc.k004', 'Отмена')}</button>
+          <button type="button" class="btn-primary h-10 px-4" data-role="submit-access-code">${wt('tc.k053', 'Открыть')}</button>
         </div>
       </div>
     `, (overlay, close) => {
@@ -1135,7 +1143,7 @@
           await openLinkedTheoryViewer(normalizedId);
         } catch (error) {
           if (feedback) {
-            feedback.textContent = `Не удалось подтвердить доступ: ${String(error?.message || 'catalog_access_code_required')}`;
+            feedback.textContent = `${wt('tc.k054', 'Не удалось подтвердить доступ: ')}${String(error?.message || 'catalog_access_code_required')}`;
             feedback.classList.remove('hidden');
           }
         }
@@ -1221,15 +1229,15 @@
   function showTheoryDeleteUndoToast(jobKey, theoryIds) {
     const count = Array.isArray(theoryIds) ? theoryIds.length : 0;
     const message = count === 1
-      ? 'Теория будет удалена.'
-      : `Будут удалены теории: ${count}.`;
+      ? wt('tc.k055', 'Теория будет удалена.')
+      : `${wt('tc.k056', 'Будут удалены теории: ')}${count}.`;
     if (typeof window.NotificationUI !== 'undefined' && typeof window.NotificationUI.toast === 'function') {
       return window.NotificationUI.toast(message, 'warning', THEORY_DELETE_UNDO_WINDOW_MS, {
-        actionLabel: 'Отменить',
+        actionLabel: wt('tc.k057', 'Отменить'),
         onAction: () => undoPendingTheoryDeletion(jobKey),
         closeable: false,
         showTimer: true,
-        timerFormatter: (secondsLeft) => `Удаление через - ${secondsLeft}`,
+        timerFormatter: (secondsLeft) => `${wt('tc.k058', 'Удаление через - ')}${secondsLeft}`,
       });
     }
     setFlash(message, 'warning');
@@ -1283,7 +1291,7 @@
     dismissTheoryDeleteToast(job);
     job.theoryIds.forEach((theoryId) => pendingTheoryDeleteIds.delete(theoryId));
     renderView();
-    setFlash(job.theoryIds.length === 1 ? 'Удаление теории отменено.' : 'Удаление выбранных теорий отменено.', 'info');
+    setFlash(job.theoryIds.length === 1 ? wt('tc.k059', 'Удаление теории отменено.') : wt('tc.k060', 'Удаление выбранных теорий отменено.'), 'info');
   }
 
   async function commitPendingTheoryDeletion(jobKey) {
@@ -1306,30 +1314,31 @@
       await loadOverview({ silent: true });
 
       if (deletedCount > 0 && !errors.length) {
-        setFlash(deletedCount === 1 ? 'Теория удалена.' : `Удалено теорий: ${deletedCount}.`, 'success');
+        setFlash(deletedCount === 1 ? wt('tc.k061', 'Теория удалена.') : `${wt('tc.k062', 'Удалено теорий: ')}${deletedCount}.`, 'success');
         return;
       }
 
       if (deletedCount > 0) {
         const linkedCount = errors.filter((item) => String(item?.error || '') === 'theory_in_use').length;
         const otherCount = errors.length - linkedCount;
-        let message = `Удалено теорий: ${deletedCount}.`;
+        let message = `${wt('tc.k062', 'Удалено теорий: ')}${deletedCount}.`;
         if (linkedCount > 0) {
-          message += ` ${linkedCount} не удалены: у них есть привязки.`;
+          message += ` ${linkedCount}${wt('tc.k063', ' не удалены: у них есть привязки.')}`;
         }
         if (otherCount > 0) {
-          message += ` ${otherCount} не удалось обработать.`;
+          message += ` ${otherCount}${wt('tc.k064', ' не удалось обработать.')}`;
         }
         setFlash(message, 'warning');
         return;
       }
 
-      setFlash('Удаление не выполнено: выбранные теории уже связаны с темами или комплексами.', 'warning');
+      setFlash(wt('tc.k065', 'Удаление не выполнено: выбранные теории уже связаны с темами или комплексами.'), 'warning');
     } catch (error) {
       console.error('[Theory Center] Failed to delete selected theories', error);
       job.theoryIds.forEach((theoryId) => pendingTheoryDeleteIds.delete(theoryId));
       await loadOverview({ silent: true });
-      setFlash('Не удалось удалить теории.', 'error');
+      setFlash(wt('tc.k066', 'Не удалось удалить теории.'), 'error');
+
     } finally {
       state.bulkDeleting = false;
       renderView();
@@ -1397,7 +1406,7 @@
       icon.textContent = state.summaryCollapsed ? 'expand_more' : 'expand_less';
     }
     if (label) {
-      label.textContent = state.summaryCollapsed ? 'Развернуть' : 'Свернуть';
+      label.textContent = state.summaryCollapsed ? wt('tc.k067', 'Развернуть') : wt('tc.k068', 'Свернуть');
     }
   }
 
@@ -1481,7 +1490,7 @@
     if (!host) return;
     host.innerHTML = `
       <div class="panel-row panel-row--soft justify-center px-5 py-10 text-center text-sm text-text-secondary">
-        ${escapeHtml(message || 'Загружаем обзор теории...')}
+        ${escapeHtml(message || wt('tc.k069', 'Загружаем обзор теории...'))}
       </div>
     `;
   }
@@ -1519,7 +1528,7 @@
 
   function formatTheoryQuotaMessage(summary) {
     if (!summary) {
-      return 'Не удалось проверить лимиты библиотеки. Попробуйте обновить страницу.';
+      return wt('tc.k070', 'Не удалось проверить лимиты библиотеки. Попробуйте обновить страницу.');
     }
     if (isPremiumWorkspacePlan()) {
       return '';
@@ -1529,13 +1538,13 @@
     const libraryCount = Number(summary.library_total_count || 0);
     const libraryLimit = Number(summary.library_limit || 0);
     if (Number(summary.remaining_personal || 0) <= 0 && Number(summary.remaining_library || 0) <= 0) {
-      return `Лимит теорий достигнут: свои ${personalCount}/${personalLimit}, библиотека ${libraryCount}/${libraryLimit}. Удалите лишнее или перейдите на Premium.`;
+      return `${wt('tc.k071', 'Лимит теорий достигнут: свои ')}${personalCount}/${personalLimit}${wt('tc.k071b', ', библиотека ')}${libraryCount}/${libraryLimit}${wt('tc.k071c', '. Удалите лишнее или перейдите на Premium.')}`;
     }
     if (Number(summary.remaining_personal || 0) <= 0) {
-      return `Лимит своих теорий достигнут: ${personalCount}/${personalLimit}. Удалите одну из личных теорий или перейдите на Premium.`;
+      return `${wt('tc.k072', 'Лимит своих теорий достигнут: ')}${personalCount}/${personalLimit}${wt('tc.k072b', '. Удалите одну из личных теорий или перейдите на Premium.')}`;
     }
     if (Number(summary.remaining_library || 0) <= 0) {
-      return `Библиотека теорий заполнена: ${libraryCount}/${libraryLimit}. Удалите лишнюю теорию или перейдите на Premium.`;
+      return `${wt('tc.k073', 'Библиотека теорий заполнена: ')}${libraryCount}/${libraryLimit}${wt('tc.k073b', '. Удалите лишнюю теорию или перейдите на Premium.')}`;
     }
     return '';
   }
@@ -1571,7 +1580,7 @@
       host.innerHTML = `
         <span class="inline-flex items-center gap-0.5 rounded-md border px-1.5 py-0.5 text-[11px] leading-none font-medium whitespace-nowrap ${getTheoryToneClass('success')}">
           <span class="material-symbols-outlined text-[12px] leading-none">workspace_premium</span>
-          Premium · без лимита
+          ${wt('tc.k074', 'Premium · без лимита')}
         </span>
       `;
       return;
@@ -1582,16 +1591,16 @@
     host.innerHTML = `
       <span class="inline-flex items-center gap-0.5 rounded-md border px-1.5 py-0.5 text-[11px] leading-none font-medium whitespace-nowrap ${getTheoryToneClass(personalBlocked ? 'warning' : 'info')}">
         <span class="material-symbols-outlined text-[12px] leading-none">edit_note</span>
-        Мои теории: ${escapeHtml(`${Number(theorySummary.personal_count || 0)}/${Number(theorySummary.personal_limit || 0)}`)}
+        ${wt('tc.k075', 'Мои теории: ')}${escapeHtml(`${Number(theorySummary.personal_count || 0)}/${Number(theorySummary.personal_limit || 0)}`)}
       </span>
       <span class="inline-flex items-center gap-0.5 rounded-md border px-1.5 py-0.5 text-[11px] leading-none font-medium whitespace-nowrap ${getTheoryToneClass(libraryBlocked ? 'warning' : 'success')}">
         <span class="material-symbols-outlined text-[12px] leading-none">inventory_2</span>
-        Библиотека: ${escapeHtml(`${Number(theorySummary.library_total_count || 0)}/${Number(theorySummary.library_limit || 0)}`)}
+        ${wt('tc.k076', 'Библиотека: ')}${escapeHtml(`${Number(theorySummary.library_total_count || 0)}/${Number(theorySummary.library_limit || 0)}`)}
       </span>
       ${archivedCount > 0 ? `
         <span class="inline-flex items-center gap-0.5 rounded-md border px-1.5 py-0.5 text-[11px] leading-none font-medium whitespace-nowrap ${getTheoryToneClass('warning')}">
           <span class="material-symbols-outlined text-[12px] leading-none">archive</span>
-          Архив Premium: ${escapeHtml(String(archivedCount))}
+          ${wt('tc.k077', 'Архив Premium: ')}${escapeHtml(String(archivedCount))}
         </span>
       ` : ''}
     `;
@@ -1630,7 +1639,7 @@
     const cards = [
       {
         key: 'topics_without_theory',
-        label: 'Тем без теории',
+        label: wt('tc.k078', 'Тем без теории'),
         value: Number(summary.topics_without_theory || 0),
         icon: 'topic',
         tone: 'warning',
@@ -1639,7 +1648,7 @@
       },
       {
         key: 'complexes_single_theory',
-        label: 'Комплексов с одной теорией',
+        label: wt('tc.k079', 'Комплексов с одной теорией'),
         value: Number(summary.complexes_single_theory || 0),
         icon: 'menu_book',
         tone: 'success',
@@ -1648,7 +1657,7 @@
       },
       {
         key: 'complexes_composite_theory',
-        label: 'Комплексов с подборкой теорий',
+        label: wt('tc.k080', 'Комплексов с подборкой теорий'),
         value: Number(summary.complexes_composite_theory || 0),
         icon: 'layers',
         tone: 'info',
@@ -1657,7 +1666,7 @@
       },
       {
         key: 'complexes_override_theory',
-        label: 'Комплексов со своей теорией',
+        label: wt('tc.k081', 'Комплексов со своей теорией'),
         value: Number(summary.complexes_override_theory || 0),
         icon: 'edit_note',
         tone: 'primary',
@@ -1666,7 +1675,7 @@
       },
       {
         key: 'complexes_without_theory',
-        label: 'Комплексов без теории',
+        label: wt('tc.k082', 'Комплексов без теории'),
         value: Number(summary.complexes_without_theory || 0),
         icon: 'warning',
         tone: 'warning',
@@ -1675,7 +1684,7 @@
       },
       {
         key: 'orphan_theories',
-        label: 'Без привязки',
+        label: wt('tc.k083', 'Без привязки'),
         value: Number(summary.orphan_theories || 0),
         icon: 'link_off',
         tone: 'warning',
@@ -1695,7 +1704,7 @@
             ${escapeHtml(card.label)}
           </span>
           <strong class="theory-summary-card__value font-bold">${escapeHtml(card.value)}</strong>
-          ${selectedModuleName ? `<span class="text-xs opacity-75">в модуле «${escapeHtml(selectedModuleName)}»</span>` : ''}
+          ${selectedModuleName ? `<span class="text-xs opacity-75">${wt('tc.k084', 'в модуле «')}${escapeHtml(selectedModuleName)}${wt('tc.k084b', '»')}</span>` : ''}
         </button>
       `;
     }).join('');
@@ -1717,7 +1726,7 @@
       ? (Array.isArray(filters.complex_states) ? filters.complex_states : [])
       : state.scope === 'topics'
         ? (Array.isArray(filters.topic_states) ? filters.topic_states : [])
-        : [{ id: 'all', label: 'Все' }];
+        : [{ id: 'all', label: wt('tc.k085', 'Все') }];
   }
 
   function populateFilters() {
@@ -1726,7 +1735,7 @@
     if (moduleSelect) {
       const currentValue = state.moduleId || 'all';
       const modules = Array.isArray(state.overview?.filters?.modules) ? state.overview.filters.modules : [];
-      moduleSelect.innerHTML = '<option value="all">Все модули</option>' + modules.map((row) => `
+      moduleSelect.innerHTML = `<option value="all">${wt('tc.k086', 'Все модули')}</option>` + modules.map((row) => `
         <option value="${escapeHtml(row.id)}">${escapeHtml(row.name || row.id)}</option>
       `).join('');
       moduleSelect.value = modules.some((row) => String(row.id) === currentValue) ? currentValue : 'all';
@@ -1769,8 +1778,8 @@
       archivedBtn.disabled = archivedCount <= 0;
       archivedBtn.setAttribute('data-active', state.scope === 'archived' ? '1' : '0');
       archivedBtn.title = archivedCount > 0
-        ? `В архиве Premium: ${archivedCount} теорий. Они доступны для просмотра и удаления, но редактирование и публикация заблокированы.`
-        : 'В архиве Premium пока нет теорий.';
+        ? `${wt('tc.k087', 'В архиве Premium: ')}${archivedCount}${wt('tc.k087b', ' теорий. Они доступны для просмотра и удаления, но редактирование и публикация заблокированы.')}`
+        : wt('tc.k088', 'В архиве Premium пока нет теорий.');
     }
 
     populateFilters();
@@ -1853,14 +1862,14 @@
         ? getTheoryToneClass('warning')
         : getTheoryToneClass('success');
       const linkedLabel = Number(row.linked_complexes_count || 0) > 0
-        ? `${row.linked_complexes_count} комплексов`
-        : 'Пока без комплексов';
+        ? `${row.linked_complexes_count}${wt('tc.k089', ' комплексов')}`
+        : wt('tc.k090', 'Пока без комплексов');
       const extraBadges = [];
       if (row.theory_has_content === false) {
         extraBadges.push(`
           <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold ${getTheoryNeutralChipClass()}">
             <span class="material-symbols-outlined text-[14px]">text_ad</span>
-            Только заголовок
+            ${wt('tc.k091', 'Только заголовок')}
           </span>
         `);
       }
@@ -1868,7 +1877,7 @@
         extraBadges.push(`
           <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold ${getTheoryNeutralChipClass()}">
             <span class="material-symbols-outlined text-[14px]">image_not_supported</span>
-            Без изображений
+            ${wt('tc.k092', 'Без изображений')}
           </span>
         `);
       }
@@ -1899,9 +1908,9 @@
     const extraBadges = [];
     if (row.has_empty_content) {
       extraBadges.push(`
-        <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold ${getTheoryNeutralChipClass()}" title="В подборке есть теория только с заголовком">
+        <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold ${getTheoryNeutralChipClass()}" title="${wt('tc.k093', 'В подборке есть теория только с заголовком')}">
           <span class="material-symbols-outlined text-[14px]">text_ad</span>
-          Есть пустые теории
+          ${wt('tc.k094', 'Есть пустые теории')}
         </span>
       `);
     }
@@ -1915,12 +1924,12 @@
           ${escapeHtml(row.theory_state_label)}
         </span>
         <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${getTheoryNeutralChipClass()}">
-          ${escapeHtml(`${row.task_count || 0} заданий`)}
+          ${escapeHtml(`${row.task_count || 0}${wt('tc.k095', ' заданий')}`)}
         </span>
         ${row.needs_sync ? `
-          <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold ${getTheoryToneClass('warning')}" title="Теория в одной из тем изменилась. Нажмите &laquo;Синхронизировать&raquo;, чтобы обновить теорию в этом комплексе.">
+          <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold ${getTheoryToneClass('warning')}" title="${wt('tc.k096', 'Теория в одной из тем изменилась. Нажмите «Синхронизировать», чтобы обновить теорию в этом комплексе.')}">
             <span class="material-symbols-outlined text-[14px]">sync_problem</span>
-            Теория устарела
+            ${wt('tc.k097', 'Теория устарела')}
           </span>
         ` : ''}
         ${extraBadges.join('')}
@@ -1972,8 +1981,8 @@
     const normalized = String(createdVia || '').trim().toLowerCase();
     if (normalized === 'workspace_import') return 'Legacy import';
     if (normalized === 'archive_import') return 'Legacy import';
-    if (normalized === 'manual_editor') return 'Редактор';
-    return normalized || 'Источник не определён';
+    if (normalized === 'manual_editor') return wt('tc.k098', 'Редактор');
+    return normalized || wt('tc.k099', 'Источник не определён');
   }
 
   function renderComplexOwnershipBadges(row) {
@@ -1983,7 +1992,7 @@
       badges.push(`
         <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold ${getTheoryToneClass('success')}">
           <span class="material-symbols-outlined text-[14px]">person</span>
-          Моё
+          ${wt('tc.k100', 'Моё')}
         </span>
       `);
     } else if (ownership.hasOwner) {
@@ -2007,11 +2016,11 @@
     const ownership = resolveComplexOwnership(row);
     if (!ownership.isOwnedByCurrentUser) return '';
     const publication = resolveTheoryPublication(row);
-    const label = publication ? getCatalogVisibilityLabel(publication.catalog_visibility) : 'Не опубликована';
+    const label = publication ? getCatalogVisibilityLabel(publication.catalog_visibility) : wt('tc.k030', 'Не опубликована');
     const toneClass = publication ? getCatalogVisibilityToneClass(publication.catalog_visibility) : getTheoryNeutralChipClass();
     const title = publication
       ? getTheoryCatalogVisibilityDescription(publication.catalog_visibility)
-      : 'Теория ещё не публиковалась и доступна только вам.';
+      : wt('tc.k101', 'Теория ещё не публиковалась и доступна только вам.');
     return `
       <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold ${toneClass}" title="${escapeHtml(title)}">
         <span class="material-symbols-outlined text-[14px]">public</span>
@@ -2023,26 +2032,26 @@
   async function openTheoryPublicationDialog(row = {}) {
     const theoryId = getTheoryRowId(row);
     if (!theoryId) {
-      setFlash('Управление публикацией недоступно: не удалось определить теорию.', 'error');
+      setFlash(wt('tc.k102', 'Управление публикацией недоступно: не удалось определить теорию.'), 'error');
       return;
     }
     const ownership = resolveComplexOwnership(row);
     if (!ownership.isOwnedByCurrentUser) {
-      setFlash('Публикацией можно управлять только для своих теорий.', 'warning');
+      setFlash(wt('tc.k103', 'Публикацией можно управлять только для своих теорий.'), 'warning');
       return;
     }
     const publication = resolveTheoryPublication(row);
     const isPremiumArchivedSource = isTheoryPremiumArchived(row);
     if (isPremiumArchivedSource && !publication) {
-      setFlash('Публикация недоступна: теория находится в архиве Premium. Продлите Premium, чтобы опубликовать её.', 'warning');
+      setFlash(wt('tc.k104', 'Публикация недоступна: теория находится в архиве Premium. Продлите Premium, чтобы опубликовать её.'), 'warning');
       return;
     }
     const currentVisibility = String(publication?.catalog_visibility || 'public').trim().toLowerCase() || 'public';
     const visibilityLock = getTheoryVisibilityLock(publication);
     const accessCode = getAccessCodeValue(publication);
-    const theoryTitle = escapeHtml(row?.title || theoryId || 'Без названия');
+    const theoryTitle = escapeHtml(row?.title || theoryId || wt('tc.k105', 'Без названия'));
     const archivePolicyText = isPremiumArchivedSource
-      ? 'Источник теории находится в архиве Premium. Опубликованная версия остаётся доступной, но новую версию и расширение доступа можно сделать только после восстановления Premium. Сузить доступ или скрыть публикацию можно сейчас.'
+      ? wt('tc.k106', 'Источник теории находится в архиве Premium. Опубликованная версия остаётся доступной, но новую версию и расширение доступа можно сделать только после восстановления Premium. Сузить доступ или скрыть публикацию можно сейчас.')
       : '';
 
     const modal = document.createElement('div');
@@ -2051,37 +2060,37 @@
       <div class="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-[28px] border border-border-subtle bg-surface-1 shadow-xl">
         <div class="flex items-start justify-between gap-4 border-b border-border-subtle px-5 py-4">
           <div class="space-y-1">
-            <p class="text-xs font-bold uppercase tracking-[0.16em] text-text-muted">Публикация теории</p>
+            <p class="text-xs font-bold uppercase tracking-[0.16em] text-text-muted">${wt('tc.k107', 'Публикация теории')}</p>
             <h3 class="text-xl font-bold text-text-main">${theoryTitle}</h3>
-            <p class="text-sm text-text-secondary">${isPremiumArchivedSource ? escapeHtml(archivePolicyText) : 'Здесь можно опубликовать теорию, изменить режим доступа и при необходимости получить код доступа.'}</p>
+            <p class="text-sm text-text-secondary">${isPremiumArchivedSource ? escapeHtml(archivePolicyText) : wt('tc.k108', 'Здесь можно опубликовать теорию, изменить режим доступа и при необходимости получить код доступа.')}</p>
           </div>
-          <button type="button" class="btn-secondary h-10 px-4" data-role="close">Закрыть</button>
+          <button type="button" class="btn-secondary h-10 px-4" data-role="close">${wt('tc.k047', 'Закрыть')}</button>
         </div>
         <div class="custom-scrollbar space-y-5 overflow-y-auto p-5">
           ${isPremiumArchivedSource ? `
             <div class="rounded-2xl border border-warning-light bg-warning-light/40 px-4 py-3 text-sm text-warning-darker">
-              Источник в архиве Premium. Текущая публикация не снята с доступа автоматически; обновление версии и расширение доступа заблокированы до восстановления Premium.
+              ${wt('tc.k109', 'Источник в архиве Premium. Текущая публикация не снята с доступа автоматически; обновление версии и расширение доступа заблокированы до восстановления Premium.')}
             </div>
           ` : ''}
           <div class="rounded-2xl border border-border-subtle bg-bg-secondary px-4 py-4">
             <div class="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <div class="text-xs font-bold uppercase tracking-[0.14em] text-text-muted">Текущий статус</div>
-                <div id="theory-publish-current-status" class="mt-1 text-base font-semibold text-text-main">${escapeHtml(publication ? getCatalogVisibilityLabel(publication.catalog_visibility) : 'Не опубликована')}</div>
-                <div id="theory-publish-current-meta" class="mt-1 text-sm text-text-secondary">${publication ? `Последняя публикация: ${escapeHtml(formatPublicationTimestamp(publication.latest_published_at))}` : 'После первой публикации теория появится в каталоге или станет доступна по коду.'}</div>
+                <div class="text-xs font-bold uppercase tracking-[0.14em] text-text-muted">${wt('tc.k110', 'Текущий статус')}</div>
+                <div id="theory-publish-current-status" class="mt-1 text-base font-semibold text-text-main">${escapeHtml(publication ? getCatalogVisibilityLabel(publication.catalog_visibility) : wt('tc.k030', 'Не опубликована'))}</div>
+                <div id="theory-publish-current-meta" class="mt-1 text-sm text-text-secondary">${publication ? `${wt('tc.k111', 'Последняя публикация: ')}${escapeHtml(formatPublicationTimestamp(publication.latest_published_at))}` : wt('tc.k112', 'После первой публикации теория появится в каталоге или станет доступна по коду.')}</div>
               </div>
-              <span id="theory-publish-current-badge" class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold ${publication ? getCatalogVisibilityToneClass(currentVisibility) : getTheoryNeutralChipClass()}">${escapeHtml(publication ? getCatalogVisibilityLabel(currentVisibility) : 'Не опубликована')}</span>
+              <span id="theory-publish-current-badge" class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold ${publication ? getCatalogVisibilityToneClass(currentVisibility) : getTheoryNeutralChipClass()}">${escapeHtml(publication ? getCatalogVisibilityLabel(currentVisibility) : wt('tc.k030', 'Не опубликована'))}</span>
             </div>
           </div>
 
           <div class="space-y-3">
             <div>
-              <div class="text-sm font-semibold text-text-main">Режим доступа</div>
-              <p class="mt-1 text-sm text-text-secondary">${visibilityLock ? escapeHtml(formatTheoryVisibilityLockMessage(visibilityLock)) : isPremiumArchivedSource ? 'Можно выбрать только текущий или более закрытый режим доступа. Расширение доступа вернётся после Premium.' : 'Если публикация уже существует, доступ можно поменять отдельно от публикации новой версии. Новые правки из редактора увидят другие пользователи только после публикации.'}</p>
+              <div class="text-sm font-semibold text-text-main">${wt('tc.k113', 'Режим доступа')}</div>
+              <p class="mt-1 text-sm text-text-secondary">${visibilityLock ? escapeHtml(formatTheoryVisibilityLockMessage(visibilityLock)) : isPremiumArchivedSource ? wt('tc.k114', 'Можно выбрать только текущий или более закрытый режим доступа. Расширение доступа вернётся после Premium.') : wt('tc.k115', 'Если публикация уже существует, доступ можно поменять отдельно от публикации новой версии. Новые правки из редактора увидят другие пользователи только после публикации.')}</p>
             </div>
             ${visibilityLock ? `
               <div class="rounded-2xl border border-warning-light bg-warning-light/40 px-4 py-3 text-sm text-warning-darker">
-                Теория используется публичным комплексом. Режим доступа зафиксирован на «Общий доступ».
+                ${wt('tc.k116', 'Теория используется публичным комплексом. Режим доступа зафиксирован на «Общий доступ».')}
               </div>
             ` : ''}
             <div class="grid gap-3 md:grid-cols-3">
@@ -2102,10 +2111,10 @@
           <div id="theory-publish-access-box" class="rounded-2xl border border-border-subtle bg-bg-secondary px-4 py-4 ${currentVisibility === 'access_code' ? '' : 'hidden'}">
             <div class="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <div class="text-xs font-bold uppercase tracking-[0.14em] text-text-muted">Код доступа</div>
-                <div id="theory-publish-access-code" class="mt-1 text-base font-semibold tracking-[0.12em] text-text-main">${escapeHtml(accessCode ? formatAccessCodeDisplay(accessCode) : 'Код будет создан после публикации')}</div>
+                <div class="text-xs font-bold uppercase tracking-[0.14em] text-text-muted">${wt('tc.k050', 'Код доступа')}</div>
+                <div id="theory-publish-access-code" class="mt-1 text-base font-semibold tracking-[0.12em] text-text-main">${escapeHtml(accessCode ? formatAccessCodeDisplay(accessCode) : wt('tc.k117', 'Код будет создан после публикации'))}</div>
               </div>
-              <button type="button" class="btn-secondary h-10 px-4" data-role="copy-access-code">Скопировать код</button>
+              <button type="button" class="btn-secondary h-10 px-4" data-role="copy-access-code">${wt('tc.k118', 'Скопировать код')}</button>
             </div>
           </div>
 
@@ -2114,11 +2123,11 @@
         <div class="flex flex-wrap justify-end gap-3 border-t border-border-subtle px-5 py-4">
           <button type="button" data-role="update-visibility" class="btn-secondary inline-flex items-center gap-2 px-4 py-2 text-sm ${publication ? '' : 'hidden'}">
             <span class="material-symbols-outlined text-[18px]">tune</span>
-            <span>Сохранить доступ</span>
+            <span>${wt('tc.k119', 'Сохранить доступ')}</span>
           </button>
           <button type="button" data-role="publish-version" class="btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm">
             <span class="material-symbols-outlined text-[18px]">publish</span>
-            <span>${publication ? 'Опубликовать версию' : 'Опубликовать'}</span>
+            <span>${publication ? wt('tc.k120', 'Опубликовать версию') : wt('tc.k121', 'Опубликовать')}</span>
           </button>
         </div>
       </div>
@@ -2191,16 +2200,16 @@
       const publishBtn = modal.querySelector('[data-role="publish-version"]');
 
       if (currentStatus) {
-        currentStatus.textContent = currentItem ? getCatalogVisibilityLabel(currentItem.catalog_visibility) : 'Не опубликована';
+        currentStatus.textContent = currentItem ? getCatalogVisibilityLabel(currentItem.catalog_visibility) : wt('tc.k030', 'Не опубликована');
       }
       if (currentMeta) {
         currentMeta.textContent = currentItem
-          ? `Последняя публикация: ${formatPublicationTimestamp(currentItem.latest_published_at)}`
-          : 'После первой публикации теория появится в каталоге или станет доступна по коду.';
+          ? `${wt('tc.k111', 'Последняя публикация: ')}${formatPublicationTimestamp(currentItem.latest_published_at)}`
+          : wt('tc.k112', 'После первой публикации теория появится в каталоге или станет доступна по коду.');
       }
       if (currentBadge) {
         currentBadge.className = `inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold ${currentItem ? getCatalogVisibilityToneClass(currentItem.catalog_visibility) : getTheoryNeutralChipClass()}`;
-        currentBadge.textContent = currentItem ? getCatalogVisibilityLabel(currentItem.catalog_visibility) : 'Не опубликована';
+        currentBadge.textContent = currentItem ? getCatalogVisibilityLabel(currentItem.catalog_visibility) : wt('tc.k030', 'Не опубликована');
       }
       const activeCode = getAccessCodeValue(currentItem);
       const showAccess = selectedVisibility === 'access_code';
@@ -2208,7 +2217,7 @@
       if (accessCodeEl) {
         accessCodeEl.textContent = activeCode
           ? formatAccessCodeDisplay(activeCode)
-          : (selectedVisibility === 'access_code' ? 'Код будет создан после публикации' : '');
+          : (selectedVisibility === 'access_code' ? wt('tc.k117', 'Код будет создан после публикации') : '');
       }
       if (updateBtn) {
         const currentItemVisibility = String(currentItem?.catalog_visibility || '').trim().toLowerCase();
@@ -2217,14 +2226,14 @@
         updateBtn.disabled = !canUpdateVisibility;
         updateBtn.classList.toggle('opacity-60', !canUpdateVisibility);
         updateBtn.title = blockedByArchive
-          ? 'Расширение доступа для архива Premium недоступно до восстановления Premium.'
+          ? wt('tc.k122', 'Расширение доступа для архива Premium недоступно до восстановления Premium.')
           : '';
       }
       if (publishBtn) {
         publishBtn.disabled = modalBusy || isPremiumArchivedSource;
         publishBtn.classList.toggle('opacity-60', isPremiumArchivedSource);
         publishBtn.title = isPremiumArchivedSource
-          ? 'Новая версия недоступна, пока источник находится в архиве Premium.'
+          ? wt('tc.k123', 'Новая версия недоступна, пока источник находится в архиве Premium.')
           : '';
       }
     };
@@ -2246,11 +2255,11 @@
       if (!currentItem) return;
       const nextVisibility = getSelectedVisibility();
       if (nextVisibility === String(currentItem.catalog_visibility || '').trim().toLowerCase()) {
-        setFeedback('Выбранный режим доступа уже сохранён.', 'info');
+        setFeedback(wt('tc.k124', 'Выбранный режим доступа уже сохранён.'), 'info');
         return;
       }
       if (isPremiumArchivedSource && isCatalogVisibilityExpansion(currentItem.catalog_visibility, nextVisibility)) {
-        setFeedback('Источник находится в архиве Premium: можно только сузить доступ или скрыть публикацию.', 'error');
+        setFeedback(wt('tc.k125', 'Источник находится в архиве Premium: можно только сузить доступ или скрыть публикацию.'), 'error');
         return;
       }
       setBusy(true);
@@ -2271,19 +2280,19 @@
             .concat(data.item ? [data.item] : [])
         );
         syncModalState(data.item);
-        setFeedback(`Доступ обновлён: ${getCatalogVisibilityLabel(data.item?.catalog_visibility)}.`, 'success');
-        setFlash(`Статус публикации теории обновлён: ${getCatalogVisibilityLabel(data.item?.catalog_visibility)}.`, 'success');
+        setFeedback(`${wt('tc.k126', 'Доступ обновлён: ')}${getCatalogVisibilityLabel(data.item?.catalog_visibility)}.`, 'success');
+        setFlash(`${wt('tc.k127', 'Статус публикации теории обновлён: ')}${getCatalogVisibilityLabel(data.item?.catalog_visibility)}.`, 'success');
         renderView();
       } catch (error) {
         console.error('[Theory Center] Visibility update failed', error);
-        setFeedback(`Не удалось изменить доступ: ${getTheoryPublicationErrorMessage(error, 'catalog_visibility_update_failed')}`, 'error');
+        setFeedback(`${wt('tc.k128', 'Не удалось изменить доступ: ')}${getTheoryPublicationErrorMessage(error, 'catalog_visibility_update_failed')}`, 'error');
       } finally {
         setBusy(false);
       }
     });
     modal.querySelector('[data-role="publish-version"]')?.addEventListener('click', async () => {
       if (isPremiumArchivedSource) {
-        setFeedback('Новая версия недоступна, пока источник находится в архиве Premium. Сузить доступ можно кнопкой «Сохранить доступ».', 'error');
+        setFeedback(wt('tc.k129', 'Новая версия недоступна, пока источник находится в архиве Premium. Сузить доступ можно кнопкой «Сохранить доступ».'), 'error');
         return;
       }
       const selectedVisibility = getSelectedVisibility();
@@ -2305,12 +2314,12 @@
             .concat(data.item ? [data.item] : [])
         );
         syncModalState(data.item);
-        setFeedback(`Публикация обновлена. Режим доступа: ${getCatalogVisibilityLabel(data.item?.catalog_visibility)}.`, 'success');
-        setFlash(`Теория опубликована: ${getCatalogVisibilityLabel(data.item?.catalog_visibility)}.`, 'success');
+        setFeedback(`${wt('tc.k130', 'Публикация обновлена. Режим доступа: ')}${getCatalogVisibilityLabel(data.item?.catalog_visibility)}.`, 'success');
+        setFlash(`${wt('tc.k131', 'Теория опубликована: ')}${getCatalogVisibilityLabel(data.item?.catalog_visibility)}.`, 'success');
         renderView();
       } catch (error) {
         console.error('[Theory Center] Publish failed', error);
-        setFeedback(`Не удалось опубликовать теорию: ${getTheoryPublicationErrorMessage(error, 'catalog_publish_failed')}`, 'error');
+        setFeedback(`${wt('tc.k132', 'Не удалось опубликовать теорию: ')}${getTheoryPublicationErrorMessage(error, 'catalog_publish_failed')}`, 'error');
       } finally {
         setBusy(false);
       }
@@ -2322,8 +2331,8 @@
 
   function renderTopicCard(row) {
     const theoryText = row.has_theory
-      ? escapeHtml(row.theory_title || row.theory_id || 'Теория')
-      : 'Теория для этой темы пока не задана.';
+      ? escapeHtml(row.theory_title || row.theory_id || wt('tc.k045', 'Теория'))
+      : wt('tc.k133', 'Теория для этой темы пока не задана.');
     return `
       <article class="theory-row-card card-elevated rounded-[28px] p-5">
         <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
@@ -2336,20 +2345,20 @@
               ${renderBadges(row)}
             </div>
             <div class="rounded-2xl border border-border-subtle bg-bg-secondary px-4 py-3">
-              <p class="text-[11px] font-bold uppercase tracking-[0.14em] text-text-secondary">Теория темы</p>
+              <p class="text-[11px] font-bold uppercase tracking-[0.14em] text-text-secondary">${wt('tc.k134', 'Теория темы')}</p>
               <p class="mt-2 text-sm text-text-main">${theoryText}</p>
             </div>
           </div>
           <div class="flex flex-wrap items-center gap-2 xl:max-w-[420px] xl:justify-end">
             <button type="button" class="theory-mini-btn ${getTheoryNeutralButtonClass()} rounded-2xl border px-4 py-2.5 text-sm font-semibold hover:border-primary hover:text-primary" data-action="open-editor-dashboard">
-              Редактор заданий
+              ${wt('tc.k135', 'Редактор заданий')}
             </button>
             <button type="button"
               class="theory-mini-btn ${getTheoryToneClass('primary', 'button')} rounded-2xl border px-4 py-2.5 text-sm font-semibold"
               data-action="${row.has_theory ? 'open-topic-theory' : 'create-topic-theory'}"
               data-module-id="${escapeHtml(row.module_id)}"
               data-topic-id="${escapeHtml(row.topic_id)}">
-              ${row.has_theory ? 'Открыть теорию' : 'Создать теорию'}
+              ${row.has_theory ? wt('tc.k136', 'Открыть теорию') : wt('tc.k137', 'Создать теорию')}
             </button>
           </div>
         </div>
@@ -2360,9 +2369,9 @@
   function renderTheoryItemsStatusText(row) {
     const sl = row.sync_label || '';
     if (sl.includes('больше не задана') || sl.includes('not set')) {
-      return 'Ни одна из тем комплекса больше не имеет теории. Синхронизация удалит устаревшую теорию.';
+      return wt('tc.k138', 'Ни одна из тем комплекса больше не имеет теории. Синхронизация удалит устаревшую теорию.');
     }
-    return 'Теория ещё не назначена. Откройте настройки и выберите или создайте теорию.';
+    return wt('tc.k139', 'Теория ещё не назначена. Откройте настройки и выберите или создайте теорию.');
   }
 
   function renderTheoryItems(row) {
@@ -2388,7 +2397,7 @@
   function renderComplexCard(row) {
     const modulesText = Array.isArray(row.module_names) && row.module_names.length
       ? row.module_names.join(', ')
-      : 'Без модулей';
+      : wt('tc.k140', 'Без модулей');
     const ownershipBadges = renderComplexOwnershipBadges(row);
     const combinedBadges = [renderBadges(row, { wrap: false }), ownershipBadges].filter(Boolean).join('');
     return `
@@ -2405,12 +2414,12 @@
               ` : ''}
             </div>
             <div class="rounded-2xl border border-border-subtle bg-bg-secondary px-4 py-3">
-              <p class="text-[11px] font-bold uppercase tracking-[0.14em] text-text-secondary">Теоретический контекст</p>
+              <p class="text-[11px] font-bold uppercase tracking-[0.14em] text-text-secondary">${wt('tc.k141', 'Теоретический контекст')}</p>
               <div class="mt-2">
                 ${renderTheoryItems(row)}
               </div>
               ${row.sync_label ? `
-                <p class="mt-3 text-sm text-text-secondary" title="Информация о необходимости синхронизации">${escapeHtml(row.sync_label)}</p>
+                <p class="mt-3 text-sm text-text-secondary" title="${wt('tc.k220', 'Информация о необходимости синхронизации')}">${escapeHtml(row.sync_label)}</p>
               ` : ''}
             </div>
           </div>
@@ -2420,15 +2429,15 @@
                 class="theory-mini-btn rounded-2xl border border-info-light bg-info-lighter px-4 py-2.5 text-sm font-semibold text-info-text hover:border-primary hover:text-primary"
                 data-action="sync-complex"
                 data-complex-id="${escapeHtml(row.complex_id)}"
-                title="${escapeHtml(row.sync_label || 'Обновить теорию комплекса по текущим теориям тем')}">
-                Синхронизировать
+                title="${escapeHtml(row.sync_label || wt('tc.k142', 'Обновить теорию комплекса по текущим теориям тем'))}">
+                ${wt('tc.k143', 'Синхронизировать')}
               </button>
             ` : ''}
             <button type="button"
               class="theory-mini-btn ${getTheoryNeutralButtonClass()} rounded-2xl border px-4 py-2.5 text-sm font-semibold hover:border-primary hover:text-primary"
               data-action="open-complex"
               data-complex-id="${escapeHtml(row.complex_id)}">
-              Открыть комплекс
+              ${wt('tc.k144', 'Открыть комплекс')}
             </button>
             ${row.open_theory_id ? `
               <button type="button"
@@ -2436,8 +2445,8 @@
                 data-action="open-complex-theory"
                 data-complex-id="${escapeHtml(row.complex_id)}"
                 data-theory-id="${escapeHtml(row.open_theory_id)}"
-                title="Открыть теорию комплекса">
-                Открыть теорию
+                title="${wt('tc.k145', 'Открыть теорию комплекса')}">
+                ${wt('tc.k136', 'Открыть теорию')}
               </button>
             ` : ''}
           </div>
@@ -2469,7 +2478,7 @@
         <div class="flex flex-col gap-3">
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0 space-y-1">
-              <p class="text-[11px] font-bold uppercase tracking-[0.14em] text-text-secondary">Теория</p>
+              <p class="text-[11px] font-bold uppercase tracking-[0.14em] text-text-secondary">${wt('tc.k146', 'Теория')}</p>
               <h3 class="text-xl font-semibold tracking-[-0.02em] text-text-main truncate">${escapeHtml(row.title || row.id)}</h3>
               <p class="text-[12px] text-text-muted truncate">${escapeHtml(row.id || '')}</p>
             </div>
@@ -2488,9 +2497,9 @@
                   class="theory-mini-btn ${getTheoryNeutralButtonClass()} rounded-2xl border px-3 py-2 text-xs font-semibold hover:border-primary hover:text-primary"
                   data-action="manage-theory-publication"
                   data-theory-id="${escapeHtml(row.id)}"
-                  title="${publicationBlocked ? 'Публикация заблокирована, пока теория в архиве Premium' : isPremiumArchived ? 'Источник в архиве Premium: можно сузить доступ текущей публикации' : 'Управлять публикацией'}"
+                  title="${publicationBlocked ? wt('tc.k147', 'Публикация заблокирована, пока теория в архиве Premium') : isPremiumArchived ? wt('tc.k148', 'Источник в архиве Premium: можно сузить доступ текущей публикации') : wt('tc.k149', 'Управлять публикацией')}"
                   ${publicationBlocked ? 'disabled' : ''}>
-                  Публикация
+                  ${wt('tc.k150', 'Публикация')}
                 </button>
               ` : ''}
             </div>
@@ -2501,26 +2510,26 @@
               ${renderTheoryOriginBadge(row)}
               ${renderTheoryCatalogStatusBadge(row)}
               ${renderTheoryArchiveBadge(row)}
-              <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 font-semibold ${getTheoryToneClass('warning')}" title="Тема или комплекс не используют эту теорию">
+              <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 font-semibold ${getTheoryToneClass('warning')}" title="${wt('tc.k151', 'Тема или комплекс не используют эту теорию')}">
                 <span class="material-symbols-outlined text-[14px]">priority_high</span>
-                Не привязана
+                ${wt('tc.k152', 'Не привязана')}
               </span>
               ${renderTheoryLinkedComplexBadge(row)}
               <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 ${getTheoryNeutralChipClass()}">
                 <span class="material-symbols-outlined text-[14px]">menu_book</span>
-                Тем: ${usageTopics}
+                ${wt('tc.k153', 'Тем: ')}${usageTopics}
               </span>
               <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 ${getTheoryNeutralChipClass()}">
                 <span class="material-symbols-outlined text-[14px]">inventory_2</span>
-                Комплексов: ${usageComplexes}
+                ${wt('tc.k154', 'Комплексов: ')}${usageComplexes}
               </span>
               ${hasContent ? '' : `
                 <span class="inline-flex items-center gap-1 rounded-full border border-error-light bg-error-lighter px-2.5 py-1 font-semibold text-error-text">
                   <span class="material-symbols-outlined text-[14px]">text_ad</span>
-                  Только заголовок
+                  ${wt('tc.k091', 'Только заголовок')}
                 </span>
               `}
-              <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 ${getTheoryNeutralChipClass({ muted: true })}" title="Дата последнего обновления">
+              <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 ${getTheoryNeutralChipClass({ muted: true })}" title="${wt('tc.k155', 'Дата последнего обновления')}">
                 <span class="material-symbols-outlined text-[14px]">event</span>
                 ${escapeHtml(formatDateLabel(row.updated_at || row.version))}
               </span>
@@ -2545,12 +2554,12 @@
           ? getTheoryToneClass('warning')
           : getTheoryNeutralChipClass();
       const accessLabel = accessState === 'active'
-        ? 'Теория из каталога'
+        ? wt('tc.k160', 'Теория из каталога')
         : accessState === 'requires_access_code'
-          ? 'Нужен код доступа'
+          ? wt('tc.k161', 'Нужен код доступа')
           : accessState === 'revoked'
-            ? 'Доступ отозван'
-            : 'Источник недоступен';
+            ? wt('tc.k162', 'Доступ отозван')
+            : wt('tc.k163', 'Источник недоступен');
       return `
         <article class="theory-row-card card-elevated rounded-[28px] p-5${isPremiumArchived ? ' theory-row-card--premium-archived' : ''}"${getTheoryRowOnboardingAttributes(row)}
           data-theory-id="${escapeHtml(getTheoryRowId(row))}"
@@ -2561,7 +2570,7 @@
           <div class="flex flex-col gap-3">
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0 space-y-1">
-                <p class="text-[11px] font-bold uppercase tracking-[0.14em] text-text-secondary">Теория из каталога</p>
+                <p class="text-[11px] font-bold uppercase tracking-[0.14em] text-text-secondary">${wt('tc.k159', 'Теория из каталога')}</p>
                 <h3 class="text-xl font-semibold tracking-[-0.02em] text-text-main truncate">${escapeHtml(row.title || row.id)}</h3>
               </div>
               <div class="flex items-start gap-2 shrink-0">
@@ -2570,8 +2579,8 @@
                     class="theory-mini-btn rounded-2xl border border-error-light bg-error-lighter px-3 py-2 text-xs font-semibold text-error-text hover:border-error"
                     data-action="delete-linked-theory-record"
                     data-library-entry-id="${escapeHtml(row.library_entry_id)}"
-                    title="Убрать теорию из библиотеки">
-                    Убрать
+                    title="${wt('tc.k156', 'Убрать теорию из библиотеки')}">
+                    ${wt('tc.k157', 'Убрать')}
                   </button>
                 ` : ''}
                 <button type="button"
@@ -2579,7 +2588,7 @@
                   ${getTheoryOpenActionOnboardingAttributes(row)}
                   data-action="${accessState === 'requires_access_code' ? 'enter-linked-access-code' : 'open-linked-theory'}"
                   data-library-entry-id="${escapeHtml(row.library_entry_id)}">
-                  ${accessState === 'requires_access_code' ? 'Ввести код' : 'Открыть'}
+                  ${accessState === 'requires_access_code' ? wt('tc.k158', 'Ввести код') : wt('tc.k040', 'Открыть')}
                 </button>
               </div>
             </div>
@@ -2631,7 +2640,7 @@
         <div class="flex flex-col gap-3">
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0 space-y-1">
-              <p class="text-[11px] font-bold uppercase tracking-[0.14em] text-text-secondary">Теория</p>
+              <p class="text-[11px] font-bold uppercase tracking-[0.14em] text-text-secondary">${wt('tc.k146', 'Теория')}</p>
               <h3 class="text-xl font-semibold tracking-[-0.02em] text-text-main truncate">${escapeHtml(row.title || row.id)}</h3>
             </div>
             <div class="flex items-start gap-2 shrink-0">
@@ -2649,9 +2658,9 @@
                   class="theory-mini-btn ${getTheoryNeutralButtonClass()} rounded-2xl border px-3 py-2 text-xs font-semibold hover:border-primary hover:text-primary"
                   data-action="manage-theory-publication"
                   data-theory-id="${escapeHtml(row.id)}"
-                  title="${publicationBlocked ? 'Публикация заблокирована, пока теория в архиве Premium' : isPremiumArchived ? 'Источник в архиве Premium: можно сузить доступ текущей публикации' : 'Управлять публикацией'}"
+                  title="${publicationBlocked ? wt('tc.k147', 'Публикация заблокирована, пока теория в архиве Premium') : isPremiumArchived ? wt('tc.k148', 'Источник в архиве Premium: можно сузить доступ текущей публикации') : wt('tc.k149', 'Управлять публикацией')}"
                   ${publicationBlocked ? 'disabled' : ''}>
-                  Публикация
+                  ${wt('tc.k150', 'Публикация')}
                 </button>
               ` : ''}
             </div>
@@ -2663,27 +2672,27 @@
               ${renderTheoryCatalogStatusBadge(row)}
               ${renderTheoryArchiveBadge(row)}
               ${row.is_orphan ? `
-                <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 font-semibold ${getTheoryToneClass('warning')}" title="Теория пока не связана ни с темами, ни с комплексами">
+                <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 font-semibold ${getTheoryToneClass('warning')}" title="${wt('tc.k164', 'Теория пока не связана ни с темами, ни с комплексами')}">
                   <span class="material-symbols-outlined text-[14px]">link_off</span>
-                  Без привязки
+                  ${wt('tc.k152', 'Без привязки')}
                 </span>
               ` : ''}
               <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 ${getTheoryNeutralChipClass()}">
                 <span class="material-symbols-outlined text-[14px]">menu_book</span>
-                Тем: ${usageTopics}
+                ${wt('tc.k153', 'Тем: ')}${usageTopics}
               </span>
               <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 ${getTheoryNeutralChipClass()}">
                 <span class="material-symbols-outlined text-[14px]">inventory_2</span>
-                Комплексов: ${usageComplexes}
+                ${wt('tc.k154', 'Комплексов: ')}${usageComplexes}
               </span>
               ${renderTheoryLinkedComplexBadge(row)}
               ${hasContent ? '' : `
                 <span class="inline-flex items-center gap-1 rounded-full border border-error-light bg-error-lighter px-2.5 py-1 font-semibold text-error-text">
                   <span class="material-symbols-outlined text-[14px]">text_ad</span>
-                  Только заголовок
+                  ${wt('tc.k091', 'Только заголовок')}
                 </span>
               `}
-              <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 ${getTheoryNeutralChipClass({ muted: true })}" title="Дата последнего обновления">
+              <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 ${getTheoryNeutralChipClass({ muted: true })}" title="${wt('tc.k155', 'Дата последнего обновления')}">
                 <span class="material-symbols-outlined text-[14px]">event</span>
                 ${escapeHtml(formatDateLabel(row.updated_at || row.version))}
               </span>
@@ -2705,22 +2714,22 @@
     if (state.loading || !state.overview) {
       return {
         disabled: true,
-        title: 'Центр теории еще загружается. Подождите несколько секунд.',
+        title: wt('tc.k165', 'Центр теории еще загружается. Подождите несколько секунд.'),
       };
     }
 
     if (!supported) {
       return {
         disabled: true,
-        title: 'Массовые операции доступны только в разделах «Теории: все», «Теории: Без привязки» и «Теории: Только заголовок».',
+        title: wt('tc.k166', 'Массовые операции доступны только в разделах «Теории: все», «Теории: Без привязки» и «Теории: Только заголовок».'),
       };
     }
 
     return {
       disabled: false,
       title: state.selectionMode
-        ? 'Завершить режим массовых операций'
-        : 'Включить режим массовых операций',
+        ? wt('tc.k167', 'Завершить режим массовых операций')
+        : wt('tc.k168', 'Включить режим массовых операций'),
     };
   }
 
@@ -2763,7 +2772,7 @@
       toggleIcon.textContent = supported && state.selectionMode ? 'close' : 'checklist';
     }
     if (toggleLabel) {
-      toggleLabel.textContent = supported && state.selectionMode ? 'Завершить выбор' : 'Массовые операции';
+      toggleLabel.textContent = supported && state.selectionMode ? wt('tc.k169', 'Завершить выбор') : wt('tc.k170', 'Массовые операции');
     }
 
     if (bulkBar) {
@@ -2780,21 +2789,21 @@
       bulkBar.setAttribute('aria-hidden', visible ? 'false' : 'true');
     }
     if (counter) {
-      counter.textContent = `Выбрано: ${selectedCount}`;
+      counter.textContent = `${wt('tc.k171', 'Выбрано: ')}${selectedCount}`;
     }
     if (note) {
       note.textContent = isTheoryCollectionScope()
-        ? 'Можно выделять только теории без привязки к темам и комплексам.'
-        : 'В этом разделе выделение доступно только на карточках отдельных теорий без привязки.';
+        ? wt('tc.k172', 'Можно выделять только теории без привязки к темам и комплексам.')
+        : wt('tc.k173', 'В этом разделе выделение доступно только на карточках отдельных теорий без привязки.');
     }
     if (selectVisibleBtn) {
       const allVisibleSelected = visibleSelectableIds.length > 0
         && visibleSelectableIds.every((theoryId) => state.selectedTheoryIds.has(theoryId));
       selectVisibleBtn.disabled = state.bulkDeleting || !visibleSelectableIds.length;
-      selectVisibleBtn.title = allVisibleSelected ? 'Снять выделение со всех видимых теорий' : 'Выделить все видимые теории без привязки';
+      selectVisibleBtn.title = allVisibleSelected ? wt('tc.k174', 'Снять выделение со всех видимых теорий') : wt('tc.k175', 'Выделить все видимые теории без привязки');
       selectVisibleBtn.innerHTML = `
         <span class="material-symbols-outlined text-[18px]">${allVisibleSelected ? 'remove_done' : 'select_all'}</span>
-        ${allVisibleSelected ? 'Снять все' : 'Все видимые'}
+        ${allVisibleSelected ? wt('tc.k176', 'Снять все') : wt('tc.k177', 'Все видимые')}
       `;
     }
     if (deleteBtn) {
@@ -2834,7 +2843,7 @@
     const rows = getVisibleRows();
     const selectableIds = new Set(getVisibleSelectableTheoryIds(rows));
     if (!selectableIds.has(normalizedTheoryId)) {
-      setFlash('Для массового удаления доступны только теории без привязки.', 'warning');
+      setFlash(wt('tc.k178', 'Для массового удаления доступны только теории без привязки.'), 'warning');
       return;
     }
 
@@ -2869,7 +2878,7 @@
 
   function toggleTheorySelectionMode() {
     if (!supportsTheorySelectionScope()) {
-      setFlash('Массовые операции доступны только в теоретических разделах.', 'info');
+      setFlash(wt('tc.k179', 'Массовые операции доступны только в теоретических разделах.'), 'info');
       updateSelectionControls([]);
       return;
     }
@@ -2888,14 +2897,14 @@
 
   function selectAllVisibleTheories() {
     if (!supportsTheorySelectionScope()) {
-      setFlash('Массовые операции доступны только в теоретических разделах.', 'info');
+      setFlash(wt('tc.k179', 'Массовые операции доступны только в теоретических разделах.'), 'info');
       return;
     }
 
     const rows = getVisibleRows();
     const selectableIds = getVisibleSelectableTheoryIds(rows);
     if (!selectableIds.length) {
-      setFlash('На текущем экране нет теорий без привязки для массовых операций.', 'info');
+      setFlash(wt('tc.k180', 'На текущем экране нет теорий без привязки для массовых операций.'), 'info');
       updateSelectionControls(rows);
       return;
     }
@@ -2919,7 +2928,7 @@
     const skippedCount = rows.length - selectableIds.length;
     if (skippedCount > 0) {
       setFlash(
-        `Выделены ${selectableIds.length} теории без привязки. Ещё ${skippedCount} пропущены: они уже используются.`,
+        `${wt('tc.k181', 'Выделены ')}${selectableIds.length}${wt('tc.k181b', ' теории без привязки. Ещё ')}${skippedCount}${wt('tc.k181c', ' пропущены: они уже используются.')}`,
         'info'
       );
     }
@@ -2948,10 +2957,10 @@
       return;
     }
     const confirmed = await theoryCenterConfirm({
-      title: 'Убрать теорию из библиотеки?',
-      message: 'Связанная теория будет удалена из вашей библиотеки. Материал автора в каталоге не изменится.',
-      confirmText: 'Убрать',
-      cancelText: 'Отмена',
+      title: wt('tc.k182', 'Убрать теорию из библиотеки?'),
+      message: wt('tc.k183', 'Связанная теория будет удалена из вашей библиотеки. Материал автора в каталоге не изменится.'),
+      confirmText: wt('tc.k157', 'Убрать'),
+      cancelText: wt('tc.k004', 'Отмена'),
       variant: 'error',
     });
     if (!confirmed) return;
@@ -2966,11 +2975,11 @@
       if (!response.ok || data?.ok === false) {
         throw new Error(data?.error || `HTTP ${response.status}`);
       }
-      setFlash('Теория убрана из библиотеки.', 'success');
+      setFlash(wt('tc.k184', 'Теория убрана из библиотеки.'), 'success');
       await loadOverview({ silent: true });
     } catch (error) {
       console.error('[Theory Center] Failed to delete linked theory entry', error);
-      setFlash('Не удалось убрать теорию из библиотеки.', 'error');
+      setFlash(wt('tc.k185', 'Не удалось убрать теорию из библиотеки.'), 'error');
     } finally {
       state.bulkDeleting = false;
       renderView();
@@ -2981,25 +2990,25 @@
     const host = $('theory-center-list');
     if (!host) return;
     const scopeLabel = state.scope === 'complexes'
-      ? 'комплексы'
+      ? wt('tc.k186', 'комплексы')
       : state.scope === 'orphans'
-        ? 'теории без привязки'
+        ? wt('tc.k187', 'теории без привязки')
         : state.scope === 'only_title'
-          ? 'теории только с заголовком'
+          ? wt('tc.k188', 'теории только с заголовком')
         : state.scope === 'archived'
-          ? 'теории в архиве Premium'
+          ? wt('tc.k189', 'теории в архиве Premium')
         : state.scope === 'all'
-          ? 'теории'
-          : 'темы';
+          ? wt('tc.k190', 'теории')
+          : wt('tc.k191', 'темы');
     host.innerHTML = `
       <div class="empty-state-card">
         <div class="mx-auto flex max-w-md flex-col items-center gap-3">
           <span class="empty-state-card__icon">
             <span class="material-symbols-outlined text-[26px]">search_off</span>
           </span>
-          <h3 class="empty-state-card__title">Ничего не найдено</h3>
+          <h3 class="empty-state-card__title">${wt('tc.k192', 'Ничего не найдено')}</h3>
           <p class="empty-state-card__copy text-sm leading-6">
-            По текущим фильтрам подходящие ${escapeHtml(scopeLabel)} не найдены. Попробуйте сбросить состояние или изменить поиск.
+            ${wt('tc.k193', 'По текущим фильтрам подходящие ')}${escapeHtml(scopeLabel)}${wt('tc.k193b', ' не найдены. Попробуйте сбросить состояние или изменить поиск.')}
           </p>
         </div>
       </div>
@@ -3015,8 +3024,8 @@
         <section class="space-y-4">
           <div class="flex items-center justify-between gap-3">
             <div>
-              <p class="text-[11px] font-bold uppercase tracking-[0.14em] text-text-secondary">Связанные публикации</p>
-              <p class="mt-1 text-sm text-text-secondary">Материалы других авторов, которые добавлены в вашу библиотеку вместе с комплексами или отдельно из каталога.</p>
+              <p class="text-[11px] font-bold uppercase tracking-[0.14em] text-text-secondary">${wt('tc.k194', 'Связанные публикации')}</p>
+              <p class="mt-1 text-sm text-text-secondary">${wt('tc.k195', 'Материалы других авторов, которые добавлены в вашу библиотеку вместе с комплексами или отдельно из каталога.')}</p>
             </div>
             <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${getTheoryNeutralChipClass()}">${escapeHtml(String(linkedRows.length))}</span>
           </div>
@@ -3029,8 +3038,8 @@
         <section class="space-y-4">
           <div class="flex items-center justify-between gap-3">
             <div>
-              <p class="text-[11px] font-bold uppercase tracking-[0.14em] text-text-secondary">Рабочие теории</p>
-              <p class="mt-1 text-sm text-text-secondary">Авторские материалы и локальные теории, которые можно редактировать.</p>
+              <p class="text-[11px] font-bold uppercase tracking-[0.14em] text-text-secondary">${wt('tc.k196', 'Рабочие теории')}</p>
+              <p class="mt-1 text-sm text-text-secondary">${wt('tc.k197', 'Авторские материалы и локальные теории, которые можно редактировать.')}</p>
             </div>
             <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${getTheoryNeutralChipClass()}">${escapeHtml(String(workspaceRows.length))}</span>
           </div>
@@ -3058,32 +3067,32 @@
 
     if (title) {
       title.textContent = state.scope === 'all'
-        ? 'Теории: все'
+        ? wt('tc.k198', 'Теории: все')
         : state.scope === 'complexes'
-        ? 'Комплексы'
+        ? wt('tc.k199', 'Комплексы')
         : state.scope === 'orphans'
-          ? 'Теории: Без привязки'
+          ? wt('tc.k200', 'Теории: Без привязки')
           : state.scope === 'only_title'
-            ? 'Теории: Только заголовок'
+            ? wt('tc.k201', 'Теории: Только заголовок')
           : state.scope === 'archived'
-            ? 'Архив Premium'
-          : 'Темы';
+            ? wt('tc.k202', 'Архив Premium')
+          : wt('tc.k203', 'Темы');
     }
     if (subtitle) {
       subtitle.textContent = state.scope === 'all'
-        ? 'Ваши теории и материалы других авторов из каталога в одном центре.'
+        ? wt('tc.k204', 'Ваши теории и материалы других авторов из каталога в одном центре.')
         : state.scope === 'complexes'
-        ? 'Показываем источник теории у комплексов и быстрые действия по обновлению.'
+        ? wt('tc.k205', 'Показываем источник теории у комплексов и быстрые действия по обновлению.')
         : state.scope === 'orphans'
-          ? 'Теории, которые пока не привязаны ни к одной теме или комплексу.'
+          ? wt('tc.k206', 'Теории, которые пока не привязаны ни к одной теме или комплексу.')
           : state.scope === 'only_title'
-            ? 'Теории, в которых пока есть только заголовок без основного текста.'
+            ? wt('tc.k207', 'Теории, в которых пока есть только заголовок без основного текста.')
           : state.scope === 'archived'
-            ? 'Материалы доступны для просмотра и удаления, но редактирование и публикация вернутся после Premium.'
-          : 'Показываем темы, их теорию и влияние на связанные комплексы.';
+            ? wt('tc.k208', 'Материалы доступны для просмотра и удаления, но редактирование и публикация вернутся после Premium.')
+          : wt('tc.k209', 'Показываем темы, их теорию и влияние на связанные комплексы.');
     }
     if (summaryEl) {
-      summaryEl.textContent = `Показано ${rows.length} из ${total}`;
+      summaryEl.textContent = `${wt('tc.k210', 'Показано ')}${rows.length}${wt('tc.k210b', ' из ')}${total}`;
     }
 
     updateSelectionControls(rows);
@@ -3126,7 +3135,7 @@
     if (state.loading) return;
     state.loading = true;
     if (!options.silent) {
-      renderLoadingState('Обновляем обзор теории...');
+      renderLoadingState(wt('tc.k211', 'Обновляем обзор теории...'));
     }
     if (isTheoryCenterOnboardingDemoRequested()) {
       state.loading = false;
@@ -3182,8 +3191,8 @@
       }
     } catch (error) {
       console.error('[Theory Center] Failed to load overview', error);
-      setFlash('Не удалось загрузить обзор теории. Попробуйте обновить страницу позже.', 'error');
-      renderLoadingState('Обзор теории недоступен.');
+      setFlash(wt('tc.k212', 'Не удалось загрузить обзор теории. Попробуйте обновить страницу позже.'), 'error');
+      renderLoadingState(wt('tc.k213', 'Обзор теории недоступен.'));
     } finally {
       state.loading = false;
     }
@@ -3253,14 +3262,14 @@
       const status = String(data?.summary?.status || 'none').trim().toLowerCase();
       setFlash(
         status === 'composite'
-          ? 'Комплекс обновлен и теперь использует подборку теорий из тем.'
-          : 'Комплекс синхронизирован по текущим теориям тем.',
+          ? wt('tc.k214', 'Комплекс обновлен и теперь использует подборку теорий из тем.')
+          : wt('tc.k215', 'Комплекс синхронизирован по текущим теориям тем.'),
         'success'
       );
       await loadOverview({ silent: true });
     } catch (error) {
       console.error('[Theory Center] Failed to sync complex', error);
-      setFlash('Не удалось обновить теорию комплекса из тем.', 'error');
+      setFlash(wt('tc.k216', 'Не удалось обновить теорию комплекса из тем.'), 'error');
     } finally {
       if (button) {
         button.disabled = false;
@@ -3305,14 +3314,14 @@
       if (action === 'open-theory-record') {
         openTheoryRecord(button.getAttribute('data-theory-id'), state.scope === 'orphans' ? 'orphan' : '').catch((error) => {
           console.error('[Theory Center] Failed to open theory record', error);
-          setFlash('Не удалось открыть теорию.', 'error');
+          setFlash(wt('tc.k217', 'Не удалось открыть теорию.'), 'error');
         });
         return;
       }
       if (action === 'open-linked-theory') {
         openLinkedTheoryViewer(button.getAttribute('data-library-entry-id')).catch((error) => {
           console.error('[Theory Center] Failed to open linked theory', error);
-          setFlash('Не удалось открыть теорию из каталога.', 'error');
+          setFlash(wt('tc.k218', 'Не удалось открыть теорию из каталога.'), 'error');
         });
         return;
       }
@@ -3325,7 +3334,7 @@
         const rows = Array.isArray(state.overview?.theories) ? state.overview.theories : [];
         const row = rows.find((item) => getTheoryRowId(item) === theoryId) || null;
         if (!row) {
-          setFlash('Не удалось найти теорию для управления публикацией.', 'error');
+          setFlash(wt('tc.k219', 'Не удалось найти теорию для управления публикацией.'), 'error');
           return;
         }
         openTheoryPublicationDialog(row);
@@ -3334,7 +3343,7 @@
       if (action === 'open-orphan-theory') {
         openOrphanTheory(button.getAttribute('data-theory-id')).catch((error) => {
           console.error('[Theory Center] Failed to open orphan theory', error);
-          setFlash('Не удалось открыть теорию.', 'error');
+          setFlash(wt('tc.k217', 'Не удалось открыть теорию.'), 'error');
         });
         return;
       }
