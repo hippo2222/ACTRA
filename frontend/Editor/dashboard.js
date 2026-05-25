@@ -1,3 +1,10 @@
+// i18n helper
+function wt(key, fallback) {
+    if (!window.i18n || typeof window.i18n.t !== 'function') return fallback;
+    var v = window.i18n.t(key);
+    return v !== key ? v : fallback;
+}
+
 /**
  * ACTRA Editor Dashboard
  */
@@ -35,9 +42,9 @@ class EditorDashboard {
         // Import manager
         this.importManager = null;
         this.sortLabels = {
-            alphabet: 'По алфавиту',
-            date: 'По дате изменения',
-            type: 'По типу задания'
+            alphabet: wt('db.k001', 'По алфавиту'),
+            date: wt('db.k002', 'По дате изменения'),
+            type: wt('db.k003', 'По типу задания')
         };
         this.sortControllerEl = null;
         this.sortToggleEl = null;
@@ -92,7 +99,7 @@ class EditorDashboard {
         const badgeMarkup = this.getAllTasksNavBadgeMarkup();
         button.innerHTML = `
             <span class="material-symbols-outlined text-[20px]">all_inclusive</span>
-            <span class="editor-sidebar-tree-label truncate text-sm font-semibold flex-1 text-inherit">Все задания</span>
+            <span class="editor-sidebar-tree-label truncate text-sm font-semibold flex-1 text-inherit">${wt('db.k004', 'Все задания')}</span>
         `;
         if (badgeMarkup) {
             button.insertAdjacentHTML('beforeend', badgeMarkup);
@@ -120,8 +127,8 @@ class EditorDashboard {
             ? 'Premium'
             : `${Number(summary.personal_count || 0)}/${Number(summary.personal_limit || 0)}`;
         const title = isPremium
-            ? 'Premium · без лимита'
-            : `Мои задания: ${label}`;
+            ? wt('db.k005', 'Premium · без лимита')
+            : `${wt('db.k006', 'Мои задания:')} ${label}`;
 
         const promoAttrs = isPremium
             ? ''
@@ -598,12 +605,12 @@ class EditorDashboard {
 
     getTaskLimitMessage(summary = this.getTaskLimitSummary()) {
         if (!summary || this.isPremiumWorkspacePlan()) return '';
-        return `Лимит своих заданий достигнут: ${Number(summary.personal_count || 0)}/${Number(summary.personal_limit || 0)}. Удалите лишние задания или перейдите на Premium.`;
+        return `${wt('db.k007', 'Лимит своих заданий достигнут:')} ${Number(summary.personal_count || 0)}/${Number(summary.personal_limit || 0)}. ${wt('db.k008', 'Удалите лишние задания или перейдите на Premium.')}`;
     }
 
     getTaskDraftNotice(summary = this.getTaskLimitSummary()) {
         if (!summary || this.isPremiumWorkspacePlan() || !this.isTaskCreationBlocked()) return '';
-        return `${this.getTaskLimitMessage(summary)} Новый черновик открыть можно, но первое сохранение нового задания будет заблокировано, пока не освободится слот.`;
+        return `${this.getTaskLimitMessage(summary)} ${wt('db.k009', 'Новый черновик открыть можно, но первое сохранение нового задания будет заблокировано, пока не освободится слот.')}`;
     }
 
     isTaskCreationBlocked() {
@@ -629,11 +636,11 @@ class EditorDashboard {
             } else if (this.isPremiumWorkspacePlan()) {
                 pill.classList.remove('hidden');
                 pill.classList.add('inline-flex');
-                pill.innerHTML = '<span class="material-symbols-outlined text-[18px]">workspace_premium</span><span>Premium · без лимита</span>';
+                pill.innerHTML = wt('db.k010', '<span class="material-symbols-outlined text-[18px]">workspace_premium</span><span>Premium · без лимита</span>');
             } else {
                 pill.classList.remove('hidden');
                 pill.classList.add('inline-flex');
-                pill.innerHTML = `<span class="material-symbols-outlined text-[18px]">${blocked ? 'lock' : 'task'}</span><span>Мои задания: ${Number(summary.personal_count || 0)}/${Number(summary.personal_limit || 0)}</span>`;
+                pill.innerHTML = `<span class="material-symbols-outlined text-[18px]">${blocked ? 'lock' : 'task'}</span><span>${wt('db.k011', 'Мои задания:')} ${Number(summary.personal_count || 0)}/${Number(summary.personal_limit || 0)}</span>`;
             }
         }
 
@@ -662,15 +669,15 @@ class EditorDashboard {
         if (createCard) {
             createCard.disabled = false;
             createCard.classList.remove('opacity-60', 'cursor-not-allowed');
-            createCard.title = blocked ? (this.getTaskDraftNotice(summary) || 'Можно открыть черновик, но сохранить новое задание пока нельзя') : 'Создать новое задание';
+            createCard.title = blocked ? (this.getTaskDraftNotice(summary) || wt('db.k012', 'Можно открыть черновик, но сохранить новое задание пока нельзя')) : wt('db.k013', 'Создать новое задание');
         }
         if (archiveFilter) {
             archiveFilter.hidden = archivedCount <= 0;
             archiveFilter.disabled = archivedCount <= 0;
             archiveFilter.setAttribute('aria-pressed', this.showPremiumArchiveTasks ? 'true' : 'false');
             archiveFilter.title = archivedCount > 0
-                ? `В архиве Premium: ${archivedCount} заданий. Они доступны для просмотра и удаления, но не для редактирования или экспорта.`
-                : 'В архиве Premium пока нет заданий.';
+                ? `${wt('db.k014', 'В архиве Premium:')} ${archivedCount} ${wt('db.k015', 'заданий. Они доступны для просмотра и удаления, но не для редактирования или экспорта.')}`
+                : wt('db.k016', 'В архиве Premium пока нет заданий.');
         }
         if (archiveFilterCount) {
             archiveFilterCount.hidden = archivedCount <= 0;
@@ -894,7 +901,7 @@ class EditorDashboard {
 
     formatImportHistoryTime(timestamp) {
         const date = new Date(Number(timestamp || 0));
-        if (Number.isNaN(date.getTime())) return 'недавно';
+        if (Number.isNaN(date.getTime())) return wt('db.k017', 'недавно');
         return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
     }
 
@@ -949,9 +956,9 @@ class EditorDashboard {
         if (!request) {
             this.showVoiceToast({
                 severity: 'warning',
-                what: 'Preview workspace-копии не открыт.',
-                impact: 'Не удалось определить исходный комплекс.',
-                next: 'Обновите Theory Hub и повторите действие.',
+                what: wt('db.k018', 'Preview workspace-копии не открыт.'),
+                impact: wt('db.k019', 'Не удалось определить исходный комплекс.'),
+                next: wt('db.k020', 'Обновите Theory Hub и повторите действие.'),
             });
             return;
         }
@@ -977,10 +984,10 @@ class EditorDashboard {
 
         host.classList.remove('hidden');
         if (favoriteEntries.length) {
-            host.appendChild(this.createShortcutSection('Избранное', favoriteEntries));
+            host.appendChild(this.createShortcutSection(wt('db.k021', 'Избранное'), favoriteEntries));
         }
         if (importEntries.length) {
-            host.appendChild(this.createImportHistorySection('Последние импорты', importEntries));
+            host.appendChild(this.createImportHistorySection(wt('db.k022', 'Последние импорты'), importEntries));
         }
         this.updateRecoveryCenterTrigger(recoveryDrafts);
     }
@@ -1012,7 +1019,7 @@ class EditorDashboard {
 
             const favoriteBtn = document.createElement('button');
             favoriteBtn.className = 'h-8 w-8 inline-flex items-center justify-center rounded-lg border border-border-subtle bg-surface-1 text-text-disabled hover:text-warning hover:border-warning transition-colors';
-            favoriteBtn.title = this.isFavoriteTask(entry.uniqueId) ? 'Убрать из избранного' : 'Добавить в избранное';
+            favoriteBtn.title = this.isFavoriteTask(entry.uniqueId) ? wt('db.k023', 'Убрать из избранного') : wt('db.k024', 'Добавить в избранное');
             favoriteBtn.innerHTML = `<span class="material-symbols-outlined text-[17px]">${this.isFavoriteTask(entry.uniqueId) ? 'star' : 'star_outline'}</span>`;
             favoriteBtn.addEventListener('click', (event) => {
                 event.stopPropagation();
@@ -1052,13 +1059,13 @@ class EditorDashboard {
                             : 'text-text-secondary bg-bg-tertiary border-border-subtle';
             const statusLabel =
                 tone === 'success'
-                    ? 'Успешно'
+                    ? wt('db.k025', 'Успешно')
                     : tone === 'warning'
-                        ? 'Частично'
+                        ? wt('db.k026', 'Частично')
                         : tone === 'error'
-                            ? 'Ошибка'
-                            : 'Недавно';
-            const location = [entry.module, entry.topic].filter(Boolean).join(' / ') || 'Без привязки';
+                            ? wt('db.k027', 'Ошибка')
+                            : wt('db.k028', 'Недавно');
+            const location = [entry.module, entry.topic].filter(Boolean).join(' / ') || wt('db.k029', 'Без привязки');
             const summary = `+${entry.imported} | skip ${entry.skipped} | err ${entry.errors}`;
             const timeLabel = this.formatImportHistoryTime(entry.timestamp);
 
@@ -1100,8 +1107,8 @@ class EditorDashboard {
             dismissBtn.dataset.role = 'import-history-dismiss';
             dismissBtn.dataset.historyIndex = String(entry.historyIndex);
             dismissBtn.className = 'h-8 w-8 mt-1 inline-flex items-center justify-center rounded-lg border border-border-subtle bg-surface-1 text-text-disabled hover:text-text-main hover:border-border-strong hover:bg-bg-hover transition-colors';
-            dismissBtn.title = 'Убрать из истории импорта';
-            dismissBtn.setAttribute('aria-label', 'Убрать из истории импорта');
+            dismissBtn.title = wt('db.k030', 'Убрать из истории импорта');
+            dismissBtn.setAttribute('aria-label', wt('db.k031', 'Убрать из истории импорта'));
             dismissBtn.innerHTML = '<span class="material-symbols-outlined text-[17px]">close</span>';
             dismissBtn.addEventListener('click', (event) => {
                 event.stopPropagation();
@@ -1115,7 +1122,7 @@ class EditorDashboard {
         const openImportBtn = document.createElement('button');
         openImportBtn.type = 'button';
         openImportBtn.className = 'w-full mt-1 text-left px-2.5 py-1.5 rounded-lg border border-border-subtle bg-surface-1 text-[11px] font-semibold text-text-secondary hover:text-primary hover:border-primary hover:bg-bg-hover transition-colors';
-        openImportBtn.textContent = 'Открыть импорт заданий';
+        openImportBtn.textContent = wt('db.k032', 'Открыть импорт заданий');
         openImportBtn.addEventListener('click', () => this.showImportModal());
         list.appendChild(openImportBtn);
 
@@ -1135,7 +1142,7 @@ class EditorDashboard {
         const taskCount = drafts.filter((item) => item && item.kind === 'task').length;
         const complexCount = Math.max(0, drafts.length - taskCount);
         const latestTimestamp = Number(drafts[0]?.timestamp || 0);
-        const latestLabel = latestTimestamp > 0 ? this.formatRecoveryTime(latestTimestamp) : 'н/д';
+        const latestLabel = latestTimestamp > 0 ? this.formatRecoveryTime(latestTimestamp) : wt('db.k033', 'н/д');
 
         const list = document.createElement('div');
         list.className = 'space-y-1';
@@ -1148,11 +1155,11 @@ class EditorDashboard {
             <div class="flex items-center justify-between gap-2">
                 <span class="inline-flex items-center gap-1 text-[11px] font-semibold text-text-main">
                     <span class="material-symbols-outlined text-[15px] text-text-disabled">history</span>
-                    Черновики: ${this.escapeHtml(String(drafts.length))}
+                    ${wt('db.k034', 'Черновики:')} ${this.escapeHtml(String(drafts.length))}
                 </span>
-                <span class="editor-recovery-meta text-[10px]">последний ${this.escapeHtml(latestLabel)}</span>
+                <span class="editor-recovery-meta text-[10px]">${wt('db.k035', 'последний')} ${this.escapeHtml(latestLabel)}</span>
             </div>
-            <p class="editor-recovery-meta mt-1 text-[10px]">задач ${taskCount} В· комплексов ${complexCount}</p>
+            <p class="editor-recovery-meta mt-1 text-[10px]">${wt('db.k036', 'задач')} ${taskCount} ${wt('db.k037', 'В· комплексов')} ${complexCount}</p>
         `;
         summaryBtn.addEventListener('click', () => this.showRecoveryCenter());
         list.appendChild(summaryBtn);
@@ -1164,18 +1171,18 @@ class EditorDashboard {
             ])
         );
         drafts.slice(0, 2).forEach((item) => {
-            let label = 'Черновик';
+            let label = wt('db.k038', 'Черновик');
             let subtitle = '';
             if (item.kind === 'task') {
                 const uniqueId = this.makeTaskUniqueId(item.moduleId, item.topicId, item.taskId);
                 const task = taskLookup.get(uniqueId);
-                label = task?.name || item.taskId || 'Черновик задания';
+                label = task?.name || item.taskId || wt('db.k039', 'Черновик задания');
                 subtitle = [task?.moduleName || item.moduleId, task?.topicName || item.topicId].filter(Boolean).join(' / ');
             } else {
                 label = item.complexId && item.complexId !== 'new'
-                    ? `Комплекс: ${item.complexId}`
-                    : 'Черновик комплекса';
-                subtitle = 'Конструктор комплексов';
+                    ? `${wt('db.k040', 'Комплекс:')} ${item.complexId}`
+                    : wt('db.k041', 'Черновик комплекса');
+                subtitle = wt('db.k042', 'Конструктор комплексов');
             }
 
             const row = document.createElement('button');
@@ -1184,7 +1191,7 @@ class EditorDashboard {
             row.className = 'w-full text-left px-2.5 py-1.5 rounded-lg border border-border-subtle bg-surface-1 text-[11px] text-text-secondary hover:text-primary hover:border-primary hover:bg-bg-hover transition-colors';
             row.innerHTML = `
                 <div class="editor-recovery-title font-semibold text-text-main">${this.escapeHtml(label)}</div>
-                <div class="editor-recovery-subtitle text-[10px]">${this.escapeHtml(subtitle || 'Черновик восстановления')}</div>
+                <div class="editor-recovery-subtitle text-[10px]">${this.escapeHtml(subtitle || wt('db.k043', 'Черновик восстановления'))}</div>
             `;
             row.addEventListener('click', () => this.openRecoveryDraft(item));
             list.appendChild(row);
@@ -1203,7 +1210,7 @@ class EditorDashboard {
         let badge = trigger.querySelector('[data-role="recovery-draft-count"]');
         if (total <= 0) {
             trigger.removeAttribute('data-has-recovery');
-            trigger.title = 'Черновики комплексов и отдельные черновики заданий';
+            trigger.title = wt('db.k044', 'Черновики комплексов и отдельные черновики заданий');
             if (badge) badge.remove();
             return;
         }
@@ -1219,7 +1226,7 @@ class EditorDashboard {
         const complexCount = Math.max(0, total - taskCount);
         badge.textContent = total > 99 ? '99+' : String(total);
         trigger.dataset.hasRecovery = 'true';
-        trigger.title = `Отдельные черновики: ${total} (заданий ${taskCount}, комплексов ${complexCount})`;
+        trigger.title = `${wt('db.k045', 'Отдельные черновики:')} ${total} (${wt('db.k046', 'заданий')} ${taskCount}, ${wt('db.k047', 'комплексов')} ${complexCount})`;
     }
 
     updateTheoryHubTrigger(summary = null) {
@@ -1233,7 +1240,7 @@ class EditorDashboard {
         let badge = trigger.querySelector('[data-role="theory-hub-queue-count"]');
         if (queueCount <= 0) {
             trigger.removeAttribute('data-has-theory-queue');
-            trigger.title = 'Центр теории';
+            trigger.title = wt('db.k048', 'Центр теории');
             if (badge) badge.remove();
             return;
         }
@@ -1262,7 +1269,7 @@ class EditorDashboard {
 
         badge.textContent = queueCount > 99 ? '99+' : String(queueCount);
         trigger.dataset.hasTheoryQueue = 'true';
-        trigger.title = `Центр теории: изменений ${queueCount}, подборок ${conflictCount}`;
+        trigger.title = `${wt('db.k049', 'Центр теории: изменений')} ${queueCount}, ${wt('db.k050', 'подборок')} ${conflictCount}`;
     }
 
     loadDashboardState() {
@@ -1456,18 +1463,18 @@ class EditorDashboard {
                 this.log(`Server returned error: ${data.error}`);
                 this.showVoiceToast({
                     severity: 'error',
-                    what: 'Каталог редактора не загружен.',
-                    impact: 'Модули и темы сейчас недоступны.',
-                    next: data.error ? `Детали: ${data.error}. Повторите загрузку.` : 'Проверьте соединение и повторите попытку.',
+                    what: wt('db.k051', 'Каталог редактора не загружен.'),
+                    impact: wt('db.k052', 'Модули и темы сейчас недоступны.'),
+                    next: data.error ? `${wt('db.k053', 'Детали:')} ${data.error}. ${wt('db.k054', 'Повторите загрузку.')}` : wt('db.k055', 'Проверьте соединение и повторите попытку.'),
                 });
             }
         } catch (error) {
             this.log(`FETCH ERROR: ${error.message}`);
             this.showVoiceToast({
                 severity: 'error',
-                what: 'Каталог редактора не загружен из-за сетевой ошибки.',
-                impact: 'Текущая структура библиотеки недоступна.',
-                next: error?.message ? `Проверьте сеть (${error.message}) и повторите загрузку.` : 'Проверьте сеть и повторите загрузку.',
+                what: wt('db.k056', 'Каталог редактора не загружен из-за сетевой ошибки.'),
+                impact: wt('db.k057', 'Текущая структура библиотеки недоступна.'),
+                next: error?.message ? `${wt('db.k058', 'Проверьте сеть')} (${error.message}) ${wt('db.k059', 'и повторите загрузку.')}` : wt('db.k060', 'Проверьте сеть и повторите загрузку.'),
             });
         }
     }
@@ -1613,22 +1620,22 @@ class EditorDashboard {
             actionBar.id = 'selection-action-bar';
             actionBar.className = 'fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-surface-1 rounded-xl shadow-2xl border border-border-subtle p-2 flex items-center gap-3 z-50 transition-all duration-300 translate-y-[200%]';
             actionBar.innerHTML = `
-                <div class="px-3 font-semibold text-text-secondary border-r border-border-subtle" id="selection-counter">0 выбрано</div>
+                <div class="px-3 font-semibold text-text-secondary border-r border-border-subtle" id="selection-counter">0 ${wt('db.k061', 'выбрано')}</div>
                 <button data-role="selection-select-all" onclick="dashboard.selectAllVisibleTasks()" class="flex items-center gap-2 px-4 py-2 bg-surface-2 text-text-secondary rounded-lg hover:bg-bg-hover transition-colors font-medium">
                     <span class="material-symbols-outlined">select_all</span>
-                    Все
+                    ${wt('db.k062', 'Все')}
                 </button>
                 <div class="w-px h-6 bg-border-subtle"></div>
                 <button data-role="selection-export" onclick="dashboard.exportSelectedTasks()" class="flex items-center gap-2 px-4 py-2 bg-primary text-primary-contrast rounded-lg hover:bg-primary-dark transition-colors font-medium">
                     <span class="material-symbols-outlined">archive</span>
-                    Экспорт
+                    ${wt('db.k063', 'Экспорт')}
                 </button>
                 <button data-role="selection-delete" onclick="dashboard.deleteSelectedTasks()" class="flex items-center gap-2 px-4 py-2 bg-error-lighter text-error-dark border border-error-light rounded-lg hover:bg-error-light transition-colors font-medium">
                     <span class="material-symbols-outlined">delete</span>
-                    Удалить
+                    ${wt('db.k064', 'Удалить')}
                 </button>
                 <div class="w-px h-6 bg-border-subtle"></div>
-                <button data-role="selection-cancel" onclick="dashboard.cancelSelection()" class="p-2 text-text-disabled hover:text-text-muted hover:bg-bg-hover rounded-lg" title="Отмена">
+                <button data-role="selection-cancel" onclick="dashboard.cancelSelection()" class="p-2 text-text-disabled hover:text-text-muted hover:bg-bg-hover rounded-lg" title="${wt('db.k065', 'Отмена')}">
                     <span class="material-symbols-outlined">close</span>
                 </button>
             `;
@@ -1642,7 +1649,7 @@ class EditorDashboard {
             btn.id = 'toggle-select-btn';
             btn.dataset.role = 'selection-toggle';
             btn.className = 'p-2 text-text-disabled hover:text-primary hover:bg-bg-hover rounded-lg transition-colors';
-            btn.title = 'Выбор заданий';
+            btn.title = wt('db.k066', 'Выбор заданий');
             btn.onclick = () => this.toggleSelectionMode();
             btn.innerHTML = '<span class="material-symbols-outlined">checklist</span>';
             // Insert before the last element (usually profile/settings)
@@ -1821,7 +1828,7 @@ class EditorDashboard {
         // Root Level
         const root = document.createElement('span');
         root.className = 'editor-breadcrumb-link';
-        root.textContent = 'Библиотека';
+        root.textContent = wt('db.k067', 'Библиотека');
         root.onclick = () => this.renderAllTasks();
         nav.appendChild(root);
 
@@ -1880,7 +1887,7 @@ class EditorDashboard {
 
         // Populate modules
         const moduleSelect = document.querySelector('#task-module-select');
-        moduleSelect.innerHTML = '<option value="">Выберите модуль...</option>';
+        moduleSelect.innerHTML = wt('db.k068', '<option value="">Выберите модуль...</option>');
         this.catalog.forEach(m => {
             const opt = document.createElement('option');
             opt.value = m.id;
@@ -1909,9 +1916,9 @@ class EditorDashboard {
         if (!this.onboardingDemoActive && this.isTaskCreationBlocked()) {
             this.showVoiceToast({
                 severity: 'warning',
-                what: 'Лимит заданий достигнут.',
-                impact: this.getTaskDraftNotice() || 'Новый черновик открыть можно, но сохранить его пока не получится.',
-                next: 'Освободите слот или перейдите на Premium.',
+                what: wt('db.k069', 'Лимит заданий достигнут.'),
+                impact: this.getTaskDraftNotice() || wt('db.k070', 'Новый черновик открыть можно, но сохранить его пока не получится.'),
+                next: wt('db.k071', 'Освободите слот или перейдите на Premium.'),
                 timeout: 4800,
             });
         }
@@ -1922,7 +1929,7 @@ class EditorDashboard {
         const topicSelect = document.querySelector('#task-topic-select');
         const module_id = moduleSelect.value;
 
-        topicSelect.innerHTML = '<option value="">Выберите тему...</option>';
+        topicSelect.innerHTML = wt('db.k072', '<option value="">Выберите тему...</option>');
         if (!module_id) return;
 
         const module = this.catalog.find(m => m.id === module_id);
@@ -1979,27 +1986,27 @@ class EditorDashboard {
         if (!module_id) {
             this.showVoiceToast({
                 severity: 'warning',
-                what: 'Создание задания приостановлено.',
-                impact: 'Модуль не выбран.',
-                next: 'Выберите модуль и повторите действие.',
+                what: wt('db.k073', 'Создание задания приостановлено.'),
+                impact: wt('db.k074', 'Модуль не выбран.'),
+                next: wt('db.k075', 'Выберите модуль и повторите действие.'),
             });
             return;
         }
         if (!topic_id) {
             this.showVoiceToast({
                 severity: 'warning',
-                what: 'Создание задания приостановлено.',
-                impact: 'Тема не выбрана.',
-                next: 'Выберите тему и повторите действие.',
+                what: wt('db.k076', 'Создание задания приостановлено.'),
+                impact: wt('db.k077', 'Тема не выбрана.'),
+                next: wt('db.k078', 'Выберите тему и повторите действие.'),
             });
             return;
         }
         if (!task_name) {
             this.showVoiceToast({
                 severity: 'warning',
-                what: 'Создание задания приостановлено.',
-                impact: 'Название задания пустое.',
-                next: 'Введите название и повторите действие.',
+                what: wt('db.k079', 'Создание задания приостановлено.'),
+                impact: wt('db.k080', 'Название задания пустое.'),
+                next: wt('db.k081', 'Введите название и повторите действие.'),
             });
             return;
         }
@@ -2032,9 +2039,9 @@ class EditorDashboard {
         if (!name) {
             this.showVoiceToast({
                 severity: 'warning',
-                what: 'Создание модуля приостановлено.',
-                impact: 'Название модуля пустое.',
-                next: 'Введите название и повторите действие.',
+                what: wt('db.k082', 'Создание модуля приостановлено.'),
+                impact: wt('db.k083', 'Название модуля пустое.'),
+                next: wt('db.k084', 'Введите название и повторите действие.'),
             });
             return;
         }
@@ -2058,18 +2065,18 @@ class EditorDashboard {
             } else {
                 this.showVoiceToast({
                     severity: 'error',
-                    what: 'Модуль не создан.',
-                    impact: 'Изменения не были применены.',
-                    next: data?.error ? `Проверьте данные (${data.error}) и повторите.` : 'Проверьте данные и повторите создание.',
+                    what: wt('db.k085', 'Модуль не создан.'),
+                    impact: wt('db.k086', 'Изменения не были применены.'),
+                    next: data?.error ? `${wt('db.k087', 'Проверьте данные')} (${data.error}) ${wt('db.k088', 'и повторите.')}` : wt('db.k089', 'Проверьте данные и повторите создание.'),
                 });
             }
         } catch (err) {
             console.error(err);
             this.showVoiceToast({
                 severity: 'error',
-                what: 'Модуль не создан из-за сетевой ошибки.',
-                impact: 'Список модулей остался без изменений.',
-                next: 'Проверьте сеть и повторите действие.',
+                what: wt('db.k090', 'Модуль не создан из-за сетевой ошибки.'),
+                impact: wt('db.k091', 'Список модулей остался без изменений.'),
+                next: wt('db.k092', 'Проверьте сеть и повторите действие.'),
             });
         }
     }
@@ -2084,9 +2091,9 @@ class EditorDashboard {
         if (!module_id) {
             this.showVoiceToast({
                 severity: 'warning',
-                what: 'Создание темы приостановлено.',
-                impact: 'Модуль не выбран.',
-                next: 'Сначала выберите модуль, затем создайте тему.',
+                what: wt('db.k093', 'Создание темы приостановлено.'),
+                impact: wt('db.k094', 'Модуль не выбран.'),
+                next: wt('db.k095', 'Сначала выберите модуль, затем создайте тему.'),
             });
             return;
         }
@@ -2212,8 +2219,8 @@ class EditorDashboard {
         if (relationSelect && relationHint) {
             const updateHint = () => {
                 relationHint.textContent = relationSelect.value === 'copy'
-                    ? 'Независимая копия — дальнейшие изменения в теории не попадут в комплекс.'
-                    : 'Связанные комплексы-наследники обновляются автоматически в безопасном режиме.';
+                    ? wt('db.k096', 'Независимая копия — дальнейшие изменения в теории не попадут в комплекс.')
+                    : wt('db.k097', 'Связанные комплексы-наследники обновляются автоматически в безопасном режиме.');
             };
             relationSelect.addEventListener('change', updateHint);
             updateHint();
@@ -2324,8 +2331,8 @@ class EditorDashboard {
         }
         if (workspaceNoteText) {
             workspaceNoteText.textContent = hasTheory
-                ? 'Эта теория живет в общей библиотеке материалов. Комплексы, унаследовавшие тему, будут брать ее как основной источник.'
-                : 'Теории хранятся в общей библиотеке. Вы можете выбрать готовый материал или сначала создать новую теорию.';
+                ? wt('db.k098', 'Эта теория живет в общей библиотеке материалов. Комплексы, унаследовавшие тему, будут брать ее как основной источник.')
+                : wt('db.k099', 'Теории хранятся в общей библиотеке. Вы можете выбрать готовый материал или сначала создать новую теорию.');
         }
     }
 
@@ -2396,7 +2403,7 @@ class EditorDashboard {
     async createAndLinkTopicTheory() {
         if (!this.topicTheoryModalState.topicId) return;
         const topic = this.getTopicRow(this.topicTheoryModalState.moduleId, this.topicTheoryModalState.topicId);
-        const defaultTitle = `${topic?.name || this.topicTheoryModalState.topicId} — Теория`;
+        const defaultTitle = `${topic?.name || this.topicTheoryModalState.topicId} — ${wt('db.k100', 'Теория')}`;
 
         // Show custom modal instead of browser prompt
         const title = await this.showCreateTheoryModal(defaultTitle);
@@ -2411,7 +2418,7 @@ class EditorDashboard {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     title: title.trim() || defaultTitle,
-                    description: `Автоматически созданная теория для темы ${topic?.name || this.topicTheoryModalState.topicId}`
+                    description: `${wt('db.k101', 'Автоматически созданная теория для темы')} ${topic?.name || this.topicTheoryModalState.topicId}`
                 })
             });
             const data = await resp.json();
@@ -2429,11 +2436,11 @@ class EditorDashboard {
             }
 
             this.syncTopicTheoryContextActions();
-            this.setTopicTheorySummary('Теория создана и выбрана. Нажмите «Сохранить» для привязки к теме.', 'success');
+            this.setTopicTheorySummary(wt('db.k102', 'Теория создана и выбрана. Нажмите «Сохранить» для привязки к теме.'), 'success');
 
         } catch (error) {
             console.error('Failed to create and link theory:', error);
-            this.setTopicTheorySummary('Ошибка: не удалось создать теорию. Попробуйте снова.', 'error');
+            this.setTopicTheorySummary(wt('db.k103', 'Ошибка: не удалось создать теорию. Попробуйте снова.'), 'error');
         } finally {
             if (saveBtn) saveBtn.disabled = false;
         }
@@ -2517,8 +2524,8 @@ class EditorDashboard {
         const skipped = Number(summary?.skipped || 0);
         const compositeCount = Number(summary?.composite_count || 0);
         const mode = String(summary?.mode || 'safe');
-        const compositeSuffix = compositeCount > 0 ? `, составных наборов ${compositeCount}` : '';
-        return `Обновление комплексов (${mode}): затронуто ${impacted}, обновлено ${updated}, без изменений ${skipped}${compositeSuffix}.`;
+        const compositeSuffix = compositeCount > 0 ? `, ${wt('db.k104', 'составных наборов')} ${compositeCount}` : '';
+        return `${wt('db.k105', 'Обновление комплексов')} (${mode}): ${wt('db.k106', 'затронуто')} ${impacted}, ${wt('db.k107', 'обновлено')} ${updated}, ${wt('db.k108', 'без изменений')} ${skipped}${compositeSuffix}.`;
     }
 
     async loadTopicTheoryCatalog(force = false) {
@@ -2530,7 +2537,7 @@ class EditorDashboard {
         }
 
         const selectedValue = picker.value;
-        picker.innerHTML = '<option value="">Загрузка теорий...</option>';
+        picker.innerHTML = wt('db.k109', '<option value="">Загрузка теорий...</option>');
         try {
             const response = await fetch('/api/theories');
             const data = await response.json();
@@ -2541,7 +2548,7 @@ class EditorDashboard {
             const items = Array.isArray(data.items) ? data.items : [];
             this.topicTheoryCatalog = items;
 
-            picker.innerHTML = '<option value="">Без теории</option>';
+            picker.innerHTML = wt('db.k110', '<option value="">Без теории</option>');
             items.forEach((item) => {
                 const opt = document.createElement('option');
                 opt.value = item.id;
@@ -2554,12 +2561,12 @@ class EditorDashboard {
             }
         } catch (error) {
             console.error('[Dashboard] Failed to load theory catalog for topic modal', error);
-            picker.innerHTML = '<option value="">Не удалось загрузить теории</option>';
+            picker.innerHTML = wt('db.k111', '<option value="">Не удалось загрузить теории</option>');
             this.showVoiceToast({
                 severity: 'warning',
-                what: 'Список теорий не загружен.',
-                impact: 'Выбор теории для темы сейчас ограничен.',
-                next: 'Проверьте соединение и обновите список теорий.',
+                what: wt('db.k112', 'Список теорий не загружен.'),
+                impact: wt('db.k113', 'Выбор теории для темы сейчас ограничен.'),
+                next: wt('db.k114', 'Проверьте соединение и обновите список теорий.'),
             });
         }
     }
@@ -2640,7 +2647,7 @@ class EditorDashboard {
             const topicLabel = topic?.name || topicId;
             metaEl.textContent = `${moduleLabel} / ${topicLabel}`;
         }
-        this.setTopicTheorySummary('Загружаем текущее состояние темы...', 'info');
+        this.setTopicTheorySummary(wt('db.k115', 'Загружаем текущее состояние темы...'), 'info');
 
         modal.classList.remove('hidden');
         modal.classList.add('flex');
@@ -2667,7 +2674,7 @@ class EditorDashboard {
                 if (theoryId && !Array.from(picker.options).some((opt) => opt.value === theoryId)) {
                     const fallback = document.createElement('option');
                     fallback.value = theoryId;
-                    fallback.textContent = `Теория ${theoryId}`;
+                    fallback.textContent = `${wt('db.k116', 'Теория')} ${theoryId}`;
                     picker.appendChild(fallback);
                 }
                 picker.value = theoryId || '';
@@ -2678,17 +2685,17 @@ class EditorDashboard {
             if (data.propagation_preview) {
                 this.setTopicTheorySummary(this.formatTopicTheorySummary(data.propagation_preview), 'muted');
             } else {
-                this.setTopicTheorySummary('Нет данных о связанных комплексах.', 'muted');
+                this.setTopicTheorySummary(wt('db.k117', 'Нет данных о связанных комплексах.'), 'muted');
             }
         } catch (error) {
             console.error('[Dashboard] Failed to load topic theory link', error);
             this.syncTopicTheoryContextActions();
-            this.setTopicTheorySummary('Не удалось загрузить данные темы. Попробуйте позже.', 'error');
+            this.setTopicTheorySummary(wt('db.k118', 'Не удалось загрузить данные темы. Попробуйте позже.'), 'error');
             this.showVoiceToast({
                 severity: 'error',
-                what: 'Связь темы с теорией не загружена.',
-                impact: 'Текущая настройка темы неизвестна.',
-                next: 'Повторите попытку позже или проверьте сеть.',
+                what: wt('db.k119', 'Связь темы с теорией не загружена.'),
+                impact: wt('db.k120', 'Текущая настройка темы неизвестна.'),
+                next: wt('db.k121', 'Повторите попытку позже или проверьте сеть.'),
             });
         } finally {
             this.topicTheoryModalState.loading = false;
@@ -2724,7 +2731,7 @@ class EditorDashboard {
             saveBtn.disabled = true;
             saveBtn.classList.add('opacity-70');
         }
-        this.setTopicTheorySummary('Сохраняем...', 'info');
+        this.setTopicTheorySummary(wt('db.k122', 'Сохраняем...'), 'info');
 
         try {
             const response = await fetch(
@@ -2751,7 +2758,7 @@ class EditorDashboard {
                     tone
                 );
             } else {
-                this.setTopicTheorySummary('Связь темы сохранена.', 'success');
+                this.setTopicTheorySummary(wt('db.k123', 'Связь темы сохранена.'), 'success');
             }
 
             await this.loadCatalog();
@@ -2759,23 +2766,23 @@ class EditorDashboard {
             const compositeCount = propagationItems.filter((row) => row && row.status === 'composite').length;
             this.showVoiceToast({
                 severity: compositeCount > 0 ? 'info' : 'success',
-                what: 'Связь темы с теорией сохранена.',
+                what: wt('db.k124', 'Связь темы с теорией сохранена.'),
                 impact: compositeCount > 0
-                    ? 'Связанные комплексы синхронизированы; часть из них теперь использует составной набор теорий.'
-                    : 'Связанные комплексы-наследники синхронизированы автоматически.',
+                    ? wt('db.k125', 'Связанные комплексы синхронизированы; часть из них теперь использует составной набор теорий.')
+                    : wt('db.k126', 'Связанные комплексы-наследники синхронизированы автоматически.'),
                 next: compositeCount > 0
-                    ? 'Многотемные комплексы могут иметь несколько теорий одновременно. Это нормальный сценарий.'
-                    : 'Настройки темы успешно обновлены.',
+                    ? wt('db.k127', 'Многотемные комплексы могут иметь несколько теорий одновременно. Это нормальный сценарий.')
+                    : wt('db.k128', 'Настройки темы успешно обновлены.'),
             });
             this.closeTopicTheoryModal();
         } catch (error) {
             console.error('[Dashboard] Failed to save topic theory link', error);
-            this.setTopicTheorySummary('Сохранение не удалось. Проверьте данные и попробуйте снова.', 'error');
+            this.setTopicTheorySummary(wt('db.k129', 'Сохранение не удалось. Проверьте данные и попробуйте снова.'), 'error');
             this.showVoiceToast({
                 severity: 'error',
-                what: 'Связь темы с теорией не сохранена.',
-                impact: 'Настройки темы и комплексов остались прежними.',
-                next: 'Проверьте параметры синхронизации и повторите действие.',
+                what: wt('db.k130', 'Связь темы с теорией не сохранена.'),
+                impact: wt('db.k131', 'Настройки темы и комплексов остались прежними.'),
+                next: wt('db.k132', 'Проверьте параметры синхронизации и повторите действие.'),
             });
         } finally {
             this.topicTheoryModalState.saving = false;
@@ -2798,7 +2805,7 @@ class EditorDashboard {
         if (actionEl) {
             actionEl.classList.add('opacity-60', 'pointer-events-none');
             actionEl.textContent = 'sync';
-            actionEl.title = 'Синхронизация привязки темы...';
+            actionEl.title = wt('db.k133', 'Синхронизация привязки темы...');
         }
 
         try {
@@ -2817,9 +2824,9 @@ class EditorDashboard {
             if (!sourceTheoryId) {
                 this.showVoiceToast({
                     severity: 'warning',
-                    what: 'Быстрая синхронизация остановлена.',
-                    impact: 'У темы пока нет привязки к теории.',
-                    next: 'Сначала задайте теорию через menu_book, затем повторите синхронизацию.',
+                    what: wt('db.k134', 'Быстрая синхронизация остановлена.'),
+                    impact: wt('db.k135', 'У темы пока нет привязки к теории.'),
+                    next: wt('db.k136', 'Сначала задайте теорию через menu_book, затем повторите синхронизацию.'),
                 });
                 return;
             }
@@ -2849,13 +2856,13 @@ class EditorDashboard {
             const compositeCount = propagationItems.filter((row) => row && row.status === 'composite').length;
             this.showVoiceToast({
                 severity: compositeCount > 0 ? 'info' : 'success',
-                what: 'Привязка теории темы синхронизирована.',
+                what: wt('db.k137', 'Привязка теории темы синхронизирована.'),
                 impact: propagationSummary
                     ? this.formatTopicTheorySummary(propagationSummary, { dryRun: false })
-                    : 'Связанные комплексы получили актуальную версию привязки.',
+                    : wt('db.k138', 'Связанные комплексы получили актуальную версию привязки.'),
                 next: compositeCount > 0
-                    ? 'Часть комплексов использует несколько теорий по темам. Это нормальный составной режим.'
-                    : 'Можно продолжать работу в редакторе.',
+                    ? wt('db.k139', 'Часть комплексов использует несколько теорий по темам. Это нормальный составной режим.')
+                    : wt('db.k140', 'Можно продолжать работу в редакторе.'),
             });
 
             await this.loadCatalog();
@@ -2863,16 +2870,16 @@ class EditorDashboard {
             console.error('[Dashboard] Failed to run quick topic theory sync', error);
             this.showVoiceToast({
                 severity: 'error',
-                what: 'Быстрая синхронизация не выполнена.',
-                impact: 'Привязки теории в комплексах не были обновлены.',
-                next: 'Откройте настройки теории темы и повторите синхронизацию.',
+                what: wt('db.k141', 'Быстрая синхронизация не выполнена.'),
+                impact: wt('db.k142', 'Привязки теории в комплексах не были обновлены.'),
+                next: wt('db.k143', 'Откройте настройки теории темы и повторите синхронизацию.'),
             });
         } finally {
             this.topicTheorySyncInFlight.delete(syncKey);
             if (actionEl) {
                 actionEl.classList.remove('opacity-60', 'pointer-events-none');
                 actionEl.textContent = initialIcon || 'sync_alt';
-                actionEl.title = initialTitle || 'Синхронизировать привязку темы с комплексами';
+                actionEl.title = initialTitle || wt('db.k144', 'Синхронизировать привязку темы с комплексами');
             }
         }
     }
@@ -2964,13 +2971,13 @@ class EditorDashboard {
             forceResolveBtn.addEventListener('click', async () => {
                 const confirmed = (typeof NotificationUI !== 'undefined' && typeof NotificationUI.confirm === 'function')
                     ? await NotificationUI.confirm({
-                        title: 'Force resolve конфликтов?',
-                        message: 'Будет запущен sync в режиме all_force для выбранных элементов очереди.',
-                        confirmText: 'Запустить',
-                        cancelText: 'Отмена',
+                        title: wt('db.k145', 'Force resolve конфликтов?'),
+                        message: wt('db.k146', 'Будет запущен sync в режиме all_force для выбранных элементов очереди.'),
+                        confirmText: wt('db.k147', 'Запустить'),
+                        cancelText: wt('db.k148', 'Отмена'),
                         variant: 'warning'
                     })
-                    : window.confirm('Запустить force resolve для выбранных элементов?');
+                    : window.confirm(wt('db.k149', 'Запустить force resolve для выбранных элементов?'));
                 if (!confirmed) return;
                 await this.runTheoryHubBatchSync('selected', {
                     propagationMode: 'all_force',
@@ -3409,9 +3416,9 @@ class EditorDashboard {
         const normalized = String(createdVia || '').trim().toLowerCase();
         if (normalized === 'complex_builder') return 'Builder';
         if (normalized === 'manual_editor') return 'Editor';
-        if (normalized === 'archive_import') return 'Импорт';
-        if (normalized === 'topic_propagation') return 'Sync темы';
-        if (normalized === 'single_complex_sync') return 'Sync комплекса';
+        if (normalized === 'archive_import') return wt('db.k150', 'Импорт');
+        if (normalized === 'topic_propagation') return wt('db.k151', 'Sync темы');
+        if (normalized === 'single_complex_sync') return wt('db.k152', 'Sync комплекса');
         return 'Workspace';
     }
 
@@ -3419,7 +3426,7 @@ class EditorDashboard {
         const normalized = this.normalizeComplexOwnership({ ownership });
         const chips = [];
         if (normalized.isOwnedByCurrentUser) {
-            chips.push('<span class="inline-flex max-w-full items-center px-2 py-0.5 rounded-full border border-success-light bg-success-lighter text-[10px] font-semibold text-success-darker">моё</span>');
+            chips.push(wt('db.k153', '<span class="inline-flex max-w-full items-center px-2 py-0.5 rounded-full border border-success-light bg-success-lighter text-[10px] font-semibold text-success-darker">моё</span>'));
         } else if (normalized.hasOwner) {
             chips.push(`<span class="inline-flex max-w-full items-center px-2 py-0.5 rounded-full border border-border-subtle bg-surface-2 text-[10px] font-semibold text-text-secondary" title="${this.escapeHtml(normalized.createdByUserId)}">${this.escapeHtml(normalized.createdByUserId)}</span>`);
         }
@@ -3437,10 +3444,10 @@ class EditorDashboard {
 
     getTheoryHubOwnershipFilterLabel(value) {
         const normalized = this.normalizeTheoryHubOwnershipFilter(value);
-        if (normalized === 'mine') return 'Моё';
-        if (normalized === 'shared') return 'Общее';
-        if (normalized === 'imported') return 'Импорт';
-        return 'Все комплексы';
+        if (normalized === 'mine') return wt('db.k154', 'Моё');
+        if (normalized === 'shared') return wt('db.k155', 'Общее');
+        if (normalized === 'imported') return wt('db.k156', 'Импорт');
+        return wt('db.k157', 'Все комплексы');
     }
 
     matchesTheoryHubOwnershipFilter(ownership, filterValue = this.theoryHubState?.ownershipFilter) {
@@ -3524,16 +3531,16 @@ class EditorDashboard {
     }
 
     describeTheoryHubQueueReason(row) {
-        if (!row) return 'Требуется проверка синхронизации.';
+        if (!row) return wt('db.k158', 'Требуется проверка синхронизации.');
         if (row.status === 'conflict') {
             return row.topicTheoryIds?.length > 1
-                ? `Темы комплекса ссылаются на разные теории: ${row.topicTheoryIds.join(', ')}.`
-                : 'Обнаружен конфликт привязки теории между темами комплекса.';
+                ? `${wt('db.k159', 'Темы комплекса ссылаются на разные теории:')} ${row.topicTheoryIds.join(', ')}.`
+                : wt('db.k160', 'Обнаружен конфликт привязки теории между темами комплекса.');
         }
         if (row.needsSync) {
-            return 'Текущая theory_link комплекса не совпадает с вычисленной по темам.';
+            return wt('db.k161', 'Текущая theory_link комплекса не совпадает с вычисленной по темам.');
         }
-        return 'Требуется проверка синхронизации.';
+        return wt('db.k162', 'Требуется проверка синхронизации.');
     }
 
     filterTheoryHubRows() {
@@ -3602,7 +3609,7 @@ class EditorDashboard {
         if (focusEl) {
             const currentValue = String(this.theoryHubState.focusTheoryId || '').trim();
             const rows = Array.isArray(filteredTheoryRows) ? filteredTheoryRows : [];
-            focusEl.innerHTML = '<option value="">Все теории</option>';
+            focusEl.innerHTML = wt('db.k163', '<option value="">Все теории</option>');
             rows.forEach((row) => {
                 const option = document.createElement('option');
                 option.value = row.theoryId;
@@ -3626,8 +3633,8 @@ class EditorDashboard {
         if (ownershipNoteEl) {
             const scopeLabel = this.getTheoryHubOwnershipFilterLabel(this.theoryHubState.ownershipFilter);
             ownershipNoteEl.textContent = this.normalizeTheoryHubOwnershipFilter(this.theoryHubState.ownershipFilter) === 'all'
-                ? 'Theory Hub фильтрует общую библиотеку комплексов. Прогресс по ним остаётся личным.'
-                : `Scope «${scopeLabel}» оставляет видимыми только соответствующие комплексы из общей библиотеки. Прогресс по ним остаётся личным.`;
+                ? wt('db.k164', 'Theory Hub фильтрует общую библиотеку комплексов. Прогресс по ним остаётся личным.')
+                : `Scope «${scopeLabel}» ${wt('db.k165', 'оставляет видимыми только соответствующие комплексы из общей библиотеки. Прогресс по ним остаётся личным.')}`;
         }
 
         const selectedSet = new Set(Array.isArray(this.theoryHubState.selectedComplexIds)
@@ -3668,14 +3675,14 @@ class EditorDashboard {
 
         const focusTheoryId = String(this.theoryHubState.focusTheoryId || '').trim();
         if (!focusTheoryId) {
-            host.innerHTML = '<div class="text-sm text-text-secondary">Выберите теорию в фильтре, чтобы увидеть impact map и действия.</div>';
+            host.innerHTML = wt('db.k166', '<div class="text-sm text-text-secondary">Выберите теорию в фильтре, чтобы увидеть impact map и действия.</div>');
             return;
         }
 
         const row = (Array.isArray(theoryRows) ? theoryRows : []).find((item) => String(item?.theoryId || '').trim() === focusTheoryId);
         if (!row) {
             const scopeLabel = this.getTheoryHubOwnershipFilterLabel(this.theoryHubState.ownershipFilter);
-            host.innerHTML = `<div class="text-sm text-text-secondary">Для выбранной теории в scope «${this.escapeHtml(scopeLabel)}» пока нет связанных topic/complex.</div>`;
+            host.innerHTML = `<div class="text-sm text-text-secondary">${wt('db.k167', 'Для выбранной теории в scope «')}${this.escapeHtml(scopeLabel)}» ${wt('db.k168', 'пока нет связанных topic/complex.')}</div>`;
             return;
         }
 
@@ -3705,7 +3712,7 @@ class EditorDashboard {
                         class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-primary text-primary-contrast text-xs font-semibold hover:bg-primary-dark transition-colors ${startCandidate ? '' : 'opacity-60 cursor-not-allowed'}"
                         ${startCandidate ? '' : 'disabled'}>
                         <span class="material-symbols-outlined text-[15px]">play_arrow</span>
-                        Тренировать
+                        ${wt('db.k169', 'Тренировать')}
                     </button>
                 </div>
                 <div class="mt-2 flex flex-wrap gap-1">
@@ -3714,15 +3721,15 @@ class EditorDashboard {
                     <span class="inline-flex items-center px-2 py-0.5 rounded-full border border-warning-light bg-warning-lighter text-[10px] text-warning-darker">stale: ${row.staleComplexes || 0}</span>
                     <span class="inline-flex items-center px-2 py-0.5 rounded-full border border-error-light bg-error-lighter text-[10px] text-error-text">conflicts: ${row.conflictComplexes || 0}</span>
                 </div>
-                <div class="editor-theory-hub-secondary mt-2 text-[11px]">Темы</div>
-                <div class="mt-1 flex flex-wrap gap-1">${topicPreview || '<span class="text-[11px] text-text-muted">Нет связанных тем</span>'}</div>
-                <div class="editor-theory-hub-secondary mt-2 text-[11px]">Комплексы</div>
-                <div class="mt-1 flex flex-wrap gap-2">${complexPreview || '<span class="text-[11px] text-text-muted">Нет связанных комплексов</span>'}</div>
+                <div class="editor-theory-hub-secondary mt-2 text-[11px]">${wt('db.k170', 'Темы')}</div>
+                <div class="mt-1 flex flex-wrap gap-1">${topicPreview || wt('db.k171', '<span class="text-[11px] text-text-muted">Нет связанных тем</span>')}</div>
+                <div class="editor-theory-hub-secondary mt-2 text-[11px]">${wt('db.k172', 'Комплексы')}</div>
+                <div class="mt-1 flex flex-wrap gap-2">${complexPreview || wt('db.k173', '<span class="text-[11px] text-text-muted">Нет связанных комплексов</span>')}</div>
                 <div class="editor-theory-hub-action-row mt-3 flex gap-2">
                     <button type="button" data-action="hub-open-complexes-for-theory" data-theory-id="${this.escapeHtml(row.theoryId)}"
                         class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border-subtle bg-surface-2 text-xs font-semibold text-text-secondary hover:text-primary hover:border-primary transition-colors">
                         <span class="material-symbols-outlined text-[15px]">dashboard</span>
-                        К комплексам
+                        ${wt('db.k174', 'К комплексам')}
                     </button>
                 </div>
             </div>
@@ -3866,9 +3873,9 @@ class EditorDashboard {
         if (!summaryHost || !mapHost || !queueHost) return;
 
         if (this.theoryHubState.loading) {
-            summaryHost.innerHTML = '<span class="inline-flex items-center px-2.5 py-1 rounded-full border border-border-subtle bg-surface-2 text-xs text-text-secondary">Загрузка...</span>';
-            mapHost.innerHTML = '<div class="text-sm text-text-secondary">Собираем граф связей...</div>';
-            queueHost.innerHTML = '<div class="text-sm text-text-secondary">Собираем очередь конфликтов...</div>';
+            summaryHost.innerHTML = wt('db.k175', '<span class="inline-flex items-center px-2.5 py-1 rounded-full border border-border-subtle bg-surface-2 text-xs text-text-secondary">Загрузка...</span>');
+            mapHost.innerHTML = wt('db.k176', '<div class="text-sm text-text-secondary">Собираем граф связей...</div>');
+            queueHost.innerHTML = wt('db.k177', '<div class="text-sm text-text-secondary">Собираем очередь конфликтов...</div>');
             this.renderTheoryHubImpact([], []);
             return;
         }
@@ -3883,21 +3890,21 @@ class EditorDashboard {
         summaryHost.replaceChildren();
         const summary = this.theoryHubState.summary || {};
         const scopeLabel = this.getTheoryHubOwnershipFilterLabel(this.theoryHubState.ownershipFilter);
-        summaryHost.appendChild(this.createTheoryHubSummaryChip('Теории', `${summary.mappedTheories || 0}/${summary.totalTheories || 0}`, 'info'));
-        summaryHost.appendChild(this.createTheoryHubSummaryChip('Темы', `${summary.mappedTopics || 0}/${summary.totalTopics || 0}`, 'neutral'));
-        summaryHost.appendChild(this.createTheoryHubSummaryChip('Темы с теорией', summary.topicsWithTheory || 0, 'neutral'));
-        summaryHost.appendChild(this.createTheoryHubSummaryChip('Комплексы', summary.totalComplexes || 0, 'neutral'));
+        summaryHost.appendChild(this.createTheoryHubSummaryChip(wt('db.k178', 'Теории'), `${summary.mappedTheories || 0}/${summary.totalTheories || 0}`, 'info'));
+        summaryHost.appendChild(this.createTheoryHubSummaryChip(wt('db.k179', 'Темы'), `${summary.mappedTopics || 0}/${summary.totalTopics || 0}`, 'neutral'));
+        summaryHost.appendChild(this.createTheoryHubSummaryChip(wt('db.k180', 'Темы с теорией'), summary.topicsWithTheory || 0, 'neutral'));
+        summaryHost.appendChild(this.createTheoryHubSummaryChip(wt('db.k181', 'Комплексы'), summary.totalComplexes || 0, 'neutral'));
         summaryHost.appendChild(this.createTheoryHubSummaryChip('Scope', scopeLabel, 'neutral'));
-        summaryHost.appendChild(this.createTheoryHubSummaryChip('Видимые комплексы', complexRows.length, complexRows.length > 0 ? 'success' : 'warning'));
-        summaryHost.appendChild(this.createTheoryHubSummaryChip('Связей', summary.linkCount || 0, 'success'));
-        summaryHost.appendChild(this.createTheoryHubSummaryChip('Очередь', summary.queueCount || 0, (summary.queueCount || 0) > 0 ? 'warning' : 'success'));
-        summaryHost.appendChild(this.createTheoryHubSummaryChip('Конфликты', summary.conflictCount || 0, (summary.conflictCount || 0) > 0 ? 'danger' : 'success'));
+        summaryHost.appendChild(this.createTheoryHubSummaryChip(wt('db.k182', 'Видимые комплексы'), complexRows.length, complexRows.length > 0 ? 'success' : 'warning'));
+        summaryHost.appendChild(this.createTheoryHubSummaryChip(wt('db.k183', 'Связей'), summary.linkCount || 0, 'success'));
+        summaryHost.appendChild(this.createTheoryHubSummaryChip(wt('db.k184', 'Очередь'), summary.queueCount || 0, (summary.queueCount || 0) > 0 ? 'warning' : 'success'));
+        summaryHost.appendChild(this.createTheoryHubSummaryChip(wt('db.k185', 'Конфликты'), summary.conflictCount || 0, (summary.conflictCount || 0) > 0 ? 'danger' : 'success'));
 
         mapHost.replaceChildren();
         if (!topicRows.length) {
             const empty = document.createElement('div');
             empty.className = 'rounded-xl border border-border-subtle bg-surface-1 p-4 text-sm text-text-secondary';
-            empty.textContent = 'По текущему фильтру нет topic-узлов для карты.';
+            empty.textContent = wt('db.k186', 'По текущему фильтру нет topic-узлов для карты.');
             mapHost.appendChild(empty);
         } else {
             topicRows.forEach((row) => {
@@ -3905,8 +3912,8 @@ class EditorDashboard {
                 card.className = 'rounded-xl border border-border-subtle bg-surface-1 p-3';
                 const hasLinks = row.linkedComplexes > 0;
                 const theoryBadge = row.hasTheoryLink
-                    ? `<button type="button" data-action="hub-focus-theory" data-theory-id="${this.escapeHtml(row.theoryId)}" class="inline-flex items-center px-2 py-0.5 rounded-full border border-primary-light bg-primary-lighter text-[11px] font-semibold text-primary-darker hover:bg-primary-light transition-colors">теория: ${this.escapeHtml(row.theoryId)}</button>`
-                    : '<span class="inline-flex items-center px-2 py-0.5 rounded-full border border-border-subtle bg-surface-2 text-[11px] font-semibold text-text-muted">без теории</span>';
+                    ? `<button type="button" data-action="hub-focus-theory" data-theory-id="${this.escapeHtml(row.theoryId)}" class="inline-flex items-center px-2 py-0.5 rounded-full border border-primary-light bg-primary-lighter text-[11px] font-semibold text-primary-darker hover:bg-primary-light transition-colors">${wt('db.k187', 'теория:')} ${this.escapeHtml(row.theoryId)}</button>`
+                    : wt('db.k188', '<span class="inline-flex items-center px-2 py-0.5 rounded-full border border-border-subtle bg-surface-2 text-[11px] font-semibold text-text-muted">без теории</span>');
                 const complexPreview = row.complexes.slice(0, 3)
                     .map((complexRow) => this.renderTheoryHubComplexPreview(complexRow, { action: 'hub-open-complex' }))
                     .join('');
@@ -3920,20 +3927,20 @@ class EditorDashboard {
                         </div>
                         <div class="editor-theory-hub-badge-row flex flex-wrap items-center gap-1 shrink-0">
                             ${theoryBadge}
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full border border-border-subtle bg-surface-2 text-[11px] text-text-secondary">комплексы: ${row.linkedComplexes}</span>
-                            ${row.conflictComplexes > 0 ? `<span class="inline-flex items-center px-2 py-0.5 rounded-full border border-error-light bg-error-lighter text-[11px] text-error-text">конфликты: ${row.conflictComplexes}</span>` : ''}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full border border-border-subtle bg-surface-2 text-[11px] text-text-secondary">${wt('db.k189', 'комплексы:')} ${row.linkedComplexes}</span>
+                            ${row.conflictComplexes > 0 ? `<span class="inline-flex items-center px-2 py-0.5 rounded-full border border-error-light bg-error-lighter text-[11px] text-error-text">${wt('db.k389', 'конфликты:')} ${row.conflictComplexes}</span>` : ''}
                         </div>
                     </div>
-                    <div class="mt-2 flex flex-wrap gap-2">${complexPreview || '<span class="text-[11px] text-text-muted">Комплексы не используют эту тему.</span>'}${moreCount > 0 ? `<span class="text-[10px] text-text-muted px-1 py-0.5">+${moreCount}</span>` : ''}</div>
+                    <div class="mt-2 flex flex-wrap gap-2">${complexPreview || wt('db.k190', '<span class="text-[11px] text-text-muted">Комплексы не используют эту тему.</span>')}${moreCount > 0 ? `<span class="text-[10px] text-text-muted px-1 py-0.5">+${moreCount}</span>` : ''}</div>
                     <div class="editor-theory-hub-action-row mt-3 flex items-center gap-2">
                         <button type="button" data-action="hub-sync-topic" data-module-id="${this.escapeHtml(row.moduleId)}" data-topic-id="${this.escapeHtml(row.topicId)}"
                             class="px-3 py-1.5 rounded-lg bg-primary text-primary-contrast text-xs font-semibold hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             ${hasLinks ? '' : 'disabled'}>
-                            Sync тему
+                            Sync ${wt('db.k191', 'тему')}
                         </button>
                         <button type="button" data-action="hub-open-topic" data-module-id="${this.escapeHtml(row.moduleId)}" data-topic-id="${this.escapeHtml(row.topicId)}"
                             class="px-3 py-1.5 rounded-lg border border-border-subtle bg-surface-2 text-text-secondary text-xs font-semibold hover:text-primary hover:border-primary transition-colors">
-                            Теория темы
+                            ${wt('db.k192', 'Теория темы')}
                         </button>
                     </div>
                 `;
@@ -3946,8 +3953,8 @@ class EditorDashboard {
             const empty = document.createElement('div');
             empty.className = 'rounded-xl border border-success-light bg-success-lighter p-4';
             empty.innerHTML = `
-                <p class="text-sm font-semibold text-success-darker">Конфликтов и рассинхронов не найдено</p>
-                <p class="text-xs text-success-darker mt-1">Текущие привязки теории согласованы с темами.</p>
+                <p class="text-sm font-semibold text-success-darker">${wt('db.k193', 'Конфликтов и рассинхронов не найдено')}</p>
+                <p class="text-xs text-success-darker mt-1">${wt('db.k194', 'Текущие привязки теории согласованы с темами.')}</p>
             `;
             queueHost.appendChild(empty);
         } else {
@@ -3981,20 +3988,20 @@ class EditorDashboard {
                     </div>
                     <p class="editor-theory-hub-secondary mt-2 text-[11px]">${this.escapeHtml(this.describeTheoryHubQueueReason(row))}</p>
                     <div class="editor-theory-hub-badge-row mt-2 flex flex-wrap gap-1">
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-full border border-border-subtle bg-surface-2 text-[10px] text-text-secondary">режим: ${this.escapeHtml(row.mode)}</span>
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-full border border-border-subtle bg-surface-2 text-[10px] text-text-secondary">тем: ${row.topicCount}</span>
-                        ${row.theoryId ? `<span class="inline-flex items-center px-2 py-0.5 rounded-full border border-primary-light bg-primary-lighter text-[10px] text-primary-darker">theory комплекса: ${this.escapeHtml(row.theoryId)}</span>` : ''}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full border border-border-subtle bg-surface-2 text-[10px] text-text-secondary">${wt('db.k195', 'режим:')} ${this.escapeHtml(row.mode)}</span>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full border border-border-subtle bg-surface-2 text-[10px] text-text-secondary">${wt('db.k196', 'тем:')} ${row.topicCount}</span>
+                        ${row.theoryId ? `<span class="inline-flex items-center px-2 py-0.5 rounded-full border border-primary-light bg-primary-lighter text-[10px] text-primary-darker">${wt('db.k391', 'theory комплекса:')} ${this.escapeHtml(row.theoryId)}</span>` : ''}
                         ${ownershipBadges}
                         ${theoryBadges}
                     </div>
                     <div class="editor-theory-hub-action-row mt-3 flex items-center gap-2">
                         <button type="button" data-action="hub-sync-complex" data-complex-id="${this.escapeHtml(row.id)}"
                             class="px-3 py-1.5 rounded-lg bg-primary text-primary-contrast text-xs font-semibold hover:bg-primary-dark transition-colors">
-                            Sync комплекс
+                            Sync ${wt('db.k197', 'комплекс')}
                         </button>
                         <button type="button" data-action="hub-open-complex" data-complex-id="${this.escapeHtml(row.id)}"
                             class="px-3 py-1.5 rounded-lg border border-border-subtle bg-surface-2 text-text-secondary text-xs font-semibold hover:text-primary hover:border-primary transition-colors">
-                            Открыть
+                            ${wt('db.k198', 'Открыть')}
                         </button>
                     </div>
                 `;
@@ -4079,9 +4086,9 @@ class EditorDashboard {
             };
             this.showVoiceToast({
                 severity: 'warning',
-                what: 'Theory Hub пока недоступен.',
-                impact: 'Карта связей и очередь конфликтов не загружены.',
-                next: 'Проверьте сеть и повторите обновление.',
+                what: wt('db.k199', 'Theory Hub пока недоступен.'),
+                impact: wt('db.k200', 'Карта связей и очередь конфликтов не загружены.'),
+                next: wt('db.k201', 'Проверьте сеть и повторите обновление.'),
             });
         } finally {
             this.renderTheoryHub();
@@ -4106,7 +4113,7 @@ class EditorDashboard {
         if (actionEl) {
             actionEl.disabled = true;
             actionEl.classList.add('opacity-60', 'pointer-events-none');
-            actionEl.textContent = 'Синхр...';
+            actionEl.textContent = wt('db.k202', 'Синхр...');
         }
 
         try {
@@ -4126,9 +4133,9 @@ class EditorDashboard {
                 if (!silent) {
                     this.showVoiceToast({
                         severity: 'warning',
-                        what: 'Sync темы остановлен.',
-                        impact: 'У темы нет привязки к теории.',
-                        next: 'Сначала привяжите теорию к теме.',
+                        what: wt('db.k203', 'Sync темы остановлен.'),
+                        impact: wt('db.k204', 'У темы нет привязки к теории.'),
+                        next: wt('db.k205', 'Сначала привяжите теорию к теме.'),
                     });
                 }
                 return { ok: false, reason: 'topic_has_no_theory' };
@@ -4161,11 +4168,11 @@ class EditorDashboard {
                 const severity = conflictCount > 0 ? 'warning' : 'success';
                 this.showVoiceToast({
                     severity,
-                    what: 'Sync темы выполнен.',
+                    what: wt('db.k206', 'Sync темы выполнен.'),
                     impact: propagationSummary
                         ? this.formatTopicTheorySummary(propagationSummary)
-                        : 'Связанные комплексы получили обновления.',
-                    next: conflictCount > 0 ? 'Проверьте complex entries со статусом conflict.' : 'Можно продолжать работу.',
+                        : wt('db.k207', 'Связанные комплексы получили обновления.'),
+                    next: conflictCount > 0 ? wt('db.k208', 'Проверьте complex entries со статусом conflict.') : wt('db.k209', 'Можно продолжать работу.'),
                 });
             }
 
@@ -4178,9 +4185,9 @@ class EditorDashboard {
             if (!silent) {
                 this.showVoiceToast({
                     severity: 'error',
-                    what: 'Sync темы не выполнен.',
-                    impact: 'Комплексы сохранили прежние привязки.',
-                    next: 'Проверьте параметры sync и повторите.',
+                    what: wt('db.k210', 'Sync темы не выполнен.'),
+                    impact: wt('db.k211', 'Комплексы сохранили прежние привязки.'),
+                    next: wt('db.k212', 'Проверьте параметры sync и повторите.'),
                 });
             }
             return { ok: false, reason: 'request_failed', error };
@@ -4189,7 +4196,7 @@ class EditorDashboard {
             if (actionEl) {
                 actionEl.disabled = false;
                 actionEl.classList.remove('opacity-60', 'pointer-events-none');
-                actionEl.textContent = initialText || 'Синхр. тему';
+                actionEl.textContent = initialText || wt('db.k213', 'Синхр. тему');
                 actionEl.title = initialTitle || actionEl.title;
             }
         }
@@ -4210,7 +4217,7 @@ class EditorDashboard {
         if (actionEl) {
             actionEl.disabled = true;
             actionEl.classList.add('opacity-60', 'pointer-events-none');
-            actionEl.textContent = 'Синхр...';
+            actionEl.textContent = wt('db.k214', 'Синхр...');
         }
 
         try {
@@ -4237,11 +4244,11 @@ class EditorDashboard {
                     : 'success';
                 this.showVoiceToast({
                     severity,
-                    what: `Sync комплекса ${complexId} выполнен.`,
-                    impact: `Статус: ${status}, action: ${action || 'none'}${reason ? `, reason: ${reason}` : ''}.`,
+                    what: `Sync ${wt('db.k215', 'комплекса')} ${complexId} ${wt('db.k216', 'выполнен.')}`,
+                    impact: `${wt('db.k217', 'Статус:')} ${status}, action: ${action || 'none'}${reason ? `, reason: ${reason}` : ''}.`,
                     next: status === 'conflict'
-                        ? 'Проверьте темы комплекса и выровняйте theory-link.'
-                        : 'Можно продолжать работу.',
+                        ? wt('db.k218', 'Проверьте темы комплекса и выровняйте theory-link.')
+                        : wt('db.k219', 'Можно продолжать работу.'),
                 });
             }
 
@@ -4254,9 +4261,9 @@ class EditorDashboard {
             if (!silent) {
                 this.showVoiceToast({
                     severity: 'error',
-                    what: 'Синхронизация комплекса не выполнена.',
-                    impact: `Комплекс ${complexId} сохранил прежнее состояние.`,
-                    next: 'Проверьте настройки режима sync и повторите попытку.',
+                    what: wt('db.k220', 'Синхронизация комплекса не выполнена.'),
+                    impact: `${wt('db.k221', 'Комплекс')} ${complexId} ${wt('db.k222', 'сохранил прежнее состояние.')}`,
+                    next: wt('db.k223', 'Проверьте настройки режима sync и повторите попытку.'),
                 });
             }
             return { ok: false, reason: 'request_failed', error };
@@ -4265,7 +4272,7 @@ class EditorDashboard {
             if (actionEl) {
                 actionEl.disabled = false;
                 actionEl.classList.remove('opacity-60', 'pointer-events-none');
-                actionEl.innerHTML = initialHtml || 'Синхр. комплекс';
+                actionEl.innerHTML = initialHtml || wt('db.k224', 'Синхр. комплекс');
             }
         }
     }
@@ -4281,9 +4288,9 @@ class EditorDashboard {
         if (!topicRows.length) {
             this.showVoiceToast({
                 severity: 'warning',
-                what: 'Sync all остановлен.',
-                impact: 'Нет тем, связанных с комплексами.',
-                next: 'Добавьте комплексы или привяжите темы к существующим комплексам.',
+                what: wt('db.k225', 'Sync all остановлен.'),
+                impact: wt('db.k226', 'Нет тем, связанных с комплексами.'),
+                next: wt('db.k227', 'Добавьте комплексы или привяжите темы к существующим комплексам.'),
             });
             return;
         }
@@ -4292,7 +4299,7 @@ class EditorDashboard {
         const initialHtml = syncAllBtn.innerHTML;
         syncAllBtn.disabled = true;
         syncAllBtn.classList.add('opacity-60', 'pointer-events-none');
-        syncAllBtn.innerHTML = '<span class="material-symbols-outlined text-[16px] animate-spin">progress_activity</span> Синхр...';
+        syncAllBtn.innerHTML = wt('db.k228', '<span class="material-symbols-outlined text-[16px] animate-spin">progress_activity</span> Синхр...');
 
         let successCount = 0;
         let failedCount = 0;
@@ -4323,11 +4330,11 @@ class EditorDashboard {
                 : (conflictCount > 0 ? 'warning' : 'success');
             this.showVoiceToast({
                 severity,
-                what: 'Sync all выполнен.',
-                impact: `Тем обработано: ${topicRows.length}, успешно: ${successCount}, пропущено (без теории): ${skippedNoTheoryCount}, с ошибками: ${failedCount}, conflicts: ${conflictCount}.`,
+                what: wt('db.k229', 'Sync all выполнен.'),
+                impact: `${wt('db.k230', 'Тем обработано:')} ${topicRows.length}, ${wt('db.k231', 'успешно:')} ${successCount}, ${wt('db.k232', 'пропущено')} (${wt('db.k233', 'без теории')}): ${skippedNoTheoryCount}, ${wt('db.k234', 'с ошибками:')} ${failedCount}, conflicts: ${conflictCount}.`,
                 next: failedCount > 0
-                    ? 'Проверьте лог и повторите sync для проблемных тем.'
-                    : 'Theory Hub обновлен по текущему состоянию.',
+                    ? wt('db.k235', 'Проверьте лог и повторите sync для проблемных тем.')
+                    : wt('db.k236', 'Theory Hub обновлен по текущему состоянию.'),
             });
         } finally {
             syncAllBtn.disabled = false;
@@ -4350,9 +4357,9 @@ class EditorDashboard {
         if (!candidateIds.length) {
             this.showVoiceToast({
                 severity: 'warning',
-                what: 'Batch sync остановлен.',
-                impact: 'В Theory Hub нет выбранных complex-элементов.',
-                next: 'Отметьте нужные complex entries в conflict queue.',
+                what: wt('db.k237', 'Batch sync остановлен.'),
+                impact: wt('db.k238', 'В Theory Hub нет выбранных complex-элементов.'),
+                next: wt('db.k239', 'Отметьте нужные complex entries в conflict queue.'),
             });
             return;
         }
@@ -4394,10 +4401,10 @@ class EditorDashboard {
                     ? 'warning'
                     : (conflictCount > 0 ? 'warning' : 'success'),
                 what: effectiveOptions.propagationMode === 'all_force'
-                    ? 'Force resolve очереди завершён.'
-                    : 'Batch sync очереди завершён.',
-                impact: `Обработано complexes: ${candidateIds.length}, успех: ${successCount}, conflicts: ${conflictCount}, errors: ${failedCount}.`,
-                next: 'Theory Hub обновлён по текущему состоянию.',
+                    ? wt('db.k240', 'Force resolve очереди завершён.')
+                    : wt('db.k241', 'Batch sync очереди завершён.'),
+                impact: `${wt('db.k242', 'Обработано complexes:')} ${candidateIds.length}, ${wt('db.k243', 'успех:')} ${successCount}, conflicts: ${conflictCount}, errors: ${failedCount}.`,
+                next: wt('db.k244', 'Theory Hub обновлён по текущему состоянию.'),
             });
         } finally {
             toggleTargets.forEach((btn) => {
@@ -4435,9 +4442,9 @@ class EditorDashboard {
         if (!complexId) {
             this.showVoiceToast({
                 severity: 'warning',
-                what: 'Старт тренировки остановлен.',
-                impact: 'Для выбранной теории нет доступных комплексов.',
-                next: 'Сначала свяжите теорию с topic/complex.',
+                what: wt('db.k245', 'Старт тренировки остановлен.'),
+                impact: wt('db.k246', 'Для выбранной теории нет доступных комплексов.'),
+                next: wt('db.k247', 'Сначала свяжите теорию с topic/complex.'),
             });
             return;
         }
@@ -4479,9 +4486,9 @@ class EditorDashboard {
             console.error('[Dashboard] Failed to start theory-focused training', error);
             this.showVoiceToast({
                 severity: 'error',
-                what: 'Старт тренировки не выполнен.',
-                impact: 'Сценарий «из теории в complex» не состоялся.',
-                next: 'Проверьте complex entry и повторите запуск.',
+                what: wt('db.k248', 'Старт тренировки не выполнен.'),
+                impact: wt('db.k249', 'Сценарий «из теории в complex» не состоялся.'),
+                next: wt('db.k250', 'Проверьте complex entry и повторите запуск.'),
             });
         }
     }
@@ -4503,9 +4510,9 @@ class EditorDashboard {
         if (!name) {
             this.showVoiceToast({
                 severity: 'warning',
-                what: 'Создание темы приостановлено.',
-                impact: 'Название темы пустое.',
-                next: 'Введите название и повторите действие.',
+                what: wt('db.k251', 'Создание темы приостановлено.'),
+                impact: wt('db.k252', 'Название темы пустое.'),
+                next: wt('db.k253', 'Введите название и повторите действие.'),
             });
             return;
         }
@@ -4530,18 +4537,18 @@ class EditorDashboard {
             } else {
                 this.showVoiceToast({
                     severity: 'error',
-                    what: 'Тема не создана.',
-                    impact: 'Структура модуля осталась без изменений.',
-                    next: data?.error ? `Проверьте данные (${data.error}) и повторите.` : 'Проверьте данные и повторите создание.',
+                    what: wt('db.k254', 'Тема не создана.'),
+                    impact: wt('db.k255', 'Структура модуля осталась без изменений.'),
+                    next: data?.error ? `${wt('db.k256', 'Проверьте данные')} (${data.error}) ${wt('db.k257', 'и повторите.')}` : wt('db.k258', 'Проверьте данные и повторите создание.'),
                 });
             }
         } catch (err) {
             console.error(err);
             this.showVoiceToast({
                 severity: 'error',
-                what: 'Тема не создана из-за сетевой ошибки.',
-                impact: 'Изменения не были отправлены.',
-                next: 'Проверьте сеть и повторите действие.',
+                what: wt('db.k259', 'Тема не создана из-за сетевой ошибки.'),
+                impact: wt('db.k260', 'Изменения не были отправлены.'),
+                next: wt('db.k261', 'Проверьте сеть и повторите действие.'),
             });
         }
     }
@@ -4564,9 +4571,9 @@ class EditorDashboard {
                 if (this.isTaskCreationBlocked()) {
                     this.showVoiceToast({
                         severity: 'warning',
-                        what: 'Черновик создан.',
-                        impact: this.getTaskDraftNotice() || 'Сохранение нового задания будет недоступно, пока не освободится слот.',
-                        next: 'Можно подготовить черновик и сохранить его позже.',
+                        what: wt('db.k262', 'Черновик создан.'),
+                        impact: this.getTaskDraftNotice() || wt('db.k263', 'Сохранение нового задания будет недоступно, пока не освободится слот.'),
+                        next: wt('db.k264', 'Можно подготовить черновик и сохранить его позже.'),
                         timeout: 5000,
                     });
                 }
@@ -4581,18 +4588,18 @@ class EditorDashboard {
             } else {
                 this.showVoiceToast({
                     severity: 'error',
-                    what: 'Задание не создано.',
-                    impact: 'Текущая тема не изменилась.',
-                    next: data?.error ? `Проверьте данные (${data.error}) и повторите.` : 'Проверьте параметры и повторите создание.',
+                    what: wt('db.k265', 'Задание не создано.'),
+                    impact: wt('db.k266', 'Текущая тема не изменилась.'),
+                    next: data?.error ? `${wt('db.k267', 'Проверьте данные')} (${data.error}) ${wt('db.k268', 'и повторите.')}` : wt('db.k269', 'Проверьте параметры и повторите создание.'),
                 });
             }
         } catch (error) {
             console.error("Error creating task:", error);
             this.showVoiceToast({
                 severity: 'error',
-                what: 'Задание не создано из-за сетевой ошибки.',
-                impact: 'Изменения не были отправлены на сервер.',
-                next: 'Проверьте сеть и повторите действие.',
+                what: wt('db.k270', 'Задание не создано из-за сетевой ошибки.'),
+                impact: wt('db.k271', 'Изменения не были отправлены на сервер.'),
+                next: wt('db.k272', 'Проверьте сеть и повторите действие.'),
             });
         }
     }
@@ -4646,8 +4653,8 @@ class EditorDashboard {
             hint.className = 'flex flex-col items-center gap-2 px-3 py-6 text-center';
             hint.innerHTML = `
                 <span class="material-symbols-outlined text-2xl text-text-disabled">folder_open</span>
-                <p class="editor-sidebar-empty-copy text-xs font-medium">Модулей пока нет.</p>
-                <p class="editor-sidebar-empty-copy text-xs">Нажмите «+» чтобы создать первый модуль</p>
+                <p class="editor-sidebar-empty-copy text-xs font-medium">${wt('db.k273', 'Модулей пока нет.')}</p>
+                <p class="editor-sidebar-empty-copy text-xs">${wt('db.k274', 'Нажмите «')}+» ${wt('db.k275', 'чтобы создать первый модуль')}</p>
             `;
             navContainer.appendChild(hint);
         }
@@ -4708,10 +4715,10 @@ class EditorDashboard {
         if (!tasksToRender.length) {
             const emptyCard = this.createEmptyStateCard(
                 this.showPremiumArchiveTasks
-                    ? 'В архиве Premium нет заданий для текущего раздела'
+                    ? wt('db.k276', 'В архиве Premium нет заданий для текущего раздела')
                     : isFiltered && this.currentSearchQuery
-                    ? `По запросу «${this.currentSearchQuery.trim()}» ничего не найдено`
-                    : 'Задания не найдены'
+                    ? `${wt('db.k277', 'По запросу «')}${this.currentSearchQuery.trim()}» ${wt('db.k278', 'ничего не найдено')}`
+                    : wt('db.k279', 'Задания не найдены')
             );
             gridContainer.appendChild(emptyCard);
             return;
@@ -4807,16 +4814,16 @@ class EditorDashboard {
         article.dataset.taskId = uniqueId;
         article.dataset.premiumArchived = isPremiumArchived ? '1' : '0';
         if (isPremiumArchived) {
-            article.title = 'Задание в архиве Premium: можно выделить и удалить, но нельзя открыть для редактирования или экспортировать.';
+            article.title = wt('db.k280', 'Задание в архиве Premium: можно выделить и удалить, но нельзя открыть для редактирования или экспортировать.');
         }
 
         const { label: typeLabel, className: typeClass } = this.getTaskTypeMeta(task);
-        const topicLabel = task.topicName || task.topicId || 'Без темы';
+        const topicLabel = task.topicName || task.topicId || wt('db.k281', 'Без темы');
         const createdLabel = this.escapeHtml(this.formatCreatedDate(task.created_at));
         const updatedLabel = task.updated_at ? this.escapeHtml(this.formatCreatedDate(task.updated_at)) : null;
         const safeTypeLabel = this.escapeHtml(typeLabel);
-        const safeTaskName = this.escapeHtml(task.name || task.id || 'Без названия');
-        const safeModuleLabel = this.escapeHtml(task.moduleName || task.moduleId || 'Без модуля');
+        const safeTaskName = this.escapeHtml(task.name || task.id || wt('db.k282', 'Без названия'));
+        const safeModuleLabel = this.escapeHtml(task.moduleName || task.moduleId || wt('db.k283', 'Без модуля'));
         const safeTopicLabel = this.escapeHtml(topicLabel);
 
         // Theme-aware error badge classes
@@ -4840,20 +4847,20 @@ class EditorDashboard {
                         </span>
                         ${hasDraft ? `<span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${draftBadgeClass}">
                             <span class="material-symbols-outlined leading-none" style="font-size: 16px;">edit_note</span>
-                            Черновик
+                            ${wt('db.k038', 'Черновик')}
                         </span>` : ""}
                         ${isErrorDetection ? `<span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${errorBadgeClass}">
                             <span class="material-symbols-outlined leading-none" style="font-size: 18px;">bug_report</span>
-                            Ошибки
+                            ${wt('db.k392', 'Ошибки')}
                         </span>` : ""}
-                        ${isPremiumArchived ? `<span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${archiveBadgeClass}" title="Архив Premium: редактирование и экспорт заблокированы до продления Premium">
+                        ${isPremiumArchived ? `<span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${archiveBadgeClass}" title="${wt('db.k393', 'Архив Premium: редактирование и экспорт заблокированы до продления Premium')}">
                             <span class="material-symbols-outlined leading-none" style="font-size: 16px;">inventory_2</span>
-                            Архив Premium
+                            ${wt('db.k394', 'Архив Premium')}
                         </span>` : ""}
                     </div>
                 </div>
                 <div class="flex items-center gap-3 shrink-0">
-                    <div class="${isDraftOnly ? 'w-2.5 h-2.5 rounded-full bg-warning ring-2 ring-warning-light' : 'status-indicator-published'}" title="${isDraftOnly ? 'Только локальный черновик' : 'Published'}"></div>
+                    <div class="${isDraftOnly ? 'w-2.5 h-2.5 rounded-full bg-warning ring-2 ring-warning-light' : 'status-indicator-published'}" title="${isDraftOnly ? wt('db.k284', 'Только локальный черновик') : 'Published'}"></div>
                     <div class="${this.selectionMode ? 'block' : 'hidden group-hover:block'}">
                         <input type="checkbox" 
                             class="w-5 h-5 text-primary rounded border-border-strong focus:ring-primary task-checkbox transition-transform hover:scale-110"
@@ -4864,7 +4871,7 @@ class EditorDashboard {
             </div>
             <div class="flex-1 min-w-0">
                 <h3 class="editor-task-card-title text-text-main text-lg font-bold mb-2 group-hover:text-primary transition-colors cursor-pointer truncate">${safeTaskName}</h3>
-                <p class="text-text-secondary text-xs font-medium truncate">Создано ${createdLabel}${updatedLabel && updatedLabel !== createdLabel ? ` В· Изм. ${updatedLabel}` : ''}</p>
+                <p class="text-text-secondary text-xs font-medium truncate">${wt('db.k285', 'Создано')} ${createdLabel}${updatedLabel && updatedLabel !== createdLabel ? ` ${wt('db.k390', 'В· Изм.')} ${updatedLabel}` : ''}</p>
             </div>
             <div class="flex gap-2 mt-4 flex-wrap items-center">
                 <span class="editor-task-card-chip inline-flex items-center rounded bg-surface-1 px-2 py-1 text-xs font-medium text-text-secondary border-2 border-border-normal whitespace-nowrap">${safeModuleLabel}</span>
@@ -4906,9 +4913,9 @@ class EditorDashboard {
                 if (isPremiumArchived) {
                     this.showVoiceToast({
                         severity: 'warning',
-                        what: 'Задание находится в архиве Premium.',
-                        impact: 'Редактирование и экспорт временно недоступны.',
-                        next: 'Можно удалить задание или продлить Premium, чтобы вернуть полный доступ.',
+                        what: wt('db.k286', 'Задание находится в архиве Premium.'),
+                        impact: wt('db.k287', 'Редактирование и экспорт временно недоступны.'),
+                        next: wt('db.k288', 'Можно удалить задание или продлить Premium, чтобы вернуть полный доступ.'),
                     });
                     return;
                 }
@@ -4930,7 +4937,7 @@ class EditorDashboard {
         const safeMessage = this.escapeHtml(message);
         const safeQuery = this.escapeHtml(this.currentSearchQuery.trim());
         const details = this.currentSearchQuery && this.currentSearchQuery.trim()
-            ? `<p class="editor-grid-empty-detail text-xs">Запрос: «${this.currentSearchQuery.trim()}»</p>`
+            ? `<p class="editor-grid-empty-detail text-xs">${wt('db.k289', 'Запрос: «')}${this.currentSearchQuery.trim()}»</p>`
             : '';
         const safeDetails = details && this.currentSearchQuery
             ? details.replace(this.currentSearchQuery.trim(), safeQuery)
@@ -5079,7 +5086,7 @@ class EditorDashboard {
 
         if (task.type === 'click' || task.type === 'click_task') {
             return {
-                label: 'Клик',
+                label: wt('db.k290', 'Клик'),
                 className: isDark
                     ? 'bg-secondary-dark text-secondary-lighter ring-1 ring-inset ring-secondary-lighter'
                     : 'bg-secondary-light text-secondary ring-1 ring-inset ring-secondary'
@@ -5087,7 +5094,7 @@ class EditorDashboard {
         }
         if (task.type === 'draw' || task.type === 'draw_task') {
             return {
-                label: 'Рисование',
+                label: wt('db.k291', 'Рисование'),
                 className: isDark
                     ? 'bg-success-dark text-success-lighter ring-1 ring-inset ring-success-lighter'
                     : 'bg-success-light text-success ring-1 ring-inset ring-success'
@@ -5095,7 +5102,7 @@ class EditorDashboard {
         }
         if (task.type === 'test') {
             return {
-                label: 'Тест',
+                label: wt('db.k292', 'Тест'),
                 className: isDark
                     ? 'bg-warning-dark text-warning-lighter ring-1 ring-inset ring-warning-lighter'
                     : 'bg-warning-light text-warning ring-1 ring-inset ring-warning'
@@ -5103,7 +5110,7 @@ class EditorDashboard {
         }
         if (task.type === 'single' || task.type === 'single_choice') {
             return {
-                label: 'Один ответ',
+                label: wt('db.k293', 'Один ответ'),
                 className: isDark
                     ? 'bg-warning-dark text-warning-lighter ring-1 ring-inset ring-warning-lighter'
                     : 'bg-warning-light text-warning ring-1 ring-inset ring-warning'
@@ -5111,7 +5118,7 @@ class EditorDashboard {
         }
         if (task.type === 'text' || task.type === 'text_input') {
             return {
-                label: 'Текст',
+                label: wt('db.k294', 'Текст'),
                 className: isDark
                     ? 'bg-info-dark text-info-lighter ring-1 ring-inset ring-info-lighter'
                     : 'bg-info-light text-info ring-1 ring-inset ring-info'
@@ -5119,7 +5126,7 @@ class EditorDashboard {
         }
         if (task.type === 'sequence_assembly') {
             return {
-                label: 'Последовательность',
+                label: wt('db.k295', 'Последовательность'),
                 className: isDark
                     ? 'bg-primary-dark text-primary-lighter ring-1 ring-inset ring-primary-lighter'
                     : 'bg-primary-lighter text-primary ring-1 ring-inset ring-primary'
@@ -5127,7 +5134,7 @@ class EditorDashboard {
         }
         if (task.type === 'open_answer') {
             return {
-                label: 'Открытый ответ',
+                label: wt('db.k296', 'Открытый ответ'),
                 className: isDark
                     ? 'bg-info-dark text-info-lighter ring-1 ring-inset ring-info-lighter'
                     : 'bg-info-light text-info ring-1 ring-inset ring-info'
@@ -5257,7 +5264,7 @@ class EditorDashboard {
 
         if (count > 0 || this.selectionMode) {
             bar.classList.remove('translate-y-[200%]');
-            counter.textContent = `${count} выбрано`;
+            counter.textContent = `${count} ${wt('db.k297', 'выбрано')}`;
         } else {
             bar.classList.add('translate-y-[200%]');
         }
@@ -5268,8 +5275,8 @@ class EditorDashboard {
             exportBtn.classList.toggle('opacity-60', exportBlocked);
             exportBtn.classList.toggle('cursor-not-allowed', exportBlocked);
             exportBtn.title = hasArchivedSelection
-                ? 'Экспорт недоступен: среди выбранных заданий есть архив Premium.'
-                : 'Экспортировать выбранные задания';
+                ? wt('db.k298', 'Экспорт недоступен: среди выбранных заданий есть архив Premium.')
+                : wt('db.k299', 'Экспортировать выбранные задания');
         }
     }
 
@@ -5280,9 +5287,9 @@ class EditorDashboard {
         if (hasArchivedSelection) {
             this.showVoiceToast({
                 severity: 'warning',
-                what: 'Экспорт недоступен для архива Premium.',
-                impact: 'Среди выбранных заданий есть материалы с ограниченным доступом.',
-                next: 'Снимите выделение с архивных заданий или продлите Premium.',
+                what: wt('db.k300', 'Экспорт недоступен для архива Premium.'),
+                impact: wt('db.k301', 'Среди выбранных заданий есть материалы с ограниченным доступом.'),
+                next: wt('db.k302', 'Снимите выделение с архивных заданий или продлите Premium.'),
             });
             return;
         }
@@ -5328,9 +5335,9 @@ class EditorDashboard {
         } catch (error) {
             this.showVoiceToast({
                 severity: 'error',
-                what: 'Экспорт выбранных заданий не выполнен.',
-                impact: 'Файл экспорта не был сформирован.',
-                next: error?.message ? `Проверьте ограничения и повторите (${error.message}).` : 'Повторите экспорт позже.',
+                what: wt('db.k303', 'Экспорт выбранных заданий не выполнен.'),
+                impact: wt('db.k304', 'Файл экспорта не был сформирован.'),
+                next: error?.message ? `${wt('db.k305', 'Проверьте ограничения и повторите')} (${error.message}).` : wt('db.k306', 'Повторите экспорт позже.'),
             });
         } finally {
             btn.innerHTML = originalText;
@@ -5364,10 +5371,10 @@ class EditorDashboard {
                 <div class="editor-sidebar-tree-hover-actions">
                     <span class="material-symbols-outlined text-[16px] text-text-disabled hover:text-primary transition-colors p-0.5 rounded hover:bg-primary-lighter"
                           onclick="dashboard.startRenameModule('${module.id}'); event.stopPropagation();"
-                          title="Переименовать модуль">edit</span>
+                          title="${wt('db.k307', 'Переименовать модуль')}">edit</span>
                     <span class="material-symbols-outlined text-[16px] text-text-disabled hover:text-error transition-colors p-0.5 rounded hover:bg-error-lighter"
                           onclick="dashboard.deleteModule('${module.id}'); event.stopPropagation();"
-                          title="Удалить модуль">delete</span>
+                          title="${wt('db.k308', 'Удалить модуль')}">delete</span>
                 </div>
                 <span class="material-symbols-outlined text-[16px] p-0.5 transition-transform" data-role="toggle">expand_more</span>
             </div>
@@ -5433,7 +5440,7 @@ class EditorDashboard {
         addTopicBtn.className = 'editor-sidebar-tree-button flex items-center gap-2 px-3 min-h-[2.5rem] text-text-secondary hover:text-primary hover:bg-bg-hover rounded-lg transition-all w-full text-left mt-1';
         addTopicBtn.innerHTML = `
             <span class="material-symbols-outlined text-[18px]">add_circle</span>
-            <span class="editor-sidebar-tree-label text-sm font-medium">Добавить тему</span>
+            <span class="editor-sidebar-tree-label text-sm font-medium">${wt('db.k309', 'Добавить тему')}</span>
         `;
         addTopicBtn.onclick = (e) => {
             e.stopPropagation();
@@ -5454,7 +5461,7 @@ class EditorDashboard {
         const theoryId = theoryLink && typeof theoryLink.theory_id === 'string' ? theoryLink.theory_id : '';
         const hasTheoryLink = Boolean(theoryId);
         const theoryBadge = hasTheoryLink
-            ? '<span class="inline-flex items-center justify-center w-5 h-5 rounded-full border border-primary-light bg-primary-lighter text-primary" title="У темы есть привязка к теории"><span class="material-symbols-outlined text-[13px]">menu_book</span></span>'
+            ? wt('db.k310', '<span class="inline-flex items-center justify-center w-5 h-5 rounded-full border border-primary-light bg-primary-lighter text-primary" title="У темы есть привязка к теории"><span class="material-symbols-outlined text-[13px]">menu_book</span></span>')
             : '';
 
         const button = document.createElement('button');
@@ -5469,10 +5476,10 @@ class EditorDashboard {
                 <div class="editor-sidebar-tree-hover-actions">
                     <span class="material-symbols-outlined text-[16px] text-text-disabled hover:text-primary transition-colors p-0.5 rounded hover:bg-primary-lighter"
                           onclick="dashboard.startRenameTopic('${moduleId}', '${topic.id}'); event.stopPropagation();"
-                          title="Переименовать тему">edit</span>
+                          title="${wt('db.k311', 'Переименовать тему')}">edit</span>
                     <span class="material-symbols-outlined text-[16px] text-text-disabled hover:text-error transition-colors p-0.5 rounded hover:bg-error-lighter"
                           onclick="dashboard.deleteTopic('${moduleId}', '${topic.id}'); event.stopPropagation();"
-                          title="Удалить тему">delete</span>
+                          title="${wt('db.k312', 'Удалить тему')}">delete</span>
                 </div>
                 <span class="material-symbols-outlined text-[16px] p-0.5 transition-transform" data-role="toggle">expand_more</span>
             </div>
@@ -5482,7 +5489,7 @@ class EditorDashboard {
             const syncTheoryAction = document.createElement('span');
             syncTheoryAction.className = 'material-symbols-outlined text-[16px] text-text-disabled hover:text-primary transition-colors p-0.5 rounded hover:bg-primary-lighter';
             syncTheoryAction.textContent = 'sync_alt';
-            syncTheoryAction.title = 'Синхронизировать привязку темы с комплексами';
+            syncTheoryAction.title = wt('db.k313', 'Синхронизировать привязку темы с комплексами');
             syncTheoryAction.dataset.role = 'topic-theory-sync';
             syncTheoryAction.dataset.moduleId = moduleId;
             syncTheoryAction.dataset.topicId = topic.id;
@@ -5497,7 +5504,7 @@ class EditorDashboard {
             theoryAction.dataset.role = 'topic-theory-open';
             theoryAction.dataset.moduleId = moduleId;
             theoryAction.dataset.topicId = topic.id;
-            theoryAction.title = 'Настроить теорию темы';
+            theoryAction.title = wt('db.k314', 'Настроить теорию темы');
             theoryAction.addEventListener('click', (event) => {
                 event.stopPropagation();
                 this.showTopicTheoryModal(moduleId, topic.id);
@@ -5585,7 +5592,7 @@ class EditorDashboard {
         addTaskBtn.className = 'editor-sidebar-tree-button flex items-center gap-2 px-3 min-h-[2.5rem] text-text-secondary hover:text-primary hover:bg-bg-hover rounded-lg transition-all w-full text-left mt-1';
         addTaskBtn.innerHTML = `
             <span class="material-symbols-outlined text-[18px]">add_circle</span>
-            <span class="editor-sidebar-tree-label text-sm font-medium">Добавить задание</span>
+            <span class="editor-sidebar-tree-label text-sm font-medium">${wt('db.k315', 'Добавить задание')}</span>
         `;
         addTaskBtn.onclick = (e) => {
             e.stopPropagation();
@@ -5621,7 +5628,7 @@ class EditorDashboard {
         button.innerHTML = `
             <span class="material-symbols-outlined text-[20px]">${icon}</span>
             <span class="editor-sidebar-tree-label truncate text-sm font-medium flex-1">${task.name || task.id}</span>
-            ${task.isDraftOnly ? '<span class="inline-flex h-5 items-center gap-1 rounded-full border border-warning-light bg-warning-lighter px-1.5 py-0 text-[10px] font-semibold leading-none text-warning-darker">Черновик</span>' : ''}
+            ${task.isDraftOnly ? wt('db.k316', '<span class="inline-flex h-5 items-center gap-1 rounded-full border border-warning-light bg-warning-lighter px-1.5 py-0 text-[10px] font-semibold leading-none text-warning-darker">Черновик</span>') : ''}
         `;
 
         button.addEventListener('click', () => {
@@ -5745,18 +5752,18 @@ class EditorDashboard {
                 console.error("Failed to load task:", data.error);
                 this.showVoiceToast({
                     severity: 'error',
-                    what: 'Задача не открыта.',
-                    impact: 'Редактор не получил данные задания.',
-                    next: data?.error ? `Проверьте состояние задачи (${data.error}) и повторите.` : 'Повторите открытие задания.',
+                    what: wt('db.k317', 'Задача не открыта.'),
+                    impact: wt('db.k318', 'Редактор не получил данные задания.'),
+                    next: data?.error ? `${wt('db.k319', 'Проверьте состояние задачи')} (${data.error}) ${wt('db.k320', 'и повторите.')}` : wt('db.k321', 'Повторите открытие задания.'),
                 });
             }
         } catch (error) {
             console.error("Error fetching task:", error);
             this.showVoiceToast({
                 severity: 'error',
-                what: 'Задача не открыта из-за сетевой ошибки.',
-                impact: 'Переход в редактор отменён.',
-                next: 'Проверьте сеть и повторите попытку.',
+                what: wt('db.k322', 'Задача не открыта из-за сетевой ошибки.'),
+                impact: wt('db.k323', 'Переход в редактор отменён.'),
+                next: wt('db.k324', 'Проверьте сеть и повторите попытку.'),
             });
         }
     }
@@ -6151,8 +6158,8 @@ class EditorDashboard {
             module,
             topic,
             task,
-            moduleName: module?.name || moduleId || 'Без модуля',
-            topicName: topic?.name || topicId || 'Без темы',
+            moduleName: module?.name || moduleId || wt('db.k325', 'Без модуля'),
+            topicName: topic?.name || topicId || wt('db.k326', 'Без темы'),
         };
     }
 
@@ -6171,7 +6178,7 @@ class EditorDashboard {
                         resolvedTaskId,
                         moduleName,
                         topicName,
-                        title: context.task?.name || item.taskName || item.taskId || 'Черновик задания',
+                        title: context.task?.name || item.taskName || item.taskId || wt('db.k327', 'Черновик задания'),
                         subtitle: `${moduleName} / ${topicName}`,
                     };
                 }
@@ -6179,9 +6186,9 @@ class EditorDashboard {
                 return {
                     ...item,
                     title: item.complexId && item.complexId !== 'new'
-                        ? `Комплекс: ${item.complexId}`
-                        : 'Новый комплекс (черновик)',
-                    subtitle: 'Конструктор комплексов',
+                        ? `${wt('db.k328', 'Комплекс:')} ${item.complexId}`
+                        : wt('db.k329', 'Новый комплекс (черновик)'),
+                    subtitle: wt('db.k330', 'Конструктор комплексов'),
                 };
             });
     }
@@ -6197,7 +6204,7 @@ class EditorDashboard {
                 if (topicId && item.topicId !== topicId) return null;
 
                 const taskType = String(item.taskType || '').trim();
-                const taskLabel = String(item.taskName || item.taskId || '').trim() || 'Черновик задания';
+                const taskLabel = String(item.taskName || item.taskId || '').trim() || wt('db.k331', 'Черновик задания');
                 const isoTimestamp = Number(item.timestamp || 0) > 0
                     ? new Date(Number(item.timestamp)).toISOString()
                     : '';
@@ -6275,9 +6282,9 @@ class EditorDashboard {
             if (!taskType) {
                 this.showVoiceToast({
                     severity: 'warning',
-                    what: 'Черновик не открыт.',
-                    impact: 'Не удалось определить тип задания для этого черновика.',
-                    next: 'Создайте черновик заново или сохраните новый черновик из редактора.',
+                    what: wt('db.k332', 'Черновик не открыт.'),
+                    impact: wt('db.k333', 'Не удалось определить тип задания для этого черновика.'),
+                    next: wt('db.k334', 'Создайте черновик заново или сохраните новый черновик из редактора.'),
                 });
                 return;
             }
@@ -6299,7 +6306,7 @@ class EditorDashboard {
 
     formatRecoveryTime(timestamp) {
         const date = new Date(Number(timestamp || 0));
-        if (Number.isNaN(date.getTime())) return 'время неизвестно';
+        if (Number.isNaN(date.getTime())) return wt('db.k335', 'время неизвестно');
         return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
     }
 
@@ -6316,8 +6323,8 @@ class EditorDashboard {
             empty.className = 'rounded-xl border border-border-subtle bg-surface-2 p-6 text-center';
             empty.innerHTML = `
                 <span class="material-symbols-outlined text-3xl text-text-disabled">history_toggle_off</span>
-                <p class="text-sm font-semibold text-text-secondary mt-2">Черновиков для восстановления нет</p>
-                <p class="text-xs text-text-secondary mt-1">Когда появятся локальные черновики задач или комплексов, они будут показаны здесь.</p>
+                <p class="text-sm font-semibold text-text-secondary mt-2">${wt('db.k336', 'Черновиков для восстановления нет')}</p>
+                <p class="text-xs text-text-secondary mt-1">${wt('db.k337', 'Когда появятся локальные черновики задач или комплексов, они будут показаны здесь.')}</p>
             `;
             host.appendChild(empty);
             return;
@@ -6328,13 +6335,13 @@ class EditorDashboard {
             card.className = 'editor-recovery-card rounded-xl border border-border-subtle bg-surface-2 p-4 flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4';
             card.dataset.recoveryIndex = String(index);
 
-            const title = item.title || 'Черновик';
-            const subtitle = item.subtitle || 'Источник не определён';
+            const title = item.title || wt('db.k338', 'Черновик');
+            const subtitle = item.subtitle || wt('db.k339', 'Источник не определён');
             const targetHint = item.kind === 'task'
                 ? (item.taskExists
-                    ? 'Откроется задача и предложит восстановить локальный черновик'
-                    : 'Откроется редактор черновика задания')
-                : 'Откроется конструктор комплексов';
+                    ? wt('db.k340', 'Откроется задача и предложит восстановить локальный черновик')
+                    : wt('db.k341', 'Откроется редактор черновика задания'))
+                : wt('db.k342', 'Откроется конструктор комплексов');
 
             card.innerHTML = `
                 <div class="min-w-0 flex-1">
@@ -6343,17 +6350,17 @@ class EditorDashboard {
                         <p class="editor-recovery-title text-sm font-bold text-text-main">${this.escapeHtml(title)}</p>
                     </div>
                     <p class="editor-recovery-subtitle text-xs mt-1">${this.escapeHtml(subtitle)}</p>
-                    <p class="editor-recovery-meta text-[11px] mt-1">Автосохранение: ${this.escapeHtml(this.formatRecoveryTime(item.timestamp))}</p>
+                    <p class="editor-recovery-meta text-[11px] mt-1">${wt('db.k343', 'Автосохранение:')} ${this.escapeHtml(this.formatRecoveryTime(item.timestamp))}</p>
                     <p class="editor-recovery-meta text-[11px] mt-1">${this.escapeHtml(targetHint)}</p>
                 </div>
                 <div class="editor-recovery-actions shrink-0">
                     <button type="button" data-action="open-recovery" data-index="${index}"
                         class="px-3 py-1.5 rounded-lg bg-primary text-primary-contrast text-xs font-semibold hover:bg-primary-dark transition-colors">
-                        Открыть
+                        ${wt('db.k344', 'Открыть')}
                     </button>
                     <button type="button" data-action="discard-recovery" data-index="${index}"
                         class="px-3 py-1.5 rounded-lg border border-border-subtle bg-surface-1 text-text-secondary text-xs font-semibold hover:text-error hover:border-error transition-colors">
-                        Удалить
+                        ${wt('db.k345', 'Удалить')}
                     </button>
                 </div>
             `;
@@ -6412,19 +6419,19 @@ class EditorDashboard {
     async discardRecoveryDraft(item) {
         if (!item?.storageKey) return;
         const ok = await NotificationUI.confirm({
-            title: 'Удалить черновик?',
-            message: 'Черновик будет удалён без возможности восстановления.',
-            confirmText: 'Удалить',
-            cancelText: 'Отмена',
+            title: wt('db.k346', 'Удалить черновик?'),
+            message: wt('db.k347', 'Черновик будет удалён без возможности восстановления.'),
+            confirmText: wt('db.k348', 'Удалить'),
+            cancelText: wt('db.k349', 'Отмена'),
             variant: 'warning',
         });
         if (!ok) return;
         localStorage.removeItem(item.storageKey);
         this.showVoiceToast({
             severity: 'info',
-            what: 'Черновик удалён.',
-            impact: 'Данные в облаке не затронуты.',
-            next: 'При необходимости откройте другой черновик.',
+            what: wt('db.k350', 'Черновик удалён.'),
+            impact: wt('db.k351', 'Данные в облаке не затронуты.'),
+            next: wt('db.k352', 'При необходимости откройте другой черновик.'),
         });
         this.renderRecoveryCenter();
         this.renderSidebar();
@@ -6472,10 +6479,10 @@ class EditorDashboard {
         if (this.selectedTasks.size === 0) return;
 
         const confirmed = await NotificationUI.confirm({
-            title: 'Удалить задания?',
-            message: `Вы действительно хотите удалить выбранные задания (${this.selectedTasks.size} шт.)?`,
-            confirmText: 'Удалить',
-            cancelText: 'Отмена',
+            title: wt('db.k353', 'Удалить задания?'),
+            message: `${wt('db.k354', 'Вы действительно хотите удалить выбранные задания')} (${this.selectedTasks.size} ${wt('db.k355', 'шт.')})?`,
+            confirmText: wt('db.k356', 'Удалить'),
+            cancelText: wt('db.k357', 'Отмена'),
             variant: 'error'
         });
         if (!confirmed) return;
@@ -6510,9 +6517,9 @@ class EditorDashboard {
 
             this.showVoiceToast({
                 severity: 'success',
-                what: `Удалено черновиков: ${draftsCleanedCount || localDraftOnlyCount}.`,
-                impact: 'Локальные черновики удалены с этого устройства.',
-                next: 'Список заданий обновлён.',
+                what: `${wt('db.k358', 'Удалено черновиков:')} ${draftsCleanedCount || localDraftOnlyCount}.`,
+                impact: wt('db.k359', 'Локальные черновики удалены с этого устройства.'),
+                next: wt('db.k360', 'Список заданий обновлён.'),
             });
             return;
         }
@@ -6537,39 +6544,39 @@ class EditorDashboard {
                 this.renderRecoveryCenter();
 
                 const successMessage = draftsCleanedCount > 0
-                    ? `Удалено заданий: ${data.deleted}. Очищено черновиков: ${draftsCleanedCount}.`
-                    : `Удалено заданий: ${data.deleted}.`;
+                    ? `${wt('db.k361', 'Удалено заданий:')} ${data.deleted}. ${wt('db.k362', 'Очищено черновиков:')} ${draftsCleanedCount}.`
+                    : `${wt('db.k363', 'Удалено заданий:')} ${data.deleted}.`;
 
                 this.showVoiceToast({
                     severity: 'success',
                     what: successMessage,
-                    impact: 'Выбранные элементы удалены из библиотеки.',
-                    next: 'Каталог обновлён автоматически.',
+                    impact: wt('db.k364', 'Выбранные элементы удалены из библиотеки.'),
+                    next: wt('db.k365', 'Каталог обновлён автоматически.'),
                 });
                 if (data.errors && data.errors.length > 0) {
                     this.showVoiceToast({
                         severity: 'warning',
-                        what: 'Удаление выполнено частично.',
-                        impact: `Ошибки: ${data.errors.join(', ')}.`,
-                        next: 'Проверьте проблемные задания и повторите удаление при необходимости.',
+                        what: wt('db.k366', 'Удаление выполнено частично.'),
+                        impact: `${wt('db.k367', 'Ошибки:')} ${data.errors.join(', ')}.`,
+                        next: wt('db.k368', 'Проверьте проблемные задания и повторите удаление при необходимости.'),
                         timeout: 6000,
                     });
                 }
             } else {
                 this.showVoiceToast({
                     severity: 'error',
-                    what: 'Массовое удаление не выполнено.',
-                    impact: 'Список заданий не изменён.',
-                    next: data?.error ? `Проверьте детали (${data.error}) и повторите.` : 'Повторите операцию позже.',
+                    what: wt('db.k369', 'Массовое удаление не выполнено.'),
+                    impact: wt('db.k370', 'Список заданий не изменён.'),
+                    next: data?.error ? `${wt('db.k371', 'Проверьте детали')} (${data.error}) ${wt('db.k372', 'и повторите.')}` : wt('db.k373', 'Повторите операцию позже.'),
                 });
             }
         } catch (error) {
             console.error('Delete error:', error);
             this.showVoiceToast({
                 severity: 'error',
-                what: 'Массовое удаление не выполнено из-за сетевой ошибки.',
-                impact: 'Изменения не были применены.',
-                next: 'Проверьте сеть и повторите операцию.',
+                what: wt('db.k374', 'Массовое удаление не выполнено из-за сетевой ошибки.'),
+                impact: wt('db.k375', 'Изменения не были применены.'),
+                next: wt('db.k376', 'Проверьте сеть и повторите операцию.'),
             });
         }
     }
@@ -6793,7 +6800,7 @@ class EditorDashboard {
             } finally {
                 confirmBtn.disabled = false;
                 confirmBtn.classList.remove('opacity-70');
-                confirmBtn.innerHTML = 'Подтвердить обновление';
+                confirmBtn.innerHTML = wt('db.k377', 'Подтвердить обновление');
             }
         };
 
@@ -6912,11 +6919,11 @@ class EditorDashboard {
                 console.error('Commit failed:', data.error);
                 this.showVoiceToast({
                     severity: 'error',
-                    what: 'Удаление не подтверждено сервером.',
-                    impact: 'Сущность восстановлена в интерфейсе.',
+                    what: wt('db.k378', 'Удаление не подтверждено сервером.'),
+                    impact: wt('db.k379', 'Сущность восстановлена в интерфейсе.'),
                     next: data?.message || data?.error
-                        ? `Проверьте причину (${data.message || data.error}) и повторите.`
-                        : 'Повторите действие позже.',
+                        ? `${wt('db.k380', 'Проверьте причину')} (${data.message || data.error}) ${wt('db.k381', 'и повторите.')}`
+                        : wt('db.k382', 'Повторите действие позже.'),
                 });
                 this.restoreVisuals(key);
             }
@@ -6924,9 +6931,9 @@ class EditorDashboard {
             console.error('Commit exception:', e);
             this.showVoiceToast({
                 severity: 'error',
-                what: 'Удаление не выполнено из-за сетевой ошибки.',
-                impact: 'Изменения отменены локально.',
-                next: 'Проверьте сеть и повторите попытку.',
+                what: wt('db.k383', 'Удаление не выполнено из-за сетевой ошибки.'),
+                impact: wt('db.k384', 'Изменения отменены локально.'),
+                next: wt('db.k385', 'Проверьте сеть и повторите попытку.'),
             });
             this.restoreVisuals(key);
         }
@@ -6966,7 +6973,7 @@ class EditorDashboard {
         const container = document.getElementById('toast-container');
         if (!container) return;
 
-        const label = type === 'module' ? 'Модуль удален' : 'Тема удалена';
+        const label = type === 'module' ? wt('db.k386', 'Модуль удален') : wt('db.k387', 'Тема удалена');
         const toast = document.createElement('div');
         toast.id = id;
         toast.className = 'bg-bg-ink text-text-on-dark px-4 py-3 rounded-lg shadow-xl flex items-center gap-4 animate-slide-up pointer-events-auto min-w-[300px] justify-between';
@@ -6976,7 +6983,7 @@ class EditorDashboard {
                 <span class="text-xs text-text-on-dark opacity-60 function-timer">6c</span>
             </div>
             <button class="text-primary-light hover:text-primary text-sm font-bold uppercase tracking-wider transition-colors">
-                Отменить
+                ${wt('db.k388', 'Отменить')}
             </button>
         `;
 
