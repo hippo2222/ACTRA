@@ -5863,13 +5863,13 @@
 
                 <!-- Header Typography -->
                 <header class="welcome-header text-center mb-10 md:mb-12 w-full max-w-3xl">
-                    <h2 id="welcomeHeaderTitle"
+                    <h2 id="welcomeHeaderTitle" data-i18n="wl.k001"
                         class="text-4xl md:text-6xl font-black text-text-main mb-4 tracking-tighter leading-tight"
                         style="color: var(--color-primary-dark);">
                         Добро пожаловать
                     </h2>
                     <p id="welcomeHeaderKicker" class="welcome-header-kicker hidden"></p>
-                    <p id="welcomeHeaderSubtitle" class="text-lg md:text-xl font-medium">
+                    <p id="welcomeHeaderSubtitle" data-i18n="wl.k002" class="text-lg md:text-xl font-medium">
                         Выберите профиль, чтобы продолжить обучение
                     </p>
                 </header>
@@ -6028,12 +6028,12 @@
                             </div>
 
                             <div class="mt-6 grid gap-3 sm:grid-cols-2">
-                                <button type="button" id="onboardingVerificationResendBtn"
+                                <button type="button" id="onboardingVerificationResendBtn" data-i18n="wl.k005"
                                     onclick="window.welcomeResendVerificationEmail()"
                                     class="rounded-2xl border border-border-strong px-4 py-3 font-semibold text-text-main hover:bg-surface-2 transition-colors">
                                     Отправить ещё раз
                                 </button>
-                                <button type="button" id="onboardingVerificationContinueBtn"
+                                <button type="button" id="onboardingVerificationContinueBtn" data-i18n="wl.k006"
                                     onclick="window.welcomeContinueAfterVerification()"
                                     class="rounded-2xl bg-primary px-4 py-3 font-bold text-primary-fg hover:bg-primary-hover transition-colors">
                                     Перейти в ACTRA
@@ -6067,7 +6067,7 @@
                         <button onclick="window.welcomeCreateProfile()" id="onboardingCreateBtn"
                             class="w-full bg-primary hover:bg-primary-hover text-primary-fg font-bold py-4 rounded-2xl shadow-xl shadow-primary/20 transform hover:-translate-y-1 transition-all flex items-center justify-center gap-3 text-base tracking-wide disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                             disabled>
-                            Начать обучение
+                            <span data-i18n="wl.k003">Начать обучение</span>
                             <span class="material-symbols-outlined">arrow_forward</span>
                         </button>
                         <button type="button" id="onboardingSecondaryAction" onclick="window.welcomeReturnToHero()"
@@ -6219,7 +6219,7 @@
                                 </p>
                                 <button type="submit" id="loginSubmitBtn"
                                     class="w-full py-4 bg-primary text-primary-fg font-bold rounded-xl shadow-lg hover:shadow-primary/30 transform hover:-translate-y-0.5 transition-all text-base flex items-center justify-center gap-3">
-                                    Войти в систему
+                                    <span data-i18n="wl.k004">Войти в систему</span>
                                     <span class="material-symbols-outlined">login</span>
                                 </button>
                                 <button type="button" id="loginBackBtn" onclick="window.welcomeReturnToHero()"
@@ -6248,9 +6248,9 @@
     <section class="welcome-marketing" aria-label="ACTRA overview">
             <section id="workflow" class="welcome-section">
                 <div class="welcome-section-header">
-                    <p class="welcome-eyebrow">Что такое ACTRA</p>
-                    <h2>Учебная система, которая держит материалы, практику и прогресс вместе.</h2>
-                    <p class="mt-4">
+                    <p class="welcome-eyebrow" data-i18n="wl.k009">Что такое ACTRA</p>
+                    <h2 data-i18n="wl.k010">Учебная система, которая держит материалы, практику и прогресс вместе.</h2>
+                    <p class="mt-4" data-i18n="wl.k011">
                         ACTRA помогает пользователям собирать личную учебную библиотеку, создавать задания и теории,
                         проходить учебные комплексы, повторять материал и видеть прогресс в календаре и статистике.
                     </p>
@@ -6260,49 +6260,49 @@
                         <span class="welcome-card-icon" style="--icon-bg: var(--welcome-orange);">
                             <span class="material-symbols-outlined">library_books</span>
                         </span>
-                        <h3>Личная библиотека</h3>
-                        <p>Собирайте теории, задания, карточки и собственные материалы в одной рабочей среде.</p>
+                        <h3 data-i18n="wl.k012">Личная библиотека</h3>
+                        <p data-i18n="wl.k013">Собирайте теории, задания, карточки и собственные материалы в одной рабочей среде.</p>
                     </article>
                     <article class="welcome-card">
                         <span class="welcome-card-icon" style="--icon-bg: var(--welcome-blue);">
                             <span class="material-symbols-outlined">psychology_alt</span>
                         </span>
-                        <h3>Практика по заданиям</h3>
-                        <p>Тренируйтесь через учебные комплексы, разные типы задач и повторение материала.</p>
+                        <h3 data-i18n="wl.k014">Практика по заданиям</h3>
+                        <p data-i18n="wl.k015">Тренируйтесь через учебные комплексы, разные типы задач и повторение материала.</p>
                     </article>
                     <article class="welcome-card">
                         <span class="welcome-card-icon" style="--icon-bg: var(--welcome-green);">
                             <span class="material-symbols-outlined">monitoring</span>
                         </span>
-                        <h3>Прогресс и ритм</h3>
-                        <p>Следите за результатами, календарём активности и статистикой обучения.</p>
+                        <h3 data-i18n="wl.k016">Прогресс и ритм</h3>
+                        <p data-i18n="wl.k017">Следите за результатами, календарём активности и статистикой обучения.</p>
                     </article>
                     <article class="welcome-card">
                         <span class="welcome-card-icon" style="--icon-bg: var(--welcome-primary);">
                             <span class="material-symbols-outlined">edit_note</span>
                         </span>
-                        <h3>Редакторы заданий</h3>
-                        <p>Создавайте тесты, открытые ответы, последовательности, задания с кликом и графические форматы.</p>
+                        <h3 data-i18n="wl.k018">Редакторы заданий</h3>
+                        <p data-i18n="wl.k019">Создавайте тесты, открытые ответы, последовательности, задания с кликом и графические форматы.</p>
                     </article>
                     <article class="welcome-card">
                         <span class="welcome-card-icon" style="--icon-bg: var(--welcome-yellow); color: var(--welcome-midnight);">
                             <span class="material-symbols-outlined">hub</span>
                         </span>
-                        <h3>Связи между материалами</h3>
-                        <p>Соединяйте теорию, комплексы и практику так, чтобы обучение не распадалось на отдельные файлы.</p>
+                        <h3 data-i18n="wl.k020">Связи между материалами</h3>
+                        <p data-i18n="wl.k021">Соединяйте теорию, комплексы и практику так, чтобы обучение не распадалось на отдельные файлы.</p>
                     </article>
                     <article class="welcome-card">
                         <span class="welcome-card-icon" style="--icon-bg: var(--welcome-blue);">
                             <span class="material-symbols-outlined">publish</span>
                         </span>
-                        <h3>Публикации и доступ</h3>
-                        <p>Готовьте материалы к использованию, управляйте доступом и возвращайтесь к рабочим версиям.</p>
+                        <h3 data-i18n="wl.k022">Публикации и доступ</h3>
+                        <p data-i18n="wl.k023">Готовьте материалы к использованию, управляйте доступом и возвращайтесь к рабочим версиям.</p>
                     </article>
                 </div>
 
                 <div class="welcome-origin-close">
-                    <strong>Авторский мотив</strong>
-                    <p><em>
+                    <strong data-i18n="wl.k024">Авторский мотив</strong>
+                    <p><em data-i18n="wl.k025">
                         Этот проект родился из попытки сделать обучение пригодным для тех, кому мало просто прочитать текст и
                         надеяться, что он сам закрепится в голове.
                     </em></p>
@@ -6313,17 +6313,17 @@
                 <div class="welcome-showcase">
                     <div class="welcome-copy-stack">
                         <div class="welcome-section-header">
-                            <p class="welcome-eyebrow">Как это работает</p>
-                            <h2>От задания к комплексу и разбору.</h2>
-                            <p class="mt-4">
+                            <p class="welcome-eyebrow" data-i18n="wl.k026">Как это работает</p>
+                            <h2 data-i18n="wl.k027">От задания к комплексу и разбору.</h2>
+                            <p class="mt-4" data-i18n="wl.k028">
                                 В ACTRA учебный цикл начинается с задания: вы создаёте материалы, собираете из них
                                 комплекс, запускаете прохождение и видите, что нужно доработать.
                             </p>
                         </div>
                         <ul class="welcome-check-list">
-                            <li><span class="material-symbols-outlined" aria-hidden="true">check_circle</span><span>Задания создаются в редакторе и привязываются к теме.</span></li>
-                            <li><span class="material-symbols-outlined" aria-hidden="true">check_circle</span><span>Комплекс собирается из готовых заданий и может быть приватным, публичным или доступным по коду.</span></li>
-                            <li><span class="material-symbols-outlined" aria-hidden="true">check_circle</span><span>Прохождение идёт по итерациям, а результат показывает ошибки и следующий шаг.</span></li>
+                            <li><span class="material-symbols-outlined" aria-hidden="true">check_circle</span><span data-i18n="wl.k029">Задания создаются в редакторе и привязываются к теме.</span></li>
+                            <li><span class="material-symbols-outlined" aria-hidden="true">check_circle</span><span data-i18n="wl.k030">Комплекс собирается из готовых заданий и может быть приватным, публичным или доступным по коду.</span></li>
+                            <li><span class="material-symbols-outlined" aria-hidden="true">check_circle</span><span data-i18n="wl.k031">Прохождение идёт по итерациям, а результат показывает ошибки и следующий шаг.</span></li>
                         </ul>
                     </div>
 
@@ -6445,41 +6445,41 @@
                 <div class="welcome-workflow-grid">
                     <article class="welcome-card welcome-step-card">
                         <span class="welcome-step-number">1</span>
-                        <h3>Создайте задания</h3>
-                        <p>Подготовьте задания в редакторе: тип, тема, содержание и сохранение.</p>
+                        <h3 data-i18n="wl.k032">Создайте задания</h3>
+                        <p data-i18n="wl.k033">Подготовьте задания в редакторе: тип, тема, содержание и сохранение.</p>
                     </article>
                     <article class="welcome-card welcome-step-card">
                         <span class="welcome-step-number">2</span>
-                        <h3>Соберите комплекс</h3>
-                        <p>Объедините готовые задания в комплекс. Добавьте теорию, если она нужна для подготовки.</p>
+                        <h3 data-i18n="wl.k034">Соберите комплекс</h3>
+                        <p data-i18n="wl.k035">Объедините готовые задания в комплекс. Добавьте теорию, если она нужна для подготовки.</p>
                     </article>
                     <article class="welcome-card welcome-step-card">
                         <span class="welcome-step-number">3</span>
-                        <h3>Запустите прохождение</h3>
-                        <p>ACTRA выдаёт задания по итерациям и сохраняет состояние сессии.</p>
+                        <h3 data-i18n="wl.k036">Запустите прохождение</h3>
+                        <p data-i18n="wl.k037">ACTRA выдаёт задания по итерациям и сохраняет состояние сессии.</p>
                     </article>
                     <article class="welcome-card welcome-step-card">
                         <span class="welcome-step-number">4</span>
-                        <h3>Разберите результат</h3>
-                        <p>Посмотрите принятые задания, ошибки и то, что стоит доработать перед новым проходом.</p>
+                        <h3 data-i18n="wl.k038">Разберите результат</h3>
+                        <p data-i18n="wl.k039">Посмотрите принятые задания, ошибки и то, что стоит доработать перед новым проходом.</p>
                     </article>
                 </div>
             </section>
 
             <section id="showcase" class="welcome-section">
                 <div class="welcome-section-header welcome-section-header--wide">
-                    <p class="welcome-eyebrow">Рабочие зоны ACTRA</p>
-                    <h2>Создание, прохождение и разбор в одном учебном сценарии.</h2>
-                    <p class="mt-4">
+                    <p class="welcome-eyebrow" data-i18n="wl.k040">Рабочие зоны ACTRA</p>
+                    <h2 data-i18n="wl.k041">Создание, прохождение и разбор в одном учебном сценарии.</h2>
+                    <p class="mt-4" data-i18n="wl.k042">
                         Несколько реальных состояний системы: создание задания, прохождение теста,
                         разбор итерации и подготовка теории.
                     </p>
                 </div>
-                <div class="welcome-surface-carousel" data-welcome-carousel aria-label="Рабочие зоны ACTRA">
+                <div class="welcome-surface-carousel" data-welcome-carousel aria-label="Рабочие зоны ACTRA" data-i18n-aria="wl.k040">
                     <div class="welcome-surface-carousel__viewport">
                         <button type="button"
                             class="welcome-surface-carousel__arrow welcome-surface-carousel__arrow--prev"
-                            data-welcome-carousel-prev aria-label="Предыдущий демонстрационный экран">
+                            data-welcome-carousel-prev aria-label="Предыдущий демонстрационный экран" data-i18n-aria="wl.k053">
                             <span class="material-symbols-outlined" aria-hidden="true">chevron_left</span>
                         </button>
                         <div class="welcome-surface-carousel__track" data-welcome-carousel-track>
@@ -6487,12 +6487,12 @@
                                 role="tabpanel" aria-labelledby="welcomeShowcaseTabClick" data-welcome-carousel-slide>
                                 <div class="welcome-product-card__header">
                                     <div>
-                                        <h3>Интерактивное задание</h3>
-                                        <p>Разметка изображения, проверяемые области и параметры задания в одном рабочем экране.</p>
+                                        <h3 data-i18n="wl.k043">Интерактивное задание</h3>
+                                        <p data-i18n="wl.k044">Разметка изображения, проверяемые области и параметры задания в одном рабочем экране.</p>
                                     </div>
                                     <span class="welcome-product-pill">
                                         <span class="material-symbols-outlined" aria-hidden="true">ads_click</span>
-                                        Редактор
+                                        <span data-i18n="wl.k045">Редактор</span>
                                     </span>
                                 </div>
                                 <div class="welcome-product-card__body">
@@ -6617,8 +6617,8 @@
                                 role="tabpanel" aria-labelledby="welcomeShowcaseTabPractice" data-welcome-carousel-slide>
                                 <div class="welcome-product-card__header">
                                     <div>
-                                        <h3>Прохождение комплекса</h3>
-                                        <p>Текущее задание, выбранный ответ и быстрый переход между вопросами.</p>
+                                        <h3 data-i18n="wl.k046">Прохождение комплекса</h3>
+                                        <p data-i18n="wl.k047">Текущее задание, выбранный ответ и быстрый переход между вопросами.</p>
                                     </div>
                                     <span class="welcome-product-pill">3 / 7</span>
                                 </div>
@@ -6636,8 +6636,8 @@
                                 role="tabpanel" aria-labelledby="welcomeShowcaseTabResult" data-welcome-carousel-slide>
                                 <div class="welcome-product-card__header">
                                     <div>
-                                        <h3>Разбор результата</h3>
-                                        <p>Итог попытки, следующий шаг и разбор ошибок на одном экране.</p>
+                                        <h3 data-i18n="wl.k048">Разбор результата</h3>
+                                        <p data-i18n="wl.k049">Итог попытки, следующий шаг и разбор ошибок на одном экране.</p>
                                     </div>
                                     <span class="welcome-product-pill">78%</span>
                                 </div>
@@ -6655,12 +6655,12 @@
                                 role="tabpanel" aria-labelledby="welcomeShowcaseTabTheory" data-welcome-carousel-slide>
                                 <div class="welcome-product-card__header">
                                     <div>
-                                        <h3>Редактор теории</h3>
-                                        <p>Материал открыт сразу в редакторе: текст, форматирование и сохранение рядом.</p>
+                                        <h3 data-i18n="wl.k050">Редактор теории</h3>
+                                        <p data-i18n="wl.k051">Материал открыт сразу в редакторе: текст, форматирование и сохранение рядом.</p>
                                     </div>
                                     <span class="welcome-product-pill">
                                         <span class="material-symbols-outlined" aria-hidden="true">menu_book</span>
-                                        Материал
+                                        <span data-i18n="wl.k052">Материал</span>
                                     </span>
                                 </div>
                                 <div class="welcome-product-card__body">
@@ -6722,30 +6722,30 @@
                         </div>
                         <button type="button"
                             class="welcome-surface-carousel__arrow welcome-surface-carousel__arrow--next"
-                            data-welcome-carousel-next aria-label="Следующий демонстрационный экран">
+                            data-welcome-carousel-next aria-label="Следующий демонстрационный экран" data-i18n-aria="wl.k054">
                             <span class="material-symbols-outlined" aria-hidden="true">chevron_right</span>
                         </button>
                     </div>
-                    <div class="welcome-surface-carousel__dots" role="tablist" aria-label="Состояния интерфейса ACTRA">
+                    <div class="welcome-surface-carousel__dots" role="tablist" aria-label="Состояния интерфейса ACTRA" data-i18n-aria="wl.k055">
                         <button type="button" class="welcome-surface-carousel__dot" id="welcomeShowcaseTabClick"
-                            role="tab" aria-label="Интерактивное задание" aria-selected="true"
+                            role="tab" aria-label="Интерактивное задание" data-i18n-aria="wl.k056" aria-selected="true"
                             aria-controls="welcomeShowcasePanelClick" data-welcome-carousel-tab data-slide-index="0">
-                            <span>Интерактивное задание</span>
+                            <span data-i18n="wl.k056">Интерактивное задание</span>
                         </button>
                         <button type="button" class="welcome-surface-carousel__dot" id="welcomeShowcaseTabPractice"
-                            role="tab" aria-label="Прохождение" aria-selected="false"
+                            role="tab" aria-label="Прохождение" data-i18n-aria="wl.k057" aria-selected="false"
                             aria-controls="welcomeShowcasePanelPractice" data-welcome-carousel-tab data-slide-index="1">
-                            <span>Прохождение</span>
+                            <span data-i18n="wl.k057">Прохождение</span>
                         </button>
                         <button type="button" class="welcome-surface-carousel__dot" id="welcomeShowcaseTabResult"
-                            role="tab" aria-label="Разбор" aria-selected="false"
+                            role="tab" aria-label="Разбор" data-i18n-aria="wl.k058" aria-selected="false"
                             aria-controls="welcomeShowcasePanelResult" data-welcome-carousel-tab data-slide-index="2">
-                            <span>Разбор</span>
+                            <span data-i18n="wl.k058">Разбор</span>
                         </button>
                         <button type="button" class="welcome-surface-carousel__dot" id="welcomeShowcaseTabTheory"
-                            role="tab" aria-label="Редактор теории" aria-selected="false"
+                            role="tab" aria-label="Редактор теории" data-i18n-aria="wl.k059" aria-selected="false"
                             aria-controls="welcomeShowcasePanelTheory" data-welcome-carousel-tab data-slide-index="3">
-                            <span>Редактор теории</span>
+                            <span data-i18n="wl.k059">Редактор теории</span>
                         </button>
                     </div>
                 </div>
@@ -6754,20 +6754,20 @@
             <section id="benefits" class="welcome-section welcome-origin-section">
                 <div class="welcome-origin-layout">
                     <div class="welcome-section-header welcome-section-header--wide">
-                        <p class="welcome-eyebrow">Почему ACTRA</p>
-                        <h2>Не заучивать теорию, а работать с ней.</h2>
-                        <p class="welcome-origin-lead">
+                        <p class="welcome-eyebrow" data-i18n="wl.k060">Почему ACTRA</p>
+                        <h2 data-i18n="wl.k061">Не заучивать теорию, а работать с ней.</h2>
+                        <p class="welcome-origin-lead" data-i18n="wl.k062">
                             ACTRA выросла из очень личной проблемы: теоретического материала обычно не мало, а слишком много.
                             Но перечитывание, механическое конспектирование и попытки “зазубрить” текст не всегда превращают
                             знания в действие.
                         </p>
                     </div>
-                    <div class="welcome-origin-note" aria-label="Авторская идея ACTRA">
-                        <p>
+                    <div class="welcome-origin-note" aria-label="Авторская идея ACTRA" data-i18n-aria="wl.k065">
+                        <p data-i18n="wl.k063">
                             Идея была не в том, чтобы сделать ещё одно место для хранения конспектов. Хотелось собрать среду,
                             где уже имеющийся материал можно постепенно превращать в задания и проверять себя практикой.
                         </p>
-                        <p>
+                        <p data-i18n="wl.k064">
                             Так теория перестаёт быть страницей, которую надо “дочитать до победы”, и становится материалом,
                             с которым можно взаимодействовать: применять, сравнивать, классифицировать, искать ошибки и
                             собирать связи.
@@ -6775,34 +6775,34 @@
                     </div>
                 </div>
 
-                <div class="welcome-practice-grid" aria-label="Как ACTRA превращает материал в практику">
+                <div class="welcome-practice-grid" aria-label="Как ACTRA превращает материал в практику" data-i18n-aria="wl.k066">
                     <article class="welcome-card welcome-card--accent welcome-practice-card">
                         <span class="welcome-card-icon" style="--icon-bg: var(--welcome-orange);">
                             <span class="material-symbols-outlined">transform</span>
                         </span>
-                        <h3>Материал становится действием</h3>
-                        <p>Теорию можно разложить на тесты, интерактивные задания, последовательности, открытые ответы и поиск ошибок.</p>
+                        <h3 data-i18n="wl.k067">Материал становится действием</h3>
+                        <p data-i18n="wl.k068">Теорию можно разложить на тесты, интерактивные задания, последовательности, открытые ответы и поиск ошибок.</p>
                     </article>
                     <article class="welcome-card welcome-card--accent welcome-practice-card">
                         <span class="welcome-card-icon" style="--icon-bg: var(--welcome-primary);">
                             <span class="material-symbols-outlined">psychology</span>
                         </span>
-                        <h3>Память через использование</h3>
-                        <p>Запоминание строится не на пассивном перечитывании, а на решении, выборе, сопоставлении и повторной попытке.</p>
+                        <h3 data-i18n="wl.k069">Память через использование</h3>
+                        <p data-i18n="wl.k070">Запоминание строится не на пассивном перечитывании, а на решении, выборе, сопоставлении и повторной попытке.</p>
                     </article>
                     <article class="welcome-card welcome-card--accent welcome-practice-card">
                         <span class="welcome-card-icon" style="--icon-bg: var(--welcome-green);">
                             <span class="material-symbols-outlined">account_tree</span>
                         </span>
-                        <h3>Связи остаются видимыми</h3>
-                        <p>Теория, задания, комплекс, попытка и разбор ошибок не распадаются на отдельные файлы и вкладки.</p>
+                        <h3 data-i18n="wl.k071">Связи остаются видимыми</h3>
+                        <p data-i18n="wl.k072">Теория, задания, комплекс, попытка и разбор ошибок не распадаются на отдельные файлы и вкладки.</p>
                     </article>
                     <article class="welcome-card welcome-card--accent welcome-practice-card">
                         <span class="welcome-card-icon" style="--icon-bg: var(--welcome-blue);">
                             <span class="material-symbols-outlined">style</span>
                         </span>
-                        <h3>Больше, чем карточки</h3>
-                        <p>Quizlet когда-то помог автору через активное вспоминание. ACTRA идёт дальше: к полноценной среде практики.</p>
+                        <h3 data-i18n="wl.k073">Больше, чем карточки</h3>
+                        <p data-i18n="wl.k074">Quizlet когда-то помог автору через активное вспоминание. ACTRA идёт дальше: к полноценной среде практики.</p>
                     </article>
                 </div>
 
@@ -6811,8 +6811,8 @@
             <section id="premium" class="welcome-section welcome-premium-section" aria-labelledby="welcomePremiumTitle">
                 <div class="welcome-section-header welcome-section-header--wide">
                     <p class="welcome-eyebrow">ACTRA Premium</p>
-                    <h2 id="welcomePremiumTitle">Когда библиотека растёт, Premium убирает лимиты рабочего пространства.</h2>
-                    <p class="mt-4">
+                    <h2 id="welcomePremiumTitle" data-i18n="wl.k075">Когда библиотека растёт, Premium убирает лимиты рабочего пространства.</h2>
+                    <p class="mt-4" data-i18n="wl.k076">
                         Premium — это цифровой доступ на выбранный срок. Он убирает стопоры free-плана, открывает
                         полные страницы Календаря и Статистики и помогает не упереться в лимит, когда библиотека уже
                         выросла из первых учебных материалов.
@@ -6820,19 +6820,19 @@
                 </div>
                 <div class="welcome-price-grid" aria-label="ACTRA Premium prices">
                     <article class="welcome-card welcome-price-card">
-                        <h3>14 дней</h3>
+                        <h3 data-i18n="wl.k077">14 дней</h3>
                         <strong>$4.99</strong>
-                        <span>$0.36/день</span>
+                        <span data-i18n="wl.k078">$0.36/день</span>
                     </article>
                     <article class="welcome-card welcome-price-card welcome-price-card--featured">
-                        <h3>30 дней</h3>
+                        <h3 data-i18n="wl.k079">30 дней</h3>
                         <strong>$7.99</strong>
-                        <span>$0.27/день · выгоднее на 25%</span>
+                        <span data-i18n="wl.k080">$0.27/день · выгоднее на 25%</span>
                     </article>
                     <article class="welcome-card welcome-price-card">
-                        <h3>90 дней</h3>
+                        <h3 data-i18n="wl.k081">90 дней</h3>
                         <strong>$19.99</strong>
-                        <span>$0.22/день · выгоднее на 38%</span>
+                        <span data-i18n="wl.k082">$0.22/день · выгоднее на 38%</span>
                     </article>
                 </div>
 
@@ -6841,22 +6841,22 @@
                         <span class="welcome-card-icon" style="--icon-bg: var(--welcome-orange);">
                             <span class="material-symbols-outlined">inventory_2</span>
                         </span>
-                        <h3>Без лимитных стопоров</h3>
-                        <p>Free-план подходит для старта, но ограничивает число своих материалов и подключений из каталога. Premium убирает эти лимиты, чтобы библиотеку можно было расширять без остановки.</p>
+                        <h3 data-i18n="wl.k083">Без лимитных стопоров</h3>
+                        <p data-i18n="wl.k084">Free-план подходит для старта, но ограничивает число своих материалов и подключений из каталога. Premium убирает эти лимиты, чтобы библиотеку можно было расширять без остановки.</p>
                     </article>
                     <article class="welcome-card">
                         <span class="welcome-card-icon" style="--icon-bg: var(--welcome-blue);">
                             <span class="material-symbols-outlined">calendar_month</span>
                         </span>
-                        <h3>Полный Календарь</h3>
-                        <p>Открывается полноценная страница с Daily Mix, расписанием, активностью и здоровьем памяти. Виджеты на главной остаются доступными всем, но полный рабочий вид — в Premium.</p>
+                        <h3 data-i18n="wl.k085">Полный Календарь</h3>
+                        <p data-i18n="wl.k086">Открывается полноценная страница с Daily Mix, расписанием, активностью и здоровьем памяти. Виджеты на главной остаются доступными всем, но полный рабочий вид — в Premium.</p>
                     </article>
                     <article class="welcome-card">
                         <span class="welcome-card-icon" style="--icon-bg: var(--welcome-green);">
                             <span class="material-symbols-outlined">bar_chart</span>
                         </span>
-                        <h3>Полная Статистика</h3>
-                        <p>Доступны метрики по задачам, времени, микрокарточкам, сериям, графику, типам заданий и учебным комплексам, а не только краткая сводка.</p>
+                        <h3 data-i18n="wl.k087">Полная Статистика</h3>
+                        <p data-i18n="wl.k088">Доступны метрики по задачам, времени, микрокарточкам, сериям, графику, типам заданий и учебным комплексам, а не только краткая сводка.</p>
                     </article>
                 </div>
 
@@ -6865,28 +6865,28 @@
                         <span class="welcome-card-icon" style="--icon-bg: var(--welcome-primary);">
                             <span class="material-symbols-outlined">archive</span>
                         </span>
-                        <h3>Материалы не исчезают</h3>
-                        <p>Если Premium закончится и free-лимиты будут превышены, лишние материалы попадают в архив Premium. Их можно открыть и удалить, а для редактирования, запуска, публикации, копирования или импорта нужно освободить лимит либо продлить доступ.</p>
+                        <h3 data-i18n="wl.k089">Материалы не исчезают</h3>
+                        <p data-i18n="wl.k090">Если Premium закончится и free-лимиты будут превышены, лишние материалы попадают в архив Premium. Их можно открыть и удалить, а для редактирования, запуска, публикации, копирования или импорта нужно освободить лимит либо продлить доступ.</p>
                     </article>
                     <article class="welcome-card">
                         <span class="welcome-card-icon" style="--icon-bg: var(--welcome-yellow); color: var(--welcome-midnight);">
                             <span class="material-symbols-outlined">published_with_changes</span>
                         </span>
-                        <h3>Публикации остаются аккуратными</h3>
-                        <p>Если источник оказался в архиве Premium, опубликованная версия остаётся доступной. Новую версию из архивного источника выпустить нельзя, пока материал не вернётся в активное пространство.</p>
+                        <h3 data-i18n="wl.k091">Публикации остаются аккуратными</h3>
+                        <p data-i18n="wl.k092">Если источник оказался в архиве Premium, опубликованная версия остаётся доступной. Новую версию из архивного источника выпустить нельзя, пока материал не вернётся в активное пространство.</p>
                     </article>
                     <article class="welcome-card">
                         <span class="welcome-card-icon" style="--icon-bg: var(--welcome-orange);">
                             <span class="material-symbols-outlined">update</span>
                         </span>
-                        <h3>Фиксированный срок</h3>
-                        <p>Доступ выдаётся на 14, 30 или 90 дней. Если продлить Premium до окончания текущего периода, новый срок считается от текущей даты окончания доступа.</p>
+                        <h3 data-i18n="wl.k093">Фиксированный срок</h3>
+                        <p data-i18n="wl.k094">Доступ выдаётся на 14, 30 или 90 дней. Если продлить Premium до окончания текущего периода, новый срок считается от текущей даты окончания доступа.</p>
                     </article>
                 </div>
 
                 <div class="welcome-premium-note">
-                    <strong>Цифровой доступ</strong>
-                    <p>
+                    <strong data-i18n="wl.k095">Цифровой доступ</strong>
+                    <p data-i18n="wl.k096">
                         ACTRA Premium является цифровой услугой: физические товары не продаются и не доставляются.
                         Доступ предоставляется в аккаунте пользователя после подтверждения оплаты. Возврат может быть
                         рассмотрен при дублирующей или случайной оплате, технической ошибке активации или другой
@@ -6895,7 +6895,7 @@
                     <div class="welcome-premium-actions" aria-label="ACTRA Premium documents">
                         <button type="button" class="welcome-pill"
                             onclick="window.welcomeScrollToRegister && window.welcomeScrollToRegister()">
-                            Создать аккаунт!
+                            <span data-i18n="wl.k097">Создать аккаунт!</span>
                             <span class="material-symbols-outlined text-[18px]" aria-hidden="true">arrow_upward</span>
                         </button>
                         <a class="welcome-pill" href="/pricing?lang=ru">
@@ -7111,11 +7111,11 @@
                         class="px-4 py-2 rounded-lg border border-border-strong text-text-main hover:bg-surface-1 transition-colors text-sm font-semibold" data-i18n="welcome.btn_close">
                         Закрыть
                     </button>
-                    <button type="button" id="forgotPasswordRequestBtn" onclick="window.welcomeSubmitForgotPassword()"
+                    <button type="button" id="forgotPasswordRequestBtn" data-i18n="wl.k007" onclick="window.welcomeSubmitForgotPassword()"
                         class="px-4 py-2 rounded-lg bg-primary text-primary-fg hover:bg-primary-hover transition-colors text-sm font-semibold">
                         Отправить ссылку
                     </button>
-                    <button type="button" id="forgotPasswordResetBtn" onclick="window.welcomeSubmitPasswordReset()"
+                    <button type="button" id="forgotPasswordResetBtn" data-i18n="wl.k008" onclick="window.welcomeSubmitPasswordReset()"
                         class="hidden px-4 py-2 rounded-lg bg-primary text-primary-fg hover:bg-primary-hover transition-colors text-sm font-semibold">
                         Сохранить новый пароль
                     </button>
