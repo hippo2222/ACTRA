@@ -619,7 +619,7 @@
                     class="flex items-center justify-center gap-2 w-full px-3 py-2 bg-surface-2 border border-border-subtle text-text-secondary hover:text-primary hover:border-primary hover:bg-bg-hover rounded-lg transition-all shadow-sm group">
                     <span
                         class="material-symbols-outlined text-[18px] group-hover:scale-110 transition-transform">add_circle</span>
-                    <span class="editor-sidebar-action-label text-xs font-bold uppercase tracking-wider">Новый модуль</span>
+                    <span class="editor-sidebar-action-label text-xs font-bold uppercase tracking-wider" data-i18n="md.new_module">Новый модуль</span>
                 </button>
             </div>
             <div class="px-4 mb-4">
@@ -628,25 +628,25 @@
                     class="flex items-center justify-center gap-2 w-full px-3 py-2 bg-surface-2 border border-border-subtle text-text-secondary hover:text-primary hover:border-primary hover:bg-bg-hover rounded-lg transition-all shadow-sm group">
                     <span
                         class="material-symbols-outlined text-[18px] group-hover:scale-110 transition-transform">upload_file</span>
-                    <span class="editor-sidebar-action-label text-xs font-bold uppercase tracking-wider">Импорт заданий</span>
+                    <span class="editor-sidebar-action-label text-xs font-bold uppercase tracking-wider" data-i18n="md.import_tasks">Импорт заданий</span>
                 </button>
             </div>
             <div class="px-4 mb-4">
                 <button onclick="dashboard.showTheoryAnalysisModal()" data-onboarding-target="editor-analysis-action"
-                    title="Анализ теории через внешний ИИ"
+                    title="Анализ теории через внешний ИИ" data-i18n-title="md.ai_analysis_title"
                     class="flex items-center justify-center gap-2 w-full px-3 py-2 bg-surface-2 border border-border-subtle text-text-secondary hover:text-primary hover:border-primary hover:bg-bg-hover rounded-lg transition-all shadow-sm group">
                     <span
                         class="material-symbols-outlined text-[18px] group-hover:scale-110 transition-transform">analytics</span>
-                    <span class="editor-sidebar-action-label text-xs font-bold uppercase tracking-wider">Анализ теории · ИИ</span>
+                    <span class="editor-sidebar-action-label text-xs font-bold uppercase tracking-wider" data-i18n="md.ai_analysis_label">Анализ теории · ИИ</span>
                 </button>
             </div>
             <div class="px-4 mb-4">
                 <button id="editor-archive-filter" type="button"
                     class="editor-archive-filter flex items-center justify-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
                     aria-pressed="false"
-                    title="Показать задания, которые стали доступны только для просмотра/удаления после окончания Premium">
+                    title="Показать задания, которые стали доступны только для просмотра/удаления после окончания Premium" data-i18n-title="md.archive_filter_title">
                     <span class="material-symbols-outlined text-[18px]">inventory_2</span>
-                    <span class="editor-sidebar-action-label">Архив Premium</span>
+                    <span class="editor-sidebar-action-label" data-i18n="md.archive_premium">Архив Premium</span>
                     <span id="editor-archive-filter-count" class="rounded-full border border-border-subtle bg-surface-1 px-1.5 py-0.5 text-[11px] leading-none text-text-main normal-case tracking-normal" hidden>0</span>
                 </button>
             </div>
@@ -657,7 +657,7 @@
                     class="flex items-center justify-center gap-2 w-full px-3 py-2 bg-surface-2 border border-border-subtle text-text-secondary hover:text-primary hover:border-primary hover:bg-bg-hover rounded-lg transition-all shadow-sm group">
                     <span
                         class="material-symbols-outlined text-[18px] group-hover:scale-110 transition-transform">history</span>
-                    <span class="editor-sidebar-action-label text-xs font-bold uppercase tracking-wider">Черновики</span>
+                    <span class="editor-sidebar-action-label text-xs font-bold uppercase tracking-wider" data-i18n="md.drafts">Черновики</span>
                 </button>
             </div>
             <div id="editor-workspace-shortcuts" class="px-4 mb-4"></div>
@@ -690,17 +690,17 @@
                     <span class="material-symbols-outlined text-[20px]">delete</span>
                 </div>
                 <div>
-                    <h3 class="text-sm font-bold text-text-main">Удалить?</h3>
+                    <h3 class="text-sm font-bold text-text-main" data-i18n="md.delete_confirm">Удалить?</h3>
                     <p class="editor-sidebar-confirm-target text-xs text-text-secondary mt-1" id="sidebar-delete-target-name">Module Name
                     </p>
                 </div>
                 <div class="editor-sidebar-confirm-actions mt-1">
                     <button onclick="dashboard.cancelDeleteConfirmation()"
-                        class="flex-1 py-1.5 text-xs font-medium text-text-secondary bg-surface-2 hover:bg-bg-hover rounded-lg transition-colors">
+                        class="flex-1 py-1.5 text-xs font-medium text-text-secondary bg-surface-2 hover:bg-bg-hover rounded-lg transition-colors" data-i18n="md.cancel">
                         Отмена
                     </button>
                     <button id="sidebar-delete-confirm-btn"
-                        class="flex-1 py-1.5 text-xs font-bold text-primary-contrast bg-error hover:bg-error-dark rounded-lg transition-colors shadow-sm">
+                        class="flex-1 py-1.5 text-xs font-bold text-primary-contrast bg-error hover:bg-error-dark rounded-lg transition-colors shadow-sm" data-i18n="md.delete">
                         Удалить
                     </button>
                 </div>
@@ -717,18 +717,18 @@
                     <span class="material-symbols-outlined text-2xl">sync</span>
                 </div>
                 <div class="space-y-2">
-                    <h3 class="text-xl font-bold text-text-main">Обновить из тем?</h3>
+                    <h3 class="text-xl font-bold text-text-main" data-i18n="md.sync_title">Обновить из тем?</h3>
                     <p class="text-sm text-text-secondary leading-relaxed">
-                        Это действие обновит теоретический контент во всех связанных комплексах на основе текущих тем в <span id="topic-sync-confirm-target" class="font-bold text-text-main">—</span>.
+                        <span data-i18n="md.sync_desc_pre">Это действие обновит теоретический контент во всех связанных комплексах на основе текущих тем в </span><span id="topic-sync-confirm-target" class="font-bold text-text-main">—</span>.
                     </p>
                 </div>
                 <div class="flex flex-col w-full gap-2 pt-2">
                     <button id="topic-sync-confirm-btn"
-                        class="w-full py-3 bg-primary hover:bg-primary-dark text-primary-contrast font-bold rounded-xl transition-all shadow-lg active:scale-98">
+                        class="w-full py-3 bg-primary hover:bg-primary-dark text-primary-contrast font-bold rounded-xl transition-all shadow-lg active:scale-98" data-i18n="md.sync_confirm">
                         Подтвердить обновление
                     </button>
                     <button id="topic-sync-cancel-btn"
-                        class="w-full py-3 bg-transparent text-text-secondary font-medium rounded-xl hover:bg-bg-hover transition-colors">
+                        class="w-full py-3 bg-transparent text-text-secondary font-medium rounded-xl hover:bg-bg-hover transition-colors" data-i18n="md.cancel">
                         Отмена
                     </button>
                 </div>
@@ -753,7 +753,7 @@
                     </div>
                     <input id="editor-search-input"
                         class="block w-full pl-10 pr-4 outline-none focus:ring-0"
-                        placeholder="Поиск заданий, модулей или файлов..." type="text" />
+                        placeholder="Поиск заданий, модулей или файлов..." data-i18n-placeholder="md.search_placeholder" type="text" />
                 </div>
                 <div class="relative shrink-0" data-role="sort-controller" data-onboarding-target="editor-sort">
                     <button data-role="sort-toggle"
@@ -764,12 +764,12 @@
                     </button>
                     <div data-role="sort-menu"
                         class="hidden absolute right-0 mt-2 w-60 rounded-xl border border-border-subtle bg-surface-1 shadow-xl z-30 py-2">
-                        <p class="px-4 pb-2 text-xs font-semibold uppercase tracking-wider text-text-disabled">
+                        <p class="px-4 pb-2 text-xs font-semibold uppercase tracking-wider text-text-disabled" data-i18n="md.sort_title">
                             Сортировка</p>
                         <button data-sort-option="date"
                             class="flex items-center w-full px-4 py-2 text-sm text-text-secondary hover:bg-bg-hover">
                             <span class="material-symbols-outlined text-[18px] text-text-disabled mr-2">schedule</span>
-                            <span class="flex-1 text-left">По дате изменения</span>
+                            <span class="flex-1 text-left" data-i18n="md.sort_by_date">По дате изменения</span>
                             <span
                                 class="material-symbols-outlined text-[18px] text-primary opacity-0 transition-opacity"
                                 data-role="sort-check">check</span>
@@ -778,7 +778,7 @@
                             class="flex items-center w-full px-4 py-2 text-sm text-text-secondary hover:bg-bg-hover">
                             <span
                                 class="material-symbols-outlined text-[18px] text-text-disabled mr-2">sort_by_alpha</span>
-                            <span class="flex-1 text-left">По алфавиту</span>
+                            <span class="flex-1 text-left" data-i18n="md.sort_by_alpha">По алфавиту</span>
                             <span
                                 class="material-symbols-outlined text-[18px] text-primary opacity-0 transition-opacity"
                                 data-role="sort-check">check</span>
@@ -786,7 +786,7 @@
                         <button data-sort-option="type"
                             class="flex items-center w-full px-4 py-2 text-sm text-text-secondary hover:bg-bg-hover">
                             <span class="material-symbols-outlined text-[18px] text-text-disabled mr-2">category</span>
-                            <span class="flex-1 text-left">По типу задания</span>
+                            <span class="flex-1 text-left" data-i18n="md.sort_by_type">По типу задания</span>
                             <span
                                 class="material-symbols-outlined text-[18px] text-primary opacity-0 transition-opacity"
                                 data-role="sort-check">check</span>
@@ -809,7 +809,7 @@
                         <span
                             class="material-symbols-outlined text-text-disabled group-hover:text-primary text-[28px]">add</span>
                     </div>
-                    <span class="text-text-secondary font-medium group-hover:text-primary transition-colors">Новое
+                    <span class="text-text-secondary font-medium group-hover:text-primary transition-colors" data-i18n="md.new_task">Новое
                         задание</span>
                 </button>
             </div>
@@ -827,8 +827,8 @@
             <div class="editor-dialog-header bg-surface-1 px-6 pt-6 pb-4">
                 <div class="flex items-start justify-between gap-4 mb-6">
                     <div class="editor-dialog-title-wrap">
-                        <h3 class="editor-dialog-title text-xl font-bold text-text-main">Создать новое задание</h3>
-                        <p class="editor-dialog-subtitle text-xs mt-1">Выберите модуль, тему и тип. После создания откроется рабочий редактор задания.</p>
+                        <h3 class="editor-dialog-title text-xl font-bold text-text-main" data-i18n="md.create_task_title">Создать новое задание</h3>
+                        <p class="editor-dialog-subtitle text-xs mt-1" data-i18n="md.create_task_subtitle">Выберите модуль, тему и тип. После создания откроется рабочий редактор задания.</p>
                     </div>
                     <button onclick="dashboard.closeModals()"
                         class="shrink-0 text-text-disabled hover:text-text-secondary transition-colors">
@@ -838,11 +838,11 @@
                 <div id="create-task-limit-note" class="hidden mb-4 rounded-lg border border-warning-light bg-warning-lighter px-4 py-3 text-sm text-warning-darker"></div>
                 <form id="create-task-form" class="space-y-4">
                     <div data-onboarding-target="editor-create-task-context">
-                        <label class="block text-sm font-semibold text-text-secondary mb-1">Модуль</label>
+                        <label class="block text-sm font-semibold text-text-secondary mb-1" data-i18n="md.module_label">Модуль</label>
                         <div class="editor-dialog-inline-row">
                             <select id="task-module-select"
                                 class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main focus:ring-2 focus:ring-primary sm:text-sm">
-                                <option value="">Выберите модуль...</option>
+                                <option value="" data-i18n="md.select_module_opt">Выберите модуль...</option>
                             </select>
                             <button type="button" onclick="dashboard.showModuleModal()"
                                 class="editor-dialog-inline-action p-2.5 bg-surface-2 hover:bg-bg-hover text-text-secondary rounded-lg transition-colors"
@@ -852,11 +852,11 @@
                         </div>
                     </div>
                     <div data-onboarding-target="editor-create-task-topic">
-                        <label class="block text-sm font-semibold text-text-secondary mb-1">Тема</label>
+                        <label class="block text-sm font-semibold text-text-secondary mb-1" data-i18n="md.topic_label">Тема</label>
                         <div class="editor-dialog-inline-row">
                             <select id="task-topic-select"
                                 class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main focus:ring-2 focus:ring-primary sm:text-sm">
-                                <option value="">Выберите тему...</option>
+                                <option value="" data-i18n="md.select_topic_opt">Выберите тему...</option>
                             </select>
                             <button type="button" onclick="dashboard.showTopicModal()"
                                 class="editor-dialog-inline-action p-2.5 bg-surface-2 hover:bg-bg-hover text-text-secondary rounded-lg transition-colors"
@@ -866,32 +866,32 @@
                         </div>
                     </div>
                     <div data-onboarding-target="editor-create-task-name">
-                        <label class="block text-sm font-semibold text-text-secondary mb-1">Название задания</label>
+                        <label class="block text-sm font-semibold text-text-secondary mb-1" data-i18n="md.task_name_label">Название задания</label>
                         <input type="text" id="task-name-input"
                             class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main placeholder:text-text-disabled focus:ring-2 focus:ring-primary sm:text-sm"
-                            placeholder="Введите понятное название" required>
+                            placeholder="Введите понятное название" data-i18n-placeholder="md.task_name_ph" required>
                     </div>
                     <div data-onboarding-target="editor-create-task-type">
-                        <label class="block text-sm font-semibold text-text-secondary mb-1">Тип задания</label>
+                        <label class="block text-sm font-semibold text-text-secondary mb-1" data-i18n="md.task_type_label">Тип задания</label>
                         <select id="task-type-select"
                             class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main focus:ring-2 focus:ring-primary sm:text-sm">
-                            <option value="click">Клик (Аннотация)</option>
-                            <option value="draw">Рисование</option>
-                            <option value="test">Тест (Выбор ответа)</option>
-                            <option value="sequence_assembly">Сборка последовательности</option>
-                            <option value="open_answer">Открытый ответ</option>
+                            <option value="click" data-i18n="md.task_type_click">Клик (Аннотация)</option>
+                            <option value="draw" data-i18n="md.task_type_draw">Рисование</option>
+                            <option value="test" data-i18n="md.task_type_test">Тест (Выбор ответа)</option>
+                            <option value="sequence_assembly" data-i18n="md.task_type_seq">Сборка последовательности</option>
+                            <option value="open_answer" data-i18n="md.task_type_open">Открытый ответ</option>
                         </select>
                     </div>
                 </form>
             </div>
             <div class="editor-dialog-footer bg-surface-2 px-6 py-4">
                 <button type="button" onclick="dashboard.closeModals()"
-                    class="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-main transition-colors">
+                    class="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-main transition-colors" data-i18n="md.cancel">
                     Отмена
                 </button>
                 <button id="create-task-submit-btn" type="button" onclick="dashboard.submitTaskForm()"
                     data-onboarding-target="editor-create-task-submit"
-                    class="px-6 py-2 bg-primary hover:bg-primary-dark text-primary-contrast font-bold rounded-lg transition-all shadow-md">
+                    class="px-6 py-2 bg-primary hover:bg-primary-dark text-primary-contrast font-bold rounded-lg transition-all shadow-md" data-i18n="md.create_task_btn">
                     Создать задание
                 </button>
             </div>
@@ -906,29 +906,29 @@
             <div class="editor-dialog-header bg-surface-1 px-6 pt-6 pb-4">
                 <div class="flex items-start justify-between gap-4 mb-4">
                     <div class="editor-dialog-title-wrap">
-                        <h3 class="editor-dialog-title text-xl font-bold text-text-main">Создать новый модуль</h3>
-                        <p class="editor-dialog-subtitle text-xs mt-1">Новый модуль появится в общей библиотеке и станет доступен для тем и заданий.</p>
+                        <h3 class="editor-dialog-title text-xl font-bold text-text-main" data-i18n="md.create_module_title">Создать новый модуль</h3>
+                        <p class="editor-dialog-subtitle text-xs mt-1" data-i18n="md.create_module_subtitle">Новый модуль появится в общей библиотеке и станет доступен для тем и заданий.</p>
                     </div>
                     <button type="button" onclick="dashboard.closeModuleModal()"
                         class="shrink-0 text-text-disabled hover:text-text-secondary transition-colors"
-                        aria-label="Закрыть">
+                        aria-label="Закрыть" data-i18n-aria="md.close_aria">
                         <span class="material-symbols-outlined">close</span>
                     </button>
                 </div>
                 <div>
-                    <label class="block text-sm font-semibold text-text-secondary mb-1">Название модуля</label>
+                    <label class="block text-sm font-semibold text-text-secondary mb-1" data-i18n="md.module_name_label">Название модуля</label>
                     <input type="text" id="module-name-input"
                         class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main placeholder:text-text-disabled focus:ring-2 focus:ring-primary sm:text-sm"
-                        placeholder="например, Анатомия грудной клетки" required>
+                        placeholder="например, Анатомия грудной клетки" data-i18n-placeholder="md.module_name_ph" required>
                 </div>
             </div>
             <div class="editor-dialog-footer bg-surface-2 px-6 py-4">
                 <button type="button" onclick="dashboard.closeModuleModal()"
-                    class="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-main transition-colors">
+                    class="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-main transition-colors" data-i18n="md.cancel">
                     Отмена
                 </button>
                 <button type="button" onclick="dashboard.submitModuleForm()"
-                    class="px-6 py-2 bg-primary hover:bg-primary-dark text-primary-contrast font-bold rounded-lg transition-all">
+                    class="px-6 py-2 bg-primary hover:bg-primary-dark text-primary-contrast font-bold rounded-lg transition-all" data-i18n="md.create_module_btn">
                     Создать модуль
                 </button>
             </div>
@@ -943,37 +943,37 @@
             <div class="editor-dialog-header bg-surface-1 px-6 pt-6 pb-4">
                 <div class="flex items-start justify-between gap-4 mb-4">
                     <div class="editor-dialog-title-wrap">
-                        <h3 class="editor-dialog-title text-xl font-bold text-text-main">Создать новую тему</h3>
-                        <p class="editor-dialog-subtitle text-xs mt-1">Тема будет добавлена в выбранный модуль и сразу станет доступна в редакторе.</p>
+                        <h3 class="editor-dialog-title text-xl font-bold text-text-main" data-i18n="md.create_topic_title">Создать новую тему</h3>
+                        <p class="editor-dialog-subtitle text-xs mt-1" data-i18n="md.create_topic_subtitle">Тема будет добавлена в выбранный модуль и сразу станет доступна в редакторе.</p>
                     </div>
                     <button type="button" onclick="dashboard.closeTopicModal()"
                         class="shrink-0 text-text-disabled hover:text-text-secondary transition-colors"
-                        aria-label="Закрыть">
+                        aria-label="Закрыть" data-i18n-aria="md.close_aria">
                         <span class="material-symbols-outlined">close</span>
                     </button>
                 </div>
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-semibold text-text-secondary mb-1">Целевой модуль</label>
+                        <label class="block text-sm font-semibold text-text-secondary mb-1" data-i18n="md.target_module_label">Целевой модуль</label>
                         <select id="topic-module-select" disabled
                             class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-secondary sm:text-sm opacity-90">
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-semibold text-text-secondary mb-1">Название темы</label>
+                        <label class="block text-sm font-semibold text-text-secondary mb-1" data-i18n="md.topic_name_label">Название темы</label>
                         <input type="text" id="topic-name-input"
                             class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main placeholder:text-text-disabled focus:ring-2 focus:ring-primary sm:text-sm"
-                            placeholder="например, Патология" required>
+                            placeholder="например, Патология" data-i18n-placeholder="md.topic_name_ph" required>
                     </div>
                 </div>
             </div>
             <div class="editor-dialog-footer bg-surface-2 px-6 py-4">
                 <button type="button" onclick="dashboard.closeTopicModal()"
-                    class="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-main transition-colors">
+                    class="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-main transition-colors" data-i18n="md.cancel">
                     Отмена
                 </button>
                 <button type="button" onclick="dashboard.submitTopicForm()"
-                    class="px-6 py-2 bg-primary hover:bg-primary-dark text-primary-contrast font-bold rounded-lg transition-all">
+                    class="px-6 py-2 bg-primary hover:bg-primary-dark text-primary-contrast font-bold rounded-lg transition-all" data-i18n="md.create_topic_btn">
                     Создать тему
                 </button>
             </div>
@@ -1012,12 +1012,12 @@
             <div class="bg-surface-1 px-6 pt-6 pb-4">
                 <div class="flex items-start justify-between gap-3 mb-4">
                     <div class="min-w-0">
-                        <h3 class="text-xl font-bold text-text-main">Управление теорией темы</h3>
+                        <h3 class="text-xl font-bold text-text-main" data-i18n="md.topic_theory_title">Управление теорией темы</h3>
                         <p id="topic-theory-meta" class="editor-flow-wrap text-xs text-text-secondary mt-1">Настройте обучающие материалы для этой темы (Менеджер теории).</p>
                     </div>
                     <button type="button" data-role="topic-theory-close"
                         class="p-2 rounded-lg text-text-disabled hover:text-text-main hover:bg-bg-hover transition-colors"
-                        aria-label="Закрыть">
+                        aria-label="Закрыть" data-i18n-aria="md.close_aria">
                         <span class="material-symbols-outlined text-[20px]">close</span>
                     </button>
                 </div>
@@ -1027,16 +1027,16 @@
                         <div id="topic-theory-current-info" class="hidden rounded-xl border border-primary/20 bg-primary/5 p-4">
                             <div class="flex items-center justify-between gap-3">
                                 <div class="min-w-0">
-                                    <span class="text-[10px] font-bold uppercase tracking-wider text-primary block mb-1">Привязанная теория</span>
+                                    <span class="text-[10px] font-bold uppercase tracking-wider text-primary block mb-1" data-i18n="md.linked_theory">Привязанная теория</span>
                                     <p id="topic-theory-current-title" class="text-sm font-bold text-text-main truncate">Загрузка...</p>
                                 </div>
                                 <div class="flex gap-2">
                                     <button id="topic-theory-edit-content-btn" type="button" 
-                                        class="p-2.5 rounded-xl bg-surface-1 border border-primary-light text-primary shadow-sm transition-all hover:border-primary hover:bg-primary-lighter hover:text-primary-darker hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary active:scale-95" title="Редактировать материалы">
+                                        class="p-2.5 rounded-xl bg-surface-1 border border-primary-light text-primary shadow-sm transition-all hover:border-primary hover:bg-primary-lighter hover:text-primary-darker hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary active:scale-95" title="Редактировать материалы" data-i18n-title="md.edit_materials_title">
                                         <span class="material-symbols-outlined text-[18px]">edit_note</span>
                                     </button>
                                     <button id="topic-theory-clear-btn" type="button" 
-                                        class="p-2.5 rounded-xl bg-surface-1 border border-border-subtle text-error-text shadow-sm transition-all hover:border-error hover:bg-error-lighter hover:text-error-text hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error active:scale-95" title="Убрать привязку">
+                                        class="p-2.5 rounded-xl bg-surface-1 border border-border-subtle text-error-text shadow-sm transition-all hover:border-error hover:bg-error-lighter hover:text-error-text hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error active:scale-95" title="Убрать привязку" data-i18n-title="md.remove_binding_title">
                                         <span class="material-symbols-outlined text-[18px]">link_off</span>
                                     </button>
                                 </div>
@@ -1048,12 +1048,12 @@
                                 <button id="topic-theory-create-new-btn" type="button"
                                     class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-primary text-primary-fg hover:bg-primary-hover font-bold text-sm transition-all shadow-sm">
                                     <span class="material-symbols-outlined text-[20px]">add_circle</span>
-                                    Создать новую теорию
+                                    <span data-i18n="md.create_theory_btn">Создать новую теорию</span>
                                 </button>
                                 <div class="relative flex-1">
                                     <select id="topic-theory-picker"
                                         class="block w-full h-full rounded-xl border-border-subtle bg-surface-2 pl-4 pr-10 py-3 text-text-main focus:ring-2 focus:ring-primary sm:text-sm appearance-none cursor-pointer">
-                                        <option value="">Выбрать из библиотеки...</option>
+                                        <option value="" data-i18n="md.pick_from_lib">Выбрать из библиотеки...</option>
                                     </select>
                                     <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none text-[18px]">expand_more</span>
                                 </div>
@@ -1064,31 +1064,31 @@
                     <!-- Propagation Settings -->
                     <div class="space-y-3 pt-2 border-t border-border-subtle">
                         <div class="flex items-center justify-between">
-                            <span class="text-[10px] font-bold uppercase tracking-wider text-text-secondary">Распространение на комплексы</span>
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-text-secondary" data-i18n="md.propagation_label">Распространение на комплексы</span>
                             <div class="flex items-center gap-2">
-                                <span class="text-[10px] font-bold text-text-muted px-1.5 py-0.5 rounded border border-border-subtle uppercase">Автосинхронизация</span>
+                                <span class="text-[10px] font-bold text-text-muted px-1.5 py-0.5 rounded border border-border-subtle uppercase" data-i18n="md.autosync">Автосинхронизация</span>
                             </div>
                         </div>
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
-                                <label class="block text-[10px] uppercase font-bold text-text-muted mb-1 ml-1" for="topic-theory-relation" title="Выберите, как теория будет связана с темой">
-                                    Способ привязки
+                                <label class="block text-[10px] uppercase font-bold text-text-muted mb-1 ml-1" for="topic-theory-relation" title="Выберите, как теория будет связана с темой" data-i18n-title="md.relation_label_title">
+                                    <span data-i18n="md.relation_label">Способ привязки</span>
                                     <span class="material-symbols-outlined text-[12px] align-middle ml-0.5 opacity-60">info</span>
                                 </label>
                                 <select id="topic-theory-relation"
                                     class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2 text-text-main focus:ring-2 focus:ring-primary sm:text-sm">
-                                    <option value="link">Динамическая ссылка</option>
-                                    <option value="copy">Статическая копия</option>
+                                    <option value="link" data-i18n="md.relation_link">Динамическая ссылка</option>
+                                    <option value="copy" data-i18n="md.relation_copy">Статическая копия</option>
                                 </select>
                                 <p id="topic-theory-relation-hint" class="mt-1 ml-1 text-[10px] text-text-secondary leading-snug">Изменения в теории автоматически появится в комплексах после синхронизации.</p>
                             </div>
                             <div class="rounded-xl border border-border-subtle bg-surface-2 px-4 py-3">
                                 <div class="flex items-center justify-between gap-3">
-                                    <span class="text-[10px] font-bold uppercase tracking-wider text-text-secondary">Синхронизация комплексов</span>
+                                    <span class="text-[10px] font-bold uppercase tracking-wider text-text-secondary" data-i18n="md.sync_complexes">Синхронизация комплексов</span>
                                     <span class="text-[10px] font-bold text-text-muted px-1.5 py-0.5 rounded border border-border-subtle uppercase">Safe</span>
                                 </div>
-                                <p class="mt-2 text-[11px] text-text-secondary leading-snug">
+                                <p class="mt-2 text-[11px] text-text-secondary leading-snug" data-i18n="md.sync_complexes_desc">
                                     При сохранении темы связанные комплексы-наследники обновляются автоматически. Комплексы с ручной переопределённой теорией не перезаписываются.
                                 </p>
                             </div>
@@ -1103,21 +1103,21 @@
             <div class="bg-surface-2 px-6 py-4 flex items-center justify-between gap-3 flex-wrap border-t border-border-subtle">
                 <div class="flex items-center gap-2 flex-wrap">
                     <button id="topic-theory-open-center-btn" type="button"
-                        class="px-4 py-2 text-sm font-medium rounded-lg border border-border-subtle bg-surface-1 text-text-secondary hover:text-primary hover:border-primary transition-colors">
+                        class="px-4 py-2 text-sm font-medium rounded-lg border border-border-subtle bg-surface-1 text-text-secondary hover:text-primary hover:border-primary transition-colors" data-i18n="md.theory_center">
                         Центр теории
                     </button>
                     <button id="topic-theory-open-complexes-btn" type="button"
-                        class="hidden px-4 py-2 text-sm font-medium rounded-lg border border-border-subtle bg-surface-1 text-text-secondary hover:text-primary hover:border-primary transition-colors">
+                        class="hidden px-4 py-2 text-sm font-medium rounded-lg border border-border-subtle bg-surface-1 text-text-secondary hover:text-primary hover:border-primary transition-colors" data-i18n="md.to_complexes">
                         К комплексам
                     </button>
                 </div>
                 <div class="flex items-center gap-3">
                     <button type="button" data-role="topic-theory-close"
-                        class="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-main transition-colors">
+                        class="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-main transition-colors" data-i18n="md.cancel">
                         Отмена
                     </button>
                     <button id="topic-theory-save-btn" type="button"
-                        class="px-5 py-2 bg-primary hover:bg-primary-dark text-primary-contrast font-bold rounded-lg transition-all">
+                        class="px-5 py-2 bg-primary hover:bg-primary-dark text-primary-contrast font-bold rounded-lg transition-all" data-i18n="md.save">
                         Сохранить
                     </button>
                 </div>
@@ -1151,29 +1151,29 @@
             <div class="bg-surface-1 px-6 pt-6 pb-4">
                 <div class="flex items-start justify-between gap-3 mb-4">
                     <div class="min-w-0">
-                        <h3 class="text-xl font-bold text-text-main">Создать новую теорию</h3>
-                        <p class="text-xs text-text-secondary mt-1">Введите название для новой теории</p>
+                        <h3 class="text-xl font-bold text-text-main" data-i18n="md.create_theory_title">Создать новую теорию</h3>
+                        <p class="text-xs text-text-secondary mt-1" data-i18n="md.create_theory_subtitle">Введите название для новой теории</p>
                     </div>
                     <button type="button" data-role="create-theory-close"
                         class="p-2 rounded-lg text-text-disabled hover:text-text-main hover:bg-bg-hover transition-colors"
-                        aria-label="Закрыть">
+                        aria-label="Закрыть" data-i18n-aria="md.close_aria">
                         <span class="material-symbols-outlined text-[20px]">close</span>
                     </button>
                 </div>
                 <div>
-                    <label class="block text-sm font-semibold text-text-secondary mb-2" for="create-theory-title-input">Название теории</label>
+                    <label class="block text-sm font-semibold text-text-secondary mb-2" for="create-theory-title-input" data-i18n="md.theory_name_label">Название теории</label>
                     <input type="text" id="create-theory-title-input"
                         class="block w-full rounded-xl border-border-subtle bg-surface-2 px-4 py-3 text-text-main placeholder:text-text-disabled focus:ring-2 focus:ring-primary sm:text-sm"
-                        placeholder="Например: КТ органов грудной клетки">
+                        placeholder="Например: КТ органов грудной клетки" data-i18n-placeholder="md.theory_name_ph">
                 </div>
             </div>
             <div class="bg-surface-2 px-6 py-4 flex items-center justify-end gap-3 border-t border-border-subtle">
                 <button type="button" data-role="create-theory-close"
-                    class="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-main transition-colors">
+                    class="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-main transition-colors" data-i18n="md.cancel">
                     Отмена
                 </button>
                 <button id="create-theory-confirm-btn" type="button"
-                    class="px-5 py-2 bg-primary hover:bg-primary-dark text-primary-contrast font-bold rounded-lg transition-all">
+                    class="px-5 py-2 bg-primary hover:bg-primary-dark text-primary-contrast font-bold rounded-lg transition-all" data-i18n="md.create_theory_confirm_btn">
                     Создать теорию
                 </button>
             </div>
@@ -1211,16 +1211,16 @@
                             <span class="material-symbols-outlined text-primary text-[28px]">hub</span>
                             <h3 class="text-2xl font-bold text-text-main">Theory Hub</h3>
                         </div>
-                        <p class="text-sm text-text-secondary mt-1">Центральное управление связями теории и их распространением.</p>
+                        <p class="text-sm text-text-secondary mt-1" data-i18n="md.hub_subtitle">Центральное управление связями теории и их распространением.</p>
                     </div>
                     <div class="flex items-center gap-2">
                         <button id="theory-hub-refresh-btn" type="button" 
-                            class="p-2.5 rounded-xl bg-surface-2 border border-border-subtle text-text-secondary hover:text-primary hover:border-primary transition-all group" title="Обновить данные">
+                            class="p-2.5 rounded-xl bg-surface-2 border border-border-subtle text-text-secondary hover:text-primary hover:border-primary transition-all group" title="Обновить данные" data-i18n-title="md.refresh_title">
                             <span class="material-symbols-outlined text-[20px] group-hover:rotate-180 transition-transform duration-500">refresh</span>
                         </button>
                         <button type="button" data-role="theory-hub-close"
                             class="p-2.5 rounded-xl text-text-disabled hover:text-text-main hover:bg-bg-hover transition-colors"
-                            aria-label="Закрыть">
+                            aria-label="Закрыть" data-i18n-aria="md.close_aria">
                             <span class="material-symbols-outlined text-[24px]">close</span>
                         </button>
                     </div>
@@ -1231,16 +1231,16 @@
                     <div class="flex flex-wrap items-center gap-3">
                         <div class="relative min-w-[200px]">
                             <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[18px]">search</span>
-                            <input id="theory-hub-search" type="text" placeholder="Поиск по теории или теме..."
+                            <input id="theory-hub-search" type="text" placeholder="Поиск по теории или теме..." data-i18n-placeholder="md.hub_search_ph"
                                 class="w-full pl-10 pr-4 py-2 bg-surface-2 border border-border-subtle rounded-xl text-sm focus:ring-2 focus:ring-primary transition-shadow">
                         </div>
                         <select id="theory-hub-focus-theory" class="bg-surface-2 border border-border-subtle rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-primary min-w-[180px]">
-                            <option value="">Все теории</option>
+                            <option value="" data-i18n="md.all_theories">Все теории</option>
                         </select>
                         <select id="theory-hub-ownership-filter" class="bg-surface-2 border border-border-subtle rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-primary min-w-[150px]">
-                            <option value="all">Все комплексы</option>
-                            <option value="my">Мои комплексы</option>
-                            <option value="system">Системные</option>
+                            <option value="all" data-i18n="md.all_complexes">Все комплексы</option>
+                            <option value="my" data-i18n="md.my_complexes">Мои комплексы</option>
+                            <option value="system" data-i18n="md.system_complexes">Системные</option>
                         </select>
                     </div>
                     <div id="theory-hub-summary" class="flex flex-wrap items-center gap-2">
@@ -1257,7 +1257,7 @@
                         <div class="flex items-center justify-between px-1">
                             <h4 class="text-xs font-bold uppercase tracking-widest text-text-secondary flex items-center gap-2">
                                 <span class="material-symbols-outlined text-[16px]">account_tree</span>
-                                Карта зависимостей (Topics)
+                                <span data-i18n="md.dep_map">Карта зависимостей (Topics)</span>
                             </h4>
                         </div>
                         <div id="theory-hub-map" class="grid grid-cols-1 gap-4">
@@ -1270,10 +1270,10 @@
                         <div class="flex items-center justify-between px-1">
                             <h4 class="text-xs font-bold uppercase tracking-widest text-text-secondary flex items-center gap-2">
                                 <span class="material-symbols-outlined text-[16px]">priority_high</span>
-                                Очередь обновлений & Конфликты
+                                <span data-i18n="md.conflicts_queue">Очередь обновлений &amp; Конфликты</span>
                             </h4>
                             <div class="flex items-center gap-2">
-                                <button id="theory-hub-select-all-btn" class="text-[10px] font-bold text-primary hover:underline uppercase">Выбрать все</button>
+                                <button id="theory-hub-select-all-btn" class="text-[10px] font-bold text-primary hover:underline uppercase" data-i18n="md.select_all">Выбрать все</button>
                             </div>
                         </div>
                         <div id="theory-hub-conflicts" class="grid grid-cols-1 gap-4">
@@ -1293,20 +1293,20 @@
             <!-- Footer -->
             <div class="bg-surface-1 px-8 py-5 border-t border-border-subtle flex items-center justify-between shrink-0">
                 <div class="flex items-center gap-3">
-                    <span class="text-xs font-bold text-text-secondary whitespace-nowrap">Режим: safe-автосинхронизация</span>
-                    <span class="text-[11px] text-text-muted">Наследуемые комплексы обновляются, переопределённые не трогаем.</span>
+                    <span class="text-xs font-bold text-text-secondary whitespace-nowrap" data-i18n="md.mode_label">Режим: safe-автосинхронизация</span>
+                    <span class="text-[11px] text-text-muted" data-i18n="md.mode_desc">Наследуемые комплексы обновляются, переопределённые не трогаем.</span>
                 </div>
                 <div class="flex items-center gap-3">
                     <button id="theory-hub-sync-all-btn" type="button" 
-                        class="px-5 py-2.5 bg-surface-2 border border-border-subtle text-text-main hover:text-primary hover:border-primary font-bold rounded-xl text-sm transition-all shadow-sm">
+                        class="px-5 py-2.5 bg-surface-2 border border-border-subtle text-text-main hover:text-primary hover:border-primary font-bold rounded-xl text-sm transition-all shadow-sm" data-i18n="md.sync_all">
                         Синхронизовать все
                     </button>
                     <button id="theory-hub-sync-selected-btn" type="button" 
-                        class="px-5 py-2.5 bg-bg-hover border border-border-subtle text-text-main hover:text-primary hover:border-primary font-bold rounded-xl text-sm transition-all shadow-sm">
+                        class="px-5 py-2.5 bg-bg-hover border border-border-subtle text-text-main hover:text-primary hover:border-primary font-bold rounded-xl text-sm transition-all shadow-sm" data-i18n="md.sync_selected">
                         Синхронизовать выбранные
                     </button>
                     <button id="theory-hub-force-resolve-btn" type="button" 
-                        class="px-6 py-2.5 bg-primary text-primary-contrast font-bold rounded-xl text-sm hover:bg-primary-dark transition-all shadow-lg shadow-primary/20 active:scale-95">
+                        class="px-6 py-2.5 bg-primary text-primary-contrast font-bold rounded-xl text-sm hover:bg-primary-dark transition-all shadow-lg shadow-primary/20 active:scale-95" data-i18n="md.force_apply">
                         Применить принудительно
                     </button>
                 </div>
@@ -1335,7 +1335,7 @@
                             class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-contrast font-semibold text-sm">
                             1
                         </div>
-                        <span class="editor-import-step-label text-xs font-medium text-text-secondary">Модуль/Тема</span>
+                        <span class="editor-import-step-label text-xs font-medium text-text-secondary" data-i18n="md.step1_label">Модуль/Тема</span>
                     </div>
                     <!-- Divider -->
                     <div class="flex-1 h-[2px] bg-border-subtle mx-2"></div>
@@ -1345,7 +1345,7 @@
                             class="w-10 h-10 rounded-full bg-surface-2 flex items-center justify-center text-text-disabled font-semibold text-sm">
                             2
                         </div>
-                        <span class="editor-import-step-label text-xs font-medium text-text-disabled">Текст</span>
+                        <span class="editor-import-step-label text-xs font-medium text-text-disabled" data-i18n="md.step2_label">Текст</span>
                     </div>
                     <!-- Divider -->
                     <div class="flex-1 h-[2px] bg-border-subtle mx-2"></div>
@@ -1355,7 +1355,7 @@
                             class="w-10 h-10 rounded-full bg-surface-2 flex items-center justify-center text-text-disabled font-semibold text-sm">
                             3
                         </div>
-                        <span class="editor-import-step-label text-xs font-medium text-text-disabled">Превью</span>
+                        <span class="editor-import-step-label text-xs font-medium text-text-disabled" data-i18n="md.step3_label">Превью</span>
                     </div>
                     <!-- Divider -->
                     <div class="flex-1 h-[2px] bg-border-subtle mx-2"></div>
@@ -1365,24 +1365,24 @@
                             class="w-10 h-10 rounded-full bg-surface-2 flex items-center justify-center text-text-disabled font-semibold text-sm">
                             4
                         </div>
-                        <span class="editor-import-step-label text-xs font-medium text-text-disabled">Подтверждение</span>
+                        <span class="editor-import-step-label text-xs font-medium text-text-disabled" data-i18n="md.step4_label">Подтверждение</span>
                     </div>
                 </div>
             </div>
             <!-- Content Area -->
             <div class="editor-import-content-shell flex-1 overflow-y-auto p-6" data-role="import-content">
                 <!-- Content will be rendered by JavaScript -->
-                <div class="text-center text-text-disabled">Загрузка...</div>
+                <div class="text-center text-text-disabled" data-i18n="md.loading">Загрузка...</div>
             </div>
             <!-- Footer -->
             <div class="editor-import-footer px-6 py-4 border-t border-border-subtle flex items-center justify-between shrink-0" data-role="import-footer">
                 <button onclick="dashboard.importPrevStep()" data-role="import-prev"
-                    class="px-4 py-2 text-text-secondary hover:text-text-main font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    class="px-4 py-2 text-text-secondary hover:text-text-main font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed" data-i18n="md.back"
                     disabled>
                     Назад
                 </button>
                 <button onclick="dashboard.importNextStep()" data-role="import-next"
-                    class="px-6 py-2 bg-primary text-primary-contrast rounded-lg hover:bg-primary-dark font-semibold transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
+                    class="px-6 py-2 bg-primary text-primary-contrast rounded-lg hover:bg-primary-dark font-semibold transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed" data-i18n="md.next">
                     Далее
                 </button>
             </div>
@@ -1392,8 +1392,8 @@
         <div class="editor-recovery-modal-shell bg-surface-1 rounded-2xl shadow-xl w-full overflow-hidden flex flex-col">
             <div class="editor-recovery-header px-6 py-4 border-b border-border-subtle flex items-start justify-between gap-4">
                 <div class="min-w-0">
-                    <h3 class="text-lg font-bold text-text-main">Центр восстановления черновиков</h3>
-                    <p class="editor-flow-wrap text-xs text-text-secondary mt-1">Локальные автосохранения и быстрый возврат в работу</p>
+                    <h3 class="text-lg font-bold text-text-main" data-i18n="md.recovery_title">Центр восстановления черновиков</h3>
+                    <p class="editor-flow-wrap text-xs text-text-secondary mt-1" data-i18n="md.recovery_subtitle">Локальные автосохранения и быстрый возврат в работу</p>
                 </div>
                 <button data-role="close-recovery-center"
                     class="shrink-0 p-2 rounded-lg text-text-disabled hover:text-text-main hover:bg-bg-hover transition-colors">
@@ -1401,7 +1401,7 @@
                 </button>
             </div>
             <div id="recovery-center-content" class="editor-recovery-content flex-1 overflow-y-auto p-5 space-y-3">
-                <div class="text-sm text-text-secondary">Загрузка...</div>
+                <div class="text-sm text-text-secondary" data-i18n="md.loading">Загрузка...</div>
             </div>
         </div>
     </div>
