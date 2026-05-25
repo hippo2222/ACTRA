@@ -1,3 +1,11 @@
+function wt(key, fallback) {
+  if (window.i18n && typeof window.i18n.t === 'function') {
+    var v = window.i18n.t(key);
+    if (v !== key) return v;
+  }
+  return fallback;
+}
+
 /**
  * ACTRA Click Task Editor
  */
@@ -9,9 +17,9 @@ const CLICK_EDITOR_HELPERS =
 
 const LABEL_DISPLAY_MODES = ["compact", "off"];
 
-const DEFAULT_PROMPT = "Отметьте ошибки в тексте";
+const DEFAULT_PROMPT = wt("ce.k001", "Отметьте ошибки в тексте");
 // В режиме «Тексты» пользователь выбирает правильный текст (один вариант), поэтому даём отдельный дефолт
-const DEFAULT_CHOICE_PROMPT = "Выберите правильный вариант текста";
+const DEFAULT_CHOICE_PROMPT = wt("ce.k002", "Выберите правильный вариант текста");
 
 function escapeHtml(str) {
     return String(str ?? "")
@@ -160,7 +168,7 @@ class ClickEditor extends BaseEditor {
         this.setupAuthoringOnboardingHelp();
         this.init().catch(err => {
             console.error("Critical initialization error:", err);
-            this.showFatalError("Ошибка инициализации редактора: " + err.message);
+            this.showFatalError(wt("ce.k003", "Ошибка инициализации редактора: ") + err.message);
         });
     }
 
@@ -562,7 +570,7 @@ class ClickEditor extends BaseEditor {
             });
             const data = await response.json();
             if (!response.ok || !data?.ok || (!data?.path && !data?.asset_id && !data?.asset_url)) {
-                this.showToast(`Ошибка загрузки дополнительного изображения: ${data?.error || "upload_failed"}`, "error");
+                this.showToast(`${wt('ce.k004', 'Ошибка загрузки дополнительного изображения: ')}${data?.error || "upload_failed"}`, "error");
                 return;
             }
 
@@ -572,7 +580,7 @@ class ClickEditor extends BaseEditor {
                 asset_url: data.asset_url,
             });
             if (!nextImageRef) {
-                this.showToast("Не удалось подготовить ссылку на изображение.", "error");
+                this.showToast(wt("ce.k005", "Не удалось подготовить ссылку на изображение."), "error");
                 return;
             }
             this.additionalInfo.images = [...currentImages, nextImageRef].slice(0, this.maxAdditionalImages || 3);
@@ -586,7 +594,7 @@ class ClickEditor extends BaseEditor {
             this.renderAdditionalInfo();
         } catch (error) {
             console.error("Failed to upload additional image:", error);
-            this.showToast("Ошибка при загрузке дополнительного изображения.", "error");
+            this.showToast(wt("ce.k006", "Ошибка при загрузке дополнительного изображения."), "error");
         } finally {
             event.target.value = "";
         }
@@ -811,8 +819,8 @@ class ClickEditor extends BaseEditor {
             markerSelector: '.click-editor-onboarding-errors-marker',
             markerClass: 'click-editor-onboarding-errors-marker',
             datasetKey: 'onboardingErrorsTour',
-            title: 'Показать обучение по режиму ошибок',
-            calloutTitles: ['Режим ошибок', 'Текст с ошибками', 'Отметить ошибку', 'Условие прохождения']
+            title: wt('ce.k007', 'Показать обучение по режиму ошибок'),
+            calloutTitles: [wt('ce.k008', 'Режим ошибок'), wt('ce.k009', 'Текст с ошибками'), wt('ce.k010', 'Отметить ошибку'), wt('ce.k011', 'Условие прохождения')]
         };
     }
 
@@ -1037,7 +1045,7 @@ class ClickEditor extends BaseEditor {
         const icon = this.promptToggleBtn?.querySelector("[data-prompt-icon]");
         const label = this.promptToggleBtn?.querySelector("[data-prompt-label]");
         if (icon) icon.textContent = open ? "expand_less" : "expand_more";
-        if (label) label.textContent = open ? "Скрыть" : "Показать";
+        if (label) label.textContent = open ? wt("ce.k012", "Скрыть") : wt("ce.k013", "Показать");
     }
 
     setClickEditorOnboardingChoicePromptOpen(open) {
@@ -1046,7 +1054,7 @@ class ClickEditor extends BaseEditor {
         const icon = this.choicePromptToggleBtn?.querySelector("[data-choice-prompt-icon]");
         const label = this.choicePromptToggleBtn?.querySelector("[data-choice-prompt-label]");
         if (icon) icon.textContent = open ? "expand_less" : "expand_more";
-        if (label) label.textContent = open ? "Скрыть" : "Показать";
+        if (label) label.textContent = open ? wt("ce.k012", "Скрыть") : wt("ce.k013", "Показать");
     }
 
     prepareClickEditorOnboardingErrorsStep(stepId) {
@@ -1449,7 +1457,7 @@ class ClickEditor extends BaseEditor {
                 return;
             }
             console.error("Missing task parameters in URL");
-            this.showFatalError("Неверная ссылка: отсутствуют параметры задания (module, topic, task)");
+            this.showFatalError(wt("ce.k014", "Неверная ссылка: отсутствуют параметры задания (module, topic, task)"));
             return;
         }
 
@@ -1471,7 +1479,7 @@ class ClickEditor extends BaseEditor {
                 await this.fetchTaskBootstrap(this.moduleId, this.topicId, this.taskId, this.taskTypeParam, this.taskNameParam);
 
             if (!bootstrap) {
-                this.showFatalError("Черновик не найден. Откройте создание задания заново.");
+                this.showFatalError(wt("ce.k015", "Черновик не найден. Откройте создание задания заново."));
                 return;
             }
 
@@ -1501,14 +1509,14 @@ class ClickEditor extends BaseEditor {
             }
             if (!data.ok || !data.task) {
                 console.error("Failed to load task:", data.error);
-                this.showFatalError(data.error || "Не удалось загрузить задание");
+                this.showFatalError(data.error || wt("ce.k016", "Не удалось загрузить задание"));
                 return;
             }
 
             await this.hydrateTask(data.task, { persisted: true });
         } catch (error) {
             console.error("Error fetching task:", error);
-            this.showFatalError("Ошибка сети или сервера: " + error.message);
+            this.showFatalError(wt("ce.k017", "Ошибка сети или сервера: ") + error.message);
         }
     }
 
@@ -1739,24 +1747,24 @@ class ClickEditor extends BaseEditor {
     validateTextErrorsBeforeSave() {
         const text = (this.errorDetection.text || "").trim();
         if (!text) {
-            this.showToast("Для режима «Ошибки в тексте» необходимо заполнить текст.", "error");
+            this.showToast(wt("ce.k018", "Для режима «Ошибки в тексте» необходимо заполнить текст."), "error");
             this.ensureErrorsPaneLoaded();
             return false;
         }
         const spans = this.getErrorSpansArray();
         if (!Array.isArray(spans) || !spans.length) {
-            this.showToast("Добавьте хотя бы одну ошибку (выделенный диапазон).", "error");
+            this.showToast(wt("ce.k019", "Добавьте хотя бы одну ошибку (выделенный диапазон)."), "error");
             return false;
         }
         const maxLen = text.length;
         for (let i = 0; i < spans.length; i += 1) {
             const { start, end } = spans[i];
             if (!Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end <= start) {
-                this.showToast(`Неверные границы у ошибки №${i + 1}. Проверьте выделения.`, "error");
+                this.showToast(`${wt('ce.k020', 'Неверные границы у ошибки №')}${i + 1}${wt('ce.k020b', '. Проверьте выделения.')}`, "error");
                 return false;
             }
             if (end > maxLen) {
-                this.showToast(`Ошибка №${i + 1} выходит за пределы текста. Исправьте диапазон.`, "error");
+                this.showToast(`${wt('ce.k021', 'Ошибка №')}${i + 1}${wt('ce.k021b', ' выходит за пределы текста. Исправьте диапазон.')}`, "error");
                 return false;
             }
         }
@@ -1766,7 +1774,7 @@ class ClickEditor extends BaseEditor {
     validateChoiceModeBeforeSave() {
         const options = this.getChoiceOptionsArray();
         if (!Array.isArray(options) || options.length < 2) {
-            this.showToast("Для режима выбора текста нужно минимум два варианта.", "error");
+            this.showToast(wt("ce.k022", "Для режима выбора текста нужно минимум два варианта."), "error");
             return false;
         }
         const trimmedOptions = options.map((opt) => ({
@@ -1775,12 +1783,12 @@ class ClickEditor extends BaseEditor {
         }));
         const emptyOption = trimmedOptions.findIndex((opt) => !opt.text.length);
         if (emptyOption !== -1) {
-            this.showToast(`Заполните текст у варианта №${emptyOption + 1}.`, "error");
+            this.showToast(`${wt('ce.k023', 'Заполните текст у варианта №')}${emptyOption + 1}${wt('ce.k023b', '.')}`, "error");
             return false;
         }
         const correctCount = trimmedOptions.filter((opt) => opt.is_correct).length;
         if (correctCount !== 1) {
-            this.showToast("Должен быть ровно один правильный вариант.", "error");
+            this.showToast(wt("ce.k024", "Должен быть ровно один правильный вариант."), "error");
             return false;
         }
         return true;
@@ -2505,17 +2513,17 @@ class ClickEditor extends BaseEditor {
                         <td class="px-4 py-3 text-xs font-semibold text-text-secondary align-top">${index + 1}</td>
                         <td class="px-4 py-3 align-top">
                             <div class="text-sm font-mono bg-surface-1 rounded border border-dashed border-border-subtle px-2 py-1">
-                                ${snippet ? escapeHtml(snippet) : '<span class="text-text-disabled">Пусто</span>'}
+                                ${snippet ? escapeHtml(snippet) : `<span class="text-text-disabled">${wt('ce.k025', 'Пусто')}</span>`}
                             </div>
-                            <div class="mt-2 text-xs text-text-secondary">Диапазон: ${start}–${end}</div>
+                            <div class="mt-2 text-xs text-text-secondary>${wt('ce.k026', 'Диапазон: ')}${start}–${end}</div>
                         </td>
                         <td class="px-4 py-3 align-top">
                             <div class="flex flex-col gap-2 items-end">
                                 <button type="button" class="click-reference-span-action click-reference-span-action--jump px-3 py-1.5 text-xs font-semibold text-success-dark border border-success-light rounded-lg transition" data-reference-action="jump">
-                                    Перейти
+                                    ${wt('ce.k027', 'Перейти')}
                                 </button>
                                 <button type="button" class="click-reference-span-action click-reference-span-action--delete px-3 py-1.5 text-xs font-semibold text-error border border-error-light rounded-lg transition" data-reference-action="delete">
-                                    Удалить
+                                    ${wt('ce.k028', 'Удалить')}
                                 </button>
                             </div>
                         </td>
@@ -2672,7 +2680,7 @@ class ClickEditor extends BaseEditor {
                 const borderClass = isCorrect ? "border-2 border-primary" : "border border-border-subtle";
                 const badge = isCorrect
                     ? `<div class="absolute -top-2.5 left-4 px-2 py-0.5 bg-primary text-primary-contrast text-[10px] uppercase font-bold tracking-wider rounded">
-                            Правильный
+                            ${wt('ce.k029', 'Правильный')}
                        </div>`
                     : "";
                 return `
@@ -2863,10 +2871,10 @@ class ClickEditor extends BaseEditor {
         const spans = this.getErrorSpansArray();
         if (!spans.length) return;
         const confirmed = await this.confirmAction({
-            title: "Очистить ошибки?",
-            message: "Все отмеченные ошибки будут удалены.",
-            confirmText: "Очистить",
-            cancelText: "Отмена",
+            title: wt("ce.k030", "Очистить ошибки?"),
+            message: wt("ce.k031", "Все отмеченные ошибки будут удалены."),
+            confirmText: wt("ce.k032", "Очистить"),
+            cancelText: wt("ce.k033", "Отмена"),
             variant: "error"
         });
         if (!confirmed) return;
@@ -2940,7 +2948,7 @@ class ClickEditor extends BaseEditor {
         if (!this.errorsPaneInitialized || !this.errorsTextPreview) return;
         const text = this.errorDetection.text || "";
         if (!text) {
-            this.errorsTextPreview.innerHTML = '<span class="text-text-disabled text-xs">Нет текста</span>';
+            this.errorsTextPreview.innerHTML = `<span class="text-text-disabled text-xs">${wt('ce.k034', 'Нет текста')}</span>`;
             return;
         }
         const spans = [...this.getErrorSpansArray()].sort((a, b) => a.start - b.start);
@@ -2994,17 +3002,17 @@ class ClickEditor extends BaseEditor {
                         <td class="px-4 py-3 text-xs font-semibold text-text-muted align-top">${index + 1}</td>
                         <td class="px-4 py-3 align-top">
                             <div class="text-sm font-mono bg-surface-2 rounded border border-dashed border-subtle px-2 py-1">
-                                ${snippet ? escapeHtml(snippet) : '<span class="text-text-disabled">Пусто</span>'}
+                                ${snippet ? escapeHtml(snippet) : `<span class="text-text-disabled">${wt('ce.k025', 'Пусто')}</span>`}
                             </div>
-                            <div class="mt-2 text-xs text-text-muted">Диапазон: ${start}–${end}</div>
+                            <div class="mt-2 text-xs text-text-muted>${wt('ce.k026', 'Диапазон: ')}${start}–${end}</div>
                         </td>
                         <td class="px-4 py-3 align-top">
                             <div class="flex flex-col gap-2 items-end">
                                 <button type="button" class="px-3 py-1.5 text-xs font-semibold text-primary border border-primary rounded-lg hover:bg-primary-lighter transition" data-action="jump-span">
-                                    Перейти
+                                    ${wt('ce.k027', 'Перейти')}
                                 </button>
                                 <button type="button" class="px-3 py-1.5 text-xs font-semibold text-error border border-error-light rounded-lg hover:bg-error-lighter transition" data-action="delete-span">
-                                    Удалить
+                                    ${wt('ce.k028', 'Удалить')}
                                 </button>
                             </div>
                         </td>
@@ -3105,7 +3113,7 @@ class ClickEditor extends BaseEditor {
         btns.forEach((btn) => {
             if (disabled) {
                 btn.setAttribute("aria-disabled", "true");
-                btn.setAttribute("title", "Переключатель доступен только при создании нового задания");
+                btn.setAttribute("title", wt("ce.k035", "Переключатель доступен только при создании нового задания"));
                 btn.classList.add("opacity-60", "cursor-not-allowed");
             } else {
                 btn.removeAttribute("aria-disabled");
@@ -3176,7 +3184,7 @@ class ClickEditor extends BaseEditor {
         } catch (error) {
             console.error("Failed to load errors UI:", error);
             this.errorsModePane.innerHTML =
-                '<div class="p-6 text-sm text-error">Не удалось загрузить интерфейс «Ошибки».</div>';
+                `<div class="p-6 text-sm text-error">${wt('ce.k036', 'Не удалось загрузить интерфейс «Ошибки».')}</div>`;
         }
     }
 
@@ -3397,8 +3405,8 @@ class ClickEditor extends BaseEditor {
                 this.task.metadata?.title ||
                 this.task.metadata?.name ||
                 this.task.metadata?.id ||
-                "Задание";
-            this.headerTitle.textContent = `Редактирование задания: ${humanName}`;
+                wt("ce.k039", "Задание");
+            this.headerTitle.textContent = `${wt('ce.k040', 'Редактирование задания: ')}${humanName}`;
         }
 
         if (this.promptArea) {
@@ -3614,7 +3622,7 @@ class ClickEditor extends BaseEditor {
 
         window.addEventListener("keydown", (event) => this.handleKeyDown(event));
 
-        this.updateStatusBadge("Режим ожидания");
+        this.updateStatusBadge(wt("ce.k041", "Режим ожидания"));
 
         this.updateToolButtons();
         this.updateCursorState();
@@ -3628,7 +3636,7 @@ class ClickEditor extends BaseEditor {
         const label = this.promptToggleBtn.querySelector("[data-prompt-label]");
         const update = () => {
             this.promptAreaWrapper.classList.toggle("hidden", !open);
-            if (label) label.textContent = open ? "Скрыть" : "Показать";
+            if (label) label.textContent = open ? wt("ce.k012", "Скрыть") : wt("ce.k013", "Показать");
             if (icon) icon.textContent = open ? "expand_less" : "expand_more";
         };
         this.promptToggleBtn.addEventListener("click", () => {
@@ -3647,7 +3655,7 @@ class ClickEditor extends BaseEditor {
         const label = this.choicePromptToggleBtn.querySelector("[data-choice-prompt-label]");
         const update = () => {
             this.choicePromptAreaWrapper.classList.toggle("hidden", !open);
-            if (label) label.textContent = open ? "Скрыть" : "Показать";
+            if (label) label.textContent = open ? wt("ce.k012", "Скрыть") : wt("ce.k013", "Показать");
             if (icon) icon.textContent = open ? "expand_less" : "expand_more";
         };
         this.choicePromptToggleBtn.addEventListener("click", () => {
@@ -3716,15 +3724,15 @@ class ClickEditor extends BaseEditor {
             return;
         }
         const modeTitleMap = {
-            compact: "Компактно",
-            off: "Выкл"
+            compact: wt("ce.k042", "Компактно"),
+            off: wt("ce.k043", "Выкл")
         };
         const iconMap = {
             compact: "visibility",
             off: "visibility_off"
         };
         const mode = LABEL_DISPLAY_MODES.includes(this.labelDisplayMode) ? this.labelDisplayMode : LABEL_DISPLAY_MODES[0];
-        this.labelToggleText.textContent = modeTitleMap[mode] || "Компактно";
+        this.labelToggleText.textContent = modeTitleMap[mode] || wt("ce.k042", "Компактно");
         if (this.labelToggleBtn) {
             const icon = this.labelToggleBtn.querySelector(".material-symbols-outlined");
             if (icon) {
@@ -3806,7 +3814,7 @@ class ClickEditor extends BaseEditor {
         this.updateCursorState();
         this.updateDrawingControlsState();
         this.updateStatusBadge(
-            tool === "polygon" ? "Режим: прямолинейное лассо" : "Режим: линии и линейные контуры"
+            tool === "polygon" ? wt("ce.k044", "Режим: прямолинейное лассо") : wt("ce.k045", "Режим: линии и линейные контуры")
         );
     }
 
@@ -3828,12 +3836,12 @@ class ClickEditor extends BaseEditor {
 
     validateTask() {
         if (!this.annotations || this.annotations.length === 0) {
-            return "Необходимо добавить хотя бы одну область или линию";
+            return wt("ce.k046", "Необходимо добавить хотя бы одну область или линию");
         }
         for (let i = 0; i < this.annotations.length; i++) {
             const label = (this.annotations[i].label || "").trim();
             if (!label) {
-                return `У объекта #${i + 1} отсутствует подпись. Пожалуйста, укажите её в списке справа.`;
+                return `${wt('ce.k047', 'У объекта #')}${i + 1}${wt('ce.k047b', ' отсутствует подпись. Пожалуйста, укажите её в списке справа.')}`;
             }
         }
         return null;
@@ -4034,7 +4042,7 @@ class ClickEditor extends BaseEditor {
         if (!this.currentPolygonPoints.length) return;
         this.currentPolygonPoints.pop();
         if (!this.currentPolygonPoints.length) {
-            this.updateStatusBadge("Контур очищен", { tone: "warning" });
+            this.updateStatusBadge(wt("ce.k048", "Контур очищен"), { tone: "warning" });
         } else {
             this.updateStatusBadge(this.getPolygonProgressMessage(), { tone: "info" });
         }
@@ -4045,12 +4053,12 @@ class ClickEditor extends BaseEditor {
     getPolygonProgressMessage() {
         const pointsCount = this.currentPolygonPoints.length;
         if (pointsCount <= 0) {
-            return "Нужно минимум 3 точки";
+            return wt("ce.k049", "Нужно минимум 3 точки");
         }
         if (pointsCount < 3) {
-            return `Точек: ${pointsCount}/3`;
+            return `${wt('ce.k050', 'Точек: ')}${pointsCount}${wt('ce.k050b', '/3')}`;
         }
-        return "Контур готов";
+        return wt("ce.k051", "Контур готов");
     }
 
     cloneAnnotation(annotation) {
@@ -4072,14 +4080,14 @@ class ClickEditor extends BaseEditor {
             index: Number.isInteger(index) ? index : this.annotations.length
         };
 
-        const kindLabel = annotationCopy.type === "freehand" ? "Линия" : "Контур";
+        const kindLabel = annotationCopy.type === "freehand" ? wt("ce.k052", "Линия") : wt("ce.k053", "Контур");
         const customLabel = String(annotationCopy.label || "").trim();
         const message = customLabel
-            ? `${kindLabel} «${customLabel}» удалён.`
-            : `${kindLabel} удалён.`;
+            ? `${kindLabel}${wt('ce.k054', ' «')}${customLabel}${wt('ce.k054b', '» удалён.')}`
+            : `${kindLabel}${wt('ce.k055', ' удалён.')}`;
 
         this.showToast(message, "warning", 5000, {
-            actionLabel: "Отменить",
+            actionLabel: wt("ce.k056", "Отменить"),
             onAction: () => this.restoreDeletedAnnotation(),
             onDismiss: () => {
                 this.pendingDeletedAnnotationUndo = null;
@@ -4114,7 +4122,7 @@ class ClickEditor extends BaseEditor {
         this.enforceRequiredCorrectBounds({ clampToMax: true });
         this.updateDrawingControlsState();
         this.highlightAnnotation(restoreIndex);
-        this.updateStatusBadge("Контур восстановлен.", { tone: "success" });
+        this.updateStatusBadge(wt("ce.k057", "Контур восстановлен."), { tone: "success" });
         this.markUnsaved();
         return true;
     }
@@ -4159,11 +4167,11 @@ class ClickEditor extends BaseEditor {
         }
 
         if (!skipStatus) {
-            const kindLabel = removedAnnotation?.type === "freehand" ? "Линия" : "Контур";
-            this.updateStatusBadge(`${kindLabel} удалён`, { tone: "warning" });
+            const kindLabel = removedAnnotation?.type === "freehand" ? wt("ce.k052", "Линия") : wt("ce.k053", "Контур");
+            this.updateStatusBadge(`${kindLabel}${wt("ce.k058", " удалён")}`, { tone: "warning" });
             if (requiredCorrectMeta?.autoLowered) {
                 this.updateStatusBadge(
-                    `Порог: ${requiredCorrectMeta.value}/${this.formatContourCount(requiredCorrectMeta.annotationsCount)}`,
+                    `${wt('ce.k059', 'Порог: ')}${requiredCorrectMeta.value}/${this.formatContourCount(requiredCorrectMeta.annotationsCount)}`,
                     { tone: "warning" }
                 );
             }
@@ -4184,7 +4192,7 @@ class ClickEditor extends BaseEditor {
             const minPoints = annotation.type === "polygon" ? 3 : 2;
             if (annotation.points.length <= minPoints) {
                 this.updateStatusBadge(
-                    `Минимум точек: ${minPoints}`,
+                    `${wt('ce.k060', 'Минимум точек: ')}${minPoints}`,
                     { tone: "warning" }
                 );
                 return;
@@ -4192,7 +4200,7 @@ class ClickEditor extends BaseEditor {
             annotation.points.splice(vertexIndex, 1);
             if (!annotation.points.length) {
                 this.deleteAnnotation(annotationIndex, { skipStatus: true });
-                this.updateStatusBadge("Контур удалён.", { tone: "warning" });
+                this.updateStatusBadge(wt("ce.k061", "Контур удалён."), { tone: "warning" });
                 return;
             }
             const nextVertexIndex = Math.min(vertexIndex, annotation.points.length - 1);
@@ -4200,7 +4208,7 @@ class ClickEditor extends BaseEditor {
                 annotation.points.length > 0 ? { annotationIndex, vertexIndex: nextVertexIndex } : null;
             this.renderAnnotations();
             this.renderAnnotationList();
-            this.updateStatusBadge(`Осталось точек: ${annotation.points.length}`, { tone: "info" });
+            this.updateStatusBadge(`${wt('ce.k062', 'Осталось точек: ')}${annotation.points.length}`, { tone: "info" });
             this.updateDrawingControlsState();
             return;
         }
@@ -4215,7 +4223,7 @@ class ClickEditor extends BaseEditor {
         this.currentPolygonPoints = [];
         this.resetVertexEditingState();
         this.updateDrawingControlsState();
-        this.updateStatusBadge("Режим ожидания");
+        this.updateStatusBadge(wt("ce.k041", "Режим ожидания"));
         this.renderAnnotations();
     }
 
@@ -4240,7 +4248,7 @@ class ClickEditor extends BaseEditor {
         this.currentPolygonPoints = [];
         this.updateAnnotationCount();
         this.updateDrawingControlsState();
-        this.updateStatusBadge("Контур добавлен", { tone: "success" });
+        this.updateStatusBadge(wt("ce.k066", "Контур добавлен"), { tone: "success" });
         this.renderAnnotations();
         this.renderAnnotationList();
         this.enforceRequiredCorrectBounds({ clampToMax: true });
@@ -4261,7 +4269,7 @@ class ClickEditor extends BaseEditor {
         this.freehandPoints = [startCoords];
         this.selectedAnnotationIndex = -1;
         this.resetVertexEditingState();
-        this.updateStatusBadge("Рисуйте с зажатой ЛКМ", { tone: "info" });
+        this.updateStatusBadge(wt("ce.k063", "Рисуйте с зажатой ЛКМ"), { tone: "info" });
         this.renderAnnotations();
     }
 
@@ -4283,7 +4291,7 @@ class ClickEditor extends BaseEditor {
         if (!this.drawingFreehand) return;
         if (this.freehandPoints.length < 2) {
             this.cancelFreehandDrawing();
-            this.updateStatusBadge("Линия слишком короткая", { tone: "warning" });
+            this.updateStatusBadge(wt("ce.k064", "Линия слишком короткая"), { tone: "warning" });
             return;
         }
 
@@ -4304,7 +4312,7 @@ class ClickEditor extends BaseEditor {
         this.updateAnnotationCount();
         this.renderAnnotations();
         this.renderAnnotationList();
-        this.updateStatusBadge("Линия добавлена", { tone: "success" });
+        this.updateStatusBadge(wt("ce.k065", "Линия добавлена"), { tone: "success" });
         this.enforceRequiredCorrectBounds({ clampToMax: true });
         this.markUnsaved();
     }
@@ -4336,10 +4344,10 @@ class ClickEditor extends BaseEditor {
     async clearAnnotations() {
         if (!this.annotations.length && !this.currentPolygonPoints.length) return;
         const confirmed = await this.confirmAction({
-            title: "Удалить все контуры?",
-            message: "Это удалит все текущие аннотации на изображении.",
-            confirmText: "Удалить",
-            cancelText: "Отмена",
+            title: wt("ce.k067", "Удалить все контуры?"),
+            message: wt("ce.k068", "Это удалит все текущие аннотации на изображении."),
+            confirmText: wt("ce.k028", "Удалить"),
+            cancelText: wt("ce.k033", "Отмена"),
             variant: "error"
         });
         if (!confirmed) return;
@@ -4354,7 +4362,7 @@ class ClickEditor extends BaseEditor {
         this.updateAnnotationCount();
         this.enforceRequiredCorrectBounds({ clampToMax: true });
         this.updateDrawingControlsState();
-        this.updateStatusBadge("Все контуры очищены.", { tone: "warning" });
+        this.updateStatusBadge(wt("ce.k069", "Все контуры очищены."), { tone: "warning" });
         this.markUnsaved();
     }
 
@@ -4728,8 +4736,8 @@ class ClickEditor extends BaseEditor {
             (annotation?.label?.trim()
                 ? annotation.label.trim()
                 : annotation?.type === "freehand"
-                    ? "Линия"
-                    : "Контур");
+                    ? wt("ce.k052", "Линия")
+                    : wt("ce.k053", "Контур"));
         const labelText = textSource || defaultTitle;
         if (!anchor || !labelText) {
             return null;
@@ -4852,7 +4860,7 @@ class ClickEditor extends BaseEditor {
         const paddingY = 10;
         const lineHeight = Math.round(fontSize * 1.3);
         const maxLineWidth = Math.max(60, maxWidth - paddingX * 2);
-        const sanitized = (text ?? "").toString().trim() || "Без названия";
+        const sanitized = (text ?? "").toString().trim() || wt("ce.k073", "Без названия");
         const paragraphs = sanitized.replace(/\r/g, "").split(/\n+/);
         const lines = [];
         let widest = 0;
@@ -4926,7 +4934,7 @@ class ClickEditor extends BaseEditor {
         });
 
         if (!lines.length) {
-            const fallback = sanitized || "Контур";
+            const fallback = sanitized || wt("ce.k053", "Контур");
             lines.push(fallback);
             widest = this.measureLabelTextWidth(fallback, fontSize);
         }
@@ -5007,16 +5015,16 @@ class ClickEditor extends BaseEditor {
             meta.className = "flex flex-col flex-1";
             const title = document.createElement("span");
             title.className = "text-xs uppercase tracking-wide text-text-muted";
-            title.textContent = isFreehand ? "Линия" : "Контур";
+            title.textContent = isFreehand ? wt("ce.k052", "Линия") : wt("ce.k053", "Контур");
             const stats = document.createElement("span");
             stats.className = "text-[11px] text-text-disabled";
-            stats.textContent = `${ann.points.length} точек`;
+            stats.textContent = `${ann.points.length}${wt('ce.k083', ' точек')}`;
             meta.appendChild(title);
             meta.appendChild(stats);
 
             const deleteBtn = document.createElement("button");
             deleteBtn.type = "button";
-            deleteBtn.title = "Удалить контур";
+            deleteBtn.title = wt("ce.k084", "Удалить контур");
             deleteBtn.className = "delete-annotation-btn text-text-disabled hover:text-error transition-colors p-1.5 rounded-lg hover:bg-error-lighter";
             deleteBtn.innerHTML = '<span class="material-symbols-outlined text-[18px]">delete</span>';
             deleteBtn.addEventListener("click", (event) => {
@@ -5037,7 +5045,7 @@ class ClickEditor extends BaseEditor {
                 <span class="material-symbols-outlined text-[16px]">
                     ${ann.labelVisible ? "visibility" : "visibility_off"}
                 </span>
-                ${ann.labelVisible ? "Подпись" : "Показать"}
+                ${ann.labelVisible ? wt('ce.k078', 'Подпись') : wt('ce.k013', 'Показать')}
             `;
             labelToggleBtn.addEventListener("click", (event) => {
                 event.stopPropagation();
@@ -5053,7 +5061,7 @@ class ClickEditor extends BaseEditor {
                 "flex-1 inline-flex items-center justify-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg border min-w-[90px] transition border-accent-light text-accent bg-accent-lighter hover:bg-accent-light";
             highlightBtn.innerHTML = `
                 <span class="material-symbols-outlined text-[16px]">auto_awesome</span>
-                ${isHighlighted ? "Мигает" : "Подсветить"}
+                ${isHighlighted ? wt('ce.k079', 'Мигает') : wt('ce.k080', 'Подсветить')}
             `;
             if (isHighlighted) {
                 highlightBtn.disabled = true;
@@ -5072,7 +5080,7 @@ class ClickEditor extends BaseEditor {
             const input = document.createElement("input");
             input.type = "text";
             input.value = ann.label || "";
-            input.placeholder = isFreehand ? "Название линии" : "Название области";
+            input.placeholder = isFreehand ? wt("ce.k081", "Название линии") : wt("ce.k082", "Название области");
             input.className =
                 "annotation-label-input w-full border border-subtle rounded-lg px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary-light";
             input.addEventListener("pointerdown", (event) => {
@@ -5195,7 +5203,7 @@ class ClickEditor extends BaseEditor {
     }
 
     getContourWord(count) {
-        return count === 1 ? "контур" : count >= 2 && count <= 4 ? "контура" : "контуров";
+        return count === 1 ? wt("ce.k070", "контур") : count >= 2 && count <= 4 ? wt("ce.k071", "контура") : wt("ce.k072", "контуров");
     }
 
     formatContourCount(count) {
@@ -5213,16 +5221,16 @@ class ClickEditor extends BaseEditor {
 
         this.requiredCorrectInput.disabled = !hasContours;
         if (this.requiredCorrectContext) {
-            this.requiredCorrectContext.textContent = `из ${contourCountText}`;
+            this.requiredCorrectContext.textContent = `${wt('ce.k074', 'из ')}${contourCountText}`;
         }
         if (this.requiredCorrectHint) {
             if (!hasContours) {
-                this.requiredCorrectHint.textContent = "Сначала добавьте хотя бы один контур.";
+                this.requiredCorrectHint.textContent = wt("ce.k075", "Сначала добавьте хотя бы один контур.");
             } else if (meta.autoLowered) {
                 this.requiredCorrectHint.textContent =
-                    `Порог автоматически снижен до ${value} из ${contourCountText}, потому что контуров стало меньше.`;
+                    `${wt('ce.k076', 'Порог автоматически снижен до ')}${value}${wt('ce.k076b', ' из ')}${contourCountText}${wt('ce.k076c', ', потому что контуров стало меньше.')}`;
             } else {
-                this.requiredCorrectHint.textContent = `Нужно отметить ${value} из ${contourCountText}.`;
+                this.requiredCorrectHint.textContent = `${wt('ce.k077', 'Нужно отметить ')}${value}${wt('ce.k076b', ' из ')}${contourCountText}.`;
             }
         }
     }
@@ -5350,7 +5358,7 @@ class ClickEditor extends BaseEditor {
         );
 
         if (!message) {
-            statusTextEl.textContent = "Режим ожидания";
+            statusTextEl.textContent = wt("ce.k041", "Режим ожидания");
             if (this.statusBadgeIcon) {
                 this.statusBadgeIcon.textContent = "info";
             }
@@ -5690,7 +5698,7 @@ class ClickEditor extends BaseEditor {
             });
             const data = await response.json();
             if (!data.ok) {
-                this.showToast(`Ошибка загрузки: ${data.error || "upload_failed"}`, "error");
+                this.showToast(`${wt('ce.k108', 'Ошибка загрузки: ')}${data.error || "upload_failed"}`, "error");
                 return;
             }
             if (!this.task.task_data) {
@@ -5718,7 +5726,7 @@ class ClickEditor extends BaseEditor {
             this.markUnsaved();
         } catch (error) {
             console.error("Ошибка загрузки изображения:", error);
-            this.showToast("Ошибка при загрузке изображения. Подробности в консоли.", "error");
+            this.showToast(wt("ce.k106", "Ошибка при загрузке изображения. Подробности в консоли."), "error");
         } finally {
             event.target.value = "";
         }
@@ -5732,7 +5740,7 @@ class ClickEditor extends BaseEditor {
         this.applyEmptyCanvasStageSize();
         this.resetViewport();
         this.renderAnnotations();
-        this.updateStatusBadge("Не удалось загрузить изображение");
+        this.updateStatusBadge(wt("ce.k107", "Не удалось загрузить изображение"));
     }
 
     countOverlappingErrorPairs(spans = []) {
@@ -5786,12 +5794,12 @@ class ClickEditor extends BaseEditor {
                 const options = this.getChoiceOptionsArray().map((opt) => opt?.text || "");
                 const duplicates = this.collectDuplicateLabels(options);
                 if (duplicates.length) {
-                    warnings.push(`Повторяются варианты ответа: ${duplicates.slice(0, 2).join(", ")}.`);
+                    warnings.push(`${wt('ce.k085', 'Повторяются варианты ответа: ')}${duplicates.slice(0, 2).join(", ")}.`);
                 }
             } else {
                 const overlaps = this.countOverlappingErrorPairs(this.getErrorSpansArray());
                 if (overlaps > 0) {
-                    warnings.push(`Есть ${overlaps} пересечений между диапазонами ошибок. Пользователь может получить неоднозначную разметку.`);
+                    warnings.push(`${wt('ce.k086', 'Есть ')}${overlaps}${wt('ce.k086b', ' пересечений между диапазонами ошибок. Пользователь может получить неоднозначную разметку.')}`);
                 }
             }
             return warnings;
@@ -5800,12 +5808,12 @@ class ClickEditor extends BaseEditor {
         const labels = this.annotations.map((annotation) => annotation?.label || "");
         const duplicates = this.collectDuplicateLabels(labels);
         if (duplicates.length) {
-            warnings.push(`Повторяются названия контуров: ${duplicates.slice(0, 2).join(", ")}.`);
+            warnings.push(`${wt('ce.k087', 'Повторяются названия контуров: ')}${duplicates.slice(0, 2).join(", ")}.`);
         }
 
         const generatedLabels = this.annotations.filter((annotation) => this.isGeneratedAnnotationLabel(annotation?.label)).length;
         if (generatedLabels > 0) {
-            warnings.push(`У ${generatedLabels} контуров осталось автосгенерированное имя. Лучше заменить его на содержательную подпись.`);
+            warnings.push(`${wt('ce.k088', 'У ')}${generatedLabels}${wt('ce.k088b', ' контуров осталось автосгенерированное имя. Лучше заменить его на содержательную подпись.')}`);
         }
 
         const requiredCorrect = this.requiredCorrectInput
@@ -5816,7 +5824,7 @@ class ClickEditor extends BaseEditor {
                 0
             );
         if (this.annotations.length > 1 && Number.isFinite(requiredCorrect) && requiredCorrect === this.annotations.length) {
-            warnings.push('Сейчас пользователь должен отметить все контуры. Убедитесь, что такой порог действительно нужен.');
+            warnings.push(wt('ce.k089', 'Сейчас пользователь должен отметить все контуры. Убедитесь, что такой порог действительно нужен.'));
         }
 
         return warnings;
@@ -5845,22 +5853,22 @@ class ClickEditor extends BaseEditor {
             }
         }
         if (!isErrorDetection && !this.task.task_data?.content?.image) {
-            this.showToast("Загрузите основное изображение задания.", "error");
+            this.showToast(wt("ce.k090", "Загрузите основное изображение задания."), "error");
             return;
         }
 
         if (!isErrorDetection) {
             if (!this.annotations.length) {
-                this.showToast("Добавьте минимум один контур.", "error");
+                this.showToast(wt("ce.k091", "Добавьте минимум один контур."), "error");
                 return;
             }
             if (!Number.isFinite(requiredCorrect) || requiredCorrect < 1) {
-                this.showToast("Количество необходимых правильных аннотаций должно быть положительным числом.", "error");
+                this.showToast(wt("ce.k092", "Количество необходимых правильных аннотаций должно быть положительным числом."), "error");
                 this.requiredCorrectInput?.focus();
                 return;
             }
             if (requiredCorrect > this.annotations.length) {
-                this.showToast("Количество нужных аннотаций не может превышать общее число контуров.", "error");
+                this.showToast(wt("ce.k093", "Количество нужных аннотаций не может превышать общее число контуров."), "error");
                 this.requiredCorrectInput?.focus();
                 return;
             }
@@ -5934,7 +5942,7 @@ class ClickEditor extends BaseEditor {
         const topicId = this.topicId || this.task.task_data?.meta?.topic || this.task.metadata?.topic;
         const taskId = this.taskId || this.task.metadata?.id || this.task.task_data?.meta?.id;
         if (!moduleId || !topicId || !taskId) {
-            this.showToast("Не удалось определить идентификаторы задания (module/topic/task). Перезагрузите редактор из списка задач.", "error");
+            this.showToast(wt("ce.k094", "Не удалось определить идентификаторы задания (module/topic/task). Перезагрузите редактор из списка задач."), "error");
             return;
         }
 
@@ -5957,14 +5965,14 @@ class ClickEditor extends BaseEditor {
             if (response.status === 409 && data?.error === 'workspace_limit_reached') {
                 this.updateSaveStatus({
                     type: "warning",
-                    message: "Лимит заданий достигнут",
-                    detail: "Черновик можно продолжать редактировать, но сохранить новый task.json пока нельзя.",
+                    message: wt("ce.k095", "Лимит заданий достигнут"),
+                    detail: wt("ce.k096", "Черновик можно продолжать редактировать, но сохранить новый task.json пока нельзя."),
                 });
-                this.showToast("Лимит заданий достигнут. Черновик можно продолжать редактировать, но сохранить новый task.json пока нельзя.", "warning");
+                this.showToast(wt("ce.k097", "Лимит заданий достигнут. Черновик можно продолжать редактировать, но сохранить новый task.json пока нельзя."), "warning");
             } else if (data.ok) {
                 const semanticWarnings = this.getSemanticWarnings();
                 if (!semanticWarnings.length) {
-                    this.showToast("Задание сохранено.", "success");
+                    this.showToast(wt("ce.k098", "Задание сохранено."), "success");
                 }
                 this.hasPersistedTask = true;
                 this.isNewTaskParam = false;
@@ -5980,17 +5988,17 @@ class ClickEditor extends BaseEditor {
                 if (semanticWarnings.length) {
                     this.updateSaveStatus({
                         type: "warning",
-                        message: "Сохранено с предупреждениями",
+                        message: wt("ce.k099", "Сохранено с предупреждениями"),
                         detail: this.buildSemanticWarningsDetail(semanticWarnings)
                     });
                     this.showToast(this.buildSemanticWarningsToast(semanticWarnings), "warning", 5200);
                 }
             } else {
-                this.showToast(`Ошибка сохранения: ${data.error || "save_failed"}`, "error");
+                this.showToast(`${wt('ce.k100', 'Ошибка сохранения: ')}${data.error || "save_failed"}`, "error");
             }
         } catch (error) {
             console.error("Error saving task:", error);
-            this.showToast("Ошибка при сохранении. Проверьте консоль.", "error");
+            this.showToast(wt("ce.k101", "Ошибка при сохранении. Проверьте консоль."), "error");
         }
     }
 
@@ -6031,10 +6039,10 @@ class ClickEditor extends BaseEditor {
     }
 
     async confirmAction({
-        title = "Подтверждение",
-        message = "Вы уверены?",
-        confirmText = "Подтвердить",
-        cancelText = "Отмена",
+        title = wt("ce.k102", "Подтверждение"),
+        message = wt("ce.k103", "Вы уверены?"),
+        confirmText = wt("ce.k104", "Подтвердить"),
+        cancelText = wt("ce.k033", "Отмена"),
         variant = "error"
     } = {}) {
         if (typeof this.showConfirmModal === "function") {
@@ -6362,7 +6370,7 @@ class ClickEditor extends BaseEditor {
         closeBtn.type = "button";
         closeBtn.className = "inline-flex h-7 w-7 items-center justify-center rounded-md border border-current/15 text-current/80 hover:bg-surface-1/70 hover:text-current transition-colors";
         closeBtn.setAttribute("data-toast-action", "close");
-        closeBtn.setAttribute("aria-label", "Закрыть уведомление");
+        closeBtn.setAttribute("aria-label", wt("ce.k105", "Закрыть уведомление"));
         closeBtn.innerHTML = '<span class="material-symbols-outlined text-[16px]">close</span>';
         closeBtn.addEventListener("click", () => dismiss("manual"));
         controls.appendChild(closeBtn);
