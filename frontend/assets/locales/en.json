@@ -663,7 +663,9 @@
     "publish_archive_unavail_next": "Delete excess complexes within the Free limit or renew Premium.",
     "access_code_rejected_what": "Access code not accepted.",
     "access_code_rejected_impact": "The linked complex remains locked for now.",
-    "access_code_rejected_next": "Check the code and try again."
+    "access_code_rejected_next": "Check the code and try again.",
+    "card_demo_title": "Demo complex: active learning",
+    "card_demo_desc": "This sample card shows the main complex states: saved session, progress, linked theory, source and actions."
   },
   "create": {
     "button": "Create",
@@ -5175,7 +5177,7 @@
     "k039": "This version is already in the library. Adding it again will not create a new object — it will simply open the existing record.",
     "k040": "Nothing found",
     "k041": "Reset filters"
-  },
+  },
   "md": {
     "new_module": "New module",
     "import_tasks": "Import tasks",
@@ -5269,7 +5271,7 @@
     "next": "Next",
     "recovery_title": "Draft recovery centre",
     "recovery_subtitle": "Local auto-saves and quick return to work"
-  },
+  },
   "pa": {
     "page_title": "ACTRA — Annotation editor",
     "back_title": "Task library",
