@@ -6,7 +6,7 @@
     <script src="../../assets/ThemeManager.js"></script>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>ACTRA — Редактор аннотаций</title>
+    <title data-i18n="pa.page_title">ACTRA — Редактор аннотаций</title>
     <link rel="stylesheet" href="click_editor.css?v=draw-onboarding-5">
     <script src="click_editor_helpers.js"></script>
     <script src="undo_manager.js"></script>
@@ -33,7 +33,7 @@
             data-onboarding-target="click-header" data-onboarding-spotlight="frame">
             <div class="click-editor-header__primary flex items-center gap-4">
                 <button id="back-btn" class="p-2 hover:bg-bg-hover rounded-full text-text-secondary transition-colors"
-                    title="Библиотека заданий">
+                    title="Библиотека заданий" data-i18n-title="pa.back_title">
                     <span class="material-symbols-outlined">arrow_back</span>
                 </button>
                 <div data-onboarding-target="click-title">
@@ -47,13 +47,13 @@
                             class="mode-toggle-btn flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-md transition-all border border-transparent text-text-secondary hover:text-primary hover:bg-bg-hover"
                             type="button" data-mode="text">
                             <span class="material-symbols-outlined text-[14px]">touch_app</span>
-                            Клик
+                            <span data-i18n="pa.mode_click">Клик</span>
                         </button>
                         <button id="mode-errors-btn" data-onboarding-target="click-errors-mode-button"
                             class="mode-toggle-btn flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-md transition-all border border-transparent text-text-secondary hover:text-primary hover:bg-bg-hover"
                             type="button" data-mode="errors">
                             <span class="material-symbols-outlined text-[14px]">error</span>
-                            Ошибки
+                            <span data-i18n="pa.mode_errors">Ошибки</span>
                         </button>
                     </div>
                 </div>
@@ -64,13 +64,13 @@
                         data-onboarding-target="click-errors-words-mode"
                         class="subtask-toggle-btn flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-md shadow-sm bg-surface-1 text-text-main transition-all">
                         <span class="material-symbols-outlined text-[14px]">text_fields</span>
-                        Слова
+                        <span data-i18n="pa.subtask_words">Слова</span>
                     </button>
                     <button data-subtask-mode="errors"
                         data-onboarding-target="click-errors-texts-mode"
                         class="subtask-toggle-btn flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-md text-text-secondary hover:text-text-main transition-all">
                         <span class="material-symbols-outlined text-[14px]">error</span>
-                        Тексты
+                        <span data-i18n="pa.subtask_texts">Тексты</span>
                     </button>
                 </div>
             </div>
@@ -83,7 +83,7 @@
                     <span class="hidden 2xl:inline-flex shrink-0 items-center gap-1.5 border-l border-border-subtle pl-2.5 text-[11px] text-text-secondary"
                         data-finish-hint="">
                         <span class="material-symbols-outlined text-[15px] text-primary">touch_app</span>
-                        Двойной клик завершает
+                        <span data-i18n="pa.finish_hint">Двойной клик завершает</span>
                     </span>
                 </div>
             </div>
@@ -105,13 +105,15 @@
                     data-onboarding-fallback-tour-id="click-editor-authoring"
                     hidden
                     title="Показать обучение"
-                    aria-label="Показать обучение">
+                    aria-label="Показать обучение"
+                    data-i18n-title="pa.show_tutorial"
+                    data-i18n-aria="pa.show_tutorial">
                     <span class="material-symbols-outlined" aria-hidden="true">help</span>
                 </button>
                 <button id="save-task-btn" data-onboarding-target="click-save-action"
                     class="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-dark active:bg-primary-darker text-primary-contrast font-semibold rounded-xl shadow-md text-sm tracking-tight transition focus:outline-none focus:border-primary">
                     <span class="material-symbols-outlined text-[18px]">save</span>
-                    <span>Сохранить</span>
+                    <span data-i18n="pa.save">Сохранить</span>
                 </button>
             </div>
         </header>
@@ -129,14 +131,14 @@
                                     <button id="lasso-tool-btn" data-tool="polygon" aria-pressed="true"
                                         class="tool-toggle inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border border-transparent transition-all">
                                         <span class="material-symbols-outlined text-[18px]">gesture</span>
-                                        Прямолинейное лассо
+                                        <span data-i18n="pa.lasso_tool">Прямолинейное лассо</span>
                                     </button>
                                 </span>
                                 <span class="inline-flex" data-toolbar-tooltip="Свободное рисование: проведите линию или линейный контур непрерывным движением">
                                     <button id="freehand-tool-btn" data-tool="freehand" aria-pressed="false"
                                         class="tool-toggle inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border border-transparent transition-all">
                                         <span class="material-symbols-outlined text-[18px]">draw</span>
-                                        Свободное рисование
+                                        <span data-i18n="pa.freehand_tool">Свободное рисование</span>
                                     </button>
                                 </span>
                             </div>
@@ -144,27 +146,27 @@
                                 class="inline-flex items-center gap-2 rounded-2xl border border-border-subtle bg-surface-2 p-1 shadow-sm text-sm flex-none"
                                 data-onboarding-target="click-polygon-actions">
                                 <span class="inline-flex" data-toolbar-tooltip="Завершить текущий контур после трёх и более точек">
-                                    <button id="finish-polygon-btn" type="button" title="Завершить контур (или двойной клик)"
+                                    <button id="finish-polygon-btn" type="button" title="Завершить контур (или двойной клик)" data-i18n-title="pa.finish_polygon_title"
                                         class="inline-flex h-11 shrink-0 min-w-[12.75rem] items-center justify-center gap-2 px-3 py-2 rounded-xl border border-primary bg-primary-lighter text-primary shadow-sm transition-all disabled:opacity-70 disabled:pointer-events-none"
-                                        aria-label="Завершить контур" disabled>
+                                        aria-label="Завершить контур" data-i18n-aria="pa.finish_polygon" disabled>
                                         <span class="material-symbols-outlined text-[18px]">done</span>
-                                        <span class="text-sm font-semibold whitespace-nowrap">Завершить контур</span>
+                                        <span class="text-sm font-semibold whitespace-nowrap" data-i18n="pa.finish_polygon">Завершить контур</span>
                                     </button>
                                 </span>
                                 <span class="inline-flex" data-toolbar-tooltip="Удалить последнюю точку незавершённого контура или выбранную точку">
-                                    <button id="delete-last-point-btn" type="button" title="Удалить последнюю точку"
+                                    <button id="delete-last-point-btn" type="button" title="Удалить последнюю точку" data-i18n-title="pa.delete_point"
                                         class="icon-action-btn h-11 w-11 rounded-xl border border-border-subtle text-text-secondary transition disabled:opacity-40 disabled:pointer-events-none"
-                                        aria-label="Удалить последнюю точку" disabled>
+                                        aria-label="Удалить последнюю точку" data-i18n-aria="pa.delete_point" disabled>
                                         <span class="material-symbols-outlined text-[18px]">backspace</span>
-                                        <span class="sr-only">Удалить последнюю точку</span>
+                                        <span class="sr-only" data-i18n="pa.delete_point">Удалить последнюю точку</span>
                                     </button>
                                 </span>
                                 <span class="inline-flex" data-toolbar-tooltip="Сбросить незавершённый контур и начать заново">
-                                    <button id="cancel-polygon-btn" type="button" title="Отменить рисование"
+                                    <button id="cancel-polygon-btn" type="button" title="Отменить рисование" data-i18n-title="pa.cancel_draw"
                                         class="icon-action-btn h-11 w-11 rounded-xl border border-border-subtle text-text-secondary transition disabled:opacity-40 disabled:pointer-events-none"
-                                        aria-label="Отменить рисование" disabled>
+                                        aria-label="Отменить рисование" data-i18n-aria="pa.cancel_draw" disabled>
                                         <span class="material-symbols-outlined text-[18px]">close</span>
-                                        <span class="sr-only">Отменить рисование</span>
+                                        <span class="sr-only" data-i18n="pa.cancel_draw">Отменить рисование</span>
                                     </button>
                                 </span>
                             </div>
@@ -173,7 +175,7 @@
                                 <span class="inline-flex" data-toolbar-tooltip="Переключить отображение подписей у контуров">
                                     <button id="toggle-label-visibility-btn"
                                         class="inline-flex h-11 items-center gap-1 px-3 py-1.5 rounded-xl border border-border-subtle bg-surface-1 text-text-secondary hover:bg-bg-hover transition text-xs font-semibold shadow-sm"
-                                        title="Переключить отображение названий">
+                                        title="Переключить отображение названий" data-i18n-title="pa.toggle_labels_title">
                                         <span class="material-symbols-outlined text-[16px]">visibility</span>
                                         <span id="label-visibility-mode-text" class="tracking-tight">Смарт</span>
                                     </button>
@@ -182,7 +184,7 @@
                                     <button id="clear-annotations-btn" type="button"
                                         class="inline-flex h-11 items-center gap-2 px-4 py-1.5 rounded-xl border border-error-light bg-surface-1 text-error-text hover:bg-error-lighter transition-colors text-sm font-semibold shadow-sm">
                                         <span class="material-symbols-outlined text-[16px]">delete_sweep</span>
-                                        Очистить всё
+                                        <span data-i18n="pa.clear_all">Очистить всё</span>
                                     </button>
                                 </span>
                             </div>
@@ -198,7 +200,7 @@
                                 <div id="image-placeholder"
                                     class="hidden absolute inset-0 flex flex-col items-center justify-center text-text-disabled bg-surface-2">
                                     <span class="material-symbols-outlined text-6xl mb-4">image_search</span>
-                                    <p class="text-sm font-medium">Изображение не выбрано</p>
+                                    <p class="text-sm font-medium" data-i18n="pa.no_image">Изображение не выбрано</p>
                                 </div>
                                 <div id="canvas-layer" class="absolute inset-0">
                                     <svg id="annotation-overlay" class="w-full h-full"></svg>
@@ -208,7 +210,7 @@
                                 <button id="change-image-btn" data-onboarding-target="click-change-image" data-onboarding-spotlight="live"
                                     class="bg-surface-1 hover:bg-surface-1 text-primary p-2 rounded-full shadow-lg border border-border-subtle flex items-center gap-2 px-3">
                                     <span class="material-symbols-outlined text-[20px]">add_photo_alternate</span>
-                                    <span class="text-xs font-bold">Сменить изображение</span>
+                                    <span class="text-xs font-bold" data-i18n="pa.change_image">Сменить изображение</span>
                                 </button>
                                 <input type="file" id="main-image-upload" class="hidden" accept="image/*">
                             </div>
@@ -234,21 +236,21 @@
                     style="width: 320px;" data-onboarding-target="click-sidebar" data-onboarding-spotlight="frame">
                     <div class="click-sidebar-content p-5 flex flex-col gap-4">
                         <div class="flex flex-col gap-1 pb-1">
-                            <label class="text-xs font-semibold uppercase tracking-wider text-text-muted">Инструкция
+                            <label class="text-xs font-semibold uppercase tracking-wider text-text-muted" data-i18n="pa.prompt_section_label">Инструкция
                                 к заданию</label>
                             <div class="relative" data-onboarding-target="click-prompt">
-                                <label class="block text-sm font-medium text-text-main mb-1">Формулировка
+                                <label class="block text-sm font-medium text-text-main mb-1" data-i18n="pa.prompt_label">Формулировка
                                     задания</label>
                                 <textarea id="prompt-textarea"
                                     class="w-full rounded-lg border-border-subtle bg-surface-2 focus:border-primary focus:ring-0 sm:text-sm text-text-main p-3 shadow-sm min-h-[100px]"
-                                    placeholder="Введите инструкцию для исполнителя..."></textarea>
+                                    placeholder="Введите инструкцию для исполнителя..." data-i18n-placeholder="pa.prompt_ph"></textarea>
                             </div>
                         </div>
                         <div class="flex flex-col gap-1 pt-1 -mt-2">
-                            <label class="text-xs font-semibold uppercase tracking-wider text-text-muted">Критерии
+                            <label class="text-xs font-semibold uppercase tracking-wider text-text-muted" data-i18n="pa.criteria_label">Критерии
                                 успеха</label>
                             <div data-onboarding-target="click-required-correct">
-                                <label class="block text-sm font-medium text-text-main mb-1">Сколько аннотаций нужно
+                                <label class="block text-sm font-medium text-text-main mb-1" data-i18n="pa.required_label">Сколько аннотаций нужно
                                     отметить</label>
                                 <div class="flex items-center gap-2">
                                     <input id="required-correct-input"
@@ -271,41 +273,41 @@
                                 class="flex items-center justify-between w-full text-left rounded-lg px-1 py-1.5 hover:bg-bg-hover transition"
                                 aria-expanded="true">
                                 <span
-                                    class="text-xs font-semibold uppercase tracking-wider text-text-secondary">Дополнительные
+                                    class="text-xs font-semibold uppercase tracking-wider text-text-secondary" data-i18n="pa.additional_label">Дополнительные
                                     материалы</span>
                                 <span id="additional-info-toggle-icon"
                                     class="material-symbols-outlined text-text-disabled text-[18px]">expand_less</span>
                             </button>
                             <div id="additional-info-content" class="flex flex-col gap-3 mt-1">
                                 <div>
-                                    <label class="block text-xs font-medium text-text-secondary mb-1">Тип</label>
+                                    <label class="block text-xs font-medium text-text-secondary mb-1" data-i18n="pa.type_label">Тип</label>
                                     <select id="additional-type-select"
                                         class="w-full rounded-lg border-border-subtle bg-surface-2 py-2 px-3 text-sm focus:border-primary focus:ring-primary shadow-sm text-text-main">
-                                        <option value="none">Нет</option>
-                                        <option value="text">Текст</option>
-                                        <option value="image">Изображение</option>
-                                        <option value="combined">Текст + изображение</option>
+                                        <option value="none" data-i18n="pa.type_none">Нет</option>
+                                        <option value="text" data-i18n="pa.type_text">Текст</option>
+                                        <option value="image" data-i18n="pa.type_image">Изображение</option>
+                                        <option value="combined" data-i18n="pa.type_combined">Текст + изображение</option>
                                     </select>
                                 </div>
                                 <div id="additional-text-group" class="flex flex-col gap-1 hidden">
-                                    <label class="block text-xs font-medium text-text-secondary mb-1">Текст</label>
+                                    <label class="block text-xs font-medium text-text-secondary mb-1" data-i18n="pa.additional_text_label">Текст</label>
                                     <textarea id="additional-textarea"
                                         class="w-full rounded-lg border-border-subtle bg-surface-2 focus:border-primary focus:ring-primary sm:text-sm text-text-main shadow-sm p-2 min-h-[80px]"
-                                        placeholder="Добавьте пояснение или комментарий"></textarea>
+                                        placeholder="Добавьте пояснение или комментарий" data-i18n-placeholder="pa.additional_text_ph"></textarea>
                                 </div>
                                 <div id="additional-images-group" class="hidden flex flex-col gap-2">
                                     <div class="flex items-center justify-between">
-                                        <label class="text-xs font-medium text-text-secondary">Изображения</label>
+                                        <label class="text-xs font-medium text-text-secondary" data-i18n="pa.additional_images_label">Изображения</label>
                                         <button id="additional-add-image-btn" type="button"
                                             class="text-xs font-semibold text-primary hover:text-primary-dark flex items-center gap-1">
                                             <span
                                                 class="material-symbols-outlined text-[16px]">add_photo_alternate</span>
-                                            Добавить
+                                            <span data-i18n="pa.additional_add_btn">Добавить</span>
                                         </button>
                                     </div>
                                     <div class="grid grid-cols-3 gap-2" id="additional-images-grid"></div>
                                     <div id="additional-images-empty"
-                                        class="text-xs text-text-disabled bg-surface-2 border border-dashed border-border-subtle rounded-lg px-3 py-2 text-center">
+                                        class="text-xs text-text-disabled bg-surface-2 border border-dashed border-border-subtle rounded-lg px-3 py-2 text-center" data-i18n="pa.no_images">
                                         Нет изображений
                                     </div>
                                     <input id="additional-image-input" class="hidden" type="file" accept="image/*">
@@ -317,7 +319,7 @@
                             data-onboarding-spotlight="frame">
                             <div class="flex items-center justify-between">
                                 <label
-                                    class="text-xs font-semibold uppercase tracking-wider text-text-secondary">Аннотации</label>
+                                    class="text-xs font-semibold uppercase tracking-wider text-text-secondary" data-i18n="pa.annotations_label">Аннотации</label>
                                 <span data-annotations-count
                                     class="bg-info-lighter text-info-text text-xs font-bold px-2 py-0.5 rounded-full">0
                                     контуров</span>
@@ -363,13 +365,13 @@
                                     data-onboarding-target="click-errors-primary-tab"
                                     class="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg shadow-sm bg-primary text-primary-contrast active:scale-[0.99] transition">
                                     <span class="material-symbols-outlined text-[16px]">edit</span>
-                                    Основной текст
+                                    <span data-i18n="pa.primary_tab">Основной текст</span>
                                 </button>
                                 <button data-pane-toggle="reference"
                                     data-onboarding-target="click-errors-reference-tab"
                                     class="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg border border-border-subtle text-text-secondary bg-surface-1 hover:bg-bg-hover transition">
                                     <span class="material-symbols-outlined text-[16px]">menu_book</span>
-                                    Референс
+                                    <span data-i18n="pa.reference_tab">Референс</span>
                                 </button>
                             </div>
                             <div class="flex flex-col gap-4">
@@ -379,13 +381,13 @@
                                             data-onboarding-target="click-errors-add-span"
                                             class="inline-flex items-center gap-2 bg-primary text-primary-contrast px-4 py-2 rounded-lg shadow-md text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed">
                                             <span class="material-symbols-outlined text-[16px]">add_circle</span>
-                                            Отметить как ошибку
+                                            <span data-i18n="pa.mark_error_btn">Отметить как ошибку</span>
                                         </button>
                                         <div data-errors-selection-hint
                                             class="text-xs text-text-muted flex items-center gap-1">
                                             <span
                                                 class="material-symbols-outlined text-[14px] text-text-disabled">info</span>
-                                            Выделите отрезок текста, чтобы активировать кнопку.
+                                            <span data-i18n="pa.select_text_hint">Выделите отрезок текста, чтобы активировать кнопку.</span>
                                         </div>
                                     </div>
                                     <div class="flex flex-col gap-4 xl:flex-row"
@@ -417,18 +419,18 @@
                                                         class="text-sm font-bold text-text-main flex items-center gap-2">
                                                         <span
                                                             class="material-symbols-outlined text-primary text-[18px]">bug_report</span>
-                                                        Найденные ошибки
+                                                        <span data-i18n="pa.errors_found_title">Найденные ошибки</span>
                                                     </h4>
                                                     <button data-errors-clear-all type="button"
                                                         class="text-xs text-error hover:text-error-dark font-semibold flex items-center gap-1">
                                                         <span
                                                             class="material-symbols-outlined text-[14px]">delete</span>
-                                                        Очистить
+                                                        <span data-i18n="pa.clear_btn">Очистить</span>
                                                     </button>
                                                 </div>
                                                 <div class="flex-1 flex flex-col">
                                                     <div data-errors-spans-empty
-                                                        class="text-xs text-text-secondary bg-surface-1 border border-dashed border-border-subtle rounded-lg px-4 py-3 m-4">
+                                                        class="text-xs text-text-secondary bg-surface-1 border border-dashed border-border-subtle rounded-lg px-4 py-3 m-4" data-i18n="pa.no_errors">
                                                         Пока нет отмеченных ошибок.
                                                     </div>
                                                     <div class="flex-1 overflow-x-auto">
@@ -449,34 +451,33 @@
                                             <span class="text-sm font-semibold text-text-main flex items-center gap-2">
                                                 <span
                                                     class="material-symbols-outlined text-primary text-[18px]">flag</span>
-                                                Для прохождения необходимо найти
+                                                <span data-i18n="pa.required_find">Для прохождения необходимо найти</span>
                                             </span>
                                             <div class="flex items-center gap-2">
                                                 <input type="number" min="0" value="0" data-errors-required-correct
                                                     class="w-20 rounded-lg border border-border-subtle bg-surface-2 px-3 py-2 text-sm font-semibold text-text-main focus:border-primary focus:ring-0" />
-                                                <span class="text-sm text-text-muted">ошибок</span>
+                                                <span class="text-sm text-text-muted" data-i18n="pa.errors_unit">ошибок</span>
                                             </div>
                                             <div class="text-sm text-text-muted">
-                                                Сейчас требуется <span class="font-semibold text-text-main"
+                                                <span data-i18n="pa.errors_required_prefix">Сейчас требуется </span><span class="font-semibold text-text-main"
                                                     data-errors-required-current>0</span>
-                                                из <span class="font-semibold text-text-main"
-                                                    data-errors-total-count>0</span> доступных
+                                                <span data-i18n="pa.errors_required_of"> из </span><span class="font-semibold text-text-main"
+                                                    data-errors-total-count>0</span><span data-i18n="pa.errors_required_suffix"> доступных</span>
                                             </div>
                                         </div>
                                         <div class="flex items-center gap-2 text-xs text-text-secondary">
                                             <span
                                                 class="material-symbols-outlined text-[16px] text-text-disabled">info</span>
-                                            Значение по умолчанию совпадает с количеством отмеченных ошибок (0, если ни
-                                            одной), но можно указать меньшее число — не меньше 0 и не больше M.
+                                            <span data-i18n="pa.errors_default_hint">Значение по умолчанию совпадает с количеством отмеченных ошибок (0, если ни одной), но можно указать меньшее число — не меньше 0 и не больше M.</span>
                                         </div>
                                         <div class="flex items-center gap-3 px-4 py-3 bg-surface-2 rounded-lg border border-border-subtle">
                                             <input type="checkbox" id="errors-require-all" data-errors-require-all
                                                 class="w-4 h-4 rounded border-border-subtle text-primary focus:ring-primary focus:ring-offset-0"
                                                 checked />
                                             <label for="errors-require-all" class="text-sm text-text-main cursor-pointer flex-1">
-                                                <span class="font-semibold">Требовать найти все ошибки</span>
+                                                <span class="font-semibold" data-i18n="pa.require_all_label">Требовать найти все ошибки</span>
                                                 <span class="block text-xs text-text-secondary mt-0.5">
-                                                    Если отключено, пользователь может пройти задание, найдя только указанное выше количество ошибок
+                                                    <span data-i18n="pa.require_all_desc">Если отключено, пользователь может пройти задание, найдя только указанное выше количество ошибок</span>
                                                 </span>
                                             </label>
                                         </div>
@@ -491,7 +492,7 @@
                                                     data-onboarding-target="click-errors-instruction-title">
                                                     <span
                                                         class="material-symbols-outlined text-primary text-[18px]">wysiwyg</span>
-                                                    Инструкция (опционально)
+                                                    <span data-i18n="pa.instruction_opt">Инструкция (опционально)</span>
                                                 </h3>
                                                 <button type="button" data-prompt-toggle
                                                     class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-border-subtle text-text-main bg-surface-1 hover:bg-bg-hover transition">
@@ -501,12 +502,10 @@
                                                 </button>
                                             </div>
                                             <div data-prompt-area class="hidden flex flex-col gap-2">
-                                                <label class="text-xs font-medium text-text-secondary">Формулировка
-                                                    задания
-                                                    (если оставить пустым, возьмём стандартное «Найдите ошибки в тексте»)</label>
+                                                <label class="text-xs font-medium text-text-secondary" data-i18n="pa.errors_prompt_format">Формулировка задания (если оставить пустым, возьмём стандартное «Найдите ошибки в тексте»)</label>
                                                 <textarea id="prompt-textarea"
                                                     class="w-full rounded-lg border border-border-subtle bg-surface-1 text-sm leading-relaxed text-text-main p-3 shadow-sm focus:border-primary focus:ring-primary min-h-[100px]"
-                                                    placeholder="Введите инструкцию, если нужно что-то особенное..."></textarea>
+                                                    placeholder="Введите инструкцию, если нужно что-то особенное..." data-i18n-placeholder="pa.instruction_ph"></textarea>
                                             </div>
                                         </div>
                                     </section>
@@ -523,13 +522,13 @@
                                                     data-onboarding-target="click-errors-reference-title">
                                                     <span
                                                         class="material-symbols-outlined text-primary text-[18px]">menu_book</span>
-                                                    Референсный текст
+                                                    <span data-i18n="pa.reference_text_title">Референсный текст</span>
                                                 </h4>
                                                 <button data-reference-copy-btn type="button"
                                                     class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg border border-border-subtle text-text-main hover:bg-bg-hover transition">
                                                     <span
                                                         class="material-symbols-outlined text-[16px]">content_copy</span>
-                                                    Скопировать из основного текста
+                                                    <span data-i18n="pa.copy_from_primary">Скопировать из основного текста</span>
                                                 </button>
                                             </div>
                                             <div class="flex flex-wrap items-center gap-3">
@@ -537,10 +536,10 @@
                                                     class="inline-flex items-center gap-2 bg-success text-primary-contrast px-4 py-2 rounded-lg shadow-md text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed">
                                                     <span
                                                         class="material-symbols-outlined text-[16px]">bookmark_add</span>
-                                                    Отметить как референс
+                                                    <span data-i18n="pa.mark_reference_btn">Отметить как референс</span>
                                                 </button>
                                                 <div class="ml-auto text-xs text-text-secondary">
-                                                    Символов: <span data-reference-char-counter>0</span>/4000
+                                                    <span data-i18n="pa.char_count_prefix">Символов: </span><span data-reference-char-counter>0</span>/4000
                                                 </div>
                                             </div>
                                             <div class="flex flex-col gap-4 xl:flex-row">
@@ -554,7 +553,7 @@
                                                             <textarea data-reference-text-editor maxlength="4000"
                                                                 class="relative w-full min-h-[220px] rounded-lg bg-transparent text-sm leading-relaxed text-text-main custom-scrollbar p-4 font-mono resize-none focus:border-primary focus:ring-0 placeholder:text-text-disabled"
                                                                 spellcheck="false"
-                                                                placeholder="Добавьте ориентир или эталонную формулировку."></textarea>
+                                                                placeholder="Добавьте ориентир или эталонную формулировку." data-i18n-placeholder="pa.reference_ph"></textarea>
                                                         </div>
                                                     </label>
                                                 </div>
@@ -567,18 +566,18 @@
                                                                 class="text-sm font-bold text-text-main flex items-center gap-2">
                                                                 <span
                                                                     class="material-symbols-outlined text-success-dark text-[18px]">label</span>
-                                                                Референсные фрагменты
+                                                                <span data-i18n="pa.reference_fragments_title">Референсные фрагменты</span>
                                                             </h4>
                                                             <button data-reference-clear-all type="button"
                                                                 class="text-xs text-error hover:text-error-dark font-semibold flex items-center gap-1">
                                                                 <span
                                                                     class="material-symbols-outlined text-[14px]">delete</span>
-                                                                Очистить
+                                                                <span data-i18n="pa.clear_btn">Очистить</span>
                                                             </button>
                                                         </div>
                                                         <div class="flex-1 flex flex-col">
                                                             <div data-reference-spans-empty
-                                                                class="text-xs text-text-secondary bg-surface-1 border border-dashed border-border-subtle rounded-lg px-4 py-3 m-4">
+                                                                class="text-xs text-text-secondary bg-surface-1 border border-dashed border-border-subtle rounded-lg px-4 py-3 m-4" data-i18n="pa.no_fragments">
                                                                 Пока нет сохранённых фрагментов.
                                                             </div>
                                                             <div class="flex-1 overflow-x-auto">
@@ -606,30 +605,30 @@
                         data-onboarding-spotlight="frame">
                         <div
                             class="flex items-center justify-between px-5 py-3 bg-surface-2 border-b border-border-subtle">
-                            <h3 class="text-base font-semibold text-text-main">Список вариантов</h3>
+                            <h3 class="text-base font-semibold text-text-main" data-i18n="pa.options_list_title">Список вариантов</h3>
                         </div>
                         <div class="px-5 pb-5 pt-4 flex flex-col gap-5">
                             <div class="flex items-center justify-between text-xs text-text-secondary">
                                 <div class="flex items-center gap-1">
                                     <span class="material-symbols-outlined text-[16px] text-primary">wysiwyg</span>
-                                    <span>Инструкция</span>
+                                    <span data-i18n="pa.instruction_label">Инструкция</span>
                                 </div>
                                 <div class="font-semibold text-text-main" data-choice-prompt-preview>—</div>
                             </div>
                             <div data-choice-options-empty
-                                class="text-xs text-text-secondary bg-surface-1 border border-dashed border-border-subtle rounded-lg px-4 py-3">
+                                class="text-xs text-text-secondary bg-surface-1 border border-dashed border-border-subtle rounded-lg px-4 py-3" data-i18n="pa.no_options">
                                 Варианты не созданы.
                             </div>
                             <div data-choice-options-list class="flex flex-col gap-4"></div>
                             <button type="button" data-choice-add-option
                                 class="flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed border-border-subtle rounded-xl text-text-secondary hover:text-primary hover:border-primary hover:bg-bg-hover transition-all font-medium text-sm">
                                 <span class="material-symbols-outlined">add_circle</span>
-                                Добавить вариант
+                                <span data-i18n="pa.add_option_btn">Добавить вариант</span>
                             </button>
                             <div data-choice-warning
                                 class="flex items-center gap-2 text-xs font-medium text-warning-text bg-warning-lighter px-3 py-2 rounded-lg border border-warning-light hidden">
                                 <span class="material-symbols-outlined text-[16px]">info</span>
-                                Должен быть ровно один правильный вариант
+                                <span data-i18n="pa.one_correct_warning">Должен быть ровно один правильный вариант</span>
                             </div>
                         </div>
                     </section>
@@ -640,7 +639,7 @@
                             <div class="flex items-center justify-between">
                                 <h3 class="text-sm font-semibold text-text-main flex items-center gap-2">
                                     <span class="material-symbols-outlined text-primary text-[18px]">wysiwyg</span>
-                                    Инструкция (опционально)
+                                    <span data-i18n="pa.instruction_opt">Инструкция (опционально)</span>
                                 </h3>
                                 <button type="button" data-choice-prompt-toggle
                                     class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-border-subtle text-text-main bg-surface-1 hover:bg-bg-hover transition">
@@ -650,12 +649,10 @@
                                 </button>
                             </div>
                             <div data-choice-prompt-area class="hidden flex flex-col gap-2">
-                                <label class="text-xs font-medium text-text-secondary">Формулировка задания (если
-                                    оставить
-                                    пустым, возьмём стандартное «Выберите правильный вариант текста»)</label>
+                                <label class="text-xs font-medium text-text-secondary" data-i18n="pa.choice_prompt_format">Формулировка задания (если оставить пустым, возьмём стандартное «Выберите правильный вариант текста»)</label>
                                 <textarea id="choice-prompt-textarea"
                                     class="w-full rounded-lg border border-border-subtle bg-surface-1 text-sm leading-relaxed text-text-main p-3 shadow-sm focus:border-primary focus:ring-primary min-h-[100px]"
-                                    placeholder="Введите инструкцию, если нужно что-то особенное..."></textarea>
+                                    placeholder="Введите инструкцию, если нужно что-то особенное..." data-i18n-placeholder="pa.instruction_ph"></textarea>
                             </div>
                         </div>
                     </section>
