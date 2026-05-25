@@ -582,31 +582,31 @@
       </div>
 
       <div class="cat-header">
-        <h1>Каталог</h1>
-        <p>Находите опубликованные комплексы и теории других авторов, смотрите описание и добавляйте связанные публикации в свою библиотеку</p>
+        <h1 data-i18n="cat.k001">Каталог</h1>
+        <p data-i18n="cat.k002">Находите опубликованные комплексы и теории других авторов, смотрите описание и добавляйте связанные публикации в свою библиотеку</p>
       </div>
 
       <!-- Search -->
       <div class="cat-search">
         <span class="material-symbols-outlined cat-search__icon">search</span>
-        <input type="text" class="cat-search__input" placeholder="Поиск по названию, автору или ключевым словам…" />
+        <input type="text" class="cat-search__input" placeholder="Поиск по названию, автору или ключевым словам…" data-i18n-placeholder="cat.k003" />
       </div>
 
       <!-- Filters -->
       <div class="cat-filters">
         <!-- Type filter: segmented control -->
         <div class="segmented-control">
-          <button class="segmented-control__button is-active" type="button">Все</button>
-          <button class="segmented-control__button" type="button">Комплексы</button>
-          <button class="segmented-control__button" type="button">Теории</button>
+          <button class="segmented-control__button is-active" type="button" data-i18n="cat.k004">Все</button>
+          <button class="segmented-control__button" type="button" data-i18n="cat.k005">Комплексы</button>
+          <button class="segmented-control__button" type="button" data-i18n="cat.k006">Теории</button>
         </div>
 
         <div class="cat-filters__sep"></div>
 
         <!-- Status filters: pills -->
-        <span class="pill-neutral pill-sm cat-filter-pill">Не добавлено</span>
-        <span class="pill-neutral pill-sm cat-filter-pill is-active">Все статусы</span>
-        <span class="pill-neutral pill-sm cat-filter-pill">В библиотеке</span>
+        <span class="pill-neutral pill-sm cat-filter-pill" data-i18n="cat.k007">Не добавлено</span>
+        <span class="pill-neutral pill-sm cat-filter-pill is-active" data-i18n="cat.k008">Все статусы</span>
+        <span class="pill-neutral pill-sm cat-filter-pill" data-i18n="cat.k009">В библиотеке</span>
       </div>
 
       <!-- Card grid -->
@@ -616,7 +616,7 @@
         <div class="cat-card anim-slide-up anim-delay-1">
           <div class="cat-card__top">
             <div class="cat-card__badges">
-              <span class="pill-neutral pill-sm pill-kicker">Комплекс</span>
+              <span class="pill-neutral pill-sm pill-kicker" data-i18n="cat.k010">Комплекс</span>
             </div>
             <span class="cat-card__meta-item" title="12 заданий" style="font-size:0.75rem; color: var(--color-text-secondary);">
               <span class="material-symbols-outlined" style="font-size:14px">assignment</span> 12
@@ -638,7 +638,7 @@
           <p class="cat-card__description">Практический комплекс по базовым свойствам электромагнитных волн, граничным условиям и расчёту параметров распространения.</p>
           <div class="cat-card__footer">
             <button class="cat-cta cat-cta--add" type="button">
-              <span class="material-symbols-outlined">add</span> Добавить
+              <span class="material-symbols-outlined">add</span> <span data-i18n="cat.k012">Добавить</span>
             </button>
           </div>
         </div>
@@ -647,7 +647,7 @@
         <div class="cat-card anim-slide-up anim-delay-2">
           <div class="cat-card__top">
             <div class="cat-card__badges">
-              <span class="pill-info pill-sm pill-kicker">Теория</span>
+              <span class="pill-info pill-sm pill-kicker" data-i18n="cat.k011">Теория</span>
             </div>
           </div>
           <h3 class="cat-card__title">Принцип суперпозиции волн</h3>
@@ -662,7 +662,7 @@
           </div>
           <div class="cat-card__footer">
             <button class="cat-cta cat-cta--add" type="button">
-              <span class="material-symbols-outlined">add</span> Добавить
+              <span class="material-symbols-outlined">add</span> <span data-i18n="cat.k012">Добавить</span>
             </button>
           </div>
         </div>
@@ -671,10 +671,10 @@
         <div class="cat-card anim-slide-up anim-delay-3">
           <div class="cat-card__top">
             <div class="cat-card__badges">
-              <span class="pill-neutral pill-sm pill-kicker">Комплекс</span>
+              <span class="pill-neutral pill-sm pill-kicker" data-i18n="cat.k010">Комплекс</span>
               <span class="pill-success pill-sm">
                 <span class="material-symbols-outlined" style="font-size:13px">check_circle</span>
-                В библиотеке
+                <span data-i18n="cat.k009">В библиотеке</span>
               </span>
             </div>
             <span class="cat-card__meta-item" title="8 заданий" style="font-size:0.75rem; color: var(--color-text-secondary);">
@@ -694,10 +694,10 @@
           <p class="cat-card__description">Комплекс с практикой по видам цифровой модуляции, чтению сигналов и разбору типовых ошибок при передаче.</p>
           <div class="cat-card__footer">
             <span class="cat-cta cat-cta--in-library">
-              <span class="material-symbols-outlined" style="font-size:15px">check</span> В библиотеке
+              <span class="material-symbols-outlined" style="font-size:15px">check</span> <span data-i18n="cat.k009">В библиотеке</span>
             </span>
             <button class="cat-cta cat-cta--open-copy" type="button">
-              <span class="material-symbols-outlined">open_in_new</span> Открыть копию
+              <span class="material-symbols-outlined">open_in_new</span> <span data-i18n="cat.k014">Открыть копию</span>
             </button>
           </div>
         </div>
@@ -706,10 +706,10 @@
         <div class="cat-card anim-slide-up anim-delay-4">
           <div class="cat-card__top">
             <div class="cat-card__badges">
-              <span class="pill-info pill-sm pill-kicker">Теория</span>
+              <span class="pill-info pill-sm pill-kicker" data-i18n="cat.k011">Теория</span>
               <span class="pill-info pill-sm">
                 <span class="material-symbols-outlined" style="font-size:13px">edit</span>
-                Моя публикация
+                <span data-i18n="cat.k013">Моя публикация</span>
               </span>
             </div>
           </div>
@@ -725,7 +725,7 @@
           </div>
           <div class="cat-card__footer">
             <span class="cat-cta cat-cta--mine">
-              <span class="material-symbols-outlined" style="font-size:15px">star</span> Моя публикация
+              <span class="material-symbols-outlined" style="font-size:15px">star</span> <span data-i18n="cat.k013">Моя публикация</span>
             </span>
           </div>
         </div>
@@ -734,7 +734,7 @@
         <div class="cat-card anim-slide-up anim-delay-5">
           <div class="cat-card__top">
             <div class="cat-card__badges">
-              <span class="pill-neutral pill-sm pill-kicker">Комплекс</span>
+              <span class="pill-neutral pill-sm pill-kicker" data-i18n="cat.k010">Комплекс</span>
             </div>
             <span class="cat-card__meta-item" title="24 задания" style="font-size:0.75rem; color: var(--color-text-secondary);">
               <span class="material-symbols-outlined" style="font-size:14px">assignment</span> 24
@@ -756,7 +756,7 @@
           <p class="cat-card__description">Большой практический курс по антеннам и решёткам с задачами на разбор режимов, расчёт параметров и применение теории в инженерных сценариях.</p>
           <div class="cat-card__footer">
             <button class="cat-cta cat-cta--add" type="button">
-              <span class="material-symbols-outlined">add</span> Добавить
+              <span class="material-symbols-outlined">add</span> <span data-i18n="cat.k012">Добавить</span>
             </button>
           </div>
         </div>
@@ -765,10 +765,10 @@
         <div class="cat-card anim-slide-up anim-delay-6">
           <div class="cat-card__top">
             <div class="cat-card__badges">
-              <span class="pill-info pill-sm pill-kicker">Теория</span>
+              <span class="pill-info pill-sm pill-kicker" data-i18n="cat.k011">Теория</span>
               <span class="pill-success pill-sm">
                 <span class="material-symbols-outlined" style="font-size:13px">check_circle</span>
-                В библиотеке
+                <span data-i18n="cat.k009">В библиотеке</span>
               </span>
             </div>
           </div>
@@ -784,10 +784,10 @@
           </div>
           <div class="cat-card__footer">
             <span class="cat-cta cat-cta--in-library">
-              <span class="material-symbols-outlined" style="font-size:15px">check</span> В библиотеке
+              <span class="material-symbols-outlined" style="font-size:15px">check</span> <span data-i18n="cat.k009">В библиотеке</span>
             </span>
             <button class="cat-cta cat-cta--open-copy" type="button">
-              <span class="material-symbols-outlined">open_in_new</span> Открыть копию
+              <span class="material-symbols-outlined">open_in_new</span> <span data-i18n="cat.k014">Открыть копию</span>
             </button>
           </div>
         </div>
@@ -796,7 +796,7 @@
         <div class="cat-card cat-card--hover-demo anim-slide-up anim-delay-6">
           <div class="cat-card__top">
             <div class="cat-card__badges">
-              <span class="pill-neutral pill-sm pill-kicker">Комплекс</span>
+              <span class="pill-neutral pill-sm pill-kicker" data-i18n="cat.k010">Комплекс</span>
               <span class="pill-warning pill-sm" style="font-size:10px">hover</span>
             </div>
             <span class="cat-card__meta-item" title="16 заданий" style="font-size:0.75rem; color: var(--color-text-secondary);">
@@ -816,7 +816,7 @@
           <p class="cat-card__description">Комплекс о распространении радиоволн в ионосфере с задачами на оценку траекторий, частот и условий устойчивой связи.</p>
           <div class="cat-card__footer">
             <button class="cat-cta cat-cta--add" type="button">
-              <span class="material-symbols-outlined">add</span> Добавить
+              <span class="material-symbols-outlined">add</span> <span data-i18n="cat.k012">Добавить</span>
             </button>
           </div>
         </div>
@@ -839,12 +839,12 @@
         <div style="opacity: 0.45; pointer-events: none;">
           <div class="cat-grid" style="grid-template-columns: 1fr;">
             <div class="cat-card">
-              <div class="cat-card__top"><span class="pill-neutral pill-sm pill-kicker">Комплекс</span></div>
+              <div class="cat-card__top"><span class="pill-neutral pill-sm pill-kicker" data-i18n="cat.k010">Комплекс</span></div>
               <h3 class="cat-card__title">Основы радиофизики: электромагнитные волны</h3>
               <div class="cat-card__author"><span class="material-symbols-outlined">person</span> Иванов А.П.</div>
             </div>
             <div class="cat-card">
-              <div class="cat-card__top"><span class="pill-info pill-sm pill-kicker">Теория</span></div>
+              <div class="cat-card__top"><span class="pill-info pill-sm pill-kicker" data-i18n="cat.k011">Теория</span></div>
               <h3 class="cat-card__title">Принцип суперпозиции волн</h3>
               <div class="cat-card__author"><span class="material-symbols-outlined">person</span> Смирнова Е.В.</div>
             </div>
@@ -855,8 +855,8 @@
         <div class="cat-detail">
           <div class="cat-detail__header">
             <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem;">
-              <span class="pill-neutral pill-sm pill-kicker">Комплекс</span>
-              <span class="pill-success pill-sm"><span class="material-symbols-outlined" style="font-size:13px">add_circle</span> Можно добавить</span>
+              <span class="pill-neutral pill-sm pill-kicker" data-i18n="cat.k010">Комплекс</span>
+              <span class="pill-success pill-sm"><span class="material-symbols-outlined" style="font-size:13px">add_circle</span> <span data-i18n="cat.k015">Можно добавить</span></span>
             </div>
             <h2>Основы радиофизики: электромагнитные волны</h2>
             <div style="display:flex; align-items:center; gap:0.35rem; margin-top:0.45rem; font-size:0.82rem; color: var(--color-text-secondary);">
@@ -870,14 +870,14 @@
             </p>
             <div>
               <div class="demo-heading" style="font-size:0.85rem; margin-bottom:0.5rem;">
-                <span class="material-symbols-outlined">inventory_2</span> Кратко о комплексе
+                <span class="material-symbols-outlined">inventory_2</span> <span data-i18n="cat.k016">Кратко о комплексе</span>
               </div>
               <div class="cat-detail__row">
-                <span class="cat-detail__row-label">Задания</span>
+                <span class="cat-detail__row-label" data-i18n="cat.k017">Задания</span>
                 <span class="cat-detail__row-value">12</span>
               </div>
               <div class="cat-detail__row">
-                <span class="cat-detail__row-label">Связанные теории</span>
+                <span class="cat-detail__row-label" data-i18n="cat.k018">Связанные теории</span>
                 <span class="cat-detail__row-value">4</span>
               </div>
             </div>
@@ -885,10 +885,10 @@
               <button class="btn-primary" type="button" style="font-size:0.85rem; padding:0.55rem 1.1rem; border-radius:0.6rem;">
                 <span style="display:inline-flex; align-items:center; gap:0.3rem;">
                   <span class="material-symbols-outlined" style="font-size:18px">preview</span>
-                  Посмотреть превью
+                  <span data-i18n="cat.k019">Посмотреть превью</span>
                 </span>
               </button>
-              <button class="btn-secondary" type="button" style="font-size:0.85rem; padding:0.55rem 1.1rem; border-radius:0.6rem;">
+              <button class="btn-secondary" type="button" style="font-size:0.85rem; padding:0.55rem 1.1rem; border-radius:0.6rem;" data-i18n="cat.k020">
                 Закрыть
               </button>
             </div>
@@ -910,40 +910,40 @@
       <div class="cat-modal-overlay">
         <div class="cat-modal">
           <div class="cat-modal__header">
-            <h3>Добавить в библиотеку</h3>
+            <h3 data-i18n="cat.k021">Добавить в библиотеку</h3>
             <button class="icon-button-muted icon-button-muted--sm" type="button">
               <span class="material-symbols-outlined" style="font-size:18px">close</span>
             </button>
           </div>
           <div class="cat-modal__body">
             <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.25rem;">
-              <span class="pill-neutral pill-sm pill-kicker">Комплекс</span>
+              <span class="pill-neutral pill-sm pill-kicker" data-i18n="cat.k010">Комплекс</span>
               <span style="font-size:0.95rem; font-weight:700;">Основы радиофизики</span>
             </div>
-            <p style="font-size:0.82rem; color: var(--color-text-secondary);">
+            <p style="font-size:0.82rem; color: var(--color-text-secondary);" data-i18n="cat.k022">
               При подтверждении публикация будет добавлена в вашу библиотеку как связанный материал. Вот что произойдёт:
             </p>
             <table class="cat-preview-table">
               <thead>
                 <tr>
-                  <th>Сущность</th>
-                  <th>Кол-во</th>
-                  <th>Действие</th>
+                  <th data-i18n="cat.k023">Сущность</th>
+                  <th data-i18n="cat.k024">Кол-во</th>
+                  <th data-i18n="cat.k025">Действие</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td>Комплекс</td>
+                  <td data-i18n="cat.k010">Комплекс</td>
                   <td style="font-weight:700;">1</td>
-                  <td><span class="preview-badge-new">Создать</span></td>
+                  <td><span class="preview-badge-new" data-i18n="cat.k028">Создать</span></td>
                 </tr>
                 <tr>
-                  <td>Модули</td>
+                  <td data-i18n="cat.k026">Модули</td>
                   <td style="font-weight:700;">3</td>
-                  <td><span class="preview-badge-new">Создать</span></td>
+                  <td><span class="preview-badge-new" data-i18n="cat.k028">Создать</span></td>
                 </tr>
                 <tr>
-                  <td>Темы</td>
+                  <td data-i18n="cat.k027">Темы</td>
                   <td style="font-weight:700;">7</td>
                   <td>
                     <span class="preview-badge-new">5 новых</span>
@@ -951,12 +951,12 @@
                   </td>
                 </tr>
                 <tr>
-                  <td>Задания</td>
+                  <td data-i18n="cat.k017">Задания</td>
                   <td style="font-weight:700;">12</td>
-                  <td><span class="preview-badge-new">Создать</span></td>
+                  <td><span class="preview-badge-new" data-i18n="cat.k028">Создать</span></td>
                 </tr>
                 <tr>
-                  <td>Теории</td>
+                  <td data-i18n="cat.k006">Теории</td>
                   <td style="font-weight:700;">4</td>
                   <td>
                     <span class="preview-badge-new">3 новых</span>
@@ -967,19 +967,19 @@
             </table>
             <div class="panel-row" style="gap:0.5rem; padding:0.55rem 0.75rem;">
               <span class="material-symbols-outlined" style="font-size:18px; color: var(--color-info);">info</span>
-              <span style="font-size:0.78rem; color: var(--color-text-secondary);">
+              <span style="font-size:0.78rem; color: var(--color-text-secondary);" data-i18n="cat.k029">
                 Переиспользование возможно только для уже существующей копии этой же версии и зависимостей с тем же source lineage. Одноимённые темы и модули не сливаются автоматически.
               </span>
             </div>
           </div>
           <div class="cat-modal__footer">
-            <button class="btn-secondary" type="button" style="font-size:0.82rem; padding:0.5rem 1rem; border-radius:0.5rem;">
+            <button class="btn-secondary" type="button" style="font-size:0.82rem; padding:0.5rem 1rem; border-radius:0.5rem;" data-i18n="cat.k030">
               Отмена
             </button>
             <button class="btn-primary" type="button" style="font-size:0.82rem; padding:0.5rem 1rem; border-radius:0.5rem;">
               <span style="display:inline-flex; align-items:center; gap:0.3rem;">
                 <span class="material-symbols-outlined" style="font-size:16px">add</span>
-                Добавить
+                <span data-i18n="cat.k012">Добавить</span>
               </span>
             </button>
           </div>
@@ -1000,35 +1000,35 @@
       <div class="cat-modal-overlay">
         <div class="cat-modal" style="max-width:440px">
           <div class="cat-modal__header">
-            <h3>Добавить теорию</h3>
+            <h3 data-i18n="cat.k031">Добавить теорию</h3>
             <button class="icon-button-muted icon-button-muted--sm" type="button">
               <span class="material-symbols-outlined" style="font-size:18px">close</span>
             </button>
           </div>
           <div class="cat-modal__body">
             <div style="display:flex; align-items:center; gap:0.5rem;">
-              <span class="pill-info pill-sm pill-kicker">Теория</span>
+              <span class="pill-info pill-sm pill-kicker" data-i18n="cat.k011">Теория</span>
               <span style="font-size:0.95rem; font-weight:700;">Принцип суперпозиции волн</span>
             </div>
             <div class="cat-detail__row" style="padding:0.65rem 0;">
-              <span class="cat-detail__row-label">Автор</span>
+              <span class="cat-detail__row-label" data-i18n="cat.k032">Автор</span>
               <span class="cat-detail__row-value" style="font-size:0.85rem;">Смирнова Е.В.</span>
             </div>
             <div class="panel-row" style="gap:0.5rem; padding:0.55rem 0.75rem;">
               <span class="material-symbols-outlined" style="font-size:18px; color: var(--color-success);">note_add</span>
               <span style="font-size:0.82rem;">
-                Теория будет добавлена <strong>как связанная публикация</strong>. Её можно сохранить отдельно от комплекса.
+                <span data-i18n="cat.k033">Теория будет добавлена </span><strong data-i18n="cat.k033b">как связанная публикация</strong><span data-i18n="cat.k033c">. Её можно сохранить отдельно от комплекса.</span>
               </span>
             </div>
           </div>
           <div class="cat-modal__footer">
-            <button class="btn-secondary" type="button" style="font-size:0.82rem; padding:0.5rem 1rem; border-radius:0.5rem;">
+            <button class="btn-secondary" type="button" style="font-size:0.82rem; padding:0.5rem 1rem; border-radius:0.5rem;" data-i18n="cat.k030">
               Отмена
             </button>
             <button class="btn-primary" type="button" style="font-size:0.82rem; padding:0.5rem 1rem; border-radius:0.5rem;">
               <span style="display:inline-flex; align-items:center; gap:0.3rem;">
                 <span class="material-symbols-outlined" style="font-size:16px">add</span>
-                Добавить теорию
+                <span data-i18n="cat.k031">Добавить теорию</span>
               </span>
             </button>
           </div>
@@ -1050,7 +1050,7 @@
       <div class="cat-toast-demo" style="margin-bottom:1.5rem;">
         <div class="cat-toast">
           <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">check_circle</span>
-          <span>Комплекс добавлен в библиотеку как связанная публикация</span>
+          <span data-i18n="cat.k034">Комплекс добавлен в библиотеку как связанная публикация</span>
         </div>
       </div>
 
@@ -1066,7 +1066,7 @@
                 fill="none" stroke="var(--color-success)" stroke-width="3"
                 stroke-linecap="round" stroke-linejoin="round" />
             </svg>
-            <h3 class="cat-success-title">Публикация добавлена</h3>
+            <h3 class="cat-success-title" data-i18n="cat.k035">Публикация добавлена</h3>
             <p class="cat-success-copy">
               Комплекс «Основы радиофизики» добавлен в вашу библиотеку как связанная публикация. Теперь его можно открыть и просматривать без отдельной версии в workspace.
             </p>
@@ -1074,10 +1074,10 @@
               <button class="btn-primary" type="button" style="font-size:0.85rem; padding:0.55rem 1.1rem; border-radius:0.6rem;">
                 <span style="display:inline-flex; align-items:center; gap:0.3rem;">
                   <span class="material-symbols-outlined" style="font-size:18px">open_in_new</span>
-                  Открыть копию
+                  <span data-i18n="cat.k014">Открыть копию</span>
                 </span>
               </button>
-              <button class="btn-secondary" type="button" style="font-size:0.85rem; padding:0.55rem 1.1rem; border-radius:0.6rem;">
+              <button class="btn-secondary" type="button" style="font-size:0.85rem; padding:0.55rem 1.1rem; border-radius:0.6rem;" data-i18n="cat.k036">
                 Вернуться в каталог
               </button>
             </div>
@@ -1099,7 +1099,7 @@
       <div class="cat-modal-overlay" style="min-height:320px;">
         <div class="cat-modal" style="max-width:440px">
           <div class="cat-modal__header">
-            <h3>Эта версия уже в библиотеке</h3>
+            <h3 data-i18n="cat.k037">Эта версия уже в библиотеке</h3>
             <button class="icon-button-muted icon-button-muted--sm" type="button">
               <span class="material-symbols-outlined" style="font-size:18px">close</span>
             </button>
@@ -1108,8 +1108,8 @@
             <div style="width:48px; height:48px; border-radius:999px; background: var(--color-component-pill-success-bg); border: 1px solid var(--color-component-pill-success-border); display:flex; align-items:center; justify-content:center;">
               <span class="material-symbols-outlined" style="font-size:24px; color: var(--color-component-pill-success-fg); font-variation-settings: 'FILL' 1;">check_circle</span>
             </div>
-            <p style="font-size:0.92rem; font-weight:700;">Эта опубликованная версия уже добавлена</p>
-            <p style="font-size:0.82rem; color: var(--color-text-secondary); max-width:32ch;">
+            <p style="font-size:0.92rem; font-weight:700;" data-i18n="cat.k038">Эта опубликованная версия уже добавлена</p>
+            <p style="font-size:0.82rem; color: var(--color-text-secondary); max-width:32ch;" data-i18n="cat.k039">
               Эта версия уже добавлена в библиотеку. Повторное добавление не создаст новый объект и просто откроет существующую запись.
             </p>
           </div>
@@ -1117,10 +1117,10 @@
             <button class="btn-primary" type="button" style="font-size:0.85rem; padding:0.55rem 1.1rem; border-radius:0.6rem;">
               <span style="display:inline-flex; align-items:center; gap:0.3rem;">
                 <span class="material-symbols-outlined" style="font-size:18px">open_in_new</span>
-                Открыть копию
+                <span data-i18n="cat.k014">Открыть копию</span>
               </span>
             </button>
-            <button class="btn-secondary" type="button" style="font-size:0.85rem; padding:0.55rem 1.1rem; border-radius:0.6rem;">
+            <button class="btn-secondary" type="button" style="font-size:0.85rem; padding:0.55rem 1.1rem; border-radius:0.6rem;" data-i18n="cat.k020">
               Закрыть
             </button>
           </div>
@@ -1145,9 +1145,9 @@
       </div>
       <div class="cat-filters" style="margin-bottom:1.5rem;">
         <div class="segmented-control">
-          <button class="segmented-control__button" type="button">Все</button>
-          <button class="segmented-control__button is-active" type="button">Теории</button>
-          <button class="segmented-control__button" type="button">Комплексы</button>
+          <button class="segmented-control__button" type="button" data-i18n="cat.k004">Все</button>
+          <button class="segmented-control__button is-active" type="button" data-i18n="cat.k006">Теории</button>
+          <button class="segmented-control__button" type="button" data-i18n="cat.k005">Комплексы</button>
         </div>
       </div>
 
@@ -1155,7 +1155,7 @@
         <div class="empty-state-card__icon">
           <span class="material-symbols-outlined" style="font-size:28px">search_off</span>
         </div>
-        <h3 class="empty-state-card__title">Ничего не найдено</h3>
+        <h3 class="empty-state-card__title" data-i18n="cat.k040">Ничего не найдено</h3>
         <p class="empty-state-card__copy">
           По запросу «квантовая хромодинамика» среди теорий ничего не нашлось. Попробуйте изменить запрос или сбросить фильтры.
         </p>
@@ -1163,7 +1163,7 @@
           <button class="btn-secondary" type="button" style="font-size:0.82rem; padding:0.45rem 0.9rem; border-radius:0.5rem;">
             <span style="display:inline-flex; align-items:center; gap:0.3rem;">
               <span class="material-symbols-outlined" style="font-size:16px">filter_alt_off</span>
-              Сбросить фильтры
+              <span data-i18n="cat.k041">Сбросить фильтры</span>
             </span>
           </button>
         </div>
@@ -1172,6 +1172,8 @@
 
   </div><!-- /cat-page -->
 
+
+  <script src="/assets/i18n.js"></script>
 
   <!-- ================================================================
        MINIMAL JS — Filter interactivity
