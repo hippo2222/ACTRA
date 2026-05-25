@@ -1,3 +1,11 @@
+function wt(key, fallback) {
+  if (window.i18n && typeof window.i18n.t === 'function') {
+    var v = window.i18n.t(key);
+    if (v !== key) return v;
+  }
+  return fallback;
+}
+
 ﻿/**
  * ACTRA Test Task Editor (Multiple Choice)
  */
@@ -266,12 +274,12 @@ class TestEditor extends BaseEditor {
         if (!q) return false;
         const existingImages = this.syncQuestionLegacyImageFields(q);
         if (existingImages.length >= this.getMaxQuestionImages()) {
-            this.showToast('Можно добавить не больше 3 изображений к вопросу', 'warning');
+            this.showToast(wt('xt.k001', 'Можно добавить не больше 3 изображений к вопросу'), 'warning');
             this.syncQuestionImageBusyState();
             return false;
         }
         if (this.isQuestionImageUploading) {
-            this.showToast('Подождите завершения загрузки изображения вопроса', 'warning');
+            this.showToast(wt('xt.k002', 'Подождите завершения загрузки изображения вопроса'), 'warning');
             return false;
         }
 
@@ -290,7 +298,7 @@ class TestEditor extends BaseEditor {
                 asset_url: data.asset_url,
             });
             if (!nextRef) {
-                this.showToast('Сервер не вернул ссылку на изображение', 'error');
+                this.showToast(wt('xt.k003', 'Сервер не вернул ссылку на изображение'), 'error');
                 return false;
             }
 
@@ -298,12 +306,12 @@ class TestEditor extends BaseEditor {
             this.syncQuestionLegacyImageFields(q);
             this.renderCurrentQuestion();
             this.renderQuestionList();
-            this.showToast('Изображение вопроса добавлено', 'success');
+            this.showToast(wt('xt.k004', 'Изображение вопроса добавлено'), 'success');
             this.markUnsavedChanges();
             return true;
         } catch (error) {
             console.error('Error uploading image:', error);
-            this.showToast(error.message || 'Ошибка загрузки изображения', 'error');
+            this.showToast(error.message || wt('xt.k005', 'Ошибка загрузки изображения'), 'error');
             return false;
         } finally {
             this.isQuestionImageUploading = false;
@@ -320,7 +328,7 @@ class TestEditor extends BaseEditor {
             return false;
         }
         if (Number.isInteger(this.uploadingOptionImageIndex)) {
-            this.showToast('Подождите завершения загрузки изображения варианта', 'warning');
+            this.showToast(wt('xt.k006', 'Подождите завершения загрузки изображения варианта'), 'warning');
             return false;
         }
 
@@ -339,11 +347,11 @@ class TestEditor extends BaseEditor {
             this.uploadingOptionImageIndex = null;
             this.renderOptions();
             this.renderQuestionList();
-            this.showToast('Изображение варианта обновлено', 'success');
+            this.showToast(wt('xt.k007', 'Изображение варианта обновлено'), 'success');
             this.markUnsavedChanges();
             return true;
         } catch (error) {
-            this.showToast(error.message || 'Ошибка загрузки изображения варианта', 'error');
+            this.showToast(error.message || wt('xt.k008', 'Ошибка загрузки изображения варианта'), 'error');
             return false;
         } finally {
             this.uploadingOptionImageIndex = null;
@@ -377,7 +385,7 @@ class TestEditor extends BaseEditor {
         this.isPasteImageTargetMode = Boolean(active);
         if (this.pasteImageTargetDescription) {
             this.pasteImageTargetDescription.textContent = this.isPasteImageTargetMode
-                ? 'Выберите карточку вопроса или карточку варианта ответа, куда нужно прикрепить изображение.'
+                ? wt('xt.k009', 'Выберите карточку вопроса или карточку варианта ответа, куда нужно прикрепить изображение.')
                 : '';
         }
         this.showPasteImageTargetModal(this.isPasteImageTargetMode);
@@ -648,7 +656,7 @@ class TestEditor extends BaseEditor {
         };
 
         (this.questions || []).forEach((question, questionIndex) => {
-            const questionLabel = `Вопрос ${questionIndex + 1}`;
+            const questionLabel = `${wt('xt.k010', 'Вопрос ')}${questionIndex + 1}`;
             this.buildQuestionImageRefs(question).forEach((ref) => {
                 pushRef(ref, questionLabel);
             });
@@ -658,7 +666,7 @@ class TestEditor extends BaseEditor {
                     path: option?.image_path,
                     asset_id: option?.image_asset_id,
                     asset_url: option?.image_asset_url,
-                }, `${questionLabel}, вариант ${this.getOptionLabel(optionIndex)}`);
+                }, `${questionLabel}${wt('xt.k011', ', вариант ')}${this.getOptionLabel(optionIndex)}`);
             });
         });
 
@@ -701,12 +709,12 @@ class TestEditor extends BaseEditor {
         const key = this.getImageReferenceKey(ref);
         const alreadyAttached = existingImages.some((existingRef) => this.getImageReferenceKey(existingRef) === key);
         if (alreadyAttached) {
-            this.showToast('Изображение уже добавлено к вопросу', 'info');
+            this.showToast(wt('xt.k012', 'Изображение уже добавлено к вопросу'), 'info');
             return false;
         }
 
         if (existingImages.length >= this.getMaxQuestionImages()) {
-            this.showToast('К вопросу уже добавлено 3 изображения', 'warning');
+            this.showToast(wt('xt.k013', 'К вопросу уже добавлено 3 изображения'), 'warning');
             return false;
         }
 
@@ -714,7 +722,7 @@ class TestEditor extends BaseEditor {
         this.syncQuestionLegacyImageFields(q);
         this.renderCurrentQuestion();
         this.renderQuestionList();
-        this.showToast('Изображение добавлено к вопросу', 'success');
+        this.showToast(wt('xt.k014', 'Изображение добавлено к вопросу'), 'success');
         this.markUnsavedChanges();
         return true;
     }
@@ -731,7 +739,7 @@ class TestEditor extends BaseEditor {
         q.options[optionIndex].image_asset_url = ref.asset_url || null;
         this.renderOptions();
         this.renderQuestionList();
-        this.showToast(`Изображение добавлено к варианту ${this.getOptionLabel(optionIndex)}`, 'success');
+        this.showToast(`${wt('xt.k015', 'Изображение добавлено к варианту ')}${this.getOptionLabel(optionIndex)}`, 'success');
         this.markUnsavedChanges();
         return true;
     }
@@ -790,7 +798,7 @@ class TestEditor extends BaseEditor {
         }
     }
 
-    openImageBankViewer(imgSrc, caption = 'Изображение') {
+    openImageBankViewer(imgSrc, caption = wt('xt.k016', 'Изображение')) {
         if (!imgSrc) return;
 
         const existing = document.querySelector('.test-image-bank-viewer');
@@ -804,14 +812,14 @@ class TestEditor extends BaseEditor {
         container.className = 'test-image-bank-viewer__panel';
         container.setAttribute('role', 'dialog');
         container.setAttribute('aria-modal', 'true');
-        container.setAttribute('aria-label', 'Просмотр изображения');
+        container.setAttribute('aria-label', wt('xt.k017', 'Просмотр изображения'));
 
         const topBar = document.createElement('div');
         topBar.className = 'test-image-bank-viewer__toolbar';
 
         const title = document.createElement('div');
         title.className = 'test-image-bank-viewer__title';
-        title.textContent = caption || 'Изображение';
+        title.textContent = caption || wt('xt.k016', 'Изображение');
 
         const controls = document.createElement('div');
         controls.className = 'test-image-bank-viewer__controls';
@@ -826,13 +834,13 @@ class TestEditor extends BaseEditor {
             return button;
         };
 
-        const zoomOutBtn = makeButton('-', 'Уменьшить');
+        const zoomOutBtn = makeButton('-', wt('xt.k018', 'Уменьшить'));
         const scaleBadge = document.createElement('span');
         scaleBadge.className = 'test-image-bank-viewer__scale';
         scaleBadge.textContent = '100%';
-        const zoomInBtn = makeButton('+', 'Увеличить');
-        const fitBtn = makeButton('Подогнать', 'Подогнать к окну');
-        const closeBtn = makeButton('Закрыть', 'Закрыть просмотр');
+        const zoomInBtn = makeButton('+', wt('xt.k019', 'Увеличить'));
+        const fitBtn = makeButton(wt('xt.k020', 'Подогнать'), wt('xt.k021', 'Подогнать к окну'));
+        const closeBtn = makeButton(wt('xt.k022', 'Закрыть'), wt('xt.k023', 'Закрыть просмотр'));
 
         controls.appendChild(zoomOutBtn);
         controls.appendChild(scaleBadge);
@@ -847,7 +855,7 @@ class TestEditor extends BaseEditor {
 
         const img = document.createElement('img');
         img.src = imgSrc;
-        img.alt = caption || 'Изображение';
+        img.alt = caption || wt('xt.k016', 'Изображение');
         img.draggable = false;
         img.className = 'test-image-bank-viewer__image';
 
@@ -1078,8 +1086,8 @@ class TestEditor extends BaseEditor {
             if (!src) return;
 
             const isSelected = item.key === selectedKey;
-            const firstSource = item.sources[0] || 'Изображение';
-            const usageLabel = item.usageCount === 1 ? '1 место' : `${item.usageCount} мест`;
+            const firstSource = item.sources[0] || wt('xt.k016', 'Изображение');
+            const usageLabel = item.usageCount === 1 ? wt('xt.k024', '1 место') : `${item.usageCount}${wt('xt.k024b', ' мест')}`;
 
             const itemNode = document.createElement('div');
             itemNode.className = `test-image-bank__item${isSelected ? ' is-selected' : ''}`;
@@ -1092,7 +1100,7 @@ class TestEditor extends BaseEditor {
             const selectButton = document.createElement('button');
             selectButton.type = 'button';
             selectButton.className = 'test-image-bank__select';
-            selectButton.title = isSelected ? 'Отменить выбор изображения' : `Выбрать: ${firstSource}`;
+            selectButton.title = isSelected ? wt('xt.k025', 'Отменить выбор изображения') : `${wt('xt.k025b', 'Выбрать: ')}${firstSource}`;
             selectButton.setAttribute('aria-label', selectButton.title);
             selectButton.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
             selectButton.onclick = () => {
@@ -1102,8 +1110,8 @@ class TestEditor extends BaseEditor {
             const previewButton = document.createElement('button');
             previewButton.type = 'button';
             previewButton.className = 'test-image-bank__preview-btn';
-            previewButton.title = 'Открыть изображение';
-            previewButton.setAttribute('aria-label', 'Открыть изображение');
+            previewButton.title = wt('xt.k026', 'Открыть изображение');
+            previewButton.setAttribute('aria-label', wt('xt.k026', 'Открыть изображение'));
             previewButton.innerHTML = '<span class="material-symbols-outlined text-[15px]">zoom_in</span>';
             previewButton.onclick = (event) => {
                 event.preventDefault();
@@ -1113,7 +1121,7 @@ class TestEditor extends BaseEditor {
 
             const meta = document.createElement('span');
             meta.className = 'test-image-bank__item-meta';
-            meta.textContent = isSelected ? 'Выбрано' : usageLabel;
+            meta.textContent = isSelected ? wt('xt.k027', 'Выбрано') : usageLabel;
 
             selectButton.appendChild(img);
             itemNode.appendChild(selectButton);
@@ -1354,8 +1362,8 @@ class TestEditor extends BaseEditor {
             timerProp: 'testEditorOnboardingImportMarkerTimer',
             datasetKey: 'onboardingImportVariant',
             variant: 'import-tools',
-            title: 'Показать обучение по импорту вопросов',
-            calloutTitles: ['Способ импорта', 'Проверка данных', 'Применение к тесту'],
+            title: wt('xt.k028', 'Показать обучение по импорту вопросов'),
+            calloutTitles: [wt('xt.k029', 'Способ импорта'), wt('xt.k030', 'Проверка данных'), wt('xt.k031', 'Применение к тесту')],
         };
     }
 
@@ -1825,16 +1833,16 @@ class TestEditor extends BaseEditor {
 
     determineQuestionType(question) {
         if (!question || !Array.isArray(question.options)) {
-            return { type: 'unknown', label: 'Нет данных', tone: 'text-text-disabled' };
+            return { type: 'unknown', label: wt('xt.k032', 'Нет данных'), tone: 'text-text-disabled' };
         }
         const correctCount = question.options.filter((opt) => opt.is_correct).length;
         if (correctCount === 0) {
-            return { type: 'invalid', label: 'Нет правильных ответов', tone: 'text-error-text' };
+            return { type: 'invalid', label: wt('xt.k033', 'Нет правильных ответов'), tone: 'text-error-text' };
         }
         if (correctCount === 1) {
-            return { type: 'single_choice', label: 'Одиночный выбор', tone: 'text-success-text' };
+            return { type: 'single_choice', label: wt('xt.k034', 'Одиночный выбор'), tone: 'text-success-text' };
         }
-        return { type: 'multiple_choice', label: 'Множественный выбор', tone: 'text-info-text' };
+        return { type: 'multiple_choice', label: wt('xt.k035', 'Множественный выбор'), tone: 'text-info-text' };
     }
 
     escapeHtml(value) {
@@ -1852,7 +1860,7 @@ class TestEditor extends BaseEditor {
             this.task?.metadata?.name
             || this.task?.task_data?.meta?.name
             || this.taskNameParam
-            || 'Новый тест'
+            || wt('xt.k036', 'Новый тест')
         ).trim();
     }
 
@@ -1867,28 +1875,28 @@ class TestEditor extends BaseEditor {
         const isEmpty = !hasQuestionText && filledOptions === 0 && correctCount === 0;
 
         let state = 'partial';
-        let meta = `${filledOptions}/${options.length || 0} вариантов заполнено`;
+        let meta = `${filledOptions}/${options.length || 0}${wt('xt.k037', ' вариантов заполнено')}`;
 
         if (isReady) {
             state = 'ready';
             meta = correctCount > 1
-                ? `${correctCount} правильных ответа`
-                : '1 правильный ответ';
+                ? `${correctCount}${wt('xt.k038', ' правильных ответа')}`
+                : wt('xt.k039', '1 правильный ответ');
         } else if (isEmpty) {
             state = 'empty';
-            meta = 'Заполните вопрос и минимум два варианта';
+            meta = wt('xt.k040', 'Заполните вопрос и минимум два варианта');
         } else if (correctCount === 0) {
-            meta = 'Отметьте правильный вариант';
+            meta = wt('xt.k041', 'Отметьте правильный вариант');
         }
 
         return { state, meta, correctCount, filledOptions };
     }
 
     updateEditorChrome() {
-        const taskName = this.getTaskDisplayName() || 'Новый тест';
-        const currentLabel = `Вопрос ${this.currentQuestionIndex + 1} из ${this.questions.length}`;
+        const taskName = this.getTaskDisplayName() || wt('xt.k036', 'Новый тест');
+        const currentLabel = `${wt('xt.k010', 'Вопрос ')}${this.currentQuestionIndex + 1}${wt('xt.k042', ' из ')}${this.questions.length}`;
         const questionCount = this.questions.length;
-        const countLabel = questionCount === 1 ? '1 вопрос' : `${questionCount} вопросов`;
+        const countLabel = questionCount === 1 ? wt('xt.k043', '1 вопрос') : `${questionCount}${wt('xt.k043b', ' вопросов')}`;
 
         const taskNameNodes = ['#task-name-caption', '#sidebar-task-name'];
         taskNameNodes.forEach((selector) => {
@@ -2073,15 +2081,15 @@ class TestEditor extends BaseEditor {
                 item.setAttribute('data-onboarding-target', 'test-editor-active-question');
             }
 
-            const questionTitle = (q.text || `Вопрос ${index + 1}`).trim();
-            const preview = questionTitle.length > 42 ? `${questionTitle.slice(0, 42).trim()}…` : questionTitle || `Вопрос ${index + 1}`;
+            const questionTitle = (q.text || `${wt('xt.k010', 'Вопрос ')}${index + 1}`).trim();
+            const preview = questionTitle.length > 42 ? `${questionTitle.slice(0, 42).trim()}…` : questionTitle || `${wt('xt.k010', 'Вопрос ')}${index + 1}`;
             const safePreview = this.escapeHtml(preview);
             const safeMeta = this.escapeHtml(summary.meta);
             const questionIndex = String(index + 1).padStart(2, '0');
             const deleteDisabled = this.questions.length <= 1;
 
             item.innerHTML = `
-                <button type="button" class="question-nav-item__select" aria-current="${isActive ? 'true' : 'false'}" title="Открыть вопрос ${index + 1}">
+                <button type="button" class="question-nav-item__select" aria-current="${isActive ? 'true' : 'false'}" title="${wt('xt.k044', 'Открыть вопрос ')}${index + 1}">
                     <span class="question-nav-item__index">${questionIndex}</span>
                     <span class="question-nav-item__body">
                         <span class="question-nav-item__title">${safePreview}</span>
@@ -2089,7 +2097,7 @@ class TestEditor extends BaseEditor {
                     </span>
                     <span class="question-nav-item__state is-${summary.state}"></span>
                 </button>
-                <button type="button" class="question-nav-item__delete" title="Удалить вопрос ${index + 1}" aria-label="Удалить вопрос ${index + 1}" ${deleteDisabled ? 'disabled' : ''}>
+                <button type="button" class="question-nav-item__delete" title="${wt('xt.k045', 'Удалить вопрос ')}${index + 1}" aria-label="${wt('xt.k045', 'Удалить вопрос ')}${index + 1}" ${deleteDisabled ? 'disabled' : ''}>
                     <span class="material-symbols-outlined text-[16px]">delete</span>
                 </button>
             `;
@@ -2182,7 +2190,7 @@ class TestEditor extends BaseEditor {
         this.updateUndoRedoButtons();
 
         if (showToast) {
-            this.showToast('Вопрос восстановлен', 'success');
+            this.showToast(wt('xt.k046', 'Вопрос восстановлен'), 'success');
         }
         return true;
     }
@@ -2192,7 +2200,7 @@ class TestEditor extends BaseEditor {
             return;
         }
         if (this.questions.length <= 1) {
-            this.showToast('Нужен хотя бы один вопрос', 'warning');
+            this.showToast(wt('xt.k047', 'Нужен хотя бы один вопрос'), 'warning');
             return;
         }
 
@@ -2222,9 +2230,9 @@ class TestEditor extends BaseEditor {
         this.renderUI();
         this.markUnsavedChanges();
         this.updateUndoRedoButtons();
-        this.showToast(`Вопрос ${index + 1} удалён`, 'warning', this.questionDeletionUndoMs, {
+        this.showToast(`${wt('xt.k010', 'Вопрос ')}${index + 1}${wt('xt.k048', ' удалён')}`, 'warning', this.questionDeletionUndoMs, {
             toastId,
-            actionLabel: 'Отменить',
+            actionLabel: wt('xt.k049', 'Отменить'),
             timerSeconds: Math.ceil(this.questionDeletionUndoMs / 1000),
             onAction: () => this.restorePendingQuestionDeletion({ showToast: true }),
         });
@@ -2272,16 +2280,16 @@ class TestEditor extends BaseEditor {
 
                 const img = document.createElement('img');
                 img.src = src;
-                img.alt = `Изображение вопроса ${index + 1}`;
+                img.alt = `${wt('xt.k050', 'Изображение вопроса ')}${index + 1}`;
                 img.className = 'w-full h-full object-cover';
 
                 const removeBtn = document.createElement('button');
                 removeBtn.type = 'button';
                 removeBtn.className = 'remove-question-image-btn question-media-thumb__remove absolute bg-surface-1 border border-border-subtle rounded-full shadow text-text-secondary hover:text-error hover:border-error-light';
-                removeBtn.title = `Удалить изображение вопроса ${index + 1}`;
-                removeBtn.setAttribute('aria-label', `Удалить изображение вопроса ${index + 1}`);
+                removeBtn.title = `${wt('xt.k051', 'Удалить изображение вопроса ')}${index + 1}`;
+                removeBtn.setAttribute('aria-label', `${wt('xt.k051', 'Удалить изображение вопроса ')}${index + 1}`);
                 removeBtn.dataset.index = String(index);
-                removeBtn.innerHTML = '<span class="material-symbols-outlined text-[16px] leading-none">close</span><span class="question-media-thumb__remove-label">Удалить</span>';
+                removeBtn.innerHTML = `<span class="material-symbols-outlined text-[16px] leading-none">close</span><span class="question-media-thumb__remove-label">${wt('xt.k052', 'Удалить')}</span>`;
                 removeBtn.onclick = (event) => {
                     event.preventDefault();
                     event.stopPropagation();
@@ -2318,17 +2326,17 @@ class TestEditor extends BaseEditor {
             if (hasQuestionImage) {
                 uploadBtn.classList.remove('hidden');
                 uploadBtn.title = canAddQuestionImage
-                    ? 'Добавить ещё изображение к вопросу или вставить его через Ctrl+V'
-                    : 'К вопросу уже добавлено 3 изображения';
-                uploadBtn.setAttribute('aria-label', canAddQuestionImage ? 'Добавить изображение к вопросу' : 'Лимит изображений вопроса достигнут');
+                    ? wt('xt.k053', 'Добавить ещё изображение к вопросу или вставить его через Ctrl+V')
+                    : wt('xt.k013', 'К вопросу уже добавлено 3 изображения');
+                uploadBtn.setAttribute('aria-label', canAddQuestionImage ? wt('xt.k054', 'Добавить изображение к вопросу') : wt('xt.k055', 'Лимит изображений вопроса достигнут'));
                 if (icon) icon.textContent = canAddQuestionImage ? 'add_photo_alternate' : 'photo_library';
-                if (label) label.textContent = canAddQuestionImage ? 'Добавить' : 'Лимит';
+                if (label) label.textContent = canAddQuestionImage ? wt('xt.k056', 'Добавить') : wt('xt.k057', 'Лимит');
             } else {
                 uploadBtn.classList.remove('hidden');
-                uploadBtn.title = 'Добавить изображение к вопросу или вставить его через Ctrl+V';
-                uploadBtn.setAttribute('aria-label', 'Добавить изображение к вопросу');
+                uploadBtn.title = wt('xt.k058', 'Добавить изображение к вопросу или вставить его через Ctrl+V');
+                uploadBtn.setAttribute('aria-label', wt('xt.k054', 'Добавить изображение к вопросу'));
                 if (icon) icon.textContent = 'add_photo_alternate';
-                if (label) label.textContent = 'Фото';
+                if (label) label.textContent = wt('xt.k059', 'Фото');
             }
         }
 
@@ -2368,56 +2376,56 @@ class TestEditor extends BaseEditor {
             }
 
             const label = String.fromCharCode(65 + index); // A, B, C...
-            const optionLabel = `вариант ${label}`;
-            const statusLabel = opt.is_correct ? 'Правильный' : 'Не выбран';
+            const optionLabel = `${wt('xt.k060', 'вариант ')}${label}`;
+            const statusLabel = opt.is_correct ? wt('xt.k061', 'Правильный') : wt('xt.k062', 'Не выбран');
             const optionImageSrc = this.resolveImageSource(opt.image_path, opt.image_asset_url, opt.image_asset_id);
 
             div.innerHTML = `
-                <button type="button" class="option-letter" ${index === 0 ? 'data-onboarding-target="test-editor-correct-toggle"' : ''} aria-pressed="${opt.is_correct ? 'true' : 'false'}" title="Отметить ${optionLabel} как правильный">${label}</button>
+                <button type="button" class="option-letter" ${index === 0 ? 'data-onboarding-target="test-editor-correct-toggle"' : ''} aria-pressed="${opt.is_correct ? 'true' : 'false'}" title="${wt('xt.k063', 'Отметить ')}${optionLabel}${wt('xt.k063b', ' как правильный')}">${label}</button>
                 <div class="option-row__main">
                     <div class="option-row__content">
                         <div class="option-row__toolbar">
                             <div class="option-row__toolbar-meta">
                                 <span class="option-row__status ${opt.is_correct ? 'is-correct' : ''}">${statusLabel}</span>
-                                <span class="option-row__toolbar-label">Ответ</span>
+                                <span class="option-row__toolbar-label">${wt('xt.k064', 'Ответ')}</span>
                             </div>
                             <div class="option-row__toolbar-actions">
-                                <button class="delete-option option-row__delete-btn icon-button-muted border-error-light bg-error-lighter text-error-text hover:border-error hover:bg-error-lighter hover:text-error transition-all active:scale-95" title="Удалить ${optionLabel}" aria-label="Удалить ${optionLabel}">
+                                <button class="delete-option option-row__delete-btn icon-button-muted border-error-light bg-error-lighter text-error-text hover:border-error hover:bg-error-lighter hover:text-error transition-all active:scale-95" title="${wt('xt.k065', 'Удалить ')}${optionLabel}" aria-label="${wt('xt.k065', 'Удалить ')}${optionLabel}">
                                     <span class="material-symbols-outlined text-[18px]">delete</span>
-                                    <span>Удалить</span>
+                                    ${wt('xt.k052', 'Удалить')}
                                 </button>
                             </div>
                         </div>
                         <textarea class="option-row__textarea rounded-md border-border-subtle bg-surface-1 text-sm focus:border-primary focus:ring-primary shadow-sm focus:shadow-md transition-all resize-none"
                             data-image-paste-target="option" data-option-index="${index}"
-                            placeholder="Введите текст варианта..." rows="1"></textarea>
+                            placeholder="${wt('xt.k066', 'Введите текст варианта...')}" rows="1"></textarea>
                     </div>
                     <div class="option-row__media">
                         ${optionImageSrc ? `
                             <div class="option-row__media-frame option-row__media-frame--filled relative">
                                 <button class="upload-option-image option-row__media-preview-button"
                                     ${index === 0 ? 'data-onboarding-target="test-editor-first-option-image"' : ''}
-                                    data-index="${index}" data-option-index="${index}" data-image-paste-target="option" title="Заменить изображение ${optionLabel} или вставить его через Ctrl+V" aria-label="Заменить изображение ${optionLabel}">
+                                    data-index="${index}" data-option-index="${index}" data-image-paste-target="option" title="${wt('xt.k067', 'Заменить изображение ')}${optionLabel}${wt('xt.k067b', ' или вставить его через Ctrl+V')}" aria-label="${wt('xt.k067', 'Заменить изображение ')}${optionLabel}">
                                     <span class="option-row__media-preview w-full h-full rounded-lg border border-border-subtle shadow overflow-hidden bg-surface-1">
-                                        <img src="${optionImageSrc}" alt="Изображение ${optionLabel}"
+                                        <img src="${optionImageSrc}" alt="${wt('xt.k068', 'Изображение ')}${optionLabel}"
                                             class="w-full h-full object-cover" />
                                     </span>
-                                    <span class="option-row__media-preview-caption">Заменить</span>
+                                    <span class="option-row__media-preview-caption">${wt('xt.k069', 'Заменить')}</span>
                                 </button>
                                 <button class="remove-option-image option-row__media-chip border-error-light bg-error-lighter text-error-text hover:border-error hover:bg-error-lighter hover:text-error transition shadow-sm"
-                                    data-index="${index}" title="Удалить изображение ${optionLabel}" aria-label="Удалить изображение ${optionLabel}">
+                                    data-index="${index}" title="${wt('xt.k070', 'Удалить изображение ')}${optionLabel}" aria-label="${wt('xt.k070', 'Удалить изображение ')}${optionLabel}">
                                     <span class="material-symbols-outlined text-[14px] leading-none">close</span>
-                                    <span class="option-row__media-chip-label">Убрать</span>
+                                    <span class="option-row__media-chip-label">${wt('xt.k071', 'Убрать')}</span>
                                 </button>
                             </div>
                         ` : `
                             <button class="upload-option-image option-row__media-empty-button"
                                     ${index === 0 ? 'data-onboarding-target="test-editor-first-option-image"' : ''}
-                                    data-index="${index}" data-option-index="${index}" data-image-paste-target="option" title="Добавить изображение к ${optionLabel} или вставить его через Ctrl+V" aria-label="Добавить изображение к ${optionLabel}">
+                                    data-index="${index}" data-option-index="${index}" data-image-paste-target="option" title="${wt('xt.k072', 'Добавить изображение к ')}${optionLabel}${wt('xt.k072b', ' или вставить его через Ctrl+V')}" aria-label="${wt('xt.k072', 'Добавить изображение к ')}${optionLabel}">
                                 <span class="material-symbols-outlined text-[18px]">add_photo_alternate</span>
                                 <span class="option-row__media-empty-copy">
-                                    <span class="option-row__media-empty-title">Добавить</span>
-                                    <span class="option-row__media-empty-subtitle">изображение</span>
+                                    <span class="option-row__media-empty-title">${wt('xt.k056', 'Добавить')}</span>
+                                    <span class="option-row__media-empty-subtitle">${wt('xt.k073', 'изображение')}</span>
                                 </span>
                             </button>
                         `}
@@ -2441,7 +2449,7 @@ class TestEditor extends BaseEditor {
                 div.classList.toggle('is-correct', q.options[index].is_correct);
                 if (statusNode) {
                     statusNode.classList.toggle('is-correct', q.options[index].is_correct);
-                    statusNode.textContent = q.options[index].is_correct ? 'Правильный' : 'Не выбран';
+                    statusNode.textContent = q.options[index].is_correct ? wt('xt.k061', 'Правильный') : wt('xt.k062', 'Не выбран');
                 }
             };
             applyLetterState();
@@ -2545,7 +2553,7 @@ class TestEditor extends BaseEditor {
             uploadBtn.onclick = () => {
                 const q = this.questions[this.currentQuestionIndex];
                 if (this.syncQuestionLegacyImageFields(q).length >= this.getMaxQuestionImages()) {
-                    this.showToast('Можно добавить не больше 3 изображений к вопросу', 'warning');
+                    this.showToast(wt('xt.k001', 'Можно добавить не больше 3 изображений к вопросу'), 'warning');
                     return;
                 }
                 fileInput.click();
@@ -2562,7 +2570,7 @@ class TestEditor extends BaseEditor {
         document.addEventListener('paste', (e) => {
             this.handleClipboardPaste(e).catch((error) => {
                 console.error('Clipboard image paste failed', error);
-                this.showToast(error.message || 'Не удалось вставить изображение', 'error');
+                this.showToast(error.message || wt('xt.k074', 'Не удалось вставить изображение'), 'error');
             });
         });
 
@@ -2675,7 +2683,7 @@ class TestEditor extends BaseEditor {
         document.addEventListener('click', (e) => {
             this.handlePasteTargetSelectionClick(e).catch((error) => {
                 console.error('Paste target selection failed', error);
-                this.showToast(error.message || 'Не удалось вставить изображение', 'error');
+                this.showToast(error.message || wt('xt.k074', 'Не удалось вставить изображение'), 'error');
             });
         }, true);
         document.addEventListener('keydown', (e) => this.handlePasteTargetSelectionKeydown(e), true);
@@ -2704,7 +2712,7 @@ class TestEditor extends BaseEditor {
     async exportTasks() {
         const payload = this.buildBackendContent();
         try {
-            await this.withLoading('Экспорт теста...', async () => {
+            await this.withLoading(wt('xt.k075', 'Экспорт теста...'), async () => {
                 const response = await fetch('/api/editor/test/export', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -2724,7 +2732,7 @@ class TestEditor extends BaseEditor {
                     } catch (_) {
                         // ignore
                     }
-                    throw new Error(errDetail || 'Экспорт не удался');
+                    throw new Error(errDetail || wt('xt.k076', 'Экспорт не удался'));
                 }
 
                 const blob = await response.blob();
@@ -2734,10 +2742,10 @@ class TestEditor extends BaseEditor {
                 a.download = `${this.task?.metadata?.id || 'test'}.txt`;
                 a.click();
                 URL.revokeObjectURL(url);
-                this.showToast('Файл с вопросами экспортирован', 'success');
+                this.showToast(wt('xt.k077', 'Файл с вопросами экспортирован'), 'success');
             });
         } catch (error) {
-            this.showToast(error.message || 'Ошибка экспорта', 'error');
+            this.showToast(error.message || wt('xt.k078', 'Ошибка экспорта'), 'error');
         }
     }
 
@@ -2762,7 +2770,7 @@ class TestEditor extends BaseEditor {
         const formData = new FormData();
         formData.append('file', file);
 
-        this.withLoading('Проверка файла...', async () => {
+        this.withLoading(wt('xt.k079', 'Проверка файла...'), async () => {
             try {
                 const data = await this.requestJson('/api/editor/test/import', {
                     method: 'POST',
@@ -2772,8 +2780,8 @@ class TestEditor extends BaseEditor {
                 this.applyImportParseResult(importedQuestions, data.errors || []);
             } catch (error) {
                 this.clearPendingImportParse();
-                this.pendingImportErrors = [error.message || 'Не удалось прочитать файл'];
-                this.showToast(error.message || 'Не удалось прочитать файл', 'error');
+                this.pendingImportErrors = [error.message || wt('xt.k080', 'Не удалось прочитать файл')];
+                this.showToast(error.message || wt('xt.k080', 'Не удалось прочитать файл'), 'error');
                 this.showImportError(this.pendingImportErrors[0]);
             }
         }).finally(() => {
@@ -2784,23 +2792,23 @@ class TestEditor extends BaseEditor {
     handleImportTextChanged() {
         const rawText = this.importTextInput?.value || '';
         if (this.importTextCount) {
-            this.importTextCount.textContent = `${rawText.length} символов`;
+            this.importTextCount.textContent = `${rawText.length}${wt('xt.k081', ' символов')}`;
         }
         this.clearPendingImportParse({
-            status: rawText.trim() ? 'Текст изменён, разберите снова' : 'Текст ещё не введён',
+            status: rawText.trim() ? wt('xt.k082', 'Текст изменён, разберите снова') : wt('xt.k083', 'Текст ещё не введён'),
         });
     }
 
     async handleImportTextSubmitted() {
         const rawText = this.importTextInput?.value || '';
         if (!rawText.trim()) {
-            this.clearPendingImportParse({ status: 'Текст ещё не введён' });
-            this.showImportError('Вставьте текст с вопросами');
+            this.clearPendingImportParse({ status: wt('xt.k083', 'Текст ещё не введён') });
+            this.showImportError(wt('xt.k084', 'Вставьте текст с вопросами'));
             this.setImportConfirmEnabled(false);
             return;
         }
 
-        await this.withLoading('Проверка текста...', async () => {
+        await this.withLoading(wt('xt.k085', 'Проверка текста...'), async () => {
             try {
                 const data = await this.requestJson('/api/editor/test/import', {
                     method: 'POST',
@@ -2812,8 +2820,8 @@ class TestEditor extends BaseEditor {
                 this.applyImportParseResult(importedQuestions, data.errors || []);
             } catch (error) {
                 this.clearPendingImportParse();
-                this.pendingImportErrors = [error.message || 'Не удалось разобрать текст'];
-                this.showToast(error.message || 'Не удалось разобрать текст', 'error');
+                this.pendingImportErrors = [error.message || wt('xt.k086', 'Не удалось разобрать текст')];
+                this.showToast(error.message || wt('xt.k086', 'Не удалось разобрать текст'), 'error');
                 this.showImportError(this.pendingImportErrors[0]);
             }
         });
@@ -2856,8 +2864,8 @@ class TestEditor extends BaseEditor {
         if (!this.pendingImportData || !this.pendingImportData.length) {
             this.showToast(
                 this.importSource === 'text'
-                    ? 'Сначала разберите текст с вопросами'
-                    : 'Сначала выберите корректный файл',
+                    ? wt('xt.k087', 'Сначала разберите текст с вопросами')
+                    : wt('xt.k088', 'Сначала выберите корректный файл'),
                 'warning'
             );
             return;
@@ -2873,7 +2881,7 @@ class TestEditor extends BaseEditor {
         }
         this.renderUI();
         this.markUnsavedChanges();
-        this.showToast(`Импортировано ${importedCount} вопросов`, 'success');
+        this.showToast(`${wt('xt.k089', 'Импортировано ')}${importedCount}${wt('xt.k089b', ' вопросов')}`, 'success');
         this.pendingImportData = null;
         this.pendingImportFile = null;
         this.pendingImportErrors = [];
@@ -2893,10 +2901,10 @@ class TestEditor extends BaseEditor {
         this.pendingImportErrors = [];
         this.importSource = 'file';
         if (this.importTextInput) this.importTextInput.value = '';
-        if (this.importTextCount) this.importTextCount.textContent = '0 символов';
+        if (this.importTextCount) this.importTextCount.textContent = wt('xt.k090', '0 символов');
         this.renderImportPreview([]);
         this.showImportError('');
-        this.setImportParserStatus('Файл ещё не выбран', 'muted');
+        this.setImportParserStatus(wt('xt.k091', 'Файл ещё не выбран'), 'muted');
         this.importMode = 'append';
         this.updateImportSourceUI();
         this.updateImportModeUI();
@@ -2962,7 +2970,7 @@ class TestEditor extends BaseEditor {
 
         if (this.importParserStatus && !this.pendingImportData?.length && !this.pendingImportErrors.length) {
             this.setImportParserStatus(
-                this.importSource === 'text' ? 'Текст ещё не введён' : 'Файл ещё не выбран',
+                this.importSource === 'text' ? wt('xt.k083', 'Текст ещё не введён') : wt('xt.k091', 'Файл ещё не выбран'),
                 'muted'
             );
         }
@@ -2984,8 +2992,8 @@ class TestEditor extends BaseEditor {
         if (hint) {
             hint.textContent =
                 this.importMode === 'append'
-                    ? 'Новые вопросы будут добавлены после существующих.'
-                    : 'Текущие вопросы будут заменены импортированными данными.';
+                    ? wt('xt.k092', 'Новые вопросы будут добавлены после существующих.')
+                    : wt('xt.k093', 'Текущие вопросы будут заменены импортированными данными.');
         }
     }
 
@@ -2996,8 +3004,8 @@ class TestEditor extends BaseEditor {
             const empty = document.createElement('p');
             empty.className = 'p-3 text-text-muted';
             empty.textContent = this.importSource === 'text'
-                ? 'Текст ещё не разобран или не содержит вопросов'
-                : 'Файл ещё не выбран или не содержит вопросов';
+                ? wt('xt.k094', 'Текст ещё не разобран или не содержит вопросов')
+                : wt('xt.k095', 'Файл ещё не выбран или не содержит вопросов');
             this.importPreview.appendChild(empty);
             return;
         }
@@ -3006,7 +3014,7 @@ class TestEditor extends BaseEditor {
             item.className = 'p-3 flex flex-col gap-1 bg-surface-1';
             const title = document.createElement('div');
             title.className = 'text-xs font-semibold text-text-main';
-            title.textContent = `Вопрос ${idx + 1}`;
+            title.textContent = `${wt('xt.k010', 'Вопрос ')}${idx + 1}`;
             const text = document.createElement('div');
             text.className = 'text-xs text-text-secondary line-clamp-2';
             text.textContent = (q.text || '').trim() || '—';
@@ -3014,7 +3022,7 @@ class TestEditor extends BaseEditor {
             answersInfo.className = 'text-[11px] text-text-muted';
             const answers = Array.isArray(q.answers) ? q.answers.length : 0;
             const correct = q.answers?.filter?.((a) => a.correct).length || 0;
-            answersInfo.textContent = `${answers} вариантов, правильных: ${correct}`;
+            answersInfo.textContent = `${answers}${wt('xt.k096', ' вариантов, правильных: ')}${correct}`;
             item.appendChild(title);
             item.appendChild(text);
             item.appendChild(answersInfo);
@@ -3023,7 +3031,7 @@ class TestEditor extends BaseEditor {
         if (questions.length > 10) {
             const more = document.createElement('div');
             more.className = 'p-2 text-[11px] text-center text-text-muted bg-surface-1 border-t border-border-subtle';
-            more.textContent = `…и ещё ${questions.length - 10}`;
+            more.textContent = `${wt('xt.k097', '…и ещё ')}${questions.length - 10}`;
             this.importPreview.appendChild(more);
         }
     }
@@ -3031,12 +3039,12 @@ class TestEditor extends BaseEditor {
     showImportError(message) {
         if (!this.importErrorBox) return;
         if (message) {
-            this.setImportParserStatus('Обнаружены ошибки при разборе', 'error');
+            this.setImportParserStatus(wt('xt.k098', 'Обнаружены ошибки при разборе'), 'error');
         } else if (this.pendingImportData && this.pendingImportData.length) {
-            this.setImportParserStatus('Парсер отработал без ошибок', 'success');
+            this.setImportParserStatus(wt('xt.k099', 'Парсер отработал без ошибок'), 'success');
         } else {
             this.setImportParserStatus(
-                this.importSource === 'text' ? 'Текст ещё не разобран' : 'Файл ещё не выбран',
+                this.importSource === 'text' ? wt('xt.k094b', 'Текст ещё не разобран') : wt('xt.k091', 'Файл ещё не выбран'),
                 'muted'
             );
         }
@@ -3081,12 +3089,12 @@ class TestEditor extends BaseEditor {
         const q = this.questions[this.currentQuestionIndex];
         const remaining = this.getMaxQuestionImages() - this.syncQuestionLegacyImageFields(q).length;
         if (remaining <= 0) {
-            this.showToast('Можно добавить не больше 3 изображений к вопросу', 'warning');
+            this.showToast(wt('xt.k001', 'Можно добавить не больше 3 изображений к вопросу'), 'warning');
             return;
         }
 
         if (files.length > remaining) {
-            this.showToast(`Будут добавлены первые ${remaining} изображ. из выбранных`, 'warning');
+            this.showToast(`${wt('xt.k100', 'Будут добавлены первые ')}${remaining}${wt('xt.k100b', ' изображ. из выбранных')}`, 'warning');
         }
 
         for (const file of files.slice(0, remaining)) {
@@ -3102,7 +3110,7 @@ class TestEditor extends BaseEditor {
         this.syncQuestionLegacyImageFields(q);
         this.renderCurrentQuestion();
         this.renderQuestionList();
-        this.showToast('Изображение удалено', 'info');
+        this.showToast(wt('xt.k101', 'Изображение удалено'), 'info');
         this.markUnsavedChanges();
     }
 
@@ -3114,7 +3122,7 @@ class TestEditor extends BaseEditor {
         this.syncQuestionLegacyImageFields(q);
         this.renderCurrentQuestion();
         this.renderQuestionList();
-        this.showToast('Изображения удалены', 'info');
+        this.showToast(wt('xt.k102', 'Изображения удалены'), 'info');
         this.markUnsavedChanges();
     }
 
@@ -3139,8 +3147,8 @@ class TestEditor extends BaseEditor {
     validateTask() {
         // Check minimum questions
         if (this.questions.length === 0) {
-            this.showToast("Нужен хотя бы один вопрос", 'warning');
-            return "Нужен хотя бы один вопрос";
+            this.showToast(wt('xt.k047', 'Нужен хотя бы один вопрос'), 'warning');
+            return wt('xt.k047', 'Нужен хотя бы один вопрос');
         }
 
         // Validate each question
@@ -3149,18 +3157,18 @@ class TestEditor extends BaseEditor {
 
             // Check question text
             if (!q.text || !q.text.trim()) {
-                this.showToast(`Вопрос ${i + 1}: пустой текст`, 'warning');
+                this.showToast(`${wt('xt.k010', 'Вопрос ')}${i + 1}${wt('xt.k103', ': пустой текст')}`, 'warning');
                 this.currentQuestionIndex = i;
                 this.renderUI();
-                return `Вопрос ${i + 1}: пустой текст`;
+                return `${wt('xt.k010', 'Вопрос ')}${i + 1}${wt('xt.k103', ': пустой текст')}`;
             }
 
             // Check minimum options
             if (!q.options || q.options.length < 2) {
-                this.showToast(`Вопрос ${i + 1}: минимум два варианта ответа`, 'warning');
+                this.showToast(`${wt('xt.k010', 'Вопрос ')}${i + 1}${wt('xt.k104', ': минимум два варианта ответа')}`, 'warning');
                 this.currentQuestionIndex = i;
                 this.renderUI();
-                return `Вопрос ${i + 1}: минимум два варианта ответа`;
+                return `${wt('xt.k010', 'Вопрос ')}${i + 1}${wt('xt.k104', ': минимум два варианта ответа')}`;
             }
 
             // Check option texts and correct answers
@@ -3171,7 +3179,7 @@ class TestEditor extends BaseEditor {
                 if ((!opt.text || !opt.text.trim()) && !opt.image_path && !opt.image_asset_id && !opt.image_asset_url) {
                     this.currentQuestionIndex = i;
                     this.renderUI();
-                    return `Вопрос ${i + 1}, вариант ${j + 1}: пустой текст`;
+                    return `${wt('xt.k010', 'Вопрос ')}${i + 1}${wt('xt.k011', ', вариант ')}${j + 1}${wt('xt.k103', ': пустой текст')}`;
                 }
                 if (opt.is_correct) hasCorrect = true;
             }
@@ -3180,7 +3188,7 @@ class TestEditor extends BaseEditor {
             if (!hasCorrect) {
                 this.currentQuestionIndex = i;
                 this.renderUI();
-                return `Вопрос ${i + 1}: отметьте правильный ответ`;
+                return `${wt('xt.k010', 'Вопрос ')}${i + 1}${wt('xt.k105', ': отметьте правильный ответ')}`;
             }
         }
 
@@ -3221,15 +3229,15 @@ class TestEditor extends BaseEditor {
         const undoBtn = document.getElementById('undo-btn');
         if (undoBtn && this.pendingQuestionDeletion) {
             undoBtn.disabled = false;
-            undoBtn.title = 'Отменить удаление вопроса (Ctrl+Z)';
+            undoBtn.title = wt('xt.k106', 'Отменить удаление вопроса (Ctrl+Z)');
         }
     }
 
     async confirmAction({
         title,
         message,
-        confirmText = 'Подтвердить',
-        cancelText = 'Отмена',
+        confirmText = wt('xt.k107', 'Подтвердить'),
+        cancelText = wt('xt.k108', 'Отмена'),
         variant = 'warning'
     }) {
         if (typeof NotificationUI !== 'undefined' && typeof NotificationUI.confirm === 'function') {
@@ -3241,10 +3249,10 @@ class TestEditor extends BaseEditor {
     async clearTest() {
         this.finalizePendingQuestionDeletion({ dismissToast: true, silent: true });
         const clearConfirmed = await this.confirmAction({
-            title: 'Очистить тест?',
-            message: 'Все вопросы будут удалены. Это действие можно отменить только до сохранения.',
-            confirmText: 'Очистить',
-            cancelText: 'Отмена',
+            title: wt('xt.k109', 'Очистить тест?'),
+            message: wt('xt.k110', 'Все вопросы будут удалены. Это действие можно отменить только до сохранения.'),
+            confirmText: wt('xt.k111', 'Очистить'),
+            cancelText: wt('xt.k108', 'Отмена'),
             variant: 'warning'
         });
         if (!clearConfirmed) {
@@ -3255,17 +3263,17 @@ class TestEditor extends BaseEditor {
         this.renderUI();
         this.markUnsavedChanges();
         this.saveStateToHistory();
-        this.showToast('Тест очищен', 'info');
+        this.showToast(wt('xt.k112', 'Тест очищен'), 'info');
     }
 
     async deleteTest() {
         this.finalizePendingQuestionDeletion({ dismissToast: true, silent: true });
         if (!this.task) return;
         const deleteConfirmed = await this.confirmAction({
-            title: 'Удалить задание?',
-            message: 'Это действие необратимо. Задание будет удалено целиком.',
-            confirmText: 'Удалить',
-            cancelText: 'Отмена',
+            title: wt('xt.k113', 'Удалить задание?'),
+            message: wt('xt.k114', 'Это действие необратимо. Задание будет удалено целиком.'),
+            confirmText: wt('xt.k052', 'Удалить'),
+            cancelText: wt('xt.k108', 'Отмена'),
             variant: 'error'
         });
         if (!deleteConfirmed) {
@@ -3273,12 +3281,12 @@ class TestEditor extends BaseEditor {
         }
 
         if (!this.hasPersistedTask) {
-            this.discardLocalTaskDraft({ successMessage: 'Черновик удалён' });
+            this.discardLocalTaskDraft({ successMessage: wt('xt.k116', 'Черновик удалён') });
             return;
         }
 
         try {
-            await this.withLoading('Удаление задания...', async () => {
+            await this.withLoading(wt('xt.k117', 'Удаление задания...'), async () => {
                 const m = this.task.task_data.meta.module;
                 const t = this.task.task_data.meta.topic;
                 const id = this.task.metadata.id;
@@ -3286,13 +3294,13 @@ class TestEditor extends BaseEditor {
                 const response = await fetch(`/api/editor/task/${encodeURIComponent(m)}/${encodeURIComponent(t)}/${encodeURIComponent(id)}`, { method: 'DELETE' });
                 const data = await response.json();
                 if (!response.ok || !data.ok) {
-                    throw new Error(data.error || 'Не удалось удалить задание');
+                    throw new Error(data.error || wt('xt.k118', 'Не удалось удалить задание'));
                 }
-                this.showToast('Задание удалено', 'success');
+                this.showToast(wt('xt.k119', 'Задание удалено'), 'success');
                 window.navigateWithTransition('/editor');
             });
         } catch (err) {
-            this.showToast(err.message || 'Ошибка удаления задания', 'error');
+            this.showToast(err.message || wt('xt.k120', 'Ошибка удаления задания'), 'error');
         }
     }
 
@@ -3328,7 +3336,7 @@ class TestEditor extends BaseEditor {
         if (Number.isFinite(options.timerSeconds) && options.timerSeconds > 0) {
             const timer = document.createElement('span');
             timer.className = 'text-xs font-semibold text-text-on-dark opacity-80';
-            timer.textContent = `${Math.max(1, Math.ceil(options.timerSeconds))}с`;
+            timer.textContent = `${Math.max(1, Math.ceil(options.timerSeconds))}${wt('xt.k121', 'с')}`;
             toast.appendChild(timer);
 
             let secondsLeft = Math.max(1, Math.ceil(options.timerSeconds));
@@ -3338,7 +3346,7 @@ class TestEditor extends BaseEditor {
                     clearInterval(toast.__countdownInterval);
                     return;
                 }
-                timer.textContent = `${secondsLeft}с`;
+                timer.textContent = `${secondsLeft}${wt('xt.k121', 'с')}`;
             }, 1000);
         }
 
@@ -3393,7 +3401,7 @@ class TestEditor extends BaseEditor {
         return toast;
     }
 
-    toggleLoading(show, message = 'Загрузка...') {
+    toggleLoading(show, message = wt('xt.k122', 'Загрузка...')) {
         if (!this.loadingOverlay) return;
         if (show) {
             this.loadingCounter += 1;
@@ -3417,14 +3425,14 @@ class TestEditor extends BaseEditor {
             try {
                 data = JSON.parse(text);
             } catch (err) {
-                throw new Error('Некорректный ответ сервера');
+                throw new Error(wt('xt.k123', 'Некорректный ответ сервера'));
             }
         }
         if (!response.ok) {
-            throw new Error(data?.error || response.statusText || 'Ошибка запроса');
+            throw new Error(data?.error || response.statusText || wt('xt.k124', 'Ошибка запроса'));
         }
         if (data && Object.prototype.hasOwnProperty.call(data, 'ok') && data.ok === false) {
-            throw new Error(data.error || 'Ошибка запроса');
+            throw new Error(data.error || wt('xt.k124', 'Ошибка запроса'));
         }
         return data || {};
     }
