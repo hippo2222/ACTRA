@@ -1,3 +1,11 @@
+function wt(key, fallback) {
+  if (window.i18n && typeof window.i18n.t === 'function') {
+    var v = window.i18n.t(key);
+    if (v !== key) return v;
+  }
+  return fallback;
+}
+
 const THEORY_EDITOR_ROUTE = "/editor/Theory_Editor.html";
 const THEORY_CENTER_ROUTE = "/editor/Theory_Center.html";
 const EMPTY_THEORY_DELTA = { ops: [{ insert: "\n" }] };
@@ -181,7 +189,7 @@ function applyTheoryEditorOnboardingDemoState() {
     updateTheoryEditorActions();
     renderTheoryLibraryList();
     syncTheoryEditorOnboardingStepState();
-    document.title = "Редактор теории";
+    document.title = wt('te.k002', 'Редактор теории');
 }
 
 function restoreTheoryEditorOnboardingDemoState() {
@@ -325,8 +333,8 @@ function ensureTheoryEditorOnboardingImageMarker(wrapper) {
     const marker = document.createElement("button");
     marker.type = "button";
     marker.className = "theory-onboarding-image-marker";
-    marker.setAttribute("aria-label", "Показать инструменты изображения");
-    marker.setAttribute("title", "Показать инструменты изображения");
+    marker.setAttribute("aria-label", wt('te.k001', 'Показать инструменты изображения'));
+    marker.setAttribute("title", wt('te.k001', 'Показать инструменты изображения'));
     marker.setAttribute("contenteditable", "false");
     marker.setAttribute("data-onboarding-interactive", "image-tools-marker");
     marker.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">priority_high</span>';
@@ -410,22 +418,22 @@ function theoryEditorToast(message, severity = "info", duration = 2400) {
 }
 
 async function theoryEditorConfirm(options) {
-    const fallbackMessage = String(options?.message || "Подтвердите действие.").trim();
+    const fallbackMessage = String(options?.message || wt('te.k003', 'Подтвердите действие.')).trim();
     if (typeof window.NotificationUI !== "undefined" && typeof window.NotificationUI.confirm === "function") {
         return window.NotificationUI.confirm({
-            title: String(options?.title || "Подтвердите действие"),
+            title: String(options?.title || wt('te.k004', 'Подтвердите действие')),
             message: fallbackMessage,
-            confirmText: String(options?.confirmText || "Продолжить"),
-            cancelText: String(options?.cancelText || "Отмена"),
+            confirmText: String(options?.confirmText || wt('te.k005', 'Продолжить')),
+            cancelText: String(options?.cancelText || wt('te.k006', 'Отмена')),
             variant: String(options?.variant || "warning"),
         });
     }
     if (window.WorkspaceImportClient && typeof window.WorkspaceImportClient.confirmAction === "function") {
         return window.WorkspaceImportClient.confirmAction({
-            title: String(options?.title || "Подтвердите действие"),
+            title: String(options?.title || wt('te.k004', 'Подтвердите действие')),
             message: fallbackMessage,
-            confirmText: String(options?.confirmText || "Продолжить"),
-            cancelText: String(options?.cancelText || "Отмена"),
+            confirmText: String(options?.confirmText || wt('te.k005', 'Продолжить')),
+            cancelText: String(options?.cancelText || wt('te.k006', 'Отмена')),
             variant: String(options?.variant || "warning"),
         });
     }
@@ -526,7 +534,7 @@ function setTheoryStatus(message, tone = "muted", icon = "notes") {
     pill.dataset.tone = tone;
     pill.innerHTML = `
         <span class="material-symbols-outlined text-[16px]">${icon}</span>
-        ${escapeTheoryHtml(message || "Готово")}
+        ${escapeTheoryHtml(message || wt('te.k007', 'Готово'))}
     `;
 }
 
@@ -680,12 +688,12 @@ async function restoreTheoryDraftIfPresent(theoryId = "") {
         return false;
     }
 
-    const savedAtLabel = draft.savedAt ? formatTheoryListDate(draft.savedAt) : "несколько минут назад";
+    const savedAtLabel = draft.savedAt ? formatTheoryListDate(draft.savedAt) : wt('te.k008', 'несколько минут назад');
     const shouldRestore = await theoryEditorConfirm({
-        title: "Найден несохранённый черновик",
-        message: `На этой странице остался черновик от ${savedAtLabel}. Восстановить его вместо текущего содержимого?`,
-        confirmText: "Восстановить",
-        cancelText: "Оставить текущее",
+        title: wt('te.k009', 'Найден несохранённый черновик'),
+        message: `${wt('te.k048a', 'На этой странице остался черновик от ')}${savedAtLabel}${wt('te.k048b', '. Восстановить его вместо текущего содержимого?')}`,
+        confirmText: wt('te.k010', 'Восстановить'),
+        cancelText: wt('te.k011', 'Оставить текущее'),
         variant: "info",
     });
 
@@ -697,8 +705,8 @@ async function restoreTheoryDraftIfPresent(theoryId = "") {
     setTheoryEditorContent(draft.title, draft.delta || EMPTY_THEORY_DELTA);
     theoryEditorState.dirty = true;
     updateTheoryEditorActions();
-    setTheoryStatus("Черновик восстановлен. Проверьте изменения и сохраните теорию.", "warning", "history");
-    theoryEditorToast("Черновик восстановлен", "info", 2400);
+    setTheoryStatus(wt('te.k012', 'Черновик восстановлен. Проверьте изменения и сохраните теорию.'), "warning", "history");
+    theoryEditorToast(wt('te.k013', 'Черновик восстановлен'), "info", 2400);
     scheduleTheoryDraftSave();
     return true;
 }
@@ -756,13 +764,13 @@ function renderTheoryContextHeader() {
                 .filter(Boolean)
                 .join(" / ");
             copyEl.textContent = topicLabel
-                ? `Вы редактируете материал, который выбран для темы ${topicLabel}.`
-                : "Вы редактируете материал, который выбран для одной из тем.";
+                ? `${wt('te.k014', 'Вы редактируете материал, который выбран для темы ')}${topicLabel}.`
+                : wt('te.k015', 'Вы редактируете материал, который выбран для одной из тем.');
         } else if (context.context === "complex") {
-            const complexLabel = context.complexName || context.complexId || "текущего комплекса";
-            copyEl.textContent = `Вы редактируете материал, который связан с ${complexLabel}.`;
+            const complexLabel = context.complexName || context.complexId || wt('te.k016', 'текущего комплекса');
+            copyEl.textContent = `${wt('te.k017', 'Вы редактируете материал, который связан с ')}${complexLabel}.`;
         } else {
-            copyEl.textContent = "Материалы: текст, структура и изображения теории.";
+            copyEl.textContent = wt('te.k018', 'Материалы: текст, структура и изображения теории.');
         }
     }
 
@@ -773,11 +781,11 @@ function renderTheoryContextHeader() {
         backBtn.hidden = isCenterReturn;
         backBtn.classList.toggle("hidden", isCenterReturn);
         if (isCenterReturn) {
-            backLabel.textContent = "К центру теории";
+            backLabel.textContent = wt('te.k019', 'К центру теории');
         } else if (returnUrl.includes("/editor")) {
-            backLabel.textContent = "К редактору заданий";
+            backLabel.textContent = wt('te.k020', 'К редактору заданий');
         } else {
-            backLabel.textContent = "Назад";
+            backLabel.textContent = wt('te.k021', 'Назад');
         }
     }
 
@@ -842,13 +850,13 @@ function getTheoryLimitMessage(summary = getTheoryWorkspaceLimitSummary()) {
         return "";
     }
     if (Number(summary.remaining_personal || 0) <= 0 && Number(summary.remaining_library || 0) <= 0) {
-        return `Лимит теорий достигнут: свои ${personalCount}/${personalLimit}, библиотека ${libraryCount}/${libraryLimit}. Удалите лишнее или перейдите на Premium.`;
+        return `${wt('te.k022', 'Лимит теорий достигнут: свои ')}${personalCount}/${personalLimit}${wt('te.k022b', ', библиотека ')}${libraryCount}/${libraryLimit}${wt('te.k022c', '. Удалите лишнее или перейдите на Premium.')}`;
     }
     if (Number(summary.remaining_personal || 0) <= 0) {
-        return `Лимит своих теорий достигнут: ${personalCount}/${personalLimit}. Удалите одну из личных теорий или перейдите на Premium.`;
+        return `${wt('te.k023', 'Лимит своих теорий достигнут: ')}${personalCount}/${personalLimit}${wt('te.k023b', '. Удалите одну из личных теорий или перейдите на Premium.')}`;
     }
     if (Number(summary.remaining_library || 0) <= 0) {
-        return `Библиотека теорий заполнена: ${libraryCount}/${libraryLimit}. Удалите лишнюю теорию или перейдите на Premium.`;
+        return `${wt('te.k024', 'Библиотека теорий заполнена: ')}${libraryCount}/${libraryLimit}${wt('te.k024b', '. Удалите лишнюю теорию или перейдите на Premium.')}`;
     }
     return "";
 }
@@ -878,12 +886,12 @@ function renderTheoryQuotaUi() {
         } else if (isPremium) {
             pill.className = "theory-chip theory-chip--primary";
             pill.hidden = false;
-            pill.innerHTML = '<span class="material-symbols-outlined text-[16px]">workspace_premium</span> Premium · без лимита';
+            pill.innerHTML = `<span class="material-symbols-outlined text-[16px]">workspace_premium</span> ${wt('te.k025', 'Premium · без лимита')}`;
         } else {
             const toneClass = blocked ? "theory-chip" : "theory-chip theory-chip--primary";
             pill.className = toneClass;
             pill.hidden = false;
-            pill.innerHTML = `<span class="material-symbols-outlined text-[16px]">inventory_2</span> Мои теории ${Number(summary.personal_count || 0)}/${Number(summary.personal_limit || 0)} · Библиотека ${Number(summary.library_total_count || 0)}/${Number(summary.library_limit || 0)}`;
+            pill.innerHTML = `<span class="material-symbols-outlined text-[16px]">inventory_2</span> ${wt('te.k026', 'Мои теории ')}${Number(summary.personal_count || 0)}/${Number(summary.personal_limit || 0)}${wt('te.k026b', ' · Библиотека ')}${Number(summary.library_total_count || 0)}/${Number(summary.library_limit || 0)}`;
         }
     }
 
@@ -915,12 +923,12 @@ async function resolveCurrentTheoryEditorUserId(forceRefresh = false) {
 function getCatalogVisibilityLabel(value) {
     switch (String(value || "").trim().toLowerCase()) {
         case "access_code":
-            return "По коду";
+            return wt('te.k027', 'По коду');
         case "private":
-            return "Приватная";
+            return wt('te.k028', 'Приватная');
         case "public":
         default:
-            return "Общий доступ";
+            return wt('te.k029', 'Общий доступ');
     }
 }
 
@@ -939,12 +947,12 @@ function getCatalogVisibilityTone(value) {
 function getTheoryCatalogVisibilityDescription(value) {
     switch (String(value || "").trim().toLowerCase()) {
         case "access_code":
-            return "Теория не видна в общем каталоге. Добавить её можно только по коду доступа.";
+            return wt('te.k030', 'Теория не видна в общем каталоге. Добавить её можно только по коду доступа.');
         case "private":
-            return "Теория доступна только вам. Другие пользователи не увидят её в каталоге и не смогут открыть по коду.";
+            return wt('te.k031', 'Теория доступна только вам. Другие пользователи не увидят её в каталоге и не смогут открыть по коду.');
         case "public":
         default:
-            return "Теория видна в общем каталоге и доступна для добавления в библиотеку.";
+            return wt('te.k032', 'Теория видна в общем каталоге и доступна для добавления в библиотеку.');
     }
 }
 
@@ -959,25 +967,25 @@ function formatTheoryVisibilityLockMessage(lock) {
         ? lock.complex_titles.filter((value) => String(value || "").trim())
         : [];
     if (complexTitles.length === 1) {
-        return `Теория привязана к публичному комплексу «${complexTitles[0]}», поэтому должна оставаться в общем доступе.`;
+        return `${wt('te.k033', 'Теория привязана к публичному комплексу «')}${complexTitles[0]}${wt('te.k033b', '», поэтому должна оставаться в общем доступе.')}`;
     }
     if (complexTitles.length > 1) {
-        return "Теория привязана к нескольким публичным комплексам, поэтому должна оставаться в общем доступе.";
+        return wt('te.k034', 'Теория привязана к нескольким публичным комплексам, поэтому должна оставаться в общем доступе.');
     }
-    return "Теория привязана к опубликованному для всех комплексу, поэтому должна оставаться в общем доступе.";
+    return wt('te.k035', 'Теория привязана к опубликованному для всех комплексу, поэтому должна оставаться в общем доступе.');
 }
 
 function getTheoryPublicationErrorMessage(error, fallback = "") {
     const message = String(error?.message || error || "").trim();
     if (message.includes("theory_catalog_visibility_locked_by_public_complex")) {
-        return "Теория привязана к опубликованному для всех комплексу. Сначала измените публикацию комплекса.";
+        return wt('te.k036', 'Теория привязана к опубликованному для всех комплексу. Сначала измените публикацию комплекса.');
     }
     return message || fallback;
 }
 
 function formatTheoryPublicationTimestamp(value) {
     const raw = String(value || "").trim();
-    if (!raw) return "ещё не публиковалась";
+    if (!raw) return wt('te.k037', 'ещё не публиковалась');
     const date = new Date(raw);
     if (Number.isNaN(date.getTime())) return raw;
     return date.toLocaleString("ru-RU", {
@@ -1090,17 +1098,17 @@ function getTheoryPublicationNotice(item = null, publication = null) {
     if (syncState === "stale") {
         return {
             kind: "stale",
-            buttonLabel: "Нужна публикация",
-            tooltip: "Есть сохранённые изменения, которые ещё не попали в публикацию. Опубликуйте новую версию, чтобы их увидели другие пользователи.",
-            saveMessage: "Теория сохранена. Чтобы другие пользователи увидели изменения, обновите публикацию.",
+            buttonLabel: wt('te.k038', 'Нужна публикация'),
+            tooltip: wt('te.k039', 'Есть сохранённые изменения, которые ещё не попали в публикацию. Опубликуйте новую версию, чтобы их увидели другие пользователи.'),
+            saveMessage: wt('te.k040', 'Теория сохранена. Чтобы другие пользователи увидели изменения, обновите публикацию.'),
         };
     }
     if (syncState === "unpublished") {
         return {
             kind: "unpublished",
-            buttonLabel: "Не опубликована",
-            tooltip: "Теория сохранена только в рабочей версии. Чтобы её увидели другие пользователи, опубликуйте материал.",
-            saveMessage: "Теория сохранена. Чтобы её увидели другие пользователи, опубликуйте материал.",
+            buttonLabel: wt('te.k041', 'Не опубликована'),
+            tooltip: wt('te.k042', 'Теория сохранена только в рабочей версии. Чтобы её увидели другие пользователи, опубликуйте материал.'),
+            saveMessage: wt('te.k043', 'Теория сохранена. Чтобы её увидели другие пользователи, опубликуйте материал.'),
         };
     }
     return {
@@ -1124,15 +1132,15 @@ function updateTheoryPublicationControls() {
 
     button.disabled = !activeTheoryId || !canManage;
     if (!activeTheoryId) {
-        button.title = "Сначала сохраните теорию";
+        button.title = wt('te.k044', 'Сначала сохраните теорию');
     } else if (!canManage) {
-        button.title = "Публикацией можно управлять только для своих теорий";
+        button.title = wt('te.k045', 'Публикацией можно управлять только для своих теорий');
     } else if (notice.kind === "stale") {
         button.title = notice.tooltip;
     } else if (publication) {
-        button.title = `Управление публикацией: ${getCatalogVisibilityLabel(publication.catalog_visibility)}`;
+        button.title = `${wt('te.k046', 'Управление публикацией: ')}${getCatalogVisibilityLabel(publication.catalog_visibility)}`;
     } else {
-        button.title = "Опубликовать сохранённую теорию";
+        button.title = wt('te.k047', 'Опубликовать сохранённую теорию');
     }
 
     if (!activeTheoryId || !canManage) {
@@ -1140,16 +1148,16 @@ function updateTheoryPublicationControls() {
         button.dataset.tone = "muted";
         button.innerHTML = `
             <span class="material-symbols-outlined text-[16px]">public</span>
-            Не опубликована
+            ${wt('te.k041', 'Не опубликована')}
         `;
         return;
     }
 
     const tone = publication ? getCatalogVisibilityTone(publication.catalog_visibility) : "muted";
-    const label = publication ? getCatalogVisibilityLabel(publication.catalog_visibility) : "Не опубликована";
+    const label = publication ? getCatalogVisibilityLabel(publication.catalog_visibility) : wt('te.k041', 'Не опубликована');
     const description = publication
         ? getTheoryCatalogVisibilityDescription(publication.catalog_visibility)
-        : "Теория пока доступна только вам и ещё не опубликована.";
+        : wt('te.k048', 'Теория пока доступна только вам и ещё не опубликована.');
 
     button.classList.remove("hidden");
     button.dataset.tone = tone;
@@ -1173,13 +1181,13 @@ function updateTheoryPublicationControls() {
 
     button.disabled = !activeTheoryId || !canManage;
     if (!activeTheoryId) {
-        button.title = "Сначала сохраните теорию";
+        button.title = wt('te.k044', 'Сначала сохраните теорию');
     } else if (!canManage) {
-        button.title = "Публикацией можно управлять только для своих теорий";
+        button.title = wt('te.k045', 'Публикацией можно управлять только для своих теорий');
     } else if (notice.kind === "stale") {
         button.title = notice.tooltip;
     } else if (publication) {
-        button.title = `Управление публикацией: ${getCatalogVisibilityLabel(publication.catalog_visibility)}`;
+        button.title = `${wt('te.k046', 'Управление публикацией: ')}${getCatalogVisibilityLabel(publication.catalog_visibility)}`;
     } else {
         button.title = notice.tooltip;
     }
@@ -1189,7 +1197,7 @@ function updateTheoryPublicationControls() {
         button.dataset.tone = "muted";
         button.innerHTML = `
             <span class="material-symbols-outlined text-[16px]">public</span>
-            Не опубликована
+            ${wt('te.k041', 'Не опубликована')}
         `;
         return;
     }
@@ -1253,13 +1261,13 @@ async function copyTheoryAccessCode(value) {
     try {
         if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
             await navigator.clipboard.writeText(code);
-            theoryEditorToast("Код доступа скопирован.", "success", 2500);
+            theoryEditorToast(wt('te.k049', 'Код доступа скопирован.'), "success", 2500);
             return;
         }
     } catch (error) {
         console.warn("[Theory Editor] Failed to copy access code", error);
     }
-    theoryEditorToast(`Код доступа: ${code}`, "info", 3200);
+    theoryEditorToast(`${wt('te.k050', 'Код доступа: ')}${code}`, "info", 3200);
 }
 
 function theoryAssetSrc(assetId, assetUrl) {
@@ -2037,7 +2045,7 @@ function resetTheoryEditorState() {
 async function openTheoryPublicationDialog() {
     const theoryId = String(theoryEditorState.activeTheoryId || "").trim();
     if (!theoryId) {
-        theoryEditorToast("Сначала сохраните теорию, чтобы управлять публикацией.", "info", 3200);
+        theoryEditorToast(wt('te.k051', 'Сначала сохраните теорию, чтобы управлять публикацией.'), "info", 3200);
         return;
     }
 
@@ -2047,7 +2055,7 @@ async function openTheoryPublicationDialog() {
         || theoryEditorState.catalog.find((item) => String(item?.id || "").trim() === theoryId)
         || null;
     if (!isTheoryOwnedByCurrentUser(activeTheory)) {
-        theoryEditorToast("Публикацией можно управлять только для своих теорий.", "warning", 3200);
+        theoryEditorToast(wt('te.k052', 'Публикацией можно управлять только для своих теорий.'), "warning", 3200);
         return;
     }
 
@@ -2064,7 +2072,7 @@ async function openTheoryPublicationDialog() {
     const visibilityLock = getTheoryVisibilityLock(publication);
     const accessCode = getTheoryAccessCodeValue(publication);
     const theoryTitle = escapeTheoryHtml(
-        String(document.getElementById("theory-title")?.value || activeTheory?.title || "Без названия").trim() || "Без названия"
+        String(document.getElementById("theory-title")?.value || activeTheory?.title || wt('te.k053', 'Без названия')).trim() || wt('te.k053', 'Без названия')
     );
 
     const modal = document.createElement("div");
@@ -2076,10 +2084,10 @@ async function openTheoryPublicationDialog() {
                     <div class="space-y-1 max-w-3xl">
                         <div class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-text-muted">
                             <span class="material-symbols-outlined text-[16px]">public</span>
-                            Публикация теории
+                            ${wt('te.k054', 'Публикация теории')}
                         </div>
                         <h3 class="text-xl font-bold text-text-main">${theoryTitle}</h3>
-                        <p class="text-sm text-text-secondary">Публикуется последняя сохранённая версия теории. Смена режима доступа влияет на текущую публикацию, а новые изменения из редактора станут видны другим пользователям только после публикации новой версии.</p>
+                        <p class="text-sm text-text-secondary">${wt('te.k055', 'Публикуется последняя сохранённая версия теории. Смена режима доступа влияет на текущую публикацию, а новые изменения из редактора станут видны другим пользователям только после публикации новой версии.')}</p>
                     </div>
                     <button type="button" data-role="close" class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-bg-tertiary hover:text-text-main">
                         <span class="material-symbols-outlined">close</span>
@@ -2089,25 +2097,25 @@ async function openTheoryPublicationDialog() {
                     <div class="rounded-2xl border border-border-subtle bg-bg-secondary px-4 py-4">
                         <div class="flex flex-wrap items-start justify-between gap-3">
                             <div>
-                                <div class="text-xs font-bold uppercase tracking-[0.14em] text-text-muted">Текущий статус</div>
-                                <div id="theory-publish-current-status" class="mt-1 text-base font-semibold text-text-main">${escapeTheoryHtml(publication ? getCatalogVisibilityLabel(publication.catalog_visibility) : "Не опубликована")}</div>
-                                <div id="theory-publish-current-meta" class="mt-1 text-sm text-text-secondary">${publication ? `Последняя публикация: ${escapeTheoryHtml(formatTheoryPublicationTimestamp(publication.latest_published_at))}` : "После первой публикации теория появится в каталоге или станет доступна по коду."}</div>
+                                <div class="text-xs font-bold uppercase tracking-[0.14em] text-text-muted">${wt('te.k056', 'Текущий статус')}</div>
+                                <div id="theory-publish-current-status" class="mt-1 text-base font-semibold text-text-main">${escapeTheoryHtml(publication ? getCatalogVisibilityLabel(publication.catalog_visibility) : wt('te.k041', 'Не опубликована'))}</div>
+                                <div id="theory-publish-current-meta" class="mt-1 text-sm text-text-secondary">${publication ? `${wt('te.k057', 'Последняя публикация: ')}${escapeTheoryHtml(formatTheoryPublicationTimestamp(publication.latest_published_at))}` : wt('te.k058', 'После первой публикации теория появится в каталоге или станет доступна по коду.')}</div>
                             </div>
                             <span id="theory-publish-current-badge" class="theory-status-pill" data-tone="${publication ? getCatalogVisibilityTone(currentVisibility) : "muted"}">
                                 <span class="material-symbols-outlined text-[16px]">public</span>
-                                ${escapeTheoryHtml(publication ? getCatalogVisibilityLabel(currentVisibility) : "Не опубликована")}
+                                ${escapeTheoryHtml(publication ? getCatalogVisibilityLabel(currentVisibility) : wt('te.k041', 'Не опубликована'))}
                             </span>
                         </div>
                     </div>
 
                     <div class="space-y-3">
                         <div>
-                            <div class="text-sm font-semibold text-text-main">Режим доступа</div>
-                            <p class="mt-1 text-sm text-text-secondary">Если публикация уже существует, доступ можно поменять отдельно от публикации новой версии. Новые правки из редактора увидят другие пользователи только после публикации.</p>
+                            <div class="text-sm font-semibold text-text-main">${wt('te.k059', 'Режим доступа')}</div>
+                            <p class="mt-1 text-sm text-text-secondary">${wt('te.k060', 'Если публикация уже существует, доступ можно поменять отдельно от публикации новой версии. Новые правки из редактора увидят другие пользователи только после публикации.')}</p>
                         </div>
                         ${visibilityLock ? `
                             <div class="rounded-2xl border border-warning-light bg-warning-light/40 px-4 py-3 text-sm text-warning-darker">
-                                Теория используется публичным комплексом. Режим доступа зафиксирован на «Общий доступ».
+                                ${wt('te.k061', 'Теория используется публичным комплексом. Режим доступа зафиксирован на «Общий доступ».')}
                             </div>
                         ` : ""}
                         <div class="grid gap-3 md:grid-cols-3">
@@ -2128,28 +2136,28 @@ async function openTheoryPublicationDialog() {
                     <div id="theory-publish-access-box" class="rounded-2xl border border-border-subtle bg-bg-secondary px-4 py-4 ${currentVisibility === "access_code" ? "" : "hidden"}">
                         <div class="flex flex-wrap items-center justify-between gap-3">
                             <div>
-                                <div class="text-xs font-bold uppercase tracking-[0.14em] text-text-muted">Код доступа</div>
-                                <div id="theory-publish-access-code" class="mt-1 text-base font-semibold tracking-[0.12em] text-text-main">${escapeTheoryHtml(accessCode ? formatTheoryAccessCodeDisplay(accessCode) : "Код будет создан после публикации")}</div>
+                                <div class="text-xs font-bold uppercase tracking-[0.14em] text-text-muted">${wt('te.k062', 'Код доступа')}</div>
+                                <div id="theory-publish-access-code" class="mt-1 text-base font-semibold tracking-[0.12em] text-text-main">${escapeTheoryHtml(accessCode ? formatTheoryAccessCodeDisplay(accessCode) : wt('te.k063', 'Код будет создан после публикации'))}</div>
                             </div>
                             <button type="button" class="theory-neutral-btn inline-flex h-10 items-center gap-2 rounded-xl border px-4 text-sm font-semibold transition-colors hover:border-primary hover:text-primary" data-role="copy-access-code">
                                 <span class="material-symbols-outlined text-[18px]">content_copy</span>
-                                Скопировать код
+                                ${wt('te.k064', 'Скопировать код')}
                             </button>
                         </div>
                     </div>
 
                     <div class="rounded-2xl border border-border-subtle bg-bg-secondary px-4 py-4">
-                        <div class="text-xs font-bold uppercase tracking-[0.14em] text-text-muted">Что произойдёт после изменения доступа</div>
+                        <div class="text-xs font-bold uppercase tracking-[0.14em] text-text-muted">${wt('te.k065', 'Что произойдёт после изменения доступа')}</div>
                         <ul class="mt-2 space-y-2 text-sm text-text-secondary">
-                            <li>Новые пользователи будут видеть публикацию только в рамках выбранного режима доступа.</li>
-                            <li>Изменение доступа не публикует новую версию автоматически и не меняет содержимое текущей опубликованной версии.</li>
-                            <li>Чтобы другие пользователи увидели новые правки из редактора, опубликуйте новую версию.</li>
-                            <li>Новая публикация делает актуальной последнюю сохранённую версию теории для каталога и доступа по коду.</li>
+                            <li>${wt('te.k066', 'Новые пользователи будут видеть публикацию только в рамках выбранного режима доступа.')}</li>
+                            <li>${wt('te.k067', 'Изменение доступа не публикует новую версию автоматически и не меняет содержимое текущей опубликованной версии.')}</li>
+                            <li>${wt('te.k068', 'Чтобы другие пользователи увидели новые правки из редактора, опубликуйте новую версию.')}</li>
+                            <li>${wt('te.k069', 'Новая публикация делает актуальной последнюю сохранённую версию теории для каталога и доступа по коду.')}</li>
                         </ul>
                     </div>
 
                     <div id="theory-publish-unsaved-note" class="${theoryEditorState.dirty ? "" : "hidden"} rounded-2xl border border-warning-light bg-warning-light/40 px-4 py-3 text-sm text-warning-darker">
-                        Есть несохранённые изменения. В публикацию попадёт последняя сохранённая версия теории.
+                        ${wt('te.k070', 'Есть несохранённые изменения. В публикацию попадёт последняя сохранённая версия теории.')}
                     </div>
 
                     <div id="theory-publish-feedback" class="hidden rounded-2xl border px-4 py-3 text-sm"></div>
@@ -2157,15 +2165,15 @@ async function openTheoryPublicationDialog() {
                 <div class="flex flex-wrap items-center justify-between gap-3 border-t border-border-subtle bg-surface-1 px-5 py-4 sm:px-6">
                     <button type="button" data-role="update-visibility" class="theory-neutral-btn inline-flex h-10 items-center gap-2 rounded-xl border px-4 text-sm font-semibold transition-colors hover:border-primary hover:text-primary">
                         <span class="material-symbols-outlined text-[18px]">tune</span>
-                        Сохранить доступ
+                        ${wt('te.k071', 'Сохранить доступ')}
                     </button>
                     <div class="flex flex-wrap items-center justify-end gap-3">
                         <button type="button" data-role="close" class="theory-neutral-btn inline-flex h-10 items-center gap-2 rounded-xl border px-4 text-sm font-semibold transition-colors hover:border-primary hover:text-primary">
-                            Отмена
+                            ${wt('te.k006', 'Отмена')}
                         </button>
                         <button type="button" data-role="publish-version" class="theory-save-btn inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-primary-fg shadow-sm transition-all hover:shadow-md">
                             <span class="material-symbols-outlined text-[18px]">publish</span>
-                            Опубликовать версию
+                            ${wt('te.k072', 'Опубликовать версию')}
                         </button>
                     </div>
                 </div>
@@ -2243,18 +2251,18 @@ async function openTheoryPublicationDialog() {
         const lock = applyVisibilityControlState(currentItem);
         const selectedVisibility = getSelectedVisibility();
         if (currentStatus) {
-            currentStatus.textContent = currentItem ? getCatalogVisibilityLabel(currentItem.catalog_visibility) : "Не опубликована";
+            currentStatus.textContent = currentItem ? getCatalogVisibilityLabel(currentItem.catalog_visibility) : wt('te.k041', 'Не опубликована');
         }
         if (currentMeta) {
             currentMeta.textContent = currentItem
-                ? `Последняя публикация: ${formatTheoryPublicationTimestamp(currentItem.latest_published_at)}`
-                : "После первой публикации теория появится в каталоге или станет доступна по коду.";
+                ? `${wt('te.k057', 'Последняя публикация: ')}${formatTheoryPublicationTimestamp(currentItem.latest_published_at)}`
+                : wt('te.k058', 'После первой публикации теория появится в каталоге или станет доступна по коду.');
         }
         if (currentBadge) {
             currentBadge.dataset.tone = currentItem ? getCatalogVisibilityTone(currentItem.catalog_visibility) : "muted";
             currentBadge.innerHTML = `
                 <span class="material-symbols-outlined text-[16px]">public</span>
-                ${escapeTheoryHtml(currentItem ? getCatalogVisibilityLabel(currentItem.catalog_visibility) : "Не опубликована")}
+                ${escapeTheoryHtml(currentItem ? getCatalogVisibilityLabel(currentItem.catalog_visibility) : wt('te.k041', 'Не опубликована'))}
             `;
         }
         const activeCode = getTheoryAccessCodeValue(currentItem);
@@ -2263,7 +2271,7 @@ async function openTheoryPublicationDialog() {
         if (accessCodeEl) {
             accessCodeEl.textContent = activeCode
                 ? formatTheoryAccessCodeDisplay(activeCode)
-                : (selectedVisibility === "access_code" ? "Код будет создан после публикации" : "");
+                : (selectedVisibility === "access_code" ? wt('te.k063', 'Код будет создан после публикации') : "");
         }
         if (updateBtn) {
             const currentItemVisibility = String(currentItem?.catalog_visibility || "").trim().toLowerCase();
@@ -2290,7 +2298,7 @@ async function openTheoryPublicationDialog() {
         if (!currentItem) return;
         const nextVisibility = getSelectedVisibility();
         if (nextVisibility === String(currentItem.catalog_visibility || "").trim().toLowerCase()) {
-            setFeedback("Выбранный режим доступа уже сохранён.", "info");
+            setFeedback(wt('te.k073', 'Выбранный режим доступа уже сохранён.'), "info");
             return;
         }
         setBusy(true);
@@ -2307,11 +2315,11 @@ async function openTheoryPublicationDialog() {
             }
             upsertTheoryPublicationItem(data.item);
             syncModalState(data.item);
-            setFeedback(`Доступ обновлён: ${getCatalogVisibilityLabel(data.item.catalog_visibility)}.`, "success");
-            theoryEditorToast(`Статус публикации теории обновлён: ${getCatalogVisibilityLabel(data.item.catalog_visibility)}.`, "success", 2600);
+            setFeedback(`${wt('te.k074', 'Доступ обновлён: ')}${getCatalogVisibilityLabel(data.item.catalog_visibility)}.`, "success");
+            theoryEditorToast(`${wt('te.k075', 'Статус публикации теории обновлён: ')}${getCatalogVisibilityLabel(data.item.catalog_visibility)}.`, "success", 2600);
         } catch (error) {
             console.error("[Theory Editor] Visibility update failed", error);
-            setFeedback(`Не удалось изменить доступ: ${String(error?.message || "catalog_visibility_update_failed")}`, "error");
+            setFeedback(`${wt('te.k076', 'Не удалось изменить доступ: ')}${String(error?.message || "catalog_visibility_update_failed")}`, "error");
         } finally {
             setBusy(false);
         }
@@ -2332,11 +2340,11 @@ async function openTheoryPublicationDialog() {
             }
             upsertTheoryPublicationItem(data.item);
             syncModalState(data.item);
-            setFeedback(`Публикация обновлена. Режим доступа: ${getCatalogVisibilityLabel(data.item.catalog_visibility)}.`, "success");
-            theoryEditorToast(`Теория опубликована: ${getCatalogVisibilityLabel(data.item.catalog_visibility)}.`, "success", 2800);
+            setFeedback(`${wt('te.k077', 'Публикация обновлена. Режим доступа: ')}${getCatalogVisibilityLabel(data.item.catalog_visibility)}.`, "success");
+            theoryEditorToast(`${wt('te.k078', 'Теория опубликована: ')}${getCatalogVisibilityLabel(data.item.catalog_visibility)}.`, "success", 2800);
         } catch (error) {
             console.error("[Theory Editor] Publish failed", error);
-            setFeedback(`Не удалось опубликовать теорию: ${String(error?.message || "catalog_publish_failed")}`, "error");
+            setFeedback(`${wt('te.k079', 'Не удалось опубликовать теорию: ')}${String(error?.message || "catalog_publish_failed")}`, "error");
         } finally {
             setBusy(false);
         }
@@ -2350,7 +2358,7 @@ function markTheoryDirty() {
     theoryEditorState.dirty = true;
     updateTheoryEditorActions();
     scheduleTheoryDraftSave();
-    setTheoryStatus("Есть несохранённые изменения", "warning", "edit");
+    setTheoryStatus(wt('te.k080', 'Есть несохранённые изменения'), "warning", "edit");
 }
 
 async function syncPublishedTheoryAfterSave(savedItem, options = {}) {
@@ -2368,9 +2376,9 @@ async function persistTheory(options = {}) {
     }
     if (!theoryEditorState.activeTheoryId && isTheoryCreationBlocked()) {
         const message = getTheoryLimitMessage();
-        setTheoryStatus(message || "Лимит теорий достигнут", "warning", "lock");
+        setTheoryStatus(message || wt('te.k081', 'Лимит теорий достигнут'), "warning", "lock");
         if (!options.silent) {
-            theoryEditorToast(message || "Лимит теорий достигнут", "warning", 3600);
+            theoryEditorToast(message || wt('te.k081', 'Лимит теорий достигнут'), "warning", 3600);
         }
         return null;
     }
@@ -2383,7 +2391,7 @@ async function persistTheory(options = {}) {
 
     theoryEditorState.saving = true;
     updateTheoryEditorActions();
-    setTheoryStatus("Сохраняем теорию...", "info", "save");
+    setTheoryStatus(wt('te.k082', 'Сохраняем теорию...'), "info", "save");
 
     try {
         let response;
@@ -2408,7 +2416,7 @@ async function persistTheory(options = {}) {
         const data = await response.json();
         if (response.status === 409 && data?.error === "workspace_limit_reached") {
             await fetchTheoryWorkspaceLimits();
-            const message = getTheoryLimitMessage() || "Лимит теорий достигнут";
+            const message = getTheoryLimitMessage() || wt('te.k081', 'Лимит теорий достигнут');
             setTheoryStatus(message, "warning", "lock");
             if (!options.silent) {
                 theoryEditorToast(message, "warning", 3600);
@@ -2438,10 +2446,10 @@ async function persistTheory(options = {}) {
         await fetchTheoryWorkspaceLimits();
         const publicationSync = await syncPublishedTheoryAfterSave(item, options);
         const publicationNotice = getTheoryPublicationNotice(item);
-        let statusMessage = "Теория сохранена";
+        let statusMessage = wt('te.k083', 'Теория сохранена');
         let statusTone = "success";
         let statusIcon = "check_circle";
-        let toastMessage = "Теория сохранена";
+        let toastMessage = wt('te.k083', 'Теория сохранена');
         let toastTone = "success";
         let toastDuration = 2200;
 
@@ -2461,29 +2469,29 @@ async function persistTheory(options = {}) {
                         }),
                     }
                 );
-                statusMessage = "Теория сохранена и привязана к теме";
+                statusMessage = wt('te.k084', 'Теория сохранена и привязана к теме');
                 toastMessage = statusMessage;
                 toastDuration = 2800;
             } catch (linkErr) {
                 console.warn("[Theory Editor] Auto-link to topic failed", linkErr);
-                statusMessage = "Теория сохранена (привязка к теме не удалась)";
+                statusMessage = wt('te.k085', 'Теория сохранена (привязка к теме не удалась)');
                 statusTone = "warning";
                 statusIcon = "warning";
-                toastMessage = "Теория сохранена. Привяжите её к теме вручную.";
+                toastMessage = wt('te.k086', 'Теория сохранена. Привяжите её к теме вручную.');
                 toastTone = "warning";
                 toastDuration = 3500;
             }
         }
 
         if (publicationSync.synced) {
-            statusMessage = `${statusMessage}. Публикация обновлена автоматически.`;
-            toastMessage = `${toastMessage}. Публикация обновлена.`;
+            statusMessage = `${statusMessage}${wt('te.k087', '. Публикация обновлена автоматически.')}`;
+            toastMessage = `${toastMessage}${wt('te.k088', '. Публикация обновлена.')}`;
             toastDuration = Math.max(toastDuration, 2800);
         } else if (publicationSync.error) {
-            statusMessage = `${statusMessage}. Но публикацию не удалось обновить.`;
+            statusMessage = `${statusMessage}${wt('te.k089', '. Но публикацию не удалось обновить.')}`;
             statusTone = "warning";
             statusIcon = "warning";
-            toastMessage = `${toastMessage}. Публикация не обновилась: ${String(publicationSync.error?.message || "catalog_publish_failed")}`;
+            toastMessage = `${toastMessage}${wt('te.k090', '. Публикация не обновилась: ')}${String(publicationSync.error?.message || "catalog_publish_failed")}`;
             toastTone = "warning";
             toastDuration = Math.max(toastDuration, 3800);
         }
@@ -2502,7 +2510,7 @@ async function persistTheory(options = {}) {
             theoryEditorToast(toastMessage, toastTone, toastDuration);
         }
 
-        document.title = item.title ? `${item.title} — Редактор теории` : "Редактор теории";
+        document.title = item.title ? `${item.title}${wt('te.k091', ' — Редактор теории')}` : wt('te.k002', 'Редактор теории');
         return item;
 
         const ctx = theoryEditorState.context || {};
@@ -2521,30 +2529,30 @@ async function persistTheory(options = {}) {
                         }),
                     }
                 );
-                setTheoryStatus("Теория сохранена и привязана к теме", "success", "check_circle");
+                setTheoryStatus(wt('te.k084', 'Теория сохранена и привязана к теме'), "success", "check_circle");
                 if (!options.silent) {
-                    theoryEditorToast("Теория сохранена и привязана к теме", "success", 2800);
+                    theoryEditorToast(wt('te.k084', 'Теория сохранена и привязана к теме'), "success", 2800);
                 }
             } catch (linkErr) {
                 console.warn("[Theory Editor] Auto-link to topic failed", linkErr);
-                setTheoryStatus("Теория сохранена (привязка к теме не удалась)", "warning", "warning");
+                setTheoryStatus(wt('te.k085', 'Теория сохранена (привязка к теме не удалась)'), "warning", "warning");
                 if (!options.silent) {
-                    theoryEditorToast("Теория сохранена. Привяжите её к теме вручную.", "warning", 3500);
+                    theoryEditorToast(wt('te.k086', 'Теория сохранена. Привяжите её к теме вручную.'), "warning", 3500);
                 }
             }
         } else {
-            setTheoryStatus("Теория сохранена", "success", "check_circle");
+            setTheoryStatus(wt('te.k083', 'Теория сохранена'), "success", "check_circle");
             if (!options.silent) {
-                theoryEditorToast("Теория сохранена", "success", 2200);
+                theoryEditorToast(wt('te.k083', 'Теория сохранена'), "success", 2200);
             }
         }
 
-        document.title = item.title ? `${item.title} — Редактор теории` : "Редактор теории";
+        document.title = item.title ? `${item.title}${wt('te.k091', ' — Редактор теории')}` : wt('te.k002', 'Редактор теории');
         return item;
     } catch (error) {
         console.error("[Theory Editor] Failed to save theory", error);
-        setTheoryStatus("Не удалось сохранить теорию", "error", "error");
-        theoryEditorToast("Не удалось сохранить теорию", "error", 3000);
+        setTheoryStatus(wt('te.k092', 'Не удалось сохранить теорию'), "error", "error");
+        theoryEditorToast(wt('te.k092', 'Не удалось сохранить теорию'), "error", 3000);
         throw error;
     } finally {
         theoryEditorState.saving = false;
@@ -2558,8 +2566,8 @@ async function startNewTheory() {
         return;
     }
     resetTheoryEditorState();
-    setTheoryStatus("Новая теория. Начните писать и сохраните материал.", "muted", "edit_square");
-    document.title = "Новая теория — Редактор теории";
+    setTheoryStatus(wt('te.k093', 'Новая теория. Начните писать и сохраните материал.'), "muted", "edit_square");
+    document.title = wt('te.k094', 'Новая теория — Редактор теории');
 }
 
 let _selectedImage = null;
@@ -2879,12 +2887,12 @@ async function uploadTheoryImage(event) {
             
             theoryEditorState.version = data.version || theoryEditorState.version;
             markTheoryDirty();
-            theoryEditorToast("Изображение добавлено. Кликните для настройки размера.", "success", 3000);
+            theoryEditorToast(wt('te.k095', 'Изображение добавлено. Кликните для настройки размера.'), "success", 3000);
         }
     } catch (error) {
         console.error("[Theory Editor] Failed to upload image", error);
-        setTheoryStatus("Не удалось загрузить изображение", "error", "error");
-        theoryEditorToast("Не удалось загрузить изображение", "error", 2800);
+        setTheoryStatus(wt('te.k096', 'Не удалось загрузить изображение'), "error", "error");
+        theoryEditorToast(wt('te.k096', 'Не удалось загрузить изображение'), "error", 2800);
     } finally {
         if (input) input.value = "";
     }
@@ -2895,8 +2903,8 @@ function updateTheoryEditorActions() {
     if (saveBtn) {
         saveBtn.disabled = theoryEditorState.saving || isTheoryCreationBlocked();
         saveBtn.innerHTML = theoryEditorState.saving
-            ? '<span class="material-symbols-outlined animate-spin text-[18px]">progress_activity</span> Сохраняем'
-            : '<span class="material-symbols-outlined text-[18px]">save</span> Сохранить';
+            ? `<span class="material-symbols-outlined animate-spin text-[18px]">progress_activity</span> ${wt('te.k097', 'Сохраняем')}`
+            : `<span class="material-symbols-outlined text-[18px]">save</span> ${wt('te.k098', 'Сохранить')}`;
         saveBtn.classList.toggle('theory-save-btn--dirty', !theoryEditorState.saving && theoryEditorState.dirty);
     }
 
@@ -2915,11 +2923,11 @@ function updateTheoryEditorActions() {
     if (saveBtn) {
         saveBtn.disabled = theoryEditorState.saving || blocked;
         if (theoryEditorState.saving) {
-            saveBtn.innerHTML = '<span class="material-symbols-outlined animate-spin text-[18px]">progress_activity</span> Сохраняем';
+            saveBtn.innerHTML = `<span class="material-symbols-outlined animate-spin text-[18px]">progress_activity</span> ${wt('te.k097', 'Сохраняем')}`;
         } else if (blocked) {
-            saveBtn.innerHTML = '<span class="material-symbols-outlined text-[18px]">lock</span> Лимит достигнут';
+            saveBtn.innerHTML = `<span class="material-symbols-outlined text-[18px]">lock</span> ${wt('te.k099', 'Лимит достигнут')}`;
         } else {
-            saveBtn.innerHTML = '<span class="material-symbols-outlined text-[18px]">save</span> Сохранить';
+            saveBtn.innerHTML = `<span class="material-symbols-outlined text-[18px]">save</span> ${wt('te.k098', 'Сохранить')}`;
         }
         saveBtn.classList.toggle('theory-save-btn--dirty', !theoryEditorState.saving && theoryEditorState.dirty);
     }
@@ -2935,10 +2943,10 @@ function updateTheoryEditorActions() {
 }
 
 function formatTheoryListDate(value) {
-    if (!value) return "без даты";
+    if (!value) return wt('te.k100', 'без даты');
     try {
         const parsed = new Date(value);
-        if (Number.isNaN(parsed.getTime())) return "без даты";
+        if (Number.isNaN(parsed.getTime())) return wt('te.k100', 'без даты');
         return parsed.toLocaleString("ru-RU", {
             day: "2-digit",
             month: "2-digit",
@@ -2947,7 +2955,7 @@ function formatTheoryListDate(value) {
             minute: "2-digit",
         });
     } catch (error) {
-        return "без даты";
+        return wt('te.k100', 'без даты');
     }
 }
 
@@ -2966,22 +2974,22 @@ function renderTheoryLibraryList() {
         return title.includes(query) || theoryId.includes(query);
     }) : [];
 
-    countEl.textContent = `${items.length} ${items.length === 1 ? "теория" : items.length < 5 ? "теории" : "теорий"}`;
+    countEl.textContent = `${items.length} ${items.length === 1 ? wt('te.k101', 'теория') : items.length < 5 ? wt('te.k102', 'теории') : wt('te.k103', 'теорий')}`;
     host.replaceChildren();
 
     if (!items.length) {
         const empty = document.createElement("div");
         empty.className = "empty-state-card empty-state-card--compact";
         empty.textContent = query
-            ? "По этому запросу теории не найдены."
-            : "В библиотеке пока нет теорий. Можно начать с пустой заготовки.";
+            : wt('te.k104', 'По этому запросу теории не найдены.')
+            : wt('te.k105', 'В библиотеке пока нет теорий. Можно начать с пустой заготовки.');
         host.appendChild(empty);
         return;
     }
 
     items.forEach((item) => {
         const theoryId = String(item?.id || "").trim();
-        const title = String(item?.title || "").trim() || theoryId || "Без названия";
+        const title = String(item?.title || "").trim() || theoryId || wt('te.k053', 'Без названия');
         const usageTopics = Number(item?.usage_topics || 0);
         const usageComplexes = Number(item?.usage_complexes || 0);
         const isOrphan = (usageTopics + usageComplexes) === 0;
@@ -2997,24 +3005,24 @@ function renderTheoryLibraryList() {
         const statusBadges = [];
         if (libraryImageCount > 0) {
             metaBadges.push(`
-                <span class="theory-chip pill pill-sm pill-neutral shrink-0 whitespace-nowrap" title="${libraryImageCount} фото">
-                    ${libraryImageCount} фото
+                <span class="theory-chip pill pill-sm pill-neutral shrink-0 whitespace-nowrap" title="${libraryImageCount}${wt('te.k106', ' фото')}">
+                    ${libraryImageCount}${wt('te.k106', ' фото')}
                 </span>
             `);
         }
         if (isOrphan) {
             statusBadges.push(`
-                <span class="theory-library-badge w-full px-2 py-1 text-center text-[10px] font-semibold" data-tone="error" title="Теория не привязана ни к теме, ни к комплексу">
+                <span class="theory-library-badge w-full px-2 py-1 text-center text-[10px] font-semibold" data-tone="error" title="${wt('te.k107', 'Теория не привязана ни к теме, ни к комплексу')}">
                     <span class="material-symbols-outlined text-[14px]">priority_high</span>
-                    Нет привязки
+                    ${wt('te.k108', 'Нет привязки')}
                 </span>
             `);
         }
         if (!hasContent) {
             statusBadges.push(`
-                <span class="theory-library-badge w-full px-2 py-1 text-center text-[10px] font-semibold" title="В теории только заголовок">
+                <span class="theory-library-badge w-full px-2 py-1 text-center text-[10px] font-semibold" title="${wt('te.k109', 'В теории только заголовок')}">
                     <span class="material-symbols-outlined text-[14px]">text_ad</span>
-                    Только заголовок
+                    ${wt('te.k110', 'Только заголовок')}
                 </span>
             `);
         }
@@ -3023,7 +3031,7 @@ function renderTheoryLibraryList() {
                 <p class="truncate text-sm font-semibold text-text-main flex-1 min-w-0">${escapeTheoryHtml(title)}</p>
             </div>
             <div class="mt-2 flex flex-col gap-2">
-                <p class="text-[11px] text-text-secondary">Обновлено: ${escapeTheoryHtml(formatTheoryListDate(item?.updated_at || item?.version))}</p>
+                <p class="text-[11px] text-text-secondary">${wt('te.k111', 'Обновлено: ')}${escapeTheoryHtml(formatTheoryListDate(item?.updated_at || item?.version))}</p>
                 <div class="flex flex-col items-stretch gap-1">
                     ${metaBadges.length ? `
                         <div class="flex justify-end gap-1">
@@ -3053,7 +3061,7 @@ async function loadTheoryCatalog(options = {}) {
     if (host) {
         host.innerHTML = `
             <div class="empty-state-card empty-state-card--compact">
-                Загружаем библиотеку теорий...
+                ${wt('te.k112', 'Загружаем библиотеку теорий...')}
             </div>
         `;
     }
@@ -3089,11 +3097,11 @@ async function loadTheoryCatalog(options = {}) {
         if (host) {
             host.innerHTML = `
                 <div class="empty-state-card empty-state-card--compact">
-                    Не удалось загрузить библиотеку теорий.
+                    ${wt('te.k113', 'Не удалось загрузить библиотеку теорий.')}
                 </div>
             `;
         }
-        theoryEditorToast("Не удалось загрузить список теорий", "warning", 2600);
+        theoryEditorToast(wt('te.k114', 'Не удалось загрузить список теорий'), "warning", 2600);
         theoryEditorState.publicationItem = null;
         updateTheoryPublicationControls();
     }
@@ -3103,14 +3111,14 @@ async function loadTheoryById(theoryId) {
     const normalizedTheoryId = String(theoryId || "").trim();
     if (!normalizedTheoryId) {
         resetTheoryEditorState();
-        setTheoryStatus("Новая теория. Сохраните материал, когда будете готовы.", "muted", "edit_square");
-        document.title = "Редактор теории";
+        setTheoryStatus(wt('te.k115', 'Новая теория. Сохраните материал, когда будете готовы.'), "muted", "edit_square");
+        document.title = wt('te.k002', 'Редактор теории');
         renderTheoryLibraryList();
         return;
     }
 
     theoryEditorState.loading = true;
-    setTheoryStatus(`Загружаем ${normalizedTheoryId}...`, "info", "progress_activity");
+    setTheoryStatus(`${wt('te.k116', 'Загружаем ')}${normalizedTheoryId}...`, "info", "progress_activity");
 
     try {
         const response = await fetch(`/api/theories/${encodeURIComponent(normalizedTheoryId)}`);
@@ -3131,12 +3139,12 @@ async function loadTheoryById(theoryId) {
         updateTheoryEditorActions();
         renderTheoryLibraryList();
         await restoreTheoryDraftIfPresent(theoryEditorState.activeTheoryId);
-        setTheoryStatus("Теория загружена", "success", "check_circle");
-        document.title = item.title ? `${item.title} — Редактор теории` : "Редактор теории";
+        setTheoryStatus(wt('te.k117', 'Теория загружена'), "success", "check_circle");
+        document.title = item.title ? `${item.title}${wt('te.k091', ' — Редактор теории')}` : wt('te.k002', 'Редактор теории');
     } catch (error) {
         console.error("[Theory Editor] Failed to load theory", error);
-        theoryEditorToast("Не удалось открыть теорию", "error", 2800);
-        setTheoryStatus("Теория не загружена", "error", "error");
+        theoryEditorToast(wt('te.k118', 'Не удалось открыть теорию'), "error", 2800);
+        setTheoryStatus(wt('te.k119', 'Теория не загружена'), "error", "error");
     } finally {
         theoryEditorState.loading = false;
     }
@@ -3147,10 +3155,10 @@ async function confirmDiscardUnsavedChanges() {
         return true;
     }
     return theoryEditorConfirm({
-        title: "Есть несохранённые изменения",
-        message: "Если уйти сейчас, несохранённые правки теории будут потеряны.",
-        confirmText: "Перейти",
-        cancelText: "Остаться",
+        title: wt('te.k080', 'Есть несохранённые изменения'),
+        message: wt('te.k120', 'Если уйти сейчас, несохранённые правки теории будут потеряны.'),
+        confirmText: wt('te.k121', 'Перейти'),
+        cancelText: wt('te.k122', 'Остаться'),
         variant: "warning",
     });
 }
@@ -3518,10 +3526,10 @@ function bindTheoryEditorEvents() {
         event.preventDefault();
         theoryReloadConfirmPending = true;
         const canReload = await theoryEditorConfirm({
-            title: "Обновить страницу?",
-            message: "Есть несохранённые изменения. Мы сохраним черновик и после обновления предложим восстановить его.",
-            confirmText: "Обновить",
-            cancelText: "Остаться",
+            title: wt('te.k123', 'Обновить страницу?'),
+            message: wt('te.k124', 'Есть несохранённые изменения. Мы сохраним черновик и после обновления предложим восстановить его.'),
+            confirmText: wt('te.k125', 'Обновить'),
+            cancelText: wt('te.k122', 'Остаться'),
             variant: "warning",
         });
         if (!canReload) {
@@ -3573,8 +3581,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     resetTheoryEditorState();
-    setTheoryStatus("Новая теория. Начните писать и сохраните материал.", "muted", "edit_square");
-    document.title = "Новая теория — Редактор теории";
+    setTheoryStatus(wt('te.k093', 'Новая теория. Начните писать и сохраните материал.'), "muted", "edit_square");
+    document.title = wt('te.k094', 'Новая теория — Редактор теории');
 });
 
 document.addEventListener("DOMContentLoaded", () => {
