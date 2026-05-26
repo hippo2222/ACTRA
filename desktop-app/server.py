@@ -1891,6 +1891,17 @@ def _start_timing():
 
 
 @app.after_request
+def _add_security_headers(response):
+    response.headers.setdefault(
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; frame-ancestors 'none'",
+    )
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    return response
+
+
+@app.after_request
 def _log_http_request(response):
     try:
         duration = time.time() - getattr(request, "_start_time", time.time())

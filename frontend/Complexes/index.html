@@ -1276,7 +1276,7 @@
                   </label>
                   <div class="cx-controls-summary-card" data-onboarding-target="complexes-filter-summary">
                     <p class="cx-controls-summary-label" data-i18n="complexes.library_state_label">Состояние библиотеки</p>
-                    <p id="complex-filter-summary" aria-live="polite">Показаны все комплексы библиотеки</p>
+                    <p id="complex-filter-summary" aria-live="polite" data-i18n="complexes.filter_summary_all">Показаны все комплексы библиотеки</p>
                   </div>
                 </div>
 
@@ -1323,7 +1323,7 @@
                     <div class="cx-theory-banner__content">
                       <p class="cx-controls-kicker" data-i18n="complexes.theory_kicker">Теоретический контекст</p>
                       <p class="cx-theory-banner__title" data-i18n="complexes.theory_banner_title">Фокус на теории</p>
-                      <p id="complex-theory-banner-copy" class="cx-theory-banner__copy">Показаны комплексы для выбранной теории.</p>
+                      <p id="complex-theory-banner-copy" class="cx-theory-banner__copy" data-i18n="complexes.theory_banner_copy">Показаны комплексы для выбранной теории.</p>
                     </div>
                     <div class="cx-theory-banner__actions">
                       <button id="complex-theory-open-hub" type="button"
@@ -1344,7 +1344,7 @@
           </div>
           <div id="complex-selection-action-bar"
             class="cx-selection-bar card-elevated fixed bottom-6 left-1/2 z-50 hidden -translate-x-1/2 items-center gap-3 p-2 shadow-2xl">
-            <div id="complex-selection-counter" class="border-r border-border-subtle px-3 font-semibold text-text-secondary">0 выбрано</div>
+            <div id="complex-selection-counter" class="border-r border-border-subtle px-3 font-semibold text-text-secondary" data-i18n="complexes.selection_counter">0 выбрано</div>
             <button id="complex-select-all"
               class="btn-secondary inline-flex items-center gap-2 font-medium">
               <span class="material-symbols-outlined">select_all</span>
@@ -2574,7 +2574,7 @@
                       type="text"
                       autocomplete="off"
                       value="${escapeHtml(String(initialValue || "").trim())}"
-                      placeholder="Например, AB12-CD34-EF56-GH78"
+                      placeholder="${wt('complexes.code_input_placeholder', 'Например, AB12-CD34-EF56-GH78')}"
                       class="w-full rounded-xl border border-border-subtle bg-surface-2 px-4 py-3 text-text-main outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
                     />
                     <div class="flex justify-end gap-3">
@@ -3342,7 +3342,7 @@
             showComplexVoiceToast({
               severity: "info",
               what: wt('complexes.code_ready_what', 'Код доступа готов.'),
-              impact: `Код: ${code}`,
+              impact: `${wt('complexes.toast_code_label', 'Код')}: ${code}`,
               next: wt('complexes.code_ready_next', 'Скопируйте его вручную.'),
               timeout: 3600,
             });
@@ -3374,10 +3374,10 @@
 
             const currentVisibility = String(publication?.catalog_visibility || "public").trim().toLowerCase() || "public";
             const accessCode = getAccessCodeValue(publication);
-            const complexName = escapeHtml(complex?.name || "Без названия");
+            const complexName = escapeHtml(complex?.name || wt('complexes.untitled_complex', 'Без названия'));
             const archivePolicyText = isPremiumArchivedSource
-              ? "Источник комплекса находится в архиве Premium. Опубликованная версия остаётся доступной, но новую версию и расширение доступа можно сделать только после восстановления Premium. Сузить доступ или скрыть публикацию можно сейчас."
-              : "Здесь можно опубликовать комплекс и отдельно поменять режим доступа без перехода в редактор.";
+              ? wt('complexes.archive_policy_premium', 'Источник комплекса находится в архиве Premium. Опубликованная версия остаётся доступной, но новую версию и расширение доступа можно сделать только после восстановления Premium. Сузить доступ или скрыть публикацию можно сейчас.')
+              : wt('complexes.archive_policy_default', 'Здесь можно опубликовать комплекс и отдельно поменять режим доступа без перехода в редактор.');
 
             const modal = document.createElement("dialog");
             modal.id = "complex-publication-dialog";
@@ -3416,7 +3416,7 @@
                 <div class="custom-scrollbar space-y-5 overflow-y-auto p-5">
                   ${isPremiumArchivedSource ? `
                     <div class="rounded-2xl border border-warning-light bg-warning-light/40 px-4 py-3 text-sm text-warning-darker">
-                      Источник в архиве Premium. Текущая публикация не снята с доступа автоматически; обновление версии и расширение доступа заблокированы до восстановления Premium.
+                      ${wt('complexes.premium_archive_source_warn', 'Источник в архиве Premium. Текущая публикация не снята с доступа автоматически; обновление версии и расширение доступа заблокированы до восстановления Premium.')}
                     </div>
                   ` : ""}
                   <div class="rounded-2xl border border-border-subtle bg-bg-secondary px-4 py-4">
@@ -3433,7 +3433,7 @@
                   <div class="space-y-3">
                     <div>
                       <div class="text-sm font-semibold text-text-main">${wt('complexes.access_mode_label', 'Режим доступа')}</div>
-                      <p class="mt-1 text-sm text-text-secondary">${isPremiumArchivedSource ? "Можно выбрать только текущий или более закрытый режим доступа. Расширение доступа вернётся после Premium." : "Если публикация уже существует, доступ можно поменять отдельно от публикации новой версии. Новые правки из редактора увидят другие пользователи только после публикации."}</p>
+                      <p class="mt-1 text-sm text-text-secondary">${isPremiumArchivedSource ? wt('complexes.access_mode_premium_desc', "Можно выбрать только текущий или более закрытый режим доступа. Расширение доступа вернётся после Premium.") : wt('complexes.access_mode_default_desc', "Если публикация уже существует, доступ можно поменять отдельно от публикации новой версии. Новые правки из редактора увидят другие пользователи только после публикации.")}</p>
                     </div>
                     <div class="grid gap-3 md:grid-cols-3">
                       ${["public", "access_code", "private"].map((visibility) => `
@@ -3644,7 +3644,7 @@
                 await fetchComplexes();
               } catch (error) {
                 console.error("[Complexes] Visibility update failed", error);
-                setFeedback(`Не удалось изменить доступ: ${getPremiumArchivedPublicationErrorMessage(error)}`, "error");
+                setFeedback(`${wt('complexes.err_change_access', 'Не удалось изменить доступ')}: ${getPremiumArchivedPublicationErrorMessage(error)}`, "error");
               } finally {
                 setBusy(false);
               }
@@ -3686,7 +3686,7 @@
                 await fetchComplexes();
               } catch (error) {
                 console.error("[Complexes] Publish failed", error);
-                setFeedback(`Не удалось опубликовать комплекс: ${getPremiumArchivedPublicationErrorMessage(error, "catalog_publish_failed")}`, "error");
+                setFeedback(`${wt('complexes.err_publish_complex', 'Не удалось опубликовать комплекс')}: ${getPremiumArchivedPublicationErrorMessage(error, "catalog_publish_failed")}`, "error");
               } finally {
                 setBusy(false);
               }
@@ -4184,14 +4184,14 @@
                 const isLinkedLocked = isLinkedUnavailable || linkedAccessState === "requires_access_code";
                 const linkedStatusBadge = ownershipContext.isLinked && linkedAccessState !== "active"
                   ? isLinkedSourceDeleted
-                    ? `<span class="cx-card-badge pill pill-sm pill-neutral" title="Автор удалил исходный комплекс. Запуск больше недоступен.">
+                    ? `<span class="cx-card-badge pill pill-sm pill-neutral" title="${wt('complexes.source_deleted_title_hint', 'Автор удалил исходный комплекс. Запуск больше недоступен.')}">
                         <span class="material-symbols-outlined text-sm">visibility_off</span> ${wt('complexes.badge_source_deleted', 'Источник удалён')}
                       </span>`
                     : linkedAccessState === "revoked"
-                      ? `<span class="cx-card-badge pill pill-sm pill-neutral" title="Автор закрыл доступ к публикации.">
+                      ? `<span class="cx-card-badge pill pill-sm pill-neutral" title="${wt('complexes.access_revoked_title_hint', 'Автор закрыл доступ к публикации.')}">
                           <span class="material-symbols-outlined text-sm">lock</span> ${wt('complexes.badge_access_revoked', 'Доступ закрыт')}
                         </span>`
-                      : `<span class="cx-card-badge pill pill-sm pill-info" title="Для этой публикации нужен код доступа.">
+                      : `<span class="cx-card-badge pill pill-sm pill-info" title="${wt('complexes.code_required_title_hint', 'Для этой публикации нужен код доступа.')}">
                           <span class="material-symbols-outlined text-sm">password</span> ${wt('complexes.badge_needs_code', 'Нужен код')}
                         </span>`
                   : "";
@@ -4210,7 +4210,7 @@
                   ? `<div class="cx-card-inline-meta"><span>${wt('complexes.archive_info', 'Комплекс в архиве Premium: доступен просмотр и удаление. Запуск, редактирование и публикация заблокированы.')}</span></div>`
                   : "";
                 const archivedDisabledAttr = isPremiumArchived
-                  ? `disabled aria-disabled="true" data-premium-archived="true" title="Недоступно для архива Premium"`
+                  ? `disabled aria-disabled="true" data-premium-archived="true" title="${wt('complexes.premium_archive_disabled_hint', 'Недоступно для архива Premium')}"`
                   : "";
                 const linkedUnavailableInfo = isLinkedSourceDeleted
                   ? `<div class="cx-card-inline-meta"><span>${wt('complexes.source_deleted_info', 'Автор удалил исходный комплекс. Он больше недоступен для прохождения; можно только убрать этот след из вашей библиотеки.')}</span></div>`
@@ -4221,9 +4221,9 @@
                   ? `disabled aria-disabled="true" data-linked-unavailable="true" title="${isLinkedSourceDeleted ? wt('complexes.badge_source_deleted', 'Источник удалён') : linkedAccessState === "revoked" ? wt('complexes.badge_access_revoked', 'Доступ закрыт') : wt('complexes.locked_needs_code', 'Нужен код доступа')}"`
                   : "";
                 const blockedActionAttr = archivedDisabledAttr || linkedLockedDisabledAttr;
-                const theoryActionLabel = theoryContext.mode === "inherit" ? "Теория (наследование)" : "Теория";
+                const theoryActionLabel = theoryContext.mode === "inherit" ? wt('complexes.theory_inherit', 'Теория (наследование)') : wt('complexes.theory_mode', 'Теория');
                 const theoryBadge = hasTheoryContext
-                  ? `<span class="cx-card-badge pill pill-sm pill-info"><span class="material-symbols-outlined text-sm">menu_book</span> Теория</span>`
+                  ? `<span class="cx-card-badge pill pill-sm pill-info"><span class="material-symbols-outlined text-sm">menu_book</span> ${wt('complexes.badge_theory', 'Теория')}</span>`
                   : "";
                 const compositeTheoryIds = !theoryId && theoryContext.syncStatus === "composite"
                   ? (Array.isArray(complex?.theory_sync_meta?.theory_ids) ? complex.theory_sync_meta.theory_ids.map(String).filter(Boolean) : [])
@@ -4231,7 +4231,7 @@
                 const theoryButton = theoryId
                   ? `<button class="theory-btn cx-card-action-btn cx-card-action-btn--theory btn-secondary inline-flex items-center justify-center gap-2 text-sm font-medium border-primary-light bg-primary-lighter text-primary hover:border-primary hover:bg-primary-lighter hover:text-primary" title="${theoryActionLabel}" data-theory-id="${safeTheoryId}" data-complex-id="${safeComplexId}" data-complex-name="${safeComplexName}"><span class="material-symbols-outlined text-lg">visibility</span><span class="truncate">${wt('complexes.btn_theory', 'Теория')}</span></button>`
                   : compositeTheoryIds.length > 0
-                    ? `<button class="composite-theory-btn cx-card-action-btn cx-card-action-btn--theory btn-secondary inline-flex items-center justify-center gap-2 text-sm font-medium border-info-light bg-info-lighter text-info-text hover:border-info hover:bg-info-lighter hover:text-info" title="Открыть все теории комплекса (${compositeTheoryIds.length})" data-composite-ids="${escapeHtml(compositeTheoryIds.join(","))}" data-complex-id="${safeComplexId}" data-complex-name="${safeComplexName}"><span class="material-symbols-outlined text-lg">layers</span><span class="truncate">${wt('complexes.btn_theories_n', 'Теории ({n})').replace('{n}', compositeTheoryIds.length)}</span></button>`
+                    ? `<button class="composite-theory-btn cx-card-action-btn cx-card-action-btn--theory btn-secondary inline-flex items-center justify-center gap-2 text-sm font-medium border-info-light bg-info-lighter text-info-text hover:border-info hover:bg-info-lighter hover:text-info" title="${wt('complexes.open_all_theories_title', 'Открыть все теории комплекса ({count})').replace('{count}', compositeTheoryIds.length)}" data-composite-ids="${escapeHtml(compositeTheoryIds.join(","))}" data-complex-id="${safeComplexId}" data-complex-name="${safeComplexName}"><span class="material-symbols-outlined text-lg">layers</span><span class="truncate">${wt('complexes.btn_theories_n', 'Теории ({n})').replace('{n}', compositeTheoryIds.length)}</span></button>`
                     : "";
 
                 const searchSource = [complex.name || "", complex.description || "", ...tasksList.map((task) => typeof task === "string" ? task : (task.task_ref || task.task_id || ""))].join(" ");
@@ -5131,15 +5131,15 @@
                 <div style="margin:0.875rem 1.375rem;border-radius:0.625rem;background:var(--color-bg-tertiary,#f1f5f9);padding:0.75rem 0.875rem;display:flex;flex-direction:column;gap:0.5rem;">
                   <div style="display:flex;align-items:flex-start;gap:0.5rem;">
                     <span class="material-symbols-outlined" style="font-size:15px;color:var(--color-primary,#6366f1);margin-top:1px;flex-shrink:0;">account_tree</span>
-                    <p style="margin:0;font-size:0.7875rem;color:var(--color-text-secondary,#64748b);line-height:1.5;">Это полезно, если комплекс был импортирован, давно не обновлялся или связи теорий в темах менялись вне обычного сценария редактирования.</p>
+                    <p style="margin:0;font-size:0.7875rem;color:var(--color-text-secondary,#64748b);line-height:1.5;">${wt('complexes.rebuild_hint_1', 'Это полезно, если комплекс был импортирован, давно не обновлялся или связи теорий в темах менялись вне обычного сценария редактирования.')}</p>
                   </div>
                   <div style="display:flex;align-items:flex-start;gap:0.5rem;">
                     <span class="material-symbols-outlined" style="font-size:15px;color:var(--color-primary,#6366f1);margin-top:1px;flex-shrink:0;">refresh</span>
-                    <p style="margin:0;font-size:0.7875rem;color:var(--color-text-secondary,#64748b);line-height:1.5;">Если всё уже актуально, ничего лишнего не произойдёт: система просто подтвердит, что пересборка не понадобилась.</p>
+                    <p style="margin:0;font-size:0.7875rem;color:var(--color-text-secondary,#64748b);line-height:1.5;">${wt('complexes.rebuild_hint_2', 'Если всё уже актуально, ничего лишнего не произойдёт: система просто подтвердит, что пересборка не понадобилась.')}</p>
                   </div>
                   <div style="display:flex;align-items:flex-start;gap:0.5rem;">
                     <span class="material-symbols-outlined" style="font-size:15px;color:var(--color-text-muted,#94a3b8);margin-top:1px;flex-shrink:0;">shield</span>
-                    <p style="margin:0;font-size:0.7875rem;color:var(--color-text-secondary,#64748b);line-height:1.5;">Пересборка идёт в безопасном режиме: локальная теория комплекса не будет принудительно перезаписана, если для него включён собственный режим.</p>
+                    <p style="margin:0;font-size:0.7875rem;color:var(--color-text-secondary,#64748b);line-height:1.5;">${wt('complexes.rebuild_hint_3', 'Пересборка идёт в безопасном режиме: локальная теория комплекса не будет принудительно перезаписана, если для него включён собственный режим.')}</p>
                   </div>
                 </div>
 

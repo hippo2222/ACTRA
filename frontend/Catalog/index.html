@@ -1804,23 +1804,22 @@
     <div class="actra-page-boot-card">
       <img class="actra-page-boot-logo" src="/assets/logo_animated.svg" alt="ACTRA" />
     </div>
-  </div>
-  <div data-global-header data-app-section="catalog"></div>
+   <div data-global-header data-app-section="catalog"></div>
   <div class="catalog-shell">
     <section class="catalog-header">
       <div class="catalog-header-main space-y-3">
-        <h1 class="catalog-title">Комплексы и теории в одном месте</h1>
+        <h1 class="catalog-title" data-i18n="catalog.title_main">Комплексы и теории в одном месте</h1>
       </div>
-      <p class="catalog-subtitle">
+      <p class="catalog-subtitle" data-i18n="catalog.subtitle_main">
         Находите готовые публикации, оценивайте их по описанию и объёму, затем добавляйте подходящее в библиотеку.
       </p>
-</section>
+    </section>
 
     <section class="catalog-hero" data-onboarding-target="catalog-search-block">
       <div class="catalog-hero__inner">
         <div class="catalog-auth-note" id="catalog-auth-note">
           <span class="material-symbols-outlined">lock</span>
-          <div>
+          <div data-i18n="catalog.auth_note_main">
             Каталог можно просматривать без входа, но добавить публикацию в библиотеку получится только после авторизации.
           </div>
         </div>
@@ -1833,16 +1832,17 @@
               id="catalog-search-input"
               type="search"
               placeholder="Поиск по названию, описанию или автору"
+              data-i18n-placeholder="catalog.search_placeholder"
               autocomplete="off"
             />
           </label>
 
           <div class="catalog-filters">
-            <div class="catalog-filter-pills" role="tablist" aria-label="Фильтр каталога по типу" data-onboarding-target="catalog-filters">
-              <button type="button" class="catalog-pill is-active" data-filter="all">Все публикации</button>
-              <button type="button" class="catalog-pill" data-filter="complex">Комплексы</button>
-              <button type="button" class="catalog-pill" data-filter="theory">Теории</button>
-              <button type="button" class="catalog-pill" data-filter="saved">Мои сохранённые</button>
+            <div class="catalog-filter-pills" role="tablist" aria-label="Фильтр каталога по типу" data-i18n-aria="catalog.filter_list_aria" data-onboarding-target="catalog-filters">
+              <button type="button" class="catalog-pill is-active" data-filter="all" data-i18n="catalog.filter_all">Все публикации</button>
+              <button type="button" class="catalog-pill" data-filter="complex" data-i18n="catalog.filter_complexes">Комплексы</button>
+              <button type="button" class="catalog-pill" data-filter="theory" data-i18n="catalog.filter_theories">Теории</button>
+              <button type="button" class="catalog-pill" data-filter="saved" data-i18n="catalog.filter_saved">Мои сохранённые</button>
             </div>
             <div class="catalog-filter-actions" data-onboarding-target="catalog-filter-actions">
               <div class="catalog-sort" data-catalog-sort-controller data-onboarding-target="catalog-sort">
@@ -1855,34 +1855,34 @@
                   aria-expanded="false"
                 >
                   <span class="material-symbols-outlined">sort</span>
-                  <span class="catalog-sort__label" data-catalog-sort-label>Сначала новые</span>
+                  <span class="catalog-sort__label" data-catalog-sort-label data-i18n="catalog.sort_date">Сначала новые</span>
                   <span class="material-symbols-outlined">expand_more</span>
                 </button>
-                <div class="catalog-sort__menu catalog-hidden" data-catalog-sort-menu role="listbox" aria-label="Сортировка каталога">
-                  <p class="catalog-sort__title">Сортировка</p>
+                <div class="catalog-sort__menu catalog-hidden" data-catalog-sort-menu role="listbox" aria-label="Сортировка каталога" data-i18n-aria="catalog.sort_aria">
+                  <p class="catalog-sort__title" data-i18n="catalog.sort_title">Сортировка</p>
                   <button type="button" class="catalog-sort__option" data-catalog-sort-option="date" role="option">
                     <span class="material-symbols-outlined">schedule</span>
-                    <span class="catalog-sort__option-label">Сначала новые</span>
+                    <span class="catalog-sort__option-label" data-i18n="catalog.sort_date">Сначала новые</span>
                     <span class="material-symbols-outlined catalog-sort__check">check</span>
                   </button>
                   <button type="button" class="catalog-sort__option" data-catalog-sort-option="alphabet" role="option">
                     <span class="material-symbols-outlined">sort_by_alpha</span>
-                    <span class="catalog-sort__option-label">По алфавиту</span>
+                    <span class="catalog-sort__option-label" data-i18n="catalog.sort_alphabet">По алфавиту</span>
                     <span class="material-symbols-outlined catalog-sort__check">check</span>
                   </button>
                   <button type="button" class="catalog-sort__option" data-catalog-sort-option="type" role="option">
                     <span class="material-symbols-outlined">category</span>
-                    <span class="catalog-sort__option-label">По типу контента</span>
+                    <span class="catalog-sort__option-label" data-i18n="catalog.sort_type">По типу контента</span>
                     <span class="material-symbols-outlined catalog-sort__check">check</span>
                   </button>
                   <button type="button" class="catalog-sort__option" data-catalog-sort-option="volume" role="option">
                     <span class="material-symbols-outlined">format_list_numbered</span>
-                    <span class="catalog-sort__option-label">По объёму</span>
+                    <span class="catalog-sort__option-label" data-i18n="catalog.sort_volume">По объёму</span>
                     <span class="material-symbols-outlined catalog-sort__check">check</span>
                   </button>
                 </div>
               </div>
-              <p class="catalog-summary" id="catalog-summary" data-onboarding-target="catalog-summary">Загружаем каталог…</p>
+              <p class="catalog-summary" id="catalog-summary" data-onboarding-target="catalog-summary" data-i18n="catalog.summary_loading">Загружаем каталог…</p>
             </div>
           </div>
         </div>
@@ -1891,9 +1891,9 @@
 
     <div class="catalog-layout">
       <section>
-        <p class="catalog-loading is-visible" id="catalog-loading">Загружаем публикации…</p>
+        <p class="catalog-loading is-visible" id="catalog-loading" data-i18n="catalog.loading_publications">Загружаем публикации…</p>
         <p class="catalog-error" id="catalog-error"></p>
-        <p class="catalog-empty" id="catalog-empty">По вашему запросу пока ничего не найдено.</p>
+        <p class="catalog-empty" id="catalog-empty" data-i18n="catalog.empty_state_main">По вашему запросу пока ничего не найдено.</p>
         <div class="catalog-grid" id="catalog-grid"></div>
       </section>
 
@@ -1902,8 +1902,8 @@
           <div style="display: flex; flex-direction: column; align-items: center; gap: 0.85rem;">
             <span class="material-symbols-outlined" style="font-size: 2.8rem; color: var(--color-text-secondary); opacity: 0.45;">touch_app</span>
             <div>
-              <p style="margin: 0 0 0.5rem; color: var(--color-text-main); font-size: 1.05rem; font-weight: 800;">Детали публикации</p>
-              <p style="margin: 0; font-weight: 600; font-size: 0.86rem; color: var(--color-text-secondary);">Кликните на любую карточку в каталоге, чтобы изучить подробности: состав, объём контента и доступные действия.</p>
+              <p style="margin: 0 0 0.5rem; color: var(--color-text-main); font-size: 1.05rem; font-weight: 800;" data-i18n="catalog.detail_title">Детали публикации</p>
+              <p style="margin: 0; font-weight: 600; font-size: 0.86rem; color: var(--color-text-secondary);" data-i18n="catalog.detail_instruction">Кликните на любую карточку в каталоге, чтобы изучить подробности: состав, объём контента и доступные действия.</p>
             </div>
           </div>
         </div>

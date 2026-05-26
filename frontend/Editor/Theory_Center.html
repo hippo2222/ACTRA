@@ -403,20 +403,20 @@
             <section class="theory-center-panel theory-center-summary-panel rounded-[24px] p-4 sm:p-5" data-onboarding-target="theory-summary-block">
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div class="min-w-0">
-                        <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-text-secondary">Быстрые подборки</p>
-                        <h2 class="mt-1 text-lg font-bold text-text-main">Сортировки по состоянию теории</h2>
+                        <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-text-secondary" data-i18n="theory_center.quick_selections">Быстрые подборки</p>
+                        <h2 class="mt-1 text-lg font-bold text-text-main" data-i18n="theory_center.sorts_by_state">Сортировки по состоянию теории</h2>
                     </div>
                     <button id="theory-center-summary-toggle" type="button"
                         class="theory-mini-btn theory-mini-btn--neutral inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold hover:border-primary hover:text-primary"
                         data-onboarding-target="theory-summary-toggle"
                         aria-expanded="false">
                         <span id="theory-center-summary-toggle-icon" class="material-symbols-outlined text-[18px]">expand_more</span>
-                        <span id="theory-center-summary-toggle-label">Развернуть</span>
+                        <span id="theory-center-summary-toggle-label" data-i18n="theory_center.expand">Развернуть</span>
                     </button>
                 </div>
                 <div id="theory-center-summary-wrap" class="theory-summary-wrap mt-3 hidden" data-collapsed="1">
                     <div class="theory-summary-grid" id="theory-center-summary" data-onboarding-target="theory-summary-grid">
-                        <div class="theory-center-panel rounded-[24px] p-4 text-sm text-text-secondary">Загрузка...</div>
+                        <div class="theory-center-panel rounded-[24px] p-4 text-sm text-text-secondary" data-i18n="theory_center.loading">Загрузка...</div>
                     </div>
                 </div>
             </section>
@@ -424,48 +424,48 @@
             <section class="theory-center-panel theory-center-controls-panel rounded-[30px] p-5 sm:p-6" data-onboarding-target="theory-controls-block">
                 <div class="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.3fr)_auto_auto] xl:items-end">
                     <label class="flex min-w-0 flex-col gap-2" data-onboarding-target="theory-search">
-                        <span class="text-xs font-bold uppercase tracking-[0.16em] text-text-secondary">Поиск</span>
+                        <span class="text-xs font-bold uppercase tracking-[0.16em] text-text-secondary" data-i18n="theory_center.search">Поиск</span>
                         <span class="relative flex items-center">
                             <span class="pointer-events-none absolute left-4 text-text-secondary">
                                 <span class="material-symbols-outlined text-[18px]">search</span>
                             </span>
                             <input id="theory-center-search" type="search" autocomplete="off" spellcheck="false"
-                                placeholder="Найти тему, комплекс или теорию"
+                                data-i18n-placeholder="theory_center.search_placeholder" placeholder="Найти тему, комплекс или теорию"
                                 class="w-full rounded-2xl border border-border-strong bg-bg-main py-3 pl-12 pr-4 text-sm text-text-main outline-none transition-colors placeholder:text-text-muted focus:border-primary focus:ring-2 focus:ring-primary-light" />
                         </span>
                     </label>
 
                     <div class="flex flex-col gap-2" data-onboarding-target="theory-scope-filters">
-                        <span class="text-xs font-bold uppercase tracking-[0.16em] text-text-secondary">Раздел</span>
+                        <span class="text-xs font-bold uppercase tracking-[0.16em] text-text-secondary" data-i18n="theory_center.section">Раздел</span>
                         <div class="flex flex-wrap rounded-2xl border border-border-subtle bg-surface-1 p-1">
                             <button id="theory-center-scope-all" type="button" data-scope="all" data-active="1"
-                                class="theory-scope-btn rounded-xl px-4 py-2 text-sm font-semibold text-text-secondary">Теории: все</button>
+                                class="theory-scope-btn rounded-xl px-4 py-2 text-sm font-semibold text-text-secondary" data-i18n="theory_center.scope_all">Теории: все</button>
                             <button id="theory-center-scope-topics" type="button" data-scope="topics" data-active="0"
-                                class="theory-scope-btn rounded-xl px-4 py-2 text-sm font-semibold text-text-secondary">Темы</button>
+                                class="theory-scope-btn rounded-xl px-4 py-2 text-sm font-semibold text-text-secondary" data-i18n="theory_center.scope_topics">Темы</button>
                             <button id="theory-center-scope-complexes" type="button" data-scope="complexes" data-active="0"
-                                class="theory-scope-btn rounded-xl px-4 py-2 text-sm font-semibold text-text-secondary">Комплексы</button>
+                                class="theory-scope-btn rounded-xl px-4 py-2 text-sm font-semibold text-text-secondary" data-i18n="theory_center.scope_complexes">Комплексы</button>
                             <button id="theory-center-scope-orphans" type="button" data-scope="orphans" data-active="0"
-                                class="theory-scope-btn rounded-xl px-4 py-2 text-sm font-semibold text-text-secondary">Теории: Без привязки</button>
+                                class="theory-scope-btn rounded-xl px-4 py-2 text-sm font-semibold text-text-secondary" data-i18n="theory_center.scope_orphans">Теории: Без привязки</button>
                             <button id="theory-center-scope-only-title" type="button" data-scope="only_title" data-active="0"
-                                class="theory-scope-btn rounded-xl px-4 py-2 text-sm font-semibold text-text-secondary">Теории: Только заголовок</button>
+                                class="theory-scope-btn rounded-xl px-4 py-2 text-sm font-semibold text-text-secondary" data-i18n="theory_center.scope_only_title">Теории: Только заголовок</button>
                             <button id="theory-center-scope-archived" type="button" data-scope="archived" data-active="0"
-                                class="theory-scope-btn rounded-xl px-4 py-2 text-sm font-semibold text-text-secondary">Архив Premium</button>
+                                class="theory-scope-btn rounded-xl px-4 py-2 text-sm font-semibold text-text-secondary" data-i18n="theory_center.scope_archived">Архив Premium</button>
                         </div>
                     </div>
 
                     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:min-w-[360px]" data-onboarding-target="theory-filter-selects">
                         <label class="flex flex-col gap-2" data-onboarding-target="theory-module-filter">
-                            <span class="text-xs font-bold uppercase tracking-[0.16em] text-text-secondary">Модуль</span>
+                            <span class="text-xs font-bold uppercase tracking-[0.16em] text-text-secondary" data-i18n="theory_center.module">Модуль</span>
                             <select id="theory-center-module-filter"
                                 class="rounded-2xl border border-border-strong bg-bg-main px-4 py-3 text-sm text-text-main outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary-light">
-                                <option value="all">Все модули</option>
+                                <option value="all" data-i18n="theory_center.all_modules">Все модули</option>
                             </select>
                         </label>
                         <label class="flex flex-col gap-2" data-onboarding-target="theory-state-filter">
-                            <span class="text-xs font-bold uppercase tracking-[0.16em] text-text-secondary">Состояние</span>
+                            <span class="text-xs font-bold uppercase tracking-[0.16em] text-text-secondary" data-i18n="theory_center.state">Состояние</span>
                             <select id="theory-center-state-filter"
                                 class="rounded-2xl border border-border-strong bg-bg-main px-4 py-3 text-sm text-text-main outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary-light">
-                                <option value="all">Все состояния</option>
+                                <option value="all" data-i18n="theory_center.all_states">Все состояния</option>
                             </select>
                         </label>
                     </div>
@@ -476,20 +476,20 @@
             <section class="theory-center-panel theory-center-list-panel rounded-[30px] p-5 sm:p-6" data-onboarding-target="theory-list-block">
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                     <div class="min-w-0 sm:flex-1">
-                        <h2 id="theory-center-list-title" class="text-xl font-bold text-text-main">Теории: все</h2>
-                        <p id="theory-center-list-subtitle" class="mt-1 text-sm text-text-secondary">
+                        <h2 id="theory-center-list-title" class="text-xl font-bold text-text-main" data-i18n="theory_center.list_title_all">Теории: все</h2>
+                        <p id="theory-center-list-subtitle" class="mt-1 text-sm text-text-secondary" data-i18n="theory_center.list_subtitle">
                             Рабочие теории и связанные публикации из каталога в одном центре.
                         </p>
                     </div>
                     <div class="flex w-full flex-wrap items-center justify-end gap-2 sm:ml-auto sm:w-auto sm:max-w-none" data-onboarding-target="theory-list-actions">
-                        <p id="theory-center-result-summary" class="text-right text-sm font-medium text-text-secondary">Подготавливаем данные...</p>
+                        <p id="theory-center-result-summary" class="text-right text-sm font-medium text-text-secondary" data-i18n="theory_center.preparing_data">Подготавливаем данные...</p>
                         <span id="theory-center-selection-toggle-wrap" class="inline-flex"
-                            title="Массовые операции доступны в разделах «Все» и «Без привязки»">
+                            data-i18n-title="theory_center.bulk_ops_title" title="Массовые операции доступны в разделах «Все» и «Без привязки»">
                             <button id="theory-center-selection-toggle" type="button" data-active="0"
                                 class="theory-selection-toggle theory-mini-btn theory-mini-btn--neutral inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold hover:border-primary hover:text-primary"
-                                title="Массовые операции доступны в разделах «Все» и «Без привязки»">
+                                data-i18n-title="theory_center.bulk_ops_title" title="Массовые операции доступны в разделах «Все» и «Без привязки»">
                                 <span id="theory-center-selection-toggle-icon" class="material-symbols-outlined text-[18px]">checklist</span>
-                                <span id="theory-center-selection-toggle-label">Массовые операции</span>
+                                <span id="theory-center-selection-toggle-label" data-i18n="theory_center.bulk_ops">Массовые операции</span>
                             </button>
                         </span>
                     </div>
@@ -497,7 +497,7 @@
 
                 <div id="theory-center-list" class="mt-5 grid grid-cols-1 gap-4" data-onboarding-target="theory-list">
                     <div class="rounded-3xl border border-border-subtle bg-surface-1 px-5 py-10 text-center text-sm text-text-secondary">
-                        Загружаем обзор теории...
+                        <span data-i18n="theory_center.loading_overview">Загружаем обзор теории...</span>
                     </div>
                 </div>
             </section>
@@ -508,8 +508,8 @@
         <div class="theory-center-panel rounded-[24px] p-3 sm:p-4">
             <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div class="min-w-0">
-                    <p id="theory-center-selection-counter" class="text-sm font-semibold text-text-main">Выбрано: 0</p>
-                    <p id="theory-center-selection-note" class="mt-1 text-xs leading-5 text-text-secondary">
+                    <p id="theory-center-selection-counter" class="text-sm font-semibold text-text-main" data-i18n="theory_center.selected_count_initial">Выбрано: 0</p>
+                    <p id="theory-center-selection-note" class="mt-1 text-xs leading-5 text-text-secondary" data-i18n="theory_center.bulk_delete_note">
                         Массовое удаление доступно только для теорий без привязки к темам и комплексам.
                     </p>
                 </div>
@@ -517,17 +517,17 @@
                     <button id="theory-center-selection-select-visible" type="button"
                         class="theory-mini-btn inline-flex min-w-[124px] items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-border-subtle bg-surface-1 px-4 py-2 text-sm font-semibold text-text-secondary hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-55">
                         <span class="material-symbols-outlined text-[18px]">select_all</span>
-                        Все видимые
+                        <span data-i18n="theory_center.all_visible">Все видимые</span>
                     </button>
                     <button id="theory-center-selection-delete" type="button"
                         class="theory-mini-btn inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-error-light bg-error-lighter px-4 py-2 text-sm font-semibold text-error-text hover:border-error disabled:cursor-not-allowed disabled:opacity-55">
                         <span class="material-symbols-outlined text-[18px]">delete</span>
-                        Удалить
+                        <span data-i18n="theory_center.delete">Удалить</span>
                     </button>
                     <button id="theory-center-selection-cancel" type="button"
                         class="theory-mini-btn inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-border-subtle bg-surface-1 px-4 py-2 text-sm font-semibold text-text-secondary hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-55">
                         <span class="material-symbols-outlined text-[18px]">close</span>
-                        Отмена
+                        <span data-i18n="theory_center.cancel">Отмена</span>
                     </button>
                 </div>
             </div>

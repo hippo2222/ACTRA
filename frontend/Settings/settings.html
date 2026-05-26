@@ -399,10 +399,10 @@
             <a href="/main"
                 class="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-bg-hover hover:text-primary">
                 <span class="material-symbols-outlined text-[20px]">arrow_back</span>
-                <span>Главная</span>
+                <span data-i18n="settings.nav_home">Главная</span>
             </a>
             <div class="flex-1"></div>
-            <h1 class="text-lg font-bold text-text-main">Настройки</h1>
+            <h1 class="text-lg font-bold text-text-main" data-i18n="settings.title">Настройки</h1>
             <div class="flex-1"></div>
             <div class="w-[88px]"></div>
         </div>
@@ -414,13 +414,13 @@
                 <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
                     <div class="flex items-start gap-4">
                         <img id="settings-account-avatar" class="settings-account-avatar" src="/api/assets/avatars/1.png"
-                            alt="Аккаунт" />
+                            alt="Аккаунт" data-i18n-attr="alt|settings.account_alt" />
                         <div class="settings-account-summary">
                             <div class="flex flex-wrap items-center gap-2">
-                                <h2 id="settings-account-name" class="settings-account-name text-2xl font-bold text-text-main">Аккаунт ACTRA</h2>
+                                <h2 id="settings-account-name" class="settings-account-name text-2xl font-bold text-text-main" data-i18n="settings.account_name_fallback">Аккаунт ACTRA</h2>
                                 <span id="settings-account-caption" class="settings-info-pill">
                                     <span class="material-symbols-outlined text-[14px]">account_circle</span>
-                                    Загружаем профиль...
+                                    <span data-i18n="settings.loading_profile">Загружаем профиль...</span>
                                 </span>
                             </div>
                             <p id="settings-account-email" class="settings-account-email mt-2 text-sm font-medium text-text-main">—</p>
@@ -428,7 +428,7 @@
                                 <span id="settings-account-role" class="settings-info-pill hidden"></span>
                                 <span id="settings-account-plan" class="settings-info-pill hidden"></span>
                             </div>
-                            <p id="settings-account-subline" class="settings-account-subline mt-2 text-sm text-text-secondary">
+                            <p id="settings-account-subline" class="settings-account-subline mt-2 text-sm text-text-secondary" data-i18n="settings.account_subline">
                                 Имя, почта, пароль и внешний вид сохраняются для текущего аккаунта.
                             </p>
                         </div>
@@ -442,7 +442,7 @@
                         <button id="settings-logout-btn" type="button"
                             class="btn-secondary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold">
                             <span class="material-symbols-outlined text-[18px]">logout</span>
-                            Выйти
+                            <span data-i18n="settings.logout">Выйти</span>
                         </button>
                     </div>
                 </div>
@@ -457,15 +457,15 @@
                             <span class="material-symbols-outlined text-[22px] text-primary">workspace_premium</span>
                         </div>
                         <div>
-                            <h2 id="settings-premium-title" class="text-xl font-bold text-text-main">Premium</h2>
-                            <p id="settings-premium-description" class="text-sm text-text-secondary">Больше места в библиотеке и доступ к полным страницам Календаря и Статистики.</p>
+                            <h2 id="settings-premium-title" class="text-xl font-bold text-text-main" data-i18n="settings.premium_title">Premium</h2>
+                            <p id="settings-premium-description" class="text-sm text-text-secondary" data-i18n="settings.premium_description">Больше места в библиотеке и доступ к полным страницам Календаря и Статистики.</p>
                         </div>
                     </div>
-                    <span id="settings-premium-status-pill" class="settings-info-pill">Загрузка...</span>
+                    <span id="settings-premium-status-pill" class="settings-info-pill" data-i18n="settings.loading">Загрузка...</span>
                 </div>
 
                 <div id="settings-premium-body" class="settings-section-card p-4 sm:p-5">
-                    <div class="text-sm text-text-secondary">Проверяем статус Premium...</div>
+                    <div class="text-sm text-text-secondary" data-i18n="settings.loading_premium">Проверяем статус Premium...</div>
                 </div>
                 <span id="settings-premium-action-status" class="mt-4 hidden"></span>
             </div>
@@ -479,8 +479,8 @@
                             <span class="material-symbols-outlined text-[22px] text-primary">badge</span>
                         </div>
                         <div>
-                            <h2 id="settings-profile-title" class="text-xl font-bold text-text-main">Профиль</h2>
-                            <p id="settings-profile-description" class="text-sm text-text-secondary">Основные данные аккаунта и фото профиля.</p>
+                            <h2 id="settings-profile-title" class="text-xl font-bold text-text-main" data-i18n="settings.profile_title">Профиль</h2>
+                            <p id="settings-profile-description" class="text-sm text-text-secondary" data-i18n="settings.profile_description">Основные данные аккаунта и фото профиля.</p>
                         </div>
                     </div>
 
@@ -488,10 +488,10 @@
                         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                             <div class="flex items-center gap-4">
                                 <img id="settings-avatar-preview-image" class="settings-avatar-preview-image"
-                                    src="/api/assets/avatars/1.png" alt="Фото профиля" />
+                                    src="/api/assets/avatars/1.png" alt="Фото профиля" data-i18n-attr="alt|settings.avatar_title" />
                                 <div class="min-w-0">
-                                    <h3 id="settings-avatar-preview-name" class="text-base font-semibold text-text-main">Фото профиля</h3>
-                                    <p id="settings-avatar-preview-note" class="mt-1 text-sm text-text-secondary">
+                                    <h3 id="settings-avatar-preview-name" class="text-base font-semibold text-text-main" data-i18n="settings.avatar_title">Фото профиля</h3>
+                                    <p id="settings-avatar-preview-note" class="mt-1 text-sm text-text-secondary" data-i18n="settings.avatar_note">
                                         Загрузите своё изображение. Оно сразу появится в меню и на странице настроек.
                                     </p>
                                 </div>
@@ -502,7 +502,7 @@
                                 <button id="settings-avatar-upload-btn" type="button"
                                     class="btn-secondary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold">
                                     <span class="material-symbols-outlined text-[18px]">upload</span>
-                                    Загрузить изображение
+                                    <span data-i18n="settings.avatar_upload">Загрузить изображение</span>
                                 </button>
                                 <span id="settings-avatar-save-status" class="hidden"></span>
                             </div>
@@ -513,16 +513,16 @@
                         <div class="settings-section-card p-4 sm:p-5">
                             <div class="flex flex-col gap-4 sm:flex-row sm:items-end">
                                 <label class="min-w-0 flex-1">
-                                    <span class="mb-2 block text-sm font-semibold text-text-main">Имя пользователя</span>
+                                    <span class="mb-2 block text-sm font-semibold text-text-main" data-i18n="settings.name_label">Имя пользователя</span>
                                     <input id="settings-name-input" type="text" autocomplete="name"
                                         class="w-full rounded-xl border border-border-subtle bg-surface-1 px-4 py-3 text-sm text-text-main outline-none transition focus:border-primary focus:ring-2 focus:ring-primary-light/50"
-                                        placeholder="Введите имя" />
+                                        placeholder="Введите имя" data-i18n-attr="placeholder|settings.name_placeholder" />
                                 </label>
                                 <div class="flex flex-col items-start gap-3 sm:items-end">
                                     <button id="settings-name-save-btn" type="button"
                                         class="btn-primary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold">
                                         <span class="material-symbols-outlined text-[18px]">save</span>
-                                        Сохранить имя
+                                        <span data-i18n="settings.name_save">Сохранить имя</span>
                                     </button>
                                     <span id="settings-name-save-status" class="hidden"></span>
                                 </div>
@@ -532,38 +532,38 @@
                         <div class="settings-section-card p-4 sm:p-5">
                             <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                                 <div class="min-w-0">
-                                    <p class="text-sm font-semibold text-text-main">Почта аккаунта</p>
+                                    <p class="text-sm font-semibold text-text-main" data-i18n="settings.email_label">Почта аккаунта</p>
                                     <p id="settings-email-value" class="mt-1 text-sm text-text-secondary">—</p>
-                                    <p id="settings-email-note" class="mt-2 text-xs text-text-secondary">
+                                    <p id="settings-email-note" class="mt-2 text-xs text-text-secondary" data-i18n="settings.email_note">
                                         Для входа по почте можно обновить адрес без выхода из аккаунта.
                                     </p>
                                 </div>
                                 <button id="settings-email-toggle-btn" type="button"
                                     class="btn-secondary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold">
                                     <span class="material-symbols-outlined text-[18px]">mail</span>
-                                    Изменить почту
+                                    <span data-i18n="settings.email_change">Изменить почту</span>
                                 </button>
                             </div>
                             <div id="settings-email-pending-panel" class="mt-4 hidden rounded-2xl border border-warning-light bg-warning-lighter/60 p-4">
                                 <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                                     <div class="min-w-0 flex-1">
-                                        <p id="settings-email-pending-title" class="text-sm font-semibold text-text-main">Смена почты ждёт подтверждения</p>
+                                        <p id="settings-email-pending-title" class="text-sm font-semibold text-text-main" data-i18n="settings.email_pending_title">Смена почты ждёт подтверждения</p>
                                         <p id="settings-email-pending-value" class="mt-1 break-all text-sm text-text-main">?</p>
-                                        <p id="settings-email-pending-hint" class="mt-2 text-xs text-text-secondary">
+                                        <p id="settings-email-pending-hint" class="mt-2 text-xs text-text-secondary" data-i18n="settings.email_pending_hint">
                                             Пока новая почта не подтверждена, текущие уведомления и вход остаются на прежнем адресе.
                                         </p>
                                     </div>
                                     <button id="settings-email-pending-resend-btn" type="button"
                                         class="btn-secondary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold">
                                         <span class="material-symbols-outlined text-[18px]">forward_to_inbox</span>
-                                        Отправить письмо ещё раз
+                                        <span data-i18n="settings.email_resend">Отправить письмо ещё раз</span>
                                     </button>
                                 </div>
                                 <span id="settings-email-pending-status" class="mt-4 hidden"></span>
                             </div>
                             <div id="settings-email-form" class="mt-4 hidden rounded-2xl border border-border-subtle bg-bg-secondary p-4">
                                 <label class="block">
-                                    <span class="mb-2 block text-sm font-semibold text-text-main">Новая почта</span>
+                                    <span class="mb-2 block text-sm font-semibold text-text-main" data-i18n="settings.email_new_label">Новая почта</span>
                                     <input id="settings-email-input" type="email" autocomplete="email"
                                         class="w-full rounded-xl border border-border-subtle bg-surface-1 px-4 py-3 text-sm text-text-main outline-none transition focus:border-primary focus:ring-2 focus:ring-primary-light/50"
                                         placeholder="name@example.com" />
@@ -572,12 +572,12 @@
                                     <button id="settings-email-save-btn" type="button"
                                         class="btn-primary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold">
                                         <span class="material-symbols-outlined text-[18px]">check</span>
-                                        Сохранить почту
+                                        <span data-i18n="settings.email_save">Сохранить почту</span>
                                     </button>
                                     <button id="settings-email-cancel-btn" type="button"
                                         class="btn-secondary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold">
                                         <span class="material-symbols-outlined text-[18px]">close</span>
-                                        Отмена
+                                        <span data-i18n="settings.cancel">Отмена</span>
                                     </button>
                                     <span id="settings-email-save-status" class="hidden"></span>
                                 </div>
@@ -594,55 +594,55 @@
                             <span class="material-symbols-outlined text-[22px] text-primary">lock</span>
                         </div>
                         <div>
-                            <h2 id="settings-security-title" class="text-xl font-bold text-text-main">Безопасность</h2>
-                            <p id="settings-security-description" class="text-sm text-text-secondary">Смена пароля и базовая защита входа.</p>
+                            <h2 id="settings-security-title" class="text-xl font-bold text-text-main" data-i18n="settings.security_title">Безопасность</h2>
+                            <p id="settings-security-description" class="text-sm text-text-secondary" data-i18n="settings.security_description">Смена пароля и базовая защита входа.</p>
                         </div>
                     </div>
 
                     <div class="settings-section-card p-4 sm:p-5">
                         <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                             <div class="min-w-0">
-                                <p class="text-sm font-semibold text-text-main">Пароль</p>
-                                <p id="settings-password-state" class="mt-1 text-sm text-text-secondary">Проверяем состояние пароля...</p>
+                                <p class="text-sm font-semibold text-text-main" data-i18n="settings.password_label">Пароль</p>
+                                <p id="settings-password-state" class="mt-1 text-sm text-text-secondary" data-i18n="settings.password_state_loading">Проверяем состояние пароля...</p>
                             </div>
                             <button id="settings-password-toggle-btn" type="button"
                                 class="btn-secondary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold">
                                 <span class="material-symbols-outlined text-[18px]">password</span>
-                                Изменить пароль
+                                <span data-i18n="settings.password_change">Изменить пароль</span>
                             </button>
                         </div>
                         <form id="settings-password-form" class="mt-4 hidden rounded-2xl border border-border-subtle bg-bg-secondary p-4">
                             <input id="settings-password-username" type="email" autocomplete="username" tabindex="-1" aria-hidden="true" class="hidden" />
                             <div class="grid gap-4">
                                 <label class="block" for="settings-password-current">
-                                    <span class="mb-2 block text-sm font-semibold text-text-main">Текущий пароль</span>
+                                    <span class="mb-2 block text-sm font-semibold text-text-main" data-i18n="settings.password_current_label">Текущий пароль</span>
                                     <input id="settings-password-current" type="password" autocomplete="current-password"
                                         class="w-full rounded-xl border border-border-subtle bg-surface-1 px-4 py-3 text-sm text-text-main outline-none transition focus:border-primary focus:ring-2 focus:ring-primary-light/50"
-                                        placeholder="Введите текущий пароль" />
+                                        placeholder="Введите текущий пароль" data-i18n-attr="placeholder|settings.password_current_placeholder" />
                                 </label>
                                 <label class="block">
-                                    <span class="mb-2 block text-sm font-semibold text-text-main">Новый пароль</span>
+                                    <span class="mb-2 block text-sm font-semibold text-text-main" data-i18n="settings.password_new_label">Новый пароль</span>
                                     <input id="settings-password-new" type="password" autocomplete="new-password"
                                         class="w-full rounded-xl border border-border-subtle bg-surface-1 px-4 py-3 text-sm text-text-main outline-none transition focus:border-primary focus:ring-2 focus:ring-primary-light/50"
-                                        placeholder="Минимум 8 символов" />
+                                        placeholder="Минимум 8 символов" data-i18n-attr="placeholder|settings.password_new_placeholder" />
                                 </label>
                                 <label class="block">
-                                    <span class="mb-2 block text-sm font-semibold text-text-main">Повторите новый пароль</span>
+                                    <span class="mb-2 block text-sm font-semibold text-text-main" data-i18n="settings.password_confirm_label">Повторите новый пароль</span>
                                     <input id="settings-password-confirm" type="password" autocomplete="new-password"
                                         class="w-full rounded-xl border border-border-subtle bg-surface-1 px-4 py-3 text-sm text-text-main outline-none transition focus:border-primary focus:ring-2 focus:ring-primary-light/50"
-                                        placeholder="Повторите новый пароль" />
+                                        placeholder="Повторите новый пароль" data-i18n-attr="placeholder|settings.password_confirm_placeholder" />
                                 </label>
                             </div>
                             <div class="mt-4 flex flex-wrap items-center gap-3">
                                 <button id="settings-password-save-btn" type="button"
                                     class="btn-primary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold">
                                     <span class="material-symbols-outlined text-[18px]">check</span>
-                                    Сохранить пароль
+                                    <span data-i18n="settings.password_save">Сохранить пароль</span>
                                 </button>
                                 <button id="settings-password-cancel-btn" type="button"
                                     class="btn-secondary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold">
                                     <span class="material-symbols-outlined text-[18px]">close</span>
-                                    Отмена
+                                    <span data-i18n="settings.cancel">Отмена</span>
                                 </button>
                                 <span id="settings-password-save-status" class="hidden"></span>
                             </div>
@@ -651,37 +651,37 @@
                     <div id="settings-delete-section" class="settings-section-card mt-5 border-danger-light bg-danger-lighter/40 p-4 sm:p-5">
                         <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                             <div class="min-w-0">
-                                <p id="settings-delete-title" class="text-sm font-semibold text-text-main">Delete account</p>
-                                <p id="settings-delete-note" class="mt-1 text-sm text-text-secondary">
+                                <p id="settings-delete-title" class="text-sm font-semibold text-text-main" data-i18n="settings.delete_title">Delete account</p>
+                                <p id="settings-delete-note" class="mt-1 text-sm text-text-secondary" data-i18n="settings.delete_note">
                                     Delete the current account together with the linked email and related data.
                                 </p>
-                                <p id="settings-delete-warning" class="mt-3 text-xs font-semibold uppercase tracking-[0.12em] text-danger-dark">
+                                <p id="settings-delete-warning" class="mt-3 text-xs font-semibold uppercase tracking-[0.12em] text-danger-dark" data-i18n="settings.delete_warning">
                                     This action cannot be undone.
                                 </p>
                             </div>
                             <button id="settings-delete-toggle-btn" type="button"
                                 class="inline-flex items-center gap-2 rounded-xl border border-danger-light bg-surface-1 px-4 py-2.5 text-sm font-semibold text-danger-dark transition hover:bg-danger-lighter/70">
                                 <span class="material-symbols-outlined text-[18px]">delete_forever</span>
-                                Delete account
+                                <span data-i18n="settings.delete_title">Delete account</span>
                             </button>
                         </div>
                         <form id="settings-delete-form" class="mt-4 hidden rounded-2xl border border-danger-light bg-surface-1/90 p-4">
                             <label id="settings-delete-password-wrap" class="block hidden">
-                                <span class="mb-2 block text-sm font-semibold text-text-main">Current password</span>
+                                <span class="mb-2 block text-sm font-semibold text-text-main" data-i18n="settings.delete_password_label">Current password</span>
                                 <input id="settings-delete-password" type="password" autocomplete="current-password"
                                     class="w-full rounded-xl border border-border-subtle bg-surface-1 px-4 py-3 text-sm text-text-main outline-none transition focus:border-danger-light focus:ring-2 focus:ring-danger-light/40"
-                                    placeholder="Enter current password" />
+                                    placeholder="Enter current password" data-i18n-attr="placeholder|settings.delete_password_placeholder" />
                             </label>
                             <div class="mt-4 flex flex-wrap items-center gap-3">
                                 <button id="settings-delete-confirm-btn" type="button"
                                     class="inline-flex items-center gap-2 rounded-xl border border-danger-light bg-danger-lighter px-4 py-2.5 text-sm font-semibold text-danger-dark transition hover:bg-danger-lighter/80">
                                     <span class="material-symbols-outlined text-[18px]">delete_forever</span>
-                                    Delete forever
+                                    <span data-i18n="settings.delete_confirm">Delete forever</span>
                                 </button>
                                 <button id="settings-delete-cancel-btn" type="button"
                                     class="btn-secondary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold">
                                     <span class="material-symbols-outlined text-[18px]">close</span>
-                                    Cancel
+                                    <span data-i18n="settings.cancel">Cancel</span>
                                 </button>
                                 <span id="settings-delete-status" class="hidden"></span>
                             </div>
@@ -698,28 +698,28 @@
                         <span class="material-symbols-outlined text-[22px] text-primary">manage_accounts</span>
                     </div>
                     <div>
-                        <h2 id="settings-admin-title" class="text-xl font-bold text-text-main">Управление аккаунтами</h2>
-                        <p id="settings-admin-description" class="text-sm text-text-secondary">Поиск пользователей, сроки premium и выдача доступа.</p>
+                        <h2 id="settings-admin-title" class="text-xl font-bold text-text-main" data-i18n="settings.admin_title">Управление аккаунтами</h2>
+                        <p id="settings-admin-description" class="text-sm text-text-secondary" data-i18n="settings.admin_description">Поиск пользователей, сроки premium и выдача доступа.</p>
                     </div>
                 </div>
 
                 <div class="settings-section-card p-4 sm:p-5">
                     <label class="block">
-                        <span class="mb-2 block text-sm font-semibold text-text-main">Поиск по имени, логину или email</span>
+                        <span class="mb-2 block text-sm font-semibold text-text-main" data-i18n="settings.admin_search_label">Поиск по имени, логину или email</span>
                         <input id="settings-admin-search-input" type="search"
                             class="w-full rounded-xl border border-border-subtle bg-surface-1 px-4 py-3 text-sm text-text-main outline-none transition focus:border-primary focus:ring-2 focus:ring-primary-light/50"
-                            placeholder="Начните вводить имя, логин или email" />
+                            placeholder="Начните вводить имя, логин или email" data-i18n-attr="placeholder|settings.admin_search_placeholder" />
                     </label>
                     <div class="mt-4 flex flex-wrap items-center gap-3">
                         <button id="settings-admin-search-btn" type="button"
                             class="btn-secondary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold">
                             <span class="material-symbols-outlined text-[18px]">search</span>
-                            Найти
+                            <span data-i18n="settings.admin_search">Найти</span>
                         </button>
                         <span id="settings-admin-status" class="hidden"></span>
                     </div>
                     <div id="settings-admin-users-list" class="mt-5 space-y-3">
-                        <div class="rounded-xl border border-border-subtle bg-bg-secondary px-4 py-4 text-sm text-text-secondary">
+                        <div class="rounded-xl border border-border-subtle bg-bg-secondary px-4 py-4 text-sm text-text-secondary" data-i18n="settings.admin_loading">
                             Список пользователей загрузится после входа администратора.
                         </div>
                     </div>
@@ -734,15 +734,15 @@
                         <span class="material-symbols-outlined text-[22px] text-primary">palette</span>
                     </div>
                     <div>
-                        <h2 id="settings-appearance-title" class="text-xl font-bold text-text-main">Оформление</h2>
-                        <p id="settings-profile-caption" class="text-sm text-text-secondary">
+                        <h2 id="settings-appearance-title" class="text-xl font-bold text-text-main" data-i18n="settings.appearance_title">Оформление</h2>
+                        <p id="settings-profile-caption" class="text-sm text-text-secondary" data-i18n="settings.appearance_description">
                             Палитра интерфейса сохраняется для текущего аккаунта.
                         </p>
                     </div>
                 </div>
 
                 <div id="theme-options" class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                    <div class="rounded-xl border border-border-subtle bg-surface-1 p-4 text-sm text-text-secondary">Загрузка тем...</div>
+                    <div class="rounded-xl border border-border-subtle bg-surface-1 p-4 text-sm text-text-secondary" data-i18n="settings.loading_themes">Загрузка тем...</div>
                 </div>
 
                 <div class="mt-4 flex flex-wrap items-center gap-3">
@@ -751,13 +751,13 @@
                 <p id="settings-footer-profile-note" class="hidden"></p>
 
                 <div class="mt-6 border-t border-border-subtle pt-5">
-                    <span id="settings-lang-label" class="mb-2 block text-sm font-semibold text-text-main">Язык интерфейса</span>
-                    <div role="group" id="settings-lang-group" aria-label="Выбор языка" class="settings-lang-group">
+                    <span id="settings-lang-label" class="mb-2 block text-sm font-semibold text-text-main" data-i18n="settings.lang_label">Язык интерфейса</span>
+                    <div role="group" id="settings-lang-group" aria-label="Выбор языка" data-i18n-aria="settings.lang_group_aria" class="settings-lang-group">
                         <button type="button" data-lang-btn="ru" class="settings-lang-opt" aria-pressed="false">RU</button>
                         <button type="button" data-lang-btn="en" class="settings-lang-opt" aria-pressed="false">EN</button>
                         <button type="button" data-lang-btn="uk" class="settings-lang-opt" aria-pressed="false">UK</button>
                     </div>
-                    <p id="settings-lang-note" class="mt-2 text-xs text-text-secondary">Язык применяется немедленно и сохраняется в браузере.</p>
+                    <p id="settings-lang-note" class="mt-2 text-xs text-text-secondary" data-i18n="settings.lang_note">Язык применяется немедленно и сохраняется в браузере.</p>
                 </div>
             </div>
         </section>
@@ -769,8 +769,8 @@
                         <span class="material-symbols-outlined text-[22px] text-primary">key</span>
                     </div>
                     <div>
-                        <h2 id="settings-ai-title" class="text-xl font-bold text-text-main">AI keys</h2>
-                        <p id="settings-ai-description" class="text-sm text-text-secondary">Сохраните ключи и проверьте их прямо на этой странице.</p>
+                        <h2 id="settings-ai-title" class="text-xl font-bold text-text-main" data-i18n="settings.ai_title">AI keys</h2>
+                        <p id="settings-ai-description" class="text-sm text-text-secondary" data-i18n="settings.ai_description">Сохраните ключи и проверьте их прямо на этой странице.</p>
                     </div>
                 </div>
 
@@ -791,13 +791,13 @@
                     <div class="flex items-start gap-3">
                         <span class="material-symbols-outlined mt-0.5 text-[20px] text-warning">history</span>
                         <div class="min-w-0 flex-1">
-                            <p class="text-sm font-semibold text-warning-text">Найден несохранённый черновик</p>
-                            <p id="settings-draft-banner-text" class="mt-1 text-xs text-warning-text">Можно восстановить последние изменения ключей.</p>
+                            <p class="text-sm font-semibold text-warning-text" data-i18n="settings.draft_title">Найден несохранённый черновик</p>
+                            <p id="settings-draft-banner-text" class="mt-1 text-xs text-warning-text" data-i18n="settings.draft_hint">Можно восстановить последние изменения ключей.</p>
                             <div class="mt-3 flex flex-wrap items-center gap-2">
-                                <button id="settings-draft-restore-btn" type="button" class="btn-primary px-3 py-2 text-xs font-semibold">
+                                <button id="settings-draft-restore-btn" type="button" class="btn-primary px-3 py-2 text-xs font-semibold" data-i18n="settings.draft_restore">
                                     Восстановить
                                 </button>
-                                <button id="settings-draft-discard-btn" type="button" class="btn-secondary px-3 py-2 text-xs font-semibold">
+                                <button id="settings-draft-discard-btn" type="button" class="btn-secondary px-3 py-2 text-xs font-semibold" data-i18n="settings.draft_discard">
                                     Удалить
                                 </button>
                             </div>
@@ -808,7 +808,7 @@
                 <div id="providers-container" class="settings-section-stack">
                     <div class="py-12 text-center text-text-secondary">
                         <span class="material-symbols-outlined animate-spin text-[28px] text-primary">progress_activity</span>
-                        <p class="mt-2 text-sm">Загрузка...</p>
+                        <p class="mt-2 text-sm" data-i18n="settings.loading">Загрузка...</p>
                     </div>
                 </div>
 
@@ -822,11 +822,11 @@
                         </div>
                         <div class="settings-actions-cluster">
                             <button id="save-keys-btn" onclick="saveKeys()"
-                                class="btn-primary rounded-xl px-6 py-2.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50">
+                                class="btn-primary rounded-xl px-6 py-2.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50" data-i18n="settings.save_keys">
                                 Сохранить ключи
                             </button>
                             <button id="validate-all-btn" onclick="validateAllKeys()"
-                                class="btn-secondary rounded-xl px-4 py-2.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50">
+                                class="btn-secondary rounded-xl px-4 py-2.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50" data-i18n="settings.validate_keys">
                                 Проверить все ключи
                             </button>
                             <span id="save-status" class="hidden"></span>
@@ -854,7 +854,7 @@
 
             <div class="mt-5 flex justify-center">
                 <div id="settings-avatar-crop-frame" class="settings-avatar-crop-stage">
-                    <img id="settings-avatar-crop-image" class="settings-avatar-crop-image hidden" alt="Предпросмотр кадрирования аватара" />
+                    <img id="settings-avatar-crop-image" class="settings-avatar-crop-image hidden" alt="Предпросмотр кадрирования аватара" data-i18n-attr="alt|settings.crop_image_alt" />
                     <div class="settings-avatar-crop-grid"></div>
                 </div>
             </div>

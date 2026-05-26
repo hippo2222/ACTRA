@@ -2166,8 +2166,8 @@
             const isDisabled = data && (data.error === 'microcards_mode_disabled' || data.error === 'guest_cannot_use_microcards');
             if (isDisabled) {
                 setMainRecommendationState({ microcardsDisabled: true, microcardsHasDecks: false, microcardsDue: 0 });
-                if (disabledState) disabledState.classList.remove('hidden');
-                if (emptyState) emptyState.classList.add('hidden');
+                if (disabledState) { disabledState.classList.remove('hidden'); disabledState.classList.add('flex'); }
+                if (emptyState) { emptyState.classList.add('hidden'); emptyState.classList.remove('flex'); }
                 if (contentState) contentState.classList.add('hidden');
                 if (ctaEl) ctaEl.disabled = true;
                 const dueBadgeCount = document.getElementById('microcardsDueCount');
@@ -2185,7 +2185,7 @@
                 if (dueBadgeEl) dueBadgeEl.hidden = true;
                 if (disabledState) disabledState.classList.add('hidden');
                 if (emptyState) {
-                    emptyState.classList.remove('hidden');
+                    emptyState.classList.remove('hidden'); emptyState.classList.add('flex');
                     const titleEl = emptyState.querySelector('p.text-sm');
                     const descEl = emptyState.querySelector('p.text-\\[10px\\]');
                     if (titleEl) titleEl.textContent = wt('main.mc_error_title', 'Сводка временно недоступна');
@@ -2210,7 +2210,7 @@
             setMainRecommendationState({ microcardsDisabled: false, microcardsHasDecks: false, microcardsDue: 0 });
             if (dueBadgeEl) dueBadgeEl.hidden = true;
             if (disabledState) disabledState.classList.add('hidden');
-            if (emptyState) emptyState.classList.remove('hidden');
+            if (emptyState) { emptyState.classList.remove('hidden'); emptyState.classList.add('flex'); }
             if (secondaryCtaEl) secondaryCtaEl.disabled = false;
             if (emptyState) {
                 const titleEl = emptyState.querySelector('p.text-sm');
@@ -2332,7 +2332,7 @@
         }
 
         if (!hasData) {
-            if (emptyState) emptyState.classList.remove('hidden');
+            if (emptyState) { emptyState.classList.remove('hidden'); emptyState.classList.add('flex'); }
             if (emptyState) {
                 const textNodes = emptyState.querySelectorAll('p');
                 if (textNodes[0]) textNodes[0].textContent = wt('main.calendar_empty_first_title', 'Начните с первого учебного шага');

@@ -2016,19 +2016,19 @@
   <div class="preview-shell">
     <header class="preview-toolbar">
       <div class="preview-title">
-        <span class="preview-btn preview-btn--primary">← К списку</span>
+        <span class="preview-btn preview-btn--primary">${wt('welcome.demo_back', '← К списку')}</span>
         <div>
-          <h1>Тест: параметры волны</h1>
-          <p>Практика · радиофизика</p>
+          <h1>${wt('welcome.demo_test_title', 'Тест: параметры волны')}</h1>
+          <p>${wt('welcome.demo_practice_sub', 'Практика · радиофизика')}</p>
         </div>
       </div>
       <div class="preview-progress">
-        <div><span>Задание 3 из 7</span><span>Итерация 1</span></div>
+        <div><span>${wt('welcome.demo_task_progress', 'Задание 3 из 7')}</span><span>${wt('welcome.demo_iteration_1', 'Итерация 1')}</span></div>
         <div class="preview-track"><span></span></div>
       </div>
       <div class="preview-actions">
-        <span class="preview-btn preview-btn--primary">Проверить</span>
-        <span class="preview-btn">Завершить комплекс</span>
+        <span class="preview-btn preview-btn--primary">${wt('welcome.demo_check', 'Проверить')}</span>
+        <span class="preview-btn">${wt('welcome.demo_finish', 'Завершить комплекс')}</span>
       </div>
     </header>
     <main id="task-content"></main>
@@ -2111,17 +2111,17 @@
       <header class="s2-toolbar">
         <div class="s2-toolbar-main">
           <div class="s2-toolbar-title">
-            <p class="s2-toolbar-context"><span id="complex-name">Комплекс</span><span class="s2-toolbar-separator">·</span><span>Итерация <span id="iteration-number-label">?</span></span></p>
+            <p class="s2-toolbar-context"><span id="complex-name">${wt('welcome.demo_complex_label', 'Комплекс')}</span><span class="s2-toolbar-separator">·</span><span>${wt('welcome.demo_iteration_label', 'Итерация')} <span id="iteration-number-label">?</span></span></p>
           </div>
         </div>
         <div class="s2-toolbar-actions">
-          <button id="pause-btn-inline" class="s2-btn s2-ghost-btn s2-toolbar-action-btn" type="button">Пауза</button>
-          <button id="finish-complex-btn-inline" class="s2-btn s2-danger-btn s2-toolbar-action-btn" type="button">Завершить комплекс</button>
+          <button id="pause-btn-inline" class="s2-btn s2-ghost-btn s2-toolbar-action-btn" type="button">${wt('welcome.demo_pause', 'Пауза')}</button>
+          <button id="finish-complex-btn-inline" class="s2-btn s2-danger-btn s2-toolbar-action-btn" type="button">${wt('welcome.demo_finish', 'Завершить комплекс')}</button>
           <div id="toolbar-menu-wrap" class="s2-menu-wrap">
-            <button id="toolbar-menu-btn" class="s2-btn s2-menu-btn" type="button" aria-label="Дополнительные действия"><span class="material-symbols-outlined" aria-hidden="true">more_horiz</span></button>
+            <button id="toolbar-menu-btn" class="s2-btn s2-menu-btn" type="button" aria-label="${wt('welcome.demo_more_actions', 'Дополнительные действия')}"><span class="material-symbols-outlined" aria-hidden="true">more_horiz</span></button>
             <div id="toolbar-menu-panel" class="s2-menu-panel hidden" role="menu" aria-hidden="true">
-              <button id="pause-btn" class="s2-menu-item" type="button" role="menuitem">Поставить на паузу</button>
-              <button id="finish-complex-btn" class="s2-menu-item s2-menu-item--danger" type="button" role="menuitem">Завершить комплекс</button>
+              <button id="pause-btn" class="s2-menu-item" type="button" role="menuitem">${wt('welcome.demo_put_on_pause', 'Поставить на паузу')}</button>
+              <button id="finish-complex-btn" class="s2-menu-item s2-menu-item--danger" type="button" role="menuitem">${wt('welcome.demo_finish', 'Завершить комплекс')}</button>
             </div>
           </div>
         </div>
@@ -2129,20 +2129,20 @@
       <div class="s2-main-stage">
         <main id="s2-main" class="s2-main">
           <section class="s2-panel s2-result-panel" aria-labelledby="result-heading">
-            <div class="s2-result-head"><div class="s2-result-copy"><p class="s2-eyebrow">Результат</p><div class="s2-hero-line"><div class="s2-score-stack"><h1 id="result-heading" class="s2-score-line"><span id="stat-success-rate">—</span></h1></div></div><p id="hero-summary" class="s2-hero-summary">Короткая сводка появится сразу после загрузки.</p></div></div>
+            <div class="s2-result-head"><div class="s2-result-copy"><p class="s2-eyebrow">${wt('welcome.demo_result', 'Результат')}</p><div class="s2-hero-line"><div class="s2-score-stack"><h1 id="result-heading" class="s2-score-line"><span id="stat-success-rate">—</span></h1></div></div><p id="hero-summary" class="s2-hero-summary">${wt('welcome.demo_summary_loading', 'Короткая сводка появится сразу после загрузки.')}</p></div></div>
             <div class="s2-result-footer">
-              <div class="s2-progress-block"><div class="s2-progress-track" aria-hidden="true"><div id="progress-success-bar" class="s2-progress-bar s2-progress-bar--success"></div><div id="progress-failed-bar" class="s2-progress-bar s2-progress-bar--error"></div></div><div class="s2-progress-counts"><span class="s2-count-chip s2-count-chip--success"><strong id="hero-success-count">—</strong> верно</span><span id="hero-failed-chip" class="s2-count-chip s2-count-chip--error"><strong id="hero-failed-count">—</strong> ошибок</span></div></div>
-              <div class="s2-meta-strip" aria-label="Контекст итерации"><span class="s2-meta-inline"><span class="s2-meta-pill-label">Задачи</span><strong id="stat-total-tasks">—</strong></span><span class="s2-meta-inline"><span class="s2-meta-pill-label">Сложность</span><strong id="stat-difficulty">—</strong></span><span class="s2-meta-inline"><span class="s2-meta-pill-label">Время</span><strong id="stat-iteration-time">—</strong></span></div>
+              <div class="s2-progress-block"><div class="s2-progress-track" aria-hidden="true"><div id="progress-success-bar" class="s2-progress-bar s2-progress-bar--success"></div><div id="progress-failed-bar" class="s2-progress-bar s2-progress-bar--error"></div></div><div class="s2-progress-counts"><span class="s2-count-chip s2-count-chip--success"><strong id="hero-success-count">—</strong> ${wt('welcome.demo_correct_count', 'верно')}</span><span id="hero-failed-chip" class="s2-count-chip s2-count-chip--error"><strong id="hero-failed-count">—</strong> ${wt('welcome.demo_errors_count', 'ошибок')}</span></div></div>
+              <div class="s2-meta-strip" aria-label="${wt('welcome.demo_iteration_context_aria', 'Контекст итерации')}"><span class="s2-meta-inline"><span class="s2-meta-pill-label">${wt('welcome.demo_tasks_label', 'Задачи')}</span><strong id="stat-total-tasks">—</strong></span><span class="s2-meta-inline"><span class="s2-meta-pill-label">${wt('welcome.demo_difficulty_label', 'Сложность')}</span><strong id="stat-difficulty">—</strong></span><span class="s2-meta-inline"><span class="s2-meta-pill-label">${wt('welcome.demo_time_label', 'Время')}</span><strong id="stat-iteration-time">—</strong></span></div>
             </div>
           </section>
-          <section class="s2-panel s2-action-panel"><article id="continue-btn" class="s2-action-card s2-action-card--next" role="button" tabindex="0"><p class="s2-eyebrow">Следующий шаг</p><h2 id="recommendation-title" class="s2-action-title">—</h2><p id="recommendation-copy" class="s2-action-copy">—</p><div class="s2-next-cta" aria-hidden="true"><span id="continue-btn-label" class="truncate s2-next-cta-text">К следующей итерации</span></div></article></section>
-          <section id="result-review-panel" class="s2-result-review hidden" aria-hidden="true"><div class="s2-result-review-head"><div class="s2-result-review-copy"><p class="s2-eyebrow">Разбор ошибок</p><h2 id="result-review-title" class="s2-review-panel-title">—</h2><p id="result-review-copy" class="s2-action-copy">—</p></div><button id="review-btn" class="s2-btn s2-secondary-btn hidden" type="button">Показать разбор</button></div><div id="review-inline" class="s2-inline-review hidden" aria-hidden="true"></div></section>
+          <section class="s2-panel s2-action-panel"><article id="continue-btn" class="s2-action-card s2-action-card--next" role="button" tabindex="0"><p class="s2-eyebrow">${wt('welcome.demo_next_step', 'Следующий шаг')}</p><h2 id="recommendation-title" class="s2-action-title">—</h2><p id="recommendation-copy" class="s2-action-copy">—</p><div class="s2-next-cta" aria-hidden="true"><span id="continue-btn-label" class="truncate s2-next-cta-text">${wt('welcome.demo_to_next_iteration', 'К следующей итерации')}</span></div></article></section>
+          <section id="result-review-panel" class="s2-result-review hidden" aria-hidden="true"><div class="s2-result-review-head"><div class="s2-result-review-copy"><p class="s2-eyebrow">${wt('welcome.demo_error_review', 'Разбор ошибок')}</p><h2 id="result-review-title" class="s2-review-panel-title">—</h2><p id="result-review-copy" class="s2-action-copy">—</p></div><button id="review-btn" class="s2-btn s2-secondary-btn hidden" type="button">${wt('welcome.demo_show_review', 'Показать разбор')}</button></div><div id="review-inline" class="s2-inline-review hidden" aria-hidden="true"></div></section>
           <div hidden aria-hidden="true"><strong id="stat-total-tasks-main">—</strong><strong id="stat-failed-tasks">—</strong><div id="trigger-tasks-list"></div></div>
         </main>
       </div>
     </div>
   </div>
-  <div id="details-dialog-backdrop" class="s2-dialog-backdrop hidden" aria-hidden="true"><div class="s2-dialog-panel"><div class="s2-dialog-header"><div><p class="s2-eyebrow">Детали</p><h2 id="details-dialog-title" class="s2-dialog-title">Детали итерации</h2><p id="details-dialog-subtitle" class="s2-dialog-subtitle">—</p></div><button id="details-dialog-close-btn" class="s2-btn s2-ghost-btn" type="button">Закрыть</button></div><div class="s2-dialog-body"><div class="s2-dialog-metrics"><div class="s2-dialog-metric"><span class="s2-meta-pill-label">Точность</span><strong id="details-rate">—</strong></div><div class="s2-dialog-metric"><span class="s2-meta-pill-label">Верно</span><strong id="details-success">—</strong></div><div class="s2-dialog-metric"><span class="s2-meta-pill-label">Ошибки</span><strong id="details-failed">—</strong></div><div class="s2-dialog-metric"><span class="s2-meta-pill-label">Время</span><strong id="details-time">—</strong></div></div><div class="s2-dialog-progress-track"><div id="details-success-bar" class="s2-progress-bar s2-progress-bar--success"></div><div id="details-failed-bar" class="s2-progress-bar s2-progress-bar--error"></div></div><div id="details-errors" class="s2-dialog-list"></div></div></div></div>
+  <div id="details-dialog-backdrop" class="s2-dialog-backdrop hidden" aria-hidden="true"><div class="s2-dialog-panel"><div class="s2-dialog-header"><div><p class="s2-eyebrow">${wt('welcome.demo_details', 'Детали')}</p><h2 id="details-dialog-title" class="s2-dialog-title">${wt('welcome.demo_iteration_details', 'Детали итерации')}</h2><p id="details-dialog-subtitle" class="s2-dialog-subtitle">—</p></div><button id="details-dialog-close-btn" class="s2-btn s2-ghost-btn" type="button">${wt('welcome.demo_close', 'Закрыть')}</button></div><div class="s2-dialog-body"><div class="s2-dialog-metrics"><div class="s2-dialog-metric"><span class="s2-meta-pill-label">${wt('welcome.demo_accuracy_label', 'Точность')}</span><strong id="details-rate">—</strong></div><div class="s2-dialog-metric"><span class="s2-meta-pill-label">${wt('welcome.demo_correct_label', 'Верно')}</span><strong id="details-success">—</strong></div><div class="s2-dialog-metric"><span class="s2-meta-pill-label">${wt('welcome.demo_errors_label', 'Ошибки')}</span><strong id="details-failed">—</strong></div><div class="s2-dialog-metric"><span class="s2-meta-pill-label">${wt('welcome.demo_time_label', 'Время')}</span><strong id="details-time">—</strong></div></div><div class="s2-dialog-progress-track"><div id="details-success-bar" class="s2-progress-bar s2-progress-bar--success"></div><div id="details-failed-bar" class="s2-progress-bar s2-progress-bar--error"></div></div><div id="details-errors" class="s2-dialog-list"></div></div></div></div>
   <script src="/assets/s2-results.js?v=20260511-copy1"><\/script>
   <script>
     if (window.S2Page && typeof window.S2Page.renderIterationResults === 'function') {

@@ -274,10 +274,11 @@
 
     function initGlobalHeaders() {
         document.querySelectorAll('[data-global-header]').forEach(function (root) {
-            if (root.dataset.globalHeaderReady === '1') return;
-            root.dataset.globalHeaderReady = '1';
             renderHeader(root);
-            bindHeader(root);
+            if (root.dataset.globalHeaderBound !== '1') {
+                root.dataset.globalHeaderBound = '1';
+                bindHeader(root);
+            }
             if (window.__mainOwnsGlobalHeaderHydration && root.dataset.appSection === 'main') {
                 if (window.__mainCurrentUser && typeof window.__mainUpdateHeaderUser === 'function') {
                     window.__mainUpdateHeaderUser(window.__mainCurrentUser);
@@ -292,9 +293,6 @@
     }
 
     function reRenderAllHeaders() {
-        document.querySelectorAll('[data-global-header]').forEach(function (root) {
-            root.dataset.globalHeaderReady = '0';
-        });
         initGlobalHeaders();
     }
 

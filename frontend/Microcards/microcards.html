@@ -263,7 +263,7 @@
             <div class="flex items-center gap-3">
                 <a href="/main"
                     class="flex items-center justify-center size-8 rounded-lg text-text-secondary hover:text-primary hover:bg-bg-hover transition-colors"
-                    title="На главную">
+                    title="На главную" data-i18n-title="stats.back_btn">
                     <span class="material-symbols-outlined">arrow_back</span>
                 </a>
                 <div class="flex items-center gap-3">
@@ -299,9 +299,9 @@
                 </a>
                 <!-- User profile widget (same as Statistics/Calendar) -->
                 <div class="flex items-center gap-2 px-3 py-1.5 bg-surface-1 rounded-lg border border-border-subtle cursor-pointer hover:bg-bg-hover transition-colors"
-                    onclick="openProfileModal()" title="Профиль">
+                    onclick="openProfileModal()" title="Профиль" data-i18n-title="stats.profile_btn_aria">
                     <img src="/api/assets/avatars/1.png" class="w-6 h-6 rounded-full" alt="User" id="mcHeaderAvatar">
-                    <span class="text-text-main text-sm font-medium hidden sm:inline" id="mcHeaderUserName">Гость</span>
+                    <span class="text-text-main text-sm font-medium hidden sm:inline" id="mcHeaderUserName" data-i18n="stats.guest_name">Гость</span>
                 </div>
             </div>
         </div>
@@ -394,10 +394,10 @@
                                     data-ownership-filter="imported" data-i18n="microcards.own_imported">Импорт</button>
                             </div>
                         </div>
-                        <p id="mcDeckOwnershipHint" class="text-xs text-text-muted">Колоды живут в общей библиотеке, а
+                        <p id="mcDeckOwnershipHint" class="text-xs text-text-muted" data-i18n="microcards.ownership_all">Колоды живут в общей библиотеке, а
                             прогресс по ним остаётся личным.</p>
                     </div>
-                    <p id="mcDeckFilterHint" class="mt-2 text-xs font-medium text-text-secondary">Сначала показываем
+                    <p id="mcDeckFilterHint" class="mt-2 text-xs font-medium text-text-secondary" data-i18n="microcards.hint_default">Сначала показываем
                         колоды с самым срочным повторением.</p>
                 </div>
 
@@ -413,8 +413,8 @@
                 <!-- Empty state -->
                 <div id="mcDeckEmpty" class="hidden flex flex-col items-center justify-center py-16 text-center">
                     <span class="material-symbols-outlined text-border-strong text-[48px] mb-3">style</span>
-                    <p class="text-base font-bold text-text-main mb-1">Нет колод микрокарточек</p>
-                    <p class="text-sm text-text-secondary max-w-md">Создайте колоду из анализа теории в редакторе или
+                    <p class="text-base font-bold text-text-main mb-1" data-i18n="microcards.empty_title">Нет колод микрокарточек</p>
+                    <p class="text-sm text-text-secondary max-w-md" data-i18n="microcards.empty_desc">Создайте колоду из анализа теории в редакторе или
                         воспользуйтесь ручным созданием.</p>
                     <a href="/editor"
                         class="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-fg rounded-lg text-sm font-bold hover:bg-primary-hover transition-colors">

@@ -20,7 +20,7 @@
         <div class="s2-toolbar-main">
           <div class="s2-toolbar-title">
             <p class="s2-toolbar-context">
-              <span id="complex-name">Комплекс</span>
+              <span id="complex-name" data-i18n="s2.complex_fallback">Комплекс</span>
               <span class="s2-toolbar-separator">·</span>
               <span><span data-i18n="s2.iteration_label">Итерация</span> <span id="iteration-number-label">?</span></span>
             </p>
@@ -116,12 +116,13 @@
             role="button"
             tabindex="0"
             aria-label="Сделать паузу"
+            data-i18n-aria="s2.pause_cta"
           >
-            <p class="s2-eyebrow">Пауза</p>
-            <h2 class="s2-action-title">Сделать паузу</h2>
-            <p class="s2-action-copy">Вы можете приостановить сессию и вернуться к ней позже.</p>
+            <p class="s2-eyebrow" data-i18n="s2.eyebrow_pause">Пауза</p>
+            <h2 class="s2-action-title" data-i18n="s2.pause_action_title">Сделать паузу</h2>
+            <p class="s2-action-copy" data-i18n="s2.pause_action_copy">Вы можете приостановить сессию и вернуться к ней позже.</p>
             <div class="s2-next-cta" aria-hidden="true">
-              <span class="truncate s2-next-cta-text">Сделать паузу</span>
+              <span class="truncate s2-next-cta-text" data-i18n="s2.pause_cta">Сделать паузу</span>
             </div>
           </article>
 
@@ -151,7 +152,7 @@
             <div id="problem-failed-state">
               <ul id="trigger-tasks-list" class="s2-dialog-list my-2"></ul>
               <p id="problem-preview-note" class="s2-review-note my-2 text-sm text-text-secondary"></p>
-              <button id="open-problem-dialog-btn" class="s2-btn s2-secondary-btn mt-2" type="button">Посмотреть все ошибки</button>
+              <button id="open-problem-dialog-btn" class="s2-btn s2-secondary-btn mt-2" type="button" data-i18n="s2.btn_view_all_errors">Посмотреть все ошибки</button>
             </div>
           </div>
 

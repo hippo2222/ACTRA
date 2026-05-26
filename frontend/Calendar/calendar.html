@@ -138,19 +138,19 @@
                                     <span class="material-symbols-outlined text-primary text-[20px]">cached</span>
 
                                     <span id="daily-mix-badge"
-                                        class="pill-kicker pill-sm pill-neutral">Повторение</span>
+                                        class="pill-kicker pill-sm pill-neutral" data-i18n="calendar.badge_review">Повторение</span>
 
                                 </div>
 
                                 <h3 class="text-lg font-bold text-text-main mb-1">Daily Mix</h3>
 
-                                <p id="daily-mix-desc" class="text-text-secondary text-sm">
+                                <p id="daily-mix-desc" class="text-text-secondary text-sm" data-i18n="calendar.daily_mix_desc">
 
                                     Персонализированная
 
                                     подборка для закрепления материала.</p>
 
-                                <p id="daily-mix-reason" class="mt-2 text-xs font-medium text-text-muted">
+                                <p id="daily-mix-reason" class="mt-2 text-xs font-medium text-text-muted" data-i18n="calendar.daily_mix_reason_multi">
 
                                     Сначала закрываем повторы, чтобы не копить просадки по памяти.</p>
 
@@ -170,7 +170,7 @@
 
                                 <button class="btn-secondary flex items-center gap-2 text-sm">
                                     <span class="material-symbols-outlined text-[18px]">play_circle</span>
-                                    <span id="daily-mix-btn-text">Начать</span>
+                                    <span id="daily-mix-btn-text" data-i18n="calendar.btn_start">Начать</span>
                                 </button>
 
                             </div>
@@ -195,17 +195,17 @@
                                     <span class="material-symbols-outlined text-accent text-[20px]">school</span>
 
                                     <span id="main-focus-badge"
-                                        class="pill-kicker pill-sm pill-neutral">Изучение</span>
+                                        class="pill-kicker pill-sm pill-neutral" data-i18n="calendar.badge_study">Изучение</span>
 
                                 </div>
 
-                                <h3 id="main-focus-title" class="text-lg font-bold text-text-main mb-1">Новый
+                                <h3 id="main-focus-title" class="text-lg font-bold text-text-main mb-1" data-i18n="calendar.new_complex">Новый
 
                                     комплекс
 
                                 </h3>
 
-                                <p id="main-focus-desc" class="text-text-secondary text-sm">Сегодняшние
+                                <p id="main-focus-desc" class="text-text-secondary text-sm" data-i18n="calendar.main_focus_default_desc">Сегодняшние
 
                                     задачи
 
@@ -369,9 +369,9 @@
 
                                     <span id="memory-health-status" class="memory-health-status">—</span>
 
-                                    <p id="memory-health-headline" class="memory-health-overview-title">Пока без данных</p>
+                                    <p id="memory-health-headline" class="memory-health-overview-title" data-i18n="calendar.health_empty_headline">Пока без данных</p>
 
-                                    <p id="memory-health-subline" class="memory-health-overview-text">Статистика появится после прохождения комплексов.</p>
+                                    <p id="memory-health-subline" class="memory-health-overview-text" data-i18n="calendar.health_empty_subline">Статистика появится после прохождения комплексов.</p>
 
                                     <div id="memory-health-metrics" class="memory-health-stats"></div>
 
@@ -383,7 +383,7 @@
 
                                 <div id="memory-health-list" class="memory-health-list"></div>
 
-                                <button id="memory-health-all-action" type="button" class="memory-health-all-action" onclick="openHealthDetails()">Все</button>
+                                <button id="memory-health-all-action" type="button" class="memory-health-all-action" onclick="openHealthDetails()" data-i18n="calendar.health_all">Все</button>
 
                             </div>
 
@@ -793,8 +793,8 @@
             state.activity = createCalendarPreviewActivity(heavy ? 'heavy' : 'light');
             state.notifications = heavy
                 ? [{
-                    title: 'Есть материал для срочного повтора',
-                    message: 'Самые слабые комплексы лучше освежить сегодня.',
+                    title: wt('calendar.notif_urgent_title', 'Есть материал для срочного повтора'),
+                    message: wt('calendar.notif_urgent_message', 'Самые слабые комплексы лучше освежить сегодня.'),
                     action_type: 'fix',
                     action_data: { complex_id: activeComplexes[0].complex_id },
                 }]
@@ -2382,7 +2382,15 @@
                     : '';
                 const metaSegments = [];
                 if (!isMissed) {
-                    visibleBadgeLabels.forEach((badge) => metaSegments.push(badge));
+                    visibleBadgeLabels.forEach((badge) => {
+                        let translated = badge;
+                        if (badge === 'Фокус') translated = wt('calendar.badge_focus_short', 'Фокус');
+                        else if (badge === 'План') translated = wt('calendar.badge_plan', 'План');
+                        else if (badge === 'Обновлено') translated = wt('calendar.badge_updated_short', 'Обновлено');
+                        else if (badge === 'Пропуск') translated = wt('calendar.badge_missed_short', 'Пропуск');
+                        else if (badge === 'Нет данных') translated = wt('calendar.badge_no_data_short', 'Нет данных');
+                        metaSegments.push(translated);
+                    });
                     if (hiddenBadgeCount > 0 && taskCount < 5) metaSegments.push(`+${hiddenBadgeCount}`);
                     if (completedLabel) metaSegments.push(completedLabel);
                 }
@@ -3098,7 +3106,7 @@
                     ? wt('calendar.action_review_first', 'Повторить первым, ещё {n}').replace('{n}', hiddenComplexCount)
                     : wt('calendar.action_recommended_review', 'Рекомендуемый повтор');
                 const toneText = complex.recovery_time
-                    ? escapeHtml(complex.recovery_time)
+                    ? escapeHtml(translateRecoveryTime(complex.recovery_time))
                     : escapeHtml((complex.health_percent || 0) < 80 ? wt('calendar.tone_support_rhythm', 'поддержать ритм') : wt('calendar.tone_holding_steady', 'держится стабильно'));
                 const meterWidth = Math.max(4, Math.min(100, healthPercent));
 
@@ -3152,7 +3160,7 @@
                     ? wt('calendar.action_urgent_review', '\u0421\u0440\u043e\u0447\u043d\u044b\u0439 \u043f\u043e\u0432\u0442\u043e\u0440')
                     : wt('calendar.action_review_short', '\u041f\u043e\u0432\u0442\u043e\u0440');
                 const toneText = complex.recovery_time
-                    ? escapeHtml(complex.recovery_time)
+                    ? escapeHtml(translateRecoveryTime(complex.recovery_time))
                     : escapeHtml((complex.health_percent || 0) < 80 ? wt('calendar.tone_today', '\u0441\u0435\u0433\u043e\u0434\u043d\u044f') : wt('calendar.tone_holding', '\u0434\u0435\u0440\u0436\u0438\u0442\u0441\u044f'));
                 const meterWidth = Math.max(4, Math.min(100, healthPercent));
 
@@ -3704,20 +3712,20 @@
             const dayNames = [wt('calendar.day_sun','Вс'), wt('calendar.day_mon','Пн'), wt('calendar.day_tue','Вт'), wt('calendar.day_wed','Ср'), wt('calendar.day_thu','Чт'), wt('calendar.day_fri','Пт'), wt('calendar.day_sat','Сб')];
             const tasksByDay = [
                 [
-                    { name: 'Daily Mix', complex_name: 'Повторение ошибок', is_completed: false, complex_id: 'demo-repeat' },
-                    { name: 'Контрольные вопросы', complex_name: 'Laguskа Complex', is_completed: false, complex_id: 'demo-lagusa' },
+                    { name: 'Daily Mix', complex_name: wt('calendar.demo_repeat_errors', 'Повторение ошибок'), is_completed: false, complex_id: 'demo-repeat' },
+                    { name: wt('calendar.demo_control_questions', 'Контрольные вопросы'), complex_name: 'Laguskа Complex', is_completed: false, complex_id: 'demo-lagusa' },
                 ],
                 [
-                    { name: 'Короткий повтор', complex_name: 'Анатомия: базовый блок', is_completed: false, complex_id: 'demo-anatomy' },
+                    { name: wt('calendar.demo_short_review', 'Короткий повтор'), complex_name: 'Анатомия: базовый блок', is_completed: false, complex_id: 'demo-anatomy' },
                 ],
                 [],
                 [
-                    { name: 'Закрепление', complex_name: 'Физиология крови', is_completed: false, complex_id: 'demo-blood' },
+                    { name: wt('calendar.demo_consolidation', 'Закрепление'), complex_name: 'Физиология крови', is_completed: false, complex_id: 'demo-blood' },
                 ],
                 [],
                 [],
                 [
-                    { name: 'Финальное повторение', complex_name: 'Laguskа Complex', is_completed: false, complex_id: 'demo-lagusa' },
+                    { name: wt('calendar.demo_final_review', 'Финальное повторение'), complex_name: 'Laguskа Complex', is_completed: false, complex_id: 'demo-lagusa' },
                 ],
             ];
 
@@ -3837,8 +3845,8 @@
                 state.activity = createCalendarOnboardingActivity();
                 state.notifications = [
                     {
-                        title: 'Есть материал для короткого повтора',
-                        message: 'Один комплекс просел по памяти. Лучше освежить его сегодня.',
+                        title: wt('calendar.notif_short_title', 'Есть материал для короткого повтора'),
+                        message: wt('calendar.notif_short_message', 'Один комплекс просел по памяти. Лучше освежить его сегодня.'),
                         action_type: 'fix',
                     },
                 ];
@@ -3978,6 +3986,22 @@
 
             return wt('calendar.days_many', 'дней');
 
+        }
+
+        function translateRecoveryTime(rt) {
+            if (!rt) return '';
+            const val = String(rt).trim().toLowerCase();
+            if (val === 'срочно') return wt('calendar.tone_urgent', 'срочно');
+            if (val === 'сегодня') return wt('calendar.tone_today', 'сегодня');
+            if (val === 'завтра') return wt('calendar.tone_tomorrow', 'завтра');
+            if (val === 'держится') return wt('calendar.tone_holding', 'держится');
+            if (val === 'стабильно') return wt('calendar.tone_stable', 'стабильно');
+            const match = val.match(/^(\d+)\s*(дня|дней|день)$/);
+            if (match) {
+                const count = parseInt(match[1], 10);
+                return `${count} ${getDaysWord(count)}`;
+            }
+            return rt;
         }
 
         // =============================================================================

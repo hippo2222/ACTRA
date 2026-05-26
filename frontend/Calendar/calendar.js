@@ -237,7 +237,7 @@ class CalendarUI {
                 let badgeClass = 'bg-bg-secondary border border-border-subtle text-text-secondary';
                 if (badge === 'Пропущено') badgeClass = 'bg-error-lighter border border-error-light text-error-text';
                 if (badge === 'Пересчитано' || badge === 'Смещено') badgeClass = 'bg-primary-lighter border border-primary-light text-primary-dark';
-                return `<div class="px-2 py-0.5 rounded ${badgeClass} w-fit"><span class="text-[10px] uppercase font-medium">${badge}</span></div>`;
+                return `<div class="px-2 py-0.5 rounded ${badgeClass} w-fit"><span class="text-[10px] uppercase font-medium">${wt('calendar.status_' + (badge === 'Пропущено' ? 'missed' : (badge === 'Пересчитано' ? 'recalculated' : 'shifted')), badge)}</span></div>`;
             }).join('');
 
             return `

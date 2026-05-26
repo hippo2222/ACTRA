@@ -38,7 +38,7 @@
                 </button>
                 <div data-onboarding-target="click-title">
                     <h2 class="text-lg font-bold text-text-main tracking-tight"></h2>
-                    <p class="text-xs text-text-secondary">Последнее изменение: 2 минуты назад</p>
+                    <p class="text-xs text-text-secondary" data-i18n="pa.last_change_fallback">Последнее изменение: 2 минуты назад</p>
                 </div>
                 <div id="click-mode-switch" class="flex items-center gap-3 ml-4"
                     data-onboarding-target="click-mode-switch">
@@ -127,14 +127,14 @@
                             <div
                                 class="inline-flex items-center gap-2 rounded-2xl border border-border-subtle bg-surface-2 p-1 shadow-sm"
                                 data-onboarding-target="click-tool-choice">
-                                <span class="inline-flex" data-toolbar-tooltip="Прямолинейное лассо: ставьте точки по контуру объекта">
+                                <span class="inline-flex" data-toolbar-tooltip data-i18n-title="pa.tooltip_lasso" title="Прямолинейное лассо: ставьте точки по контуру объекта">
                                     <button id="lasso-tool-btn" data-tool="polygon" aria-pressed="true"
                                         class="tool-toggle inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border border-transparent transition-all">
                                         <span class="material-symbols-outlined text-[18px]">gesture</span>
                                         <span data-i18n="pa.lasso_tool">Прямолинейное лассо</span>
                                     </button>
                                 </span>
-                                <span class="inline-flex" data-toolbar-tooltip="Свободное рисование: проведите линию или линейный контур непрерывным движением">
+                                <span class="inline-flex" data-toolbar-tooltip data-i18n-title="pa.tooltip_freehand" title="Свободное рисование: проведите линию или линейный контур непрерывным движением">
                                     <button id="freehand-tool-btn" data-tool="freehand" aria-pressed="false"
                                         class="tool-toggle inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border border-transparent transition-all">
                                         <span class="material-symbols-outlined text-[18px]">draw</span>
@@ -145,7 +145,7 @@
                             <div
                                 class="inline-flex items-center gap-2 rounded-2xl border border-border-subtle bg-surface-2 p-1 shadow-sm text-sm flex-none"
                                 data-onboarding-target="click-polygon-actions">
-                                <span class="inline-flex" data-toolbar-tooltip="Завершить текущий контур после трёх и более точек">
+                                <span class="inline-flex" data-toolbar-tooltip data-i18n-title="pa.tooltip_finish" title="Завершить текущий контур после трёх и более точек">
                                     <button id="finish-polygon-btn" type="button" title="Завершить контур (или двойной клик)" data-i18n-title="pa.finish_polygon_title"
                                         class="inline-flex h-11 shrink-0 min-w-[12.75rem] items-center justify-center gap-2 px-3 py-2 rounded-xl border border-primary bg-primary-lighter text-primary shadow-sm transition-all disabled:opacity-70 disabled:pointer-events-none"
                                         aria-label="Завершить контур" data-i18n-aria="pa.finish_polygon" disabled>
@@ -153,7 +153,7 @@
                                         <span class="text-sm font-semibold whitespace-nowrap" data-i18n="pa.finish_polygon">Завершить контур</span>
                                     </button>
                                 </span>
-                                <span class="inline-flex" data-toolbar-tooltip="Удалить последнюю точку незавершённого контура или выбранную точку">
+                                <span class="inline-flex" data-toolbar-tooltip data-i18n-title="pa.tooltip_delete" title="Удалить последнюю точку незавершённого контура или выбранную точку">
                                     <button id="delete-last-point-btn" type="button" title="Удалить последнюю точку" data-i18n-title="pa.delete_point"
                                         class="icon-action-btn h-11 w-11 rounded-xl border border-border-subtle text-text-secondary transition disabled:opacity-40 disabled:pointer-events-none"
                                         aria-label="Удалить последнюю точку" data-i18n-aria="pa.delete_point" disabled>
@@ -161,7 +161,7 @@
                                         <span class="sr-only" data-i18n="pa.delete_point">Удалить последнюю точку</span>
                                     </button>
                                 </span>
-                                <span class="inline-flex" data-toolbar-tooltip="Сбросить незавершённый контур и начать заново">
+                                <span class="inline-flex" data-toolbar-tooltip data-i18n-title="pa.tooltip_cancel" title="Сбросить незавершённый контур и начать заново">
                                     <button id="cancel-polygon-btn" type="button" title="Отменить рисование" data-i18n-title="pa.cancel_draw"
                                         class="icon-action-btn h-11 w-11 rounded-xl border border-border-subtle text-text-secondary transition disabled:opacity-40 disabled:pointer-events-none"
                                         aria-label="Отменить рисование" data-i18n-aria="pa.cancel_draw" disabled>
@@ -172,15 +172,15 @@
                             </div>
                             <div class="flex items-center gap-2 text-xs text-text-secondary xl:ml-auto justify-end"
                                 data-onboarding-target="click-view-actions">
-                                <span class="inline-flex" data-toolbar-tooltip="Переключить отображение подписей у контуров">
+                                <span class="inline-flex" data-toolbar-tooltip data-i18n-title="pa.tooltip_toggle_labels" title="Переключить отображение подписей у контуров">
                                     <button id="toggle-label-visibility-btn"
                                         class="inline-flex h-11 items-center gap-1 px-3 py-1.5 rounded-xl border border-border-subtle bg-surface-1 text-text-secondary hover:bg-bg-hover transition text-xs font-semibold shadow-sm"
                                         title="Переключить отображение названий" data-i18n-title="pa.toggle_labels_title">
                                         <span class="material-symbols-outlined text-[16px]">visibility</span>
-                                        <span id="label-visibility-mode-text" class="tracking-tight">Смарт</span>
+                                        <span id="label-visibility-mode-text" class="tracking-tight" data-i18n="pa.label_visibility_smart">Смарт</span>
                                     </button>
                                 </span>
-                                <span class="inline-flex" data-toolbar-tooltip="Удалить все контуры на изображении">
+                                <span class="inline-flex" data-toolbar-tooltip data-i18n-title="pa.tooltip_clear_all" title="Удалить все контуры на изображении">
                                     <button id="clear-annotations-btn" type="button"
                                         class="inline-flex h-11 items-center gap-2 px-4 py-1.5 rounded-xl border border-error-light bg-surface-1 text-error-text hover:bg-error-lighter transition-colors text-sm font-semibold shadow-sm">
                                         <span class="material-symbols-outlined text-[16px]">delete_sweep</span>
@@ -498,7 +498,7 @@
                                                     class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-border-subtle text-text-main bg-surface-1 hover:bg-bg-hover transition">
                                                     <span class="material-symbols-outlined text-[16px]"
                                                         data-prompt-icon>expand_more</span>
-                                                    <span data-prompt-label>Показать</span>
+                                                    <span data-prompt-label data-i18n="pa.show">Показать</span>
                                                 </button>
                                             </div>
                                             <div data-prompt-area class="hidden flex flex-col gap-2">
@@ -645,7 +645,7 @@
                                     class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-border-subtle text-text-main bg-surface-1 hover:bg-bg-hover transition">
                                     <span class="material-symbols-outlined text-[16px]"
                                         data-choice-prompt-icon>expand_more</span>
-                                    <span data-choice-prompt-label>Показать</span>
+                                    <span data-choice-prompt-label data-i18n="pa.show">Показать</span>
                                 </button>
                             </div>
                             <div data-choice-prompt-area class="hidden flex flex-col gap-2">

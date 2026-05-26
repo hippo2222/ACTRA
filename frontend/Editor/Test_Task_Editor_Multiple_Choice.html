@@ -6,7 +6,7 @@
     <script src="../../assets/ThemeManager.js"></script>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>ACTRA — Редактор тестовых заданий</title>
+    <title data-i18n="test_editor.page_title">ACTRA — Редактор тестовых заданий</title>
     <link rel="stylesheet" href="test_editor.css">
     <!-- BaseEditor dependencies -->
     <script src="/assets/i18n.js"></script>
@@ -32,7 +32,7 @@
     <div id="loading-overlay"
         class="hidden fixed inset-0 bg-surface-1 backdrop-blur-sm z-40 flex flex-col items-center justify-center text-primary">
         <div class="w-10 h-10 border-4 border-primary-light border-t-primary rounded-full animate-spin mb-3"></div>
-        <p id="loading-text" class="text-sm font-semibold tracking-wide">Загрузка...</p>
+        <p id="loading-text" class="text-sm font-semibold tracking-wide" data-i18n="test_editor.loading">Загрузка...</p>
     </div>
     <div id="import-modal" data-import-source="file"
         class="import-modal hidden fixed inset-0 bg-scrim backdrop-blur-sm z-50 flex items-center justify-center px-4 py-4">
@@ -92,7 +92,7 @@
                     <span data-i18n="xt.k137">В импортируемых данных не найдено вопросов. Продолжение очистит текущий тест.</span>
                 </div>
                 <div id="import-parser-status"
-                    class="text-xs px-3 py-2 rounded-lg bg-surface-2 text-text-secondary font-medium">Файл ещё не выбран
+                    class="text-xs px-3 py-2 rounded-lg bg-surface-2 text-text-secondary font-medium" data-i18n="test_editor.no_file_chosen">Файл ещё не выбран
                 </div>
                 <div>
                     <div class="flex items-center justify-between text-xs font-semibold text-text-secondary mb-1">
@@ -101,7 +101,7 @@
                     </div>
                     <div id="import-question-preview"
                         class="max-h-40 overflow-y-auto rounded-lg border border-border-subtle bg-surface-1 text-[12px] text-text-main divide-y divide-border-subtle">
-                        <p class="p-3 text-text-muted">Файл ещё не выбран</p>
+                        <p class="p-3 text-text-muted" data-i18n="test_editor.no_file_chosen">Файл ещё не выбран</p>
                     </div>
                 </div>
             </div>
@@ -109,7 +109,7 @@
                 class="hidden text-xs px-3 py-2 rounded-lg bg-error-lighter text-error font-semibold">
             </div>
             <div class="import-modal__toolbar flex items-center justify-between pt-1 gap-4">
-                <p class="text-xs text-text-secondary" id="import-mode-hint">Новые вопросы будут добавлены после существующих.</p>
+                <p class="text-xs text-text-secondary" id="import-mode-hint" data-i18n="test_editor.import_mode_hint">Новые вопросы будут добавлены после существующих.</p>
                 <button id="choose-import-file-btn"
                     class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border-subtle text-xs font-semibold text-text-secondary hover:bg-bg-hover transition">
                     <span class="material-symbols-outlined text-[16px]">upload_file</span>
@@ -156,12 +156,12 @@
                     <span class="sr-only" data-i18n="xt.k022">Закрыть</span>
                 </button>
             </div>
-            <p id="paste-image-target-description" class="text-sm text-text-secondary">
+            <p id="paste-image-target-description" class="text-sm text-text-secondary" data-i18n="test_editor.paste_image_target_desc">
                 В буфере найдено изображение. Выберите, к какому элементу его прикрепить.
             </p>
             <div class="flex items-center justify-end gap-3 pt-2">
                 <button id="paste-image-target-cancel" type="button"
-                    class="px-4 py-2 rounded-lg border border-border-subtle text-sm font-semibold text-text-secondary hover:bg-bg-hover transition" data-i18n="xt.k144">
+                    class="px-4 py-2 rounded-lg border border-border-subtle text-sm font-semibold text-text-secondary hover:bg-bg-hover transition" data-i18n="test_editor.cancel">
                     Отмена
                 </button>
             </div>
@@ -229,9 +229,9 @@
                     <div class="test-editor-header__copy">
                         <h2 class="test-editor-header__headline" data-i18n="xt.k161">Тестовые задания</h2>
                         <div class="test-editor-header__meta">
-                            <span id="task-name-caption" class="test-editor-header__eyebrow-text">Новый тест</span>
+                            <span id="task-name-caption" class="test-editor-header__eyebrow-text" data-i18n="test_editor.new_test">Новый тест</span>
                             <span class="test-editor-header__meta-divider" aria-hidden="true"></span>
-                            <span id="active-question-caption" class="test-editor-header__caption">Вопрос 1 из 1</span>
+                            <span id="active-question-caption" class="test-editor-header__caption" data-i18n="test_editor.question_index_initial">Вопрос 1 из 1</span>
                         </div>
                     </div>
                 </div>
@@ -260,7 +260,7 @@
                         <div id="save-status-indicator" class="status-cluster__dot"></div>
                         <div class="status-cluster__body">
                             <span id="save-status-text"
-                                class="status-cluster__label text-[11px] font-bold text-text-secondary leading-none">Сохранено</span>
+                                class="status-cluster__label text-[11px] font-bold text-text-secondary leading-none" data-i18n="test_editor.status_saved">Сохранено</span>
                             <span id="save-status-detail"
                                 class="status-cluster__detail text-[10px] text-text-disabled leading-none mt-1 hidden"></span>
                         </div>
@@ -321,7 +321,7 @@
                 <label class="sidebar-section-title block" data-i18n="xt.k178">Тип ответа</label>
                 <div class="flex items-center gap-2 text-sm font-semibold text-text-main">
                     <span class="material-symbols-outlined text-[17px] text-primary">tune</span>
-                    <span id="answer-type-display">Определяется по ответам</span>
+                    <span id="answer-type-display" data-i18n="test_editor.determined_by_answers">Определяется по ответам</span>
                 </div>
                 <p class="text-[11px] text-text-secondary leading-snug" data-i18n="xt.k190">Определяется автоматически по количеству
                     правильных ответов.</p>

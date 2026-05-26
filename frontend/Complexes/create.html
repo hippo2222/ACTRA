@@ -2559,7 +2559,7 @@
               <span class="material-symbols-outlined text-text-muted text-[18px]">analytics</span>
               <h3 class="text-sm font-bold text-text-main" data-i18n="create.quality_panel_title">Анализ комплекса</h3>
             </div>
-            <span id="builder-quality-status-badge" class="cx-status-pill cx-status-pill--muted px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">В работе</span>
+            <span id="builder-quality-status-badge" class="cx-status-pill cx-status-pill--muted px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider" data-i18n="create.status_in_progress">В работе</span>
           </div>
 
           <div id="builder-quality-metrics" class="grid grid-cols-2 gap-2"></div>
@@ -2710,7 +2710,7 @@
                         <div class="min-w-0 flex-1">
                           <p id="theory-preview-kicker" class="text-[11px] uppercase tracking-wide font-semibold text-text-muted" data-i18n="create.theory_preview_kicker">Контекст теории</p>
                           <h3 id="theory-preview-title" class="text-[1.05rem] font-semibold text-text-main" data-i18n="create.theory_not_selected">Теория пока не выбрана</h3>
-                          <p id="theory-preview-meta" class="mt-1 text-sm leading-6 text-text-secondary">
+                          <p id="theory-preview-meta" class="mt-1 text-sm leading-6 text-text-secondary" data-i18n="create.theory_preview_meta_fallback">
                             Здесь будет показано, какая теория используется комплексом и что с ней можно сделать.
                           </p>
                         </div>
@@ -2942,7 +2942,7 @@
 
                 <span class="text-xs text-text-secondary" id="catalog-total" data-i18n="create.catalog_total_default">Всего: —</span>
 
-                <span class="px-2 py-0.5 rounded text-xs font-medium" id="catalog-selected" data-count="0">Выбрано:
+                <span class="px-2 py-0.5 rounded text-xs font-medium" id="catalog-selected" data-count="0" data-i18n="create.selected_prefix_initial">Выбрано:
                   0</span>
 
               </div>
@@ -3915,9 +3915,10 @@
 
     async function copyPublicationAccessCode(value) {
 
-      const code = asCleanString(value).replace(/\s+/g, '').replace(/-/g, '').toUpperCase();
+      const noCodeVal = wt('create.code_will_be_created', 'Код будет создан после публикации');
+      const cleanNoCode = asCleanString(noCodeVal).replace(/\s+/g, '').replace(/-/g, '').toUpperCase();
 
-      if (!code || code === 'Код будет создан после публикации') return;
+      if (!code || code === cleanNoCode) return;
 
       try {
 
@@ -7177,7 +7178,7 @@
           const refAttr = isTheoryHostedAssetRef(segment.value)
             ? ` data-asset-url="${safeRef}"`
             : ` data-path="${safeRef}"`;
-          html += `<img${refAttr} src="${imageSrc}" alt="" style="max-width:100%;border-radius:8px;" />`;
+          html += `<img${refAttr} src="${escapeTheoryHtml(imageSrc)}" alt="" style="max-width:100%;border-radius:8px;" />`;
         }
       }
       return html || "<br>";
@@ -7507,7 +7508,7 @@
           const refAttr = isTheoryHostedAssetRef(segment.value)
             ? ` data-asset-url="${safeRef}"`
             : ` data-path="${safeRef}"`;
-          html += `<span class="theory-image-wrapper" contenteditable="false" style="${wrapperStyle}"><img${refAttr} data-width="${escapeTheoryHtml(width)}" data-align="${escapeTheoryHtml(align)}" data-rotate="${escapeTheoryHtml(rotate)}" data-float="${escapeTheoryHtml(float)}" data-flip="${escapeTheoryHtml(flip)}" src="${imageSrc}" alt="" class="theory-image ${alignClass}" style="max-width:${escapeTheoryHtml(width)};width:${escapeTheoryHtml(width)};border-radius:12px;cursor:pointer;${transformStyle}" onmousedown="event.preventDefault()" onclick="theoryImageClick(this,event)" /></span>`;
+          html += `<span class="theory-image-wrapper" contenteditable="false" style="${wrapperStyle}"><img${refAttr} data-width="${escapeTheoryHtml(width)}" data-align="${escapeTheoryHtml(align)}" data-rotate="${escapeTheoryHtml(rotate)}" data-float="${escapeTheoryHtml(float)}" data-flip="${escapeTheoryHtml(flip)}" src="${escapeTheoryHtml(imageSrc)}" alt="" class="theory-image ${alignClass}" style="max-width:${escapeTheoryHtml(width)};width:${escapeTheoryHtml(width)};border-radius:12px;cursor:pointer;${transformStyle}" onmousedown="event.preventDefault()" onclick="theoryImageClick(this,event)" /></span>`;
         }
       }
       return html || "<br>";
