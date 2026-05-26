@@ -23,7 +23,7 @@ class SequenceEditor extends BaseEditor {
 
     // Note: generateId() is now inherited from BaseEditor
 
-    createEmptyLevel(title = "Новый уровень") {
+    createEmptyLevel(title = wt('se.k001', 'Новый уровень')) {
         return {
             levelId: this.generateId("level"),
             title,
@@ -34,7 +34,7 @@ class SequenceEditor extends BaseEditor {
     createEmptyItem() {
         return {
             id: this.generateId("elem"),
-            label: "Новый элемент",
+            label: wt('se.k002', 'Новый элемент'),
             image: null,
             semanticKey: null
         };
@@ -84,7 +84,7 @@ class SequenceEditor extends BaseEditor {
     }
 
     getTaskDisplayName() {
-        if (!this.task) return 'Новое задание';
+        if (!this.task) return wt('se.k003', 'Новое задание');
         const taskData = this.task.task_data || {};
         const meta = taskData.meta || {};
         const metadata = this.task.metadata || {};
@@ -97,7 +97,7 @@ class SequenceEditor extends BaseEditor {
             metadata.name ||
             metadata.id ||
             meta.id ||
-            'Новое задание'
+            wt('se.k003', 'Новое задание')
         );
     }
 
@@ -106,7 +106,7 @@ class SequenceEditor extends BaseEditor {
         if (!display) return;
         const fallback = this.getTaskDisplayName();
         const value = typeof name === 'string' ? name.trim() : '';
-        display.textContent = value || fallback || 'Новое задание';
+        display.textContent = value || fallback || wt('se.k003', 'Новое задание');
     }
 
     markUnsaved() {
@@ -126,15 +126,15 @@ class SequenceEditor extends BaseEditor {
         levelOrder = false,
     } = {}) {
         if (levelOrder && orderInside) {
-            return '<strong>Строгая проверка:</strong><br>Требуется соблюдение заданной последовательности уровней и последовательности элементов в каждом уровне.';
+            return wt('se.k004', '<strong>Строгая проверка:</strong><br>Требуется соблюдение заданной последовательности уровней и последовательности элементов в каждом уровне.');
         }
         if (levelOrder && !orderInside) {
-            return '<strong>Проверка уровней:</strong><br>Важна последовательность уровней. Порядок элементов внутри уровня не учитывается, важна только их принадлежность к уровню.';
+            return wt('se.k005', '<strong>Проверка уровней:</strong><br>Важна последовательность уровней. Порядок элементов внутри уровня не учитывается, важна только их принадлежность к уровню.');
         }
         if (!levelOrder && orderInside) {
-            return '<strong>Проверка элементов:</strong><br>Важна последовательность элементов в каждом уровне. Последовательность самих уровней не учитывается.';
+            return wt('se.k006', '<strong>Проверка элементов:</strong><br>Важна последовательность элементов в каждом уровне. Последовательность самих уровней не учитывается.');
         }
-        return '<strong>Только группировка:</strong><br>Важна только принадлежность элементов к соответствующим уровням. Последовательность не учитывается.';
+        return wt('se.k007', '<strong>Только группировка:</strong><br>Важна только принадлежность элементов к соответствующим уровням. Последовательность не учитывается.');
     }
 
     updateSettingsHelpText() {
@@ -153,10 +153,10 @@ class SequenceEditor extends BaseEditor {
     }
 
     async confirmAction({
-        title = 'Подтверждение',
-        message = 'Вы уверены?',
-        confirmText = 'Подтвердить',
-        cancelText = 'Отмена',
+        title = wt('editor_base.modal.confirm_title', 'Подтверждение'),
+        message = wt('editor_base.modal.confirm_message', 'Вы уверены?'),
+        confirmText = wt('editor_base.modal.confirm_btn', 'Подтвердить'),
+        cancelText = wt('editor_base.modal.cancel_btn', 'Отмена'),
         variant = 'error',
     } = {}) {
         if (typeof NotificationUI !== 'undefined' && typeof NotificationUI.confirm === 'function') {
@@ -480,14 +480,14 @@ class SequenceEditor extends BaseEditor {
                     ${lIndex + 1}
                 </div>
                 <input class="level-title-input bg-transparent border-transparent hover:border-border-subtle focus:border-primary focus:ring-0 rounded text-sm font-bold text-text-main px-2 py-1 flex-1 transition-colors" 
-                       type="text" placeholder="Название уровня"/>
+                       type="text" placeholder="${wt('se.k008', 'Название уровня')}"/>
                 <span class="sequence-level-title-onboarding-anchor absolute pointer-events-none" aria-hidden="true"></span>
                 <span class="sequence-level-title-onboarding-edge absolute pointer-events-none" aria-hidden="true"></span>
                 <div class="sequence-level-actions flex items-center gap-1 transition-opacity">
-                    <button class="move-up icon-button-muted" title="Переместить вверх"><span class="material-symbols-outlined text-[20px]">arrow_upward</span></button>
-                    <button class="move-down icon-button-muted" title="Переместить вниз"><span class="material-symbols-outlined text-[20px]">arrow_downward</span></button>
+                    <button class="move-up icon-button-muted" title="${wt('se.k009', 'Переместить вверх')}"><span class="material-symbols-outlined text-[20px]">arrow_upward</span></button>
+                    <button class="move-down icon-button-muted" title="${wt('se.k010', 'Переместить вниз')}"><span class="material-symbols-outlined text-[20px]">arrow_downward</span></button>
                     <div class="w-px h-5 bg-border-subtle mx-1"></div>
-                    <button class="delete-level icon-button-muted border-error-light bg-error-lighter text-error-text hover:border-error hover:bg-error-lighter hover:text-error" title="Удалить уровень"><span class="material-symbols-outlined text-[20px]">close</span></button>
+                    <button class="delete-level icon-button-muted border-error-light bg-error-lighter text-error-text hover:border-error hover:bg-error-lighter hover:text-error" title="${wt('se.k011', 'Удалить уровень')}"><span class="material-symbols-outlined text-[20px]">close</span></button>
                 </div>
             </div>
             <div class="flex gap-4 overflow-x-auto p-4 pt-1 custom-scrollbar min-h-[140px] items-container"></div>
@@ -501,7 +501,7 @@ class SequenceEditor extends BaseEditor {
                 const titleWidth = Math.max(104, Math.min(220, (level.title || '').length * 8 + 28));
                 titleAnchor.setAttribute('data-onboarding-target', 'sequence-first-level-title');
                 titleAnchor.setAttribute('data-onboarding-clone-variant', 'sequence-level-title');
-                titleAnchor.textContent = level.title || 'Название уровня';
+                titleAnchor.textContent = level.title || wt('se.k008', 'Название уровня');
                 titleAnchor.style.left = '72px';
                 titleAnchor.style.top = '18px';
                 titleAnchor.style.width = `${titleWidth}px`;
@@ -543,8 +543,8 @@ class SequenceEditor extends BaseEditor {
 
         const addButton = document.createElement('button');
         addButton.className = 'sequence-add-block-btn empty-state-card empty-state-card--compact empty-state-card--icon-only w-12 h-[104px] shrink-0 border-2 border-dashed text-text-disabled hover:text-primary transition-all duration-300';
-        addButton.title = 'Добавить шаг в этот уровень';
-        addButton.setAttribute('aria-label', 'Добавить блок');
+        addButton.title = wt('se.k012', 'Добавить шаг в этот уровень');
+        addButton.setAttribute('aria-label', wt('se.k013', 'Добавить блок'));
         if (lIndex === 0) {
             addButton.setAttribute('data-onboarding-target', 'sequence-first-level-add-step');
         }
@@ -568,18 +568,18 @@ class SequenceEditor extends BaseEditor {
         }
 
         div.innerHTML = `
-            <button class="delete-block sequence-block-delete icon-button-muted icon-button-muted--xs absolute top-2 right-2 border-error-light bg-error-lighter text-error-text hover:border-error hover:bg-error-lighter hover:text-error" title="Удалить элемент">
+            <button class="delete-block sequence-block-delete icon-button-muted icon-button-muted--xs absolute top-2 right-2 border-error-light bg-error-lighter text-error-text hover:border-error hover:bg-error-lighter hover:text-error" title="${wt('se.k014', 'Удалить элемент')}">
                 <span class="material-symbols-outlined text-[16px]">close</span>
             </button>
             <textarea class="block-title-input sequence-block-title w-full text-sm font-semibold border border-border-subtle bg-transparent focus:border-primary focus:ring-0 rounded-md text-text-main placeholder-text-disabled resize-none min-h-[44px] transition-colors py-2 px-3 text-center leading-tight overflow-hidden" 
-                   rows="1" placeholder="Опишите элемент..."></textarea>
+                   rows="1" placeholder="${wt('se.k015', 'Опишите элемент...')}"></textarea>
             <div class="sequence-block-actions grid grid-cols-2 gap-2 pt-1 text-[11px] font-bold">
                 <button class="move-left sequence-block-move-btn btn-secondary btn-secondary--compact inline-flex items-center justify-center gap-1 w-full min-w-0 rounded-md transition-all">
                     <span class="material-symbols-outlined text-[16px]">chevron_left</span>
-                    Влево
+                    ${wt('se.k016', 'Влево')}
                 </button>
                 <button class="move-right sequence-block-move-btn btn-secondary btn-secondary--compact inline-flex items-center justify-center gap-1 w-full min-w-0 rounded-md transition-all">
-                    Вправо
+                    ${wt('se.k017', 'Вправо')}
                     <span class="material-symbols-outlined text-[16px]">chevron_right</span>
                 </button>
             </div>
@@ -636,14 +636,14 @@ class SequenceEditor extends BaseEditor {
 
     async deleteLevel(index) {
         if (this.levels.length <= 1) {
-            this.showToast("Должен остаться минимум один уровень.", 'error');
+            this.showToast(wt('se.k018', 'Должен остаться минимум один уровень.'), 'error');
             return;
         }
         const confirmed = await this.confirmAction({
-            title: 'Удалить уровень?',
-            message: 'Будет удалён весь уровень вместе со всеми шагами.',
-            confirmText: 'Удалить',
-            cancelText: 'Отмена',
+            title: wt('se.k019', 'Удалить уровень?'),
+            message: wt('se.k020', 'Будет удалён весь уровень вместе со всеми шагами.'),
+            confirmText: wt('se.k021', 'Удалить'),
+            cancelText: wt('editor_base.modal.cancel_btn', 'Отмена'),
             variant: 'error',
         });
         if (!confirmed) return;
@@ -652,7 +652,7 @@ class SequenceEditor extends BaseEditor {
         this.renderLevels();
         this.markUnsaved();
         this.saveStateToHistory(); // Save state for undo/redo
-        this.showToast('Уровень удалён. При необходимости нажмите Ctrl+Z, чтобы вернуть его.', 'info');
+        this.showToast(wt('se.k022', 'Уровень удалён. При необходимости нажмите Ctrl+Z, чтобы вернуть его.'), 'info');
     }
 
     addLevel() {
@@ -677,7 +677,7 @@ class SequenceEditor extends BaseEditor {
         const level = this.levels[lIndex];
         if (!level) return;
         if (level.items.length <= 1) {
-            this.showToast("В уровне должен быть хотя бы один шаг.", 'error');
+            this.showToast(wt('se.k023', 'В уровне должен быть хотя бы один шаг.'), 'error');
             return;
         }
         this.checkpointHistoryBeforeMutation();
@@ -685,7 +685,7 @@ class SequenceEditor extends BaseEditor {
         this.renderLevels();
         this.markUnsaved();
         this.saveStateToHistory();
-        this.showToast('Шаг удалён. При необходимости нажмите Ctrl+Z, чтобы вернуть его.', 'info');
+        this.showToast(wt('se.k024', 'Шаг удалён. При необходимости нажмите Ctrl+Z, чтобы вернуть его.'), 'info');
     }
 
     moveBlock(lIndex, iIndex, direction) {
@@ -714,20 +714,20 @@ class SequenceEditor extends BaseEditor {
     setupEventListeners() {
         const backBtn = document.querySelector('#back-to-dashboard');
         if (backBtn) {
-            backBtn.title = 'Вернуться к редактору заданий';
+            backBtn.title = wt('se.k025', 'Вернуться к редактору заданий');
             backBtn.setAttribute('aria-label', backBtn.title);
             backBtn.onclick = () => this.goBack();
         }
 
         const clearAllBtn = document.querySelector('#clear-all-btn');
         if (clearAllBtn) {
-            clearAllBtn.title = 'Очистить всю текущую структуру';
+            clearAllBtn.title = wt('se.k026', 'Очистить всю текущую структуру');
             clearAllBtn.onclick = async () => {
                 const confirmed = await this.confirmAction({
-                    title: 'Очистить все уровни?',
-                    message: 'Редактор оставит только один новый пустой уровень.',
-                    confirmText: 'Очистить',
-                    cancelText: 'Отмена',
+                    title: wt('se.k027', 'Очистить все уровни?'),
+                    message: wt('se.k028', 'Редактор оставит только один новый пустой уровень.'),
+                    confirmText: wt('se.k029', 'Очистить'),
+                    cancelText: wt('editor_base.modal.cancel_btn', 'Отмена'),
                     variant: 'error',
                 });
                 if (confirmed) {
@@ -736,20 +736,20 @@ class SequenceEditor extends BaseEditor {
                     this.renderLevels();
                     this.markUnsaved();
                     this.saveStateToHistory();
-                    this.showToast('Редактор очищен. При необходимости нажмите Ctrl+Z, чтобы вернуть предыдущую структуру.', 'info', 5200);
+                    this.showToast(wt('se.k030', 'Редактор очищен. При необходимости нажмите Ctrl+Z, чтобы вернуть предыдущую структуру.'), 'info', 5200);
                 }
             };
         }
 
         const addLevelBtn = document.querySelector('#add-level-btn');
         if (addLevelBtn) {
-            addLevelBtn.title = 'Добавить новый уровень';
+            addLevelBtn.title = wt('se.k031', 'Добавить новый уровень');
             addLevelBtn.onclick = () => this.addLevel();
         }
 
         const saveBtn = document.querySelector('#save-task-btn');
         if (saveBtn) {
-            saveBtn.title = 'Сохранить задание';
+            saveBtn.title = wt('se.k032', 'Сохранить задание');
             saveBtn.onclick = () => this.saveTask();
         }
 
@@ -839,18 +839,18 @@ class SequenceEditor extends BaseEditor {
 
         // Validate task name
         if (!humanName) {
-            return "Название задания не задано. Укажите его в карточке задания перед сохранением.";
+            return wt('se.k033', 'Название задания не задано. Укажите его в карточке задания перед сохранением.');
         }
 
         // Validate prompt
         if (!prompt) {
             if (promptArea) promptArea.focus();
-            return "Введите текст задания.";
+            return wt('se.k034', 'Введите текст задания.');
         }
 
         // Validate levels exist
         if (!this.levels.length) {
-            return "Добавьте хотя бы один уровень.";
+            return wt('se.k035', 'Добавьте хотя бы один уровень.');
         }
 
         // Validate each level has items
@@ -873,7 +873,7 @@ class SequenceEditor extends BaseEditor {
         // Validate minimum elements
         const { elements } = this.buildStructure();
         if (elements.length < 2) {
-            return "Добавьте минимум два шага (элемента).";
+            return wt('se.k036', 'Добавьте минимум два шага (элемента).');
         }
 
         return null; // Validation passed
@@ -893,7 +893,7 @@ class SequenceEditor extends BaseEditor {
         }
 
         if (levels.length > 1 && levels.every((level) => Array.isArray(level?.items) && level.items.length === 1)) {
-            warnings.push('Каждый уровень содержит только один шаг. Такая структура может ощущаться слишком плоской для задания на последовательность.');
+            warnings.push(wt('se.k037', 'Каждый уровень содержит только один шаг. Такая структура может ощущаться слишком плоской для задания на последовательность.'));
         }
 
         const duplicates = [];
