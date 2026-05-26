@@ -2839,7 +2839,8 @@
     "placeholder_confirm_password": "New password again",
     "forgot_reset_hint": "Set a new password for this account. The link from the email is valid for a limited time.",
     "loading_text": "Loading...",
-    "scroll_top_aria": "Back to top"
+    "scroll_top_aria": "Back to top",
+    "consent_gate_checklist_aria": "Confirm documents"
   },
   "tours": {
     "main_dashboard_work_contour": {

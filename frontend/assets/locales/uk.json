@@ -2839,7 +2839,8 @@
     "placeholder_confirm_password": "Ще раз новий пароль",
     "forgot_reset_hint": "Придумайте новий пароль для цього акаунта. Посилання з листа діє обмежений час.",
     "loading_text": "Завантаження...",
-    "scroll_top_aria": "Вгору"
+    "scroll_top_aria": "Вгору",
+    "consent_gate_checklist_aria": "Підтвердження документів"
   },
   "tours": {
     "main_dashboard_work_contour": {
