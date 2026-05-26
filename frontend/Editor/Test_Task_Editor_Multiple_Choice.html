@@ -9,6 +9,7 @@
     <title>ACTRA — Редактор тестовых заданий</title>
     <link rel="stylesheet" href="test_editor.css">
     <!-- BaseEditor dependencies -->
+    <script src="/assets/i18n.js"></script>
     <script src="undo_manager.js"></script>
     <script src="autosave_manager.js"></script>
     <script src="../../assets/NotificationUI.js"></script>
@@ -38,65 +39,65 @@
         <div id="import-modal-panel" class="import-modal__panel bg-surface-1 rounded-2xl shadow-2xl p-6 space-y-4">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-[10px] font-bold uppercase tracking-widest text-text-disabled">Импорт вопросов</p>
-                    <h3 class="text-base font-bold text-text-main mt-0.5">Подтвердите импорт</h3>
+                    <p class="text-[10px] font-bold uppercase tracking-widest text-text-disabled" data-i18n="xt.k128">Импорт вопросов</p>
+                    <h3 class="text-base font-bold text-text-main mt-0.5" data-i18n="xt.k129">Подтвердите импорт</h3>
                 </div>
                 <button id="import-modal-close"
                     class="p-2 rounded-full text-text-disabled hover:text-text-main hover:bg-bg-hover transition"
-                    title="Закрыть окно импорта" aria-label="Закрыть окно импорта">
+                    title="Закрыть окно импорта" aria-label="Закрыть окно импорта" data-i18n-title="xt.k130" data-i18n-aria="xt.k130">
                     <span class="material-symbols-outlined text-[20px]">close</span>
                 </button>
             </div>
-            <div class="grid grid-cols-2 gap-2 text-xs font-semibold" role="radiogroup" aria-label="Источник импорта">
+            <div class="grid grid-cols-2 gap-2 text-xs font-semibold" role="radiogroup" aria-label="Источник импорта" data-i18n-aria="xt.k131">
                 <label
                     class="import-source-option flex items-center justify-center gap-1 px-3 py-2 rounded-lg border border-border-subtle bg-surface-1 text-text-secondary cursor-pointer transition data-[active=true]:bg-primary-light data-[active=true]:border-primary-light data-[active=true]:text-primary"
                     data-active="true">
                     <input type="radio" name="import-source" value="file" class="hidden" checked>
                     <span class="material-symbols-outlined text-[16px]">upload_file</span>
-                    Из файла
+                    <span data-i18n="xt.k132">Из файла</span>
                 </label>
                 <label
                     class="import-source-option flex items-center justify-center gap-1 px-3 py-2 rounded-lg border border-border-subtle bg-surface-1 text-text-secondary cursor-pointer transition data-[active=true]:bg-primary-light data-[active=true]:border-primary-light data-[active=true]:text-primary"
                     data-active="false">
                     <input type="radio" name="import-source" value="text" class="hidden">
                     <span class="material-symbols-outlined text-[16px]">notes</span>
-                    Из текста
+                    <span data-i18n="xt.k133">Из текста</span>
                 </label>
             </div>
             <div class="bg-surface-2 rounded-xl p-4 text-sm text-text-main space-y-4">
                 <div id="import-file-panel" data-import-source-panel="file" class="flex items-center justify-between gap-4">
-                    <span class="text-text-secondary">Файл</span>
+                    <span class="text-text-secondary" data-i18n="xt.k134">Файл</span>
                     <span id="import-file-name"
                         class="font-semibold text-text-main text-right truncate max-w-[240px]">—</span>
                 </div>
                 <div id="import-text-panel" data-import-source-panel="text" class="hidden space-y-2">
                     <textarea id="import-text-input"
                         class="import-text-input block w-full min-h-[8.5rem] rounded-lg border border-border-subtle bg-surface-1 px-3 py-2 text-sm text-text-main placeholder:text-text-disabled focus:border-primary focus:ring-1 focus:ring-primary resize-y"
-                        placeholder="? Вопрос&#10;+ Правильный ответ&#10;- Неверный ответ"></textarea>
+                        placeholder="? Вопрос&#10;+ Правильный ответ&#10;- Неверный ответ" data-i18n-placeholder="xt.k168b"></textarea>
                     <div class="flex items-center justify-between gap-3">
                         <span id="import-text-count" class="text-[11px] font-medium text-text-muted">0 символов</span>
                         <button id="parse-import-text-btn" type="button"
                             class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border-subtle text-xs font-semibold text-text-secondary hover:bg-bg-hover transition">
                             <span class="material-symbols-outlined text-[16px]">data_object</span>
-                            Разобрать
+                            <span data-i18n="xt.k135">Разобрать</span>
                         </button>
                     </div>
                 </div>
                 <div class="flex items-center justify-between gap-4">
-                    <span class="text-text-secondary">Найдено вопросов</span>
+                    <span class="text-text-secondary" data-i18n="xt.k136">Найдено вопросов</span>
                     <span id="import-question-count" class="font-semibold text-text-main">0</span>
                 </div>
                 <div id="import-warning"
                     class="hidden text-xs px-3 py-2 rounded-lg bg-warning-lighter text-warning-text font-medium">
-                    В импортируемых данных не найдено вопросов. Продолжение очистит текущий тест.
+                    <span data-i18n="xt.k137">В импортируемых данных не найдено вопросов. Продолжение очистит текущий тест.</span>
                 </div>
                 <div id="import-parser-status"
                     class="text-xs px-3 py-2 rounded-lg bg-surface-2 text-text-secondary font-medium">Файл ещё не выбран
                 </div>
                 <div>
                     <div class="flex items-center justify-between text-xs font-semibold text-text-secondary mb-1">
-                        <span>Предпросмотр</span>
-                        <span class="text-[10px] text-text-disabled">Первых 10 вопросов</span>
+                        <span data-i18n="xt.k138">Предпросмотр</span>
+                        <span class="text-[10px] text-text-disabled" data-i18n="xt.k139">Первых 10 вопросов</span>
                     </div>
                     <div id="import-question-preview"
                         class="max-h-40 overflow-y-auto rounded-lg border border-border-subtle bg-surface-1 text-[12px] text-text-main divide-y divide-border-subtle">
@@ -112,31 +113,31 @@
                 <button id="choose-import-file-btn"
                     class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border-subtle text-xs font-semibold text-text-secondary hover:bg-bg-hover transition">
                     <span class="material-symbols-outlined text-[16px]">upload_file</span>
-                    Выбрать файл
+                    <span data-i18n="xt.k140">Выбрать файл</span>
                 </button>
             </div>
             <div class="space-y-2">
-                <p class="text-xs font-semibold text-text-secondary">Как обработать импортированные вопросы?</p>
+                <p class="text-xs font-semibold text-text-secondary" data-i18n="xt.k141">Как обработать импортированные вопросы?</p>
                 <div class="grid grid-cols-2 gap-2 text-xs font-semibold">
                     <label
                         class="import-mode-option flex items-center justify-center gap-1 px-3 py-2 rounded-lg border border-border-subtle bg-surface-1 text-text-secondary cursor-pointer transition data-[active=true]:bg-primary-light data-[active=true]:border-primary-light data-[active=true]:text-primary">
                         <input type="radio" name="import-mode" value="replace" class="hidden">
                         <span class="material-symbols-outlined text-[16px]">refresh</span>
-                        Заменить
+                        <span data-i18n="xt.k142">Заменить</span>
                     </label>
                     <label
                         class="import-mode-option flex items-center justify-center gap-1 px-3 py-2 rounded-lg border border-border-subtle bg-surface-1 text-text-secondary cursor-pointer transition data-[active=true]:bg-primary-light data-[active=true]:border-primary-light data-[active=true]:text-primary">
                         <input type="radio" name="import-mode" value="append" class="hidden" checked>
                         <span class="material-symbols-outlined text-[16px]">add_circle</span>
-                        Добавить
+                        <span data-i18n="xt.k143">Добавить</span>
                     </label>
                 </div>
             </div>
             <div class="import-modal__actions flex items-center justify-end gap-2.5 pt-2">
                 <button id="cancel-import-btn"
-                    class="px-4 py-2 rounded-lg border border-border-subtle text-sm font-semibold text-text-secondary hover:bg-bg-hover transition">Отмена</button>
+                    class="px-4 py-2 rounded-lg border border-border-subtle text-sm font-semibold text-text-secondary hover:bg-bg-hover transition" data-i18n="xt.k144">Отмена</button>
                 <button id="confirm-import-btn" disabled
-                    class="px-4 py-2 rounded-lg bg-primary text-primary-contrast text-sm font-semibold shadow-md shadow-primary-light hover:bg-primary-dark transition disabled:opacity-40 disabled:pointer-events-none">Импортировать</button>
+                    class="px-4 py-2 rounded-lg bg-primary text-primary-contrast text-sm font-semibold shadow-md shadow-primary-light hover:bg-primary-dark transition disabled:opacity-40 disabled:pointer-events-none" data-i18n="xt.k145">Импортировать</button>
             </div>
         </div>
     </div>
@@ -145,14 +146,14 @@
         <div class="paste-image-target-modal__panel bg-surface-1 rounded-2xl shadow-2xl p-6 space-y-4">
             <div class="flex items-center justify-between gap-4">
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-wider text-text-disabled">Вставка изображения</p>
-                    <h3 class="text-lg font-bold text-text-main mt-1">Куда прикрепить изображение?</h3>
+                    <p class="text-xs font-semibold uppercase tracking-wider text-text-disabled" data-i18n="xt.k146">Вставка изображения</p>
+                    <h3 class="text-lg font-bold text-text-main mt-1" data-i18n="xt.k147">Куда прикрепить изображение?</h3>
                 </div>
                 <button id="paste-image-target-close"
                     class="p-2 rounded-full text-text-disabled hover:text-text-main hover:bg-bg-hover transition"
-                    title="Закрыть окно выбора цели" aria-label="Закрыть окно выбора цели">
+                    title="Закрыть окно выбора цели" aria-label="Закрыть окно выбора цели" data-i18n-title="xt.k148" data-i18n-aria="xt.k148">
                     <span class="material-symbols-outlined text-[20px]">close</span>
-                    <span class="sr-only">Закрыть</span>
+                    <span class="sr-only" data-i18n="xt.k022">Закрыть</span>
                 </button>
             </div>
             <p id="paste-image-target-description" class="text-sm text-text-secondary">
@@ -160,7 +161,7 @@
             </p>
             <div class="flex items-center justify-end gap-3 pt-2">
                 <button id="paste-image-target-cancel" type="button"
-                    class="px-4 py-2 rounded-lg border border-border-subtle text-sm font-semibold text-text-secondary hover:bg-bg-hover transition">
+                    class="px-4 py-2 rounded-lg border border-border-subtle text-sm font-semibold text-text-secondary hover:bg-bg-hover transition" data-i18n="xt.k144">
                     Отмена
                 </button>
             </div>
@@ -174,7 +175,7 @@
             </div>
         </div>
         <div class="px-4 pt-4 pb-2">
-            <h2 class="sidebar-section-title">Вопросы теста</h2>
+            <h2 class="sidebar-section-title" data-i18n="xt.k187">Вопросы теста</h2>
         </div>
         <div id="question-list" class="flex-1 overflow-y-auto py-2 no-scrollbar px-2 space-y-1">
             <!-- Questions will be rendered here -->
@@ -183,33 +184,33 @@
             <button id="add-question-btn"
                 class="flex items-center justify-center gap-2 w-full px-3 py-2.5 bg-primary text-primary-fg hover:bg-primary-dark rounded-lg transition-all active:scale-95 shadow-sm shadow-primary-light">
                 <span class="material-symbols-outlined text-[16px]">add</span>
-                <span class="text-xs font-bold">Добавить вопрос</span>
+                <span class="text-xs font-bold" data-i18n="xt.k152">Добавить вопрос</span>
             </button>
             <div class="flex gap-1.5 pt-0.5">
                 <button id="import-btn"
                     class="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-semibold text-text-secondary hover:text-text-main hover:bg-surface-1 rounded-md transition-colors"
-                    title="Импортировать вопросы из файла">
+                    title="Импортировать вопросы из файла" data-i18n-title="xt.k153">
                     <span class="material-symbols-outlined text-[15px]">upload_file</span>
-                    <span class="hidden xl:inline">Импорт</span>
+                    <span class="hidden xl:inline" data-i18n="xt.k154">Импорт</span>
                 </button>
                 <button id="export-btn"
                     class="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-semibold text-text-secondary hover:text-text-main hover:bg-surface-1 rounded-md transition-colors"
-                    title="Экспортировать вопросы в файл">
+                    title="Экспортировать вопросы в файл" data-i18n-title="xt.k155">
                     <span class="material-symbols-outlined text-[15px]">download</span>
-                    <span class="hidden xl:inline">Экспорт</span>
+                    <span class="hidden xl:inline" data-i18n="xt.k156">Экспорт</span>
                 </button>
             </div>
             <div class="pt-2 mt-1 border-t border-border-subtle space-y-1.5">
-                <p class="sidebar-section-title px-1">Действия</p>
+                <p class="sidebar-section-title px-1" data-i18n="xt.k157">Действия</p>
                 <button id="clear-test-sidebar-btn"
                     class="w-full flex items-center justify-center gap-1.5 h-[34px] px-3 text-xs font-semibold text-text-secondary bg-surface-1 border border-border-subtle rounded-lg hover:text-text-main hover:border-border-normal transition-all active:scale-95">
                     <span class="material-symbols-outlined text-[16px]">refresh</span>
-                    Очистить тест
+                    <span data-i18n="xt.k158">Очистить тест</span>
                 </button>
                 <button id="delete-test-sidebar-btn"
                     class="w-full flex items-center justify-center gap-1.5 h-[34px] px-3 text-xs font-semibold text-error bg-surface-1 border border-error-light rounded-lg hover:bg-error-lighter transition-all active:scale-95">
                     <span class="material-symbols-outlined text-[16px]">delete</span>
-                    Удалить задание
+                    <span data-i18n="xt.k159">Удалить задание</span>
                 </button>
             </div>
             <input type="file" id="import-input" class="hidden" accept=".txt,.json">
@@ -220,13 +221,13 @@
             class="test-editor-header px-6 py-2.5 bg-surface-1 backdrop-blur-md border-b border-border-subtle shrink-0 z-30 shadow-sm sticky top-0">
             <div class="test-editor-header__inner">
                 <div class="test-editor-header__title">
-                    <button title="Библиотека заданий"
+                    <button title="Библиотека заданий" data-i18n-title="xt.k160"
                         class="test-editor-back-btn p-1.5 hover:bg-bg-hover rounded-lg text-text-secondary transition-colors"
                         type="button">
                         <span class="material-symbols-outlined">arrow_back</span>
                     </button>
                     <div class="test-editor-header__copy">
-                        <h2 class="test-editor-header__headline">Тестовые задания</h2>
+                        <h2 class="test-editor-header__headline" data-i18n="xt.k161">Тестовые задания</h2>
                         <div class="test-editor-header__meta">
                             <span id="task-name-caption" class="test-editor-header__eyebrow-text">Новый тест</span>
                             <span class="test-editor-header__meta-divider" aria-hidden="true"></span>
@@ -237,12 +238,12 @@
                 <div class="test-editor-header__actions">
                     <div class="test-editor-header__controls">
                         <div class="test-editor-header__history">
-                            <button id="undo-btn" disabled title="Отменить (Ctrl+Z)"
+                            <button id="undo-btn" disabled title="Отменить (Ctrl+Z)" data-i18n-title="xt.k162"
                                 class="test-editor-icon-btn p-1.5 rounded-lg text-text-disabled hover:text-primary hover:bg-bg-hover transition-all active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-text-disabled disabled:active:scale-100"
                                 type="button">
                                 <span class="material-symbols-outlined text-[20px]">undo</span>
                             </button>
-                            <button id="redo-btn" disabled title="Повторить (Ctrl+Y)"
+                            <button id="redo-btn" disabled title="Повторить (Ctrl+Y)" data-i18n-title="xt.k163"
                                 class="test-editor-icon-btn p-1.5 rounded-lg text-text-disabled hover:text-primary hover:bg-bg-hover transition-all active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-text-disabled disabled:active:scale-100"
                                 type="button">
                                 <span class="material-symbols-outlined text-[20px]">redo</span>
@@ -252,7 +253,7 @@
                             class="test-editor-save-btn shrink-0 flex items-center justify-center gap-1.5 px-4 h-9 bg-primary text-primary-fg text-sm font-semibold rounded-lg hover:bg-primary-dark transition-all active:scale-95 border border-primary"
                             type="button">
                             <span class="material-symbols-outlined text-[17px]">save</span>
-                            Сохранить
+                            <span data-i18n="xt.k165">Сохранить</span>
                         </button>
                     </div>
                     <div id="save-status-container" class="status-cluster test-editor-header__status" data-tone="success">
@@ -270,28 +271,28 @@
         <div class="flex-1 overflow-y-auto p-5 md:p-7">
             <div class="max-w-3xl mx-auto space-y-7">
                 <section class="space-y-2.5">
-                    <label class="block text-sm font-bold text-text-main tracking-tight">Текст вопроса</label>
+                    <label class="block text-sm font-bold text-text-main tracking-tight" data-i18n="xt.k188">Текст вопроса</label>
                     <div class="relative group">
                         <textarea id="question-textarea" style="padding-right: 5rem;"
                             class="block w-full rounded-xl border border-border-subtle bg-surface-1 py-3.5 pl-4 pr-20 text-text-main placeholder:text-text-disabled focus:border-primary focus:ring-1 focus:ring-primary shadow-sm focus:shadow-md text-[0.9375rem] leading-relaxed resize-none transition-all min-h-[88px]"
-                            placeholder="Введите формулировку вопроса..." rows="2"></textarea>
+                            placeholder="Введите формулировку вопроса..." rows="2" data-i18n-placeholder="xt.k168"></textarea>
                         <div class="absolute top-3 right-3 flex flex-col items-end gap-2">
                             <button id="upload-image-btn" type="button"
                                 class="w-9 h-9 rounded-lg bg-surface-1 border border-border-subtle text-icon-secondary flex items-center justify-center shadow-sm hover:text-primary hover:border-primary transition-all active:scale-95 opacity-70 hover:opacity-100"
-                                title="Добавить изображение к вопросу" aria-label="Добавить изображение к вопросу">
+                                title="Добавить изображение к вопросу" aria-label="Добавить изображение к вопросу" data-i18n-title="xt.k169" data-i18n-aria="xt.k169">
                                 <span class="material-symbols-outlined text-[18px]">add_photo_alternate</span>
                             </button>
                             <div id="question-images-grid"
                                 class="question-media-grid hidden"
-                                aria-hidden="true" aria-label="Question images"></div>
+                                aria-hidden="true" aria-label="Question images" data-i18n-aria="xt.k170"></div>
                         </div>
                     </div>
                     <input type="file" id="image-upload-input" class="hidden" accept="image/*" multiple>
                 </section>
                 <section class="space-y-4 pt-4 border-t border-border-subtle">
                     <div class="flex items-center justify-between">
-                        <label class="block text-sm font-bold text-text-main tracking-tight">Варианты ответов</label>
-                        <span class="text-[11px] bg-info-lighter text-info-text px-2.5 py-1 rounded-full font-semibold tracking-tight">Выберите верные варианты</span>
+                        <label class="block text-sm font-bold text-text-main tracking-tight" data-i18n="xt.k189">Варианты ответов</label>
+                        <span class="text-[11px] bg-info-lighter text-info-text px-2.5 py-1 rounded-full font-semibold tracking-tight" data-i18n="xt.k173">Выберите верные варианты</span>
                     </div>
                     <div id="options-container" class="flex flex-col gap-3">
                         <!-- Options will be rendered here -->
@@ -300,7 +301,7 @@
                         <button id="add-option-btn"
                             class="flex items-center gap-2 text-sm font-semibold text-primary hover:bg-primary-lighter px-3 py-2 rounded-lg transition-all active:scale-95 w-max">
                             <span class="material-symbols-outlined text-[19px]">add_circle</span>
-                            Добавить вариант
+                            <span data-i18n="xt.k175">Добавить вариант</span>
                         </button>
                         <input type="file" id="option-image-input" class="hidden" accept="image/*">
                     </div>
@@ -313,24 +314,24 @@
         style="width: 320px;">
         <div
             class="h-14 flex items-center px-6 border-b border-border-subtle bg-surface-1 backdrop-blur sticky top-0 z-10">
-            <h2 class="text-sm font-bold text-text-main tracking-tight">Настройки вопроса</h2>
+            <h2 class="text-sm font-bold text-text-main tracking-tight" data-i18n="xt.k177">Настройки вопроса</h2>
         </div>
         <div class="p-6 space-y-7">
             <div class="space-y-2">
-                <label class="sidebar-section-title block">Тип ответа</label>
+                <label class="sidebar-section-title block" data-i18n="xt.k178">Тип ответа</label>
                 <div class="flex items-center gap-2 text-sm font-semibold text-text-main">
                     <span class="material-symbols-outlined text-[17px] text-primary">tune</span>
                     <span id="answer-type-display">Определяется по ответам</span>
                 </div>
-                <p class="text-[11px] text-text-secondary leading-snug">Определяется автоматически по количеству
+                <p class="text-[11px] text-text-secondary leading-snug" data-i18n="xt.k190">Определяется автоматически по количеству
                     правильных ответов.</p>
             </div>
             <section class="test-editor-inspector-card test-image-bank is-expanded" aria-labelledby="test-image-bank-title">
                 <button id="test-image-bank-toggle" class="test-image-bank__toggle" type="button"
                     aria-expanded="true" aria-controls="test-image-bank-panel">
                     <span class="test-image-bank__toggle-copy">
-                        <span class="test-image-bank__eyebrow">Изображения</span>
-                        <span id="test-image-bank-title" class="test-image-bank__toggle-title">Банк задания</span>
+                        <span class="test-image-bank__eyebrow" data-i18n="xt.k180">Изображения</span>
+                        <span id="test-image-bank-title" class="test-image-bank__toggle-title" data-i18n="xt.k181">Банк задания</span>
                     </span>
                     <span id="test-image-bank-count" class="test-image-bank__count">0</span>
                     <span class="test-image-bank__toggle-icon material-symbols-outlined text-[18px]" aria-hidden="true">expand_more</span>
@@ -339,16 +340,16 @@
                     <div id="test-image-bank-grid" class="test-image-bank__grid" aria-live="polite"></div>
                     <div id="test-image-bank-empty" class="test-image-bank__empty">
                         <span class="material-symbols-outlined text-[18px]">imagesmode</span>
-                        <span>Пока пусто</span>
+                        <span data-i18n="xt.k182">Пока пусто</span>
                     </div>
                 </div>
             </section>
             <div class="space-y-2.5">
-                <label class="sidebar-section-title block">Обратная связь</label>
+                <label class="sidebar-section-title block" data-i18n="xt.k183">Обратная связь</label>
                 <textarea id="explanation-textarea"
                     class="block w-full rounded-xl border border-border-subtle bg-surface-1 text-sm py-3 px-3.5 focus:border-primary focus:ring-1 focus:ring-primary shadow-sm focus:shadow-md transition-all leading-relaxed"
-                    placeholder="Комментарий, который увидит пользователь после ответа..." rows="4"></textarea>
-                <p class="text-[11px] text-text-secondary">Показывается пользователю после отправки ответа.</p>
+                    placeholder="Комментарий, который увидит пользователь после ответа..." rows="4" data-i18n-placeholder="xt.k185"></textarea>
+                <p class="text-[11px] text-text-secondary" data-i18n="xt.k191">Показывается пользователю после отправки ответа.</p>
             </div>
         </div>
     </aside>

@@ -8,6 +8,7 @@
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>ACTRA - Редактор тестовых заданий</title>
     <link rel="stylesheet" href="test_editor.css?v=test-editor-onboarding-35">
+    <script src="/assets/i18n.js"></script>
     <script src="undo_manager.js"></script>
     <script src="autosave_manager.js"></script>
     <script src="../../assets/NotificationUI.js"></script>
@@ -39,68 +40,68 @@
             data-onboarding-target="test-editor-import-modal-panel">
             <div class="flex items-center justify-between" data-onboarding-target="test-editor-import-modal-header">
                 <div data-onboarding-target="test-editor-import-modal-title">
-                    <p class="text-xs font-semibold uppercase tracking-wider text-text-disabled">Импорт вопросов</p>
-                    <h3 class="text-lg font-bold text-text-main mt-1">Подтвердите импорт</h3>
+                    <p class="text-xs font-semibold uppercase tracking-wider text-text-disabled" data-i18n="xt.k128">Импорт вопросов</p>
+                    <h3 class="text-lg font-bold text-text-main mt-1" data-i18n="xt.k129">Подтвердите импорт</h3>
                 </div>
                 <button id="import-modal-close"
                     class="p-2 rounded-full text-text-disabled hover:text-text-main hover:bg-bg-hover transition"
-                    title="Закрыть окно импорта" aria-label="Закрыть окно импорта">
+                    title="Закрыть окно импорта" aria-label="Закрыть окно импорта" data-i18n-title="xt.k130" data-i18n-aria="xt.k130">
                     <span class="material-symbols-outlined text-[20px]">close</span>
-                    <span class="sr-only">Закрыть</span>
+                    <span class="sr-only" data-i18n="xt.k022">Закрыть</span>
                 </button>
             </div>
-            <div class="grid grid-cols-2 gap-2 text-xs font-semibold" role="radiogroup" aria-label="Источник импорта"
+            <div class="grid grid-cols-2 gap-2 text-xs font-semibold" role="radiogroup" aria-label="Источник импорта" data-i18n-aria="xt.k131"
                 data-onboarding-target="test-editor-import-source">
                 <label
                     class="import-source-option flex items-center justify-center gap-1 px-3 py-2 rounded-lg border border-border-subtle bg-surface-1 text-text-secondary cursor-pointer transition data-[active=true]:bg-primary-light data-[active=true]:border-primary-light data-[active=true]:text-primary"
                     data-active="true">
                     <input type="radio" name="import-source" value="file" class="hidden" checked>
                     <span class="material-symbols-outlined text-[16px]">upload_file</span>
-                    Из файла
+                    <span data-i18n="xt.k132">Из файла</span>
                 </label>
                 <label
                     class="import-source-option flex items-center justify-center gap-1 px-3 py-2 rounded-lg border border-border-subtle bg-surface-1 text-text-secondary cursor-pointer transition data-[active=true]:bg-primary-light data-[active=true]:border-primary-light data-[active=true]:text-primary"
                     data-active="false">
                     <input type="radio" name="import-source" value="text" class="hidden">
                     <span class="material-symbols-outlined text-[16px]">notes</span>
-                    Из текста
+                    <span data-i18n="xt.k133">Из текста</span>
                 </label>
             </div>
             <div class="bg-surface-2 rounded-xl p-4 text-sm text-text-main space-y-4"
                 data-onboarding-target="test-editor-import-parse-panel">
                 <div id="import-file-panel" data-import-source-panel="file" class="flex items-center justify-between gap-4">
-                    <span class="text-text-secondary">Файл</span>
+                    <span class="text-text-secondary" data-i18n="xt.k134">Файл</span>
                     <span id="import-file-name"
                         class="font-semibold text-text-main text-right truncate max-w-[240px]">-</span>
                 </div>
                 <div id="import-text-panel" data-import-source-panel="text" class="hidden space-y-2">
                     <textarea id="import-text-input"
                         class="import-text-input block w-full min-h-[8.5rem] rounded-lg border border-border-subtle bg-surface-1 px-3 py-2 text-sm text-text-main placeholder:text-text-disabled focus:border-primary focus:ring-1 focus:ring-primary resize-y"
-                        placeholder="? Вопрос&#10;+ Правильный ответ&#10;- Неверный ответ"></textarea>
+                        placeholder="? Вопрос&#10;+ Правильный ответ&#10;- Неверный ответ" data-i18n-placeholder="xt.k168b"></textarea>
                     <div class="flex items-center justify-between gap-3">
                         <span id="import-text-count" class="text-[11px] font-medium text-text-muted">0 символов</span>
                         <button id="parse-import-text-btn" type="button"
                             class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border-subtle text-xs font-semibold text-text-secondary hover:bg-bg-hover transition">
                             <span class="material-symbols-outlined text-[16px]">data_object</span>
-                            Разобрать
+                            <span data-i18n="xt.k135">Разобрать</span>
                         </button>
                     </div>
                 </div>
                 <div class="flex items-center justify-between gap-4">
-                    <span class="text-text-secondary">Найдено вопросов</span>
+                    <span class="text-text-secondary" data-i18n="xt.k136">Найдено вопросов</span>
                     <span id="import-question-count" class="font-semibold text-text-main">0</span>
                 </div>
                 <div id="import-warning"
                     class="hidden text-xs px-3 py-2 rounded-lg bg-warning-lighter text-warning-text font-medium">
-                    В импортируемых данных не найдено вопросов. Продолжение очистит текущий тест.
+                    <span data-i18n="xt.k137">В импортируемых данных не найдено вопросов. Продолжение очистит текущий тест.</span>
                 </div>
                 <div id="import-parser-status"
                     class="text-xs px-3 py-2 rounded-lg bg-surface-2 text-text-secondary font-medium">Файл еще не выбран
                 </div>
                 <div>
                     <div class="flex items-center justify-between text-xs font-semibold text-text-secondary mb-1">
-                        <span>Предпросмотр</span>
-                        <span class="text-[10px] text-text-disabled">Первые 10 вопросов</span>
+                        <span data-i18n="xt.k138">Предпросмотр</span>
+                        <span class="text-[10px] text-text-disabled" data-i18n="xt.k139">Первые 10 вопросов</span>
                     </div>
                     <div id="import-question-preview"
                         data-onboarding-target="test-editor-import-preview"
@@ -118,32 +119,32 @@
                     data-onboarding-target="test-editor-import-choose-file"
                     class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border-subtle text-xs font-semibold text-text-secondary hover:bg-bg-hover transition">
                     <span class="material-symbols-outlined text-[16px]">upload_file</span>
-                    Выбрать файл
+                    <span data-i18n="xt.k140">Выбрать файл</span>
                 </button>
             </div>
             <div class="space-y-2" data-onboarding-target="test-editor-import-mode">
-                <p class="text-xs font-semibold text-text-secondary">Как обработать импортированные вопросы?</p>
+                <p class="text-xs font-semibold text-text-secondary" data-i18n="xt.k141">Как обработать импортированные вопросы?</p>
                 <div class="grid grid-cols-2 gap-2 text-xs font-semibold">
                     <label
                         class="import-mode-option flex items-center justify-center gap-1 px-3 py-2 rounded-lg border border-border-subtle bg-surface-1 text-text-secondary cursor-pointer transition data-[active=true]:bg-primary-light data-[active=true]:border-primary-light data-[active=true]:text-primary">
                         <input type="radio" name="import-mode" value="replace" class="hidden">
                         <span class="material-symbols-outlined text-[16px]">refresh</span>
-                        Заменить
+                        <span data-i18n="xt.k142">Заменить</span>
                     </label>
                     <label
                         class="import-mode-option flex items-center justify-center gap-1 px-3 py-2 rounded-lg border border-border-subtle bg-surface-1 text-text-secondary cursor-pointer transition data-[active=true]:bg-primary-light data-[active=true]:border-primary-light data-[active=true]:text-primary">
                         <input type="radio" name="import-mode" value="append" class="hidden" checked>
                         <span class="material-symbols-outlined text-[16px]">add_circle</span>
-                        Добавить
+                        <span data-i18n="xt.k143">Добавить</span>
                     </label>
                 </div>
             </div>
             <div class="import-modal__actions flex items-center justify-end gap-3 pt-2"
                 data-onboarding-target="test-editor-import-modal-actions">
                 <button id="cancel-import-btn"
-                    class="px-4 py-2 rounded-lg border border-border-subtle text-sm font-semibold text-text-secondary hover:bg-bg-hover transition">Отмена</button>
+                    class="px-4 py-2 rounded-lg border border-border-subtle text-sm font-semibold text-text-secondary hover:bg-bg-hover transition" data-i18n="xt.k144">Отмена</button>
                 <button id="confirm-import-btn" disabled
-                    class="px-4 py-2 rounded-lg bg-primary text-primary-contrast text-sm font-semibold shadow-lg shadow-primary-light hover:bg-primary-dark transition disabled:opacity-40 disabled:pointer-events-none">Импортировать</button>
+                    class="px-4 py-2 rounded-lg bg-primary text-primary-contrast text-sm font-semibold shadow-lg shadow-primary-light hover:bg-primary-dark transition disabled:opacity-40 disabled:pointer-events-none" data-i18n="xt.k145">Импортировать</button>
             </div>
         </div>
     </div>
@@ -153,14 +154,14 @@
         <div class="paste-image-target-modal__panel bg-surface-1 rounded-2xl shadow-2xl p-6 space-y-4">
             <div class="flex items-center justify-between gap-4">
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-wider text-text-disabled">Вставка изображения</p>
-                    <h3 class="text-lg font-bold text-text-main mt-1">Куда прикрепить изображение?</h3>
+                    <p class="text-xs font-semibold uppercase tracking-wider text-text-disabled" data-i18n="xt.k146">Вставка изображения</p>
+                    <h3 class="text-lg font-bold text-text-main mt-1" data-i18n="xt.k147">Куда прикрепить изображение?</h3>
                 </div>
                 <button id="paste-image-target-close"
                     class="p-2 rounded-full text-text-disabled hover:text-text-main hover:bg-bg-hover transition"
-                    title="Закрыть окно выбора цели" aria-label="Закрыть окно выбора цели">
+                    title="Закрыть окно выбора цели" aria-label="Закрыть окно выбора цели" data-i18n-title="xt.k148" data-i18n-aria="xt.k148">
                     <span class="material-symbols-outlined text-[20px]">close</span>
-                    <span class="sr-only">Закрыть</span>
+                    <span class="sr-only" data-i18n="xt.k022">Закрыть</span>
                 </button>
             </div>
             <p id="paste-image-target-description" class="text-sm text-text-secondary">
@@ -168,7 +169,7 @@
             </p>
             <div class="flex items-center justify-end gap-3 pt-2">
                 <button id="paste-image-target-cancel" type="button"
-                    class="px-4 py-2 rounded-lg border border-border-subtle text-sm font-semibold text-text-secondary hover:bg-bg-hover transition">
+                    class="px-4 py-2 rounded-lg border border-border-subtle text-sm font-semibold text-text-secondary hover:bg-bg-hover transition" data-i18n="xt.k144">
                     Отмена
                 </button>
             </div>
@@ -184,7 +185,7 @@
                 <span class="brand-logo" style="color:var(--color-primary)" aria-hidden="true"></span>
                 <div class="test-editor-sidebar__brand-copy">
                     <h1 class="brand-lockup__word">ACTRA</h1>
-                    <p class="test-editor-sidebar__brand-subtitle">Редактор теста</p>
+                    <p class="test-editor-sidebar__brand-subtitle" data-i18n="xt.k149">Редактор теста</p>
                 </div>
             </div>
         </div>
@@ -192,8 +193,8 @@
         <div class="test-editor-sidebar__heading px-4 py-4 border-b border-border-subtle">
             <div class="flex items-start justify-between gap-3">
                 <div class="min-w-0">
-                    <p class="section-label">Структура теста</p>
-                    <h2 class="test-editor-sidebar__title">Вопросы</h2>
+                    <p class="section-label" data-i18n="xt.k150">Структура теста</p>
+                    <h2 class="test-editor-sidebar__title" data-i18n="xt.k151">Вопросы</h2>
                     <p id="sidebar-task-name" class="test-editor-sidebar__subtitle">Новый тест</p>
                 </div>
                 <span id="question-count-badge" class="test-editor-count-badge">1 вопрос</span>
@@ -210,33 +211,33 @@
             <button id="add-question-btn" class="test-editor-sidebar__primary-btn" type="button"
                 data-onboarding-target="test-editor-add-question">
                 <span class="material-symbols-outlined text-[18px]">add</span>
-                <span class="text-sm font-bold">Добавить вопрос</span>
+                <span class="text-sm font-bold" data-i18n="xt.k152">Добавить вопрос</span>
             </button>
 
             <div class="test-editor-sidebar__tool-row" data-onboarding-target="test-editor-import-export">
                 <button id="import-btn" class="test-editor-sidebar__tool-btn" type="button"
                     data-onboarding-target="test-editor-import-button"
-                    title="Импортировать вопросы из файла">
+                    title="Импортировать вопросы из файла" data-i18n-title="xt.k153">
                     <span class="material-symbols-outlined text-[16px]">upload_file</span>
-                    <span>Импорт</span>
+                    <span data-i18n="xt.k154">Импорт</span>
                 </button>
                 <button id="export-btn" class="test-editor-sidebar__tool-btn" type="button"
                     data-onboarding-target="test-editor-export-button"
-                    title="Экспортировать вопросы в файл">
+                    title="Экспортировать вопросы в файл" data-i18n-title="xt.k155">
                     <span class="material-symbols-outlined text-[16px]">download</span>
-                    <span>Экспорт</span>
+                    <span data-i18n="xt.k156">Экспорт</span>
                 </button>
             </div>
 
             <div class="pt-3 mt-1 border-t border-border-subtle space-y-2">
-                <p class="sidebar-section-title">Действия</p>
+                <p class="sidebar-section-title" data-i18n="xt.k157">Действия</p>
                 <button id="clear-test-sidebar-btn" class="test-editor-sidebar__action-btn" type="button">
                     <span class="material-symbols-outlined text-[18px]">refresh</span>
-                    Очистить тест
+                    <span data-i18n="xt.k158">Очистить тест</span>
                 </button>
                 <button id="delete-test-sidebar-btn" class="test-editor-sidebar__action-btn is-danger" type="button">
                     <span class="material-symbols-outlined text-[18px]">delete</span>
-                    Удалить задание
+                    <span data-i18n="xt.k159">Удалить задание</span>
                 </button>
             </div>
 
@@ -250,13 +251,13 @@
             data-onboarding-target="test-editor-header">
             <div class="test-editor-header__inner">
                 <div class="test-editor-header__title">
-                    <button title="Библиотека заданий"
+                    <button title="Библиотека заданий" data-i18n-title="xt.k160"
                         class="test-editor-back-btn p-2 hover:bg-bg-hover rounded-full text-text-secondary transition-colors"
                         type="button">
                         <span class="material-symbols-outlined">arrow_back</span>
                     </button>
                     <div class="test-editor-header__copy">
-                        <h2 class="test-editor-header__headline">Тестовые задания</h2>
+                        <h2 class="test-editor-header__headline" data-i18n="xt.k161">Тестовые задания</h2>
                         <div class="test-editor-header__meta">
                             <span id="task-name-caption" class="test-editor-header__eyebrow-text">Новый тест</span>
                             <span class="test-editor-header__meta-divider" aria-hidden="true"></span>
@@ -267,11 +268,11 @@
                 <div class="test-editor-header__actions">
                     <div class="test-editor-header__controls">
                         <div class="test-editor-header__history" data-onboarding-target="test-editor-history-actions">
-                            <button id="undo-btn" disabled title="Отменить (Ctrl+Z)" class="test-editor-icon-btn"
+                            <button id="undo-btn" disabled title="Отменить (Ctrl+Z)" data-i18n-title="xt.k162" class="test-editor-icon-btn"
                                 type="button">
                                 <span class="material-symbols-outlined text-[20px]">undo</span>
                             </button>
-                            <button id="redo-btn" disabled title="Повторить (Ctrl+Y)" class="test-editor-icon-btn"
+                            <button id="redo-btn" disabled title="Повторить (Ctrl+Y)" data-i18n-title="xt.k163" class="test-editor-icon-btn"
                                 type="button">
                                 <span class="material-symbols-outlined text-[20px]">redo</span>
                             </button>
@@ -283,14 +284,14 @@
                             data-onboarding-tour-id="test-editor-authoring"
                             hidden
                             title="Показать обучение"
-                            aria-label="Показать обучение">
+                            aria-label="Показать обучение" data-i18n-title="xt.k164" data-i18n-aria="xt.k164">
                             <span class="material-symbols-outlined" aria-hidden="true">help</span>
                         </button>
                         <button id="save-task-btn"
                             class="test-editor-save-btn shrink-0 flex items-center justify-center gap-2 px-4 py-1.5 bg-primary text-primary-fg text-sm font-semibold rounded-lg hover:bg-primary-dark transition-all active:scale-95 border border-primary"
                             type="button" data-onboarding-target="test-editor-save-action">
                             <span class="material-symbols-outlined text-[18px]">save</span>
-                            Сохранить
+                            <span data-i18n="xt.k165">Сохранить</span>
                         </button>
                     </div>
                     <div id="save-status-container" class="status-cluster test-editor-header__status" data-tone="success"
@@ -313,35 +314,35 @@
                     <section class="editor-card editor-card--hero" data-onboarding-target="test-editor-question-card">
                         <div class="editor-card__header">
                             <div>
-                                <h3 class="editor-card__title">Вопрос</h3>
+                                <h3 class="editor-card__title" data-i18n="xt.k166">Вопрос</h3>
                             </div>
-                            <p class="editor-card__meta">Сделайте текст вопроса коротким, ясным и без двусмысленности.</p>
+                            <p class="editor-card__meta" data-i18n="xt.k167">Сделайте текст вопроса коротким, ясным и без двусмысленности.</p>
                         </div>
 
                         <div class="relative group">
                             <textarea id="question-textarea"
                                 data-onboarding-target="test-editor-question-text"
                                 class="block w-full rounded-lg border-border-subtle bg-surface-1 py-4 pl-4 pr-28 text-text-main placeholder:text-text-disabled focus:border-primary focus:ring-primary shadow-sm focus:shadow-md text-base leading-relaxed resize-none transition-all min-h-[112px]"
-                                placeholder="Введите формулировку вопроса..." rows="3"></textarea>
+                                placeholder="Введите формулировку вопроса..." rows="3" data-i18n-placeholder="xt.k168"></textarea>
 
                             <div class="question-media-dock absolute top-3 right-3 flex flex-col items-end gap-2">
                                 <button id="upload-image-btn" type="button"
                                     data-onboarding-target="test-editor-question-image"
                                     class="question-media-trigger rounded-full bg-surface-1 border border-border-subtle text-icon-secondary flex items-center justify-center shadow-sm hover:text-primary hover:border-primary transition-all active:scale-95 opacity-95 hover:opacity-100"
-                                    title="Добавить изображение к вопросу" aria-label="Добавить изображение к вопросу">
+                                    title="Добавить изображение к вопросу" aria-label="Добавить изображение к вопросу" data-i18n-title="xt.k169" data-i18n-aria="xt.k169">
                                     <span class="material-symbols-outlined text-[20px]">add_photo_alternate</span>
-                                    <span class="question-media-trigger__label">Фото</span>
+                                    <span class="question-media-trigger__label" data-i18n="xt.k059">Фото</span>
                                 </button>
 
                                 <div id="question-images-grid"
                                     class="question-media-grid hidden"
-                                    aria-hidden="true" aria-label="Question images"></div>
+                                    aria-hidden="true" aria-label="Question images" data-i18n-aria="xt.k170"></div>
                             </div>
                         </div>
 
                         <div class="test-editor-inline-note">
                             <span class="material-symbols-outlined text-[18px] text-info">tips_and_updates</span>
-                            <span>При необходимости добавьте иллюстрацию: она будет привязана именно к текущему вопросу.</span>
+                            <span data-i18n="xt.k171">При необходимости добавьте иллюстрацию: она будет привязана именно к текущему вопросу.</span>
                         </div>
 
                         <input type="file" id="image-upload-input" class="hidden" accept="image/*" multiple>
@@ -351,13 +352,13 @@
                         <div class="editor-card__header editor-card__header--stack-sm">
                             <div>
                                 <div class="flex items-center gap-3 flex-wrap">
-                                    <h3 class="editor-card__title">Варианты</h3>
+                                    <h3 class="editor-card__title" data-i18n="xt.k172">Варианты</h3>
                                     <span
-                                        class="text-xs bg-info-lighter text-info-text px-2.5 py-1 rounded-full font-semibold">Выберите
+                                        class="text-xs bg-info-lighter text-info-text px-2.5 py-1 rounded-full font-semibold" data-i18n="xt.k173">Выберите
                                         верные варианты</span>
                                 </div>
                             </div>
-                            <p class="editor-card__meta">Нажмите на букву варианта, чтобы отметить правильный ответ.</p>
+                            <p class="editor-card__meta" data-i18n="xt.k174">Нажмите на букву варианта, чтобы отметить правильный ответ.</p>
                         </div>
 
                         <div id="options-container" class="flex flex-col gap-3" data-onboarding-target="test-editor-options-list">
@@ -368,7 +369,7 @@
                             <button id="add-option-btn" class="test-editor-secondary-action" type="button"
                                 data-onboarding-target="test-editor-add-option">
                                 <span class="material-symbols-outlined text-[20px]">add_circle</span>
-                                Добавить вариант
+                                <span data-i18n="xt.k175">Добавить вариант</span>
                             </button>
                             <input type="file" id="option-image-input" class="hidden" accept="image/*">
                         </div>
@@ -385,8 +386,8 @@
             class="test-editor-inspector__header h-16 flex items-center px-6 border-b border-border-subtle bg-surface-1 backdrop-blur sticky top-0 z-10"
             data-onboarding-target="test-editor-inspector-header">
             <div>
-                <p class="section-label">Инспектор</p>
-                <h2 class="text-base font-bold text-text-main">Настройки вопроса</h2>
+                <p class="section-label" data-i18n="xt.k176">Инспектор</p>
+                <h2 class="text-base font-bold text-text-main" data-i18n="xt.k177">Настройки вопроса</h2>
             </div>
         </div>
 
@@ -395,13 +396,13 @@
                 data-onboarding-clone-variant="test-editor-inspector-text"
                 data-onboarding-clone-height-extra="44">
                 <div class="space-y-1">
-                    <label class="block text-xs font-bold text-text-secondary uppercase tracking-wider">Тип ответа</label>
+                    <label class="block text-xs font-bold text-text-secondary uppercase tracking-wider" data-i18n="xt.k178">Тип ответа</label>
                     <div class="flex items-center gap-2 text-sm font-semibold text-text-main">
                         <span class="material-symbols-outlined text-[18px] text-primary">tune</span>
                         <span id="answer-type-display">Определяется по ответам</span>
                     </div>
                 </div>
-                <p class="text-[12px] text-text-secondary leading-relaxed">Тип определяется автоматически по количеству
+                <p class="text-[12px] text-text-secondary leading-relaxed" data-i18n="xt.k179">Тип определяется автоматически по количеству
                     правильных вариантов. Как только отметите несколько ответов, редактор переключится в множественный
                     выбор.</p>
             </section>
@@ -411,8 +412,8 @@
                 <button id="test-image-bank-toggle" class="test-image-bank__toggle" type="button"
                     aria-expanded="true" aria-controls="test-image-bank-panel">
                     <span class="test-image-bank__toggle-copy">
-                        <span class="test-image-bank__eyebrow">Изображения</span>
-                        <span id="test-image-bank-title" class="test-image-bank__toggle-title">Банк задания</span>
+                        <span class="test-image-bank__eyebrow" data-i18n="xt.k180">Изображения</span>
+                        <span id="test-image-bank-title" class="test-image-bank__toggle-title" data-i18n="xt.k181">Банк задания</span>
                     </span>
                     <span id="test-image-bank-count" class="test-image-bank__count">0</span>
                     <span class="test-image-bank__toggle-icon material-symbols-outlined text-[18px]" aria-hidden="true">expand_more</span>
@@ -421,7 +422,7 @@
                     <div id="test-image-bank-grid" class="test-image-bank__grid" aria-live="polite"></div>
                     <div id="test-image-bank-empty" class="test-image-bank__empty">
                         <span class="material-symbols-outlined text-[18px]">imagesmode</span>
-                        <span>Пока пусто</span>
+                        <span data-i18n="xt.k182">Пока пусто</span>
                     </div>
                 </div>
             </section>
@@ -430,14 +431,14 @@
                 data-onboarding-clone-variant="test-editor-inspector-text"
                 data-onboarding-clone-height-extra="48">
                 <div class="space-y-1">
-                    <label class="block text-xs font-bold text-text-secondary uppercase tracking-wider">Обратная связь</label>
-                    <h3 class="text-base font-bold text-text-main">Комментарий после ответа</h3>
+                    <label class="block text-xs font-bold text-text-secondary uppercase tracking-wider" data-i18n="xt.k183">Обратная связь</label>
+                    <h3 class="text-base font-bold text-text-main" data-i18n="xt.k184">Комментарий после ответа</h3>
                 </div>
                 <textarea id="explanation-textarea"
                     data-onboarding-target="test-editor-explanation"
                     class="block w-full rounded-xl border-border-subtle bg-surface-1 text-sm py-3 px-3 focus:border-primary focus:ring-primary shadow-sm focus:shadow-md transition-all min-h-[148px]"
-                    placeholder="Комментарий, который увидит пользователь после ответа..." rows="5"></textarea>
-                <p class="text-[12px] text-text-secondary leading-relaxed">Подскажите, почему ответ верный, на что обратить
+                    placeholder="Комментарий, который увидит пользователь после ответа..." rows="5" data-i18n-placeholder="xt.k185"></textarea>
+                <p class="text-[12px] text-text-secondary leading-relaxed" data-i18n="xt.k186">Подскажите, почему ответ верный, на что обратить
                     внимание и как не ошибиться в следующий раз.</p>
             </section>
         </div>

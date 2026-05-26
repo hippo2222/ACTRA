@@ -1191,10 +1191,10 @@ class TestEditor extends BaseEditor {
     createEmptyQuestion() {
         return {
             id: Date.now(),
-            text: "Новый вопрос",
+            text: wt('xt.k125', 'Новый вопрос'),
             options: [
-                { text: "Вариант 1", is_correct: true, image_path: null, image_asset_id: null, image_asset_url: null },
-                { text: "Вариант 2", is_correct: false, image_path: null, image_asset_id: null, image_asset_url: null }
+                { text: wt('xt.k126', 'Вариант 1'), is_correct: true, image_path: null, image_asset_id: null, image_asset_url: null },
+                { text: wt('xt.k127', 'Вариант 2'), is_correct: false, image_path: null, image_asset_id: null, image_asset_url: null }
             ],
             settings: { all_correct_required: true, allow_partial_credit: false },
             explanation: "",
