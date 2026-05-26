@@ -2878,7 +2878,12 @@
     "toast_stats_error": "Не удалось загрузить статистику",
     "toast_chart_error": "Не удалось полностью обновить график. Показаны доступные данные.",
     "metric_attempts_primary": "Все действия",
-    "metric_study_primary": "Минуты обучения"
+    "metric_study_primary": "Минуты обучения",
+    "metric_tasks_tooltip": "Количество уникальных заданий с успешной попыткой",
+    "metric_time_tooltip": "Суммарное время обучения (задачи + микрокарточки)",
+    "metric_microcards_tooltip": "Всего пройдено карточек и точность ответов",
+    "metric_streak_tooltip": "Количество последовательных дней с любой учебной активностью",
+    "performance_tooltip": "Распределение успешности по типам задач и микрокарточек"
   },
   "welcome": {
     "google_btn_enabled": "Продолжить через Google",

@@ -2878,7 +2878,12 @@
     "toast_stats_error": "Не вдалося завантажити статистику",
     "toast_chart_error": "Не вдалося повністю оновити графік. Показано доступні дані.",
     "metric_attempts_primary": "Усі дії",
-    "metric_study_primary": "Хвилини навчання"
+    "metric_study_primary": "Хвилини навчання",
+    "metric_tasks_tooltip": "Количество уникальных заданий с успешной попыткой",
+    "metric_time_tooltip": "Суммарное время обучения (задачи + микрокарточки)",
+    "metric_microcards_tooltip": "Всего пройдено карточек и точность ответов",
+    "metric_streak_tooltip": "Количество последовательных дней с любой учебной активностью",
+    "performance_tooltip": "Распределение успешности по типам задач и микрокарточек"
   },
   "welcome": {
     "google_btn_enabled": "Продовжити через Google",

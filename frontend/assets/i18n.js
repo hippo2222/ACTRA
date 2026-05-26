@@ -48,6 +48,11 @@
             var val = t(key);
             if (val !== key) el.placeholder = val;
         });
+        document.querySelectorAll('[data-i18n-tooltip]').forEach(function (el) {
+            var key = el.getAttribute('data-i18n-tooltip');
+            var val = t(key);
+            if (val !== key) el.setAttribute('data-tooltip', val);
+        });
         document.querySelectorAll('[data-lang-display]').forEach(function (el) {
             el.textContent = _lang.toUpperCase();
         });
