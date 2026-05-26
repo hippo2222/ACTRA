@@ -1654,10 +1654,10 @@ class BaseEditor {
                 <p class="text-text-secondary mb-8 leading-relaxed">${message || wt('editor_base.modal.confirm_message', 'Вы уверены?')}</p>
                 <div class="flex flex-col gap-3">
                     <button id="confirm-modal-btn" class="w-full py-3 px-4 bg-primary text-primary-fg rounded-lg shadow-md font-semibold hover:bg-primary-dark transition-all flex items-center justify-center gap-2 active:scale-[0.98]">
-                        ${confirmText || 'Подтвердить'}
+                        ${confirmText || wt('editor_base.modal.confirm_btn', 'Подтвердить')}
                     </button>
                     <button id="cancel-modal-btn" class="w-full py-3 px-4 bg-transparent border border-transparent text-text-secondary rounded-lg font-medium hover:text-text-main hover:bg-surface-2 transition-all">
-                        ${cancelText || 'Отмена'}
+                        ${cancelText || wt('editor_base.modal.cancel_btn', 'Отмена')}
                     </button>
                 </div>
             </div>
@@ -1851,15 +1851,15 @@ class BaseEditor {
                     <span class="material-symbols-outlined text-3xl sm:text-4xl ${theme.iconText} p-3 ${theme.iconBg} rounded-2xl">${theme.icon}</span>
                     <div class="min-w-0">
                         <h3 class="text-lg sm:text-xl font-bold text-text-main">${title || wt('editor_base.modal.confirm_title', 'Подтверждение')}</h3>
-                        <p class="mt-1 text-sm leading-relaxed text-text-main opacity-90">${message || 'Вы уверены?'}</p>
+                        <p class="mt-1 text-sm leading-relaxed text-text-main opacity-90">${message || wt('editor_base.modal.confirm_message', 'Вы уверены?')}</p>
                     </div>
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <button id="confirm-modal-btn" class="w-full rounded-xl font-semibold transition-all inline-flex items-center justify-center gap-2 active:scale-[0.98] ${theme.confirmBtn}">
-                        ${confirmText || 'Подтвердить'}
+                        ${confirmText || wt('editor_base.modal.confirm_btn', 'Подтвердить')}
                     </button>
                     <button id="cancel-modal-btn" class="w-full rounded-xl font-medium transition-all inline-flex items-center justify-center gap-2 border border-border-strong bg-surface-1 text-text-main hover:bg-surface-2 hover:border-primary">
-                        ${cancelText || 'Отмена'}
+                        ${cancelText || wt('editor_base.modal.cancel_btn', 'Отмена')}
                     </button>
                 </div>
             </div>
