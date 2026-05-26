@@ -743,7 +743,7 @@
             <nav id="header-breadcrumbs"
                 data-onboarding-target="editor-breadcrumbs"
                 class="editor-workspace-breadcrumbs flex shrink-1 min-w-0 flex-1">
-                <span class="cursor-pointer hover:text-primary transition-colors">Библиотека</span>
+                <span class="cursor-pointer hover:text-primary transition-colors" data-i18n="md.library_crumb">Библиотека</span>
             </nav>
             <div class="editor-header-actions flex items-center gap-4 justify-end min-w-0 shrink-0">
                 <div class="editor-toolbar-search relative search-container-expanding shrink-0 rounded-lg"
@@ -759,7 +759,7 @@
                     <button data-role="sort-toggle"
                         class="editor-toolbar-sort flex items-center gap-2 text-text-secondary hover:text-primary hover:border-primary transition-colors shadow-sm whitespace-nowrap shrink-0">
                         <span class="material-symbols-outlined text-[20px] text-text-secondary">sort</span>
-                        <span data-role="sort-label">По дате изменения</span>
+                        <span data-role="sort-label" data-i18n="md.sort_by_date">По дате изменения</span>
                         <span class="material-symbols-outlined text-[18px] text-text-disabled">expand_more</span>
                     </button>
                     <div data-role="sort-menu"
@@ -1013,7 +1013,7 @@
                 <div class="flex items-start justify-between gap-3 mb-4">
                     <div class="min-w-0">
                         <h3 class="text-xl font-bold text-text-main" data-i18n="md.topic_theory_title">Управление теорией темы</h3>
-                        <p id="topic-theory-meta" class="editor-flow-wrap text-xs text-text-secondary mt-1">Настройте обучающие материалы для этой темы (Менеджер теории).</p>
+                        <p id="topic-theory-meta" class="editor-flow-wrap text-xs text-text-secondary mt-1" data-i18n="md.theory_meta_hint">Настройте обучающие материалы для этой темы (Менеджер теории).</p>
                     </div>
                     <button type="button" data-role="topic-theory-close"
                         class="p-2 rounded-lg text-text-disabled hover:text-text-main hover:bg-bg-hover transition-colors"
@@ -1028,7 +1028,7 @@
                             <div class="flex items-center justify-between gap-3">
                                 <div class="min-w-0">
                                     <span class="text-[10px] font-bold uppercase tracking-wider text-primary block mb-1" data-i18n="md.linked_theory">Привязанная теория</span>
-                                    <p id="topic-theory-current-title" class="text-sm font-bold text-text-main truncate">Загрузка...</p>
+                                    <p id="topic-theory-current-title" class="text-sm font-bold text-text-main truncate" data-i18n="md.loading">Загрузка...</p>
                                 </div>
                                 <div class="flex gap-2">
                                     <button id="topic-theory-edit-content-btn" type="button" 
@@ -1094,7 +1094,7 @@
                             </div>
                         </div>
 
-                        <div id="topic-theory-propagation-summary" class="text-[11px] font-medium text-primary bg-primary/10 rounded-lg px-3 py-2 hidden">
+                        <div id="topic-theory-propagation-summary" class="text-[11px] font-medium text-primary bg-primary/10 rounded-lg px-3 py-2 hidden" data-i18n="md.sync_summary_loading">
                             Сводка синхронизации появится после загрузки.
                         </div>
                     </div>
@@ -1320,7 +1320,7 @@
             class="editor-import-modal-shell bg-surface-1 rounded-2xl shadow-xl w-full mx-4 overflow-hidden flex flex-col">
             <!-- Header -->
             <div class="editor-import-header px-6 py-4 border-b border-border-subtle flex items-start justify-between gap-4 shrink-0">
-                <h2 class="editor-flow-wrap text-xl font-bold text-text-main" data-role="import-modal-title">Импорт заданий</h2>
+                <h2 class="editor-flow-wrap text-xl font-bold text-text-main" data-role="import-modal-title" data-i18n="md.import_tasks">Импорт заданий</h2>
                 <button onclick="dashboard.closeImportModal()"
                     class="shrink-0 text-text-disabled hover:text-text-secondary transition-colors">
                     <span class="material-symbols-outlined">close</span>

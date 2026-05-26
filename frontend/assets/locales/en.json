@@ -5492,7 +5492,10 @@
     "back": "Back",
     "next": "Next",
     "recovery_title": "Draft recovery centre",
-    "recovery_subtitle": "Local auto-saves and quick return to work"
+    "recovery_subtitle": "Local auto-saves and quick return to work",
+    "library_crumb": "Library",
+    "theory_meta_hint": "Configure learning materials for this topic (Theory Manager).",
+    "sync_summary_loading": "Sync summary will appear after loading."
   },
   "pa": {
     "page_title": "ACTRA — Annotation editor",
