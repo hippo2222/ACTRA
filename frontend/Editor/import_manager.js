@@ -3733,39 +3733,39 @@ ${remaining}
                     <span class="material-symbols-outlined ${nothingToImport ? 'text-error-text' : 'text-success-text'} text-[48px]">${nothingToImport ? 'block' : 'check_circle'}</span>
                 </div>
                 
-                <h3 class="text-xl font-bold text-text-main mb-2">${nothingToImport ? 'Импорт недоступен' : 'Готово к импорту'}</h3>
-                <p class="text-text-secondary mb-6">${nothingToImport ? wt('im.k163', 'После проверки и фильтрации не осталось заданий, которые можно импортировать.') : `Будет импортировано ${validTasks.length} заданий`}</p>
+                <h3 class="text-xl font-bold text-text-main mb-2">${nothingToImport ? wt('im.k791', 'Импорт недоступен') : wt('im.k792', 'Готово к импорту')}</h3>
+                <p class="text-text-secondary mb-6">${nothingToImport ? wt('im.k163', 'После проверки и фильтрации не осталось заданий, которые можно импортировать.') : `${wt('im.k793', 'Будет импортировано ')}${validTasks.length}${wt('im.k794', ' заданий')}`}</p>
                 
                 <div class="bg-surface-2 rounded-lg p-6 text-left">
                     <div class="space-y-2 text-sm">
                         <div class="flex flex-wrap items-start justify-between gap-3">
-                            <span class="text-text-secondary">Модуль:</span>
+                            <span class="text-text-secondary">${wt('im.k768', 'Модуль')}:</span>
                             <span class="editor-flow-wrap font-medium text-text-main text-right">${this.escapeHtml(this.selectedModuleName || this.selectedModule)}</span>
                         </div>
                         <div class="flex flex-wrap items-start justify-between gap-3">
-                            <span class="text-text-secondary">Тема:</span>
+                            <span class="text-text-secondary">${wt('im.k769', 'Тема')}:</span>
                             <span class="editor-flow-wrap font-medium text-text-main text-right">${this.escapeHtml(this.selectedTopicName || this.selectedTopic)}</span>
                         </div>
                         <div class="flex flex-wrap items-start justify-between gap-3">
-                            <span class="text-text-secondary">Будет импортировано:</span>
+                            <span class="text-text-secondary">${wt('im.k795', 'Будет импортировано:')}</span>
                             <span class="font-medium text-text-main">${validTasks.length}</span>
                         </div>
                         <div class="flex flex-wrap items-start justify-between gap-3">
-                            <span class="text-text-secondary">Заблокировано по ошибкам:</span>
+                            <span class="text-text-secondary">${wt('im.k796', 'Заблокировано по ошибкам:')}</span>
                             <span class="font-medium ${blockedTasksCount > 0 ? 'text-error-text' : 'text-text-main'}">${blockedTasksCount}</span>
                         </div>
                         <div class="flex flex-wrap items-start justify-between gap-3">
-                            <span class="text-text-secondary">Исключено вручную:</span>
+                            <span class="text-text-secondary">${wt('im.k797', 'Исключено вручную:')}</span>
                             <span class="font-medium text-text-main">${excludedTasksCount}</span>
                         </div>
                     </div>
                 </div>
                 <div class="mt-4 rounded-lg ${nothingToImport ? 'border border-error-light bg-error-lighter text-error-text' : 'border border-warning-light bg-warning-lighter text-warning-text'} px-4 py-3 text-left text-sm">
-                    <div class="font-semibold">${nothingToImport ? 'Импорт отключён' : 'Что будет при импорте'}</div>
+                    <div class="font-semibold">${nothingToImport ? wt('im.k798', 'Импорт отключён') : wt('im.k799', 'Что будет при импорте')}</div>
                     <div class="mt-1">
                         ${nothingToImport
                             ? wt('im.k164', 'Кнопка импорта отключена, потому что все задания либо битые, либо исключены вручную.')
-                            : `Задания со статусом «Ошибка» не будут добавлены. Импорт продолжится только для оставшихся ${validTasks.length} заданий.`}
+                            : `${wt('im.k800', 'Задания со статусом «Ошибка» не будут добавлены. Импорт продолжится только для оставшихся ')}${validTasks.length}${wt('im.k801', ' заданий.')}`}
                     </div>
                 </div>
             </div>
@@ -3857,7 +3857,7 @@ ${remaining}
                         onclick="dashboard.importManager.startEditName(${index}, this)">${this.escapeHtml(task.name)}</h4>
                     
                     <!-- Prompt Preview -->
-                    <p class="text-sm text-text-muted line-clamp-2">${this.escapeHtml(task.data?.prompt || 'Нет описания')}</p>
+                    <p class="text-sm text-text-muted line-clamp-2">${this.escapeHtml(task.data?.prompt || wt('im.k802', 'Нет описания'))}</p>
                 </div>
                 
                 <!-- Card Body: Metadata -->
@@ -3893,14 +3893,14 @@ ${remaining}
                 <!-- Per-task conflict resolution (only for conflict tasks) -->
                 ${task.status === 'conflict' ? `
                     <div class="px-4 py-2 border-t border-border-subtle bg-warning-lighter">
-                        <label class="block text-xs font-semibold text-text-secondary mb-1">Действие при конфликте:</label>
+                        <label class="block text-xs font-semibold text-text-secondary mb-1">${wt('im.k772', 'Действие при конфликте:')}</label>
                         <select 
                             onchange="dashboard.importManager.setPerTaskConflict(${index}, this.value)"
                             class="block w-full rounded border-border-normal text-xs py-1 focus:ring-primary bg-surface-1">
-                            <option value="" ${!this.perTaskConflictRes.has(index) ? 'selected' : ''}>Как в общих настройках</option>
-                            <option value="skip" ${this.perTaskConflictRes.get(index) === 'skip' ? 'selected' : ''}>Пропустить</option>
-                            <option value="overwrite" ${this.perTaskConflictRes.get(index) === 'overwrite' ? 'selected' : ''}>Перезаписать</option>
-                            <option value="new_id" ${this.perTaskConflictRes.get(index) === 'new_id' ? 'selected' : ''}>Создать копию (новый ID)</option>
+                            <option value="" ${!this.perTaskConflictRes.has(index) ? 'selected' : ''}>${wt('im.k773', 'Как в общих настройках')}</option>
+                            <option value="skip" ${this.perTaskConflictRes.get(index) === 'skip' ? 'selected' : ''}>${wt('im.k774', 'Пропустить')}</option>
+                            <option value="overwrite" ${this.perTaskConflictRes.get(index) === 'overwrite' ? 'selected' : ''}>${wt('im.k761', 'Перезаписать')}</option>
+                            <option value="new_id" ${this.perTaskConflictRes.get(index) === 'new_id' ? 'selected' : ''}>${wt('im.k762', 'Создать копию (новый ID)')}</option>
                         </select>
                     </div>
                 ` : ''}
@@ -3916,7 +3916,7 @@ ${remaining}
                         onclick="dashboard.importManager.toggleExclude(${index})"
                         class="flex-1 px-3 py-1.5 text-xs font-medium text-text-muted hover:bg-bg-hover hover:text-text-on-dark rounded transition-colors border border-border-subtle"
                         data-task-exclude-btn="${index}">
-                        ${this.excludedTasks.has(index) ? 'Включить' : 'Исключить'}
+                        ${this.excludedTasks.has(index) ? wt('im.k775', 'Включить') : wt('im.k776', 'Исключить')}
                     </button>
                 </div>
             </div>
@@ -3931,8 +3931,8 @@ ${remaining}
             return `
                 <div class="flex items-center gap-1">
                     <span class="text-text-muted">\u270E</span>
-                    <span class="text-text-secondary">Длина вопроса:</span>
-                    <span class="font-semibold text-text-main">${promptLength} \u0441\u0438\u043c\u0432.</span>
+                    <span class="text-text-secondary">${wt('im.k803', 'Длина вопроса:')}</span>
+                    <span class="font-semibold text-text-main">${promptLength} ${wt('im.k804', 'симв.')}</span>
                 </div>
             `;
         }
@@ -3943,12 +3943,12 @@ ${remaining}
             return `
                 <div class="flex items-center gap-1">
                     <span class="text-text-muted">\u25A6</span>
-                    <span class="text-text-secondary">Элементов:</span>
+                    <span class="text-text-secondary">${wt('im.k805', 'Элементов:')}</span>
                     <span class="font-semibold text-text-main">${elementsCount}</span>
                 </div>
                 <div class="flex items-center gap-1">
                     <span class="text-text-muted">\u2261</span>
-                    <span class="text-text-secondary">Уровней:</span>
+                    <span class="text-text-secondary">${wt('im.k806', 'Уровней:')}</span>
                     <span class="font-semibold text-text-main">${levelsCount}</span>
                 </div>
             `;
@@ -3961,18 +3961,18 @@ ${remaining}
                 return `
                     <div class="flex items-center gap-1">
                         <span class="text-text-muted">\u25A3</span>
-                        <span class="text-text-secondary">Вариантов:</span>
+                        <span class="text-text-secondary">${wt('im.k807', 'Вариантов:')}</span>
                         <span class="font-semibold text-text-main">${optionsCount}</span>
                     </div>
                     <div class="flex items-center gap-1">
                         <span class="text-text-muted">\u2713</span>
-                        <span class="text-text-secondary">Правильных:</span>
+                        <span class="text-text-secondary">${wt('im.k808', 'Правильных:')}</span>
                         <span class="font-semibold text-text-main">${correctCount}</span>
                     </div>
                     <div class="col-span-2 flex items-center gap-1">
                         <span class="text-text-muted">\u2699</span>
-                        <span class="text-text-secondary">Режим:</span>
-                        <span class="font-semibold text-text-main">Текстовый выбор</span>
+                        <span class="text-text-secondary">${wt('im.k809', 'Режим:')}</span>
+                        <span class="font-semibold text-text-main">${wt('im.k810', 'Текстовый выбор')}</span>
                     </div>
                 `;
             } else if (data.mode === 'word_errors' || data.mode === 'text_errors') {
@@ -3981,12 +3981,12 @@ ${remaining}
                 return `
                     <div class="flex items-center gap-1">
                         <span class="text-text-muted">\u270E</span>
-                        <span class="text-text-secondary">Текст:</span>
-                        <span class="font-semibold text-text-main">${textLength} \u0441\u0438\u043c\u0432.</span>
+                        <span class="text-text-secondary">${wt('im.k811', 'Текст:')}</span>
+                        <span class="font-semibold text-text-main">${textLength} ${wt('im.k804', 'симв.')}</span>
                     </div>
                     <div class="flex items-center gap-1">
                         <span class="text-text-muted">\u2717</span>
-                        <span class="text-text-secondary">Ошибок:</span>
+                        <span class="text-text-secondary">${wt('im.k812', 'Ошибок:')}</span>
                         <span class="font-semibold text-text-main">${errorCount}</span>
                     </div>
                 `;
@@ -3998,14 +3998,14 @@ ${remaining}
             return `
                 <div class="flex items-center gap-1">
                     <span class="text-text-muted">\u25A3</span>
-                    <span class="text-text-secondary">\u0412\u043e\u043f\u0440\u043e\u0441\u043e\u0432:</span>
+                    <span class="text-text-secondary">${wt('im.k813', 'Вопросов:')}</span>
                     <span class="font-semibold text-text-main">${questionCount}</span>
                 </div>
             `;
         }
 
         return `
-            <div class="col-span-2 text-text-muted text-center">Нет дополнительной информации</div>
+            <div class="col-span-2 text-text-muted text-center">${wt('im.k814', 'Нет дополнительной информации')}</div>
         `;
     }
 
