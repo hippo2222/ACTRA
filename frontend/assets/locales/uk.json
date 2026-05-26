@@ -186,7 +186,14 @@
     "congrats_heading": "{streak} днів підряд!",
     "congrats_text": "Ви чудово тримаєтесь! Продовжуйте в тому ж дусі — регулярність важливіша за інтенсивність.",
     "default_banner_title": "Це нормально — пропускати дні",
-    "default_banner_text": "Ваш прогрес зберігається. Можна вибрати менше часу на день, якщо розклад став занадто щільним."
+    "default_banner_text": "Ваш прогрес зберігається. Можна вибрати менше часу на день, якщо розклад став занадто щільним.",
+    "microcards_due_suffix": " до повтору",
+    "microcards_new_suffix": " нових",
+    "microcards_all_done": "Все повторені!",
+    "microcards_today_prefix": "Сьогодні: ",
+    "microcards_cards_unit": "карт",
+    "microcards_widget_title": "Мікрокартки",
+    "microcards_repeat_btn": "Повторити"
   },
   "clickui.already_found_hint": "Цю ціль уже знайдено.",
   "clickui.already_found_status": "Вже знайдено ({ref})",

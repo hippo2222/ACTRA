@@ -186,7 +186,14 @@
     "congrats_heading": "{streak} days in a row!",
     "congrats_text": "You're doing great! Keep it up — consistency matters more than intensity.",
     "default_banner_title": "It's okay to skip days",
-    "default_banner_text": "Your progress is saved. Try reducing your daily time if the schedule feels too tight."
+    "default_banner_text": "Your progress is saved. Try reducing your daily time if the schedule feels too tight.",
+    "microcards_due_suffix": " to review",
+    "microcards_new_suffix": " new",
+    "microcards_all_done": "All reviewed!",
+    "microcards_today_prefix": "Today: ",
+    "microcards_cards_unit": "cards",
+    "microcards_widget_title": "Microcards",
+    "microcards_repeat_btn": "Review"
   },
   "clickui.already_found_hint": "This target has already been found.",
   "clickui.already_found_status": "Already found ({ref})",

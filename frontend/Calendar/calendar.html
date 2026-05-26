@@ -528,7 +528,7 @@
         function createEmptyPreviewSchedule() {
             const today = new Date();
             today.setHours(0, 0, 0, 0);
-            const dayNames = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+            const dayNames = [wt('calendar.day_sun','Вс'), wt('calendar.day_mon','Пн'), wt('calendar.day_tue','Вт'), wt('calendar.day_wed','Ср'), wt('calendar.day_thu','Чт'), wt('calendar.day_fri','Пт'), wt('calendar.day_sat','Сб')];
 
             return Array.from({ length: 7 }, (_, index) => {
                 const date = new Date(today);
@@ -536,7 +536,7 @@
 
                 return {
                     date: formatIsoDate(date),
-                    day_name: index === 0 ? 'Сегодня' : index === 1 ? 'Завтра' : dayNames[date.getDay()],
+                    day_name: index === 0 ? wt('calendar.day_today','Сегодня') : index === 1 ? wt('calendar.day_tomorrow','Завтра') : dayNames[date.getDay()],
                     day_num: date.getDate(),
                     month: date.toLocaleDateString('ru', { month: 'short' }),
                     status: 'empty',
@@ -642,7 +642,7 @@
         function createCalendarPreviewSchedule(tasksByDay) {
             const today = new Date();
             today.setHours(0, 0, 0, 0);
-            const dayNames = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+            const dayNames = [wt('calendar.day_sun','Вс'), wt('calendar.day_mon','Пн'), wt('calendar.day_tue','Вт'), wt('calendar.day_wed','Ср'), wt('calendar.day_thu','Чт'), wt('calendar.day_fri','Пт'), wt('calendar.day_sat','Сб')];
 
             return Array.from({ length: 7 }, (_, index) => {
                 const date = new Date(today);
@@ -651,7 +651,7 @@
 
                 return {
                     date: formatIsoDate(date),
-                    day_name: index === 0 ? 'Сегодня' : index === 1 ? 'Завтра' : dayNames[date.getDay()],
+                    day_name: index === 0 ? wt('calendar.day_today','Сегодня') : index === 1 ? wt('calendar.day_tomorrow','Завтра') : dayNames[date.getDay()],
                     day_num: date.getDate(),
                     month: date.toLocaleDateString('ru', { month: 'short' }),
                     status: tasks.length ? 'planned' : 'empty',
@@ -2132,29 +2132,29 @@
             let statusLine = '';
             if (hasDue) {
                 const parts = [];
-                if (cardsDue > 0) parts.push(`${cardsDue} к повтору`);
-                if (cardsNew > 0) parts.push(`${cardsNew} новых`);
+                if (cardsDue > 0) parts.push(`${cardsDue}${wt('calendar.microcards_due_suffix', ' к повтору')}`);
+                if (cardsNew > 0) parts.push(`${cardsNew}${wt('calendar.microcards_new_suffix', ' новых')}`);
                 statusLine = parts.join(', ');
             } else {
-                statusLine = 'Всё повторено!';
+                statusLine = wt('calendar.microcards_all_done', 'Всё повторено!');
             }
 
             let todayLine = '';
             if (todayReviews > 0) {
                 const correctRate = todayData.correct_rate != null ? Math.round(todayData.correct_rate * 100) : null;
-                todayLine = `Сегодня: ${todayReviews} карт${correctRate != null ? ` · ${correctRate}%` : ''}`;
+                todayLine = `${wt('calendar.microcards_today_prefix', 'Сегодня: ')}${todayReviews} ${wt('calendar.microcards_cards_unit', 'карт')}${correctRate != null ? ` · ${correctRate}%` : ''}`;
             }
 
             container.innerHTML = `
                 <div class="calendar-microcards-summary">
                     <div class="calendar-microcards-summary__header">
                         <span class="material-symbols-outlined text-secondary text-[16px]">style</span>
-                        <span class="calendar-microcards-summary__title">Микрокарточки</span>
+                        <span class="calendar-microcards-summary__title">${wt('calendar.microcards_widget_title', 'Микрокарточки')}</span>
                     </div>
                     <p class="calendar-microcards-summary__status">${statusLine}</p>
                     ${todayLine ? `<p class="calendar-microcards-summary__today">${todayLine}</p>` : ''}
                     ${hasDue ? `<a href="/microcards" class="calendar-microcards-summary__link">
-                        Повторить
+                        ${wt('calendar.microcards_repeat_btn', 'Повторить')}
                         <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
                     </a>` : ''}
                 </div>
@@ -3705,7 +3705,7 @@
         function createCalendarOnboardingSchedule() {
             const today = new Date();
             today.setHours(0, 0, 0, 0);
-            const dayNames = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+            const dayNames = [wt('calendar.day_sun','Вс'), wt('calendar.day_mon','Пн'), wt('calendar.day_tue','Вт'), wt('calendar.day_wed','Ср'), wt('calendar.day_thu','Чт'), wt('calendar.day_fri','Пт'), wt('calendar.day_sat','Сб')];
             const tasksByDay = [
                 [
                     { name: 'Daily Mix', complex_name: 'Повторение ошибок', is_completed: false, complex_id: 'demo-repeat' },
@@ -3731,7 +3731,7 @@
                 const tasks = tasksByDay[index] || [];
                 return {
                     date: formatIsoDate(date),
-                    day_name: index === 0 ? 'Сегодня' : index === 1 ? 'Завтра' : dayNames[date.getDay()],
+                    day_name: index === 0 ? wt('calendar.day_today','Сегодня') : index === 1 ? wt('calendar.day_tomorrow','Завтра') : dayNames[date.getDay()],
                     day_num: date.getDate(),
                     month: date.toLocaleDateString('ru', { month: 'short' }),
                     status: tasks.length ? 'planned' : 'empty',
