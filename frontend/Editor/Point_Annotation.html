@@ -79,7 +79,7 @@
                     class="click-editor-header__drawing-status flex min-h-[2.5rem] items-center gap-3 rounded-xl border border-border-subtle px-3.5 py-2 transition-all duration-200 shadow-sm bg-surface-2 text-text-secondary">
                     <span data-drawing-status-icon=""
                         class="material-symbols-outlined text-[18px] text-primary shrink-0">info</span>
-                    <span data-drawing-status-text="" class="min-w-0 flex-1 text-sm leading-snug">Режим ожидания</span>
+                    <span data-drawing-status-text="" class="min-w-0 flex-1 text-sm leading-snug" data-i18n="pa.status_idle">Режим ожидания</span>
                     <span class="hidden 2xl:inline-flex shrink-0 items-center gap-1.5 border-l border-border-subtle pl-2.5 text-[11px] text-text-secondary"
                         data-finish-hint="">
                         <span class="material-symbols-outlined text-[15px] text-primary">touch_app</span>
@@ -93,7 +93,7 @@
                     <div id="save-status-indicator" class="status-cluster__dot"></div>
                     <div class="status-cluster__body">
                         <span id="save-status-text"
-                            class="text-xs font-bold text-text-secondary leading-none">Сохранено</span>
+                            class="text-xs font-bold text-text-secondary leading-none" data-i18n="pa.status_saved">Сохранено</span>
                         <span id="save-status-detail"
                             class="text-xs text-text-disabled leading-none mt-1 hidden"></span>
                     </div>
@@ -662,6 +662,7 @@
     </template>
 
     <script src="../../assets/ConnectionMonitor.js"></script>
+    <script src="/assets/i18n.js" defer></script>
     <script src="../../assets/onboarding_tours.js?v=draw-onboarding-4"></script>
     <script src="../../assets/OnboardingTour.js?v=draw-onboarding-4"></script>
 </body>

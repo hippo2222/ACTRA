@@ -5564,7 +5564,9 @@
     "no_options": "No options created.",
     "add_option_btn": "Add option",
     "one_correct_warning": "There must be exactly one correct option",
-    "choice_prompt_format": "Task prompt (if left empty, we use the default «Choose the correct text option»)"
+    "choice_prompt_format": "Task prompt (if left empty, we use the default «Choose the correct text option»)",
+    "status_idle": "Idle",
+    "status_saved": "Saved"
   },
   "se": {
     "k001": "New level",
