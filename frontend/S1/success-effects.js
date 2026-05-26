@@ -428,7 +428,7 @@
             extraClass = '';
         }
 
-        badge.innerHTML = `<span class="streak-badge-inner${extraClass}">${fires} ${streak} подряд!</span>`;
+        badge.innerHTML = `<span class="streak-badge-inner${extraClass}">${fires}${wt('s1.streak_badge', ' {streak} подряд!').replace('{streak}', streak)}</span>`;
         header.appendChild(badge);
     }
 

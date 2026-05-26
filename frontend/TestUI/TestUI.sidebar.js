@@ -2,6 +2,13 @@
 // Plugs into TestUI.web.js via TestUISidebar.renderSidebar({ state, listElement, onSelectQuestion })
 
 (function (global) {
+  function wt(key, fallback) {
+    if (typeof window !== 'undefined' && window.i18n && typeof window.i18n.t === 'function') {
+      var v = window.i18n.t(key); if (v !== key) return v;
+    }
+    return fallback;
+  }
+
   function hasMeaningfulAnswerValue(value) {
     if (Array.isArray(value)) return value.length > 0;
     if (typeof value === "string") return value.trim().length > 0;
@@ -181,7 +188,7 @@
       const empty = document.createElement("li");
       empty.className =
         "col-span-5 rounded-xl border-2 border-dashed border-border-strong bg-surface-2 px-3 py-3 text-center text-xs text-text-muted dark:border-border-strong dark:bg-surface-2 dark:text-text-muted";
-      empty.textContent = "Нет вопросов";
+      empty.textContent = wt('testui_q.no_questions_short', 'Нет вопросов');
       listElement.appendChild(empty);
       return;
     }

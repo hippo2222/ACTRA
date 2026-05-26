@@ -44,12 +44,13 @@
         container.className = 'relative';
 
         toggleBtn.type = 'button';
-        toggleBtn.title = 'Сменить тему';
+        toggleBtn.title = (window.i18n && typeof window.i18n.t === 'function' ? window.i18n.t('theme.switch_title') : null) || 'Сменить тему';
         toggleBtn.className = sidebarTarget
             ? 'flex items-center gap-3 px-3 py-2 text-text-secondary hover:text-text-main hover:bg-bg-hover rounded-lg transition-colors w-full text-left'
             : 'flex size-8 items-center justify-center rounded-full bg-surface-2 text-text-muted border border-border-strong transition-colors hover:bg-surface-1 hover:text-primary';
+        const switchLabel = (window.i18n && typeof window.i18n.t === 'function' ? window.i18n.t('theme.switch_title') : null) || 'Сменить тему';
         toggleBtn.innerHTML = sidebarTarget
-            ? '<span class="material-symbols-outlined text-[20px]">palette</span><span class="text-sm font-medium">Сменить тему</span>'
+            ? `<span class="material-symbols-outlined text-[20px]">palette</span><span class="text-sm font-medium">${switchLabel}</span>`
             : '<span class="material-symbols-outlined text-[18px]">palette</span>';
 
         menu.id = 'theme-switcher-menu';

@@ -14,6 +14,7 @@
     }
 
     function t(key) {
+        if (typeof _locale[key] === 'string') return _locale[key];
         var parts = key.split('.');
         var val = _locale;
         for (var i = 0; i < parts.length; i++) {

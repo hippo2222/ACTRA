@@ -749,7 +749,7 @@
             const kindLabels = [];
             rawKinds.forEach((kind) => {
                 const key = String(kind || "").trim().toLowerCase();
-                const labelMap = { layout: "раскладки", yo: "е/ё", y_i: "ы/і" };
+                const labelMap = { layout: wt('s1.norm_layout', 'раскладки'), yo: wt('s1.norm_yo', 'е/ё'), y_i: wt('s1.norm_y_i', 'ы/і') };
                 const label = labelMap[key];
                 if (label && !kindLabels.includes(label)) kindLabels.push(label);
             });
@@ -757,9 +757,9 @@
                 ? kindLabels.length === 1
                     ? kindLabels[0]
                     : kindLabels.length === 2
-                        ? `${kindLabels[0]} и ${kindLabels[1]}`
-                        : `${kindLabels.slice(0, -1).join(", ")} и ${kindLabels[kindLabels.length - 1]}`
-                : "текста";
+                        ? `${kindLabels[0]}${wt('s1.and_conjunction', ' и ')}${kindLabels[1]}`
+                        : `${kindLabels.slice(0, -1).join(", ")}${wt('s1.and_conjunction', ' и ')}${kindLabels[kindLabels.length - 1]}`
+                : wt('s1.norm_text', 'текста');
 
             if (toleranceType === "typo") return wt('s1.tolerance_typo', 'Ответ засчитан с учетом опечатки.');
             if (toleranceType === "ending") return wt('s1.tolerance_ending', 'Ответ засчитан с учетом формы слова.');
@@ -919,8 +919,8 @@
             title.textContent = pendingUserJudgement
                 ? wt('s1.result_pending_judgement', 'Нужно ваше решение')
                 : success
-                    ? "\u041e\u0442\u0432\u0435\u0442 \u043f\u0440\u0438\u043d\u044f\u0442"
-                    : "\u041e\u0442\u0432\u0435\u0442 \u043d\u0435\u0432\u0435\u0440\u043d\u044b\u0439";
+                    ? wt('s1.result_accepted', 'Ответ принят')
+                    : wt('s1.result_wrong', 'Ответ неверный');
             title.className =
                 "text-sm font-bold leading-tight " +
                 "text-text-main dark:text-text-on-dark";
@@ -1289,17 +1289,17 @@
             }
             progressParts.push(
                 total && index != null
-                    ? `\u0417\u0430\u0434\u0430\u043d\u0438\u0435 ${index + 1} \u0438\u0437 ${total}`
-                    : "\u0417\u0430\u0434\u0430\u043d\u0438\u0435 \u2013"
+                    ? wt('s1.task_n_of_total', 'Задание {n} из {total}').replace('{n}', index + 1).replace('{total}', total)
+                    : wt('s1.task_type_default', 'Задание') + ' \u2013'
             );
-            progressParts.push(`\u0418\u0442\u0435\u0440\u0430\u0446\u0438\u044f ${task.iteration ?? "?"}`);
+            progressParts.push(wt('s1.iteration_label', 'Итерация {iter}').replace('{iter}', task.iteration ?? '?'));
             progressLabel.textContent = progressParts.join(" \u2022 ");
         }
 
         const difficulty = task.difficulty ?? null;
         if (difficultyLabel) {
             difficultyLabel.textContent =
-                difficulty != null ? `\u0421\u043b\u043e\u0436\u043d\u043e\u0441\u0442\u044c: ${difficulty}` : "\u0421\u043b\u043e\u0436\u043d\u043e\u0441\u0442\u044c: -";
+                difficulty != null ? wt('s1.difficulty_label', 'Сложность: {n}').replace('{n}', difficulty) : wt('s1.difficulty_unknown', 'Сложность: -');
             difficultyLabel.classList.remove("hidden");
         }
 
@@ -1307,9 +1307,9 @@
         if (taskHeaderMeta) {
             const qInfo =
                 total && index != null
-                    ? `\u0412\u043e\u043f\u0440\u043e\u0441 ${index + 1} \u0438\u0437 ${total}`
-                    : "\u0412\u043e\u043f\u0440\u043e\u0441";
-            const iterInfo = `\u0418\u0442\u0435\u0440\u0430\u0446\u0438\u044f ${task.iteration ?? "?"}`;
+                    ? wt('s1.question_n_of_total', 'Вопрос {n} из {total}').replace('{n}', index + 1).replace('{total}', total)
+                    : wt('s1.question_label', 'Вопрос');
+            const iterInfo = wt('s1.iteration_label', 'Итерация {iter}').replace('{iter}', task.iteration ?? '?');
             taskHeaderMeta.textContent = `${qInfo} - ${iterInfo}`;
             taskHeaderMeta.classList.remove("hidden");
         }

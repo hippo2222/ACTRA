@@ -223,8 +223,8 @@ class OpenAnswerEditor extends BaseEditor {
                 this.task.metadata?.title ||
                 this.task.metadata?.name ||
                 this.task.metadata?.id ||
-                'Задание';
-            headerTitle.textContent = `Редактирование задания: ${humanName}`;
+                wt('open_answer_editor.task_default', 'Задание');
+            headerTitle.textContent = wt('open_answer_editor.edit_task_title', 'Редактирование задания: {name}').replace('{name}', humanName);
         }
 
         const content = this.task.task_data.content || {};
@@ -450,11 +450,11 @@ class OpenAnswerEditor extends BaseEditor {
         if (!this.keywords.length) {
             const placeholder = document.createElement('p');
             placeholder.className = 'open-answer-keywords-placeholder text-sm text-text-muted italic';
-            placeholder.textContent = 'Добавьте ключевые слова или используйте кнопку «Разбить на ключевые слова».';
+            placeholder.textContent = wt('open_answer_editor.keywords_placeholder', 'Добавьте ключевые слова или используйте кнопку «Разбить на ключевые слова».');
             container.appendChild(placeholder);
         }
 
-        if (badge) badge.textContent = `Выбрано: ${selectedCount}`;
+        if (badge) badge.textContent = wt('open_answer_editor.selected_count', 'Выбрано: {n}').replace('{n}', selectedCount);
     }
 
     splitKeywords() {
@@ -463,7 +463,7 @@ class OpenAnswerEditor extends BaseEditor {
 
         const text = referenceArea.value || '';
         if (!text.trim()) {
-            this.showToast('Сначала заполните эталонный ответ, чтобы выделить ключевые слова.', 'warning');
+            this.showToast(wt('open_answer_editor.err_fill_reference', 'Сначала заполните эталонный ответ, чтобы выделить ключевые слова.'), 'warning');
             referenceArea.focus();
             return;
         }
@@ -477,7 +477,7 @@ class OpenAnswerEditor extends BaseEditor {
         }));
 
         if (!generated.length) {
-            this.showToast('Не удалось выделить ключевые слова. Проверьте эталонный ответ и попробуйте снова.', 'warning');
+            this.showToast(wt('open_answer_editor.err_split_keywords', 'Не удалось выделить ключевые слова. Проверьте эталонный ответ и попробуйте снова.'), 'warning');
             return;
         }
 
@@ -539,13 +539,13 @@ class OpenAnswerEditor extends BaseEditor {
         if (!images.length) {
             const emptyState = document.createElement('div');
             emptyState.className = 'images-empty-state empty-state-card empty-state-card--compact col-span-4';
-            emptyState.textContent = 'Изображения не добавлены';
+            emptyState.textContent = wt('open_answer_editor.no_images', 'Изображения не добавлены');
             emptyState.innerHTML = `
                 <span class="empty-state-card__icon">
                     <span class="material-symbols-outlined text-[22px]">imagesmode</span>
                 </span>
-                <h4 class="empty-state-card__title">Изображения не добавлены</h4>
-                <p class="empty-state-card__copy">Добавьте до ${this.maxImages} ссылок или изображений для задачи.</p>
+                <h4 class="empty-state-card__title">${wt('open_answer_editor.no_images', 'Изображения не добавлены')}</h4>
+                <p class="empty-state-card__copy">${wt('open_answer_editor.add_images_hint', 'Добавьте до {n} ссылок или изображений для задачи.').replace('{n}', this.maxImages)}</p>
             `;
             container.insertBefore(emptyState, referenceNode);
         }
@@ -598,14 +598,14 @@ class OpenAnswerEditor extends BaseEditor {
 
         const remainingSlots = this.maxImages - content.images.length;
         if (remainingSlots <= 0) {
-            this.showToast(`Можно загрузить не более ${this.maxImages} изображений.`, 'warning');
+            this.showToast(wt('open_answer_editor.err_max_images', 'Можно загрузить не более {n} изображений.').replace('{n}', this.maxImages), 'warning');
             event.target.value = '';
             return;
         }
 
         const filesToUpload = files.slice(0, remainingSlots);
         if (filesToUpload.length < files.length) {
-            this.showToast(`Загружено максимальное количество файлов (${this.maxImages}).`, 'warning');
+            this.showToast(wt('open_answer_editor.warn_max_files', 'Загружено максимальное количество файлов ({n}).').replace('{n}', this.maxImages), 'warning');
         }
 
         for (let file of filesToUpload) {
@@ -630,18 +630,18 @@ class OpenAnswerEditor extends BaseEditor {
                         asset_url: data.asset_url,
                     });
                     if (!nextImageRef) {
-                        this.showToast('Не удалось подготовить ссылку на изображение.', 'error');
+                        this.showToast(wt('open_answer_editor.err_img_url', 'Не удалось подготовить ссылку на изображение.'), 'error');
                         continue;
                     }
                     this.task.task_data.content.images.push(nextImageRef);
                     this.task.task_data.content.images = this.normalizeContentImages(this.task.task_data.content.images);
                     this.markUnsaved();
                 } else {
-                    this.showToast(`Ошибка загрузки: ${data.error || 'upload_failed'}`, 'error');
+                    this.showToast(wt('open_answer_editor.err_upload', 'Ошибка загрузки: {err}').replace('{err}', data.error || 'upload_failed'), 'error');
                 }
             } catch (error) {
                 console.error("Ошибка загрузки изображения:", error);
-                this.showToast('Ошибка загрузки изображения. Проверьте соединение и попробуйте снова.', 'error');
+                this.showToast(wt('open_answer_editor.err_upload_network', 'Ошибка загрузки изображения. Проверьте соединение и попробуйте снова.'), 'error');
             }
         }
         this.renderImages();
@@ -664,8 +664,8 @@ class OpenAnswerEditor extends BaseEditor {
         this.pendingDeletedImageUndo = { index, path: removedImage };
         this.renderImages();
         this.markUnsaved();
-        this.showToast('Изображение удалено.', 'info', 5000, {
-            actionLabel: 'Отменить',
+        this.showToast(wt('open_answer_editor.img_deleted', 'Изображение удалено.'), 'info', 5000, {
+            actionLabel: wt('open_answer_editor.undo', 'Отменить'),
             closeable: true,
             onAction: () => this.restoreDeletedImage(),
         });
@@ -685,7 +685,7 @@ class OpenAnswerEditor extends BaseEditor {
         this.pendingDeletedImageUndo = null;
         this.renderImages();
         this.markUnsaved();
-        this.showToast('Изображение восстановлено.', 'success');
+        this.showToast(wt('open_answer_editor.img_restored', 'Изображение восстановлено.'), 'success');
         return true;
     }
 
@@ -705,18 +705,18 @@ class OpenAnswerEditor extends BaseEditor {
         // Validate prompt
         if (!prompt) {
             if (questionArea) questionArea.focus();
-            return "Ошибка: поле вопроса не должно быть пустым.";
+            return wt('open_answer_editor.err_empty_question', 'Ошибка: поле вопроса не должно быть пустым.');
         }
 
         // Validate reference answer
         if (!referenceAnswer) {
             if (referenceArea) referenceArea.focus();
-            return "Ошибка: эталонный ответ не должен быть пустым.";
+            return wt('open_answer_editor.err_empty_reference', 'Ошибка: эталонный ответ не должен быть пустым.');
         }
 
         if (maxLengthPreference.invalid) {
             if (maxLengthInput) maxLengthInput.focus();
-            return "Ошибка: максимальная длина ответа должна быть целым числом не меньше 1 или пустым полем.";
+            return wt('open_answer_editor.err_max_length', 'Ошибка: максимальная длина ответа должна быть целым числом не меньше 1 или пустым полем.');
         }
 
         // Validate keywords
@@ -725,13 +725,13 @@ class OpenAnswerEditor extends BaseEditor {
             .filter((kw) => kw && kw.required);
 
         if (!normalizedKeywords.length) {
-            return "Ошибка: добавьте хотя бы одно ключевое слово для проверки.";
+            return wt('open_answer_editor.err_no_keywords', 'Ошибка: добавьте хотя бы одно ключевое слово для проверки.');
         }
 
         const keywordsTexts = normalizedKeywords.map((kw) => kw.text).filter(Boolean);
 
         if (!keywordsTexts.length) {
-            return "Ошибка: выберите хотя бы одно ключевое слово.";
+            return wt('open_answer_editor.err_select_keyword', 'Ошибка: выберите хотя бы одно ключевое слово.');
         }
 
         return null; // Validation passed

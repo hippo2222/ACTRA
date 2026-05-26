@@ -66,7 +66,7 @@
         const paddingX = 14 * normalizedPaddingScale;
         const paddingY = 10 * normalizedPaddingScale;
         const lineHeight = Math.round(fontSize * 1.3);
-        const sanitized = (text ?? "").toString().trim() || "Без названия";
+        const sanitized = (text ?? "").toString().trim() || (typeof wt === 'function' ? wt('drawui.no_name', 'Без названия') : 'Без названия');
         const paragraphs = sanitized.replace(/\r/g, "").split(/\n+/);
         const lines = [];
         let widest = 0;

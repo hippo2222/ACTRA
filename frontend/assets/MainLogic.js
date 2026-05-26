@@ -1097,11 +1097,11 @@
         }
         if (streakEl) streakEl.textContent = '6';
         if (countEl) {
-            countEl.innerHTML = '<span class="text-sm font-black text-text-main">5</span><span class="text-[11px] text-text-secondary">задач</span>';
+            countEl.innerHTML = '<span class="text-sm font-black text-text-main">5</span><span class="text-[11px] text-text-secondary">' + wt('main.calendar_tasks_word', 'задач') + '</span>';
         }
         if (timeEl) {
             if (timeEl.parentElement) timeEl.parentElement.classList.remove('hidden');
-            timeEl.textContent = '~34 мин';
+            timeEl.textContent = '~34 ' + wt('main.calendar_min', 'мин');
         }
 
         const today = new Date();
@@ -1136,12 +1136,12 @@
 
         if (healthList) {
             healthList.innerHTML = `
-                <div class="main-health-row panel-row" title="Повторить: электродинамика&#10;Также ждут повторения: кинематика, магнитное поле">
+                <div class="main-health-row panel-row" title="${wt('main.health_repeat_prefix', 'Повторить: {name}').replace('{name}', 'электродинамика')}">
                     <div class="main-health-meta">
                         <div class="w-1.5 h-1.5 rounded-full bg-status-error"></div>
-                        <span class="main-health-name">Повторить: электродинамика</span>
+                        <span class="main-health-name">${wt('main.health_repeat_prefix', 'Повторить: {name}').replace('{name}', 'электродинамика')}</span>
                     </div>
-                    <span class="main-health-extra" title="Ещё 2 комплекса">+2</span>
+                    <span class="main-health-extra" title="${wt('main.health_extra', '+{n} more').replace('{n}', '2')}">+2</span>
                 </div>
             `;
         }
@@ -1168,7 +1168,7 @@
         setText('statTotalAvailable', '24');
         setText('statSuccessRate', '86%');
         setText('statTimeSpent', '1ч 42м');
-        setText('statComplexesLabel', 'Комплексов сегодня');
+        setText('statComplexesLabel', wt('main.stat_complexes_today', 'Комплексов сегодня'));
         setText('statTodayCount', '3');
     }
 
@@ -1181,7 +1181,7 @@
         if (emptyEl) emptyEl.hidden = true;
         if (count) {
             count.textContent = '3';
-            count.title = 'Комплексов в быстром доступе: 3';
+            count.title = wt('main.qa_count_full', 'Комплексов в быстром доступе: {n}').replace('{n}', '3');
         }
         if (!list) return;
 
@@ -1189,7 +1189,7 @@
         list.className = 'main-quick-access-grid main-quick-access-grid--rail';
         list.innerHTML = `
             <div class="main-quick-access-card interactive-card group" data-tone="paused" role="button" tabindex="0" title="Подготовка к контрольной: электричество">
-                <button type="button" class="main-quick-access-remove icon-button-muted" title="Убрать">
+                <button type="button" class="main-quick-access-remove icon-button-muted" title="${wt('main.qa_card_remove', 'Убрать')}">
                     <span class="material-symbols-outlined text-[14px]">close</span>
                 </button>
                 <div class="main-quick-access-card-head">
@@ -1204,8 +1204,8 @@
                     </div>
                     <div class="main-quick-access-body">
                         <div class="main-quick-access-topline">
-                            <span class="main-quick-access-pill pill-neutral pill-sm pill-kicker">На паузе</span>
-                            <span class="main-quick-access-meta-tag">Шаг 7/12</span>
+                            <span class="main-quick-access-pill pill-neutral pill-sm pill-kicker">${wt('main.card_status_paused', 'На паузе')}</span>
+                            <span class="main-quick-access-meta-tag">${wt('main.card_step', 'Шаг {n}/{total}').replace('{n}', '7').replace('{total}', '12')}</span>
                         </div>
                         <div class="main-quick-access-title">Подготовка к контрольной</div>
                         <div class="main-quick-access-description">Электричество: закон Ома, цепи, мощность.</div>
@@ -1213,14 +1213,14 @@
                 </div>
                 <div class="main-quick-access-footer">
                     <div class="main-quick-access-progress">
-                        <div class="main-quick-access-progress-label">Сейчас 7/12</div>
+                        <div class="main-quick-access-progress-label">${wt('main.card_step', 'Шаг {n}/{total}').replace('{n}', '7').replace('{total}', '12')}</div>
                         <div class="main-quick-access-progress-track"><div class="main-quick-access-progress-fill" style="width: 62%"></div></div>
                     </div>
-                    <div class="main-quick-access-action"><span>Продолжить</span><span class="material-symbols-outlined">restart_alt</span></div>
+                    <div class="main-quick-access-action"><span>${wt('main.card_action_continue', 'Продолжить')}</span><span class="material-symbols-outlined">restart_alt</span></div>
                 </div>
             </div>
             <div class="main-quick-access-card interactive-card group" data-tone="critical" role="button" tabindex="0" title="Кинематика: графики движения">
-                <button type="button" class="main-quick-access-remove icon-button-muted" title="Убрать">
+                <button type="button" class="main-quick-access-remove icon-button-muted" title="${wt('main.qa_card_remove', 'Убрать')}">
                     <span class="material-symbols-outlined text-[14px]">close</span>
                 </button>
                 <div class="main-quick-access-card-head">
@@ -1230,7 +1230,7 @@
                     </div>
                     <div class="main-quick-access-body">
                         <div class="main-quick-access-topline">
-                            <span class="main-quick-access-pill pill-neutral pill-sm pill-kicker">Нужен повтор</span>
+                            <span class="main-quick-access-pill pill-neutral pill-sm pill-kicker">${wt('main.action_recommended_review', 'Нужен повтор')}</span>
                             <span class="main-quick-access-meta-tag">Риск забывания</span>
                         </div>
                         <div class="main-quick-access-title">Кинематика: графики</div>
@@ -1239,14 +1239,14 @@
                 </div>
                 <div class="main-quick-access-footer">
                     <div class="main-quick-access-progress">
-                        <div class="main-quick-access-progress-label">Пора вернуться</div>
+                        <div class="main-quick-access-progress-label">${wt('main.card_action_return', 'Вернуться')}</div>
                         <div class="main-quick-access-progress-track"><div class="main-quick-access-progress-fill" style="width: 18%"></div></div>
                     </div>
-                    <div class="main-quick-access-action"><span>Вернуться</span><span class="material-symbols-outlined">local_fire_department</span></div>
+                    <div class="main-quick-access-action"><span>${wt('main.card_action_return', 'Вернуться')}</span><span class="material-symbols-outlined">local_fire_department</span></div>
                 </div>
             </div>
             <div class="main-quick-access-card interactive-card group" data-tone="mastered" role="button" tabindex="0" title="Магнитное поле: повторение">
-                <button type="button" class="main-quick-access-remove icon-button-muted" title="Убрать">
+                <button type="button" class="main-quick-access-remove icon-button-muted" title="${wt('main.qa_card_remove', 'Убрать')}">
                     <span class="material-symbols-outlined text-[14px]">close</span>
                 </button>
                 <div class="main-quick-access-card-head">
@@ -1255,7 +1255,7 @@
                     </div>
                     <div class="main-quick-access-body">
                         <div class="main-quick-access-topline">
-                            <span class="main-quick-access-pill pill-neutral pill-sm pill-kicker">Закреплено</span>
+                            <span class="main-quick-access-pill pill-neutral pill-sm pill-kicker">${wt('main.card_status_mastered', 'Закреплено')}</span>
                             <span class="main-quick-access-meta-tag">100%</span>
                         </div>
                         <div class="main-quick-access-title">Магнитное поле</div>
@@ -1264,10 +1264,10 @@
                 </div>
                 <div class="main-quick-access-footer">
                     <div class="main-quick-access-progress">
-                        <div class="main-quick-access-progress-label">Готово к повторению</div>
+                        <div class="main-quick-access-progress-label">${wt('main.action_review_short', 'Готово к повторению')}</div>
                         <div class="main-quick-access-progress-track"><div class="main-quick-access-progress-fill" style="width: 100%"></div></div>
                     </div>
-                    <div class="main-quick-access-action"><span>Открыть</span><span class="material-symbols-outlined">arrow_forward</span></div>
+                    <div class="main-quick-access-action"><span>${wt('main.card_action_open', 'Открыть')}</span><span class="material-symbols-outlined">arrow_forward</span></div>
                 </div>
             </div>
         `;

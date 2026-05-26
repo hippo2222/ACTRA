@@ -904,8 +904,8 @@
         const mode = normalizedChoice === "accept" ? "force_success" : "force_failure";
         const message =
             normalizedChoice === "accept"
-                ? "Ответ принят по вашему выбору."
-                : "Ответ отмечен как неверный по вашему выбору.";
+                ? wt('s1.verdict_accepted', 'Ответ принят по вашему выбору.')
+                : wt('s1.verdict_rejected', 'Ответ отмечен как неверный по вашему выбору.');
         const baseResult =
             SessionState.currentEvaluationResult && typeof SessionState.currentEvaluationResult === "object"
                 ? SessionState.currentEvaluationResult
@@ -1077,7 +1077,7 @@
                         if (missingName) break;
                     }
                     if (missingName) {
-                        showStatus("\u0414\u043b\u044f \u0432\u0441\u0435\u0445 \u0440\u0430\u0437\u043c\u0435\u0449\u0435\u043d\u043d\u044b\u0445 \u044d\u043b\u0435\u043c\u0435\u043d\u0442\u043e\u0432 \u043d\u0443\u0436\u043d\u043e \u0443\u043a\u0430\u0437\u0430\u0442\u044c \u043d\u0430\u0437\u0432\u0430\u043d\u0438\u044f", "error");
+                        showStatus(wt('s1.err_fill_sequence_names', 'Для всех размещённых элементов нужно указать названия'), "error");
                         showEvaluationResult(null);
                         return;
                     }

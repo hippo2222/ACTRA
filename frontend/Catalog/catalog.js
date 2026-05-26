@@ -1180,28 +1180,6 @@
     render();
   }
 
-  function renderSummary() {
-    const total = state.filteredItems.length;
-    const typeLabel =
-      state.contentType === 'saved' ? 'сохранённых комплексов'
-        : state.contentType === 'complex' ? 'комплексов'
-        : state.contentType === 'theory' ? 'теорий'
-          : 'публикаций';
-    if (state.loading) {
-      els.summary.textContent = 'Загружаем каталог…';
-      return;
-    }
-    if (state.error) {
-      els.summary.textContent = 'Каталог сейчас недоступен';
-      return;
-    }
-    if (!total) {
-      els.summary.textContent = 'Пустой результат поиска';
-      return;
-    }
-    els.summary.textContent = `Найдено ${total} ${typeLabel}`;
-  }
-
   function buildCatalogRenderEntries(items) {
     const sourceItems = Array.isArray(items) ? items : [];
     if (state.contentType !== 'all') {

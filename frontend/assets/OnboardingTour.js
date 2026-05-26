@@ -9,6 +9,11 @@
         return fallback;
     }
 
+    function rt(val, tourId, stepId, suffix) {
+        if (!val || !tourId || !stepId) return val || '';
+        return wt('ot.' + tourId + '.' + stepId + (suffix ? '.' + suffix : ''), val);
+    }
+
     const LOCAL_SEEN_KEY = 'actra_onboarding_seen_v1';
     const LOCAL_DISABLED_KEY = 'actra_onboarding_disabled_v1';
     const LOCAL_FIRST_RUN_PROMPT_KEY = 'actra_onboarding_first_run_prompt_v1';
@@ -1074,10 +1079,10 @@
         tooltipEl.innerHTML = `
             <div class="onboarding-tour-kicker">
                 <span class="material-symbols-outlined text-[15px]" aria-hidden="true">tips_and_updates</span>
-                <span>${escapeHtml(step.kicker || activeTour?.title || wt('onboarding.kicker_fallback', 'Обучение'))}</span>
+                <span>${escapeHtml(rt(step.kicker, activeTour?.tourId, step.id, 'kicker') || rt(activeTour?.title, activeTour?.tourId, 'tour', 'title') || wt('onboarding.kicker_fallback', 'Обучение'))}</span>
             </div>
-            <h2 class="onboarding-tour-title">${escapeHtml(step.title || '')}</h2>
-            ${step.body ? `<p class="onboarding-tour-body">${escapeHtml(step.body)}</p>` : ''}
+            <h2 class="onboarding-tour-title">${escapeHtml(rt(step.title, activeTour?.tourId, step.id, 'title') || '')}</h2>
+            ${step.body ? `<p class="onboarding-tour-body">${escapeHtml(rt(step.body, activeTour?.tourId, step.id, 'body'))}</p>` : ''}
             ${listHtml}
             <div class="onboarding-tour-footer">
                 <span class="onboarding-tour-progress">${stepCount > 1 ? `${activeStepIndex + 1} / ${stepCount}` : wt('onboarding.progress_main', 'Главная')}</span>
@@ -1201,7 +1206,9 @@
             : null;
         const callouts = variantCallouts || step.callouts || [];
 
+        let _ci = 0;
         callouts.forEach((callout) => {
+            const _ckp = (variantCallouts ? 'cv.' + activeStepVariant + '.c' : 'c') + _ci;
             const targetNodes = callout.target
                 ? Array.from(document.querySelectorAll(callout.target)).filter((node) => {
                     const rect = node.getBoundingClientRect();
@@ -1227,18 +1234,18 @@
                 ? callout.extraArrows.filter((arrow) => arrow && arrow.target)
                 : [];
             const itemHtml = Array.isArray(callout.items) && callout.items.length
-                ? `<div class="onboarding-tour-callout-list">${callout.items.map((item) => `
+                ? `<div class="onboarding-tour-callout-list">${callout.items.map((item, _im) => `
                     <div class="onboarding-tour-callout-list-item">
-                        <p class="onboarding-tour-callout-list-title">${escapeHtml(item.title || '')}</p>
-                        <p class="onboarding-tour-callout-list-copy">${escapeHtml(item.body || '')}</p>
+                        <p class="onboarding-tour-callout-list-title">${escapeHtml(rt(item.title, activeTour?.tourId, step.id, _ckp + '.i' + _im + '.title') || '')}</p>
+                        <p class="onboarding-tour-callout-list-copy">${escapeHtml(rt(item.body, activeTour?.tourId, step.id, _ckp + '.i' + _im + '.body') || '')}</p>
                     </div>
                 `).join('')}</div>`
                 : '';
             node.innerHTML = `
                 ${callout.hideArrow ? '' : renderArrowSvg()}
                 ${extraArrows.map((_, index) => `<span class="onboarding-tour-callout-arrow onboarding-tour-callout-arrow--extra" data-extra-arrow-index="${index}" aria-hidden="true"></span>`).join('')}
-                ${callout.title ? `<h3 class="onboarding-tour-callout-title">${escapeHtml(callout.title)}</h3>` : ''}
-                ${callout.body ? `<p class="onboarding-tour-callout-body">${escapeHtml(callout.body || '')}</p>` : ''}
+                ${callout.title ? `<h3 class="onboarding-tour-callout-title">${escapeHtml(rt(callout.title, activeTour?.tourId, step.id, _ckp + '.title'))}</h3>` : ''}
+                ${callout.body ? `<p class="onboarding-tour-callout-body">${escapeHtml(rt(callout.body, activeTour?.tourId, step.id, _ckp + '.body'))}</p>` : ''}
                 ${itemHtml}
             `;
             node.__onboardingTarget = target;
@@ -1270,6 +1277,7 @@
             node.__onboardingExtraArrows = extraArrows;
             (calloutStack || document.body).appendChild(node);
             calloutEls.push(node);
+            _ci++;
         });
 
         const stepCount = activeTour?.steps?.length || 1;

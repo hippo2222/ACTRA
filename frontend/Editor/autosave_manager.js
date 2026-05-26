@@ -222,7 +222,7 @@ class AutoSaveManager {
             if (blockingState) {
                 this.editor.updateSaveStatus({
                     type: 'blocking',
-                    message: blockingState.message || '! Требуется правка',
+                    message: blockingState.message || wt('editor_base.status.needs_editing', '! Требуется правка'),
                     detail: blockingState.draftDetail || blockingState.detail || '',
                 });
                 if (typeof this.editor?.notifyBlockingDraftSaved === 'function') {
@@ -233,7 +233,7 @@ class AutoSaveManager {
             const time = new Date(this.lastSaveTime).toLocaleTimeString();
             this.editor.updateSaveStatus({
                 type: 'draft',
-                message: 'Черновик сохранен',
+                message: wt('editor_base.status.draft_saved', 'Черновик сохранён'),
                 time: time
             });
         }

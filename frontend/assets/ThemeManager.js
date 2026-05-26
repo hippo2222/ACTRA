@@ -50,13 +50,19 @@ const ThemeManager = {
     },
 
     normalizeThemeMetadata() {
+        function wt(key, fallback) {
+            if (typeof window !== 'undefined' && window.i18n && typeof window.i18n.t === 'function') {
+                var v = window.i18n.t(key); if (v !== key) return v;
+            }
+            return fallback;
+        }
         const overrides = {
-            'light-a': { name: 'Контраст', description: 'Светлая тема с холодным акцентом' },
-            'light-b': { name: 'Тепло', description: 'Мягкая светлая палитра с тёплыми оттенками' },
-            'neutral-a': { name: 'Земля', description: 'Нейтральная палитра в природных тонах' },
-            'neutral-b': { name: 'Сумерки', description: 'Спокойная нейтральная тема с мягким контрастом' },
-            'dark-a': { name: 'Ночь', description: 'Тёмная тема с тёплыми акцентами' },
-            'dark-b': { name: 'Космос', description: 'Глубокая тёмная палитра для вечерней работы' },
+            'light-a': { name: wt('theme.light_a_name', 'Контраст'), description: wt('theme.light_a_desc', 'Светлая тема с холодным акцентом') },
+            'light-b': { name: wt('theme.light_b_name', 'Тепло'), description: wt('theme.light_b_desc', 'Мягкая светлая палитра с тёплыми оттенками') },
+            'neutral-a': { name: wt('theme.neutral_a_name', 'Земля'), description: wt('theme.neutral_a_desc', 'Нейтральная палитра в природных тонах') },
+            'neutral-b': { name: wt('theme.neutral_b_name', 'Сумерки'), description: wt('theme.neutral_b_desc', 'Спокойная нейтральная тема с мягким контрастом') },
+            'dark-a': { name: wt('theme.dark_a_name', 'Ночь'), description: wt('theme.dark_a_desc', 'Тёмная тема с тёплыми акцентами') },
+            'dark-b': { name: wt('theme.dark_b_name', 'Космос'), description: wt('theme.dark_b_desc', 'Глубокая тёмная палитра для вечерней работы') },
         };
         Object.entries(overrides).forEach(([id, patch]) => {
             if (!this.themes[id]) return;

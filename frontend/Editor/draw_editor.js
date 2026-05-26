@@ -543,17 +543,17 @@ class DrawEditor extends BaseEditor {
         });
 
         if (duplicateLabels.length) {
-            warnings.push(`Повторяются названия областей: ${duplicateLabels.slice(0, 2).join(", ")}.`);
+            warnings.push(wt('draw_editor.warn_duplicate_labels', 'Повторяются названия областей: {labels}.').replace('{labels}', duplicateLabels.slice(0, 2).join(', ')));
         }
 
         const placeholderCount = this.regions.filter((region) => this.isPlaceholderRegionLabel(region?.label)).length;
         if (placeholderCount > 0) {
-            warnings.push(`У ${placeholderCount} областей осталось техническое имя. Лучше заменить его на понятную подсказку для пользователя.`);
+            warnings.push(wt('draw_editor.warn_tech_name', 'У {n} областей осталось техническое имя. Лучше заменить его на понятную подсказку для пользователя.').replace('{n}', placeholderCount));
         }
 
         const tinyRegions = this.regions.filter((region) => this.calculateRegionArea(region?.points) > 0 && this.calculateRegionArea(region?.points) < 25).length;
         if (tinyRegions > 0) {
-            warnings.push(`${tinyRegions} областей выглядят слишком маленькими. Проверьте, что по ним реально удобно попадать.`);
+            warnings.push(wt('draw_editor.warn_tiny_regions', '{n} областей выглядят слишком маленькими. Проверьте, что по ним реально удобно попадать.').replace('{n}', tinyRegions));
         }
 
         return warnings;

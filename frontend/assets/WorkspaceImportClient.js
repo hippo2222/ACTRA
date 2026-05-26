@@ -1,6 +1,13 @@
 (function attachWorkspaceImportClient(global) {
   'use strict';
 
+  function wt(key, fallback) {
+    if (typeof window !== 'undefined' && window.i18n && typeof window.i18n.t === 'function') {
+      var v = window.i18n.t(key); if (v !== key) return v;
+    }
+    return fallback;
+  }
+
   function asString(value) {
     return String(value == null ? '' : value).trim();
   }
@@ -57,20 +64,20 @@
     if (normalized === 'archive_import') return 'Legacy import';
     switch (asString(createdVia).toLowerCase()) {
       case 'complex_builder':
-        return 'Конструктор';
+        return wt('wic.created_via_builder', 'Конструктор');
       case 'manual_editor':
-        return 'Редактор';
+        return wt('wic.created_via_editor', 'Редактор');
       case 'analysis_auto':
-        return 'AI генерация';
+        return wt('wic.created_via_ai', 'AI генерация');
       case 'topic_propagation':
-        return 'Синхронизация тем';
+        return wt('wic.created_via_topic_sync', 'Синхронизация тем');
       case 'single_complex_sync':
-        return 'Синхронизация комплекса';
+        return wt('wic.created_via_complex_sync', 'Синхронизация комплекса');
       case 'workspace_import':
       case 'archive_import':
         return 'Legacy import';
       default:
-        return asString(createdVia) || 'Источник не определён';
+        return asString(createdVia) || wt('wic.source_unknown', 'Источник не определён');
     }
   }
 
@@ -103,7 +110,7 @@
     const workspaceCopy = (node && typeof node.workspace_copy === 'object') ? node.workspace_copy : {};
     const sourceLineage = (node && typeof node.source_lineage === 'object') ? node.source_lineage : {};
     return {
-      title: asString(node?.name || node?.title || node?.workspace_entity_ref || node?.workspace_entity_id) || 'Без названия',
+      title: asString(node?.name || node?.title || node?.workspace_entity_ref || node?.workspace_entity_id) || wt('wic.untitled', 'Без названия'),
       workspaceRef: asString(node?.workspace_entity_ref || node?.workspace_entity_id),
       copyKind: asString(workspaceCopy.kind || workspaceCopy.workspace_copy_kind),
       createdVia: asString(ownership.created_via || node?.created_via),
@@ -120,7 +127,7 @@
   function renderWorkspaceImportNodePreview(title, nodes, emptyText) {
     const normalizedNodes = Array.isArray(nodes) ? nodes : [];
     if (!normalizedNodes.length) {
-      return `<div class="rounded-2xl border border-border-subtle bg-bg-secondary px-4 py-3 text-sm text-text-secondary">${escapeHtml(emptyText || 'Нет элементов.')}</div>`;
+      return `<div class="rounded-2xl border border-border-subtle bg-bg-secondary px-4 py-3 text-sm text-text-secondary">${escapeHtml(emptyText || wt('wic.no_items', 'Нет элементов.'))}</div>`;
     }
 
     const preview = normalizedNodes.slice(0, 4).map((node) => {
@@ -134,14 +141,14 @@
         <div class="rounded-2xl border border-border-subtle bg-bg-secondary px-4 py-3">
           <div class="text-sm font-semibold text-text-main break-words">${escapeHtml(summary.title)}</div>
           ${badges ? `<div class="mt-2 flex flex-wrap gap-1">${badges}</div>` : ''}
-          ${summary.workspaceRef ? `<div class="mt-2 text-[11px] text-text-secondary break-all">Копия: ${escapeHtml(summary.workspaceRef)}</div>` : ''}
-          ${summary.sourceRef ? `<div class="mt-1 text-[11px] text-text-secondary break-all">Источник: ${escapeHtml(summary.sourceRef)}</div>` : ''}
+          ${summary.workspaceRef ? `<div class="mt-2 text-[11px] text-text-secondary break-all">${wt('wic.copy_label', 'Копия')}: ${escapeHtml(summary.workspaceRef)}</div>` : ''}
+          ${summary.sourceRef ? `<div class="mt-1 text-[11px] text-text-secondary break-all">${wt('wic.source_label', 'Источник')}: ${escapeHtml(summary.sourceRef)}</div>` : ''}
         </div>
       `;
     }).join('');
 
     const remainder = normalizedNodes.length > 4
-      ? `<div class="px-1 text-xs text-text-secondary">+${escapeHtml(String(normalizedNodes.length - 4))} ещё</div>`
+      ? `<div class="px-1 text-xs text-text-secondary">+${escapeHtml(String(normalizedNodes.length - 4))} ${wt('wic.more_suffix', 'ещё')}</div>`
       : '';
 
     return `
@@ -190,31 +197,31 @@
   function confirmAction(options) {
     if (global.NotificationUI && typeof global.NotificationUI.confirm === 'function') {
       return global.NotificationUI.confirm({
-        title: asString(options && options.title) || 'Подтвердите действие',
-        message: asString(options && options.message) || 'Подтвердите действие.',
-        confirmText: asString(options && options.confirmText) || 'Продолжить',
-        cancelText: asString(options && options.cancelText) || 'Отмена',
+        title: asString(options && options.title) || wt('wic.confirm_title', 'Подтвердите действие'),
+        message: asString(options && options.message) || wt('wic.confirm_message', 'Подтвердите действие.'),
+        confirmText: asString(options && options.confirmText) || wt('wic.confirm_ok', 'Продолжить'),
+        cancelText: asString(options && options.cancelText) || wt('wic.cancel', 'Отмена'),
         variant: asString(options && options.variant) || 'warning',
       });
     }
 
-    const title = asString(options && options.title) || 'Подтвердите действие';
-    const message = asString(options && options.message) || 'Подтвердите действие.';
-    const confirmText = asString(options && options.confirmText) || 'Продолжить';
-    const cancelText = asString(options && options.cancelText) || 'Отмена';
+    const title = asString(options && options.title) || wt('wic.confirm_title', 'Подтвердите действие');
+    const message = asString(options && options.message) || wt('wic.confirm_message', 'Подтвердите действие.');
+    const confirmText = asString(options && options.confirmText) || wt('wic.confirm_ok', 'Продолжить');
+    const cancelText = asString(options && options.cancelText) || wt('wic.cancel', 'Отмена');
     const variant = asString(options && options.variant).toLowerCase();
     const confirmButtonClass = variant === 'error'
       ? 'border border-error-light bg-error-lighter text-error-text hover:border-error hover:bg-error-lighter'
       : 'btn-primary';
 
     const config = (options && typeof options === 'object') ? options : {};
-    const dialogTitle = asString(config.title) || 'Перед созданием рабочей версии';
-    const dialogLead = asString(config.lead) || 'Проверьте, что именно будет создано в вашем workspace. Источник при этом не изменится.';
-    const sourceLabel = asString(config.sourceLabel) || 'Источник';
-    const targetLabel = asString(config.targetLabel) || 'Будет создано';
-    const modeValue = asString(config.modeValue) || 'Независимая версия в workspace';
-    const dialogCancelText = asString(config.cancelText) || 'Отмена';
-    const dialogConfirmText = asString(config.confirmText) || 'Создать свою версию';
+    const dialogTitle = asString(config.title) || wt('wic.workspace_copy_title', 'Перед созданием рабочей версии');
+    const dialogLead = asString(config.lead) || wt('wic.workspace_copy_lead', 'Проверьте, что именно будет создано в вашем workspace. Источник при этом не изменится.');
+    const sourceLabel = asString(config.sourceLabel) || wt('wic.source_label', 'Источник');
+    const targetLabel = asString(config.targetLabel) || wt('wic.will_be_created', 'Будет создано');
+    const modeValue = asString(config.modeValue) || wt('wic.independent_version', 'Независимая версия в workspace');
+    const dialogCancelText = asString(config.cancelText) || wt('wic.cancel', 'Отмена');
+    const dialogConfirmText = asString(config.confirmText) || wt('wic.create_version', 'Создать свою версию');
 
     return showModalOverlay(`
       <div class="w-full max-w-lg overflow-hidden rounded-[28px] border border-border-subtle bg-surface-1 shadow-xl">
@@ -243,87 +250,87 @@
     const reusedCounts = (summary && typeof summary.reused_counts === 'object') ? summary.reused_counts : {};
     const routeNamespace = asString(previewData?.route_contract?.namespace) || 'internal_workspace_import';
     const payloadTitle = asString(payload?.name || payload?.complex_name || payload?.complexName || payload?.id || payload?.complex_id);
-    const complexTitle = payloadTitle || asString(workspace?.complex_id) || asString(request?.source_complex_id) || 'Комплекс';
+    const complexTitle = payloadTitle || asString(workspace?.complex_id) || asString(request?.source_complex_id) || wt('wic.complex_label', 'Комплекс');
 
     return showModalOverlay(`
       <div class="flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-[28px] border border-border-subtle bg-surface-1 shadow-xl">
         <div class="flex items-start justify-between gap-4 border-b border-border-subtle px-5 py-4">
           <div>
-            <p class="text-lg font-bold text-text-main">Перед добавлением в библиотеку</p>
-            <p class="mt-1 text-sm text-text-secondary">Проверьте, что именно будет создано в вашей библиотеке. Одинаковые названия не объединяются автоматически.</p>
+            <p class="text-lg font-bold text-text-main">${wt('wic.preview_title', 'Перед добавлением в библиотеку')}</p>
+            <p class="mt-1 text-sm text-text-secondary">${wt('wic.preview_lead', 'Проверьте, что именно будет создано в вашей библиотеке. Одинаковые названия не объединяются автоматически.')}</p>
           </div>
-          <button type="button" class="btn-secondary h-10 px-4" data-role="close">Закрыть</button>
+          <button type="button" class="btn-secondary h-10 px-4" data-role="close">${wt('wic.close', 'Закрыть')}</button>
         </div>
         <div class="custom-scrollbar space-y-5 overflow-y-auto p-5">
           <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
             <div class="rounded-2xl border border-border-subtle bg-bg-secondary px-4 py-3">
-              <div class="text-xs uppercase tracking-wide text-text-secondary">Задания</div>
+              <div class="text-xs uppercase tracking-wide text-text-secondary">${wt('wic.tasks_label', 'Задания')}</div>
               <div class="mt-1 text-2xl font-bold text-text-main">${escapeHtml(String(totalNodes.tasks || 0))}</div>
             </div>
             <div class="rounded-2xl border border-success-light bg-success-lighter px-4 py-3">
-              <div class="text-xs uppercase tracking-wide text-success-darker">Создаст</div>
+              <div class="text-xs uppercase tracking-wide text-success-darker">${wt('wic.will_create', 'Создаст')}</div>
               <div class="mt-1 text-2xl font-bold text-success-darker">${escapeHtml(String(createdCounts.tasks || 0))}</div>
             </div>
             <div class="rounded-2xl border border-warning-light bg-warning-lighter px-4 py-3">
-              <div class="text-xs uppercase tracking-wide text-warning-darker">Переиспользует</div>
+              <div class="text-xs uppercase tracking-wide text-warning-darker">${wt('wic.will_reuse', 'Переиспользует')}</div>
               <div class="mt-1 text-2xl font-bold text-warning-darker">${escapeHtml(String(reusedCounts.tasks || 0))}</div>
             </div>
             <div class="rounded-2xl border border-info-light bg-info-lighter px-4 py-3">
-              <div class="text-xs uppercase tracking-wide text-info-text">Теории</div>
+              <div class="text-xs uppercase tracking-wide text-info-text">${wt('wic.theories_label', 'Теории')}</div>
               <div class="mt-1 text-2xl font-bold text-info-text">${escapeHtml(String(totalNodes.theories || 0))}</div>
             </div>
           </div>
 
           <div class="grid gap-5 lg:grid-cols-2">
             <div class="space-y-2 rounded-2xl border border-border-subtle bg-bg-secondary px-4 py-4 text-sm">
-              <div class="font-semibold text-text-main">Источник</div>
+              <div class="font-semibold text-text-main">${wt('wic.source_label', 'Источник')}</div>
               <div class="flex flex-wrap items-start justify-between gap-3">
-                <span class="text-text-secondary">Комплекс</span>
+                <span class="text-text-secondary">${wt('wic.complex_label', 'Комплекс')}</span>
                 <span class="font-medium text-text-main break-words">${escapeHtml(complexTitle)}</span>
               </div>
               ${source.catalog_item_id || request?.source_catalog_item_id ? `
                 <div class="flex flex-wrap items-start justify-between gap-3">
-                  <span class="text-text-secondary">Публикация</span>
+                  <span class="text-text-secondary">${wt('wic.publication_label', 'Публикация')}</span>
                   <span class="font-mono text-text-main break-all">${escapeHtml(source.catalog_item_id || request?.source_catalog_item_id || '')}</span>
                 </div>
               ` : ''}
               ${source.catalog_version_id || request?.source_catalog_version_id ? `
                 <div class="flex flex-wrap items-start justify-between gap-3">
-                  <span class="text-text-secondary">Версия</span>
+                  <span class="text-text-secondary">${wt('wic.version_label', 'Версия')}</span>
                   <span class="font-mono text-text-main break-all">${escapeHtml(source.catalog_version_id || request?.source_catalog_version_id || '')}</span>
                 </div>
               ` : ''}
             </div>
             <div class="space-y-2 rounded-2xl border border-border-subtle bg-bg-secondary px-4 py-4 text-sm">
-              <div class="font-semibold text-text-main">Будет создано</div>
+              <div class="font-semibold text-text-main">${wt('wic.will_be_created', 'Будет создано')}</div>
               ${(workspace.complex_ref || workspace.complex_id) ? `
                 <div class="flex flex-wrap items-start justify-between gap-3">
-                  <span class="text-text-secondary">Рабочая версия</span>
+                  <span class="text-text-secondary">${wt('wic.working_version', 'Рабочая версия')}</span>
                   <span class="font-mono text-text-main break-all">${escapeHtml(workspace.complex_ref || workspace.complex_id || '')}</span>
                 </div>
               ` : ''}
               <div class="flex flex-wrap items-start justify-between gap-3">
-                <span class="text-text-secondary">Модули / Темы / Теории</span>
+                <span class="text-text-secondary">${wt('wic.modules_topics_theories', 'Модули / Темы / Теории')}</span>
                 <span class="font-medium text-text-main">${escapeHtml(`${totalNodes.modules || 0} / ${totalNodes.topics || 0} / ${totalNodes.theories || 0}`)}</span>
               </div>
               <div class="flex flex-wrap items-start justify-between gap-3">
-                <span class="text-text-secondary">Режим</span>
-                <span class="font-medium text-text-main">Независимая версия в workspace</span>
+                <span class="text-text-secondary">${wt('wic.mode_label', 'Режим')}</span>
+                <span class="font-medium text-text-main">${wt('wic.independent_version', 'Независимая версия в workspace')}</span>
               </div>
             </div>
           </div>
 
           <div class="grid gap-4 lg:grid-cols-2">
-            ${renderWorkspaceImportNodePreview('Комплекс', result.complex ? [result.complex] : [], 'Комплекс не найден.')}
-            ${renderWorkspaceImportNodePreview('Модули', result.modules, 'Модулей нет.')}
-            ${renderWorkspaceImportNodePreview('Темы', result.topics, 'Тем нет.')}
-            ${renderWorkspaceImportNodePreview('Задания', result.tasks, 'Заданий нет.')}
-            ${renderWorkspaceImportNodePreview('Теории', result.theories, 'Теорий нет.')}
+            ${renderWorkspaceImportNodePreview(wt('wic.complex_label', 'Комплекс'), result.complex ? [result.complex] : [], wt('wic.no_complex', 'Комплекс не найден.'))}
+            ${renderWorkspaceImportNodePreview(wt('wic.modules_label', 'Модули'), result.modules, wt('wic.no_modules', 'Модулей нет.'))}
+            ${renderWorkspaceImportNodePreview(wt('wic.topics_label', 'Темы'), result.topics, wt('wic.no_topics', 'Тем нет.'))}
+            ${renderWorkspaceImportNodePreview(wt('wic.tasks_label', 'Задания'), result.tasks, wt('wic.no_tasks', 'Заданий нет.'))}
+            ${renderWorkspaceImportNodePreview(wt('wic.theories_label', 'Теории'), result.theories, wt('wic.no_theories', 'Теорий нет.'))}
           </div>
         </div>
         <div class="flex justify-end gap-3 border-t border-border-subtle px-5 py-4">
-          <button type="button" class="btn-secondary h-10 px-4" data-role="cancel">Закрыть</button>
-          <button type="button" class="btn-primary h-10 px-4" data-role="confirm">Добавить в библиотеку</button>
+          <button type="button" class="btn-secondary h-10 px-4" data-role="cancel">${wt('wic.close', 'Закрыть')}</button>
+          <button type="button" class="btn-primary h-10 px-4" data-role="confirm">${wt('wic.add_to_library', 'Добавить в библиотеку')}</button>
         </div>
       </div>
     `, {

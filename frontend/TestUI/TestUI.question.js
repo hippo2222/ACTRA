@@ -2,6 +2,14 @@
 // This module plugs into TestUI.web.js via TestUIQuestion.createQuestionRenderer(state, main)
 
 (function (global) {
+  function wt(key, fallback) {
+    if (typeof window !== 'undefined' && window.i18n && typeof window.i18n.t === 'function') {
+      var v = window.i18n.t(key);
+      if (v !== key) return v;
+    }
+    return fallback;
+  }
+
   // Inject TestUI animation styles once
   (function _injectTestUIStyles() {
     if (document.getElementById("testui-anim-style")) return;
@@ -245,7 +253,7 @@
     }
 
     function appendReferenceAnswerCard(body, options = {}) {
-      const title = String(options.title || "Эталонный ответ");
+      const title = String(options.title || wt('testui_q.reference_answer', 'Эталонный ответ'));
       const html = String(options.html || "");
       const hintText = String(options.hintText || "").trim();
       const dataTestUi = String(options.dataTestUi || "l2-reference-answer");
@@ -373,37 +381,37 @@
 
       if (status === "correct") {
         return {
-          title: "Разбор ответа",
+          title: wt('testui_q.analysis_title', 'Разбор ответа'),
           description: isMultiple
-            ? "Вы выбрали все правильные варианты."
-            : "Вы выбрали правильный вариант.",
-          badge: createCompactStatusBadge("Верно", "success"),
+            ? wt('testui_q.correct_multiple', 'Вы выбрали все правильные варианты.')
+            : wt('testui_q.correct_single', 'Вы выбрали правильный вариант.'),
+          badge: createCompactStatusBadge(wt('testui_q.badge_correct', 'Верно'), "success"),
           headerClass: "bg-success-light dark:bg-success-light",
         };
       }
 
       if (status === "incorrect") {
         return {
-          title: "Разбор ответа",
+          title: wt('testui_q.analysis_title', 'Разбор ответа'),
           description: isMultiple
-            ? "Зеленым отмечены правильные варианты, красным отмечены лишние выбранные."
-            : "Зеленым отмечен правильный вариант, красным отмечен ваш неверный выбор.",
-          badge: createCompactStatusBadge("Есть ошибка", "error"),
+            ? wt('testui_q.incorrect_multiple', 'Зеленым отмечены правильные варианты, красным отмечены лишние выбранные.')
+            : wt('testui_q.incorrect_single', 'Зеленым отмечен правильный вариант, красным отмечен ваш неверный выбор.'),
+          badge: createCompactStatusBadge(wt('testui_q.badge_incorrect', 'Есть ошибка'), "error"),
           headerClass: "bg-error-light dark:bg-error-light",
         };
       }
 
       if (status === "unanswered") {
         return {
-          title: "Разбор ответа",
-          description: "Ответ на этот вопрос не был выбран.",
-          badge: createCompactStatusBadge("Без ответа"),
+          title: wt('testui_q.analysis_title', 'Разбор ответа'),
+          description: wt('testui_q.unanswered_description', 'Ответ на этот вопрос не был выбран.'),
+          badge: createCompactStatusBadge(wt('testui_q.badge_unanswered', 'Без ответа')),
           headerClass: "bg-surface-2 dark:bg-surface-2",
         };
       }
 
       return {
-        title: "Разбор ответа",
+        title: wt('testui_q.analysis_title', 'Разбор ответа'),
         description: "",
         badge: null,
         headerClass: "bg-surface-2 dark:bg-surface-2",
@@ -425,7 +433,7 @@
 
       if (!currentMeta || !state.questions.length) {
         const empty = document.createElement("p");
-        empty.textContent = "В задании нет вопросов";
+        empty.textContent = wt('testui_q.no_questions', 'В задании нет вопросов');
         body.appendChild(empty);
         // Навигация между вопросами (стрелки под вариантами / полем ответа)
         renderQuestionNavigation(body);
@@ -441,7 +449,7 @@
       const qText = document.createElement("p");
       qText.className =
         "mb-1 max-w-3xl text-[1.05rem] font-semibold leading-7 text-text-main dark:text-text-on-dark";
-      qText.textContent = currentMeta.text || "Вопрос теста";
+      qText.textContent = currentMeta.text || wt('testui_q.question_fallback', 'Вопрос теста');
       body.appendChild(qText);
 
       // Optional question images (L1.C / L2)
@@ -457,14 +465,14 @@
           questionImages.forEach((questionImagePath, index) => {
             const img = document.createElement("img");
             img.src = questionImagePath;
-            img.alt = `Изображение вопроса ${index + 1}`;
+            img.alt = wt('testui_q.question_image_alt', 'Изображение вопроса {n}').replace('{n}', index + 1);
             img.className = questionImages.length === 1
               ? "max-h-[260px] w-auto object-contain rounded-lg border border-border-strong dark:border-border-strong shadow-sm cursor-pointer"
               : "max-h-[260px] w-full object-contain rounded-lg border border-border-strong dark:border-border-strong shadow-sm cursor-pointer";
 
             img.addEventListener("click", (ev) => {
               ev.preventDefault();
-              openImageLightbox(questionImagePath, currentMeta.text || "Изображение вопроса");
+              openImageLightbox(questionImagePath, currentMeta.text || wt('testui_q.question_image_fallback', 'Изображение вопроса'));
             });
 
             imgWrapper.appendChild(img);
@@ -527,14 +535,14 @@
       const label = document.createElement("label");
       label.className =
         "flex items-center justify-between gap-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-text-secondary dark:text-text-secondary";
-      label.textContent = "Ваш ответ:";
+      label.textContent = wt('testui_q.your_answer', 'Ваш ответ:');
 
       textWrapper.appendChild(label);
 
       const textarea = document.createElement("textarea");
       textarea.className = CLASSMAP.l2.open.textareaAnswering;
       textarea.value = existing;
-      textarea.placeholder = "Введите точный ответ";
+      textarea.placeholder = wt('testui_q.enter_answer', 'Введите точный ответ');
 
       textarea.addEventListener("input", () => {
         const val = textarea.value || "";
@@ -575,7 +583,7 @@
       const label = document.createElement("span");
       label.className =
         "text-[12px] font-semibold uppercase tracking-[0.08em] text-text-secondary dark:text-text-secondary";
-      label.textContent = "Ваш ответ:";
+      label.textContent = wt('testui_q.your_answer', 'Ваш ответ:');
 
       const badge = document.createElement("div");
       badge.id = "l2-status-badge";
@@ -590,17 +598,17 @@
           : [];
 
       function describeNormalizationKinds(kinds) {
-        const labelMap = { layout: 'раскладки', yo: 'е/ё', y_i: 'ы/і' };
+        const labelMap = { layout: wt('s1.norm_layout', 'раскладки'), yo: wt('s1.norm_yo', 'е/ё'), y_i: wt('s1.norm_y_i', 'ы/і') };
         const labels = [];
         (Array.isArray(kinds) ? kinds : []).forEach((kind) => {
           const key = String(kind || '').trim().toLowerCase();
           const label = labelMap[key];
           if (label && !labels.includes(label)) labels.push(label);
         });
-        if (!labels.length) return 'текста';
+        if (!labels.length) return wt('s1.norm_text', 'текста');
         if (labels.length === 1) return labels[0];
-        if (labels.length === 2) return `${labels[0]} и ${labels[1]}`;
-        return `${labels.slice(0, -1).join(', ')} и ${labels[labels.length - 1]}`;
+        if (labels.length === 2) return `${labels[0]}${wt('s1.and_conjunction', ' и ')}${labels[1]}`;
+        return `${labels.slice(0, -1).join(', ')}${wt('s1.and_conjunction', ' и ')}${labels[labels.length - 1]}`;
       }
 
       let badgeClass =
@@ -613,26 +621,26 @@
           "bg-success-light text-success-text border-success dark:bg-success-light dark:text-success-light dark:border-success";
         badgeDotClass += "bg-success";
         if (tolType === "typo") {
-          badgeText = "Верно (опечатка)";
+          badgeText = wt('testui_q.badge_correct_typo', 'Верно (опечатка)');
         } else if (tolType === "ending") {
-          badgeText = "Верно (окончание)";
+          badgeText = wt('testui_q.badge_correct_ending', 'Верно (окончание)');
         } else if (tolType === "both") {
-          badgeText = "Верно (опечатка + окончание)";
+          badgeText = wt('testui_q.badge_correct_both', 'Верно (опечатка + окончание)');
         } else if (tolType === "normalized") {
-          badgeText = "Верно (нормализация)";
+          badgeText = wt('testui_q.badge_correct_normalized', 'Верно (нормализация)');
         } else {
-          badgeText = "Верно";
+          badgeText = wt('testui_q.badge_correct', 'Верно');
         }
       } else if (status === "incorrect") {
         badgeClass +=
           "bg-error-light text-error-text border-error-light dark:bg-error-light dark:text-error-light dark:border-error";
         badgeDotClass += "bg-error";
-        badgeText = "Неверно";
+        badgeText = wt('testui_q.badge_wrong', 'Неверно');
       } else {
         badgeClass +=
           "bg-surface-2 text-text-secondary border-border-strong dark:bg-surface-2 dark:text-text-on-dark dark:border-border-strong";
         badgeDotClass += "bg-bg-hover";
-        badgeText = "Без ответа";
+        badgeText = wt('testui_q.badge_unanswered', 'Без ответа');
       }
 
       badge.className = badgeClass;
@@ -669,19 +677,19 @@
       if (status === "correct") {
         statusLineClass = "text-success-text dark:text-success";
         if (tolType === "typo") {
-          statusLineText = "Ответ засчитан как верный с учетом опечатки.";
+          statusLineText = wt('testui_q.status_correct_typo', 'Ответ засчитан как верный с учетом опечатки.');
         } else if (tolType === "ending") {
-          statusLineText = "Ответ засчитан как верный с учетом окончания слова.";
+          statusLineText = wt('testui_q.status_correct_ending', 'Ответ засчитан как верный с учетом окончания слова.');
         } else if (tolType === "both") {
-          statusLineText = "Ответ засчитан как верный с учетом опечатки и окончания слова.";
+          statusLineText = wt('testui_q.status_correct_both', 'Ответ засчитан как верный с учетом опечатки и окончания слова.');
         } else if (tolType === "normalized") {
-          statusLineText = `Ответ засчитан после нормализации ${describeNormalizationKinds(tolKinds)}.`;
+          statusLineText = wt('testui_q.status_correct_normalized', 'Ответ засчитан после нормализации {kinds}.').replace('{kinds}', describeNormalizationKinds(tolKinds));
         } else {
-          statusLineText = "Ответ на этот вопрос засчитан как верный.";
+          statusLineText = wt('testui_q.status_correct', 'Ответ на этот вопрос засчитан как верный.');
         }
       } else if (status === "unanswered") {
         statusLineClass = "text-text-muted dark:text-text-muted";
-        statusLineText = "Ответ на этот вопрос отсутствует.";
+        statusLineText = wt('testui_q.status_unanswered', 'Ответ на этот вопрос отсутствует.');
       }
 
       if (statusLineText) {
@@ -726,7 +734,7 @@
         const referenceLabel = document.createElement("div");
         referenceLabel.className =
           "text-[12px] font-semibold uppercase tracking-[0.08em] text-success-text dark:text-success-lighter";
-        referenceLabel.textContent = "Эталонный ответ";
+        referenceLabel.textContent = wt('testui_q.reference_answer', 'Эталонный ответ');
 
         const referenceText = document.createElement("div");
         referenceText.className =
@@ -748,10 +756,10 @@
         const diffResult = buildReferenceAnswerDiff(referenceAnswer, textValue);
         appendReferenceAnswerCard(body, {
           dataTestUi: "l2-reference-answer",
-          title: "Эталонный ответ",
+          title: wt('testui_q.reference_answer', 'Эталонный ответ'),
           html: diffResult.html || escapeHtml(referenceAnswer),
           hintText: diffResult.hasHighlights
-            ? "Подсвечены отличия между вашим ответом и эталоном."
+            ? wt('testui_q.diff_hint', 'Подсвечены отличия между вашим ответом и эталоном.')
             : "",
         });
       }
