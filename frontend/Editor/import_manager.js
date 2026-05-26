@@ -614,7 +614,7 @@ class ImportManager {
             this.theorySubMode = this.parsedResult ? 'task_preview' : 'task_generation';
         }
         this.updateNavigationButtons();
-        this.showToast(`Черновик для ${this.getEditorFacingTaskTypeLabel(normalizedTaskType)} восстановлен.`, 'success');
+        this.showToast(`${wt('im.k620', 'Черновик для')} ${this.getEditorFacingTaskTypeLabel(normalizedTaskType)} ${wt('im.k621', 'восстановлен.')}`, 'success');
         this.renderCurrentStep();
     }
 
@@ -1012,7 +1012,7 @@ ${remaining}
                 this.updateAIAgentPromptTextarea();
                 this._updateLiveCounter('');
             }
-            this.showToast(`Статус для ${this.getEditorFacingTaskTypeLabel(normalizedTaskType)} сброшен.`, 'info');
+            this.showToast(`${wt('im.k622', 'Статус для')} ${this.getEditorFacingTaskTypeLabel(normalizedTaskType)} ${wt('im.k623', 'сброшен.')}`, 'info');
             this.renderCurrentStep();
             return;
         }
@@ -1022,7 +1022,7 @@ ${remaining}
                 status: 'manual_done',
                 last_imported_at: new Date().toISOString(),
             });
-            this.showToast(`Ручной этап отмечен для ${this.getEditorFacingTaskTypeLabel(normalizedTaskType)}.`, 'success');
+            this.showToast(`${wt('im.k624', 'Ручной этап отмечен для')} ${this.getEditorFacingTaskTypeLabel(normalizedTaskType)}.`, 'success');
             this.renderCurrentStep();
             return;
         }
@@ -1038,7 +1038,7 @@ ${remaining}
                 this.updateAIAgentPromptTextarea();
                 this._updateLiveCounter('');
             }
-            this.showToast(`Тип ${this.getEditorFacingTaskTypeLabel(normalizedTaskType)} помечен как пропущенный.`, 'warning');
+            this.showToast(`${wt('im.k625', 'Тип')} ${this.getEditorFacingTaskTypeLabel(normalizedTaskType)} ${wt('im.k626', 'помечен как пропущенный.')}`, 'warning');
             this.renderCurrentStep();
             return;
         }
@@ -1139,19 +1139,19 @@ ${remaining}
             <div class="rounded-xl border border-border-subtle bg-surface-1 p-4 space-y-4">
                 <div class="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                        <h4 class="text-sm font-bold text-text-main">Карта покрытия материала</h4>
-                        <p class="text-xs text-text-secondary mt-1">Показывает, какие образовательные единицы уже закрыты импортом или ручной работой, а какие ещё требуют отдельного типа задания.</p>
+                        <h4 class="text-sm font-bold text-text-main">${wt('im.k627', 'Карта покрытия материала')}</h4>
+                        <p class="text-xs text-text-secondary mt-1">${wt('im.k628', 'Показывает, какие образовательные единицы уже закрыты импортом или ручной работой, а какие ещё требуют отдельного типа задания.')}</p>
                     </div>
                 </div>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    ${summaryBadge('Всего единиц', snapshot.rows.length, 'border-border-subtle bg-surface-2')}
-                    ${summaryBadge('Не покрыто', snapshot.uncovered.length, 'border-warning-light bg-warning-lighter')}
-                    ${summaryBadge('Покрыто 1 типом', snapshot.coveredOnce.length, 'border-info-light bg-info-lighter')}
-                    ${summaryBadge('Покрыто 2+ типами', snapshot.coveredMulti.length, 'border-success-light bg-success-lighter')}
+                    ${summaryBadge(wt('im.k629', 'Всего единиц'), snapshot.rows.length, 'border-border-subtle bg-surface-2')}
+                    ${summaryBadge(wt('im.k630', 'Не покрыто'), snapshot.uncovered.length, 'border-warning-light bg-warning-lighter')}
+                    ${summaryBadge(wt('im.k631', 'Покрыто 1 типом'), snapshot.coveredOnce.length, 'border-info-light bg-info-lighter')}
+                    ${summaryBadge(wt('im.k632', 'Покрыто 2+ типами'), snapshot.coveredMulti.length, 'border-success-light bg-success-lighter')}
                 </div>
                 ${snapshot.uncovered.length ? `
                     <div class="rounded-lg border border-warning-light bg-warning-lighter p-3 text-xs text-warning-text">
-                        <span class="font-semibold">Сейчас без покрытия:</span>
+                        <span class="font-semibold">${wt('im.k634', 'Сейчас без покрытия:')}</span>
                         ${this.escapeHtml(snapshot.uncovered.map((row) => `#${row.unit.id} ${row.unit.title}`).join('; '))}
                     </div>
                 ` : `
@@ -1211,7 +1211,7 @@ ${remaining}
                                 ${wt('im.k051', 'Последнее обновление:')}${this.escapeHtml(this.formatTheorySessionTimestamp(session.updated_at))}
                             </div>
                             <div class="mt-1 text-sm text-text-secondary">
-                                ${this.escapeHtml(String(session.analysis?.human_summary || 'Открыт сохранённый анализ материала.'))}
+                                ${this.escapeHtml(String(session.analysis?.human_summary || wt('im.k635', 'Открыт сохранённый анализ материала.')))}
                             </div>
                         </div>
                         <div class="flex flex-wrap gap-2">
@@ -1271,7 +1271,7 @@ ${remaining}
             <div class="max-w-4xl mx-auto space-y-5">
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                        <h3 class="text-lg font-bold text-text-main">Архив анализов</h3>
+                        <h3 class="text-lg font-bold text-text-main">${wt('im.k636', 'Архив анализов')}</h3>
                         <div class="text-sm text-text-secondary mt-1">
                             ${wt('im.k057', 'Здесь можно сохранить анализ даже без создания заданий и позже вернуться к нему.')}
                         </div>
@@ -1375,19 +1375,19 @@ ${remaining}
             <div class="rounded-xl border border-border-subtle bg-surface-1 p-4 space-y-4">
                 <div class="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                        <h4 class="text-sm font-bold text-text-main">Карта покрытия материала</h4>
-                        <p class="text-xs text-text-secondary mt-1">Показывает, какие образовательные единицы уже закрыты импортом или ручной работой, а какие ещё требуют отдельного типа задания.</p>
+                        <h4 class="text-sm font-bold text-text-main">${wt('im.k627', 'Карта покрытия материала')}</h4>
+                        <p class="text-xs text-text-secondary mt-1">${wt('im.k628', 'Показывает, какие образовательные единицы уже закрыты импортом или ручной работой, а какие ещё требуют отдельного типа задания.')}</p>
                     </div>
                 </div>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    ${summaryBadge('Всего единиц', snapshot.rows.length, 'border-border-subtle')}
-                    ${summaryBadge('Без покрытия', snapshot.uncovered.length, 'border-warning-light')}
-                    ${summaryBadge('Покрыто 1 типом', snapshot.coveredOnce.length, 'border-info-light')}
-                    ${summaryBadge('Покрыто 2+ типами', snapshot.coveredMulti.length, 'border-success-light')}
+                    ${summaryBadge(wt('im.k629', 'Всего единиц'), snapshot.rows.length, 'border-border-subtle')}
+                    ${summaryBadge(wt('im.k633', 'Без покрытия'), snapshot.uncovered.length, 'border-warning-light')}
+                    ${summaryBadge(wt('im.k631', 'Покрыто 1 типом'), snapshot.coveredOnce.length, 'border-info-light')}
+                    ${summaryBadge(wt('im.k632', 'Покрыто 2+ типами'), snapshot.coveredMulti.length, 'border-success-light')}
                 </div>
                 ${snapshot.uncovered.length ? `
                     <div class="rounded-lg border border-warning-light bg-surface-2 p-3 text-xs text-text-secondary">
-                        <span class="font-semibold text-text-main">Сейчас без покрытия:</span>
+                        <span class="font-semibold text-text-main">${wt('im.k634', 'Сейчас без покрытия:')}</span>
                         ${this.escapeHtml(snapshot.uncovered.map((row) => `#${row.unit.id} ${row.unit.title}`).join('; '))}
                     </div>
                 ` : `
@@ -1447,7 +1447,7 @@ ${remaining}
                                 ${wt('im.k071', 'Последнее обновление:')}${this.escapeHtml(this.formatTheorySessionTimestamp(session.updated_at))}
                             </div>
                             <div class="mt-1 text-sm text-text-secondary">
-                                ${this.escapeHtml(String(session.analysis?.human_summary || 'Открыт сохранённый анализ материала.'))}
+                                ${this.escapeHtml(String(session.analysis?.human_summary || wt('im.k635', 'Открыт сохранённый анализ материала.')))}
                             </div>
                         </div>
                         <div class="flex flex-wrap gap-2">
@@ -1507,7 +1507,7 @@ ${remaining}
             <div class="max-w-4xl mx-auto space-y-5">
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                        <h3 class="text-lg font-bold text-text-main">Архив анализов</h3>
+                        <h3 class="text-lg font-bold text-text-main">${wt('im.k636', 'Архив анализов')}</h3>
                         <div class="text-sm text-text-secondary mt-1">
                             ${wt('im.k077', 'Здесь можно сохранить анализ даже без создания заданий и позже вернуться к нему.')}
                         </div>
@@ -1818,7 +1818,7 @@ ${remaining}
             return `
                 <div class="flex flex-col items-center justify-center py-12 animate-slide-up-fade">
                     <img src="/assets/logo_animated.svg" alt="Loading" class="w-16 h-16 mb-4 drop-shadow-md" />
-                    <h3 class="text-lg font-bold text-text-main">Подготовка workspace-копии...</h3>
+                    <h3 class="text-lg font-bold text-text-main">${wt('im.k637', 'Подготовка workspace-копии...')}</h3>
                     <p class="text-text-secondary text-sm mt-2">Проверяем source lineage, reuse и целевую структуру graph.</p>
                 </div>
             `;
@@ -1850,16 +1850,16 @@ ${remaining}
         return `
             <div class="max-w-5xl mx-auto animate-slide-up-fade space-y-5">
                 <div>
-                    <h3 class="text-lg font-bold text-text-main">Предпросмотр workspace-импорта</h3>
+                    <h3 class="text-lg font-bold text-text-main">${wt('im.k638', 'Предпросмотр workspace-импорта')}</h3>
                     <p class="text-sm text-text-secondary mt-1">Этот internal flow ещё не является public catalog API. Здесь мы проверяем, какая рабочая версия будет создана или переиспользована, с учётом lineage и ownership imported graph.</p>
                 </div>
 
                 <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
-                    ${this.renderWorkspaceImportSummaryStat('Комплекс', totalNodes.complexes || 0, 'info')}
-                    ${this.renderWorkspaceImportSummaryStat('Модули', totalNodes.modules || 0, 'neutral')}
-                    ${this.renderWorkspaceImportSummaryStat('Темы', totalNodes.topics || 0, 'neutral')}
-                    ${this.renderWorkspaceImportSummaryStat('Задания', totalNodes.tasks || 0, 'success')}
-                    ${this.renderWorkspaceImportSummaryStat('Теории', totalNodes.theories || 0, 'neutral')}
+                    ${this.renderWorkspaceImportSummaryStat(wt('im.k639', 'Комплекс'), totalNodes.complexes || 0, 'info')}
+                    ${this.renderWorkspaceImportSummaryStat(wt('im.k640', 'Модули'), totalNodes.modules || 0, 'neutral')}
+                    ${this.renderWorkspaceImportSummaryStat(wt('im.k641', 'Темы'), totalNodes.topics || 0, 'neutral')}
+                    ${this.renderWorkspaceImportSummaryStat(wt('im.k642', 'Задания'), totalNodes.tasks || 0, 'success')}
+                    ${this.renderWorkspaceImportSummaryStat(wt('im.k643', 'Теории'), totalNodes.theories || 0, 'neutral')}
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -1901,11 +1901,11 @@ ${remaining}
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    ${this.renderWorkspaceImportNodePreview('Комплекс', result.complex ? [result.complex] : [], 'Комплекс не найден.')}
-                    ${this.renderWorkspaceImportNodePreview('Модули', result.modules, 'Модулей нет.')}
-                    ${this.renderWorkspaceImportNodePreview('Темы', result.topics, 'Тем нет.')}
-                    ${this.renderWorkspaceImportNodePreview('Задания', result.tasks, 'Заданий нет.')}
-                    ${this.renderWorkspaceImportNodePreview('Теории', result.theories, 'Теорий нет.')}
+                    ${this.renderWorkspaceImportNodePreview(wt('im.k639', 'Комплекс'), result.complex ? [result.complex] : [], wt('im.k644', 'Комплекс не найден.'))}
+                    ${this.renderWorkspaceImportNodePreview(wt('im.k640', 'Модули'), result.modules, wt('im.k645', 'Модулей нет.'))}
+                    ${this.renderWorkspaceImportNodePreview(wt('im.k641', 'Темы'), result.topics, wt('im.k646', 'Тем нет.'))}
+                    ${this.renderWorkspaceImportNodePreview(wt('im.k642', 'Задания'), result.tasks, wt('im.k647', 'Заданий нет.'))}
+                    ${this.renderWorkspaceImportNodePreview(wt('im.k643', 'Теории'), result.theories, wt('im.k648', 'Теорий нет.'))}
                 </div>
 
             </div>
@@ -1946,7 +1946,7 @@ ${remaining}
                 </div>
 
                 <div>
-                    <h3 class="text-xl font-bold text-text-main mb-2">Готово к добавлению в workspace</h3>
+                    <h3 class="text-xl font-bold text-text-main mb-2">${wt('im.k649', 'Готово к добавлению в workspace')}</h3>
                     <p class="text-text-secondary">Будет создана или переиспользована рабочая версия комплекса со всеми зависимостями, без merge по имени.</p>
                 </div>
 
@@ -2535,8 +2535,8 @@ ${remaining}
             ? wt('im.k110', 'Закрыть импорт и сбросить локальные данные?')
             : wt('im.k111', 'Сбросить данные импорта?');
         const message = guard.hasImportedProgress
-            ? `Окно импорта будет закрыто. Черновики, карта покрытия и промежуточные данные будут сброшены. Уже импортированные задания останутся в библиотеке. Импортировано типов: ${guard.importedRecommendationTypes}.`
-            : `Окно импорта будет закрыто. Все промежуточные данные будут удалены: введённый текст, результаты парсинга и черновики${guard.draftRecommendationTypes > 0 ? ` (${guard.draftRecommendationTypes})` : ''}.`;
+            ? `${wt('im.k650', 'Окно импорта будет закрыто. Черновики, карта покрытия и промежуточные данные будут сброшены. Уже импортированные задания останутся в библиотеке. Импортировано типов:')} ${guard.importedRecommendationTypes}.`
+            : `${wt('im.k651', 'Окно импорта будет закрыто. Все промежуточные данные будут удалены: введённый текст, результаты парсинга и черновики')}${guard.draftRecommendationTypes > 0 ? ` (${guard.draftRecommendationTypes})` : ''}.`;
         return await this.confirmAction({
             title,
             message,
@@ -2704,7 +2704,7 @@ ${remaining}
 
         return `
             <div class="max-w-3xl mx-auto animate-slide-up-fade">
-                <h3 class="text-lg font-bold text-text-main mb-6">Выберите режим импорта</h3>
+                <h3 class="text-lg font-bold text-text-main mb-6">${wt('im.k652', 'Выберите режим импорта')}</h3>
                 
                 <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 mb-8">
                     <button data-role="import-mode-text" onclick="dashboard.importManager.setImportMode('text')" 
@@ -2751,7 +2751,7 @@ ${remaining}
                     <label class="block text-sm font-semibold text-text-secondary mb-2">Целевой модуль</label>
                     <select id="import-module-select" 
                         class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main focus:ring-2 focus:ring-primary sm:text-sm">
-                        ${this.renderModuleOptions(modules, 'Выберите модуль...')}
+                        ${this.renderModuleOptions(modules, wt('im.k653', 'Выберите модуль...'))}
                     </select>
                 </div>
                 
@@ -2802,7 +2802,7 @@ ${remaining}
                             <label class="block text-sm font-medium text-text-secondary mb-1">Переопределить модуль (опционально)</label>
                             <select id="import-module-select" 
                                 class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2 text-text-main sm:text-xs">
-                                ${this.renderModuleOptions(modules, 'Не переопределять (из архива)')}
+                                ${this.renderModuleOptions(modules, wt('im.k654', 'Не переопределять (из архива)'))}
                             </select>
                         </div>
                         <div>
@@ -2823,7 +2823,7 @@ ${remaining}
             return `
                <div class="flex flex-col items-center justify-center py-12 animate-slide-up-fade">
                    <img src="/assets/logo_animated.svg" alt="Loading" class="w-16 h-16 mb-4 drop-shadow-md" />
-                   <h3 class="text-lg font-bold text-text-main">Проверка архива...</h3>
+                   <h3 class="text-lg font-bold text-text-main">${wt('im.k655', 'Проверка архива...')}</h3>
                    <p class="text-text-secondary text-sm mt-2">Анализ структуры и поиск конфликтов</p>
                </div>
             `;
@@ -2902,7 +2902,7 @@ ${remaining}
                         <div class="flex items-start gap-2 mb-2">
                             <span class="material-symbols-outlined text-error text-[20px]">error</span>
                             <div class="flex-1">
-                                <h4 class="font-bold text-error-text mb-1">Обнаружены ошибки парсинга</h4>
+                                <h4 class="font-bold text-error-text mb-1">${wt('im.k656', 'Обнаружены ошибки парсинга')}</h4>
                                 <p class="text-sm text-error-text">Исправьте ошибки ниже и повторите попытку</p>
                             </div>
                         </div>
@@ -2987,7 +2987,7 @@ ${remaining}
         if (textArea) textArea.value = '';
         this.updateAIAgentPromptTextarea();
         this._updateLiveCounter('');
-        this.showToast(`Шаблон переключён на ${this.getEditorFacingTaskTypeLabel(normalizedTaskType)}. Контекст анализа уже встроен в prompt.`, 'success');
+        this.showToast(`${wt('im.k657', 'Шаблон переключён на')} ${this.getEditorFacingTaskTypeLabel(normalizedTaskType)}. ${wt('im.k658', 'Контекст анализа уже встроен в prompt.')}`, 'success');
         this.renderCurrentStep();
     }
 
@@ -3032,7 +3032,7 @@ ${remaining}
             <div class="mt-4 rounded-xl border border-border-subtle bg-surface-1 p-4 space-y-4">
                 <div class="flex items-start justify-between gap-3">
                     <div>
-                        <h4 class="text-sm font-bold text-text-main">Разобранный анализ материала</h4>
+                        <h4 class="text-sm font-bold text-text-main">${wt('im.k659', 'Разобранный анализ материала')}</h4>
                         <p class="text-xs text-text-secondary mt-1">Теперь можно выбрать рекомендованный тип и перейти к генерации задач.</p>
                     </div>
                     <div class="flex flex-col items-end gap-2">
@@ -3166,7 +3166,7 @@ ${remaining}
                                                 <button
                                                     onclick="dashboard.importManager.setManualAnalysisRecommendationLifecycle('${this.escapeInlineJsString(taskType)}', '${String(recState?.status || '').trim().toLowerCase() === 'manual_done' ? 'reset' : 'manual_done'}')"
                                                     class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-success-light text-success-text hover:bg-success-lighter transition-colors">
-                                                    ${String(recState?.status || '').trim().toLowerCase() === 'manual_done' ? 'Снять отметку' : 'Пометить как сделано вручную'}
+                                                    ${String(recState?.status || '').trim().toLowerCase() === 'manual_done' ? wt('im.k660', 'Снять отметку') : wt('im.k661', 'Пометить как сделано вручную')}
                                                 </button>
                                             ` : `
                                                 <button
@@ -3233,7 +3233,7 @@ ${remaining}
 
         return `
             <div class="animate-slide-up-fade">
-                <h3 class="text-lg font-bold text-text-main mb-4">Просмотр распарсенных заданий</h3>
+                <h3 class="text-lg font-bold text-text-main mb-4">${wt('im.k662', 'Просмотр распарсенных заданий')}</h3>
 
                 ${notes.length ? `
                     <div class="mb-4 p-3 bg-info-lighter border border-info-light rounded-lg">
@@ -3270,7 +3270,7 @@ ${remaining}
 
                 <!-- Settings Panel -->
                 <div class="mb-4 p-4 bg-surface-1 border border-border-subtle rounded-lg shadow-sm">
-                    <h4 class="text-sm font-bold text-text-main mb-3">Настройки импорта</h4>
+                    <h4 class="text-sm font-bold text-text-main mb-3">${wt('im.k663', 'Настройки импорта')}</h4>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-xs font-semibold text-text-secondary mb-1">Если задание уже существует</label>
@@ -3299,11 +3299,11 @@ ${remaining}
                                 onchange="dashboard.importManager.toggleSelectAll()"
                                 class="w-4 h-4 text-primary rounded focus:ring-2 focus:ring-primary"
                                 ${this.selectedTasks.size === tasks.length && tasks.length > 0 ? 'checked' : ''}>
-                            <span class="text-sm font-medium text-text-secondary">Выбрать все</span>
+                            <span class="text-sm font-medium text-text-secondary">${wt('im.k737', 'Выбрать все')}</span>
                         </label>
                         ${selectedCount > 0 ? `
                             <span class="text-xs text-text-muted px-2 py-1 bg-surface-1 rounded border border-border-subtle">
-                                Выбрано: ${selectedCount}
+                                ${wt('im.k664', 'Выбрано:')} ${selectedCount}
                             </span>
                         ` : ''}
                     </div>
@@ -3411,7 +3411,7 @@ ${remaining}
 
     renderArchiveTaskCard(task, index) {
         const meta = this.getArchiveTaskPreviewStatusMeta(task);
-        const taskName = String(task.name || task.id || `Задание ${index + 1}`);
+        const taskName = String(task.name || task.id || `${wt('im.k665', 'Задание')} ${index + 1}`);
         const taskId = String(task.id || '');
         const taskType = String(task.type || 'unknown');
         const targetModule = String(task.target_module || this.selectedModuleName || this.selectedModule || wt('im.k144', 'из архива'));
@@ -3513,7 +3513,7 @@ ${remaining}
                         onclick="dashboard.importManager.toggleExclude(${index})"
                         class="flex-1 px-3 py-1.5 text-xs font-medium text-text-secondary hover:bg-bg-hover hover:text-text-main rounded transition-colors border border-border-subtle"
                         data-task-exclude-btn="${index}">
-                        ${isExcluded ? 'Включить' : 'Исключить'}
+                        ${isExcluded ? wt('im.k666', 'Включить') : wt('im.k667', 'Исключить')}
                     </button>
                 </div>
             </div>
@@ -3552,7 +3552,7 @@ ${remaining}
         return `
             <div data-role="archive-import-preview" class="animate-slide-up-fade space-y-5">
                 <div>
-                    <h3 class="text-lg font-bold text-text-main">Предпросмотр архива</h3>
+                    <h3 class="text-lg font-bold text-text-main">${wt('im.k668', 'Предпросмотр архива')}</h3>
                     <p class="text-sm text-text-secondary mt-1">Проверьте состав пакета, конфликты и правила импорта до применения изменений.</p>
                 </div>
 
@@ -3589,7 +3589,7 @@ ${remaining}
                 <div class="rounded-xl border border-border-subtle bg-surface-1 p-4 shadow-sm space-y-3">
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div>
-                            <h4 class="text-sm font-bold text-text-main">Контекст импорта</h4>
+                            <h4 class="text-sm font-bold text-text-main">${wt('im.k669', 'Контекст импорта')}</h4>
                             <p class="text-xs text-text-secondary mt-1">Override применяется только если вы задали модуль или тему вручную.</p>
                         </div>
                         ${archiveVersion ? `<span class="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-2 px-2 py-1 text-xs font-semibold text-text-secondary">Archive v${this.escapeHtml(archiveVersion)}</span>` : ''}
@@ -3607,7 +3607,7 @@ ${remaining}
                 </div>
 
                 <div class="rounded-xl border border-border-subtle bg-surface-1 p-4 shadow-sm">
-                    <h4 class="text-sm font-bold text-text-main mb-3">Настройки импорта</h4>
+                    <h4 class="text-sm font-bold text-text-main mb-3">${wt('im.k663', 'Настройки импорта')}</h4>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-xs font-semibold text-text-secondary mb-1">Если задание уже существует</label>
@@ -3628,7 +3628,7 @@ ${remaining}
                         <div class="font-semibold">Импорт битых заданий заблокирован</div>
                         <div class="mt-1">
                             ${blockedTasksCount > 0
-                                ? `Задания со статусом «Ошибка» не будут добавлены. Сейчас заблокировано: ${blockedTasksCount}. К импорту доступно: ${importableTasksCount}.`
+                                ? `${wt('im.k670', 'Задания со статусом «Ошибка» не будут добавлены. Сейчас заблокировано:')} ${blockedTasksCount}. ${wt('im.k671', 'К импорту доступно:')} ${importableTasksCount}.`
                                 : wt('im.k150', 'Если при проверке находятся задания со статусом «Ошибка», они не добавляются и остаются только в списке предпросмотра.')}
                         </div>
                     </div>
@@ -3637,7 +3637,7 @@ ${remaining}
                 <div class="grid gap-5 lg:grid-cols-2">
                     <div class="space-y-4">
                         <div>
-                            <h4 class="text-sm font-bold text-text-main mb-2">Конфликты и ошибки</h4>
+                            <h4 class="text-sm font-bold text-text-main mb-2">${wt('im.k672', 'Конфликты и ошибки')}</h4>
                             ${this.renderArchivePreviewIssueList(
                                 [
                                     ...duplicates.map((item) => ({
@@ -3646,7 +3646,7 @@ ${remaining}
                                     })),
                                     ...overwrites.map((item) => ({
                                         title: item.name || item.id || wt('im.k153', 'Конфликт'),
-                                        detail: `Требует решения по конфликту${Array.isArray(item.diff_keys) && item.diff_keys.length ? `, diff: ${item.diff_keys.join(', ')}` : '.'}`,
+                                        detail: `${wt('im.k673', 'Требует решения по конфликту')}${Array.isArray(item.diff_keys) && item.diff_keys.length ? `, diff: ${item.diff_keys.join(', ')}` : '.'}`,
                                     })),
                                     ...brokenDeps.map((item) => ({
                                         title: item.name || item.id || wt('im.k154', 'Проблема зависимостей'),
@@ -3666,7 +3666,7 @@ ${remaining}
                             )}
                         </div>
                         <div>
-                            <h4 class="text-sm font-bold text-text-main mb-2">Предупреждения</h4>
+                            <h4 class="text-sm font-bold text-text-main mb-2">${wt('im.k674', 'Предупреждения')}</h4>
                             ${this.renderArchivePreviewIssueList(
                                 warnings.map((warning) => ({ warning })),
                                 wt('im.k160', 'Дополнительных предупреждений нет.'),
@@ -3686,11 +3686,11 @@ ${remaining}
                                         onchange="dashboard.importManager.toggleSelectAll()"
                                         class="w-4 h-4 text-primary rounded focus:ring-2 focus:ring-primary"
                                         ${this.selectedTasks.size === tasks.length && tasks.length > 0 ? 'checked' : ''}>
-                                    <span class="text-sm font-medium text-text-secondary">Выбрать все</span>
+                                    <span class="text-sm font-medium text-text-secondary">${wt('im.k737', 'Выбрать все')}</span>
                                 </label>
                                 ${selectedCount > 0 ? `
                                     <span class="text-xs text-text-muted px-2 py-1 bg-surface-1 rounded border border-border-subtle">
-                                        Выбрано: ${selectedCount}
+                                        ${wt('im.k664', 'Выбрано:')} ${selectedCount}
                                     </span>
                                 ` : ''}
                             </div>
@@ -4279,18 +4279,18 @@ ${remaining}
             const color = issue.severity === 'error' ? 'text-error-text' : 'text-warning-text';
             const icon = issue.severity === 'error' ? 'error' : 'warning';
             return `<div class="flex items-start gap-2 py-1"><span class="material-symbols-outlined ${color} text-[16px] mt-0.5">${icon}</span><span class="text-sm ${color}">${this.escapeHtml(issue.message)}</span></div>`;
-        }).join('') || '<div class="text-sm text-success-text">Нет проблем</div>';
+        }).join('') || `<div class="text-sm text-success-text">${wt('im.k738', 'Нет проблем')}</div>`;
 
         const data = task.data || {};
         let extraFieldsHtml = '';
         if (task.type === 'open_answer') {
-            if (data.reference_answer) extraFieldsHtml += `<div class="mt-3"><div class="text-xs font-semibold text-text-muted mb-1">Эталонный ответ</div><div class="text-sm text-text-main bg-surface-2 rounded p-2">${this.escapeHtml(data.reference_answer)}</div></div>`;
-            if (data.keywords?.length) extraFieldsHtml += `<div class="mt-3"><div class="text-xs font-semibold text-text-muted mb-1">Ключевые слова</div><div class="flex flex-wrap gap-1">${data.keywords.map(k => `<span class="px-2 py-0.5 bg-primary-lighter text-primary text-xs rounded-full">${this.escapeHtml(k)}</span>`).join('')}</div></div>`;
+            if (data.reference_answer) extraFieldsHtml += `<div class="mt-3"><div class="text-xs font-semibold text-text-muted mb-1">${wt('im.k739', 'Эталонный ответ')}</div><div class="text-sm text-text-main bg-surface-2 rounded p-2">${this.escapeHtml(data.reference_answer)}</div></div>`;
+            if (data.keywords?.length) extraFieldsHtml += `<div class="mt-3"><div class="text-xs font-semibold text-text-muted mb-1">${wt('im.k740', 'Ключевые слова')}</div><div class="flex flex-wrap gap-1">${data.keywords.map(k => `<span class="px-2 py-0.5 bg-primary-lighter text-primary text-xs rounded-full">${this.escapeHtml(k)}</span>`).join('')}</div></div>`;
         } else if (task.type === 'sequence_assembly') {
-            extraFieldsHtml += `<div class="mt-3 text-sm text-text-secondary">Элементов: ${data.elements_count || 0}, Уровней: ${data.levels_count || 0}</div>`;
+            extraFieldsHtml += `<div class="mt-3 text-sm text-text-secondary">${wt('im.k741', 'Элементов:')} ${data.elements_count || 0}, ${wt('im.k742', 'Уровней:')} ${data.levels_count || 0}</div>`;
         } else if (task.type === 'click') {
-            if (data.mode === 'text_choice') extraFieldsHtml += `<div class="mt-3 text-sm text-text-secondary">Вариантов: ${data.options_count || 0}, Правильных: ${data.correct_count || 0}</div>`;
-            else extraFieldsHtml += `<div class="mt-3 text-sm text-text-secondary">Текст: ${data.text_length || 0} симв., Ошибок: ${data.error_count || 0}</div>`;
+            if (data.mode === 'text_choice') extraFieldsHtml += `<div class="mt-3 text-sm text-text-secondary">${wt('im.k743', 'Вариантов:')} ${data.options_count || 0}, ${wt('im.k744', 'Правильных:')} ${data.correct_count || 0}</div>`;
+            else extraFieldsHtml += `<div class="mt-3 text-sm text-text-secondary">${wt('im.k745', 'Текст:')} ${data.text_length || 0} ${wt('im.k746', 'симв.,')} ${wt('im.k747', 'Ошибок:')} ${data.error_count || 0}</div>`;
         }
 
         // Create modal overlay
@@ -4315,16 +4315,16 @@ ${remaining}
                         <div><span class="text-text-muted">${wt('im.k194', 'Статус:</span>')}${statusLabels[task.status] || task.status}</div>
                     </div>
                     <div>
-                        <div class="text-xs font-semibold text-text-muted mb-1">Название</div>
+                        <div class="text-xs font-semibold text-text-muted mb-1">${wt('im.k748', 'Название')}</div>
                         <div class="text-sm text-text-main">${this.escapeHtml(task.name)}</div>
                     </div>
                     <div>
                         <div class="text-xs font-semibold text-text-muted mb-1">\u041f\u0440\u043e\u043c\u043f\u0442</div>
-                        <div class="text-sm text-text-main bg-surface-2 rounded p-3 whitespace-pre-wrap">${this.escapeHtml(data.prompt || 'Нет')}</div>
+                        <div class="text-sm text-text-main bg-surface-2 rounded p-3 whitespace-pre-wrap">${this.escapeHtml(data.prompt || wt('im.k752', 'Нет'))}</div>
                     </div>
                     ${extraFieldsHtml}
                     <div>
-                        <div class="text-xs font-semibold text-text-muted mb-2">Валидация</div>
+                        <div class="text-xs font-semibold text-text-muted mb-2">${wt('im.k749', 'Валидация')}</div>
                         ${issuesHtml}
                     </div>
                 </div>
@@ -4535,7 +4535,7 @@ ${remaining}
                 this.materialText = e.target.value;
                 const wc = e.target.value.split(/\s+/).filter(Boolean).length;
                 const wcEl = document.getElementById('ai-word-count');
-                if (wcEl) wcEl.textContent = wc > 0 ? `${wc} слов` : '';
+                if (wcEl) wcEl.textContent = wc > 0 ? `${wc} ${wt('im.k675', 'слов')}` : '';
             });
         }
 
@@ -4567,7 +4567,7 @@ ${remaining}
                 }
             }
             if (total > 0) {
-                container.innerHTML = `<span class="text-text-muted py-0.5">Найдено:</span>${badges.join('')}`;
+                container.innerHTML = `<span class="text-text-muted py-0.5">${wt('im.k750', 'Найдено:')}</span>${badges.join('')}`;
             } else {
                 container.innerHTML = text.trim() ? wt('im.k199', '<span class="text-text-disabled py-0.5">Маркеры анализа не найдены</span>') : '';
             }
@@ -4593,7 +4593,7 @@ ${remaining}
         }
 
         if (total > 0) {
-            container.innerHTML = `<span class="text-text-muted py-0.5">Найдено:</span>${badges.join('')}<span class="text-text-muted py-0.5 ml-1">Всего: ${total}</span>`;
+            container.innerHTML = `<span class="text-text-muted py-0.5">${wt('im.k750', 'Найдено:')}</span>${badges.join('')}<span class="text-text-muted py-0.5 ml-1">${wt('im.k751', 'Всего:')} ${total}</span>`;
         } else {
             container.innerHTML = text.trim() ? wt('im.k205', '<span class="text-text-disabled py-0.5">Маркеры не найдены</span>') : '';
         }
@@ -5327,7 +5327,7 @@ text: Сердце человека состоит из [трёх] камер. �
                             severity: 'error',
                             what: wt('im.k235', 'Проверка архива завершилась ошибкой.'),
                             impact: wt('im.k236', 'Предпросмотр не сформирован.'),
-                            next: `Проверьте архив и повторите проверку. Детали: ${result.error || 'unknown_error'}`,
+                            next: `${wt('im.k676', 'Проверьте архив и повторите проверку. Детали:')} ${result.error || 'unknown_error'}`,
                         });
                         this.prevStep();
                     }
@@ -5336,7 +5336,7 @@ text: Сердце человека состоит из [трёх] камер. �
                         severity: 'error',
                         what: wt('im.k237', 'Проверка архива прервана сетью.'),
                         impact: wt('im.k238', 'Импорт не может перейти к предпросмотру.'),
-                        next: `Проверьте соединение и повторите проверку. Детали: ${e.message}`,
+                        next: `${wt('im.k677', 'Проверьте соединение и повторите проверку. Детали:')} ${e.message}`,
                     });
                     this.prevStep();
                 }
@@ -5471,7 +5471,7 @@ text: Сердце человека состоит из [трёх] камер. �
                     this.showVoiceToast({
                         severity: 'success',
                         what: wt('im.k248', 'Рабочая версия добавлена.'),
-                        impact: `Заданий в рабочей версии: ${taskCount}.`,
+                        impact: `${wt('im.k678', 'Заданий в рабочей версии:')} ${taskCount}.`,
                         next: wt('im.k249', 'Каталог будет обновлён, после чего можно открыть импортированную версию в рабочем пространстве.'),
                     });
                     try {
@@ -5495,7 +5495,7 @@ text: Сердце человека состоит из [трёх] камер. �
                         severity: 'error',
                         what: wt('im.k250', 'Workspace-импорт завершился ошибкой.'),
                         impact: wt('im.k251', 'Рабочая версия не была создана полностью.'),
-                        next: `Проверьте source lineage и повторите добавление. Детали: ${result?.error || 'workspace_import_failed'}`,
+                        next: `${wt('im.k679', 'Проверьте source lineage и повторите добавление. Детали:')} ${result?.error || 'workspace_import_failed'}`,
                     });
                 }
                 return;
@@ -5539,7 +5539,7 @@ text: Сердце человека состоит из [трёх] камер. �
                         this.showVoiceToast({
                             severity: 'success',
                             what: wt('im.k253', 'Импорт завершён.'),
-                            impact: `Добавлено: ${result.imported}.`,
+                            impact: `${wt('im.k680', 'Добавлено:')} ${result.imported}.`,
                             next: wt('im.k254', 'Сессия анализа сохранена. Можно выбрать следующий тип задания в карте покрытия.'),
                         });
                         this.setManualAnalysisSelectedTaskType(selectedTaskType);
@@ -5564,7 +5564,7 @@ text: Сердце человека состоит из [трёх] камер. �
                         this.showVoiceToast({
                             severity: 'success',
                             what: wt('im.k256', 'Импорт завершён.'),
-                            impact: `Добавлено: ${result.imported}.`,
+                            impact: `${wt('im.k680', 'Добавлено:')} ${result.imported}.`,
                             next: wt('im.k257', 'Каталог обновлён, можно переходить к редактуре.'),
                         });
                         this.dashboard.closeImportModal({ skipConfirm: true });
@@ -5582,7 +5582,7 @@ text: Сердце человека состоит из [трёх] камер. �
                         severity: 'error',
                         what: wt('im.k258', 'Импорт завершился ошибкой.'),
                         impact: wt('im.k259', 'Изменения в каталог не были применены полностью.'),
-                        next: `Проверьте источник и повторите импорт. Детали: ${result.error || 'unknown_error'}`,
+                        next: `${wt('im.k681', 'Проверьте источник и повторите импорт. Детали:')} ${result.error || 'unknown_error'}`,
                     });
                 }
             } else {
@@ -5679,9 +5679,9 @@ text: Сердце человека состоит из [трёх] камер. �
                                     const label = document.getElementById('import-progress-label');
                                     const pctEl = document.getElementById('import-progress-percent');
                                     if (fill) fill.style.width = `${pct}%`;
-                                    if (label) label.textContent = msg.status || `Задание ${msg.current} из ${msg.total}`;
+                                    if (label) label.textContent = msg.status || `${wt('im.k665', 'Задание')} ${msg.current} ${wt('im.k682', 'из')} ${msg.total}`;
                                     if (pctEl) pctEl.textContent = `${pct}%`;
-                                    if (btn) btn.textContent = `Импорт... ${pct}%`;
+                                    if (btn) btn.textContent = `${wt('im.k683', 'Импорт...')} ${pct}%`;
                                 } else if (msg.type === 'result') {
                                     finalResult = msg.data;
                                 } else if (msg.type === 'error') {
@@ -5705,7 +5705,7 @@ text: Сердце человека состоит из [трёх] камер. �
                             this.showVoiceToast({
                                 severity: finalResult.errors > 0 ? 'warning' : 'success',
                                 what: wt('im.k262', 'Импорт архива завершён.'),
-                                impact: `Добавлено: ${finalResult.imported}, пропущено: ${finalResult.skipped}, ошибок: ${finalResult.errors}.`,
+                                impact: `${wt('im.k680', 'Добавлено:')} ${finalResult.imported}, ${wt('im.k684', 'пропущено:')} ${finalResult.skipped}, ${wt('im.k685', 'ошибок:')} ${finalResult.errors}.`,
                                 next: finalResult.errors > 0
                                     ? wt('im.k263', 'Проверьте проблемные задания и при необходимости повторите импорт.')
                                     : wt('im.k264', 'Каталог обновлён и готов к работе.'),
@@ -5714,8 +5714,8 @@ text: Сердце человека состоит из [трёх] камер. �
                             this.dashboard.loadCatalog();
                         } else {
                             const errorMsg = finalResult.rollback
-                                ? `Ошибка импорта (выполнен откат): ${finalResult.error_message || finalResult.error}`
-                                : `Ошибка импорта: ${finalResult.error}`;
+                                ? `${wt('im.k686', 'Ошибка импорта (выполнен откат):')} ${finalResult.error_message || finalResult.error}`
+                                : `${wt('im.k687', 'Ошибка импорта:')} ${finalResult.error}`;
                             this.recordImportHistory({
                                 status: 'error',
                                 imported: 0,
@@ -5754,7 +5754,7 @@ text: Сердце человека состоит из [трёх] камер. �
                 severity: 'error',
                 what: wt('im.k270', 'Импорт прерван из-за ошибки.'),
                 impact: wt('im.k271', 'Операция не завершена.'),
-                next: `Проверьте соединение и входные данные. Детали: ${error.message}`,
+                next: `${wt('im.k688', 'Проверьте соединение и входные данные. Детали:')} ${error.message}`,
             });
         }
         this.importInProgress = false;
@@ -6144,7 +6144,7 @@ text: Сердце человека состоит из [трёх] камер. �
                         <div class="inline-flex items-center gap-2 rounded-full border border-warning-light bg-warning-lighter px-3 py-1 text-xs font-semibold uppercase tracking-[0.08em] text-warning-text">
                             ${wt('im.k297', 'В разработке')}
                         </div>
-                        <h3 class="mt-4 text-xl font-bold text-text-main">В разработке</h3>
+                        <h3 class="mt-4 text-xl font-bold text-text-main">${wt('im.k297', 'В разработке')}</h3>
                         <p class="mt-3 w-full max-w-none text-sm leading-6 text-text-secondary text-justify">
                             ${wt('im.k298', 'Внутренняя ИИ-генерация и связанные сценарии временно прикрыты единым placeholder-состоянием.')}
                             ${wt('im.k299', 'В этом разделе пока не доступны запуск анализа, история прогонов и остальные встроенные AI-потоки.')}
@@ -6240,7 +6240,7 @@ text: Сердце человека состоит из [трёх] камер. �
                 this.showVoiceToast({
                     severity: 'success',
                     what: wt('im.k308', 'Колода микрокарточек создана.'),
-                    impact: `Добавлено карточек: ${data.deck_summary?.cards_total || 0}.`,
+                    impact: `${wt('im.k689', 'Добавлено карточек:')} ${data.deck_summary?.cards_total || 0}.`,
                     next: wt('im.k309', 'Можно открыть колоду и начать повторение.'),
                 });
                 await this.loadMicrocardsDecks();
@@ -6312,7 +6312,7 @@ text: Сердце человека состоит из [трёх] камер. �
         }
         const defaultId = String(this.microcardsActiveDeck?.id || decks[0]?.id || '').trim();
         const preview = decks.slice(0, 8).map((d) => `${d.id} — ${d.name || d.id}`).join('\n');
-        const raw = window.prompt(`Введите ID колоды для добавления карточек:\n\n${preview}${decks.length > 8 ? `\n... и ещё ${decks.length - 8}` : ''}`, defaultId);
+        const raw = window.prompt(`${wt('im.k690', 'Введите ID колоды для добавления карточек:')}\n\n${preview}${decks.length > 8 ? `\n... и ещё ${decks.length - 8}` : ''}`, defaultId);
         if (raw == null) return null;
         const picked = String(raw || '').trim();
         if (!picked) return null;
@@ -6351,7 +6351,7 @@ text: Сердце человека состоит из [трёх] камер. �
                 this.showVoiceToast({
                     severity: 'success',
                     what: wt('im.k325', 'Карточки добавлены в колоду.'),
-                    impact: `Добавлено: ${data.added_cards || 0}, пропущено дублей: ${data.skipped_duplicates || 0}.`,
+                    impact: `${wt('im.k680', 'Добавлено:')} ${data.added_cards || 0}, ${wt('im.k691', 'пропущено дублей:')} ${data.skipped_duplicates || 0}.`,
                     next: wt('im.k326', 'Можно открыть очередь колоды и продолжить повторение.'),
                 });
                 await this.loadMicrocardsDecks();
@@ -6494,7 +6494,7 @@ text: Сердце человека состоит из [трёх] камер. �
                                         <div class="text-[11px] text-text-secondary mt-1 font-mono truncate">${this.escapeHtml(String(deck?.id || ''))}</div>
                                         ${ownershipBadges ? `<div class="mt-2 flex flex-wrap gap-1">${ownershipBadges}</div>` : ''}
                                         <div class="text-[11px] text-text-secondary mt-1">
-                                            к повторению: ${this.escapeHtml(String(stats.cards_due ?? 0))} · новые: ${this.escapeHtml(String(stats.cards_new ?? 0))} · всего: ${this.escapeHtml(String(stats.cards_total ?? 0))}
+                                            ${wt('im.k692', 'к повторению:')} ${this.escapeHtml(String(stats.cards_due ?? 0))} · ${wt('im.k693', 'новые:')} ${this.escapeHtml(String(stats.cards_new ?? 0))} · ${wt('im.k694', 'всего:')} ${this.escapeHtml(String(stats.cards_total ?? 0))}
                                         </div>
                                     </div>
                                     <button type="button"
@@ -6507,7 +6507,7 @@ text: Сердце человека состоит из [трёх] камер. �
                         `;
                     }).join('')}
                 </div>
-            ` : `<div class="text-sm text-text-secondary">Колод пока нет. Создайте их из отчёта анализа.</div>`);
+            ` : `<div class="text-sm text-text-secondary">${wt('im.k695', 'Колод пока нет. Создайте их из отчёта анализа.')}</div>`);
 
         return `
             <div class="space-y-4">
@@ -6522,7 +6522,7 @@ text: Сердце человека состоит из [трёх] камер. �
                                 onclick="dashboard.importManager.createTheoryMicrocardsDeckAll()"
                                 ${this.microcardsCreateLoading ? 'disabled' : ''}
                                 class="px-3 py-1.5 text-xs font-medium rounded-lg border border-primary text-primary hover:bg-primary hover:text-primary-fg disabled:opacity-60">
-                                ${this.microcardsCreateLoading ? 'Создание...' : 'Колода из анализа'}
+                                ${this.microcardsCreateLoading ? wt('im.k696', 'Создание...') : wt('im.k697', 'Колода из анализа')}
                             </button>
                             <button type="button"
                                 onclick="dashboard.importManager.appendTheoryMicrocardsDeckAll()"
@@ -6554,8 +6554,8 @@ text: Сердце человека состоит из [трёх] камер. �
                             <div class="text-sm font-semibold text-text-main">${this.escapeHtml(String(activeDeck?.name || 'Сессия повторения'))}</div>
                             <div class="text-xs text-text-secondary mt-1">
                                 ${activeDeck?.id ? `<span class="font-mono">${this.escapeHtml(String(activeDeck.id))}</span>` : wt('im.k344', 'Выберите колоду слева')}
-                                ${queueCount ? ` · ${doneCount}/${queueCount} пройдено` : ''}
-                                ${remainingCount ? ` · осталось ${remainingCount}` : ''}
+                                ${queueCount ? ` · ${doneCount}/${queueCount} ${wt('im.k698', 'пройдено')}` : ''}
+                                ${remainingCount ? ` · ${wt('im.k699', 'осталось')} ${remainingCount}` : ''}
                             </div>
                             ${activeDeck?.id ? `<div class="mt-2 flex flex-wrap gap-1">${this.renderMicrocardsDeckOwnershipBadges(activeDeck)}</div>` : ''}
                         </div>
@@ -7536,7 +7536,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
 
                 <div class="space-y-4">
                     <div class="rounded-xl border border-border-strong bg-surface-1 p-4">
-                        <h4 class="text-sm font-bold text-text-main mb-2">Вставьте текст с микрокарточками</h4>
+                        <h4 class="text-sm font-bold text-text-main mb-2">${wt('im.k700', 'Вставьте текст с микрокарточками')}</h4>
                         ${hasErrors ? `
                             <div class="mb-3 p-3 bg-error-lighter border border-error-light rounded-lg">
                                 <div class="flex items-start gap-2">
@@ -7550,7 +7550,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                         <div class="flex justify-end mb-2">
                             <button onclick="dashboard.importManager.mcImportPasteClipboard()"
                                 class="px-3 py-1.5 text-xs font-bold text-text-secondary border border-border-subtle rounded-lg hover:bg-bg-hover transition-all">
-                                <span class="material-symbols-outlined text-[14px] align-middle mr-1">content_paste</span> Вставить из буфера
+                                <span class="material-symbols-outlined text-[14px] align-middle mr-1">content_paste</span> ${wt('im.k701', 'Вставить из буфера')}
                             </button>
                         </div>
                         <textarea id="mcImportTextArea"
@@ -7563,7 +7563,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                             <button onclick="dashboard.importManager.mcImportParseText()"
                                 class="px-5 py-2.5 text-sm font-bold rounded-lg bg-primary text-primary-fg hover:bg-primary-hover transition-colors disabled:opacity-50 shadow-sm"
                                 ${this.mcImportParsing ? 'disabled' : ''}>
-                                ${this.mcImportParsing ? 'Парсинг...' : 'Распарсить'}
+                                ${this.mcImportParsing ? wt('im.k702', 'Парсинг...') : wt('im.k703', 'Распарсить')}
                             </button>
                         </div>
                         <div class="mt-3 flex items-start gap-2 p-3 bg-info-lighter border border-info-light rounded-lg">
@@ -7631,7 +7631,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                 </div>
 
                 <div class="rounded-xl border border-primary-light bg-primary-lighter/10 p-4">
-                    <h4 class="text-sm font-bold text-text-main mb-3">Импорт карточек</h4>
+                    <h4 class="text-sm font-bold text-text-main mb-3">${wt('im.k704', 'Импорт карточек')}</h4>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                         <div>
                             <label class="block text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1">Режим</label>
@@ -7675,7 +7675,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                         <button onclick="dashboard.importManager.mcImportExecute()"
                             class="px-5 py-2.5 text-sm font-bold rounded-lg bg-primary text-primary-fg hover:bg-primary-hover transition-colors disabled:opacity-50 shadow-sm"
                             ${this.mcImportExecuting || !(summary.valid > 0) ? 'disabled' : ''}>
-                            ${this.mcImportExecuting ? wt('im.k432', 'Импорт...') : `Импортировать ${summary.valid || 0} карточек`}
+                            ${this.mcImportExecuting ? wt('im.k432', 'Импорт...') : `${wt('im.k705', 'Импортировать')} ${summary.valid || 0} ${wt('im.k706', 'карточек')}`}
                         </button>
                         <button onclick="dashboard.importManager.mcImportReset()"
                             class="px-4 py-2 text-sm font-semibold rounded-lg border border-border-strong text-text-secondary hover:bg-bg-hover transition-colors">
@@ -7694,7 +7694,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                 <div class="rounded-xl border ${ok ? 'border-success-light bg-success-lighter/20' : 'border-error-light bg-error-lighter/20'} p-6 text-center">
                     <span class="material-symbols-outlined ${ok ? 'text-success' : 'text-error'} text-[40px] mb-2">${ok ? 'check_circle' : 'error'}</span>
                     <h4 class="text-base font-bold ${ok ? 'text-success-text' : 'text-error-text'} mb-2">
-                        ${ok ? 'Импорт завершён' : 'Ошибка импорта'}
+                        ${ok ? wt('im.k707', 'Импорт завершён') : wt('im.k708', 'Ошибка импорта')}
                     </h4>
                     ${ok ? `
                         <div class="flex flex-wrap justify-center gap-4 text-sm mb-3">
@@ -7826,7 +7826,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
             const data = await resp.json();
             this.mcImportExecuteResult = data;
             if (data.ok) {
-                this.showToast(`Импортировано ${data.added_cards || 0} карточек.`, 'success');
+                this.showToast(`${wt('im.k709', 'Импортировано')} ${data.added_cards || 0} ${wt('im.k706', 'карточек')}.`, 'success');
                 this.loadMicrocardsDecks();
             } else {
                 this.showToast(data.error || wt('im.k444', 'Ошибка импорта'), 'error');
@@ -7980,7 +7980,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                         class="px-4 py-2 text-xs font-bold rounded-lg bg-primary text-primary-fg hover:bg-primary-hover transition-colors disabled:opacity-50"
                         ${this.manualEditorSaving ? 'disabled' : ''}>
                         ${this.manualEditorSaving ? 'disabled' : ''}>
-                        ${this.manualEditorSaving ? 'Сохранение...' : (form.mode === 'edit' ? 'Сохранить изменения' : 'Создать карточку')}
+                        ${this.manualEditorSaving ? wt('im.k710', 'Сохранение...') : (form.mode === 'edit' ? wt('im.k711', 'Сохранить изменения') : wt('im.k712', 'Создать карточку'))}
                     </button>
                     <button onclick="dashboard.importManager.manualEditorPreviewCurrentCard()"
                         class="px-4 py-2 text-xs font-bold rounded-lg border border-border-strong text-text-secondary hover:bg-bg-hover transition-colors">
@@ -8341,7 +8341,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                         <div class="text-xs font-semibold uppercase tracking-wide text-text-secondary">Метаданные отчёта</div>
                         <div class="text-[11px] text-text-secondary mt-1">
                             ${a?.report_blocks_version ? `report_blocks v${this.escapeHtml(String(a.report_blocks_version))}` : wt('im.k468', 'устаревш.')}
-                            ${a?.analysis_schema_version ? ` · схема ${this.escapeHtml(String(a.analysis_schema_version))}` : ''}
+                            ${a?.analysis_schema_version ? ` · ${wt('im.k713', 'схема')} ${this.escapeHtml(String(a.analysis_schema_version))}` : ''}
                         </div>
                     </div>
                     ${compactMode ? `<span class="px-2 py-0.5 rounded-full text-[10px] border border-warning-light bg-warning-lighter text-warning-text">компактный</span>` : ''}
@@ -8527,7 +8527,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                         <div class="text-xs font-semibold uppercase tracking-wide text-text-main">Типы как progressions</div>
                         <div class="text-[11px] text-text-secondary mt-1">Детерминированное объяснение fixed progression уровней (P10), независимо от AI-layout.</div>
                     </div>
-                    ${matrixAnchor ? this.renderTheoryReportJumpButton('К матрице уровней', matrixAnchor) : ''}
+                    ${matrixAnchor ? this.renderTheoryReportJumpButton(wt('im.k714', 'К матрице уровней'), matrixAnchor) : ''}
                 </div>
                 ${this.renderTheoryReportFixedProgressionPolicyNote(typeEntries)}
                 ${summaryCardsHtml ? `<div class="mt-3">${summaryCardsHtml}</div>` : ''}
@@ -9048,7 +9048,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
             const levelsHtml = levelRoles.length
                 ? `
                     ${levelList.length ? `<div class="text-[11px] text-text-secondary mb-1">Уровни в progression: ${this.escapeHtml(levelList.map(level => `L${level}`).join(', '))}</div>` : ''}
-                    ${this.theoryReportLevelRoleMapToHtml(levelRoles, { max: 4, emptyText: 'Роли уровней не указаны.' })}
+                    ${this.theoryReportLevelRoleMapToHtml(levelRoles, { max: 4, emptyText: wt('im.k715', 'Роли уровней не указаны.') })}
                 `
                 : (entry?.progression_is_fixed
                     ? wt('im.k487', '<div class="text-[11px] text-text-secondary">Уровни у этого типа трактуются как fixed progression; отдельный выбор уровня не предлагается.</div>')
@@ -9143,7 +9143,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                     onclick="${createAction}"
                     ${this.microcardsCreateLoading ? 'disabled' : ''}
                     class="${small} rounded-md font-medium border border-primary text-primary hover:bg-primary hover:text-primary-fg transition-colors disabled:opacity-60">
-                    ${hasPairMatchStep ? 'pair_match колода' : 'Колода по маршруту'}
+                    ${hasPairMatchStep ? wt('im.k716', 'pair_match колода') : wt('im.k717', 'Колода по маршруту')}
                 </button>
             ` : '',
             showMicrocardsActions ? `
@@ -9151,7 +9151,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                     onclick="${appendAction}"
                     ${this.microcardsCreateLoading ? 'disabled' : ''}
                     class="${small} rounded-md font-medium border border-border-strong text-text-secondary hover:bg-bg-hover transition-colors disabled:opacity-60">
-                    ${compact ? '+ в колоду...' : 'Добавить в колоду...'}
+                    ${compact ? wt('im.k718', '+ в колоду...') : wt('im.k719', 'Добавить в колоду...')}
                 </button>
             ` : '',
             showMicrocardsOpen ? `
@@ -9595,7 +9595,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
         const submitBtn = document.getElementById('ai-submit-btn');
 
         if (countSpan && countText) {
-            countSpan.textContent = wordCount ? `${wordCount} слов` : '';
+            countSpan.textContent = wordCount ? `${wordCount} ${wt('im.k675', 'слов')}` : '';
             if (wordCount > 0 && wordCount < 50) {
                 countText.classList.add('text-error-text');
                 countSpan.classList.add('text-error-text');
@@ -9724,7 +9724,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                             class="block w-full rounded-lg border-border-subtle bg-surface-2 p-3 text-sm text-text-main placeholder:text-text-secondary focus:ring-2 focus:ring-primary resize-y"
                             placeholder=wt('im.k499', "Вставьте учебный материал сюда...") oninput="dashboard.importManager.onAiMaterialInput(event)">${this.escapeHtml(this.materialText)}</textarea>
                         <div class="flex justify-between mt-1">
-                            <span class="text-xs ${wordCount > 0 && wordCount < 50 ? 'text-error-text' : 'text-text-secondary'}" id="ai-word-count">${wordCount ? `${wordCount} слов` : ''}</span>
+                            <span class="text-xs ${wordCount > 0 && wordCount < 50 ? 'text-error-text' : 'text-text-secondary'}" id="ai-word-count">${wordCount ? `${wordCount} ${wt('im.k675', 'слов')}` : ''}</span>
                             <span class="text-xs ${wordCount > 0 && wordCount < 50 ? 'text-error-text' : 'text-text-secondary'}" id="ai-word-count-text">Минимум 50 слов</span>
                         </div>
                     </div>
@@ -9782,9 +9782,9 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
             const isOpening = row.ai_run_id === this.theoryOpeningRunId;
             const updatedAt = row.updated_at || row.created_at || '';
             const stats = [
-                row.material_word_count ? `${row.material_word_count} слов` : null,
-                row.material_language ? `язык: ${row.material_language}` : null,
-                row.effective_output_language ? `вывод: ${row.effective_output_language}` : null,
+                row.material_word_count ? `${row.material_word_count} ${wt('im.k675', 'слов')}` : null,
+                row.material_language ? `${wt('im.k720', 'язык:')} ${row.material_language}` : null,
+                row.effective_output_language ? `${wt('im.k721', 'вывод:')} ${row.effective_output_language}` : null,
             ].filter(Boolean).join(' · ');
             const counts = [
                 Number.isFinite(row.units_count) ? `units ${row.units_count}` : null,
@@ -9800,7 +9800,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                                         </div>
                                         <button onclick="dashboard.importManager.openTheoryAnalysisRun('${this.escapeInlineJsString(row.ai_run_id)}')" ${isOpening ? 'disabled' : ''}
                                             class="editor-flow-button-wrap shrink-0 px-2.5 py-1.5 text-xs font-medium rounded-md border ${isActive ? 'border-primary text-primary bg-primary-lighter' : 'border-border-strong text-text-secondary hover:bg-bg-hover'} disabled:opacity-60 disabled:cursor-not-allowed">
-                                            ${isOpening ? 'Открытие...' : (isActive ? 'Открыт' : 'Открыть')}
+                                            ${isOpening ? wt('im.k722', 'Открытие...') : (isActive ? wt('im.k723', 'Открыт') : wt('im.k724', 'Открыть'))}
                                         </button>
                                     </div>
                                 </div>
@@ -9817,7 +9817,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
             return `
                 <div class="border border-border-subtle rounded-xl bg-surface-1 p-8 flex flex-col items-center justify-center text-center">
                     <img src="/assets/logo_animated.svg" alt="AI Analyzing" class="w-14 h-14 mb-4 drop-shadow-md" />
-                    <h4 class="text-lg font-bold text-text-main">Анализ материала...</h4>
+                    <h4 class="text-lg font-bold text-text-main">${wt('im.k725', 'Анализ материала...')}</h4>
                     <p class="text-sm text-text-muted mt-2">ИИ разбирает структуру материала и формирует рекомендации.</p>
                 </div>
             `;
@@ -9827,7 +9827,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
         if (!a) {
             return `
                 <div class="border border-border-subtle rounded-xl bg-surface-1 p-6">
-                    <div class="text-sm font-semibold text-text-main mb-1">Результат анализа</div>
+                    <div class="text-sm font-semibold text-text-main mb-1">${wt('im.k726', 'Результат анализа')}</div>
                     <div class="text-xs text-text-muted">После запуска или открытия анализа здесь появится структурированный результат.</div>
                 </div>
             `;
@@ -9888,7 +9888,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                         <div class="min-w-0">
                             <div class="text-xs font-semibold text-text-main">${this.escapeHtml(route.title || route.id || 'Route')}</div>
                             <div class="text-[10px] text-text-muted mt-1">
-                                ${this.escapeHtml([route.route_kind, route.target_surface, route.effort_estimate].filter(Boolean).join(' · ') || 'Без метаданных')}
+                                ${this.escapeHtml([route.route_kind, route.target_surface, route.effort_estimate].filter(Boolean).join(' · ') || wt('im.k727', 'Без метаданных'))}
                             </div>
                         </div>
                         <div class="flex flex-wrap gap-1">
@@ -9961,7 +9961,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
             <div class="border border-border-strong rounded-xl bg-surface-1 p-4" data-role="theory-analysis-report-panel">
                 <div class="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-3 mb-4">
                     <div class="min-w-0">
-                        <h4 class="text-lg font-bold text-text-main">Результат анализа</h4>
+                        <h4 class="text-lg font-bold text-text-main">${wt('im.k726', 'Результат анализа')}</h4>
                         <div class="text-xs text-text-secondary mt-1">
                             ${this.aiRunId ? `<span class="font-mono">${this.escapeHtml(this.aiRunId)}</span>` : ''}
                             ${createdAt ? ` · ${this.escapeHtml(createdAt)}` : ''}
@@ -10198,7 +10198,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                     <div class="flex items-start gap-3">
                         <span class="material-symbols-outlined text-primary text-[22px] mt-0.5">auto_awesome</span>
                         <div>
-                            <h4 class="text-sm font-bold text-text-main mb-1">Единственный путь: через внешний ИИ</h4>
+                            <h4 class="text-sm font-bold text-text-main mb-1">${wt('im.k728', 'Единственный путь: через внешний ИИ')}</h4>
                             <ol class="text-xs text-text-secondary space-y-1 list-decimal list-inside">
                                 <li>Выберите модуль и тему, куда пойдут задания</li>
                                 <li>На следующем шаге получите готовый промпт для внешней нейросети</li>
@@ -10253,7 +10253,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                         <label class="block text-sm font-semibold text-text-secondary mb-2">Целевой модуль</label>
                         <select id="import-module-select" 
                             class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main focus:ring-2 focus:ring-primary sm:text-sm">
-                            ${this.renderModuleOptions(modules, 'Выберите модуль...')}
+                            ${this.renderModuleOptions(modules, wt('im.k653', 'Выберите модуль...'))}
                         </select>
                     </div>
                     <div>
@@ -10274,7 +10274,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
             return `
                 <div class="flex flex-col items-center justify-center py-12 animate-slide-up-fade">
                     <img src="/assets/logo_animated.svg" alt="AI Analyzing" class="w-16 h-16 mb-4 drop-shadow-md" />
-                    <h3 class="text-lg font-bold text-text-main">Анализ материала...</h3>
+                    <h3 class="text-lg font-bold text-text-main">${wt('im.k725', 'Анализ материала...')}</h3>
                     <p class="text-text-muted text-sm mt-2">ИИ изучает ваш материал и подбирает типы заданий</p>
                 </div>
             `;
@@ -10335,7 +10335,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
             <div class="w-full animate-slide-up-fade">
                 <div class="flex items-center justify-between mb-6">
                     <div>
-                        <h3 class="text-lg font-bold text-text-main mb-1">Результат анализа</h3>
+                        <h3 class="text-lg font-bold text-text-main mb-1">${wt('im.k726', 'Результат анализа')}</h3>
                         <p class="text-sm text-text-muted">Выберите типы заданий и количество для генерации</p>
                     </div>
                     <!-- Total -->
@@ -10485,7 +10485,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
             return `
                 <div class="flex flex-col items-center justify-center py-12 animate-slide-up-fade">
                     <img src="/assets/logo_animated.svg" alt="AI Generating" class="w-16 h-16 mb-4 drop-shadow-md" />
-                    <h3 class="text-lg font-bold text-text-main">Генерация заданий...</h3>
+                    <h3 class="text-lg font-bold text-text-main">${wt('im.k729', 'Генерация заданий...')}</h3>
                     <p class="text-text-muted text-sm mt-2" id="ai-gen-progress">ИИ создаёт задания по вашему материалу</p>
                 </div>
             `;
@@ -10576,7 +10576,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
 
         return `
             <div>
-                <h3 class="text-lg font-bold text-text-main mb-1">Сгенерированные задания</h3>
+                <h3 class="text-lg font-bold text-text-main mb-1">${wt('im.k730', 'Сгенерированные задания')}</h3>
                 <p class="text-sm text-text-muted mb-4">Просмотрите задания и выберите для импорта</p>
 
                 <!-- Summary -->
@@ -10659,7 +10659,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                 ${Object.entries(grouped).map(([taskType, r]) => {
             const label = _TYPE_LABELS[taskType] || taskType;
             const tasks = r.tasks || [];
-            const genTime = r.generation_time_ms ? ` (${(r.generation_time_ms / 1000).toFixed(1)}с)` : '';
+            const genTime = r.generation_time_ms ? ` (${(r.generation_time_ms / 1000).toFixed(1)}${wt('im.k731', 'с')})` : '';
 
             return `
                         <div class="mb-4 border border-border-subtle rounded-lg overflow-hidden">
@@ -10709,7 +10709,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                 <div class="w-16 h-16 bg-error-light rounded-full flex items-center justify-center mx-auto mb-4">
                     <span class="material-symbols-outlined text-error text-[32px]">error_outline</span>
                 </div>
-                <h3 class="text-lg font-bold text-text-main mb-2">Что-то пошло не так</h3>
+                <h3 class="text-lg font-bold text-text-main mb-2">${wt('im.k732', 'Что-то пошло не так')}</h3>
                 <p class="text-sm text-text-muted mb-6">${this.escapeHtml(message)}</p>
                 <div class="flex gap-3 justify-center">
                     <button onclick="dashboard.importManager.prevStep()" 
@@ -10962,7 +10962,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
         const ext = file.name.split('.').pop().toLowerCase();
         const allowedExts = ['pdf', 'docx', 'txt'];
         if (!allowedExts.includes(ext)) {
-            this.showToast(`Формат .${ext} не поддерживается. Используйте PDF, DOCX или TXT.`, 'error');
+            this.showToast(`${wt('im.k733', 'Формат')} .${ext} ${wt('im.k734', 'не поддерживается. Используйте PDF, DOCX или TXT.')}`, 'error');
             return;
         }
         if (file.size > 18 * 1024 * 1024) {
@@ -10981,10 +10981,10 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
         // Upload to server
         const result = await this.aiUploadFile(file);
         if (result.ok) {
-            this.showToast(`Файл загружен: ${result.word_count} слов`, 'success');
+            this.showToast(`${wt('im.k735', 'Файл загружен:')} ${result.word_count} ${wt('im.k675', 'слов')}`, 'success');
             // Update word count display
             const wordCountEl = document.getElementById('ai-word-count');
-            if (wordCountEl) wordCountEl.textContent = `${result.word_count} слов (из файла)`;
+            if (wordCountEl) wordCountEl.textContent = `${result.word_count} ${wt('im.k675', 'слов')} ${wt('im.k736', '(из файла)')}`;
             // Update textarea
             const textarea = document.getElementById('ai-material-textarea');
             if (textarea) textarea.value = this.materialText;
