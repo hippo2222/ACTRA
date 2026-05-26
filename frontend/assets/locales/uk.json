@@ -2162,7 +2162,16 @@
     "legend_answered": "Відповів",
     "legend_visited": "Відвідан",
     "legend_not_visited": "Не відвідан",
-    "legend_flagged": "Позначено"
+    "legend_flagged": "Позначено",
+    "options_title": "Варіанти",
+    "your_choice_badge": "Ваш вибір",
+    "reference_badge": "Еталон",
+    "no_data": "Немає даних для відображення.",
+    "fit_btn": "Підігнати",
+    "close_btn": "Закрити",
+    "answer_option_alt": "Варіант відповіді",
+    "review_selected_correct": "Вибрано вірно",
+    "review_correct_option": "Правильний"
   },
   "s2": {
     "page_title": "Результати ітерації",

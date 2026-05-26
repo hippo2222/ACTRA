@@ -987,13 +987,13 @@
     function appendChoiceOptionCollectionCard(body, options = {}) {
       const tone = String(options.tone || "neutral");
       const items = Array.isArray(options.options) ? options.options : [];
-      const title = String(options.title || "Варианты").trim();
+      const title = String(options.title || wt('testui_q.options_title', 'Варианты')).trim();
       const dataTestUi = String(options.dataTestUi || "choice-option-collection");
 
       const toneConfig =
         tone === "error"
           ? {
-              badge: createCompactStatusBadge("Ваш выбор", "error"),
+              badge: createCompactStatusBadge(wt('testui_q.your_choice_badge', 'Ваш выбор'), "error"),
               headerClass: "bg-error-light dark:bg-error-light",
               cardClass:
                 "overflow-hidden rounded-2xl border border-error-light bg-surface-2 shadow-sm dark:border-error dark:bg-surface-2",
@@ -1002,7 +1002,7 @@
             }
           : tone === "success"
             ? {
-                badge: createCompactStatusBadge("Эталон", "success"),
+                badge: createCompactStatusBadge(wt('testui_q.reference_badge', 'Эталон'), "success"),
                 headerClass: "bg-success-light dark:bg-success-light",
                 cardClass:
                   "overflow-hidden rounded-2xl border border-success-light bg-surface-2 shadow-sm dark:border-success dark:bg-surface-2",
@@ -1030,7 +1030,7 @@
         const empty = document.createElement("p");
         empty.className =
           "text-sm leading-relaxed text-text-secondary dark:text-text-muted";
-        empty.textContent = String(options.emptyText || "Нет данных для отображения.");
+        empty.textContent = String(options.emptyText || wt('testui_q.no_data', 'Нет данных для отображения.'));
         shell.content.appendChild(empty);
         return shell;
       }
@@ -1134,12 +1134,12 @@
       );
 
       const fitBtn = makeToolbarButton(
-        "Подогнать",
+        wt('testui_q.fit_btn', 'Подогнать'),
         "",
         "Fit to screen"
       );
 
-      const closeBtn = makeToolbarButton("Закрыть", "", "Close image viewer");
+      const closeBtn = makeToolbarButton(wt('testui_q.close_btn', 'Закрыть'), "", "Close image viewer");
       closeBtn.className =
         "inline-flex items-center justify-center rounded-lg border border-border-subtle bg-surface-1 px-3 py-1.5 text-xs font-semibold text-text-secondary shadow-sm transition-colors hover:bg-bg-hover";
 
@@ -1159,7 +1159,7 @@
 
       const img = document.createElement("img");
       img.src = imgSrc;
-      img.alt = caption || "Вариант ответа";
+      img.alt = caption || wt('testui_q.answer_option_alt', 'Вариант ответа');
       img.draggable = false;
       img.className = "absolute left-0 top-0 select-none rounded-lg shadow-2xl";
       img.style.maxWidth = "none";
@@ -1574,15 +1574,15 @@
 
           if (isCorrect && isChosen) {
             optionClass = CLASSMAP.l1.textOption.reviewCorrectChosen;
-            reviewTagText = "Выбрано верно";
+            reviewTagText = wt('testui_q.review_selected_correct', 'Выбрано верно');
             reviewTagTone = "success";
           } else if (isCorrect && !isChosen) {
             optionClass = CLASSMAP.l1.textOption.reviewCorrectMissed;
-            reviewTagText = "Правильный";
+            reviewTagText = wt('testui_q.review_correct_option', 'Правильный');
             reviewTagTone = "success";
           } else if (!isCorrect && isChosen) {
             optionClass = CLASSMAP.l1.textOption.reviewWrongChosen;
-            reviewTagText = "Ваш выбор";
+            reviewTagText = wt('testui_q.your_choice_badge', 'Ваш выбор');
             reviewTagTone = "error";
           }
         }
@@ -1766,17 +1766,17 @@
           if (isCorrect && isChosen) {
             cardClass =
               "flex flex-col gap-3 rounded-2xl border-2 border-success bg-success-light p-3 shadow-sm text-success-text dark:border-success dark:bg-success-light dark:text-success-lighter transition-colors cursor-pointer group";
-            reviewTagText = "Выбрано верно";
+            reviewTagText = wt('testui_q.review_selected_correct', 'Выбрано верно');
             reviewTagTone = "success";
           } else if (isCorrect && !isChosen) {
             cardClass =
               "flex flex-col gap-3 rounded-2xl border-2 border-dashed border-success bg-surface-1 p-3 shadow-sm text-success-text dark:border-success dark:bg-surface-1 dark:text-success-lighter transition-colors cursor-pointer group";
-            reviewTagText = "Правильный";
+            reviewTagText = wt('testui_q.review_correct_option', 'Правильный');
             reviewTagTone = "success";
           } else if (!isCorrect && isChosen) {
             cardClass =
               "flex flex-col gap-3 rounded-2xl border-2 border-error bg-error-light p-3 shadow-sm text-error-dark dark:border-error dark:bg-error-light dark:text-error-lighter transition-colors cursor-pointer group";
-            reviewTagText = "Ваш выбор";
+            reviewTagText = wt('testui_q.your_choice_badge', 'Ваш выбор');
             reviewTagTone = "error";
           }
         }
@@ -1791,7 +1791,7 @@
           const finalSrc = resolveImageUrlForWeb(imgSrc);
           const img = document.createElement("img");
           img.src = finalSrc;
-          img.alt = caption || "Вариант ответа";
+          img.alt = caption || wt('testui_q.answer_option_alt', 'Вариант ответа');
           img.className = "w-full h-full object-contain";
           // ВАЖНО: не вешаем обработчик click на img, чтобы он не запускал зум,
           // выбор варианта обрабатывается через label/input.
