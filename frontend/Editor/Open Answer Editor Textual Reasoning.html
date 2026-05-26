@@ -4,9 +4,10 @@
 <head>
     <link rel="icon" href="../assets/actra_white.ico" type="image/x-icon" />
     <script src="../../assets/ThemeManager.js"></script>
+    <script src="/assets/i18n.js" defer></script>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>ACTRA — Редактор открытых ответов</title>
+    <title data-i18n="open_answer_editor.page_title">ACTRA — Редактор открытых ответов</title>
     <link rel="stylesheet" href="open_answer_editor.css?v=open-answer-onboarding-14">
     <!-- BaseEditor must be loaded before open_answer_editor.js -->
     <script src="undo_manager.js"></script>
@@ -31,13 +32,14 @@
             data-onboarding-spotlight="frame"
             data-onboarding-target="open-answer-header">
             <div class="open-answer-editor-header__main flex min-w-0 flex-1 items-center gap-4">
-                <button id="back-to-dashboard-btn" title="Библиотека заданий"
+                <button id="back-to-dashboard-btn" data-i18n-title="open_answer_editor.back_title" title="Библиотека заданий"
                     class="p-2 rounded-full hover:bg-bg-hover text-text-secondary transition-colors">
                     <span class="material-symbols-outlined">arrow_back</span>
                 </button>
                 <div class="open-answer-editor-header__title-row flex min-w-0 flex-1 items-center gap-4">
                     <h2 id="editor-title" class="text-lg font-bold text-text-main tracking-tight"
-                        data-onboarding-target="open-answer-title">Редактирование задания
+                        data-onboarding-target="open-answer-title"
+                        data-i18n="open_answer_editor.header_title_default">Редактирование задания
                     </h2>
                     <div id="save-status-container" class="open-answer-header-status status-cluster" data-tone="success"
                         data-onboarding-target="open-answer-save-status">
@@ -59,14 +61,16 @@
                     data-onboarding-help-mode="direct"
                     data-onboarding-tour-id="open-answer-authoring"
                     hidden
+                    data-i18n-title="open_answer_editor.show_tutorial"
                     title="Показать обучение"
+                    data-i18n-aria="open_answer_editor.show_tutorial"
                     aria-label="Показать обучение">
                     <span class="material-symbols-outlined" aria-hidden="true">help</span>
                 </button>
                 <button id="save-task-btn" class="btn-primary flex items-center gap-2 text-sm font-semibold shadow-md"
                     data-onboarding-target="open-answer-save-action">
                     <span class="material-symbols-outlined text-[18px]">save</span>
-                    Сохранить
+                    <span data-i18n="open_answer_editor.save_btn">Сохранить</span>
                 </button>
             </div>
         </header>
@@ -77,13 +81,14 @@
                         data-onboarding-target="open-answer-question-block">
                         <label class="text-sm font-semibold text-text-main flex items-center gap-2">
                             <span class="material-symbols-outlined text-[18px] text-text-disabled">help</span>
-                            Вопрос
+                            <span data-i18n="open_answer_editor.question_label">Вопрос</span>
                         </label>
                         <div
                             class="bg-surface-2 rounded-xl shadow-sm border border-border-subtle overflow-hidden focus-within:border-primary transition-all">
                             <textarea id="question-textarea" data-auto-resize="true"
                                 data-onboarding-target="open-answer-question-text"
                                 class="w-full border-0 p-4 text-sm text-text-main placeholder:text-text-disabled focus:ring-0 resize-none min-h-[60px] leading-relaxed bg-transparent"
+                                data-i18n-placeholder="open_answer_editor.question_placeholder"
                                 placeholder="Введите формулировку вопроса или описание кейса..."></textarea>
                         </div>
                     </div>
@@ -93,7 +98,7 @@
                             <label class="text-sm font-semibold text-text-main flex items-center gap-2">
                                 <span
                                     class="material-symbols-outlined text-[18px] text-text-disabled">check_circle</span>
-                                Эталонный ответ
+                                <span data-i18n="open_answer_editor.reference_label">Эталонный ответ</span>
                             </label>
                         </div>
                         <div
@@ -101,17 +106,18 @@
                             <textarea id="reference-textarea" data-auto-resize="true"
                                 data-onboarding-target="open-answer-reference-text"
                                 class="w-full border-0 p-4 text-sm text-text-main placeholder:text-text-disabled focus:ring-0 resize-none min-h-[72px] leading-relaxed bg-transparent"
+                                data-i18n-placeholder="open_answer_editor.reference_placeholder"
                                 placeholder="Введите текст правильного ответа..."></textarea>
                             <div
                                 class="border-t border-border-subtle bg-surface-2 p-3 flex items-center justify-between">
-                                <span class="text-xs text-text-muted italic">Выберите слова или фразы, обязательные
+                                <span class="text-xs text-text-muted italic" data-i18n="open_answer_editor.reference_hint">Выберите слова или фразы, обязательные
                                     для
                                     правильного ответа</span>
                                 <button id="split-keywords-btn"
                                     data-onboarding-target="open-answer-split-keywords"
                                     class="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-primary bg-primary-lighter hover:bg-primary-light rounded-md border border-primary-light transition-colors">
                                     <span class="material-symbols-outlined text-[16px]">cut</span>
-                                    Разбить на ключевые слова
+                                    <span data-i18n="open_answer_editor.split_keywords_btn">Разбить на ключевые слова</span>
                                 </button>
                             </div>
                         </div>
@@ -119,7 +125,7 @@
                     <div class="flex flex-col gap-3" data-onboarding-spotlight="frame"
                         data-onboarding-target="open-answer-keywords-hint-block">
                         <div class="flex items-center justify-between">
-                            <h3 class="text-xs font-bold text-text-secondary uppercase tracking-wider">Ключевые слова
+                            <h3 class="text-xs font-bold text-text-secondary uppercase tracking-wider" data-i18n="open_answer_editor.keywords_title">Ключевые слова
                             </h3>
                             <span id="selected-count-badge"
                                 data-onboarding-target="open-answer-selected-count"
@@ -135,13 +141,14 @@
                             <label class="text-sm font-semibold text-text-main flex items-center gap-2">
                                 <span
                                     class="material-symbols-outlined text-[18px] text-text-disabled">chat_bubble</span>
-                                Подсказка (необязательно)
+                                <span data-i18n="open_answer_editor.hint_label">Подсказка (необязательно)</span>
                             </label>
                             <div
                                 class="bg-surface-2 rounded-xl shadow-sm border border-border-subtle overflow-hidden focus-within:border-primary transition-all">
                                 <textarea id="hint-textarea" data-auto-resize="true"
                                     data-onboarding-target="open-answer-hint-text"
                                     class="w-full border-0 p-4 text-sm text-text-main placeholder:text-text-disabled focus:ring-0 resize-none min-h-[48px] leading-relaxed bg-transparent"
+                                    data-i18n-placeholder="open_answer_editor.hint_placeholder"
                                     placeholder="Добавьте подсказку, которую увидит пользователь при необходимости..."></textarea>
                             </div>
                         </div>
@@ -155,7 +162,7 @@
                     <div class="flex flex-col gap-5" data-onboarding-target="open-answer-requirements">
                         <div class="flex items-center gap-2 pb-2 border-b border-border-subtle">
                             <span class="material-symbols-outlined text-text-disabled">fact_check</span>
-                            <h3 class="text-sm font-bold text-text-main">Требования к ответу</h3>
+                            <h3 class="text-sm font-bold text-text-main" data-i18n="open_answer_editor.requirements_title">Требования к ответу</h3>
                         </div>
                         <div class="flex flex-col gap-4">
                             <div class="flex items-start gap-3 mt-2">
@@ -166,20 +173,21 @@
                                         id="sequence-order-check" type="checkbox" />
                                 </div>
                                 <div class="flex flex-col">
-                                    <label class="text-sm font-medium text-text-main" for="sequence">Проверять порядок
+                                    <label class="text-sm font-medium text-text-main" for="sequence" data-i18n="open_answer_editor.check_order_label">Проверять порядок
                                         слов</label>
-                                    <p class="text-xs text-text-muted mt-0.5">Ключевые слова должны встречаться в
+                                    <p class="text-xs text-text-muted mt-0.5" data-i18n="open_answer_editor.check_order_hint">Ключевые слова должны встречаться в
                                         эталонном порядке.</p>
                                 </div>
                             </div>
                             <div class="flex flex-col gap-1.5 pt-2 border-t border-border-subtle">
                                 <label class="text-xs font-semibold text-text-secondary uppercase tracking-wide"
-                                    for="max-length-input">Максимальная длина ответа</label>
+                                    for="max-length-input" data-i18n="open_answer_editor.max_length_label">Максимальная длина ответа</label>
                                 <input id="max-length-input" type="number" min="1" inputmode="numeric"
                                     data-onboarding-target="open-answer-max-length"
                                     class="w-full rounded-md border-border-subtle py-2 px-3 text-sm focus:ring-primary focus:border-primary text-text-main bg-surface-1"
+                                    data-i18n-placeholder="open_answer_editor.max_length_placeholder"
                                     placeholder="Оставьте пустым, если ответ можно вводить без лимита" />
-                                <p class="text-xs text-text-muted">Необязательная настройка. Если задать лимит, в
+                                <p class="text-xs text-text-muted" data-i18n="open_answer_editor.max_length_hint">Необязательная настройка. Если задать лимит, в
                                     тренажёре появится счётчик символов и ограничение на ввод.</p>
                             </div>
                         </div>
@@ -189,9 +197,9 @@
                         data-onboarding-target="open-answer-images-panel">
                         <div class="flex items-center gap-2 pb-2">
                             <span class="material-symbols-outlined text-text-disabled">image</span>
-                            <h3 class="text-sm font-bold text-text-main">Изображения</h3>
+                            <h3 class="text-sm font-bold text-text-main" data-i18n="open_answer_editor.images_title">Изображения</h3>
                         </div>
-                        <p class="text-xs text-text-muted">
+                        <p class="text-xs text-text-muted" data-i18n="open_answer_editor.images_hint">
                             Прикрепите до трех изображений. Они автоматически сохранятся вместе с заданием.
                         </p>
                         <div id="images-container" class="grid grid-cols-2 gap-3">
@@ -202,7 +210,8 @@
                                 <span
                                     class="material-symbols-outlined text-text-disabled group-hover:text-primary text-[24px]">add_photo_alternate</span>
                                 <span
-                                    class="text-xs font-medium text-text-muted group-hover:text-primary add-image-label text-center">Добавить
+                                    class="text-xs font-medium text-text-muted group-hover:text-primary add-image-label text-center"
+                                    data-i18n="open_answer_editor.add_image_label">Добавить
                                     изображение</span>
                             </button>
                             <input type="file" id="image-upload-input" class="hidden" accept="image/*" multiple>
