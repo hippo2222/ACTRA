@@ -632,7 +632,7 @@
 
         @media (max-height: 900px) {
             .welcome-panel-right {
-                overflow: visible !important;
+                overflow: auto !important;
             }
 
             .welcome-main {
@@ -887,6 +887,56 @@
         .welcome-pill:focus-visible .material-symbols-outlined,
         .welcome-pill-light:focus-visible .material-symbols-outlined {
             transform: translateX(2px);
+        }
+
+        .welcome-lang-switcher {
+            display: inline-flex;
+            gap: 0.25rem;
+            padding: 0.25rem;
+            border: 1px solid var(--welcome-stone);
+            border-radius: 32px;
+            background: #f6f4ef;
+        }
+
+        .welcome-lang-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 2.15rem;
+            min-width: 2.15rem;
+            border-radius: 99px;
+            border: 1px solid transparent;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--welcome-graphite);
+            cursor: pointer;
+            background: transparent;
+            transition: background 0.15s, color 0.15s, border-color 0.15s;
+            padding: 0 0.55rem;
+        }
+
+        .welcome-lang-btn:hover {
+            background: rgba(0, 0, 0, 0.04);
+            color: var(--welcome-charcoal);
+        }
+
+        .welcome-lang-btn.is-active {
+            background: #ffffff;
+            border-color: var(--welcome-stone);
+            color: var(--welcome-primary);
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        @media (max-width: 480px) {
+            .welcome-lang-switcher {
+                padding: 0.15rem;
+            }
+            .welcome-lang-btn {
+                height: 1.85rem;
+                min-width: 1.85rem;
+                font-size: 0.72rem;
+                padding: 0 0.35rem;
+            }
         }
 
         .welcome-scroll-top {
@@ -5363,6 +5413,40 @@
             background: #fffdf9 !important;
             border-color: #d9cab8 !important;
             color: #4a2633 !important;
+            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease !important;
+        }
+
+        body[data-mode="auth"] #onboardingSecondaryAction:not(:disabled):hover,
+        body[data-mode="auth"] #loginBackBtn:not(:disabled):hover {
+            background: #f7f3eb !important;
+            border-color: #cdbfab !important;
+            color: #241f1a !important;
+            transform: translateY(-1px);
+        }
+
+        body[data-mode="auth"] #onboardingCreateBtn,
+        body[data-mode="auth"] #loginSubmitBtn {
+            transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease !important;
+        }
+
+        body[data-mode="auth"] #onboardingCreateBtn:not(:disabled):hover,
+        body[data-mode="auth"] #loginSubmitBtn:not(:disabled):hover {
+            background: linear-gradient(135deg, var(--welcome-orange), color-mix(in srgb, var(--welcome-primary) 85%, black 15%)) !important;
+            border-color: var(--welcome-orange) !important;
+            box-shadow:
+                0 16px 36px rgba(156, 66, 21, 0.32),
+                0 0 0 6px rgba(255, 108, 56, 0.15) !important;
+            transform: translateY(-1.5px);
+        }
+
+        body[data-mode="auth"] .google-auth-button {
+            transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease !important;
+        }
+
+        body[data-mode="auth"] .google-auth-button:not(:disabled):hover {
+            background: #2e2a24 !important;
+            border-color: #2e2a24 !important;
+            transform: translateY(-1px);
         }
 
         body[data-mode="auth"] #onboardingConsentBox,
@@ -5790,6 +5874,11 @@
             <a href="/terms?lang=ru">Terms</a>
         </nav>
         <div class="flex items-center gap-2">
+            <div class="welcome-lang-switcher" role="group" aria-label="Language selection" data-i18n-aria="settings.lang_group_aria">
+                <button type="button" data-lang-btn="ru" class="welcome-lang-btn">RU</button>
+                <button type="button" data-lang-btn="en" class="welcome-lang-btn">EN</button>
+                <button type="button" data-lang-btn="uk" class="welcome-lang-btn">UK</button>
+            </div>
             <button type="button" class="welcome-pill-light" onclick="window.welcomeShowAuthLogin && window.welcomeShowAuthLogin()" data-i18n="welcome.btn_login">
                 Войти
             </button>
@@ -6713,6 +6802,14 @@
                                                         <article class="welcome-theory-doc-real">
                                                             <h4 data-i18n="wl.k142">Основная идея</h4>
                                                             <p data-i18n="wl.k143">Переменное электрическое поле создает магнитное поле, а переменное магнитное поле снова порождает электрическое.</p>
+                                                             <div style="display: flex; justify-content: center; margin: 0.8rem 0; width: 100%;">
+                                                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 320" style="max-width: 56%; width: 56%; height: auto; border-radius: 12px; display: block;" role="img" aria-label="Схема распространения волны">
+                                                                     <rect width="720" height="320" rx="28" fill="#eef4ff"/>
+                                                                     <path d="M72 238c86-82 142-124 210-90 30 15 48 44 88 42 58-2 84-66 138-70 46-4 82 32 140 118" fill="none" stroke="#32208a" stroke-width="18" stroke-linecap="round"/>
+                                                                     <circle cx="560" cy="92" r="38" fill="#b8c7ff"/>
+                                                                     <text x="72" y="86" fill="#17213a" font-family="Arial, sans-serif" font-size="34" font-weight="700" data-i18n="wl.k148">Схема распространения волны</text>
+                                                                 </svg>
+                                                             </div>
                                                             <h5 data-i18n="wl.k144">Что важно запомнить</h5>
                                                             <ul>
                                                                 <li data-i18n="wl.k145">В вакууме волна распространяется со скоростью света.</li>
