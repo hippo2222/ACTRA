@@ -1252,6 +1252,52 @@ class AdaptiveSessionManager:
         known_failed = session.test_failed_subtests.get(task_ref)
 
         if known_failed is not None:
+            # SCATTERED GUARD ─────────────────────────────────────────────────
+            # In scattered mode each submit covers exactly one question. We must
+            # only enter the partial-retry path when the submitted question(s)
+            # overlap with known_failed. If the user answered a *different*
+            # question (not in known_failed), this submit is irrelevant to the
+            # tracked failures — skip the partial-retry path and treat the
+            # result as an independent first attempt for that question.
+            #
+            # session_api.py already populates details["shown_question_indices"]
+            # for every scattered submit (the indices actually shown in this
+            # slot). Together-mode submits do not include this field, so an
+            # absent/empty value means "together mode → keep old behaviour".
+            shown_indices_raw = details.get("shown_question_indices") or []
+            if shown_indices_raw:  # non-empty ↔ scattered submit
+                shown_set: set = set()
+                for _v in shown_indices_raw:
+                    try:
+                        shown_set.add(int(_v))
+                    except (TypeError, ValueError):
+                        pass
+                known_failed_set_check = set(known_failed)
+                if not (shown_set & known_failed_set_check):
+                    # None of the shown questions were previously tracked as
+                    # failed. Leave test_failed_subtests untouched.
+                    logger.debug(
+                        "[_process_test_partial_retry] Scattered submit for %s: "
+                        "shown=%s ∩ known_failed=%s = ∅ — skipping partial-retry path",
+                        task_ref,
+                        shown_set,
+                        known_failed_set_check,
+                    )
+                    if current_failed_indices:
+                        # New failures on questions not yet tracked: merge them
+                        # into known_failed so they are retried properly later.
+                        merged = sorted(set(known_failed) | set(current_failed_indices))
+                        session.test_failed_subtests[task_ref] = merged
+                        logger.debug(
+                            "[_process_test_partial_retry] Merged new failures %s "
+                            "into known_failed for %s → %s",
+                            current_failed_indices,
+                            task_ref,
+                            merged,
+                        )
+                    return result.success
+            # ─────────────────────────────────────────────────────────────────
+
             # Partial retry path: narrow down to questions that were previously wrong
             # AND are still wrong now.
             known_failed_set = set(known_failed)
@@ -1282,6 +1328,7 @@ class AdaptiveSessionManager:
 
             session.test_failed_subtests[task_ref] = still_wrong
             return False
+
 
         # First attempt: store failures so retry copies know which questions to show.
         if current_failed_indices:
