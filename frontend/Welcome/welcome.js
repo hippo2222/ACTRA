@@ -2035,6 +2035,10 @@
     </header>
     <main id="task-content"></main>
   </div>
+  <script>
+    window.i18n = window.parent.i18n;
+    window.wt = window.parent.wt;
+  </script>
   <script src="/TestUI/TestUI.web.js?v=20260402-reviewfix1"><\/script>
   <script src="/TestUI/TestUI.question.js?v=20260402-reviewfix1"><\/script>
   <script src="/TestUI/TestUI.sidebar.js"><\/script>
@@ -2145,6 +2149,10 @@
     </div>
   </div>
   <div id="details-dialog-backdrop" class="s2-dialog-backdrop hidden" aria-hidden="true"><div class="s2-dialog-panel"><div class="s2-dialog-header"><div><p class="s2-eyebrow">${wt('welcome.demo_details', 'Детали')}</p><h2 id="details-dialog-title" class="s2-dialog-title">${wt('welcome.demo_iteration_details', 'Детали итерации')}</h2><p id="details-dialog-subtitle" class="s2-dialog-subtitle">—</p></div><button id="details-dialog-close-btn" class="s2-btn s2-ghost-btn" type="button">${wt('welcome.demo_close', 'Закрыть')}</button></div><div class="s2-dialog-body"><div class="s2-dialog-metrics"><div class="s2-dialog-metric"><span class="s2-meta-pill-label">${wt('welcome.demo_accuracy_label', 'Точность')}</span><strong id="details-rate">—</strong></div><div class="s2-dialog-metric"><span class="s2-meta-pill-label">${wt('welcome.demo_correct_label', 'Верно')}</span><strong id="details-success">—</strong></div><div class="s2-dialog-metric"><span class="s2-meta-pill-label">${wt('welcome.demo_errors_label', 'Ошибки')}</span><strong id="details-failed">—</strong></div><div class="s2-dialog-metric"><span class="s2-meta-pill-label">${wt('welcome.demo_time_label', 'Время')}</span><strong id="details-time">—</strong></div></div><div class="s2-dialog-progress-track"><div id="details-success-bar" class="s2-progress-bar s2-progress-bar--success"></div><div id="details-failed-bar" class="s2-progress-bar s2-progress-bar--error"></div></div><div id="details-errors" class="s2-dialog-list"></div></div></div></div>
+  <script>
+    window.i18n = window.parent.i18n;
+    window.wt = window.parent.wt;
+  </script>
   <script src="/assets/s2-results.js?v=20260511-copy1"><\/script>
   <script>
     if (window.S2Page && typeof window.S2Page.renderIterationResults === 'function') {
@@ -2386,6 +2394,17 @@
             renderProfilesList();
         }
         if (hostedVerificationState) applyHostedVerificationState();
+
+        // Rebuild/refresh onboarding preview iframes with updated localization
+        const practiceFrame = document.getElementById('welcomePracticePreviewFrame');
+        if (practiceFrame) {
+            practiceFrame.srcdoc = buildWelcomePracticePreviewDoc();
+        }
+        const resultFrame = document.getElementById('welcomeResultPreviewFrame');
+        if (resultFrame) {
+            resultFrame.srcdoc = buildWelcomeResultPreviewDoc();
+        }
+
         if (window.i18n) window.i18n.updateDOM();
     }
 

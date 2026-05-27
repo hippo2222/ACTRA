@@ -126,10 +126,12 @@ const ThemeManager = {
     },
 
     getThemeInfo(themeId) {
+        this.normalizeThemeMetadata();
         return this.themes[themeId || this.getTheme()];
     },
 
     getThemes() {
+        this.normalizeThemeMetadata();
         return Object.entries(this.themes).map(([id, value]) => ({
             id,
             ...value,
