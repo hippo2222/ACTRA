@@ -11,7 +11,16 @@
 
     function rt(val, tourId, stepId, suffix) {
         if (!val || !tourId || !stepId) return val || '';
-        return wt('ot.' + tourId + '.' + stepId + (suffix ? '.' + suffix : ''), val);
+        const tId = tourId.replace(/-/g, '_');
+        const cleanSuffix = suffix ? suffix.replace(/\./g, '_') : '';
+        let key;
+        if (stepId === 'tour') {
+            key = 'tours.' + tId + '.' + cleanSuffix;
+        } else {
+            const sId = stepId.replace(/-/g, '_');
+            key = 'tours.' + tId + '.' + sId + (cleanSuffix ? '.' + cleanSuffix : '');
+        }
+        return wt(key, val);
     }
 
     const LOCAL_SEEN_KEY = 'actra_onboarding_seen_v1';
