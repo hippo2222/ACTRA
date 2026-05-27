@@ -4829,10 +4829,14 @@ class EditorDashboard {
         // Theme-aware error badge classes
         const isDark = this.isCurrentThemeDark();
         const errorBadgeClass = isDark
-            ? 'bg-error-dark text-error-lighter ring-1 ring-inset ring-error-lighter'
+            ? 'bg-error-dark text-error-text ring-1 ring-inset ring-error-light'
             : 'bg-error-light text-error-darker ring-1 ring-inset ring-error-darker';
-        const draftBadgeClass = 'border border-warning-light bg-warning-lighter text-warning-darker';
-        const archiveBadgeClass = 'border border-warning-light bg-warning-lighter text-warning-darker';
+        const draftBadgeClass = isDark
+            ? 'border border-warning-light bg-warning-dark text-warning-text'
+            : 'border border-warning-light bg-warning-lighter text-warning-darker';
+        const archiveBadgeClass = isDark
+            ? 'border border-warning-light bg-warning-dark text-warning-text'
+            : 'border border-warning-light bg-warning-lighter text-warning-darker';
 
         article.innerHTML = `
             <div class="flex justify-between items-start mb-3 gap-3">
@@ -5080,7 +5084,7 @@ class EditorDashboard {
         const base = {
             label: task.type || 'Task',
             className: isDark
-                ? 'bg-info-dark text-info-lighter ring-1 ring-inset ring-info-lighter'
+                ? 'bg-info-dark text-info-text ring-1 ring-inset ring-info-light'
                 : 'bg-info-light text-info ring-1 ring-inset ring-info'
         };
 
@@ -5088,7 +5092,7 @@ class EditorDashboard {
             return {
                 label: wt('db.k290', 'Клик'),
                 className: isDark
-                    ? 'bg-secondary-dark text-secondary-lighter ring-1 ring-inset ring-secondary-lighter'
+                    ? 'bg-secondary-dark text-secondary-text ring-1 ring-inset ring-secondary-light'
                     : 'bg-secondary-light text-secondary ring-1 ring-inset ring-secondary'
             };
         }
@@ -5096,7 +5100,7 @@ class EditorDashboard {
             return {
                 label: wt('db.k291', 'Рисование'),
                 className: isDark
-                    ? 'bg-success-dark text-success-lighter ring-1 ring-inset ring-success-lighter'
+                    ? 'bg-success-dark text-success-text ring-1 ring-inset ring-success-light'
                     : 'bg-success-light text-success ring-1 ring-inset ring-success'
             };
         }
@@ -5104,7 +5108,7 @@ class EditorDashboard {
             return {
                 label: wt('db.k292', 'Тест'),
                 className: isDark
-                    ? 'bg-warning-dark text-warning-lighter ring-1 ring-inset ring-warning-lighter'
+                    ? 'bg-warning-dark text-warning-text ring-1 ring-inset ring-warning-light'
                     : 'bg-warning-light text-warning ring-1 ring-inset ring-warning'
             };
         }
@@ -5112,7 +5116,7 @@ class EditorDashboard {
             return {
                 label: wt('db.k293', 'Один ответ'),
                 className: isDark
-                    ? 'bg-warning-dark text-warning-lighter ring-1 ring-inset ring-warning-lighter'
+                    ? 'bg-warning-dark text-warning-text ring-1 ring-inset ring-warning-light'
                     : 'bg-warning-light text-warning ring-1 ring-inset ring-warning'
             };
         }
@@ -5120,7 +5124,7 @@ class EditorDashboard {
             return {
                 label: wt('db.k294', 'Текст'),
                 className: isDark
-                    ? 'bg-info-dark text-info-lighter ring-1 ring-inset ring-info-lighter'
+                    ? 'bg-info-dark text-info-text ring-1 ring-inset ring-info-light'
                     : 'bg-info-light text-info ring-1 ring-inset ring-info'
             };
         }
@@ -5128,7 +5132,7 @@ class EditorDashboard {
             return {
                 label: wt('db.k295', 'Последовательность'),
                 className: isDark
-                    ? 'bg-primary-dark text-primary-lighter ring-1 ring-inset ring-primary-lighter'
+                    ? 'bg-primary-dark text-primary-light ring-1 ring-inset ring-primary-light'
                     : 'bg-primary-lighter text-primary ring-1 ring-inset ring-primary'
             };
         }
@@ -5136,7 +5140,7 @@ class EditorDashboard {
             return {
                 label: wt('db.k296', 'Открытый ответ'),
                 className: isDark
-                    ? 'bg-info-dark text-info-lighter ring-1 ring-inset ring-info-lighter'
+                    ? 'bg-info-dark text-info-text ring-1 ring-inset ring-info-light'
                     : 'bg-info-light text-info ring-1 ring-inset ring-info'
             };
         }

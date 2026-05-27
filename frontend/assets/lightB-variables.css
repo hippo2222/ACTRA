@@ -433,7 +433,7 @@
    /* Slate 600 */
    --color-text-muted: #475569;
    /* FIXED: WCAG 4.5:1 Contrast against #E8E9ED */
-   --color-text-disabled: #94A3B8;
+   --color-text-disabled: #718096;
    --color-text-contrast: #FFFFFF;
 
    /* ========== BORDER COLORS ========== */
@@ -816,7 +816,7 @@
    --color-text-main: #1a1226;
    --color-text-secondary: #261a38;
    --color-text-muted: #1d232f;
-   --color-text-disabled: #808a9f;
+   --color-text-disabled: #4d5566;
    --color-text-contrast: #dbe4f0;
 
    /* ========== BORDER COLORS ========== */
@@ -939,7 +939,7 @@ html.dark,
    /* Lightened from #E0B588 (>6:1) to exceed 4.5:1 against new lighter surfaces */
    --color-text-muted: #D4C4A8;
    /* Lightened to match secondary-light for better contrast */
-   --color-text-disabled: #5a4a32;
+   --color-text-disabled: #a29177;
    /* Lightened from #54442b for visibility */
    --color-text-contrast: #1a1810;
    /* Text on light backgrounds - updated to match new bg-main */
@@ -1008,28 +1008,28 @@ html.dark,
 
    /* ========== BADGE SYSTEM (Dark Theme Optimized) ========== */
    --badge-secondary-bg: var(--color-secondary-dark);
-   --badge-secondary-text: var(--color-secondary-lighter);
-   --badge-secondary-ring: var(--color-secondary-lighter);
+   --badge-secondary-text: var(--color-secondary-text);
+   --badge-secondary-ring: var(--color-secondary-text);
 
    --badge-success-bg: var(--color-success-dark);
-   --badge-success-text: var(--color-success-lighter);
-   --badge-success-ring: var(--color-success-lighter);
+   --badge-success-text: var(--color-success-text);
+   --badge-success-ring: var(--color-success-text);
 
    --badge-warning-bg: var(--color-warning-dark);
-   --badge-warning-text: var(--color-warning-lighter);
-   --badge-warning-ring: var(--color-warning-lighter);
+   --badge-warning-text: var(--color-warning-text);
+   --badge-warning-ring: var(--color-warning-text);
 
    --badge-primary-bg: var(--color-primary-dark);
-   --badge-primary-text: var(--color-primary-lighter);
-   --badge-primary-ring: var(--color-primary-lighter);
+   --badge-primary-text: var(--color-primary-light);
+   --badge-primary-ring: var(--color-primary-light);
 
    --badge-error-bg: var(--color-error-dark);
-   --badge-error-text: var(--color-error-lighter);
-   --badge-error-ring: var(--color-error-lighter);
+   --badge-error-text: var(--color-error-text);
+   --badge-error-ring: var(--color-error-text);
 
    --badge-info-bg: var(--color-info-dark);
-   --badge-info-text: var(--color-info-lighter);
-   --badge-info-ring: var(--color-info-lighter);
+   --badge-info-text: var(--color-info-text);
+   --badge-info-ring: var(--color-info-text);
 
    /* ========== DYNAMIC CHAIN PALETTE (Warm Glow) ========== */
    --color-chain-1: #81c784;
@@ -1193,4 +1193,29 @@ html.dark,
    --color-component-card-elevated-bg-start: color-mix(in srgb, var(--color-surface-1) 94%, var(--color-primary-light) 6%);
    --color-component-card-elevated-bg-mid: color-mix(in srgb, var(--color-surface-1) 98%, var(--color-primary-light) 2%);
    --color-component-card-elevated-bg-end: color-mix(in srgb, var(--color-surface-1) 96%, var(--color-accent-light) 4%);
+
+   /* ========== BADGE SYSTEM (Dark Theme B Optimized) ========== */
+   --badge-secondary-bg: var(--color-secondary-dark);
+   --badge-secondary-text: var(--color-secondary-text);
+   --badge-secondary-ring: var(--color-secondary-text);
+
+   --badge-success-bg: var(--color-success-dark);
+   --badge-success-text: var(--color-success-text);
+   --badge-success-ring: var(--color-success-text);
+
+   --badge-warning-bg: var(--color-warning-dark);
+   --badge-warning-text: var(--color-warning-text);
+   --badge-warning-ring: var(--color-warning-text);
+
+   --badge-primary-bg: var(--color-primary-dark);
+   --badge-primary-text: var(--color-primary-light);
+   --badge-primary-ring: var(--color-primary-light);
+
+   --badge-error-bg: var(--color-error-dark);
+   --badge-error-text: var(--color-error-text);
+   --badge-error-ring: var(--color-error-text);
+
+   --badge-info-bg: var(--color-info-dark);
+   --badge-info-text: var(--color-info-text);
+   --badge-info-ring: var(--color-info-text);
 }

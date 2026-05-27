@@ -35,24 +35,24 @@ window.NotificationUI = (function () {
 
     const _COLORS = {
         success: {
-            bg: 'bg-success-lighter border-success-light',
-            icon: 'text-success',
-            text: 'text-success',
+            bg: 'bg-success-lighter border-success-light dark:bg-success-dark dark:border-success-light',
+            icon: 'text-success-dark dark:text-success-text',
+            text: 'text-success-dark dark:text-success-text',
         },
         error: {
-            bg: 'bg-error-lighter border-error-light',
-            icon: 'text-error',
-            text: 'text-error',
+            bg: 'bg-error-lighter border-error-light dark:bg-error-dark dark:border-error-light',
+            icon: 'text-error-dark dark:text-error-text',
+            text: 'text-error-dark dark:text-error-text',
         },
         warning: {
-            bg: 'bg-warning-lighter border-warning-light',
-            icon: 'text-warning',
-            text: 'text-warning',
+            bg: 'bg-warning-lighter border-warning-light dark:bg-warning-dark dark:border-warning-light',
+            icon: 'text-warning-darker dark:text-warning-text',
+            text: 'text-warning-darker dark:text-warning-text',
         },
         info: {
-            bg: 'bg-info-lighter border-info-light',
-            icon: 'text-info',
-            text: 'text-info',
+            bg: 'bg-info-lighter border-info-light dark:bg-info-dark dark:border-info-light',
+            icon: 'text-info-dark dark:text-info-text',
+            text: 'text-info-dark dark:text-info-text',
         },
     };
 
