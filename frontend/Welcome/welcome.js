@@ -2361,6 +2361,7 @@
                     goToMain();
                     return;
             }
+            _applyWelcomeI18n();
         } finally {
             finalizeOverlay();
         }
