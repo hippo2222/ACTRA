@@ -16,6 +16,22 @@
         'Проходим и повторяем',
         'Смотрим статистику',
     ];
+    const CATEGORY_KEYS = {
+        'Знакомимся с проектом': 'intro',
+        'Находим материалы': 'find',
+        'Создаем задания': 'create',
+        'Объединяем задания в комплексы': 'assemble',
+        'Работаем с теорией': 'theory',
+        'Проходим и повторяем': 'practice',
+        'Смотрим статистику': 'stats'
+    };
+
+    function translateCategory(category) {
+        const keySuffix = CATEGORY_KEYS[category];
+        if (!keySuffix) return category;
+        return wt('reference.cat_' + keySuffix, category);
+    }
+
     const PREVIEW_VIEWPORT_WIDTH = 1440;
     const PREVIEW_VIEWPORT_HEIGHT = 900;
 
@@ -96,6 +112,7 @@
             tour?.title,
             tour?.summary,
             getCategory(tour),
+            translateCategory(getCategory(tour)),
             ...asArray(tour?.referenceTags),
         ];
 
@@ -301,7 +318,7 @@
                     aria-controls="${escapeHtml(categoryBodyId)}"
                 >
                     <span class="reference-toc__heading-icon" aria-hidden="true"></span>
-                    <span class="reference-toc__heading-title">${escapeHtml(category)}</span>
+                    <span class="reference-toc__heading-title">${escapeHtml(translateCategory(category))}</span>
                     <span class="reference-toc__heading-count">${tours.length}</span>
                 </button>
                 <div class="reference-toc__category-body" id="${escapeHtml(categoryBodyId)}" ${expanded ? '' : 'hidden'}>
