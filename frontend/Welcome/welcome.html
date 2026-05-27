@@ -416,46 +416,47 @@
         }
 
         .registration-promo-card {
-            display: grid;
-            grid-template-columns: auto minmax(0, 1fr);
-            gap: 0.9rem;
-            align-items: start;
-            border: 1px solid color-mix(in srgb, var(--color-primary) 22%, var(--color-border-subtle));
-            border-radius: 1.25rem;
-            background:
-                linear-gradient(135deg,
-                    color-mix(in srgb, var(--color-primary) 9%, var(--color-surface-1)) 0%,
-                    var(--color-surface-1) 100%);
-            padding: 1rem;
-            color: var(--color-text-main);
-            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            border: 1px dashed rgba(255, 108, 56, 0.3) !important;
+            border-radius: 16px !important;
+            background: rgba(255, 108, 56, 0.05) !important;
+            padding: 0.9rem 1.1rem !important;
+            color: #241f1a !important;
         }
 
-        .registration-promo-card__icon {
-            display: inline-flex;
+        .registration-promo-card__icon-wrap {
+            display: flex;
             align-items: center;
             justify-content: center;
-            width: 2.7rem;
-            height: 2.7rem;
-            border-radius: 1rem;
-            background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface-2));
-            color: var(--color-primary-dark);
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 10px;
+            background: rgba(255, 108, 56, 0.12) !important;
+            color: var(--welcome-orange) !important;
+            flex-shrink: 0;
+        }
+
+        .registration-promo-card__icon-wrap .material-symbols-outlined {
+            font-size: 22px !important;
+            line-height: 1 !important;
         }
 
         .registration-promo-card__title {
             margin: 0;
-            color: var(--color-text-main);
-            font-size: 0.98rem;
-            font-weight: 900;
-            line-height: 1.2;
+            color: #241f1a !important;
+            font-size: 0.94rem;
+            font-weight: 800;
+            line-height: 1.25;
         }
 
         .registration-promo-card__copy {
-            margin: 0.35rem 0 0;
-            color: var(--color-text-secondary);
-            font-size: 0.86rem;
-            font-weight: 600;
-            line-height: 1.45;
+            margin: 0.2rem 0 0;
+            color: #5a524b !important;
+            font-size: 0.8rem;
+            font-weight: 500;
+            line-height: 1.35;
         }
 
         .auth-choice-card__promo {
@@ -5086,10 +5087,10 @@
         }
 
         body[data-mode="auth"] #onboardingConsentBox {
-            border: 0 !important;
-            border-radius: 16px !important;
-            padding: 0.85rem !important;
-            background: color-mix(in srgb, var(--welcome-midnight) 92%, var(--welcome-primary) 8%) !important;
+            border: 1px solid var(--welcome-stone) !important;
+            border-radius: 12px !important;
+            padding: 0.75rem !important;
+            background: rgba(0, 0, 0, 0.02) !important;
         }
 
         body[data-mode="auth"] .auth-divider {
@@ -5452,11 +5453,11 @@
         body[data-mode="auth"] #onboardingConsentBox,
         body[data-mode="auth"] #onboardingConsentBox p,
         body[data-mode="auth"] #onboardingConsentBox label {
-            color: rgba(255, 253, 250, 0.9) !important;
+            color: var(--welcome-graphite) !important;
         }
 
         body[data-mode="auth"] #onboardingConsentBox button {
-            color: #ffc7ba !important;
+            color: var(--welcome-orange) !important;
         }
 
         body[data-mode="auth"] #onboardingConsentBox input[type="checkbox"] {
@@ -5469,7 +5470,7 @@
             padding: 0 !important;
             border-radius: 0.35rem !important;
             background: #fffdfa !important;
-            border-color: rgba(255, 253, 250, 0.84) !important;
+            border-color: #cdbfab !important;
             accent-color: var(--welcome-orange);
         }
 
@@ -5966,9 +5967,7 @@
                     <p id="welcomeHeaderSubtitle" data-i18n="wl.k002" class="text-lg md:text-xl font-medium">
                         Выберите профиль, чтобы продолжить обучение
                     </p>
-                    <p id="welcomeHeaderAuthDescription" class="welcome-header-auth-desc" data-i18n="welcome.header_auth_desc">
-                        Войдите в библиотеку или создайте аккаунт, чтобы сохранить материалы, практику и прогресс в одном рабочем пространстве.
-                    </p>
+
                 </header>
 
                 <!-- ===== INTERACTIVE MODES ===== -->
@@ -6003,8 +6002,9 @@
                             <div id="hostedRegistrationFields" class="hidden space-y-4 mt-4">
                                 <div id="registrationPremiumPromo" class="registration-promo-card"
                                     data-registration-premium-promo>
-                                    <span class="registration-promo-card__icon material-symbols-outlined"
-                                        aria-hidden="true">workspace_premium</span>
+                                    <div class="registration-promo-card__icon-wrap">
+                                        <span class="material-symbols-outlined" aria-hidden="true">workspace_premium</span>
+                                    </div>
                                     <div>
                                         <p class="registration-promo-card__title" data-i18n="welcome.promo_title">21 день Premium бесплатно</p>
                                         <p class="registration-promo-card__copy" data-i18n="welcome.promo_copy">
