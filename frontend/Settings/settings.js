@@ -2475,6 +2475,7 @@
         // Re-render theme options to pick up translated theme names
         var currentTheme = window.ThemeManager ? window.ThemeManager.getTheme() : 'light-a';
         renderThemeOptions(currentTheme);
+        renderPremiumSection();
 
         window.i18n.updateDOM();
     }

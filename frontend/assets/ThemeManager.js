@@ -75,6 +75,11 @@ const ThemeManager = {
 
     init() {
         this.normalizeThemeMetadata();
+        if (typeof window !== 'undefined') {
+            window.addEventListener('i18n:changed', () => {
+                this.normalizeThemeMetadata();
+            });
+        }
         console.log('[ThemeManager] Init started');
         const savedTheme = localStorage.getItem('app-theme') || 'light-a';
         console.log('[ThemeManager] Loaded theme from storage:', savedTheme);
