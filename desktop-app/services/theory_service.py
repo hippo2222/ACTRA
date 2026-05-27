@@ -100,7 +100,7 @@ class TheoryNotFoundError(Exception):
 class TheoryService:
     """Filesystem-backed service for storing theory notes in Delta format."""
 
-    ALLOWED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"}
+    ALLOWED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
     ALLOWED_DELTA_ATTRIBUTES = {
         "bold",
         "italic",

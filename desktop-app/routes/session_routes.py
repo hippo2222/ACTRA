@@ -1,4 +1,4 @@
-"""Session API routes.
+﻿"""Session API routes.
 
 Endpoints:
 - GET    /api/session/<id>/task              - Get current task
@@ -197,8 +197,8 @@ def get_current_task(session_id: str) -> Any:
     ctx = get_ctx()
     session_api = ctx.session_api
     current_user_id = getattr(ctx, "user_id", None)
-    # BUG-5 fix: не снимаем паузу автоматически в GET-запросе.
-    # Если сессия на паузе, возвращаем флаг paused — фронтенд покажет модалку resume.
+    # BUG-5 fix: РЅРµ СЃРЅРёРјР°РµРј РїР°СѓР·Сѓ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё РІ GET-Р·Р°РїСЂРѕСЃРµ.
+    # Р•СЃР»Рё СЃРµСЃСЃРёСЏ РЅР° РїР°СѓР·Рµ, РІРѕР·РІСЂР°С‰Р°РµРј С„Р»Р°Рі paused вЂ” С„СЂРѕРЅС‚РµРЅРґ РїРѕРєР°Р¶РµС‚ РјРѕРґР°Р»РєСѓ resume.
     session_obj = session_api.get_session(session_id, user_id=current_user_id)
     if session_obj and session_obj.paused:
         logger.info(
@@ -219,7 +219,7 @@ def get_current_task(session_id: str) -> Any:
             pass
         return jsonify(resp), 404
 
-    # Логируем компактное представление (ref + queue)
+    # Р›РѕРіРёСЂСѓРµРј РєРѕРјРїР°РєС‚РЅРѕРµ РїСЂРµРґСЃС‚Р°РІР»РµРЅРёРµ (ref + queue)
     try:
         logger.info(
             "[HTTP] get_current_task session_id=%s task_ref=%s index=%s total=%s",
@@ -327,7 +327,7 @@ def get_current_task(session_id: str) -> Any:
     except Exception:
         pass
 
-    # Дополнительно логируем полный JSON-ответ для дебага (без бинарных данных)
+    # Р”РѕРїРѕР»РЅРёС‚РµР»СЊРЅРѕ Р»РѕРіРёСЂСѓРµРј РїРѕР»РЅС‹Р№ JSON-РѕС‚РІРµС‚ РґР»СЏ РґРµР±Р°РіР° (Р±РµР· Р±РёРЅР°СЂРЅС‹С… РґР°РЅРЅС‹С…)
     resp = {"ok": True, "task": data}
     try:
         logger.debug("[HTTP][RESPONSE] /task session_id=%s payload=%s", session_id, resp)
@@ -349,7 +349,7 @@ def list_active_sessions() -> Any:
         repo = sm.session_repository if sm is not None else None
         if repo is None:
             return jsonify({"ok": False, "error": "session_repository_unavailable"}), 500
-        # MISSING-2: очистка устаревших паузированных сессий (>30 дней)
+        # MISSING-2: РѕС‡РёСЃС‚РєР° СѓСЃС‚Р°СЂРµРІС€РёС… РїР°СѓР·РёСЂРѕРІР°РЅРЅС‹С… СЃРµСЃСЃРёР№ (>30 РґРЅРµР№)
         try:
             removed = repo.cleanup_stale_sessions(user_id, max_pause_days=30)
             if removed:
@@ -369,12 +369,12 @@ def submit_task(session_id: str) -> Any:
     ctx = get_ctx()
     session_api = ctx.session_api
     current_user_id = getattr(ctx, "user_id", None)
-    payload = request.get_json(force=True)
+    payload = request.get_json(silent=True) or {}
     task_id = payload.get("task_id")
     raw_user_input = payload.get("user_input") or {}
     audit_control = payload.get("audit_control") if isinstance(payload, dict) else None
 
-    # GUEST MODE PROTECTION: запретить submit для гостя на HTTP-уровне
+    # GUEST MODE PROTECTION: Р·Р°РїСЂРµС‚РёС‚СЊ submit РґР»СЏ РіРѕСЃС‚СЏ РЅР° HTTP-СѓСЂРѕРІРЅРµ
     if ctx.user_id == "guest":
         logger.warning("[HTTP] Rejecting submit for guest user")
         return jsonify({"ok": False, "error": "guest_cannot_submit"}), 403
@@ -389,7 +389,7 @@ def submit_task(session_id: str) -> Any:
     except Exception:
         pass
 
-    # Дополнительный verbose-лог для расследования daily_mix: состояние сессии/контроллера
+    # Р”РѕРїРѕР»РЅРёС‚РµР»СЊРЅС‹Р№ verbose-Р»РѕРі РґР»СЏ СЂР°СЃСЃР»РµРґРѕРІР°РЅРёСЏ daily_mix: СЃРѕСЃС‚РѕСЏРЅРёРµ СЃРµСЃСЃРёРё/РєРѕРЅС‚СЂРѕР»Р»РµСЂР°
     try:
         sm = getattr(session_api, "_session_manager", None)
         ctrl = getattr(session_api, "_controller", None)
@@ -422,15 +422,15 @@ def submit_task(session_id: str) -> Any:
     if not task_id:
         return jsonify({"ok": False, "error": "task_id_required"}), 400
 
-    # Определяем тип текущего задания, чтобы при необходимости провалидировать
-    # структуру user_input для sequence_assembly.
+    # РћРїСЂРµРґРµР»СЏРµРј С‚РёРї С‚РµРєСѓС‰РµРіРѕ Р·Р°РґР°РЅРёСЏ, С‡С‚РѕР±С‹ РїСЂРё РЅРµРѕР±С…РѕРґРёРјРѕСЃС‚Рё РїСЂРѕРІР°Р»РёРґРёСЂРѕРІР°С‚СЊ
+    # СЃС‚СЂСѓРєС‚СѓСЂСѓ user_input РґР»СЏ sequence_assembly.
     current_task = session_api.get_current_task(session_id, user_id=current_user_id) or {}
     task_data = current_task.get("task_data") or {}
     task_type = None
     if isinstance(task_data, dict):
         task_type = task_data.get("type") or task_data.get("task_type")
-        # Fallback для error_detection text_choice: если нет spans/clicks, но есть selected_option_id,
-        # конвертируем в spans из reference_spans, чтобы оценка прошла как успех.
+        # Fallback РґР»СЏ error_detection text_choice: РµСЃР»Рё РЅРµС‚ spans/clicks, РЅРѕ РµСЃС‚СЊ selected_option_id,
+        # РєРѕРЅРІРµСЂС‚РёСЂСѓРµРј РІ spans РёР· reference_spans, С‡С‚РѕР±С‹ РѕС†РµРЅРєР° РїСЂРѕС€Р»Р° РєР°Рє СѓСЃРїРµС….
         try:
             content = task_data.get("content") or {}
             subtype = (
@@ -498,7 +498,7 @@ def submit_task(session_id: str) -> Any:
             audit_details = {}
         audit_message = str(
             audit_control.get("message")
-            or ("Ответ принят по вашему выбору." if forced_success else "Ответ отмечен как неверный по вашему выбору.")
+            or ("РћС‚РІРµС‚ РїСЂРёРЅСЏС‚ РїРѕ РІР°С€РµРјСѓ РІС‹Р±РѕСЂСѓ." if forced_success else "РћС‚РІРµС‚ РѕС‚РјРµС‡РµРЅ РєР°Рє РЅРµРІРµСЂРЅС‹Р№ РїРѕ РІР°С€РµРјСѓ РІС‹Р±РѕСЂСѓ.")
         ).strip()
         expected_iteration = session_obj.iteration
         submit_payload = {
@@ -529,11 +529,11 @@ def submit_task(session_id: str) -> Any:
     user_input = raw_user_input
     if task_type == "sequence_assembly":
         try:
-            # Мягкая валидация: если структура не соответствует модели,
-            # возвращаем ошибку 400, чтобы фронт мог её отловить.
+            # РњСЏРіРєР°СЏ РІР°Р»РёРґР°С†РёСЏ: РµСЃР»Рё СЃС‚СЂСѓРєС‚СѓСЂР° РЅРµ СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓРµС‚ РјРѕРґРµР»Рё,
+            # РІРѕР·РІСЂР°С‰Р°РµРј РѕС€РёР±РєСѓ 400, С‡С‚РѕР±С‹ С„СЂРѕРЅС‚ РјРѕРі РµС‘ РѕС‚Р»РѕРІРёС‚СЊ.
             answer_model = WebSequenceAnswer(**raw_user_input)
             user_input = answer_model.dict()
-        except Exception as exc:  # pragma: no cover - защитный код
+        except Exception as exc:  # pragma: no cover - Р·Р°С‰РёС‚РЅС‹Р№ РєРѕРґ
             logger.warning(
                 "[HTTP] Invalid sequence_assembly user_input for session %s, task_id=%s: %s",
                 session_id,
@@ -545,7 +545,7 @@ def submit_task(session_id: str) -> Any:
                 400,
             )
 
-    # Подтип error_detection не использует координаты кликов — пропускаем click-валидацию
+    # РџРѕРґС‚РёРї error_detection РЅРµ РёСЃРїРѕР»СЊР·СѓРµС‚ РєРѕРѕСЂРґРёРЅР°С‚С‹ РєР»РёРєРѕРІ вЂ” РїСЂРѕРїСѓСЃРєР°РµРј click-РІР°Р»РёРґР°С†РёСЋ
     def _detect_subtype(task_obj: Dict[str, Any]) -> Optional[str]:
         if not isinstance(task_obj, dict):
             return None
@@ -796,7 +796,7 @@ def next_task(session_id: str) -> Any:
             pass
         return jsonify(resp), 400
 
-    # Если SessionAPI сигнализирует завершение сессии, не возвращаем задачу.
+    # Р•СЃР»Рё SessionAPI СЃРёРіРЅР°Р»РёР·РёСЂСѓРµС‚ Р·Р°РІРµСЂС€РµРЅРёРµ СЃРµСЃСЃРёРё, РЅРµ РІРѕР·РІСЂР°С‰Р°РµРј Р·Р°РґР°С‡Сѓ.
     if isinstance(data, dict) and not data.get("ok", True):
         try:
             logger.info("[HTTP] next_task session_id=%s -> %s", session_id, data)

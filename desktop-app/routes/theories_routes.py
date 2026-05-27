@@ -451,6 +451,15 @@ def delete_theory(theory_id: str) -> Any:
     if ctx.user_id == "guest":
         return jsonify({"ok": False, "error": "guest_cannot_edit"}), 403
 
+    if is_hosted_web_runtime():
+        try:
+            existing = ctx.theory_service.get_theory(theory_id, include_delta=False)
+            existing_s = _serialize_theory_payload(existing, current_user_id=ctx.user_id)
+            if not (existing_s.get("ownership") or {}).get("is_owned_by_current_user"):
+                return jsonify({"ok": False, "error": "theory_not_found"}), 404
+        except TheoryNotFoundError:
+            return jsonify({"ok": False, "error": "theory_not_found"}), 404
+
     try:
         usage_stats = _load_theory_usage_stats(ctx)
         item = _delete_theory_if_orphan(ctx, theory_id, usage_stats)
@@ -565,6 +574,15 @@ def update_theory(theory_id: str) -> Any:
     ctx = get_ctx()
     if ctx.user_id == "guest":
         return jsonify({"ok": False, "error": "guest_cannot_edit"}), 403
+
+    if is_hosted_web_runtime():
+        try:
+            existing = ctx.theory_service.get_theory(theory_id, include_delta=False)
+            existing_s = _serialize_theory_payload(existing, current_user_id=ctx.user_id)
+            if not (existing_s.get("ownership") or {}).get("is_owned_by_current_user"):
+                return jsonify({"ok": False, "error": "theory_not_found"}), 404
+        except TheoryNotFoundError:
+            return jsonify({"ok": False, "error": "theory_not_found"}), 404
 
     payload = request.get_json(silent=True) or {}
     expected_version = payload.get("expected_version")

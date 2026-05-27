@@ -57,19 +57,19 @@
   <div class="panel">
     <div class="header">
       <div class="header-label">
-        <span>Аккаунт</span>
+        <span data-i18n="profile_modal.hosted_header">Аккаунт</span>
         <span class="hosted-badge">Hosted</span>
       </div>
       <div class="user-row">
         <div class="avatar-wrap">
-          <div class="avatar">АЗ</div>
+          <div class="avatar" id="demo-avatar">АА</div>
           <div class="avatar-dot">
             <svg viewBox="0 0 8 8" fill="none"><circle cx="4" cy="4" r="3" fill="#fff"/></svg>
           </div>
         </div>
         <div class="user-info">
-          <div class="user-name">Антон Зайченко</div>
-          <div class="user-sub">Личный кабинет ACTRA</div>
+          <div class="user-name" id="demo-user-name" data-i18n="profile_modal.guest_name">Пользователь</div>
+          <div class="user-sub" data-i18n="profile_modal.hosted_account_caption">Личный кабинет ACTRA</div>
         </div>
       </div>
     </div>
@@ -80,8 +80,8 @@
           <span class="material-symbols-outlined" style="font-size:18px;">manage_accounts</span>
         </div>
         <div class="menu-text">
-          <div class="menu-title">Настройки аккаунта</div>
-          <div class="menu-desc">Профиль, аватар и параметры</div>
+          <div class="menu-title" data-i18n="profile_modal.hosted_settings_title">Настройки аккаунта</div>
+          <div class="menu-desc" data-i18n="profile_modal.hosted_settings_desc">Профиль, аватар и параметры</div>
         </div>
         <span class="material-symbols-outlined menu-arrow" style="font-size:16px;">arrow_forward_ios</span>
       </a>
@@ -92,7 +92,7 @@
             <span class="material-symbols-outlined" style="font-size:18px;">palette</span>
           </div>
           <div class="menu-text">
-            <div class="menu-title">Оформление</div>
+            <div class="menu-title" data-i18n="profile_modal.hosted_theme_title">Оформление</div>
             <div class="menu-desc" id="themeLabel">Light A — Indigo</div>
           </div>
           <span class="material-symbols-outlined menu-chevron" id="chevron" style="font-size:18px;">expand_more</span>
@@ -140,7 +140,7 @@
     <div class="footer">
       <button class="logout-btn" type="button">
         <span class="material-symbols-outlined" style="font-size:16px;">logout</span>
-        Выйти
+        <span data-i18n="profile_modal.hosted_logout">Выйти</span>
       </button>
     </div>
   </div>

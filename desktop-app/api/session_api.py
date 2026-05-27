@@ -664,6 +664,16 @@ class SessionAPI:
                     persist=True,
                     source="repository_restore",
                 )
+                loaded_user_id = str(getattr(normalized, "user_id", "") or "").strip()
+                requested_user_id = str(user_id or "").strip()
+                if requested_user_id and loaded_user_id and loaded_user_id != requested_user_id:
+                    logger.warning(
+                        "[SessionAPI.get_session] IDOR prevented (repo): session_id=%s requested=%s actual=%s",
+                        session_id,
+                        requested_user_id,
+                        loaded_user_id,
+                    )
+                    return None
                 try:
                     normalized_user_id = str(getattr(normalized, "user_id", "") or candidate_user_id).strip()
                     self._ensure_runtime_complex_available(

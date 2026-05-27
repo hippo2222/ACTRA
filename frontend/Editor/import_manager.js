@@ -956,7 +956,7 @@ ${remaining}
             <div class="mb-4 rounded-xl border border-primary-light bg-primary-lighter/40 p-4 space-y-3">
                 <div class="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                        <div class="text-sm font-bold text-text-main">Текущий маршрут генерации</div>
+                        <div class="text-sm font-bold text-text-main">${wt('im.k815', 'Текущий маршрут генерации')}</div>
                         <div class="text-xs text-text-secondary mt-1">
                             ${this.escapeHtml(this.getEditorFacingTaskTypeLabel(ctx.taskType))} • ${wt('im.k040', 'сессия')}${this.escapeHtml(ctx.session.id)}
                         </div>
@@ -968,21 +968,21 @@ ${remaining}
                 </div>
                 ${recommendation?.generation_focus ? `
                     <div class="text-xs text-text-secondary">
-                        <span class="font-semibold text-text-main">Фокус:</span> ${this.escapeHtml(String(recommendation.generation_focus))}
+                        <span class="font-semibold text-text-main">${wt('im.k816', 'Фокус:')}</span> ${this.escapeHtml(String(recommendation.generation_focus))}
                     </div>
                 ` : ''}
                 <div class="text-xs text-text-secondary">
-                    <span class="font-semibold text-text-main">Целевые единицы:</span>
+                    <span class="font-semibold text-text-main">${wt('im.k817', 'Целевые единицы:')}</span>
                     ${this.escapeHtml(ctx.targetUnits.map((unit) => `#${unit.id} ${unit.title}`).join('; ') || wt('im.k043', 'нет'))}
                 </div>
                 ${anchors.length ? `
                     <div class="text-xs text-text-secondary">
-                        <span class="font-semibold text-text-main">Опоры для генерации:</span>
+                        <span class="font-semibold text-text-main">${wt('im.k818', 'Опоры для генерации:')}</span>
                         ${this.escapeHtml(anchors.join('; '))}
                     </div>
                 ` : ''}
                 <div class="text-xs text-text-secondary">
-                    <span class="font-semibold text-text-main">Осталось без импорта:</span>
+                    <span class="font-semibold text-text-main">${wt('im.k819', 'Осталось без импорта:')}</span>
                     ${this.escapeHtml(remainingUnits.map((unit) => `#${unit.id} ${unit.title}`).join('; ') || wt('im.k044', 'все единицы уже покрыты'))}
                 </div>
             </div>
@@ -1124,10 +1124,10 @@ ${remaining}
                 <div class="rounded-lg border border-border-subtle bg-surface-2 p-3">
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div class="min-w-0 flex-1">
-                            <div class="text-sm font-semibold text-text-main">#${Number(row.unit?.id || 0)} ${this.escapeHtml(String(row.unit?.title || 'Единица'))}</div>
+                            <div class="text-sm font-semibold text-text-main">#${Number(row.unit?.id || 0)} ${this.escapeHtml(String(row.unit?.title || wt('im.k820', 'Единица')))}</div>
                             ${row.unit?.description ? `<div class="mt-1 text-[11px] text-text-secondary">${this.escapeHtml(String(row.unit.description))}</div>` : ''}
-                            ${completed ? `<div class="mt-2 text-[11px] text-text-secondary"><span class="font-semibold text-text-main">Уже закрыто:</span> ${this.escapeHtml(completed)}</div>` : ''}
-                            ${pending ? `<div class="mt-1 text-[11px] text-text-secondary"><span class="font-semibold text-text-main">Ещё можно закрыть:</span> ${this.escapeHtml(pending)}</div>` : ''}
+                            ${completed ? `<div class="mt-2 text-[11px] text-text-secondary"><span class="font-semibold text-text-main">${wt('im.k821', 'Уже закрыто:')}</span> ${this.escapeHtml(completed)}</div>` : ''}
+                            ${pending ? `<div class="mt-1 text-[11px] text-text-secondary"><span class="font-semibold text-text-main">${wt('im.k822', 'Ещё можно закрыть:')}</span> ${this.escapeHtml(pending)}</div>` : ''}
                         </div>
                         <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${statusMeta.className}">${this.escapeHtml(statusMeta.label)}</span>
                     </div>
@@ -1205,7 +1205,7 @@ ${remaining}
                 <div class="rounded-2xl border border-border-subtle bg-surface-1 p-5">
                     <div class="flex flex-wrap items-start justify-between gap-4">
                         <div>
-                            <div class="text-xs font-semibold uppercase tracking-[0.08em] text-text-secondary">Активный анализ</div>
+                            <div class="text-xs font-semibold uppercase tracking-[0.08em] text-text-secondary">${wt('im.k823', 'Активный анализ')}</div>
                             <h3 class="mt-1 text-lg font-bold text-text-main">${this.escapeHtml(this.getManualAnalysisSessionHeadline(session))}</h3>
                             <div class="mt-2 text-sm text-text-secondary">
                                 ${wt('im.k051', 'Последнее обновление:')}${this.escapeHtml(this.formatTheorySessionTimestamp(session.updated_at))}
@@ -1231,19 +1231,19 @@ ${remaining}
                     </div>
                     <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
                         <div class="rounded-lg border border-border-subtle bg-surface-2 px-3 py-2">
-                            <div class="text-xs text-text-secondary">Единиц</div>
+                            <div class="text-xs text-text-secondary">${wt('im.k824', 'Единиц')}</div>
                             <div class="text-base font-bold text-text-main mt-1">${snapshot.rows.length}</div>
                         </div>
                         <div class="rounded-lg border border-warning-light bg-warning-lighter px-3 py-2">
-                            <div class="text-xs text-warning-text">Без покрытия</div>
+                            <div class="text-xs text-warning-text">${wt('im.k825', 'Без покрытия')}</div>
                             <div class="text-base font-bold text-text-main mt-1">${snapshot.uncovered.length}</div>
                         </div>
                         <div class="rounded-lg border border-info-light bg-info-lighter px-3 py-2">
-                            <div class="text-xs text-info-text">Черновики</div>
+                            <div class="text-xs text-info-text">${wt('im.k826', 'Черновики')}</div>
                             <div class="text-base font-bold text-text-main mt-1">${draftCount}</div>
                         </div>
                         <div class="rounded-lg border border-success-light bg-success-lighter px-3 py-2">
-                            <div class="text-xs text-success-text">Импортированные типы</div>
+                            <div class="text-xs text-success-text">${wt('im.k827', 'Импортированные типы')}</div>
                             <div class="text-base font-bold text-text-main mt-1">${importedTypes}</div>
                         </div>
                     </div>
@@ -1326,7 +1326,7 @@ ${remaining}
                     </div>
                 ` : `
                     <div class="rounded-2xl border border-border-subtle bg-surface-1 p-6 text-center">
-                        <div class="text-base font-semibold text-text-main">Архив пока пуст</div>
+                        <div class="text-base font-semibold text-text-main">${wt('im.k828', 'Архив пока пуст')}</div>
                         <div class="mt-2 text-sm text-text-secondary">
                             ${wt('im.k566', 'Сохраняйте полезные анализы в архив, чтобы возвращаться к ним позже даже без генерации заданий.')}
                         </div>
@@ -1360,10 +1360,10 @@ ${remaining}
                 <div class="rounded-lg border border-border-subtle bg-surface-2 p-3">
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div class="min-w-0 flex-1">
-                            <div class="text-sm font-semibold text-text-main">#${Number(row.unit?.id || 0)} ${this.escapeHtml(String(row.unit?.title || 'Единица'))}</div>
+                            <div class="text-sm font-semibold text-text-main">#${Number(row.unit?.id || 0)} ${this.escapeHtml(String(row.unit?.title || wt('im.k820', 'Единица')))}</div>
                             ${row.unit?.description ? `<div class="mt-1 text-[11px] text-text-secondary">${this.escapeHtml(String(row.unit.description))}</div>` : ''}
-                            ${completed ? `<div class="mt-2 text-[11px] text-text-secondary"><span class="font-semibold text-text-main">Уже закрыто:</span> ${this.escapeHtml(completed)}</div>` : ''}
-                            ${pending ? `<div class="mt-1 text-[11px] text-text-secondary"><span class="font-semibold text-text-main">Ещё можно закрыть:</span> ${this.escapeHtml(pending)}</div>` : ''}
+                            ${completed ? `<div class="mt-2 text-[11px] text-text-secondary"><span class="font-semibold text-text-main">${wt('im.k821', 'Уже закрыто:')}</span> ${this.escapeHtml(completed)}</div>` : ''}
+                            ${pending ? `<div class="mt-1 text-[11px] text-text-secondary"><span class="font-semibold text-text-main">${wt('im.k822', 'Ещё можно закрыть:')}</span> ${this.escapeHtml(pending)}</div>` : ''}
                         </div>
                         <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${statusMeta.className}">${this.escapeHtml(statusMeta.label)}</span>
                     </div>
@@ -1441,7 +1441,7 @@ ${remaining}
                 <div class="rounded-2xl border border-border-subtle bg-surface-1 p-5">
                     <div class="flex flex-wrap items-start justify-between gap-4">
                         <div>
-                            <div class="text-xs font-semibold uppercase tracking-[0.08em] text-text-secondary">Активный анализ</div>
+                            <div class="text-xs font-semibold uppercase tracking-[0.08em] text-text-secondary">${wt('im.k823', 'Активный анализ')}</div>
                             <h3 class="mt-1 text-lg font-bold text-text-main">${this.escapeHtml(this.getManualAnalysisSessionHeadline(session))}</h3>
                             <div class="mt-2 text-sm text-text-secondary">
                                 ${wt('im.k071', 'Последнее обновление:')}${this.escapeHtml(this.formatTheorySessionTimestamp(session.updated_at))}
@@ -1467,19 +1467,19 @@ ${remaining}
                     </div>
                     <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
                         <div class="rounded-lg border border-border-subtle bg-surface-2 px-3 py-2">
-                            <div class="text-xs text-text-secondary">Единиц</div>
+                            <div class="text-xs text-text-secondary">${wt('im.k824', 'Единиц')}</div>
                             <div class="text-base font-bold text-text-main mt-1">${snapshot.rows.length}</div>
                         </div>
                         <div class="rounded-lg border border-warning-light bg-surface-2 px-3 py-2">
-                            <div class="text-xs text-text-secondary">Без покрытия</div>
+                            <div class="text-xs text-text-secondary">${wt('im.k825', 'Без покрытия')}</div>
                             <div class="text-base font-bold text-text-main mt-1">${snapshot.uncovered.length}</div>
                         </div>
                         <div class="rounded-lg border border-primary-light bg-surface-2 px-3 py-2">
-                            <div class="text-xs text-text-secondary">Черновики</div>
+                            <div class="text-xs text-text-secondary">${wt('im.k826', 'Черновики')}</div>
                             <div class="text-base font-bold text-text-main mt-1">${draftCount}</div>
                         </div>
                         <div class="rounded-lg border border-success-light bg-surface-2 px-3 py-2">
-                            <div class="text-xs text-text-secondary">Импортированные типы</div>
+                            <div class="text-xs text-text-secondary">${wt('im.k827', 'Импортированные типы')}</div>
                             <div class="text-base font-bold text-text-main mt-1">${importedTypes}</div>
                         </div>
                     </div>
@@ -1562,7 +1562,7 @@ ${remaining}
                     </div>
                 ` : `
                     <div class="rounded-2xl border border-border-subtle bg-surface-1 p-6 text-center">
-                        <div class="text-base font-semibold text-text-main">Архив пока пуст</div>
+                        <div class="text-base font-semibold text-text-main">${wt('im.k828', 'Архив пока пуст')}</div>
                         <div class="mt-2 text-sm text-text-secondary">
                             ${wt('im.k566', 'Сохраняйте полезные анализы в архив, чтобы возвращаться к ним позже даже без генерации заданий.')}
                         </div>
@@ -1805,7 +1805,7 @@ ${remaining}
                     <div class="text-xs text-text-secondary">${this.escapeHtml(String(normalizedNodes.length))}</div>
                 </div>
                 <div class="mt-3 space-y-2">${listHtml}</div>
-                ${hiddenCount > 0 ? `<div class="mt-2 text-xs text-text-secondary">И ещё ${hiddenCount} элементов.</div>` : ''}
+                ${hiddenCount > 0 ? `<div class="mt-2 text-xs text-text-secondary">${wt('im.k829', 'И ещё {n} элементов.').replace('{n}', hiddenCount)}</div>` : ''}
             </div>
         `;
     }
@@ -1819,7 +1819,7 @@ ${remaining}
                 <div class="flex flex-col items-center justify-center py-12 animate-slide-up-fade">
                     <img src="/assets/logo_animated.svg" alt="Loading" class="w-16 h-16 mb-4 drop-shadow-md" />
                     <h3 class="text-lg font-bold text-text-main">${wt('im.k637', 'Подготовка workspace-копии...')}</h3>
-                    <p class="text-text-secondary text-sm mt-2">Проверяем source lineage, reuse и целевую структуру graph.</p>
+                    <p class="text-text-secondary text-sm mt-2">${wt('im.k830', 'Проверяем source lineage, reuse и целевую структуру graph.')}</p>
                 </div>
             `;
         }
@@ -1827,7 +1827,7 @@ ${remaining}
             return `
                 <div class="max-w-3xl mx-auto animate-slide-up-fade">
                     <div class="rounded-2xl border border-error-light bg-error-lighter px-5 py-4">
-                        <div class="text-base font-bold text-error-text">Не удалось получить preview workspace-импорта</div>
+                        <div class="text-base font-bold text-error-text">${wt('im.k831', 'Не удалось получить preview workspace-импорта')}</div>
                         <div class="mt-2 text-sm text-error-text break-words">${this.escapeHtml(state.error || 'workspace_import_preview_failed')}</div>
                         <div class="mt-4 flex flex-wrap gap-2">
                             <button type="button" onclick="dashboard.importManager.retryWorkspaceImportPreview()"
@@ -1851,7 +1851,7 @@ ${remaining}
             <div class="max-w-5xl mx-auto animate-slide-up-fade space-y-5">
                 <div>
                     <h3 class="text-lg font-bold text-text-main">${wt('im.k638', 'Предпросмотр workspace-импорта')}</h3>
-                    <p class="text-sm text-text-secondary mt-1">Этот internal flow ещё не является public catalog API. Здесь мы проверяем, какая рабочая версия будет создана или переиспользована, с учётом lineage и ownership imported graph.</p>
+                    <p class="text-sm text-text-secondary mt-1">${wt('im.k832', 'Этот internal flow ещё не является public catalog API. Здесь мы проверяем, какая рабочая версия будет создана или переиспользована, с учётом lineage и ownership imported graph.')}</p>
                 </div>
 
                 <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -1864,7 +1864,7 @@ ${remaining}
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <div class="rounded-xl border border-border-subtle bg-surface-1 p-4">
-                        <div class="text-sm font-semibold text-text-main">Источник</div>
+                        <div class="text-sm font-semibold text-text-main">${wt('im.k833', 'Источник')}</div>
                         <div class="mt-3 space-y-2 text-sm">
                             <div class="flex flex-wrap items-start justify-between gap-3">
                                 <span class="text-text-secondary">source_complex_id</span>
@@ -1882,7 +1882,7 @@ ${remaining}
                     </div>
 
                     <div class="rounded-xl border border-border-subtle bg-surface-1 p-4">
-                        <div class="text-sm font-semibold text-text-main">Целевая версия в workspace</div>
+                        <div class="text-sm font-semibold text-text-main">${wt('im.k834', 'Целевая версия в workspace')}</div>
                         <div class="mt-3 space-y-2 text-sm">
                             <div class="flex flex-wrap items-start justify-between gap-3">
                                 <span class="text-text-secondary">complex_id</span>
@@ -1919,8 +1919,8 @@ ${remaining}
             return `
                 <div class="max-w-3xl mx-auto text-center py-10 animate-slide-up-fade">
                     <div class="rounded-2xl border border-error-light bg-error-lighter px-5 py-4 text-left">
-                        <div class="text-base font-bold text-error-text">Подтверждение недоступно</div>
-                        <div class="mt-2 text-sm text-error-text">Сначала нужно получить корректный preview workspace-импорта.</div>
+                        <div class="text-base font-bold text-error-text">${wt('im.k835', 'Подтверждение недоступно')}</div>
+                        <div class="mt-2 text-sm text-error-text">${wt('im.k836', 'Сначала нужно получить корректный preview workspace-импорта.')}</div>
                     </div>
                 </div>
             `;
@@ -1947,12 +1947,12 @@ ${remaining}
 
                 <div>
                     <h3 class="text-xl font-bold text-text-main mb-2">${wt('im.k649', 'Готово к добавлению в workspace')}</h3>
-                    <p class="text-text-secondary">Будет создана или переиспользована рабочая версия комплекса со всеми зависимостями, без merge по имени.</p>
+                    <p class="text-text-secondary">${wt('im.k837', 'Будет создана или переиспользована рабочая версия комплекса со всеми зависимостями, без merge по имени.')}</p>
                 </div>
 
                 ${runtimeError ? `
                     <div class="rounded-xl border border-error-light bg-error-lighter px-4 py-3 text-left text-sm text-error-text">
-                        <div class="font-semibold">Последняя ошибка выполнения</div>
+                        <div class="font-semibold">${wt('im.k838', 'Последняя ошибка выполнения')}</div>
                         <div class="mt-1 break-words">${this.escapeHtml(runtimeError)}</div>
                     </div>
                 ` : ''}
@@ -1972,11 +1972,11 @@ ${remaining}
                             <span class="font-medium text-text-main">${this.escapeHtml(`${totalNodes.modules || 0} / ${totalNodes.topics || 0} / ${totalNodes.theories || 0}`)}</span>
                         </div>
                         <div class="flex flex-wrap items-start justify-between gap-3">
-                            <span class="text-text-secondary">Создаст новых</span>
+                            <span class="text-text-secondary">${wt('im.k839', 'Создаст новых')}</span>
                             <span class="font-medium text-text-main">${this.escapeHtml(`${createdCounts.modules || 0} модулей, ${createdCounts.topics || 0} тем, ${createdCounts.tasks || 0} заданий, ${createdCounts.theories || 0} теорий`)}</span>
                         </div>
                         <div class="flex flex-wrap items-start justify-between gap-3">
-                            <span class="text-text-secondary">Переиспользует</span>
+                            <span class="text-text-secondary">${wt('im.k840', 'Переиспользует')}</span>
                             <span class="font-medium text-text-main">${this.escapeHtml(`${reusedCounts.modules || 0} модулей, ${reusedCounts.topics || 0} тем, ${reusedCounts.tasks || 0} заданий, ${reusedCounts.theories || 0} теорий`)}</span>
                         </div>
                     </div>
@@ -1984,7 +1984,7 @@ ${remaining}
 
                 ${executeResult?.ok ? `
                     <div class="rounded-xl border border-success-light bg-success-lighter px-4 py-3 text-left text-sm text-success-darker">
-                        <div class="font-semibold">Последний execute-ответ уже нормализован</div>
+                        <div class="font-semibold">${wt('im.k841', 'Последний execute-ответ уже нормализован')}</div>
                         <div class="mt-1 break-words">service_contract: ${this.escapeHtml(executeResult.serviceContract?.namespace || '')}</div>
                         ${importedComplexId ? `<div class="mt-1 break-words">workspace_complex_id: ${this.escapeHtml(importedComplexId)}</div>` : ''}
                     </div>
@@ -2649,8 +2649,8 @@ ${remaining}
         if (!items.length) {
             return `
                 <div class="mt-6 rounded-xl border border-border-subtle bg-surface-1 p-3">
-                    <div class="text-xs font-semibold text-text-secondary mb-1">Последние импорты</div>
-                    <div class="editor-import-history-summary text-[11px]">История пока пуста.</div>
+                    <div class="text-xs font-semibold text-text-secondary mb-1">${wt('im.k842', 'Последние импорты')}</div>
+                    <div class="editor-import-history-summary text-[11px]">${wt('im.k843', 'История пока пуста.')}</div>
                 </div>
             `;
         }
@@ -2669,10 +2669,10 @@ ${remaining}
             return `
                 <div class="rounded-lg border border-border-subtle bg-surface-2 px-2.5 py-2">
                     <div class="flex items-center justify-between gap-2">
-                        <div class="text-[11px] font-semibold ${tone}">${this.escapeHtml(status === 'ok' ? 'Успешно' : status === 'error' ? 'Ошибка' : 'Частично')}</div>
+                        <div class="text-[11px] font-semibold ${tone}">${this.escapeHtml(status === 'ok' ? wt('im.k844', 'Успешно') : status === 'error' ? wt('im.k845', 'Ошибка') : wt('im.k846', 'Частично'))}</div>
                         <div class="editor-import-history-meta text-[10px]" title="${this.escapeHtmlAttr(dateText)}">${this.escapeHtml(dateText)}</div>
                     </div>
-                    <div class="editor-import-history-title text-[11px] mt-1">${this.escapeHtml(location || 'Без привязки')}</div>
+                    <div class="editor-import-history-title text-[11px] mt-1">${this.escapeHtml(location || wt('im.k847', 'Без привязки'))}</div>
                     <div class="editor-import-history-summary text-[10px] mt-0.5">${this.escapeHtml(summary)}</div>
                 </div>
             `;
@@ -2680,7 +2680,7 @@ ${remaining}
 
         return `
             <div class="mt-6 rounded-xl border border-border-subtle bg-surface-1 p-3 space-y-2">
-                <div class="text-xs font-semibold text-text-secondary">Последние импорты</div>
+                <div class="text-xs font-semibold text-text-secondary">${wt('im.k842', 'Последние импорты')}</div>
                 ${rows}
             </div>
         `;
@@ -2711,27 +2711,27 @@ ${remaining}
                         class="editor-flow-wrap p-4 rounded-xl border-2 transition-all text-left ${this.importMode === 'text' ? 'border-primary bg-primary-lighter ring-2 ring-primary-light' : 'border-border-subtle hover:border-border-strong'}">
                         <div class="flex items-center gap-3 mb-2">
                             <span class="material-symbols-outlined text-2xl ${this.importMode === 'text' ? 'text-primary' : 'text-text-disabled'}">description</span>
-                            <span class="font-bold text-text-main">Из текста</span>
+                            <span class="font-bold text-text-main">${wt('im.k848', 'Из текста')}</span>
                         </div>
-                        <p class="text-xs text-text-secondary">Вставка текста с разметкой (@OPEN_ANSWER, @SEQUENCE...)</p>
+                        <p class="text-xs text-text-secondary">${wt('im.k849', 'Вставка текста с разметкой (@OPEN_ANSWER, @SEQUENCE...)')}</p>
                     </button>
                     
                     <button data-role="import-mode-archive" onclick="dashboard.importManager.setImportMode('archive')" 
                         class="editor-flow-wrap p-4 rounded-xl border-2 transition-all text-left ${this.importMode === 'archive' ? 'border-primary bg-primary-lighter ring-2 ring-primary-light' : 'border-border-subtle hover:border-border-strong'}">
                         <div class="flex items-center gap-3 mb-2">
                             <span class="material-symbols-outlined text-2xl ${this.importMode === 'archive' ? 'text-primary' : 'text-text-disabled'}">folder_zip</span>
-                            <span class="font-bold text-text-main">Из архива</span>
+                            <span class="font-bold text-text-main">${wt('im.k850', 'Из архива')}</span>
                         </div>
-                        <p class="text-xs text-text-secondary">Загрузка ZIP-архива с заданиями (с картинками)</p>
+                        <p class="text-xs text-text-secondary">${wt('im.k851', 'Загрузка ZIP-архива с заданиями (с картинками)')}</p>
                     </button>
 
                     <button data-role="import-mode-ai" onclick="dashboard.importManager.setImportMode('ai')" 
                         class="editor-flow-wrap p-4 rounded-xl border-2 transition-all text-left ${this.importMode === 'ai' ? 'border-primary bg-primary-lighter ring-2 ring-primary-light' : 'border-border-subtle hover:border-border-strong'}">
                         <div class="flex items-center gap-3 mb-2">
                             <span class="material-symbols-outlined text-2xl ${this.importMode === 'ai' ? 'text-primary' : 'text-text-disabled'}">auto_awesome</span>
-                            <span class="font-bold text-text-main">ИИ-генерация</span>
+                            <span class="font-bold text-text-main">${wt('im.k852', 'ИИ-генерация')}</span>
                         </div>
-                        <p class="text-xs text-text-secondary">Промпты для самостоятельной работы с внешней нейросетью и последующего импорта результата</p>
+                        <p class="text-xs text-text-secondary">${wt('im.k853', 'Промпты для самостоятельной работы с внешней нейросетью и последующего импорта результата')}</p>
                     </button>
                 </div>
 
@@ -2748,19 +2748,19 @@ ${remaining}
         return `
             <div class="space-y-4 animate-fade-in">
                 <div>
-                    <label class="block text-sm font-semibold text-text-secondary mb-2">Целевой модуль</label>
-                    <select id="import-module-select" 
+                    <label class="block text-sm font-semibold text-text-secondary mb-2">${wt('im.k854', 'Целевой модуль')}</label>
+                    <select id="import-module-select"
                         class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main focus:ring-2 focus:ring-primary sm:text-sm">
                         ${this.renderModuleOptions(modules, wt('im.k653', 'Выберите модуль...'))}
                     </select>
                 </div>
                 
                 <div>
-                    <label class="block text-sm font-semibold text-text-secondary mb-2">Целевая тема</label>
-                    <select id="import-topic-select" 
+                    <label class="block text-sm font-semibold text-text-secondary mb-2">${wt('im.k855', 'Целевая тема')}</label>
+                    <select id="import-topic-select"
                         class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main focus:ring-2 focus:ring-primary sm:text-sm"
                         disabled>
-                        <option value="">Сначала выберите модуль...</option>
+                        <option value="">${wt('im.k856', 'Сначала выберите модуль...')}</option>
                     </select>
                 </div>
 
@@ -2772,44 +2772,44 @@ ${remaining}
         return `
             <div class="space-y-4 animate-fade-in">
                 <div class="p-4 bg-warning-lighter text-warning-text rounded-lg text-sm border border-warning-light">
-                    <div class="font-bold mb-1">Как это работает:</div>
+                    <div class="font-bold mb-1">${wt('im.k857', 'Как это работает:')}</div>
                     <ul class="list-disc list-inside space-y-1 ml-1 text-xs">
-                        <li>Задания будут распакованы из ZIP-архива</li>
-                        <li>Картинки будут сохранены автоматически</li>
-                        <li>Если модули/темы не выбраны, они будут созданы из структуры архива</li>
+                        <li>${wt('im.k858', 'Задания будут распакованы из ZIP-архива')}</li>
+                        <li>${wt('im.k859', 'Картинки будут сохранены автоматически')}</li>
+                        <li>${wt('im.k860', 'Если модули/темы не выбраны, они будут созданы из структуры архива')}</li>
                     </ul>
                 </div>
 
                  <div>
-                    <label class="block text-sm font-semibold text-text-secondary mb-2">Файл архива (.zip)</label>
+                    <label class="block text-sm font-semibold text-text-secondary mb-2">${wt('im.k861', 'Файл архива (.zip)')}</label>
                     <div id="import-drop-zone" class="border-2 border-dashed border-border-subtle rounded-lg p-8 text-center bg-surface-2 hover:bg-bg-hover hover:border-primary transition-colors cursor-pointer relative">
                         <input type="file" id="import-file-input" accept=".zip" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
                         <div class="pointer-events-none">
                             <span class="material-symbols-outlined text-4xl text-text-disabled mb-2">cloud_upload</span>
-                            <p class="text-sm font-medium text-text-secondary" id="file-name-display">Перетащите файл сюда или кликните</p>
-                            <p class="text-xs text-text-disabled mt-1">Максимальный размер: 200MB</p>
+                            <p class="text-sm font-medium text-text-secondary" id="file-name-display">${wt('im.k862', 'Перетащите файл сюда или кликните')}</p>
+                            <p class="text-xs text-text-disabled mt-1">${wt('im.k863', 'Максимальный размер: 200MB')}</p>
                         </div>
                     </div>
                 </div>
 
                 <div class="pt-4 border-t border-border-subtle">
                    <div class="flex items-center justify-between mb-2 cursor-pointer" onclick="document.getElementById('advanced-options').classList.toggle('hidden')">
-                       <span class="text-sm font-semibold text-text-secondary">Дополнительно (Target Override)</span>
+                       <span class="text-sm font-semibold text-text-secondary">${wt('im.k864', 'Дополнительно (Target Override)')}</span>
                        <span class="material-symbols-outlined text-text-disabled">expand_more</span>
                    </div>
                    <div id="advanced-options" class="hidden space-y-4">
                        <div>
-                            <label class="block text-sm font-medium text-text-secondary mb-1">Переопределить модуль (опционально)</label>
+                            <label class="block text-sm font-medium text-text-secondary mb-1">${wt('im.k865', 'Переопределить модуль (опционально)')}</label>
                             <select id="import-module-select" 
                                 class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2 text-text-main sm:text-xs">
                                 ${this.renderModuleOptions(modules, wt('im.k654', 'Не переопределять (из архива)'))}
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-text-secondary mb-1">Переопределить тему (опционально)</label>
+                            <label class="block text-sm font-medium text-text-secondary mb-1">${wt('im.k866', 'Переопределить тему (опционально)')}</label>
                             <select id="import-topic-select" 
                                 class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2 text-text-main sm:text-xs" disabled>
-                                <option value="">Не переопределять</option>
+                                <option value="">${wt('im.k867', 'Не переопределять')}</option>
                             </select>
                         </div>
                    </div>
@@ -2824,7 +2824,7 @@ ${remaining}
                <div class="flex flex-col items-center justify-center py-12 animate-slide-up-fade">
                    <img src="/assets/logo_animated.svg" alt="Loading" class="w-16 h-16 mb-4 drop-shadow-md" />
                    <h3 class="text-lg font-bold text-text-main">${wt('im.k655', 'Проверка архива...')}</h3>
-                   <p class="text-text-secondary text-sm mt-2">Анализ структуры и поиск конфликтов</p>
+                   <p class="text-text-secondary text-sm mt-2">${wt('im.k868', 'Анализ структуры и поиск конфликтов')}</p>
                </div>
             `;
         }
@@ -2859,8 +2859,8 @@ ${remaining}
                 <div class="mb-4 p-4 bg-surface-2 border border-border-subtle rounded-lg">
                     <div class="flex items-start justify-between gap-3 mb-3">
                         <div>
-                            <h4 class="text-sm font-bold text-text-main">Шаблон промпта для ИИ-агента</h4>
-                            <p class="text-xs text-text-secondary mt-1">Скопируйте шаблон, передайте его ИИ-агенту и вставьте результат ниже.</p>
+                            <h4 class="text-sm font-bold text-text-main">${wt('im.k869', 'Шаблон промпта для ИИ-агента')}</h4>
+                            <p class="text-xs text-text-secondary mt-1">${wt('im.k870', 'Скопируйте шаблон, передайте его ИИ-агенту и вставьте результат ниже.')}</p>
                         </div>
                         <button id="ai-agent-copy-prompt-btn"
                             class="px-3 py-1.5 text-xs font-semibold text-primary border border-primary rounded hover:bg-primary hover:text-primary-fg transition-colors">
@@ -2869,7 +2869,7 @@ ${remaining}
                     </div>
                     ${showTemplateSelector ? `
                         <div class="mb-3">
-                            <label for="ai-agent-template-type" class="block text-xs font-semibold text-text-secondary mb-1">Тип задания</label>
+                            <label for="ai-agent-template-type" class="block text-xs font-semibold text-text-secondary mb-1">${wt('im.k871', 'Тип задания')}</label>
                             <select id="ai-agent-template-type"
                                 class="block w-full rounded-lg border-border-subtle bg-surface-1 py-2 px-3 text-sm text-text-main focus:ring-2 focus:ring-primary">
                                 ${Object.entries(templateOptions).map(([key, value]) => `
@@ -2879,7 +2879,7 @@ ${remaining}
                         </div>
                     ` : `
                         <div class="mb-3">
-                            <div class="block text-xs font-semibold text-text-secondary mb-1">Режим</div>
+                            <div class="block text-xs font-semibold text-text-secondary mb-1">${wt('im.k872', 'Режим')}</div>
                             <div class="rounded-lg border border-border-subtle bg-surface-1 py-2 px-3 text-sm font-medium text-text-main">
                                 ${this.escapeHtml(fixedTheoryTemplateLabel)}
                             </div>
@@ -2903,7 +2903,7 @@ ${remaining}
                             <span class="material-symbols-outlined text-error text-[20px]">error</span>
                             <div class="flex-1">
                                 <h4 class="font-bold text-error-text mb-1">${wt('im.k656', 'Обнаружены ошибки парсинга')}</h4>
-                                <p class="text-sm text-error-text">Исправьте ошибки ниже и повторите попытку</p>
+                                <p class="text-sm text-error-text">${wt('im.k873', 'Исправьте ошибки ниже и повторите попытку')}</p>
                             </div>
                         </div>
                         <div class="mt-3 space-y-1 max-h-32 overflow-y-auto">
@@ -2933,13 +2933,13 @@ ${remaining}
                 <div class="mt-3 flex items-start gap-2 p-3 bg-surface-2 border border-info-light rounded-lg">
                     <span class="material-symbols-outlined text-info text-[20px]">info</span>
                     <div class="text-xs text-text-secondary">
-                        <p class="font-medium mb-1">Поддерживаемые форматы:</p>
-                        <p>@OPEN_ANSWER - Открытый ответ</p>
-                        <p>@SEQUENCE - Последовательность</p>
-                        <p>@CLICK_TEXT - Клик/Ошибки (текстовый выбор)</p>
-                        <p>@CLICK_WORDS - Клик/Ошибки (поиск ошибок в тексте)</p>
-                        <p>@TEST - Тест (вопросы с вариантами ответов)</p>
-                        <p class="mt-1 font-medium">Поддерживается только подтип Клик/Ошибки (error_detection). Рисование и координатные click-задачи не поддерживаются.</p>
+                        <p class="font-medium mb-1">${wt('im.k874', 'Поддерживаемые форматы:')}</p>
+                        <p>${wt('im.k875', '@OPEN_ANSWER - Открытый ответ')}</p>
+                        <p>${wt('im.k876', '@SEQUENCE - Последовательность')}</p>
+                        <p>${wt('im.k877', '@CLICK_TEXT - Клик/Ошибки (текстовый выбор)')}</p>
+                        <p>${wt('im.k878', '@CLICK_WORDS - Клик/Ошибки (поиск ошибок в тексте)')}</p>
+                        <p>${wt('im.k879', '@TEST - Тест (вопросы с вариантами ответов)')}</p>
+                        <p class="mt-1 font-medium">${wt('im.k880', 'Поддерживается только подтип Клик/Ошибки (error_detection). Рисование и координатные click-задачи не поддерживаются.')}</p>
                     </div>
                 </div>
 
@@ -3033,7 +3033,7 @@ ${remaining}
                 <div class="flex items-start justify-between gap-3">
                     <div>
                         <h4 class="text-sm font-bold text-text-main">${wt('im.k659', 'Разобранный анализ материала')}</h4>
-                        <p class="text-xs text-text-secondary mt-1">Теперь можно выбрать рекомендованный тип и перейти к генерации задач.</p>
+                        <p class="text-xs text-text-secondary mt-1">${wt('im.k881', 'Теперь можно выбрать рекомендованный тип и перейти к генерации задач.')}</p>
                     </div>
                     <div class="flex flex-col items-end gap-2">
                         <div class="text-right text-xs text-text-secondary">
@@ -3053,11 +3053,11 @@ ${remaining}
                 ${session ? `
                     <div class="rounded-lg border border-primary-light bg-surface-2 p-3 text-xs text-text-secondary">
                         <div class="flex flex-wrap items-center gap-3">
-                            <span>Сессия: <span class="font-semibold text-text-main">${this.escapeHtml(session.id)}</span></span>
-                            <span>Импортировано типов: <span class="font-semibold text-text-main">${importedTypesCount}</span></span>
-                            <span>Черновиков сохранено: <span class="font-semibold text-text-main">${draftTypesCount}</span></span>
-                            <span>Покрыто единиц импортом: <span class="font-semibold text-text-main">${importedUnitIds.size}/${units.length}</span></span>
-                            ${session.selected_task_type ? `<span>Текущий фокус: <span class="font-semibold text-text-main">${this.escapeHtml(this.getEditorFacingTaskTypeLabel(session.selected_task_type))}</span></span>` : ''}
+                            <span>${wt('im.k882', 'Сессия:')} <span class="font-semibold text-text-main">${this.escapeHtml(session.id)}</span></span>
+                            <span>${wt('im.k883', 'Импортировано типов:')} <span class="font-semibold text-text-main">${importedTypesCount}</span></span>
+                            <span>${wt('im.k884', 'Черновиков сохранено:')} <span class="font-semibold text-text-main">${draftTypesCount}</span></span>
+                            <span>${wt('im.k885', 'Покрыто единиц импортом:')} <span class="font-semibold text-text-main">${importedUnitIds.size}/${units.length}</span></span>
+                            ${session.selected_task_type ? `<span>${wt('im.k886', 'Текущий фокус:')} <span class="font-semibold text-text-main">${this.escapeHtml(this.getEditorFacingTaskTypeLabel(session.selected_task_type))}</span></span>` : ''}
                         </div>
                     </div>
                 ` : ''}
@@ -3070,7 +3070,7 @@ ${remaining}
 
                 ${warnings.length ? `
                     <div class="rounded-lg border border-warning-light bg-surface-2 p-3">
-                        <div class="text-xs font-semibold text-text-main mb-1">Предупреждения</div>
+                        <div class="text-xs font-semibold text-text-main mb-1">${wt('im.k887', 'Предупреждения')}</div>
                         <div class="space-y-1 text-xs text-text-secondary">
                             ${warnings.map((warning) => `<p>${this.escapeHtml(String(warning))}</p>`).join('')}
                         </div>
@@ -3080,7 +3080,7 @@ ${remaining}
                 ${coverageMapCard}
 
                 <div>
-                    <div class="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-2">Рекомендованные типы</div>
+                    <div class="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-2">${wt('im.k888', 'Рекомендованные типы')}</div>
                     <div class="space-y-3">
                         ${recommendations.map((rec) => {
                             const taskType = String(rec?.task_type || '').trim().toUpperCase();
@@ -3121,20 +3121,20 @@ ${remaining}
                                             <div class="flex flex-wrap items-center gap-2">
                                                 <div class="text-sm font-bold text-text-main">${this.escapeHtml(editorLabel)}</div>
                                                 <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-1 text-text-main border border-primary-light">${this.escapeHtml(String(rec?.priority || 'medium'))}</span>
-                                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-1 text-text-secondary border border-border-subtle">${Number(rec?.count || 0)} шт.</span>
+                                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-1 text-text-secondary border border-border-subtle">${Number(rec?.count || 0)} ${wt('im.k889', 'шт.')}</span>
                                                 <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${statusMeta.className}">${this.escapeHtml(statusMeta.label)}</span>
-                                                ${importedCount > 0 ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-1 text-text-main border border-success-light">импортов: ${importedCount}</span>` : ''}
+                                                ${importedCount > 0 ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-1 text-text-main border border-success-light">${wt('im.k890', 'импортов:')} ${importedCount}</span>` : ''}
                                                 ${hasDraft ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-1 text-text-main border border-primary-light">черновик: ${draftCount || wt('im.k130', 'сохранён')}</span>` : ''}
                                             </div>
                                             ${rec?.coverage_role ? `<div class="mt-2 text-xs text-text-secondary">${this.escapeHtml(String(rec.coverage_role))}</div>` : ''}
-                                            ${rec?.generation_focus ? `<div class="mt-2 text-[11px] text-text-secondary"><span class="font-semibold text-text-main">Фокус генерации:</span> ${this.escapeHtml(String(rec.generation_focus))}</div>` : ''}
-                                            ${coveredUnits.length ? `<div class="mt-2 text-[11px] text-text-secondary">Покрывает: ${this.escapeHtml(coveredUnits.join('; '))}</div>` : ''}
-                                            ${anchors.length ? `<div class="mt-2 text-[11px] text-text-secondary"><span class="font-semibold text-text-main">Опоры:</span> ${this.escapeHtml(anchors.join('; '))}</div>` : ''}
+                                            ${rec?.generation_focus ? `<div class="mt-2 text-[11px] text-text-secondary"><span class="font-semibold text-text-main">${wt('im.k891', 'Фокус генерации:')}</span> ${this.escapeHtml(String(rec.generation_focus))}</div>` : ''}
+                                            ${coveredUnits.length ? `<div class="mt-2 text-[11px] text-text-secondary">${wt('im.k892', 'Покрывает:')} ${this.escapeHtml(coveredUnits.join('; '))}</div>` : ''}
+                                            ${anchors.length ? `<div class="mt-2 text-[11px] text-text-secondary"><span class="font-semibold text-text-main">${wt('im.k893', 'Опоры:')}</span> ${this.escapeHtml(anchors.join('; '))}</div>` : ''}
                                             ${rec?.count_rationale ? `<div class="mt-1 text-[11px] text-text-muted">${this.escapeHtml(String(rec.count_rationale))}</div>` : ''}
-                                            ${draft?.savedAt ? `<div class="mt-1 text-[11px] text-text-muted">Черновик сохранён: ${this.escapeHtml(new Date(draft.savedAt).toLocaleString())}</div>` : ''}
+                                            ${draft?.savedAt ? `<div class="mt-1 text-[11px] text-text-muted">${wt('im.k894', 'Черновик сохранён:')} ${this.escapeHtml(new Date(draft.savedAt).toLocaleString())}</div>` : ''}
                                             ${designCandidates.length ? `
                                                 <div class="mt-3">
-                                                    <div class="text-[11px] font-semibold text-text-main mb-1">Черновики заданий</div>
+                                                    <div class="text-[11px] font-semibold text-text-main mb-1">${wt('im.k895', 'Черновики заданий')}</div>
                                                     <div class="space-y-1">
                                                         ${designCandidates.map((item) => `
                                                             <div class="text-[11px] text-text-secondary bg-surface-1 border border-border-subtle rounded px-2 py-1">
@@ -3146,12 +3146,12 @@ ${remaining}
                                             ` : ''}
                                             ${manualAuthoring ? `
                                                 <div class="mt-3 rounded-lg border border-warning-light bg-surface-1 p-2.5 space-y-1">
-                                                    <div class="text-[11px] font-semibold text-text-main">Визуальный blueprint</div>
-                                                    ${Array.isArray(manualAuthoring.figure_refs) && manualAuthoring.figure_refs.length ? `<div class="text-[11px] text-text-secondary"><span class="font-semibold text-text-main">Рисунки:</span> ${this.escapeHtml(manualAuthoring.figure_refs.join(', '))}</div>` : ''}
-                                                    ${Array.isArray(manualAuthoring.target_objects) && manualAuthoring.target_objects.length ? `<div class="text-[11px] text-text-secondary"><span class="font-semibold text-text-main">Что распознать:</span> ${this.escapeHtml(manualAuthoring.target_objects.join('; '))}</div>` : ''}
-                                                    ${manualAuthoring.polygon_hint ? `<div class="text-[11px] text-text-secondary"><span class="font-semibold text-text-main">Полигон:</span> ${this.escapeHtml(String(manualAuthoring.polygon_hint))}</div>` : ''}
-                                                    ${manualAuthoring.task_stem_example ? `<div class="text-[11px] text-text-secondary"><span class="font-semibold text-text-main">Пример формулировки:</span> ${this.escapeHtml(String(manualAuthoring.task_stem_example))}</div>` : ''}
-                                                    ${manualAuthoring.text_anchor ? `<div class="text-[11px] text-text-secondary"><span class="font-semibold text-text-main">Текстовая привязка:</span> ${this.escapeHtml(String(manualAuthoring.text_anchor))}</div>` : ''}
+                                                    <div class="text-[11px] font-semibold text-text-main">${wt('im.k896', 'Визуальный blueprint')}</div>
+                                                    ${Array.isArray(manualAuthoring.figure_refs) && manualAuthoring.figure_refs.length ? `<div class="text-[11px] text-text-secondary"><span class="font-semibold text-text-main">${wt('im.k897', 'Рисунки:')}</span> ${this.escapeHtml(manualAuthoring.figure_refs.join(', '))}</div>` : ''}
+                                                    ${Array.isArray(manualAuthoring.target_objects) && manualAuthoring.target_objects.length ? `<div class="text-[11px] text-text-secondary"><span class="font-semibold text-text-main">${wt('im.k898', 'Что распознать:')}</span> ${this.escapeHtml(manualAuthoring.target_objects.join('; '))}</div>` : ''}
+                                                    ${manualAuthoring.polygon_hint ? `<div class="text-[11px] text-text-secondary"><span class="font-semibold text-text-main">${wt('im.k899', 'Полигон:')}</span> ${this.escapeHtml(String(manualAuthoring.polygon_hint))}</div>` : ''}
+                                                    ${manualAuthoring.task_stem_example ? `<div class="text-[11px] text-text-secondary"><span class="font-semibold text-text-main">${wt('im.k900', 'Пример формулировки:')}</span> ${this.escapeHtml(String(manualAuthoring.task_stem_example))}</div>` : ''}
+                                                    ${manualAuthoring.text_anchor ? `<div class="text-[11px] text-text-secondary"><span class="font-semibold text-text-main">${wt('im.k901', 'Текстовая привязка:')}</span> ${this.escapeHtml(String(manualAuthoring.text_anchor))}</div>` : ''}
                                                 </div>
                                             ` : ''}
                                         </div>
@@ -3192,11 +3192,11 @@ ${remaining}
 
                 ${notRecommended.length ? `
                     <div>
-                        <div class="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-2">Не рекомендуется</div>
+                        <div class="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-2">${wt('im.k902', 'Не рекомендуется')}</div>
                         <div class="space-y-2">
                             ${notRecommended.map((item) => `
                                 <div class="rounded-lg border border-border-subtle bg-surface-2 p-3">
-                                    <div class="text-sm font-semibold text-text-main">${this.escapeHtml(String(item?.editor_label || this.getEditorFacingTaskTypeLabel(String(item?.task_type || '').trim().toUpperCase()) || String(item?.task_type || 'Тип')))}</div>
+                                    <div class="text-sm font-semibold text-text-main">${this.escapeHtml(String(item?.editor_label || this.getEditorFacingTaskTypeLabel(String(item?.task_type || '').trim().toUpperCase()) || String(item?.task_type || wt('im.k903', 'Тип'))))}</div>
                                     <div class="mt-1 text-xs text-text-secondary">${this.escapeHtml(String(item?.reason || ''))}</div>
                                 </div>
                             `).join('')}
@@ -3219,7 +3219,7 @@ ${remaining}
             return `
                 <div class="flex flex-col items-center justify-center py-12 animate-slide-up-fade">
                     <img src="/assets/logo_animated.svg" alt="Loading" class="w-16 h-16 mb-4 drop-shadow-md" />
-                    <p class="text-text-muted">Парсинг заданий...</p>
+                    <p class="text-text-muted">${wt('im.k904', 'Парсинг заданий...')}</p>
                 </div>
             `;
         }
@@ -3251,19 +3251,19 @@ ${remaining}
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
                         <div class="text-center">
                             <div class="text-2xl font-bold text-text-main">${summary.total || 0}</div>
-                            <div class="text-xs text-text-secondary">Всего</div>
+                            <div class="text-xs text-text-secondary">${wt('im.k905', 'Всего')}</div>
                         </div>
                         <div class="text-center">
                             <div class="text-2xl font-bold text-success-text">${summary.valid || 0}</div>
-                            <div class="text-xs text-text-secondary">✓ Готовы</div>
+                            <div class="text-xs text-text-secondary">✓ ${wt('im.k906', 'Готовы')}</div>
                         </div>
                         <div class="text-center">
                             <div class="text-2xl font-bold text-warning-text">${summary.warnings || 0}</div>
-                            <div class="text-xs text-text-secondary">⚠ Предупреждения</div>
+                            <div class="text-xs text-text-secondary">⚠ ${wt('im.k887', 'Предупреждения')}</div>
                         </div>
                         <div class="text-center">
                             <div class="text-2xl font-bold text-error-text">${summary.errors || 0}</div>
-                            <div class="text-xs text-text-secondary">✗ Ошибки</div>
+                            <div class="text-xs text-text-secondary">✗ ${wt('im.k845', 'Ошибки')}</div>
                         </div>
                     </div>
                 </div>
@@ -3273,17 +3273,17 @@ ${remaining}
                     <h4 class="text-sm font-bold text-text-main mb-3">${wt('im.k663', 'Настройки импорта')}</h4>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-xs font-semibold text-text-secondary mb-1">Если задание уже существует</label>
+                            <label class="block text-xs font-semibold text-text-secondary mb-1">${wt('im.k909', 'Если задание уже существует')}</label>
                             <select id="conflict-resolution-select" class="block w-full rounded border-border-normal text-sm py-1.5 focus:ring-primary">
-                                <option value="skip">Пропустить (по умолчанию)</option>
-                                <option value="overwrite">Перезаписать</option>
-                                <option value="new_id">Создать копию (новый ID)</option>
+                                <option value="skip">${wt('im.k910', 'Пропустить (по умолчанию)')}</option>
+                                <option value="overwrite">${wt('im.k911', 'Перезаписать')}</option>
+                                <option value="new_id">${wt('im.k912', 'Создать копию (новый ID)')}</option>
                             </select>
                         </div>
                         <div class="flex items-center">
                             <label class="flex items-center gap-2 cursor-pointer mt-4">
                                 <input type="checkbox" id="skip-errors-checkbox" checked class="rounded text-primary focus:ring-primary w-4 h-4">
-                                <span class="text-sm text-text-secondary">Пропускать задания с ошибками</span>
+                                <span class="text-sm text-text-secondary">${wt('im.k913', 'Пропускать задания с ошибками')}</span>
                             </label>
                         </div>
                     </div>
@@ -3404,7 +3404,7 @@ ${remaining}
                         ${formatter(item)}
                     </div>
                 `).join('')}
-                ${items.length > 6 ? `<div class="text-xs text-text-secondary">И ещё ${items.length - 6} элементов.</div>` : ''}
+                ${items.length > 6 ? `<div class="text-xs text-text-secondary">${wt('im.k829', 'И ещё {n} элементов.').replace('{n}', items.length - 6)}</div>` : ''}
             </div>
         `;
     }
@@ -3437,7 +3437,7 @@ ${remaining}
                                 <div class="flex flex-wrap items-center gap-2">
                                     <span class="text-xs font-bold text-text-muted">#${index + 1}</span>
                                     <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold border border-border-subtle bg-surface-1 text-text-secondary">${this.escapeHtml(taskType)}</span>
-                                    ${isExcluded ? '<span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold border border-border-subtle bg-surface-1 text-text-secondary">исключено</span>' : ''}
+                                    ${isExcluded ? `<span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold border border-border-subtle bg-surface-1 text-text-secondary">${wt('im.k914', 'исключено')}</span>` : ''}
                                 </div>
                                 <div class="mt-2 text-base font-bold text-text-main break-words">${this.escapeHtml(taskName)}</div>
                                 <div class="text-[11px] font-mono text-text-secondary break-all mt-1">${this.escapeHtml(taskId)}</div>
@@ -3454,32 +3454,32 @@ ${remaining}
                 <div class="p-4 bg-surface-1 space-y-3">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                         <div class="rounded-lg border border-border-subtle bg-surface-2 px-3 py-2">
-                            <div class="text-text-muted uppercase tracking-wide">Модуль</div>
+                            <div class="text-text-muted uppercase tracking-wide">${wt('im.k768', 'Модуль')}</div>
                             <div class="mt-1 font-semibold text-text-main">${this.escapeHtml(targetModule)}</div>
                         </div>
                         <div class="rounded-lg border border-border-subtle bg-surface-2 px-3 py-2">
-                            <div class="text-text-muted uppercase tracking-wide">Тема</div>
+                            <div class="text-text-muted uppercase tracking-wide">${wt('im.k769', 'Тема')}</div>
                             <div class="mt-1 font-semibold text-text-main">${this.escapeHtml(targetTopic)}</div>
                         </div>
                     </div>
 
                     ${existingPath ? `
                         <div class="rounded-lg border border-border-subtle bg-surface-2 px-3 py-2 text-xs">
-                            <div class="text-text-muted uppercase tracking-wide">Текущий путь</div>
+                            <div class="text-text-muted uppercase tracking-wide">${wt('im.k917', 'Текущий путь')}</div>
                             <div class="mt-1 font-mono text-text-main break-all">${this.escapeHtml(existingPath)}</div>
                         </div>
                     ` : ''}
 
                     ${diffKeys.length ? `
                         <div class="rounded-lg border border-warning-light bg-warning-lighter px-3 py-2 text-xs text-warning-text">
-                            <div class="font-semibold">Изменённые ключи</div>
+                            <div class="font-semibold">${wt('im.k918', 'Изменённые ключи')}</div>
                             <div class="mt-1 break-words">${this.escapeHtml(diffKeys.join(', '))}</div>
                         </div>
                     ` : ''}
 
                     ${warnings.length ? `
                         <div class="rounded-lg border border-warning-light bg-warning-lighter px-3 py-2 text-xs text-warning-text">
-                            <div class="font-semibold">Предупреждения</div>
+                            <div class="font-semibold">${wt('im.k887', 'Предупреждения')}</div>
                             <div class="mt-1 space-y-1">
                                 ${warnings.slice(0, 3).map((warning) => `<div>${this.escapeHtml(warning)}</div>`).join('')}
                             </div>
@@ -3488,7 +3488,7 @@ ${remaining}
 
                     ${task.status === 'error' && task.error ? `
                         <div class="rounded-lg border border-error-light bg-error-lighter px-3 py-2 text-xs text-error-text">
-                            <div class="font-semibold">Ошибка</div>
+                            <div class="font-semibold">${wt('im.k845', 'Ошибка')}</div>
                             <div class="mt-1 break-words">${this.escapeHtml(task.error)}</div>
                         </div>
                     ` : ''}
@@ -3496,14 +3496,14 @@ ${remaining}
 
                 ${task.status === 'conflict' ? `
                     <div class="px-4 py-3 border-t border-border-subtle bg-warning-lighter">
-                        <label class="block text-xs font-semibold text-text-secondary mb-1">Действие при конфликте:</label>
+                        <label class="block text-xs font-semibold text-text-secondary mb-1">${wt('im.k919', 'Действие при конфликте:')}</label>
                         <select
                             onchange="dashboard.importManager.setPerTaskConflict(${index}, this.value)"
                             class="block w-full rounded border-border-normal text-xs py-1.5 focus:ring-primary bg-surface-1">
-                            <option value="" ${!this.perTaskConflictRes.has(index) ? 'selected' : ''}>Как в общих настройках</option>
-                            <option value="skip" ${this.perTaskConflictRes.get(index) === 'skip' ? 'selected' : ''}>Пропустить</option>
-                            <option value="overwrite" ${this.perTaskConflictRes.get(index) === 'overwrite' ? 'selected' : ''}>Перезаписать</option>
-                            <option value="new_id" ${this.perTaskConflictRes.get(index) === 'new_id' ? 'selected' : ''}>Создать копию (новый ID)</option>
+                            <option value="" ${!this.perTaskConflictRes.has(index) ? 'selected' : ''}>${wt('im.k920', 'Как в общих настройках')}</option>
+                            <option value="skip" ${this.perTaskConflictRes.get(index) === 'skip' ? 'selected' : ''}>${wt('im.k921', 'Пропустить')}</option>
+                            <option value="overwrite" ${this.perTaskConflictRes.get(index) === 'overwrite' ? 'selected' : ''}>${wt('im.k911', 'Перезаписать')}</option>
+                            <option value="new_id" ${this.perTaskConflictRes.get(index) === 'new_id' ? 'selected' : ''}>${wt('im.k912', 'Создать копию (новый ID)')}</option>
                         </select>
                     </div>
                 ` : ''}
@@ -3525,7 +3525,7 @@ ${remaining}
             return `
                 <div class="flex flex-col items-center justify-center py-12 animate-slide-up-fade">
                     <img src="/assets/logo_animated.svg" alt="Loading" class="w-16 h-16 mb-4 drop-shadow-md" />
-                    <p class="text-text-muted">Проверка архива...</p>
+                    <p class="text-text-muted">${wt('im.k922', 'Проверка архива...')}</p>
                 </div>
             `;
         }
@@ -3553,31 +3553,31 @@ ${remaining}
             <div data-role="archive-import-preview" class="animate-slide-up-fade space-y-5">
                 <div>
                     <h3 class="text-lg font-bold text-text-main">${wt('im.k668', 'Предпросмотр архива')}</h3>
-                    <p class="text-sm text-text-secondary mt-1">Проверьте состав пакета, конфликты и правила импорта до применения изменений.</p>
+                    <p class="text-sm text-text-secondary mt-1">${wt('im.k923', 'Проверьте состав пакета, конфликты и правила импорта до применения изменений.')}</p>
                 </div>
 
                 ${this.parsedResult.critical_error ? `
                     <div class="rounded-xl border border-error-light bg-error-lighter px-4 py-3 text-sm text-error-text">
-                        <div class="font-semibold">Критическая ошибка проверки</div>
+                        <div class="font-semibold">${wt('im.k924', 'Критическая ошибка проверки')}</div>
                         <div class="mt-1 break-words">${this.escapeHtml(this.parsedResult.critical_error)}</div>
                     </div>
                 ` : ''}
 
                 <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
                     <div class="rounded-xl border border-border-subtle bg-surface-2 px-4 py-3">
-                        <div class="text-xs uppercase tracking-wide text-text-secondary">Всего</div>
+                        <div class="text-xs uppercase tracking-wide text-text-secondary">${wt('im.k905', 'Всего')}</div>
                         <div class="mt-1 text-2xl font-bold text-text-main">${summary.total || 0}</div>
                     </div>
                     <div class="rounded-xl border border-success-light bg-success-lighter px-4 py-3">
-                        <div class="text-xs uppercase tracking-wide text-success-darker">Готово</div>
+                        <div class="text-xs uppercase tracking-wide text-success-darker">${wt('im.k925', 'Готово')}</div>
                         <div class="mt-1 text-2xl font-bold text-success-darker">${summary.valid || 0}</div>
                     </div>
                     <div class="rounded-xl border border-warning-light bg-warning-lighter px-4 py-3">
-                        <div class="text-xs uppercase tracking-wide text-warning-text">Конфликты</div>
+                        <div class="text-xs uppercase tracking-wide text-warning-text">${wt('im.k926', 'Конфликты')}</div>
                         <div class="mt-1 text-2xl font-bold text-warning-text">${summary.conflicts || 0}</div>
                     </div>
                     <div class="rounded-xl border border-error-light bg-error-lighter px-4 py-3">
-                        <div class="text-xs uppercase tracking-wide text-error-text">Ошибки</div>
+                        <div class="text-xs uppercase tracking-wide text-error-text">${wt('im.k927', 'Ошибки')}</div>
                         <div class="mt-1 text-2xl font-bold text-error-text">${summary.errors || 0}</div>
                     </div>
                     <div class="rounded-xl border border-warning-light bg-warning-lighter px-4 py-3">
@@ -3590,7 +3590,7 @@ ${remaining}
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div>
                             <h4 class="text-sm font-bold text-text-main">${wt('im.k669', 'Контекст импорта')}</h4>
-                            <p class="text-xs text-text-secondary mt-1">Override применяется только если вы задали модуль или тему вручную.</p>
+                            <p class="text-xs text-text-secondary mt-1">${wt('im.k928', 'Override применяется только если вы задали модуль или тему вручную.')}</p>
                         </div>
                         ${archiveVersion ? `<span class="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-2 px-2 py-1 text-xs font-semibold text-text-secondary">Archive v${this.escapeHtml(archiveVersion)}</span>` : ''}
                     </div>
@@ -3600,7 +3600,7 @@ ${remaining}
                             <div class="mt-1 font-semibold text-text-main break-words">${this.escapeHtml(overrideLabel)}</div>
                         </div>
                         <div class="rounded-lg border border-border-subtle bg-surface-2 px-3 py-3">
-                            <div class="text-xs uppercase tracking-wide text-text-secondary">Политика ошибок</div>
+                            <div class="text-xs uppercase tracking-wide text-text-secondary">${wt('im.k929', 'Политика ошибок')}</div>
                             <div class="mt-1 font-semibold text-text-main">${this.excludedTasks.size > 0 ? `Ручных исключений: ${this.excludedTasks.size}` : wt('im.k149', 'Исключений вручную пока нет.')}</div>
                         </div>
                     </div>
@@ -3610,22 +3610,22 @@ ${remaining}
                     <h4 class="text-sm font-bold text-text-main mb-3">${wt('im.k663', 'Настройки импорта')}</h4>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-xs font-semibold text-text-secondary mb-1">Если задание уже существует</label>
+                            <label class="block text-xs font-semibold text-text-secondary mb-1">${wt('im.k909', 'Если задание уже существует')}</label>
                             <select id="conflict-resolution-select" class="block w-full rounded border-border-normal text-sm py-1.5 focus:ring-primary">
-                                <option value="skip">Пропустить (по умолчанию)</option>
-                                <option value="overwrite">Перезаписать</option>
-                                <option value="new_id">Создать копию (новый ID)</option>
+                                <option value="skip">${wt('im.k910', 'Пропустить (по умолчанию)')}</option>
+                                <option value="overwrite">${wt('im.k911', 'Перезаписать')}</option>
+                                <option value="new_id">${wt('im.k912', 'Создать копию (новый ID)')}</option>
                             </select>
                         </div>
                         <div class="flex items-center">
                             <label class="flex items-center gap-2 cursor-pointer mt-4">
                                 <input type="checkbox" id="skip-errors-checkbox" checked class="rounded text-primary focus:ring-primary w-4 h-4">
-                                <span class="text-sm text-text-secondary">Пропускать задания с ошибками</span>
+                                <span class="text-sm text-text-secondary">${wt('im.k913', 'Пропускать задания с ошибками')}</span>
                             </label>
                         </div>
                     </div>
                     <div class="mt-4 rounded-xl border border-warning-light bg-warning-lighter px-4 py-3 text-sm text-warning-text">
-                        <div class="font-semibold">Импорт битых заданий заблокирован</div>
+                        <div class="font-semibold">${wt('im.k930', 'Импорт битых заданий заблокирован')}</div>
                         <div class="mt-1">
                             ${blockedTasksCount > 0
                                 ? `${wt('im.k670', 'Задания со статусом «Ошибка» не будут добавлены. Сейчас заблокировано:')} ${blockedTasksCount}. ${wt('im.k671', 'К импорту доступно:')} ${importableTasksCount}.`
@@ -5629,7 +5629,7 @@ text: Сердце человека состоит из [трёх] камер. �
                 progressContainer.className = 'mt-4 px-2';
                 progressContainer.innerHTML = `
                     <div class="flex items-center justify-between text-sm text-text-secondary mb-1">
-                        <span id="import-progress-label">Подготовка...</span>
+                        <span id="import-progress-label">${wt('im.k931', 'Подготовка...')}</span>
                         <span id="import-progress-percent">0%</span>
                     </div>
                     <div class="w-full bg-surface-alt rounded-full h-3 overflow-hidden">
@@ -6067,7 +6067,7 @@ text: Сердце человека состоит из [трёх] камер. �
                 ${!hasSession && this.getManualAnalysisArchive().length ? `
                     <div class="max-w-3xl mx-auto rounded-xl border border-border-subtle bg-surface-1 p-4 flex flex-wrap items-center justify-between gap-3">
                         <div>
-                            <div class="text-sm font-semibold text-text-main">В архиве есть сохранённые анализы</div>
+                            <div class="text-sm font-semibold text-text-main">${wt('im.k932', 'В архиве есть сохранённые анализы')}</div>
                             <div class="text-xs text-text-secondary mt-1">
                                 ${wt('im.k577', 'Можно открыть предыдущий анализ вместо запуска нового.')}
                             </div>
@@ -6083,7 +6083,7 @@ text: Сердце человека состоит из [трёх] камер. �
                     <div class="max-w-3xl mx-auto rounded-xl border border-border-subtle bg-surface-1 p-4 space-y-4">
                         <div class="flex flex-wrap items-start justify-between gap-3">
                             <div>
-                                <div class="text-sm font-bold text-text-main">Целевой контекст</div>
+                                <div class="text-sm font-bold text-text-main">${wt('im.k933', 'Целевой контекст')}</div>
                                 <div class="text-xs text-text-secondary mt-1">
                                     ${wt('im.k579', 'Все созданные задания будут импортированы в выбранный модуль и тему.')}
                                 </div>
@@ -6097,18 +6097,18 @@ text: Сердце человека состоит из [трёх] камер. �
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-semibold text-text-secondary mb-2">Целевой модуль</label>
+                                <label class="block text-sm font-semibold text-text-secondary mb-2">${wt('im.k854', 'Целевой модуль')}</label>
                                 <select id="import-module-select"
                                     class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main focus:ring-2 focus:ring-primary sm:text-sm">
                                     ${this.renderModuleOptions(this.dashboard.catalog || [], wt('im.k296', 'Выберите модуль...'))}
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-semibold text-text-secondary mb-2">Целевая тема</label>
+                                <label class="block text-sm font-semibold text-text-secondary mb-2">${wt('im.k855', 'Целевая тема')}</label>
                                 <select id="import-topic-select"
                                     class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main focus:ring-2 focus:ring-primary sm:text-sm"
                                     disabled>
-                                    <option value="">Сначала выберите модуль...</option>
+                                    <option value="">${wt('im.k856', 'Сначала выберите модуль...')}</option>
                                 </select>
                             </div>
                         </div>
@@ -6479,7 +6479,7 @@ text: Сердце человека состоит из [трёх] камер. �
         const remainingCount = Math.max(0, queueCount - doneCount);
 
         const deckListHtml = this.microcardsDecksLoading
-            ? `<div class="text-sm text-text-secondary">Загрузка колод...</div>`
+            ? `<div class="text-sm text-text-secondary">${wt('im.k934', 'Загрузка колод...')}</div>`
             : (decks.length ? `
                 <div class="space-y-2">
                     ${decks.map((deck) => {
@@ -6514,8 +6514,8 @@ text: Сердце человека состоит из [трёх] камер. �
                 <div class="rounded-xl border border-border-strong bg-surface-1 p-4">
                     <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
                         <div>
-                            <div class="text-sm font-semibold text-text-main">Колоды микрокарточек</div>
-                            <div class="text-xs text-text-secondary mt-1">Контент колод общий на устройстве; прогресс повторения считается отдельно для каждого пользователя.</div>
+                            <div class="text-sm font-semibold text-text-main">${wt('im.k935', 'Колоды микрокарточек')}</div>
+                            <div class="text-xs text-text-secondary mt-1">${wt('im.k936', 'Контент колод общий на устройстве; прогресс повторения считается отдельно для каждого пользователя.')}</div>
                         </div>
                         <div class="flex flex-wrap gap-2">
                             <button type="button"
@@ -6551,7 +6551,7 @@ text: Сердце человека состоит из [трёх] камер. �
                 <div class="rounded-xl border border-border-strong bg-surface-1 p-4">
                     <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
                         <div>
-                            <div class="text-sm font-semibold text-text-main">${this.escapeHtml(String(activeDeck?.name || 'Сессия повторения'))}</div>
+                            <div class="text-sm font-semibold text-text-main">${this.escapeHtml(String(activeDeck?.name || wt('im.k937', 'Сессия повторения')))}</div>
                             <div class="text-xs text-text-secondary mt-1">
                                 ${activeDeck?.id ? `<span class="font-mono">${this.escapeHtml(String(activeDeck.id))}</span>` : wt('im.k344', 'Выберите колоду слева')}
                                 ${queueCount ? ` · ${doneCount}/${queueCount} ${wt('im.k698', 'пройдено')}` : ''}
@@ -6602,13 +6602,13 @@ text: Сердце человека состоит из [трёх] камер. �
         return `
             <div class="space-y-4">
                 <div class="flex flex-wrap items-center gap-2">
-                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border border-border-strong bg-surface-1 text-text-secondary uppercase">${this.escapeHtml(cardType === 'pair_match' ? 'сопоставление' : 'вопрос/ответ')}</span>
-                    ${isPair ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold border border-info-light bg-info-lighter text-info-text uppercase">ПАРА</span>` : ''}
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border border-border-strong bg-surface-1 text-text-secondary uppercase">${this.escapeHtml(cardType === 'pair_match' ? wt('im.k938', 'сопоставление') : wt('im.k939', 'вопрос/ответ'))}</span>
+                    ${isPair ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold border border-info-light bg-info-lighter text-info-text uppercase">${wt('im.k940', 'ПАРА')}</span>` : ''}
                     <span class="text-[11px] text-text-secondary font-mono">${this.escapeHtml(String(card?.id || ''))}</span>
                 </div>
 
                 <div class="rounded-lg border border-border-strong bg-surface-2 p-3">
-                    <div class="text-[11px] uppercase tracking-wide text-text-secondary mb-1">Лицевая</div>
+                    <div class="text-[11px] uppercase tracking-wide text-text-secondary mb-1">${wt('im.k941', 'Лицевая')}</div>
                     <div class="text-sm text-text-main whitespace-pre-line">${this.escapeHtml(frontText)}</div>
                 </div>
 
@@ -6616,7 +6616,7 @@ text: Сердце человека состоит из [трёх] камер. �
 
                 ${(!isPair && this.microcardsReviewReveal) ? `
                     <div class="rounded-lg border border-border-strong bg-surface-2 p-3">
-                        <div class="text-[11px] uppercase tracking-wide text-text-secondary mb-1">Обратная</div>
+                        <div class="text-[11px] uppercase tracking-wide text-text-secondary mb-1">${wt('im.k942', 'Обратная')}</div>
                         <div class="text-sm text-text-main whitespace-pre-line">${this.escapeHtml(backText)}</div>
                     </div>
                 ` : ''}
@@ -6672,7 +6672,7 @@ text: Сердце человека состоит из [трёх] камер. �
         const saved = (this.microcardsPairSelections && this.microcardsPairSelections[cardId]) ? this.microcardsPairSelections[cardId] : {};
         return `
             <div class="rounded-lg border border-border-strong bg-surface-2 p-3">
-                <div class="text-[11px] uppercase tracking-wide text-text-secondary mb-2">Сопоставление пар</div>
+                <div class="text-[11px] uppercase tracking-wide text-text-secondary mb-2">${wt('im.k943', 'Сопоставление пар')}</div>
                 <div class="space-y-2">
                     ${leftItems.map((left) => {
                         const leftId = String(left?.id || '');
@@ -6682,7 +6682,7 @@ text: Сердце человека состоит из [трёх] камер. �
                                 <div class="text-xs text-text-main p-2 rounded-md border border-border-strong bg-surface-1">${this.escapeHtml(String(left?.text || leftId))}</div>
                                 <select onchange="dashboard.importManager.setMicrocardsPairSelection('${this.escapeInlineJsString(cardId)}','${this.escapeInlineJsString(leftId)}', this.value)"
                                     class="rounded-md border border-border-strong bg-surface-1 px-2 py-2 text-xs text-text-main">
-                                    <option value="">Выберите соответствие...</option>
+                                    <option value="">${wt('im.k944', 'Выберите соответствие...')}</option>
                                     ${rightItems.map((right) => {
                                         const rid = String(right?.id || '');
                                         return `<option value="${this.escapeHtmlAttr(rid)}" ${currentVal === rid ? 'selected' : ''}>${this.escapeHtml(String(right?.text || rid))}</option>`;
@@ -6705,7 +6705,7 @@ text: Сердце человека состоит из [трёх] камер. �
         return `
             <div class="rounded-lg border border-border-strong bg-surface-2 p-3">
                 <div class="flex flex-wrap items-center gap-2 mb-2">
-                    <div class="text-[11px] uppercase tracking-wide text-text-secondary">Результат</div>
+                    <div class="text-[11px] uppercase tracking-wide text-text-secondary">${wt('im.k945', 'Результат')}</div>
                     ${Number.isFinite(score) ? `<span class="px-2 py-0.5 rounded-full text-[10px] border border-info-light bg-info-lighter text-info-text">${this.escapeHtml(String(score))}%</span>` : ''}
                 </div>
                 <div class="space-y-1">
@@ -7505,8 +7505,8 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                     <div class="rounded-xl border border-border-strong bg-surface-1 p-4">
                         <div class="flex items-start justify-between gap-3 mb-3">
                             <div>
-                                <h4 class="text-sm font-bold text-text-main">Шаблон промпта для ИИ-агента</h4>
-                                <p class="text-xs text-text-secondary mt-1">Скопируйте этот шаблон, передайте его внешнему ИИ (например, ChatGPT) и вставьте полученный результат справа.</p>
+                                <h4 class="text-sm font-bold text-text-main">${wt('im.k869', 'Шаблон промпта для ИИ-агента')}</h4>
+                                <p class="text-xs text-text-secondary mt-1">${wt('im.k946', 'Скопируйте этот шаблон, передайте его внешнему ИИ (например, ChatGPT) и вставьте полученный результат справа.')}</p>
                             </div>
                             <button onclick="dashboard.importManager.mcImportCopyPrompt()"
                                 class="px-3 py-1.5 text-xs font-semibold text-primary border border-primary rounded hover:bg-primary hover:text-primary-fg transition-colors shrink-0">
@@ -7514,7 +7514,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                             </button>
                         </div>
                         <div class="mb-3">
-                            <label class="block text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1">Тип карточек</label>
+                            <label class="block text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1">${wt('im.k947', 'Тип карточек')}</label>
                             <select id="mcImportTemplateType"
                                 onchange="dashboard.importManager.mcImportChangeTemplate(this.value)"
                                 class="block w-full rounded-lg border border-border-strong bg-surface-1 py-2 px-3 text-sm text-text-main focus:ring-2 focus:ring-primary">
@@ -7569,9 +7569,9 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                         <div class="mt-3 flex items-start gap-2 p-3 bg-info-lighter border border-info-light rounded-lg">
                             <span class="material-symbols-outlined text-info text-[18px]">info</span>
                             <div class="text-xs text-info-text">
-                                <p class="font-medium mb-1">Формат:</p>
-                                <p>@MICROCARD — простая карточка (вопрос/ответ)</p>
-                                <p class="mt-1 text-text-muted">@PAIR_MATCH — сопоставления (v1.1, запланировано)</p>
+                                <p class="font-medium mb-1">${wt('im.k948', 'Формат:')}</p>
+                                <p>${wt('im.k949', '@MICROCARD — простая карточка (вопрос/ответ)')}</p>
+                                <p class="mt-1 text-text-muted">${wt('im.k950', '@PAIR_MATCH — сопоставления (v1.1, запланировано)')}</p>
                             </div>
                         </div>
                     </div>
@@ -7595,8 +7595,8 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                         <h4 class="text-sm font-bold text-text-main">${wt('im.k427', 'Предпросмотр:')}${summary.total || 0} ${wt('im.k428', 'карточек</h4>')}
                         <div class="flex items-center gap-2 text-xs">
                             <span class="px-2 py-1 rounded-md bg-success-lighter text-success-text border border-success-light font-bold">${summary.valid || 0} ${wt('im.k429', 'ок</span>')}
-                            ${summary.warnings ? `<span class="px-2 py-1 rounded-md bg-warning-lighter text-warning-text border border-warning-light font-bold">${summary.warnings} предупр.</span>` : ''}
-                            ${summary.errors ? `<span class="px-2 py-1 rounded-md bg-error-lighter text-error-text border border-error-light font-bold">${summary.errors} ошибок</span>` : ''}
+                            ${summary.warnings ? `<span class="px-2 py-1 rounded-md bg-warning-lighter text-warning-text border border-warning-light font-bold">${summary.warnings} ${wt('im.k951', 'предупр.')}</span>` : ''}
+                            ${summary.errors ? `<span class="px-2 py-1 rounded-md bg-error-lighter text-error-text border border-error-light font-bold">${summary.errors} ${wt('im.k952', 'ошибок')}</span>` : ''}
                         </div>
                     </div>
                     ${notes.length ? `
@@ -7617,9 +7617,9 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                                 <div class="rounded-lg border ${borderCls} p-3">
                                     <div class="flex items-center gap-2 mb-1.5">
                                         <span class="text-[10px] font-bold text-text-muted">#${idx + 1}</span>
-                                        <span class="px-1.5 py-0.5 rounded text-[9px] font-bold border border-border-strong bg-surface-1 text-text-muted uppercase tracking-tight">${this.escapeHtml(cp.card_type === 'pair_match' ? 'сопост.' : 'вопр/отв')}</span>
+                                        <span class="px-1.5 py-0.5 rounded text-[9px] font-bold border border-border-strong bg-surface-1 text-text-muted uppercase tracking-tight">${this.escapeHtml(cp.card_type === 'pair_match' ? wt('im.k953', 'сопост.') : wt('im.k954', 'вопр/отв'))}</span>
                                         ${meta.tags?.length ? `<span class="text-[10px] text-text-secondary">${meta.tags.map(t => this.escapeHtml(t)).join(', ')}</span>` : ''}
-                                        ${st !== 'valid' ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${st === 'error' ? 'bg-error-lighter text-error-text border border-error-light' : 'bg-warning-lighter text-warning-text border border-warning-light'} uppercase tracking-tight">${this.escapeHtml(st === 'warning' ? 'предупреждение' : (st === 'error' ? 'ошибка' : st))}</span>` : ''}
+                                        ${st !== 'valid' ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${st === 'error' ? 'bg-error-lighter text-error-text border border-error-light' : 'bg-warning-lighter text-warning-text border border-warning-light'} uppercase tracking-tight">${this.escapeHtml(st === 'warning' ? wt('im.k955', 'предупреждение') : (st === 'error' ? wt('im.k956', 'ошибка') : st))}</span>` : ''}
                                     </div>
                                     <div class="text-xs font-semibold text-text-main mb-0.5">${this.escapeHtml(String(cp.front || '').slice(0, 120))}</div>
                                     <div class="text-[11px] text-text-secondary">${this.escapeHtml(String(cp.back || '').slice(0, 150))}</div>
@@ -7634,17 +7634,17 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                     <h4 class="text-sm font-bold text-text-main mb-3">${wt('im.k704', 'Импорт карточек')}</h4>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                         <div>
-                            <label class="block text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1">Режим</label>
+                            <label class="block text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1">${wt('im.k872', 'Режим')}</label>
                             <select id="mcImportModeSelect"
                                 onchange="dashboard.importManager.mcImportMode = this.value; dashboard.importManager.renderTheoryAnalysisMode()"
                                 class="w-full px-3 py-2 text-xs rounded-lg border border-border-strong bg-surface-1 text-text-main focus:outline-none focus:ring-1 focus:ring-primary">
-                                <option value="create_deck" ${this.mcImportMode === 'create_deck' ? 'selected' : ''}>Создать новую колоду</option>
-                                <option value="append_to_deck" ${this.mcImportMode === 'append_to_deck' ? 'selected' : ''}>Добавить в существующую</option>
+                                <option value="create_deck" ${this.mcImportMode === 'create_deck' ? 'selected' : ''}>${wt('im.k957', 'Создать новую колоду')}</option>
+                                <option value="append_to_deck" ${this.mcImportMode === 'append_to_deck' ? 'selected' : ''}>${wt('im.k958', 'Добавить в существующую')}</option>
                             </select>
                         </div>
                         ${this.mcImportMode === 'create_deck' ? `
                             <div>
-                                <label class="block text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1">Название колоды</label>
+                                <label class="block text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1">${wt('im.k959', 'Название колоды')}</label>
                                 <input id="mcImportDeckName" type="text"
                                     value="${this.escapeHtmlAttr(this.mcImportDeckName || (items[0]?.metadata?.deck || ''))}"
                                     oninput="dashboard.importManager.mcImportDeckName = this.value"
@@ -7653,11 +7653,11 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                             </div>
                         ` : `
                             <div>
-                                <label class="block text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1">Целевая колода</label>
+                                <label class="block text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1">${wt('im.k960', 'Целевая колода')}</label>
                                 <select id="mcImportTargetDeck"
                                     onchange="dashboard.importManager.mcImportTargetDeckId = this.value; dashboard.importManager.renderTheoryAnalysisMode()"
                                     class="w-full px-3 py-2 text-xs rounded-lg border border-border-strong bg-surface-1 text-text-main focus:outline-none focus:ring-1 focus:ring-primary">
-                                    <option value="">— выберите колоду —</option>
+                                    <option value="">${wt('im.k961', '— выберите колоду —')}</option>
                                     ${decks.filter(d => !d?.meta?.archived).map(d => `
                                         <option value="${this.escapeHtmlAttr(String(d?.id || ''))}" ${this.mcImportTargetDeckId === String(d?.id) ? 'selected' : ''}>${this.escapeHtml(String(d?.name || d?.id || 'Колода'))} (${d?.stats?.cards_total ?? 0} карт.)</option>
                                     `).join('')}
@@ -7698,11 +7698,11 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                     </h4>
                     ${ok ? `
                         <div class="flex flex-wrap justify-center gap-4 text-sm mb-3">
-                            <div><span class="font-bold text-text-main">${result.added_cards || 0}</span> <span class="text-text-secondary">добавлено</span></div>
-                            ${result.skipped_duplicates ? `<div><span class="font-bold text-warning-text">${result.skipped_duplicates}</span> <span class="text-text-secondary">дубликатов</span></div>` : ''}
-                            ${result.skipped_errors ? `<div><span class="font-bold text-error-text">${result.skipped_errors}</span> <span class="text-text-secondary">ошибок</span></div>` : ''}
+                            <div><span class="font-bold text-text-main">${result.added_cards || 0}</span> <span class="text-text-secondary">${wt('im.k962', 'добавлено')}</span></div>
+                            ${result.skipped_duplicates ? `<div><span class="font-bold text-warning-text">${result.skipped_duplicates}</span> <span class="text-text-secondary">${wt('im.k963', 'дубликатов')}</span></div>` : ''}
+                            ${result.skipped_errors ? `<div><span class="font-bold text-error-text">${result.skipped_errors}</span> <span class="text-text-secondary">${wt('im.k952', 'ошибок')}</span></div>` : ''}
                         </div>
-                        <p class="text-xs text-text-secondary mb-1">Колода: <span class="font-semibold text-text-main">${this.escapeHtml(result.deck_name || result.deck_id || '')}</span></p>
+                        <p class="text-xs text-text-secondary mb-1">${wt('im.k964', 'Колода:')} <span class="font-semibold text-text-main">${this.escapeHtml(result.deck_name || result.deck_id || '')}</span></p>
                     ` : `
                         <p class="text-sm text-error-text">${this.escapeHtml(result.error || wt('im.k434', 'Неизвестная ошибка'))}</p>
                     `}
@@ -7869,7 +7869,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                     <div data-m11-deck-row="${this.escapeHtmlAttr(String(d?.id || ''))}" class="flex items-center gap-2 px-3 py-2 rounded-lg border ${isActive ? 'border-primary bg-primary-lighter/20 shadow-sm' : 'border-border-strong bg-surface-2 opacity-80 hover:opacity-100'} ${archived ? 'grayscale opacity-50' : ''} cursor-pointer hover:bg-bg-hover transition-all"
                          onclick="dashboard.importManager.manualEditorOpenDeck('${this.escapeInlineJsString(String(d?.id || ''))}')">
                         <div class="min-w-0 flex-1">
-                            <div class="text-xs font-bold text-text-main truncate">${this.escapeHtml(String(d?.name || d?.id || 'Колода'))}${archived ? ' <span class="text-text-muted">(архив)</span>' : ''}</div>
+                            <div class="text-xs font-bold text-text-main truncate">${this.escapeHtml(String(d?.name || d?.id || wt('im.k431', 'Колода')))}${archived ? ` <span class="text-text-muted">${wt('im.k965', '(архив)')}</span>` : ''}</div>
                             ${ownershipBadges ? `<div class="mt-1 flex flex-wrap gap-1">${ownershipBadges}</div>` : ''}
                             <div class="text-[10px] text-text-secondary mt-1">${stats.cards_total ?? 0} ${wt('im.k447', 'карт.</div>')}
                         </div>
@@ -7891,7 +7891,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                         </div>
                     ` : ''}
                 `;
-            }).join('') : '<div class="text-sm text-text-secondary py-4 text-center">Нет колод. Создайте новую.</div>');
+            }).join('') : `<div class="text-sm text-text-secondary py-4 text-center">${wt('im.k966', 'Нет колод. Создайте новую.')}</div>`);
 
         const isPairMatch = form && form.card_type === 'pair_match';
         const formPairs = (form && Array.isArray(form.pairs)) ? form.pairs : [{ left: '', right: '' }, { left: '', right: '' }];
@@ -7899,7 +7899,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
         const cardFormHtml = form ? `
             <div class="rounded-xl border border-primary-light bg-primary-lighter/10 p-4 space-y-3">
                 <div class="flex items-center justify-between gap-2">
-                    <div class="text-xs font-bold text-text-main">${form.mode === 'edit' ? 'Редактирование карточки' : 'Новая карточка'}</div>
+                    <div class="text-xs font-bold text-text-main">${form.mode === 'edit' ? wt('im.k967', 'Редактирование карточки') : wt('im.k968', 'Новая карточка')}</div>
                     ${form.mode !== 'edit' ? `
                         <div class="flex rounded-lg border border-border-strong overflow-hidden text-[10px] font-bold">
                             <button onclick="dashboard.importManager.manualEditorCardForm.card_type='fact_recall'; dashboard.importManager.renderTheoryAnalysisMode();"
@@ -7914,14 +7914,14 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                     ` : (isPairMatch ? '<span class="px-2 py-0.5 rounded text-[9px] font-bold border border-primary-light bg-primary-lighter text-primary uppercase">pair_match</span>' : '')}
                 </div>
                 <div>
-                    <label class="block text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1">${isPairMatch ? 'Инструкция (лицевая сторона)' : 'Лицевая сторона (вопрос)'}</label>
+                    <label class="block text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1">${isPairMatch ? wt('im.k969', 'Инструкция (лицевая сторона)') : wt('im.k970', 'Лицевая сторона (вопрос)')}</label>
                     <textarea id="m11CardFront" rows="2"
                         class="w-full px-3 py-2 text-sm rounded-lg border border-border-strong bg-surface-1 text-text-main focus:outline-none focus:ring-1 focus:ring-primary resize-y"
                         placeholder="${isPairMatch ? wt('im.k598', 'Сопоставьте термин и определение') : wt('im.k599', 'Что такое синусовый ритм?')}">${this.escapeHtml(form.front_text)}</textarea>
                 </div>
                 ${isPairMatch ? `
                     <div>
-                        <label class="block text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1">Пары (2–5)</label>
+                        <label class="block text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1">${wt('im.k971', 'Пары (2–5)')}</label>
                         <div class="space-y-2" id="m15PairsContainer">
                             ${formPairs.map((p, i) => `
                                 <div class="flex items-center gap-2">
@@ -7945,14 +7945,14 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                         ${formPairs.length < 5 ? `
                             <button onclick="dashboard.importManager._m15AddPair()"
                                 class="mt-2 flex items-center gap-1 px-3 py-1.5 text-[10px] font-bold rounded-lg border border-border-strong text-text-secondary hover:bg-bg-hover transition-colors">
-                                <span class="material-symbols-outlined text-[14px]">add</span> Добавить пару
+                                <span class="material-symbols-outlined text-[14px]">add</span> ${wt('im.k972', 'Добавить пару')}
                             </button>
                         ` : ''}
-                        <div class="text-[10px] text-text-muted mt-1">Каждый левый и правый элемент должен быть уникальным. Минимум 2, максимум 5 пар.</div>
+                        <div class="text-[10px] text-text-muted mt-1">${wt('im.k973', 'Каждый левый и правый элемент должен быть уникальным. Минимум 2, максимум 5 пар.')}</div>
                     </div>
                 ` : `
                     <div>
-                        <label class="block text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1">Обратная сторона (ответ)</label>
+                        <label class="block text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1">${wt('im.k974', 'Обратная сторона (ответ)')}</label>
                         <textarea id="m11CardBack" rows="2"
                             class="w-full px-3 py-2 text-sm rounded-lg border border-border-strong bg-surface-1 text-text-main focus:outline-none focus:ring-1 focus:ring-primary resize-y"
                             placeholder=wt('im.k450', "Ритм сердца, при котором импульсы исходят из синусового узла.")>${this.escapeHtml(form.back_text)}</textarea>
@@ -7960,18 +7960,18 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                 `}
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1">Теги (через запятую)</label>
+                        <label class="block text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1">${wt('im.k975', 'Теги (через запятую)')}</label>
                         <input id="m11CardTags" type="text" value="${this.escapeHtmlAttr(form.tags)}"
                             class="w-full px-3 py-2 text-xs rounded-lg border border-border-strong bg-surface-1 text-text-main focus:outline-none focus:ring-1 focus:ring-primary"
                             placeholder=wt('im.k602', "кардиология, ритм") />
                     </div>
                     <div>
-                        <label class="block text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1">Сложность</label>
+                        <label class="block text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1">${wt('im.k976', 'Сложность')}</label>
                         <select id="m11CardDifficulty"
                             class="w-full px-3 py-2 text-xs rounded-lg border border-border-strong bg-surface-1 text-text-main focus:outline-none focus:ring-1 focus:ring-primary">
-                            <option value="low" ${form.difficulty_hint === 'low' ? 'selected' : ''}>Низкая</option>
-                            <option value="medium" ${form.difficulty_hint === 'medium' ? 'selected' : ''}>Средняя</option>
-                            <option value="high" ${form.difficulty_hint === 'high' ? 'selected' : ''}>Высокая</option>
+                            <option value="low" ${form.difficulty_hint === 'low' ? 'selected' : ''}>${wt('im.k977', 'Низкая')}</option>
+                            <option value="medium" ${form.difficulty_hint === 'medium' ? 'selected' : ''}>${wt('im.k978', 'Средняя')}</option>
+                            <option value="high" ${form.difficulty_hint === 'high' ? 'selected' : ''}>${wt('im.k979', 'Высокая')}</option>
                         </select>
                     </div>
                 </div>
@@ -7994,14 +7994,14 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
             </div>
             ${preview ? `
                 <div class="rounded-xl border border-info-light bg-info-lighter/30 p-4">
-                    <div class="text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-2">Предпросмотр карточки</div>
+                    <div class="text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-2">${wt('im.k980', 'Предпросмотр карточки')}</div>
                     <div class="rounded-lg border border-border-strong bg-surface-1 p-3 mb-2 shadow-sm">
-                        <div class="text-[10px] uppercase font-bold tracking-wider text-text-secondary mb-1">Лицевая сторона</div>
+                        <div class="text-[10px] uppercase font-bold tracking-wider text-text-secondary mb-1">${wt('im.k981', 'Лицевая сторона')}</div>
                         <div class="text-sm text-text-main whitespace-pre-line leading-relaxed">${this.escapeHtml(String(preview.front?.text || ''))}</div>
                     </div>
                     ${preview.card_type === 'pair_match' && preview.front?.payload?.left_items ? `
                         <div class="rounded-lg border border-border-strong bg-surface-1 p-3 mb-2 shadow-sm">
-                            <div class="text-[10px] uppercase font-bold tracking-wider text-text-secondary mb-2">Пары сопоставления</div>
+                            <div class="text-[10px] uppercase font-bold tracking-wider text-text-secondary mb-2">${wt('im.k982', 'Пары сопоставления')}</div>
                             <div class="space-y-1.5">
                                 ${(Array.isArray(preview.back?.payload?.pairs) ? preview.back.payload.pairs : []).map(pl => {
                                     const li = (preview.front.payload.left_items || []).find(x => x.id === pl.left_id);
@@ -8016,7 +8016,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                         </div>
                     ` : `
                         <div class="rounded-lg border border-border-strong bg-surface-1 p-3 shadow-sm">
-                            <div class="text-[10px] uppercase font-bold tracking-wider text-text-secondary mb-1">Обратная сторона</div>
+                            <div class="text-[10px] uppercase font-bold tracking-wider text-text-secondary mb-1">${wt('im.k983', 'Обратная сторона')}</div>
                             <div class="text-sm text-text-main whitespace-pre-line leading-relaxed">${this.escapeHtml(String(preview.back?.text || ''))}</div>
                         </div>
                     `}
@@ -8037,9 +8037,9 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                         <div class="flex items-start gap-2 px-3 py-2.5 rounded-lg border border-border-strong bg-surface-2 group hover:border-primary-light transition-all ${cstatus !== 'active' ? 'opacity-60 grayscale' : ''}">
                             <div class="min-w-0 flex-1">
                                 <div class="flex items-center gap-1.5 mb-1.5">
-                                    <span class="px-1.5 py-0.5 rounded text-[9px] font-bold border border-border-strong bg-surface-1 text-text-muted uppercase tracking-tight">${this.escapeHtml(ctype === 'pair_match' ? 'сопост.' : 'вопр/отв')}</span>
+                                    <span class="px-1.5 py-0.5 rounded text-[9px] font-bold border border-border-strong bg-surface-1 text-text-muted uppercase tracking-tight">${this.escapeHtml(ctype === 'pair_match' ? wt('im.k953', 'сопост.') : wt('im.k954', 'вопр/отв'))}</span>
                                     ${isManual ? wt('im.k453', '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold border border-info-light bg-info-lighter text-info-text uppercase tracking-tight">ручная</span>') : ''}
-                                    ${cstatus !== 'active' ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold border border-warning-light bg-warning-lighter text-warning-text uppercase tracking-tight">${this.escapeHtml(cstatus === 'archived' ? 'в архиве' : cstatus)}</span>` : ''}
+                                    ${cstatus !== 'active' ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold border border-warning-light bg-warning-lighter text-warning-text uppercase tracking-tight">${this.escapeHtml(cstatus === 'archived' ? wt('im.k984', 'в архиве') : cstatus)}</span>` : ''}
                                 </div>
                                 <div class="text-xs font-bold text-text-main truncate">${this.escapeHtml(ft || wt('im.k454', 'Без текста'))}</div>
                                 <div class="text-[11px] text-text-secondary truncate mt-0.5 italic">${this.escapeHtml(bt || '')}</div>
@@ -8073,9 +8073,9 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
             <div class="grid grid-cols-1 xl:grid-cols-[0.85fr_1.35fr] gap-5">
                 <div class="space-y-3">
                     <div class="rounded-xl border border-border-strong bg-surface-1 p-4">
-                        <div class="text-xs font-bold text-text-main mb-3">Колоды</div>
+                        <div class="text-xs font-bold text-text-main mb-3">${wt('im.k985', 'Колоды')}</div>
                         <div id="m11WorkspaceNote" class="mb-3 rounded-lg border border-border-subtle bg-bg-secondary px-3 py-2">
-                            <p class="text-[11px] text-text-secondary">Колоды живут в общей библиотеке устройства. Прогресс повторения и будущие review остаются персональными.</p>
+                            <p class="text-[11px] text-text-secondary">${wt('im.k986', 'Колоды живут в общей библиотеке устройства. Прогресс повторения и будущие review остаются персональными.')}</p>
                         </div>
                         <div class="flex gap-2 mb-3">
                             <input id="m11DeckNameInput" type="text" placeholder=wt('im.k605', "Название новой колоды")
@@ -8083,7 +8083,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                             <button onclick="dashboard.importManager.manualEditorCreateDeck()"
                                 class="px-3 py-2 text-xs font-bold rounded-lg bg-primary text-primary-fg hover:bg-primary-hover transition-colors disabled:opacity-50 shrink-0"
                                 ${this.manualEditorSaving ? 'disabled' : ''}>
-                                <span class="material-symbols-outlined text-[14px] align-middle">add</span> Создать
+                                <span class="material-symbols-outlined text-[14px] align-middle">add</span> ${wt('im.k987', 'Создать')}
                             </button>
                         </div>
                         <div class="space-y-1 max-h-[340px] overflow-y-auto">${deckListHtml}</div>
@@ -8103,7 +8103,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                                     ${!isArchived ? `
                                         <button onclick="dashboard.importManager.manualEditorShowCardForm('create')"
                                             class="flex items-center gap-1 px-3 py-1.5 text-[11px] font-bold rounded-lg bg-primary text-primary-fg hover:bg-primary-hover transition-colors">
-                                            <span class="material-symbols-outlined text-[14px]">add</span> Карточка
+                                            <span class="material-symbols-outlined text-[14px]">add</span> ${wt('im.k988', 'Карточка')}
                                         </button>
                                     ` : ''}
                                     <button onclick="dashboard.importManager.manualEditorArchiveDeck('${this.escapeInlineJsString(String(deck.id))}', ${!isArchived})"
@@ -8119,12 +8119,12 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                                 </div>
                             </div>
                             <div class="flex items-center gap-3 text-[11px] text-text-secondary mb-3">
-                                <span>${cards.length} карт.</span>
+                                <span>${cards.length} ${wt('im.k989', 'карт.')}</span>
                                 ${deck.meta?.source === 'manual_editor' ? '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold border border-info-light bg-info-lighter text-info-text">manual</span>' : ''}
                                 ${isArchived ? wt('im.k463', '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold border border-warning-light bg-warning-lighter text-warning-text">архив</span>') : ''}
                             </div>
                             <div class="mb-3 rounded-lg border border-border-subtle bg-bg-secondary px-3 py-2">
-                                <p class="text-[11px] text-text-secondary">Изменения в этой колоде увидят все профили устройства, а история повторения останется только у текущего пользователя.</p>
+                                <p class="text-[11px] text-text-secondary">${wt('im.k990', 'Изменения в этой колоде увидят все профили устройства, а история повторения останется только у текущего пользователя.')}</p>
                             </div>
                             ${cardFormHtml}
                             ${this.manualEditorDeckLoading ? wt('im.k464', '<div class="text-sm text-text-secondary py-4 text-center">Загрузка карточек...</div>') : cardListHtml}
@@ -8132,8 +8132,8 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                     ` : `
                         <div class="rounded-xl border border-border-strong bg-surface-1 p-8 text-center">
                             <span class="material-symbols-outlined text-border-strong text-[40px] mb-2">style</span>
-                            <p class="text-sm font-semibold text-text-main">Выберите колоду</p>
-                            <p class="text-xs text-text-secondary mt-1">Выберите колоду слева для просмотра и редактирования карточек, или создайте новую.</p>
+                            <p class="text-sm font-semibold text-text-main">${wt('im.k991', 'Выберите колоду')}</p>
+                            <p class="text-xs text-text-secondary mt-1">${wt('im.k992', 'Выберите колоду слева для просмотра и редактирования карточек, или создайте новую.')}</p>
                         </div>
                     `}
                 </div>
@@ -8171,7 +8171,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                 <div class="flex items-start gap-2">
                     <span class="material-symbols-outlined text-[18px] text-text-secondary mt-0.5">info</span>
                     <div class="min-w-0">
-                        <p class="text-xs font-semibold text-text-main">Резервный рендерер</p>
+                        <p class="text-xs font-semibold text-text-main">${wt('im.k993', 'Резервный рендерер')}</p>
                         <p class="text-xs text-text-secondary mt-1">${this.escapeHtml(reasonText)}</p>
                     </div>
                 </div>
@@ -8216,7 +8216,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                 <summary class="flex items-center justify-between p-3 cursor-pointer select-none outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-xl">
                     <div class="flex items-center gap-2">
                         <span class="material-symbols-outlined text-[20px] text-text-secondary group-open:rotate-180 transition-transform">expand_more</span>
-                        <span class="text-sm font-semibold text-text-main">Технические детали</span>
+                        <span class="text-sm font-semibold text-text-main">${wt('im.k994', 'Технические детали')}</span>
                         <span class="text-[11px] text-text-secondary hidden sm:inline">(coverage, progressions, config)</span>
                     </div>
                 </summary>
@@ -8235,7 +8235,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                         <div class="flex items-start gap-2">
                             <span class="material-symbols-outlined text-[18px] text-warning-text mt-0.5">compress</span>
                             <div class="min-w-0">
-                                <p class="text-xs font-semibold text-text-main">Компактный режим</p>
+                                <p class="text-xs font-semibold text-text-main">${wt('im.k995', 'Компактный режим')}</p>
                                 <p class="text-xs text-text-secondary mt-1">
                                     report_lint: verbosity_risk=${this.escapeHtml(String(a?.report_lint?.verbosity_risk || 'unknown'))},
                                     duplicates=${this.escapeHtml(String(a?.report_lint?.duplicate_content_signals ?? 0))}.
@@ -8338,24 +8338,24 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
             <section class="rounded-xl border border-border-strong bg-surface-2 p-3">
                 <div class="flex items-start justify-between gap-2 mb-3">
                     <div>
-                        <div class="text-xs font-semibold uppercase tracking-wide text-text-secondary">Метаданные отчёта</div>
+                        <div class="text-xs font-semibold uppercase tracking-wide text-text-secondary">${wt('im.k996', 'Метаданные отчёта')}</div>
                         <div class="text-[11px] text-text-secondary mt-1">
                             ${a?.report_blocks_version ? `report_blocks v${this.escapeHtml(String(a.report_blocks_version))}` : wt('im.k468', 'устаревш.')}
                             ${a?.analysis_schema_version ? ` · ${wt('im.k713', 'схема')} ${this.escapeHtml(String(a.analysis_schema_version))}` : ''}
                         </div>
                     </div>
-                    ${compactMode ? `<span class="px-2 py-0.5 rounded-full text-[10px] border border-warning-light bg-warning-lighter text-warning-text">компактный</span>` : ''}
+                    ${compactMode ? `<span class="px-2 py-0.5 rounded-full text-[10px] border border-warning-light bg-warning-lighter text-warning-text">${wt('im.k997', 'компактный')}</span>` : ''}
                 </div>
                 <div class="flex flex-wrap gap-2 text-xs">
                     <div class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-surface-1 border border-border-strong text-text-secondary"><span class="material-symbols-outlined text-[14px]">school</span> ${wt('im.k469', 'Единиц <span class="font-semibold text-text-main">')}${units}</span></div>
                     <div class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-surface-1 border border-border-strong text-text-secondary"><span class="material-symbols-outlined text-[14px]">segment</span> ${wt('im.k470', 'Фрагментов <span class="font-semibold text-text-main">')}${chunks}</span></div>
                     <div class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-surface-1 border border-border-strong text-text-secondary"><span class="material-symbols-outlined text-[14px]">route</span> ${wt('im.k471', 'Маршрутов <span class="font-semibold text-text-main">')}${routes}</span></div>
-                    ${lint.duplicate_content_signals ? `<div class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-warning-lighter border border-warning-light text-warning-text"><span class="material-symbols-outlined text-[14px]">content_copy</span> Дубли <span class="font-semibold">${this.escapeHtml(String(lint.duplicate_content_signals))}</span></div>` : ''}
+                    ${lint.duplicate_content_signals ? `<div class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-warning-lighter border border-warning-light text-warning-text"><span class="material-symbols-outlined text-[14px]">content_copy</span> ${wt('im.k998', 'Дубли')} <span class="font-semibold">${this.escapeHtml(String(lint.duplicate_content_signals))}</span></div>` : ''}
                 </div>
                 <div class="mt-3 text-[11px] text-text-secondary flex flex-wrap gap-y-1 gap-x-3">
                     <p>${wt('im.k472', 'Язык контента: <span class="text-text-main">')}${this.escapeHtml(String(materialLang))}</span></p>
                     <p>${wt('im.k473', 'Язык анализа: <span class="text-text-main">')}${this.escapeHtml(String(outputLang))}</span></p>
-                    ${a?.provider_used ? `<p>ИИ-модель: <span class="text-text-main">${this.escapeHtml(String(a.provider_used))}${a?.provider_model ? ` (${this.escapeHtml(String(a.provider_model))})` : ''}</span></p>` : ''}
+                    ${a?.provider_used ? `<p>${wt('im.k999', 'ИИ-модель:')} <span class="text-text-main">${this.escapeHtml(String(a.provider_used))}${a?.provider_model ? ` (${this.escapeHtml(String(a.provider_model))})` : ''}</span></p>` : ''}
                 </div>
                 ${a?.human_summary ? `<p class="text-xs text-text-main mt-3 leading-relaxed border-t border-border-subtle pt-2">${this.escapeHtml(String(a.human_summary))}</p>` : ''}
             </section>
@@ -8369,11 +8369,11 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
             <section class="rounded-xl border border-border-strong bg-surface-2 p-3">
                 <div class="flex items-center gap-1.5 mb-2">
                     <span class="material-symbols-outlined text-[16px] text-text-secondary">warning</span>
-                    <div class="text-xs font-semibold uppercase tracking-wide text-text-main">Предупреждения</div>
+                    <div class="text-xs font-semibold uppercase tracking-wide text-text-main">${wt('im.k887', 'Предупреждения')}</div>
                 </div>
                 <div class="space-y-1">
                     ${warnings.slice(0, 8).map(w => `<p class="text-xs text-text-main">${this.escapeHtml(String(w))}</p>`).join('')}
-                    ${warnings.length > 8 ? `<p class="text-[11px] text-text-secondary">Показаны первые 8 из ${warnings.length}</p>` : ''}
+                    ${warnings.length > 8 ? `<p class="text-[11px] text-text-secondary">${wt('im.k1000', 'Показаны первые 8 из')} ${warnings.length}</p>` : ''}
                 </div>
             </section>
         `;
@@ -8451,9 +8451,9 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                 <div class="flex items-start gap-2">
                     <span class="material-symbols-outlined text-[18px] text-text-secondary mt-0.5">schema</span>
                     <div class="min-w-0">
-                        <p class="text-xs font-semibold text-text-main uppercase tracking-wide">Как читать уровни</p>
+                        <p class="text-xs font-semibold text-text-main uppercase tracking-wide">${wt('im.k1001', 'Как читать уровни')}</p>
                         <p class="text-xs text-text-main mt-1">
-                            Для типов с <strong class="font-semibold">fixed progression</strong> уровни не выбираются как отдельная ручная опция.
+                            ${wt('im.k1002', 'Для типов с')} <strong class="font-semibold">fixed progression</strong> ${wt('im.k1003', 'уровни не выбираются как отдельная ручная опция.')}
                             ${wt('im.k475', 'В комплексах это части одной progression; пользователь выбирает сам тип и приоритетные units/chunks.')}${matrixSuffix}
                         </p>
                         <div class="flex flex-wrap gap-1 mt-2">
@@ -8500,7 +8500,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                                 ${availability ? `<span class="px-1 py-0.5 rounded-md text-[10px] text-text-secondary">${this.escapeHtml(availability)}</span>` : ''}
                                 ${role && role !== 'none' ? `<span class="px-1 py-0.5 rounded-md text-[10px] text-text-secondary">${this.escapeHtml(role)}</span>` : ''}
                             </div>
-                            ${levelLabels.length ? `<div class="text-[11px] text-text-secondary mt-1">Уровни в progression: ${this.escapeHtml(levelLabels.join(', '))}</div>` : ''}
+                            ${levelLabels.length ? `<div class="text-[11px] text-text-secondary mt-1">${wt('im.k1004', 'Уровни в progression:')} ${this.escapeHtml(levelLabels.join(', '))}</div>` : ''}
                             <div class="mt-2">${this.theoryReportLevelRoleMapToHtml(levelRoleMap, { max: 3, emptyText: wt('im.k476', 'Роли уровней не указаны в анализе.') })}</div>
                             ${iterativeNotes.length ? `<p class="text-[11px] text-text-secondary mt-2">${this.escapeHtml(String(iterativeNotes[0]))}</p>` : ''}
                             ${entry?.why ? `<p class="text-[11px] text-text-secondary mt-2">${this.escapeHtml(String(entry.why))}</p>` : ''}
@@ -8524,8 +8524,8 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
             <section class="rounded-xl border border-border-strong bg-surface-2 p-3">
                 <div class="flex flex-wrap items-start justify-between gap-2 mb-3">
                     <div class="min-w-0">
-                        <div class="text-xs font-semibold uppercase tracking-wide text-text-main">Типы как progressions</div>
-                        <div class="text-[11px] text-text-secondary mt-1">Детерминированное объяснение fixed progression уровней (P10), независимо от AI-layout.</div>
+                        <div class="text-xs font-semibold uppercase tracking-wide text-text-main">${wt('im.k1005', 'Типы как progressions')}</div>
+                        <div class="text-[11px] text-text-secondary mt-1">${wt('im.k1006', 'Детерминированное объяснение fixed progression уровней (P10), независимо от AI-layout.')}</div>
                     </div>
                     ${matrixAnchor ? this.renderTheoryReportJumpButton(wt('im.k714', 'К матрице уровней'), matrixAnchor) : ''}
                 </div>
@@ -8813,7 +8813,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                                         onclick="dashboard.importManager.pushTheoryReportBlockContextForEditor('${this.escapeInlineJsString(blockId)}')"
                                         class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] border border-info-light bg-info-lighter text-info-text hover:bg-info-light transition-colors">
                                         <span class="material-symbols-outlined text-[12px]">open_in_new</span>
-                                        <span>В редактор</span>
+                                        <span>${wt('im.k1007', 'В редактор')}</span>
                                     </button>
                                 ` : ''}
                                 ${refsHtml}
@@ -8826,7 +8826,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                                 onclick="dashboard.importManager.toggleTheoryReportBlockCollapse('${this.escapeInlineJsString(blockId)}')"
                                 class="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-md border border-border-strong bg-surface-1 text-text-secondary hover:bg-bg-hover text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
                                 <span data-role="theory-report-block-toggle-icon" class="material-symbols-outlined text-[15px] transition-transform duration-150 ease-out">${collapsed ? 'expand_more' : 'expand_less'}</span>
-                                <span data-role="theory-report-block-toggle-label">${collapsed ? 'Открыть' : 'Свернуть'}</span>
+                                <span data-role="theory-report-block-toggle-label">${collapsed ? wt('im.k477', 'Открыть') : wt('im.k478', 'Свернуть')}</span>
                             </button>
                         ` : ''}
                     </div>
@@ -8871,7 +8871,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
             : wt('im.k480', '<p class="text-xs text-text-secondary">Раздел без описания.</p>');
         const subanchorsHtml = subanchors.length ? `
             <div class="mt-3">
-                <div class="text-[11px] font-semibold uppercase tracking-wide text-text-secondary mb-2">Подразделы</div>
+                <div class="text-[11px] font-semibold uppercase tracking-wide text-text-secondary mb-2">${wt('im.k1008', 'Подразделы')}</div>
                 <div class="flex flex-wrap gap-2">
                     ${subanchors.map(anchor => this.renderTheoryReportJumpButton(anchor, anchor)).join('')}
                 </div>
@@ -8889,7 +8889,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
         const bodyHtml = `
             ${text ? `<p class="text-sm text-text-main leading-relaxed">${this.escapeHtml(text)}</p>` : ''}
             ${bullets.length ? `<div class="${text ? 'mt-3' : ''}">${this.theoryReportListToHtml(bullets, { max: 3, className: 'text-xs text-text-main' })}</div>` : ''}
-            ${!text && !bullets.length ? `<p class="text-xs text-text-secondary">Пустой callout.</p>` : ''}
+            ${!text && !bullets.length ? `<p class="text-xs text-text-secondary">${wt('im.k1009', 'Пустой callout.')}</p>` : ''}
         `;
         return { html: bodyHtml, tone };
     }
@@ -8952,7 +8952,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
 
                 ${body.show_units !== false ? `
                     <div class="pt-2 border-t border-border-subtle">
-                        <div class="text-[10px] font-bold uppercase tracking-wider text-text-secondary mb-2">Охватываемые единицы</div>
+                        <div class="text-[10px] font-bold uppercase tracking-wider text-text-secondary mb-2">${wt('im.k1010', 'Охватываемые единицы')}</div>
                         ${unitIds.length ? `
                             <div class="space-y-1">
                                 ${unitIds.slice(0, 10).map((unitId) => {
@@ -8973,22 +8973,22 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                                         </div>
                                     `;
                                 }).join('')}
-                                ${unitIds.length > 10 ? `<div class="text-[11px] text-text-secondary">Показаны первые 10 из ${unitIds.length}</div>` : ''}
+                                ${unitIds.length > 10 ? `<div class="text-[11px] text-text-secondary">${wt('im.k1011', 'Показаны первые 10 из')} ${unitIds.length}</div>` : ''}
                             </div>
-                        ` : `<div class="text-xs text-text-secondary">Нет связанных units.</div>`}
+                        ` : `<div class="text-xs text-text-secondary">${wt('im.k1012', 'Нет связанных units.')}</div>`}
                     </div>
                 ` : ''}
 
                 ${body.show_confusions !== false && confusions.length ? `
                     <div class="pt-2 border-t border-border-subtle">
-                        <div class="text-[10px] font-bold uppercase tracking-wider text-text-secondary mb-2">Частые ошибки</div>
+                        <div class="text-[10px] font-bold uppercase tracking-wider text-text-secondary mb-2">${wt('im.k1013', 'Частые ошибки')}</div>
                         ${this.theoryReportListToHtml(confusions, { max: 6, className: 'text-xs text-text-main' })}
                     </div>
                 ` : ''}
 
                 ${anchors.length ? `
                     <div class="pt-2 border-t border-border-subtle">
-                        <div class="text-[10px] font-bold uppercase tracking-wider text-text-secondary mb-2">Фактологические якоря</div>
+                        <div class="text-[10px] font-bold uppercase tracking-wider text-text-secondary mb-2">${wt('im.k1014', 'Фактологические якоря')}</div>
                         <div class="flex flex-wrap gap-1">
                             ${anchors.slice(0, 8).map((anchorItem) => {
                                 const kind = typeof anchorItem === 'object' ? String(anchorItem?.kind || '') : '';
@@ -9002,7 +9002,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
 
                 ${body.show_route_links !== false && routeIds.length ? `
                     <div>
-                        <div class="text-[11px] font-semibold uppercase tracking-wide text-text-secondary mb-1">Маршруты</div>
+                        <div class="text-[11px] font-semibold uppercase tracking-wide text-text-secondary mb-1">${wt('im.k1015', 'Маршруты')}</div>
                         <div class="flex flex-wrap gap-2">
                             ${routeIds.map((routeId) => {
                                 const route = ctx?.routeById?.get(String(routeId));
@@ -9018,7 +9018,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
 
                 ${notes.length ? `
                     <div>
-                        <div class="text-[11px] font-semibold uppercase tracking-wide text-text-secondary mb-1">Заметки для автора</div>
+                        <div class="text-[11px] font-semibold uppercase tracking-wide text-text-secondary mb-1">${wt('im.k1016', 'Заметки для автора')}</div>
                         ${this.theoryReportListToHtml(notes, { max: 8, className: 'text-xs text-text-main' })}
                     </div>
                 ` : ''}
@@ -9047,7 +9047,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
 
             const levelsHtml = levelRoles.length
                 ? `
-                    ${levelList.length ? `<div class="text-[11px] text-text-secondary mb-1">Уровни в progression: ${this.escapeHtml(levelList.map(level => `L${level}`).join(', '))}</div>` : ''}
+                    ${levelList.length ? `<div class="text-[11px] text-text-secondary mb-1">${wt('im.k1004', 'Уровни в progression:')} ${this.escapeHtml(levelList.map(level => `L${level}`).join(', '))}</div>` : ''}
                     ${this.theoryReportLevelRoleMapToHtml(levelRoles, { max: 4, emptyText: wt('im.k715', 'Роли уровней не указаны.') })}
                 `
                 : (entry?.progression_is_fixed
@@ -9083,8 +9083,8 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                     <table class="min-w-full text-xs">
                         <thead class="bg-surface-2">
                             <tr>
-                                <th class="text-left px-2 py-2 font-semibold text-text-secondary uppercase tracking-wide">Тип / роль</th>
-                                <th class="text-left px-2 py-2 font-semibold text-text-secondary uppercase tracking-wide">Уровни в progression</th>
+                                <th class="text-left px-2 py-2 font-semibold text-text-secondary uppercase tracking-wide">${wt('im.k1017', 'Тип / роль')}</th>
+                                <th class="text-left px-2 py-2 font-semibold text-text-secondary uppercase tracking-wide">${wt('im.k1018', 'Уровни в progression')}</th>
                                 <th class="text-left px-2 py-2 font-semibold text-text-secondary uppercase tracking-wide">Iterative notes</th>
                             </tr>
                         </thead>
@@ -9197,7 +9197,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
 
                 ${chunkIds.length ? `
                     <div>
-                        <div class="text-[11px] font-semibold uppercase tracking-wide text-text-secondary mb-1">Фрагменты</div>
+                        <div class="text-[11px] font-semibold uppercase tracking-wide text-text-secondary mb-1">${wt('im.k1019', 'Фрагменты')}</div>
                         <div class="flex flex-wrap gap-2">
                             ${chunkIds.map((chunkId) => {
                                 const chunk = ctx?.chunkById?.get(String(chunkId));
@@ -9213,17 +9213,17 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
 
                 ${unitIds.length ? `
                     <div>
-                        <div class="text-[11px] font-semibold uppercase tracking-wide text-text-secondary mb-1">Единицы</div>
+                        <div class="text-[11px] font-semibold uppercase tracking-wide text-text-secondary mb-1">${wt('im.k1020', 'Единицы')}</div>
                         <div class="text-xs text-text-secondary">${unitIds.slice(0, 12).map((unitId) => {
                             const unit = ctx?.unitById?.get(String(unitId));
                             return `#${this.escapeHtml(String(unitId))} ${this.escapeHtml(unit?.title || 'Unit')}`;
                         }).join(' · ')}</div>
-                        ${unitIds.length > 12 ? `<div class="text-[11px] text-text-secondary mt-1">Показаны первые 12 из ${unitIds.length}</div>` : ''}
+                        ${unitIds.length > 12 ? `<div class="text-[11px] text-text-secondary mt-1">${wt('im.k1021', 'Показаны первые 12 из')} ${unitIds.length}</div>` : ''}
                     </div>
                 ` : ''}
 
                 <div>
-                    <div class="text-[11px] font-semibold uppercase tracking-wide text-text-secondary mb-2">Шаги</div>
+                    <div class="text-[11px] font-semibold uppercase tracking-wide text-text-secondary mb-2">${wt('im.k1022', 'Шаги')}</div>
                     <div class="space-y-2">
                         ${steps.map((step, idx) => {
                             const checklist = Array.isArray(step?.authoring_checklist) ? step.authoring_checklist : [];
@@ -9239,7 +9239,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                                     ${step?.purpose ? `<p class="text-xs text-text-secondary mt-1">${this.escapeHtml(String(step.purpose))}</p>` : ''}
                                     ${(body.show_checklists !== false && checklist.length) ? `
                                         <div class="mt-2">
-                                            <div class="text-[11px] font-semibold text-text-secondary mb-1">Чеклист</div>
+                                            <div class="text-[11px] font-semibold text-text-secondary mb-1">${wt('im.k1023', 'Чеклист')}</div>
                                             ${this.theoryReportListToHtml(checklist, { max: 8, className: 'text-xs text-text-main' })}
                                         </div>
                                     ` : ''}
@@ -9251,7 +9251,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
 
                 ${(body.show_anti_patterns !== false && Array.isArray(route.anti_patterns) && route.anti_patterns.length) ? `
                     <div>
-                        <div class="text-[11px] font-semibold uppercase tracking-wide text-text-secondary mb-1">Антипаттерны</div>
+                        <div class="text-[11px] font-semibold uppercase tracking-wide text-text-secondary mb-1">${wt('im.k1024', 'Антипаттерны')}</div>
                         ${this.theoryReportListToHtml(route.anti_patterns, { max: 8, className: 'text-xs text-text-main', bulletClass: 'text-warning-text' })}
                     </div>
                 ` : ''}
@@ -9274,9 +9274,9 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                 <table class="min-w-full text-xs">
                     <thead class="bg-surface-2">
                         <tr>
-                            <th class="text-left px-2 py-2 font-semibold text-text-secondary uppercase tracking-wide">Unit (Единица)</th>
-                            <th class="text-left px-2 py-2 font-semibold text-text-secondary uppercase tracking-wide">Поверхность / Типы</th>
-                            <th class="text-left px-2 py-2 font-semibold text-text-secondary uppercase tracking-wide">Сигналы</th>
+                            <th class="text-left px-2 py-2 font-semibold text-text-secondary uppercase tracking-wide">${wt('im.k1025', 'Unit (Единица)')}</th>
+                            <th class="text-left px-2 py-2 font-semibold text-text-secondary uppercase tracking-wide">${wt('im.k1026', 'Поверхность / Типы')}</th>
+                            <th class="text-left px-2 py-2 font-semibold text-text-secondary uppercase tracking-wide">${wt('im.k1027', 'Сигналы')}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -9308,7 +9308,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                         }).join('')}
                     </tbody>
                 </table>
-                ${unitTargets.length > 20 ? `<div class="px-2 py-2 text-[11px] text-text-secondary border-t border-border-subtle">Показаны первые 20 unit_targets из ${unitTargets.length}</div>` : ''}
+                ${unitTargets.length > 20 ? `<div class="px-2 py-2 text-[11px] text-text-secondary border-t border-border-subtle">${wt('im.k1028', 'Показаны первые 20 unit_targets из')} ${unitTargets.length}</div>` : ''}
             </div>
         ` : '';
 
@@ -9317,9 +9317,9 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                 <table class="min-w-full text-xs">
                     <thead class="bg-surface-2">
                         <tr>
-                            <th class="text-left px-2 py-2 font-semibold text-text-secondary uppercase tracking-wide">Chunk (Фрагмент)</th>
-                            <th class="text-left px-2 py-2 font-semibold text-text-secondary uppercase tracking-wide">Маршруты</th>
-                            <th class="text-left px-2 py-2 font-semibold text-text-secondary uppercase tracking-wide">Лимиты</th>
+                            <th class="text-left px-2 py-2 font-semibold text-text-secondary uppercase tracking-wide">${wt('im.k1029', 'Chunk (Фрагмент)')}</th>
+                            <th class="text-left px-2 py-2 font-semibold text-text-secondary uppercase tracking-wide">${wt('im.k1015', 'Маршруты')}</th>
+                            <th class="text-left px-2 py-2 font-semibold text-text-secondary uppercase tracking-wide">${wt('im.k1030', 'Лимиты')}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -9346,7 +9346,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                                                         : `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-2 text-text-secondary">${this.escapeHtml(String(label))}</span>`;
                                                 }).join('')}
                                             </div>
-                                        ` : `<div class="text-[11px] text-text-secondary">Нет route_ids</div>`}
+                                        ` : `<div class="text-[11px] text-text-secondary">${wt('im.k1031', 'Нет route_ids')}</div>`}
                                         ${hasGap ? `<div class="text-[11px] text-warning-text mt-1">gap: chunk без маршрута</div>` : ''}
                                         ${hasOverlap ? `<div class="text-[11px] text-info-text mt-1">overlap: ${routeIds.length} маршрута(ов)</div>` : ''}
                                     </td>
@@ -9358,7 +9358,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                         }).join('')}
                     </tbody>
                 </table>
-                ${chunkTargets.length > 20 ? `<div class="px-2 py-2 text-[11px] text-text-secondary border-t border-border-subtle">Показаны первые 20 chunk_targets из ${chunkTargets.length}</div>` : ''}
+                ${chunkTargets.length > 20 ? `<div class="px-2 py-2 text-[11px] text-text-secondary border-t border-border-subtle">${wt('im.k1032', 'Показаны первые 20 chunk_targets из')} ${chunkTargets.length}</div>` : ''}
             </div>
         ` : '';
 
@@ -9373,7 +9373,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                     ${unitTable}
                     ${chunkTable}
                 </div>
-                ${!unitTable && !chunkTable ? `<div class="text-xs text-text-secondary">Нет данных coverage_plan.</div>` : ''}
+                ${!unitTable && !chunkTable ? `<div class="text-xs text-text-secondary">${wt('im.k1033', 'Нет данных coverage_plan.')}</div>` : ''}
             </div>
         `;
     }
@@ -9478,11 +9478,11 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
             <div class="grid grid-cols-1 xl:grid-cols-[1.05fr_0.95fr] gap-4">
                 <div class="space-y-4">
                     <div class="p-3 bg-surface-2 rounded-lg border border-border-strong">
-                        <div class="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-2">Сводка</div>
+                        <div class="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-2">${wt('im.k1034', 'Сводка')}</div>
                         <div class="text-xs text-text-secondary space-y-1">
                             <p><strong class="text-text-main">${wt('im.k494', 'Язык материала:</strong>')}${this.escapeHtml(materialLang)}</p>
                             <p><strong class="text-text-main">${wt('im.k495', 'Язык анализа:</strong>')}${this.escapeHtml(outputLang)}</p>
-                            ${a.provider_used ? `<p><strong class="text-text-main">Провайдер:</strong> ${this.escapeHtml(a.provider_used)}${a.provider_model ? ` (${this.escapeHtml(a.provider_model)})` : ''}</p>` : ''}
+                            ${a.provider_used ? `<p><strong class="text-text-main">${wt('im.k1035', 'Провайдер:')}</strong> ${this.escapeHtml(a.provider_used)}${a.provider_model ? ` (${this.escapeHtml(a.provider_model)})` : ''}</p>` : ''}
                             ${a.analysis_schema_version ? `<p><strong class="text-text-main">Schema:</strong> ${this.escapeHtml(a.analysis_schema_version)}</p>` : ''}
                             ${a.report_blocks_version ? `<p><strong class="text-text-main">Report blocks:</strong> ${this.escapeHtml(a.report_blocks_version)}</p>` : ''}
                         </div>
@@ -9500,7 +9500,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
 
                     ${suitabilityRows ? `
                         <div class="p-3 bg-surface-2 rounded-lg border border-border-strong">
-                            <div class="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-2">Типы как progression</div>
+                            <div class="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-2">${wt('im.k1005', 'Типы как progressions')}</div>
                             ${progressionPolicyHtml ? `<div class="mb-2">${progressionPolicyHtml}</div>` : ''}
                             <div class="space-y-2">${suitabilityRows}</div>
                         </div>
@@ -9508,7 +9508,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
 
                     ${routeRows ? `
                         <div class="p-3 bg-surface-2 rounded-lg border border-border-strong">
-                            <div class="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-2">Маршруты автора</div>
+                            <div class="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-2">${wt('im.k1036', 'Маршруты автора')}</div>
                             <div class="space-y-2">${routeRows}</div>
                         </div>
                     ` : ''}
@@ -9516,7 +9516,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
 
                 <div class="space-y-4">
                     <div class="p-3 bg-surface-2 rounded-lg border border-border-strong">
-                        <div class="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-2">Образовательные единицы</div>
+                        <div class="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-2">${wt('im.k1037', 'Образовательные единицы')}</div>
                         ${units.length ? `
                             <div class="space-y-2">
                                 ${units.slice(0, 12).map(unit => `
@@ -9528,9 +9528,9 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                                         ${unit.description ? `<p class="text-[11px] text-text-secondary mt-1">${this.escapeHtml(unit.description)}</p>` : ''}
                                     </div>
                                 `).join('')}
-                                ${units.length > 12 ? `<div class="text-[11px] text-text-secondary">Показаны первые 12 из ${units.length}</div>` : ''}
+                                ${units.length > 12 ? `<div class="text-[11px] text-text-secondary">${wt('im.k1021', 'Показаны первые 12 из')} ${units.length}</div>` : ''}
                             </div>
-                        ` : `<div class="text-xs text-text-secondary">Нет данных по educational_units.</div>`}
+                        ` : `<div class="text-xs text-text-secondary">${wt('im.k1038', 'Нет данных по educational_units.')}</div>`}
                     </div>
 
                     ${recs.length ? `
@@ -9552,7 +9552,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
 
                     ${(futureRows || microcards.length || notRec.length) ? `
                         <div class="p-3 bg-surface-2 rounded-lg border border-border-strong">
-                            <div class="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-2">Дополнительно</div>
+                            <div class="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-2">${wt('im.k1039', 'Дополнительно')}</div>
                             ${futureRows ? `
                                 <div class="mb-3">
                                     <div class="text-[11px] font-semibold text-text-main mb-1">Future capabilities (${futureCaps.length})</div>
@@ -9626,7 +9626,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
         const limitHtml = limitInfo ? `
             <div class="flex items-center gap-2 text-xs text-text-muted mt-2">
                 <span class="material-symbols-outlined text-[16px]">cloud_upload</span>
-                <span>Загрузок файлов сегодня: <strong class="${limitInfo.files_remaining === 0 ? 'text-error' : 'text-text-main'}">${limitInfo.max_files_per_day - limitInfo.files_remaining}</strong> из ${limitInfo.max_files_per_day}</span>
+                <span>${wt('im.k1040', 'Загрузок файлов сегодня:')} <strong class="${limitInfo.files_remaining === 0 ? 'text-error' : 'text-text-main'}">${limitInfo.max_files_per_day - limitInfo.files_remaining}</strong> ${wt('im.k1041', 'из')} ${limitInfo.max_files_per_day}</span>
             </div>` : '';
 
         return `
@@ -9636,8 +9636,8 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                         <span class="material-symbols-outlined text-[20px]">analytics</span>
                     </div>
                     <div class="min-w-0">
-                        <div class="text-sm font-bold text-text-main">Новый анализ</div>
-                        <div class="text-xs text-text-secondary mt-1">Добавьте материал. Анализ сохранится и будет доступен в истории справа.</div>
+                        <div class="text-sm font-bold text-text-main">${wt('im.k1042', 'Новый анализ')}</div>
+                        <div class="text-xs text-text-secondary mt-1">${wt('im.k1043', 'Добавьте материал. Анализ сохранится и будет доступен в истории справа.')}</div>
                     </div>
                 </div>
 
@@ -9646,8 +9646,8 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                         <div class="flex items-start gap-3">
                             <span class="material-symbols-outlined text-warning text-[20px] mt-0.5">key_off</span>
                             <div>
-                                <p class="text-sm font-semibold text-text-main mb-1">ИИ-генерация не настроена</p>
-                                <p class="text-xs text-text-secondary">Для запуска анализа необходимо указать API-ключ. Ранее сохранённые анализы остаются доступны.</p>
+                                <p class="text-sm font-semibold text-text-main mb-1">${wt('im.k1044', 'ИИ-генерация не настроена')}</p>
+                                <p class="text-xs text-text-secondary">${wt('im.k1045', 'Для запуска анализа необходимо указать API-ключ. Ранее сохранённые анализы остаются доступны.')}</p>
                                 <a href="/settings" class="inline-flex items-center gap-1.5 mt-2 text-xs font-semibold text-primary hover:underline">
                                     <span class="material-symbols-outlined text-[14px]">settings</span>
                                     ${wt('im.k611', 'Настроить API-ключи')}
@@ -9661,7 +9661,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                     <div class="flex flex-col sm:flex-row sm:items-center gap-3">
                         <div class="flex items-center gap-2 flex-1">
                             <span class="material-symbols-outlined text-[18px] text-primary">translate</span>
-                            <span class="text-sm font-semibold text-text-main">Язык результатов:</span>
+                            <span class="text-sm font-semibold text-text-main">${wt('im.k1046', 'Язык результатов:')}</span>
                         </div>
                         <div class="flex items-center gap-3">
                             <label class="flex items-center gap-1.5 cursor-pointer">
@@ -9669,7 +9669,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                                     class="text-primary border-border-strong bg-surface-1 focus:ring-primary"
                                     ${this.aiOutputLanguageMode !== 'custom' ? 'checked' : ''}
                                     onchange="document.getElementById('ai-output-language-select').disabled = true">
-                                <span class="text-sm text-text-main">Как в материале</span>
+                                <span class="text-sm text-text-main">${wt('im.k1047', 'Как в материале')}</span>
                             </label>
                             <label class="flex items-center gap-1.5 cursor-pointer">
                                 <input type="radio" name="ai-output-language-mode" value="custom"
@@ -9709,8 +9709,8 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                                     <p class="text-xs text-text-muted mt-1">${this.aiFileInfo ? `${this.aiFileInfo.word_count} слов` : wt('im.k498', 'Загружено')}</p>
                                 ` : `
                                     <span class="material-symbols-outlined text-3xl text-text-disabled mb-1">upload_file</span>
-                                    <p class="text-sm font-medium text-text-secondary" id="ai-file-name">Перетащите PDF, DOCX или TXT</p>
-                                    <p class="text-xs text-text-secondary mt-1">Максимум 18 МБ</p>
+                                    <p class="text-sm font-medium text-text-secondary" id="ai-file-name">${wt('im.k1048', 'Перетащите PDF, DOCX или TXT')}</p>
+                                    <p class="text-xs text-text-secondary mt-1">${wt('im.k1049', 'Максимум 18 МБ')}</p>
                                 `}
                             </div>
                         </div>
@@ -9725,7 +9725,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                             placeholder=wt('im.k499', "Вставьте учебный материал сюда...") oninput="dashboard.importManager.onAiMaterialInput(event)">${this.escapeHtml(this.materialText)}</textarea>
                         <div class="flex justify-between mt-1">
                             <span class="text-xs ${wordCount > 0 && wordCount < 50 ? 'text-error-text' : 'text-text-secondary'}" id="ai-word-count">${wordCount ? `${wordCount} ${wt('im.k675', 'слов')}` : ''}</span>
-                            <span class="text-xs ${wordCount > 0 && wordCount < 50 ? 'text-error-text' : 'text-text-secondary'}" id="ai-word-count-text">Минимум 50 слов</span>
+                            <span class="text-xs ${wordCount > 0 && wordCount < 50 ? 'text-error-text' : 'text-text-secondary'}" id="ai-word-count-text">${wt('im.k1050', 'Минимум 50 слов')}</span>
                         </div>
                     </div>
                 ` : ''}
@@ -9734,7 +9734,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                     <button id="ai-submit-btn" onclick="dashboard.importManager.theoryAnalyze()" ${isSubmitDisabled ? 'disabled' : ''}
                         class="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-contrast rounded-lg hover:bg-primary-dark font-semibold transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
                         ${this.aiAnalyzing ? '<span class="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>' : ''}
-                        <span>${this.aiAnalyzing ? 'Анализ...' : 'Запустить анализ'}</span>
+                        <span>${this.aiAnalyzing ? wt('im.k1051', 'Анализ...') : wt('im.k1052', 'Запустить анализ')}</span>
                     </button>
                     ${!isSubmitDisabled ? `<span class="editor-flow-wrap text-xs text-text-secondary ml-2">${this.aiRunId ? `Последний ai_run_id: ${this.escapeHtml(this.aiRunId)}` : wt('im.k500', 'Результат будет сохранён в истории анализов')}</span>` : ''}
                 </div>
@@ -9748,8 +9748,8 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
             <div class="border border-border-strong rounded-xl bg-surface-1 p-4 xl:sticky xl:top-0">
                 <div class="flex items-start justify-between gap-3 mb-3">
                     <div class="min-w-0">
-                        <div class="text-sm font-bold text-text-main">Сохранённые анализы</div>
-                        <div class="editor-flow-wrap text-xs text-text-secondary">Повторное открытие по <code class="font-mono">ai_run_id</code></div>
+                        <div class="text-sm font-bold text-text-main">${wt('im.k1053', 'Сохранённые анализы')}</div>
+                        <div class="editor-flow-wrap text-xs text-text-secondary">${wt('im.k1054', 'Повторное открытие по')} <code class="font-mono">ai_run_id</code></div>
                     </div>
                     <span class="shrink-0 px-2 py-0.5 rounded-full text-xs bg-surface-2 text-text-secondary">${rows.length}</span>
                 </div>
@@ -9770,8 +9770,8 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                 ${!this.theoryRunsLoading && !this.theoryRunsError && rows.length === 0 ? `
                     <div class="flex flex-col items-center justify-center p-6 bg-surface-2 border border-border-strong border-dashed rounded-lg text-center mt-2">
                         <span class="material-symbols-outlined text-[32px] text-border-strong mb-2">history</span>
-                        <p class="text-xs font-semibold text-text-main">Нет сохранённых анализов</p>
-                        <p class="text-[11px] text-text-secondary mt-1">Здесь появится история ваших анализов после первого запуска.</p>
+                        <p class="text-xs font-semibold text-text-main">${wt('im.k1055', 'Нет сохранённых анализов')}</p>
+                        <p class="text-[11px] text-text-secondary mt-1">${wt('im.k1056', 'Здесь появится история ваших анализов после первого запуска.')}</p>
                     </div>
                 ` : ''}
 
@@ -9794,7 +9794,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                                 <div class="rounded-lg border ${isActive ? 'border-primary bg-primary-lighter/20' : 'border-border-strong bg-surface-2'} p-3">
                                     <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                         <div class="min-w-0 flex-1">
-                                            <div class="editor-flow-wrap text-xs font-semibold text-text-main">${this.escapeHtml(row.source_file_name || row.human_summary || 'Анализ без имени')}</div>
+                                            <div class="editor-flow-wrap text-xs font-semibold text-text-main">${this.escapeHtml(row.source_file_name || row.human_summary || wt('im.k1057', 'Анализ без имени'))}</div>
                                             ${updatedAt ? `<div class="editor-flow-wrap text-[10px] text-text-secondary mt-1">${this.escapeHtml(updatedAt)}</div>` : ''}
                                             ${counts ? `<div class="editor-flow-wrap text-[10px] text-text-secondary mt-0.5">${this.escapeHtml(counts)}</div>` : ''}
                                         </div>
@@ -9818,7 +9818,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                 <div class="border border-border-subtle rounded-xl bg-surface-1 p-8 flex flex-col items-center justify-center text-center">
                     <img src="/assets/logo_animated.svg" alt="AI Analyzing" class="w-14 h-14 mb-4 drop-shadow-md" />
                     <h4 class="text-lg font-bold text-text-main">${wt('im.k725', 'Анализ материала...')}</h4>
-                    <p class="text-sm text-text-muted mt-2">ИИ разбирает структуру материала и формирует рекомендации.</p>
+                    <p class="text-sm text-text-muted mt-2">${wt('im.k1058', 'ИИ разбирает структуру материала и формирует рекомендации.')}</p>
                 </div>
             `;
         }
@@ -9828,7 +9828,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
             return `
                 <div class="border border-border-subtle rounded-xl bg-surface-1 p-6">
                     <div class="text-sm font-semibold text-text-main mb-1">${wt('im.k726', 'Результат анализа')}</div>
-                    <div class="text-xs text-text-muted">После запуска или открытия анализа здесь появится структурированный результат.</div>
+                    <div class="text-xs text-text-muted">${wt('im.k1059', 'После запуска или открытия анализа здесь появится структурированный результат.')}</div>
                 </div>
             `;
         }
@@ -9863,12 +9863,12 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                         <div class="text-xs font-semibold text-text-main">${this.escapeHtml(item.task_type || 'UNKNOWN')}${item.subtype ? ` / ${this.escapeHtml(item.subtype)}` : ''}</div>
                         <div class="flex flex-wrap gap-1">
                             <span class="text-[10px] px-1 py-0.5 rounded font-medium text-text-main">${this.escapeHtml(item.suitability || 'н/д')}</span>
-                            ${item?.progression_is_fixed ? `<span class="text-[10px] px-1 py-0.5 rounded text-text-secondary">фиксированная посл.</span>` : ''}
+                            ${item?.progression_is_fixed ? `<span class="text-[10px] px-1 py-0.5 rounded text-text-secondary">${wt('im.k1060', 'фиксированная посл.')}</span>` : ''}
                             ${item?.complex_role && item.complex_role !== 'none' ? `<span class="text-[10px] px-1 py-0.5 rounded text-text-secondary">${this.escapeHtml(String(item.complex_role))}</span>` : ''}
                         </div>
                     </div>
-                    ${item?.progression_is_fixed ? `<p class="text-[11px] text-text-secondary mt-2">Уровни показываются как роли внутри последовательности (progression), а не как произвольный выбор.</p>` : ''}
-                    ${levelLabels.length ? `<p class="text-[11px] text-text-secondary mt-1">Уровни в последовательности: ${this.escapeHtml(levelLabels.join(', '))}</p>` : ''}
+                    ${item?.progression_is_fixed ? `<p class="text-[11px] text-text-secondary mt-2">${wt('im.k1061', 'Уровни показываются как роли внутри последовательности (progression), а не как произвольный выбор.')}</p>` : ''}
+                    ${levelLabels.length ? `<p class="text-[11px] text-text-secondary mt-1">${wt('im.k1062', 'Уровни в последовательности:')} ${this.escapeHtml(levelLabels.join(', '))}</p>` : ''}
                     ${levelRoleMap.length ? `<div class="mt-2">${this.theoryReportLevelRoleMapToHtml(levelRoleMap, { max: 3, emptyText: wt('im.k501', 'Роли уровней не указаны.') })}</div>` : ''}
                     ${iterativeNotes.length ? `<p class="text-[11px] text-text-secondary mt-2">${this.escapeHtml(String(iterativeNotes[0]))}</p>` : ''}
                     ${item.why ? `<p class="text-[11px] text-text-secondary mt-2">${this.escapeHtml(item.why)}</p>` : ''}
@@ -9893,8 +9893,8 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                         </div>
                         <div class="flex flex-wrap gap-1">
                             <span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-2 text-text-secondary">${steps.length} ${wt('im.k502', 'шагов</span>')}
-                            ${chunkIds.length ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-2 text-text-secondary">${chunkIds.length} фрагментов</span>` : ''}
-                            ${unitIds.length ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-2 text-text-secondary">${unitIds.length} единиц</span>` : ''}
+                            ${chunkIds.length ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-2 text-text-secondary">${chunkIds.length} ${wt('im.k1063', 'фрагментов')}</span>` : ''}
+                            ${unitIds.length ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-2 text-text-secondary">${unitIds.length} ${wt('im.k1064', 'единиц')}</span>` : ''}
                         </div>
                     </div>
                     ${route?.expected_effect ? `<p class="text-[11px] text-text-secondary mt-2">${this.escapeHtml(String(route.expected_effect))}</p>` : ''}
@@ -9913,18 +9913,18 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                                     ${step?.purpose ? `<p class="text-[11px] text-text-secondary mt-1">${this.escapeHtml(String(step.purpose))}</p>` : ''}
                                     ${checklist.length ? `
                                         <div class="mt-1.5 pt-1.5 border-t border-border-subtle">
-                                            <div class="text-[10px] font-semibold text-text-secondary mb-1 uppercase tracking-tight">Чеклист</div>
+                                            <div class="text-[10px] font-semibold text-text-secondary mb-1 uppercase tracking-tight">${wt('im.k1023', 'Чеклист')}</div>
                                             ${this.theoryReportListToHtml(checklist, { max: 4, className: 'text-[11px] text-text-main' })}
                                         </div>
                                     ` : ''}
                                 </div>
                             `;
                         }).join('')}
-                        ${steps.length > 3 ? `<div class="text-[10px] text-text-secondary">Показаны первые 3 шага из ${steps.length}</div>` : ''}
+                        ${steps.length > 3 ? `<div class="text-[10px] text-text-secondary">${wt('im.k1065', 'Показаны первые 3 шага из')} ${steps.length}</div>` : ''}
                     </div>
                     ${antiPatterns.length ? `
                         <div class="mt-2">
-                            <div class="text-[10px] font-semibold text-text-secondary mb-1 uppercase tracking-wide">Антипаттерны</div>
+                            <div class="text-[10px] font-semibold text-text-secondary mb-1 uppercase tracking-wide">${wt('im.k1024', 'Антипаттерны')}</div>
                             ${this.theoryReportListToHtml(antiPatterns, { max: 4, className: 'text-[11px] text-text-main', bulletClass: 'text-warning-text' })}
                         </div>
                     ` : ''}
@@ -9978,27 +9978,27 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                             onclick="dashboard.importManager.pushTheoryAnalysisContextForEditor()"
                             class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg text-primary-fg bg-primary hover:bg-primary-dark transition-colors shadow-sm self-start xl:self-auto">
                             <span class="material-symbols-outlined text-[16px]">open_in_new</span>
-                            <span>В редактор (P8)</span>
+                            <span>${wt('im.k1066', 'В редактор (P8)')}</span>
                         </button>
                         <button type="button"
                             onclick="dashboard.importManager.createTheoryMicrocardsDeckAll()"
                             ${this.microcardsCreateLoading ? 'disabled' : ''}
                             class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-primary text-primary bg-primary-lighter hover:bg-primary hover:text-primary-fg transition-colors self-start xl:self-auto disabled:opacity-60">
                             <span class="material-symbols-outlined text-[16px]">style</span>
-                            <span>${this.microcardsCreateLoading ? 'Создание колоды...' : 'Колода из анализа (P9)'}</span>
+                            <span>${this.microcardsCreateLoading ? wt('im.k1067', 'Создание колоды...') : wt('im.k1068', 'Колода из анализа (P9)')}</span>
                         </button>
                         <button type="button"
                             onclick="dashboard.importManager.appendTheoryMicrocardsDeckAll()"
                             ${this.microcardsCreateLoading ? 'disabled' : ''}
                             class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-border-strong text-text-secondary bg-surface-2 hover:bg-bg-hover transition-colors self-start xl:self-auto disabled:opacity-60">
                             <span class="material-symbols-outlined text-[16px]">playlist_add</span>
-                            <span>Добавить в колоду...</span>
+                            <span>${wt('im.k1069', 'Добавить в колоду...')}</span>
                         </button>
                         <button type="button"
                             onclick="dashboard.importManager.openTheoryMicrocardsMode()"
                             class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-border-strong text-text-secondary bg-surface-2 hover:bg-bg-hover transition-colors self-start xl:self-auto">
                             <span class="material-symbols-outlined text-[16px]">school</span>
-                            <span>Открыть микрокарточки</span>
+                            <span>${wt('im.k1070', 'Открыть микрокарточки')}</span>
                         </button>
                         <button type="button"
                             data-role="theory-report-toggle-btn"
@@ -10006,7 +10006,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                             onclick="dashboard.importManager.toggleTheoryAnalysisReportPanel()"
                             class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-border-strong text-text-secondary bg-surface-2 hover:bg-bg-hover transition-colors self-start xl:self-auto">
                             <span class="material-symbols-outlined text-[16px]" data-role="theory-report-toggle-icon">${reportOpen ? 'expand_less' : 'expand_more'}</span>
-                            <span data-role="theory-report-toggle-label">${reportOpen ? 'Свернуть отчёт' : 'Открыть отчёт'}</span>
+                            <span data-role="theory-report-toggle-label">${reportOpen ? wt('im.k1071', 'Свернуть отчёт') : wt('im.k1072', 'Открыть отчёт')}</span>
                         </button>
                     </div>
                 </div>
@@ -10015,8 +10015,8 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                     <div class="flex items-start gap-2">
                         <span class="material-symbols-outlined text-[18px] text-text-muted mt-0.5">article</span>
                         <div class="min-w-0">
-                            <p class="text-xs font-semibold text-text-main">Отчёт свёрнут</p>
-                            <p class="text-xs text-text-secondary mt-1">Быстро откройте его кнопкой выше. Позиция прокрутки отчёта сохраняется.</p>
+                            <p class="text-xs font-semibold text-text-main">${wt('im.k1073', 'Отчёт свёрнут')}</p>
+                            <p class="text-xs text-text-secondary mt-1">${wt('im.k1074', 'Быстро откройте его кнопкой выше. Позиция прокрутки отчёта сохраняется.')}</p>
                             ${a.human_summary ? `<p class="text-[11px] text-text-secondary mt-2">${this.escapeHtml(a.human_summary)}</p>` : ''}
                         </div>
                     </div>
@@ -10200,10 +10200,10 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                         <div>
                             <h4 class="text-sm font-bold text-text-main mb-1">${wt('im.k728', 'Единственный путь: через внешний ИИ')}</h4>
                             <ol class="text-xs text-text-secondary space-y-1 list-decimal list-inside">
-                                <li>Выберите модуль и тему, куда пойдут задания</li>
-                                <li>На следующем шаге получите готовый промпт для внешней нейросети</li>
-                                <li>Сгенерируйте задания вне платформы и вставьте ответ сюда</li>
-                                <li>Проверьте парсинг и импортируйте результат</li>
+                                <li>${wt('im.k1075', 'Выберите модуль и тему, куда пойдут задания')}</li>
+                                <li>${wt('im.k1076', 'На следующем шаге получите готовый промпт для внешней нейросети')}</li>
+                                <li>${wt('im.k1077', 'Сгенерируйте задания вне платформы и вставьте ответ сюда')}</li>
+                                <li>${wt('im.k1078', 'Проверьте парсинг и импортируйте результат')}</li>
                             </ol>
                         </div>
                     </div>
@@ -10250,18 +10250,18 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-semibold text-text-secondary mb-2">Целевой модуль</label>
+                        <label class="block text-sm font-semibold text-text-secondary mb-2">${wt('im.k854', 'Целевой модуль')}</label>
                         <select id="import-module-select" 
                             class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main focus:ring-2 focus:ring-primary sm:text-sm">
                             ${this.renderModuleOptions(modules, wt('im.k653', 'Выберите модуль...'))}
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-semibold text-text-secondary mb-2">Целевая тема</label>
-                        <select id="import-topic-select" 
+                        <label class="block text-sm font-semibold text-text-secondary mb-2">${wt('im.k855', 'Целевая тема')}</label>
+                        <select id="import-topic-select"
                             class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main focus:ring-2 focus:ring-primary sm:text-sm"
                             disabled>
-                            <option value="">Сначала выберите модуль...</option>
+                            <option value="">${wt('im.k856', 'Сначала выберите модуль...')}</option>
                         </select>
                     </div>
                 </div>
@@ -10275,7 +10275,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                 <div class="flex flex-col items-center justify-center py-12 animate-slide-up-fade">
                     <img src="/assets/logo_animated.svg" alt="AI Analyzing" class="w-16 h-16 mb-4 drop-shadow-md" />
                     <h3 class="text-lg font-bold text-text-main">${wt('im.k725', 'Анализ материала...')}</h3>
-                    <p class="text-text-muted text-sm mt-2">ИИ изучает ваш материал и подбирает типы заданий</p>
+                    <p class="text-text-muted text-sm mt-2">${wt('im.k1079', 'ИИ изучает ваш материал и подбирает типы заданий')}</p>
                 </div>
             `;
         }
@@ -10336,11 +10336,11 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                 <div class="flex items-center justify-between mb-6">
                     <div>
                         <h3 class="text-lg font-bold text-text-main mb-1">${wt('im.k726', 'Результат анализа')}</h3>
-                        <p class="text-sm text-text-muted">Выберите типы заданий и количество для генерации</p>
+                        <p class="text-sm text-text-muted">${wt('im.k1080', 'Выберите типы заданий и количество для генерации')}</p>
                     </div>
                     <!-- Total -->
                     <div class="text-right">
-                        <span class="text-sm text-text-secondary mr-2">Будет сгенерировано заданий:</span>
+                        <span class="text-sm text-text-secondary mr-2">${wt('im.k1081', 'Будет сгенерировано заданий:')}</span>
                         <span class="text-2xl font-bold text-primary align-middle" id="ai-total-count">${totalSelected}</span>
                     </div>
                 </div>
@@ -10358,10 +10358,10 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                         ` : ''}
 
                         <div class="p-3 bg-surface-1 border border-border-subtle rounded-lg">
-                            <div class="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">Язык генерации</div>
+                            <div class="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">${wt('im.k1082', 'Язык генерации')}</div>
                             <div class="text-xs text-text-secondary space-y-1">
                                 <p><strong class="text-text-main">${wt('im.k535', 'Язык материала:</strong>')}${this.escapeHtml(materialLang)}</p>
-                                <p><strong class="text-text-main">Язык заданий:</strong> ${this.escapeHtml(outputLang)} ${outputLangMode === 'custom' ? '(выбран вручную)' : '(как в материале)'}</p>
+                                <p><strong class="text-text-main">${wt('im.k1083', 'Язык заданий:')}</strong> ${this.escapeHtml(outputLang)} ${outputLangMode === 'custom' ? wt('im.k1084', '(выбран вручную)') : wt('im.k1085', '(как в материале)')}</p>
                                 ${a.output_language_warning ? `<p class="text-warning-text">${this.escapeHtml(a.output_language_warning)}</p>` : ''}
                             </div>
                         </div>
@@ -10382,7 +10382,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                                 <div class="text-xs font-semibold text-info-text uppercase tracking-wide mb-2">Planned capability</div>
                                 <div class="text-xs text-info-text space-y-1">
                                     <p><strong class="text-text-main">${this.escapeHtml(pairMatchingFuture.display_name || wt('im.k536', 'MATCH (сопоставление пар)'))}</strong> · статус: ${this.escapeHtml(pairMatchingFuture.status || 'planned')}</p>
-                                    ${pairMatchingFuture.suitability ? `<p>Пригодность: ${this.escapeHtml(pairMatchingFuture.suitability)}</p>` : ''}
+                                    ${pairMatchingFuture.suitability ? `<p>${wt('im.k1086', 'Пригодность:')} ${this.escapeHtml(pairMatchingFuture.suitability)}</p>` : ''}
                                     ${pairMatchingFuture.why ? `<p>${this.escapeHtml(pairMatchingFuture.why)}</p>` : ''}
                                 </div>
                             </div>
@@ -10390,7 +10390,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
 
                         ${notRec.length ? `
                             <div>
-                                <p class="text-xs font-semibold text-text-muted mb-2 uppercase tracking-wide">Не рекомендуется:</p>
+                                <p class="text-xs font-semibold text-text-muted mb-2 uppercase tracking-wide">${wt('im.k1087', 'Не рекомендуется:')}</p>
                                 <div class="text-xs text-text-disabled space-y-2">
                                     ${notRec.map(nr => {
             const typeInfo = _TYPE_LABELS[nr.task_type] || { label: nr.task_type };
@@ -10419,9 +10419,9 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
             const countRationale = String(rec.count_rationale || '').trim();
             const progressionMetaHtml = rec.progression_is_fixed ? `
                 <div class="mt-2 p-2 rounded-md bg-surface-2 border border-border-subtle">
-                    <p class="text-[10px] font-semibold uppercase tracking-wide text-text-muted">Фиксированная прогрессия</p>
+                    <p class="text-[10px] font-semibold uppercase tracking-wide text-text-muted">${wt('im.k1088', 'Фиксированная прогрессия')}</p>
                     <p class="text-[11px] text-text-secondary leading-relaxed mt-1">${this.escapeHtml(rec.fixed_progression_note || wt('im.k537', 'Уровни этого типа рассматриваются как часть progression.'))}</p>
-                    ${supportedLevels.length ? `<p class="text-[10px] text-text-disabled mt-1">Поддерживаемые уровни: ${supportedLevels.map(l => `L${l}`).join(', ')}</p>` : ''}
+                    ${supportedLevels.length ? `<p class="text-[10px] text-text-disabled mt-1">${wt('im.k1089', 'Поддерживаемые уровни:')} ${supportedLevels.map(l => `L${l}`).join(', ')}</p>` : ''}
                     ${levelRoleMap.length ? `
                         <div class="mt-2 space-y-1">
                             ${levelRoleMap.map(item => `<p class="text-[10px] text-text-secondary"><strong class="text-text-main">L${item.level}:</strong> ${this.escapeHtml(item.role || '')}</p>`).join('')}
@@ -10429,12 +10429,12 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                     ` : ''}
                 </div>
             ` : '';
-            const sequenceIntentsHtml = sequenceIntentLabels.length ? `<p class="text-[10px] text-text-disabled mt-2">SEQUENCE-интенты: ${this.escapeHtml(sequenceIntentLabels.join(', '))}</p>` : '';
+            const sequenceIntentsHtml = sequenceIntentLabels.length ? `<p class="text-[10px] text-text-disabled mt-2">${wt('im.k1090', 'SEQUENCE-интенты:')} ${this.escapeHtml(sequenceIntentLabels.join(', '))}</p>` : '';
             const specialRoleHtml = rec.complex_role === 'finisher_special'
-                ? `<p class="text-[10px] text-text-disabled mt-2">Роль в системе: специальный финализатор (${this.escapeHtml(rec.error_detection_mode || 'error_detection')})</p>`
+                ? `<p class="text-[10px] text-text-disabled mt-2">${wt('im.k1091', 'Роль в системе: специальный финализатор')} (${this.escapeHtml(rec.error_detection_mode || 'error_detection')})</p>`
                 : '';
             const manualOnlyHtml = manualOnly
-                ? `<p class=\"text-[10px] text-info-text mt-2\">Создаётся вручную в редакторе. В этом потоке автогенерация недоступна.</p>`
+                ? `<p class=\"text-[10px] text-info-text mt-2\">${wt('im.k1092', 'Создаётся вручную в редакторе. В этом потоке автогенерация недоступна.')}</p>`
                 : '';
 
             return `
@@ -10456,12 +10456,12 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                                             </div>
                                             <!-- Truncate class removed below for full visibility -->
                                             <p class="text-xs text-text-muted leading-relaxed">${this.escapeHtml(rec.rationale || '')}</p>
-                                            ${coverageRole ? `<p class="text-[11px] text-text-secondary mt-2"><strong class="text-text-main">Что проверяет:</strong> ${this.escapeHtml(coverageRole)}</p>` : ''}
-                                            ${countRationale ? `<p class="text-[11px] text-text-secondary mt-1"><strong class="text-text-main">Почему именно столько:</strong> ${this.escapeHtml(countRationale)}</p>` : ''}
+                                            ${coverageRole ? `<p class="text-[11px] text-text-secondary mt-2"><strong class="text-text-main">${wt('im.k1093', 'Что проверяет:')}</strong> ${this.escapeHtml(coverageRole)}</p>` : ''}
+                                            ${countRationale ? `<p class="text-[11px] text-text-secondary mt-1"><strong class="text-text-main">${wt('im.k1094', 'Почему именно столько:')}</strong> ${this.escapeHtml(countRationale)}</p>` : ''}
                                             ${progressionMetaHtml}
                                             ${sequenceIntentsHtml}
                                             ${specialRoleHtml}
-                                            ${coveredUnits.length ? `<p class="text-[10px] text-text-disabled mt-2">Единицы: ${coveredUnits.join(', ')}</p>` : ''}
+                                            ${coveredUnits.length ? `<p class="text-[10px] text-text-disabled mt-2">${wt('im.k1095', 'Единицы:')} ${coveredUnits.join(', ')}</p>` : ''}
                                         </div>
                                         <div class="flex items-center gap-1 flex-shrink-0 mt-0.5 ml-2">
                                             <button onclick="dashboard.importManager.adjustAIRecCount('${rec.task_type}', -1)" 
@@ -10486,7 +10486,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                 <div class="flex flex-col items-center justify-center py-12 animate-slide-up-fade">
                     <img src="/assets/logo_animated.svg" alt="AI Generating" class="w-16 h-16 mb-4 drop-shadow-md" />
                     <h3 class="text-lg font-bold text-text-main">${wt('im.k729', 'Генерация заданий...')}</h3>
-                    <p class="text-text-muted text-sm mt-2" id="ai-gen-progress">ИИ создаёт задания по вашему материалу</p>
+                    <p class="text-text-muted text-sm mt-2" id="ai-gen-progress">${wt('im.k1096', 'ИИ создаёт задания по вашему материалу')}</p>
                 </div>
             `;
         }
@@ -10577,41 +10577,41 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
         return `
             <div>
                 <h3 class="text-lg font-bold text-text-main mb-1">${wt('im.k730', 'Сгенерированные задания')}</h3>
-                <p class="text-sm text-text-muted mb-4">Просмотрите задания и выберите для импорта</p>
+                <p class="text-sm text-text-muted mb-4">${wt('im.k1097', 'Просмотрите задания и выберите для импорта')}</p>
 
                 <!-- Summary -->
                 <div class="mb-4 p-4 bg-surface-2 rounded-lg">
                     <div class="flex gap-6">
                         <div class="text-center">
                             <div class="text-2xl font-bold text-text-main">${summary.total_generated || 0}</div>
-                            <div class="text-xs text-text-secondary">Всего</div>
+                            <div class="text-xs text-text-secondary">${wt('im.k905', 'Всего')}</div>
                         </div>
                         <div class="text-center">
                             <div class="text-2xl font-bold text-success-text">${summary.total_valid || 0}</div>
-                            <div class="text-xs text-text-secondary">Готовы</div>
+                            <div class="text-xs text-text-secondary">${wt('im.k1098', 'Готовы')}</div>
                         </div>
                         <div class="text-center">
                             <div class="text-2xl font-bold text-warning-text">${summary.total_warnings || 0}</div>
-                            <div class="text-xs text-text-secondary">Предупр.</div>
+                            <div class="text-xs text-text-secondary">${wt('im.k1099', 'Предупр.')}</div>
                         </div>
                         <div class="text-center">
                             <div class="text-2xl font-bold text-error-text">${summary.total_errors || 0}</div>
-                            <div class="text-xs text-text-secondary">Ошибки</div>
+                            <div class="text-xs text-text-secondary">${wt('im.k1100', 'Ошибки')}</div>
                         </div>
                     </div>
                 </div>
 
                 ${summary.quality ? `
                     <div class="mb-4 p-4 bg-surface-1 border border-border-subtle rounded-lg">
-                        <div class="text-sm font-bold text-text-main mb-2">Проверки качества</div>
+                        <div class="text-sm font-bold text-text-main mb-2">${wt('im.k1101', 'Проверки качества')}</div>
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-                            <div class="p-2 rounded border border-border-subtle bg-surface-2">Дубликаты: <span class="font-bold">${summary.quality.duplicate_groups || 0}</span></div>
-                            <div class="p-2 rounded border border-border-subtle bg-surface-2">Алерты языка: <span class="font-bold">${summary.quality.language_mismatch_warnings || 0}</span></div>
-                            <div class="p-2 rounded border border-border-subtle bg-surface-2">SEQ-привязка: <span class="font-bold">${summary.quality.sequence_grounding_warnings || 0}</span></div>
-                            <div class="p-2 rounded border border-border-subtle bg-surface-2">Язык материала: <span class="font-bold">${this.escapeHtml(summary.quality.material_language || 'unknown')}</span></div>
+                            <div class="p-2 rounded border border-border-subtle bg-surface-2">${wt('im.k1102', 'Дубликаты:')} <span class="font-bold">${summary.quality.duplicate_groups || 0}</span></div>
+                            <div class="p-2 rounded border border-border-subtle bg-surface-2">${wt('im.k1103', 'Алерты языка:')} <span class="font-bold">${summary.quality.language_mismatch_warnings || 0}</span></div>
+                            <div class="p-2 rounded border border-border-subtle bg-surface-2">${wt('im.k1104', 'SEQ-привязка:')} <span class="font-bold">${summary.quality.sequence_grounding_warnings || 0}</span></div>
+                            <div class="p-2 rounded border border-border-subtle bg-surface-2">${wt('im.k1105', 'Язык материала:')} <span class="font-bold">${this.escapeHtml(summary.quality.material_language || 'unknown')}</span></div>
                         </div>
                         <div class="mt-2 text-xs text-text-secondary">
-                            Ожидаемый язык вывода: <span class="font-bold text-text-main">${this.escapeHtml(summary.quality.expected_output_language || gen.effective_output_language || 'unknown')}</span>
+                            ${wt('im.k1106', 'Ожидаемый язык вывода:')} <span class="font-bold text-text-main">${this.escapeHtml(summary.quality.expected_output_language || gen.effective_output_language || 'unknown')}</span>
                         </div>
                     </div>
                 ` : ''}
@@ -10629,12 +10629,12 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                     <div class="mb-4 p-4 bg-surface-1 border border-border-subtle rounded-lg">
                         <div class="flex items-center justify-between gap-3 mb-3">
                             <div>
-                                <div class="text-sm font-bold text-text-main">Покрытие</div>
-                                <div class="text-xs text-text-secondary">Покрытие учебных единиц перед импортом</div>
+                                <div class="text-sm font-bold text-text-main">${wt('im.k1107', 'Покрытие')}</div>
+                                <div class="text-xs text-text-secondary">${wt('im.k1108', 'Покрытие учебных единиц перед импортом')}</div>
                             </div>
                             <div class="text-xs text-text-secondary text-right">
-                                <div>Не покрыто: <span class="font-bold text-error-text">${uncoveredUnits.length}</span></div>
-                                <div>Избыточно покрыто (3+): <span class="font-bold text-warning-text">${overcoveredUnits.length}</span></div>
+                                <div>${wt('im.k1109', 'Не покрыто:')} <span class="font-bold text-error-text">${uncoveredUnits.length}</span></div>
+                                <div>${wt('im.k1110', 'Избыточно покрыто (3+):')} <span class="font-bold text-warning-text">${overcoveredUnits.length}</span></div>
                             </div>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -10686,7 +10686,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                                                 ${!isExcluded ? 'checked' : ''}
                                                 onchange="dashboard.importManager.toggleExclude(${globalIdx}); this.closest('.divide-y').parentElement.querySelector('[data-chevron]').click(); dashboard.importManager.renderCurrentStep();">
                                             <div class="flex-1 min-w-0">
-                                                <p class="text-sm text-text-main truncate">${this.escapeHtml(task.name || task.prompt || `Задание #${i + 1}`)}</p>
+                                                <p class="text-sm text-text-main truncate">${this.escapeHtml(task.name || task.prompt || `${wt('im.k1111', 'Задание')} #${i + 1}`)}</p>
                                                 ${task.validation_issues?.length ? `
                                                     <p class="text-[10px] text-warning-text mt-0.5">${task.validation_issues.map(v => v.message).join('; ')}</p>
                                                 ` : ''}

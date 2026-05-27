@@ -103,12 +103,6 @@ def _google_auth_provider_payload() -> Dict[str, Any]:
 
 
 def _client_fingerprint() -> str:
-    forwarded = str(request.headers.get("X-Forwarded-For") or "").strip()
-    if forwarded:
-        return str(forwarded.split(",")[0]).strip() or "unknown"
-    real_ip = str(request.headers.get("X-Real-IP") or "").strip()
-    if real_ip:
-        return real_ip
     return str(request.remote_addr or "unknown").strip() or "unknown"
 
 

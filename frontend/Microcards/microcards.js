@@ -952,7 +952,7 @@
                     <span class="hidden sm:block text-text-muted text-xs">→</span>
                     <select onchange="mcApp.setPairSelection('${cardIdJs}','${leftIdJs}', this.value)"
                         class="flex-1 rounded-lg border border-border-strong bg-surface-1 px-3 py-2 text-sm text-text-main focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all">
-                        <option value="">Выберите...</option>
+                        <option value="">${escHtml(wt('microcards.pair_select_placeholder', 'Выберите...'))}</option>
                         ${options}
                     </select>
                 </div>
@@ -983,7 +983,7 @@
             hide($('mcCardBack'));
         } else {
             const back = (card.back && typeof card.back === 'object') ? card.back : {};
-            const backText = String(back.text || '').trim() || 'Ответ не указан';
+            const backText = String(back.text || '').trim() || wt('microcards.answer_not_set', 'Ответ не указан');
             const backEl = $('mcCardBackText');
             if (backEl) backEl.textContent = backText;
             show($('mcCardBack'));
@@ -1056,7 +1056,7 @@
                     ? '<span class="material-symbols-outlined text-success text-[14px]">check_circle</span>'
                     : '<span class="material-symbols-outlined text-error text-[14px]">cancel</span>';
                 const exp = expByLeft.get(pr.leftId);
-                const correctAnswer = !pr.isCorrect ? `<span class="text-[10px] text-success-text ml-1">(верно: ${escHtml(pr.rightText)})</span>` : '';
+                const correctAnswer = !pr.isCorrect ? `<span class="text-[10px] text-success-text ml-1">(${escHtml(wt('microcards.pair_correct_prefix', 'верно'))}: ${escHtml(pr.rightText)})</span>` : '';
                 return `
                     <div class="flex items-start gap-2 text-xs ${pr.isCorrect ? '' : 'text-error-text'}">
                         ${icon}

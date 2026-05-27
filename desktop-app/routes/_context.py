@@ -84,8 +84,7 @@ def is_hosted_dev_auth_bridge_enabled() -> bool:
 def _is_localhost_request() -> bool:
     if not has_request_context():
         return False
-    host = str(getattr(request, "host", "") or "").split(":", 1)[0].strip().lower()
-    return host in _LOCALHOST_HOSTS
+    return str(request.remote_addr or "").strip() in _LOCALHOST_HOSTS
 
 
 def _get_hosted_dev_bridge_user_id() -> Optional[str]:

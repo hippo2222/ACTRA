@@ -1,0 +1,71 @@
+name: Hosted Release Gate
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v2.*"
+
+jobs:
+  hosted-release-gate:
+    runs-on: ubuntu-latest
+    env:
+      ACTRA_RUNTIME_MODE: hosted_web
+      ACTRA_UPDATE_CHECK_ENABLED: "0"
+      ACTRA_HOSTED_PERSISTENCE_STRICT: "1"
+      ACTRA_HOSTED_DEV_AUTH_BRIDGE: "0"
+      ACTRA_ENABLE_HOSTED_SHADOW_WRITE_FALLBACK: "0"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Install Node dependencies
+        run: |
+          npm ci
+
+      - name: Install Playwright browsers
+        run: |
+          playwright install --with-deps
+
+      - name: Build CSS
+        run: |
+          npm run build:css
+
+      - name: Run hosted code-level smoke gates
+        run: |
+          npm run smoke:main-quick-access:hosted
+          npm run smoke:statistics:hosted
+          npm run smoke:calendar:hosted
+          npm run smoke:task-editor:hosted
+          npm run smoke:complex-editor:hosted
+          npm run smoke:theory-editor:hosted
+          npm run smoke:catalog-library:hosted
+          npm run smoke:linked-theory-open:hosted
+          npm run smoke:assets-media:hosted
+          npm run smoke:microcards:hosted
+          npm run smoke:ai-placeholder:hosted
+          npm run smoke:import-export:hosted
+          npm run smoke:readiness:hosted
+          npm run smoke:launch-contract:hosted
+
+      - name: Release policy note
+        run: |
+          echo "Hosted release gate passed."
+          echo "Production domain / SMTP / reverse proxy / backup-restore checks remain manual acceptance items."

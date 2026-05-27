@@ -1686,6 +1686,27 @@ _AUTH_GATE_REQUIRE_PREFIX = (
 
 
 @app.before_request
+def _csrf_origin_check():
+    """Defense-in-depth CSRF: validate Origin header on state-changing requests in hosted_web."""
+    if _runtime_mode() != "hosted_web":
+        return None
+    if request.method in {"GET", "HEAD", "OPTIONS"}:
+        return None
+    origin = request.headers.get("Origin")
+    if not origin:
+        return None
+    from urllib.parse import urlparse as _urlparse
+    origin_host = _urlparse(origin).netloc
+    if origin_host != request.host:
+        logger.warning(
+            "[CSRF] Rejected %s %s: Origin=%s expected=%s",
+            request.method, request.path, origin, request.host,
+        )
+        return jsonify({"ok": False, "error": "csrf_origin_mismatch"}), 403
+    return None
+
+
+@app.before_request
 def _redirect_unauthenticated_hosted_pages():
     if _runtime_mode() != "hosted_web":
         return None

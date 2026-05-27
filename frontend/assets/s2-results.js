@@ -1689,7 +1689,7 @@
 
       navigateTo("/complexes");
     } catch (_) {
-      showToast("Не удалось поставить сессию на паузу.", "error");
+      showToast(wt('s2.pause_failed', 'Не удалось поставить сессию на паузу.'), "error");
     }
   }
 
@@ -1726,7 +1726,7 @@
 
       navigateTo("/complexes");
     } catch (_) {
-      showToast("Не удалось завершить комплекс.", "error");
+      showToast(wt('s2.cancel_failed', 'Не удалось завершить комплекс.'), "error");
     }
   }
 
@@ -2115,7 +2115,7 @@
 
     if (previewNoteEl) {
       if (N > 3) {
-        previewNoteEl.textContent = `Показаны 3 из ${N} ошибок`;
+        previewNoteEl.textContent = wt('s2.errors_shown_of', 'Показаны 3 из {n} ошибок').replace('{n}', N);
       } else {
         previewNoteEl.textContent = "";
       }
