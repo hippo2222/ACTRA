@@ -8,7 +8,7 @@
   }
 
   const STYLE_ID = "mistakes-ui-styles";
-  const DEFAULT_CHOICE_PROMPT = wt("mistakesui.default_choice_prompt", "Выберите правильный вариант текста");
+  const getDEFAULT_CHOICE_PROMPT = () => wt("mistakesui.default_choice_prompt", "Выберите правильный вариант текста");
 
   const state = {
     taskDto: null,
@@ -550,7 +550,7 @@
 
   function renderChoiceMode(container, content) {
     const options = Array.isArray(content.options) ? content.options.map((opt, idx) => ({ ...opt, _idx: idx })) : [];
-    const prompt = content.choice_prompt || content.prompt || DEFAULT_CHOICE_PROMPT;
+    const prompt = content.choice_prompt || content.prompt || getDEFAULT_CHOICE_PROMPT();
     const referenceText = content.reference_text || content.referenceText || "";
     const correctCount = options.filter((o) => o.is_correct).length;
     const isInvalid =

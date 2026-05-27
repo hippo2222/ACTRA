@@ -17,9 +17,9 @@ const CLICK_EDITOR_HELPERS =
 
 const LABEL_DISPLAY_MODES = ["compact", "off"];
 
-const DEFAULT_PROMPT = wt("ce.k001", "Отметьте ошибки в тексте");
+const getDEFAULT_PROMPT = () => wt("ce.k001", "Отметьте ошибки в тексте");
 // В режиме «Тексты» пользователь выбирает правильный текст (один вариант), поэтому даём отдельный дефолт
-const DEFAULT_CHOICE_PROMPT = wt("ce.k002", "Выберите правильный вариант текста");
+const getDEFAULT_CHOICE_PROMPT = () => wt("ce.k002", "Выберите правильный вариант текста");
 
 function escapeHtml(str) {
     return String(str ?? "")
@@ -978,8 +978,8 @@ class ClickEditor extends BaseEditor {
         const referenceStart = referenceText.indexOf("в день");
         const referenceEnd = referenceStart + "в день".length;
         content.mode = "text_errors";
-        content.prompt = DEFAULT_PROMPT;
-        content.choice_prompt = DEFAULT_CHOICE_PROMPT;
+        content.prompt = getDEFAULT_PROMPT();
+        content.choice_prompt = getDEFAULT_CHOICE_PROMPT();
         content.text = text;
         content.error_spans = errorStart >= 0
             ? [{ start: errorStart, end: errorEnd, label: "Неверная частота приёма" }]
@@ -1024,7 +1024,7 @@ class ClickEditor extends BaseEditor {
         this.updateErrorsSubpaneVisibility();
         if (isTextsMode) {
             if (this.choicePromptTextarea) {
-                this.choicePromptTextarea.value = content.choice_prompt || DEFAULT_CHOICE_PROMPT;
+                this.choicePromptTextarea.value = content.choice_prompt || getDEFAULT_CHOICE_PROMPT();
             }
             this.populateChoicePaneFromState();
         } else {
@@ -2557,7 +2557,7 @@ class ClickEditor extends BaseEditor {
         if (!this.errorsPaneInitialized || !this.errorsPromptPreviewEl) return;
         const promptInput = this.promptArea ? this.promptArea.value.trim() : "";
         const prompt = promptInput || this.task?.task_data?.content?.prompt || "";
-        const value = prompt || DEFAULT_PROMPT;
+        const value = prompt || getDEFAULT_PROMPT();
         this.errorsPromptPreviewEl.textContent = value;
     }
 
@@ -2568,7 +2568,7 @@ class ClickEditor extends BaseEditor {
         const content = this.task?.task_data?.content || {};
         const promptFromContent = content.choice_prompt || content.prompt || "";
         const prompt = promptInput || fallbackPromptInput || promptFromContent || "";
-        const value = prompt || DEFAULT_CHOICE_PROMPT;
+        const value = prompt || getDEFAULT_CHOICE_PROMPT();
         this.choicePromptPreviewEl.textContent = value;
     }
 
@@ -5838,8 +5838,8 @@ class ClickEditor extends BaseEditor {
         const isErrorDetection = this.isErrorDetectionTask();
         const requiredCorrect = this.requiredCorrectInput ? parseInt(this.requiredCorrectInput.value, 10) : 1;
 
-        const effectivePrompt = prompt || DEFAULT_PROMPT;
-        const effectiveChoicePrompt = choicePrompt || prompt || DEFAULT_CHOICE_PROMPT;
+        const effectivePrompt = prompt || getDEFAULT_PROMPT();
+        const effectiveChoicePrompt = choicePrompt || prompt || getDEFAULT_CHOICE_PROMPT();
         
         if (isErrorDetection && !this.validateErrorDetectionBeforeSave()) {
             return;
