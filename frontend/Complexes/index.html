@@ -1463,7 +1463,7 @@
             fetchComplexes();
           }
 
-          document.addEventListener('i18n:changed', _applyComplexesI18n);
+          window.addEventListener('i18n:changed', _applyComplexesI18n);
 
           function parseSessionTime(value) {
             if (!value) return 0;

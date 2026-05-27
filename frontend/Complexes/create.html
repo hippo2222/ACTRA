@@ -3086,7 +3086,7 @@
             if (window.i18n) window.i18n.updateDOM();
           }
 
-          document.addEventListener('i18n:changed', _applyCreateI18n);
+          window.addEventListener('i18n:changed', _applyCreateI18n);
 
     function createEmptyTheoryState() {
       return {

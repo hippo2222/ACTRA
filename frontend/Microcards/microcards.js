@@ -1355,7 +1355,7 @@
             renderDeckGrid();
         }
     }
-    document.addEventListener('i18n:changed', _applyMicrocardsI18n);
+    window.addEventListener('i18n:changed', _applyMicrocardsI18n);
 
     // ── Init ──────────────────────────────────────────────────────────────
     async function init() {

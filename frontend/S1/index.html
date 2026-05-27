@@ -622,7 +622,7 @@
       function _applyS1I18n() {
         if (window.i18n) window.i18n.updateDOM();
       }
-      document.addEventListener('i18n:changed', _applyS1I18n);
+      window.addEventListener('i18n:changed', _applyS1I18n);
       window.addEventListener("DOMContentLoaded", () => {
         if (typeof Main !== 'undefined') {
           Main.init();
