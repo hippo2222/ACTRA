@@ -71,7 +71,7 @@ describe('welcome hosted auth flow', () => {
     const html = loadFile('frontend/Welcome/welcome.html');
 
     expect(html).toContain('21 день Premium бесплатно');
-    expect(html).toContain('Зарегистрируйтесь до 1 июня 2026 включительно');
+    expect(html).toContain('Premium активируется автоматически при регистрации до 1 июня 2026.');
     expect(html).toContain('21 день Premium до 1 июня');
   });
 

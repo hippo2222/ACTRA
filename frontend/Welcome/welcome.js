@@ -788,8 +788,12 @@
         }
 
         const nameField = document.getElementById('onboardingNameField');
+        const promo = document.getElementById('registrationPremiumPromo');
         if (nameField) {
             nameField.className = 'relative w-full';
+            if (promo) {
+                promo.parentNode.insertBefore(nameField, promo.nextSibling);
+            }
         }
 
         const button = document.getElementById('onboardingCreateBtn');
@@ -821,12 +825,10 @@
         loadAvatarGallery('onboardingAvatarGallery', 'onboardingAvatarSeed', 'onboardingAvatarPreview');
 
         const avatarPicker = document.getElementById('onboardingAvatarPicker');
-        if (avatarPicker) {
-            avatarPicker.className = 'flex flex-col items-center gap-4 mb-5';
-        }
-
         const nameField = document.getElementById('onboardingNameField');
-        if (nameField) {
+        if (avatarPicker && nameField) {
+            avatarPicker.appendChild(nameField);
+            avatarPicker.className = 'flex flex-col items-center gap-4 mb-5';
             nameField.className = 'w-full text-center';
         }
 
@@ -1231,7 +1233,7 @@
                     kicker.classList.remove('hidden');
                 }
                 title.textContent = wt('welcome.header_create_title', 'Создайте аккаунт');
-                subtitle.textContent = wt('welcome.header_create_subtitle', 'Укажите отображаемое имя, логин, email и пароль, чтобы сразу войти в ACTRA Web.');
+                subtitle.textContent = wt('welcome.header_create_subtitle', 'Заполните данные для создания аккаунта.');
                 return;
             }
 
