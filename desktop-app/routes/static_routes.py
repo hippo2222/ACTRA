@@ -497,6 +497,41 @@ def _public_shell_page(
     subtitle_block = f'<p class="subtitle">{subtitle_html}</p>' if subtitle_html else ""
     article_class = "document-card" if legal else ""
     content_html = f'<article class="{article_class}">{body_html}</article>' if legal else body_html
+
+    # Canonical mapping matching sitemap.xml
+    canonical_path = current_path
+    if canonical_path == "/legal/privacy":
+        canonical_path = "/privacy"
+    elif canonical_path == "/legal/terms":
+        canonical_path = "/terms"
+    elif canonical_path == "/refund-policy":
+        canonical_path = "/refund"
+
+    canonical_url = f"{_public_base_url()}{canonical_path}"
+
+    descriptions = {
+        "en": {
+            "/pricing": "View ACTRA Premium pricing options. Simple fixed-period digital access to expand your learning workflow features.",
+            "/privacy": "Read the ACTRA Privacy Policy. Learn how we handle and protect your personal learning library data.",
+            "/terms": "Read the ACTRA Terms of Service. Review the rules and guidelines for using the ACTRA learning application.",
+            "/refund": "Read the ACTRA Refund Policy. Learn about our refund guidelines for digital access and premium services."
+        },
+        "ru": {
+            "/pricing": "Цены на ACTRA Premium. Простой цифровой доступ на фиксированный период для расширения возможностей обучения.",
+            "/privacy": "Политика конфиденциальности ACTRA. Узнайте, как мы обрабатываем и защищаем ваши персональные данные.",
+            "/terms": "Условия использования ACTRA. Ознакомьтесь с правилами и инструкциями по использованию веб-приложения.",
+            "/refund": "Политика возврата ACTRA. Узнайте о правилах и условиях возврата средств за цифровые услуги."
+        }
+    }
+
+    desc_lang = lang if lang in descriptions else "en"
+    meta_desc = descriptions[desc_lang].get(canonical_path, "")
+    if not meta_desc:
+        if desc_lang == "ru":
+            meta_desc = "ACTRA помогает создавать учебные материалы, тренироваться по заданиям и отслеживать прогресс в обучении."
+        else:
+            meta_desc = "ACTRA helps you create learning materials, practice tasks, and track study progress."
+
     return (
         f"""<!doctype html>
 <html lang="{lang}">
@@ -504,17 +539,19 @@ def _public_shell_page(
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{title_html} - ACTRA</title>
+  <meta name="description" content="{escape(meta_desc)}" />
+  <link rel="canonical" href="{canonical_url}" />
   <style>{_public_page_css()}</style>
 </head>
 <body>
   <header>
     <div class="wrap top">
-      <a class="brand" href="/welcome" aria-label="ACTRA">
+      <a class="brand" href="/" aria-label="ACTRA">
         <span class="brand-logo" aria-hidden="true"></span>
         <span class="brand-word">ACTRA</span>
       </a>
       {_public_nav_html(lang, current_path)}
-      <a class="home-button" href="/welcome">{escape(labels['back_home'])}</a>
+      <a class="home-button" href="/">{escape(labels['back_home'])}</a>
     </div>
   </header>
   <main class="wrap">
@@ -664,7 +701,7 @@ def _public_home_page() -> Any:
         <section class="panel">
           <h2>Цифровой доступ</h2>
           <p>ACTRA Premium является цифровой услугой. Физические товары не продаются и не доставляются. Доступ предоставляется в аккаунте пользователя после подтверждения оплаты.</p>
-          <p><a href="/pricing?lang=ru">Посмотреть цены</a> · <a href="/welcome">Главная ACTRA</a> · <a href="mailto:{_SUPPORT_EMAIL}">{_SUPPORT_EMAIL}</a></p>
+          <p><a href="/pricing?lang=ru">Посмотреть цены</a> · <a href="/">Главная ACTRA</a> · <a href="mailto:{_SUPPORT_EMAIL}">{_SUPPORT_EMAIL}</a></p>
         </section>
         """
     else:
@@ -699,7 +736,7 @@ def _public_home_page() -> Any:
         <section class="panel">
           <h2>Digital access</h2>
           <p>ACTRA Premium is a digital service. No physical goods are sold or shipped. Access is delivered to the user account after payment is confirmed.</p>
-          <p><a href="/pricing?lang=en">View pricing</a> · <a href="/welcome">ACTRA home</a> · <a href="mailto:{_SUPPORT_EMAIL}">{_SUPPORT_EMAIL}</a></p>
+          <p><a href="/pricing?lang=en">View pricing</a> · <a href="/">ACTRA home</a> · <a href="mailto:{_SUPPORT_EMAIL}">{_SUPPORT_EMAIL}</a></p>
         </section>
         """
     return _public_commerce_page(
@@ -999,15 +1036,19 @@ def serve_catalog_file_legacy(filename: str) -> Any:
 # ---------------------------------------------------------------------------
 
 @static_bp.route("/", methods=["GET"])
-def serve_root_ui_alias() -> Any:
-    """Send the product domain entry point to the public welcome experience.
-
-    Uses 301 (permanent) so that Google Search Console treats /welcome as the
-    canonical indexable URL for the root domain. The previous 302 broke
-    indexing because Google declines to follow temporary redirects when
-    deciding canonical URLs.
-    """
-    return redirect("/welcome", code=301)
+def serve_welcome_ui() -> Any:
+    """Serve the Welcome / onboarding screen directly on the root domain."""
+    dirs = _get_ui_dirs()
+    WELCOME_UI_DIR = dirs.get("WELCOME_UI_DIR")
+    if not WELCOME_UI_DIR or not WELCOME_UI_DIR.exists():
+        logger.error("[HTTP] WELCOME_UI_DIR does not exist: %s", WELCOME_UI_DIR)
+        return jsonify({"ok": False, "error": "welcome_ui_not_found"}), 500
+    resp = send_from_directory(WELCOME_UI_DIR, "welcome.html")
+    try:
+        resp.headers["Cache-Control"] = "no-store"
+    except Exception:
+        pass
+    return resp
 
 
 @static_bp.route("/robots.txt", methods=["GET"])
@@ -1024,8 +1065,8 @@ Sitemap: {base_url}/sitemap.xml
 @static_bp.route("/sitemap.xml", methods=["GET"])
 def serve_sitemap_xml() -> Any:
     base_url = escape(_public_base_url(), quote=True)
-    # /welcome is the canonical indexable entry point (/ 301-redirects to it).
-    paths = ("", "welcome", "pricing", "refund", "privacy", "terms")
+    # Root domain (/) is the canonical indexable entry point.
+    paths = ("", "pricing", "refund", "privacy", "terms")
     urls = "\n".join(
         f"  <url><loc>{base_url}/{path}</loc></url>" if path else f"  <url><loc>{base_url}/</loc></url>"
         for path in paths
@@ -1066,24 +1107,9 @@ def serve_refund_policy() -> Any:
 
 
 @static_bp.route("/welcome", methods=["GET"])
-def serve_welcome_ui() -> Any:
-    """Serve the Welcome / onboarding screen."""
-    dirs = _get_ui_dirs()
-    WELCOME_UI_DIR = dirs.get("WELCOME_UI_DIR")
-    if not WELCOME_UI_DIR or not WELCOME_UI_DIR.exists():
-        logger.error("[HTTP] WELCOME_UI_DIR does not exist: %s", WELCOME_UI_DIR)
-        return jsonify({"ok": False, "error": "welcome_ui_not_found"}), 500
-    resp = send_from_directory(WELCOME_UI_DIR, "welcome.html")
-    try:
-        resp.headers["Cache-Control"] = "no-store"
-    except Exception:
-        pass
-    return resp
-
-
 @static_bp.route("/ui/welcome", methods=["GET"])
 def serve_welcome_ui_legacy() -> Any:
-    return _legacy_redirect("/welcome")
+    return _legacy_redirect("/")
 
 
 @static_bp.route("/Welcome/<path:filename>", methods=["GET"])

@@ -2687,7 +2687,7 @@
                   impact: wt('complexes.code_err_unauthorized_impact', 'Без авторизации библиотека не может сохранить связанную публикацию.'),
                   next: wt('complexes.code_err_unauthorized_next', 'Войдите в аккаунт и повторите попытку.'),
                 });
-                window.navigateWithTransition?.("/welcome");
+                window.navigateWithTransition?.("/");
                 return;
               }
               if (errorText === "catalog_access_code_not_found" || errorText === "invalid_access_code") {

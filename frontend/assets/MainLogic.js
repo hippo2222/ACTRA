@@ -1006,7 +1006,7 @@
             const consentOk = await ensureUserConsent(currentUser.user_id);
             if (!consentOk) {
                 mainBootRedirecting = true;
-                window.navigateWithTransition('/welcome');
+                window.navigateWithTransition('/');
                 return;
             }
 
@@ -1283,7 +1283,7 @@
         } else {
             // No active user — redirect to Welcome Screen
             mainBootRedirecting = true;
-            window.navigateWithTransition('/welcome');
+            window.navigateWithTransition('/');
         }
     }
 

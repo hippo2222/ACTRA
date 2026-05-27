@@ -62,7 +62,8 @@ def _install_hosted_runtime(monkeypatch, *, users=None, ui_dirs=None):
     )()
     extra = dict(getattr(ctx_module, "_extra", {}))
     if ui_dirs is not None:
-        extra["ui_dirs"] = ui_dirs
+        extra["ui_dirs"] = extra.get("ui_dirs", {}).copy()
+        extra["ui_dirs"].update(ui_dirs)
     monkeypatch.setattr(ctx_module, "_app_ctx", app_ctx)
     monkeypatch.setattr(ctx_module, "_extra", extra)
     monkeypatch.setattr(server._headless_app_ctx, "user_service", user_service, raising=False)
@@ -76,9 +77,9 @@ def test_ui_main_serves_current_mainscreen_html(client, tmp_path, monkeypatch):
     
     # After refactoring, routes use context to get ui_dirs
     import routes._context as ctx_module
-    ui_dirs = {"MAINSCREEN_UI_DIR": mainscreen_dir}
-    existing_extra = getattr(ctx_module, "_extra", {})
-    existing_extra["ui_dirs"] = ui_dirs
+    existing_extra = dict(getattr(ctx_module, "_extra", {}))
+    existing_extra["ui_dirs"] = existing_extra.get("ui_dirs", {}).copy()
+    existing_extra["ui_dirs"].update({"MAINSCREEN_UI_DIR": mainscreen_dir})
     monkeypatch.setattr(ctx_module, "_extra", existing_extra)
 
     response = client.get("/main")
@@ -101,7 +102,8 @@ def test_ui_reference_serves_reference_html_and_assets(client, tmp_path, monkeyp
     import routes._context as ctx_module
 
     existing_extra = dict(getattr(ctx_module, "_extra", {}))
-    existing_extra["ui_dirs"] = {"REFERENCE_UI_DIR": reference_dir}
+    existing_extra["ui_dirs"] = existing_extra.get("ui_dirs", {}).copy()
+    existing_extra["ui_dirs"]["REFERENCE_UI_DIR"] = reference_dir
     monkeypatch.setattr(ctx_module, "_extra", existing_extra)
 
     html_response = client.get("/reference")
@@ -123,8 +125,9 @@ def test_should_welcome_onboarding_when_no_users(client, monkeypatch):
     import routes._context as ctx_module
     dummy_service = _DummyUserService(users=[])
     misc_helpers = {"user_service": dummy_service}
-    existing_extra = getattr(ctx_module, "_extra", {})
-    existing_extra["misc_helpers"] = misc_helpers
+    existing_extra = dict(getattr(ctx_module, "_extra", {}))
+    existing_extra["misc_helpers"] = existing_extra.get("misc_helpers", {}).copy()
+    existing_extra["misc_helpers"].update(misc_helpers)
     monkeypatch.setattr(ctx_module, "_extra", existing_extra)
 
     response = client.get("/api/users/should-welcome")
@@ -146,8 +149,9 @@ def test_should_welcome_login_for_single_password_profile(client, monkeypatch):
     import routes._context as ctx_module
     dummy_service = _DummyUserService(users=[user])
     misc_helpers = {"user_service": dummy_service}
-    existing_extra = getattr(ctx_module, "_extra", {})
-    existing_extra["misc_helpers"] = misc_helpers
+    existing_extra = dict(getattr(ctx_module, "_extra", {}))
+    existing_extra["misc_helpers"] = existing_extra.get("misc_helpers", {}).copy()
+    existing_extra["misc_helpers"].update(misc_helpers)
     monkeypatch.setattr(ctx_module, "_extra", existing_extra)
 
     response = client.get("/api/users/should-welcome")
@@ -170,8 +174,9 @@ def test_should_auto_select_single_profile_without_login_password(client, monkey
     import routes._context as ctx_module
     dummy_service = _DummyUserService(users=[user])
     misc_helpers = {"user_service": dummy_service}
-    existing_extra = getattr(ctx_module, "_extra", {})
-    existing_extra["misc_helpers"] = misc_helpers
+    existing_extra = dict(getattr(ctx_module, "_extra", {}))
+    existing_extra["misc_helpers"] = existing_extra.get("misc_helpers", {}).copy()
+    existing_extra["misc_helpers"].update(misc_helpers)
     monkeypatch.setattr(ctx_module, "_extra", existing_extra)
 
     response = client.get("/api/users/should-welcome")
@@ -217,26 +222,23 @@ def test_hosted_ui_pages_redirect_to_welcome_without_auth(client, monkeypatch, t
     welcome_response = client.get("/welcome")
 
     assert main_response.status_code == 302
-    assert main_response.headers["Location"].endswith("/welcome")
+    assert main_response.headers["Location"].endswith("/")
     assert settings_response.status_code == 302
-    assert settings_response.headers["Location"].endswith("/welcome")
+    assert settings_response.headers["Location"].endswith("/")
     assert reference_response.status_code == 302
-    assert reference_response.headers["Location"].endswith("/welcome")
-    assert welcome_response.status_code == 200
+    assert reference_response.headers["Location"].endswith("/")
+    assert welcome_response.status_code == 301
+    assert welcome_response.headers["Location"].endswith("/")
 
 
-def test_root_redirects_to_public_welcome_page(client, monkeypatch):
+def test_root_serves_public_welcome_page_directly(client, monkeypatch):
     _install_hosted_runtime(monkeypatch, users=[])
 
     response = client.get("/")
 
-    assert response.status_code == 302
-    assert response.headers["Location"].endswith("/welcome")
-
-    welcome_response = client.get("/", follow_redirects=True)
-    assert welcome_response.status_code == 200
-    assert "text/html" in (welcome_response.content_type or "")
-    text = welcome_response.get_data(as_text=True)
+    assert response.status_code == 200
+    assert "text/html" in (response.content_type or "")
+    text = response.get_data(as_text=True)
     assert "ACTRA" in text
     assert "$4.99" in text
     assert "$7.99" in text

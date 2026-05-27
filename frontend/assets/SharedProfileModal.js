@@ -857,7 +857,7 @@
             }
 
             closeProfileMenu();
-            navigateTo('/welcome');
+            navigateTo('/');
         } catch (error) {
             console.error('[SharedProfileMenu] Failed to logout:', error);
             showToast(wt('profile_modal.toast_logout_failed', 'Не удалось выйти из аккаунта'));

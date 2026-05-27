@@ -1,4 +1,4 @@
-﻿"""Minimal HTTP server over SessionAPI.
+"""Minimal HTTP server over SessionAPI.
 
 This module runs a small Flask application that exposes a JSON API
 for working with complex sessions via SessionAPI.
@@ -1652,11 +1652,11 @@ def watchdog_end(exception=None):
 # Paths that are always public — the auth gate must never intercept them.
 # This includes the welcome screen itself (both new and legacy URLs) and
 # the legacy Welcome static-asset directory.
-_AUTH_GATE_PUBLIC_EXACT = frozenset({"", "/welcome", "/ui/welcome"})
+_AUTH_GATE_PUBLIC_EXACT = frozenset({"", "/", "/welcome", "/ui/welcome"})
 _AUTH_GATE_PUBLIC_PREFIX = ("/Welcome/",)
 
 # Paths that REQUIRE the auth check. The gate redirects unauthenticated
-# GET/HEAD HTML requests for these paths to /welcome. Everything not listed
+# GET/HEAD HTML requests for these paths to /. Everything not listed
 # here (and not in _AUTH_GATE_PUBLIC_*) passes through untouched — those
 # routes are either public marketing pages, /api/* (which have their own
 # auth), or static assets (also skipped by the file-extension filter below).
@@ -1707,6 +1707,34 @@ def _csrf_origin_check():
 
 
 @app.before_request
+def _redirect_www_to_non_www():
+    if _runtime_mode() != "hosted_web":
+        return None
+
+    if request.method not in {"GET", "HEAD"}:
+        return None
+
+    host = request.host.lower()
+    if host.startswith("www."):
+        configured_url = (
+            str(os.environ.get("ACTRA_AUTH_PUBLIC_BASE_URL") or "").strip()
+            or str(os.environ.get("ACTRA_PUBLIC_BASE_URL") or "").strip()
+            or "https://actra.site"
+        )
+        parsed = urlparse(configured_url)
+        canonical_host = (parsed.netloc or "actra.site").lower()
+        if not canonical_host.startswith("www."):
+            scheme = request.headers.get("X-Forwarded-Proto", request.scheme)
+            new_host = host[4:]
+            qs = request.query_string.decode("utf-8") if request.query_string else ""
+            target = f"{scheme}://{new_host}{request.path}"
+            if qs:
+                target = f"{target}?{qs}"
+            return redirect(target, code=301)
+    return None
+
+
+@app.before_request
 def _redirect_unauthenticated_hosted_pages():
     if _runtime_mode() != "hosted_web":
         return None
@@ -1742,12 +1770,12 @@ def _redirect_unauthenticated_hosted_pages():
 
     user_id = get_authenticated_user_id()
     if not user_id:
-        return redirect("/welcome")
+        return redirect("/")
 
     user = _headless_app_ctx.user_service.get_user(user_id)
     if user is None:
         logout_authenticated_user()
-        return redirect("/welcome")
+        return redirect("/")
 
     return None
 
@@ -3233,7 +3261,7 @@ def _build_auth_verify_email_url(token: str, *, request_base_url: Optional[str] 
     base_url = _resolve_auth_public_base_url(request_base_url=request_base_url)
     if not base_url:
         raise ValueError("missing_base_url")
-    return f"{base_url}/welcome?verify_email_token={quote(str(token or '').strip())}"
+    return f"{base_url}/?verify_email_token={quote(str(token or '').strip())}"
 
 
 def _auth_email_display_name(user: Optional[Any]) -> str:
@@ -3751,7 +3779,7 @@ def _build_auth_password_reset_url(token: str, *, request_base_url: Optional[str
     base_url = _resolve_auth_public_base_url(request_base_url=request_base_url)
     if not base_url:
         raise ValueError("missing_base_url")
-    return f"{base_url}/welcome?reset_password_token={quote(str(token or '').strip())}"
+    return f"{base_url}/?reset_password_token={quote(str(token or '').strip())}"
 
 
 def _build_auth_password_reset_subject(user: Optional[Any]) -> str:

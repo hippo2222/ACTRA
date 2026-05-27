@@ -310,7 +310,7 @@ def _get_start_url(base_url: str) -> str:
     session_id = os.environ.get("TRAINER_SESSION_ID")
     if session_id:
         return f"{base_url}/session/{session_id}?_cb={cache_buster}&force={cache_buster}"
-    return f"{base_url}/welcome?_cb={cache_buster}&force={cache_buster}"
+    return f"{base_url}/?_cb={cache_buster}&force={cache_buster}"
 
 
 def main() -> None:

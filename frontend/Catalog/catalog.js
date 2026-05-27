@@ -2607,7 +2607,7 @@
     if (!action || action.disabled) return;
     if (action.key === 'login') {
       showToast(wt('catalog.toast_login_required', 'Войдите в аккаунт, чтобы добавлять публикации в библиотеку.'), 'warning', 3400);
-      navigate('/welcome');
+      navigate('/');
       return;
     }
     if (action.key === 'open-library') {
@@ -2630,7 +2630,7 @@
       } catch (error) {
         if (error && error.status === 403) {
           showToast(wt('catalog.toast_need_login', 'Для добавления в библиотеку нужно войти в аккаунт.'), 'warning');
-          navigate('/welcome');
+          navigate('/');
           return;
         }
         showToast(wt('catalog.toast_preview_error', 'Не удалось открыть превью: {msg}').replace('{msg}', asString(error && error.message) || 'unknown_error'), 'error', 4200);
