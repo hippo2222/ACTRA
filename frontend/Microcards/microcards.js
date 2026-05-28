@@ -311,7 +311,7 @@
                 </div>
                 <div class="flex items-center gap-2">
                     <span class="px-2 py-0.5 rounded-md text-[10px] font-bold border border-border-subtle bg-surface-2 text-text-secondary">${t('microcards.level_badge', 'Уровень {n}').replace('{n}', card.level || 1)}</span>
-                    <button type="button" onclick="mcApp.openCardEditor('${card.id}')" class="p-2 rounded-lg border border-border-strong hover:bg-bg-hover text-text-secondary hover:text-primary transition-colors flex items-center justify-center">
+                    <button type="button" onclick="mcApp.openCardEditor('${card.id}')" class="p-2.5 rounded-lg border border-border-strong hover:bg-bg-hover text-text-secondary hover:text-primary transition-colors flex items-center justify-center">
                         <span class="material-symbols-outlined text-[16px]">edit</span>
                     </button>
                 </div>
