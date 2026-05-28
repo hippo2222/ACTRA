@@ -315,6 +315,13 @@ class _WorkspaceLimitsStub:
     def assert_can_create_workspace_entity(self, user_id: str, entity_kind: str):
         return None
 
+    def assert_entity_not_archived(self, user_id, entity_kind, entity_ref, *, action, scope=None):
+        return {
+            "workspace_access_state": "active",
+            "is_premium_archived": False,
+            "archived_item": None,
+        }
+
 
 class _DummyHostedAssetService:
     def __init__(self, *, asset_id: str = "asset_editor_1", asset_url: str = "/api/assets/asset_editor_1/content"):

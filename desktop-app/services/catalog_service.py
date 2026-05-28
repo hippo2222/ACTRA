@@ -559,6 +559,40 @@ class CatalogService:
             catalog_visibility=catalog_visibility,
         )
 
+    def publish_deck(
+        self,
+        deck_id: str,
+        deck_data: dict,
+        *,
+        requested_by_user_id: str | None,
+        catalog_visibility: str | None = None,
+    ) -> dict:
+        clean_deck_id = self._require_text(deck_id, "deck_id_required")
+        snapshot = self._json_safe(copy.deepcopy(deck_data))
+        source = {
+            "source_workspace_kind": "flashcard_deck",
+            "source_workspace_id": clean_deck_id,
+            "source_workspace_ref": clean_deck_id,
+        }
+        owner_user_id = self._normalize_optional_text(requested_by_user_id) or "default_user"
+        title = str(snapshot.get("name") or clean_deck_id)
+        description = str(snapshot.get("description") or "").strip()
+        manifest = {
+            "content_type": "flashcard_deck",
+            "card_count": len(snapshot.get("cards") or []),
+            "tags": snapshot.get("tags") or [],
+        }
+        return self._publish_workspace_snapshot(
+            content_type="flashcard_deck",
+            owner_user_id=owner_user_id,
+            title=title,
+            description=description,
+            source=source,
+            manifest=manifest,
+            snapshot=snapshot,
+            catalog_visibility=catalog_visibility,
+        )
+
     def add_version_to_library(
         self,
         item_id: str,
@@ -582,6 +616,25 @@ class CatalogService:
                 requested_by_user_id=requested_by_user_id,
                 prefer_existing_by_lineage=prefer_existing_by_lineage,
             )
+        if content_type == "flashcard_deck":
+            requester = self._require_text(requested_by_user_id, "requested_by_user_id_required")
+            clean_item_id = self._require_text(item_id, "item_id_required")
+            self._assert_item_access(item_payload, requested_by_user_id=requester, access_code=access_code)
+            latest_version_id = item_payload.get("latest_version_id")
+            if not latest_version_id:
+                raise ValueError("no_version_found_for_catalog_item")
+            version_payload = self._get_version_payload(clean_item_id, latest_version_id)
+            if not isinstance(version_payload, dict):
+                raise ValueError("catalog_version_not_found")
+            snapshot = version_payload.get("snapshot") or {}
+            return {
+                "ok": True,
+                "add_to_library_kind": "catalog_flashcard_deck_import",
+                "requested_by_user_id": requester,
+                "item": self._summarize_item_payload(item_payload),
+                "snapshot": snapshot,
+            }
+
         if content_type == "complex":
             return self._add_complex_version_to_library(
                 item_payload,
@@ -621,6 +674,31 @@ class CatalogService:
                 requested_by_user_id=requested_by_user_id,
                 prefer_existing_by_lineage=prefer_existing_by_lineage,
             )
+        elif content_type == "flashcard_deck":
+            requester = self._normalize_optional_text(requested_by_user_id)
+            in_library = False
+            if requester:
+                user_decks_dir = self.users_dir / requester / "microcards" / "decks"
+                if user_decks_dir.exists():
+                    for p in user_decks_dir.glob("*.json"):
+                        try:
+                            with open(p, "r", encoding="utf-8") as f:
+                                deck_data = json.load(f)
+                                if str(deck_data.get("catalog_item_id")) == item_id:
+                                    in_library = True
+                                    break
+                        except Exception:
+                            pass
+            result = {
+                "ok": True,
+                "requested_by_user_id": requester,
+                "item": self._summarize_item_payload(item_payload),
+                "version": self._normalize_version_payload(version_payload, include_snapshot=False),
+                "library_status": {
+                    "in_library": in_library,
+                    "already_in_library": in_library,
+                },
+            }
         else:
             raise ValueError("catalog_version_content_type_not_supported")
         result["preview_only"] = True
@@ -823,6 +901,22 @@ class CatalogService:
                 "reused": isinstance(existing_entry, dict),
                 "workspace_limits": limit_evaluation,
             }
+        if content_type == "flashcard_deck":
+            self._assert_item_access(item_payload, requested_by_user_id=requester, access_code=access_code)
+            latest_version_id = item_payload.get("latest_version_id")
+            if not latest_version_id:
+                raise ValueError("no_version_found_for_catalog_item")
+            version_payload = self._get_version_payload(clean_item_id, latest_version_id)
+            if not isinstance(version_payload, dict):
+                raise ValueError("catalog_version_not_found")
+            snapshot = version_payload.get("snapshot") or {}
+            return {
+                "ok": True,
+                "add_to_library_kind": "catalog_flashcard_deck_import",
+                "requested_by_user_id": requester,
+                "item": self._summarize_item_payload(item_payload),
+                "snapshot": snapshot,
+            }
         raise ValueError("catalog_item_content_type_not_supported")
 
     def get_version_library_status(
@@ -911,6 +1005,33 @@ class CatalogService:
                 ),
                 "library_entry": copy.deepcopy(resolved.get("library_entry")) if isinstance(resolved, dict) else None,
                 "version": copy.deepcopy(resolved.get("version")) if isinstance(resolved, dict) else None,
+            }
+        if content_type == "flashcard_deck":
+            in_library = False
+            if requester:
+                user_decks_dir = self.users_dir / requester / "microcards" / "decks"
+                if user_decks_dir.exists():
+                    for p in user_decks_dir.glob("*.json"):
+                        try:
+                            with open(p, "r", encoding="utf-8") as f:
+                                deck_data = json.load(f)
+                                if str(deck_data.get("catalog_item_id")) == clean_item_id:
+                                    in_library = True
+                                    break
+                        except Exception:
+                            pass
+            return {
+                "ok": True,
+                "status_kind": "catalog_item_library_status",
+                "requested_by_user_id": requester,
+                "service_contract": dict(self.SERVICE_CONTRACT),
+                "item": self._summarize_item_payload(item_payload),
+                "library_status": {
+                    "in_library": in_library,
+                    "already_in_library": in_library,
+                },
+                "library_entry": None,
+                "version": None,
             }
         raise ValueError("catalog_item_content_type_not_supported")
 
@@ -3463,7 +3584,7 @@ class CatalogService:
         normalized = self._normalize_optional_text(value)
         if normalized is None and allow_empty:
             return None
-        if normalized not in {"complex", "theory"}:
+        if normalized not in {"complex", "theory", "flashcard_deck"}:
             raise ValueError("invalid_content_type")
         return normalized
 

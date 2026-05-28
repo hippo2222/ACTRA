@@ -313,6 +313,7 @@ class TestSmartRetry(unittest.TestCase):
                 "smart_retry_near_jitter_max": 0,
                 "smart_retry_max_copies_per_task": 10,
                 "smart_retry_training_control_enabled": True,
+                "test_question_display_modes": {task_ref: "scattered"},
             },
         )
         self.difficulty_manager.get_smart_retry_config.return_value = {
@@ -354,6 +355,7 @@ class TestSmartRetry(unittest.TestCase):
                 "smart_retry_near_jitter_max": 0,
                 "smart_retry_max_copies_per_task": 1,
                 "smart_retry_training_control_enabled": False,
+                "test_question_display_modes": {task_ref: "scattered", other_scattered_ref: "scattered"},
             },
         )
         self.difficulty_manager.get_smart_retry_config.return_value = {
@@ -404,6 +406,7 @@ class TestSmartRetry(unittest.TestCase):
                 "smart_retry_near_jitter_max": 0,
                 "smart_retry_max_copies_per_task": 10,
                 "smart_retry_training_control_enabled": True,
+                "test_question_display_modes": {task_ref: "scattered"},
             },
         )
         self.difficulty_manager.get_smart_retry_config.return_value = {
@@ -454,6 +457,7 @@ class TestSmartRetry(unittest.TestCase):
                 "smart_retry_near_jitter_max": 0,
                 "smart_retry_max_copies_per_task": 1,
                 "smart_retry_training_control_enabled": False,
+                "test_question_display_modes": {failed_ref: "scattered", other_ref: "scattered"},
             },
         )
 

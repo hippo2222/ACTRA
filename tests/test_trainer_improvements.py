@@ -131,11 +131,16 @@ class TestTrainerImprovements(unittest.TestCase):
         
         print(f"Resulting queue: {list(zip(refs, diffs))}")
         
-        self.assertEqual(refs[3], "m1")
-        self.assertEqual(diffs[3], 1) # Training
+        self.assertEqual(refs[1], "m1")
+        self.assertEqual(diffs[1], 1) # Training (lvl 1) sorted to front of tail
         
-        self.assertEqual(refs[4], "m1") 
-        self.assertEqual(diffs[4], 2) # Control
+        self.assertEqual(refs[2], "m1")
+        self.assertEqual(diffs[2], 2) # Failed task / control retry
+        
+        self.assertEqual(refs[3], "m1")
+        self.assertEqual(diffs[3], 2) # Failed task / control retry
+        
+        self.assertEqual(refs[4], "m2")
         
         self.assertEqual(refs[5], "f1") # Finisher pushed back
         print("Smart Retry verified.")

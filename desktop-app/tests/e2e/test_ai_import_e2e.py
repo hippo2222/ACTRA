@@ -21,28 +21,49 @@ def test_ai_generation_full_cycle_e2e(page, local_server):
     # there is a button like [data-role="import-open"] or similar.
     # Wait for the page to load
     page.wait_for_selector("body")
+    
+    # Disable onboarding tour to prevent the tour scrim from intercepting clicks
+    page.evaluate("localStorage.setItem('actra_onboarding_disabled_v1', 'true')")
+    page.reload()
+    page.wait_for_selector("body")
+    
+    # Wait for the dashboard catalog to load
+    page.wait_for_function("() => window.dashboard && window.dashboard.catalog && window.dashboard.catalog.length > 0", timeout=15000)
 
-    # If we don't know the exact button to open the modal, we can open it via JS
-    # since we know dashboard.openImportModal() or similar exists.
-    # But let's look for a button containing "Импорт"
-    import_btn = page.locator("button", has_text="Импорт")
-    if import_btn.count() > 0:
-        import_btn.first.click()
-    else:
-        # Fallback to JS invocation if the button is hidden in a menu
-        page.evaluate("if(window.dashboard && window.dashboard.importManager) { window.dashboard.importManager.setImportMode('ai'); window.dashboard.importManager.goToStep(1); window.dashboard.openModal('import-tasks-modal'); }")
+    # Open the import modal directly via JS to avoid localization and scrim dependency
+    page.evaluate("if(window.dashboard) { window.dashboard.showImportModal(); if (window.dashboard.importManager) { window.dashboard.importManager.setImportMode('ai'); window.dashboard.importManager.goToStep(1); } }")
 
-    # 2. In step 1, select AI mode if not already active
-    # The button with text "ИИ-генерация"
-    ai_mode_btn = page.locator("button", has_text="ИИ-генерация")
-    ai_mode_btn.click()
+    # Wait for the re-rendering of AI mode step 1 to complete (the button gets highlighted)
+    page.locator("[data-role='import-mode-ai'].border-primary").wait_for()
 
     # 3. We need to select a module and topic inside the modal
-    # Select first module
-    page.locator("#import-module-select").select_option(index=1)
-    # Give time for topic select to populate
-    page.wait_for_timeout(500)
-    page.locator("#import-topic-select").select_option(index=1)
+    # Wait for module "111" to be available in the dropdown options
+    try:
+        page.wait_for_selector("#import-module-select option[value='111']", state="attached", timeout=10000)
+    except Exception as e:
+        select_html = page.evaluate("() => document.getElementById('import-module-select') ? document.getElementById('import-module-select').outerHTML : 'NOT_FOUND'")
+        modal_html = page.evaluate("() => document.getElementById('import-tasks-modal') ? document.getElementById('import-tasks-modal').innerHTML : 'MODAL_NOT_FOUND'")
+        print(f"\n--- DEBUG E2E SELECT HTML:\n{select_html}")
+        print(f"\n--- DEBUG E2E MODAL HTML:\n{modal_html}")
+        raise e
+    
+    # Print module options for debugging
+    modules_opts = page.evaluate("() => Array.from(document.querySelectorAll('#import-module-select option')).map(o => ({text: o.textContent, value: o.value}))")
+    print("\n--- DEBUG: MODULE OPTIONS:", modules_opts)
+    
+    # Select module "111"
+    page.locator("#import-module-select").select_option(value="111")
+    
+    # Wait for the topic "111_t" to be populated in the topic dropdown
+    page.wait_for_selector("#import-topic-select option[value='111_t']", state="attached", timeout=10000)
+    
+    # Print topic options for debugging
+    topics_opts = page.locator("#import-topic-select option").all_text_contents()
+    print("\n--- DEBUG: TOPIC OPTIONS:", topics_opts)
+    print("\n--- DEBUG: TOPIC SELECT DISABLED:", page.locator("#import-topic-select").is_disabled())
+    
+    # Select topic "111_t"
+    page.locator("#import-topic-select").select_option(value="111_t")
 
     # 4. Upload a file
     # Create a temporary test file

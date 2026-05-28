@@ -1554,6 +1554,7 @@ from routes.session_routes import session_bp
 from routes.editor_routes import editor_bp
 from routes.quick_access_routes import quick_access_bp
 from routes.microcards_routes import microcards_bp
+from routes.microcards_routes_v2 import microcards_v2_bp
 from routes.ai_routes import ai_bp
 from routes.import_routes import import_bp
 from routes.misc_routes import misc_bp
@@ -1607,6 +1608,7 @@ app.register_blueprint(session_bp)
 app.register_blueprint(editor_bp)
 app.register_blueprint(quick_access_bp)
 app.register_blueprint(microcards_bp)
+app.register_blueprint(microcards_v2_bp, url_prefix="/api/v2/microcards")
 app.register_blueprint(ai_bp)
 app.register_blueprint(import_bp)
 app.register_blueprint(misc_bp)

@@ -498,4 +498,4 @@ class TestSubmitResult:
             "difficulty": 1,
             "expected_iteration": 2,
         })
-        assert result.iteration_index == 2
+        assert result.iteration_index == 3

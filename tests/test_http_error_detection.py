@@ -30,14 +30,14 @@ class _DummySessionAPI:
         self.last_submit = None
         self.task_payload = None
 
-    def get_session(self, session_id: str):
+    def get_session(self, session_id: str, user_id=None, **kwargs):
         return _DummySession(session_id)
 
-    def get_current_task(self, session_id: str, auto_resume: bool = False):
+    def get_current_task(self, session_id: str, auto_resume: bool = False, **kwargs):
         # task_payload may be set per test
         return self.task_payload
 
-    def submit_answer(self, session_id: str, task_id: str, user_input):
+    def submit_answer(self, session_id: str, task_id: str, user_input, **kwargs):
         self.last_submit = {"session_id": session_id, "task_id": task_id, "user_input": user_input}
         return _DummyResult(success=True)
 

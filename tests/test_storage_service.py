@@ -591,8 +591,8 @@ class TestDeleteTopicFromModuleJson:
 
 class TestEnrichTasks:
     def test_no_tasks(self, svc):
-        assert svc._enrich_tasks_with_metadata(None, None) == []
-        assert svc._enrich_tasks_with_metadata([], None) == []
+        assert svc._enrich_tasks_with_metadata(None, "mod1", None) == []
+        assert svc._enrich_tasks_with_metadata([], "mod1", None) == []
 
     def test_enriches_from_disk(self, data_dir):
         _make_module(data_dir, "mod1", "Module 1")
@@ -600,7 +600,7 @@ class TestEnrichTasks:
         task_dir = _make_task(data_dir, "mod1", "t1", "task1", task_type="draw")
         svc = StorageService(str(data_dir))
         topic_path = data_dir / "modules" / "mod1" / "topics" / "t1"
-        result = svc._enrich_tasks_with_metadata([{"id": "task1"}], topic_path)
+        result = svc._enrich_tasks_with_metadata([{"id": "task1"}], "mod1", topic_path)
         assert len(result) == 1
         assert result[0]["type"] == "draw"
         assert result[0]["name"] == "Task task1"

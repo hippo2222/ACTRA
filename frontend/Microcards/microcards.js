@@ -1,30 +1,12 @@
 /**
- * Microcards Runtime UI (M10 + M13) — standalone review-first page.
- *
- * Features (M10):
- *  - Deck list with due/new/total counts
- *  - Queue open / resume / restart
- *  - Review flow: fact_recall (front→back→rate) and pair_match (matching→check→rate)
- *  - Work-on-errors loop: incorrect cards requeued to tail of session
- *  - Correct result shown after error
- *  - Session summary
- *  - pair_match behind feature flag
- *
- * UX-polish (M13):
- *  - Keyboard shortcuts: Space/Enter=reveal, 1-4=rating, Escape=back
- *  - Focus management: auto-focus reveal/rating buttons
- *  - Accessibility: ARIA attributes, focus-visible rings, reduced-motion
- *  - Success/failure glow via project's --_glow / a-result-glow pattern
- *  - Streak badge with tiered styling (warm/hot/epic)
- *  - Pair_match result highlighting with pop/shake animations
- *  - Rating button keyboard-active visual feedback
- *  - Session summary with animated counters and confetti celebration
+ * Microcards Runtime JS Controller (V2)
+ * Fully rewritten for FSRS planning, progressive levels, in-page editing and dialog modals.
  */
 
 (function () {
     'use strict';
 
-    // ── Helpers ───────────────────────────────────────────────────────────
+    // ── Helper Selectors ──────────────────────────────────────────────────
     function $(id) { return document.getElementById(id); }
     function escHtml(s) {
         return String(s ?? '').replace(/[&<>"']/g, (char) => ({
@@ -35,1370 +17,982 @@
             "'": '&#39;',
         }[char] || char));
     }
-    function escJsString(s) {
-        return String(s ?? '')
-            .replace(/\\/g, '\\\\')
-            .replace(/'/g, "\\'")
-            .replace(/"/g, '\\x22')
-            .replace(/&/g, '\\x26')
-            .replace(/\r/g, '\\r')
-            .replace(/\n/g, '\\n')
-            .replace(/\u2028/g, '\\u2028')
-            .replace(/\u2029/g, '\\u2029')
-            .replace(/</g, '\\x3C')
-            .replace(/>/g, '\\x3E');
-    }
-    function show(el) { if (el) el.classList.remove('hidden'); }
-    function hide(el) { if (el) el.classList.add('hidden'); }
-    function formatTime(sec) {
-        const m = Math.floor(sec / 60);
-        const s = Math.floor(sec % 60);
-        return m + ':' + String(s).padStart(2, '0');
-    }
-
-    function wt(key, fallback) {
+    
+    // Translation helper
+    function t(key, fallback) {
         if (!window.i18n) return fallback;
         const result = window.i18n.t(key);
         return result !== key ? result : fallback;
     }
 
-    function normalizeDeckSearch(value) {
-        return String(value ?? '')
-            .toLocaleLowerCase('ru-RU')
-            .trim();
-    }
+    // ── App State ─────────────────────────────────────────────────────────
+    const state = {
+        view: 'library', // 'library' | 'details' | 'session' | 'summary' | 'editor'
+        decks: [],
+        activeDeckId: null,
+        activeDeck: null,
+        cards: [], // active deck cards
+        activeCard: null, // card being edited
+        
+        // Session state
+        session: null,
+        sessionCards: [],
+        sessionIndex: 0,
+        sessionStats: { total: 0, correct: 0, errors: 0 },
+        sessionErrors: [], // list of incorrect card objects
+        isErrorsOnlyMode: false,
+        
+        // Import modal state
+        importFormat: 'csv',
+        
+        // Keyboard controls lock
+        keyboardLocked: false
+    };
 
-    function parseDeckTimestamp(value) {
-        if (!value) return 0;
-        const ts = Date.parse(value);
-        return Number.isFinite(ts) ? ts : 0;
-    }
-
-    function getDeckStats(deck) {
-        const stats = deck?.stats || {};
-        return {
-            due: Math.max(0, Number(stats.cards_due ?? 0)),
-            newCards: Math.max(0, Number(stats.cards_new ?? 0)),
-            total: Math.max(0, Number(stats.cards_total ?? 0)),
-        };
-    }
-
-    function getDeckPriorityScore(deck) {
-        const { due, newCards } = getDeckStats(deck);
-        return (due * 10) + (newCards * 4);
-    }
-
-    function isDeckRecent(deck) {
-        const meta = deck?.meta || {};
-        const updatedAt = parseDeckTimestamp(meta.updated_at || meta.created_at);
-        if (!updatedAt) return false;
-        const maxAgeMs = 14 * 24 * 60 * 60 * 1000;
-        return (Date.now() - updatedAt) <= maxAgeMs;
-    }
-
-    function getDeckTopicLabel(deck) {
-        const selector = deck?.selector || {};
-        const meta = deck?.meta || {};
-        const labels = [];
-        const metaTopic = String(meta.topic || meta.section_title || meta.title || '').trim();
-        const scope = String(selector.scope || '').trim();
-        const language = String(deck?.target_language || '').trim();
-        if (metaTopic) labels.push(metaTopic);
-        if (scope && scope !== 'all' && !labels.includes(scope)) labels.push(scope);
-        if (language && !labels.includes(language)) labels.push(language);
-        return labels.join(' · ');
-    }
-
-    function getDeckSearchText(deck) {
-        return normalizeDeckSearch([
-            deck?.name || '',
-            getDeckTopicLabel(deck),
-            deck?.id || '',
-        ].join(' '));
-    }
-
-    function getDeckOwnership(deck) {
-        const ownership = (deck && typeof deck.ownership === 'object') ? deck.ownership : {};
-        const meta = (deck && typeof deck.meta === 'object') ? deck.meta : {};
-        const createdByUserId = String(
-            ownership.created_by_user_id || meta.created_by_user_id || ''
-        ).trim();
-        const createdVia = String(
-            ownership.created_via || meta.source || ''
-        ).trim() || ((deck && deck.analysis_id) ? 'analysis_auto' : 'manual_editor');
-        return {
-            createdByUserId,
-            createdVia,
-            hasOwner: ownership.has_owner === true || !!createdByUserId,
-            isOwnedByCurrentUser: ownership.is_owned_by_current_user === true,
-        };
-    }
-
-    function getDeckCreatedViaLabel(createdVia) {
-        const normalized = String(createdVia || '').trim().toLowerCase();
-        if (normalized === 'manual_editor') return wt('microcards.source_editor', 'Редактор');
-        if (normalized === 'analysis_auto') return wt('microcards.source_ai', 'ИИ');
-        if (normalized === 'text_import') return wt('microcards.source_import', 'Импорт');
-        return wt('microcards.source_system', 'Система');
-    }
-
-    function formatOwnerDisplayName(userId) {
-        if (!userId) return '';
-        // Hide technical IDs like user_7f4b075b5365
-        if (/^user_[a-f0-9]{8,}$/i.test(userId)) return wt('microcards.owner_other_profile', 'Другой профиль');
-        return userId;
-    }
-
-    function getCardTypeLabel(cardType) {
-        if (cardType === 'fact_recall') return wt('microcards.card_type_recall', 'Запомни');
-        if (cardType === 'pair_match') return wt('microcards.card_type_pairs', 'Пары');
-        return cardType;
-    }
-
-    function renderDeckOwnershipBadges(deck) {
-        const ownership = getDeckOwnership(deck);
-        const chips = [];
-        const displayName = escHtml(formatOwnerDisplayName(ownership.createdByUserId));
-        const rawOwnerId = escHtml(ownership.createdByUserId);
-        const sourceLabel = escHtml(getDeckCreatedViaLabel(ownership.createdVia));
-        if (ownership.isOwnedByCurrentUser) {
-            chips.push('<span class="inline-flex items-center gap-1 rounded-full border border-success-light bg-surface-1 px-2 py-0.5 text-[10px] font-semibold text-text-main">' + escHtml(wt('microcards.badge_mine', 'моё')) + '</span>');
-        } else if (ownership.hasOwner && displayName) {
-            chips.push(`<span class="mc-owner-chip inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-2 px-2 py-0.5 text-[10px] font-semibold text-text-secondary" title="${rawOwnerId}">${displayName}</span>`);
-        }
-        chips.push(`<span class="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-2 px-2 py-0.5 text-[10px] font-semibold text-text-secondary" title="${sourceLabel}">${sourceLabel}</span>`);
-        return chips.join('');
-    }
-
-    function isImportedDeck(deck) {
-        const createdVia = String(getDeckOwnership(deck).createdVia || '').trim().toLowerCase();
-        return createdVia === 'text_import';
-    }
-
-    function matchesDeckOwnershipFilter(deck) {
-        const ownership = getDeckOwnership(deck);
-        if (state.deckOwnershipFilter === 'mine') {
-            return ownership.isOwnedByCurrentUser;
-        }
-        if (state.deckOwnershipFilter === 'shared') {
-            return !ownership.isOwnedByCurrentUser && !isImportedDeck(deck);
-        }
-        if (state.deckOwnershipFilter === 'imported') {
-            return isImportedDeck(deck);
-        }
-        return true;
-    }
-
-    function getFilteredDecks() {
-        const query = normalizeDeckSearch(state.deckListQuery);
-        let decks = Array.isArray(state.decks) ? state.decks.slice() : [];
-
-        if (query) {
-            decks = decks.filter((deck) => getDeckSearchText(deck).includes(query));
-        }
-
-        decks = decks.filter((deck) => matchesDeckOwnershipFilter(deck));
-
-        if (state.deckListFilter === 'urgent') {
-            decks = decks
-                .filter((deck) => getDeckPriorityScore(deck) > 0)
-                .sort((a, b) => getDeckPriorityScore(b) - getDeckPriorityScore(a));
-        } else if (state.deckListFilter === 'new') {
-            decks = decks
-                .filter((deck) => getDeckStats(deck).newCards > 0)
-                .sort((a, b) => getDeckStats(b).newCards - getDeckStats(a).newCards);
-        } else if (state.deckListFilter === 'recent') {
-            decks = decks
-                .filter((deck) => isDeckRecent(deck))
-                .sort((a, b) => parseDeckTimestamp(b?.meta?.updated_at || b?.meta?.created_at) - parseDeckTimestamp(a?.meta?.updated_at || a?.meta?.created_at));
-        } else {
-            decks = decks.sort((a, b) => {
-                const scoreDiff = getDeckPriorityScore(b) - getDeckPriorityScore(a);
-                if (scoreDiff !== 0) return scoreDiff;
-                return parseDeckTimestamp(b?.meta?.updated_at || b?.meta?.created_at) - parseDeckTimestamp(a?.meta?.updated_at || a?.meta?.created_at);
-            });
-        }
-
-        return decks;
-    }
-
-    function getMostUrgentDeckId(decks) {
-        let bestDeckId = '';
-        let bestScore = 0;
-        (decks || []).forEach((deck) => {
-            const score = getDeckPriorityScore(deck);
-            const deckId = String(deck?.id || '').trim();
-            if (deckId && score > bestScore) {
-                bestScore = score;
-                bestDeckId = deckId;
-            }
-        });
-        return bestDeckId;
-    }
-
-    function setDeckEmptyMessage(title, text) {
-        const emptyState = $('mcDeckEmpty');
-        if (!emptyState) return;
-        const textBlocks = emptyState.querySelectorAll('p');
-        if (textBlocks[0]) textBlocks[0].textContent = title;
-        if (textBlocks[1]) textBlocks[1].textContent = text;
-    }
-
-    function updateDeckFilterHint(visibleCount, totalCount) {
-        const hint = $('mcDeckFilterHint');
-        const ownershipHint = $('mcDeckOwnershipHint');
-        if (!hint) return;
-        if (ownershipHint) {
-            if (state.deckOwnershipFilter === 'mine') {
-                ownershipHint.textContent = wt('microcards.ownership_mine', 'Показываем колоды, созданные из текущего профиля. Они всё равно живут в общей библиотеке.');
-            } else if (state.deckOwnershipFilter === 'shared') {
-                ownershipHint.textContent = wt('microcards.ownership_shared', 'Показываем общие колоды, созданные вне текущего профиля и не пришедшие через отдельный импорт.');
-            } else if (state.deckOwnershipFilter === 'imported') {
-                ownershipHint.textContent = wt('microcards.ownership_imported', 'Показываем колоды, пришедшие через текстовый импорт.');
-            } else {
-                ownershipHint.textContent = wt('microcards.ownership_all', 'Колоды живут в общей библиотеке, а прогресс по ним остаётся личным.');
-            }
-        }
-        if (!totalCount) {
-            hint.textContent = wt('microcards.hint_no_decks', 'Когда появятся колоды, здесь можно будет быстро выбрать, что повторять первым.');
-            return;
-        }
-        if (state.deckListFilter === 'urgent') {
-            hint.textContent = visibleCount
-                ? wt('microcards.hint_urgent_some', '{n} колод с ближайшим повторением. Сверху — самая срочная.').replace('{n}', visibleCount)
-                : wt('microcards.hint_urgent_none', 'Срочных повторений по текущему фильтру нет.');
-            return;
-        }
-        if (state.deckListFilter === 'new') {
-            hint.textContent = visibleCount
-                ? wt('microcards.hint_new_some', '{n} колод с новыми карточками. Хороший режим для короткого входа.').replace('{n}', visibleCount)
-                : wt('microcards.hint_new_none', 'Новых карточек по текущему запросу нет.');
-            return;
-        }
-        if (state.deckListFilter === 'recent') {
-            hint.textContent = visibleCount
-                ? wt('microcards.hint_recent_some', '{n} колод, к которым ты возвращался недавно.').replace('{n}', visibleCount)
-                : wt('microcards.hint_recent_none', 'Недавних колод по текущему запросу не найдено.');
-            return;
-        }
-        if (state.deckListQuery) {
-            hint.textContent = wt('microcards.hint_search', 'Найдено {visible} из {total}. Поиск работает по названию и теме колоды.')
-                .replace('{visible}', visibleCount).replace('{total}', totalCount);
-            return;
-        }
-        hint.textContent = wt('microcards.hint_default', 'Сначала показываем колоды с самым срочным повторением.');
-        if (!state.deckListQuery && state.deckListFilter === 'all' && totalCount > 0) {
-            hint.textContent = wt('microcards.hint_local', 'Колоды живут в общей локальной библиотеке, а прогресс по ним остаётся личным. Сначала показываем самые срочные колоды.');
-        }
-    }
-
-    function updateDeckFilterUi() {
-        document.querySelectorAll('.mc-deck-filter-chip[data-filter]').forEach((button) => {
-            const isActive = button.dataset.filter === state.deckListFilter;
-            button.classList.toggle('bg-primary', isActive);
-            button.classList.toggle('text-primary-fg', isActive);
-            button.classList.toggle('border-primary', isActive);
-            button.classList.toggle('shadow-sm', isActive);
-            button.classList.toggle('bg-surface-1', !isActive);
-            button.classList.toggle('text-text-secondary', !isActive);
-            button.classList.toggle('border-border-subtle', !isActive);
-            button.classList.toggle('hover:bg-bg-hover', !isActive);
-            button.setAttribute('aria-selected', isActive ? 'true' : 'false');
-        });
-    }
-
-    function updateDeckOwnershipFilterUi() {
-        document.querySelectorAll('.mc-deck-ownership-chip[data-ownership-filter]').forEach((button) => {
-            const isActive = button.dataset.ownershipFilter === state.deckOwnershipFilter;
-            button.classList.toggle('bg-primary', isActive);
-            button.classList.toggle('text-primary-fg', isActive);
-            button.classList.toggle('border-primary', isActive);
-            button.classList.toggle('shadow-sm', isActive);
-            button.classList.toggle('bg-surface-1', !isActive);
-            button.classList.toggle('text-text-secondary', !isActive);
-            button.classList.toggle('border-border-subtle', !isActive);
-            button.classList.toggle('hover:bg-bg-hover', !isActive);
-            button.setAttribute('aria-selected', isActive ? 'true' : 'false');
-        });
-    }
-
-    function rerenderDeckList() {
-        renderDeckListState();
-        renderDeckGrid();
-    }
-
-    function bindDeckListControls() {
-        const queryInput = $('mcDeckQuery');
-        if (queryInput) {
-            queryInput.addEventListener('input', () => {
-                state.deckListQuery = queryInput.value || '';
-                rerenderDeckList();
-            });
-        }
-
-        document.querySelectorAll('.mc-deck-filter-chip[data-filter]').forEach((button) => {
-            button.addEventListener('click', () => {
-                state.deckListFilter = button.dataset.filter || 'all';
-                updateDeckFilterUi();
-                rerenderDeckList();
-            });
-        });
-
-        document.querySelectorAll('.mc-deck-ownership-chip[data-ownership-filter]').forEach((button) => {
-            button.addEventListener('click', () => {
-                state.deckOwnershipFilter = button.dataset.ownershipFilter || 'all';
-                updateDeckOwnershipFilterUi();
-                rerenderDeckList();
-            });
-        });
-
-        updateDeckFilterUi();
-        updateDeckOwnershipFilterUi();
-        updateDeckFilterHint(0, 0);
-    }
-
-    // ── Toast ─────────────────────────────────────────────────────────────
-    function showToast(msg, type) {
+    // ── Toast Notifications ────────────────────────────────────────────────
+    function showToast(msg, type = 'info') {
         const container = $('mcToastContainer');
         if (!container) return;
-        const toneMap = {
-            success: 'border-success-light bg-success-lighter text-success-text',
-            error: 'border-error-light bg-error-lighter text-error-text',
-            warning: 'border-warning-light bg-warning-lighter text-warning-text',
-            info: 'border-info-light bg-info-lighter text-info-text',
+        const colors = {
+            success: 'border-success bg-success/10 text-success',
+            error: 'border-error bg-error/10 text-error',
+            warning: 'border-warning bg-warning/10 text-warning',
+            info: 'border-primary bg-primary/10 text-primary',
         };
-        const tone = toneMap[type] || toneMap.info;
+        const tone = colors[type] || colors.info;
         const el = document.createElement('div');
-        el.className = `pointer-events-auto px-4 py-2.5 rounded-xl border shadow-lg text-xs font-semibold ${tone}`;
-        el.style.animation = 'a-slide-up 0.3s ease-out';
+        el.className = `px-4 py-2.5 rounded-xl border shadow-lg text-xs font-semibold ${tone} transition-opacity duration-300`;
         el.textContent = msg;
         container.appendChild(el);
         setTimeout(() => {
             el.style.opacity = '0';
-            el.style.transition = 'opacity 0.3s';
             setTimeout(() => el.remove(), 300);
         }, 3000);
     }
 
-    // ── State ─────────────────────────────────────────────────────────────
-    const state = {
-        // Feature flags
-        featureFlags: { microcards_mode: false, microcards_pair_match: false },
-        // M14: Microcards productization rollout flags
-        prodFlags: {
-            microcards_runtime_ui: true,
-            microcards_home_entry: true,
-            microcards_calendar_integration: true,
-            microcards_statistics_integration: true,
-            microcards_manual_editor: true,
-            microcards_text_import: true,
-            microcards_review_fx: true,
-            microcards_pair_match_runtime: true,
-        },
+    // ── Navigation & View Switching ────────────────────────────────────────
+    function switchView(viewName) {
+        state.view = viewName;
+        
+        // Hide all views
+        document.querySelectorAll('.page-view').forEach(el => {
+            el.classList.add('hidden');
+            el.classList.remove('active-view');
+        });
 
-        // Deck list
-        decks: [],
-        decksLoading: false,
-        decksError: '',
-        deckListQuery: '',
-        deckListFilter: 'all',
-        deckOwnershipFilter: 'all',
+        // Show targets
+        let targetId = 'viewLibrary';
+        if (viewName === 'details') targetId = 'viewDeckDetails';
+        else if (viewName === 'session') targetId = 'viewSession';
+        else if (viewName === 'summary') targetId = 'viewSummary';
+        else if (viewName === 'editor') targetId = 'viewEditor';
 
-        // Summary from /api/microcards/summary
-        summary: null,
+        const targetEl = $(targetId);
+        if (targetEl) {
+            targetEl.classList.remove('hidden');
+            // Allow browser to register layout before animating
+            setTimeout(() => targetEl.classList.add('active-view'), 50);
+        }
 
-        // Active review session
-        activeDeckId: null,
-        activeDeckName: '',
-        session: null,
-        queue: [],           // original queue from server
-        localQueue: [],      // working queue (includes requeued errors)
-        localIndex: 0,       // current position in localQueue
-        revealed: false,
-        submitting: false,
-        reviewStartedAt: 0,
-        pairSelections: {},  // cardId -> { leftId: rightId }
-        pairEvaluation: null,
+        // Configure header back button
+        const backBtn = $('mcHeaderBackBtn');
+        if (viewName === 'library') {
+            backBtn.style.visibility = 'hidden';
+            $('mcHeaderSubtitle').textContent = t('microcards.subtitle_default', 'Повторение и обучение');
+        } else {
+            backBtn.style.visibility = 'visible';
+        }
 
-        // Session stats (client-side tracking)
-        sessionStartedAt: 0,
-        sessionStats: { total: 0, correct: 0, errors: 0, again: 0, hard: 0, good: 0, easy: 0 },
-        requeuedCardIds: new Set(), // cards that have been requeued at least once
-
-        // Current view: 'decks' | 'review' | 'summary'
-        view: 'decks',
-    };
-
-    // ── View Switching ────────────────────────────────────────────────────
-    function switchView(v) {
-        state.view = v;
-        hide($('mcViewDeckList'));
-        hide($('mcViewReview'));
-        hide($('mcViewSummary'));
-        if (v === 'decks') show($('mcViewDeckList'));
-        else if (v === 'review') show($('mcViewReview'));
-        else if (v === 'summary') show($('mcViewSummary'));
-
-        // Header progress
-        if (v === 'review') {
-            show($('mcHeaderProgress'));
+        // Show/hide progress tracker in header
+        const headerProgress = $('mcHeaderProgress');
+        if (viewName === 'session') {
+            headerProgress.classList.remove('hidden');
+            headerProgress.classList.add('flex');
             updateHeaderProgress();
         } else {
-            hide($('mcHeaderProgress'));
+            headerProgress.classList.add('hidden');
+            headerProgress.classList.remove('flex');
         }
 
-        // Header subtitle
-        const subtitle = $('mcHeaderSubtitle');
-        if (subtitle) {
-            if (v === 'review') subtitle.textContent = state.activeDeckName || wt('microcards.subtitle_session', 'Сессия повторения');
-            else if (v === 'summary') subtitle.textContent = wt('microcards.subtitle_summary', 'Результаты сессии');
-            else subtitle.textContent = wt('microcards.subtitle_default', 'Повторение и обучение');
+        // Dropdowns clean up
+        $('deckActionsDropdown').classList.add('hidden');
+    }
+
+    function handleBackNavigation() {
+        if (state.view === 'details') {
+            loadLibraryData();
+        } else if (state.view === 'session') {
+            abortSession();
+        } else if (state.view === 'summary') {
+            switchView('details');
+        } else if (state.view === 'editor') {
+            switchView('details');
         }
     }
 
-    function updateHeaderProgress() {
-        const total = state.localQueue.length;
-        const done = Math.min(state.localIndex, total);
-        const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-        const txt = $('mcHeaderProgressText');
-        const bar = $('mcHeaderProgressBar');
-        if (txt) txt.textContent = done + '/' + total;
-        if (bar) bar.style.width = pct + '%';
-    }
-
-    // ── Feature Flags ─────────────────────────────────────────────────────
-    async function loadFeatureFlags() {
+    // ── API Service Calls ─────────────────────────────────────────────────
+    async function apiCall(url, options = {}) {
         try {
-            const resp = await fetch('/api/editor/theory/rollout/status');
+            const resp = await fetch(url, options);
             const data = await resp.json();
-            if (data.ok && data.rollout && data.rollout.feature_flags) {
-                const ff = data.rollout.feature_flags;
-                state.featureFlags.microcards_mode = ff.microcards_mode !== false;
-                state.featureFlags.microcards_pair_match = ff.microcards_pair_match !== false;
+            if (!data.ok) {
+                throw new Error(data.error || 'API Error');
             }
-        } catch (e) {
-            console.warn('[Microcards] Failed to load feature flags:', e);
+            return data;
+        } catch (err) {
+            showToast(err.message, 'error');
+            throw err;
         }
-        // M14: Load microcards productization rollout flags
+    }
+
+    // ── Library Screen ────────────────────────────────────────────────────
+    async function loadLibraryData() {
+        switchView('library');
+        const grid = $('decksGrid');
+        grid.innerHTML = '<div class="col-span-full py-8 text-center text-xs text-text-secondary">Загрузка колод...</div>';
+        
         try {
-            const resp2 = await fetch('/api/microcards/rollout/status');
-            const data2 = await resp2.json();
-            if (data2.ok && data2.rollout && data2.rollout.effective_feature_flags) {
-                const pf = data2.rollout.effective_feature_flags;
-                Object.keys(state.prodFlags).forEach(key => {
-                    if (Object.prototype.hasOwnProperty.call(pf, key)) {
-                        state.prodFlags[key] = pf[key] !== false;
-                    }
-                });
-            }
-        } catch (e) {
-            console.warn('[Microcards] Failed to load prod rollout flags:', e);
+            const data = await apiCall('/api/v2/microcards/decks');
+            state.decks = data.items || [];
+            renderLibrary();
+        } catch (err) {
+            grid.innerHTML = '<div class="col-span-full py-8 text-center text-xs text-error">Не удалось загрузить библиотеку.</div>';
         }
     }
 
-    // M14: Telemetry helper — fire-and-forget POST to runtime telemetry endpoint
-    function emitProdTelemetry(eventName, fields) {
-        try {
-            fetch('/api/microcards/runtime/telemetry', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ event: eventName, fields: fields || {} }),
-            }).catch(() => { });
-        } catch (_) { /* fire-and-forget */ }
-    }
+    function renderLibrary() {
+        const grid = $('decksGrid');
+        const empty = $('decksEmpty');
+        grid.innerHTML = '';
 
-    // ── Data Loading ──────────────────────────────────────────────────────
-    async function loadSummary() {
-        try {
-            const resp = await fetch('/api/microcards/summary');
-            const data = await resp.json();
-            if (data.ok) {
-                state.summary = data;
-                renderSummaryStrip(data);
-                renderStreakBadge(data);
-            } else {
-                state.summary = null;
-                resetSummaryStrip();
-            }
-        } catch (e) {
-            console.warn('[Microcards] summary fetch failed:', e);
-            state.summary = null;
-            resetSummaryStrip();
-        }
-    }
+        const searchQuery = $('libSearch').value.toLowerCase().trim();
+        const filtered = state.decks.filter(d => d.name.toLowerCase().includes(searchQuery));
 
-    function renderSummaryStrip(data) {
-        const qs = data.queue_summary || {};
-        const today = data.today || {};
-        const el = (id, val) => { const e = $(id); if (e) e.textContent = val; };
-        el('mcSummaryDue', String(qs.cards_due_total ?? 0));
-        el('mcSummaryNew', String(qs.cards_new_total ?? 0));
-        const todayReviews = Number(today.reviews || 0);
-        const todayCR = today.correct_rate;
-        const todayText = String(todayReviews)
-            + (Number.isFinite(todayCR) ? ' · ' + Math.round(todayCR * 100) + '%' : '');
-        el('mcSummaryToday', todayText);
-    }
+        // Update stats
+        let totalDue = 0;
+        let totalNew = 0;
+        state.decks.forEach(d => {
+            totalDue += d.due_count || 0;
+            totalNew += d.new_count || 0;
+        });
+        $('libStatDue').textContent = totalDue;
+        $('libStatNew').textContent = totalNew;
+        $('libStatTotal').textContent = state.decks.length;
 
-    function renderStreakBadge(data) {
-        const streak = data.activity_streak_days ?? data.streak_days ?? null;
-        const el = $('mcStreakDays');
-        if (el) el.textContent = streak != null ? String(streak) : '—';
-
-        const badge = $('mcStreakBadge');
-        if (badge && streak != null) {
-            badge.classList.remove('mc-streak-warm', 'mc-streak-hot', 'mc-streak-epic');
-            if (streak >= 21) {
-                badge.classList.add('mc-streak-epic');
-            } else if (streak >= 7) {
-                badge.classList.add('mc-streak-hot');
-            } else if (streak >= 1) {
-                badge.classList.add('mc-streak-warm');
-            }
-        }
-    }
-
-    function resetSummaryStrip() {
-        const el = (id, val) => { const e = $(id); if (e) e.textContent = val; };
-        el('mcSummaryDue', '0');
-        el('mcSummaryNew', '0');
-        el('mcSummaryToday', '—');
-        el('mcStreakDays', '—');
-
-        const badge = $('mcStreakBadge');
-        if (badge) {
-            badge.classList.remove('mc-streak-warm', 'mc-streak-hot', 'mc-streak-epic');
-        }
-    }
-
-    function showModeInProgress() {
-        const subtitle = $('mcHeaderSubtitle');
-        if (subtitle) subtitle.textContent = wt('microcards.mode_wip_title', 'Функционал в разработке');
-        const grid = $('mcDeckGrid');
-        const loading = $('mcDeckLoading');
-        const error = $('mcDeckError');
-        const empty = $('mcDeckEmpty');
-        hide(grid);
-        hide(loading);
-        hide(error);
-        if (empty) {
-            const textBlocks = empty.querySelectorAll('p');
-            const editorLink = empty.querySelector('a[href="/editor"]');
-            if (textBlocks[0]) textBlocks[0].textContent = wt('microcards.mode_wip_title', 'Функционал в разработке');
-            if (textBlocks[1]) textBlocks[1].textContent = wt('microcards.mode_wip_desc', 'Микрокарточки временно скрыты из продукта. Вернём этот режим после следующего этапа доработки.');
-            if (editorLink) editorLink.classList.add('hidden');
-            show(empty);
-        }
-        resetSummaryStrip();
-    }
-
-    async function loadDecks() {
-        state.decksLoading = true;
-        state.decksError = '';
-        renderDeckListState();
-        try {
-            const resp = await fetch('/api/editor/microcards/decks?limit=100');
-            const data = await resp.json();
-            if (data.ok) {
-                state.decks = Array.isArray(data.items) ? data.items : [];
-                state.decksError = '';
-            } else {
-                state.decks = [];
-                state.decksError = data.message || data.error || wt('microcards.error_load_decks', 'Не удалось загрузить колоды');
-            }
-        } catch (e) {
-            console.error('[Microcards] loadDecks failed:', e);
-            state.decks = [];
-            state.decksError = wt('microcards.error_network_decks', 'Ошибка сети при загрузке колод');
-        } finally {
-            state.decksLoading = false;
-            renderDeckListState();
-            renderDeckGrid();
-        }
-    }
-
-    // ── Deck List Rendering ───────────────────────────────────────────────
-    function renderDeckListState() {
-        const grid = $('mcDeckGrid');
-        const loading = $('mcDeckLoading');
-        const empty = $('mcDeckEmpty');
-        const error = $('mcDeckError');
-        const filteredDecks = getFilteredDecks();
-        const ownershipScopedTotal = Array.isArray(state.decks)
-            ? state.decks.filter((deck) => matchesDeckOwnershipFilter(deck)).length
-            : 0;
-
-        hide(grid); hide(loading); hide(empty); hide(error);
-
-        if (state.decksLoading) {
-            show(loading);
-        } else if (state.decksError) {
-            show(error);
-            const errText = $('mcDeckErrorText');
-            if (errText) errText.textContent = state.decksError;
-        } else if (!state.decks.length) {
-            setDeckEmptyMessage(
-                wt('microcards.empty_title', 'Нет колод микрокарточек'),
-                wt('microcards.empty_desc', 'Создайте колоду из анализа теории в редакторе или воспользуйтесь ручным созданием.'),
-            );
-            show(empty);
-        } else if (!filteredDecks.length) {
-            setDeckEmptyMessage(
-                wt('microcards.empty_filter_title', 'По этому фильтру колод нет'),
-                wt('microcards.empty_filter_desc', 'Снимите часть ограничений или измените поисковый запрос, чтобы увидеть другие колоды.'),
-            );
-            show(empty);
-        } else {
-            show(grid);
-        }
-
-        updateDeckFilterHint(filteredDecks.length, ownershipScopedTotal || state.decks.length);
-    }
-
-    function renderDeckGrid() {
-        const grid = $('mcDeckGrid');
-        const decks = getFilteredDecks();
-        if (!grid) return;
-        if (!decks.length) {
-            grid.innerHTML = '';
+        if (filtered.length === 0) {
+            empty.classList.remove('hidden');
             return;
         }
+        empty.classList.add('hidden');
 
-        const mostUrgentDeckId = getMostUrgentDeckId(decks);
+        filtered.forEach(deck => {
+            const card = document.createElement('div');
+            card.className = 'glass-card p-5 flex flex-col justify-between cursor-pointer';
+            card.onclick = () => openDeckDetails(deck.id);
 
-        // Pre-compute translations for use inside map (avoid repeated wt() calls)
-        const tDueSuffix = escHtml(wt('microcards.deck_due_suffix', 'к повтору'));
-        const tDoneBadge = escHtml(wt('microcards.deck_done_badge', 'всё пройдено'));
-        const tUrgentBadge = escHtml(wt('microcards.deck_urgent_badge', 'Самое срочное'));
-        const tNewSuffix = escHtml(wt('microcards.deck_new_suffix', 'новых'));
-        const tBtnRepeat = escHtml(wt('microcards.deck_btn_repeat', 'Повторять'));
-        const tBtnOpen = escHtml(wt('microcards.deck_btn_open', 'Открыть'));
-        const tRestartTitle = escHtml(wt('microcards.deck_restart_title', 'Начать сессию заново'));
-        const tUpdatedRecently = wt('microcards.deck_updated_recently', 'обновлена недавно');
-
-        grid.innerHTML = decks.map(deck => {
-            const rawId = String(deck.id || '');
-            const idJs = escJsString(rawId);
-            const name = escHtml(String(deck.name || deck.id || wt('microcards.deck_name_fallback', 'Колода')));
-            const stats = deck.stats || {};
-            const due = Number(stats.cards_due ?? 0);
-            const newCards = Number(stats.cards_new ?? 0);
-            const total = Number(stats.cards_total ?? 0);
-            const hasDue = due > 0 || newCards > 0;
-            const borderClass = hasDue ? 'border-primary-light hover:border-primary' : 'border-border-strong hover:border-border-strong';
-            const isMostUrgent = rawId && rawId === mostUrgentDeckId && getDeckPriorityScore(deck) > 0;
-            const topicLabel = getDeckTopicLabel(deck);
-            const ownershipBadges = renderDeckOwnershipBadges(deck);
-            const metaHintParts = [];
-            if (topicLabel) metaHintParts.push(topicLabel);
-            if (isDeckRecent(deck)) metaHintParts.push(tUpdatedRecently);
-            const metaHint = escHtml(metaHintParts.join(' · '));
-            const dueBadge = hasDue
-                ? `<span class="inline-flex self-start shrink-0 items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary-lighter text-primary border border-primary-light">${due + newCards} ${tDueSuffix}</span>`
-                : `<span class="inline-flex self-start shrink-0 items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-2 text-text-secondary border border-border-subtle">${tDoneBadge}</span>`;
-
-            const urgentBadge = isMostUrgent
-                ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-warning-lighter text-warning-text border border-warning-light">
-                        <span class="material-symbols-outlined text-[12px]">priority_high</span>
-                        ${tUrgentBadge}
-                   </span>`
-                : '';
-
-            return `
-                <div class="mc-deck-card rounded-xl border ${borderClass} bg-surface-1 p-4 transition-all cursor-pointer hover:shadow-md hover:-translate-y-0.5 group"
-                     onclick="mcApp.openDeck('${idJs}')">
-                    <div class="mc-deck-header flex flex-wrap items-start justify-between gap-2 mb-3">
-                        <div class="min-w-0 flex-1">
-                            <h3 class="mc-deck-title text-sm font-bold text-text-main group-hover:text-primary transition-colors" title="${name}">${name}</h3>
-                            ${metaHint ? `<p class="mc-deck-meta mt-1 text-[11px] text-text-secondary" title="${metaHint}">${metaHint}</p>` : ''}
-                            ${ownershipBadges ? `<div class="mc-deck-badges mt-2 flex flex-wrap gap-1">${ownershipBadges}</div>` : ''}
-                        </div>
-                        ${dueBadge}
-                    </div>
-                    ${urgentBadge ? `<div class="mb-3">${urgentBadge}</div>` : ''}
-                    <div class="mc-deck-stats flex flex-wrap items-center gap-2 text-[11px] text-text-secondary">
-                        <span class="flex items-center gap-1">
-                            <span class="material-symbols-outlined text-[14px]">pending_actions</span>
-                            ${escHtml(due)} ${tDueSuffix}
-                        </span>
-                        <span class="flex items-center gap-1">
-                            <span class="material-symbols-outlined text-[14px]">fiber_new</span>
-                            ${escHtml(newCards)} ${tNewSuffix}
-                        </span>
-                        <span class="flex items-center gap-1">
-                            <span class="material-symbols-outlined text-[14px]">layers</span>
-                            ${escHtml(total)}
-                        </span>
-                    </div>
-                    <div class="mt-3 flex gap-2">
-                        <button type="button"
-                            onclick="event.stopPropagation(); mcApp.openDeck('${idJs}')"
-                            class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold rounded-lg ${hasDue ? 'bg-primary text-primary-fg hover:bg-primary-hover' : 'bg-surface-2 text-text-secondary hover:bg-bg-hover'} transition-colors">
-                            <span class="material-symbols-outlined text-[16px]">play_arrow</span>
-                            ${hasDue ? tBtnRepeat : tBtnOpen}
-                        </button>
-                        <button type="button"
-                            onclick="event.stopPropagation(); mcApp.openDeck('${idJs}', { restart: true })"
-                            class="flex items-center justify-center gap-1 px-2.5 py-2 text-xs font-semibold rounded-lg border border-border-strong text-text-secondary hover:bg-bg-hover transition-colors"
-                            title="${tRestartTitle}">
-                            <span class="material-symbols-outlined text-[14px]">restart_alt</span>
-                        </button>
+            const tagsHtml = (deck.tags || []).map(t => `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold border border-border-subtle bg-surface-2 text-text-secondary">${escHtml(t)}</span>`).join('');
+            
+            card.innerHTML = `
+                <div>
+                    <h3 class="font-extrabold text-base text-text-main mb-1 line-clamp-1">${escHtml(deck.name)}</h3>
+                    <p class="text-xs text-text-secondary mb-4 line-clamp-2">${escHtml(deck.description || 'Описание отсутствует.')}</p>
+                    <div class="flex flex-wrap gap-1 mb-4">${tagsHtml}</div>
+                </div>
+                <div class="flex items-center justify-between pt-3 border-t border-border-subtle">
+                    <span class="text-xs text-text-secondary">Карточек: <strong class="text-text-main">${deck.card_count}</strong></span>
+                    <div class="flex gap-2">
+                        ${deck.due_count > 0 ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-error/10 border border-error/20 text-error">${deck.due_count} к повтору</span>` : ''}
+                        ${deck.new_count > 0 ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-info/10 border border-info/20 text-info">${deck.new_count} новых</span>` : ''}
                     </div>
                 </div>
             `;
-        }).join('');
+            grid.appendChild(card);
+        });
     }
 
-    // ── Queue / Session ───────────────────────────────────────────────────
-    async function openDeck(deckId, options) {
-        const id = String(deckId || '').trim();
-        if (!id) return;
-        const restart = !!(options && options.restart);
+    function openCreateDeckDialog() {
+        $('createDeckName').value = '';
+        $('createDeckDesc').value = '';
+        $('dialogCreateDeck').showModal();
+    }
 
-        state.activeDeckId = id;
-        state.revealed = false;
-        state.submitting = false;
-        state.pairSelections = {};
-        state.pairEvaluation = null;
-        state.sessionStats = { total: 0, correct: 0, errors: 0, again: 0, hard: 0, good: 0, easy: 0 };
-        state.requeuedCardIds = new Set();
-        state.sessionStartedAt = Date.now();
-
-        switchView('review');
-        renderCardLoading();
+    async function handleCreateDeckSubmit(e) {
+        e.preventDefault();
+        const name = $('createDeckName').value.trim();
+        const description = $('createDeckDesc').value.trim();
+        if (!name) return;
 
         try {
-            const params = new URLSearchParams({ limit: '100' });
-            if (restart) params.set('restart', '1');
-            const resp = await fetch(`/api/editor/microcards/decks/${encodeURIComponent(id)}/queue?${params.toString()}`);
-            const data = await resp.json();
-            if (data.ok) {
-                state.activeDeckName = data.deck?.name || id;
-                state.session = data.session || null;
-                state.queue = Array.isArray(data.queue) ? data.queue : [];
-                // Build local queue (clone) for work-on-errors support
-                state.localQueue = state.queue.map(c => ({ ...c, _requeued: false }));
-                state.localIndex = Math.max(0, Number(data.cursor) || 0);
-                state.reviewStartedAt = Date.now();
+            const result = await apiCall('/api/v2/microcards/decks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, description })
+            });
+            $('dialogCreateDeck').close();
+            showToast('Колода успешно создана!', 'success');
+            openDeckDetails(result.deck.id);
+        } catch (err) {
+            console.error(err);
+        }
+    }
 
-                // M14: emit session started telemetry
-                emitProdTelemetry('microcards_runtime_session_started', {
-                    deck_id: id,
-                    restart: restart,
-                    queue_count: state.localQueue.length,
-                    session_id: (state.session || {}).id || null,
-                });
+    // ── Deck Details Screen ───────────────────────────────────────────────
+    async function openDeckDetails(deckId) {
+        state.activeDeckId = deckId;
+        switchView('details');
+        
+        try {
+            const data = await apiCall(`/api/v2/microcards/decks/${deckId}`);
+            state.activeDeck = data.deck;
+            
+            // Set details fields
+            $('deckDetailsTitle').textContent = state.activeDeck.name;
+            $('deckDetailsDesc').textContent = state.activeDeck.description || 'Описание отсутствует.';
+            $('mcHeaderSubtitle').textContent = state.activeDeck.name;
+            
+            // Render tags
+            const tagsZone = $('deckDetailsTags');
+            tagsZone.innerHTML = '';
+            (state.activeDeck.tags || []).forEach(t => {
+                const badge = document.createElement('span');
+                badge.className = 'px-2.5 py-0.5 rounded-full text-xs font-bold border border-border-subtle bg-surface-2 text-text-secondary';
+                badge.textContent = t;
+                tagsZone.appendChild(badge);
+            });
 
-                const el = $('mcReviewDeckName');
-                if (el) el.textContent = state.activeDeckName;
+            // Load cards
+            const cardsData = await apiCall(`/api/v2/microcards/decks/${deckId}/cards`);
+            state.cards = cardsData.items || [];
+            
+            // Calculate progress by level
+            let l1 = 0, l2 = 0;
+            state.cards.forEach(c => {
+                // Determine level from local user stats if available, or default to level 1
+                const lvl = c.level || 1;
+                if (lvl === 1) l1++;
+                else if (lvl === 2) l2++;
+            });
 
-                renderCurrentCard();
-            } else {
-                showToast(data.message || data.error || wt('microcards.error_open_deck', 'Не удалось открыть колоду'), 'error');
-                backToDecks();
+            $('progressL1Count').textContent = l1;
+            $('progressL2Count').textContent = l2;
+            $('deckTotalCardsCount').textContent = state.cards.length;
+            $('deckCardsCountBadge').textContent = state.cards.length;
+
+            const total = state.cards.length || 1;
+            $('progressL1Bar').style.width = `${(l1 / total) * 100}%`;
+            $('progressL2Bar').style.width = `${(l2 / total) * 100}%`;
+
+            renderDeckCardsList();
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    function renderDeckCardsList() {
+        const container = $('deckCardsListContainer');
+        container.innerHTML = '';
+
+        if (state.cards.length === 0) {
+            container.innerHTML = '<div class="py-8 text-center text-xs text-text-secondary border border-dashed border-border-strong rounded-xl">В колоде пока нет карточек.</div>';
+            return;
+        }
+
+        state.cards.forEach(card => {
+            const item = document.createElement('div');
+            item.className = 'p-4 bg-surface-1 rounded-xl border border-border-subtle flex flex-col md:flex-row md:items-center justify-between gap-3';
+            
+            const hintHtml = card.hint ? `<p class="text-xs italic text-text-muted mt-1">Подсказка: ${escHtml(card.hint)}</p>` : '';
+            
+            item.innerHTML = `
+                <div class="flex-1">
+                    <p class="text-sm font-extrabold text-text-main">${escHtml(card.front.text)}</p>
+                    <p class="text-xs text-text-secondary mt-1">${escHtml(card.back.text)}</p>
+                    ${hintHtml}
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="px-2 py-0.5 rounded-md text-[10px] font-bold border border-border-subtle bg-surface-2 text-text-secondary">Уровень ${card.level || 1}</span>
+                    <button type="button" onclick="mcApp.openCardEditor('${card.id}')" class="p-2 rounded-lg border border-border-strong hover:bg-bg-hover text-text-secondary hover:text-primary transition-colors flex items-center justify-center">
+                        <span class="material-symbols-outlined text-[16px]">edit</span>
+                    </button>
+                </div>
+            `;
+            container.appendChild(item);
+        });
+    }
+
+    function toggleDeckActionsMenu(e) {
+        e.stopPropagation();
+        const menu = $('deckActionsDropdown');
+        menu.classList.toggle('hidden');
+    }
+
+    // Close actions dropdown on outer click
+    document.addEventListener('click', () => {
+        $('deckActionsDropdown').classList.add('hidden');
+    });
+
+    async function exportDeck(format) {
+        const url = `/api/v2/microcards/decks/${state.activeDeckId}/export/${format}`;
+        window.open(url, '_blank');
+        showToast('Экспорт запущен!', 'success');
+    }
+
+    function confirmDeleteDeck() {
+        $('deleteConfirmText').textContent = `Вы действительно хотите удалить колоду "${state.activeDeck.name}"? Это действие сотрет все карточки и ваш прогресс по ним.`;
+        const btn = $('btnDeleteConfirmAction');
+        btn.onclick = async () => {
+            try {
+                await apiCall(`/api/v2/microcards/decks/${state.activeDeckId}`, { method: 'DELETE' });
+                $('dialogConfirmDelete').close();
+                showToast('Колода успешно удалена', 'success');
+                loadLibraryData();
+            } catch (err) {
+                console.error(err);
             }
-        } catch (e) {
-            console.error('[Microcards] openDeck failed:', e);
-            showToast(wt('microcards.error_network_open', 'Ошибка сети при открытии колоды'), 'error');
-            backToDecks();
+        };
+        $('dialogConfirmDelete').showModal();
+    }
+
+    // ── Learning Session Screen ───────────────────────────────────────────
+    async function startLearningSession(errorsOnly = false) {
+        state.isErrorsOnlyMode = errorsOnly;
+        switchView('session');
+
+        try {
+            if (errorsOnly) {
+                // Initialize queue with failed cards from current session stats
+                state.sessionCards = state.sessionErrors.map(id => state.cards.find(c => c.id === id)).filter(Boolean);
+                state.sessionStats = { total: state.sessionCards.length, correct: 0, errors: 0 };
+                state.sessionErrors = [];
+                state.sessionIndex = 0;
+                setupCurrentCard();
+            } else {
+                const data = await apiCall(`/api/v2/microcards/decks/${state.activeDeckId}/session/start`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ resume: true, restart: true })
+                });
+                state.session = data.session;
+                
+                // Map queue IDs to full card payloads
+                state.sessionCards = (state.session.card_queue || []).map(id => state.cards.find(c => c.id === id)).filter(Boolean);
+                state.sessionStats = { total: state.sessionCards.length, correct: 0, errors: 0 };
+                state.sessionErrors = [];
+                state.sessionIndex = 0;
+                
+                setupCurrentCard();
+            }
+        } catch (err) {
+            switchView('details');
         }
     }
 
-    function renderCardLoading() {
-        hide($('mcCardContent'));
-        hide($('mcCardEmpty'));
-        show($('mcCardLoading'));
-    }
-
-    function getCurrentCard() {
-        if (state.localIndex >= 0 && state.localIndex < state.localQueue.length) {
-            return state.localQueue[state.localIndex];
+    function setupCurrentCard() {
+        if (state.sessionIndex >= state.sessionCards.length) {
+            finishSession();
+            return;
         }
-        return null;
-    }
 
-    // ── Card Rendering ────────────────────────────────────────────────────
-    function renderCurrentCard() {
-        const card = getCurrentCard();
-        hide($('mcCardLoading'));
+        const card = state.sessionCards[state.sessionIndex];
+        
+        // Reset card face state
+        $('flashcardInner').classList.remove('flipped');
+        
+        // Load text and images
+        $('cardFrontText').textContent = card.front.text;
+        $('cardBackText').textContent = card.back.text;
+        
+        if (card.hint) {
+            $('btnShowHint').classList.remove('hidden');
+            $('cardHintText').classList.add('hidden');
+            $('cardHintText').textContent = card.hint;
+        } else {
+            $('btnShowHint').classList.add('hidden');
+            $('cardHintText').classList.add('hidden');
+        }
+
+        // Front Image
+        const frontImg = $('cardFrontImage');
+        if (card.front.image_url) {
+            frontImg.src = card.front.image_url;
+            frontImg.classList.remove('hidden');
+        } else {
+            frontImg.classList.add('hidden');
+        }
+
+        // Back Image
+        const backImg = $('cardBackImage');
+        if (card.back.image_url) {
+            backImg.src = card.back.image_url;
+            backImg.classList.remove('hidden');
+        } else {
+            backImg.classList.add('hidden');
+        }
+
+        // Set Level Indicator
+        const level = card.level || 1;
+        const levelInd = $('sessionLevelIndicator');
+        levelInd.textContent = level === 1 ? 'Уровень 1: Знаю / Не знаю' : 'Уровень 2: Открытый ответ';
+        levelInd.className = `px-3 py-1 rounded-full text-xs font-bold border ${level === 1 ? 'bg-warning/10 border-warning/30 text-warning' : 'bg-success/10 border-success/30 text-success'}`;
+
+        // Reset UI actions
+        if (level === 1) {
+            $('frontActionsL1').classList.remove('hidden');
+            $('frontActionsL2').classList.add('hidden');
+            $('backActionsL1').classList.remove('hidden');
+            $('backActionsL2').classList.add('hidden');
+        } else {
+            $('frontActionsL1').classList.add('hidden');
+            $('frontActionsL2').classList.remove('hidden');
+            $('backActionsL1').classList.add('hidden');
+            $('backActionsL2').classList.remove('hidden');
+            $('inputL2Answer').value = '';
+            $('inputL2Answer').focus();
+        }
+
+        $('l2ComparisonZone').classList.add('hidden');
+        $('btnL2Override').classList.add('hidden');
 
         updateHeaderProgress();
-        updateReviewProgress();
+    }
 
-        if (!card) {
-            // Session complete
-            hide($('mcCardContent'));
-            if (state.sessionStats.total > 0) {
-                showSessionSummary();
+    function toggleHint() {
+        const hintText = $('cardHintText');
+        hintText.classList.toggle('hidden');
+    }
+
+    function revealAnswerL1() {
+        $('flashcardInner').classList.add('flipped');
+    }
+
+    async function submitAnswerL1(know) {
+        const card = state.sessionCards[state.sessionIndex];
+        const ratingValue = know ? 'know' : 'dont_know';
+        
+        try {
+            // Update stats locally
+            if (know) {
+                state.sessionStats.correct++;
             } else {
-                show($('mcCardEmpty'));
+                state.sessionStats.errors++;
+                if (!state.sessionErrors.includes(card.id)) {
+                    state.sessionErrors.push(card.id);
+                }
             }
-            return;
+
+            // Sync with backend if not errors-only offline review
+            if (state.session && !state.isErrorsOnlyMode) {
+                await apiCall(`/api/v2/microcards/session/${state.session.id}/answer`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ card_id: card.id, user_answer: ratingValue })
+                });
+            }
+
+            state.sessionIndex++;
+            setupCurrentCard();
+        } catch (err) {
+            console.error(err);
         }
+    }
 
-        show($('mcCardContent'));
-        hide($('mcCardEmpty'));
+    async function submitAnswerL2(e) {
+        if (e) e.preventDefault();
+        const card = state.sessionCards[state.sessionIndex];
+        const answer = $('inputL2Answer').value.trim();
 
-        const cardType = String(card.card_type || 'fact_recall');
-        const isPair = cardType === 'pair_match' && state.featureFlags.microcards_pair_match;
-        const front = (card.front && typeof card.front === 'object') ? card.front : {};
-        const back = (card.back && typeof card.back === 'object') ? card.back : {};
-        const frontText = String(front.text || '').trim() || wt('microcards.card_fallback', 'Карточка');
+        try {
+            let isCorrect = false;
+            let expected = card.back.text;
+            let cardState = null;
 
-        // Type badge
-        const badge = $('mcCardTypeBadge');
-        if (badge) badge.textContent = getCardTypeLabel(cardType);
+            if (state.session && !state.isErrorsOnlyMode) {
+                const result = await apiCall(`/api/v2/microcards/session/${state.session.id}/answer`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ card_id: card.id, user_answer: answer })
+                });
+                isCorrect = result.is_correct;
+                expected = result.expected_answer;
+                cardState = result.card_state;
+            } else {
+                // Offline fallback math
+                isCorrect = answer.toLowerCase() === expected.toLowerCase();
+            }
 
-        // Requeue badge
-        const reqBadge = $('mcCardRequeueBadge');
-        if (reqBadge) {
-            if (card._requeued) show(reqBadge); else hide(reqBadge);
+            // Flip card and show details
+            $('flashcardInner').classList.add('flipped');
+            $('l2ComparisonZone').classList.remove('hidden');
+            $('l2UserAnswerDisplay').textContent = answer || '(пусто)';
+            $('l2CorrectAnswerDisplay').textContent = expected;
+
+            const badge = $('answerEvaluationBadge');
+            badge.classList.remove('hidden');
+            if (isCorrect) {
+                badge.textContent = 'Верно';
+                badge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border bg-success/15 border-success text-success';
+                state.sessionStats.correct++;
+                $('btnL2Override').classList.add('hidden');
+            } else {
+                badge.textContent = 'Ошибка';
+                badge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border bg-error/15 border-error text-error';
+                state.sessionStats.errors++;
+                if (!state.sessionErrors.includes(card.id)) {
+                    state.sessionErrors.push(card.id);
+                }
+                $('btnL2Override').classList.remove('hidden');
+            }
+
+            // Update level locally
+            if (cardState) {
+                card.level = cardState.level;
+            }
+
+        } catch (err) {
+            console.error(err);
         }
+    }
 
-        // Front text
-        const frontEl = $('mcCardFront');
-        if (frontEl) frontEl.textContent = frontText;
+    async function overrideL2Answer() {
+        const card = state.sessionCards[state.sessionIndex];
+        const answer = $('inputL2Answer').value.trim();
 
-        // Pair match area
-        const pairArea = $('mcPairMatchArea');
-        if (isPair) {
-            show(pairArea);
-            renderPairMatchUI(card);
+        try {
+            if (state.session && !state.isErrorsOnlyMode) {
+                await apiCall(`/api/v2/microcards/session/${state.session.id}/answer`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ card_id: card.id, user_answer: answer, override: true })
+                });
+            }
+
+            // Update stats
+            state.sessionStats.errors = Math.max(0, state.sessionStats.errors - 1);
+            state.sessionStats.correct++;
+            
+            const idx = state.sessionErrors.indexOf(card.id);
+            if (idx !== -1) {
+                state.sessionErrors.splice(idx, 1);
+            }
+
+            // Update UI
+            const badge = $('answerEvaluationBadge');
+            badge.textContent = 'Исправлено';
+            badge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border bg-warning/15 border-warning text-warning';
+            $('btnL2Override').classList.add('hidden');
+
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    function nextCard() {
+        state.sessionIndex++;
+        setupCurrentCard();
+    }
+
+    function abortSession() {
+        if (confirm('Вы уверены, что хотите выйти из сессии? Прогресс текущих ответов не сохранится.')) {
+            switchView('details');
+        }
+    }
+
+    // ── Session Summary Screen ────────────────────────────────────────────
+    function finishSession() {
+        switchView('summary');
+        
+        $('sumStatTotal').textContent = state.sessionStats.total;
+        $('sumStatCorrect').textContent = state.sessionStats.correct;
+        $('sumStatErrors').textContent = state.sessionStats.errors;
+
+        // Configure "Работа над ошибками" button
+        const retryBtn = $('btnRetryErrors');
+        if (state.sessionErrors.length > 0) {
+            retryBtn.classList.remove('hidden');
         } else {
-            hide(pairArea);
+            retryBtn.classList.add('hidden');
         }
 
-        // Reset reveal
-        state.revealed = false;
-        state.pairEvaluation = null;
-        state.reviewStartedAt = Date.now();
-        hide($('mcRevealArea'));
-        hide($('mcCardBack'));
-        hide($('mcPairResult'));
+        // Render errors list
+        const errorsList = $('summaryErrorsList');
+        const errorsSection = $('summaryErrorsSection');
+        errorsList.innerHTML = '';
 
-        // Action buttons
-        show($('mcActionsPreReveal'));
-        hide($('mcActionsPostReveal'));
-
-        // Update reveal button text
-        const revealBtn = $('mcBtnReveal');
-        if (revealBtn) {
-            revealBtn.textContent = isPair ? wt('microcards.btn_check_pairs', 'Проверить пары') : wt('microcards.btn_reveal', 'Показать ответ');
-            // M13: auto-focus reveal button for keyboard flow
-            requestAnimationFrame(() => revealBtn.focus({ preventScroll: true }));
-        }
-
-        // Glow animation for card area
-        const cardArea = $('mcCardArea');
-        if (cardArea) {
-            cardArea.classList.remove('mc-glow-correct', 'mc-glow-incorrect');
-        }
-    }
-
-    function updateReviewProgress() {
-        const total = state.localQueue.length;
-        const done = Math.min(state.localIndex, total);
-        const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-
-        const progText = $('mcReviewProgress');
-        if (progText) progText.textContent = done + '/' + total;
-
-        const progBar = $('mcReviewProgressBar');
-        if (progBar) progBar.style.width = pct + '%';
-
-        // Requeue info
-        const requeueCount = state.localQueue.slice(state.localIndex).filter(c => c._requeued).length;
-        const reqInfo = $('mcReviewRequeueInfo');
-        const reqCount = $('mcReviewRequeueCount');
-        if (requeueCount > 0) {
-            show(reqInfo);
-            if (reqCount) reqCount.textContent = String(requeueCount);
-        } else {
-            hide(reqInfo);
-        }
-    }
-
-    // ── Pair Match UI ─────────────────────────────────────────────────────
-    function renderPairMatchUI(card) {
-        const grid = $('mcPairMatchGrid');
-        if (!grid) return;
-
-        const frontPayload = (card.front && typeof card.front.payload === 'object') ? card.front.payload : {};
-        const leftItems = Array.isArray(frontPayload.left_items) ? frontPayload.left_items : [];
-        const rightItems = Array.isArray(frontPayload.right_items) ? frontPayload.right_items : [];
-
-        if (!leftItems.length || !rightItems.length) {
-            grid.innerHTML = '<p class="text-xs text-text-secondary">' + escHtml(wt('microcards.pair_empty', 'pair_match данные пусты.')) + '</p>';
-            return;
-        }
-
-        const cardId = String(card.id || '');
-        const cardIdJs = escJsString(cardId);
-        if (!state.pairSelections[cardId]) state.pairSelections[cardId] = {};
-        const saved = state.pairSelections[cardId];
-
-        grid.innerHTML = leftItems.map(left => {
-            const leftId = String(left.id || '');
-            const leftIdJs = escJsString(leftId);
-            const currentVal = String(saved[leftId] || '');
-            const options = rightItems.map(right => {
-                const rid = String(right.id || '');
-                return `<option value="${escHtml(rid)}" ${currentVal === rid ? 'selected' : ''}>${escHtml(String(right.text || rid))}</option>`;
-            }).join('');
-
-            return `
-                <div class="flex flex-col sm:flex-row sm:items-center gap-2">
-                    <div class="flex-1 text-sm text-text-main px-3 py-2 rounded-lg border border-border-strong bg-surface-2" data-pair-left="${escHtml(leftId)}">${escHtml(String(left.text || leftId))}</div>
-                    <span class="hidden sm:block text-text-muted text-xs">→</span>
-                    <select onchange="mcApp.setPairSelection('${cardIdJs}','${leftIdJs}', this.value)"
-                        class="flex-1 rounded-lg border border-border-strong bg-surface-1 px-3 py-2 text-sm text-text-main focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all">
-                        <option value="">${escHtml(wt('microcards.pair_select_placeholder', 'Выберите...'))}</option>
-                        ${options}
-                    </select>
-                </div>
-            `;
-        }).join('');
-    }
-
-    function setPairSelection(cardId, leftId, rightId) {
-        if (!state.pairSelections[cardId]) state.pairSelections[cardId] = {};
-        state.pairSelections[cardId][leftId] = String(rightId || '');
-    }
-
-    // ── Reveal ────────────────────────────────────────────────────────────
-    function reveal() {
-        if (state.revealed || state.submitting) return;
-        const card = getCurrentCard();
-        if (!card) return;
-
-        const cardType = String(card.card_type || 'fact_recall');
-        const isPair = cardType === 'pair_match' && state.featureFlags.microcards_pair_match;
-
-        state.revealed = true;
-        show($('mcRevealArea'));
-
-        if (isPair) {
-            evaluatePairMatch(card);
-            show($('mcPairResult'));
-            hide($('mcCardBack'));
-        } else {
-            const back = (card.back && typeof card.back === 'object') ? card.back : {};
-            const backText = String(back.text || '').trim() || wt('microcards.answer_not_set', 'Ответ не указан');
-            const backEl = $('mcCardBackText');
-            if (backEl) backEl.textContent = backText;
-            show($('mcCardBack'));
-            hide($('mcPairResult'));
-        }
-
-        hide($('mcActionsPreReveal'));
-        show($('mcActionsPostReveal'));
-        setRatingButtonsEnabled(true);
-
-        // M13: auto-focus Good button for keyboard flow (most common rating)
-        requestAnimationFrame(() => {
-            const goodBtn = $('mcBtnGood');
-            if (goodBtn) goodBtn.focus({ preventScroll: true });
-        });
-    }
-
-    function evaluatePairMatch(card) {
-        const cardId = String(card.id || '');
-        const saved = state.pairSelections[cardId] || {};
-        const frontPayload = (card.front && typeof card.front.payload === 'object') ? card.front.payload : {};
-        const backPayload = (card.back && typeof card.back.payload === 'object') ? card.back.payload : {};
-        const pairs = Array.isArray(backPayload.pairs) ? backPayload.pairs : [];
-        const exps = Array.isArray(backPayload.explanations) ? backPayload.explanations : [];
-
-        // Build ID→text lookup maps from front payload
-        const leftItems = Array.isArray(frontPayload.left_items) ? frontPayload.left_items : [];
-        const rightItems = Array.isArray(frontPayload.right_items) ? frontPayload.right_items : [];
-        const leftTextById = new Map(leftItems.map(i => [String(i.id || ''), String(i.text || i.id || '')]));
-        const rightTextById = new Map(rightItems.map(i => [String(i.id || ''), String(i.text || i.id || '')]));
-
-        let total = 0, correct = 0;
-        const pairResults = [];
-        for (const p of pairs) {
-            const lid = String(p.left_id || '');
-            const rid = String(p.right_id || '');
-            if (!lid || !rid) continue;
-            total++;
-            const userPick = String(saved[lid] || '');
-            const isCorrect = userPick === rid;
-            if (isCorrect) correct++;
-            pairResults.push({
-                leftId: lid, rightId: rid, userPick, isCorrect,
-                leftText: leftTextById.get(lid) || lid,
-                rightText: rightTextById.get(rid) || rid,
-                userPickText: userPick ? (rightTextById.get(userPick) || userPick) : '',
+        if (state.sessionErrors.length > 0) {
+            errorsSection.classList.remove('hidden');
+            state.sessionErrors.forEach(cardId => {
+                const card = state.cards.find(c => c.id === cardId);
+                if (card) {
+                    const row = document.createElement('div');
+                    row.className = 'p-3 bg-surface-1 rounded-xl border border-border-subtle text-left';
+                    row.innerHTML = `
+                        <p class="text-xs font-extrabold text-text-main">${escHtml(card.front.text)}</p>
+                        <p class="text-xs text-success font-semibold mt-1">${escHtml(card.back.text)}</p>
+                    `;
+                    errorsList.appendChild(row);
+                }
             });
+        } else {
+            errorsSection.classList.add('hidden');
         }
 
-        const score = total ? Math.round((correct / total) * 10000) / 100 : 0;
-        const isPerfect = correct === total && total > 0;
-        state.pairEvaluation = { score, correct, total, isPerfect, pairs: pairResults };
-
-        // Render result
-        const scoreBadge = $('mcPairScoreBadge');
-        if (scoreBadge) {
-            scoreBadge.textContent = score + '%';
-            if (isPerfect) {
-                scoreBadge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold border border-success-light bg-success-lighter text-success-text';
-            } else {
-                scoreBadge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold border border-error-light bg-error-lighter text-error-text';
+        // Run celebration effect if perfect score
+        if (state.sessionStats.errors === 0 && window.CelebrationEffects) {
+            try {
+                window.CelebrationEffects.launchConfetti();
+            } catch (e) {
+                console.warn(e);
             }
         }
-
-        const resultGrid = $('mcPairResultGrid');
-        if (resultGrid) {
-            const expByLeft = new Map(exps.map(e => [String(e.left_id || ''), String(e.text || '')]));
-            resultGrid.innerHTML = pairResults.map(pr => {
-                const icon = pr.isCorrect
-                    ? '<span class="material-symbols-outlined text-success text-[14px]">check_circle</span>'
-                    : '<span class="material-symbols-outlined text-error text-[14px]">cancel</span>';
-                const exp = expByLeft.get(pr.leftId);
-                const correctAnswer = !pr.isCorrect ? `<span class="text-[10px] text-success-text ml-1">(${escHtml(wt('microcards.pair_correct_prefix', 'верно'))}: ${escHtml(pr.rightText)})</span>` : '';
-                return `
-                    <div class="flex items-start gap-2 text-xs ${pr.isCorrect ? '' : 'text-error-text'}">
-                        ${icon}
-                        <span class="text-text-main font-medium">${escHtml(pr.leftText)}</span>
-                        <span class="text-text-muted">→</span>
-                        <span class="${pr.isCorrect ? 'text-text-main' : 'text-error-text line-through'}">${escHtml(pr.userPickText || '—')}</span>
-                        ${correctAnswer}
-                        ${exp ? `<span class="text-text-secondary ml-1">· ${escHtml(exp)}</span>` : ''}
-                    </div>
-                `;
-            }).join('');
-        }
-
-        // Glow animation
-        const cardArea = $('mcCardArea');
-        if (cardArea) {
-            cardArea.classList.remove('mc-glow-correct', 'mc-glow-incorrect');
-            void cardArea.offsetWidth; // force reflow
-            cardArea.classList.add(isPerfect ? 'mc-glow-correct' : 'mc-glow-incorrect');
-        }
-
-        // Highlight pair match grid items
-        highlightPairMatchResults(card, pairResults);
     }
 
-    function highlightPairMatchResults(card, pairResults) {
-        const pairArea = $('mcPairMatchArea');
-        if (!pairArea) return;
-        const leftEls = pairArea.querySelectorAll('[data-pair-left]');
-        leftEls.forEach((el, idx) => {
-            const lid = el.getAttribute('data-pair-left');
-            const pr = pairResults.find(p => p.leftId === lid);
-            if (pr) {
-                el.classList.remove('mc-pair-correct', 'mc-pair-incorrect');
-                // M13: stagger animation for sequential reveal feel
-                el.style.animationDelay = (idx * 0.08) + 's';
-                el.classList.add(pr.isCorrect ? 'mc-pair-correct' : 'mc-pair-incorrect');
-            }
+    function retrySessionErrors() {
+        startLearningSession(true);
+    }
+
+    // ── Deck & Cards Editor ───────────────────────────────────────────────
+    function openDeckEditor() {
+        switchView('editor');
+        
+        // Load metadata
+        $('editDeckName').value = state.activeDeck.name;
+        $('editDeckDesc').value = state.activeDeck.description || '';
+        $('editDeckTags').value = (state.activeDeck.tags || []).join(', ');
+
+        renderEditorSidebarList();
+        initNewCardForm();
+    }
+
+    function renderEditorSidebarList() {
+        const container = $('editorSidebarList');
+        container.innerHTML = '';
+
+        // Add Deck Metadata Button
+        const metaBtn = document.createElement('button');
+        metaBtn.type = 'button';
+        metaBtn.className = 'w-full text-left px-3 py-2 text-xs font-bold rounded-lg border border-border-strong hover:bg-bg-hover flex items-center gap-1.5 transition-colors mb-2';
+        metaBtn.onclick = () => selectEditorTarget('deck');
+        metaBtn.innerHTML = '<span class="material-symbols-outlined text-[14px]">settings</span><span>Параметры колоды</span>';
+        container.appendChild(metaBtn);
+
+        if (state.cards.length === 0) {
+            const emptyLabel = document.createElement('div');
+            emptyLabel.className = 'text-center py-4 text-[10px] text-text-secondary';
+            emptyLabel.textContent = 'Нет карточек';
+            container.appendChild(emptyLabel);
+            return;
+        }
+
+        state.cards.forEach(card => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'w-full text-left px-3 py-2 text-xs rounded-lg border border-border-subtle hover:bg-bg-hover line-clamp-1 transition-colors';
+            btn.textContent = card.front.text || '(без текста)';
+            btn.onclick = () => selectEditorTarget('card', card.id);
+            container.appendChild(btn);
         });
     }
 
-    // ── Rating Submission ─────────────────────────────────────────────────
-    function setRatingButtonsEnabled(enabled) {
-        ['mcBtnAgain', 'mcBtnHard', 'mcBtnGood', 'mcBtnEasy'].forEach(id => {
-            const btn = $(id);
-            if (btn) btn.disabled = !enabled;
-        });
+    function selectEditorTarget(type, id = null) {
+        if (type === 'deck') {
+            $('editorDeckMetaForm').classList.remove('hidden');
+            $('editorCardFormZone').classList.add('hidden');
+        } else {
+            $('editorDeckMetaForm').classList.add('hidden');
+            $('editorCardFormZone').classList.remove('hidden');
+            
+            const card = state.cards.find(c => c.id === id);
+            if (card) {
+                state.activeCard = card;
+                $('editorCardFormTitle').textContent = 'Редактировать карточку';
+                $('editCardFront').value = card.front.text;
+                $('editCardBack').value = card.back.text;
+                $('editCardHint').value = card.hint || '';
+                $('editCardFrontImage').value = card.front.image_url || '';
+                $('editCardBackImage').value = card.back.image_url || '';
+                
+                previewEditorImage('front');
+                previewEditorImage('back');
+                
+                $('btnDeleteCard').classList.remove('hidden');
+            }
+        }
     }
 
-    async function submitRating(rating) {
-        if (!state.revealed || state.submitting) return;
-        const card = getCurrentCard();
-        if (!card) return;
+    function initNewCardForm() {
+        state.activeCard = null;
+        $('editorDeckMetaForm').classList.add('hidden');
+        $('editorCardFormZone').classList.remove('hidden');
+        
+        $('editorCardFormTitle').textContent = 'Новая карточка';
+        $('editCardFront').value = '';
+        $('editCardBack').value = '';
+        $('editCardHint').value = '';
+        $('editCardFrontImage').value = '';
+        $('editCardBackImage').value = '';
+        
+        $('editCardFrontImagePreview').classList.add('hidden');
+        $('editCardBackImagePreview').classList.add('hidden');
+        $('btnDeleteCard').classList.add('hidden');
+    }
 
-        const deckId = state.activeDeckId;
-        if (!deckId) return;
+    function previewEditorImage(face) {
+        const inputId = face === 'front' ? 'editCardFrontImage' : 'editCardBackImage';
+        const previewId = face === 'front' ? 'editCardFrontImagePreview' : 'editCardBackImagePreview';
+        const url = $(inputId).value.trim();
+        const img = $(previewId);
+        
+        if (url) {
+            img.src = url;
+            img.classList.remove('hidden');
+        } else {
+            img.classList.add('hidden');
+        }
+    }
 
-        state.submitting = true;
-        setRatingButtonsEnabled(false);
+    async function saveDeckMeta() {
+        const name = $('editDeckName').value.trim();
+        const description = $('editDeckDesc').value.trim();
+        const tagsRaw = $('editDeckTags').value;
+        const tags = tagsRaw.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
 
-        const cardType = String(card.card_type || 'fact_recall');
-        const isPair = cardType === 'pair_match' && state.featureFlags.microcards_pair_match;
-        const responseTimeMs = Math.max(0, Date.now() - state.reviewStartedAt);
-
-        const responsePayload = isPair
-            ? { mapping: state.pairSelections[String(card.id || '')] || {} }
-            : null;
-
-        // Determine if this was an error (for work-on-errors loop)
-        let wasError = false;
-        if (rating === 'again') {
-            wasError = true;
-        } else if (isPair && state.pairEvaluation && !state.pairEvaluation.isPerfect) {
-            wasError = true;
+        if (!name) {
+            showToast('Название колоды обязательно', 'error');
+            return;
         }
 
         try {
-            const resp = await fetch('/api/editor/microcards/review/submit', {
-                method: 'POST',
+            await apiCall(`/api/v2/microcards/decks/${state.activeDeckId}`, {
+                method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    deck_id: deckId,
-                    card_id: card.id,
-                    rating: rating,
-                    session_id: state.session?.id || null,
-                    response: responsePayload,
-                    response_time_ms: responseTimeMs,
-                }),
+                body: JSON.stringify({ name, description, tags })
             });
-            const data = await resp.json();
-            if (data.ok) {
-                // Update session
-                if (data.session && typeof data.session === 'object') {
-                    state.session = data.session;
-                }
-
-                // Track stats
-                state.sessionStats.total++;
-                state.sessionStats[rating] = (state.sessionStats[rating] || 0) + 1;
-                if (wasError) {
-                    state.sessionStats.errors++;
-                } else {
-                    state.sessionStats.correct++;
-                }
-
-                // Work-on-errors: requeue to tail if error
-                if (wasError) {
-                    const requeued = { ...card, _requeued: true };
-                    state.localQueue.push(requeued);
-                    state.requeuedCardIds.add(String(card.id || ''));
-                }
-
-                // Glow animation
-                const cardArea = $('mcCardArea');
-                if (cardArea) {
-                    cardArea.classList.remove('mc-glow-correct', 'mc-glow-incorrect');
-                    void cardArea.offsetWidth;
-                    cardArea.classList.add(wasError ? 'mc-glow-incorrect' : 'mc-glow-correct');
-                }
-
-                // Advance
-                state.localIndex++;
-                state.revealed = false;
-                state.pairEvaluation = null;
-                state.reviewStartedAt = Date.now();
-
-                // Clear pair selections for this card
-                delete state.pairSelections[String(card.id || '')];
-
-                // Next card
-                renderCurrentCard();
-            } else {
-                const err = String(data.error || '');
-                if (err.startsWith('session_')) {
-                    showToast(wt('microcards.session_expired', 'Сессия устарела. Возвращаемся к колодам.'), 'warning');
-                    backToDecks();
-                } else {
-                    showToast(data.message || data.error || wt('microcards.error_save_review', 'Ошибка сохранения review'), 'error');
-                }
-            }
-        } catch (e) {
-            console.error('[Microcards] submitRating failed:', e);
-            showToast(wt('microcards.error_network_review', 'Ошибка сети при отправке оценки'), 'error');
-        } finally {
-            state.submitting = false;
-            if (state.revealed) setRatingButtonsEnabled(true);
+            showToast('Параметры колоды сохранены', 'success');
+            openDeckDetails(state.activeDeckId);
+        } catch (err) {
+            console.error(err);
         }
     }
 
-    // ── Session Summary ───────────────────────────────────────────────
-    function showSessionSummary() {
-        const stats = state.sessionStats;
-        const elapsed = Math.round((Date.now() - state.sessionStartedAt) / 1000);
+    async function saveActiveCard() {
+        const frontText = $('editCardFront').value.trim();
+        const backText = $('editCardBack').value.trim();
+        const hint = $('editCardHint').value.trim();
+        const frontImage = $('editCardFrontImage').value.trim();
+        const backImage = $('editCardBackImage').value.trim();
 
-        // M14: emit session completed telemetry
-        emitProdTelemetry('microcards_runtime_session_completed', {
-            deck_id: state.activeDeckId,
-            total: stats.total,
-            correct: stats.correct,
-            errors: stats.errors,
-            elapsed_seconds: elapsed,
-            requeued_cards: state.requeuedCardIds.size,
-        });
-
-        $('mcSummaryDeckName').textContent = state.activeDeckName;
-
-        // M13: animated stat counters
-        const CE = window.CelebrationEffects;
-        if (CE && CE.animateCounter) {
-            CE.animateCounter($('mcSumTotal'), stats.total, { duration: 600 });
-            CE.animateCounter($('mcSumCorrect'), stats.correct, { duration: 600 });
-            CE.animateCounter($('mcSumErrors'), stats.errors, { duration: 600 });
-        } else {
-            $('mcSumTotal').textContent = String(stats.total);
-            $('mcSumCorrect').textContent = String(stats.correct);
-            $('mcSumErrors').textContent = String(stats.errors);
-        }
-        $('mcSumTime').textContent = formatTime(elapsed);
-        $('mcSumRAgain').textContent = String(stats.again);
-        $('mcSumRHard').textContent = String(stats.hard);
-        $('mcSumRGood').textContent = String(stats.good);
-        $('mcSumREasy').textContent = String(stats.easy);
-
-        switchView('summary');
-
-        // M13: confetti celebration for good results
-        if (CE && CE.celebrate && stats.total > 0) {
-            const successRate = Math.round((stats.correct / stats.total) * 100);
-            const isPerfect = stats.errors === 0;
-            CE.celebrate(successRate, { isPerfect, isFinalResults: true });
-        }
-    }
-
-    // ── Navigation ────────────────────────────────────────────────────
-    function backToDecks() {
-        state.activeDeckId = null;
-        state.session = null;
-        state.queue = [];
-        state.localQueue = [];
-        state.localIndex = 0;
-        switchView('decks');
-        loadDecks();
-        loadSummary();
-    }
-
-    function restartSession() {
-        if (state.activeDeckId) {
-            openDeck(state.activeDeckId, { restart: true });
-        }
-    }
-
-    async function refreshDecks() {
-        await Promise.all([loadDecks(), loadSummary()]);
-    }
-
-    // ── Keyboard Shortcuts ────────────────────────────────────────────────
-    const _ratingBtnMap = { '1': 'mcBtnAgain', '2': 'mcBtnHard', '3': 'mcBtnGood', '4': 'mcBtnEasy' };
-    const _ratingKeyMap = { '1': 'again', '2': 'hard', '3': 'good', '4': 'easy' };
-
-    function handleKeyDown(e) {
-        // Skip if focus is on an input field
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
-
-        // Escape: navigate back
-        if (e.key === 'Escape') {
-            e.preventDefault();
-            if (state.view === 'review') {
-                backToDecks();
-            } else if (state.view === 'summary') {
-                backToDecks();
-            }
+        if (!frontText || !backText) {
+            showToast('Заполните лицевую и обратную стороны', 'error');
             return;
         }
 
-        if (state.view === 'review') {
-            // Space / Enter: reveal answer
-            if (e.key === ' ' || e.key === 'Enter') {
-                e.preventDefault();
-                if (!state.revealed) {
-                    reveal();
-                }
+        const payload = {
+            front_text: frontText,
+            back_text: backText,
+            hint: hint || null,
+            front_image_url: frontImage || null,
+            back_image_url: backImage || null
+        };
+
+        try {
+            if (state.activeCard) {
+                // Update existing card
+                await apiCall(`/api/v2/microcards/decks/${state.activeDeckId}/cards/${state.activeCard.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                showToast('Карточка сохранена', 'success');
+            } else {
+                // Create new card
+                await apiCall(`/api/v2/microcards/decks/${state.activeDeckId}/cards`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                showToast('Карточка добавлена', 'success');
+            }
+            openDeckDetails(state.activeDeckId).then(() => openDeckEditor());
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    async function deleteActiveCard() {
+        if (!state.activeCard) return;
+        if (confirm('Вы действительно хотите удалить эту карточку?')) {
+            try {
+                await apiCall(`/api/v2/microcards/decks/${state.activeDeckId}/cards/${state.activeCard.id}`, {
+                    method: 'DELETE'
+                });
+                showToast('Карточка удалена', 'success');
+                openDeckDetails(state.activeDeckId).then(() => openDeckEditor());
+            } catch (err) {
+                console.error(err);
+            }
+        }
+    }
+
+    function closeDeckEditor() {
+        openDeckDetails(state.activeDeckId);
+    }
+
+    // ── Import Decks Dialog ───────────────────────────────────────────────
+    function openImportDialog() {
+        $('importCsvContent').value = '';
+        $('importJsonContent').value = '';
+        $('importFile').value = '';
+        switchImportTab('csv');
+        $('dialogImportDeck').showModal();
+    }
+
+    function switchImportTab(format) {
+        state.importFormat = format;
+        const btnCsv = $('btnImportTabCsv');
+        const btnJson = $('btnImportTabJson');
+        const zoneCsv = $('importTabCsvZone');
+        const zoneJson = $('importTabJsonZone');
+
+        if (format === 'csv') {
+            btnCsv.className = 'px-4 py-1.5 text-xs font-bold rounded-lg border bg-primary text-primary-fg';
+            btnJson.className = 'px-4 py-1.5 text-xs font-bold rounded-lg border border-border-strong';
+            zoneCsv.classList.remove('hidden');
+            zoneJson.classList.add('hidden');
+        } else {
+            btnCsv.className = 'px-4 py-1.5 text-xs font-bold rounded-lg border border-border-strong';
+            btnJson.className = 'px-4 py-1.5 text-xs font-bold rounded-lg border bg-primary text-primary-fg';
+            zoneCsv.classList.add('hidden');
+            zoneJson.classList.remove('hidden');
+        }
+    }
+
+    async function handleImportSubmit(e) {
+        e.preventDefault();
+        const fileInput = $('importFile');
+        const isFile = fileInput.files.length > 0;
+        
+        let url = `/api/v2/microcards/decks/${state.activeDeckId}/import/${state.importFormat}`;
+        let options = { method: 'POST' };
+
+        if (isFile) {
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            options.body = formData;
+        } else {
+            const content = state.importFormat === 'csv' ? $('importCsvContent').value : $('importJsonContent').value;
+            if (!content.trim()) {
+                showToast('Введите текст или выберите файл для импорта', 'error');
                 return;
             }
+            if (state.importFormat === 'json') {
+                try {
+                    options.body = JSON.stringify(JSON.parse(content));
+                    options.headers = { 'Content-Type': 'application/json' };
+                } catch (err) {
+                    showToast('Невалидный JSON формат', 'error');
+                    return;
+                }
+            } else {
+                options.body = JSON.stringify({ csv_content: content });
+                options.headers = { 'Content-Type': 'application/json' };
+            }
+        }
 
-            // 1-4: rate card with visual feedback
-            if (state.revealed && !state.submitting) {
-                const rating = _ratingKeyMap[e.key];
-                const btnId = _ratingBtnMap[e.key];
-                if (rating && btnId) {
-                    e.preventDefault();
-                    // M13: visual keyboard-active feedback
-                    const btn = $(btnId);
-                    if (btn) {
-                        btn.classList.add('mc-rating-active');
-                        setTimeout(() => btn.classList.remove('mc-rating-active'), 200);
-                    }
-                    submitRating(rating);
+        try {
+            const result = await apiCall(url, options);
+            $('dialogImportDeck').close();
+            showToast(`Успешно импортировано ${result.added_count} карточек`, 'success');
+            openDeckDetails(state.activeDeckId);
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    // ── Catalog Integration ───────────────────────────────────────────────
+    function publishDeckToCatalog() {
+        $('publishVisibility').value = 'public';
+        $('dialogPublishDeck').showModal();
+    }
+
+    async function handlePublishSubmit(e) {
+        e.preventDefault();
+        const visibility = $('publishVisibility').value;
+        
+        try {
+            const result = await apiCall(`/api/v2/microcards/decks/${state.activeDeckId}/publish`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ catalog_visibility: visibility })
+            });
+            $('dialogPublishDeck').close();
+            showToast('Колода опубликована в каталог!', 'success');
+            openDeckDetails(state.activeDeckId);
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    // ── Init & Event Binding ──────────────────────────────────────────────
+    function init() {
+        loadLibraryData();
+        
+        // Bind search input to re-run filtering
+        $('libSearch').addEventListener('input', () => {
+            renderLibrary();
+        });
+
+        // Set up Escape navigation key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && state.view !== 'library') {
+                // If any dialog is open, do not trigger page back navigation
+                const openDialogs = document.querySelectorAll('dialog[open]');
+                if (openDialogs.length === 0) {
+                    handleBackNavigation();
                 }
             }
-        }
+        });
     }
 
-    // ── Current-user header widget ─────────────────────────────────────────
-    async function loadCurrentUser() {
-        try {
-            const res = await fetch('/api/users/current');
-            const data = await res.json();
-            if (!data.ok || !data.user) return;
-            const user = data.user;
-            const avatarEl = document.getElementById('mcHeaderAvatar');
-            const nameEl = document.getElementById('mcHeaderUserName');
-            if (avatarEl && user.avatar_seed) {
-                const seed = String(user.avatar_seed);
-                avatarEl.src = seed.includes('.') ? `/api/assets/avatars/${encodeURIComponent(seed)}` : '/api/assets/avatars/1.png';
-                avatarEl.alt = user.name || wt('microcards.user_avatar_alt', 'Пользователь');
-            }
-            if (nameEl) nameEl.textContent = user.name || wt('microcards.user_guest', 'Гость');
-        } catch (e) {
-            /* non-critical, keep defaults */
-        }
-    }
-
-    // ── i18n ─────────────────────────────────────────────────────────────
-    function _applyMicrocardsI18n() {
-        if (window.i18n) window.i18n.updateDOM();
-        // Re-render dynamic elements that may currently be visible
-        const subtitle = $('mcHeaderSubtitle');
-        if (subtitle && subtitle.textContent) {
-            const v = state.view;
-            if (v === 'review') subtitle.textContent = state.activeDeckName || wt('microcards.subtitle_session', 'Сессия повторения');
-            else if (v === 'summary') subtitle.textContent = wt('microcards.subtitle_summary', 'Результаты сессии');
-            else subtitle.textContent = wt('microcards.subtitle_default', 'Повторение и обучение');
-        }
-        if (state.decks !== undefined) {
-            renderDeckListState();
-            renderDeckGrid();
-        }
-    }
-    window.addEventListener('i18n:changed', _applyMicrocardsI18n);
-
-    // ── Init ──────────────────────────────────────────────────────────────
-    async function init() {
-        document.addEventListener('keydown', handleKeyDown);
-        bindDeckListControls();
-
-        switchView('decks');
-        await loadFeatureFlags();
-
-        if (!state.featureFlags.microcards_mode) {
-            showModeInProgress();
-            return;
-        }
-
-        // M14: emit runtime opened telemetry
-        emitProdTelemetry('microcards_runtime_opened', {});
-
-        await Promise.all([loadDecks(), loadSummary(), loadCurrentUser()]);
-
-        // Check URL params for direct deck open
-        const params = new URLSearchParams(window.location.search);
-        const directDeck = params.get('deck');
-        if (directDeck) {
-            openDeck(directDeck);
-        }
-    }
-
-    // ── Public API ────────────────────────────────────────────────────────
+    // Expose controls to global context
     window.mcApp = {
-        openDeck,
-        backToDecks,
-        restartSession,
-        refreshDecks,
-        reveal,
-        submitRating,
-        setPairSelection,
-        state,
+        init,
+        handleBackNavigation,
+        openCreateDeckDialog,
+        handleCreateDeckSubmit,
+        openDeckDetails,
+        toggleDeckActionsMenu,
+        exportDeck,
+        confirmDeleteDeck,
+        startLearningSession,
+        abortSession,
+        toggleHint,
+        revealAnswerL1,
+        submitAnswerL1,
+        submitAnswerL2,
+        overrideL2Answer,
+        nextCard,
+        retrySessionErrors,
+        openDeckEditor,
+        saveDeckMeta,
+        saveActiveCard,
+        deleteActiveCard,
+        closeDeckEditor,
+        openCardEditor: (id) => selectEditorTarget('card', id),
+        initNewCardForm,
+        previewEditorImage,
+        openImportDialog,
+        switchImportTab,
+        handleImportSubmit,
+        publishDeckToCatalog,
+        handlePublishSubmit
     };
 
-    // Start
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-    } else {
+    // Auto boot
+    document.addEventListener('DOMContentLoaded', () => {
+        if (window.i18n && typeof window.i18n.translatePage === 'function') {
+            window.i18n.translatePage();
+        }
         init();
-    }
+    });
+
 })();

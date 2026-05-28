@@ -49,6 +49,7 @@ artifacts/
 playwright-report/
 archive/
 tmp/
+.codegraph/
 .codex-artifacts/
 .codex_tmp_*.png
 nul

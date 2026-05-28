@@ -641,6 +641,24 @@
         );
     }
 
+    .catalog-card--flashcards {
+      background:
+        linear-gradient(
+          165deg,
+          color-mix(in srgb, var(--color-surface-1) 96%, white 4%) 0%,
+          color-mix(in srgb, var(--color-surface-2) 90%, var(--color-success-lighter) 10%) 100%
+        );
+    }
+
+    .catalog-card--flashcards::before {
+      background:
+        linear-gradient(
+          90deg,
+          color-mix(in srgb, var(--color-success) 86%, white 14%) 0%,
+          color-mix(in srgb, var(--color-success-light) 78%, var(--color-primary-light) 22%) 100%
+        );
+    }
+
     .catalog-card__header,
     .catalog-card__actions,
     .catalog-card__badges {
@@ -689,6 +707,12 @@
       border-color: var(--color-info-light);
       background: color-mix(in srgb, var(--color-info-lighter) 84%, white 16%);
       color: var(--color-info-darker);
+    }
+
+    .catalog-badge--flashcards {
+      border-color: var(--color-success-light);
+      background: color-mix(in srgb, var(--color-success-lighter) 84%, white 16%);
+      color: var(--color-success-darker);
     }
 
     .catalog-badge--primary {
@@ -1842,6 +1866,7 @@
               <button type="button" class="catalog-pill is-active" data-filter="all" data-i18n="catalog.filter_all">Все публикации</button>
               <button type="button" class="catalog-pill" data-filter="complex" data-i18n="catalog.filter_complexes">Комплексы</button>
               <button type="button" class="catalog-pill" data-filter="theory" data-i18n="catalog.filter_theories">Теории</button>
+              <button type="button" class="catalog-pill" data-filter="flashcard_deck" data-i18n="catalog.filter_flashcards">Карточки</button>
               <button type="button" class="catalog-pill" data-filter="saved" data-i18n="catalog.filter_saved">Мои сохранённые</button>
             </div>
             <div class="catalog-filter-actions" data-onboarding-target="catalog-filter-actions">

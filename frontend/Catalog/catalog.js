@@ -479,6 +479,11 @@
     return normalizeCount(getDependencyCounts(item).theories);
   }
 
+  function getCardCount(item) {
+    const manifest = getLatestManifest(item);
+    return normalizeCount(manifest.card_count || 0);
+  }
+
   function getFreshnessLabel(item) {
     return formatRelativeDate(item && item.latest_published_at);
   }
@@ -495,6 +500,9 @@
   }
 
   function getCatalogVolumeValue(item) {
+    if (item && item.content_type === 'flashcard_deck') {
+      return getCardCount(item);
+    }
     if (item && item.content_type === 'theory') {
       const manifest = getLatestManifest(item);
       return normalizeCount(manifest.image_count || getDependencyCounts(item).images || 0);
@@ -520,7 +528,7 @@
     }
 
     if (state.sortBy === 'type') {
-      const order = { complex: 0, theory: 1 };
+      const order = { complex: 0, theory: 1, flashcards: 2 };
       return sorted.sort((left, right) => {
         const diff = (order[getTypeKey(left)] ?? 99) - (order[getTypeKey(right)] ?? 99);
         return diff || compareCatalogTitle(left, right) || compareDate(left, right);
@@ -574,25 +582,34 @@
     if (isSavedComplexItem(item)) {
       return wt('catalog.desc_saved_complex', 'Связанная публикация сохраняется в каталоге и открывается только для чтения.');
     }
+    if (item && item.content_type === 'flashcard_deck') {
+      return wt('catalog.desc_flashcards_default', 'Можно добавить в раздел Микрокарточки как локальную колоду.');
+    }
     return item && item.content_type === 'theory'
       ? wt('catalog.desc_theory_default', 'Можно добавить в Теоретический центр как связанную публикацию.')
       : wt('catalog.desc_complex_default', 'Можно сохранить в каталоге как связанную публикацию и просматривать без создания отдельной версии в workspace.');
   }
 
   function getTypeLabel(item) {
+    if (item && item.content_type === 'flashcard_deck') return wt('catalog.type_label_flashcards', 'Карточки');
     return item && item.content_type === 'theory' ? wt('catalog.type_label_theory', 'Теория') : wt('catalog.type_label_complex', 'Комплекс');
   }
 
   function getTypeKey(item) {
+    if (item && item.content_type === 'flashcard_deck') return 'flashcards';
     return item && item.content_type === 'theory' ? 'theory' : 'complex';
   }
 
   function getTypeIcon(item) {
-    return getTypeKey(item) === 'theory' ? 'menu_book' : 'account_tree';
+    const key = getTypeKey(item);
+    if (key === 'flashcards') return 'style';
+    return key === 'theory' ? 'menu_book' : 'account_tree';
   }
 
   function getTypeBadgeClass(item) {
-    return getTypeKey(item) === 'theory'
+    const key = getTypeKey(item);
+    if (key === 'flashcards') return 'catalog-badge catalog-badge--type catalog-badge--flashcards';
+    return key === 'theory'
       ? 'catalog-badge catalog-badge--type catalog-badge--theory'
       : 'catalog-badge catalog-badge--type catalog-badge--complex';
   }
@@ -1284,8 +1301,8 @@
         </div>
         <div class="catalog-card__meta">
           <span class="catalog-card__meta-item">
-            <span class="material-symbols-outlined">task_alt</span>
-            ${item.content_type === 'complex' ? `${escapeHtml(String(getTaskCount(item)))} ${wt('catalog.tasks_count', 'заданий')}` : `${escapeHtml(String(normalizeCount(getLatestManifest(item).image_count || 0)))} ${wt('catalog.images_count', 'изображ.')}`}
+            <span class="material-symbols-outlined">${item.content_type === 'complex' ? 'task_alt' : (item.content_type === 'flashcard_deck' ? 'style' : 'image')}</span>
+            ${item.content_type === 'complex' ? `${escapeHtml(String(getTaskCount(item)))} ${wt('catalog.tasks_count', 'заданий')}` : (item.content_type === 'flashcard_deck' ? `${escapeHtml(String(getCardCount(item)))} ${wt('catalog.cards_count', 'карт.')}` : `${escapeHtml(String(normalizeCount(getLatestManifest(item).image_count || 0)))} ${wt('catalog.images_count', 'изображ.')}`)}
           </span>
           ${theoryMeta ? `
             <span class="catalog-card__meta-item">
@@ -1632,12 +1649,13 @@
         : primaryAction;
       const descriptionText = asString(item.description);
       const asyncBlockId = `catalog-detail-async-${Date.now()}`;
-      const descriptionRowHtml = isComplex ? `
+      const isFlashcards = item.content_type === 'flashcard_deck';
+      const descriptionRowHtml = `
         <div class="catalog-detail__row">
-          <p class="catalog-detail__kicker">${wt('catalog.detail_desc_kicker', 'Описание комплекса')}</p>
+          <p class="catalog-detail__kicker">${wt('catalog.kicker_description', 'Описание')}</p>
           <p class="catalog-detail__text ${!descriptionText ? 'catalog-detail__text--placeholder' : ''}">${escapeHtml(descriptionText || wt('catalog.detail_desc_placeholder', 'Описание отсутствует.'))}</p>
         </div>
-      ` : '';
+      `;
 
       els.detailEmpty.classList.add('catalog-hidden');
       els.detailContent.classList.remove('catalog-hidden');
@@ -1736,6 +1754,62 @@
               `;
             }
           }
+          } else if (item.content_type === 'flashcard_deck') {
+            const cards = Array.isArray(snapshot.cards) ? snapshot.cards : [];
+            const tags = Array.isArray(snapshot.tags) ? snapshot.tags : [];
+            const cardLimit = 5;
+            const shownCards = cards.slice(0, cardLimit);
+            const remainingCount = cards.length - shownCards.length;
+            
+            let tagsHtml = '';
+            if (tags.length > 0) {
+              tagsHtml = `
+                <div class="catalog-detail__row">
+                  <p class="catalog-detail__kicker">${wt('catalog.kicker_tags', 'Теги')}</p>
+                  <div class="catalog-tags">
+                    ${tags.map(tag => `<span class="catalog-tag" style="background:var(--color-bg-primary);border:1px solid var(--color-border-normal);border-radius:var(--radius-full);padding:0.25rem 0.5rem;font-size:0.75rem;margin-right:0.25rem;">${escapeHtml(tag)}</span>`).join('')}
+                  </div>
+                </div>
+              `;
+            }
+
+            let cardsHtml = '';
+            if (shownCards.length > 0) {
+              cardsHtml = `
+                <div class="catalog-detail__row">
+                  <p class="catalog-detail__kicker">${wt('catalog.detail_cards_preview', 'Примеры карточек')}</p>
+                  <div class="catalog-detail__cards-preview-list" style="display:flex;flex-direction:column;gap:0.5rem;margin-top:0.25rem;">
+                    ${shownCards.map(card => {
+                      const frontText = card.front?.text || '';
+                      const backText = card.back?.text || '';
+                      return `
+                        <div class="catalog-detail__card-preview-item" style="border:1px solid var(--color-border-normal);border-radius:var(--radius-md);padding:0.5rem;background:var(--color-bg-primary);">
+                          <div class="catalog-detail__card-preview-front" style="font-weight:600;font-size:0.875rem;color:var(--color-text-main);">${escapeHtml(frontText)}</div>
+                          <div class="catalog-detail__card-preview-back" style="font-size:0.875rem;color:var(--color-text-secondary);margin-top:0.25rem;border-top:1px dashed var(--color-border-subtle);padding-top:0.25rem;">${escapeHtml(backText)}</div>
+                        </div>
+                      `;
+                    }).join('')}
+                    ${remainingCount > 0 ? `
+                      <div class="catalog-detail__cards-preview-more" style="font-size:0.75rem;color:var(--color-text-secondary);text-align:center;margin-top:0.25rem;">
+                        +${remainingCount} ${wt('catalog.remaining_cards_suffix', 'ещё')}
+                      </div>
+                    ` : ''}
+                  </div>
+                </div>
+              `;
+            } else {
+              cardsHtml = `
+                <div class="catalog-detail__row">
+                  <p class="catalog-detail__kicker">${wt('catalog.detail_cards_preview', 'Примеры карточек')}</p>
+                  <p class="catalog-detail__text catalog-detail__text--placeholder">${wt('catalog.detail_cards_no_info', 'Карточки отсутствуют.')}</p>
+                </div>
+              `;
+            }
+
+            asyncBlock.innerHTML = `
+              ${tagsHtml}
+              ${cardsHtml}
+            `;
           } else {
             const delta = snapshot.delta && typeof snapshot.delta === 'object' ? snapshot.delta : (snapshot && typeof snapshot === 'object' && snapshot.delta ? snapshot.delta : {});
             const ops = Array.isArray(delta.ops) ? delta.ops : [];
@@ -2490,6 +2564,50 @@
         </div>
       </div>
     `, null, { blurCatalogShell: true, variant: 'confirm' });
+  async function openCatalogFlashcardConfirmModal(preview) {
+    const already = !!(preview && preview.library_status && preview.library_status.already_in_library);
+    const item = preview && preview.item ? preview.item : {};
+    const owner = getDisplayOwner(item) || wt('catalog.owner_unknown_author', 'Автор не указан');
+    const primaryLabel = already
+      ? wt('catalog.action_open_library', 'Открыть в библиотеке')
+      : wt('catalog.action_add_library', 'Добавить в библиотеку');
+    const factsMarkup = buildConfirmFacts([
+      { label: wt('catalog.type_label_flashcards', 'Карточки'), value: String(getCardCount(item)) },
+    ]);
+    const summaryMarkup = buildConfirmSummaryItems([
+      {
+        icon: 'style',
+        title: already ? wt('catalog.confirm_flashcards_already_saved', 'Уже добавлено в ваши карточки') : wt('catalog.confirm_flashcards_will_appear', 'Добавится в раздел Микрокарточки'),
+        text: already ? wt('catalog.confirm_flashcards_open_anytime', 'Можно открыть и начать учить в любой момент.') : wt('catalog.confirm_flashcards_material_saved', 'Колода скопируется в ваши локальные микрокарточки.'),
+      },
+    ]);
+    return openModal(`
+      <div class="catalog-confirm-modal custom-scrollbar">
+        <div class="catalog-confirm-modal__header">
+          <div>
+            <p class="catalog-confirm-modal__eyebrow">${wt('catalog.type_label_flashcards', 'Карточки')}</p>
+            <p class="catalog-confirm-modal__headline">${escapeHtml(already ? wt('catalog.confirm_flashcards_already_title', 'Колода уже добавлена') : wt('catalog.confirm_flashcards_add_title', 'Добавить колоду в карточки'))}</p>
+          </div>
+          <button type="button" class="btn-secondary h-10 px-4" data-close>${wt('catalog.btn_cancel', 'Отмена')}</button>
+        </div>
+        <div class="catalog-confirm-modal__body">
+          <section class="catalog-confirm-modal__hero">
+            <p class="catalog-confirm-modal__item-title">${escapeHtml(asString(item.title) || wt('catalog.deck_name_fallback', 'Колода'))}</p>
+            <div class="catalog-confirm-modal__meta">
+              <span class="catalog-confirm-modal__meta-item">${wt('catalog.confirm_author', 'Автор: {name}').replace('{name}', escapeHtml(owner))}</span>
+              <span class="catalog-confirm-modal__meta-item">${wt('catalog.confirm_section_microcards', 'Раздел: Карточки')}</span>
+            </div>
+            ${asString(item.description) ? `<p class="catalog-confirm-modal__description">${escapeHtml(asString(item.description))}</p>` : ''}
+          </section>
+          ${factsMarkup ? `<div class="catalog-confirm-modal__facts">${factsMarkup}</div>` : ''}
+          <div class="catalog-confirm-modal__summary">${summaryMarkup}</div>
+        </div>
+        <div class="catalog-confirm-modal__footer">
+          <button type="button" class="btn-secondary h-10 px-4" data-action="close">${wt('catalog.btn_cancel', 'Отмена')}</button>
+          <button type="button" class="btn-primary h-10 px-4" data-action-key="${already ? 'open' : 'confirm'}">${escapeHtml(primaryLabel)}</button>
+        </div>
+      </div>
+    `, null, { blurCatalogShell: true, variant: 'confirm' });
   }
 
   function resolveLibraryTarget(resultPayload) {
@@ -2522,12 +2640,21 @@
   async function executeAddToLibrary(item) {
     let payload;
     try {
-      payload = await fetchJson(`/api/catalog/items/${encodeURIComponent(asString(item.item_id))}/library`, {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-      });
+      if (item && item.content_type === 'flashcard_deck') {
+        payload = await fetchJson(`/api/v2/microcards/catalog/${encodeURIComponent(asString(item.item_id))}/import`, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        });
+      } else {
+        payload = await fetchJson(`/api/catalog/items/${encodeURIComponent(asString(item.item_id))}/library`, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        });
+      }
     } catch (error) {
       if (error?.status === 409 && error?.payload?.error === 'workspace_limit_reached') {
         await loadWorkspaceLimits();
@@ -2540,15 +2667,26 @@
     if (versionKey) {
       state.statusByVersionKey.set(versionKey, {
         ok: true,
-        item: payload.item,
+        item: payload.item || item,
         version: payload.version,
         library_entry: payload.library_entry,
-        library_status: payload.library_status,
+        library_status: payload.library_status || { already_in_library: true, in_library: true },
+      });
+    }
+    if (item && item.content_type === 'flashcard_deck') {
+      state.statusByVersionKey.set(versionKey, {
+        ok: true,
+        item: item,
+        library_status: { already_in_library: true, in_library: true },
       });
     }
     await loadWorkspaceLimits();
     render();
-    showToast(item && item.content_type === 'theory' ? wt('catalog.toast_theory_added', 'Теория добавлена в Теоретический центр.') : wt('catalog.toast_complex_added', 'Комплекс добавлен в сохранённые публикации каталога.'), 'success', 2800);
+    if (item && item.content_type === 'flashcard_deck') {
+      showToast(wt('catalog.toast_flashcards_added', 'Колода добавлена в раздел Микрокарточки.'), 'success', 2800);
+    } else {
+      showToast(item && item.content_type === 'theory' ? wt('catalog.toast_theory_added', 'Теория добавлена в Теоретический центр.') : wt('catalog.toast_complex_added', 'Комплекс добавлен в сохранённые публикации каталога.'), 'success', 2800);
+    }
     return payload;
   }
 
@@ -2587,7 +2725,9 @@
     }
     const modalAction = item && item.content_type === 'theory'
       ? await openCatalogTheoryConfirmModal(preview)
-      : await openCatalogComplexConfirmModal(preview);
+      : (item && item.content_type === 'flashcard_deck'
+         ? await openCatalogFlashcardConfirmModal(preview)
+         : await openCatalogComplexConfirmModal(preview));
     if (!modalAction) return;
     if (modalAction === 'open') {
       if (item && item.content_type === 'theory') {
@@ -2612,6 +2752,10 @@
     }
     if (action.key === 'open-library') {
       const status = getStatus(item);
+      if (item && item.content_type === 'flashcard_deck') {
+        navigate('/microcards');
+        return;
+      }
       if (item && item.content_type === 'theory') {
         const target = resolveLibraryTarget(status || { item, library_status: { content_type: item.content_type } });
         if (target) {
@@ -2806,7 +2950,7 @@
 
       const params = new URLSearchParams(global.location.search || '');
       const initialContentType = asString(params.get('content_type')).toLowerCase();
-      if (['all', 'complex', 'theory', 'saved'].includes(initialContentType)) {
+      if (['all', 'complex', 'theory', 'flashcard_deck', 'saved'].includes(initialContentType)) {
         state.contentType = initialContentType;
       }
       state.sortBy = normalizeCatalogSort(params.get('sort'));
