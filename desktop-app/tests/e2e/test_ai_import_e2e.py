@@ -9,29 +9,29 @@ def test_ai_generation_full_cycle_e2e(page, local_server):
     """
     Simulates a user going through the AI generation import cycle.
     """
-    # 1. Open the UI Editor where the import modal is located
-    # Assuming "/editor" is the main entry for complexes and has the import button.
-    page.goto(f"{local_server}/editor")
-
-    # The actual selector for the open import modal button might vary.
-    # Searching for generic terms if exact ID is unknown. 
-    # Let's try to click the first button that opens the import modal.
-    # From import_manager.js it seems there is a 'dashboard.importManager.goToStep(1)'
-    # We will trigger it via JS if we can't find the button easily, but normally
-    # there is a button like [data-role="import-open"] or similar.
-    # Wait for the page to load
-    page.wait_for_selector("body")
+    # 1. Capture console output and intercept settings to disable onboarding tour
+    page.on("console", lambda msg: print(f"\n--- BROWSER CONSOLE [{msg.type}]: {msg.text}"))
     
-    # Disable onboarding tour to prevent the tour scrim from intercepting clicks
-    page.evaluate("localStorage.setItem('actra_onboarding_disabled_v1', 'true')")
-    page.reload()
+    page.route("**/api/ui/settings", lambda route: route.fulfill(
+        json={"ok": True, "settings": {"onboarding": {"disabled": True}}}
+    ))
+
+    # 2. Open the UI Editor where the import modal is located
+    page.goto(f"{local_server}/editor")
     page.wait_for_selector("body")
     
     # Wait for the dashboard catalog to load
     page.wait_for_function("() => window.dashboard && window.dashboard.catalog && window.dashboard.catalog.length > 0", timeout=15000)
 
-    # Open the import modal directly via JS to avoid localization and scrim dependency
-    page.evaluate("if(window.dashboard) { window.dashboard.showImportModal(); if (window.dashboard.importManager) { window.dashboard.importManager.setImportMode('ai'); window.dashboard.importManager.goToStep(1); } }")
+    # Open the import modal directly via JS to avoid localization and scrim dependency, override in-development flag
+    page.evaluate("""
+        if(window.dashboard && window.dashboard.importManager) {
+            window.dashboard.importManager.isInternalAiGenerationInDevelopment = () => false;
+            window.dashboard.showImportModal();
+            window.dashboard.importManager.setImportMode('ai');
+            window.dashboard.importManager.goToStep(1);
+        }
+    """)
 
     # Wait for the re-rendering of AI mode step 1 to complete (the button gets highlighted)
     page.locator("[data-role='import-mode-ai'].border-primary").wait_for()

@@ -2818,6 +2818,10 @@ ${remaining}
         `;
     }
     renderStep2() {
+        if (this.importMode === 'ai' && !this.isInternalAiGenerationInDevelopment()) {
+            return this.renderStep2AI();
+        }
+
         if (this.importMode === 'archive') {
             // Step 2 for Archive is "Validating..." (Spinner)
             return `
@@ -3208,6 +3212,9 @@ ${remaining}
     }
 
     renderStep3() {
+        if (this.importMode === 'ai' && !this.isInternalAiGenerationInDevelopment()) {
+            return this.renderStep3AI();
+        }
         if (this.hasActiveWorkspaceImportFlow()) {
             return this.renderWorkspaceImportPreviewStep();
         }
@@ -5276,6 +5283,11 @@ text: Сердце человека состоит из [трёх] камер. �
                     });
                     return;
                 }
+                if (!this.isInternalAiGenerationInDevelopment()) {
+                    this.nextStep();
+                    this.aiAnalyze().catch(e => console.error('[AI] analyze failed:', e));
+                    return;
+                }
                 this.nextStep();
                 return;
             }
@@ -5342,6 +5354,12 @@ text: Сердце человека состоит из [трёх] камер. �
                 }
             }
         } else if (this.currentStep === 2) {
+            if (this.importMode === 'ai' && !this.isInternalAiGenerationInDevelopment()) {
+                // AI Step 2 -> Step 3: trigger generation
+                this.nextStep();
+                this.aiGenerate().catch(e => console.error('[AI] generate failed:', e));
+                return;
+            }
             if (this.importMode === 'ai' && this.aiTemplateType === 'material_analysis') {
                 if (!this.sourceText.trim()) {
                     this.showVoiceToast({
@@ -10192,62 +10210,66 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
         const savedDraftsCount = sessionLooksRelevant
             ? Object.values(savedSession?.recommendation_state || {}).filter((state) => !!String(state?.draft_source_text || '').trim() || !!state?.draft_parsed_result).length
             : 0;
-        return `
-            <div class="space-y-5 animate-fade-in">
-                <div class="p-4 bg-primary-lighter border border-primary-light rounded-lg">
-                    <div class="flex items-start gap-3">
-                        <span class="material-symbols-outlined text-primary text-[22px] mt-0.5">auto_awesome</span>
-                        <div>
-                            <h4 class="text-sm font-bold text-text-main mb-1">${wt('im.k728', 'Единственный путь: через внешний ИИ')}</h4>
-                            <ol class="text-xs text-text-secondary space-y-1 list-decimal list-inside">
-                                <li>${wt('im.k1075', 'Выберите модуль и тему, куда пойдут задания')}</li>
-                                <li>${wt('im.k1076', 'На следующем шаге получите готовый промпт для внешней нейросети')}</li>
-                                <li>${wt('im.k1077', 'Сгенерируйте задания вне платформы и вставьте ответ сюда')}</li>
-                                <li>${wt('im.k1078', 'Проверьте парсинг и импортируйте результат')}</li>
-                            </ol>
-                        </div>
-                    </div>
-                </div>
 
-                ${false && sessionLooksRelevant ? `
-                    <div class="p-4 border border-info-light rounded-lg bg-info-lighter">
+        const limitInfo = this.dailyLimit;
+        const limitHtml = limitInfo ? `
+            <div class="flex items-center gap-2 text-xs text-text-muted mt-2">
+                <span class="material-symbols-outlined text-[16px]">cloud_upload</span>
+                <span>${wt('im.k1040', 'Загрузок файлов сегодня:')} <strong class="${limitInfo.files_remaining === 0 ? 'text-error' : 'text-text-main'}">${limitInfo.max_files_per_day - limitInfo.files_remaining}</strong> ${wt('im.k1041', 'из')} ${limitInfo.max_files_per_day}</span>
+            </div>` : '';
+
+        if (this.isInternalAiGenerationInDevelopment()) {
+            return `
+                <div class="space-y-5 animate-fade-in">
+                    <div class="p-4 bg-primary-lighter border border-primary-light rounded-lg">
                         <div class="flex items-start gap-3">
-                            <span class="material-symbols-outlined text-info text-[20px] mt-0.5">history</span>
-                            <div class="text-sm text-info-text leading-relaxed">
-                                <div class="font-bold text-text-main mb-1">Найдена сохранённая analysis session</div>
-                                <div>
-                                    ${this.escapeHtml(savedSession.module_name || savedSession.module_id || wt('im.k515', 'Без модуля'))}
-                                    ${savedSession.topic_name || savedSession.topic_id ? ` / ${this.escapeHtml(savedSession.topic_name || savedSession.topic_id)}` : ''}
-                                </div>
-                                <div class="mt-1 text-xs">
-                                    Покрыто единиц: <strong>${sessionSnapshot ? (sessionSnapshot.coveredOnce.length + sessionSnapshot.coveredMulti.length) : 0}</strong>,
-                                    ещё без покрытия: <strong>${sessionSnapshot ? sessionSnapshot.uncovered.length : 0}</strong>,
-                                    сохранённых черновиков: <strong>${savedDraftsCount}</strong>.
-                                    ${wt('im.k613', 'На шаге с промптами можно продолжить эту сессию, не начиная анализ заново.')}
-                                </div>
-                                <div class="mt-3">
-                                    <button
-                                        onclick="dashboard.importManager.resumeManualAnalysisSession()"
-                                        class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-info text-info hover:bg-info hover:text-white transition-colors">
-                                        ${wt('im.k614', 'Продолжить session')}
-                                    </button>
-                                </div>
+                            <span class="material-symbols-outlined text-primary text-[22px] mt-0.5">auto_awesome</span>
+                            <div>
+                                <h4 class="text-sm font-bold text-text-main mb-1">${wt('im.k728', 'Единственный путь: через внешний ИИ')}</h4>
+                                <ol class="text-xs text-text-secondary space-y-1 list-decimal list-inside">
+                                    <li>${wt('im.k1075', 'Выберите модуль и тему, куда пойдут задания')}</li>
+                                    <li>${wt('im.k1076', 'На следующем шаге получите готовый промпт для внешней нейросети')}</li>
+                                    <li>${wt('im.k1077', 'Сгенерируйте задания вне платформы и вставьте ответ сюда')}</li>
+                                    <li>${wt('im.k1078', 'Проверьте парсинг и импортируйте результат')}</li>
+                                </ol>
                             </div>
                         </div>
                     </div>
-                ` : ''}
 
-                <div class="p-4 border border-border-subtle rounded-lg bg-surface-1">
-                    <div class="flex items-start gap-2">
-                        <span class="material-symbols-outlined text-[18px] text-primary mt-0.5">tips_and_updates</span>
-                        <div class="text-sm text-text-secondary leading-relaxed">
-                            ${wt('im.k516', 'Встроенная автоматическая генерация в этом разделе больше не используется.')}
-                            ${wt('im.k517', 'Здесь остаётся только сценарий с выдачей промптов для самостоятельной работы')}
-                            ${wt('im.k518', 'с нейросетями "на стороне".')}
+                    <div class="p-4 border border-border-subtle rounded-lg bg-surface-1">
+                        <div class="flex items-start gap-2">
+                            <span class="material-symbols-outlined text-[18px] text-primary mt-0.5">tips_and_updates</span>
+                            <div class="text-sm text-text-secondary leading-relaxed">
+                                ${wt('im.k516', 'Встроенная автоматическая генерация в этом разделе больше не используется.')}
+                                ${wt('im.k517', 'Здесь остаётся только сценарий с выдачей промптов для самостоятельной работы')}
+                                ${wt('im.k518', 'с нейросетями "на стороне".')}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-text-secondary mb-2">${wt('im.k854', 'Целевой модуль')}</label>
+                            <select id="import-module-select" 
+                                class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main focus:ring-2 focus:ring-primary sm:text-sm">
+                                ${this.renderModuleOptions(modules, wt('im.k653', 'Выберите модуль...'))}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-text-secondary mb-2">${wt('im.k855', 'Целевая тема')}</label>
+                            <select id="import-topic-select"
+                                class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main focus:ring-2 focus:ring-primary sm:text-sm"
+                                disabled>
+                                <option value="">${wt('im.k856', 'Сначала выберите модуль...')}</option>
+                            </select>
                         </div>
                     </div>
                 </div>
+            `;
+        }
 
+        return `
+            <div class="space-y-4 animate-fade-in">
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-semibold text-text-secondary mb-2">${wt('im.k854', 'Целевой модуль')}</label>
@@ -10263,6 +10285,70 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                             disabled>
                             <option value="">${wt('im.k856', 'Сначала выберите модуль...')}</option>
                         </select>
+                    </div>
+                </div>
+
+                <div class="p-4 border border-border-strong rounded-lg bg-surface-2">
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                        <div class="flex items-center gap-2 flex-1">
+                            <span class="material-symbols-outlined text-[18px] text-primary">translate</span>
+                            <span class="text-sm font-semibold text-text-main">${wt('im.k1046', 'Язык результатов:')}</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <label class="flex items-center gap-1.5 cursor-pointer">
+                                <input type="radio" name="ai-output-language-mode" value="same_as_material"
+                                    class="text-primary border-border-strong bg-surface-1 focus:ring-primary"
+                                    ${this.aiOutputLanguageMode !== 'custom' ? 'checked' : ''}
+                                    onchange="document.getElementById('ai-output-language-select').disabled = true">
+                                <span class="text-sm text-text-main">${wt('im.k1047', 'Как в материале')}</span>
+                            </label>
+                            <label class="flex items-center gap-1.5 cursor-pointer">
+                                <input type="radio" name="ai-output-language-mode" value="custom"
+                                    class="text-primary border-border-strong bg-surface-1 focus:ring-primary"
+                                    ${this.aiOutputLanguageMode === 'custom' ? 'checked' : ''}
+                                    onchange="document.getElementById('ai-output-language-select').disabled = false; document.getElementById('ai-output-language-select').focus()">
+                                <select id="ai-output-language-select"
+                                    class="rounded-md border-border-subtle bg-surface-1 py-1 px-2 text-sm text-text-main focus:ring-1 focus:ring-primary disabled:opacity-50"
+                                    ${this.aiOutputLanguageMode !== 'custom' ? 'disabled' : ''}>
+                                    <option value="ru" ${this.aiOutputLanguage === 'ru' ? 'selected' : ''}>Русский</option>
+                                    <option value="en" ${this.aiOutputLanguage === 'en' ? 'selected' : ''}>English</option>
+                                </select>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-text-secondary mb-2">${wt('im.k861', 'Загрузка материала')}</label>
+                    <div id="ai-drop-zone" class="border-2 border-dashed border-border-subtle rounded-lg p-6 text-center bg-surface-2 hover:bg-bg-hover hover:border-primary transition-all cursor-pointer relative">
+                        <input type="file" id="ai-file-input" accept=".pdf,.docx,.txt" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                        <div class="pointer-events-none">
+                            ${this.aiUploadedFile ? `
+                                <span class="material-symbols-outlined text-3xl text-success-text mb-1">check_circle</span>
+                                <p class="text-sm font-bold text-primary" id="ai-file-name">${this.escapeHtml(this.aiUploadedFile.name)}</p>
+                                <p class="text-xs text-text-muted mt-1">${this.aiFileInfo ? `${this.aiFileInfo.word_count} слов` : wt('im.k498', 'Загружено')}</p>
+                            ` : `
+                                <span class="material-symbols-outlined text-3xl text-text-disabled mb-1">upload_file</span>
+                                <p class="text-sm font-medium text-text-secondary" id="ai-file-name">${wt('im.k1048', 'Перетащите PDF, DOCX или TXT')}</p>
+                                <p class="text-xs text-text-secondary mt-1">${wt('im.k1049', 'Максимум 18 МБ')}</p>
+                            `}
+                        </div>
+                    </div>
+                    ${limitHtml}
+                </div>
+
+                <div>
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="flex-1 h-px bg-border-subtle"></div>
+                        <span class="text-xs text-text-disabled font-medium">${wt('im.k1050_or', 'или вставьте текст')}</span>
+                        <div class="flex-1 h-px bg-border-subtle"></div>
+                    </div>
+                    <textarea id="ai-material-textarea" rows="6" 
+                        class="block w-full rounded-lg border-border-subtle bg-surface-2 p-3 text-sm text-text-main focus:ring-2 focus:ring-primary resize-y"
+                        placeholder="${wt('im.k499', 'Вставьте учебный материал сюда...')}">${this.escapeHtml(this.materialText)}</textarea>
+                    <div class="flex justify-between mt-1">
+                        <span class="text-xs text-text-disabled" id="ai-word-count">${this.materialText ? this.materialText.split(/\s+/).filter(Boolean).length + ' слов' : ''}</span>
+                        <span class="text-xs text-text-disabled">${wt('im.k1050', 'Минимум 50 слов')}</span>
                     </div>
                 </div>
             </div>

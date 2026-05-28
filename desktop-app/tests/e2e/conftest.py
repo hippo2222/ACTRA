@@ -40,6 +40,9 @@ def local_server():
     env = os.environ.copy()
     env["TRAINER_HTTP_PORT"] = str(port)
     env["FLASK_DEBUG"] = "0"
+    env["RP_EDITOR_FF_AI_MODE"] = "1"
+    env["RP_EDITOR_FF_MICROCARDS_MODE"] = "1"
+    env["RP_EDITOR_FF_MICROCARDS_PAIR_MATCH"] = "1"
     
     # Overwrite ai_config.json with mock for testing
     import json
