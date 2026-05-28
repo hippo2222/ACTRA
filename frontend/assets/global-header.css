@@ -362,8 +362,20 @@
     background: var(--color-primary);
 }
 
-@media (max-width: 1120px) {
-    .global-header__link span:not(.material-symbols-outlined),
+/* Stage 1: below ~1500px the five nav labels no longer fit beside the
+   action cluster, so the centered nav spills over the brand and "Create"
+   button. Collapse nav labels to icons first (they free the most space). */
+@media (max-width: 1500px) {
+    .global-header__link span:not(.material-symbols-outlined) {
+        display: none;
+    }
+    .global-header__link {
+        padding: 0 0.62rem;
+    }
+}
+
+/* Stage 2: below ~1180px collapse the secondary action labels too. */
+@media (max-width: 1180px) {
     .global-header__reference span:not(.material-symbols-outlined),
     .global-header__onboarding-help span:not(.material-symbols-outlined),
     .global-header__lang-btn .global-header__lang-code,
@@ -371,5 +383,8 @@
     .global-header__user-name,
     .global-header__plan-badge {
         display: none;
+    }
+    .global-header__reference {
+        padding: 0 0.6rem;
     }
 }

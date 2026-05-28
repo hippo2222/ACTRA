@@ -79,12 +79,15 @@
 
         var navHtml = NAV_ITEMS.map(function (item) {
             var active = item.section === activeSection;
+            var label = _t(item.i18nKey);
             return '<a class="global-header__link' + (active ? ' is-active' : '') + '"' +
                 ' href="' + escapeHtml(item.href) + '"' +
                 ' data-global-nav="' + escapeHtml(item.href) + '"' +
+                ' data-i18n-aria="' + escapeHtml(item.i18nKey) + '" aria-label="' + escapeHtml(label) + '"' +
+                ' data-i18n-title="' + escapeHtml(item.i18nKey) + '" title="' + escapeHtml(label) + '"' +
                 (active ? ' aria-current="page"' : '') + '>' +
                 '<span class="material-symbols-outlined" aria-hidden="true">' + escapeHtml(item.icon) + '</span>' +
-                '<span data-i18n="' + escapeHtml(item.i18nKey) + '">' + escapeHtml(_t(item.i18nKey)) + '</span>' +
+                '<span data-i18n="' + escapeHtml(item.i18nKey) + '">' + escapeHtml(label) + '</span>' +
                 '</a>';
         }).join('');
 
