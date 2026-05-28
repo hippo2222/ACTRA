@@ -125,7 +125,7 @@
             <div class="flex items-center gap-3">
                 <button type="button" id="mcHeaderBackBtn" onclick="mcApp.handleBackNavigation()"
                     class="flex items-center justify-center size-9 rounded-lg text-text-secondary hover:text-primary hover:bg-bg-hover transition-colors"
-                    title="Назад">
+                    title="Назад" aria-label="Назад" data-i18n-title="microcards.btn_back">
                     <span class="material-symbols-outlined">arrow_back</span>
                 </button>
                 <div class="flex flex-col">
@@ -136,7 +136,7 @@
             
             <div class="flex items-center gap-2">
                 <!-- Session progress -->
-                <div id="mcHeaderProgress" class="hidden items-center gap-2 px-3 py-1 bg-surface-2 rounded-full border border-border-subtle">
+                <div id="mcHeaderProgress" class="hidden items-center gap-2 px-3 py-1 bg-surface-2 rounded-full border border-border-subtle" aria-live="polite" aria-label="Прогресс сессии">
                     <span class="text-[11px] font-bold text-text-secondary" id="mcHeaderProgressText">0/0</span>
                     <div class="w-16 h-1.5 bg-bg-secondary rounded-full overflow-hidden">
                         <div id="mcHeaderProgressBar" class="h-full bg-primary rounded-full transition-all duration-300" style="width:0%"></div>
@@ -189,14 +189,14 @@
                     <span class="absolute inset-y-0 left-3 flex items-center text-text-secondary">
                         <span class="material-symbols-outlined text-[20px]">search</span>
                     </span>
-                    <input id="libSearch" type="search" placeholder="Поиск колоды по названию..."
+                    <input id="libSearch" type="search" placeholder="Поиск колоды по названию..." data-i18n-placeholder="microcards.search_placeholder"
                         class="w-full rounded-xl border border-border-strong bg-surface-1 py-2.5 pl-10 pr-4 text-sm text-text-main outline-none focus:border-primary transition-colors" />
                 </div>
                 <div class="flex items-center gap-2">
                     <button type="button" onclick="mcApp.openCreateDeckDialog()"
                         class="px-4 py-2.5 rounded-xl bg-primary text-primary-fg hover:bg-primary-hover font-bold text-sm transition-colors flex items-center gap-1.5">
                         <span class="material-symbols-outlined text-[18px]">add</span>
-                        <span>Создать колоду</span>
+                        <span data-i18n="microcards.btn_create_deck">Создать колоду</span>
                     </button>
                 </div>
             </div>
@@ -208,8 +208,8 @@
 
             <div id="decksEmpty" class="hidden text-center py-16">
                 <span class="material-symbols-outlined text-text-secondary text-[48px] mb-3">style</span>
-                <h3 class="text-lg font-bold mb-1">Библиотека пуста</h3>
-                <p class="text-sm text-text-secondary">Создайте свою первую колоду, чтобы начать обучение.</p>
+                <h3 class="text-lg font-bold mb-1" data-i18n="microcards.empty_library_title">Библиотека пуста</h3>
+                <p class="text-sm text-text-secondary" data-i18n="microcards.empty_library_hint">Создайте свою первую колоду, чтобы начать обучение.</p>
             </div>
         </div>
 
@@ -226,17 +226,17 @@
                     <button type="button" id="btnStudyDeck" onclick="mcApp.startLearningSession()"
                         class="px-5 py-3 rounded-xl bg-primary text-primary-fg hover:bg-primary-hover font-extrabold text-sm transition-colors flex items-center gap-1.5 shadow-md shadow-primary/20">
                         <span class="material-symbols-outlined text-[20px]">play_arrow</span>
-                        <span>Начать обучение</span>
+                        <span data-i18n="microcards.btn_start_study">Начать обучение</span>
                     </button>
                     <button type="button" onclick="mcApp.openDeckEditor()"
                         class="px-4 py-3 rounded-xl border border-border-strong text-text-main hover:bg-bg-hover font-bold text-sm transition-colors flex items-center gap-1.5">
                         <span class="material-symbols-outlined text-[18px]">edit</span>
-                        <span>Редактор</span>
+                        <span data-i18n="microcards.btn_editor">Редактор</span>
                     </button>
                     <button type="button" onclick="mcApp.openImportDialog()"
                         class="px-4 py-3 rounded-xl border border-border-strong text-text-main hover:bg-bg-hover font-bold text-sm transition-colors flex items-center gap-1.5">
                         <span class="material-symbols-outlined text-[18px]">upload</span>
-                        <span>Импорт</span>
+                        <span data-i18n="microcards.btn_import">Импорт</span>
                     </button>
                     <div class="relative">
                         <button type="button" onclick="mcApp.toggleDeckActionsMenu(event)"
@@ -246,17 +246,17 @@
                         <!-- Actions menu -->
                         <div id="deckActionsDropdown" class="hidden absolute right-0 mt-2 w-48 rounded-xl bg-surface-1 border border-border-strong shadow-xl py-1.5 z-20">
                             <button type="button" onclick="mcApp.exportDeck('json')" class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-bg-hover flex items-center gap-2">
-                                <span class="material-symbols-outlined text-xs">download</span>Экспорт JSON
+                                <span class="material-symbols-outlined text-xs">download</span><span data-i18n="microcards.btn_menu_export_json">Экспорт JSON</span>
                             </button>
                             <button type="button" onclick="mcApp.exportDeck('csv')" class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-bg-hover flex items-center gap-2">
-                                <span class="material-symbols-outlined text-xs">download</span>Экспорт CSV
+                                <span class="material-symbols-outlined text-xs">download</span><span data-i18n="microcards.btn_menu_export_csv">Экспорт CSV</span>
                             </button>
                             <button type="button" onclick="mcApp.publishDeckToCatalog()" class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-bg-hover flex items-center gap-2">
-                                <span class="material-symbols-outlined text-xs">publish</span>В каталог
+                                <span class="material-symbols-outlined text-xs">publish</span><span data-i18n="microcards.btn_menu_publish">В каталог</span>
                             </button>
                             <hr class="border-border-subtle my-1">
                             <button type="button" onclick="mcApp.confirmDeleteDeck()" class="w-full text-left px-4 py-2 text-xs font-semibold text-error hover:bg-bg-hover flex items-center gap-2">
-                                <span class="material-symbols-outlined text-xs">delete</span>Удалить колоду
+                                <span class="material-symbols-outlined text-xs">delete</span><span data-i18n="microcards.btn_menu_delete_deck">Удалить колоду</span>
                             </button>
                         </div>
                     </div>
@@ -267,11 +267,11 @@
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <!-- Sidebar progress -->
                 <div class="p-4 bg-surface-1 rounded-2xl border border-border-subtle h-fit">
-                    <h3 class="font-bold text-sm mb-4">Прогресс обучения</h3>
+                    <h3 class="font-bold text-sm mb-4" data-i18n="microcards.progress_title">Прогресс обучения</h3>
                     <div class="space-y-4">
                         <div>
                             <div class="flex justify-between text-xs mb-1">
-                                <span class="text-text-secondary">Уровень 1 (Знаю / Не знаю)</span>
+                                <span class="text-text-secondary" data-i18n="microcards.level1_label">Уровень 1 (Знаю / Не знаю)</span>
                                 <span id="progressL1Count" class="font-bold">0</span>
                             </div>
                             <div class="h-2 bg-bg-secondary rounded-full overflow-hidden">
@@ -280,7 +280,7 @@
                         </div>
                         <div>
                             <div class="flex justify-between text-xs mb-1">
-                                <span class="text-text-secondary">Уровень 2 (Ввод ответа)</span>
+                                <span class="text-text-secondary" data-i18n="microcards.level2_label">Уровень 2 (Ввод ответа)</span>
                                 <span id="progressL2Count" class="font-bold">0</span>
                             </div>
                             <div class="h-2 bg-bg-secondary rounded-full overflow-hidden">
@@ -288,7 +288,7 @@
                             </div>
                         </div>
                         <div class="pt-4 border-t border-border-subtle flex justify-between text-sm">
-                            <span class="text-text-secondary">Всего карточек:</span>
+                            <span class="text-text-secondary" data-i18n="microcards.total_cards_label">Всего карточек:</span>
                             <span id="deckTotalCardsCount" class="font-extrabold">0</span>
                         </div>
                     </div>
@@ -297,7 +297,7 @@
                 <!-- Cards list -->
                 <div class="lg:col-span-2">
                     <div class="flex items-center justify-between mb-4">
-                        <h3 class="font-black text-base text-text-main">Карточки в колоде</h3>
+                        <h3 class="font-black text-base text-text-main" data-i18n="microcards.deck_cards_heading">Карточки в колоде</h3>
                         <span id="deckCardsCountBadge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-surface-2 border border-border-subtle text-text-secondary">0</span>
                     </div>
                     <div class="space-y-3" id="deckCardsListContainer">
@@ -313,9 +313,9 @@
                 <div class="flex items-center justify-between gap-4 mb-4">
                     <button type="button" onclick="mcApp.abortSession()" class="flex items-center gap-1 text-sm text-text-secondary hover:text-primary transition-colors">
                         <span class="material-symbols-outlined text-[18px]">close</span>
-                        <span>Выйти из сессии</span>
+                        <span data-i18n="microcards.btn_exit_session">Выйти из сессии</span>
                     </button>
-                    <div id="sessionLevelIndicator" class="px-3 py-1 rounded-full text-xs font-bold border"></div>
+                    <div id="sessionLevelIndicator" class="px-3 py-1 rounded-full text-xs font-bold border" aria-live="polite" aria-atomic="true"></div>
                 </div>
 
                 <!-- Flashcard layout -->
@@ -325,10 +325,10 @@
                         <!-- Front Face -->
                         <div class="flashcard-front absolute inset-0 w-full h-full flex flex-col justify-between p-6 overflow-y-auto">
                             <div class="flex items-start justify-between">
-                                <span class="text-xs font-bold text-text-secondary uppercase tracking-wider">Вопрос</span>
+                                <span class="text-xs font-bold text-text-secondary uppercase tracking-wider" data-i18n="microcards.card_question_label">Вопрос</span>
                                 <button type="button" id="btnShowHint" onclick="mcApp.toggleHint()" class="hidden px-2.5 py-1 rounded-lg text-xs border border-border-strong hover:bg-bg-hover text-text-secondary transition-colors flex items-center gap-1">
                                     <span class="material-symbols-outlined text-[14px]">lightbulb</span>
-                                    <span>Подсказка</span>
+                                    <span data-i18n="microcards.hint_label">Подсказка</span>
                                 </button>
                             </div>
                             
@@ -342,17 +342,17 @@
                             <div id="frontActionsL1" class="flex justify-center">
                                 <button type="button" onclick="mcApp.revealAnswerL1()"
                                     class="px-6 py-2.5 rounded-xl bg-primary text-primary-fg hover:bg-primary-hover font-bold text-sm shadow-md shadow-primary/20 transition-colors">
-                                    Показать ответ
+                                    <span data-i18n="microcards.btn_show_answer">Показать ответ</span>
                                 </button>
                             </div>
 
                             <!-- Level 2 inputs -->
                             <div id="frontActionsL2" class="hidden w-full">
                                 <form onsubmit="mcApp.submitAnswerL2(event)" class="flex gap-2">
-                                    <input type="text" id="inputL2Answer" placeholder="Введите ответ..." autocomplete="off"
+                                    <input type="text" id="inputL2Answer" placeholder="Введите ответ..." autocomplete="off" data-i18n-placeholder="microcards.input_answer_ph"
                                         class="flex-1 px-4 py-2.5 rounded-xl border border-border-strong bg-surface-2 text-sm text-text-main outline-none focus:border-primary transition-colors" />
                                     <button type="submit" class="px-5 py-2.5 rounded-xl bg-primary text-primary-fg hover:bg-primary-hover font-bold text-sm transition-colors">
-                                        Проверить
+                                        <span data-i18n="microcards.btn_check">Проверить</span>
                                     </button>
                                 </form>
                             </div>
@@ -361,7 +361,7 @@
                         <!-- Back Face -->
                         <div class="flashcard-back absolute inset-0 w-full h-full flex flex-col justify-between p-6 overflow-y-auto">
                             <div class="flex items-start justify-between">
-                                <span class="text-xs font-bold text-text-secondary uppercase tracking-wider">Ответ</span>
+                                <span class="text-xs font-bold text-text-secondary uppercase tracking-wider" data-i18n="microcards.card_answer_label">Ответ</span>
                                 <span id="answerEvaluationBadge" class="hidden px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border"></span>
                             </div>
 
@@ -371,25 +371,25 @@
                                 
                                 <div id="l2ComparisonZone" class="hidden w-full mt-4 p-3 bg-surface-2 rounded-xl border border-border-subtle text-left text-xs space-y-2">
                                     <div>
-                                        <span class="text-text-secondary block">Ваш ответ:</span>
+                                        <span class="text-text-secondary block" data-i18n="microcards.your_answer_label">Ваш ответ:</span>
                                         <span id="l2UserAnswerDisplay" class="font-semibold text-text-main block"></span>
                                     </div>
                                     <div>
-                                        <span class="text-text-secondary block">Правильный ответ:</span>
+                                        <span class="text-text-secondary block" data-i18n="microcards.correct_answer_label">Правильный ответ:</span>
                                         <span id="l2CorrectAnswerDisplay" class="font-semibold text-success block"></span>
                                     </div>
                                 </div>
                             </div>
 
                             <!-- Level 1 grading -->
-                            <div id="backActionsL1" class="hidden grid grid-cols-2 gap-3">
+                            <div id="backActionsL1" class="hidden grid grid-cols-2 gap-3" role="group" aria-label="Оцените ответ">
                                 <button type="button" onclick="mcApp.submitAnswerL1(false)"
                                     class="px-4 py-3 rounded-xl bg-error/10 hover:bg-error/20 border border-error/20 text-error font-extrabold text-sm transition-colors">
-                                    Не знаю
+                                    <span data-i18n="microcards.btn_dont_know">Не знаю</span>
                                 </button>
                                 <button type="button" onclick="mcApp.submitAnswerL1(true)"
                                     class="px-4 py-3 rounded-xl bg-success/10 hover:bg-success/20 border border-success/20 text-success font-extrabold text-sm transition-colors">
-                                    Знаю
+                                    <span data-i18n="microcards.btn_know">Знаю</span>
                                 </button>
                             </div>
 
@@ -397,11 +397,11 @@
                             <div id="backActionsL2" class="hidden flex items-center justify-between gap-3">
                                 <button type="button" id="btnL2Override" onclick="mcApp.overrideL2Answer()"
                                     class="px-4 py-3 rounded-xl border border-warning/20 bg-warning/10 text-warning hover:bg-warning/20 font-bold text-xs transition-colors hidden">
-                                    Всё равно правильно
+                                    <span data-i18n="microcards.btn_override">Всё равно правильно</span>
                                 </button>
                                 <button type="button" onclick="mcApp.nextCard()"
                                     class="px-6 py-3 rounded-xl bg-primary text-primary-fg hover:bg-primary-hover font-bold text-sm transition-colors ml-auto">
-                                    Далее
+                                    <span data-i18n="microcards.btn_next">Далее</span>
                                 </button>
                             </div>
                         </div>
@@ -416,22 +416,22 @@
             <div class="max-w-xl mx-auto">
                 <div class="glass-card p-6 md:p-8 text-center mb-6">
                     <span class="material-symbols-outlined text-success text-[48px] mb-3">celebration</span>
-                    <h2 class="text-xl font-black text-text-main mb-1">Отличная работа!</h2>
-                    <p class="text-sm text-text-secondary mb-6">Вы успешно завершили текущую сессию.</p>
+                    <h2 class="text-xl font-black text-text-main mb-1" data-i18n="microcards.summary_v2_title">Отличная работа!</h2>
+                    <p class="text-sm text-text-secondary mb-6" data-i18n="microcards.summary_subtitle">Вы успешно завершили текущую сессию.</p>
                     
                     <!-- Stats Grid -->
                     <div class="grid grid-cols-3 gap-3 mb-6">
                         <div class="p-3 bg-surface-2 rounded-xl border border-border-subtle">
                             <span class="text-xl font-black text-text-main" id="sumStatTotal">0</span>
-                            <p class="text-[9px] font-bold text-text-secondary uppercase tracking-wider mt-1">Изучено</p>
+                            <p class="text-[9px] font-bold text-text-secondary uppercase tracking-wider mt-1" data-i18n="microcards.sum_stat_total">Изучено</p>
                         </div>
                         <div class="p-3 bg-success-lighter rounded-xl border border-success-light">
                             <span class="text-xl font-black text-success-text" id="sumStatCorrect">0</span>
-                            <p class="text-[9px] font-bold text-text-secondary uppercase tracking-wider mt-1">Верно</p>
+                            <p class="text-[9px] font-bold text-text-secondary uppercase tracking-wider mt-1" data-i18n="microcards.sum_stat_correct">Верно</p>
                         </div>
                         <div class="p-3 bg-error-lighter rounded-xl border border-error-light">
                             <span class="text-xl font-black text-error-text" id="sumStatErrors">0</span>
-                            <p class="text-[9px] font-bold text-text-secondary uppercase tracking-wider mt-1">Ошибки</p>
+                            <p class="text-[9px] font-bold text-text-secondary uppercase tracking-wider mt-1" data-i18n="microcards.sum_stat_errors">Ошибки</p>
                         </div>
                     </div>
 
@@ -439,16 +439,16 @@
                     <div class="flex flex-col sm:flex-row items-center justify-center gap-2">
                         <button type="button" onclick="mcApp.backToDecks()"
                             class="w-full sm:w-auto px-5 py-2.5 text-sm font-bold rounded-xl border border-border-strong text-text-main hover:bg-bg-hover transition-colors">
-                            Назад к колодам
+                            <span data-i18n="microcards.btn_back_to_decks">Назад к колодам</span>
                         </button>
                         <button type="button" id="btnRetryErrors" onclick="mcApp.retrySessionErrors()"
                             class="w-full sm:w-auto px-5 py-2.5 text-sm font-bold rounded-xl bg-warning text-warning-fg hover:bg-warning-hover transition-colors flex items-center justify-center gap-1.5">
                             <span class="material-symbols-outlined text-[16px]">replay</span>
-                            <span>Работа над ошибками</span>
+                            <span data-i18n="microcards.btn_retry_errors">Работа над ошибками</span>
                         </button>
                         <button type="button" onclick="mcApp.restartLearningSession()"
                             class="w-full sm:w-auto px-5 py-2.5 text-sm font-bold rounded-xl bg-primary text-primary-fg hover:bg-primary-hover shadow-sm shadow-primary/20 transition-colors">
-                            Учить снова
+                            <span data-i18n="microcards.btn_study_again">Учить снова</span>
                         </button>
                     </div>
                 </div>
@@ -457,7 +457,7 @@
                 <div id="summaryErrorsSection" class="hidden">
                     <h3 class="font-black text-sm text-text-main mb-3 flex items-center gap-2">
                         <span class="material-symbols-outlined text-error text-[18px]">error</span>
-                        <span>Разбор ошибок</span>
+                        <span data-i18n="microcards.errors_breakdown_title">Разбор ошибок</span>
                     </h3>
                     <div class="space-y-3" id="summaryErrorsList">
                         <!-- Filled by JS -->
@@ -472,7 +472,7 @@
                 <!-- Sidebar Cards Navigator -->
                 <div class="lg:w-1/4 p-4 bg-surface-1 rounded-2xl border border-border-subtle h-fit">
                     <div class="flex items-center justify-between mb-4">
-                        <h3 class="font-bold text-sm">Карточки колоды</h3>
+                        <h3 class="font-bold text-sm" data-i18n="microcards.editor_cards_nav_title">Карточки колоды</h3>
                         <button type="button" onclick="mcApp.initNewCardForm()"
                             class="p-1 rounded-lg border border-border-strong hover:bg-bg-hover text-primary transition-colors flex items-center justify-center">
                             <span class="material-symbols-outlined text-[18px]">add</span>
@@ -487,24 +487,24 @@
                 <div class="flex-1 p-6 bg-surface-1 rounded-2xl border border-border-subtle">
                     <!-- Deck Edit Form (only if selected header editing) -->
                     <div id="editorDeckMetaForm" class="mb-6 pb-6 border-b border-border-subtle">
-                        <h3 class="font-extrabold text-base mb-4 text-text-main">Параметры колоды</h3>
+                        <h3 class="font-extrabold text-base mb-4 text-text-main" data-i18n="microcards.editor_deck_params_title">Параметры колоды</h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label for="editDeckName" class="block text-xs font-bold text-text-secondary uppercase mb-1.5">Название колоды</label>
+                                <label for="editDeckName" class="block text-xs font-bold text-text-secondary uppercase mb-1.5" data-i18n="microcards.editor_deck_name_label">Название колоды</label>
                                 <input type="text" id="editDeckName" class="w-full px-4 py-2.5 rounded-xl border border-border-strong bg-surface-2 text-sm text-text-main outline-none focus:border-primary transition-colors" />
                             </div>
                             <div>
-                                <label for="editDeckTags" class="block text-xs font-bold text-text-secondary uppercase mb-1.5">Теги (через запятую)</label>
+                                <label for="editDeckTags" class="block text-xs font-bold text-text-secondary uppercase mb-1.5" data-i18n="microcards.editor_deck_tags_label">Теги (через запятую)</label>
                                 <input type="text" id="editDeckTags" placeholder="протоколы, сети" class="w-full px-4 py-2.5 rounded-xl border border-border-strong bg-surface-2 text-sm text-text-main outline-none focus:border-primary transition-colors" />
                             </div>
                             <div class="md:col-span-2">
-                                <label for="editDeckDesc" class="block text-xs font-bold text-text-secondary uppercase mb-1.5">Описание колоды</label>
+                                <label for="editDeckDesc" class="block text-xs font-bold text-text-secondary uppercase mb-1.5" data-i18n="microcards.editor_deck_desc_label">Описание колоды</label>
                                 <textarea id="editDeckDesc" rows="2" class="w-full px-4 py-2.5 rounded-xl border border-border-strong bg-surface-2 text-sm text-text-main outline-none focus:border-primary transition-colors resize-none"></textarea>
                             </div>
                         </div>
                         <div class="mt-4 flex justify-end">
                             <button type="button" onclick="mcApp.saveDeckMeta()" class="px-5 py-2 rounded-xl bg-success text-success-fg hover:bg-success-hover font-bold text-xs transition-colors">
-                                Сохранить параметры
+                                <span data-i18n="microcards.editor_save_params">Сохранить параметры</span>
                             </button>
                         </div>
                     </div>
@@ -512,34 +512,34 @@
                     <!-- Card Form -->
                     <div id="editorCardFormZone">
                         <div class="flex items-center justify-between mb-4">
-                            <h3 class="font-extrabold text-base text-text-main" id="editorCardFormTitle">Новая карточка</h3>
+                            <h3 class="font-extrabold text-base text-text-main" id="editorCardFormTitle" data-i18n="microcards.editor_new_card_title">Новая карточка</h3>
                             <button type="button" id="btnDeleteCard" onclick="mcApp.deleteActiveCard()" class="hidden px-3.5 py-2 rounded-xl border border-error/20 bg-error/10 hover:bg-error/20 text-error font-bold text-xs transition-colors">
-                                Удалить карточку
+                                <span data-i18n="microcards.editor_delete_card_btn">Удалить карточку</span>
                             </button>
                         </div>
                         <div class="space-y-4">
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <label for="editCardFront" class="block text-xs font-bold text-text-secondary uppercase mb-1.5">Вопрос (Лицевая сторона)</label>
+                                    <label for="editCardFront" class="block text-xs font-bold text-text-secondary uppercase mb-1.5" data-i18n="microcards.editor_card_front_label">Вопрос (Лицевая сторона)</label>
                                     <textarea id="editCardFront" rows="3" class="w-full px-4 py-2.5 rounded-xl border border-border-strong bg-surface-2 text-sm text-text-main outline-none focus:border-primary transition-colors resize-none" placeholder="Что такое OSI?"></textarea>
                                 </div>
                                 <div>
-                                    <label for="editCardBack" class="block text-xs font-bold text-text-secondary uppercase mb-1.5">Ответ (Обратная сторона)</label>
+                                    <label for="editCardBack" class="block text-xs font-bold text-text-secondary uppercase mb-1.5" data-i18n="microcards.editor_card_back_label">Ответ (Обратная сторона)</label>
                                     <textarea id="editCardBack" rows="3" class="w-full px-4 py-2.5 rounded-xl border border-border-strong bg-surface-2 text-sm text-text-main outline-none focus:border-primary transition-colors resize-none" placeholder="Базовая эталонная модель взаимодействия открытых систем."></textarea>
                                 </div>
                             </div>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div class="md:col-span-2">
-                                    <label for="editCardHint" class="block text-xs font-bold text-text-secondary uppercase mb-1.5">Подсказка (Опционально)</label>
+                                    <label for="editCardHint" class="block text-xs font-bold text-text-secondary uppercase mb-1.5" data-i18n="microcards.editor_card_hint_label">Подсказка (Опционально)</label>
                                     <input type="text" id="editCardHint" class="w-full px-4 py-2.5 rounded-xl border border-border-strong bg-surface-2 text-sm text-text-main outline-none focus:border-primary transition-colors" placeholder="Аббревиатура из 3 букв" />
                                 </div>
                                 <div>
-                                    <label for="editCardFrontImage" class="block text-xs font-bold text-text-secondary uppercase mb-1.5">Ссылка на изображение к Вопросу (Опционально)</label>
+                                    <label for="editCardFrontImage" class="block text-xs font-bold text-text-secondary uppercase mb-1.5" data-i18n="microcards.editor_card_front_img_label">Ссылка на изображение к Вопросу (Опционально)</label>
                                     <input type="url" id="editCardFrontImage" oninput="mcApp.previewEditorImage('front')" class="w-full px-4 py-2.5 rounded-xl border border-border-strong bg-surface-2 text-sm text-text-main outline-none focus:border-primary transition-colors" placeholder="https://example.com/image.jpg" />
                                     <img id="editCardFrontImagePreview" class="hidden mt-2 max-h-[80px] rounded-lg object-contain border border-border-subtle" alt="Front preview">
                                 </div>
                                 <div>
-                                    <label for="editCardBackImage" class="block text-xs font-bold text-text-secondary uppercase mb-1.5">Ссылка на изображение к Ответу (Опционально)</label>
+                                    <label for="editCardBackImage" class="block text-xs font-bold text-text-secondary uppercase mb-1.5" data-i18n="microcards.editor_card_back_img_label">Ссылка на изображение к Ответу (Опционально)</label>
                                     <input type="url" id="editCardBackImage" oninput="mcApp.previewEditorImage('back')" class="w-full px-4 py-2.5 rounded-xl border border-border-strong bg-surface-2 text-sm text-text-main outline-none focus:border-primary transition-colors" placeholder="https://example.com/image.jpg" />
                                     <img id="editCardBackImagePreview" class="hidden mt-2 max-h-[80px] rounded-lg object-contain border border-border-subtle" alt="Back preview">
                                 </div>
@@ -547,10 +547,10 @@
                             
                             <div class="pt-4 flex justify-end gap-2">
                                 <button type="button" onclick="mcApp.closeDeckEditor()" class="px-5 py-2.5 rounded-xl border border-border-strong text-text-main hover:bg-bg-hover font-bold text-xs transition-colors">
-                                    Закрыть редактор
+                                    <span data-i18n="microcards.editor_close_btn">Закрыть редактор</span>
                                 </button>
                                 <button type="button" onclick="mcApp.saveActiveCard()" class="px-5 py-2.5 rounded-xl bg-primary text-primary-fg hover:bg-primary-hover font-bold text-xs transition-colors">
-                                    Сохранить карточку
+                                    <span data-i18n="microcards.editor_save_card_btn">Сохранить карточку</span>
                                 </button>
                             </div>
                         </div>
@@ -566,18 +566,18 @@
     <!-- Dialog: Create Deck -->
     <dialog id="dialogCreateDeck" closedby="any" aria-labelledby="createDeckTitle">
         <form method="dialog" class="space-y-4" onsubmit="mcApp.handleCreateDeckSubmit(event)">
-            <h3 id="createDeckTitle" class="text-lg font-black text-text-main">Создать колоду</h3>
+            <h3 id="createDeckTitle" class="text-lg font-black text-text-main" data-i18n="microcards.dialog_create_title">Создать колоду</h3>
             <div>
-                <label for="createDeckName" class="block text-xs font-bold text-text-secondary uppercase mb-1.5">Название</label>
+                <label for="createDeckName" class="block text-xs font-bold text-text-secondary uppercase mb-1.5" data-i18n="microcards.dialog_create_name_label">Название</label>
                 <input type="text" id="createDeckName" required class="w-full px-4 py-2.5 rounded-xl border border-border-strong bg-surface-2 text-sm text-text-main outline-none focus:border-primary transition-colors" />
             </div>
             <div>
-                <label for="createDeckDesc" class="block text-xs font-bold text-text-secondary uppercase mb-1.5">Описание</label>
+                <label for="createDeckDesc" class="block text-xs font-bold text-text-secondary uppercase mb-1.5" data-i18n="microcards.dialog_create_desc_label">Описание</label>
                 <textarea id="createDeckDesc" rows="2" class="w-full px-4 py-2.5 rounded-xl border border-border-strong bg-surface-2 text-sm text-text-main outline-none focus:border-primary transition-colors resize-none"></textarea>
             </div>
             <div class="flex justify-end gap-2 pt-2">
-                <button type="button" onclick="$('dialogCreateDeck').close()" class="px-4 py-2 rounded-lg border border-border-strong font-bold text-xs">Отмена</button>
-                <button type="submit" class="px-4 py-2 rounded-lg bg-primary text-primary-fg hover:bg-primary-hover font-bold text-xs">Создать</button>
+                <button type="button" onclick="$('dialogCreateDeck').close()" class="px-4 py-2 rounded-lg border border-border-strong font-bold text-xs" data-i18n="microcards.btn_cancel">Отмена</button>
+                <button type="submit" class="px-4 py-2 rounded-lg bg-primary text-primary-fg hover:bg-primary-hover font-bold text-xs" data-i18n="microcards.btn_create">Создать</button>
             </div>
         </form>
     </dialog>
@@ -585,11 +585,11 @@
     <!-- Dialog: Deletion Confirmation -->
     <dialog id="dialogConfirmDelete" closedby="any" aria-labelledby="deleteTitle">
         <div class="space-y-4">
-            <h3 id="deleteTitle" class="text-lg font-black text-error">Подтверждение удаления</h3>
-            <p class="text-sm text-text-secondary" id="deleteConfirmText">Вы действительно хотите удалить колоду? Это действие невозможно отменить.</p>
+            <h3 id="deleteTitle" class="text-lg font-black text-error" data-i18n="microcards.dialog_delete_title">Подтверждение удаления</h3>
+            <p class="text-sm text-text-secondary" id="deleteConfirmText" data-i18n="microcards.dialog_delete_text">Вы действительно хотите удалить колоду? Это действие невозможно отменить.</p>
             <div class="flex justify-end gap-2">
-                <button type="button" onclick="$('dialogConfirmDelete').close()" class="px-4 py-2 rounded-lg border border-border-strong font-bold text-xs">Отмена</button>
-                <button type="button" id="btnDeleteConfirmAction" class="px-4 py-2 rounded-lg bg-error text-error-fg hover:bg-error-hover font-bold text-xs">Удалить</button>
+                <button type="button" onclick="$('dialogConfirmDelete').close()" class="px-4 py-2 rounded-lg border border-border-strong font-bold text-xs" data-i18n="microcards.btn_cancel">Отмена</button>
+                <button type="button" id="btnDeleteConfirmAction" class="px-4 py-2 rounded-lg bg-error text-error-fg hover:bg-error-hover font-bold text-xs" data-i18n="microcards.btn_delete">Удалить</button>
             </div>
         </div>
     </dialog>
@@ -597,7 +597,7 @@
     <!-- Dialog: Import Deck -->
     <dialog id="dialogImportDeck" closedby="any" aria-labelledby="importTitle">
         <form method="dialog" class="space-y-4" onsubmit="mcApp.handleImportSubmit(event)">
-            <h3 id="importTitle" class="text-lg font-black text-text-main">Импортировать карточки</h3>
+            <h3 id="importTitle" class="text-lg font-black text-text-main" data-i18n="microcards.dialog_import_title">Импортировать карточки</h3>
             
             <div class="space-y-3">
                 <div class="flex gap-2 justify-center border-b border-border-subtle pb-2">
@@ -606,24 +606,24 @@
                 </div>
 
                 <div id="importTabCsvZone">
-                    <label for="importCsvContent" class="block text-xs font-bold text-text-secondary uppercase mb-1.5">Текст CSV (разделитель запятая/точка с запятой)</label>
+                    <label for="importCsvContent" class="block text-xs font-bold text-text-secondary uppercase mb-1.5" data-i18n="microcards.dialog_import_csv_label">Текст CSV (разделитель запятая/точка с запятой)</label>
                     <textarea id="importCsvContent" rows="6" class="w-full px-4 py-2.5 rounded-xl border border-border-strong bg-surface-2 text-xs text-text-main outline-none focus:border-primary transition-colors resize-none font-mono" placeholder="front,back,hint&#10;&quot;Что такое RFC?&quot;,&quot;Серия технических документов&quot;,&quot;Hint&quot;"></textarea>
                 </div>
 
                 <div id="importTabJsonZone" class="hidden">
-                    <label for="importJsonContent" class="block text-xs font-bold text-text-secondary uppercase mb-1.5">Текст JSON (Schema: actra_flashcards_v1)</label>
+                    <label for="importJsonContent" class="block text-xs font-bold text-text-secondary uppercase mb-1.5" data-i18n="microcards.dialog_import_json_label">Текст JSON (Schema: actra_flashcards_v1)</label>
                     <textarea id="importJsonContent" rows="6" class="w-full px-4 py-2.5 rounded-xl border border-border-strong bg-surface-2 text-xs text-text-main outline-none focus:border-primary transition-colors resize-none font-mono" placeholder="{&#10;  &quot;cards&quot;: [&#10;    { &quot;front&quot;: &quot;Q&quot;, &quot;back&quot;: &quot;A&quot;, &quot;hint&quot;: &quot;H&quot; }&#10;  ]&#10;}"></textarea>
                 </div>
 
                 <div class="flex flex-col gap-1.5 mt-2">
-                    <label for="importFile" class="text-xs font-bold text-text-secondary uppercase">Или выберите файл</label>
+                    <label for="importFile" class="text-xs font-bold text-text-secondary uppercase" data-i18n="microcards.dialog_import_file_label">Или выберите файл</label>
                     <input type="file" id="importFile" accept=".csv,.json" class="text-xs file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-surface-2 file:text-text-main hover:file:bg-bg-hover" />
                 </div>
             </div>
 
             <div class="flex justify-end gap-2 pt-2">
-                <button type="button" onclick="$('dialogImportDeck').close()" class="px-4 py-2 rounded-lg border border-border-strong font-bold text-xs">Отмена</button>
-                <button type="submit" class="px-4 py-2 rounded-lg bg-primary text-primary-fg hover:bg-primary-hover font-bold text-xs">Импорт</button>
+                <button type="button" onclick="$('dialogImportDeck').close()" class="px-4 py-2 rounded-lg border border-border-strong font-bold text-xs" data-i18n="microcards.btn_cancel">Отмена</button>
+                <button type="submit" class="px-4 py-2 rounded-lg bg-primary text-primary-fg hover:bg-primary-hover font-bold text-xs" data-i18n="microcards.btn_import_action">Импорт</button>
             </div>
         </form>
     </dialog>
@@ -631,24 +631,24 @@
     <!-- Dialog: Publish Deck -->
     <dialog id="dialogPublishDeck" closedby="any" aria-labelledby="publishTitle">
         <form method="dialog" class="space-y-4" onsubmit="mcApp.handlePublishSubmit(event)">
-            <h3 id="publishTitle" class="text-lg font-black text-text-main">Публикация в Каталог</h3>
-            <p class="text-xs text-text-secondary">Публикация делает колоду доступной для импорта другими пользователями.</p>
+            <h3 id="publishTitle" class="text-lg font-black text-text-main" data-i18n="microcards.dialog_publish_title">Публикация в Каталог</h3>
+            <p class="text-xs text-text-secondary" data-i18n="microcards.dialog_publish_hint">Публикация делает колоду доступной для импорта другими пользователями.</p>
             <div>
-                <label for="publishVisibility" class="block text-xs font-bold text-text-secondary uppercase mb-1.5">Видимость в каталоге</label>
+                <label for="publishVisibility" class="block text-xs font-bold text-text-secondary uppercase mb-1.5" data-i18n="microcards.dialog_publish_visibility_label">Видимость в каталоге</label>
                 <select id="publishVisibility" class="w-full px-4 py-2.5 rounded-xl border border-border-strong bg-surface-2 text-sm text-text-main outline-none focus:border-primary transition-colors">
-                    <option value="public">Публичная (всем в каталоге)</option>
-                    <option value="private">Приватная (только по коду доступа)</option>
+                    <option value="public" data-i18n="microcards.dialog_publish_public">Публичная (всем в каталоге)</option>
+                    <option value="private" data-i18n="microcards.dialog_publish_private">Приватная (только по коду доступа)</option>
                 </select>
             </div>
             <div class="flex justify-end gap-2 pt-2">
-                <button type="button" onclick="$('dialogPublishDeck').close()" class="px-4 py-2 rounded-lg border border-border-strong font-bold text-xs">Отмена</button>
-                <button type="submit" class="px-4 py-2 rounded-lg bg-primary text-primary-fg hover:bg-primary-hover font-bold text-xs">Опубликовать</button>
+                <button type="button" onclick="$('dialogPublishDeck').close()" class="px-4 py-2 rounded-lg border border-border-strong font-bold text-xs" data-i18n="microcards.btn_cancel">Отмена</button>
+                <button type="submit" class="px-4 py-2 rounded-lg bg-primary text-primary-fg hover:bg-primary-hover font-bold text-xs" data-i18n="microcards.btn_publish">Опубликовать</button>
             </div>
         </form>
     </dialog>
 
     <!-- Toast container -->
-    <div id="mcToastContainer" class="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none"></div>
+    <div id="mcToastContainer" class="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none" role="status" aria-live="polite" aria-atomic="false"></div>
 
     <script src="microcards.js"></script>
     <script src="../assets/SharedProfileModal.js"></script>

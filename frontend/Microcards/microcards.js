@@ -149,14 +149,14 @@
     async function loadLibraryData() {
         switchView('library');
         const grid = $('decksGrid');
-        grid.innerHTML = '<div class="col-span-full py-8 text-center text-xs text-text-secondary">Загрузка колод...</div>';
+        grid.innerHTML = `<div class="col-span-full py-8 text-center text-xs text-text-secondary">${t('microcards.loading_decks', 'Загрузка колод...')}</div>`;
         
         try {
             const data = await apiCall('/api/v2/microcards/decks');
             state.decks = data.items || [];
             renderLibrary();
         } catch (err) {
-            grid.innerHTML = '<div class="col-span-full py-8 text-center text-xs text-error">Не удалось загрузить библиотеку.</div>';
+            grid.innerHTML = `<div class="col-span-full py-8 text-center text-xs text-error">${t('microcards.load_library_error', 'Не удалось загрузить библиотеку.')}</div>`;
         }
     }
 
@@ -195,14 +195,14 @@
             card.innerHTML = `
                 <div>
                     <h3 class="font-extrabold text-base text-text-main mb-1 line-clamp-1">${escHtml(deck.name)}</h3>
-                    <p class="text-xs text-text-secondary mb-4 line-clamp-2">${escHtml(deck.description || 'Описание отсутствует.')}</p>
+                    <p class="text-xs text-text-secondary mb-4 line-clamp-2">${escHtml(deck.description || t('microcards.no_description', 'Описание отсутствует.'))}</p>
                     <div class="flex flex-wrap gap-1 mb-4">${tagsHtml}</div>
                 </div>
                 <div class="flex items-center justify-between pt-3 border-t border-border-subtle">
                     <span class="text-xs text-text-secondary">Карточек: <strong class="text-text-main">${deck.card_count}</strong></span>
                     <div class="flex gap-2">
-                        ${deck.due_count > 0 ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-error/10 border border-error/20 text-error">${deck.due_count} к повтору</span>` : ''}
-                        ${deck.new_count > 0 ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-info/10 border border-info/20 text-info">${deck.new_count} новых</span>` : ''}
+                        ${deck.due_count > 0 ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-error/10 border border-error/20 text-error">${t('microcards.badge_due', '{n} к повтору').replace('{n}', deck.due_count)}</span>` : ''}
+                        ${deck.new_count > 0 ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-info/10 border border-info/20 text-info">${t('microcards.badge_new_cards', '{n} новых').replace('{n}', deck.new_count)}</span>` : ''}
                     </div>
                 </div>
             `;
@@ -229,7 +229,7 @@
                 body: JSON.stringify({ name, description })
             });
             $('dialogCreateDeck').close();
-            showToast('Колода успешно создана!', 'success');
+            showToast(t('microcards.toast_deck_created', 'Колода успешно создана!'), 'success');
             openDeckDetails(result.deck.id);
         } catch (err) {
             console.error(err);
@@ -247,7 +247,7 @@
             
             // Set details fields
             $('deckDetailsTitle').textContent = state.activeDeck.name;
-            $('deckDetailsDesc').textContent = state.activeDeck.description || 'Описание отсутствует.';
+            $('deckDetailsDesc').textContent = state.activeDeck.description || t('microcards.no_description', 'Описание отсутствует.');
             $('mcHeaderSubtitle').textContent = state.activeDeck.name;
             
             // Render tags
@@ -293,7 +293,7 @@
         container.innerHTML = '';
 
         if (state.cards.length === 0) {
-            container.innerHTML = '<div class="py-8 text-center text-xs text-text-secondary border border-dashed border-border-strong rounded-xl">В колоде пока нет карточек.</div>';
+            container.innerHTML = `<div class="py-8 text-center text-xs text-text-secondary border border-dashed border-border-strong rounded-xl">${t('microcards.no_cards_yet', 'В колоде пока нет карточек.')}</div>`;
             return;
         }
 
@@ -301,7 +301,7 @@
             const item = document.createElement('div');
             item.className = 'p-4 bg-surface-1 rounded-xl border border-border-subtle flex flex-col md:flex-row md:items-center justify-between gap-3';
             
-            const hintHtml = card.hint ? `<p class="text-xs italic text-text-muted mt-1">Подсказка: ${escHtml(card.hint)}</p>` : '';
+            const hintHtml = card.hint ? `<p class="text-xs italic text-text-muted mt-1">${t('microcards.hint_label', 'Подсказка')}: ${escHtml(card.hint)}</p>` : '';
             
             item.innerHTML = `
                 <div class="flex-1">
@@ -310,7 +310,7 @@
                     ${hintHtml}
                 </div>
                 <div class="flex items-center gap-2">
-                    <span class="px-2 py-0.5 rounded-md text-[10px] font-bold border border-border-subtle bg-surface-2 text-text-secondary">Уровень ${card.level || 1}</span>
+                    <span class="px-2 py-0.5 rounded-md text-[10px] font-bold border border-border-subtle bg-surface-2 text-text-secondary">${t('microcards.level_badge', 'Уровень {n}').replace('{n}', card.level || 1)}</span>
                     <button type="button" onclick="mcApp.openCardEditor('${card.id}')" class="p-2 rounded-lg border border-border-strong hover:bg-bg-hover text-text-secondary hover:text-primary transition-colors flex items-center justify-center">
                         <span class="material-symbols-outlined text-[16px]">edit</span>
                     </button>
@@ -334,7 +334,7 @@
     async function exportDeck(format) {
         const url = `/api/v2/microcards/decks/${state.activeDeckId}/export/${format}`;
         window.open(url, '_blank');
-        showToast('Экспорт запущен!', 'success');
+        showToast(t('microcards.toast_export_started', 'Экспорт запущен!'), 'success');
     }
 
     function confirmDeleteDeck() {
@@ -344,7 +344,7 @@
             try {
                 await apiCall(`/api/v2/microcards/decks/${state.activeDeckId}`, { method: 'DELETE' });
                 $('dialogConfirmDelete').close();
-                showToast('Колода успешно удалена', 'success');
+                showToast(t('microcards.toast_deck_deleted', 'Колода успешно удалена'), 'success');
                 loadLibraryData();
             } catch (err) {
                 console.error(err);
@@ -432,7 +432,7 @@
         // Set Level Indicator
         const level = card.level || 1;
         const levelInd = $('sessionLevelIndicator');
-        levelInd.textContent = level === 1 ? 'Уровень 1: Знаю / Не знаю' : 'Уровень 2: Открытый ответ';
+        levelInd.textContent = level === 1 ? t('microcards.level1_indicator', 'Уровень 1: Знаю / Не знаю') : t('microcards.level2_indicator', 'Уровень 2: Открытый ответ');
         levelInd.className = `px-3 py-1 rounded-full text-xs font-bold border ${level === 1 ? 'bg-warning/10 border-warning/30 text-warning' : 'bg-success/10 border-success/30 text-success'}`;
 
         // Reset UI actions
@@ -523,18 +523,18 @@
             // Flip card and show details
             $('flashcardInner').classList.add('flipped');
             $('l2ComparisonZone').classList.remove('hidden');
-            $('l2UserAnswerDisplay').textContent = answer || '(пусто)';
+            $('l2UserAnswerDisplay').textContent = answer || t('microcards.empty_answer', '(пусто)');
             $('l2CorrectAnswerDisplay').textContent = expected;
 
             const badge = $('answerEvaluationBadge');
             badge.classList.remove('hidden');
             if (isCorrect) {
-                badge.textContent = 'Верно';
+                badge.textContent = t('microcards.badge_correct', 'Верно');
                 badge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border bg-success/15 border-success text-success';
                 state.sessionStats.correct++;
                 $('btnL2Override').classList.add('hidden');
             } else {
-                badge.textContent = 'Ошибка';
+                badge.textContent = t('microcards.badge_error', 'Ошибка');
                 badge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border bg-error/15 border-error text-error';
                 state.sessionStats.errors++;
                 if (!state.sessionErrors.includes(card.id)) {
@@ -577,7 +577,7 @@
 
             // Update UI
             const badge = $('answerEvaluationBadge');
-            badge.textContent = 'Исправлено';
+            badge.textContent = t('microcards.badge_overridden', 'Исправлено');
             badge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border bg-warning/15 border-warning text-warning';
             $('btnL2Override').classList.add('hidden');
 
@@ -592,7 +592,7 @@
     }
 
     function abortSession() {
-        if (confirm('Вы уверены, что хотите выйти из сессии? Прогресс текущих ответов не сохранится.')) {
+        if (confirm(t('microcards.confirm_exit_session', 'Вы уверены, что хотите выйти из сессии? Прогресс текущих ответов не сохранится.'))) {
             switchView('details');
         }
     }
@@ -678,7 +678,7 @@
         if (state.cards.length === 0) {
             const emptyLabel = document.createElement('div');
             emptyLabel.className = 'text-center py-4 text-[10px] text-text-secondary';
-            emptyLabel.textContent = 'Нет карточек';
+            emptyLabel.textContent = t('microcards.editor_no_cards', 'Нет карточек');
             container.appendChild(emptyLabel);
             return;
         }
@@ -704,7 +704,7 @@
             const card = state.cards.find(c => c.id === id);
             if (card) {
                 state.activeCard = card;
-                $('editorCardFormTitle').textContent = 'Редактировать карточку';
+                $('editorCardFormTitle').textContent = t('microcards.editor_edit_card_title', 'Редактировать карточку');
                 $('editCardFront').value = card.front.text;
                 $('editCardBack').value = card.back.text;
                 $('editCardHint').value = card.hint || '';
@@ -724,7 +724,7 @@
         $('editorDeckMetaForm').classList.add('hidden');
         $('editorCardFormZone').classList.remove('hidden');
         
-        $('editorCardFormTitle').textContent = 'Новая карточка';
+        $('editorCardFormTitle').textContent = t('microcards.editor_new_card_title', 'Новая карточка');
         $('editCardFront').value = '';
         $('editCardBack').value = '';
         $('editCardHint').value = '';
@@ -757,7 +757,7 @@
         const tags = tagsRaw.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
 
         if (!name) {
-            showToast('Название колоды обязательно', 'error');
+            showToast(t('microcards.error_name_required', 'Название колоды обязательно'), 'error');
             return;
         }
 
@@ -767,7 +767,7 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name, description, tags })
             });
-            showToast('Параметры колоды сохранены', 'success');
+            showToast(t('microcards.toast_deck_saved', 'Параметры колоды сохранены'), 'success');
             openDeckDetails(state.activeDeckId);
         } catch (err) {
             console.error(err);
@@ -782,7 +782,7 @@
         const backImage = $('editCardBackImage').value.trim();
 
         if (!frontText || !backText) {
-            showToast('Заполните лицевую и обратную стороны', 'error');
+            showToast(t('microcards.error_front_back_required', 'Заполните лицевую и обратную стороны'), 'error');
             return;
         }
 
@@ -802,7 +802,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                showToast('Карточка сохранена', 'success');
+                showToast(t('microcards.toast_card_saved', 'Карточка сохранена'), 'success');
             } else {
                 // Create new card
                 await apiCall(`/api/v2/microcards/decks/${state.activeDeckId}/cards`, {
@@ -810,7 +810,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                showToast('Карточка добавлена', 'success');
+                showToast(t('microcards.toast_card_added', 'Карточка добавлена'), 'success');
             }
             openDeckDetails(state.activeDeckId).then(() => openDeckEditor());
         } catch (err) {
@@ -820,12 +820,12 @@
 
     async function deleteActiveCard() {
         if (!state.activeCard) return;
-        if (confirm('Вы действительно хотите удалить эту карточку?')) {
+        if (confirm(t('microcards.confirm_delete_card', 'Вы действительно хотите удалить эту карточку?'))) {
             try {
                 await apiCall(`/api/v2/microcards/decks/${state.activeDeckId}/cards/${state.activeCard.id}`, {
                     method: 'DELETE'
                 });
-                showToast('Карточка удалена', 'success');
+                showToast(t('microcards.toast_card_deleted', 'Карточка удалена'), 'success');
                 openDeckDetails(state.activeDeckId).then(() => openDeckEditor());
             } catch (err) {
                 console.error(err);
@@ -881,7 +881,7 @@
         } else {
             const content = state.importFormat === 'csv' ? $('importCsvContent').value : $('importJsonContent').value;
             if (!content.trim()) {
-                showToast('Введите текст или выберите файл для импорта', 'error');
+                showToast(t('microcards.error_import_empty', 'Введите текст или выберите файл'), 'error');
                 return;
             }
             if (state.importFormat === 'json') {
@@ -889,7 +889,7 @@
                     options.body = JSON.stringify(JSON.parse(content));
                     options.headers = { 'Content-Type': 'application/json' };
                 } catch (err) {
-                    showToast('Невалидный JSON формат', 'error');
+                    showToast(t('microcards.error_json_invalid', 'Невалидный JSON формат'), 'error');
                     return;
                 }
             } else {
@@ -901,7 +901,7 @@
         try {
             const result = await apiCall(url, options);
             $('dialogImportDeck').close();
-            showToast(`Успешно импортировано ${result.added_count} карточек`, 'success');
+            showToast(t('microcards.toast_imported', 'Успешно импортировано {n} карточек').replace('{n}', result.added_count), 'success');
             openDeckDetails(state.activeDeckId);
         } catch (err) {
             console.error(err);
@@ -925,7 +925,7 @@
                 body: JSON.stringify({ catalog_visibility: visibility })
             });
             $('dialogPublishDeck').close();
-            showToast('Колода опубликована в каталог!', 'success');
+            showToast(t('microcards.toast_published', 'Колода опубликована в каталог!'), 'success');
             openDeckDetails(state.activeDeckId);
         } catch (err) {
             console.error(err);
