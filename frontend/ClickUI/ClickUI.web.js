@@ -476,6 +476,14 @@
       parts.push(wt("clickui.coverage_only", "Совпадение {coverage}").replace("{coverage}", coverageText));
     }
 
+    const labelStatus = _getLabelStatusForAction(action.kind, action.index);
+    if (labelStatus && labelStatus.status === "unmatched") {
+      const expectedLabel = labelStatus.correctLabel || targetLabel;
+      if (expectedLabel) {
+        parts.push(wt("clickui.expected_name", "Ожидалось название: «{name}»").replace("{name}", expectedLabel));
+      }
+    }
+
     const success =
       interpretation.success === true ||
       interpretation.click_success === true ||
@@ -943,6 +951,19 @@
       return interpretation.targetIndex;
     }
     return null;
+  }
+
+  // Корректность названия для конкретной ЦЕЛИ (привязка по месту, не по порядку).
+  function _getLabelStatusForTarget(targetIndex) {
+    if (typeof targetIndex !== "number" || targetIndex < 0) return null;
+    const le = state.labelEval;
+    if (!le || !le.byTarget || typeof le.byTarget.get !== "function") return null;
+    return le.byTarget.get(targetIndex) || null;
+  }
+
+  // Корректность названия для действия пользователя (через цель, в которую оно попало).
+  function _getLabelStatusForAction(kind, actionIndex0) {
+    return _getLabelStatusForTarget(_findTargetIndex(state.taskDto, kind, actionIndex0));
   }
 
   function _getActionDisplayColor(taskDto, kind, actionIndex) {
@@ -2415,6 +2436,17 @@
     if (state.labelsContainer) {
       svgElements.push(...state.labelsContainer.querySelectorAll("[data-target-index]"));
     }
+    if (state.reviewComparisonEl) {
+      const reviewHoverables = Array.from(state.reviewComparisonEl.querySelectorAll("[data-target-index]"));
+      reviewHoverables.forEach((el) => {
+        const isSvg = el instanceof SVGElement || (typeof el.closest === "function" && !!el.closest("svg"));
+        if (isSvg) {
+          svgElements.push(el);
+        } else {
+          panelElements.push(el);
+        }
+      });
+    }
 
     if (!hoverInfo) {
       svgElements.forEach(el => { el.style.opacity = ""; });
@@ -2450,15 +2482,18 @@
     // Panel rows: ring-highlight on match, subtle dim otherwise
     panelElements.forEach(el => {
       el.style.transition = "opacity 0.15s ease-in-out, box-shadow 0.15s ease-in-out, transform 0.15s ease-in-out";
+      const inReview = state.reviewComparisonEl && state.reviewComparisonEl.contains(el);
       if (_elMatches(el)) {
         const elTargetIdxAttr = el.getAttribute("data-target-index");
         const elTargetIdx = (elTargetIdxAttr !== null && elTargetIdxAttr !== "") ? Number(elTargetIdxAttr) : null;
         const ringColor = elTargetIdx !== null ? _getTargetColor(elTargetIdx) : _getThemeColor("--color-accent", "#d97706");
         el.style.opacity = "1";
         el.style.boxShadow = `0 0 0 2px ${ringColor}, 0 2px 10px ${_withAlpha(ringColor, 0.22)}`;
-        el.style.transform = "translateX(2px)";
+        if (!inReview) {
+          el.style.transform = "translateX(2px)";
+        }
       } else {
-        el.style.opacity = "0.45";
+        el.style.opacity = inReview ? "0.08" : "0.45";
         el.style.boxShadow = "";
         el.style.transform = "";
       }
@@ -2480,50 +2515,18 @@
   function _setupReviewHoverEffects(root) {
     // Наведение на любую область/строку в блоке «Разбор ошибок» подсвечивает один и
     // тот же target ОДНОВРЕМЕННО на обоих изображениях (ответ + эталон) и в обеих
-    // таблицах названий (что написал пользователь + что нужно было). Поэтому scope —
-    // весь раздел сравнения, а не отдельная карточка.
+    // таблицах названий (что написал пользователь + что нужно было).
+    // Мы интегрируем это в глобальный ховер, чтобы синхронизировать с рабочей областью и списком действий.
     const hoverables = Array.from(root.querySelectorAll("[data-target-index]"));
     if (!hoverables.length) return;
 
-    const isTableRow = (el) =>
-      typeof el.closest === "function" && !!el.closest("[data-clickui$='-labels']");
-
-    const applyMatch = (el) => {
-      el.style.opacity = "1";
-      if (isTableRow(el)) {
-        const idxAttr = el.getAttribute("data-target-index");
-        const idx = idxAttr !== null && idxAttr !== "" ? Number(idxAttr) : null;
-        const ring = idx !== null ? _getTargetColor(idx) : _getThemeColor("--color-accent", "#d97706");
-        el.style.boxShadow = `0 0 0 2px ${ring}, 0 2px 10px ${_withAlpha(ring, 0.22)}`;
-      }
-    };
-    const clear = (el) => {
-      el.style.opacity = "";
-      el.style.boxShadow = "";
-    };
-
-    hoverables.forEach((el) => {
-      el.style.transition = "opacity 0.2s ease-in-out, box-shadow 0.2s ease-in-out";
-    });
-
     hoverables.forEach((el) => {
       const targetIndexStr = el.getAttribute("data-target-index");
-      if (targetIndexStr === null || targetIndexStr === undefined) return;
+      if (targetIndexStr === null || targetIndexStr === undefined || targetIndexStr === "") return;
+      const targetIndex = Number(targetIndexStr);
 
-      el.addEventListener("mouseenter", () => {
-        hoverables.forEach((other) => {
-          if (other.getAttribute("data-target-index") !== targetIndexStr) {
-            other.style.opacity = "0.08";
-            other.style.boxShadow = "";
-          } else {
-            applyMatch(other);
-          }
-        });
-      });
-
-      el.addEventListener("mouseleave", () => {
-        hoverables.forEach(clear);
-      });
+      el.addEventListener("mouseenter", () => _setGlobalHover({ targetIndex }));
+      el.addEventListener("mouseleave", () => _setGlobalHover(null));
     });
   }
 
@@ -4024,23 +4027,13 @@
 
       try {
         if (state.locked && state.labelEval) {
-          const le = state.labelEval;
-          const lineBase = _requiresDrawing() ? (state.polygons.length || 0) : (state.clicks.length || 0);
-          let flatIndex = null;
-          if (_requiresDrawing()) {
-            if (kind === "polygon") flatIndex = idx1based - 1;
-            else if (kind === "line") flatIndex = lineBase + (idx1based - 1);
-          } else {
-            if (kind === "click") flatIndex = idx1based - 1;
-            else if (kind === "line") flatIndex = lineBase + (idx1based - 1);
-          }
-
-          if (flatIndex != null) {
-            if (le.matched && le.matched.has(flatIndex)) {
+          const statusInfo = _getLabelStatusForAction(kind, idx1based - 1);
+          if (statusInfo) {
+            if (statusInfo.status === "matched") {
               statusIcon.textContent = "check";
               statusIcon.classList.add("text-success", "dark:text-success");
               statusIcon.style.visibility = "visible";
-            } else if (le.unmatched && le.unmatched.has(flatIndex)) {
+            } else if (statusInfo.status === "unmatched") {
               statusIcon.textContent = "close";
               statusIcon.classList.add("text-error", "dark:text-error");
               statusIcon.style.visibility = "visible";
@@ -4086,30 +4079,15 @@
         input.className = baseInputClass;
 
         // After check: if backend returned per-label correctness, highlight accordingly.
-        // Mapping: payload order is
-        //  - L2: labels_clicks then labels_lines
-        //  - L3: labels_polygons then labels_lines
         if (state.locked && state.labelEval && hasText) {
-          const le = state.labelEval;
-          const clickBase = 0;
-          const polyBase = 0;
-          const lineBase = _requiresDrawing() ? (state.polygons.length || 0) : (state.clicks.length || 0);
-          let flatIndex = null;
-          if (_requiresDrawing()) {
-            if (kind === "polygon") flatIndex = polyBase + (idx1based - 1);
-            else if (kind === "line") flatIndex = lineBase + (idx1based - 1);
-          } else {
-            if (kind === "click") flatIndex = clickBase + (idx1based - 1);
-            else if (kind === "line") flatIndex = lineBase + (idx1based - 1);
-          }
-
-          if (flatIndex != null) {
-            if (le.matched && le.matched.has(flatIndex)) {
+          const statusInfo = _getLabelStatusForAction(kind, idx1based - 1);
+          if (statusInfo) {
+            if (statusInfo.status === "matched") {
               input.className +=
                 " border-success-light dark:border-success-dark bg-success-lighter dark:bg-success-light";
               return;
             }
-            if (le.unmatched && le.unmatched.has(flatIndex)) {
+            if (statusInfo.status === "unmatched") {
               input.className +=
                 " border-error-light dark:border-error-dark bg-error-lighter dark:bg-error-light";
               return;
@@ -4948,6 +4926,35 @@
       },
       { passive: true }
     );
+
+    function _updateSideColumnMaxHeight() {
+      try {
+        if (!sideColumn) return;
+        const vw = window.innerWidth || document.documentElement.clientWidth || 0;
+        if (vw < 1024) {
+          sideColumn.style.maxHeight = "";
+          return;
+        }
+        if (!sideColumn.classList.contains("lg:sticky")) {
+          sideColumn.style.maxHeight = "";
+          return;
+        }
+        const rect = sideColumn.getBoundingClientRect();
+        const vh = window.innerHeight || document.documentElement.clientHeight || 0;
+        const margin = 24; // bottom spacing
+        const top = Math.max(12, rect.top);
+        const avail = vh - top - margin;
+        sideColumn.style.maxHeight = `${Math.max(200, avail)}px`;
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    state._updateSideColumnMaxHeight = _updateSideColumnMaxHeight;
+    setTimeout(_updateSideColumnMaxHeight, 100);
+
+    window.addEventListener("scroll", _updateSideColumnMaxHeight, { passive: true });
+    window.addEventListener("resize", _updateSideColumnMaxHeight, { passive: true });
 
     if (!document.getElementById("clickui-style")) {
       const style = document.createElement("style");
@@ -6019,19 +6026,37 @@
     _syncFoundTargetsUI();
 
     // Capture label correctness from evaluator (if provided) for green/red highlighting.
+    // ВАЖНО: позиции в matched_labels/unmatched_labels — это индексы в found_user_labels,
+    // упорядоченных по sorted(found_targets), а НЕ по порядку действий пользователя.
+    // Поэтому переводим их в индексы ЦЕЛЕЙ (target index) — единый ключ, по которому
+    // связаны маркеры, строки таблиц и разбор. Это чинит неверную привязку ошибки
+    // названия к действию.
     state.labelEval = null;
     try {
       const labelsBlock = details.labels && typeof details.labels === "object" ? details.labels : null;
-      const matched = labelsBlock && Array.isArray(labelsBlock.matched_labels) ? labelsBlock.matched_labels : [];
-      const unmatched = labelsBlock && Array.isArray(labelsBlock.unmatched_labels) ? labelsBlock.unmatched_labels : [];
-      if (matched.length || unmatched.length) {
-        state.labelEval = {
-          matched: new Set(matched.map((t) => (Array.isArray(t) ? t[0] : null)).filter((x) => typeof x === "number")),
-          unmatched: new Set(
-            unmatched.map((t) => (Array.isArray(t) ? t[0] : null)).filter((x) => typeof x === "number")
-          ),
-          success: labelsBlock.success === true,
+      if (labelsBlock) {
+        const matched = Array.isArray(labelsBlock.matched_labels) ? labelsBlock.matched_labels : [];
+        const unmatched = Array.isArray(labelsBlock.unmatched_labels) ? labelsBlock.unmatched_labels : [];
+        const ft = Array.isArray(details.found_targets) ? details.found_targets.slice() : [];
+        const foundTargetsList = ft.filter((x) => Number.isInteger(x)).sort((a, b) => a - b);
+        const byTarget = new Map();
+        const recordTuple = (tuple, status) => {
+          if (!Array.isArray(tuple)) return;
+          const pos = tuple[0];
+          if (!Number.isInteger(pos) || pos < 0 || pos >= foundTargetsList.length) return;
+          const targetIdx = foundTargetsList[pos];
+          if (!Number.isInteger(targetIdx)) return;
+          byTarget.set(targetIdx, {
+            status,
+            userLabel: String(tuple[1] != null ? tuple[1] : "").trim(),
+            correctLabel: String(tuple[2] != null ? tuple[2] : "").trim(),
+          });
         };
+        matched.forEach((t) => recordTuple(t, "matched"));
+        unmatched.forEach((t) => recordTuple(t, "unmatched"));
+        if (byTarget.size) {
+          state.labelEval = { byTarget, success: labelsBlock.success === true };
+        }
       }
     } catch (e) {
       // ignore
@@ -6072,6 +6097,10 @@
 
     if (state._themeListener) {
       window.removeEventListener("themechanged", state._themeListener);
+    }
+    if (state._updateSideColumnMaxHeight) {
+      window.removeEventListener("scroll", state._updateSideColumnMaxHeight);
+      window.removeEventListener("resize", state._updateSideColumnMaxHeight);
     }
     if (state.targetsAttentionTimer) {
       clearTimeout(state.targetsAttentionTimer);
@@ -6137,6 +6166,7 @@
       additionalModal: null,
       additionalModalKeyHandler: null,
       _themeListener: null,
+      _updateSideColumnMaxHeight: null,
     });
 
     // Note: Window event listeners (pointermove, pointerup, pointercancel) are attached
