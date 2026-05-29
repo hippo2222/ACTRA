@@ -8,6 +8,25 @@
     <meta name="description"
         content="ACTRA помогает создавать учебные материалы, тренироваться по заданиям, собирать персональную библиотеку и отслеживать прогресс в обучении." />
     <link rel="canonical" href="https://actra.site/" />
+    <link rel="alternate" hreflang="ru" href="https://actra.site/?lang=ru" />
+    <link rel="alternate" hreflang="en" href="https://actra.site/?lang=en" />
+    <link rel="alternate" hreflang="x-default" href="https://actra.site/" />
+    <script>
+        (function () {
+            var params = new URLSearchParams(window.location.search);
+            var lang = params.get('lang');
+            var canonical = document.querySelector('link[rel="canonical"]');
+            if (canonical) {
+                if (lang === 'ru') {
+                    canonical.setAttribute('href', 'https://actra.site/?lang=ru');
+                } else if (lang === 'en') {
+                    canonical.setAttribute('href', 'https://actra.site/?lang=en');
+                } else {
+                    canonical.setAttribute('href', 'https://actra.site/');
+                }
+            }
+        })();
+    </script>
     <meta property="og:site_name" content="ACTRA" />
     <meta property="og:title" content="ACTRA — платформа для обучения и практики" />
     <meta property="og:description"

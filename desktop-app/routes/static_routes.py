@@ -507,7 +507,10 @@ def _public_shell_page(
     elif canonical_path == "/refund-policy":
         canonical_path = "/refund"
 
-    canonical_url = f"{_public_base_url()}{canonical_path}"
+    if lang == "ru":
+        canonical_url = f"{_public_base_url()}{canonical_path}?lang=ru"
+    else:
+        canonical_url = f"{_public_base_url()}{canonical_path}"
 
     descriptions = {
         "en": {
@@ -541,6 +544,9 @@ def _public_shell_page(
   <title>{title_html} - ACTRA</title>
   <meta name="description" content="{escape(meta_desc)}" />
   <link rel="canonical" href="{canonical_url}" />
+  <link rel="alternate" hreflang="ru" href="{_public_base_url()}{canonical_path}?lang=ru" />
+  <link rel="alternate" hreflang="en" href="{_public_base_url()}{canonical_path}?lang=en" />
+  <link rel="alternate" hreflang="x-default" href="{_public_base_url()}{canonical_path}" />
   <style>{_public_page_css()}</style>
 </head>
 <body>
