@@ -135,6 +135,9 @@ check_body() {
         echo "  [PASS] $name"
     else
         echo "  [FAIL] $name (body does not contain: $must_contain)"
+        echo "    URL: $url"
+        echo "    Body length: ${#body}"
+        echo "    Body prefix: ${body:0:200}"
         fail_count=$((fail_count + 1))
     fi
 }
