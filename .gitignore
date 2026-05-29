@@ -108,3 +108,16 @@ data/ai_config.json.*
 .tmp_pytest_feedback/
 tmp_*.png
 tmp_*.html
+
+# --- Local-only artifacts (never commit) ---
+# Exported complexes pulled from prod for local testing
+export_complexes_*/
+export_complexes_*.zip
+# Nested agent worktrees and agent tooling caches
+radioproject_git/
+.agents/
+skills-lock.json
+# Scratch / one-off analysis artifacts
+scratch/
+scratch_*.txt
+*_cyrillic_report.txt
