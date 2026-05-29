@@ -858,9 +858,54 @@ class TestClickTaskDifficultyLevels(unittest.TestCase):
         }
         
         result = self.service.evaluate_click_task(user_input, answer_key, task_data)
-        
+
         self.assertFalse(result.success)
         self.assertEqual(result.details.get('error'), 'labels_missing')
+
+    def _l2_multi_answer_key(self):
+        return {
+            'targets': [
+                {'shape': 'point', 'coordinates': [100, 100], 'label': 'Печень'},
+                {'shape': 'point', 'coordinates': [300, 300], 'label': 'Почка'},
+            ],
+            'target_names': ['Печень', 'Почка'],
+        }
+
+    def test_click_level_2_labels_order_independent_success(self):
+        """Уровень 2: пользователь кликает и называет области в ОБРАТНОМ порядке
+        относительно референса — должно засчитываться, т.к. имя привязывается к
+        области по месту клика, а не по порядку ввода."""
+        user_input = {
+            'clicks': [
+                {'x': 300, 'y': 300, 'scale_factor': 1.0, 'offset_x': 0, 'offset_y': 0},
+                {'x': 100, 'y': 100, 'scale_factor': 1.0, 'offset_x': 0, 'offset_y': 0},
+            ],
+            # labels_clicks[i] — имя, данное i-му клику (тот же порядок, что clicks)
+            'labels_clicks': ['Почка', 'Печень'],
+        }
+        task_data = {'content': {'requires_labels': True, 'requires_drawing': False}}
+
+        result = self.service.evaluate_click_task(user_input, self._l2_multi_answer_key(), task_data)
+
+        self.assertTrue(result.success)
+        self.assertTrue(result.details.get('labels', {}).get('success'))
+
+    def test_click_level_2_labels_swapped_names_fail(self):
+        """Уровень 2: пользователь кликает по правильным областям, но перепутал имена
+        (назвал каждую область чужим именем) — должно быть неверно."""
+        user_input = {
+            'clicks': [
+                {'x': 100, 'y': 100, 'scale_factor': 1.0, 'offset_x': 0, 'offset_y': 0},
+                {'x': 300, 'y': 300, 'scale_factor': 1.0, 'offset_x': 0, 'offset_y': 0},
+            ],
+            # клик 0 попал в "Печень", но назван "Почка"; клик 1 наоборот
+            'labels_clicks': ['Почка', 'Печень'],
+        }
+        task_data = {'content': {'requires_labels': True, 'requires_drawing': False}}
+
+        result = self.service.evaluate_click_task(user_input, self._l2_multi_answer_key(), task_data)
+
+        self.assertFalse(result.success)
         self.assertEqual(result.details.get('level'), 2)
     
     def test_click_level_3_with_drawing_and_labels_correct(self):

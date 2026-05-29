@@ -434,10 +434,12 @@ class TestTaskEvaluatorDifficultyAdditional(unittest.TestCase):
         }
         
         result = self.service.evaluate_sequence_task(user_input, answer_key, task_data)
-        
-        # Структура правильная (blocks совпадают) — успех, даже если level_name отсутствует
-        # Текущая реализация не блокирует success из-за отсутствия level_names
-        self.assertTrue(result.success)
+
+        # requires_level_names=True, но пользователь не указал level_name → неуспех,
+        # даже если структура (blocks) совпала. Согласовано с L3-аналогом
+        # (test_evaluate_sequence_task_level_3_missing_block_names): если названия
+        # требуются, без них задание не засчитывается.
+        self.assertFalse(result.success)
     
     def test_evaluate_sequence_task_level_3_missing_block_names(self):
         """Тест evaluate_sequence_task уровня 3 без block_names"""

@@ -764,6 +764,11 @@
     path.setAttribute("stroke-linejoin", "round");
     if (opts.strokeDasharray) path.setAttribute("stroke-dasharray", opts.strokeDasharray);
     if (opts.strokeOpacity != null) path.setAttribute("stroke-opacity", String(opts.strokeOpacity));
+    if (opts.targetIndex != null) {
+      path.setAttribute("data-target-index", String(opts.targetIndex));
+      // svg has pointer-events:none — re-enable on the shape so hover works.
+      path.style.pointerEvents = "auto";
+    }
     svg.appendChild(path);
     return scaled;
   }
@@ -808,6 +813,9 @@
         "rounded-xl border border-border-subtle bg-surface-2 px-3 py-2 text-sm text-text-main dark:border-border-subtle dark:bg-surface-2 dark:text-text-on-dark",
         ""
       );
+      if (item && item.targetIndex != null) {
+        row.setAttribute("data-target-index", String(item.targetIndex));
+      }
       const prefix = item && item.kind === "freehand" ? wt("drawui.shape_line", "Линия") : wt("drawui.shape_polygon", "Контур");
       row.textContent = `${prefix} ${idx + 1}: ${_normalizeReviewLabelText(item && item.label)}`;
       list.appendChild(row);
@@ -905,6 +913,85 @@
     return card;
   }
 
+  // Сопоставление «структура пользователя → индекс эталонной цели», построенное из
+  // результатов проверки (matched_polygon_idx / matched_line_idx + target_index).
+  // Позволяет связать контур/линию пользователя с соответствующей целью эталона.
+  function _buildReviewStructureTargetMap(details) {
+    const map = { polygon: new Map(), line: new Map() };
+    if (!details || typeof details !== "object") return map;
+    const polygonResults = Array.isArray(details.polygon_results) ? details.polygon_results : [];
+    polygonResults.forEach((r, orderedIndex) => {
+      if (!r || typeof r !== "object") return;
+      const userIdx = Number(r.matched_polygon_idx);
+      if (!Number.isInteger(userIdx) || userIdx < 0) return;
+      const targetIdx = Number.isInteger(Number(r.target_index)) ? Number(r.target_index) : orderedIndex;
+      map.polygon.set(userIdx, targetIdx);
+    });
+    const lineResults = Array.isArray(details.line_results) ? details.line_results : [];
+    lineResults.forEach((r, orderedIndex) => {
+      if (!r || typeof r !== "object") return;
+      const userIdx = Number(r.matched_line_idx);
+      if (!Number.isInteger(userIdx) || userIdx < 0) return;
+      const targetIdx = Number.isInteger(Number(r.target_index)) ? Number(r.target_index) : orderedIndex;
+      map.line.set(userIdx, targetIdx);
+    });
+    return map;
+  }
+
+  function _reviewTargetIndexFor(kind, userIdx) {
+    const m = state._reviewStructureTargets;
+    if (!m) return null;
+    const family = kind === "freehand" || kind === "line" ? m.line : m.polygon;
+    if (!family || !family.has(userIdx)) return null;
+    const v = family.get(userIdx);
+    return Number.isInteger(v) ? v : null;
+  }
+
+  // Связанная подсветка по всему разделу «Разбор ошибок»: наведение на структуру/строку
+  // подсвечивает тот же target ОДНОВРЕМЕННО на обоих изображениях (ответ + эталон) и в
+  // обеих таблицах названий (что нарисовал/назвал пользователь + что нужно было).
+  function _setupReviewHoverEffects(root) {
+    const hoverables = Array.from(root.querySelectorAll("[data-target-index]"));
+    if (!hoverables.length) return;
+
+    const isTableRow = (el) =>
+      typeof el.closest === "function" && !!el.closest("[data-drawui$='-labels']");
+    const accent = _getThemeColor("--color-accent", "#a855f7");
+
+    const applyMatch = (el) => {
+      el.style.opacity = "1";
+      if (isTableRow(el)) {
+        el.style.boxShadow = `0 0 0 2px ${accent}, 0 2px 10px ${_withAlpha(accent, 0.22)}`;
+      }
+    };
+    const clear = (el) => {
+      el.style.opacity = "";
+      el.style.boxShadow = "";
+    };
+
+    hoverables.forEach((el) => {
+      el.style.transition = "opacity 0.2s ease-in-out, box-shadow 0.2s ease-in-out";
+    });
+
+    hoverables.forEach((el) => {
+      const targetIndexStr = el.getAttribute("data-target-index");
+      if (targetIndexStr === null || targetIndexStr === undefined) return;
+      el.addEventListener("mouseenter", () => {
+        hoverables.forEach((other) => {
+          if (other.getAttribute("data-target-index") !== targetIndexStr) {
+            other.style.opacity = "0.08";
+            other.style.boxShadow = "";
+          } else {
+            applyMatch(other);
+          }
+        });
+      });
+      el.addEventListener("mouseleave", () => {
+        hoverables.forEach(clear);
+      });
+    });
+  }
+
   function _clearReviewComparison() {
     if (state.reviewComparisonEl && state.reviewComparisonEl.parentNode) {
       state.reviewComparisonEl.parentNode.removeChild(state.reviewComparisonEl);
@@ -926,10 +1013,18 @@
 
     const labelItems = [];
     (state.polygons || []).forEach((_, idx) => {
-      labelItems.push({ kind: "polygon", label: state.labelsPolygons && state.labelsPolygons[idx] });
+      labelItems.push({
+        kind: "polygon",
+        label: state.labelsPolygons && state.labelsPolygons[idx],
+        targetIndex: _reviewTargetIndexFor("polygon", idx),
+      });
     });
     (state.lines || []).forEach((_, idx) => {
-      labelItems.push({ kind: "freehand", label: state.labelsLines && state.labelsLines[idx] });
+      labelItems.push({
+        kind: "freehand",
+        label: state.labelsLines && state.labelsLines[idx],
+        targetIndex: _reviewTargetIndexFor("line", idx),
+      });
     });
 
     return _createReviewPreviewCard({
@@ -946,6 +1041,7 @@
           const color = idx % 2 === 0
             ? _getThemeColor("--color-success", "#22c55e")
             : _getThemeColor("--color-primary", "#2563eb");
+          const targetIndex = _reviewTargetIndexFor("polygon", idx);
           _appendReviewPath(svg, poly && poly.points, {
             closed: true,
             naturalW,
@@ -953,12 +1049,14 @@
             stroke: color,
             fill: _withAlpha(color, 0.16),
             strokeWidth: 4,
+            targetIndex: targetIndex != null ? targetIndex : undefined,
           });
         });
         (state.lines || []).forEach((line, idx) => {
           const color = idx % 2 === 0
             ? _getThemeColor("--color-primary", "#2563eb")
             : _getThemeColor("--color-info", "#0f766e");
+          const targetIndex = _reviewTargetIndexFor("line", idx);
           _appendReviewPath(svg, line && line.points, {
             closed: false,
             naturalW,
@@ -967,6 +1065,7 @@
             strokeWidth: 4,
             strokeDasharray: "10 6",
             strokeOpacity: 0.94,
+            targetIndex: targetIndex != null ? targetIndex : undefined,
           });
         });
       },
@@ -981,6 +1080,13 @@
     if (polygons) parts.push(polygons === 1 ? wt("drawui.one_polygon", "1 контур") : wt("drawui.n_polygons", "{n} контура").replace("{n}", polygons));
     if (lines) parts.push(lines === 1 ? wt("drawui.one_line", "1 линия") : wt("drawui.n_lines", "{n} линии").replace("{n}", lines));
 
+    // У эталона data-target-index = индекс цели в массиве targets.
+    const refLabelItems = targets.map((target, idx) => ({
+      kind: target && target.shape === "freehand" ? "freehand" : "polygon",
+      label: target && target.label,
+      targetIndex: idx,
+    }));
+
     return _createReviewPreviewCard({
       dataTestUi: "review-reference-preview",
       title: wt("drawui.reference", "Эталон"),
@@ -989,7 +1095,7 @@
       naturalW,
       naturalH,
       openImage: _openMetadataModal,
-      labelsBlock: _buildReviewLabelsBlock(wt("drawui.ref_labels", "Эталонные названия"), targets, "review-reference-labels"),
+      labelsBlock: _buildReviewLabelsBlock(wt("drawui.ref_labels", "Эталонные названия"), refLabelItems, "review-reference-labels"),
       renderSvg(svg) {
         targets.forEach((target, idx) => {
           const isBad = state.badRefTargets instanceof Set && state.badRefTargets.has(idx);
@@ -1007,6 +1113,7 @@
             strokeWidth: isBad ? 5 : 4,
             strokeDasharray: target && target.shape === "freehand" ? "10 6" : null,
             strokeOpacity: 0.94,
+            targetIndex: idx,
           });
         });
       },
@@ -1039,15 +1146,21 @@
         "div",
         "mt-1 text-sm leading-6 text-text-secondary dark:text-text-muted",
         result && result.success === true
-          ? wt("drawui.review_success_desc", "Сохраняем рядом ваш рисунок и эталон, чтобы можно было быстро сверить форму и направление линий.")
-          : wt("drawui.review_error_desc", "Показываем ваш рисунок и эталон прямо поверх исходного изображения, чтобы различия были видны без текстовых описаний.")
+          ? wt("drawui.review_success_desc", "Сохраняем рядом ваш рисунок и эталон. Наведите на структуру — она подсветится на обоих изображениях и в обеих таблицах названий.")
+          : wt("drawui.review_error_desc", "Показываем ваш рисунок и эталон прямо поверх исходного изображения. Наведите на структуру — она подсветится на обоих изображениях и в обеих таблицах названий, чтобы сразу видеть, что вы нарисовали/назвали и что нужно было.")
       )
     );
+
+    // Карта «структура пользователя → цель эталона» из результатов проверки.
+    state._reviewStructureTargets = _buildReviewStructureTargetMap(result && result.details);
 
     const grid = _createEl("div", "mt-4 grid gap-3 xl:grid-cols-2", "");
     grid.appendChild(_buildUserReviewPreviewCard(imageUrl, canvasSize.width, canvasSize.height));
     grid.appendChild(_buildReferenceReviewPreviewCard(imageUrl, canvasSize.width, canvasSize.height));
     section.appendChild(grid);
+
+    // Связанная подсветка по всему разделу (оба изображения + обе таблицы).
+    _setupReviewHoverEffects(section);
 
     state.reviewHost.classList.remove("hidden");
     state.reviewHost.appendChild(section);

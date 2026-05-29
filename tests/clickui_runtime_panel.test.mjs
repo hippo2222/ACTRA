@@ -528,7 +528,8 @@ describe("ClickUI runtime targets panel", () => {
     const statusCard = container.querySelector('[data-clickui="status-card"]');
 
     expect(prompt?.textContent || "").toContain("Кликните по нужной области и назовите её.");
-    expect(instruction?.textContent || "").toContain("кликай только по подходящим областям");
+    // L2 скрывает список целей и показывает инструкцию «кликай и называй».
+    expect(instruction?.textContent || "").toContain("Кликай по областям и давай каждой название.");
     expect(instruction?.textContent || "").toContain("Сделано 1 кликов из 1 доступных.");
     expect(instruction?.textContent || "").toContain("Введи названия для отмеченных целей");
     expect(list).toBeNull();
@@ -997,7 +998,9 @@ describe("ClickUI runtime targets panel", () => {
     expect(refPreview?.querySelectorAll("path, circle").length || 0).toBeGreaterThan(0);
   });
 
-  it("does not render review comparison for level 2 click tasks in runtime mode", () => {
+  it("renders review comparison for level 2 click tasks in runtime mode", () => {
+    // Разбор ответа показывается для всех уровней и в runtime-сессии (намеренно,
+    // см. commit 4324339): после проверки пользователь видит свой ответ и эталон.
     const task = createLevel2ClickTaskWithoutExplicitLabels();
     const container = document.getElementById("app");
 
@@ -1016,7 +1019,7 @@ describe("ClickUI runtime targets panel", () => {
       },
     });
 
-    expect(container.querySelector('[data-clickui="review-comparison"]')).toBeNull();
+    expect(container.querySelector('[data-clickui="review-comparison"]')).toBeTruthy();
   });
 
   it("renders click review labels in non-runtime mode", () => {
@@ -1047,7 +1050,8 @@ describe("ClickUI runtime targets panel", () => {
     expect(refLabels?.textContent || "").toContain("Центр");
   });
 
-  it("does not render review comparison for draw tasks in runtime mode", () => {
+  it("renders review comparison for draw tasks in runtime mode", () => {
+    // См. предыдущий тест: разбор показывается и в runtime для draw/L3 задач.
     const task = createDrawTaskFixture([
       {
         label: "Контур мишени",
@@ -1080,7 +1084,7 @@ describe("ClickUI runtime targets panel", () => {
       },
     });
 
-    expect(container.querySelector('[data-clickui="review-comparison"]')).toBeNull();
+    expect(container.querySelector('[data-clickui="review-comparison"]')).toBeTruthy();
   });
 
   it("renders draw review labels in non-runtime mode", () => {
@@ -1224,6 +1228,55 @@ describe("ClickUI runtime targets panel", () => {
     hoverables.forEach(el => {
       expect(el.style.opacity).toBe("");
     });
+  });
+
+  it("links hover across BOTH images and BOTH label tables in review", () => {
+    const task = createDrawTaskFixture([
+      { label: "Контур мишени", shape: "polygon", points: [[10, 10], [20, 10], [20, 20], [10, 20]] },
+      { label: "Линия ориентира", shape: "freehand", points: [[40, 40], [55, 40], [70, 42]] },
+    ]);
+    const container = document.getElementById("app");
+
+    dom.window.ClickUI.render(container, task, { runtimeMode: false });
+    dom.window.ClickUI.restoreInput({
+      polygons: [{ points: [[10, 10], [20, 10], [20, 20], [10, 20]] }],
+      lines: [{ points: [[40, 40], [55, 40], [70, 42]] }],
+      labels_polygons: ["Контур пользователя"],
+      labels_lines: ["Линия пользователя"],
+      action_history: [{ kind: "polygon" }, { kind: "line" }],
+    });
+    dom.window.ClickUI.applyCheckFeedback({
+      success: false,
+      details: {
+        polygon_results: [{ target_index: 0, polygon_success: true, coverage: 95, threshold: 75, matched_polygon_idx: 0 }],
+        line_results: [{ target_index: 1, line_success: false, coverage: 60, threshold: 75, matched_line_idx: 0 }],
+        found_targets: [0],
+      },
+    });
+
+    const userPreview = container.querySelector('[data-clickui="review-user-preview"]');
+    const refPreview = container.querySelector('[data-clickui="review-reference-preview"]');
+    const userLabels = container.querySelector('[data-clickui="review-user-labels"]');
+    const refLabels = container.querySelector('[data-clickui="review-reference-labels"]');
+    expect(userPreview && refPreview && userLabels && refLabels).toBeTruthy();
+
+    const t0InRef = refPreview.querySelector('[data-target-index="0"]');
+    const t0InUser = userPreview.querySelector('[data-target-index="0"]');
+    const t0UserRow = userLabels.querySelector('[data-target-index="0"]');
+    const t0RefRow = refLabels.querySelector('[data-target-index="0"]');
+    const t1InUser = userPreview.querySelector('[data-target-index="1"]');
+    const t1RefRow = refLabels.querySelector('[data-target-index="1"]');
+    expect(t0InRef && t0InUser && t0UserRow && t0RefRow).toBeTruthy();
+
+    // Hover the reference IMAGE area for target 0 → target 0 lights up everywhere:
+    // user image marker + both label-table rows; target 1 fades on every surface.
+    t0InRef.dispatchEvent(new dom.window.MouseEvent("mouseenter", { bubbles: true }));
+
+    expect(t0InUser.style.opacity).toBe("1");
+    expect(t0UserRow.style.opacity).toBe("1");
+    expect(t0RefRow.style.opacity).toBe("1");
+    if (t1InUser) expect(t1InUser.style.opacity).toBe("0.08");
+    if (t1RefRow) expect(t1RefRow.style.opacity).toBe("0.08");
   });
 });
 

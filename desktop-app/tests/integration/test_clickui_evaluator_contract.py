@@ -168,9 +168,12 @@ if (scenario === 'l3') {
   if (!brushBtn) throw new Error('Brush mode button not found');
   brushBtn.click();
 
+  // Замкнутый контур требует >= _MIN_CLOSED_STROKE_POINTS (5) точек, иначе штрих
+  // классифицируется как линия. Рисуем полный квадрат (down + 4 move = 5 точек).
   pointer('pointerdown', viewport, 110, 110);
   pointer('pointermove', window, 290, 110);
   pointer('pointermove', window, 290, 290);
+  pointer('pointermove', window, 110, 290);
   pointer('pointermove', window, 112, 112);
   pointer('pointerup', window, 112, 112);
 

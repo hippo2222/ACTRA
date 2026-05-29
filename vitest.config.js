@@ -5,7 +5,9 @@ export default defineConfig({
         exclude: [
             'node_modules/**',
             'BackupArchiveFiles/**',
-            '.venv/**'
+            '.venv/**',
+            // Untracked nested agent worktrees — not part of the active project
+            'radioproject_git/**'
         ]
     }
 });

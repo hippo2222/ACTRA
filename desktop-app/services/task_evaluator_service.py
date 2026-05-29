@@ -1067,23 +1067,25 @@ class TaskEvaluatorService:
             found_correct_labels = [correct_labels[i] if i < len(correct_labels) else '' 
                                    for i in found_targets_list]
             if labels_clicks:
+                # Привязка названия к цели ВСЕГДА по спатиальному якорю: берём имя у того
+                # клика, который геометрически попал в эту цель (matched_click_idx).
+                # Порядок ввода названий не учитывается. Если у цели нет привязанного
+                # клика — название не продемонстрировано и не засчитывается (candidate='').
                 matched_click_idx_by_target = {
                     info.get('index'): info.get('matched_click_idx')
                     for info in targets_info
                     if isinstance(info, dict)
                 }
                 found_user_labels = []
-                for seq_pos, target_idx in enumerate(found_targets_list):
+                for target_idx in found_targets_list:
                     candidate = ''
                     click_i = matched_click_idx_by_target.get(target_idx)
                     if click_i is not None and click_i < len(labels_clicks):
                         candidate = labels_clicks[click_i]
-                    if not candidate and target_idx < len(user_labels):
-                        candidate = user_labels[target_idx]
-                    if not candidate and seq_pos < len(user_labels):
-                        candidate = user_labels[seq_pos]
                     found_user_labels.append(candidate)
             else:
+                # Legacy-формат без per-click названий (современный фронтенд всегда шлёт
+                # labels_clicks — см. контракт test_clickui_evaluator_contract). Якоря нет.
                 found_user_labels = user_labels[:len(found_targets_list)] if len(user_labels) >= len(found_targets_list) else user_labels
             
             labels_result = self._evaluate_labels(found_user_labels, found_correct_labels)
@@ -2373,6 +2375,15 @@ class TaskEvaluatorService:
                 if isinstance(r, dict)
             }
 
+            # Привязка названия к цели ВСЕГДА по спатиальному якорю: берём имя у того
+            # контура/линии, который геометрически сопоставлен этой цели
+            # (matched_polygon_idx / matched_line_idx). Порядок ввода не учитывается.
+            # Если для семейства (контуры/линии) переданы привязанные названия, но у
+            # конкретной цели якоря нет — название не засчитывается (candidate='').
+            # Legacy-исключение: если привязанных названий семейства нет вовсе, а есть
+            # только плоский список labels (старый формат), используем его по индексу
+            # цели как единственный доступный источник (современный фронтенд всегда
+            # шлёт labels_polygons/labels_lines — см. контракт).
             found_user_labels = []
             found_correct_labels = []
             for idx in found_targets_list:
@@ -2382,9 +2393,7 @@ class TaskEvaluatorService:
                     candidate = ''
                     if li is not None and li < len(labels_lines):
                         candidate = labels_lines[li]
-                    if not candidate and idx < len(normalized_line_labels):
-                        candidate = normalized_line_labels[idx]
-                    if not candidate and idx < len(normalized_labels):
+                    elif not labels_lines and idx < len(normalized_labels):
                         candidate = normalized_labels[idx]
                     found_user_labels.append(candidate)
                 else:
@@ -2392,9 +2401,7 @@ class TaskEvaluatorService:
                     candidate = ''
                     if labels_polygons and pi is not None and pi < len(labels_polygons):
                         candidate = labels_polygons[pi]
-                    if not candidate and idx < len(normalized_polygon_labels):
-                        candidate = normalized_polygon_labels[idx]
-                    if not candidate and idx < len(normalized_labels):
+                    elif not labels_polygons and idx < len(normalized_labels):
                         candidate = normalized_labels[idx]
                     found_user_labels.append(candidate)
 

@@ -19,7 +19,7 @@ set -euo pipefail
 REPO_DIR="${REPO_DIR:-$(pwd)}"
 COMPOSE_FILES="-f docker-compose.hosted.yml"
 BRANCH="online-hosting"
-APP_CONTAINER="radioproject_git-app-1"
+APP_CONTAINER="actra-app-1"
 PUBLIC_BASE="${PUBLIC_BASE:-https://actra.site}"
 
 cd "$REPO_DIR"

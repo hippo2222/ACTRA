@@ -2,6 +2,10 @@
 .github
 .mypy_cache
 .pytest_cache
+.pytest_tmp*
+**/.pytest_tmp*
+**/.pytest_cache
+.coverage
 .vscode
 __pycache__
 node_modules

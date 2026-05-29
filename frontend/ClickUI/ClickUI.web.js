@@ -2477,12 +2477,33 @@
     }
   }
 
-  function _setupReviewHoverEffects(card) {
-    const hoverables = Array.from(card.querySelectorAll("[data-target-index]"));
+  function _setupReviewHoverEffects(root) {
+    // Наведение на любую область/строку в блоке «Разбор ошибок» подсвечивает один и
+    // тот же target ОДНОВРЕМЕННО на обоих изображениях (ответ + эталон) и в обеих
+    // таблицах названий (что написал пользователь + что нужно было). Поэтому scope —
+    // весь раздел сравнения, а не отдельная карточка.
+    const hoverables = Array.from(root.querySelectorAll("[data-target-index]"));
     if (!hoverables.length) return;
 
+    const isTableRow = (el) =>
+      typeof el.closest === "function" && !!el.closest("[data-clickui$='-labels']");
+
+    const applyMatch = (el) => {
+      el.style.opacity = "1";
+      if (isTableRow(el)) {
+        const idxAttr = el.getAttribute("data-target-index");
+        const idx = idxAttr !== null && idxAttr !== "" ? Number(idxAttr) : null;
+        const ring = idx !== null ? _getTargetColor(idx) : _getThemeColor("--color-accent", "#d97706");
+        el.style.boxShadow = `0 0 0 2px ${ring}, 0 2px 10px ${_withAlpha(ring, 0.22)}`;
+      }
+    };
+    const clear = (el) => {
+      el.style.opacity = "";
+      el.style.boxShadow = "";
+    };
+
     hoverables.forEach((el) => {
-      el.style.transition = "opacity 0.2s ease-in-out";
+      el.style.transition = "opacity 0.2s ease-in-out, box-shadow 0.2s ease-in-out";
     });
 
     hoverables.forEach((el) => {
@@ -2493,16 +2514,15 @@
         hoverables.forEach((other) => {
           if (other.getAttribute("data-target-index") !== targetIndexStr) {
             other.style.opacity = "0.08";
+            other.style.boxShadow = "";
           } else {
-            other.style.opacity = "1";
+            applyMatch(other);
           }
         });
       });
 
       el.addEventListener("mouseleave", () => {
-        hoverables.forEach((other) => {
-          other.style.opacity = "";
-        });
+        hoverables.forEach(clear);
       });
     });
   }
@@ -2593,7 +2613,8 @@
     if (opts.labelsBlock) {
       card.appendChild(opts.labelsBlock);
     }
-    _setupReviewHoverEffects(card);
+    // Hover-эффекты навешиваются один раз на весь раздел сравнения в
+    // _renderReviewComparison, чтобы подсветка связывала обе карточки и обе таблицы.
     return card;
   }
 
@@ -2837,8 +2858,8 @@
       "div",
       "mt-1 text-sm leading-6 text-text-secondary dark:text-text-muted",
       result && result.success === true
-        ? wt("clickui.review_success_desc", "Показываем, что вы отметили на изображении, и рядом оставляем эталон для быстрой сверки.")
-        : wt("clickui.review_error_desc", "Слева сохранён ваш ответ, справа показан эталон на том же изображении, чтобы различия считывались визуально.")
+        ? wt("clickui.review_success_desc", "Показываем, что вы отметили на изображении, и рядом оставляем эталон для быстрой сверки. Наведите на область — она подсветится на обоих изображениях и в обеих таблицах.")
+        : wt("clickui.review_error_desc", "Слева сохранён ваш ответ, справа показан эталон на том же изображении. Наведите на область — она подсветится на обоих изображениях и в обеих таблицах названий, чтобы сразу видеть, что вы написали и что нужно было.")
     );
     const grid = _createEl("div", "mt-4 grid gap-3 xl:grid-cols-2", "");
     grid.appendChild(_buildUserReviewPreviewCard(imageUrl, canvasSize.width, canvasSize.height));
@@ -2847,6 +2868,9 @@
     section.appendChild(title);
     section.appendChild(note);
     section.appendChild(grid);
+    // Связанная подсветка по всему разделу: наведение на область/строку подсвечивает
+    // тот же target на обоих изображениях и в обеих таблицах одновременно.
+    _setupReviewHoverEffects(section);
     state.reviewHost.classList.remove("hidden");
     state.reviewHost.appendChild(section);
     state.reviewComparisonEl = section;
