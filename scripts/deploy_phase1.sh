@@ -63,8 +63,8 @@ deadline=$((SECONDS + 60))
 ready=0
 while [[ $SECONDS -lt $deadline ]]; do
     if docker ps --filter "name=$APP_CONTAINER" --format '{{.Status}}' | grep -q "Up"; then
-        # Container is Up; try health from inside
-        if docker exec "$APP_CONTAINER" sh -c 'wget -q -O- http://127.0.0.1:8000/welcome > /dev/null 2>&1'; then
+        # Container is Up; try health from host
+        if curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/welcome | grep -qE "200|301|302"; then
             ready=1
             break
         fi
