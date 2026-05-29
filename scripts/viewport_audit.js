@@ -56,8 +56,74 @@ async function registerAndLogin(context, baseUrl, suffix) {
 // exist in the built-in /api/task-catalog, so we just assemble complexes from
 // those refs (same path proven by ensure_contrast_s1_seed.js). Failures are
 // non-fatal: the audit still runs against whatever rendered.
+// The fresh dev DB ships with no startable task content, so we import a real
+// complex archive exported from prod (radiology tasks with proper difficulty
+// levels). This seeds modules/topics/tasks + a complex, which makes both the
+// catalog and a real session possible. Returns the imported complex id or null.
+const IMPORT_ARCHIVE = path.resolve(__dirname, "..", "export_complexes_20260512_194547.zip");
+
+async function importComplexArchive(context, baseUrl) {
+  try {
+    if (!fs.existsSync(IMPORT_ARCHIVE)) {
+      console.warn(`[viewport-audit] seed: import archive not found at ${IMPORT_ARCHIVE}`);
+      return null;
+    }
+    const buffer = fs.readFileSync(IMPORT_ARCHIVE);
+    const filePart = {
+      name: path.basename(IMPORT_ARCHIVE),
+      mimeType: "application/zip",
+      buffer,
+    };
+    const check = await context.request.post(
+      resolveUrl(baseUrl, "/api/complexes/import/check"),
+      { multipart: { file: filePart } }
+    );
+    if (!check.ok()) {
+      console.warn(`[viewport-audit] seed: import check failed (${check.status()})`);
+      return null;
+    }
+    const checkBody = await check.json();
+    const cacheId = checkBody && checkBody.cache_id;
+    if (!cacheId) {
+      console.warn("[viewport-audit] seed: import check returned no cache_id");
+      return null;
+    }
+    const confirm = await context.request.post(
+      resolveUrl(baseUrl, "/api/complexes/import/confirm"),
+      {
+        multipart: {
+          cache_id: cacheId,
+          complex_conflict_resolution: "new_id",
+          task_conflict_resolution: "skip",
+          theory_conflict_resolution: "reuse_if_same_hash",
+          atomic_mode: "bundle",
+        },
+      }
+    );
+    if (!confirm.ok()) {
+      console.warn(`[viewport-audit] seed: import confirm failed (${confirm.status()})`);
+      return null;
+    }
+    // Find the imported complex by listing — it's the one that isn't ours.
+    const list = await context.request.get(resolveUrl(baseUrl, "/api/complexes"));
+    if (list.ok()) {
+      const body = await list.json();
+      const items = Array.isArray(body && body.items) ? body.items : [];
+      const imported = items.find((it) => it && !String(it.name || "").startsWith("Демо:"));
+      const id = imported && (imported.id || imported.complex_id);
+      console.log(`[viewport-audit] seed: imported prod complex archive (complex ${id || "?"})`);
+      return id || null;
+    }
+    return null;
+  } catch (err) {
+    console.warn(`[viewport-audit] seed: import error (non-fatal): ${err && err.message ? err.message : err}`);
+    return null;
+  }
+}
+
 async function seedDemoData(context, baseUrl) {
   try {
+    const importedComplexId = await importComplexArchive(context, baseUrl);
     const res = await context.request.get(resolveUrl(baseUrl, "/api/task-catalog"));
     if (!res.ok()) {
       console.warn(`[viewport-audit] seed: task-catalog unavailable (${res.status()}), skipping`);
@@ -79,6 +145,7 @@ async function seedDemoData(context, baseUrl) {
       { name: "Демо: интенсив", take: Math.min(5, refs.length) },
     ];
     let created = 0;
+    const complexIds = [];
     for (const plan of plans) {
       const tasks = refs.slice(0, plan.take);
       if (tasks.length === 0) continue;
@@ -92,12 +159,96 @@ async function seedDemoData(context, baseUrl) {
           settings: {},
         },
       });
-      if (r.ok()) created += 1;
-      else console.warn(`[viewport-audit] seed: complex "${plan.name}" failed (${r.status()})`);
+      if (r.ok()) {
+        created += 1;
+        try {
+          const body = await r.json();
+          const item = (body && body.item) || {};
+          const id = item.id || item.complex_id;
+          if (id) complexIds.push(id);
+        } catch (_) {}
+      } else {
+        console.warn(`[viewport-audit] seed: complex "${plan.name}" failed (${r.status()})`);
+      }
     }
     console.log(`[viewport-audit] seed: ${created}/${plans.length} demo complexes created (catalog tasks: ${refs.length})`);
+
+    // Drive one complex to completion so history-backed screens (statistics,
+    // calendar, microcards) render populated instead of empty states. Prefer the
+    // imported prod complex — its tasks have real difficulty levels and start.
+    const sessionComplexId = importedComplexId || complexIds[0];
+    if (sessionComplexId) {
+      await seedCompletedSession(context, baseUrl, sessionComplexId);
+    }
   } catch (err) {
     console.warn(`[viewport-audit] seed: error (non-fatal): ${err && err.message ? err.message : err}`);
+  }
+}
+
+// Run a whole session to "completed" using the server's audit_control override,
+// which forces a deterministic pass without crafting per-task answer payloads.
+// Flow: POST /start -> {submit force_success, next} per task until next returns
+// 410 session_completed. Non-fatal on any error.
+async function seedCompletedSession(context, baseUrl, complexId) {
+  try {
+    // Resolve the logged-in user id so the server doesn't treat us as guest.
+    let userId;
+    try {
+      const me = await context.request.get(resolveUrl(baseUrl, "/api/users/current"));
+      if (me.ok()) {
+        const u = await me.json();
+        const user = (u && (u.user || u.profile || u)) || {};
+        userId = user.user_id || user.id || undefined;
+      }
+    } catch (_) {}
+
+    const startRes = await context.request.post(
+      resolveUrl(baseUrl, `/api/session/${encodeURIComponent(complexId)}/start`),
+      { data: userId ? { user_id: userId } : {} }
+    );
+    if (!startRes.ok()) {
+      console.warn(`[viewport-audit] seed: session start failed (${startRes.status()})`);
+      return;
+    }
+    const startBody = await startRes.json();
+    const sessionId = startBody && (startBody.session_id || startBody.id);
+    if (!sessionId) {
+      console.warn("[viewport-audit] seed: session start returned no session_id");
+      return;
+    }
+
+    let guard = 0;
+    while (guard++ < 50) {
+      const taskRes = await context.request.get(
+        resolveUrl(baseUrl, `/api/session/${encodeURIComponent(sessionId)}/task`)
+      );
+      if (!taskRes.ok()) break;
+      const taskBody = await taskRes.json();
+      const task = taskBody && taskBody.task;
+      const taskRef = task && task.task_ref;
+      if (!taskRef) break;
+
+      await context.request.post(
+        resolveUrl(baseUrl, `/api/session/${encodeURIComponent(sessionId)}/task/submit`),
+        {
+          data: {
+            task_id: taskRef,
+            user_input: {},
+            audit_control: { enabled: true, mode: "force_success" },
+          },
+        }
+      );
+
+      const nextRes = await context.request.post(
+        resolveUrl(baseUrl, `/api/session/${encodeURIComponent(sessionId)}/task/next`),
+        { data: {} }
+      );
+      if (nextRes.status() === 410) break; // session_completed
+      if (!nextRes.ok()) break;
+    }
+    console.log(`[viewport-audit] seed: completed a session on complex ${complexId}`);
+  } catch (err) {
+    console.warn(`[viewport-audit] seed: session error (non-fatal): ${err && err.message ? err.message : err}`);
   }
 }
 
