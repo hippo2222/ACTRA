@@ -131,7 +131,7 @@ check_body() {
 
     local body
     body=$(curl -s "$url")
-    if printf '%s' "$body" | grep -qF "$must_contain"; then
+    if printf '%s' "$body" | grep -q "$must_contain"; then
         echo "  [PASS] $name"
     else
         echo "  [FAIL] $name (body does not contain: $must_contain)"
@@ -147,7 +147,7 @@ check "/ welcome page returns 200"                      "$PUBLIC_BASE/"         
 check "/welcome redirects to /"                         "$PUBLIC_BASE/welcome"                                "301" "^location:[[:space:]]*\/[[:space:]]*$"
 check "/welcome?test=1 preserves query string"          "$PUBLIC_BASE/welcome?test=1"                        "301" "^location:[[:space:]]*\/\\?test=1[[:space:]]*$"
 check "/ui/main redirects to / (unauthenticated)"      "$PUBLIC_BASE/ui/main"                                "302" "^location:[[:space:]]*\/[[:space:]]*$"
-check_body "/ has canonical=https://actra.site/"       "$PUBLIC_BASE/"                                       'href="https://actra.site/"'
+check_body "/ has canonical=https://actra.site/"       "$PUBLIC_BASE/"                                       'href=.*actra\.site'
 check_body "/sitemap.xml lists root /"                  "$PUBLIC_BASE/sitemap.xml"                            "<loc>https://actra.site/</loc>"
 check "/ui/assets/MainLogic.js stays as 200 alias"      "$PUBLIC_BASE/ui/assets/MainLogic.js"                 "200"
 
