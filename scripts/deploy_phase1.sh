@@ -139,19 +139,21 @@ check_body() {
     fi
 }
 
-check "/ returns 301 to /welcome"                       "$PUBLIC_BASE/"                                       "301" "^location:.*\\/welcome"
-check "/ui/main returns 301 to /main"                   "$PUBLIC_BASE/ui/main"                                "301" "^location:.*\\/main"
-check "/ui/editor preserves query string"               "$PUBLIC_BASE/ui/editor?module=X&topic=Y&sort=date"    "301" "^location:.*\\/editor\\?module=X&topic=Y&sort=date"
-check_body "/welcome has canonical=/welcome"            "$PUBLIC_BASE/welcome"                                'rel="canonical" href="https://actra.site/welcome"'
-check_body "/sitemap.xml lists /welcome"                "$PUBLIC_BASE/sitemap.xml"                            "<loc>https://actra.site/welcome</loc>"
+check "/ welcome page returns 200"                      "$PUBLIC_BASE/"                                       "200"
+check "/welcome redirects to /"                         "$PUBLIC_BASE/welcome"                                "301" "^location:.*\\/$"
+check "/welcome?test=1 preserves query string"          "$PUBLIC_BASE/welcome?test=1"                        "301" "^location:.*\\/\\?test=1"
+check "/ui/main redirects to / (unauthenticated)"      "$PUBLIC_BASE/ui/main"                                "302" "^location:.*\\/$"
+check_body "/ has canonical=https://actra.site/"       "$PUBLIC_BASE/"                                       'rel="canonical" href="https://actra.site/"'
+check_body "/sitemap.xml lists root /"                  "$PUBLIC_BASE/sitemap.xml"                            "<loc>https://actra.site/</loc>"
 check "/ui/assets/MainLogic.js stays as 200 alias"      "$PUBLIC_BASE/ui/assets/MainLogic.js"                 "200"
 
 echo ""
 if [[ $fail_count -eq 0 ]]; then
-    echo "==> All 6 smoke checks passed. Phase 1 deployed successfully."
+    echo "==> All 7 smoke checks passed. Phase 1 deployed successfully."
 else
-    echo "==> $fail_count of 6 smoke checks FAILED. Review above and consider rollback:" >&2
+    echo "==> $fail_count of 7 smoke checks FAILED. Review above and consider rollback:" >&2
     echo "      git revert HEAD && git push origin $BRANCH" >&2
     echo "      docker compose $COMPOSE_FILES up -d --build app" >&2
     exit 1
 fi
+
