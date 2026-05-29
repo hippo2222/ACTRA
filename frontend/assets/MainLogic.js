@@ -2159,58 +2159,41 @@
         if (ctaEl) ctaEl.disabled = true;
         if (secondaryCtaEl) secondaryCtaEl.disabled = true;
 
-        const { ok, data } = await apiFetch('/api/microcards/summary');
+        // v2 API — replaces the old /api/microcards/summary that returned microcards_mode_disabled
+        const { ok, data } = await apiFetch('/api/v2/microcards/summary');
         if (loadingState) loadingState.classList.add('hidden');
 
         if (!ok) {
-            const isDisabled = data && (data.error === 'microcards_mode_disabled' || data.error === 'guest_cannot_use_microcards');
-            if (isDisabled) {
-                setMainRecommendationState({ microcardsDisabled: true, microcardsHasDecks: false, microcardsDue: 0 });
-                if (disabledState) { disabledState.classList.remove('hidden'); disabledState.classList.add('flex'); }
-                if (emptyState) { emptyState.classList.add('hidden'); emptyState.classList.remove('flex'); }
-                if (contentState) contentState.classList.add('hidden');
-                if (ctaEl) ctaEl.disabled = true;
-                const dueBadgeCount = document.getElementById('microcardsDueCount');
-                const ctaText = document.getElementById('microcardsCTAText');
-                const ctaIcon = document.getElementById('microcardsCTAIcon');
-                const secondaryIcon = secondaryCtaEl?.querySelector('.material-symbols-outlined');
-                const secondaryText = secondaryCtaEl?.querySelector('span:last-child');
-                if (dueBadgeCount) dueBadgeCount.textContent = '—';
-                if (ctaText) ctaText.textContent = wt('main.mc_wip_cta', 'Функционал в разработке');
-                if (ctaIcon) ctaIcon.textContent = 'construction';
-                if (secondaryIcon) secondaryIcon.textContent = 'schedule';
-                if (secondaryText) secondaryText.textContent = wt('main.mc_wip_coming', 'Скоро вернём');
-            } else {
-                setMainRecommendationState({ microcardsDisabled: false, microcardsHasDecks: false, microcardsDue: 0 });
-                if (dueBadgeEl) dueBadgeEl.hidden = true;
-                if (disabledState) disabledState.classList.add('hidden');
-                if (emptyState) {
-                    emptyState.classList.remove('hidden'); emptyState.classList.add('flex');
-                    const titleEl = emptyState.querySelector('p.text-sm');
-                    const descEl = emptyState.querySelector('p.text-\\[10px\\]');
-                    if (titleEl) titleEl.textContent = wt('main.mc_error_title', 'Сводка временно недоступна');
-                    if (descEl) descEl.textContent = wt('main.mc_error_desc', 'Открыть режим можно позже: сама карточка никуда не исчезнет.');
-                }
+            setMainRecommendationState({ microcardsDisabled: false, microcardsHasDecks: false, microcardsDue: 0 });
+            if (dueBadgeEl) dueBadgeEl.hidden = true;
+            if (disabledState) disabledState.classList.add('hidden');
+            if (emptyState) {
+                emptyState.classList.remove('hidden'); emptyState.classList.add('flex');
+                const titleEl = emptyState.querySelector('p.text-sm');
+                const descEl = emptyState.querySelector('p\\.text-\\[10px\\]') || emptyState.querySelector('[class*="text-\\[10px\\]"]') || emptyState.querySelectorAll('p')[1];
+                if (titleEl) titleEl.textContent = wt('main.mc_error_title', 'Сводка временно недоступна');
+                if (descEl) descEl.textContent = wt('main.mc_error_desc', 'Открыть раздел можно кнопкой ниже.');
             }
+            if (ctaEl) { ctaEl.disabled = false; }
+            if (secondaryCtaEl) secondaryCtaEl.disabled = false;
             return;
         }
 
-        const queue = data.queue_summary || {};
-        const today = data.today || {};
-        const totals = data.totals || {};
-        const dueTotal = queue.cards_due_total || 0;
-        const newTotal = queue.cards_new_total || 0;
-        const decksActive = totals.decks_active || 0;
-        const todayReviews = today.reviews || 0;
-        const todayCorrectRate = today.correct_rate;
+        // v2 flat response: { total_decks, total_cards, due_cards, new_cards }
+        const dueTotal = data.due_cards || 0;
+        const newTotal = data.new_cards || 0;
+        const decksActive = data.total_decks || 0;
+        const todayReviews = 0;          // v2 summary doesn't expose daily breakdown yet
+        const todayCorrectRate = null;
 
-        const hasDecks = decksActive > 0 || dueTotal > 0 || newTotal > 0 || todayReviews > 0 || (totals.reviews || 0) > 0;
+        const hasDecks = decksActive > 0 || dueTotal > 0 || newTotal > 0;
 
         if (!hasDecks) {
             setMainRecommendationState({ microcardsDisabled: false, microcardsHasDecks: false, microcardsDue: 0 });
             if (dueBadgeEl) dueBadgeEl.hidden = true;
             if (disabledState) disabledState.classList.add('hidden');
             if (emptyState) { emptyState.classList.remove('hidden'); emptyState.classList.add('flex'); }
+            if (ctaEl) ctaEl.disabled = false;
             if (secondaryCtaEl) secondaryCtaEl.disabled = false;
             if (emptyState) {
                 const titleEl = emptyState.querySelector('p.text-sm');

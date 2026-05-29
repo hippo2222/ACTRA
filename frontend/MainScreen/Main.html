@@ -2872,10 +2872,10 @@
                                     </div>
                                     <div id="microcardsDisabledState"
                                         class="hidden flex-1 flex-col items-center justify-center py-4 text-center gap-2">
-                                        <span class="material-symbols-outlined text-border-strong text-[32px]">construction</span>
+                                        <span class="material-symbols-outlined text-border-strong text-[32px]">style</span>
                                         <div class="main-widget-inline-copy">
-                                            <p class="text-sm font-medium text-text-main" data-i18n="main.mc_disabled_title">Пока на паузе</p>
-                                            <p class="main-widget-empty-copy text-[11px] mt-1 max-w-sm" data-i18n="main.mc_disabled_desc">Вернём микрокарточки после следующего этапа доработки.</p>
+                                            <p class="text-sm font-medium text-text-main" data-i18n="main.mc_disabled_title">Раздел готов</p>
+                                            <p class="main-widget-empty-copy text-[11px] mt-1 max-w-sm" data-i18n="main.mc_disabled_desc">Создайте первую колоду и начните повторение.</p>
                                         </div>
                                     </div>
                                     <div id="microcardsContentState" class="hidden flex-col gap-2">
@@ -2915,15 +2915,16 @@
                                     <div class="main-microcards-actions grid grid-cols-2 gap-2">
                                         <button
                                             class="w-full inline-flex items-center justify-center gap-2 main-primary-cta text-sm font-bold py-1.5 px-3 rounded-lg transition-all"
-                                            id="microcardsCTA" disabled><span
+                                            id="microcardsCTA"
+                                            onclick="event.stopPropagation(); window.navigateWithTransition('/microcards');"><span
                                                 class="material-symbols-outlined text-[16px]"
-                                                id="microcardsCTAIcon">construction</span><span
+                                                id="microcardsCTAIcon">style</span><span
                                                 id="microcardsCTAText" data-i18n="main.mc_cta_open">Открыть микрокарточки</span>
                                         </button>
                                         <button
                                             class="w-full inline-flex items-center justify-center gap-2 main-secondary-cta text-sm font-bold py-1.5 px-3 rounded-lg transition-all"
-                                            disabled>
-                                            <span class="material-symbols-outlined text-[14px]">schedule</span>
+                                            onclick="event.stopPropagation(); window.navigateWithTransition('/microcards');">
+                                            <span class="material-symbols-outlined text-[14px]">add_card</span>
                                             <span data-i18n="main.mc_create_manual">Создать вручную</span>
                                         </button>
                                     </div>
