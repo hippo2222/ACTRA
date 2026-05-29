@@ -12,6 +12,8 @@
     <link href="/assets/lightB-variables.css" rel="stylesheet" />
     <link href="/assets/lightB-components.css" rel="stylesheet" />
     <link href="/assets/animations.css" rel="stylesheet" />
+    <link href="/assets/global-header.css" rel="stylesheet" />
+    <link href="/assets/PageBoot.css" rel="stylesheet" />
     <script src="/assets/celebration-effects.js"></script>
     <style>
         /* CSS resets and custom utilities for modern UI */
@@ -146,38 +148,38 @@
         }
     </style>
 </head>
-<body class="bg-bg-main text-text-main min-h-screen flex flex-col font-display antialiased">
+<body class="actra-page-booting bg-bg-main text-text-main min-h-screen flex flex-col font-display antialiased">
 
-    <!-- Header -->
-    <header class="sticky top-0 z-50 border-b border-border-subtle bg-surface-1/95 backdrop-blur px-4 md:px-6 py-3">
-        <div class="flex items-center justify-between max-w-[1280px] mx-auto">
-            <div class="flex items-center gap-3">
-                <!-- H3 fix: size-9 (36px) → size-11 (44px) for minimum touch target -->
+    <!-- Page boot splash -->
+    <div class="actra-page-boot-screen" role="status" aria-live="polite" aria-label="ACTRA">
+        <div class="actra-page-boot-card">
+            <img class="actra-page-boot-logo" src="/assets/logo_animated.svg" alt="ACTRA" />
+        </div>
+    </div>
+
+    <!-- Global navigation header (profile, nav, language) -->
+    <div data-global-header data-app-section="microcards"></div>
+
+    <!-- Page-specific sub-header: back button, section title, session progress -->
+    <header class="sticky top-[var(--global-header-height,3.5rem)] z-40 border-b border-border-subtle bg-surface-1/95 backdrop-blur-sm px-4 md:px-6 py-2.5">
+        <div class="flex items-center justify-between max-w-[1280px] mx-auto gap-3">
+            <div class="flex items-center gap-3 min-w-0">
                 <button type="button" id="mcHeaderBackBtn" onclick="mcApp.handleBackNavigation()"
-                    class="flex items-center justify-center size-11 rounded-lg text-text-secondary hover:text-primary hover:bg-bg-hover transition-colors"
+                    class="flex items-center justify-center size-9 rounded-lg text-text-secondary hover:text-primary hover:bg-bg-hover transition-colors flex-shrink-0"
                     title="Назад" aria-label="Назад" data-i18n-title="microcards.btn_back">
-                    <span class="material-symbols-outlined">arrow_back</span>
+                    <span class="material-symbols-outlined text-[20px]">arrow_back</span>
                 </button>
-                <div class="flex flex-col">
-                    <h1 class="text-base font-extrabold leading-tight tracking-tight text-text-main" data-i18n="microcards.page_heading">Микрокарточки</h1>
-                    <p class="text-xs text-text-secondary" id="mcHeaderSubtitle" data-i18n="microcards.subtitle_default">Повторение и обучение</p>
+                <div class="flex flex-col min-w-0">
+                    <h1 class="text-sm font-extrabold leading-tight tracking-tight text-text-main truncate" data-i18n="microcards.page_heading">Микрокарточки</h1>
+                    <p class="text-xs text-text-secondary truncate" id="mcHeaderSubtitle" data-i18n="microcards.subtitle_default">Повторение и обучение</p>
                 </div>
             </div>
-            
-            <div class="flex items-center gap-2">
-                <!-- Session progress -->
-                <div id="mcHeaderProgress" class="hidden items-center gap-2 px-3 py-1 bg-surface-2 rounded-full border border-border-subtle" aria-live="polite" aria-label="Прогресс сессии">
-                    <span class="text-[11px] font-bold text-text-secondary" id="mcHeaderProgressText">0/0</span>
-                    <div class="w-16 h-1.5 bg-bg-secondary rounded-full overflow-hidden">
-                        <div id="mcHeaderProgressBar" class="h-full bg-primary rounded-full transition-all duration-300" style="width:0%"></div>
-                    </div>
-                </div>
 
-                <!-- User profile widget -->
-                <div class="flex items-center gap-2 px-3 py-1.5 bg-surface-1 rounded-lg border border-border-subtle cursor-pointer hover:bg-bg-hover transition-colors"
-                    onclick="openProfileModal()" title="Профиль" data-i18n-title="stats.profile_btn_aria">
-                    <img src="/api/assets/avatars/1.png" class="w-6 h-6 rounded-full" alt="User" id="mcHeaderAvatar">
-                    <span class="text-text-main text-sm font-medium hidden sm:inline" id="mcHeaderUserName" data-i18n="stats.guest_name">Гость</span>
+            <!-- Session progress (shown only during active session) -->
+            <div id="mcHeaderProgress" class="hidden items-center gap-2 px-3 py-1 bg-surface-2 rounded-full border border-border-subtle flex-shrink-0" aria-live="polite" aria-label="Прогресс сессии">
+                <span class="text-[11px] font-bold text-text-secondary" id="mcHeaderProgressText">0/0</span>
+                <div class="w-16 h-1.5 bg-bg-secondary rounded-full overflow-hidden">
+                    <div id="mcHeaderProgressBar" class="h-full bg-primary rounded-full transition-all duration-300" style="width:0%"></div>
                 </div>
             </div>
         </div>
@@ -684,9 +686,9 @@
     <div id="mcToastContainer" class="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none" role="status" aria-live="polite" aria-atomic="false"></div>
 
     <script src="/microcards/microcards.js"></script>
-    <script src="../assets/SharedProfileModal.js"></script>
-    <script src="../assets/ThemeSwitcherUI.js"></script>
     <script src="/assets/i18n.js"></script>
+    <script src="../assets/GlobalHeader.js"></script>
+    <script src="/assets/PageBoot.js"></script>
     <script src="../assets/ConnectionMonitor.js"></script>
 
     <script>
