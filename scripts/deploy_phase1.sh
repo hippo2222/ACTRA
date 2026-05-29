@@ -131,7 +131,7 @@ check_body() {
 
     local body
     body=$(curl -s "$url")
-    if printf '%s' "$body" | grep -q "$must_contain"; then
+    if printf '%s' "$body" | grep "$must_contain" > /dev/null; then
         echo "  [PASS] $name"
     else
         echo "  [FAIL] $name (body does not contain: $must_contain)"
