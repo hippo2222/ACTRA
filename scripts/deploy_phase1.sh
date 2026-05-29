@@ -137,7 +137,8 @@ check_body() {
         echo "  [FAIL] $name (body does not contain: $must_contain)"
         echo "    URL: $url"
         echo "    Body length: ${#body}"
-        echo "    Body prefix: ${body:0:200}"
+        echo "    Matches for canonical:"
+        printf '%s' "$body" | grep 'canonical'
         fail_count=$((fail_count + 1))
     fi
 }
