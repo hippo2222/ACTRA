@@ -29,6 +29,7 @@
     const state = {
         view: 'library', // 'library' | 'details' | 'session' | 'summary' | 'editor'
         decks: [],
+        sortKey: 'name-asc', // library sort order
         activeDeckId: null,
         activeDeck: null,
         cards: [], // active deck cards
@@ -171,13 +172,41 @@
         }
     }
 
+    const SORT_KEYS = ['name-asc', 'name-desc', 'date-desc', 'due-desc', 'cards-desc'];
+
+    function sortDecks(list, key) {
+        const arr = list.slice();
+        const collator = new Intl.Collator(undefined, { sensitivity: 'base', numeric: true });
+        const ts = (d) => d.updated_at || d.created_at || '';
+        switch (key) {
+            case 'name-desc': return arr.sort((a, b) => collator.compare(b.name || '', a.name || ''));
+            case 'date-desc': return arr.sort((a, b) => String(ts(b)).localeCompare(String(ts(a))));
+            case 'due-desc':  return arr.sort((a, b) => (b.due_count || 0) - (a.due_count || 0) || collator.compare(a.name || '', b.name || ''));
+            case 'cards-desc': return arr.sort((a, b) => (b.card_count || 0) - (a.card_count || 0) || collator.compare(a.name || '', b.name || ''));
+            default:          return arr.sort((a, b) => collator.compare(a.name || '', b.name || '')); // name-asc
+        }
+    }
+
+    function setSort(key) {
+        state.sortKey = SORT_KEYS.includes(key) ? key : 'name-asc';
+        document.querySelectorAll('#mcSort .mc-sort-btn[data-sort]').forEach(btn => {
+            const active = btn.getAttribute('data-sort') === state.sortKey;
+            btn.classList.toggle('is-active', active);
+            btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+        renderLibrary();
+    }
+
     function renderLibrary() {
         const grid = $('decksGrid');
         const empty = $('decksEmpty');
         grid.innerHTML = '';
 
         const searchQuery = $('libSearch').value.toLowerCase().trim();
-        const filtered = state.decks.filter(d => d.name.toLowerCase().includes(searchQuery));
+        const filtered = sortDecks(
+            state.decks.filter(d => d.name.toLowerCase().includes(searchQuery)),
+            state.sortKey
+        );
 
         // Update stats
         let totalDue = 0;
@@ -975,6 +1004,15 @@
         $('libSearch').addEventListener('input', () => {
             renderLibrary();
         });
+
+        // Bind sort buttons
+        const sortBar = $('mcSort');
+        if (sortBar) {
+            sortBar.addEventListener('click', (e) => {
+                const btn = e.target.closest('.mc-sort-btn[data-sort]');
+                if (btn) setSort(btn.getAttribute('data-sort'));
+            });
+        }
 
         // Set up Escape navigation key
         document.addEventListener('keydown', (e) => {

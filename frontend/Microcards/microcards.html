@@ -173,6 +173,31 @@
         .mc-search input:focus { border-color: var(--color-primary);
             box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 14%, transparent); }
 
+        /* ── Controls row: search + sort ──────────────────────────── */
+        .mc-controls { display: flex; align-items: center; gap: 0.85rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+        .mc-controls .mc-search { flex: 1 1 18rem; }
+        .mc-sort { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+        .mc-sort-btn {
+            display: inline-flex; align-items: center; justify-content: center;
+            min-height: 2.75rem; padding: 0 0.85rem; border-radius: 0.75rem;
+            border: 1px solid var(--color-border-strong); background: var(--color-surface-1);
+            color: var(--color-text-secondary); font-size: 0.78rem; font-weight: 800; white-space: nowrap;
+            transition: background .16s, border-color .16s, color .16s, transform .12s;
+        }
+        .mc-sort-btn:hover { color: var(--color-text-main); border-color: var(--color-primary); }
+        .mc-sort-btn:active { transform: scale(0.97); }
+        .mc-sort-btn.is-active {
+            background: var(--color-primary); border-color: var(--color-primary); color: var(--color-primary-fg);
+        }
+        @media (max-width: 680px) {
+            .mc-controls .mc-search { flex-basis: 100%; }
+            .mc-sort { width: 100%; }
+            .mc-sort-btn { flex: 1 1 auto; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .mc-sort-btn:active { transform: none !important; }
+        }
+
         /* ── Deck grid + card ─────────────────────────────────────── */
         .mc-deck-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--mc-gap); }
         .mc-deck-card {
@@ -527,9 +552,18 @@
                     </div>
                 </div>
 
-                <div class="mc-search" style="margin-bottom:1.5rem">
-                    <span class="material-symbols-outlined">search</span>
-                    <input id="libSearch" type="search" placeholder="Поиск колоды по названию..." data-i18n-placeholder="microcards.search_placeholder" />
+                <div class="mc-controls">
+                    <div class="mc-search">
+                        <span class="material-symbols-outlined">search</span>
+                        <input id="libSearch" type="search" placeholder="Поиск колоды по названию..." data-i18n-placeholder="microcards.search_placeholder" />
+                    </div>
+                    <div class="mc-sort" id="mcSort" role="group" aria-label="Сортировка колод" data-i18n-aria="microcards.sort_label">
+                        <button type="button" class="mc-sort-btn is-active" data-sort="name-asc" aria-pressed="true" data-i18n="microcards.sort_name_asc">А–Я</button>
+                        <button type="button" class="mc-sort-btn" data-sort="name-desc" aria-pressed="false" data-i18n="microcards.sort_name_desc">Я–А</button>
+                        <button type="button" class="mc-sort-btn" data-sort="date-desc" aria-pressed="false" data-i18n="microcards.sort_date_desc">Сначала новые</button>
+                        <button type="button" class="mc-sort-btn" data-sort="due-desc" aria-pressed="false" data-i18n="microcards.sort_due_desc">К повторению</button>
+                        <button type="button" class="mc-sort-btn" data-sort="cards-desc" aria-pressed="false" data-i18n="microcards.sort_cards_desc">Больше карточек</button>
+                    </div>
                 </div>
 
                 <div id="decksGrid" class="mc-deck-grid"></div>
