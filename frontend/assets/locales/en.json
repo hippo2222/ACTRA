@@ -1697,6 +1697,7 @@
   "metadata.threshold_placeholder": "e.g. 3",
   "microcards": {
     "page_heading": "Microcards",
+    "btn_back": "Back",
     "library_subtitle": "Your decks for spaced repetition",
     "cards_count_label": "Cards:",
     "editor_card_untitled": "(no text)",

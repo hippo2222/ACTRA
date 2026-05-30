@@ -1697,6 +1697,7 @@
   "metadata.threshold_placeholder": "Напр. 3",
   "microcards": {
     "page_heading": "Мікрокартки",
+    "btn_back": "Назад",
     "library_subtitle": "Ваші колоди для інтервального повторення",
     "cards_count_label": "Карток:",
     "editor_card_untitled": "(без тексту)",
