@@ -530,6 +530,39 @@
         .mc-combo.is-break { animation: mc-combo-break 320ms ease forwards; }
         @keyframes mc-combo-break { to { opacity: 0; transform: translateY(-6px) scale(0.8); } }
 
+        /* ── L1 grading rails (swipe-style) ─────────────────────────── */
+        .mc-arena { display: flex; align-items: stretch; justify-content: center; gap: 1rem; }
+        .mc-arena .mc-flashcard-wrap { flex: 0 1 36rem; min-width: 0;
+            transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1); }
+        .mc-arena.lean-left .mc-flashcard-wrap { transform: rotate(-2.4deg) translateX(-12px); }
+        .mc-arena.lean-right .mc-flashcard-wrap { transform: rotate(2.4deg) translateX(12px); }
+        .mc-rail {
+            flex: 0 0 6.5rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.6rem;
+            border-radius: 1.25rem; border: 2px solid transparent; cursor: pointer;
+            font-size: 0.95rem; font-weight: 900; opacity: 0; pointer-events: none;
+            transition: opacity 0.28s ease, background 0.2s ease, border-color 0.2s ease, transform 0.14s ease;
+        }
+        .mc-rail .material-symbols-outlined { font-size: 2.6rem; }
+        .mc-rail--no { color: var(--color-error);
+            background: color-mix(in srgb, var(--color-error) 8%, transparent);
+            border-color: color-mix(in srgb, var(--color-error) 26%, transparent); }
+        .mc-rail--no:hover { background: color-mix(in srgb, var(--color-error) 18%, transparent); border-color: var(--color-error); }
+        .mc-rail--yes { color: var(--color-success);
+            background: color-mix(in srgb, var(--color-success) 8%, transparent);
+            border-color: color-mix(in srgb, var(--color-success) 26%, transparent); }
+        .mc-rail--yes:hover { background: color-mix(in srgb, var(--color-success) 18%, transparent); border-color: var(--color-success); }
+        .mc-rail:active { transform: scale(0.97); }
+        .mc-arena.is-grading .mc-rail { opacity: 1; pointer-events: auto; }
+        @media (max-width: 859px) {
+            .mc-rail { display: none; }
+            .mc-arena { gap: 0; }
+            .mc-arena .mc-flashcard-wrap { flex: 1 1 auto; }
+        }
+        @media (min-width: 860px) {
+            /* Rails are the desktop L1 grading affordance — hide the bottom buttons there */
+            #backActionsL1 { display: none !important; }
+        }
+
         /* ── Flashcard feedback overlay ─────────────────────────────── */
         .mc-flashcard-wrap { position: relative; }
         .mc-feedback {
@@ -643,6 +676,7 @@
             .mc-feedback__check svg path { stroke-dashoffset: 0 !important; }
             .mc-acc-ring__fill { transition: none !important; }
             .mc-stars .material-symbols-outlined { transform: scale(1); }
+            .mc-arena .mc-flashcard-wrap { transition: none !important; transform: none !important; }
         }
     </style>
 </head>
@@ -846,7 +880,12 @@
                         </div>
                     </div>
 
-                    <div class="mc-flashcard-wrap">
+                    <div class="mc-arena" id="mcArena">
+                        <button type="button" class="mc-rail mc-rail--no" id="railNo" aria-label="Не знаю" data-i18n-aria="microcards.btn_dont_know">
+                            <span class="material-symbols-outlined">thumb_down</span>
+                            <span class="mc-rail__label" data-i18n="microcards.btn_dont_know">Не знаю</span>
+                        </button>
+                        <div class="mc-flashcard-wrap" id="mcFlashWrap">
                         <div id="mcFeedback" class="mc-feedback">
                             <span id="mcFeedbackCheck" class="mc-feedback__check" data-state="out" aria-hidden="true">
                                 <svg viewBox="0 0 48 48" fill="none"><path d="M14 25 L21 32 L35 16" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -927,7 +966,12 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
+                        </div><!-- /mc-flashcard-wrap -->
+                        <button type="button" class="mc-rail mc-rail--yes" id="railYes" aria-label="Знаю" data-i18n-aria="microcards.btn_know">
+                            <span class="material-symbols-outlined">thumb_up</span>
+                            <span class="mc-rail__label" data-i18n="microcards.btn_know">Знаю</span>
+                        </button>
+                    </div><!-- /mc-arena -->
                 </div>
             </div>
 

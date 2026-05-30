@@ -173,6 +173,26 @@
         }
     }
 
+    // ── L1 grading rails (swipe-style side zones) ──────────────────────────
+    function hideRails() {
+        const arena = $('mcArena');
+        if (arena) arena.classList.remove('is-grading', 'lean-left', 'lean-right');
+    }
+    function showRails() {
+        const arena = $('mcArena');
+        if (arena) arena.classList.add('is-grading');
+    }
+    function bindSessionRails() {
+        const arena = $('mcArena'), railNo = $('railNo'), railYes = $('railYes');
+        if (!arena || !railNo || !railYes) return;
+        railNo.addEventListener('mouseenter', () => arena.classList.add('lean-left'));
+        railNo.addEventListener('mouseleave', () => arena.classList.remove('lean-left'));
+        railYes.addEventListener('mouseenter', () => arena.classList.add('lean-right'));
+        railYes.addEventListener('mouseleave', () => arena.classList.remove('lean-right'));
+        railNo.addEventListener('click', () => { if (arena.classList.contains('is-grading')) submitAnswerL1(false); });
+        railYes.addEventListener('click', () => { if (arena.classList.contains('is-grading')) submitAnswerL1(true); });
+    }
+
     // ── Daily streak (local, per-device) ───────────────────────────────────
     function _todayKey() {
         const d = new Date();
@@ -601,9 +621,10 @@
         }
 
         const card = state.sessionCards[state.sessionIndex];
-        
+
         // Reset card face state
         $('flashcardInner').classList.remove('flipped');
+        hideRails(); // rails reappear only after the answer is revealed
         
         // Load text and images
         $('cardFrontText').textContent = card.front.text;
@@ -674,11 +695,14 @@
 
     function revealAnswerL1() {
         $('flashcardInner').classList.add('flipped');
+        showRails(); // reveal the swipe-style grading rails (desktop)
     }
 
     async function submitAnswerL1(know) {
         const card = state.sessionCards[state.sessionIndex];
         const ratingValue = know ? 'know' : 'dont_know';
+
+        hideRails(); // rails vanish + card un-leans as the answer is graded
 
         // Update stats locally
         if (know) {
@@ -1231,6 +1255,9 @@
                 if (btn) setSort(btn.getAttribute('data-sort'));
             });
         }
+
+        // Bind swipe-style grading rails
+        bindSessionRails();
 
         // Set up Escape navigation key
         document.addEventListener('keydown', (e) => {
