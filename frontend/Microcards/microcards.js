@@ -159,6 +159,12 @@
             renderLibrary();
         } catch (err) {
             grid.innerHTML = `<div class="col-span-full py-8 text-center text-xs text-error">${t('microcards.load_library_error', 'Не удалось загрузить библиотеку.')}</div>`;
+        } finally {
+            // Dismiss the PageBoot splash as soon as the first screen is ready.
+            // Without this the splash lingers for the full 12s timeout.
+            if (window.PageBoot && typeof window.PageBoot.ready === 'function') {
+                window.PageBoot.ready();
+            }
         }
     }
 
