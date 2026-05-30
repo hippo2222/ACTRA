@@ -42,6 +42,11 @@
         sessionStats: { total: 0, correct: 0, errors: 0 },
         sessionErrors: [], // list of incorrect card objects
         isErrorsOnlyMode: false,
+
+        // Gamification (per session)
+        combo: 0,
+        maxCombo: 0,
+        sessionXp: 0,
         
         // Import modal state
         importFormat: 'csv',
@@ -73,6 +78,137 @@
         const barEl = $('mcHeaderProgressBar');
         if (textEl) textEl.textContent = total > 0 ? `${current}/${total}` : '0/0';
         if (barEl) barEl.style.width = total > 0 ? `${(state.sessionIndex / total) * 100}%` : '0%';
+    }
+
+    // ══ Gamification ═══════════════════════════════════════════════════════
+
+    // Animated number pop-in (transitions.dev). Re-renders each char, replays.
+    function popNumber(el, value) {
+        if (!el) return;
+        el.classList.add('t-digit-group');
+        el.classList.remove('is-animating');
+        el.replaceChildren();
+        const chars = String(value).split('');
+        chars.forEach((ch, i) => {
+            const span = document.createElement('span');
+            span.className = 't-digit';
+            span.textContent = ch;
+            if (i === chars.length - 2) span.dataset.stagger = '1';
+            else if (i === chars.length - 1) span.dataset.stagger = '2';
+            el.appendChild(span);
+        });
+        void el.offsetHeight; // reflow → replay
+        el.classList.add('is-animating');
+    }
+
+    // Points for a correct answer: base + combo bonus (capped, satisfying ramp).
+    function pointsForCombo(combo) {
+        return 10 + Math.min(Math.max(combo - 1, 0), 9) * 3; // 10 → 37
+    }
+
+    function updateXpChip() {
+        popNumber($('xpChipVal'), state.sessionXp);
+    }
+
+    function showCombo() {
+        const chip = $('comboChip');
+        if (!chip) return;
+        if (state.combo >= 2) {
+            $('comboChipText').textContent = '×' + state.combo;
+            chip.style.display = 'inline-flex';
+            chip.classList.remove('is-break');
+            chip.classList.remove('is-pop'); void chip.offsetWidth; chip.classList.add('is-pop');
+        } else if (chip.style.display !== 'none') {
+            chip.classList.remove('is-pop');
+            chip.classList.add('is-break');
+            setTimeout(() => { chip.style.display = 'none'; chip.classList.remove('is-break'); }, 320);
+        }
+    }
+
+    function floatXp(pts) {
+        const el = $('mcFloatXp');
+        if (!el) return;
+        el.textContent = '+' + pts;
+        el.classList.remove('is-float'); void el.offsetWidth; el.classList.add('is-float');
+    }
+
+    function playCheck() {
+        const check = $('mcFeedbackCheck');
+        if (!check) return;
+        check.setAttribute('data-state', 'out');
+        void check.offsetWidth;
+        check.setAttribute('data-state', 'in');
+    }
+
+    function reactCard(kind) {
+        const card = $('flashcardInner');
+        if (!card) return;
+        const glow = kind === 'correct' ? 'mc-glow-correct' : 'mc-glow-wrong';
+        card.classList.remove('mc-glow-correct', 'mc-glow-wrong');
+        void card.offsetWidth;
+        card.classList.add(glow);
+        setTimeout(() => card.classList.remove(glow), 760);
+        if (kind === 'wrong') {
+            card.classList.remove('mc-shake'); void card.offsetWidth; card.classList.add('mc-shake');
+            setTimeout(() => card.classList.remove('mc-shake'), 320);
+        }
+    }
+
+    // Central hook for every graded answer — drives combo, XP and feedback.
+    function registerAnswer(isCorrect) {
+        if (isCorrect) {
+            state.combo += 1;
+            state.maxCombo = Math.max(state.maxCombo, state.combo);
+            const pts = pointsForCombo(state.combo);
+            state.sessionXp += pts;
+            updateXpChip();
+            floatXp(pts);
+            playCheck();
+            reactCard('correct');
+            showCombo();
+        } else {
+            state.combo = 0;
+            reactCard('wrong');
+            showCombo();
+        }
+    }
+
+    // ── Daily streak (local, per-device) ───────────────────────────────────
+    function _todayKey() {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+    function loadStreak() {
+        try { return JSON.parse(localStorage.getItem('mc_streak') || '{}'); } catch (e) { return {}; }
+    }
+    function recordStreak() {
+        const s = loadStreak();
+        const today = _todayKey();
+        if (s.last === today) return s.count || 1;
+        const y = new Date(); y.setDate(y.getDate() - 1);
+        const yKey = `${y.getFullYear()}-${String(y.getMonth() + 1).padStart(2, '0')}-${String(y.getDate()).padStart(2, '0')}`;
+        const count = s.last === yKey ? (s.count || 0) + 1 : 1;
+        try { localStorage.setItem('mc_streak', JSON.stringify({ last: today, count })); } catch (e) {}
+        return count;
+    }
+    function pluralizeDays(n) {
+        const a = Math.abs(n) % 100, d = a % 10;
+        if (a > 10 && a < 20) return t('microcards.days_many', 'дней');
+        if (d > 1 && d < 5) return t('microcards.days_few', 'дня');
+        if (d === 1) return t('microcards.days_one', 'день');
+        return t('microcards.days_many', 'дней');
+    }
+    function renderStreak() {
+        const s = loadStreak();
+        const chip = $('mcStreakChip');
+        if (!chip) return;
+        if (s.count && s.last) {
+            $('mcStreakText').textContent = t('microcards.streak_label', 'Серия: {n} {unit}')
+                .replace('{n}', s.count).replace('{unit}', pluralizeDays(s.count));
+            chip.style.display = 'inline-flex';
+        } else {
+            chip.style.display = 'none';
+        }
     }
 
     // ── Navigation & View Switching ────────────────────────────────────────
@@ -160,7 +296,10 @@
         try {
             const data = await apiCall('/api/v2/microcards/decks');
             state.decks = data.items || [];
+            state._entrance = true; // stagger deck cards in on fresh load only
             renderLibrary();
+            animateLibraryStats();
+            renderStreak();
         } catch (err) {
             grid.innerHTML = `<div class="col-span-full py-8 text-center text-xs text-error">${t('microcards.load_library_error', 'Не удалось загрузить библиотеку.')}</div>`;
         } finally {
@@ -197,6 +336,15 @@
         renderLibrary();
     }
 
+    // Animate the three library stat counters once (on data load, not on search).
+    function animateLibraryStats() {
+        let totalDue = 0, totalNew = 0;
+        state.decks.forEach(d => { totalDue += d.due_count || 0; totalNew += d.new_count || 0; });
+        popNumber($('libStatDue'), totalDue);
+        popNumber($('libStatNew'), totalNew);
+        popNumber($('libStatTotal'), state.decks.length);
+    }
+
     function renderLibrary() {
         const grid = $('decksGrid');
         const empty = $('decksEmpty');
@@ -225,9 +373,11 @@
         }
         empty.classList.add('hidden');
 
-        filtered.forEach(deck => {
+        const entrance = !!state._entrance;
+        filtered.forEach((deck, idx) => {
             const card = document.createElement('div');
-            card.className = 'mc-deck-card';
+            card.className = entrance ? 'mc-deck-card mc-enter' : 'mc-deck-card';
+            if (entrance) card.style.animationDelay = Math.min(idx, 8) * 45 + 'ms';
             card.onclick = () => openDeckDetails(deck.id);
 
             const tagsHtml = (deck.tags || []).slice(0, 4).map(tag => `<span class="mc-tag">${escHtml(tag)}</span>`).join('');
@@ -257,6 +407,7 @@
             `;
             grid.appendChild(card);
         });
+        state._entrance = false; // entrance is a one-shot per fresh load
     }
 
     function openCreateDeckDialog() {
@@ -405,6 +556,13 @@
     // ── Learning Session Screen ───────────────────────────────────────────
     async function startLearningSession(errorsOnly = false) {
         state.isErrorsOnlyMode = errorsOnly;
+        // Reset gamification for the new run
+        state.combo = 0;
+        state.maxCombo = 0;
+        state.sessionXp = 0;
+        const comboChip = $('comboChip');
+        if (comboChip) comboChip.style.display = 'none';
+        popNumber($('xpChipVal'), 0);
         switchView('session');
 
         try {
@@ -521,18 +679,21 @@
     async function submitAnswerL1(know) {
         const card = state.sessionCards[state.sessionIndex];
         const ratingValue = know ? 'know' : 'dont_know';
-        
-        try {
-            // Update stats locally
-            if (know) {
-                state.sessionStats.correct++;
-            } else {
-                state.sessionStats.errors++;
-                if (!state.sessionErrors.includes(card.id)) {
-                    state.sessionErrors.push(card.id);
-                }
-            }
 
+        // Update stats locally
+        if (know) {
+            state.sessionStats.correct++;
+        } else {
+            state.sessionStats.errors++;
+            if (!state.sessionErrors.includes(card.id)) {
+                state.sessionErrors.push(card.id);
+            }
+        }
+
+        // Immediate juicy feedback on the revealed card
+        registerAnswer(know);
+
+        try {
             // Sync with backend if not errors-only offline review
             if (state.session && !state.isErrorsOnlyMode) {
                 await apiCall(`/api/v2/microcards/session/${state.session.id}/answer`, {
@@ -541,12 +702,15 @@
                     body: JSON.stringify({ card_id: card.id, user_answer: ratingValue })
                 });
             }
-
-            state.sessionIndex++;
-            setupCurrentCard();
         } catch (err) {
             console.error(err);
         }
+
+        // Let the feedback animation play before advancing
+        setTimeout(() => {
+            state.sessionIndex++;
+            setupCurrentCard();
+        }, know ? 640 : 780);
     }
 
     async function submitAnswerL2(e) {
@@ -603,6 +767,9 @@
                 card.level = cardState.level;
             }
 
+            // Combo / XP / feedback
+            registerAnswer(isCorrect);
+
         } catch (err) {
             console.error(err);
         }
@@ -637,6 +804,9 @@
             badge.style.cssText = 'background:color-mix(in srgb,var(--color-warning) 15%,transparent);border-color:var(--color-warning);color:var(--color-warning)';
             $('btnL2Override').classList.add('hidden');
 
+            // Reward the correction
+            registerAnswer(true);
+
         } catch (err) {
             console.error(err);
         }
@@ -656,10 +826,20 @@
     // ── Session Summary Screen ────────────────────────────────────────────
     function finishSession() {
         switchView('summary');
-        
+
+        const total = state.sessionStats.total || 0;
+        const correct = state.sessionStats.correct || 0;
+        const accuracy = total > 0 ? Math.round((correct / total) * 100) : 0;
+
         $('sumStatTotal').textContent = state.sessionStats.total;
         $('sumStatCorrect').textContent = state.sessionStats.correct;
         $('sumStatErrors').textContent = state.sessionStats.errors;
+
+        // Gamified summary: accuracy ring, stars, XP, best combo, message
+        gamifySummary(accuracy);
+
+        // Daily streak (count this completed session)
+        recordStreak();
 
         // Configure "Работа над ошибками" button
         const retryBtn = $('btnRetryErrors');
@@ -692,14 +872,52 @@
             errorsSection.classList.add('hidden');
         }
 
-        // Run celebration effect if perfect score
-        if (state.sessionStats.errors === 0 && window.CelebrationEffects) {
+        // Run celebration effect for strong results
+        const acc = total > 0 ? (correct / total) * 100 : 0;
+        if ((state.sessionStats.errors === 0 || acc >= 90) && window.CelebrationEffects) {
             try {
                 window.CelebrationEffects.launchConfetti();
             } catch (e) {
                 console.warn(e);
             }
         }
+    }
+
+    function gamifySummary(accuracy) {
+        // Accuracy ring (r=56 → circumference ≈ 352)
+        const circ = 352;
+        const ring = $('sumAccRing');
+        if (ring) {
+            const tone = accuracy >= 85 ? 'var(--color-success)' : accuracy >= 60 ? 'var(--color-warning)' : 'var(--color-error)';
+            ring.style.setProperty('--ring-circ', circ);
+            ring.style.stroke = tone;
+            ring.style.strokeDashoffset = circ; // start empty
+            void ring.getBoundingClientRect();
+            requestAnimationFrame(() => { ring.style.strokeDashoffset = circ * (1 - accuracy / 100); });
+        }
+        if ($('sumAccVal')) $('sumAccVal').textContent = accuracy + '%';
+
+        // Stars: 3 ≥85, 2 ≥60, 1 ≥1
+        const starCount = accuracy >= 85 ? 3 : accuracy >= 60 ? 2 : accuracy >= 1 ? 1 : 0;
+        const stars = $('sumStars');
+        if (stars) {
+            stars.querySelectorAll('.material-symbols-outlined').forEach((s, i) => s.classList.toggle('is-on', i < starCount));
+            stars.classList.remove('is-revealed'); void stars.offsetWidth; stars.classList.add('is-revealed');
+        }
+
+        // XP + best combo
+        popNumber($('sumXp'), state.sessionXp);
+        if ($('sumCombo')) $('sumCombo').textContent = state.maxCombo;
+
+        // Dynamic title / message
+        let titleKey, titleFb, subKey, subFb;
+        if (accuracy >= 100) { titleKey = 'microcards.res_title_perfect'; titleFb = 'Идеально!'; subKey = 'microcards.res_sub_perfect'; subFb = 'Безупречно — ни одной ошибки!'; }
+        else if (accuracy >= 85) { titleKey = 'microcards.res_title_great'; titleFb = 'Великолепно!'; subKey = 'microcards.res_sub_great'; subFb = 'Отличный результат, так держать!'; }
+        else if (accuracy >= 60) { titleKey = 'microcards.res_title_good'; titleFb = 'Хорошая работа!'; subKey = 'microcards.res_sub_good'; subFb = 'Уверенный результат — ещё немного до идеала.'; }
+        else if (accuracy >= 30) { titleKey = 'microcards.res_title_ok'; titleFb = 'Неплохо!'; subKey = 'microcards.res_sub_ok'; subFb = 'Поработай над ошибками — и станет отлично.'; }
+        else { titleKey = 'microcards.res_title_keep'; titleFb = 'Продолжай тренироваться'; subKey = 'microcards.res_sub_keep'; subFb = 'Повтори ошибки, чтобы закрепить материал.'; }
+        if ($('sumTitle')) $('sumTitle').textContent = t(titleKey, titleFb);
+        if ($('sumSubtitle')) $('sumSubtitle').textContent = t(subKey, subFb);
     }
 
     function retrySessionErrors() {
