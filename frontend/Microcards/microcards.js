@@ -98,12 +98,15 @@
             setTimeout(() => targetEl.classList.add('active-view'), 50);
         }
 
-        // Configure header back button
+        // The contextual toolbar (back + deck name + progress) is useless on the
+        // library screen — the page heading already says everything. Hide it there;
+        // show it on every other view where the back button / progress matter.
+        const toolbar = $('mcToolbar');
         const backBtn = $('mcHeaderBackBtn');
         if (viewName === 'library') {
-            backBtn.style.visibility = 'hidden';
-            $('mcHeaderSubtitle').textContent = t('microcards.subtitle_default', 'Повторение и обучение');
+            if (toolbar) toolbar.style.display = 'none';
         } else {
+            if (toolbar) toolbar.style.display = 'flex';
             backBtn.style.visibility = 'visible';
         }
 
