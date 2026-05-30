@@ -184,13 +184,25 @@ class MicrocardsServiceV2:
 
     # ── Decks CRUD ────────────────────────────────────────────────────
 
+    def _owns_deck(self, deck: Dict[str, Any]) -> bool:
+        """Decks live in a global store but belong to a single user.
+        Ownership is the only access boundary — enforce it everywhere."""
+        return _s(deck.get("created_by_user_id")) == _s(self.user_id)
+
     def get_deck(self, deck_id: str) -> Optional[Dict[str, Any]]:
         clean_id = _s(deck_id)
         if not clean_id:
             return None
         path = self._deck_path(clean_id)
         deck = _read_json(path, None)
-        return deck if isinstance(deck, dict) else None
+        if not isinstance(deck, dict):
+            return None
+        # Ownership guard: prevents cross-user read/update/delete (IDOR).
+        # All mutations route through get_deck, so this single check scopes
+        # details, cards CRUD, sessions, import/export and publish to the owner.
+        if not self._owns_deck(deck):
+            return None
+        return deck
 
     def list_decks(self, limit: int = 100) -> List[Dict[str, Any]]:
         paths = list(self._decks_root.glob("*.json"))
@@ -199,7 +211,7 @@ class MicrocardsServiceV2:
 
         for p in paths:
             deck = _read_json(p, None)
-            if isinstance(deck, dict):
+            if isinstance(deck, dict) and self._owns_deck(deck):
                 # Calculate stats
                 deck_id = deck.get("id")
                 deck_cards = deck.get("cards", [])
@@ -274,6 +286,10 @@ class MicrocardsServiceV2:
         return deck
 
     def delete_deck(self, deck_id: str) -> bool:
+        # Ownership guard: get_deck returns None for decks the user doesn't own,
+        # so a non-owner gets False (-> 404) instead of deleting someone else's deck.
+        if not self.get_deck(deck_id):
+            return False
         path = self._deck_path(deck_id)
         if path.exists():
             path.unlink()

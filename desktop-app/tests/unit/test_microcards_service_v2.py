@@ -161,3 +161,37 @@ def test_import_export():
     cards_json = svc.import_json(deck_2["id"], exported_json)
     assert len(cards_json) == 2
     assert cards_json[1]["front"]["text"] == "What is OSI?"
+
+
+def test_cross_user_deck_isolation():
+    """Decks live in a global store but must be scoped to their owner.
+    Regression for the IDOR / cross-user leak: a second user sharing the same
+    data_dir must not see, read, mutate or delete the first user's decks."""
+    shared_dir = tempfile.mkdtemp()
+    alice = MicrocardsServiceV2(shared_dir, user_id="alice")
+    bob = MicrocardsServiceV2(shared_dir, user_id="bob")
+
+    deck = alice.create_deck(name="Alice Private")
+    did = deck["id"]
+    alice.create_card(did, front_text="q", back_text="a")
+
+    # Bob cannot see or reach Alice's deck
+    assert bob.list_decks() == []
+    assert bob.get_deck(did) is None
+    assert bob.delete_deck(did) is False
+
+    for fn in (
+        lambda: bob.update_deck(did, name="hacked"),
+        lambda: bob.list_cards(did),
+        lambda: bob.create_card(did, front_text="x", back_text="y"),
+    ):
+        try:
+            fn()
+            raise AssertionError("expected LookupError for non-owner access")
+        except LookupError:
+            pass
+
+    # Alice retains full, untouched access
+    assert [d["name"] for d in alice.list_decks()] == ["Alice Private"]
+    assert alice.get_deck(did)["name"] == "Alice Private"
+    assert alice.delete_deck(did) is True
