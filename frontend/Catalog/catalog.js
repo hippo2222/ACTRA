@@ -2564,6 +2564,8 @@
         </div>
       </div>
     `, null, { blurCatalogShell: true, variant: 'confirm' });
+  }
+
   async function openCatalogFlashcardConfirmModal(preview) {
     const already = !!(preview && preview.library_status && preview.library_status.already_in_library);
     const item = preview && preview.item ? preview.item : {};
