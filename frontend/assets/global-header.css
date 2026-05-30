@@ -388,3 +388,99 @@
         padding: 0 0.6rem;
     }
 }
+
+/* ── Hamburger button (phone only) ─────────────────────────── */
+.global-header__hamburger {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 2.6rem;
+    height: 2.6rem;
+    border: 1px solid var(--color-border-strong);
+    border-radius: 0.75rem;
+    background: var(--color-surface-1);
+    color: var(--color-text-main);
+    cursor: pointer;
+    transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+.global-header__hamburger:hover {
+    background: var(--color-component-button-muted-hover-bg);
+    border-color: var(--color-component-button-muted-hover-border);
+}
+.global-header__hamburger .material-symbols-outlined { font-size: 1.5rem; line-height: 1; }
+
+/* ── Mobile drawer ─────────────────────────────────────────── */
+.global-header__drawer { position: fixed; inset: 0; z-index: 70; }
+.global-header__drawer[hidden] { display: none; }
+.global-header__drawer-scrim {
+    position: absolute;
+    inset: 0;
+    background: var(--color-scrim, rgba(0, 0, 0, 0.5));
+    backdrop-filter: blur(2px);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+.global-header__drawer.is-open .global-header__drawer-scrim { opacity: 1; }
+.global-header__drawer-panel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 100%;
+    width: min(20rem, 86vw);
+    background: var(--color-surface-1);
+    border-left: 1px solid var(--color-border-subtle);
+    box-shadow: var(--shadow-xl, -12px 0 40px rgba(0, 0, 0, 0.25));
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    overflow-y: auto;
+    transform: translateX(100%);
+    transition: transform 0.26s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.global-header__drawer.is-open .global-header__drawer-panel { transform: translateX(0); }
+.global-header__drawer-sep { height: 1px; background: var(--color-border-subtle); margin: 0.5rem 0; }
+.global-header__drawer-nav,
+.global-header__drawer-group,
+.global-header__drawer-lang { display: flex; flex-direction: column; gap: 0.25rem; }
+
+/* Full-width rows inside the drawer; force collapsed labels back on */
+.global-header__drawer .global-header__link {
+    width: 100%;
+    justify-content: flex-start;
+    min-height: 2.9rem;
+    padding: 0 0.9rem;
+}
+.global-header__drawer .global-header__link span:not(.material-symbols-outlined) { display: inline !important; }
+.global-header__drawer .global-header__menu-item { width: 100%; }
+
+@media (prefers-reduced-motion: reduce) {
+    .global-header__drawer-panel,
+    .global-header__drawer-scrim { transition: none !important; }
+}
+
+/* Desktop: the drawer never participates */
+@media (min-width: 769px) {
+    .global-header__drawer { display: none !important; }
+}
+
+body.global-header-drawer-open { overflow: hidden; }
+
+/* Stage 3: phone (<=768px) — collapse to brand + hamburger + profile. */
+@media (max-width: 768px) {
+    .global-header__inner {
+        grid-template-columns: auto 1fr auto;
+        gap: 0.5rem;
+        padding: 0.4rem 0.85rem;
+        min-height: 3.5rem;
+    }
+    .global-header__nav,
+    .global-header__create,
+    .global-header__reference,
+    .global-header__onboarding-help,
+    .global-header__lang { display: none !important; }
+    .global-header__hamburger { display: inline-flex; }
+    .global-header__brand-text { display: none; }
+    .global-header__brand-logo { height: 2.1rem; width: 2.1rem; }
+    .global-header__actions { gap: 0.4rem; }
+}

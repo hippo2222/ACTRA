@@ -74,6 +74,18 @@
         if (button) button.setAttribute('aria-expanded', 'false');
     }
 
+    function setDrawer(root, open) {
+        var drawer = root.querySelector('[data-global-drawer]');
+        var burger = root.querySelector('[data-global-burger]');
+        if (!drawer) return;
+        drawer.classList.toggle('is-open', open);
+        drawer.hidden = !open;
+        if (burger) burger.setAttribute('aria-expanded', open ? 'true' : 'false');
+        document.body.classList.toggle('global-header-drawer-open', open);
+    }
+
+    function closeDrawer(root) { setDrawer(root, false); }
+
     function renderHeader(root) {
         var activeSection = root.dataset.appSection || document.body.dataset.appSection || getSectionFromPath();
 
@@ -103,6 +115,32 @@
 
         var currentLang = (window.i18n && typeof window.i18n.getLang === 'function') ? window.i18n.getLang() : 'ru';
 
+        var LANGS = [['ru', 'Русский'], ['en', 'English'], ['uk', 'Українська']];
+        var langItemsHtml = LANGS.map(function (l) {
+            var active = currentLang === l[0];
+            return '<button class="global-header__lang-item' + (active ? ' is-active' : '') + '" type="button" data-lang-btn="' + l[0] + '" role="menuitem" aria-pressed="' + (active ? 'true' : 'false') + '">' +
+                '<span class="global-header__lang-item-dot" aria-hidden="true"></span>' + l[1] +
+                '</button>';
+        }).join('');
+
+        // Mobile drawer: reuses nav / create / lang markup (same data-* hooks),
+        // so the existing click delegation handles navigation and language.
+        var drawerHtml =
+            '<div class="global-header__drawer" data-global-drawer hidden>' +
+            '<div class="global-header__drawer-scrim" data-global-drawer-close></div>' +
+            '<div class="global-header__drawer-panel" role="dialog" aria-modal="true" aria-label="' + escapeHtml(_t('header.nav_aria')) + '">' +
+            '<nav class="global-header__drawer-nav">' + navHtml + '</nav>' +
+            '<div class="global-header__drawer-sep"></div>' +
+            '<div class="global-header__drawer-group">' + createHtml + '</div>' +
+            '<div class="global-header__drawer-sep"></div>' +
+            '<a class="global-header__link global-header__drawer-ref" data-global-nav="/reference" href="/reference">' +
+            '<span class="material-symbols-outlined" aria-hidden="true">menu_book</span>' +
+            '<span data-i18n="header.reference">' + escapeHtml(_t('header.reference')) + '</span></a>' +
+            '<div class="global-header__drawer-sep"></div>' +
+            '<div class="global-header__drawer-lang">' + langItemsHtml + '</div>' +
+            '</div>' +
+            '</div>';
+
         root.innerHTML =
             '<header class="global-header">' +
             '<div class="global-header__inner">' +
@@ -115,6 +153,10 @@
             navHtml +
             '</nav>' +
             '<div class="global-header__actions">' +
+            '<button class="global-header__hamburger" type="button" data-global-burger aria-haspopup="true" aria-expanded="false"' +
+            ' data-i18n-aria="header.nav_aria" aria-label="' + escapeHtml(_t('header.nav_aria')) + '">' +
+            '<span class="material-symbols-outlined" aria-hidden="true">menu</span>' +
+            '</button>' +
             '<div class="global-header__create">' +
             '<button class="global-header__menu-button" type="button" data-global-create-toggle aria-haspopup="menu" aria-expanded="false">' +
             '<span class="material-symbols-outlined" aria-hidden="true">add_circle</span>' +
@@ -145,15 +187,7 @@
             '<span class="material-symbols-outlined global-header__lang-chevron" aria-hidden="true">expand_more</span>' +
             '</button>' +
             '<div class="global-header__lang-menu" data-global-lang-menu role="menu">' +
-            '<button class="global-header__lang-item' + (currentLang === 'ru' ? ' is-active' : '') + '" type="button" data-lang-btn="ru" role="menuitem" aria-pressed="' + (currentLang === 'ru' ? 'true' : 'false') + '">' +
-            '<span class="global-header__lang-item-dot" aria-hidden="true"></span>Русский' +
-            '</button>' +
-            '<button class="global-header__lang-item' + (currentLang === 'en' ? ' is-active' : '') + '" type="button" data-lang-btn="en" role="menuitem" aria-pressed="' + (currentLang === 'en' ? 'true' : 'false') + '">' +
-            '<span class="global-header__lang-item-dot" aria-hidden="true"></span>English' +
-            '</button>' +
-            '<button class="global-header__lang-item' + (currentLang === 'uk' ? ' is-active' : '') + '" type="button" data-lang-btn="uk" role="menuitem" aria-pressed="' + (currentLang === 'uk' ? 'true' : 'false') + '">' +
-            '<span class="global-header__lang-item-dot" aria-hidden="true"></span>Українська' +
-            '</button>' +
+            langItemsHtml +
             '</div>' +
             '</div>' +
             '<button class="global-header__profile" type="button" data-profile-menu-anchor aria-haspopup="menu" aria-expanded="false">' +
@@ -164,7 +198,11 @@
             '</button>' +
             '</div>' +
             '</div>' +
-            '</header>';
+            '</header>' +
+            // Drawer is a SIBLING of <header>: the header's backdrop-filter would
+            // otherwise become the containing block for our position:fixed drawer,
+            // trapping it inside the header strip instead of covering the viewport.
+            drawerHtml;
     }
 
     async function hydrateUser(root) {
@@ -199,6 +237,23 @@
 
     function bindHeader(root) {
         root.addEventListener('click', function (event) {
+            var burger = event.target.closest('[data-global-burger]');
+            if (burger) {
+                event.preventDefault();
+                event.stopPropagation();
+                closeCreateMenu(root);
+                closeLangMenu(root);
+                var drawer = root.querySelector('[data-global-drawer]');
+                setDrawer(root, !(drawer && drawer.classList.contains('is-open')));
+                return;
+            }
+
+            if (event.target.closest('[data-global-drawer-close]')) {
+                event.preventDefault();
+                closeDrawer(root);
+                return;
+            }
+
             var createToggle = event.target.closest('[data-global-create-toggle]');
             if (createToggle) {
                 event.preventDefault();
@@ -228,6 +283,7 @@
                 event.preventDefault();
                 var lang = langBtn.getAttribute('data-lang-btn');
                 closeLangMenu(root);
+                closeDrawer(root);
                 if (window.i18n && typeof window.i18n.setLang === 'function') {
                     window.i18n.setLang(lang);
                 }
@@ -239,6 +295,7 @@
                 event.preventDefault();
                 closeCreateMenu(root);
                 closeLangMenu(root);
+                closeDrawer(root);
                 navigate('/reference');
                 return;
             }
@@ -256,6 +313,7 @@
                 event.preventDefault();
                 closeCreateMenu(root);
                 closeLangMenu(root);
+                closeDrawer(root);
                 navigate(nav.getAttribute('data-global-nav') || nav.getAttribute('href'));
             }
         });
@@ -271,6 +329,7 @@
             if (event.key === 'Escape') {
                 closeCreateMenu(root);
                 closeLangMenu(root);
+                closeDrawer(root);
             }
         });
     }
