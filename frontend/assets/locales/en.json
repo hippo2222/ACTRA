@@ -1697,6 +1697,9 @@
   "metadata.threshold_placeholder": "e.g. 3",
   "microcards": {
     "page_heading": "Microcards",
+    "library_subtitle": "Your decks for spaced repetition",
+    "cards_count_label": "Cards:",
+    "editor_card_untitled": "(no text)",
     "subtitle_default": "Review and study",
     "subtitle_session": "Review session",
     "subtitle_summary": "Session results",

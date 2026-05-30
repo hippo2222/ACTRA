@@ -16,135 +16,444 @@
     <link href="/assets/PageBoot.css" rel="stylesheet" />
     <script src="/assets/celebration-effects.js"></script>
     <style>
-        /* CSS resets and custom utilities for modern UI */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: var(--color-border-normal);
-            border-radius: 3px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--color-border-strong);
+        /* ============================================================
+           MICROCARDS — REDESIGNED UI
+           Token-only styling, works across all 6 ACTRA themes.
+           ============================================================ */
+
+        :root {
+            --mc-radius: 1.25rem;
+            --mc-radius-sm: 0.75rem;
+            --mc-gap: 1.25rem;
         }
 
-        /* Glassmorphism card container */
-        .glass-card {
-            background: var(--color-surface-1);
-            border: 1px solid var(--color-border-subtle);
-            /* C1/C2 fix: use themed shadow token — adapts to dark themes automatically */
-            box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.08));
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            border-radius: 1rem;
-            transition: border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                        box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                        transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        .mc-page {
+            width: 100%;
+            max-width: 1120px;
+            margin: 0 auto;
+            padding: 1.5rem 1rem 4rem;
         }
-        .glass-card:hover {
-            border-color: var(--color-primary);
-            /* C2 fix: color-mix() replaces missing --color-primary-rgb */
-            box-shadow: var(--shadow-lg, 0 12px 24px rgba(0, 0, 0, 0.12)),
-                        0 0 0 1px color-mix(in srgb, var(--color-primary) 20%, transparent);
-            transform: translateY(-2px);
+        @media (min-width: 768px) {
+            .mc-page { padding: 2rem 1.5rem 5rem; }
         }
 
-        /* Focus visible states for accessibility */
-        button:focus-visible,
-        input:focus-visible,
-        textarea:focus-visible,
-        select:focus-visible,
-        a:focus-visible {
-            outline: 2px solid var(--color-primary);
-            outline-offset: 2px;
-        }
+        /* Ensure .hidden always wins over component display rules (.mc-grade, .mc-field, inline flex) */
+        #mcMain .hidden, dialog .hidden { display: none !important; }
 
-        /* Native dialog modern styles */
-        dialog {
-            background: var(--color-surface-1);
-            color: var(--color-text-main);
-            border: 1px solid var(--color-border-strong);
-            border-radius: 1.25rem;
-            padding: 1.5rem;
-            max-width: 480px;
-            width: 90%;
-            /* C1 fix: use themed shadow token instead of hardcoded rgba(0,0,0,...) */
-            box-shadow: var(--shadow-xl, 0 20px 40px rgba(0, 0, 0, 0.15));
-            transform: scale(0.95);
-            opacity: 0;
-            /* M3 fix: target only the animated properties to avoid side-effects */
-            transition: opacity 0.2s ease-out, transform 0.2s ease-out;
-        }
-        dialog[open] {
-            transform: scale(1);
-            opacity: 1;
-        }
-        dialog::backdrop {
-            /* M1 fix: use scrim token — rgba(0,0,0,0.4) globally, darker in critical contexts */
-            background-color: var(--color-scrim, rgba(0, 0, 0, 0.45));
-            backdrop-filter: blur(4px);
-            transition: backdrop-filter 0.2s ease;
-        }
+        /* Scrollbars */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--color-border-normal); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--color-border-strong); }
 
-        /* Screen-specific page transition classes */
+        /* ── View transitions ─────────────────────────────────────── */
         .page-view {
             opacity: 0;
-            transform: translateY(12px);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translateY(10px);
+            transition: opacity 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+                        transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .page-view.active-view {
-            opacity: 1;
-            transform: translateY(0);
+        .page-view.active-view { opacity: 1; transform: translateY(0); }
+
+        /* ── In-page contextual toolbar (back + progress) ─────────── */
+        .mc-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            min-height: 2.25rem;
+        }
+        .mc-toolbar__left { display: flex; align-items: center; gap: 0.75rem; min-width: 0; }
+        .mc-back-btn {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            height: 2.5rem; padding: 0 0.9rem 0 0.7rem;
+            border-radius: 999px;
+            border: 1px solid var(--color-border-strong);
+            background: var(--color-surface-1);
+            color: var(--color-text-secondary);
+            font-size: 0.8rem; font-weight: 700;
+            transition: color .18s, border-color .18s, background .18s, transform .18s;
+        }
+        .mc-back-btn:hover { color: var(--color-primary); border-color: var(--color-primary); }
+        .mc-back-btn:active { transform: scale(0.96); }
+        .mc-ctx-label { font-size: 0.8rem; font-weight: 600; color: var(--color-text-secondary); min-width: 0;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        .mc-session-progress {
+            display: inline-flex; align-items: center; gap: 0.6rem;
+            padding: 0.4rem 0.85rem; border-radius: 999px;
+            background: var(--color-surface-2); border: 1px solid var(--color-border-subtle);
+        }
+        .mc-session-progress__text { font-size: 0.72rem; font-weight: 800; color: var(--color-text-secondary);
+            letter-spacing: 0.02em; min-width: 2.5rem; text-align: center; }
+        .mc-session-progress__track { width: 5rem; height: 0.4rem; border-radius: 999px;
+            background: var(--color-bg-secondary); overflow: hidden; }
+        .mc-session-progress__bar { height: 100%; border-radius: 999px;
+            background: var(--color-primary); transition: width .35s cubic-bezier(0.4,0,0.2,1); }
+
+        /* ── Page heading ─────────────────────────────────────────── */
+        .mc-pagehead { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem;
+            flex-wrap: wrap; margin-bottom: 1.5rem; }
+        .mc-pagehead__title { font-size: 1.6rem; font-weight: 900; letter-spacing: -0.02em;
+            color: var(--color-text-main); line-height: 1.1; }
+        .mc-pagehead__sub { font-size: 0.85rem; color: var(--color-text-secondary); margin-top: 0.25rem; }
+
+        /* ── Buttons ──────────────────────────────────────────────── */
+        .mc-btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+            min-height: 2.75rem; padding: 0 1.15rem; border-radius: 0.85rem;
+            font-size: 0.85rem; font-weight: 700; line-height: 1;
+            border: 1px solid transparent; cursor: pointer; white-space: nowrap;
+            transition: background .18s, border-color .18s, color .18s, box-shadow .18s, transform .12s;
+        }
+        .mc-btn:active:not(:disabled) { transform: scale(0.975); }
+        .mc-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .mc-btn .material-symbols-outlined { font-size: 1.15rem; }
+
+        .mc-btn--primary { background: var(--color-primary); color: var(--color-primary-fg);
+            box-shadow: 0 4px 12px color-mix(in srgb, var(--color-primary) 24%, transparent); }
+        .mc-btn--primary:hover { background: var(--color-primary-hover, var(--color-primary-dark)); }
+        .mc-btn--ghost { background: var(--color-surface-1); color: var(--color-text-main);
+            border-color: var(--color-border-strong); }
+        .mc-btn--ghost:hover { border-color: var(--color-primary); color: var(--color-primary);
+            background: var(--color-bg-hover, var(--color-surface-2)); }
+        .mc-btn--success { background: var(--color-success); color: var(--color-success-fg, #fff); }
+        .mc-btn--success:hover { background: var(--color-success-hover, var(--color-success-dark)); }
+        .mc-btn--warning { background: var(--color-warning); color: var(--color-warning-fg, #1a1a1a); }
+        .mc-btn--warning:hover { background: var(--color-warning-hover, var(--color-warning-dark)); }
+        .mc-btn--block { width: 100%; }
+        .mc-btn--lg { min-height: 3.1rem; font-size: 0.95rem; padding: 0 1.5rem; }
+
+        .mc-iconbtn {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 2.75rem; height: 2.75rem; border-radius: 0.85rem;
+            border: 1px solid var(--color-border-strong); background: var(--color-surface-1);
+            color: var(--color-text-secondary);
+            transition: color .18s, border-color .18s, background .18s, transform .12s;
+        }
+        .mc-iconbtn:hover { color: var(--color-primary); border-color: var(--color-primary); }
+        .mc-iconbtn:active { transform: scale(0.95); }
+
+        /* ── Stat tiles ───────────────────────────────────────────── */
+        .mc-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.85rem; margin-bottom: 1.5rem; }
+        .mc-stat {
+            display: flex; align-items: center; gap: 0.85rem;
+            padding: 1rem 1.1rem; border-radius: var(--mc-radius-sm);
+            background: var(--color-surface-1); border: 1px solid var(--color-border-subtle);
+        }
+        .mc-stat__icon {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 2.75rem; height: 2.75rem; border-radius: 0.85rem; flex-shrink: 0;
+        }
+        .mc-stat__icon .material-symbols-outlined { font-size: 1.4rem; }
+        .mc-stat__icon--due { background: color-mix(in srgb, var(--color-error) 14%, transparent); color: var(--color-error); }
+        .mc-stat__icon--new { background: color-mix(in srgb, var(--color-info) 14%, transparent); color: var(--color-info); }
+        .mc-stat__icon--total { background: color-mix(in srgb, var(--color-success) 14%, transparent); color: var(--color-success); }
+        .mc-stat__label { font-size: 0.62rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+            color: var(--color-text-secondary); }
+        .mc-stat__value { font-size: 1.5rem; font-weight: 900; color: var(--color-text-main); line-height: 1.05; }
+        @media (max-width: 560px) {
+            .mc-stat { flex-direction: column; align-items: flex-start; gap: 0.5rem; padding: 0.85rem; }
+            .mc-stat__value { font-size: 1.2rem; }
         }
 
-        /* Learning card flip mechanics */
+        /* ── Search ───────────────────────────────────────────────── */
+        .mc-search { position: relative; flex: 1; min-width: 0; }
+        .mc-search .material-symbols-outlined {
+            position: absolute; left: 0.9rem; top: 50%; transform: translateY(-50%);
+            color: var(--color-text-secondary); font-size: 1.25rem; pointer-events: none;
+        }
+        .mc-search input {
+            width: 100%; height: 3rem; padding: 0 1rem 0 2.75rem;
+            border-radius: 0.95rem; border: 1px solid var(--color-border-strong);
+            background: var(--color-surface-1); color: var(--color-text-main);
+            font-size: 0.9rem; outline: none; transition: border-color .18s, box-shadow .18s;
+        }
+        .mc-search input:focus { border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 14%, transparent); }
+
+        /* ── Deck grid + card ─────────────────────────────────────── */
+        .mc-deck-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--mc-gap); }
+        .mc-deck-card {
+            position: relative; display: flex; flex-direction: column;
+            border-radius: var(--mc-radius); border: 1px solid var(--color-border-subtle);
+            background: var(--color-surface-1); padding: 1.25rem; cursor: pointer;
+            overflow: hidden;
+            transition: border-color .2s, box-shadow .2s, transform .2s;
+        }
+        .mc-deck-card::before {
+            content: ''; position: absolute; inset: 0 0 auto 0; height: 4px;
+            background: linear-gradient(90deg, var(--color-primary), color-mix(in srgb, var(--color-accent, var(--color-primary)) 70%, var(--color-primary)));
+            opacity: 0.85;
+        }
+        .mc-deck-card:hover {
+            border-color: var(--color-primary);
+            box-shadow: var(--shadow-lg, 0 12px 28px rgba(0,0,0,0.12));
+            transform: translateY(-3px);
+        }
+        .mc-deck-card__top { display: flex; align-items: flex-start; gap: 0.85rem; margin-bottom: 0.75rem; }
+        .mc-deck-card__medallion {
+            display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+            width: 2.85rem; height: 2.85rem; border-radius: 0.85rem;
+            background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface-2));
+            color: var(--color-primary);
+        }
+        .mc-deck-card__medallion .material-symbols-outlined { font-size: 1.5rem; }
+        .mc-deck-card__title { font-size: 1.02rem; font-weight: 800; color: var(--color-text-main); line-height: 1.25;
+            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .mc-deck-card__desc { font-size: 0.8rem; color: var(--color-text-secondary); line-height: 1.45;
+            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+            margin-bottom: 0.85rem; min-height: 2.3rem; }
+        .mc-deck-card__tags { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.9rem; }
+        .mc-tag { padding: 0.15rem 0.55rem; border-radius: 0.5rem; font-size: 0.65rem; font-weight: 700;
+            background: var(--color-surface-2); border: 1px solid var(--color-border-subtle); color: var(--color-text-secondary); }
+        .mc-deck-card__progress { height: 0.4rem; border-radius: 999px; background: var(--color-bg-secondary);
+            overflow: hidden; margin-bottom: 0.9rem; }
+        .mc-deck-card__progress > span { display: block; height: 100%; border-radius: 999px;
+            background: linear-gradient(90deg, var(--color-success), color-mix(in srgb, var(--color-success) 60%, var(--color-primary))); }
+        .mc-deck-card__foot { margin-top: auto; display: flex; align-items: center; justify-content: space-between;
+            gap: 0.5rem; padding-top: 0.85rem; border-top: 1px solid var(--color-border-subtle); }
+        .mc-deck-card__count { font-size: 0.75rem; color: var(--color-text-secondary); }
+        .mc-deck-card__count strong { color: var(--color-text-main); font-weight: 800; }
+
+        .mc-pill { padding: 0.18rem 0.55rem; border-radius: 999px; font-size: 0.62rem; font-weight: 800; }
+        .mc-pill--due { background: color-mix(in srgb, var(--color-error) 14%, transparent);
+            border: 1px solid color-mix(in srgb, var(--color-error) 30%, transparent); color: var(--color-error); }
+        .mc-pill--new { background: color-mix(in srgb, var(--color-info) 14%, transparent);
+            border: 1px solid color-mix(in srgb, var(--color-info) 30%, transparent); color: var(--color-info); }
+
+        /* ── Panels ───────────────────────────────────────────────── */
+        .mc-panel { background: var(--color-surface-1); border: 1px solid var(--color-border-subtle);
+            border-radius: var(--mc-radius); padding: 1.4rem; }
+        .mc-panel-title { font-size: 0.95rem; font-weight: 800; color: var(--color-text-main); }
+
+        /* ── Empty state ──────────────────────────────────────────── */
+        .mc-empty { display: flex; flex-direction: column; align-items: center; text-align: center;
+            padding: 4rem 1.5rem; }
+        .mc-empty__icon { display: inline-flex; align-items: center; justify-content: center;
+            width: 4.5rem; height: 4.5rem; border-radius: 1.5rem; margin-bottom: 1.25rem;
+            background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface-2)); color: var(--color-primary); }
+        .mc-empty__icon .material-symbols-outlined { font-size: 2.25rem; }
+        .mc-empty__title { font-size: 1.15rem; font-weight: 800; color: var(--color-text-main); margin-bottom: 0.4rem; }
+        .mc-empty__hint { font-size: 0.85rem; color: var(--color-text-secondary); max-width: 24rem; margin-bottom: 1.5rem; }
+
+        /* ── Deck details hero ────────────────────────────────────── */
+        .mc-deckhero { display: flex; flex-direction: column; gap: 1.25rem; margin-bottom: 1.75rem;
+            padding-bottom: 1.75rem; border-bottom: 1px solid var(--color-border-subtle); }
+        @media (min-width: 900px) { .mc-deckhero { flex-direction: row; align-items: flex-start; justify-content: space-between; } }
+        .mc-deckhero__title { font-size: 1.9rem; font-weight: 900; letter-spacing: -0.02em;
+            color: var(--color-text-main); line-height: 1.1; margin-bottom: 0.5rem; }
+        .mc-deckhero__desc { font-size: 0.92rem; color: var(--color-text-secondary); line-height: 1.5; max-width: 42rem; margin-bottom: 0.85rem; }
+        .mc-deckhero__tags { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+        .mc-deckhero__actions { display: flex; flex-wrap: wrap; gap: 0.6rem; flex-shrink: 0; }
+
+        /* Dropdown menu */
+        .mc-menu { position: absolute; right: 0; margin-top: 0.5rem; width: 13rem; z-index: 30;
+            background: var(--color-surface-1); border: 1px solid var(--color-border-strong);
+            border-radius: 0.9rem; box-shadow: var(--shadow-xl, 0 16px 40px rgba(0,0,0,0.18)); padding: 0.4rem; }
+        .mc-menu__item { width: 100%; display: flex; align-items: center; gap: 0.6rem;
+            padding: 0.6rem 0.7rem; border-radius: 0.6rem; font-size: 0.8rem; font-weight: 600;
+            color: var(--color-text-main); transition: background .15s; text-align: left; }
+        .mc-menu__item:hover { background: var(--color-surface-2); }
+        .mc-menu__item .material-symbols-outlined { font-size: 1.1rem; color: var(--color-text-secondary); }
+        .mc-menu__item--danger { color: var(--color-error); }
+        .mc-menu__item--danger .material-symbols-outlined { color: var(--color-error); }
+        .mc-menu__sep { height: 1px; background: var(--color-border-subtle); margin: 0.35rem 0.3rem; }
+
+        /* ── Progress panel (details) ─────────────────────────────── */
+        .mc-levelrow { margin-bottom: 1.1rem; }
+        .mc-levelrow__head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.45rem; }
+        .mc-levelrow__label { font-size: 0.78rem; color: var(--color-text-secondary); }
+        .mc-levelrow__count { font-size: 0.9rem; font-weight: 800; color: var(--color-text-main); }
+        .mc-levelrow__track { height: 0.55rem; border-radius: 999px; background: var(--color-bg-secondary); overflow: hidden; }
+        .mc-levelrow__bar { height: 100%; border-radius: 999px; transition: width .4s cubic-bezier(0.4,0,0.2,1); }
+        .mc-levelrow__bar--l1 { background: var(--color-warning); }
+        .mc-levelrow__bar--l2 { background: var(--color-success); }
+
+        /* ── Card list rows (details) ─────────────────────────────── */
+        .mc-cardrow { display: flex; align-items: center; justify-content: space-between; gap: 0.85rem;
+            padding: 0.95rem 1.05rem; border-radius: var(--mc-radius-sm);
+            background: var(--color-surface-1); border: 1px solid var(--color-border-subtle);
+            transition: border-color .18s, box-shadow .18s; }
+        .mc-cardrow:hover { border-color: var(--color-border-strong); box-shadow: var(--shadow-sm, 0 2px 8px rgba(0,0,0,0.06)); }
+        .mc-cardrow__front { font-size: 0.88rem; font-weight: 700; color: var(--color-text-main); }
+        .mc-cardrow__back { font-size: 0.78rem; color: var(--color-text-secondary); margin-top: 0.2rem;
+            display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+        .mc-cardrow__hint { font-size: 0.72rem; font-style: italic; color: var(--color-text-secondary); margin-top: 0.25rem; }
+        .mc-level-chip { padding: 0.18rem 0.5rem; border-radius: 0.5rem; font-size: 0.62rem; font-weight: 800;
+            background: var(--color-surface-2); border: 1px solid var(--color-border-subtle); color: var(--color-text-secondary); white-space: nowrap; }
+
+        /* ── Session / flashcard ──────────────────────────────────── */
+        .mc-session { max-width: 38rem; margin: 0 auto; }
+        .mc-session__head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem; }
+        .mc-level-indicator { padding: 0.4rem 0.9rem; border-radius: 999px; font-size: 0.72rem; font-weight: 800;
+            border: 1px solid transparent; }
+
+        .mc-flashcard-wrap { perspective: 1600px; margin-bottom: 1.25rem; }
         .flashcard-inner {
-            /* H1 fix: 0.6s → 0.35s — within Guide's "normal" 250-350ms range */
-            transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative; width: 100%; min-height: 24rem;
+            transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
             transform-style: preserve-3d;
         }
-        .flashcard-inner.flipped {
-            transform: rotateY(180deg);
-        }
+        .flashcard-inner.flipped { transform: rotateY(180deg); }
         .flashcard-front, .flashcard-back {
-            backface-visibility: hidden;
-            -webkit-backface-visibility: hidden;
+            position: absolute; inset: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column;
+            backface-visibility: hidden; -webkit-backface-visibility: hidden;
+            border-radius: var(--mc-radius); border: 1px solid var(--color-border-strong);
+            background: var(--color-surface-1);
+            box-shadow: var(--shadow-lg, 0 14px 32px rgba(0,0,0,0.12));
+            padding: 1.5rem; overflow: hidden;
         }
-        .flashcard-back {
-            transform: rotateY(180deg);
+        .flashcard-back { transform: rotateY(180deg); }
+        .mc-face__meta { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-shrink: 0; }
+        .mc-face__label { font-size: 0.68rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+            color: var(--color-text-secondary); }
+        .mc-face__body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; gap: 0.85rem; overflow-y: auto; padding: 0.75rem 0; }
+        .mc-face__text { font-size: 1.4rem; font-weight: 800; color: var(--color-text-main); line-height: 1.35;
+            white-space: pre-line; }
+        .mc-face__img { max-height: 9rem; border-radius: 0.75rem; object-fit: contain; border: 1px solid var(--color-border-subtle); }
+        .mc-face__actions { flex-shrink: 0; padding-top: 0.5rem; }
+        .mc-hint-text { font-size: 0.85rem; font-style: italic; font-weight: 600; color: var(--color-warning); }
+        .mc-hint-btn { display: inline-flex; align-items: center; gap: 0.35rem; height: 2rem; padding: 0 0.7rem;
+            border-radius: 0.6rem; border: 1px solid var(--color-border-strong); color: var(--color-text-secondary);
+            font-size: 0.72rem; font-weight: 700; transition: background .15s, color .15s; }
+        .mc-hint-btn:hover { background: var(--color-surface-2); color: var(--color-text-main); }
+
+        .mc-grade { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+        .mc-grade__btn { display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+            min-height: 3.25rem; border-radius: 0.9rem; font-size: 0.92rem; font-weight: 800;
+            border: 1.5px solid transparent; transition: background .16s, transform .12s; }
+        .mc-grade__btn:active { transform: scale(0.97); }
+        .mc-grade__btn .material-symbols-outlined { font-size: 1.25rem; }
+        .mc-grade__btn--no { background: color-mix(in srgb, var(--color-error) 12%, transparent);
+            border-color: color-mix(in srgb, var(--color-error) 28%, transparent); color: var(--color-error); }
+        .mc-grade__btn--no:hover { background: color-mix(in srgb, var(--color-error) 20%, transparent); }
+        .mc-grade__btn--yes { background: color-mix(in srgb, var(--color-success) 12%, transparent);
+            border-color: color-mix(in srgb, var(--color-success) 28%, transparent); color: var(--color-success); }
+        .mc-grade__btn--yes:hover { background: color-mix(in srgb, var(--color-success) 20%, transparent); }
+
+        .mc-answer-form { display: flex; gap: 0.6rem; }
+        .mc-answer-input { flex: 1; height: 2.9rem; padding: 0 1rem; border-radius: 0.85rem;
+            border: 1px solid var(--color-border-strong); background: var(--color-surface-2); color: var(--color-text-main);
+            font-size: 0.9rem; outline: none; transition: border-color .18s, box-shadow .18s; }
+        .mc-answer-input:focus { border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 14%, transparent); }
+
+        .mc-eval-badge { padding: 0.2rem 0.6rem; border-radius: 999px; font-size: 0.62rem; font-weight: 800;
+            text-transform: uppercase; letter-spacing: 0.04em; border: 1px solid transparent; }
+        .mc-compare { width: 100%; margin-top: 0.5rem; padding: 0.9rem 1rem; border-radius: 0.85rem;
+            background: var(--color-surface-2); border: 1px solid var(--color-border-subtle); text-align: left; }
+        .mc-compare__row + .mc-compare__row { margin-top: 0.6rem; }
+        .mc-compare__label { display: block; font-size: 0.68rem; font-weight: 700; color: var(--color-text-secondary); }
+        .mc-compare__val { display: block; font-size: 0.85rem; font-weight: 700; color: var(--color-text-main); margin-top: 0.1rem; }
+        .mc-compare__val--ok { color: var(--color-success); }
+
+        /* ── Summary ──────────────────────────────────────────────── */
+        .mc-summary { max-width: 34rem; margin: 0 auto; }
+        .mc-summary__card { text-align: center; padding: 2.25rem 1.75rem; border-radius: var(--mc-radius);
+            background: var(--color-surface-1); border: 1px solid var(--color-border-subtle);
+            box-shadow: var(--shadow-md, 0 6px 20px rgba(0,0,0,0.08)); margin-bottom: 1.5rem; }
+        .mc-summary__icon { display: inline-flex; align-items: center; justify-content: center;
+            width: 4rem; height: 4rem; border-radius: 1.4rem; margin-bottom: 1rem;
+            background: color-mix(in srgb, var(--color-success) 14%, transparent); color: var(--color-success); }
+        .mc-summary__icon .material-symbols-outlined { font-size: 2.1rem; }
+        .mc-summary__title { font-size: 1.45rem; font-weight: 900; color: var(--color-text-main); margin-bottom: 0.35rem; }
+        .mc-summary__sub { font-size: 0.88rem; color: var(--color-text-secondary); margin-bottom: 1.75rem; }
+        .mc-summary__stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 1.75rem; }
+        .mc-sumstat { padding: 1rem 0.5rem; border-radius: var(--mc-radius-sm); border: 1px solid var(--color-border-subtle); }
+        .mc-sumstat__val { font-size: 1.6rem; font-weight: 900; line-height: 1; }
+        .mc-sumstat__label { font-size: 0.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.07em;
+            color: var(--color-text-secondary); margin-top: 0.4rem; }
+        .mc-sumstat--total { background: var(--color-surface-2); }
+        .mc-sumstat--total .mc-sumstat__val { color: var(--color-text-main); }
+        .mc-sumstat--correct { background: color-mix(in srgb, var(--color-success) 10%, transparent);
+            border-color: color-mix(in srgb, var(--color-success) 25%, transparent); }
+        .mc-sumstat--correct .mc-sumstat__val { color: var(--color-success); }
+        .mc-sumstat--errors { background: color-mix(in srgb, var(--color-error) 10%, transparent);
+            border-color: color-mix(in srgb, var(--color-error) 25%, transparent); }
+        .mc-sumstat--errors .mc-sumstat__val { color: var(--color-error); }
+        .mc-summary__actions { display: flex; flex-direction: column; gap: 0.6rem; }
+        @media (min-width: 520px) { .mc-summary__actions { flex-direction: row; justify-content: center; } }
+
+        .mc-errrow { padding: 0.9rem 1rem; border-radius: var(--mc-radius-sm); text-align: left;
+            background: var(--color-surface-1); border: 1px solid var(--color-border-subtle); }
+        .mc-errrow__q { font-size: 0.82rem; font-weight: 800; color: var(--color-text-main); }
+        .mc-errrow__a { font-size: 0.8rem; font-weight: 600; color: var(--color-success); margin-top: 0.25rem; }
+
+        /* ── Editor ───────────────────────────────────────────────── */
+        .mc-editor { display: grid; grid-template-columns: 1fr; gap: var(--mc-gap); }
+        @media (min-width: 900px) { .mc-editor { grid-template-columns: minmax(0, 17rem) 1fr; } }
+        .mc-editor__sidebar { background: var(--color-surface-1); border: 1px solid var(--color-border-subtle);
+            border-radius: var(--mc-radius); padding: 1.1rem; align-self: start; }
+        .mc-editor__sidehead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.9rem; }
+        .mc-editor__list { display: flex; flex-direction: column; gap: 0.4rem; max-height: 30rem; overflow-y: auto; padding-right: 0.2rem; }
+        .mc-editor__main { background: var(--color-surface-1); border: 1px solid var(--color-border-subtle);
+            border-radius: var(--mc-radius); padding: 1.5rem; }
+        .mc-field { display: flex; flex-direction: column; }
+        .mc-field__label { font-size: 0.66rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;
+            color: var(--color-text-secondary); margin-bottom: 0.45rem; }
+        .mc-input, .mc-textarea, .mc-select {
+            width: 100%; padding: 0.7rem 0.9rem; border-radius: 0.8rem;
+            border: 1px solid var(--color-border-strong); background: var(--color-surface-2); color: var(--color-text-main);
+            font-size: 0.88rem; outline: none; transition: border-color .18s, box-shadow .18s; }
+        .mc-input:focus, .mc-textarea:focus, .mc-select:focus { border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 14%, transparent); }
+        .mc-textarea { resize: vertical; min-height: 4.5rem; }
+        .mc-editimg { max-height: 5rem; border-radius: 0.6rem; object-fit: contain; border: 1px solid var(--color-border-subtle); margin-top: 0.5rem; }
+        .mc-side-item { width: 100%; text-align: left; padding: 0.6rem 0.7rem; border-radius: 0.6rem;
+            font-size: 0.78rem; border: 1px solid var(--color-border-subtle); color: var(--color-text-main);
+            transition: background .15s, border-color .15s;
+            display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+        .mc-side-item:hover { background: var(--color-surface-2); border-color: var(--color-border-strong); }
+        .mc-side-item--meta { display: flex; align-items: center; gap: 0.5rem; font-weight: 700;
+            border-color: var(--color-border-strong); margin-bottom: 0.6rem; }
+        .mc-side-item--meta .material-symbols-outlined { font-size: 1rem; color: var(--color-text-secondary); }
+
+        /* ── Focus visible ────────────────────────────────────────── */
+        button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, a:focus-visible {
+            outline: 2px solid var(--color-primary); outline-offset: 2px;
         }
 
-        /* H2 fix: :active press feedback — required by Guide step 22.1 */
-        button:active:not(:disabled) {
-            transform: scale(0.97);
+        /* ── Dialogs ──────────────────────────────────────────────── */
+        dialog {
+            background: var(--color-surface-1); color: var(--color-text-main);
+            border: 1px solid var(--color-border-strong); border-radius: var(--mc-radius);
+            padding: 1.6rem; max-width: 30rem; width: 92%;
+            box-shadow: var(--shadow-xl, 0 24px 48px rgba(0,0,0,0.2));
+            transform: scale(0.96); opacity: 0; transition: opacity .2s ease-out, transform .2s ease-out;
         }
-        /* Override for glass-card which has its own transform on hover */
-        .glass-card button:active:not(:disabled) {
-            transform: scale(0.97);
-        }
+        dialog[open] { transform: scale(1); opacity: 1; }
+        dialog::backdrop { background-color: var(--color-scrim, rgba(0,0,0,0.5)); backdrop-filter: blur(4px); }
+        .mc-dialog-title { font-size: 1.15rem; font-weight: 900; color: var(--color-text-main); }
+        .mc-dialog-actions { display: flex; justify-content: flex-end; gap: 0.6rem; padding-top: 0.4rem; }
+        .mc-tabbtn { height: 2.1rem; padding: 0 1rem; border-radius: 0.6rem; font-size: 0.75rem; font-weight: 800;
+            border: 1px solid var(--color-border-strong); color: var(--color-text-secondary); transition: all .15s; }
+        .mc-tabbtn.is-active { background: var(--color-primary); color: var(--color-primary-fg); border-color: var(--color-primary); }
 
-        /* H3 fix: header back button minimum touch target 44×44px (also changed size-9→size-11 in HTML) */
-        #mcHeaderBackBtn {
-            min-width: 44px;
-            min-height: 44px;
-        }
+        /* ── Toasts ───────────────────────────────────────────────── */
+        #mcToastContainer { position: fixed; bottom: 1.25rem; right: 1.25rem; z-index: 100;
+            display: flex; flex-direction: column; gap: 0.6rem; pointer-events: none; }
+        .mc-toast { padding: 0.75rem 1rem; border-radius: 0.85rem; font-size: 0.8rem; font-weight: 700;
+            box-shadow: var(--shadow-lg, 0 10px 24px rgba(0,0,0,0.15)); border: 1px solid; transition: opacity .3s; }
+        .mc-toast--success { background: color-mix(in srgb, var(--color-success) 14%, var(--color-surface-1));
+            border-color: var(--color-success); color: var(--color-success); }
+        .mc-toast--error { background: color-mix(in srgb, var(--color-error) 14%, var(--color-surface-1));
+            border-color: var(--color-error); color: var(--color-error); }
+        .mc-toast--warning { background: color-mix(in srgb, var(--color-warning) 14%, var(--color-surface-1));
+            border-color: var(--color-warning); color: var(--color-warning); }
+        .mc-toast--info { background: color-mix(in srgb, var(--color-primary) 14%, var(--color-surface-1));
+            border-color: var(--color-primary); color: var(--color-primary); }
 
-        /* Reduced motion support */
+        /* ── Reduced motion ───────────────────────────────────────── */
         @media (prefers-reduced-motion: reduce) {
-            .page-view, .glass-card, dialog, .flashcard-inner {
-                transition: none !important;
-                transform: none !important;
-                animation: none !important;
+            .page-view, .flashcard-inner, dialog, .mc-deck-card,
+            .mc-levelrow__bar, .mc-session-progress__bar, .mc-deck-card__progress > span {
+                transition: none !important; animation: none !important;
             }
-            /* Also disable :active press scale added by H2 fix */
-            button:active:not(:disabled),
-            .glass-card button:active:not(:disabled) {
-                transform: none !important;
-            }
+            .mc-btn:active, .mc-grade__btn:active, .mc-iconbtn:active, .mc-back-btn:active { transform: none !important; }
         }
     </style>
 </head>
@@ -157,533 +466,464 @@
         </div>
     </div>
 
-    <!-- Global navigation header (profile, nav, language) -->
+    <!-- Global navigation header -->
     <div data-global-header data-app-section="microcards"></div>
 
-    <!-- Page-specific sub-header: back button, section title, session progress -->
-    <header class="sticky top-[var(--global-header-height,3.5rem)] z-40 border-b border-border-subtle bg-surface-1/95 backdrop-blur-sm px-4 md:px-6 py-2.5">
-        <div class="flex items-center justify-between max-w-[1280px] mx-auto gap-3">
-            <div class="flex items-center gap-3 min-w-0">
-                <button type="button" id="mcHeaderBackBtn" onclick="mcApp.handleBackNavigation()"
-                    class="flex items-center justify-center size-9 rounded-lg text-text-secondary hover:text-primary hover:bg-bg-hover transition-colors flex-shrink-0"
-                    title="Назад" aria-label="Назад" data-i18n-title="microcards.btn_back">
-                    <span class="material-symbols-outlined text-[20px]">arrow_back</span>
-                </button>
-                <div class="flex flex-col min-w-0">
-                    <h1 class="text-sm font-extrabold leading-tight tracking-tight text-text-main truncate" data-i18n="microcards.page_heading">Микрокарточки</h1>
-                    <p class="text-xs text-text-secondary truncate" id="mcHeaderSubtitle" data-i18n="microcards.subtitle_default">Повторение и обучение</p>
-                </div>
-            </div>
+    <main id="mcMain" class="flex-1 w-full">
+        <div class="mc-page">
 
-            <!-- Session progress (shown only during active session) -->
-            <div id="mcHeaderProgress" class="hidden items-center gap-2 px-3 py-1 bg-surface-2 rounded-full border border-border-subtle flex-shrink-0" aria-live="polite" aria-label="Прогресс сессии">
-                <span class="text-[11px] font-bold text-text-secondary" id="mcHeaderProgressText">0/0</span>
-                <div class="w-16 h-1.5 bg-bg-secondary rounded-full overflow-hidden">
-                    <div id="mcHeaderProgressBar" class="h-full bg-primary rounded-full transition-all duration-300" style="width:0%"></div>
+            <!-- Contextual toolbar: back + session progress -->
+            <div class="mc-toolbar">
+                <div class="mc-toolbar__left">
+                    <button type="button" id="mcHeaderBackBtn" onclick="mcApp.handleBackNavigation()"
+                        class="mc-back-btn" title="Назад" aria-label="Назад" data-i18n-title="microcards.btn_back">
+                        <span class="material-symbols-outlined" style="font-size:1.2rem">arrow_back</span>
+                        <span data-i18n="microcards.btn_back">Назад</span>
+                    </button>
+                    <span class="mc-ctx-label" id="mcHeaderSubtitle" data-i18n="microcards.subtitle_default">Повторение и обучение</span>
                 </div>
-            </div>
-        </div>
-    </header>
-
-    <!-- Main Container -->
-    <main id="mcMain" class="flex-1 max-w-[1280px] w-full mx-auto p-4 md:p-6 overflow-y-auto">
-
-        <!-- VIEW 1: Decks Library -->
-        <div id="viewLibrary" class="page-view hidden">
-            <!-- Summary stats -->
-            <div class="grid grid-cols-3 gap-3 mb-6">
-                <div class="flex items-center gap-3 p-3 bg-surface-1 rounded-xl border border-border-subtle">
-                    <span class="material-symbols-outlined text-primary text-[24px]">pending_actions</span>
-                    <div>
-                        <p class="text-[10px] font-bold text-text-secondary uppercase tracking-wider" data-i18n="microcards.stat_due_label">К повтору</p>
-                        <p class="text-lg font-black text-text-main leading-tight" id="libStatDue">0</p>
-                    </div>
-                </div>
-                <div class="flex items-center gap-3 p-3 bg-surface-1 rounded-xl border border-border-subtle">
-                    <span class="material-symbols-outlined text-info text-[24px]">fiber_new</span>
-                    <div>
-                        <p class="text-[10px] font-bold text-text-secondary uppercase tracking-wider" data-i18n="microcards.stat_new_label">Новых</p>
-                        <p class="text-lg font-black text-text-main leading-tight" id="libStatNew">0</p>
-                    </div>
-                </div>
-                <div class="flex items-center gap-3 p-3 bg-surface-1 rounded-xl border border-border-subtle">
-                    <span class="material-symbols-outlined text-success text-[24px]">style</span>
-                    <div>
-                        <p class="text-[10px] font-bold text-text-secondary uppercase tracking-wider" data-i18n="microcards.stat_total">Всего колод</p>
-                        <p class="text-lg font-black text-text-main leading-tight" id="libStatTotal">0</p>
+                <div id="mcHeaderProgress" class="mc-session-progress" style="display:none" aria-live="polite" aria-label="Прогресс сессии">
+                    <span class="mc-session-progress__text" id="mcHeaderProgressText">0/0</span>
+                    <div class="mc-session-progress__track">
+                        <div id="mcHeaderProgressBar" class="mc-session-progress__bar" style="width:0%"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- Search and filters -->
-            <div class="flex flex-col gap-4 md:flex-row md:items-center justify-between mb-6">
-                <div class="relative flex-1 max-w-md">
-                    <span class="absolute inset-y-0 left-3 flex items-center text-text-secondary">
-                        <span class="material-symbols-outlined text-[20px]">search</span>
-                    </span>
-                    <input id="libSearch" type="search" placeholder="Поиск колоды по названию..." data-i18n-placeholder="microcards.search_placeholder"
-                        class="w-full rounded-xl border border-border-strong bg-surface-1 py-2.5 pl-10 pr-4 text-sm text-text-main outline-none focus:border-primary transition-colors" />
+            <!-- ════════════ VIEW 1: LIBRARY ════════════ -->
+            <div id="viewLibrary" class="page-view hidden">
+                <div class="mc-pagehead">
+                    <div>
+                        <h1 class="mc-pagehead__title" data-i18n="microcards.page_heading">Микрокарточки</h1>
+                        <p class="mc-pagehead__sub" data-i18n="microcards.library_subtitle">Ваши колоды для интервального повторения</p>
+                    </div>
+                    <button type="button" onclick="mcApp.openCreateDeckDialog()" class="mc-btn mc-btn--primary">
+                        <span class="material-symbols-outlined">add</span>
+                        <span data-i18n="microcards.btn_create_deck">Создать колоду</span>
+                    </button>
                 </div>
-                <div class="flex items-center gap-2">
-                    <button type="button" onclick="mcApp.openCreateDeckDialog()"
-                        class="px-4 py-2.5 rounded-xl bg-primary text-primary-fg hover:bg-primary-hover font-bold text-sm transition-colors flex items-center gap-1.5">
-                        <span class="material-symbols-outlined text-[18px]">add</span>
+
+                <div class="mc-stats">
+                    <div class="mc-stat">
+                        <span class="mc-stat__icon mc-stat__icon--due"><span class="material-symbols-outlined">pending_actions</span></span>
+                        <div>
+                            <p class="mc-stat__label" data-i18n="microcards.stat_due_label">К повтору</p>
+                            <p class="mc-stat__value" id="libStatDue">0</p>
+                        </div>
+                    </div>
+                    <div class="mc-stat">
+                        <span class="mc-stat__icon mc-stat__icon--new"><span class="material-symbols-outlined">fiber_new</span></span>
+                        <div>
+                            <p class="mc-stat__label" data-i18n="microcards.stat_new_label">Новых</p>
+                            <p class="mc-stat__value" id="libStatNew">0</p>
+                        </div>
+                    </div>
+                    <div class="mc-stat">
+                        <span class="mc-stat__icon mc-stat__icon--total"><span class="material-symbols-outlined">style</span></span>
+                        <div>
+                            <p class="mc-stat__label" data-i18n="microcards.stat_total">Всего колод</p>
+                            <p class="mc-stat__value" id="libStatTotal">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mc-search" style="margin-bottom:1.5rem">
+                    <span class="material-symbols-outlined">search</span>
+                    <input id="libSearch" type="search" placeholder="Поиск колоды по названию..." data-i18n-placeholder="microcards.search_placeholder" />
+                </div>
+
+                <div id="decksGrid" class="mc-deck-grid"></div>
+
+                <div id="decksEmpty" class="mc-empty hidden">
+                    <span class="mc-empty__icon"><span class="material-symbols-outlined">style</span></span>
+                    <h3 class="mc-empty__title" data-i18n="microcards.empty_library_title">Библиотека пуста</h3>
+                    <p class="mc-empty__hint" data-i18n="microcards.empty_library_hint">Создайте свою первую колоду, чтобы начать обучение.</p>
+                    <button type="button" onclick="mcApp.openCreateDeckDialog()" class="mc-btn mc-btn--primary">
+                        <span class="material-symbols-outlined">add</span>
                         <span data-i18n="microcards.btn_create_deck">Создать колоду</span>
                     </button>
                 </div>
             </div>
 
-            <!-- Decks Grid -->
-            <div id="decksGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <!-- Dynamically loaded -->
-            </div>
-
-            <div id="decksEmpty" class="hidden text-center py-16">
-                <span class="material-symbols-outlined text-text-secondary text-[48px] mb-3">style</span>
-                <h3 class="text-lg font-bold mb-1" data-i18n="microcards.empty_library_title">Библиотека пуста</h3>
-                <p class="text-sm text-text-secondary" data-i18n="microcards.empty_library_hint">Создайте свою первую колоду, чтобы начать обучение.</p>
-            </div>
-        </div>
-
-        <!-- VIEW 2: Deck Details -->
-        <div id="viewDeckDetails" class="page-view hidden">
-            <!-- Header bar -->
-            <div class="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6 pb-6 border-b border-border-subtle">
-                <div>
-                    <h2 id="deckDetailsTitle" class="text-2xl font-black text-text-main mb-1">Название колоды</h2>
-                    <p id="deckDetailsDesc" class="text-sm text-text-secondary mb-3">Описание колоды отсутствует.</p>
-                    <div id="deckDetailsTags" class="flex flex-wrap gap-1.5"></div>
-                </div>
-                <div class="flex flex-wrap items-center gap-2">
-                    <button type="button" id="btnStudyDeck" onclick="mcApp.startLearningSession()"
-                        class="px-5 py-3 rounded-xl bg-primary text-primary-fg hover:bg-primary-hover font-extrabold text-sm transition-colors flex items-center gap-1.5 shadow-md shadow-primary/20">
-                        <span class="material-symbols-outlined text-[20px]">play_arrow</span>
-                        <span data-i18n="microcards.btn_start_study">Начать обучение</span>
-                    </button>
-                    <button type="button" onclick="mcApp.openDeckEditor()"
-                        class="px-4 py-3 rounded-xl border border-border-strong text-text-main hover:bg-bg-hover font-bold text-sm transition-colors flex items-center gap-1.5">
-                        <span class="material-symbols-outlined text-[18px]">edit</span>
-                        <span data-i18n="microcards.btn_editor">Редактор</span>
-                    </button>
-                    <button type="button" onclick="mcApp.openImportDialog()"
-                        class="px-4 py-3 rounded-xl border border-border-strong text-text-main hover:bg-bg-hover font-bold text-sm transition-colors flex items-center gap-1.5">
-                        <span class="material-symbols-outlined text-[18px]">upload</span>
-                        <span data-i18n="microcards.btn_import">Импорт</span>
-                    </button>
-                    <div class="relative">
-                        <button type="button" onclick="mcApp.toggleDeckActionsMenu(event)"
-                            class="p-3 rounded-xl border border-border-strong text-text-main hover:bg-bg-hover transition-colors flex items-center justify-center">
-                            <span class="material-symbols-outlined text-[20px]">more_horiz</span>
+            <!-- ════════════ VIEW 2: DECK DETAILS ════════════ -->
+            <div id="viewDeckDetails" class="page-view hidden">
+                <div class="mc-deckhero">
+                    <div style="min-width:0">
+                        <h2 id="deckDetailsTitle" class="mc-deckhero__title">Название колоды</h2>
+                        <p id="deckDetailsDesc" class="mc-deckhero__desc">Описание колоды отсутствует.</p>
+                        <div id="deckDetailsTags" class="mc-deckhero__tags"></div>
+                    </div>
+                    <div class="mc-deckhero__actions">
+                        <button type="button" id="btnStudyDeck" onclick="mcApp.startLearningSession()" class="mc-btn mc-btn--primary mc-btn--lg">
+                            <span class="material-symbols-outlined">play_arrow</span>
+                            <span data-i18n="microcards.btn_start_study">Начать обучение</span>
                         </button>
-                        <!-- Actions menu -->
-                        <div id="deckActionsDropdown" class="hidden absolute right-0 mt-2 w-48 rounded-xl bg-surface-1 border border-border-strong shadow-xl py-1.5 z-20">
-                            <button type="button" onclick="mcApp.exportDeck('json')" class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-bg-hover flex items-center gap-2">
-                                <span class="material-symbols-outlined text-xs">download</span><span data-i18n="microcards.btn_menu_export_json">Экспорт JSON</span>
+                        <button type="button" onclick="mcApp.openDeckEditor()" class="mc-btn mc-btn--ghost">
+                            <span class="material-symbols-outlined">edit</span>
+                            <span data-i18n="microcards.btn_editor">Редактор</span>
+                        </button>
+                        <button type="button" onclick="mcApp.openImportDialog()" class="mc-btn mc-btn--ghost">
+                            <span class="material-symbols-outlined">upload</span>
+                            <span data-i18n="microcards.btn_import">Импорт</span>
+                        </button>
+                        <div class="relative">
+                            <button type="button" onclick="mcApp.toggleDeckActionsMenu(event)" class="mc-iconbtn" aria-label="Ещё">
+                                <span class="material-symbols-outlined">more_horiz</span>
                             </button>
-                            <button type="button" onclick="mcApp.exportDeck('csv')" class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-bg-hover flex items-center gap-2">
-                                <span class="material-symbols-outlined text-xs">download</span><span data-i18n="microcards.btn_menu_export_csv">Экспорт CSV</span>
-                            </button>
-                            <button type="button" onclick="mcApp.publishDeckToCatalog()" class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-bg-hover flex items-center gap-2">
-                                <span class="material-symbols-outlined text-xs">publish</span><span data-i18n="microcards.btn_menu_publish">В каталог</span>
-                            </button>
-                            <hr class="border-border-subtle my-1">
-                            <button type="button" onclick="mcApp.confirmDeleteDeck()" class="w-full text-left px-4 py-2 text-xs font-semibold text-error hover:bg-bg-hover flex items-center gap-2">
-                                <span class="material-symbols-outlined text-xs">delete</span><span data-i18n="microcards.btn_menu_delete_deck">Удалить колоду</span>
-                            </button>
+                            <div id="deckActionsDropdown" class="mc-menu hidden">
+                                <button type="button" onclick="mcApp.exportDeck('json')" class="mc-menu__item">
+                                    <span class="material-symbols-outlined">download</span><span data-i18n="microcards.btn_menu_export_json">Экспорт JSON</span>
+                                </button>
+                                <button type="button" onclick="mcApp.exportDeck('csv')" class="mc-menu__item">
+                                    <span class="material-symbols-outlined">download</span><span data-i18n="microcards.btn_menu_export_csv">Экспорт CSV</span>
+                                </button>
+                                <button type="button" onclick="mcApp.publishDeckToCatalog()" class="mc-menu__item">
+                                    <span class="material-symbols-outlined">publish</span><span data-i18n="microcards.btn_menu_publish">В каталог</span>
+                                </button>
+                                <div class="mc-menu__sep"></div>
+                                <button type="button" onclick="mcApp.confirmDeleteDeck()" class="mc-menu__item mc-menu__item--danger">
+                                    <span class="material-symbols-outlined">delete</span><span data-i18n="microcards.btn_menu_delete_deck">Удалить колоду</span>
+                                </button>
+                            </div>
                         </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="mc-panel" style="height:fit-content">
+                        <h3 class="mc-panel-title" style="margin-bottom:1.2rem" data-i18n="microcards.progress_title">Прогресс обучения</h3>
+                        <div class="mc-levelrow">
+                            <div class="mc-levelrow__head">
+                                <span class="mc-levelrow__label" data-i18n="microcards.level1_label">Уровень 1 (Знаю / Не знаю)</span>
+                                <span class="mc-levelrow__count" id="progressL1Count">0</span>
+                            </div>
+                            <div class="mc-levelrow__track"><div id="progressL1Bar" class="mc-levelrow__bar mc-levelrow__bar--l1" style="width:0%"></div></div>
+                        </div>
+                        <div class="mc-levelrow">
+                            <div class="mc-levelrow__head">
+                                <span class="mc-levelrow__label" data-i18n="microcards.level2_label">Уровень 2 (Ввод ответа)</span>
+                                <span class="mc-levelrow__count" id="progressL2Count">0</span>
+                            </div>
+                            <div class="mc-levelrow__track"><div id="progressL2Bar" class="mc-levelrow__bar mc-levelrow__bar--l2" style="width:0%"></div></div>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;padding-top:1rem;margin-top:0.4rem;border-top:1px solid var(--color-border-subtle)">
+                            <span class="mc-levelrow__label" data-i18n="microcards.total_cards_label">Всего карточек:</span>
+                            <span id="deckTotalCardsCount" style="font-weight:900;font-size:1.05rem;color:var(--color-text-main)">0</span>
+                        </div>
+                    </div>
+
+                    <div class="lg:col-span-2">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+                            <h3 class="mc-panel-title" data-i18n="microcards.deck_cards_heading">Карточки в колоде</h3>
+                            <span id="deckCardsCountBadge" class="mc-level-chip">0</span>
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:0.6rem" id="deckCardsListContainer"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- Stats & Cards table -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <!-- Sidebar progress -->
-                <div class="p-4 bg-surface-1 rounded-2xl border border-border-subtle h-fit">
-                    <h3 class="font-bold text-sm mb-4" data-i18n="microcards.progress_title">Прогресс обучения</h3>
-                    <div class="space-y-4">
-                        <div>
-                            <div class="flex justify-between text-xs mb-1">
-                                <span class="text-text-secondary" data-i18n="microcards.level1_label">Уровень 1 (Знаю / Не знаю)</span>
-                                <span id="progressL1Count" class="font-bold">0</span>
-                            </div>
-                            <div class="h-2 bg-bg-secondary rounded-full overflow-hidden">
-                                <div id="progressL1Bar" class="h-full bg-warning rounded-full" style="width:0%"></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="flex justify-between text-xs mb-1">
-                                <span class="text-text-secondary" data-i18n="microcards.level2_label">Уровень 2 (Ввод ответа)</span>
-                                <span id="progressL2Count" class="font-bold">0</span>
-                            </div>
-                            <div class="h-2 bg-bg-secondary rounded-full overflow-hidden">
-                                <div id="progressL2Bar" class="h-full bg-success rounded-full" style="width:0%"></div>
-                            </div>
-                        </div>
-                        <div class="pt-4 border-t border-border-subtle flex justify-between text-sm">
-                            <span class="text-text-secondary" data-i18n="microcards.total_cards_label">Всего карточек:</span>
-                            <span id="deckTotalCardsCount" class="font-extrabold">0</span>
-                        </div>
+            <!-- ════════════ VIEW 3: SESSION ════════════ -->
+            <div id="viewSession" class="page-view hidden">
+                <div class="mc-session">
+                    <div class="mc-session__head">
+                        <button type="button" onclick="mcApp.abortSession()" class="mc-back-btn">
+                            <span class="material-symbols-outlined" style="font-size:1.1rem">close</span>
+                            <span data-i18n="microcards.btn_exit_session">Выйти из сессии</span>
+                        </button>
+                        <div id="sessionLevelIndicator" class="mc-level-indicator" aria-live="polite" aria-atomic="true"></div>
                     </div>
-                </div>
 
-                <!-- Cards list -->
-                <div class="lg:col-span-2">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="font-black text-base text-text-main" data-i18n="microcards.deck_cards_heading">Карточки в колоде</h3>
-                        <span id="deckCardsCountBadge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-surface-2 border border-border-subtle text-text-secondary">0</span>
-                    </div>
-                    <div class="space-y-3" id="deckCardsListContainer">
-                        <!-- Dynamically loaded -->
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- VIEW 3: Learning Session -->
-        <div id="viewSession" class="page-view hidden">
-            <div class="max-w-2xl mx-auto">
-                <div class="flex items-center justify-between gap-4 mb-4">
-                    <button type="button" onclick="mcApp.abortSession()" class="flex items-center gap-1 text-sm text-text-secondary hover:text-primary transition-colors">
-                        <span class="material-symbols-outlined text-[18px]">close</span>
-                        <span data-i18n="microcards.btn_exit_session">Выйти из сессии</span>
-                    </button>
-                    <div id="sessionLevelIndicator" class="px-3 py-1 rounded-full text-xs font-bold border" aria-live="polite" aria-atomic="true"></div>
-                </div>
-
-                <!-- Flashcard layout -->
-                <div class="relative w-full aspect-[4/3] max-h-[360px] min-h-[240px] perspective-1000 mb-6">
-                    <div id="flashcardInner" class="flashcard-inner w-full h-full relative rounded-2xl border border-border-strong bg-surface-1 shadow-xl">
-                        
-                        <!-- Front Face -->
-                        <div class="flashcard-front absolute inset-0 w-full h-full flex flex-col justify-between p-6 overflow-y-auto">
-                            <div class="flex items-start justify-between">
-                                <span class="text-xs font-bold text-text-secondary uppercase tracking-wider" data-i18n="microcards.card_question_label">Вопрос</span>
-                                <button type="button" id="btnShowHint" onclick="mcApp.toggleHint()" class="hidden px-2.5 py-1 rounded-lg text-xs border border-border-strong hover:bg-bg-hover text-text-secondary transition-colors flex items-center gap-1">
-                                    <span class="material-symbols-outlined text-[14px]">lightbulb</span>
-                                    <span data-i18n="microcards.hint_label">Подсказка</span>
-                                </button>
-                            </div>
-                            
-                            <div class="flex-1 flex flex-col items-center justify-center my-4 text-center">
-                                <div id="cardFrontText" class="text-lg font-bold text-text-main leading-relaxed max-w-lg whitespace-pre-line"></div>
-                                <img id="cardFrontImage" class="hidden mt-4 max-h-[140px] rounded-lg object-contain border border-border-subtle" alt="Front Preview">
-                                <div id="cardHintText" class="hidden mt-4 text-xs italic text-warning font-semibold"></div>
-                            </div>
-                            
-                            <!-- Level 1 actions -->
-                            <div id="frontActionsL1" class="flex justify-center">
-                                <button type="button" onclick="mcApp.revealAnswerL1()"
-                                    class="px-6 py-2.5 rounded-xl bg-primary text-primary-fg hover:bg-primary-hover font-bold text-sm shadow-md shadow-primary/20 transition-colors">
-                                    <span data-i18n="microcards.btn_show_answer">Показать ответ</span>
-                                </button>
-                            </div>
-
-                            <!-- Level 2 inputs -->
-                            <div id="frontActionsL2" class="hidden w-full">
-                                <form onsubmit="mcApp.submitAnswerL2(event)" class="flex gap-2">
-                                    <input type="text" id="inputL2Answer" placeholder="Введите ответ..." autocomplete="off" data-i18n-placeholder="microcards.input_answer_ph"
-                                        class="flex-1 px-4 py-2.5 rounded-xl border border-border-strong bg-surface-2 text-sm text-text-main outline-none focus:border-primary transition-colors" />
-                                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-primary text-primary-fg hover:bg-primary-hover font-bold text-sm transition-colors">
-                                        <span data-i18n="microcards.btn_check">Проверить</span>
+                    <div class="mc-flashcard-wrap">
+                        <div id="flashcardInner" class="flashcard-inner">
+                            <!-- Front -->
+                            <div class="flashcard-front">
+                                <div class="mc-face__meta">
+                                    <span class="mc-face__label" data-i18n="microcards.card_question_label">Вопрос</span>
+                                    <button type="button" id="btnShowHint" onclick="mcApp.toggleHint()" class="mc-hint-btn hidden">
+                                        <span class="material-symbols-outlined" style="font-size:0.95rem">lightbulb</span>
+                                        <span data-i18n="microcards.hint_label">Подсказка</span>
                                     </button>
-                                </form>
-                            </div>
-                        </div>
-
-                        <!-- Back Face -->
-                        <div class="flashcard-back absolute inset-0 w-full h-full flex flex-col justify-between p-6 overflow-y-auto">
-                            <div class="flex items-start justify-between">
-                                <span class="text-xs font-bold text-text-secondary uppercase tracking-wider" data-i18n="microcards.card_answer_label">Ответ</span>
-                                <span id="answerEvaluationBadge" class="hidden px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border"></span>
-                            </div>
-
-                            <div class="flex-1 flex flex-col items-center justify-center my-4 text-center">
-                                <div id="cardBackText" class="text-lg font-bold text-text-main leading-relaxed max-w-lg whitespace-pre-line"></div>
-                                <img id="cardBackImage" class="hidden mt-4 max-h-[140px] rounded-lg object-contain border border-border-subtle" alt="Back Preview">
-                                
-                                <div id="l2ComparisonZone" class="hidden w-full mt-4 p-3 bg-surface-2 rounded-xl border border-border-subtle text-left text-xs space-y-2">
-                                    <div>
-                                        <span class="text-text-secondary block" data-i18n="microcards.your_answer_label">Ваш ответ:</span>
-                                        <span id="l2UserAnswerDisplay" class="font-semibold text-text-main block"></span>
+                                </div>
+                                <div class="mc-face__body">
+                                    <div id="cardFrontText" class="mc-face__text"></div>
+                                    <img id="cardFrontImage" class="mc-face__img hidden" alt="Front Preview">
+                                    <div id="cardHintText" class="mc-hint-text hidden"></div>
+                                </div>
+                                <div class="mc-face__actions">
+                                    <div id="frontActionsL1">
+                                        <button type="button" onclick="mcApp.revealAnswerL1()" class="mc-btn mc-btn--primary mc-btn--block mc-btn--lg">
+                                            <span data-i18n="microcards.btn_show_answer">Показать ответ</span>
+                                        </button>
                                     </div>
-                                    <div>
-                                        <span class="text-text-secondary block" data-i18n="microcards.correct_answer_label">Правильный ответ:</span>
-                                        <span id="l2CorrectAnswerDisplay" class="font-semibold text-success block"></span>
+                                    <div id="frontActionsL2" class="hidden">
+                                        <form onsubmit="mcApp.submitAnswerL2(event)" class="mc-answer-form">
+                                            <input type="text" id="inputL2Answer" class="mc-answer-input" placeholder="Введите ответ..." autocomplete="off" data-i18n-placeholder="microcards.input_answer_ph" />
+                                            <button type="submit" class="mc-btn mc-btn--primary">
+                                                <span data-i18n="microcards.btn_check">Проверить</span>
+                                            </button>
+                                        </form>
                                     </div>
                                 </div>
                             </div>
-
-                            <!-- Level 1 grading -->
-                            <div id="backActionsL1" class="hidden grid grid-cols-2 gap-3" role="group" aria-label="Оцените ответ">
-                                <button type="button" onclick="mcApp.submitAnswerL1(false)"
-                                    class="px-4 py-3 rounded-xl bg-error/10 hover:bg-error/20 border border-error/20 text-error font-extrabold text-sm transition-colors">
-                                    <span data-i18n="microcards.btn_dont_know">Не знаю</span>
-                                </button>
-                                <button type="button" onclick="mcApp.submitAnswerL1(true)"
-                                    class="px-4 py-3 rounded-xl bg-success/10 hover:bg-success/20 border border-success/20 text-success font-extrabold text-sm transition-colors">
-                                    <span data-i18n="microcards.btn_know">Знаю</span>
-                                </button>
-                            </div>
-
-                            <!-- Level 2 actions -->
-                            <div id="backActionsL2" class="hidden flex items-center justify-between gap-3">
-                                <button type="button" id="btnL2Override" onclick="mcApp.overrideL2Answer()"
-                                    class="px-4 py-3 rounded-xl border border-warning/20 bg-warning/10 text-warning hover:bg-warning/20 font-bold text-xs transition-colors hidden">
-                                    <span data-i18n="microcards.btn_override">Всё равно правильно</span>
-                                </button>
-                                <button type="button" onclick="mcApp.nextCard()"
-                                    class="px-6 py-3 rounded-xl bg-primary text-primary-fg hover:bg-primary-hover font-bold text-sm transition-colors ml-auto">
-                                    <span data-i18n="microcards.btn_next">Далее</span>
-                                </button>
+                            <!-- Back -->
+                            <div class="flashcard-back">
+                                <div class="mc-face__meta">
+                                    <span class="mc-face__label" data-i18n="microcards.card_answer_label">Ответ</span>
+                                    <span id="answerEvaluationBadge" class="mc-eval-badge hidden"></span>
+                                </div>
+                                <div class="mc-face__body">
+                                    <div id="cardBackText" class="mc-face__text"></div>
+                                    <img id="cardBackImage" class="mc-face__img hidden" alt="Back Preview">
+                                    <div id="l2ComparisonZone" class="mc-compare hidden">
+                                        <div class="mc-compare__row">
+                                            <span class="mc-compare__label" data-i18n="microcards.your_answer_label">Ваш ответ:</span>
+                                            <span id="l2UserAnswerDisplay" class="mc-compare__val"></span>
+                                        </div>
+                                        <div class="mc-compare__row">
+                                            <span class="mc-compare__label" data-i18n="microcards.correct_answer_label">Правильный ответ:</span>
+                                            <span id="l2CorrectAnswerDisplay" class="mc-compare__val mc-compare__val--ok"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mc-face__actions">
+                                    <div id="backActionsL1" class="mc-grade hidden" role="group" aria-label="Оцените ответ">
+                                        <button type="button" onclick="mcApp.submitAnswerL1(false)" class="mc-grade__btn mc-grade__btn--no">
+                                            <span class="material-symbols-outlined">close</span>
+                                            <span data-i18n="microcards.btn_dont_know">Не знаю</span>
+                                        </button>
+                                        <button type="button" onclick="mcApp.submitAnswerL1(true)" class="mc-grade__btn mc-grade__btn--yes">
+                                            <span class="material-symbols-outlined">check</span>
+                                            <span data-i18n="microcards.btn_know">Знаю</span>
+                                        </button>
+                                    </div>
+                                    <div id="backActionsL2" class="hidden" style="display:flex;align-items:center;gap:0.6rem">
+                                        <button type="button" id="btnL2Override" onclick="mcApp.overrideL2Answer()" class="mc-btn mc-btn--warning hidden">
+                                            <span data-i18n="microcards.btn_override">Всё равно правильно</span>
+                                        </button>
+                                        <button type="button" onclick="mcApp.nextCard()" class="mc-btn mc-btn--primary" style="margin-left:auto">
+                                            <span data-i18n="microcards.btn_next">Далее</span>
+                                            <span class="material-symbols-outlined">arrow_forward</span>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- VIEW 4: Session Summary -->
-        <div id="viewSummary" class="page-view hidden">
-            <div class="max-w-xl mx-auto">
-                <div class="glass-card p-6 md:p-8 text-center mb-6">
-                    <span class="material-symbols-outlined text-success text-[48px] mb-3">celebration</span>
-                    <h2 class="text-xl font-black text-text-main mb-1" data-i18n="microcards.summary_v2_title">Отличная работа!</h2>
-                    <p class="text-sm text-text-secondary mb-6" data-i18n="microcards.summary_subtitle">Вы успешно завершили текущую сессию.</p>
-                    
-                    <!-- Stats Grid -->
-                    <div class="grid grid-cols-3 gap-3 mb-6">
-                        <div class="p-3 bg-surface-2 rounded-xl border border-border-subtle">
-                            <span class="text-xl font-black text-text-main" id="sumStatTotal">0</span>
-                            <p class="text-[9px] font-bold text-text-secondary uppercase tracking-wider mt-1" data-i18n="microcards.sum_stat_total">Изучено</p>
-                        </div>
-                        <div class="p-3 bg-success-lighter rounded-xl border border-success-light">
-                            <span class="text-xl font-black text-success-text" id="sumStatCorrect">0</span>
-                            <p class="text-[9px] font-bold text-text-secondary uppercase tracking-wider mt-1" data-i18n="microcards.sum_stat_correct">Верно</p>
-                        </div>
-                        <div class="p-3 bg-error-lighter rounded-xl border border-error-light">
-                            <span class="text-xl font-black text-error-text" id="sumStatErrors">0</span>
-                            <p class="text-[9px] font-bold text-text-secondary uppercase tracking-wider mt-1" data-i18n="microcards.sum_stat_errors">Ошибки</p>
-                        </div>
-                    </div>
+            <!-- ════════════ VIEW 4: SUMMARY ════════════ -->
+            <div id="viewSummary" class="page-view hidden">
+                <div class="mc-summary">
+                    <div class="mc-summary__card">
+                        <span class="mc-summary__icon"><span class="material-symbols-outlined">celebration</span></span>
+                        <h2 class="mc-summary__title" data-i18n="microcards.summary_v2_title">Отличная работа!</h2>
+                        <p class="mc-summary__sub" data-i18n="microcards.summary_subtitle">Вы успешно завершили текущую сессию.</p>
 
-                    <!-- CTA Actions -->
-                    <div class="flex flex-col sm:flex-row items-center justify-center gap-2">
-                        <button type="button" onclick="mcApp.backToDecks()"
-                            class="w-full sm:w-auto px-5 py-2.5 text-sm font-bold rounded-xl border border-border-strong text-text-main hover:bg-bg-hover transition-colors">
-                            <span data-i18n="microcards.btn_back_to_decks">Назад к колодам</span>
-                        </button>
-                        <button type="button" id="btnRetryErrors" onclick="mcApp.retrySessionErrors()"
-                            class="w-full sm:w-auto px-5 py-2.5 text-sm font-bold rounded-xl bg-warning text-warning-fg hover:bg-warning-hover transition-colors flex items-center justify-center gap-1.5">
-                            <span class="material-symbols-outlined text-[16px]">replay</span>
-                            <span data-i18n="microcards.btn_retry_errors">Работа над ошибками</span>
-                        </button>
-                        <button type="button" onclick="mcApp.restartLearningSession()"
-                            class="w-full sm:w-auto px-5 py-2.5 text-sm font-bold rounded-xl bg-primary text-primary-fg hover:bg-primary-hover shadow-sm shadow-primary/20 transition-colors">
-                            <span data-i18n="microcards.btn_study_again">Учить снова</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Errors breakdown section -->
-                <div id="summaryErrorsSection" class="hidden">
-                    <h3 class="font-black text-sm text-text-main mb-3 flex items-center gap-2">
-                        <span class="material-symbols-outlined text-error text-[18px]">error</span>
-                        <span data-i18n="microcards.errors_breakdown_title">Разбор ошибок</span>
-                    </h3>
-                    <div class="space-y-3" id="summaryErrorsList">
-                        <!-- Filled by JS -->
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- VIEW 5: Deck & Cards Editor -->
-        <div id="viewEditor" class="page-view hidden">
-            <div class="flex flex-col lg:flex-row gap-6">
-                <!-- Sidebar Cards Navigator -->
-                <div class="lg:w-1/4 p-4 bg-surface-1 rounded-2xl border border-border-subtle h-fit">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="font-bold text-sm" data-i18n="microcards.editor_cards_nav_title">Карточки колоды</h3>
-                        <!-- M2 fix: p-1 (26px) → p-2.5 (44px) for minimum touch target -->
-                        <button type="button" onclick="mcApp.initNewCardForm()"
-                            class="p-2.5 rounded-lg border border-border-strong hover:bg-bg-hover text-primary transition-colors flex items-center justify-center"
-                            aria-label="Добавить карточку">
-                            <span class="material-symbols-outlined text-[18px]">add</span>
-                        </button>
-                    </div>
-                    <div class="max-h-[300px] lg:max-h-[500px] overflow-y-auto space-y-1.5 pr-1" id="editorSidebarList">
-                        <!-- Dynamically loaded -->
-                    </div>
-                </div>
-
-                <!-- Editor Form Area -->
-                <div class="flex-1 p-6 bg-surface-1 rounded-2xl border border-border-subtle">
-                    <!-- Deck Edit Form (only if selected header editing) -->
-                    <div id="editorDeckMetaForm" class="mb-6 pb-6 border-b border-border-subtle">
-                        <h3 class="font-extrabold text-base mb-4 text-text-main" data-i18n="microcards.editor_deck_params_title">Параметры колоды</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label for="editDeckName" class="block text-xs font-bold text-text-secondary uppercase mb-1.5" data-i18n="microcards.editor_deck_name_label">Название колоды</label>
-                                <input type="text" id="editDeckName" class="w-full px-4 py-2.5 rounded-xl border border-border-strong bg-surface-2 text-sm text-text-main outline-none focus:border-primary transition-colors" />
+                        <div class="mc-summary__stats">
+                            <div class="mc-sumstat mc-sumstat--total">
+                                <div class="mc-sumstat__val" id="sumStatTotal">0</div>
+                                <div class="mc-sumstat__label" data-i18n="microcards.sum_stat_total">Изучено</div>
                             </div>
-                            <div>
-                                <label for="editDeckTags" class="block text-xs font-bold text-text-secondary uppercase mb-1.5" data-i18n="microcards.editor_deck_tags_label">Теги (через запятую)</label>
-                                <input type="text" id="editDeckTags" placeholder="протоколы, сети" class="w-full px-4 py-2.5 rounded-xl border border-border-strong bg-surface-2 text-sm text-text-main outline-none focus:border-primary transition-colors" />
+                            <div class="mc-sumstat mc-sumstat--correct">
+                                <div class="mc-sumstat__val" id="sumStatCorrect">0</div>
+                                <div class="mc-sumstat__label" data-i18n="microcards.sum_stat_correct">Верно</div>
                             </div>
-                            <div class="md:col-span-2">
-                                <label for="editDeckDesc" class="block text-xs font-bold text-text-secondary uppercase mb-1.5" data-i18n="microcards.editor_deck_desc_label">Описание колоды</label>
-                                <textarea id="editDeckDesc" rows="2" class="w-full px-4 py-2.5 rounded-xl border border-border-strong bg-surface-2 text-sm text-text-main outline-none focus:border-primary transition-colors resize-none"></textarea>
+                            <div class="mc-sumstat mc-sumstat--errors">
+                                <div class="mc-sumstat__val" id="sumStatErrors">0</div>
+                                <div class="mc-sumstat__label" data-i18n="microcards.sum_stat_errors">Ошибки</div>
                             </div>
                         </div>
-                        <div class="mt-4 flex justify-end">
-                            <button type="button" onclick="mcApp.saveDeckMeta()" class="px-5 py-2 rounded-xl bg-success text-success-fg hover:bg-success-hover font-bold text-xs transition-colors">
-                                <span data-i18n="microcards.editor_save_params">Сохранить параметры</span>
+
+                        <div class="mc-summary__actions">
+                            <button type="button" onclick="mcApp.backToDecks()" class="mc-btn mc-btn--ghost mc-btn--block">
+                                <span data-i18n="microcards.btn_back_to_decks">Назад к колодам</span>
+                            </button>
+                            <button type="button" id="btnRetryErrors" onclick="mcApp.retrySessionErrors()" class="mc-btn mc-btn--warning mc-btn--block">
+                                <span class="material-symbols-outlined">replay</span>
+                                <span data-i18n="microcards.btn_retry_errors">Работа над ошибками</span>
+                            </button>
+                            <button type="button" onclick="mcApp.restartLearningSession()" class="mc-btn mc-btn--primary mc-btn--block">
+                                <span data-i18n="microcards.btn_study_again">Учить снова</span>
                             </button>
                         </div>
                     </div>
 
-                    <!-- Card Form -->
-                    <div id="editorCardFormZone">
-                        <div class="flex items-center justify-between mb-4">
-                            <h3 class="font-extrabold text-base text-text-main" id="editorCardFormTitle" data-i18n="microcards.editor_new_card_title">Новая карточка</h3>
-                            <button type="button" id="btnDeleteCard" onclick="mcApp.deleteActiveCard()" class="hidden px-3.5 py-2 rounded-xl border border-error/20 bg-error/10 hover:bg-error/20 text-error font-bold text-xs transition-colors">
-                                <span data-i18n="microcards.editor_delete_card_btn">Удалить карточку</span>
+                    <div id="summaryErrorsSection" class="hidden">
+                        <h3 class="mc-panel-title" style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.85rem">
+                            <span class="material-symbols-outlined" style="color:var(--color-error);font-size:1.1rem">error</span>
+                            <span data-i18n="microcards.errors_breakdown_title">Разбор ошибок</span>
+                        </h3>
+                        <div style="display:flex;flex-direction:column;gap:0.6rem" id="summaryErrorsList"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ════════════ VIEW 5: EDITOR ════════════ -->
+            <div id="viewEditor" class="page-view hidden">
+                <div class="mc-editor">
+                    <div class="mc-editor__sidebar">
+                        <div class="mc-editor__sidehead">
+                            <h3 class="mc-panel-title" style="font-size:0.85rem" data-i18n="microcards.editor_cards_nav_title">Карточки колоды</h3>
+                            <button type="button" onclick="mcApp.initNewCardForm()" class="mc-iconbtn" style="width:2.25rem;height:2.25rem" aria-label="Добавить карточку">
+                                <span class="material-symbols-outlined" style="font-size:1.15rem">add</span>
                             </button>
                         </div>
-                        <div class="space-y-4">
+                        <div class="mc-editor__list" id="editorSidebarList"></div>
+                    </div>
+
+                    <div class="mc-editor__main">
+                        <div id="editorDeckMetaForm" style="margin-bottom:1.5rem;padding-bottom:1.5rem;border-bottom:1px solid var(--color-border-subtle)">
+                            <h3 class="mc-panel-title" style="margin-bottom:1.1rem" data-i18n="microcards.editor_deck_params_title">Параметры колоды</h3>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label for="editCardFront" class="block text-xs font-bold text-text-secondary uppercase mb-1.5" data-i18n="microcards.editor_card_front_label">Вопрос (Лицевая сторона)</label>
-                                    <textarea id="editCardFront" rows="3" class="w-full px-4 py-2.5 rounded-xl border border-border-strong bg-surface-2 text-sm text-text-main outline-none focus:border-primary transition-colors resize-none" placeholder="Что такое OSI?"></textarea>
+                                <div class="mc-field">
+                                    <label for="editDeckName" class="mc-field__label" data-i18n="microcards.editor_deck_name_label">Название колоды</label>
+                                    <input type="text" id="editDeckName" class="mc-input" />
                                 </div>
-                                <div>
-                                    <label for="editCardBack" class="block text-xs font-bold text-text-secondary uppercase mb-1.5" data-i18n="microcards.editor_card_back_label">Ответ (Обратная сторона)</label>
-                                    <textarea id="editCardBack" rows="3" class="w-full px-4 py-2.5 rounded-xl border border-border-strong bg-surface-2 text-sm text-text-main outline-none focus:border-primary transition-colors resize-none" placeholder="Базовая эталонная модель взаимодействия открытых систем."></textarea>
+                                <div class="mc-field">
+                                    <label for="editDeckTags" class="mc-field__label" data-i18n="microcards.editor_deck_tags_label">Теги (через запятую)</label>
+                                    <input type="text" id="editDeckTags" class="mc-input" placeholder="протоколы, сети" />
+                                </div>
+                                <div class="mc-field md:col-span-2">
+                                    <label for="editDeckDesc" class="mc-field__label" data-i18n="microcards.editor_deck_desc_label">Описание колоды</label>
+                                    <textarea id="editDeckDesc" rows="2" class="mc-textarea"></textarea>
                                 </div>
                             </div>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div class="md:col-span-2">
-                                    <label for="editCardHint" class="block text-xs font-bold text-text-secondary uppercase mb-1.5" data-i18n="microcards.editor_card_hint_label">Подсказка (Опционально)</label>
-                                    <input type="text" id="editCardHint" class="w-full px-4 py-2.5 rounded-xl border border-border-strong bg-surface-2 text-sm text-text-main outline-none focus:border-primary transition-colors" placeholder="Аббревиатура из 3 букв" />
-                                </div>
-                                <div>
-                                    <label for="editCardFrontImage" class="block text-xs font-bold text-text-secondary uppercase mb-1.5" data-i18n="microcards.editor_card_front_img_label">Ссылка на изображение к Вопросу (Опционально)</label>
-                                    <input type="url" id="editCardFrontImage" oninput="mcApp.previewEditorImage('front')" class="w-full px-4 py-2.5 rounded-xl border border-border-strong bg-surface-2 text-sm text-text-main outline-none focus:border-primary transition-colors" placeholder="https://example.com/image.jpg" />
-                                    <img id="editCardFrontImagePreview" class="hidden mt-2 max-h-[80px] rounded-lg object-contain border border-border-subtle" alt="Front preview">
-                                </div>
-                                <div>
-                                    <label for="editCardBackImage" class="block text-xs font-bold text-text-secondary uppercase mb-1.5" data-i18n="microcards.editor_card_back_img_label">Ссылка на изображение к Ответу (Опционально)</label>
-                                    <input type="url" id="editCardBackImage" oninput="mcApp.previewEditorImage('back')" class="w-full px-4 py-2.5 rounded-xl border border-border-strong bg-surface-2 text-sm text-text-main outline-none focus:border-primary transition-colors" placeholder="https://example.com/image.jpg" />
-                                    <img id="editCardBackImagePreview" class="hidden mt-2 max-h-[80px] rounded-lg object-contain border border-border-subtle" alt="Back preview">
-                                </div>
+                            <div style="margin-top:1rem;display:flex;justify-content:flex-end">
+                                <button type="button" onclick="mcApp.saveDeckMeta()" class="mc-btn mc-btn--success">
+                                    <span data-i18n="microcards.editor_save_params">Сохранить параметры</span>
+                                </button>
                             </div>
-                            
-                            <div class="pt-4 flex justify-end gap-2">
-                                <button type="button" onclick="mcApp.closeDeckEditor()" class="px-5 py-2.5 rounded-xl border border-border-strong text-text-main hover:bg-bg-hover font-bold text-xs transition-colors">
-                                    <span data-i18n="microcards.editor_close_btn">Закрыть редактор</span>
+                        </div>
+
+                        <div id="editorCardFormZone">
+                            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.1rem">
+                                <h3 class="mc-panel-title" id="editorCardFormTitle" data-i18n="microcards.editor_new_card_title">Новая карточка</h3>
+                                <button type="button" id="btnDeleteCard" onclick="mcApp.deleteActiveCard()" class="mc-btn mc-btn--ghost hidden" style="min-height:2.4rem;color:var(--color-error);border-color:color-mix(in srgb,var(--color-error) 30%,transparent)">
+                                    <span class="material-symbols-outlined" style="font-size:1rem">delete</span>
+                                    <span data-i18n="microcards.editor_delete_card_btn">Удалить карточку</span>
                                 </button>
-                                <button type="button" onclick="mcApp.saveActiveCard()" class="px-5 py-2.5 rounded-xl bg-primary text-primary-fg hover:bg-primary-hover font-bold text-xs transition-colors">
-                                    <span data-i18n="microcards.editor_save_card_btn">Сохранить карточку</span>
-                                </button>
+                            </div>
+                            <div style="display:flex;flex-direction:column;gap:1rem">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="mc-field">
+                                        <label for="editCardFront" class="mc-field__label" data-i18n="microcards.editor_card_front_label">Вопрос (Лицевая сторона)</label>
+                                        <textarea id="editCardFront" rows="3" class="mc-textarea" placeholder="Что такое OSI?"></textarea>
+                                    </div>
+                                    <div class="mc-field">
+                                        <label for="editCardBack" class="mc-field__label" data-i18n="microcards.editor_card_back_label">Ответ (Обратная сторона)</label>
+                                        <textarea id="editCardBack" rows="3" class="mc-textarea" placeholder="Базовая эталонная модель взаимодействия открытых систем."></textarea>
+                                    </div>
+                                </div>
+                                <div class="mc-field">
+                                    <label for="editCardHint" class="mc-field__label" data-i18n="microcards.editor_card_hint_label">Подсказка (Опционально)</label>
+                                    <input type="text" id="editCardHint" class="mc-input" placeholder="Аббревиатура из 3 букв" />
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="mc-field">
+                                        <label for="editCardFrontImage" class="mc-field__label" data-i18n="microcards.editor_card_front_img_label">Ссылка на изображение к Вопросу (Опционально)</label>
+                                        <input type="url" id="editCardFrontImage" oninput="mcApp.previewEditorImage('front')" class="mc-input" placeholder="https://example.com/image.jpg" />
+                                        <img id="editCardFrontImagePreview" class="mc-editimg hidden" alt="Front preview">
+                                    </div>
+                                    <div class="mc-field">
+                                        <label for="editCardBackImage" class="mc-field__label" data-i18n="microcards.editor_card_back_img_label">Ссылка на изображение к Ответу (Опционально)</label>
+                                        <input type="url" id="editCardBackImage" oninput="mcApp.previewEditorImage('back')" class="mc-input" placeholder="https://example.com/image.jpg" />
+                                        <img id="editCardBackImagePreview" class="mc-editimg hidden" alt="Back preview">
+                                    </div>
+                                </div>
+                                <div style="display:flex;justify-content:flex-end;gap:0.6rem;padding-top:0.5rem">
+                                    <button type="button" onclick="mcApp.closeDeckEditor()" class="mc-btn mc-btn--ghost">
+                                        <span data-i18n="microcards.editor_close_btn">Закрыть редактор</span>
+                                    </button>
+                                    <button type="button" onclick="mcApp.saveActiveCard()" class="mc-btn mc-btn--primary">
+                                        <span data-i18n="microcards.editor_save_card_btn">Сохранить карточку</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
 
+        </div>
     </main>
 
-    <!-- NATIVE DIALOGS -->
-    
-    <!-- Dialog: Create Deck -->
+    <!-- ════════════ DIALOGS ════════════ -->
     <dialog id="dialogCreateDeck" closedby="any" aria-labelledby="createDeckTitle">
-        <form method="dialog" class="space-y-4" onsubmit="mcApp.handleCreateDeckSubmit(event)">
-            <h3 id="createDeckTitle" class="text-lg font-black text-text-main" data-i18n="microcards.dialog_create_title">Создать колоду</h3>
-            <div>
-                <label for="createDeckName" class="block text-xs font-bold text-text-secondary uppercase mb-1.5" data-i18n="microcards.dialog_create_name_label">Название</label>
-                <input type="text" id="createDeckName" required class="w-full px-4 py-2.5 rounded-xl border border-border-strong bg-surface-2 text-sm text-text-main outline-none focus:border-primary transition-colors" />
+        <form method="dialog" style="display:flex;flex-direction:column;gap:1rem" onsubmit="mcApp.handleCreateDeckSubmit(event)">
+            <h3 id="createDeckTitle" class="mc-dialog-title" data-i18n="microcards.dialog_create_title">Создать колоду</h3>
+            <div class="mc-field">
+                <label for="createDeckName" class="mc-field__label" data-i18n="microcards.dialog_create_name_label">Название</label>
+                <input type="text" id="createDeckName" required class="mc-input" />
             </div>
-            <div>
-                <label for="createDeckDesc" class="block text-xs font-bold text-text-secondary uppercase mb-1.5" data-i18n="microcards.dialog_create_desc_label">Описание</label>
-                <textarea id="createDeckDesc" rows="2" class="w-full px-4 py-2.5 rounded-xl border border-border-strong bg-surface-2 text-sm text-text-main outline-none focus:border-primary transition-colors resize-none"></textarea>
+            <div class="mc-field">
+                <label for="createDeckDesc" class="mc-field__label" data-i18n="microcards.dialog_create_desc_label">Описание</label>
+                <textarea id="createDeckDesc" rows="2" class="mc-textarea"></textarea>
             </div>
-            <!-- H4 fix: py-2 → py-2.5 for minimum 44px touch target in dialogs -->
-            <div class="flex justify-end gap-2 pt-2">
-                <button type="button" onclick="$('dialogCreateDeck').close()" class="px-4 py-2.5 rounded-lg border border-border-strong font-bold text-xs" data-i18n="microcards.btn_cancel">Отмена</button>
-                <button type="submit" class="px-4 py-2.5 rounded-lg bg-primary text-primary-fg hover:bg-primary-hover font-bold text-xs" data-i18n="microcards.btn_create">Создать</button>
+            <div class="mc-dialog-actions">
+                <button type="button" onclick="$('dialogCreateDeck').close()" class="mc-btn mc-btn--ghost" data-i18n="microcards.btn_cancel">Отмена</button>
+                <button type="submit" class="mc-btn mc-btn--primary" data-i18n="microcards.btn_create">Создать</button>
             </div>
         </form>
     </dialog>
 
-    <!-- Dialog: Deletion Confirmation -->
     <dialog id="dialogConfirmDelete" closedby="any" aria-labelledby="deleteTitle">
-        <div class="space-y-4">
-            <h3 id="deleteTitle" class="text-lg font-black text-error" data-i18n="microcards.dialog_delete_title">Подтверждение удаления</h3>
-            <p class="text-sm text-text-secondary" id="deleteConfirmText" data-i18n="microcards.dialog_delete_text">Вы действительно хотите удалить колоду? Это действие невозможно отменить.</p>
-            <div class="flex justify-end gap-2">
-                <button type="button" onclick="$('dialogConfirmDelete').close()" class="px-4 py-2.5 rounded-lg border border-border-strong font-bold text-xs" data-i18n="microcards.btn_cancel">Отмена</button>
-                <button type="button" id="btnDeleteConfirmAction" class="px-4 py-2.5 rounded-lg bg-error text-error-fg hover:bg-error-hover font-bold text-xs" data-i18n="microcards.btn_delete">Удалить</button>
+        <div style="display:flex;flex-direction:column;gap:1rem">
+            <h3 id="deleteTitle" class="mc-dialog-title" style="color:var(--color-error)" data-i18n="microcards.dialog_delete_title">Подтверждение удаления</h3>
+            <p style="font-size:0.88rem;color:var(--color-text-secondary);line-height:1.5" id="deleteConfirmText" data-i18n="microcards.dialog_delete_text">Вы действительно хотите удалить колоду? Это действие невозможно отменить.</p>
+            <div class="mc-dialog-actions">
+                <button type="button" onclick="$('dialogConfirmDelete').close()" class="mc-btn mc-btn--ghost" data-i18n="microcards.btn_cancel">Отмена</button>
+                <button type="button" id="btnDeleteConfirmAction" class="mc-btn" style="background:var(--color-error);color:var(--color-error-fg,#fff)" data-i18n="microcards.btn_delete">Удалить</button>
             </div>
         </div>
     </dialog>
 
-    <!-- Dialog: Import Deck -->
     <dialog id="dialogImportDeck" closedby="any" aria-labelledby="importTitle">
-        <form method="dialog" class="space-y-4" onsubmit="mcApp.handleImportSubmit(event)">
-            <h3 id="importTitle" class="text-lg font-black text-text-main" data-i18n="microcards.dialog_import_title">Импортировать карточки</h3>
-            
-            <div class="space-y-3">
-                <div class="flex gap-2 justify-center border-b border-border-subtle pb-2">
-                    <button type="button" id="btnImportTabCsv" onclick="mcApp.switchImportTab('csv')" class="px-4 py-1.5 text-xs font-bold rounded-lg border bg-primary text-primary-fg">CSV</button>
-                    <button type="button" id="btnImportTabJson" onclick="mcApp.switchImportTab('json')" class="px-4 py-1.5 text-xs font-bold rounded-lg border border-border-strong">JSON</button>
-                </div>
-
-                <div id="importTabCsvZone">
-                    <label for="importCsvContent" class="block text-xs font-bold text-text-secondary uppercase mb-1.5" data-i18n="microcards.dialog_import_csv_label">Текст CSV (разделитель запятая/точка с запятой)</label>
-                    <textarea id="importCsvContent" rows="6" class="w-full px-4 py-2.5 rounded-xl border border-border-strong bg-surface-2 text-xs text-text-main outline-none focus:border-primary transition-colors resize-none font-mono" placeholder="front,back,hint&#10;&quot;Что такое RFC?&quot;,&quot;Серия технических документов&quot;,&quot;Hint&quot;"></textarea>
-                </div>
-
-                <div id="importTabJsonZone" class="hidden">
-                    <label for="importJsonContent" class="block text-xs font-bold text-text-secondary uppercase mb-1.5" data-i18n="microcards.dialog_import_json_label">Текст JSON (Schema: actra_flashcards_v1)</label>
-                    <textarea id="importJsonContent" rows="6" class="w-full px-4 py-2.5 rounded-xl border border-border-strong bg-surface-2 text-xs text-text-main outline-none focus:border-primary transition-colors resize-none font-mono" placeholder="{&#10;  &quot;cards&quot;: [&#10;    { &quot;front&quot;: &quot;Q&quot;, &quot;back&quot;: &quot;A&quot;, &quot;hint&quot;: &quot;H&quot; }&#10;  ]&#10;}"></textarea>
-                </div>
-
-                <div class="flex flex-col gap-1.5 mt-2">
-                    <label for="importFile" class="text-xs font-bold text-text-secondary uppercase" data-i18n="microcards.dialog_import_file_label">Или выберите файл</label>
-                    <input type="file" id="importFile" accept=".csv,.json" class="text-xs file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-surface-2 file:text-text-main hover:file:bg-bg-hover" />
-                </div>
+        <form method="dialog" style="display:flex;flex-direction:column;gap:1rem" onsubmit="mcApp.handleImportSubmit(event)">
+            <h3 id="importTitle" class="mc-dialog-title" data-i18n="microcards.dialog_import_title">Импортировать карточки</h3>
+            <div style="display:flex;gap:0.5rem;justify-content:center;border-bottom:1px solid var(--color-border-subtle);padding-bottom:0.85rem">
+                <button type="button" id="btnImportTabCsv" onclick="mcApp.switchImportTab('csv')" class="mc-tabbtn is-active">CSV</button>
+                <button type="button" id="btnImportTabJson" onclick="mcApp.switchImportTab('json')" class="mc-tabbtn">JSON</button>
             </div>
-
-            <div class="flex justify-end gap-2 pt-2">
-                <button type="button" onclick="$('dialogImportDeck').close()" class="px-4 py-2.5 rounded-lg border border-border-strong font-bold text-xs" data-i18n="microcards.btn_cancel">Отмена</button>
-                <button type="submit" class="px-4 py-2.5 rounded-lg bg-primary text-primary-fg hover:bg-primary-hover font-bold text-xs" data-i18n="microcards.btn_import_action">Импорт</button>
+            <div id="importTabCsvZone" class="mc-field">
+                <label for="importCsvContent" class="mc-field__label" data-i18n="microcards.dialog_import_csv_label">Текст CSV (разделитель запятая/точка с запятой)</label>
+                <textarea id="importCsvContent" rows="6" class="mc-textarea" style="font-family:monospace;font-size:0.78rem" placeholder="front,back,hint&#10;&quot;Что такое RFC?&quot;,&quot;Серия технических документов&quot;,&quot;Hint&quot;"></textarea>
+            </div>
+            <div id="importTabJsonZone" class="mc-field hidden">
+                <label for="importJsonContent" class="mc-field__label" data-i18n="microcards.dialog_import_json_label">Текст JSON (Schema: actra_flashcards_v1)</label>
+                <textarea id="importJsonContent" rows="6" class="mc-textarea" style="font-family:monospace;font-size:0.78rem" placeholder="{&#10;  &quot;cards&quot;: [&#10;    { &quot;front&quot;: &quot;Q&quot;, &quot;back&quot;: &quot;A&quot;, &quot;hint&quot;: &quot;H&quot; }&#10;  ]&#10;}"></textarea>
+            </div>
+            <div class="mc-field">
+                <label for="importFile" class="mc-field__label" data-i18n="microcards.dialog_import_file_label">Или выберите файл</label>
+                <input type="file" id="importFile" accept=".csv,.json" class="text-xs file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-surface-2 file:text-text-main hover:file:bg-bg-hover" />
+            </div>
+            <div class="mc-dialog-actions">
+                <button type="button" onclick="$('dialogImportDeck').close()" class="mc-btn mc-btn--ghost" data-i18n="microcards.btn_cancel">Отмена</button>
+                <button type="submit" class="mc-btn mc-btn--primary" data-i18n="microcards.btn_import_action">Импорт</button>
             </div>
         </form>
     </dialog>
 
-    <!-- Dialog: Publish Deck -->
     <dialog id="dialogPublishDeck" closedby="any" aria-labelledby="publishTitle">
-        <form method="dialog" class="space-y-4" onsubmit="mcApp.handlePublishSubmit(event)">
-            <h3 id="publishTitle" class="text-lg font-black text-text-main" data-i18n="microcards.dialog_publish_title">Публикация в Каталог</h3>
-            <p class="text-xs text-text-secondary" data-i18n="microcards.dialog_publish_hint">Публикация делает колоду доступной для импорта другими пользователями.</p>
-            <div>
-                <label for="publishVisibility" class="block text-xs font-bold text-text-secondary uppercase mb-1.5" data-i18n="microcards.dialog_publish_visibility_label">Видимость в каталоге</label>
-                <select id="publishVisibility" class="w-full px-4 py-2.5 rounded-xl border border-border-strong bg-surface-2 text-sm text-text-main outline-none focus:border-primary transition-colors">
+        <form method="dialog" style="display:flex;flex-direction:column;gap:1rem" onsubmit="mcApp.handlePublishSubmit(event)">
+            <h3 id="publishTitle" class="mc-dialog-title" data-i18n="microcards.dialog_publish_title">Публикация в Каталог</h3>
+            <p style="font-size:0.8rem;color:var(--color-text-secondary)" data-i18n="microcards.dialog_publish_hint">Публикация делает колоду доступной для импорта другими пользователями.</p>
+            <div class="mc-field">
+                <label for="publishVisibility" class="mc-field__label" data-i18n="microcards.dialog_publish_visibility_label">Видимость в каталоге</label>
+                <select id="publishVisibility" class="mc-select">
                     <option value="public" data-i18n="microcards.dialog_publish_public">Публичная (всем в каталоге)</option>
                     <option value="private" data-i18n="microcards.dialog_publish_private">Приватная (только по коду доступа)</option>
                 </select>
             </div>
-            <div class="flex justify-end gap-2 pt-2">
-                <button type="button" onclick="$('dialogPublishDeck').close()" class="px-4 py-2.5 rounded-lg border border-border-strong font-bold text-xs" data-i18n="microcards.btn_cancel">Отмена</button>
-                <button type="submit" class="px-4 py-2.5 rounded-lg bg-primary text-primary-fg hover:bg-primary-hover font-bold text-xs" data-i18n="microcards.btn_publish">Опубликовать</button>
+            <div class="mc-dialog-actions">
+                <button type="button" onclick="$('dialogPublishDeck').close()" class="mc-btn mc-btn--ghost" data-i18n="microcards.btn_cancel">Отмена</button>
+                <button type="submit" class="mc-btn mc-btn--primary" data-i18n="microcards.btn_publish">Опубликовать</button>
             </div>
         </form>
     </dialog>
 
-    <!-- Toast container -->
-    <div id="mcToastContainer" class="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none" role="status" aria-live="polite" aria-atomic="false"></div>
+    <!-- Toasts -->
+    <div id="mcToastContainer" role="status" aria-live="polite" aria-atomic="false"></div>
 
     <script src="/microcards/microcards.js"></script>
     <script src="/assets/i18n.js"></script>
@@ -692,17 +932,15 @@
     <script src="../assets/ConnectionMonitor.js"></script>
 
     <script>
-        // Setup Safari backdrop fallbacks for dialogs
+        // Safari light-dismiss fallback for dialogs without closedBy support
         document.querySelectorAll('dialog').forEach(dialog => {
             if (!('closedBy' in HTMLDialogElement.prototype)) {
                 dialog.addEventListener('click', (event) => {
                     if (event.target !== dialog) return;
                     const rect = dialog.getBoundingClientRect();
                     const isInside = (
-                        rect.top <= event.clientY &&
-                        event.clientY <= rect.top + rect.height &&
-                        rect.left <= event.clientX &&
-                        event.clientX <= rect.left + rect.width
+                        rect.top <= event.clientY && event.clientY <= rect.top + rect.height &&
+                        rect.left <= event.clientX && event.clientX <= rect.left + rect.width
                     );
                     if (!isInside) dialog.close();
                 });

@@ -1697,6 +1697,9 @@
   "metadata.threshold_placeholder": "Напр. 3",
   "microcards": {
     "page_heading": "Микрокарточки",
+    "library_subtitle": "Ваши колоды для интервального повторения",
+    "cards_count_label": "Карточек:",
+    "editor_card_untitled": "(без текста)",
     "subtitle_default": "Повторение и обучение",
     "subtitle_session": "Сессия повторения",
     "subtitle_summary": "Результаты сессии",

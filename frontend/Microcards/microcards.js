@@ -53,21 +53,25 @@
     function showToast(msg, type = 'info') {
         const container = $('mcToastContainer');
         if (!container) return;
-        const colors = {
-            success: 'border-success bg-success/10 text-success',
-            error: 'border-error bg-error/10 text-error',
-            warning: 'border-warning bg-warning/10 text-warning',
-            info: 'border-primary bg-primary/10 text-primary',
-        };
-        const tone = colors[type] || colors.info;
+        const kind = ['success', 'error', 'warning', 'info'].includes(type) ? type : 'info';
         const el = document.createElement('div');
-        el.className = `px-4 py-2.5 rounded-xl border shadow-lg text-xs font-semibold ${tone} transition-opacity duration-300`;
+        el.className = `mc-toast mc-toast--${kind}`;
         el.textContent = msg;
         container.appendChild(el);
         setTimeout(() => {
             el.style.opacity = '0';
             setTimeout(() => el.remove(), 300);
         }, 3000);
+    }
+
+    // ── Session progress (header toolbar) ──────────────────────────────────
+    function updateHeaderProgress() {
+        const total = state.sessionCards.length || 0;
+        const current = Math.min(state.sessionIndex + 1, total);
+        const textEl = $('mcHeaderProgressText');
+        const barEl = $('mcHeaderProgressBar');
+        if (textEl) textEl.textContent = total > 0 ? `${current}/${total}` : '0/0';
+        if (barEl) barEl.style.width = total > 0 ? `${(state.sessionIndex / total) * 100}%` : '0%';
     }
 
     // ── Navigation & View Switching ────────────────────────────────────────
@@ -106,12 +110,10 @@
         // Show/hide progress tracker in header
         const headerProgress = $('mcHeaderProgress');
         if (viewName === 'session') {
-            headerProgress.classList.remove('hidden');
-            headerProgress.classList.add('flex');
+            headerProgress.style.display = 'inline-flex';
             updateHeaderProgress();
         } else {
-            headerProgress.classList.add('hidden');
-            headerProgress.classList.remove('flex');
+            headerProgress.style.display = 'none';
         }
 
         // Dropdowns clean up
@@ -187,23 +189,32 @@
 
         filtered.forEach(deck => {
             const card = document.createElement('div');
-            card.className = 'glass-card p-5 flex flex-col justify-between cursor-pointer';
+            card.className = 'mc-deck-card';
             card.onclick = () => openDeckDetails(deck.id);
 
-            const tagsHtml = (deck.tags || []).map(t => `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold border border-border-subtle bg-surface-2 text-text-secondary">${escHtml(t)}</span>`).join('');
-            
+            const tagsHtml = (deck.tags || []).slice(0, 4).map(tag => `<span class="mc-tag">${escHtml(tag)}</span>`).join('');
+
+            // Mastery: share of cards at level 2
+            const total = deck.card_count || 0;
+            const mastered = deck.level2_count || 0;
+            const masteryPct = total > 0 ? Math.round((mastered / total) * 100) : 0;
+
+            const duePill = deck.due_count > 0
+                ? `<span class="mc-pill mc-pill--due">${t('microcards.badge_due', '{n} к повтору').replace('{n}', deck.due_count)}</span>` : '';
+            const newPill = deck.new_count > 0
+                ? `<span class="mc-pill mc-pill--new">${t('microcards.badge_new_cards', '{n} новых').replace('{n}', deck.new_count)}</span>` : '';
+
             card.innerHTML = `
-                <div>
-                    <h3 class="font-extrabold text-base text-text-main mb-1 line-clamp-1">${escHtml(deck.name)}</h3>
-                    <p class="text-xs text-text-secondary mb-4 line-clamp-2">${escHtml(deck.description || t('microcards.no_description', 'Описание отсутствует.'))}</p>
-                    <div class="flex flex-wrap gap-1 mb-4">${tagsHtml}</div>
+                <div class="mc-deck-card__top">
+                    <span class="mc-deck-card__medallion"><span class="material-symbols-outlined">style</span></span>
+                    <h3 class="mc-deck-card__title">${escHtml(deck.name)}</h3>
                 </div>
-                <div class="flex items-center justify-between pt-3 border-t border-border-subtle">
-                    <span class="text-xs text-text-secondary">Карточек: <strong class="text-text-main">${deck.card_count}</strong></span>
-                    <div class="flex gap-2">
-                        ${deck.due_count > 0 ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-error/10 border border-error/20 text-error">${t('microcards.badge_due', '{n} к повтору').replace('{n}', deck.due_count)}</span>` : ''}
-                        ${deck.new_count > 0 ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-info/10 border border-info/20 text-info">${t('microcards.badge_new_cards', '{n} новых').replace('{n}', deck.new_count)}</span>` : ''}
-                    </div>
+                <p class="mc-deck-card__desc">${escHtml(deck.description || t('microcards.no_description', 'Описание отсутствует.'))}</p>
+                ${tagsHtml ? `<div class="mc-deck-card__tags">${tagsHtml}</div>` : ''}
+                <div class="mc-deck-card__progress"><span style="width:${masteryPct}%"></span></div>
+                <div class="mc-deck-card__foot">
+                    <span class="mc-deck-card__count">${t('microcards.cards_count_label', 'Карточек:')} <strong>${total}</strong></span>
+                    <div style="display:flex;gap:0.35rem;flex-wrap:wrap;justify-content:flex-end">${duePill}${newPill}</div>
                 </div>
             `;
             grid.appendChild(card);
@@ -255,7 +266,7 @@
             tagsZone.innerHTML = '';
             (state.activeDeck.tags || []).forEach(t => {
                 const badge = document.createElement('span');
-                badge.className = 'px-2.5 py-0.5 rounded-full text-xs font-bold border border-border-subtle bg-surface-2 text-text-secondary';
+                badge.className = 'mc-tag';
                 badge.textContent = t;
                 tagsZone.appendChild(badge);
             });
@@ -293,26 +304,26 @@
         container.innerHTML = '';
 
         if (state.cards.length === 0) {
-            container.innerHTML = `<div class="py-8 text-center text-xs text-text-secondary border border-dashed border-border-strong rounded-xl">${t('microcards.no_cards_yet', 'В колоде пока нет карточек.')}</div>`;
+            container.innerHTML = `<div style="padding:2rem;text-align:center;font-size:0.8rem;color:var(--color-text-secondary);border:1px dashed var(--color-border-strong);border-radius:var(--mc-radius-sm)">${t('microcards.no_cards_yet', 'В колоде пока нет карточек.')}</div>`;
             return;
         }
 
         state.cards.forEach(card => {
             const item = document.createElement('div');
-            item.className = 'p-4 bg-surface-1 rounded-xl border border-border-subtle flex flex-col md:flex-row md:items-center justify-between gap-3';
-            
-            const hintHtml = card.hint ? `<p class="text-xs italic text-text-muted mt-1">${t('microcards.hint_label', 'Подсказка')}: ${escHtml(card.hint)}</p>` : '';
-            
+            item.className = 'mc-cardrow';
+
+            const hintHtml = card.hint ? `<p class="mc-cardrow__hint">${t('microcards.hint_label', 'Подсказка')}: ${escHtml(card.hint)}</p>` : '';
+
             item.innerHTML = `
-                <div class="flex-1">
-                    <p class="text-sm font-extrabold text-text-main">${escHtml(card.front.text)}</p>
-                    <p class="text-xs text-text-secondary mt-1">${escHtml(card.back.text)}</p>
+                <div style="min-width:0;flex:1">
+                    <p class="mc-cardrow__front">${escHtml(card.front.text)}</p>
+                    <p class="mc-cardrow__back">${escHtml(card.back.text)}</p>
                     ${hintHtml}
                 </div>
-                <div class="flex items-center gap-2">
-                    <span class="px-2 py-0.5 rounded-md text-[10px] font-bold border border-border-subtle bg-surface-2 text-text-secondary">${t('microcards.level_badge', 'Уровень {n}').replace('{n}', card.level || 1)}</span>
-                    <button type="button" onclick="mcApp.openCardEditor('${card.id}')" class="p-2.5 rounded-lg border border-border-strong hover:bg-bg-hover text-text-secondary hover:text-primary transition-colors flex items-center justify-center">
-                        <span class="material-symbols-outlined text-[16px]">edit</span>
+                <div style="display:flex;align-items:center;gap:0.6rem;flex-shrink:0">
+                    <span class="mc-level-chip">${t('microcards.level_badge', 'Уровень {n}').replace('{n}', card.level || 1)}</span>
+                    <button type="button" onclick="mcApp.openCardEditor('${card.id}')" class="mc-iconbtn" style="width:2.4rem;height:2.4rem" aria-label="Редактировать">
+                        <span class="material-symbols-outlined" style="font-size:1.05rem">edit</span>
                     </button>
                 </div>
             `;
@@ -433,7 +444,11 @@
         const level = card.level || 1;
         const levelInd = $('sessionLevelIndicator');
         levelInd.textContent = level === 1 ? t('microcards.level1_indicator', 'Уровень 1: Знаю / Не знаю') : t('microcards.level2_indicator', 'Уровень 2: Открытый ответ');
-        levelInd.className = `px-3 py-1 rounded-full text-xs font-bold border ${level === 1 ? 'bg-warning/10 border-warning/30 text-warning' : 'bg-success/10 border-success/30 text-success'}`;
+        levelInd.className = 'mc-level-indicator';
+        const accent = level === 1 ? 'var(--color-warning)' : 'var(--color-success)';
+        levelInd.style.background = `color-mix(in srgb, ${accent} 12%, transparent)`;
+        levelInd.style.borderColor = `color-mix(in srgb, ${accent} 30%, transparent)`;
+        levelInd.style.color = accent;
 
         // Reset UI actions
         if (level === 1) {
@@ -530,12 +545,14 @@
             badge.classList.remove('hidden');
             if (isCorrect) {
                 badge.textContent = t('microcards.badge_correct', 'Верно');
-                badge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border bg-success/15 border-success text-success';
+                badge.className = 'mc-eval-badge';
+                badge.style.cssText = 'background:color-mix(in srgb,var(--color-success) 15%,transparent);border-color:var(--color-success);color:var(--color-success)';
                 state.sessionStats.correct++;
                 $('btnL2Override').classList.add('hidden');
             } else {
                 badge.textContent = t('microcards.badge_error', 'Ошибка');
-                badge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border bg-error/15 border-error text-error';
+                badge.className = 'mc-eval-badge';
+                badge.style.cssText = 'background:color-mix(in srgb,var(--color-error) 15%,transparent);border-color:var(--color-error);color:var(--color-error)';
                 state.sessionStats.errors++;
                 if (!state.sessionErrors.includes(card.id)) {
                     state.sessionErrors.push(card.id);
@@ -578,7 +595,8 @@
             // Update UI
             const badge = $('answerEvaluationBadge');
             badge.textContent = t('microcards.badge_overridden', 'Исправлено');
-            badge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border bg-warning/15 border-warning text-warning';
+            badge.className = 'mc-eval-badge';
+            badge.style.cssText = 'background:color-mix(in srgb,var(--color-warning) 15%,transparent);border-color:var(--color-warning);color:var(--color-warning)';
             $('btnL2Override').classList.add('hidden');
 
         } catch (err) {
@@ -624,10 +642,10 @@
                 const card = state.cards.find(c => c.id === cardId);
                 if (card) {
                     const row = document.createElement('div');
-                    row.className = 'p-3 bg-surface-1 rounded-xl border border-border-subtle text-left';
+                    row.className = 'mc-errrow';
                     row.innerHTML = `
-                        <p class="text-xs font-extrabold text-text-main">${escHtml(card.front.text)}</p>
-                        <p class="text-xs text-success font-semibold mt-1">${escHtml(card.back.text)}</p>
+                        <p class="mc-errrow__q">${escHtml(card.front.text)}</p>
+                        <p class="mc-errrow__a">${escHtml(card.back.text)}</p>
                     `;
                     errorsList.appendChild(row);
                 }
@@ -650,6 +668,14 @@
         startLearningSession(true);
     }
 
+    function restartLearningSession() {
+        startLearningSession(false);
+    }
+
+    function backToDecks() {
+        loadLibraryData();
+    }
+
     // ── Deck & Cards Editor ───────────────────────────────────────────────
     function openDeckEditor() {
         switchView('editor');
@@ -670,14 +696,14 @@
         // Add Deck Metadata Button
         const metaBtn = document.createElement('button');
         metaBtn.type = 'button';
-        metaBtn.className = 'w-full text-left px-3 py-2 text-xs font-bold rounded-lg border border-border-strong hover:bg-bg-hover flex items-center gap-1.5 transition-colors mb-2';
+        metaBtn.className = 'mc-side-item mc-side-item--meta';
         metaBtn.onclick = () => selectEditorTarget('deck');
-        metaBtn.innerHTML = '<span class="material-symbols-outlined text-[14px]">settings</span><span>Параметры колоды</span>';
+        metaBtn.innerHTML = `<span class="material-symbols-outlined">settings</span><span>${t('microcards.editor_deck_params_title', 'Параметры колоды')}</span>`;
         container.appendChild(metaBtn);
 
         if (state.cards.length === 0) {
             const emptyLabel = document.createElement('div');
-            emptyLabel.className = 'text-center py-4 text-[10px] text-text-secondary';
+            emptyLabel.style.cssText = 'text-align:center;padding:1rem;font-size:0.7rem;color:var(--color-text-secondary)';
             emptyLabel.textContent = t('microcards.editor_no_cards', 'Нет карточек');
             container.appendChild(emptyLabel);
             return;
@@ -686,8 +712,8 @@
         state.cards.forEach(card => {
             const btn = document.createElement('button');
             btn.type = 'button';
-            btn.className = 'w-full text-left px-3 py-2 text-xs rounded-lg border border-border-subtle hover:bg-bg-hover line-clamp-1 transition-colors';
-            btn.textContent = card.front.text || '(без текста)';
+            btn.className = 'mc-side-item';
+            btn.textContent = card.front.text || t('microcards.editor_card_untitled', '(без текста)');
             btn.onclick = () => selectEditorTarget('card', card.id);
             container.appendChild(btn);
         });
@@ -854,13 +880,13 @@
         const zoneJson = $('importTabJsonZone');
 
         if (format === 'csv') {
-            btnCsv.className = 'px-4 py-1.5 text-xs font-bold rounded-lg border bg-primary text-primary-fg';
-            btnJson.className = 'px-4 py-1.5 text-xs font-bold rounded-lg border border-border-strong';
+            btnCsv.classList.add('is-active');
+            btnJson.classList.remove('is-active');
             zoneCsv.classList.remove('hidden');
             zoneJson.classList.add('hidden');
         } else {
-            btnCsv.className = 'px-4 py-1.5 text-xs font-bold rounded-lg border border-border-strong';
-            btnJson.className = 'px-4 py-1.5 text-xs font-bold rounded-lg border bg-primary text-primary-fg';
+            btnCsv.classList.remove('is-active');
+            btnJson.classList.add('is-active');
             zoneCsv.classList.add('hidden');
             zoneJson.classList.remove('hidden');
         }
@@ -972,6 +998,8 @@
         overrideL2Answer,
         nextCard,
         retrySessionErrors,
+        restartLearningSession,
+        backToDecks,
         openDeckEditor,
         saveDeckMeta,
         saveActiveCard,
