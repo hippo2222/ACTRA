@@ -130,41 +130,6 @@ def test_session_flows_and_progression():
     assert res5["card_state"]["level"] == 1
     assert res5["card_state"]["consecutive_correct"] == 1
 
-
-def test_cross_user_deck_isolation():
-    """Decks live in a global store but must be scoped to their owner.
-    Regression for the IDOR / cross-user leak: a second user sharing the same
-    data_dir must not see, read, mutate or delete the first user's decks."""
-    shared_dir = tempfile.mkdtemp()
-    alice = MicrocardsServiceV2(shared_dir, user_id="alice")
-    bob = MicrocardsServiceV2(shared_dir, user_id="bob")
-
-    deck = alice.create_deck(name="Alice Private")
-    did = deck["id"]
-    alice.create_card(did, front_text="q", back_text="a")
-
-    # Bob cannot see or reach Alice's deck
-    assert bob.list_decks() == []
-    assert bob.get_deck(did) is None
-    assert bob.delete_deck(did) is False
-
-    for fn in (
-        lambda: bob.update_deck(did, name="hacked"),
-        lambda: bob.list_cards(did),
-        lambda: bob.create_card(did, front_text="x", back_text="y"),
-    ):
-        try:
-            fn()
-            raise AssertionError("expected LookupError for non-owner access")
-        except LookupError:
-            pass
-
-    # Alice retains full, untouched access
-    assert [d["name"] for d in alice.list_decks()] == ["Alice Private"]
-    assert alice.get_deck(did)["name"] == "Alice Private"
-    assert alice.delete_deck(did) is True
-
-
 def test_import_export():
     tmp = tempfile.mkdtemp()
     svc = MicrocardsServiceV2(tmp, user_id="test_user")
@@ -372,3 +337,181 @@ def test_import_quizlet_multiline():
     assert len(auto_cards) == 2
     assert auto_cards[0]["front"]["text"] == "Никотиновая к-та"
     assert auto_cards[0]["back"]["text"] == "Ниацин\nПролонг форма - Эндурацин"
+
+
+def test_analyze_import_preview():
+    tmp = tempfile.mkdtemp()
+    svc = MicrocardsServiceV2(tmp, user_id="test_user")
+    deck = svc.create_deck(name="Analyze Deck")
+    svc.create_card(deck["id"], front_text="Existing", back_text="Card")
+
+    content = "Existing - dup\nFresh - new\nBrokenLineNoSeparator\n"
+    result = svc.analyze_import(deck["id"], "txt_simplified", content)
+    counts = result["counts"]
+    assert counts["total"] == 3
+    assert counts["ok"] == 1
+    assert counts["duplicates"] == 1
+    assert counts["errors"] == 1
+    # No cards were written by a dry-run.
+    assert len(svc.list_cards(deck["id"])) == 1
+
+
+def test_analytics_aggregation():
+    tmp = tempfile.mkdtemp()
+    svc = MicrocardsServiceV2(tmp, user_id="test_user")
+    deck = svc.create_deck(name="Analytics Deck")
+    for i in range(3):
+        svc.create_card(deck["id"], front_text=f"Q{i}", back_text=f"A{i}")
+
+    # Empty history → panel-empty shape.
+    empty = svc.get_analytics()
+    assert empty["total_reviews"] == 0
+    assert empty["streak"] == 0
+    assert len(empty["heatmap"]) == 84
+    assert len(empty["forecast"]) == 7
+
+    # Generate some review events.
+    session = svc.start_session(deck["id"])
+    for cid in session["card_queue"]:
+        svc.submit_answer(session["id"], cid, "know")
+
+    data = svc.get_analytics()
+    assert data["total_reviews"] == 3
+    assert data["reviews_today"] == 3
+    assert data["streak"] == 1
+    assert data["retention"] == 100.0
+    assert any(d["deck_id"] == deck["id"] for d in data["deck_mastery"])
+
+
+def test_list_cards_with_state_buckets():
+    tmp = tempfile.mkdtemp()
+    svc = MicrocardsServiceV2(tmp, user_id="test_user")
+    deck = svc.create_deck(name="Progress Deck")
+    for i in range(3):
+        svc.create_card(deck["id"], front_text=f"Q{i}", back_text=f"A{i}")
+
+    # Fresh deck: every card is "new".
+    cards = svc.list_cards_with_state(deck["id"])
+    assert all(c["is_new"] and c["progress"] == "new" for c in cards)
+
+    # Study one card once → it becomes "learning" (has state, level 1).
+    session = svc.start_session(deck["id"], restart=True)
+    first = session["card_queue"][0]
+    svc.submit_answer(session["id"], first, "know")
+
+    cards = {c["id"]: c for c in svc.list_cards_with_state(deck["id"])}
+    assert cards[first]["progress"] == "learning"
+    assert cards[first]["is_new"] is False
+    others = [c for cid, c in cards.items() if cid != first]
+    assert all(c["progress"] == "new" for c in others)
+
+
+def test_analytics_ignores_orphaned_states():
+    tmp = tempfile.mkdtemp()
+    svc = MicrocardsServiceV2(tmp, user_id="test_user")
+    deck = svc.create_deck(name="Temp Deck")
+    for i in range(2):
+        svc.create_card(deck["id"], front_text=f"Q{i}", back_text=f"A{i}")
+
+    # Study both cards (creates states + events), then delete the deck.
+    session = svc.start_session(deck["id"], restart=True)
+    for cid in session["card_queue"]:
+        svc.submit_answer(session["id"], cid, "know")
+    svc.delete_deck(deck["id"])
+
+    # A fresh deck with untouched cards must show zero overdue / reviews —
+    # the deleted deck's leftover states must not leak into analytics.
+    deck2 = svc.create_deck(name="Fresh Deck")
+    svc.create_card(deck2["id"], front_text="New", back_text="Card")
+
+    data = svc.get_analytics()
+    assert data["overdue"] == 0
+    assert data["total_reviews"] == 0
+    assert data["streak"] == 0
+
+
+def test_settings_clamp_and_persist():
+    tmp = tempfile.mkdtemp()
+    svc = MicrocardsServiceV2(tmp, user_id="test_user")
+    assert svc.get_settings()["session_size"] == 20
+
+    svc.update_settings({"session_size": 999, "new_per_session": -5,
+                         "default_direction": "bogus"})
+    s = svc.get_settings()
+    assert s["session_size"] == 100          # clamped to max
+    assert s["new_per_session"] == 0         # clamped to min
+    assert "fuzzy_threshold" not in s        # not a user-facing setting
+    assert s["default_direction"] == "front_back"  # invalid → default
+
+    svc.update_settings({"session_size": 7, "default_direction": "back_front"})
+    s2 = svc.get_settings()
+    assert s2["session_size"] == 7
+    assert s2["default_direction"] == "back_front"
+
+
+def test_session_size_setting():
+    tmp = tempfile.mkdtemp()
+    svc = MicrocardsServiceV2(tmp, user_id="test_user")
+    deck = svc.create_deck(name="Sized Deck")
+    for i in range(10):
+        svc.create_card(deck["id"], front_text=f"Q{i}", back_text=f"A{i}")
+
+    svc.update_settings({"session_size": 4})
+    session = svc.start_session(deck["id"], restart=True)
+    assert len(session["card_queue"]) == 4
+
+
+def test_fuzzy_and_acceptable_answers():
+    tmp = tempfile.mkdtemp()
+    svc = MicrocardsServiceV2(tmp, user_id="test_user")
+
+    # Token-set tolerance: word order should not matter.
+    assert svc.verify_fuzzy_match("blue light", "light blue") is True
+    # Acceptable alternatives.
+    assert svc.verify_answer_against_card("H2O", "water", ["H2O", "aqua"]) is True
+    assert svc.verify_answer_against_card("fire", "water", ["H2O"]) is False
+
+
+def test_reverse_direction_session():
+    tmp = tempfile.mkdtemp()
+    svc = MicrocardsServiceV2(tmp, user_id="test_user")
+    deck = svc.create_deck(name="Reverse Deck")
+    card = svc.create_card(deck["id"], front_text="apple", back_text="яблоко")
+    svc.create_card(deck["id"], front_text="dog", back_text="собака")  # keeps session open
+
+    session = svc.start_session(deck["id"], restart=True, direction="back_front")
+    assert session["card_directions"][card["id"]] == "back_front"
+
+    # Promote to level 2 (three correct level-1 answers).
+    for _ in range(3):
+        svc.submit_answer(session["id"], card["id"], "know")
+
+    # In reverse mode the expected answer is the FRONT text.
+    res = svc.submit_answer(session["id"], card["id"], "apple")
+    assert res["is_correct"] is True
+    assert res["expected_answer"] == "apple"
+    assert res["direction"] == "back_front"
+
+
+def test_cross_user_deck_isolation():
+    """Decks live in a global store but must be scoped to their owner (IDOR regression)."""
+    shared_dir = tempfile.mkdtemp()
+    alice = MicrocardsServiceV2(shared_dir, user_id="alice")
+    bob = MicrocardsServiceV2(shared_dir, user_id="bob")
+    deck = alice.create_deck(name="Alice Private")
+    did = deck["id"]
+    alice.create_card(did, front_text="q", back_text="a")
+    assert bob.list_decks() == []
+    assert bob.get_deck(did) is None
+    assert bob.delete_deck(did) is False
+    for fn in (
+        lambda: bob.update_deck(did, name="hacked"),
+        lambda: bob.list_cards(did),
+        lambda: bob.create_card(did, front_text="x", back_text="y"),
+    ):
+        try:
+            fn(); raise AssertionError("expected LookupError for non-owner access")
+        except LookupError:
+            pass
+    assert [d["name"] for d in alice.list_decks()] == ["Alice Private"]
+    assert alice.delete_deck(did) is True

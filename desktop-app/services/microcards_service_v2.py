@@ -55,6 +55,28 @@ def _s(value: Any, default: str = "") -> str:
     return str(value if value is not None else default).strip()
 
 
+def _clean_answer_list(values: Any) -> List[str]:
+    """Normalize an optional list of acceptable answers: trim, drop empties/dupes."""
+    if not values:
+        return []
+    if isinstance(values, str):
+        values = [values]
+    result: List[str] = []
+    seen = set()
+    for v in values:
+        text = _s(v)
+        key = " ".join(text.lower().split())
+        if text and key not in seen:
+            seen.add(key)
+            result.append(text)
+    return result
+
+
+def _normalize_key(text: Any) -> str:
+    """Lowercased, whitespace-collapsed key used for dedup comparisons."""
+    return " ".join(_s(text).lower().split())
+
+
 def _is_hosted_runtime() -> bool:
     return str(os.environ.get("ACTRA_RUNTIME_MODE") or "").strip().lower() == "hosted_web"
 
@@ -68,29 +90,18 @@ def _resolve_microcards_user_id(user_id: Optional[str], *, legacy_default: str =
     return _s(legacy_default, "default_user") or "default_user"
 
 
-def _clean_answer_list(values):
-    """Normalize an optional list of acceptable answers: trim, drop empties/dupes."""
-    if not values:
-        return []
-    if isinstance(values, str):
-        values = [values]
-    result = []
-    seen = set()
-    for v in values:
-        text = _s(v)
-        key = " ".join(text.lower().split())
-        if text and key not in seen:
-            seen.add(key)
-            result.append(text)
-    return result
-
-
-def _normalize_key(text):
-    """Lowercased, whitespace-collapsed key used for dedup comparisons."""
-    return " ".join(_s(text).lower().split())
-
-
 class MicrocardsServiceV2:
+    DEFAULT_SETTINGS = {
+        "session_size": 20,
+        "new_per_session": 20,
+        "default_direction": "front_back",  # front_back | back_front | mixed
+    }
+    DIRECTIONS = ("front_back", "back_front", "mixed")
+    # Fixed, typo-tolerant answer-matching threshold. Not user-configurable on purpose:
+    # typos should pass by default, and genuinely borderline answers are resolved by the
+    # learner via the "count as correct" (override) action during review.
+    FUZZY_THRESHOLD = 0.82
+
     def __init__(self, data_dir: str, user_id: Optional[str] = None) -> None:
         self.data_dir = Path(data_dir)
         self.user_id = _resolve_microcards_user_id(user_id)
@@ -120,6 +131,39 @@ class MicrocardsServiceV2:
     @property
     def _states_path(self) -> Path:
         return self._user_root / "review_states.json"
+
+    @property
+    def _settings_path(self) -> Path:
+        return self._user_root / "settings.json"
+
+    def get_settings(self) -> Dict[str, Any]:
+        """User study settings with defaults applied and values clamped to safe ranges."""
+        raw = _read_json(self._settings_path, {})
+        s = dict(self.DEFAULT_SETTINGS)
+        if isinstance(raw, dict):
+            for k in s:
+                if raw.get(k) is not None:
+                    s[k] = raw[k]
+        try:
+            s["session_size"] = max(1, min(int(s["session_size"]), 100))
+        except Exception:
+            s["session_size"] = self.DEFAULT_SETTINGS["session_size"]
+        try:
+            s["new_per_session"] = max(0, min(int(s["new_per_session"]), 100))
+        except Exception:
+            s["new_per_session"] = self.DEFAULT_SETTINGS["new_per_session"]
+        if s["default_direction"] not in self.DIRECTIONS:
+            s["default_direction"] = self.DEFAULT_SETTINGS["default_direction"]
+        return s
+
+    def update_settings(self, patch: Dict[str, Any]) -> Dict[str, Any]:
+        s = self.get_settings()
+        if isinstance(patch, dict):
+            for k in self.DEFAULT_SETTINGS:
+                if patch.get(k) is not None:
+                    s[k] = patch[k]
+        _write_json(self._settings_path, s)
+        return self.get_settings()
 
     @property
     def _events_path(self) -> Path:
@@ -221,8 +265,8 @@ class MicrocardsServiceV2:
         if not isinstance(deck, dict):
             return None
         # Ownership guard: prevents cross-user read/update/delete (IDOR).
-        # All mutations route through get_deck, so this single check scopes
-        # details, cards CRUD, sessions, import/export and publish to the owner.
+        # All mutations route through get_deck, so this scopes details, cards
+        # CRUD, sessions, import/export and publish to the owner.
         if not self._owns_deck(deck):
             return None
         return deck
@@ -309,8 +353,7 @@ class MicrocardsServiceV2:
         return deck
 
     def delete_deck(self, deck_id: str) -> bool:
-        # Ownership guard: get_deck returns None for decks the user doesn't own,
-        # so a non-owner gets False (-> 404) instead of deleting someone else's deck.
+        # Ownership guard: get_deck returns None for decks the user doesn't own.
         if not self.get_deck(deck_id):
             return False
         path = self._deck_path(deck_id)
@@ -327,11 +370,41 @@ class MicrocardsServiceV2:
             raise LookupError("deck_not_found")
         return deck.get("cards", [])
 
+    def list_cards_with_state(self, deck_id: str) -> List[Dict[str, Any]]:
+        """Cards augmented with real review state so the UI can show honest progress.
+
+        Adds per card: is_new (never studied), level (1/2), due_at, and a coarse
+        `progress` bucket: 'new' | 'learning' | 'mastered'.
+        """
+        deck = self.get_deck(deck_id)
+        if not deck:
+            raise LookupError("deck_not_found")
+        states = self._read_states()
+        out: List[Dict[str, Any]] = []
+        for card in deck.get("cards", []):
+            st = states.get(card.get("id"), {})
+            stability = st.get("stability", 0.0) or 0.0
+            level = int(st.get("level", 1) or 1)
+            is_new = (not st) or stability <= 0
+            if is_new:
+                bucket = "new"
+            elif level >= 2:
+                bucket = "mastered"
+            else:
+                bucket = "learning"
+            enriched = dict(card)
+            enriched["is_new"] = is_new
+            enriched["level"] = level if not is_new else 0
+            enriched["due_at"] = st.get("due_at")
+            enriched["progress"] = bucket
+            out.append(enriched)
+        return out
+
     def create_card(self, deck_id: str, front_text: str, back_text: str, hint: Optional[str] = None, front_image_url: Optional[str] = None, back_image_url: Optional[str] = None, acceptable_answers: Optional[List[str]] = None) -> Dict[str, Any]:
         deck = self.get_deck(deck_id)
         if not deck:
             raise LookupError("deck_not_found")
-        
+
         cards = deck.get("cards", [])
         if len(cards) >= 500:
             raise ValueError("deck_card_limit_reached")
@@ -361,7 +434,7 @@ class MicrocardsServiceV2:
         _write_json(self._deck_path(deck_id), deck)
         return card
 
-    def update_card(self, deck_id: str, card_id: str, front_text: Optional[str] = None, back_text: Optional[str] = None, hint: Optional[str] = None, front_image_url: Optional[str] = None, back_image_url: Optional[str] = None, status: Optional[str] = None) -> Dict[str, Any]:
+    def update_card(self, deck_id: str, card_id: str, front_text: Optional[str] = None, back_text: Optional[str] = None, hint: Optional[str] = None, front_image_url: Optional[str] = None, back_image_url: Optional[str] = None, status: Optional[str] = None, acceptable_answers: Optional[List[str]] = None) -> Dict[str, Any]:
         deck = self.get_deck(deck_id)
         if not deck:
             raise LookupError("deck_not_found")
@@ -381,6 +454,8 @@ class MicrocardsServiceV2:
             card["back"]["image_url"] = back_image_url
         if hint is not None:
             card["hint"] = _s(hint) or None
+        if acceptable_answers is not None:
+            card["acceptable_answers"] = _clean_answer_list(acceptable_answers)
         if status is not None:
             card["status"] = _s(status)
 
@@ -430,7 +505,8 @@ class MicrocardsServiceV2:
 
     # ── Learning Sessions ─────────────────────────────────────────────
 
-    def start_session(self, deck_id: str, resume: bool = True, restart: bool = False) -> Dict[str, Any]:
+    def start_session(self, deck_id: str, resume: bool = True, restart: bool = False,
+                      direction: Optional[str] = None) -> Dict[str, Any]:
         deck = self.get_deck(deck_id)
         if not deck:
             raise LookupError("deck_not_found")
@@ -445,6 +521,12 @@ class MicrocardsServiceV2:
         if not cards:
             raise ValueError("deck_is_empty")
 
+        settings = self.get_settings()
+        size = settings["session_size"]
+        new_limit = settings["new_per_session"]
+        if direction not in self.DIRECTIONS:
+            direction = settings["default_direction"]
+
         states = self._read_states()
         now = _utc_now()
 
@@ -455,7 +537,7 @@ class MicrocardsServiceV2:
             card_id = card.get("id")
             state = states.get(card_id, {})
             stability = state.get("stability", 0.0)
-            
+
             if not state or stability <= 0:
                 new_cards.append(card_id)
             else:
@@ -463,21 +545,30 @@ class MicrocardsServiceV2:
                 if due_at and due_at <= now:
                     due_cards.append(card_id)
 
-        # Mix cards: due cards first, then new cards, up to 20 total.
-        # This keeps the sessions small and manageable.
+        # Mix cards: due cards first, then new cards (capped by the new-per-session
+        # limit), up to the configured session size.
         random.shuffle(due_cards)
         random.shuffle(new_cards)
 
         queue = []
-        queue.extend(due_cards[:20])
-        if len(queue) < 20:
-            queue.extend(new_cards[:(20 - len(queue))])
+        queue.extend(due_cards[:size])
+        if len(queue) < size:
+            remaining = size - len(queue)
+            queue.extend(new_cards[:min(new_limit, remaining)])
 
         if not queue:
             # If nothing is due or new, let user study everything
             all_ids = [c.get("id") for c in cards]
             random.shuffle(all_ids)
-            queue = all_ids[:20]
+            queue = all_ids[:size]
+
+        # Resolve a concrete direction per card (mixed → random per card).
+        card_directions = {}
+        for cid in queue:
+            if direction == "mixed":
+                card_directions[cid] = random.choice(("front_back", "back_front"))
+            else:
+                card_directions[cid] = direction
 
         session_id = f"session_{uuid.uuid4().hex[:12]}"
         session = {
@@ -485,6 +576,8 @@ class MicrocardsServiceV2:
             "deck_id": deck_id,
             "user_id": self.user_id,
             "card_queue": queue,
+            "direction": direction,
+            "card_directions": card_directions,
             "cursor": 0,
             "completed": False,
             "created_at": _utc_now_iso(),
@@ -501,7 +594,14 @@ class MicrocardsServiceV2:
         return session
 
     def submit_answer(self, session_id: str, card_id: str, user_answer: str, override: bool = False) -> Dict[str, Any]:
-        """Submit answer to a card in session. Checks correctness and schedules via FSRS."""
+        """Submit answer to a card in session. Checks correctness and schedules via FSRS.
+
+        Note: microcards intentionally use a *binary* self-grade — only Rating.GOOD
+        (correct) and Rating.AGAIN (wrong) are produced here. The Hard/Easy ratings
+        that FSRS supports are legacy for this feature and are never emitted; the
+        generic Hard/Easy branches in logic/fsrs.py stay only because they belong to
+        the standard FSRS interval math.
+        """
         session = self._get_session(session_id)
         if not session or session.get("completed"):
             raise LookupError("session_not_found_or_completed")
@@ -533,7 +633,17 @@ class MicrocardsServiceV2:
         consecutive_correct = card_state.get("consecutive_correct", 0)
         is_correct = False
         rating = Rating.AGAIN
-        
+
+        # Direction of this card in the session decides which side is the answer.
+        card_dir = (session.get("card_directions") or {}).get(card_id) or session.get("direction") or "front_back"
+        if card_dir == "back_front":
+            # Prompt = back side, the user must produce the FRONT text.
+            expected_text = card["front"]["text"]
+            acceptable = []  # acceptable_answers describe the back side only
+        else:
+            expected_text = card["back"]["text"]
+            acceptable = card.get("acceptable_answers") or []
+
         # 1. Check correctness based on Level
         if level == 1:
             # Level 1: user_answer is expected to be "know" or "dont_know"
@@ -545,9 +655,10 @@ class MicrocardsServiceV2:
                 is_correct = False
                 rating = Rating.AGAIN
         else:
-            # Level 2: user_answer is compared to back_text via fuzzy matching
-            back_text = card["back"]["text"]
-            is_correct = self.verify_fuzzy_match(user_answer, back_text) or override
+            # Level 2: open answer compared via fuzzy matching (back side + alternatives).
+            # Typo-tolerant by a fixed threshold; borderline misses are handled by override.
+            is_correct = override or self.verify_answer_against_card(
+                user_answer, expected_text, acceptable, self.FUZZY_THRESHOLD)
             rating = Rating.GOOD if is_correct else Rating.AGAIN
 
         # 2. Update level and progression
@@ -644,38 +755,167 @@ class MicrocardsServiceV2:
             "is_correct": is_correct,
             "card_state": card_state,
             "session": session,
-            "expected_answer": card["back"]["text"]
+            "expected_answer": expected_text,
+            "direction": card_dir,
         }
 
-    def verify_fuzzy_match(self, user_answer: str, target_answer: str) -> bool:
-        """Normalized comparison using difflib SequenceMatcher ratio >= 0.82."""
-        # 1. Normalize
-        def normalize(txt: str) -> str:
-            t = _s(txt).lower().strip()
-            # Remove punctuation
-            punctuation = '.,!?;:"()[]{}-\\/_#@*&^%$'
-            for char in punctuation:
-                t = t.replace(char, "")
-            # Collapse spaces
-            return " ".join(t.split())
+    @staticmethod
+    def _normalize_answer(txt: str) -> str:
+        t = _s(txt).lower().strip()
+        punctuation = '.,!?;:"()[]{}-\\/_#@*&^%$'
+        for char in punctuation:
+            t = t.replace(char, "")
+        return " ".join(t.split())
 
-        norm_user = normalize(user_answer)
-        norm_target = normalize(target_answer)
+    def verify_fuzzy_match(self, user_answer: str, target_answer: str, threshold: float = 0.82) -> bool:
+        """Fuzzy answer check: exact match, then the better of character-level and
+        word-order-independent (token-set) similarity, compared against `threshold`."""
+        norm_user = self._normalize_answer(user_answer)
+        norm_target = self._normalize_answer(target_answer)
 
         if not norm_target:
             return False
         if norm_user == norm_target:
             return True
 
-        # 2. Ratio check
-        ratio = difflib.SequenceMatcher(None, norm_user, norm_target).ratio()
-        return ratio >= 0.82
+        # Character-level ratio (typo tolerance).
+        char_ratio = difflib.SequenceMatcher(None, norm_user, norm_target).ratio()
+
+        # Token-set ratio (word-order / extra-word tolerance).
+        user_tokens = set(norm_user.split())
+        target_tokens = set(norm_target.split())
+        if user_tokens and target_tokens:
+            inter = len(user_tokens & target_tokens)
+            union = len(user_tokens | target_tokens)
+            token_ratio = inter / union if union else 0.0
+        else:
+            token_ratio = 0.0
+
+        return max(char_ratio, token_ratio) >= threshold
+
+    def verify_answer_against_card(self, user_answer: str, target_text: str,
+                                   acceptable_answers: Optional[List[str]] = None,
+                                   threshold: float = 0.82) -> bool:
+        """True if the answer fuzzy-matches the primary target or any acceptable alternative."""
+        candidates = [target_text] + list(acceptable_answers or [])
+        return any(self.verify_fuzzy_match(user_answer, c, threshold) for c in candidates if _s(c))
 
     def get_session_summary(self, session_id: str) -> Dict[str, Any]:
         session = self._get_session(session_id)
         if not session:
             raise LookupError("session_not_found")
         return session
+
+    def get_analytics(self, *, retention_days: int = 30, heatmap_days: int = 84, forecast_days: int = 7) -> Dict[str, Any]:
+        """Aggregate review history (events) and scheduler state into inline dashboard data.
+
+        Only cards that still exist count — orphaned states/events from decks or cards
+        the user has since deleted are ignored (otherwise "overdue" etc. would be inflated).
+        """
+        from collections import Counter
+
+        events = _read_json(self._events_path, [])
+        if not isinstance(events, list):
+            events = []
+        states = self._read_states()
+        now = _utc_now()
+        today = now.date()
+        retention_cutoff = now - timedelta(days=retention_days)
+
+        # Set of card ids that currently exist across the user's decks.
+        live_ids = set()
+        for summary in self.list_decks():
+            deck = self.get_deck(summary["id"])
+            for c in (deck.get("cards", []) if deck else []):
+                live_ids.add(c.get("id"))
+
+        per_day: Counter = Counter()
+        event_dates = set()
+        total_recent = 0
+        correct_recent = 0
+        for e in events:
+            if e.get("card_id") not in live_ids:
+                continue
+            dt = _parse_iso(e.get("reviewed_at"))
+            if not dt:
+                continue
+            d = dt.date()
+            event_dates.add(d)
+            per_day[d.isoformat()] += 1
+            if dt >= retention_cutoff:
+                total_recent += 1
+                if e.get("is_correct"):
+                    correct_recent += 1
+
+        retention = round(100.0 * correct_recent / total_recent, 1) if total_recent else 0.0
+
+        # Streak: consecutive days with reviews, counting today (or starting yesterday).
+        streak = 0
+        cursor = today
+        if today not in event_dates and (today - timedelta(days=1)) in event_dates:
+            cursor = today - timedelta(days=1)
+        while cursor in event_dates:
+            streak += 1
+            cursor = cursor - timedelta(days=1)
+
+        heatmap = []
+        for i in range(heatmap_days - 1, -1, -1):
+            d = (today - timedelta(days=i)).isoformat()
+            heatmap.append({"date": d, "count": per_day.get(d, 0)})
+
+        # Due forecast for the next `forecast_days` days + overdue backlog (live cards only).
+        due_counts: Counter = Counter()
+        overdue = 0
+        for card_id, st in states.items():
+            if card_id not in live_ids:
+                continue
+            due = _parse_iso(st.get("due_at"))
+            if not due:
+                continue
+            dd = due.date()
+            if dd <= today:
+                overdue += 1
+            else:
+                due_counts[dd.isoformat()] += 1
+        forecast = []
+        for i in range(1, forecast_days + 1):
+            d = (today + timedelta(days=i)).isoformat()
+            forecast.append({"date": d, "count": due_counts.get(d, 0)})
+
+        # Per-deck mastery: cards advanced to level 2 with a positive stability.
+        deck_mastery = []
+        for summary in self.list_decks():
+            deck = self.get_deck(summary["id"])
+            cards = deck.get("cards", []) if deck else []
+            mastered = 0
+            for c in cards:
+                st = states.get(c.get("id"), {})
+                if st.get("level", 1) >= 2 and st.get("stability", 0) > 0:
+                    mastered += 1
+            deck_mastery.append({
+                "deck_id": summary["id"],
+                "name": summary.get("name", ""),
+                "total": len(cards),
+                "mastered": mastered,
+            })
+
+        return {
+            "streak": streak,
+            "retention": retention,
+            "retention_window_days": retention_days,
+            "total_reviews": sum(per_day.values()),
+            "reviews_today": per_day.get(today.isoformat(), 0),
+            "overdue": overdue,
+            "heatmap": heatmap,
+            "forecast": forecast,
+            "deck_mastery": deck_mastery,
+        }
+
+    # \u2500\u2500 Import: parsing / preview / create \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+    # Each _parse_<fmt> turns raw text into a uniform list of preview items:
+    #   {front, back, hint, acceptable_answers, status: "ok"|"error", error}
+    # The same parsers feed both the live preview (analyze_import) and the
+    # actual import (_create_from_parsed), so there is a single source of truth.
 
     PARSE_FORMATS = ("csv", "json", "txt_full", "txt_simplified", "test")
 

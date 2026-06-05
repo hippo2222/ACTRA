@@ -26,9 +26,6 @@ def _check_guest():
         return jsonify({"ok": False, "error": "guest_cannot_use_microcards"}), 403
     return None
 
-# ── Decks CRUD ────────────────────────────────────────────────────────
-
-
 def _read_import_text(req):
     """Extract raw import text + optional parser options from a multipart file or JSON body."""
     if "file" in req.files:
@@ -142,7 +139,7 @@ def list_cards(deck_id: str):
         return guest_check
     try:
         svc = _get_svc()
-        cards = svc.list_cards(deck_id)
+        cards = svc.list_cards_with_state(deck_id)
         return jsonify({"ok": True, "items": cards})
     except LookupError as exc:
         return jsonify({"ok": False, "error": str(exc)}), 404
@@ -161,10 +158,11 @@ def create_card(deck_id: str):
     hint = body.get("hint")
     front_image_url = body.get("front_image_url")
     back_image_url = body.get("back_image_url")
-    
+    acceptable_answers = body.get("acceptable_answers")
+
     if not front_text or not back_text:
         return jsonify({"ok": False, "error": "front_text_and_back_text_required"}), 400
-        
+
     try:
         svc = _get_svc()
         card = svc.create_card(
@@ -173,7 +171,8 @@ def create_card(deck_id: str):
             back_text=back_text,
             hint=hint,
             front_image_url=front_image_url,
-            back_image_url=back_image_url
+            back_image_url=back_image_url,
+            acceptable_answers=acceptable_answers
         )
         return jsonify({"ok": True, "card": card})
     except LookupError as exc:
@@ -196,7 +195,8 @@ def update_card(deck_id: str, card_id: str):
     front_image_url = body.get("front_image_url")
     back_image_url = body.get("back_image_url")
     status = body.get("status")
-    
+    acceptable_answers = body.get("acceptable_answers")
+
     try:
         svc = _get_svc()
         card = svc.update_card(
@@ -207,7 +207,8 @@ def update_card(deck_id: str, card_id: str):
             hint=hint,
             front_image_url=front_image_url,
             back_image_url=back_image_url,
-            status=status
+            status=status,
+            acceptable_answers=acceptable_answers
         )
         return jsonify({"ok": True, "card": card})
     except LookupError as exc:
@@ -265,10 +266,11 @@ def start_session(deck_id: str):
     body = request.get_json(silent=True) or {}
     resume = body.get("resume", True)
     restart = body.get("restart", False)
-    
+    direction = body.get("direction")
+
     try:
         svc = _get_svc()
-        session = svc.start_session(deck_id, resume=resume, restart=restart)
+        session = svc.start_session(deck_id, resume=resume, restart=restart, direction=direction)
         return jsonify({"ok": True, "session": session})
     except LookupError as exc:
         return jsonify({"ok": False, "error": str(exc)}), 404
@@ -634,17 +636,58 @@ def import_deck_from_catalog(catalog_item_id: str):
             catalog_item_id=catalog_item_id
         )
         
-        # Import the cards from the snapshot
-        cards = svc.import_json(deck["id"], snapshot)
-        
-        return jsonify({"ok": True, "deck": deck, "added_count": len(cards)})
+        # Import the cards from the snapshot (fresh deck copy → no dedup)
+        result = svc.import_json(deck["id"], snapshot, dedup=False)
+
+        return jsonify({"ok": True, "deck": deck, "added_count": len(result["items"])})
     except ValueError as exc:
         return jsonify({"ok": False, "error": str(exc)}), 400
     except Exception as exc:
         logger.exception("[HTTP] v2/microcards/catalog import failed: %s", exc)
         return jsonify({"ok": False, "error": "catalog_import_failed"}), 500
 
+# ── Settings ──────────────────────────────────────────────────────────
+
+@microcards_v2_bp.route("/settings", methods=["GET"])
+def get_v2_settings():
+    guest_check = _check_guest()
+    if guest_check:
+        return guest_check
+    try:
+        svc = _get_svc()
+        return jsonify({"ok": True, "settings": svc.get_settings()})
+    except Exception as exc:
+        logger.exception("[HTTP] v2/microcards/settings get failed: %s", exc)
+        return jsonify({"ok": False, "error": "settings_failed"}), 500
+
+@microcards_v2_bp.route("/settings", methods=["PATCH"])
+def update_v2_settings():
+    guest_check = _check_guest()
+    if guest_check:
+        return guest_check
+    body = request.get_json(silent=True) or {}
+    try:
+        svc = _get_svc()
+        return jsonify({"ok": True, "settings": svc.update_settings(body)})
+    except Exception as exc:
+        logger.exception("[HTTP] v2/microcards/settings update failed: %s", exc)
+        return jsonify({"ok": False, "error": "settings_update_failed"}), 500
+
 # ── Summary Statistics ────────────────────────────────────────────────
+
+@microcards_v2_bp.route("/analytics", methods=["GET"])
+def get_v2_analytics():
+    guest_check = _check_guest()
+    if guest_check:
+        return guest_check
+
+    try:
+        svc = _get_svc()
+        data = svc.get_analytics()
+        return jsonify({"ok": True, **data})
+    except Exception as exc:
+        logger.exception("[HTTP] v2/microcards/analytics failed: %s", exc)
+        return jsonify({"ok": False, "error": "analytics_failed"}), 500
 
 @microcards_v2_bp.route("/summary", methods=["GET"])
 def get_v2_summary():
