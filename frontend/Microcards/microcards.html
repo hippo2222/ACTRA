@@ -194,6 +194,18 @@
             .mc-sort { width: 100%; }
             .mc-sort-btn { flex: 1 1 auto; }
         }
+
+        /* ── Tag filters + direction buttons ────────────────────────── */
+        .mc-tagfilters { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1.25rem; }
+        .mc-tag-chip { padding: 0.3rem 0.7rem; border-radius: 999px; font-size: 0.74rem; font-weight: 800;
+            border: 1px solid var(--color-border-strong); background: var(--color-surface-1); color: var(--color-text-secondary); transition: all .15s; }
+        .mc-tag-chip:hover { border-color: var(--color-primary); color: var(--color-text-main); }
+        .mc-tag-chip.is-active { background: var(--color-primary); color: var(--color-primary-fg); border-color: var(--color-primary); }
+        .mc-dir-group { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+        .mc-dir-btn { flex: 1 1 8rem; min-height: 2.5rem; padding: 0 0.7rem; border-radius: 0.7rem; font-size: 0.78rem; font-weight: 800;
+            border: 1px solid var(--color-border-strong); background: var(--color-surface-1); color: var(--color-text-secondary); transition: all .15s; }
+        .mc-dir-btn:hover { border-color: var(--color-primary); color: var(--color-text-main); }
+        .mc-dir-btn.is-active { background: var(--color-primary); color: var(--color-primary-fg); border-color: var(--color-primary); }
         @media (prefers-reduced-motion: reduce) {
             .mc-sort-btn:active { transform: none !important; }
         }
@@ -756,10 +768,15 @@
                             <span id="mcStreakText"></span>
                         </div>
                     </div>
-                    <button type="button" onclick="mcApp.openCreateDeckDialog()" class="mc-btn mc-btn--primary">
-                        <span class="material-symbols-outlined">add</span>
-                        <span data-i18n="microcards.btn_create_deck">Создать колоду</span>
-                    </button>
+                    <div style="display:flex;align-items:center;gap:0.6rem">
+                        <button type="button" onclick="mcApp.openSettingsDialog()" class="mc-iconbtn" aria-label="Настройки" data-i18n-title="microcards.settings_title" title="Настройки обучения">
+                            <span class="material-symbols-outlined">tune</span>
+                        </button>
+                        <button type="button" onclick="mcApp.openCreateDeckDialog()" class="mc-btn mc-btn--primary">
+                            <span class="material-symbols-outlined">add</span>
+                            <span data-i18n="microcards.btn_create_deck">Создать колоду</span>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="mc-stats">
@@ -799,6 +816,8 @@
                         <button type="button" class="mc-sort-btn" data-sort="cards-desc" aria-pressed="false" data-i18n="microcards.sort_cards_desc">Больше карточек</button>
                     </div>
                 </div>
+
+                <div id="libTagFilters" class="mc-tagfilters hidden" role="group" aria-label="Фильтр по тегам"></div>
 
                 <div id="decksGrid" class="mc-deck-grid"></div>
 
@@ -1144,6 +1163,10 @@
                                     <label for="editCardHint" class="mc-field__label" data-i18n="microcards.editor_card_hint_label">Подсказка (Опционально)</label>
                                     <input type="text" id="editCardHint" class="mc-input" placeholder="Аббревиатура из 3 букв" />
                                 </div>
+                                <div class="mc-field">
+                                    <label for="editCardAcceptable" class="mc-field__label" data-i18n="microcards.editor_card_acceptable_label">Доп. верные ответы (по одному на строку, опционально)</label>
+                                    <textarea id="editCardAcceptable" rows="2" class="mc-textarea" placeholder="Синонимы, которые тоже засчитываются как верные" data-i18n-placeholder="microcards.editor_card_acceptable_ph"></textarea>
+                                </div>
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div class="mc-field">
                                         <label for="editCardFrontImage" class="mc-field__label" data-i18n="microcards.editor_card_front_img_label">Ссылка на изображение к Вопросу (Опционально)</label>
@@ -1280,6 +1303,35 @@
             <div class="mc-dialog-actions">
                 <button type="button" onclick="this.closest('dialog').close()" class="mc-btn mc-btn--ghost" data-i18n="microcards.btn_cancel">Отмена</button>
                 <button type="submit" class="mc-btn mc-btn--primary" data-i18n="microcards.btn_publish">Опубликовать</button>
+            </div>
+        </form>
+    </dialog>
+
+    <dialog id="dialogSettings" closedby="any" aria-labelledby="settingsTitle">
+        <form method="dialog" style="display:flex;flex-direction:column;gap:1rem" onsubmit="mcApp.saveSettings(event)">
+            <h3 id="settingsTitle" class="mc-dialog-title" data-i18n="microcards.settings_title">Настройки обучения</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="mc-field">
+                    <label for="setSessionSize" class="mc-field__label" data-i18n="microcards.set_session_size">Карточек за сессию</label>
+                    <input type="number" id="setSessionSize" min="1" max="100" class="mc-input" />
+                </div>
+                <div class="mc-field">
+                    <label for="setNewPerSession" class="mc-field__label" data-i18n="microcards.set_new_per_session">Новых карточек за сессию</label>
+                    <input type="number" id="setNewPerSession" min="0" max="100" class="mc-input" />
+                </div>
+            </div>
+            <div class="mc-field">
+                <span class="mc-field__label" data-i18n="microcards.set_direction">Направление по умолчанию</span>
+                <div class="mc-dir-group" id="settingsDirection">
+                    <button type="button" class="mc-dir-btn is-active" data-dir="front_back" data-i18n="microcards.dir_front_back">Вопрос → Ответ</button>
+                    <button type="button" class="mc-dir-btn" data-dir="back_front" data-i18n="microcards.dir_back_front">Ответ → Вопрос</button>
+                    <button type="button" class="mc-dir-btn" data-dir="mixed" data-i18n="microcards.dir_mixed">Вперемешку</button>
+                </div>
+                <input type="hidden" id="setDirection" value="front_back" />
+            </div>
+            <div class="mc-dialog-actions">
+                <button type="button" onclick="this.closest('dialog').close()" class="mc-btn mc-btn--ghost" data-i18n="microcards.btn_cancel">Отмена</button>
+                <button type="submit" class="mc-btn mc-btn--primary" data-i18n="microcards.set_save">Сохранить</button>
             </div>
         </form>
     </dialog>

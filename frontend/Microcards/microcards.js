@@ -30,6 +30,7 @@
         view: 'library', // 'library' | 'details' | 'session' | 'summary' | 'editor'
         decks: [],
         sortKey: 'name-asc', // library sort order
+        activeTag: null, // active tag filter
         activeDeckId: null,
         activeDeck: null,
         cards: [], // active deck cards
@@ -373,9 +374,18 @@
 
         const searchQuery = $('libSearch').value.toLowerCase().trim();
         const filtered = sortDecks(
-            state.decks.filter(d => d.name.toLowerCase().includes(searchQuery)),
+            state.decks.filter(d => {
+                const matchesSearch = !searchQuery
+                    || (d.name || '').toLowerCase().includes(searchQuery)
+                    || (d.description || '').toLowerCase().includes(searchQuery)
+                    || (d.tags || []).some(tag => (tag || '').toLowerCase().includes(searchQuery));
+                const matchesTag = !state.activeTag || (d.tags || []).includes(state.activeTag);
+                return matchesSearch && matchesTag;
+            }),
             state.sortKey
         );
+
+        renderTagFilters();
 
         // Update stats
         let totalDue = 0;
@@ -429,6 +439,75 @@
             grid.appendChild(card);
         });
         state._entrance = false; // entrance is a one-shot per fresh load
+    }
+
+    // ── Tag filters ────────────────────────────────────────────────────────
+    function renderTagFilters() {
+        const container = $('libTagFilters');
+        if (!container) return;
+        const tags = [...new Set(state.decks.flatMap(d => d.tags || []))].sort();
+        if (tags.length === 0) {
+            container.classList.add('hidden');
+            container.innerHTML = '';
+            return;
+        }
+        container.classList.remove('hidden');
+        const chip = (label, value, active) =>
+            `<button type="button" class="mc-tag-chip ${active ? 'is-active' : ''}" data-tag="${value === null ? '' : escHtml(value)}">${escHtml(label)}</button>`;
+        container.innerHTML =
+            chip(t('microcards.tag_all', 'Все'), null, !state.activeTag) +
+            tags.map(tag => chip(tag, tag, state.activeTag === tag)).join('');
+    }
+    function selectTagFilter(tag) {
+        state.activeTag = (state.activeTag === tag) ? null : (tag || null);
+        renderLibrary();
+    }
+
+    // ── Study settings (session size, new/session, direction) ──────────────
+    function selectDirection(value) {
+        $('setDirection').value = value;
+        document.querySelectorAll('#settingsDirection [data-dir]').forEach(btn =>
+            btn.classList.toggle('is-active', btn.getAttribute('data-dir') === value));
+    }
+    async function openSettingsDialog() {
+        try {
+            const data = await apiCall('/api/v2/microcards/settings');
+            const s = data.settings || {};
+            $('setSessionSize').value = s.session_size ?? 20;
+            $('setNewPerSession').value = s.new_per_session ?? 20;
+            selectDirection(s.default_direction || 'front_back');
+            $('dialogSettings').showModal();
+        } catch (err) {
+            showToast(t('microcards.settings_load_fail', 'Не удалось загрузить настройки'), 'error');
+        }
+    }
+    async function saveSettings(e) {
+        if (e) e.preventDefault();
+        const payload = {
+            session_size: parseInt($('setSessionSize').value, 10),
+            new_per_session: parseInt($('setNewPerSession').value, 10),
+            default_direction: $('setDirection').value
+        };
+        try {
+            await apiCall('/api/v2/microcards/settings', {
+                method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            $('dialogSettings').close();
+            showToast(t('microcards.settings_saved', 'Настройки сохранены'), 'success');
+        } catch (err) { console.error(err); }
+    }
+    function bindLibraryDelegates() {
+        const tf = $('libTagFilters');
+        if (tf) tf.addEventListener('click', (e) => {
+            const b = e.target.closest('.mc-tag-chip[data-tag]');
+            if (b) selectTagFilter(b.getAttribute('data-tag') || null);
+        });
+        const dir = $('settingsDirection');
+        if (dir) dir.addEventListener('click', (e) => {
+            const b = e.target.closest('[data-dir]');
+            if (b) selectDirection(b.getAttribute('data-dir'));
+        });
     }
 
     function openCreateDeckDialog() {
@@ -627,10 +706,15 @@
         $('flashcardInner').classList.remove('flipped');
         hideRails(); // rails reappear only after the answer is revealed
         
-        // Load text and images
-        $('cardFrontText').textContent = card.front.text;
-        $('cardBackText').textContent = card.back.text;
-        
+        // Effective direction (reverse mode): which side is the question vs answer
+        const dir = (state.session && ((state.session.card_directions || {})[card.id] || state.session.direction)) || 'front_back';
+        const qSide = dir === 'back_front' ? card.back : card.front;
+        const aSide = dir === 'back_front' ? card.front : card.back;
+
+        // Load text and images (question on front face, answer on back face)
+        $('cardFrontText').textContent = qSide.text;
+        $('cardBackText').textContent = aSide.text;
+
         if (card.hint) {
             $('btnShowHint').classList.remove('hidden');
             $('cardHintText').classList.add('hidden');
@@ -640,23 +724,13 @@
             $('cardHintText').classList.add('hidden');
         }
 
-        // Front Image
         const frontImg = $('cardFrontImage');
-        if (card.front.image_url) {
-            frontImg.src = card.front.image_url;
-            frontImg.classList.remove('hidden');
-        } else {
-            frontImg.classList.add('hidden');
-        }
+        if (qSide.image_url) { frontImg.src = qSide.image_url; frontImg.classList.remove('hidden'); }
+        else { frontImg.classList.add('hidden'); }
 
-        // Back Image
         const backImg = $('cardBackImage');
-        if (card.back.image_url) {
-            backImg.src = card.back.image_url;
-            backImg.classList.remove('hidden');
-        } else {
-            backImg.classList.add('hidden');
-        }
+        if (aSide.image_url) { backImg.src = aSide.image_url; backImg.classList.remove('hidden'); }
+        else { backImg.classList.add('hidden'); }
 
         // Set Level Indicator
         const level = card.level || 1;
@@ -1015,6 +1089,7 @@
                 $('editCardFront').value = card.front.text;
                 $('editCardBack').value = card.back.text;
                 $('editCardHint').value = card.hint || '';
+                $('editCardAcceptable').value = (card.acceptable_answers || []).join('\n');
                 $('editCardFrontImage').value = card.front.image_url || '';
                 $('editCardBackImage').value = card.back.image_url || '';
                 
@@ -1035,6 +1110,7 @@
         $('editCardFront').value = '';
         $('editCardBack').value = '';
         $('editCardHint').value = '';
+        $('editCardAcceptable').value = '';
         $('editCardFrontImage').value = '';
         $('editCardBackImage').value = '';
         
@@ -1085,6 +1161,7 @@
         const frontText = $('editCardFront').value.trim();
         const backText = $('editCardBack').value.trim();
         const hint = $('editCardHint').value.trim();
+        const acceptable = $('editCardAcceptable').value.split('\n').map(s => s.trim()).filter(Boolean);
         const frontImage = $('editCardFrontImage').value.trim();
         const backImage = $('editCardBackImage').value.trim();
 
@@ -1097,6 +1174,7 @@
             front_text: frontText,
             back_text: backText,
             hint: hint || null,
+            acceptable_answers: acceptable,
             front_image_url: frontImage || null,
             back_image_url: backImage || null
         };
@@ -1341,6 +1419,9 @@
         // Bind import dialog controls (format tabs + separator chips)
         bindImportControls();
 
+        // Bind tag-filter chips and settings direction buttons (delegated)
+        bindLibraryDelegates();
+
         // Set up Escape navigation key
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && state.view !== 'library') {
@@ -1389,6 +1470,10 @@
         pasteImportClipboard,
         onImportInput,
         onImportFile,
+        selectTagFilter,
+        openSettingsDialog,
+        saveSettings,
+        selectDirection,
         publishDeckToCatalog,
         handlePublishSubmit
     };
