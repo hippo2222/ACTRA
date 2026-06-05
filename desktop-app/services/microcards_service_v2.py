@@ -3,6 +3,7 @@
 import json
 import os
 import random
+import re
 import uuid
 import difflib
 from datetime import datetime, timedelta, timezone
@@ -65,6 +66,28 @@ def _resolve_microcards_user_id(user_id: Optional[str], *, legacy_default: str =
     if _is_hosted_runtime():
         raise ValueError("user_id_required_in_hosted_runtime")
     return _s(legacy_default, "default_user") or "default_user"
+
+
+def _clean_answer_list(values):
+    """Normalize an optional list of acceptable answers: trim, drop empties/dupes."""
+    if not values:
+        return []
+    if isinstance(values, str):
+        values = [values]
+    result = []
+    seen = set()
+    for v in values:
+        text = _s(v)
+        key = " ".join(text.lower().split())
+        if text and key not in seen:
+            seen.add(key)
+            result.append(text)
+    return result
+
+
+def _normalize_key(text):
+    """Lowercased, whitespace-collapsed key used for dedup comparisons."""
+    return " ".join(_s(text).lower().split())
 
 
 class MicrocardsServiceV2:
@@ -304,7 +327,7 @@ class MicrocardsServiceV2:
             raise LookupError("deck_not_found")
         return deck.get("cards", [])
 
-    def create_card(self, deck_id: str, front_text: str, back_text: str, hint: Optional[str] = None, front_image_url: Optional[str] = None, back_image_url: Optional[str] = None) -> Dict[str, Any]:
+    def create_card(self, deck_id: str, front_text: str, back_text: str, hint: Optional[str] = None, front_image_url: Optional[str] = None, back_image_url: Optional[str] = None, acceptable_answers: Optional[List[str]] = None) -> Dict[str, Any]:
         deck = self.get_deck(deck_id)
         if not deck:
             raise LookupError("deck_not_found")
@@ -327,6 +350,7 @@ class MicrocardsServiceV2:
                 "image_url": back_image_url
             },
             "hint": _s(hint) or None,
+            "acceptable_answers": _clean_answer_list(acceptable_answers),
             "status": "active",
             "created_at": now_iso,
             "updated_at": now_iso,
@@ -653,13 +677,108 @@ class MicrocardsServiceV2:
             raise LookupError("session_not_found")
         return session
 
-    def import_csv(self, deck_id: str, csv_content: str) -> List[Dict[str, Any]]:
-        import csv
-        import io
+    PARSE_FORMATS = ("csv", "json", "txt_full", "txt_simplified", "test")
+
+    @staticmethod
+    def _ok_item(front: str, back: str, hint: Optional[str] = None,
+                 acceptable_answers: Optional[List[str]] = None) -> Dict[str, Any]:
+        return {
+            "front": _s(front),
+            "back": _s(back),
+            "hint": _s(hint) or None,
+            "acceptable_answers": _clean_answer_list(acceptable_answers),
+            "status": "ok",
+            "error": None,
+        }
+
+    @staticmethod
+    def _err_item(raw: str, error: str) -> Dict[str, Any]:
+        return {
+            "front": _s(raw),
+            "back": "",
+            "hint": None,
+            "acceptable_answers": [],
+            "status": "error",
+            "error": error,
+        }
+
+    def _parse_by_format(self, fmt: str, content: Any, options: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+        fmt = _s(fmt)
+        if fmt == "csv":
+            return self._parse_csv(content, options)
+        if fmt == "json":
+            return self._parse_json(content, options)
+        if fmt == "txt_full":
+            return self._parse_txt_full(content, options)
+        if fmt == "txt_simplified":
+            return self._parse_txt_simplified(content, options)
+        if fmt == "test":
+            return self._parse_test(content, options)
+        raise ValueError("unknown_import_format")
+
+    def _create_from_parsed(self, deck_id: str, parsed: List[Dict[str, Any]], *, dedup: bool = True) -> Dict[str, Any]:
+        """Create cards from parsed items, skipping error rows and (optionally) duplicates."""
         deck = self.get_deck(deck_id)
         if not deck:
             raise LookupError("deck_not_found")
-        
+
+        seen = {_normalize_key(c.get("front", {}).get("text", "")) for c in deck.get("cards", [])} if dedup else set()
+        imported: List[Dict[str, Any]] = []
+        skipped = 0
+        for item in parsed:
+            if item.get("status") == "error":
+                continue
+            front = _s(item.get("front"))
+            back = _s(item.get("back"))
+            if not front or not back:
+                continue
+            key = _normalize_key(front)
+            if dedup and key in seen:
+                skipped += 1
+                continue
+            seen.add(key)
+            card = self.create_card(
+                deck_id=deck_id,
+                front_text=front,
+                back_text=back,
+                hint=item.get("hint"),
+                acceptable_answers=item.get("acceptable_answers"),
+            )
+            imported.append(card)
+        return {"items": imported, "skipped_duplicates": skipped}
+
+    def analyze_import(self, deck_id: str, fmt: str, content: Any, options: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Dry-run: parse content and report preview rows + counts WITHOUT writing."""
+        deck = self.get_deck(deck_id)
+        if not deck:
+            raise LookupError("deck_not_found")
+
+        parsed = self._parse_by_format(fmt, content, options)
+        existing = {_normalize_key(c.get("front", {}).get("text", "")) for c in deck.get("cards", [])}
+        seen: set = set()
+        rows: List[Dict[str, Any]] = []
+        counts = {"total": 0, "ok": 0, "errors": 0, "duplicates": 0}
+        for item in parsed:
+            counts["total"] += 1
+            row = dict(item)
+            row["duplicate"] = False
+            if item.get("status") == "error":
+                counts["errors"] += 1
+            else:
+                key = _normalize_key(item.get("front"))
+                if key in existing or key in seen:
+                    row["duplicate"] = True
+                    counts["duplicates"] += 1
+                else:
+                    seen.add(key)
+                    counts["ok"] += 1
+            rows.append(row)
+        return {"rows": rows, "counts": counts}
+
+    def _parse_csv(self, csv_content: Any, options: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+        import csv
+        import io
+        csv_content = _s(csv_content)
         # Read lines, handling UTF-8 and BOM
         if csv_content.startswith('\ufeff'):
             csv_content = csv_content[1:]
@@ -668,11 +787,17 @@ class MicrocardsServiceV2:
         # We try to detect if we have a header or if separator is ; or ,
         first_line = next(f, "")
         f.seek(0)
-        
-        delimiter = ','
-        if ';' in first_line and ',' not in first_line:
-            delimiter = ';'
-            
+
+        opts = options or {}
+        preset = _s(opts.get("delimiter")).lower()
+        delimiter_map = {",": ",", ";": ";", "tab": "\t", "\t": "\t", "comma": ",", "semicolon": ";"}
+        if preset in delimiter_map:
+            delimiter = delimiter_map[preset]
+        else:
+            delimiter = ','
+            if ';' in first_line and ',' not in first_line:
+                delimiter = ';'
+
         reader = csv.reader(f, delimiter=delimiter)
         rows = list(reader)
         if not rows:
@@ -704,41 +829,80 @@ class MicrocardsServiceV2:
             else:
                 hint_idx = -1
                 
-        imported_cards = []
+        parsed: List[Dict[str, Any]] = []
         for row in rows[start_row:]:
-            if not row or len(row) <= max(front_idx, back_idx):
+            if not row or not any(_s(c) for c in row):
+                continue
+            if len(row) <= max(front_idx, back_idx):
+                parsed.append(self._err_item(delimiter.join(row), "too_few_columns"))
                 continue
             front_text = row[front_idx].strip()
             back_text = row[back_idx].strip()
             if not front_text or not back_text:
+                parsed.append(self._err_item(delimiter.join(row), "empty_front_or_back"))
                 continue
             hint = row[hint_idx].strip() if (hint_idx >= 0 and hint_idx < len(row)) else None
-            
-            card = self.create_card(
-                deck_id=deck_id,
-                front_text=front_text,
-                back_text=back_text,
-                hint=hint
-            )
-            imported_cards.append(card)
-            
-        return imported_cards
+            parsed.append(self._ok_item(front_text, back_text, hint))
+        return parsed
 
-    def import_json(self, deck_id: str, data: Dict[str, Any]) -> List[Dict[str, Any]]:
-        deck = self.get_deck(deck_id)
-        if not deck:
-            raise LookupError("deck_not_found")
-            
-        cards_data = []
+    def import_csv(self, deck_id: str, csv_content: str, options: Optional[Dict[str, Any]] = None, dedup: bool = True) -> Dict[str, Any]:
+        parsed = self._parse_csv(csv_content, options)
+        return self._create_from_parsed(deck_id, parsed, dedup=dedup)
+
+    def _parse_json(self, data: Any, options: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+        if isinstance(data, str):
+            try:
+                data = json.loads(data)
+            except Exception:
+                raise ValueError("invalid_json_format")
+
+        cards_data: Any = []
         if isinstance(data, dict):
             cards_data = data.get("cards", [])
         elif isinstance(data, list):
             cards_data = data
-            
+
         if not isinstance(cards_data, list):
             raise ValueError("invalid_json_format")
-            
-        imported_cards = []
+
+        parsed: List[Dict[str, Any]] = []
+        for item in cards_data:
+            if not isinstance(item, dict):
+                continue
+            front = item.get("front", "")
+            front_text = front.get("text", "") if isinstance(front, dict) else str(front)
+            back = item.get("back", "")
+            back_text = back.get("text", "") if isinstance(back, dict) else str(back)
+            hint = item.get("hint")
+            acceptable = item.get("acceptable_answers")
+            if not _s(front_text) or not _s(back_text):
+                continue
+            parsed.append(self._ok_item(front_text, back_text, hint, acceptable))
+        return parsed
+
+    def import_json(self, deck_id: str, data: Any, options: Optional[Dict[str, Any]] = None, dedup: bool = True) -> Dict[str, Any]:
+        # JSON keeps its richer create path (image URLs) rather than the generic loop.
+        deck = self.get_deck(deck_id)
+        if not deck:
+            raise LookupError("deck_not_found")
+
+        if isinstance(data, str):
+            try:
+                data = json.loads(data)
+            except Exception:
+                raise ValueError("invalid_json_format")
+
+        cards_data: Any = []
+        if isinstance(data, dict):
+            cards_data = data.get("cards", [])
+        elif isinstance(data, list):
+            cards_data = data
+        if not isinstance(cards_data, list):
+            raise ValueError("invalid_json_format")
+
+        existing = {_normalize_key(c.get("front", {}).get("text", "")) for c in deck.get("cards", [])} if dedup else set()
+        imported: List[Dict[str, Any]] = []
+        skipped = 0
         for item in cards_data:
             if not isinstance(item, dict):
                 continue
@@ -749,7 +913,7 @@ class MicrocardsServiceV2:
             else:
                 front_text = str(front)
                 front_img = item.get("front_image_url") or item.get("image_url")
-                
+
             back = item.get("back", "")
             if isinstance(back, dict):
                 back_text = back.get("text", "")
@@ -757,23 +921,25 @@ class MicrocardsServiceV2:
             else:
                 back_text = str(back)
                 back_img = item.get("back_image_url")
-                
-            hint = item.get("hint")
-            
-            if not front_text or not back_text:
+
+            if not _s(front_text) or not _s(back_text):
                 continue
-                
+            key = _normalize_key(front_text)
+            if dedup and key in existing:
+                skipped += 1
+                continue
+            existing.add(key)
             card = self.create_card(
                 deck_id=deck_id,
                 front_text=front_text,
                 back_text=back_text,
-                hint=hint,
+                hint=item.get("hint"),
                 front_image_url=front_img,
-                back_image_url=back_img
+                back_image_url=back_img,
+                acceptable_answers=item.get("acceptable_answers"),
             )
-            imported_cards.append(card)
-            
-        return imported_cards
+            imported.append(card)
+        return {"items": imported, "skipped_duplicates": skipped}
 
     def export_json(self, deck_id: str) -> Dict[str, Any]:
         deck = self.get_deck(deck_id)
@@ -791,7 +957,8 @@ class MicrocardsServiceV2:
                 {
                     "front": c.get("front", {}),
                     "back": c.get("back", {}),
-                    "hint": c.get("hint")
+                    "hint": c.get("hint"),
+                    "acceptable_answers": c.get("acceptable_answers", [])
                 } for c in deck.get("cards", [])
             ]
         }
@@ -812,3 +979,223 @@ class MicrocardsServiceV2:
             hint = c.get("hint", "") or ""
             writer.writerow([front_text, back_text, hint])
         return output.getvalue()
+
+    def export_txt(self, deck_id: str) -> str:
+        """Plain-text export, one 'front<TAB>back' per line.
+
+        Round-trips with the simplified TXT import (tab separator). Tabs/newlines inside
+        a card's text are flattened to spaces so each card stays on a single line.
+        """
+        deck = self.get_deck(deck_id)
+        if not deck:
+            raise LookupError("deck_not_found")
+
+        def flatten(text: str) -> str:
+            return " ".join(str(text or "").split())
+
+        lines = []
+        for c in deck.get("cards", []):
+            front_text = flatten(c.get("front", {}).get("text", ""))
+            back_text = flatten(c.get("back", {}).get("text", ""))
+            if not front_text or not back_text:
+                continue
+            lines.append(f"{front_text}\t{back_text}")
+        return "\n".join(lines) + ("\n" if lines else "")
+
+    def _parse_txt_full(self, content: Any, options: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+        from task_system.models.parsers.microcard_parser import MicrocardParser
+        parser = MicrocardParser()
+        result = parser.parse_text(_s(content))
+
+        parsed: List[Dict[str, Any]] = []
+        for item in result.get("items", []):
+            if item.get("status") == "error":
+                parsed.append(self._err_item(item.get("raw") or "", item.get("error") or "parse_error"))
+                continue
+            preview = item.get("card_preview") or {}
+            card_type = preview.get("card_type")
+            meta = item.get("metadata") or {}
+
+            if card_type == "fact_recall":
+                front_text = preview.get("front", "").strip()
+                back_text = preview.get("back", "").strip()
+                if not front_text or not back_text:
+                    continue
+                parsed.append(self._ok_item(front_text, back_text, meta.get("hint")))
+            elif card_type == "pair_match":
+                for pair in preview.get("pairs", []):
+                    left = pair.get("left", "").strip()
+                    right = pair.get("right", "").strip()
+                    if not left or not right:
+                        continue
+                    parsed.append(self._ok_item(left, right))
+        return parsed
+
+    def import_txt_full(self, deck_id: str, content: str, options: Optional[Dict[str, Any]] = None, dedup: bool = True) -> Dict[str, Any]:
+        parsed = self._parse_txt_full(content, options)
+        return self._create_from_parsed(deck_id, parsed, dedup=dedup)
+
+    # Friendly preset name -> literal separator for the simplified TXT parser.
+    QA_SEPARATOR_PRESETS = {
+        "tab": "\t",
+        "arrow": " => ",
+        "arrow2": " -> ",
+        "dash": " - ",
+        "hyphen": "-",
+        "semicolon": ";",
+        "colon": ":",
+        "comma": ",",
+    }
+
+    def _split_simplified(self, stripped: str, qa_sep: str) -> Optional[List[str]]:
+        """Split one 'front<sep>back' line. qa_sep 'auto'/'' uses a cascade of common separators."""
+        # NOTE: do not strip qa_sep — whitespace separators (tab, " | ") must survive.
+        qa_sep = "" if qa_sep is None else str(qa_sep)
+        if qa_sep and qa_sep.lower() != "auto":
+            sep = self.QA_SEPARATOR_PRESETS.get(qa_sep.lower(), qa_sep)
+            if sep and sep in stripped:
+                return stripped.split(sep, 1)
+            return None
+        # auto cascade (original heuristic order)
+        if "\t" in stripped:
+            return stripped.split("\t", 1)
+        if " => " in stripped:
+            return stripped.split(" => ", 1)
+        if " -> " in stripped:
+            return stripped.split(" -> ", 1)
+        if " - " in stripped:
+            return stripped.split(" - ", 1)
+        if ";" in stripped:
+            return stripped.split(";", 1)
+        if ":" in stripped and not ("http:" in stripped or "https:" in stripped):
+            return stripped.split(":", 1)
+        if "," in stripped:
+            return stripped.split(",", 1)
+        if "-" in stripped:
+            return stripped.split("-", 1)
+        return None
+
+    def _parse_txt_simplified(self, content: Any, options: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+        opts = options or {}
+        qa_sep = opts.get("qa_separator") or "auto"
+        card_sep = _s(opts.get("card_separator")).lower() or "line"
+        # multiline: lines without a separator are appended to the previous card's back
+        # (e.g. Quizlet exports where a definition spans several lines).
+        multiline = bool(opts.get("multiline"))
+
+        text = _s(content)
+        parsed: List[Dict[str, Any]] = []
+
+        if card_sep == "blank":
+            # Blank-line separated blocks: first line = front, the rest joined = back.
+            blocks = re.split(r"\n\s*\n", text)
+            for block in blocks:
+                block_lines = [ln.strip() for ln in block.splitlines()
+                               if ln.strip() and not ln.strip().startswith(("//", "#"))]
+                if not block_lines:
+                    continue
+                if len(block_lines) >= 2:
+                    front = block_lines[0]
+                    back = "\n".join(block_lines[1:]).strip()
+                    if front and back:
+                        parsed.append(self._ok_item(front, back))
+                    else:
+                        parsed.append(self._err_item(block.strip(), "empty_front_or_back"))
+                else:
+                    # Single-line block: fall back to inline separator split.
+                    parts = self._split_simplified(block_lines[0], qa_sep)
+                    if parts and len(parts) == 2 and parts[0].strip() and parts[1].strip():
+                        parsed.append(self._ok_item(parts[0].strip(), parts[1].strip()))
+                    else:
+                        parsed.append(self._err_item(block_lines[0], "separator_not_found"))
+            return parsed
+
+        content_lines = [ln.strip() for ln in text.splitlines()
+                         if ln.strip() and not ln.strip().startswith(("//", "#"))]
+
+        # In auto mode, lock onto the separator that dominates the whole text. This keeps
+        # the split consistent (e.g. a tab-separated Quizlet export where some definitions
+        # themselves contain " - " won't be split on the dash).
+        line_sep = qa_sep
+        if _s(qa_sep).lower() in ("", "auto"):
+            dominant = self._detect_dominant_separator(content_lines)
+            if dominant:
+                line_sep = dominant
+
+        for stripped in content_lines:
+            parts = self._split_simplified(stripped, line_sep)
+            if parts and len(parts) == 2 and parts[0].strip() and parts[1].strip():
+                parsed.append(self._ok_item(parts[0].strip(), parts[1].strip()))
+            elif multiline and parsed and parsed[-1].get("status") == "ok":
+                # Continuation line: append to the previous card's back.
+                prev = parsed[-1]
+                prev["back"] = (prev["back"] + "\n" + stripped).strip()
+            else:
+                parsed.append(self._err_item(stripped, "separator_not_found"))
+        return parsed
+
+    @staticmethod
+    def _detect_dominant_separator(lines: List[str]) -> Optional[str]:
+        """Pick the separator present on most lines (priority order breaks ties).
+
+        Returns None unless one separator clearly dominates (>=2 lines and >=40%),
+        so genuinely mixed-separator input falls back to the per-line cascade.
+        """
+        if not lines:
+            return None
+        candidates = ["\t", " => ", " -> ", " - ", ";", ":", ","]
+        best, best_count = None, 0
+        for sep in candidates:
+            count = 0
+            for ln in lines:
+                if sep == ":" and ("http:" in ln or "https:" in ln):
+                    continue
+                if sep in ln:
+                    count += 1
+            if count > best_count:  # strict > keeps higher-priority sep on ties
+                best, best_count = sep, count
+        if best_count >= 2 and best_count >= 0.4 * len(lines):
+            return best
+        return None
+
+    def import_txt_simplified(self, deck_id: str, content: str, options: Optional[Dict[str, Any]] = None, dedup: bool = True) -> Dict[str, Any]:
+        parsed = self._parse_txt_simplified(content, options)
+        return self._create_from_parsed(deck_id, parsed, dedup=dedup)
+
+    def _parse_test(self, content: Any, options: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+        """Parse a test-question file. Wrong answers are ignored; card = question + correct answer.
+        All correct answers are kept: the first becomes `back`, the rest go to acceptable_answers."""
+        from task_system.models.test_parser import TestFileParser
+        import tempfile
+
+        temp_path = None
+        try:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".txt", mode="w", encoding="utf-8") as tmp:
+                temp_path = tmp.name
+                tmp.write(_s(content))
+
+            parser = TestFileParser()
+            questions = parser.parse_file(temp_path)
+
+            parsed: List[Dict[str, Any]] = []
+            for q in questions:
+                front_text = (q.text or "").strip()
+                correct_answers = [ans.text.strip() for ans in q.answers if ans.correct and ans.text.strip()]
+                if not front_text:
+                    continue
+                if not correct_answers:
+                    parsed.append(self._err_item(front_text, "no_correct_answer"))
+                    continue
+                parsed.append(self._ok_item(front_text, correct_answers[0],
+                                            acceptable_answers=correct_answers[1:]))
+            return parsed
+        finally:
+            if temp_path and os.path.exists(temp_path):
+                try:
+                    os.remove(temp_path)
+                except Exception:
+                    pass
+
+    def import_test(self, deck_id: str, content: str, options: Optional[Dict[str, Any]] = None, dedup: bool = True) -> Dict[str, Any]:
+        parsed = self._parse_test(content, options)
+        return self._create_from_parsed(deck_id, parsed, dedup=dedup)

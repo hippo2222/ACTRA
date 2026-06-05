@@ -130,38 +130,6 @@ def test_session_flows_and_progression():
     assert res5["card_state"]["level"] == 1
     assert res5["card_state"]["consecutive_correct"] == 1
 
-def test_import_export():
-    tmp = tempfile.mkdtemp()
-    svc = MicrocardsServiceV2(tmp, user_id="test_user")
-    deck = svc.create_deck(name="Import Deck")
-    
-    csv_content = """front,back,hint
-"What is RFC?","Request for Comments","Hint 1"
-"What is OSI?","Open Systems Interconnection",""
-"""
-    # Import CSV
-    cards = svc.import_csv(deck["id"], csv_content)
-    assert len(cards) == 2
-    assert cards[0]["front"]["text"] == "What is RFC?"
-    assert cards[0]["back"]["text"] == "Request for Comments"
-    assert cards[0]["hint"] == "Hint 1"
-    
-    # Export CSV
-    exported_csv = svc.export_csv(deck["id"])
-    assert "What is RFC?" in exported_csv
-    assert "Open Systems Interconnection" in exported_csv
-    
-    # Export JSON
-    exported_json = svc.export_json(deck["id"])
-    assert exported_json["schema"] == "actra_flashcards_v1"
-    assert len(exported_json["cards"]) == 2
-    
-    # Import JSON to new deck
-    deck_2 = svc.create_deck(name="Import JSON Deck")
-    cards_json = svc.import_json(deck_2["id"], exported_json)
-    assert len(cards_json) == 2
-    assert cards_json[1]["front"]["text"] == "What is OSI?"
-
 
 def test_cross_user_deck_isolation():
     """Decks live in a global store but must be scoped to their owner.
@@ -195,3 +163,212 @@ def test_cross_user_deck_isolation():
     assert [d["name"] for d in alice.list_decks()] == ["Alice Private"]
     assert alice.get_deck(did)["name"] == "Alice Private"
     assert alice.delete_deck(did) is True
+
+
+def test_import_export():
+    tmp = tempfile.mkdtemp()
+    svc = MicrocardsServiceV2(tmp, user_id="test_user")
+    deck = svc.create_deck(name="Import Deck")
+    
+    csv_content = """front,back,hint
+"What is RFC?","Request for Comments","Hint 1"
+"What is OSI?","Open Systems Interconnection",""
+"""
+    # Import CSV
+    cards = svc.import_csv(deck["id"], csv_content)["items"]
+    assert len(cards) == 2
+    assert cards[0]["front"]["text"] == "What is RFC?"
+    assert cards[0]["back"]["text"] == "Request for Comments"
+    assert cards[0]["hint"] == "Hint 1"
+    
+    # Export CSV
+    exported_csv = svc.export_csv(deck["id"])
+    assert "What is RFC?" in exported_csv
+    assert "Open Systems Interconnection" in exported_csv
+    
+    # Export JSON
+    exported_json = svc.export_json(deck["id"])
+    assert exported_json["schema"] == "actra_flashcards_v1"
+    assert len(exported_json["cards"]) == 2
+    
+    # Import JSON to new deck
+    deck_2 = svc.create_deck(name="Import JSON Deck")
+    cards_json = svc.import_json(deck_2["id"], exported_json)["items"]
+    assert len(cards_json) == 2
+    assert cards_json[1]["front"]["text"] == "What is OSI?"
+
+
+def test_new_import_formats():
+    tmp = tempfile.mkdtemp()
+    svc = MicrocardsServiceV2(tmp, user_id="test_user")
+    deck = svc.create_deck(name="Import Deck")
+    
+    # 1. Test full TXT (@MICROCARD/@PAIR_MATCH)
+    txt_full_content = """@MICROCARD
+# Q1
+= A1
+@ tags: tag1
+@ difficulty: 1
+
+@PAIR_MATCH
+# Pair Question
+L: L1
+L: L2
+R: R1
+R: R2
+P: L1 => R1
+P: L2 => R2
+"""
+    cards_full = svc.import_txt_full(deck["id"], txt_full_content)["items"]
+    # 1 fact recall + 2 pair matches = 3 cards total
+    assert len(cards_full) == 3
+    assert cards_full[0]["front"]["text"] == "Q1"
+    assert cards_full[0]["back"]["text"] == "A1"
+    assert cards_full[1]["front"]["text"] == "L1"
+    assert cards_full[1]["back"]["text"] == "R1"
+    assert cards_full[2]["front"]["text"] == "L2"
+    assert cards_full[2]["back"]["text"] == "R2"
+    
+    # 2. Test Simplified TXT (fresh deck so cross-format dedup doesn't drop rows)
+    deck_simplified = svc.create_deck(name="Simplified Deck")
+    simplified_content = """
+    Q1 - A1
+    Q2 => A2
+    Q3; A3
+    Q4: A4
+    """
+    cards_simplified = svc.import_txt_simplified(deck_simplified["id"], simplified_content)["items"]
+    assert len(cards_simplified) == 4
+    assert cards_simplified[0]["front"]["text"] == "Q1"
+    assert cards_simplified[0]["back"]["text"] == "A1"
+    assert cards_simplified[1]["front"]["text"] == "Q2"
+    assert cards_simplified[1]["back"]["text"] == "A2"
+    assert cards_simplified[2]["front"]["text"] == "Q3"
+    assert cards_simplified[2]["back"]["text"] == "A3"
+    assert cards_simplified[3]["front"]["text"] == "Q4"
+    assert cards_simplified[3]["back"]["text"] == "A4"
+    
+    # 3. Test Test format
+    test_content = """? Test Q1
+    + Correct Answer
+    - Incorrect Answer 1
+    - Incorrect Answer 2
+    """
+    cards_test = svc.import_test(deck["id"], test_content)["items"]
+    assert len(cards_test) == 1
+    assert cards_test[0]["front"]["text"] == "Test Q1"
+    assert cards_test[0]["back"]["text"] == "Correct Answer"
+
+
+def test_export_txt_roundtrip():
+    tmp = tempfile.mkdtemp()
+    svc = MicrocardsServiceV2(tmp, user_id="test_user")
+    deck = svc.create_deck(name="Export Deck")
+    svc.create_card(deck["id"], front_text="Q1", back_text="A1")
+    svc.create_card(deck["id"], front_text="Q2", back_text="A2")
+
+    txt = svc.export_txt(deck["id"])
+    assert txt == "Q1\tA1\nQ2\tA2\n"
+
+    # Round-trips through the simplified TXT import (tab separator).
+    deck2 = svc.create_deck(name="Reimported")
+    cards = svc.import_txt_simplified(deck2["id"], txt, options={"qa_separator": "tab"})["items"]
+    assert len(cards) == 2
+    assert cards[0]["front"]["text"] == "Q1"
+    assert cards[0]["back"]["text"] == "A1"
+
+
+def test_import_dedup():
+    tmp = tempfile.mkdtemp()
+    svc = MicrocardsServiceV2(tmp, user_id="test_user")
+    deck = svc.create_deck(name="Dedup Deck")
+
+    content = "Q1 - A1\nQ2 - A2\nQ1 - A1 (duplicate front)\n"
+    res = svc.import_txt_simplified(deck["id"], content)
+    assert len(res["items"]) == 2
+    assert res["skipped_duplicates"] == 1
+
+    # Re-importing the same content into the same deck skips everything.
+    res2 = svc.import_txt_simplified(deck["id"], content)
+    assert len(res2["items"]) == 0
+    assert res2["skipped_duplicates"] == 3
+
+    # dedup=False keeps duplicates.
+    res3 = svc.import_txt_simplified(deck["id"], content, dedup=False)
+    assert len(res3["items"]) == 3
+
+
+def test_import_test_multi_correct():
+    tmp = tempfile.mkdtemp()
+    svc = MicrocardsServiceV2(tmp, user_id="test_user")
+    deck = svc.create_deck(name="Multi Correct Deck")
+
+    content = """? Which are prime?
++ 2
++ 3
+- 4
+"""
+    cards = svc.import_test(deck["id"], content)["items"]
+    assert len(cards) == 1
+    assert cards[0]["back"]["text"] == "2"
+    assert cards[0]["acceptable_answers"] == ["3"]
+
+
+def test_import_simplified_separator_options():
+    tmp = tempfile.mkdtemp()
+    svc = MicrocardsServiceV2(tmp, user_id="test_user")
+    deck = svc.create_deck(name="Sep Deck")
+
+    # Pipe is not in the auto cascade, so a custom separator is required.
+    content = "Term1 | Def1\nTerm2 | Def2\n"
+    cards = svc.import_txt_simplified(deck["id"], content, options={"qa_separator": " | "})["items"]
+    assert len(cards) == 2
+    assert cards[0]["front"]["text"] == "Term1"
+    assert cards[0]["back"]["text"] == "Def1"
+
+    # Blank-line blocks: first line front, rest back.
+    deck2 = svc.create_deck(name="Block Deck")
+    block = "Question one\nLine A of answer\nLine B of answer\n\nQuestion two\nAnswer two\n"
+    blk_cards = svc.import_txt_simplified(deck2["id"], block, options={"card_separator": "blank"})["items"]
+    assert len(blk_cards) == 2
+    assert blk_cards[0]["front"]["text"] == "Question one"
+    assert blk_cards[0]["back"]["text"] == "Line A of answer\nLine B of answer"
+
+
+def test_import_quizlet_multiline():
+    tmp = tempfile.mkdtemp()
+    svc = MicrocardsServiceV2(tmp, user_id="test_user")
+    deck = svc.create_deck(name="Quizlet Deck")
+
+    # Quizlet TAB export where definitions span several tab-less lines.
+    content = (
+        "Виды стенокардии\tНапряжения\n"
+        "Вазоспастическая\n"
+        "Нестабильная\n"
+        "Статины\tЛовастатин\n"
+        "Симвастатин\n"
+    )
+    opts = {"qa_separator": "tab", "multiline": True}
+    cards = svc.import_txt_simplified(deck["id"], content, options=opts)["items"]
+    assert len(cards) == 2
+    assert cards[0]["front"]["text"] == "Виды стенокардии"
+    assert cards[0]["back"]["text"] == "Напряжения\nВазоспастическая\nНестабильная"
+    assert cards[1]["front"]["text"] == "Статины"
+    assert cards[1]["back"]["text"] == "Ловастатин\nСимвастатин"
+
+    # Without multiline the tab-less lines are flagged as errors (no silent merge).
+    res = svc.analyze_import(deck["id"], "txt_simplified", content, options={"qa_separator": "tab"})
+    assert res["counts"]["errors"] == 3
+
+    # Auto mode locks onto the dominant separator (tab) so a definition containing
+    # " - " is treated as a continuation, not split on the dash.
+    deck2 = svc.create_deck(name="Quizlet Auto Deck")
+    auto_content = (
+        "Никотиновая к-та\tНиацин\n"
+        "Пролонг форма - Эндурацин\n"
+        "Статины\tЛовастатин\n"
+    )
+    auto_cards = svc.import_txt_simplified(deck2["id"], auto_content, options={"multiline": True})["items"]
+    assert len(auto_cards) == 2
+    assert auto_cards[0]["front"]["text"] == "Никотиновая к-та"
+    assert auto_cards[0]["back"]["text"] == "Ниацин\nПролонг форма - Эндурацин"

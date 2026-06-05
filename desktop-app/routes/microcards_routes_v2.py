@@ -28,6 +28,18 @@ def _check_guest():
 
 # ── Decks CRUD ────────────────────────────────────────────────────────
 
+
+def _read_import_text(req):
+    """Extract raw import text + optional parser options from a multipart file or JSON body."""
+    if "file" in req.files:
+        f = req.files["file"]
+        return f.read().decode("utf-8", errors="ignore"), None
+    body = req.get_json(silent=True) or {}
+    text = body.get("text") or req.data.decode("utf-8", errors="ignore")
+    return text, body.get("options")
+
+# ── Decks CRUD ────────────────────────────────────────────────────────
+
 @microcards_v2_bp.route("/decks", methods=["GET"])
 def list_decks():
     guest_check = _check_guest()
@@ -324,20 +336,23 @@ def import_csv(deck_id: str):
         return guest_check
         
     csv_content = ""
+    options = None
     if "file" in request.files:
         f = request.files["file"]
         csv_content = f.read().decode("utf-8", errors="ignore")
     else:
         body = request.get_json(silent=True) or {}
         csv_content = body.get("csv_content") or request.data.decode("utf-8", errors="ignore")
-        
+        options = body.get("options")
+
     if not csv_content.strip():
         return jsonify({"ok": False, "error": "csv_content_required"}), 400
-        
+
     try:
         svc = _get_svc()
-        cards = svc.import_csv(deck_id, csv_content)
-        return jsonify({"ok": True, "added_count": len(cards), "items": cards})
+        result = svc.import_csv(deck_id, csv_content, options=options)
+        return jsonify({"ok": True, "added_count": len(result["items"]),
+                        "skipped_duplicates": result["skipped_duplicates"], "items": result["items"]})
     except LookupError as exc:
         return jsonify({"ok": False, "error": str(exc)}), 404
     except Exception as exc:
@@ -352,11 +367,12 @@ def import_json(deck_id: str):
     body = request.get_json(silent=True)
     if not body:
         return jsonify({"ok": False, "error": "json_data_required"}), 400
-        
+
     try:
         svc = _get_svc()
-        cards = svc.import_json(deck_id, body)
-        return jsonify({"ok": True, "added_count": len(cards), "items": cards})
+        result = svc.import_json(deck_id, body)
+        return jsonify({"ok": True, "added_count": len(result["items"]),
+                        "skipped_duplicates": result["skipped_duplicates"], "items": result["items"]})
     except LookupError as exc:
         return jsonify({"ok": False, "error": str(exc)}), 404
     except ValueError as exc:
@@ -364,6 +380,97 @@ def import_json(deck_id: str):
     except Exception as exc:
         logger.exception("[HTTP] v2/microcards/import json failed: %s", exc)
         return jsonify({"ok": False, "error": "json_import_failed"}), 500
+
+@microcards_v2_bp.route("/decks/<string:deck_id>/import/txt_full", methods=["POST"])
+def import_txt_full(deck_id: str):
+    guest_check = _check_guest()
+    if guest_check:
+        return guest_check
+        
+    text_content, options = _read_import_text(request)
+    if not text_content.strip():
+        return jsonify({"ok": False, "error": "text_content_required"}), 400
+
+    try:
+        svc = _get_svc()
+        result = svc.import_txt_full(deck_id, text_content, options=options)
+        return jsonify({"ok": True, "added_count": len(result["items"]),
+                        "skipped_duplicates": result["skipped_duplicates"], "items": result["items"]})
+    except LookupError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 404
+    except Exception as exc:
+        logger.exception("[HTTP] v2/microcards/import txt_full failed: %s", exc)
+        return jsonify({"ok": False, "error": "txt_full_import_failed"}), 500
+
+@microcards_v2_bp.route("/decks/<string:deck_id>/import/txt_simplified", methods=["POST"])
+def import_txt_simplified(deck_id: str):
+    guest_check = _check_guest()
+    if guest_check:
+        return guest_check
+        
+    text_content, options = _read_import_text(request)
+    if not text_content.strip():
+        return jsonify({"ok": False, "error": "text_content_required"}), 400
+
+    try:
+        svc = _get_svc()
+        result = svc.import_txt_simplified(deck_id, text_content, options=options)
+        return jsonify({"ok": True, "added_count": len(result["items"]),
+                        "skipped_duplicates": result["skipped_duplicates"], "items": result["items"]})
+    except LookupError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 404
+    except Exception as exc:
+        logger.exception("[HTTP] v2/microcards/import txt_simplified failed: %s", exc)
+        return jsonify({"ok": False, "error": "txt_simplified_import_failed"}), 500
+
+@microcards_v2_bp.route("/decks/<string:deck_id>/import/test", methods=["POST"])
+def import_test_format(deck_id: str):
+    guest_check = _check_guest()
+    if guest_check:
+        return guest_check
+        
+    text_content, options = _read_import_text(request)
+    if not text_content.strip():
+        return jsonify({"ok": False, "error": "text_content_required"}), 400
+
+    try:
+        svc = _get_svc()
+        result = svc.import_test(deck_id, text_content, options=options)
+        return jsonify({"ok": True, "added_count": len(result["items"]),
+                        "skipped_duplicates": result["skipped_duplicates"], "items": result["items"]})
+    except LookupError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 404
+    except Exception as exc:
+        logger.exception("[HTTP] v2/microcards/import test failed: %s", exc)
+        return jsonify({"ok": False, "error": "test_import_failed"}), 500
+
+@microcards_v2_bp.route("/decks/<string:deck_id>/import/analyze", methods=["POST"])
+def import_analyze(deck_id: str):
+    """Dry-run preview: parse content with given format/options, no cards are created."""
+    guest_check = _check_guest()
+    if guest_check:
+        return guest_check
+
+    body = request.get_json(silent=True) or {}
+    fmt = body.get("format")
+    content = body.get("content")
+    options = body.get("options")
+    if not fmt:
+        return jsonify({"ok": False, "error": "format_required"}), 400
+    if content is None or not str(content).strip():
+        return jsonify({"ok": False, "error": "content_required"}), 400
+
+    try:
+        svc = _get_svc()
+        result = svc.analyze_import(deck_id, fmt, content, options=options)
+        return jsonify({"ok": True, "rows": result["rows"], "counts": result["counts"]})
+    except LookupError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 404
+    except ValueError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+    except Exception as exc:
+        logger.exception("[HTTP] v2/microcards/import analyze failed: %s", exc)
+        return jsonify({"ok": False, "error": "analyze_failed"}), 500
 
 @microcards_v2_bp.route("/decks/import/csv", methods=["POST"])
 def import_csv_to_new_deck():
@@ -397,8 +504,8 @@ def import_csv_to_new_deck():
     try:
         svc = _get_svc()
         deck = svc.create_deck(name=deck_name)
-        cards = svc.import_csv(deck["id"], csv_content)
-        return jsonify({"ok": True, "deck": deck, "added_count": len(cards), "items": cards})
+        result = svc.import_csv(deck["id"], csv_content, dedup=False)
+        return jsonify({"ok": True, "deck": deck, "added_count": len(result["items"]), "items": result["items"]})
     except Exception as exc:
         logger.exception("[HTTP] v2/microcards/import csv to new deck failed: %s", exc)
         return jsonify({"ok": False, "error": "csv_import_failed"}), 500
@@ -441,6 +548,25 @@ def export_csv(deck_id: str):
     except Exception as exc:
         logger.exception("[HTTP] v2/microcards/export csv failed: %s", exc)
         return jsonify({"ok": False, "error": "csv_export_failed"}), 500
+
+@microcards_v2_bp.route("/decks/<string:deck_id>/export/txt", methods=["GET"])
+def export_txt(deck_id: str):
+    guest_check = _check_guest()
+    if guest_check:
+        return guest_check
+    try:
+        svc = _get_svc()
+        txt_data = svc.export_txt(deck_id)
+        return Response(
+            txt_data,
+            mimetype="text/plain; charset=utf-8",
+            headers={"Content-Disposition": f"attachment;filename=deck_{deck_id}.txt"}
+        )
+    except LookupError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 404
+    except Exception as exc:
+        logger.exception("[HTTP] v2/microcards/export txt failed: %s", exc)
+        return jsonify({"ok": False, "error": "txt_export_failed"}), 500
 
 # ── Catalog Integration ───────────────────────────────────────────────
 
