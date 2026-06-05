@@ -321,7 +321,7 @@
             state._entrance = true; // stagger deck cards in on fresh load only
             renderLibrary();
             animateLibraryStats();
-            renderStreak();
+            loadAnalytics();
         } catch (err) {
             grid.innerHTML = `<div class="col-span-full py-8 text-center text-xs text-error">${t('microcards.load_library_error', 'Не удалось загрузить библиотеку.')}</div>`;
         } finally {
@@ -461,6 +461,57 @@
     function selectTagFilter(tag) {
         state.activeTag = (state.activeTag === tag) ? null : (tag || null);
         renderLibrary();
+    }
+
+    // ── Analytics widgets (streak / retention / overdue / heatmap / forecast) ──
+    async function loadAnalytics() {
+        try {
+            const data = await apiCall('/api/v2/microcards/analytics');
+            renderAnalytics(data);
+        } catch (err) {
+            if ($('mcActivity')) $('mcActivity').classList.add('hidden');
+            if ($('mcKpis')) $('mcKpis').style.display = 'none';
+        }
+    }
+    function renderAnalytics(data) {
+        data = data || {};
+        $('anStreak').textContent = data.streak || 0;
+        $('anRetention').textContent = data.retention || 0;
+        $('anOverdue').textContent = data.overdue || 0;
+        const hasActivity = (data.total_reviews || 0) > 0 || (data.streak || 0) > 0 || (data.overdue || 0) > 0;
+        $('mcKpis').style.display = hasActivity ? 'flex' : 'none';
+
+        const heatmap = data.heatmap || [];
+        const forecast = data.forecast || [];
+        const hasHeat = heatmap.some(c => (c.count || 0) > 0);
+        const hasFore = forecast.some(c => (c.count || 0) > 0);
+        $('mcHeatmapCard').classList.toggle('hidden', !hasHeat);
+        $('mcForecastCard').classList.toggle('hidden', !hasFore);
+        $('mcActivity').classList.toggle('hidden', !hasHeat && !hasFore);
+        if (hasHeat) renderHeatmap(heatmap);
+        if (hasFore) renderForecast(forecast);
+    }
+    function heatColor(count) {
+        if (count <= 0) return 'color-mix(in srgb, var(--color-text-main) 8%, transparent)';
+        const pct = count < 3 ? 35 : count < 6 ? 65 : 100;
+        return `color-mix(in srgb, var(--color-primary) ${pct}%, transparent)`;
+    }
+    function renderHeatmap(cells) {
+        $('anHeatmap').innerHTML = cells.map(c =>
+            `<div style="background:${heatColor(c.count)}" title="${escHtml(c.date)}: ${c.count}"></div>`).join('');
+    }
+    function renderForecast(days) {
+        const max = Math.max(1, ...days.map(d => d.count || 0));
+        $('anForecast').innerHTML = days.map(d => {
+            const h = Math.max(3, Math.round(((d.count || 0) / max) * 52));
+            const bg = d.count ? 'var(--color-primary)' : 'color-mix(in srgb, var(--color-text-main) 8%, transparent)';
+            let label = d.date;
+            try { label = new Date(d.date).toLocaleDateString(undefined, { weekday: 'short' }); } catch (e) {}
+            return `<div class="mc-forecast__day" title="${escHtml(d.date)}: ${d.count}">
+                <div class="mc-forecast__bar" style="height:${h}px;background:${bg}"></div>
+                <span class="mc-forecast__label">${escHtml(label)}</span>
+            </div>`;
+        }).join('');
     }
 
     // ── Study settings (session size, new/session, direction) ──────────────
