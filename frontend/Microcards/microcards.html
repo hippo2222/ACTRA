@@ -1154,7 +1154,7 @@
                 <textarea id="createDeckDesc" rows="2" class="mc-textarea"></textarea>
             </div>
             <div class="mc-dialog-actions">
-                <button type="button" onclick="$('dialogCreateDeck').close()" class="mc-btn mc-btn--ghost" data-i18n="microcards.btn_cancel">Отмена</button>
+                <button type="button" onclick="this.closest('dialog').close()" class="mc-btn mc-btn--ghost" data-i18n="microcards.btn_cancel">Отмена</button>
                 <button type="submit" class="mc-btn mc-btn--primary" data-i18n="microcards.btn_create">Создать</button>
             </div>
         </form>
@@ -1165,7 +1165,7 @@
             <h3 id="deleteTitle" class="mc-dialog-title" style="color:var(--color-error)" data-i18n="microcards.dialog_delete_title">Подтверждение удаления</h3>
             <p style="font-size:0.88rem;color:var(--color-text-secondary);line-height:1.5" id="deleteConfirmText" data-i18n="microcards.dialog_delete_text">Вы действительно хотите удалить колоду? Это действие невозможно отменить.</p>
             <div class="mc-dialog-actions">
-                <button type="button" onclick="$('dialogConfirmDelete').close()" class="mc-btn mc-btn--ghost" data-i18n="microcards.btn_cancel">Отмена</button>
+                <button type="button" onclick="this.closest('dialog').close()" class="mc-btn mc-btn--ghost" data-i18n="microcards.btn_cancel">Отмена</button>
                 <button type="button" id="btnDeleteConfirmAction" class="mc-btn" style="background:var(--color-error);color:var(--color-error-fg,#fff)" data-i18n="microcards.btn_delete">Удалить</button>
             </div>
         </div>
@@ -1191,7 +1191,7 @@
                 <input type="file" id="importFile" accept=".csv,.json" class="text-xs file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-surface-2 file:text-text-main hover:file:bg-bg-hover" />
             </div>
             <div class="mc-dialog-actions">
-                <button type="button" onclick="$('dialogImportDeck').close()" class="mc-btn mc-btn--ghost" data-i18n="microcards.btn_cancel">Отмена</button>
+                <button type="button" onclick="this.closest('dialog').close()" class="mc-btn mc-btn--ghost" data-i18n="microcards.btn_cancel">Отмена</button>
                 <button type="submit" class="mc-btn mc-btn--primary" data-i18n="microcards.btn_import_action">Импорт</button>
             </div>
         </form>
@@ -1209,7 +1209,7 @@
                 </select>
             </div>
             <div class="mc-dialog-actions">
-                <button type="button" onclick="$('dialogPublishDeck').close()" class="mc-btn mc-btn--ghost" data-i18n="microcards.btn_cancel">Отмена</button>
+                <button type="button" onclick="this.closest('dialog').close()" class="mc-btn mc-btn--ghost" data-i18n="microcards.btn_cancel">Отмена</button>
                 <button type="submit" class="mc-btn mc-btn--primary" data-i18n="microcards.btn_publish">Опубликовать</button>
             </div>
         </form>
