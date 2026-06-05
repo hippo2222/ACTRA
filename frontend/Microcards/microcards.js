@@ -50,6 +50,7 @@
         
         // Import modal state
         importFormat: 'csv',
+        importSep: 'auto',
         
         // Keyboard controls lock
         keyboardLocked: false
@@ -1144,70 +1145,148 @@
     }
 
     // ── Import Decks Dialog ───────────────────────────────────────────────
+    const IMPORT_HINTS = {
+        csv: ['microcards.imp_hint_csv', 'Колонки: front, back, hint. Строки в кавычках. Совместимо с Quizlet (term/definition).'],
+        json: ['microcards.imp_hint_json', 'Схема actra_flashcards_v1: { "cards": [ { "front": "Q", "back": "A", "hint": "H" } ] }'],
+        txt_full: ['microcards.imp_hint_txt_full', 'Блочный формат @MICROCARD с полями Q:/A: — несколько строк на карточку, поддержка изображений и подсказок.'],
+        txt_simplified: ['microcards.imp_hint_txt_simple', 'По строке на карточку: «вопрос<разделитель>ответ». Разделитель выбирается ниже (или «Авто»).'],
+        test: ['microcards.imp_hint_test', 'Тестовый формат: «? Вопрос», «+ правильный», «- неправильный». Неправильные варианты игнорируются.'],
+    };
+
     function openImportDialog() {
-        $('importCsvContent').value = '';
-        $('importJsonContent').value = '';
+        state.importFormat = 'csv';
+        state.importSep = 'auto';
+        $('impContent').value = '';
         $('importFile').value = '';
+        if ($('impMultiline')) $('impMultiline').checked = false;
+        setImportSep('auto');
         switchImportTab('csv');
+        clearImportPreview();
         $('dialogImportDeck').showModal();
     }
 
     function switchImportTab(format) {
         state.importFormat = format;
-        const btnCsv = $('btnImportTabCsv');
-        const btnJson = $('btnImportTabJson');
-        const zoneCsv = $('importTabCsvZone');
-        const zoneJson = $('importTabJsonZone');
+        document.querySelectorAll('#impTabs .mc-tabbtn[data-fmt]').forEach(b =>
+            b.classList.toggle('is-active', b.getAttribute('data-fmt') === format));
+        $('impOptions').classList.toggle('hidden', format !== 'txt_simplified');
+        const h = IMPORT_HINTS[format] || IMPORT_HINTS.csv;
+        $('impHint').textContent = t(h[0], h[1]);
+        clearImportPreview();
+    }
 
-        if (format === 'csv') {
-            btnCsv.classList.add('is-active');
-            btnJson.classList.remove('is-active');
-            zoneCsv.classList.remove('hidden');
-            zoneJson.classList.add('hidden');
-        } else {
-            btnCsv.classList.remove('is-active');
-            btnJson.classList.add('is-active');
-            zoneCsv.classList.add('hidden');
-            zoneJson.classList.remove('hidden');
+    function setImportSep(sep) {
+        state.importSep = sep;
+        document.querySelectorAll('#impSeps .mc-sep-chip[data-sep]').forEach(c =>
+            c.classList.toggle('is-active', c.getAttribute('data-sep') === sep));
+    }
+
+    function getImportOptions() {
+        if (state.importFormat === 'txt_simplified') {
+            return { separator: state.importSep || 'auto', multiline: !!($('impMultiline') && $('impMultiline').checked) };
+        }
+        return null;
+    }
+
+    function clearImportPreview() {
+        if ($('impPreview')) $('impPreview').classList.add('hidden');
+        if ($('impRows')) $('impRows').innerHTML = '';
+        if ($('impCounts')) $('impCounts').innerHTML = '';
+    }
+    function onImportInput() { clearImportPreview(); }
+    function onImportFile() { clearImportPreview(); }
+
+    async function pasteImportClipboard() {
+        try {
+            const txt = await navigator.clipboard.readText();
+            if (txt) { $('impContent').value = txt; clearImportPreview(); }
+        } catch (e) {
+            showToast(t('microcards.imp_paste_fail', 'Не удалось прочитать буфер — вставьте вручную (Ctrl+V)'), 'warning');
         }
     }
 
+    async function previewImport() {
+        const content = $('impContent').value;
+        if (!content.trim()) {
+            showToast(t('microcards.error_import_empty', 'Введите текст или выберите файл'), 'error');
+            return;
+        }
+        try {
+            const result = await apiCall(`/api/v2/microcards/decks/${state.activeDeckId}/import/analyze`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ format: state.importFormat, content, options: getImportOptions() })
+            });
+            renderImportPreview(result.rows || [], result.counts || {});
+        } catch (err) { console.error(err); }
+    }
+
+    function renderImportPreview(rows, counts) {
+        $('impPreview').classList.remove('hidden');
+        $('impCounts').innerHTML =
+            `<span class="mc-imp-count mc-imp-count--ok">${t('microcards.imp_count_ok', 'К импорту: {n}').replace('{n}', counts.ok || 0)}</span>` +
+            (counts.duplicates ? `<span class="mc-imp-count mc-imp-count--dup">${t('microcards.imp_count_dup', 'Дубли: {n}').replace('{n}', counts.duplicates)}</span>` : '') +
+            (counts.errors ? `<span class="mc-imp-count mc-imp-count--err">${t('microcards.imp_count_err', 'Ошибки: {n}').replace('{n}', counts.errors)}</span>` : '');
+        $('impRows').innerHTML = rows.slice(0, 200).map(row => {
+            if (row.status === 'error') {
+                return `<div class="mc-imp-row mc-imp-row--err"><span class="mc-imp-row__icon material-symbols-outlined">error</span><span class="mc-imp-row__front">${escHtml(row.front)}</span><span class="mc-imp-row__err">${escHtml(row.error || '')}</span></div>`;
+            }
+            const dup = row.duplicate;
+            return `<div class="mc-imp-row ${dup ? 'mc-imp-row--dup' : 'mc-imp-row--ok'}"><span class="mc-imp-row__icon material-symbols-outlined">${dup ? 'content_copy' : 'check_circle'}</span><span class="mc-imp-row__front">${escHtml(row.front)}</span><span class="mc-imp-row__back">${escHtml(row.back)}</span></div>`;
+        }).join('');
+    }
+
+    function bindImportControls() {
+        const tabs = $('impTabs');
+        if (tabs) tabs.addEventListener('click', (e) => {
+            const b = e.target.closest('.mc-tabbtn[data-fmt]');
+            if (b) switchImportTab(b.getAttribute('data-fmt'));
+        });
+        const seps = $('impSeps');
+        if (seps) seps.addEventListener('click', (e) => {
+            const c = e.target.closest('.mc-sep-chip[data-sep]');
+            if (c) { setImportSep(c.getAttribute('data-sep')); clearImportPreview(); }
+        });
+    }
+
     async function handleImportSubmit(e) {
-        e.preventDefault();
+        if (e) e.preventDefault();
+        const fmt = state.importFormat;
         const fileInput = $('importFile');
         const isFile = fileInput.files.length > 0;
-        
-        let url = `/api/v2/microcards/decks/${state.activeDeckId}/import/${state.importFormat}`;
-        let options = { method: 'POST' };
+        const url = `/api/v2/microcards/decks/${state.activeDeckId}/import/${fmt}`;
+        const opts = { method: 'POST' };
 
         if (isFile) {
-            const formData = new FormData();
-            formData.append('file', fileInput.files[0]);
-            options.body = formData;
+            const fd = new FormData();
+            fd.append('file', fileInput.files[0]);
+            opts.body = fd;
         } else {
-            const content = state.importFormat === 'csv' ? $('importCsvContent').value : $('importJsonContent').value;
+            const content = $('impContent').value;
             if (!content.trim()) {
                 showToast(t('microcards.error_import_empty', 'Введите текст или выберите файл'), 'error');
                 return;
             }
-            if (state.importFormat === 'json') {
-                try {
-                    options.body = JSON.stringify(JSON.parse(content));
-                    options.headers = { 'Content-Type': 'application/json' };
-                } catch (err) {
-                    showToast(t('microcards.error_json_invalid', 'Невалидный JSON формат'), 'error');
-                    return;
-                }
+            opts.headers = { 'Content-Type': 'application/json' };
+            if (fmt === 'json') {
+                let parsed;
+                try { parsed = JSON.parse(content); }
+                catch (err) { showToast(t('microcards.error_json_invalid', 'Невалидный JSON формат'), 'error'); return; }
+                opts.body = JSON.stringify(parsed);
+            } else if (fmt === 'csv') {
+                opts.body = JSON.stringify({ csv_content: content, options: getImportOptions() });
             } else {
-                options.body = JSON.stringify({ csv_content: content });
-                options.headers = { 'Content-Type': 'application/json' };
+                opts.body = JSON.stringify({ text: content, options: getImportOptions() });
             }
         }
 
         try {
-            const result = await apiCall(url, options);
+            const result = await apiCall(url, opts);
             $('dialogImportDeck').close();
-            showToast(t('microcards.toast_imported', 'Успешно импортировано {n} карточек').replace('{n}', result.added_count), 'success');
+            let msg = t('microcards.toast_imported', 'Импортировано {n} карточек').replace('{n}', result.added_count || 0);
+            if (result.skipped_duplicates) {
+                msg += ' · ' + t('microcards.toast_skipped_dup', 'дублей пропущено: {n}').replace('{n}', result.skipped_duplicates);
+            }
+            showToast(msg, 'success');
             openDeckDetails(state.activeDeckId);
         } catch (err) {
             console.error(err);
@@ -1259,6 +1338,9 @@
         // Bind swipe-style grading rails
         bindSessionRails();
 
+        // Bind import dialog controls (format tabs + separator chips)
+        bindImportControls();
+
         // Set up Escape navigation key
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && state.view !== 'library') {
@@ -1303,6 +1385,10 @@
         openImportDialog,
         switchImportTab,
         handleImportSubmit,
+        previewImport,
+        pasteImportClipboard,
+        onImportInput,
+        onImportFile,
         publishDeckToCatalog,
         handlePublishSubmit
     };

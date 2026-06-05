@@ -458,6 +458,38 @@
             border: 1px solid var(--color-border-strong); color: var(--color-text-secondary); transition: all .15s; }
         .mc-tabbtn.is-active { background: var(--color-primary); color: var(--color-primary-fg); border-color: var(--color-primary); }
 
+        /* ── Advanced import dialog ─────────────────────────────────── */
+        .mc-import-dialog { max-width: 46rem; }
+        .mc-imp-tabs { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+        .mc-imp-hint { font-size: 0.76rem; color: var(--color-text-secondary); line-height: 1.45; margin: 0;
+            background: var(--color-surface-2); border: 1px solid var(--color-border-subtle); border-radius: 0.6rem; padding: 0.55rem 0.75rem; white-space: pre-line; }
+        .mc-imp-options { background: var(--color-surface-2); border: 1px solid var(--color-border-subtle); border-radius: 0.7rem; padding: 0.75rem 0.85rem; display: flex; flex-direction: column; gap: 0.55rem; }
+        .mc-imp-seps { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+        .mc-sep-chip { min-height: 2rem; padding: 0 0.7rem; border-radius: 0.55rem; font-size: 0.74rem; font-weight: 800;
+            border: 1px solid var(--color-border-strong); background: var(--color-surface-1); color: var(--color-text-secondary); transition: all .15s; }
+        .mc-sep-chip:hover { border-color: var(--color-primary); color: var(--color-text-main); }
+        .mc-sep-chip.is-active { background: var(--color-primary); color: var(--color-primary-fg); border-color: var(--color-primary); }
+        .mc-imp-toggle { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.78rem; font-weight: 600; color: var(--color-text-main); cursor: pointer; }
+        .mc-imp-toggle input { width: 1.05rem; height: 1.05rem; accent-color: var(--color-primary); }
+        .mc-imp-preview { border: 1px solid var(--color-border-subtle); border-radius: 0.7rem; overflow: hidden; }
+        .mc-imp-counts { display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0.6rem 0.7rem; background: var(--color-surface-2); border-bottom: 1px solid var(--color-border-subtle); font-size: 0.72rem; font-weight: 800; }
+        .mc-imp-count { padding: 0.15rem 0.55rem; border-radius: 999px; }
+        .mc-imp-count--ok { background: color-mix(in srgb, var(--color-success) 14%, transparent); color: var(--color-success); }
+        .mc-imp-count--dup { background: color-mix(in srgb, var(--color-warning) 14%, transparent); color: var(--color-warning); }
+        .mc-imp-count--err { background: color-mix(in srgb, var(--color-error) 14%, transparent); color: var(--color-error); }
+        .mc-imp-rows { max-height: 15rem; overflow-y: auto; }
+        .mc-imp-row { display: grid; grid-template-columns: 1.4rem 1fr 1fr; gap: 0.5rem; align-items: start;
+            padding: 0.45rem 0.7rem; border-bottom: 1px solid var(--color-border-subtle); font-size: 0.76rem; }
+        .mc-imp-row:last-child { border-bottom: none; }
+        .mc-imp-row__icon .material-symbols-outlined { font-size: 1.05rem; }
+        .mc-imp-row--ok .mc-imp-row__icon { color: var(--color-success); }
+        .mc-imp-row--dup .mc-imp-row__icon { color: var(--color-warning); }
+        .mc-imp-row--err { background: color-mix(in srgb, var(--color-error) 7%, transparent); }
+        .mc-imp-row--err .mc-imp-row__icon { color: var(--color-error); }
+        .mc-imp-row__front { font-weight: 700; color: var(--color-text-main); word-break: break-word; }
+        .mc-imp-row__back { color: var(--color-text-secondary); word-break: break-word; }
+        .mc-imp-row__err { grid-column: 2 / 4; color: var(--color-error); font-style: italic; }
+
         /* ── Toasts ───────────────────────────────────────────────── */
         #mcToastContainer { position: fixed; bottom: 1.25rem; right: 1.25rem; z-index: 100;
             display: flex; flex-direction: column; gap: 0.6rem; pointer-events: none; }
@@ -1171,27 +1203,64 @@
         </div>
     </dialog>
 
-    <dialog id="dialogImportDeck" closedby="any" aria-labelledby="importTitle">
-        <form method="dialog" style="display:flex;flex-direction:column;gap:1rem" onsubmit="mcApp.handleImportSubmit(event)">
+    <dialog id="dialogImportDeck" class="mc-import-dialog" closedby="any" aria-labelledby="importTitle">
+        <form method="dialog" style="display:flex;flex-direction:column;gap:0.9rem" onsubmit="mcApp.handleImportSubmit(event)">
             <h3 id="importTitle" class="mc-dialog-title" data-i18n="microcards.dialog_import_title">Импортировать карточки</h3>
-            <div style="display:flex;gap:0.5rem;justify-content:center;border-bottom:1px solid var(--color-border-subtle);padding-bottom:0.85rem">
-                <button type="button" id="btnImportTabCsv" onclick="mcApp.switchImportTab('csv')" class="mc-tabbtn is-active">CSV</button>
-                <button type="button" id="btnImportTabJson" onclick="mcApp.switchImportTab('json')" class="mc-tabbtn">JSON</button>
+
+            <div class="mc-imp-tabs" id="impTabs">
+                <button type="button" class="mc-tabbtn is-active" data-fmt="csv">CSV</button>
+                <button type="button" class="mc-tabbtn" data-fmt="json">JSON</button>
+                <button type="button" class="mc-tabbtn" data-fmt="txt_full" data-i18n="microcards.imp_tab_txt_full">TXT (полный)</button>
+                <button type="button" class="mc-tabbtn" data-fmt="txt_simplified" data-i18n="microcards.imp_tab_txt_simple">TXT (упрощённый)</button>
+                <button type="button" class="mc-tabbtn" data-fmt="test" data-i18n="microcards.imp_tab_test">Тест</button>
             </div>
-            <div id="importTabCsvZone" class="mc-field">
-                <label for="importCsvContent" class="mc-field__label" data-i18n="microcards.dialog_import_csv_label">Текст CSV (разделитель запятая/точка с запятой)</label>
-                <textarea id="importCsvContent" rows="6" class="mc-textarea" style="font-family:monospace;font-size:0.78rem" placeholder="front,back,hint&#10;&quot;Что такое RFC?&quot;,&quot;Серия технических документов&quot;,&quot;Hint&quot;"></textarea>
+
+            <p id="impHint" class="mc-imp-hint"></p>
+
+            <div class="mc-field">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.45rem">
+                    <label for="impContent" class="mc-field__label" style="margin:0" data-i18n="microcards.imp_content_label">Вставьте текст</label>
+                    <button type="button" id="impPasteBtn" onclick="mcApp.pasteImportClipboard()" class="mc-btn mc-btn--ghost" style="min-height:2rem;padding:0 0.7rem;font-size:0.72rem">
+                        <span class="material-symbols-outlined" style="font-size:1rem">content_paste</span>
+                        <span data-i18n="microcards.imp_paste">Вставить из буфера</span>
+                    </button>
+                </div>
+                <textarea id="impContent" rows="7" class="mc-textarea" style="font-family:monospace;font-size:0.78rem" oninput="mcApp.onImportInput()"></textarea>
             </div>
-            <div id="importTabJsonZone" class="mc-field hidden">
-                <label for="importJsonContent" class="mc-field__label" data-i18n="microcards.dialog_import_json_label">Текст JSON (Schema: actra_flashcards_v1)</label>
-                <textarea id="importJsonContent" rows="6" class="mc-textarea" style="font-family:monospace;font-size:0.78rem" placeholder="{&#10;  &quot;cards&quot;: [&#10;    { &quot;front&quot;: &quot;Q&quot;, &quot;back&quot;: &quot;A&quot;, &quot;hint&quot;: &quot;H&quot; }&#10;  ]&#10;}"></textarea>
+
+            <!-- txt_simplified parser options -->
+            <div id="impOptions" class="mc-imp-options hidden">
+                <div class="mc-field__label" data-i18n="microcards.imp_sep_label">Разделитель «вопрос / ответ»</div>
+                <div class="mc-imp-seps" id="impSeps">
+                    <button type="button" class="mc-sep-chip is-active" data-sep="auto" data-i18n="microcards.imp_sep_auto">Авто</button>
+                    <button type="button" class="mc-sep-chip" data-sep="tab" data-i18n="microcards.imp_sep_tab">Таб</button>
+                    <button type="button" class="mc-sep-chip" data-sep="arrow">→</button>
+                    <button type="button" class="mc-sep-chip" data-sep="dash">—</button>
+                    <button type="button" class="mc-sep-chip" data-sep="semicolon">;</button>
+                    <button type="button" class="mc-sep-chip" data-sep="colon">:</button>
+                    <button type="button" class="mc-sep-chip" data-sep="comma">,</button>
+                </div>
+                <label class="mc-imp-toggle">
+                    <input type="checkbox" id="impMultiline" onchange="mcApp.onImportInput()" />
+                    <span data-i18n="microcards.imp_multiline">Многострочные определения (Quizlet)</span>
+                </label>
             </div>
+
             <div class="mc-field">
                 <label for="importFile" class="mc-field__label" data-i18n="microcards.dialog_import_file_label">Или выберите файл</label>
-                <input type="file" id="importFile" accept=".csv,.json" class="text-xs file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-surface-2 file:text-text-main hover:file:bg-bg-hover" />
+                <input type="file" id="importFile" accept=".csv,.json,.txt,.text,.md,.tsv" onchange="mcApp.onImportFile()"
+                    class="text-xs file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-surface-2 file:text-text-main hover:file:bg-bg-hover" />
             </div>
+
+            <!-- live preview -->
+            <div id="impPreview" class="mc-imp-preview hidden">
+                <div class="mc-imp-counts" id="impCounts"></div>
+                <div class="mc-imp-rows" id="impRows"></div>
+            </div>
+
             <div class="mc-dialog-actions">
                 <button type="button" onclick="this.closest('dialog').close()" class="mc-btn mc-btn--ghost" data-i18n="microcards.btn_cancel">Отмена</button>
+                <button type="button" onclick="mcApp.previewImport()" class="mc-btn mc-btn--ghost" data-i18n="microcards.imp_preview_btn">Предпросмотр</button>
                 <button type="submit" class="mc-btn mc-btn--primary" data-i18n="microcards.btn_import_action">Импорт</button>
             </div>
         </form>
