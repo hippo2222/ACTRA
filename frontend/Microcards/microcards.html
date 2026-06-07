@@ -1305,9 +1305,37 @@
                 </label>
             </div>
 
+            <!-- test-format parser options: configurable markers -->
+            <div id="impTestOptions" class="mc-imp-options hidden">
+                <div class="mc-field__label" data-i18n="microcards.imp_markers_label">Маркеры разбора</div>
+                <div class="mc-imp-seps" id="impMarkerPresets">
+                    <button type="button" class="mc-sep-chip is-active" data-preset="standard" data-i18n="microcards.imp_preset_standard">Стандарт (? +/−)</button>
+                    <button type="button" class="mc-sep-chip" data-preset="mytestx" data-i18n="microcards.imp_preset_mytestx">MyTestX (# +/−)</button>
+                    <button type="button" class="mc-sep-chip" data-preset="custom" data-i18n="microcards.imp_preset_custom">Свой…</button>
+                </div>
+                <div id="impMarkerCustom" class="hidden" style="display:flex;flex-wrap:wrap;gap:0.6rem;margin-top:0.5rem">
+                    <label style="display:flex;flex-direction:column;gap:0.2rem;font-size:0.72rem">
+                        <span data-i18n="microcards.imp_marker_question">Вопрос</span>
+                        <input type="text" id="impMarkerQuestion" class="mc-input" style="width:5rem;font-family:monospace" value="?#" oninput="mcApp.onImportInput()" />
+                    </label>
+                    <label style="display:flex;flex-direction:column;gap:0.2rem;font-size:0.72rem">
+                        <span data-i18n="microcards.imp_marker_correct">Правильный</span>
+                        <input type="text" id="impMarkerCorrect" class="mc-input" style="width:4rem;font-family:monospace" value="+" oninput="mcApp.onImportInput()" />
+                    </label>
+                    <label style="display:flex;flex-direction:column;gap:0.2rem;font-size:0.72rem">
+                        <span data-i18n="microcards.imp_marker_wrong">Неправильный</span>
+                        <input type="text" id="impMarkerWrong" class="mc-input" style="width:4rem;font-family:monospace" value="-" oninput="mcApp.onImportInput()" />
+                    </label>
+                    <label style="display:flex;flex-direction:column;gap:0.2rem;font-size:0.72rem">
+                        <span data-i18n="microcards.imp_marker_image">Картинка</span>
+                        <input type="text" id="impMarkerImage" class="mc-input" style="width:4rem;font-family:monospace" value="@" oninput="mcApp.onImportInput()" />
+                    </label>
+                </div>
+            </div>
+
             <div class="mc-field">
                 <label for="importFile" class="mc-field__label" data-i18n="microcards.dialog_import_file_label">Или выберите файл</label>
-                <input type="file" id="importFile" accept=".csv,.json,.txt,.text,.md,.tsv" onchange="mcApp.onImportFile()"
+                <input type="file" id="importFile" accept=".csv,.json,.txt,.text,.md,.tsv,.qst" onchange="mcApp.onImportFile()"
                     class="text-xs file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-surface-2 file:text-text-main hover:file:bg-bg-hover" />
             </div>
 

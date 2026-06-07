@@ -1991,7 +1991,16 @@
     "fmt_json": "JSON",
     "fmt_txt_full": "TXT (блоки)",
     "fmt_txt_simplified": "Текст «вопрос — ответ»",
-    "fmt_test": "Тестовые вопросы"
+    "fmt_test": "Тестовые вопросы",
+    "imp_markers_label": "Маркеры разбора",
+    "imp_preset_standard": "Стандарт (? +/−)",
+    "imp_preset_mytestx": "MyTestX (# +/−)",
+    "imp_preset_custom": "Свой…",
+    "imp_marker_question": "Вопрос",
+    "imp_marker_correct": "Правильный",
+    "imp_marker_wrong": "Неправильный",
+    "imp_marker_image": "Картинка",
+    "imp_tune_hint": "Разобралось не так? Вкладка «Тест» → «Маркеры разбора»"
   },
   "nav": {
     "home": "Главная",

@@ -8,15 +8,34 @@ from .test_task import TestTask, TestQuestion, TestAnswer
 
 
 class TestFileParser:
-    """Парсер для импорта тестов из текстовых файлов"""
-    
-    def __init__(self):
-        # '?' (стандарт) и '#' (формат MyTestX) — оба маркеры вопроса.
-        self.question_pattern = re.compile(r'^[?#]\s*(.+)$')
-        self.answer_pattern = re.compile(r'^[+-]\s*(.+)$')
-        # '@ image.jpg' — ссылка на картинку (MyTestX). Файла у нас нет, строку пропускаем.
-        self.image_pattern = re.compile(r'^@\s*(.+)$')
-    
+    """Парсер для импорта тестов из текстовых файлов.
+
+    Маркеры настраиваемые (variant A «модифицировать парсер под файл»):
+    markers = {"question": "?#", "correct": "+", "wrong": "-", "image": "@"}.
+    Каждое поле — набор односимвольных префиксов строки.
+    """
+
+    DEFAULT_MARKERS = {"question": "?#", "correct": "+", "wrong": "-", "image": "@"}
+
+    def __init__(self, markers=None):
+        m = dict(self.DEFAULT_MARKERS)
+        if isinstance(markers, dict):
+            for k in m:
+                v = markers.get(k)
+                if isinstance(v, str) and v.strip():
+                    m[k] = v.strip()
+        q = m["question"] or "?#"
+        c = m["correct"] or "+"
+        w = m["wrong"] or "-"
+        img = m["image"] or ""
+        self.question_chars = set(q)
+        self.correct_chars = set(c)
+        self.question_pattern = re.compile(r'^[%s]\s*(.+)$' % re.escape(q))
+        # Правильные и неправильные ответы — один паттерн, тип решает первый символ.
+        self.answer_pattern = re.compile(r'^[%s]\s*(.+)$' % re.escape(c + w))
+        # Ссылка на картинку (например MyTestX '@ image.jpg') — строку пропускаем.
+        self.image_pattern = re.compile(r'^[%s]\s*(.+)$' % re.escape(img)) if img else None
+
     def parse_file(self, file_path: str, lenient: bool = False) -> List[TestQuestion]:
         """Парсит файл с тестовыми вопросами
 
@@ -69,7 +88,7 @@ class TestFileParser:
                         continue
                     
                     # Проверяем, является ли строка только маркером вопроса (новый формат)
-                    if line_stripped in ('?', '#'):
+                    if len(line_stripped) == 1 and line_stripped in self.question_chars:
                         # Сохраняем предыдущий вопрос, если есть
                         if current_question:
                             questions.append(current_question)
@@ -93,7 +112,7 @@ class TestFileParser:
                                 break
 
                             # Ссылка на картинку (MyTestX) — пропускаем (файла нет)
-                            if self.image_pattern.match(next_line_stripped):
+                            if self.image_pattern and self.image_pattern.match(next_line_stripped):
                                 i += 1
                                 continue
 
@@ -129,8 +148,8 @@ class TestFileParser:
                                 continue
                             raise ValueError(f"Строка {line_num}: ответ без вопроса")
                         
-                        # Определяем, правильный ли это ответ
-                        is_correct = line_stripped.startswith('+')
+                        # Определяем, правильный ли это ответ (по маркеру)
+                        is_correct = line_stripped[:1] in self.correct_chars
                         answer_text = answer_match.group(1)
                         
                         # Создаем ответ
@@ -143,7 +162,7 @@ class TestFileParser:
                         continue
                     
                     # Ссылка на картинку (MyTestX) между вопросом и ответами — пропускаем
-                    if self.image_pattern.match(line_stripped):
+                    if self.image_pattern and self.image_pattern.match(line_stripped):
                         i += 1
                         continue
 

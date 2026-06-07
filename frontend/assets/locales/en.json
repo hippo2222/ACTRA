@@ -1988,7 +1988,16 @@
     "fmt_json": "JSON",
     "fmt_txt_full": "TXT (blocks)",
     "fmt_txt_simplified": "Text «question — answer»",
-    "fmt_test": "Test questions"
+    "fmt_test": "Test questions",
+    "imp_markers_label": "Parse markers",
+    "imp_preset_standard": "Standard (? +/−)",
+    "imp_preset_mytestx": "MyTestX (# +/−)",
+    "imp_preset_custom": "Custom…",
+    "imp_marker_question": "Question",
+    "imp_marker_correct": "Correct",
+    "imp_marker_wrong": "Wrong",
+    "imp_marker_image": "Image",
+    "imp_tune_hint": "Parsed wrong? Test tab → Parse markers"
   },
   "nav": {
     "home": "Home",

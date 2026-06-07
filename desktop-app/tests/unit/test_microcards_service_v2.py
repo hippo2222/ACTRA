@@ -335,6 +335,23 @@ def test_import_test_mytestx_hash_format():
     assert all("радуга" not in c["back"]["text"] for c in cards)
 
 
+def test_import_test_custom_markers():
+    # Variant A: adapt the parser to an unusual file via custom markers, no code change.
+    tmp = tempfile.mkdtemp()
+    svc = MicrocardsServiceV2(tmp, user_id="test_user")
+    deck = svc.create_deck(name="Custom Markers")
+
+    content = "* Capital of France?\n= Paris\n~ Lyon\n* 2+2?\n= 4\n~ 3\n"
+    # default markers don't recognize * = ~ → no cards
+    assert len(svc.import_test(deck["id"], content)["items"]) == 0
+    # custom markers unlock it
+    deck2 = svc.create_deck(name="Custom Markers 2")
+    opts = {"markers": {"question": "*", "correct": "=", "wrong": "~"}}
+    cards = svc.import_test(deck2["id"], content, options=opts)["items"]
+    assert [c["front"]["text"] for c in cards] == ["Capital of France?", "2+2?"]
+    assert cards[0]["back"]["text"] == "Paris"
+
+
 def test_import_auto_multiline_decision():
     # multiline:"auto" — ON for a tab hierarchy (Quizlet tree), OFF for a flat list.
     tmp = tempfile.mkdtemp()

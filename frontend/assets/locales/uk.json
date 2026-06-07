@@ -1991,7 +1991,16 @@
     "fmt_json": "JSON",
     "fmt_txt_full": "TXT (блоки)",
     "fmt_txt_simplified": "Текст «питання — відповідь»",
-    "fmt_test": "Тестові питання"
+    "fmt_test": "Тестові питання",
+    "imp_markers_label": "Маркери розбору",
+    "imp_preset_standard": "Стандарт (? +/−)",
+    "imp_preset_mytestx": "MyTestX (# +/−)",
+    "imp_preset_custom": "Свій…",
+    "imp_marker_question": "Питання",
+    "imp_marker_correct": "Правильний",
+    "imp_marker_wrong": "Неправильний",
+    "imp_marker_image": "Картинка",
+    "imp_tune_hint": "Розібралося не так? Вкладка «Тест» → «Маркери розбору»"
   },
   "nav": {
     "home": "Головна",

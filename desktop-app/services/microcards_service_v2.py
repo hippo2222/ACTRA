@@ -1506,7 +1506,10 @@ class MicrocardsServiceV2:
                 temp_path = tmp.name
                 tmp.write(_s(content))
 
-            parser = TestFileParser()
+            # Custom markers (variant A): the UI can override question/answer/image
+            # markers to match an unusual file without code changes.
+            markers = (options or {}).get("markers")
+            parser = TestFileParser(markers=markers)
             # Lenient: skip malformed lines (questions without '?', B./C. options,
             # stray separators) so a messy bank still imports its valid questions.
             questions = parser.parse_file(temp_path, lenient=True)

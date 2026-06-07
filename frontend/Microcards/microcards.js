@@ -1290,6 +1290,7 @@
         $('importFile').value = '';
         if ($('impMultiline')) $('impMultiline').checked = true;
         setImportSep('auto');
+        setMarkerPreset('standard');
         switchImportTab('auto');
         clearImportPreview();
         $('dialogImportDeck').showModal();
@@ -1302,6 +1303,8 @@
         // Manual parser options only for the simplified TXT tab — Auto decides on
         // its own (separator + multiline), so we don't burden the user with knobs.
         $('impOptions').classList.toggle('hidden', format !== 'txt_simplified');
+        // Configurable markers for the Test tab (adapt parser to the file's format).
+        if ($('impTestOptions')) $('impTestOptions').classList.toggle('hidden', format !== 'test');
         const h = IMPORT_HINTS[format] || IMPORT_HINTS.csv;
         $('impHint').textContent = t(h[0], h[1]);
         schedulePreview();
@@ -1313,6 +1316,24 @@
             c.classList.toggle('is-active', c.getAttribute('data-sep') === sep));
     }
 
+    function setMarkerPreset(preset) {
+        state.importMarkerPreset = preset;
+        document.querySelectorAll('#impMarkerPresets .mc-sep-chip[data-preset]').forEach(c =>
+            c.classList.toggle('is-active', c.getAttribute('data-preset') === preset));
+        if ($('impMarkerCustom')) $('impMarkerCustom').classList.toggle('hidden', preset !== 'custom');
+        schedulePreview();
+    }
+
+    function getTestMarkers() {
+        const preset = state.importMarkerPreset || 'standard';
+        if (preset === 'mytestx') return { question: '#', correct: '+', wrong: '-', image: '@' };
+        if (preset === 'custom') {
+            const v = (id, d) => (($(id) && $(id).value) || '').trim() || d;
+            return { question: v('impMarkerQuestion', '?#'), correct: v('impMarkerCorrect', '+'), wrong: v('impMarkerWrong', '-'), image: (($('impMarkerImage') && $('impMarkerImage').value) || '').trim() };
+        }
+        return { question: '?#', correct: '+', wrong: '-', image: '@' };
+    }
+
     function getImportOptions() {
         if (state.importFormat === 'auto') {
             // Auto: backend picks the separator and decides multiline itself.
@@ -1320,6 +1341,9 @@
         }
         if (state.importFormat === 'txt_simplified') {
             return { separator: state.importSep || 'auto', multiline: !!($('impMultiline') && $('impMultiline').checked) };
+        }
+        if (state.importFormat === 'test') {
+            return { markers: getTestMarkers() };
         }
         return null;
     }
@@ -1418,6 +1442,11 @@
             if (h.multiline_cards > 0) {
                 chips.push(chip('account_tree', t('microcards.imp_hierarchy', 'Иерархия: {n} многострочных').replace('{n}', h.multiline_cards)));
             }
+            // Poor result on a test/auto import → nudge the user to the marker settings.
+            const okN = counts.ok || 0, errN = counts.errors || 0;
+            if ((okN === 0 || errN >= okN) && (state.importFormat === 'test' || state.importFormat === 'auto')) {
+                chips.push(chip('tune', t('microcards.imp_tune_hint', 'Разобралось не так? Вкладка «Тест» → «Маркеры разбора»')));
+            }
             badges.innerHTML = chips.join('');
         }
         $('impCounts').innerHTML =
@@ -1442,7 +1471,12 @@
         const seps = $('impSeps');
         if (seps) seps.addEventListener('click', (e) => {
             const c = e.target.closest('.mc-sep-chip[data-sep]');
-            if (c) { setImportSep(c.getAttribute('data-sep')); clearImportPreview(); }
+            if (c) { setImportSep(c.getAttribute('data-sep')); schedulePreview(); }
+        });
+        const presets = $('impMarkerPresets');
+        if (presets) presets.addEventListener('click', (e) => {
+            const c = e.target.closest('.mc-sep-chip[data-preset]');
+            if (c) setMarkerPreset(c.getAttribute('data-preset'));
         });
     }
 
