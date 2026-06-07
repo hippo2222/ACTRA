@@ -1353,9 +1353,16 @@
     }
 
     const IMPORT_FORMAT_LABELS = {
-        csv: 'CSV-таблица', json: 'JSON', txt_full: 'TXT (блоки)',
-        txt_simplified: 'Текст «вопрос — ответ»', test: 'Тестовые вопросы',
+        csv: ['microcards.fmt_csv', 'CSV-таблица'],
+        json: ['microcards.fmt_json', 'JSON'],
+        txt_full: ['microcards.fmt_txt_full', 'TXT (блоки)'],
+        txt_simplified: ['microcards.fmt_txt_simplified', 'Текст «вопрос — ответ»'],
+        test: ['microcards.fmt_test', 'Тестовые вопросы'],
     };
+    function importFormatLabel(fmt) {
+        const e = IMPORT_FORMAT_LABELS[fmt];
+        return e ? t(e[0], e[1]) : fmt;
+    }
 
     function renderImportPreview(rows, counts, meta) {
         $('impPreview').classList.remove('hidden');
@@ -1364,7 +1371,7 @@
             const chips = [];
             const chip = (icon, text) => `<span class="mc-imp-count" style="display:inline-flex;align-items:center;gap:0.3rem"><span class="material-symbols-outlined" style="font-size:0.95rem">${icon}</span>${escHtml(text)}</span>`;
             if (state.importFormat === 'auto' && meta && meta.detected_format) {
-                chips.push(chip('auto_awesome', t('microcards.imp_detected', 'Распознано: {f}').replace('{f}', IMPORT_FORMAT_LABELS[meta.detected_format] || meta.detected_format)));
+                chips.push(chip('auto_awesome', t('microcards.imp_detected', 'Распознано: {f}').replace('{f}', importFormatLabel(meta.detected_format))));
             }
             const h = (meta && meta.hierarchy) || {};
             if (h.multiline_cards > 0) {
