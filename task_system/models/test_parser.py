@@ -14,12 +14,16 @@ class TestFileParser:
         self.question_pattern = re.compile(r'^\?\s*(.+)$')
         self.answer_pattern = re.compile(r'^[+-]\s*(.+)$')
     
-    def parse_file(self, file_path: str) -> List[TestQuestion]:
+    def parse_file(self, file_path: str, lenient: bool = False) -> List[TestQuestion]:
         """Парсит файл с тестовыми вопросами
-        
+
         Поддерживает два формата:
         1. Старый формат: ? текст вопроса на одной строке
         2. Новый формат: ? на отдельной строке, текст вопроса на следующих строках
+
+        lenient=True: пропускать строки неизвестного формата вместо ошибки —
+        чтобы импортировать корректные вопросы из «грязного» файла (без ?, с
+        вариантами B./C./D. и т.п.), а не падать на первой проблемной строке.
         """
         questions = []
         current_question = None
@@ -91,6 +95,9 @@ class TestFileParser:
                         
                         # Проверяем, что нашли текст вопроса
                         if not question_lines:
+                            if lenient:
+                                current_question = None
+                                continue
                             raise ValueError(f"Строка {line_num}: вопрос без текста (после '?' не найден текст)")
                         
                         # Объединяем строки вопроса (многострочный вопрос)
@@ -109,6 +116,9 @@ class TestFileParser:
                     answer_match = self.answer_pattern.match(line_stripped)
                     if answer_match:
                         if current_question is None:
+                            if lenient:
+                                i += 1
+                                continue
                             raise ValueError(f"Строка {line_num}: ответ без вопроса")
                         
                         # Определяем, правильный ли это ответ
@@ -125,6 +135,9 @@ class TestFileParser:
                         continue
                     
                     # Если строка не соответствует ни одному паттерну
+                    if lenient:
+                        i += 1
+                        continue
                     raise ValueError(f"Строка {line_num}: неизвестный формат: '{line_stripped}'")
                 
                 # Добавляем последний вопрос, если есть

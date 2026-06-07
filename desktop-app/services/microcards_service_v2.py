@@ -1495,7 +1495,9 @@ class MicrocardsServiceV2:
                 tmp.write(_s(content))
 
             parser = TestFileParser()
-            questions = parser.parse_file(temp_path)
+            # Lenient: skip malformed lines (questions without '?', B./C. options,
+            # stray separators) so a messy bank still imports its valid questions.
+            questions = parser.parse_file(temp_path, lenient=True)
 
             parsed: List[Dict[str, Any]] = []
             for q in questions:

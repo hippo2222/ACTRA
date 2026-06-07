@@ -26,13 +26,33 @@ def _check_guest():
         return jsonify({"ok": False, "error": "guest_cannot_use_microcards"}), 403
     return None
 
+def _decode_import_bytes(raw: bytes) -> str:
+    """Decode uploaded text trying UTF-8 (incl. BOM) first, then common legacy
+    Cyrillic encodings — many exported test banks are Windows-1251, not UTF-8.
+    """
+    if not raw:
+        return ""
+    if raw[:3] == b"\xef\xbb\xbf":
+        return raw[3:].decode("utf-8", errors="replace")
+    if raw[:2] in (b"\xff\xfe", b"\xfe\xff"):
+        return raw.decode("utf-16", errors="replace")
+    for enc in ("utf-8", "cp1251", "cp1252"):
+        try:
+            return raw.decode(enc)
+        except UnicodeDecodeError:
+            continue
+    return raw.decode("utf-8", errors="replace")
+
+
 def _read_import_text(req):
     """Extract raw import text + optional parser options from a multipart file or JSON body."""
     if "file" in req.files:
         f = req.files["file"]
-        return f.read().decode("utf-8", errors="ignore"), None
+        return _decode_import_bytes(f.read()), None
     body = req.get_json(silent=True) or {}
-    text = body.get("text") or req.data.decode("utf-8", errors="ignore")
+    text = body.get("text")
+    if text is None:
+        text = _decode_import_bytes(req.data or b"")
     return text, body.get("options")
 
 # ── Decks CRUD ────────────────────────────────────────────────────────

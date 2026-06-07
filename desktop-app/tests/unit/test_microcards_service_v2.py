@@ -279,6 +279,35 @@ def test_import_test_multi_correct():
     assert cards[0]["acceptable_answers"] == ["3"]
 
 
+def test_import_test_messy_bank_is_lenient():
+    # A real-world test bank often has malformed lines: a question without the
+    # leading '?', B./C. option markers, stray separators. Import must skip those
+    # gracefully and still create the valid cards (not raise / 500).
+    tmp = tempfile.mkdtemp()
+    svc = MicrocardsServiceV2(tmp, user_id="test_user")
+    deck = svc.create_deck(name="Messy Bank")
+
+    content = "\n".join([
+        "?Q1 good",
+        "+A1",
+        "-w",
+        "Q2 question without leading question-mark",   # malformed → skipped
+        "+ignored",
+        "?Q3 good",
+        "+A3",
+        "B. option-style answer",                       # malformed → skipped
+        "--",                                            # stray separator
+        "?Q4 good",
+        "+A4",
+    ]) + "\n"
+
+    cards = svc.import_test(deck["id"], content)["items"]
+    fronts = [c["front"]["text"] for c in cards]
+    assert "Q1 good" in fronts and "Q3 good" in fronts and "Q4 good" in fronts
+    assert all("without leading" not in f for f in fronts)
+    assert len(cards) >= 3
+
+
 def test_import_simplified_separator_options():
     tmp = tempfile.mkdtemp()
     svc = MicrocardsServiceV2(tmp, user_id="test_user")
