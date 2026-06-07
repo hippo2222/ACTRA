@@ -1336,23 +1336,22 @@
                     <button type="button" class="mc-sep-chip" data-preset="mytestx" data-i18n="microcards.imp_preset_mytestx">MyTestX (# +/−)</button>
                     <button type="button" class="mc-sep-chip" data-preset="custom" data-i18n="microcards.imp_preset_custom">Свой…</button>
                 </div>
-                <div id="impMarkerCustom" class="hidden" style="display:flex;flex-wrap:wrap;gap:0.6rem;margin-top:0.5rem">
-                    <label style="display:flex;flex-direction:column;gap:0.2rem;font-size:0.72rem">
-                        <span data-i18n="microcards.imp_marker_question">Вопрос</span>
-                        <input type="text" id="impMarkerQuestion" class="mc-input" style="width:5rem;font-family:monospace" value="?#" oninput="mcApp.onImportInput()" />
-                    </label>
-                    <label style="display:flex;flex-direction:column;gap:0.2rem;font-size:0.72rem">
-                        <span data-i18n="microcards.imp_marker_correct">Правильный</span>
-                        <input type="text" id="impMarkerCorrect" class="mc-input" style="width:4rem;font-family:monospace" value="+" oninput="mcApp.onImportInput()" />
-                    </label>
-                    <label style="display:flex;flex-direction:column;gap:0.2rem;font-size:0.72rem">
-                        <span data-i18n="microcards.imp_marker_wrong">Неправильный</span>
-                        <input type="text" id="impMarkerWrong" class="mc-input" style="width:4rem;font-family:monospace" value="-" oninput="mcApp.onImportInput()" />
-                    </label>
-                    <label style="display:flex;flex-direction:column;gap:0.2rem;font-size:0.72rem">
-                        <span data-i18n="microcards.imp_marker_image">Картинка</span>
-                        <input type="text" id="impMarkerImage" class="mc-input" style="width:4rem;font-family:monospace" value="@" oninput="mcApp.onImportInput()" />
-                    </label>
+                <div id="impMarkerCustom" class="hidden" style="margin-top:0.5rem">
+                    <div style="display:flex;flex-wrap:wrap;gap:0.6rem">
+                        <label style="display:flex;flex-direction:column;gap:0.2rem;font-size:0.72rem">
+                            <span data-i18n="microcards.imp_marker_question">Вопрос</span>
+                            <input type="text" id="impMarkerQuestion" class="mc-input" style="width:4rem;font-family:monospace" value="?" oninput="mcApp.onImportInput()" />
+                        </label>
+                        <label style="display:flex;flex-direction:column;gap:0.2rem;font-size:0.72rem">
+                            <span data-i18n="microcards.imp_marker_correct">Правильный</span>
+                            <input type="text" id="impMarkerCorrect" class="mc-input" style="width:4rem;font-family:monospace" value="+" oninput="mcApp.onImportInput()" />
+                        </label>
+                        <label style="display:flex;flex-direction:column;gap:0.2rem;font-size:0.72rem">
+                            <span data-i18n="microcards.imp_marker_wrong">Неправильный</span>
+                            <input type="text" id="impMarkerWrong" class="mc-input" style="width:4rem;font-family:monospace" value="-" oninput="mcApp.onImportInput()" />
+                        </label>
+                    </div>
+                    <p style="font-size:0.7rem;color:var(--color-text-secondary);margin:0.4rem 0 0" data-i18n="microcards.imp_marker_hint">Можно перечислить несколько символов подряд (например ?# — оба считаются вопросом).</p>
                 </div>
             </div>
 

@@ -1328,13 +1328,15 @@
     }
 
     function getTestMarkers() {
+        // The image marker (@) is handled by the backend default and skipped — embedded
+        // images can't be shown, so it's not exposed as a knob.
         const preset = state.importMarkerPreset || 'standard';
-        if (preset === 'mytestx') return { question: '#', correct: '+', wrong: '-', image: '@' };
+        if (preset === 'mytestx') return { question: '#', correct: '+', wrong: '-' };
         if (preset === 'custom') {
             const v = (id, d) => (($(id) && $(id).value) || '').trim() || d;
-            return { question: v('impMarkerQuestion', '?#'), correct: v('impMarkerCorrect', '+'), wrong: v('impMarkerWrong', '-'), image: (($('impMarkerImage') && $('impMarkerImage').value) || '').trim() };
+            return { question: v('impMarkerQuestion', '?'), correct: v('impMarkerCorrect', '+'), wrong: v('impMarkerWrong', '-') };
         }
-        return { question: '?#', correct: '+', wrong: '-', image: '@' };
+        return null; // standard → backend default markers (accepts both ? and #)
     }
 
     function getImportOptions() {

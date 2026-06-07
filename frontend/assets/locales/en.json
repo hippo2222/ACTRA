@@ -2019,7 +2019,8 @@
     "pub_code_share": "Share the code — others can find and import the deck with it.",
     "btn_close2": "Close",
     "btn_save_access": "Save",
-    "btn_publish_deck": "Publish"
+    "btn_publish_deck": "Publish",
+    "imp_marker_hint": "You can list several characters in a row (e.g. ?# — both count as a question)."
   },
   "nav": {
     "home": "Home",
