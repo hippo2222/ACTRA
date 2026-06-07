@@ -792,6 +792,10 @@
                         <button type="button" onclick="mcApp.openSettingsDialog()" class="mc-iconbtn" aria-label="Настройки" data-i18n-title="microcards.settings_title" title="Настройки обучения">
                             <span class="material-symbols-outlined">tune</span>
                         </button>
+                        <button type="button" onclick="mcApp.openImportByCodeDialog()" class="mc-btn mc-btn--ghost" data-i18n-title="microcards.import_by_code_title" title="Импорт колоды по коду доступа">
+                            <span class="material-symbols-outlined">key</span>
+                            <span data-i18n="microcards.btn_import_by_code">По коду</span>
+                        </button>
                         <button type="button" onclick="mcApp.openCreateDeckDialog()" class="mc-btn mc-btn--primary">
                             <span class="material-symbols-outlined">add</span>
                             <span data-i18n="microcards.btn_create_deck">Создать колоду</span>
@@ -1262,7 +1266,8 @@
             <h3 id="importTitle" class="mc-dialog-title" data-i18n="microcards.dialog_import_title">Импортировать карточки</h3>
 
             <div class="mc-imp-tabs" id="impTabs">
-                <button type="button" class="mc-tabbtn is-active" data-fmt="csv">CSV</button>
+                <button type="button" class="mc-tabbtn is-active" data-fmt="auto" data-i18n="microcards.imp_tab_auto">Авто</button>
+                <button type="button" class="mc-tabbtn" data-fmt="csv">CSV</button>
                 <button type="button" class="mc-tabbtn" data-fmt="json">JSON</button>
                 <button type="button" class="mc-tabbtn" data-fmt="txt_full" data-i18n="microcards.imp_tab_txt_full">TXT (полный)</button>
                 <button type="button" class="mc-tabbtn" data-fmt="txt_simplified" data-i18n="microcards.imp_tab_txt_simple">TXT (упрощённый)</button>
@@ -1308,6 +1313,7 @@
 
             <!-- live preview -->
             <div id="impPreview" class="mc-imp-preview hidden">
+                <div class="mc-imp-badges" id="impBadges" style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-bottom:0.4rem"></div>
                 <div class="mc-imp-counts" id="impCounts"></div>
                 <div class="mc-imp-rows" id="impRows"></div>
             </div>
@@ -1316,6 +1322,22 @@
                 <button type="button" onclick="this.closest('dialog').close()" class="mc-btn mc-btn--ghost" data-i18n="microcards.btn_cancel">Отмена</button>
                 <button type="button" onclick="mcApp.previewImport()" class="mc-btn mc-btn--ghost" data-i18n="microcards.imp_preview_btn">Предпросмотр</button>
                 <button type="submit" class="mc-btn mc-btn--primary" data-i18n="microcards.btn_import_action">Импорт</button>
+            </div>
+        </form>
+    </dialog>
+
+    <dialog id="dialogImportByCode" closedby="any" aria-labelledby="importByCodeTitle">
+        <form method="dialog" style="display:flex;flex-direction:column;gap:0.9rem" onsubmit="mcApp.handleImportByCodeSubmit(event)">
+            <h3 id="importByCodeTitle" class="mc-dialog-title" data-i18n="microcards.import_by_code_title">Импорт по коду</h3>
+            <p style="font-size:0.8rem;color:var(--color-text-secondary)" data-i18n="microcards.import_by_code_hint">Введите код доступа к колоде — она скопируется в вашу библиотеку.</p>
+            <div class="mc-field">
+                <label for="importCodeInput" class="mc-field__label" data-i18n="microcards.import_by_code_label">Код доступа</label>
+                <input type="text" id="importCodeInput" class="mc-input" autocomplete="off" required
+                    placeholder="например  7NR72S7GQNVF759K" style="font-family:monospace;letter-spacing:0.12em;text-transform:uppercase" />
+            </div>
+            <div class="mc-dialog-actions">
+                <button type="button" onclick="this.closest('dialog').close()" class="mc-btn mc-btn--ghost" data-i18n="microcards.btn_cancel">Отмена</button>
+                <button type="submit" id="importByCodeSubmit" class="mc-btn mc-btn--primary" data-i18n="microcards.btn_import_action">Импорт</button>
             </div>
         </form>
     </dialog>

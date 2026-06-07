@@ -959,8 +959,53 @@ class MicrocardsServiceV2:
             "error": error,
         }
 
+    def _detect_format(self, content: Any) -> str:
+        """Guess the import format from raw content (used by the 'auto' mode).
+
+        Cheap, unambiguous signals first, with the forgiving txt_simplified parser
+        (which auto-detects its own separator, incl. the Quizlet tab-tree) as the
+        catch-all.
+        """
+        text = _s(content).strip()
+        if not text:
+            return "txt_simplified"
+        if text[0] in "{[":
+            try:
+                if isinstance(json.loads(text), (dict, list)):
+                    return "json"
+            except Exception:
+                pass
+        lines = [ln for ln in text.splitlines() if ln.strip()]
+        head = "\n".join(lines[:40])
+        if "@MICROCARD" in text or "@PAIR_MATCH" in text:
+            return "txt_full"
+        if re.search(r"(?m)^\s*\?", head) and re.search(r"(?m)^\s*[+\-−]", head):
+            return "test"
+        if any("\t" in ln for ln in lines):
+            return "txt_simplified"
+        first = (lines[0].lower() if lines else "")
+        if ("," in first or ";" in first) and any(h in first for h in ("front", "term", "back", "definition")):
+            return "csv"
+        return "txt_simplified"
+
+    @staticmethod
+    def _hierarchy_stats(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Summarize merged multi-line (hierarchical) definitions for the preview badge."""
+        multiline_cards = 0
+        merged_lines = 0
+        for r in rows:
+            if r.get("status") != "ok":
+                continue
+            extra = _s(r.get("back")).count("\n")
+            if extra:
+                multiline_cards += 1
+                merged_lines += extra
+        return {"multiline_cards": multiline_cards, "merged_lines": merged_lines}
+
     def _parse_by_format(self, fmt: str, content: Any, options: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         fmt = _s(fmt)
+        if fmt == "auto":
+            fmt = self._detect_format(content)
         if fmt == "csv":
             return self._parse_csv(content, options)
         if fmt == "json":
@@ -1010,6 +1055,7 @@ class MicrocardsServiceV2:
         if not deck:
             raise LookupError("deck_not_found")
 
+        detected_format = self._detect_format(content) if _s(fmt) == "auto" else _s(fmt)
         parsed = self._parse_by_format(fmt, content, options)
         existing = {_normalize_key(c.get("front", {}).get("text", "")) for c in deck.get("cards", [])}
         seen: set = set()
@@ -1030,7 +1076,7 @@ class MicrocardsServiceV2:
                     seen.add(key)
                     counts["ok"] += 1
             rows.append(row)
-        return {"rows": rows, "counts": counts}
+        return {"rows": rows, "counts": counts, "detected_format": detected_format, "hierarchy": self._hierarchy_stats(rows)}
 
     def _parse_csv(self, csv_content: Any, options: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         import csv
@@ -1397,9 +1443,16 @@ class MicrocardsServiceV2:
 
         Returns None unless one separator clearly dominates (>=2 lines and >=40%),
         so genuinely mixed-separator input falls back to the per-line cascade.
+
+        Tab is the exception: it is an almost-certain structural marker (it virtually
+        never appears incidentally in pasted prose), so a tab on >=2 lines wins
+        outright even below the 40% bar — this is the Quizlet tree export where most
+        lines are tab-less continuations and the tabbed parents are a minority.
         """
         if not lines:
             return None
+        if sum(1 for ln in lines if "\t" in ln) >= 2:
+            return "\t"
         candidates = ["\t", " => ", " -> ", " - ", ";", ":", ","]
         best, best_count = None, 0
         for sep in candidates:
@@ -1418,6 +1471,16 @@ class MicrocardsServiceV2:
     def import_txt_simplified(self, deck_id: str, content: str, options: Optional[Dict[str, Any]] = None, dedup: bool = True) -> Dict[str, Any]:
         parsed = self._parse_txt_simplified(content, options)
         return self._create_from_parsed(deck_id, parsed, dedup=dedup)
+
+    def import_auto(self, deck_id: str, content: str, options: Optional[Dict[str, Any]] = None, dedup: bool = True) -> Dict[str, Any]:
+        """Detect the format from the content and import with the matching parser."""
+        fmt = self._detect_format(content)
+        if fmt == "json":
+            return self.import_json(deck_id, content, options=options, dedup=dedup)
+        parsed = self._parse_by_format(fmt, content, options)
+        result = self._create_from_parsed(deck_id, parsed, dedup=dedup)
+        result["detected_format"] = fmt
+        return result
 
     def _parse_test(self, content: Any, options: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         """Parse a test-question file. Wrong answers are ignored; card = question + correct answer.

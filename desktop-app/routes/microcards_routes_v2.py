@@ -425,6 +425,29 @@ def import_txt_simplified(deck_id: str):
         logger.exception("[HTTP] v2/microcards/import txt_simplified failed: %s", exc)
         return jsonify({"ok": False, "error": "txt_simplified_import_failed"}), 500
 
+@microcards_v2_bp.route("/decks/<string:deck_id>/import/auto", methods=["POST"])
+def import_auto(deck_id: str):
+    """Detect the format from pasted content and import with the matching parser."""
+    guest_check = _check_guest()
+    if guest_check:
+        return guest_check
+
+    text_content, options = _read_import_text(request)
+    if not text_content.strip():
+        return jsonify({"ok": False, "error": "text_content_required"}), 400
+
+    try:
+        svc = _get_svc()
+        result = svc.import_auto(deck_id, text_content, options=options)
+        return jsonify({"ok": True, "added_count": len(result["items"]),
+                        "skipped_duplicates": result["skipped_duplicates"],
+                        "detected_format": result.get("detected_format"), "items": result["items"]})
+    except LookupError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 404
+    except Exception as exc:
+        logger.exception("[HTTP] v2/microcards/import auto failed: %s", exc)
+        return jsonify({"ok": False, "error": "auto_import_failed"}), 500
+
 @microcards_v2_bp.route("/decks/<string:deck_id>/import/test", methods=["POST"])
 def import_test_format(deck_id: str):
     guest_check = _check_guest()
@@ -465,7 +488,8 @@ def import_analyze(deck_id: str):
     try:
         svc = _get_svc()
         result = svc.analyze_import(deck_id, fmt, content, options=options)
-        return jsonify({"ok": True, "rows": result["rows"], "counts": result["counts"]})
+        return jsonify({"ok": True, "rows": result["rows"], "counts": result["counts"],
+                        "detected_format": result.get("detected_format"), "hierarchy": result.get("hierarchy")})
     except LookupError as exc:
         return jsonify({"ok": False, "error": str(exc)}), 404
     except ValueError as exc:
@@ -611,6 +635,50 @@ def publish_deck_to_catalog(deck_id: str):
     except Exception as exc:
         logger.exception("[HTTP] v2/microcards/publish failed: %s", exc)
         return jsonify({"ok": False, "error": "publish_failed"}), 500
+
+@microcards_v2_bp.route("/catalog/import-by-code", methods=["POST"])
+def import_deck_by_access_code():
+    """Import a deck into the user's library by its catalog access code."""
+    guest_check = _check_guest()
+    if guest_check:
+        return guest_check
+
+    body = request.get_json(silent=True) or {}
+    access_code = str(body.get("access_code") or "").strip()
+    if not access_code:
+        return jsonify({"ok": False, "error": "access_code_required"}), 400
+
+    catalog_svc = _get_catalog_svc()
+    if not catalog_svc:
+        return jsonify({"ok": False, "error": "catalog_service_not_available"}), 503
+
+    try:
+        svc = _get_svc()
+        resolved = catalog_svc.resolve_access_code(access_code, requested_by_user_id=svc.user_id)
+        item = resolved.get("item") or {}
+        item_id = item.get("item_id")
+        if str(item.get("content_type") or "") != "flashcard_deck":
+            return jsonify({"ok": False, "error": "not_a_flashcard_deck"}), 400
+
+        existing = svc.find_deck_by_catalog_item_id(item_id)
+        if existing:
+            return jsonify({"ok": True, "deck": existing, "added_count": 0, "already_in_library": True})
+
+        result = catalog_svc.add_item_to_library(item_id, requested_by_user_id=svc.user_id, access_code=access_code)
+        snapshot = result.get("snapshot") or {}
+        deck = svc.create_deck(
+            name=snapshot.get("name") or "Imported Deck",
+            description=snapshot.get("description") or "",
+            tags=snapshot.get("tags") or [],
+            catalog_item_id=item_id,
+        )
+        imported = svc.import_json(deck["id"], snapshot, dedup=False)
+        return jsonify({"ok": True, "deck": deck, "added_count": len(imported["items"]), "already_in_library": False})
+    except ValueError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+    except Exception as exc:
+        logger.exception("[HTTP] v2/microcards/catalog import-by-code failed: %s", exc)
+        return jsonify({"ok": False, "error": "catalog_import_by_code_failed"}), 500
 
 @microcards_v2_bp.route("/catalog/<string:catalog_item_id>/import", methods=["POST"])
 def import_deck_from_catalog(catalog_item_id: str):

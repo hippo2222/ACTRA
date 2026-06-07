@@ -1275,6 +1275,7 @@
 
     // ── Import Decks Dialog ───────────────────────────────────────────────
     const IMPORT_HINTS = {
+        auto: ['microcards.imp_hint_auto', 'Вставьте что угодно — формат определится сам: Quizlet/Excel (таб), «вопрос — ответ», CSV, JSON или тест. Разделитель и иерархия распознаются автоматически.'],
         csv: ['microcards.imp_hint_csv', 'Колонки: front, back, hint. Строки в кавычках. Совместимо с Quizlet (term/definition).'],
         json: ['microcards.imp_hint_json', 'Схема actra_flashcards_v1: { "cards": [ { "front": "Q", "back": "A", "hint": "H" } ] }'],
         txt_full: ['microcards.imp_hint_txt_full', 'Блочный формат @MICROCARD с полями Q:/A: — несколько строк на карточку, поддержка изображений и подсказок.'],
@@ -1283,13 +1284,13 @@
     };
 
     function openImportDialog() {
-        state.importFormat = 'csv';
+        state.importFormat = 'auto';
         state.importSep = 'auto';
         $('impContent').value = '';
         $('importFile').value = '';
-        if ($('impMultiline')) $('impMultiline').checked = false;
+        if ($('impMultiline')) $('impMultiline').checked = true;
         setImportSep('auto');
-        switchImportTab('csv');
+        switchImportTab('auto');
         clearImportPreview();
         $('dialogImportDeck').showModal();
     }
@@ -1298,7 +1299,9 @@
         state.importFormat = format;
         document.querySelectorAll('#impTabs .mc-tabbtn[data-fmt]').forEach(b =>
             b.classList.toggle('is-active', b.getAttribute('data-fmt') === format));
-        $('impOptions').classList.toggle('hidden', format !== 'txt_simplified');
+        // Parser options apply to the simplified TXT parser and to Auto (which
+        // falls back to it for plain pasted text).
+        $('impOptions').classList.toggle('hidden', format !== 'txt_simplified' && format !== 'auto');
         const h = IMPORT_HINTS[format] || IMPORT_HINTS.csv;
         $('impHint').textContent = t(h[0], h[1]);
         clearImportPreview();
@@ -1311,7 +1314,7 @@
     }
 
     function getImportOptions() {
-        if (state.importFormat === 'txt_simplified') {
+        if (state.importFormat === 'txt_simplified' || state.importFormat === 'auto') {
             return { separator: state.importSep || 'auto', multiline: !!($('impMultiline') && $('impMultiline').checked) };
         }
         return null;
@@ -1345,12 +1348,30 @@
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ format: state.importFormat, content, options: getImportOptions() })
             });
-            renderImportPreview(result.rows || [], result.counts || {});
+            renderImportPreview(result.rows || [], result.counts || {}, result);
         } catch (err) { console.error(err); }
     }
 
-    function renderImportPreview(rows, counts) {
+    const IMPORT_FORMAT_LABELS = {
+        csv: 'CSV-таблица', json: 'JSON', txt_full: 'TXT (блоки)',
+        txt_simplified: 'Текст «вопрос — ответ»', test: 'Тестовые вопросы',
+    };
+
+    function renderImportPreview(rows, counts, meta) {
         $('impPreview').classList.remove('hidden');
+        const badges = $('impBadges');
+        if (badges) {
+            const chips = [];
+            const chip = (icon, text) => `<span class="mc-imp-count" style="display:inline-flex;align-items:center;gap:0.3rem"><span class="material-symbols-outlined" style="font-size:0.95rem">${icon}</span>${escHtml(text)}</span>`;
+            if (state.importFormat === 'auto' && meta && meta.detected_format) {
+                chips.push(chip('auto_awesome', t('microcards.imp_detected', 'Распознано: {f}').replace('{f}', IMPORT_FORMAT_LABELS[meta.detected_format] || meta.detected_format)));
+            }
+            const h = (meta && meta.hierarchy) || {};
+            if (h.multiline_cards > 0) {
+                chips.push(chip('account_tree', t('microcards.imp_hierarchy', 'Иерархия: {n} многострочных').replace('{n}', h.multiline_cards)));
+            }
+            badges.innerHTML = chips.join('');
+        }
         $('impCounts').innerHTML =
             `<span class="mc-imp-count mc-imp-count--ok">${t('microcards.imp_count_ok', 'К импорту: {n}').replace('{n}', counts.ok || 0)}</span>` +
             (counts.duplicates ? `<span class="mc-imp-count mc-imp-count--dup">${t('microcards.imp_count_dup', 'Дубли: {n}').replace('{n}', counts.duplicates)}</span>` : '') +
@@ -1419,6 +1440,36 @@
             openDeckDetails(state.activeDeckId);
         } catch (err) {
             console.error(err);
+        }
+    }
+
+    // ── Import by access code ─────────────────────────────────────────────
+    function openImportByCodeDialog() {
+        if ($('importCodeInput')) $('importCodeInput').value = '';
+        $('dialogImportByCode').showModal();
+        setTimeout(() => { try { $('importCodeInput').focus(); } catch (e) {} }, 50);
+    }
+
+    async function handleImportByCodeSubmit(e) {
+        if (e) e.preventDefault();
+        const code = ($('importCodeInput').value || '').trim();
+        if (!code) return;
+        const btn = $('importByCodeSubmit');
+        if (btn) btn.disabled = true;
+        try {
+            const result = await apiCall('/api/v2/microcards/catalog/import-by-code', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ access_code: code }),
+            });
+            $('dialogImportByCode').close();
+            showToast(result.already_in_library
+                ? t('microcards.toast_code_already', 'Эта колода уже в вашей библиотеке')
+                : t('microcards.toast_imported', 'Импортировано {n} карточек').replace('{n}', result.added_count || 0), 'success');
+            if (result.deck && result.deck.id) openDeckDetails(result.deck.id); else loadLibraryData();
+        } catch (err) {
+            showToast(t('microcards.toast_code_not_found', 'Колода по такому коду не найдена'), 'error');
+        } finally {
+            if (btn) btn.disabled = false;
         }
     }
 
@@ -1528,6 +1579,8 @@
         pasteImportClipboard,
         onImportInput,
         onImportFile,
+        openImportByCodeDialog,
+        handleImportByCodeSubmit,
         selectTagFilter,
         openSettingsDialog,
         saveSettings,
