@@ -979,7 +979,8 @@ class MicrocardsServiceV2:
         head = "\n".join(lines[:40])
         if "@MICROCARD" in text or "@PAIR_MATCH" in text:
             return "txt_full"
-        if re.search(r"(?m)^\s*\?", head) and re.search(r"(?m)^\s*[+\-−]", head):
+        # Test bank: '?' or '#' (MyTestX) question lines + '+'/'-' answer lines.
+        if re.search(r"(?m)^\s*[?#]", head) and re.search(r"(?m)^\s*[+\-−]", head):
             return "test"
         if any("\t" in ln for ln in lines):
             return "txt_simplified"

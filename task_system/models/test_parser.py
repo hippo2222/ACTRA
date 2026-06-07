@@ -11,8 +11,11 @@ class TestFileParser:
     """Парсер для импорта тестов из текстовых файлов"""
     
     def __init__(self):
-        self.question_pattern = re.compile(r'^\?\s*(.+)$')
+        # '?' (стандарт) и '#' (формат MyTestX) — оба маркеры вопроса.
+        self.question_pattern = re.compile(r'^[?#]\s*(.+)$')
         self.answer_pattern = re.compile(r'^[+-]\s*(.+)$')
+        # '@ image.jpg' — ссылка на картинку (MyTestX). Файла у нас нет, строку пропускаем.
+        self.image_pattern = re.compile(r'^@\s*(.+)$')
     
     def parse_file(self, file_path: str, lenient: bool = False) -> List[TestQuestion]:
         """Парсит файл с тестовыми вопросами
@@ -65,8 +68,8 @@ class TestFileParser:
                         i += 1
                         continue
                     
-                    # Проверяем, является ли строка только символом ? (новый формат)
-                    if line_stripped == '?':
+                    # Проверяем, является ли строка только маркером вопроса (новый формат)
+                    if line_stripped in ('?', '#'):
                         # Сохраняем предыдущий вопрос, если есть
                         if current_question:
                             questions.append(current_question)
@@ -88,7 +91,12 @@ class TestFileParser:
                             # Если строка начинается с + или -, это начало ответов
                             if self.answer_pattern.match(next_line_stripped):
                                 break
-                            
+
+                            # Ссылка на картинку (MyTestX) — пропускаем (файла нет)
+                            if self.image_pattern.match(next_line_stripped):
+                                i += 1
+                                continue
+
                             # Иначе это часть текста вопроса
                             question_lines.append(next_line_stripped)
                             i += 1
@@ -134,6 +142,11 @@ class TestFileParser:
                         i += 1
                         continue
                     
+                    # Ссылка на картинку (MyTestX) между вопросом и ответами — пропускаем
+                    if self.image_pattern.match(line_stripped):
+                        i += 1
+                        continue
+
                     # Если строка не соответствует ни одному паттерну
                     if lenient:
                         i += 1

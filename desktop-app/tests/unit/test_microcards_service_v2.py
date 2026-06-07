@@ -308,6 +308,33 @@ def test_import_test_messy_bank_is_lenient():
     assert len(cards) >= 3
 
 
+def test_import_test_mytestx_hash_format():
+    # MyTestX text export: '#' question marker + '@ image' lines. Auto-detect must
+    # recognize it as a test bank; '@' image references are skipped (no file).
+    tmp = tempfile.mkdtemp()
+    svc = MicrocardsServiceV2(tmp, user_id="test_user")
+    deck = svc.create_deck(name="MyTestX Deck")
+
+    content = (
+        "#Сколько цветов у радуги?\n"
+        "@ радуга.jpg\n"
+        "+ 7\n"
+        "- 10\n"
+        "\n"
+        "#Кто друг Гены?\n"
+        "+ Чебурашка\n"
+        "- Шапокляк\n"
+    )
+    assert svc._detect_format(content) == "test"
+    cards = svc.import_test(deck["id"], content)["items"]
+    fronts = [c["front"]["text"] for c in cards]
+    assert "Сколько цветов у радуги?" in fronts
+    assert "Кто друг Гены?" in fronts
+    assert any(c["back"]["text"] == "7" for c in cards)
+    # image filename must not leak into a card
+    assert all("радуга" not in c["back"]["text"] for c in cards)
+
+
 def test_import_auto_multiline_decision():
     # multiline:"auto" — ON for a tab hierarchy (Quizlet tree), OFF for a flat list.
     tmp = tempfile.mkdtemp()
