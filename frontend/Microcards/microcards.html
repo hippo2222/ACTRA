@@ -483,6 +483,18 @@
         .mc-sep-chip.is-active { background: var(--color-primary); color: var(--color-primary-fg); border-color: var(--color-primary); }
         .mc-imp-toggle { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.78rem; font-weight: 600; color: var(--color-text-main); cursor: pointer; }
         .mc-imp-toggle input { width: 1.05rem; height: 1.05rem; accent-color: var(--color-primary); }
+        /* Inputs inside the (surface-2) options panel use a contrasting solid fill so
+           they don't blend into the panel — guidance: clear visibility + border contrast. */
+        .mc-imp-options .mc-input { background: var(--color-surface-1); border-color: var(--color-border-strong); }
+        /* Custom file input: style the native button via ::file-selector-button. */
+        .mc-file input[type="file"] { font-size: 0.82rem; color: var(--color-text-secondary); max-width: 100%; }
+        .mc-file input[type="file"]::file-selector-button {
+            margin-inline-end: 0.7rem; padding: 0.5rem 0.95rem; border-radius: 0.7rem;
+            border: 1px solid var(--color-border-strong); background: var(--color-surface-1);
+            color: var(--color-text-main); font-weight: 700; font-size: 0.8rem; cursor: pointer;
+            transition: border-color .15s, color .15s, background .15s; }
+        .mc-file input[type="file"]::file-selector-button:hover {
+            border-color: var(--color-primary); color: var(--color-primary); background: var(--color-bg-hover); }
         .mc-imp-preview { border: 1px solid var(--color-border-subtle); border-radius: 0.7rem; overflow: hidden; }
         .mc-imp-counts { display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0.6rem 0.7rem; background: var(--color-surface-2); border-bottom: 1px solid var(--color-border-subtle); font-size: 0.72rem; font-weight: 800; }
         .mc-imp-count { padding: 0.15rem 0.55rem; border-radius: 999px; }
@@ -1355,10 +1367,9 @@
                 </div>
             </div>
 
-            <div class="mc-field">
+            <div class="mc-field mc-file">
                 <label for="importFile" class="mc-field__label" data-i18n="microcards.dialog_import_file_label">Или выберите файл</label>
-                <input type="file" id="importFile" accept=".csv,.json,.txt,.text,.md,.tsv,.qst" onchange="mcApp.onImportFile()"
-                    class="text-xs file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-surface-2 file:text-text-main hover:file:bg-bg-hover" />
+                <input type="file" id="importFile" accept=".csv,.json,.txt,.text,.md,.tsv,.qst" onchange="mcApp.onImportFile()" />
             </div>
 
             <!-- live preview -->
