@@ -624,27 +624,44 @@ def import_deck_from_catalog(catalog_item_id: str):
         
     try:
         svc = _get_svc()
+        # Don't create a duplicate if this catalog deck is already in the library.
+        existing = svc.find_deck_by_catalog_item_id(catalog_item_id)
+        if existing:
+            return jsonify({"ok": True, "deck": existing, "added_count": 0, "already_in_library": True})
+
         result = catalog_svc.add_item_to_library(catalog_item_id, requested_by_user_id=svc.user_id)
         snapshot = result.get("snapshot") or {}
-        
-        # Check if user already has this deck or if we should create a new one
-        # Let's create a new deck copied from snapshot
+
         deck = svc.create_deck(
             name=snapshot.get("name") or "Imported Deck",
             description=snapshot.get("description") or "",
             tags=snapshot.get("tags") or [],
             catalog_item_id=catalog_item_id
         )
-        
+
         # Import the cards from the snapshot (fresh deck copy → no dedup)
         result = svc.import_json(deck["id"], snapshot, dedup=False)
 
-        return jsonify({"ok": True, "deck": deck, "added_count": len(result["items"])})
+        return jsonify({"ok": True, "deck": deck, "added_count": len(result["items"]), "already_in_library": False})
     except ValueError as exc:
         return jsonify({"ok": False, "error": str(exc)}), 400
     except Exception as exc:
         logger.exception("[HTTP] v2/microcards/catalog import failed: %s", exc)
         return jsonify({"ok": False, "error": "catalog_import_failed"}), 500
+
+@microcards_v2_bp.route("/catalog/<string:catalog_item_id>/library-status", methods=["GET"])
+def catalog_deck_library_status(catalog_item_id: str):
+    """Report whether the current user already imported this catalog deck."""
+    guest_check = _check_guest()
+    if guest_check:
+        return guest_check
+    try:
+        svc = _get_svc()
+        deck = svc.find_deck_by_catalog_item_id(catalog_item_id)
+        return jsonify({"ok": True, "already_in_library": bool(deck), "deck_id": deck.get("id") if deck else None})
+    except Exception as exc:
+        logger.exception("[HTTP] v2/microcards/catalog library-status failed: %s", exc)
+        return jsonify({"ok": False, "error": "library_status_failed"}), 500
 
 # ── Settings ──────────────────────────────────────────────────────────
 

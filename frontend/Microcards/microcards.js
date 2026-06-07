@@ -1448,8 +1448,15 @@
 
     // ── Init & Event Binding ──────────────────────────────────────────────
     function init() {
-        loadLibraryData();
-        
+        // Deep-link: /microcards?deck=<id> opens that deck directly (e.g. from the catalog).
+        let deepLinkDeck = null;
+        try { deepLinkDeck = new URLSearchParams(window.location.search).get('deck'); } catch (e) {}
+        if (deepLinkDeck) {
+            openDeckDetails(deepLinkDeck);
+        } else {
+            loadLibraryData();
+        }
+
         // Bind search input to re-run filtering
         $('libSearch').addEventListener('input', () => {
             renderLibrary();

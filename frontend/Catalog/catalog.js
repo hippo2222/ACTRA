@@ -693,6 +693,9 @@
   function getBundleActionLabel(item, action) {
     if (!action) return '';
     if (action.key !== 'preview') return action.label;
+    if (item && item.content_type === 'flashcard_deck') {
+      return wt('catalog.bundle_add_flashcards', '\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u043a\u043e\u043b\u043e\u0434\u0443');
+    }
     return item && item.content_type === 'theory'
       ? wt('catalog.bundle_add_theory', '\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u0442\u0435\u043e\u0440\u0438\u044e')
       : wt('catalog.bundle_add_complex', '\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u043a\u043e\u043c\u043f\u043b\u0435\u043a\u0441');
@@ -1173,10 +1176,26 @@
       .filter(({ item, versionKey }) => versionKey && !state.statusByVersionKey.has(versionKey) && !state.pendingStatusKeys.has(versionKey))
       .map(({ item, versionKey }) => {
         state.pendingStatusKeys.add(versionKey);
-        const statusUrl = `/api/catalog/items/${encodeURIComponent(asString(item.item_id))}/library-status`;
+        // Flashcard decks live in the microcards service, not the catalog library,
+        // so they have their own status endpoint that we normalize to the shared shape.
+        const isFlashcards = item.content_type === 'flashcard_deck';
+        const statusUrl = isFlashcards
+          ? `/api/v2/microcards/catalog/${encodeURIComponent(asString(item.item_id))}/library-status`
+          : `/api/catalog/items/${encodeURIComponent(asString(item.item_id))}/library-status`;
         return fetchJson(statusUrl, { method: 'GET', credentials: 'same-origin' })
           .then((payload) => {
-            state.statusByVersionKey.set(versionKey, payload);
+            const normalized = isFlashcards
+              ? {
+                  ok: payload && payload.ok !== false,
+                  library_status: {
+                    already_in_library: !!(payload && payload.already_in_library),
+                    access_state: 'granted',
+                    content_type: 'flashcard_deck',
+                    deck_id: payload && payload.deck_id || null,
+                  },
+                }
+              : payload;
+            state.statusByVersionKey.set(versionKey, normalized);
           })
           .catch(() => {
             state.statusByVersionKey.set(versionKey, {
@@ -1757,17 +1776,28 @@
           } else if (item.content_type === 'flashcard_deck') {
             const cards = Array.isArray(snapshot.cards) ? snapshot.cards : [];
             const tags = Array.isArray(snapshot.tags) ? snapshot.tags : [];
-            const cardLimit = 5;
+            // The list is scrollable + each card is clamped to 2 lines, so a higher
+            // cap is safe: the block stays a fixed height regardless of card count
+            // or how dense the text is.
+            const cardLimit = 12;
             const shownCards = cards.slice(0, cardLimit);
             const remainingCount = cards.length - shownCards.length;
+            const clampStyle = 'display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;';
             
             let tagsHtml = '';
             if (tags.length > 0) {
+              // Cap the visible tags so a deck with dozens of tags doesn't blow up
+              // the detail panel; surplus is summarized with a muted «+N» chip.
+              const tagLimit = 12;
+              const shownTags = tags.slice(0, tagLimit);
+              const extraTags = tags.length - shownTags.length;
+              const tagChip = 'background:var(--color-bg-primary);border:1px solid var(--color-border-normal);border-radius:var(--radius-full);padding:0.25rem 0.5rem;font-size:0.75rem;';
               tagsHtml = `
                 <div class="catalog-detail__row">
-                  <p class="catalog-detail__kicker">${wt('catalog.kicker_tags', 'Теги')}</p>
-                  <div class="catalog-tags">
-                    ${tags.map(tag => `<span class="catalog-tag" style="background:var(--color-bg-primary);border:1px solid var(--color-border-normal);border-radius:var(--radius-full);padding:0.25rem 0.5rem;font-size:0.75rem;margin-right:0.25rem;">${escapeHtml(tag)}</span>`).join('')}
+                  <p class="catalog-detail__kicker">${wt('catalog.kicker_tags', 'Теги')}${tags.length ? ` · ${tags.length}` : ''}</p>
+                  <div class="catalog-tags" style="display:flex;flex-wrap:wrap;gap:0.25rem;">
+                    ${shownTags.map(tag => `<span class="catalog-tag" title="${escapeHtml(tag)}" style="${tagChip}max-width:12rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(tag)}</span>`).join('')}
+                    ${extraTags > 0 ? `<span class="catalog-tag" style="${tagChip}color:var(--color-text-secondary);" title="${escapeHtml(tags.slice(tagLimit).join(', '))}">+${extraTags}</span>` : ''}
                   </div>
                 </div>
               `;
@@ -1777,15 +1807,15 @@
             if (shownCards.length > 0) {
               cardsHtml = `
                 <div class="catalog-detail__row">
-                  <p class="catalog-detail__kicker">${wt('catalog.detail_cards_preview', 'Примеры карточек')}</p>
-                  <div class="catalog-detail__cards-preview-list" style="display:flex;flex-direction:column;gap:0.5rem;margin-top:0.25rem;">
+                  <p class="catalog-detail__kicker">${wt('catalog.detail_cards_preview', 'Примеры карточек')}${cards.length ? ` · ${cards.length}` : ''}</p>
+                  <div class="catalog-detail__cards-preview-list custom-scrollbar" style="display:flex;flex-direction:column;gap:0.5rem;margin-top:0.25rem;max-height:13rem;overflow-y:auto;padding-right:0.25rem;">
                     ${shownCards.map(card => {
                       const frontText = card.front?.text || '';
                       const backText = card.back?.text || '';
                       return `
                         <div class="catalog-detail__card-preview-item" style="border:1px solid var(--color-border-normal);border-radius:var(--radius-md);padding:0.5rem;background:var(--color-bg-primary);">
-                          <div class="catalog-detail__card-preview-front" style="font-weight:600;font-size:0.875rem;color:var(--color-text-main);">${escapeHtml(frontText)}</div>
-                          <div class="catalog-detail__card-preview-back" style="font-size:0.875rem;color:var(--color-text-secondary);margin-top:0.25rem;border-top:1px dashed var(--color-border-subtle);padding-top:0.25rem;">${escapeHtml(backText)}</div>
+                          <div class="catalog-detail__card-preview-front" title="${escapeHtml(frontText)}" style="font-weight:600;font-size:0.875rem;color:var(--color-text-main);${clampStyle}">${escapeHtml(frontText)}</div>
+                          <div class="catalog-detail__card-preview-back" title="${escapeHtml(backText)}" style="font-size:0.875rem;color:var(--color-text-secondary);margin-top:0.25rem;border-top:1px dashed var(--color-border-subtle);padding-top:0.25rem;${clampStyle}">${escapeHtml(backText)}</div>
                         </div>
                       `;
                     }).join('')}
@@ -1806,10 +1836,23 @@
               `;
             }
 
+            const viewAllHtml = cards.length ? `
+              <div class="catalog-detail__row">
+                <button type="button" id="catalog-detail-view-deck" class="btn-secondary h-9 px-4" style="width:100%;display:flex;align-items:center;justify-content:center;gap:0.4rem;">
+                  <span class="material-symbols-outlined" style="font-size:1.05rem;">visibility</span>${wt('catalog.deck_viewer_view_all', 'Посмотреть все {n} карточек').replace('{n}', cards.length)}
+                </button>
+              </div>
+            ` : '';
+
             asyncBlock.innerHTML = `
               ${tagsHtml}
               ${cardsHtml}
+              ${viewAllHtml}
             `;
+            asyncBlock.querySelector('#catalog-detail-view-deck')?.addEventListener('click', async () => {
+              const result = await openCatalogDeckViewer(item);
+              await actOnDeckViewerResult(item, result);
+            });
           } else {
             const delta = snapshot.delta && typeof snapshot.delta === 'object' ? snapshot.delta : (snapshot && typeof snapshot === 'object' && snapshot.delta ? snapshot.delta : {});
             const ops = Array.isArray(delta.ops) ? delta.ops : [];
@@ -2570,39 +2613,40 @@
     const already = !!(preview && preview.library_status && preview.library_status.already_in_library);
     const item = preview && preview.item ? preview.item : {};
     const owner = getDisplayOwner(item) || wt('catalog.owner_unknown_author', 'Автор не указан');
+    const cardCount = getCardCount(item);
     const primaryLabel = already
       ? wt('catalog.action_open_library', 'Открыть в библиотеке')
       : wt('catalog.action_add_library', 'Добавить в библиотеку');
-    const factsMarkup = buildConfirmFacts([
-      { label: wt('catalog.type_label_flashcards', 'Карточки'), value: String(getCardCount(item)) },
-    ]);
     const summaryMarkup = buildConfirmSummaryItems([
       {
-        icon: 'style',
-        title: already ? wt('catalog.confirm_flashcards_already_saved', 'Уже добавлено в ваши карточки') : wt('catalog.confirm_flashcards_will_appear', 'Добавится в раздел Микрокарточки'),
-        text: already ? wt('catalog.confirm_flashcards_open_anytime', 'Можно открыть и начать учить в любой момент.') : wt('catalog.confirm_flashcards_material_saved', 'Колода скопируется в ваши локальные микрокарточки.'),
+        icon: already ? 'bookmark_added' : 'library_add',
+        title: already ? wt('catalog.confirm_flashcards_already_saved', 'Уже в ваших Микрокарточках') : wt('catalog.confirm_flashcards_will_appear', 'Появится в разделе Микрокарточки'),
+        text: already ? wt('catalog.confirm_flashcards_open_anytime', 'Можно открыть и учить в любой момент.') : wt('catalog.confirm_flashcards_material_saved', 'Копия колоды добавится в вашу библиотеку — со своим прогрессом.'),
       },
     ]);
+    const iconCloseBtn = `<button type="button" class="catalog-confirm-modal__close" data-close aria-label="${wt('catalog.btn_close', 'Закрыть')}" style="flex:none;width:2.1rem;height:2.1rem;border:none;border-radius:0.6rem;background:transparent;color:var(--color-text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;"><span class="material-symbols-outlined">close</span></button>`;
     return openModal(`
       <div class="catalog-confirm-modal custom-scrollbar">
         <div class="catalog-confirm-modal__header">
           <div>
             <p class="catalog-confirm-modal__eyebrow">${wt('catalog.type_label_flashcards', 'Карточки')}</p>
-            <p class="catalog-confirm-modal__headline">${escapeHtml(already ? wt('catalog.confirm_flashcards_already_title', 'Колода уже добавлена') : wt('catalog.confirm_flashcards_add_title', 'Добавить колоду в карточки'))}</p>
+            <p class="catalog-confirm-modal__headline">${escapeHtml(already ? wt('catalog.confirm_flashcards_already_title', 'Колода уже в Микрокарточках') : wt('catalog.confirm_flashcards_add_title', 'Добавить колоду в Микрокарточки'))}</p>
           </div>
-          <button type="button" class="btn-secondary h-10 px-4" data-close>${wt('catalog.btn_cancel', 'Отмена')}</button>
+          ${iconCloseBtn}
         </div>
         <div class="catalog-confirm-modal__body">
           <section class="catalog-confirm-modal__hero">
             <p class="catalog-confirm-modal__item-title">${escapeHtml(asString(item.title) || wt('catalog.deck_name_fallback', 'Колода'))}</p>
             <div class="catalog-confirm-modal__meta">
               <span class="catalog-confirm-modal__meta-item">${wt('catalog.confirm_author', 'Автор: {name}').replace('{name}', escapeHtml(owner))}</span>
-              <span class="catalog-confirm-modal__meta-item">${wt('catalog.confirm_section_microcards', 'Раздел: Карточки')}</span>
+              <span class="catalog-confirm-modal__meta-item">${cardCount} ${wt('catalog.cards_word', 'карточек')}</span>
             </div>
             ${asString(item.description) ? `<p class="catalog-confirm-modal__description">${escapeHtml(asString(item.description))}</p>` : ''}
           </section>
-          ${factsMarkup ? `<div class="catalog-confirm-modal__facts">${factsMarkup}</div>` : ''}
           <div class="catalog-confirm-modal__summary">${summaryMarkup}</div>
+          <button type="button" class="btn-secondary h-10 px-4" data-action-key="view" style="width:100%;display:flex;align-items:center;justify-content:center;gap:0.4rem;">
+            <span class="material-symbols-outlined" style="font-size:1.1rem;">visibility</span>${wt('catalog.deck_viewer_open', 'Посмотреть карточки')}
+          </button>
         </div>
         <div class="catalog-confirm-modal__footer">
           <button type="button" class="btn-secondary h-10 px-4" data-action="close">${wt('catalog.btn_cancel', 'Отмена')}</button>
@@ -2610,6 +2654,81 @@
         </div>
       </div>
     `, null, { blurCatalogShell: true, variant: 'confirm' });
+  }
+
+  // Full deck content viewer: every card in full, with search and images.
+  async function openCatalogDeckViewer(item) {
+    const already = !!(getStatus(item)?.library_status?.already_in_library);
+    const version = await loadVersionDetail(item).catch(() => null);
+    const snapshot = version && typeof version.snapshot === 'object' ? version.snapshot : {};
+    const cards = Array.isArray(snapshot.cards) ? snapshot.cards : [];
+    cards.forEach((c, i) => { c.__n = i + 1; });
+    const title = asString(item.title) || wt('catalog.deck_name_fallback', 'Колода');
+    const primaryLabel = already
+      ? wt('catalog.action_open_library', 'Открыть в библиотеке')
+      : wt('catalog.action_add_library', 'Добавить в библиотеку');
+
+    const imgTag = (u) => u ? `<img src="${escapeHtml(u)}" loading="lazy" alt="" style="max-width:100%;max-height:170px;border-radius:8px;margin-top:6px;display:block;">` : '';
+    const renderItems = (list) => list.length ? list.map((card) => {
+      const f = asString(card.front?.text);
+      const b = asString(card.back?.text);
+      return `<div class="catalog-deck-viewer__card" style="border:1px solid var(--color-border-normal);border-radius:12px;padding:0.7rem 0.85rem;background:var(--color-bg-primary);">
+        <div style="display:flex;gap:0.6rem;">
+          <span style="flex:none;min-width:1.5rem;height:1.5rem;display:flex;align-items:center;justify-content:center;border-radius:999px;background:var(--color-surface-2);font-size:0.7rem;font-weight:700;color:var(--color-text-secondary);">${card.__n}</span>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:600;color:var(--color-text-main);white-space:pre-wrap;word-break:break-word;">${escapeHtml(f) || '—'}</div>
+            ${imgTag(asString(card.front?.image_url))}
+            <div style="margin-top:0.45rem;padding-top:0.45rem;border-top:1px dashed var(--color-border-subtle);color:var(--color-text-secondary);white-space:pre-wrap;word-break:break-word;">${escapeHtml(b) || '—'}</div>
+            ${imgTag(asString(card.back?.image_url))}
+          </div>
+        </div>
+      </div>`;
+    }).join('') : `<p style="color:var(--color-text-secondary);text-align:center;padding:1.5rem;">${wt('catalog.deck_viewer_empty', 'Ничего не найдено.')}</p>`;
+
+    const markup = `
+      <div class="catalog-deck-viewer" style="width:min(680px,94vw);max-height:88vh;display:flex;flex-direction:column;background:var(--color-surface-1);border-radius:1.25rem;overflow:hidden;box-shadow:0 24px 60px rgba(15,23,42,0.22);">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;padding:1.1rem 1.25rem 0.7rem;">
+          <div style="min-width:0;">
+            <p style="font-size:0.7rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--color-primary);margin:0;">${wt('catalog.type_label_flashcards', 'Карточки')}</p>
+            <p style="font-size:1.1rem;font-weight:800;color:var(--color-text-main);margin:0.15rem 0 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(title)}</p>
+            <p style="font-size:0.8rem;color:var(--color-text-secondary);margin:0.1rem 0 0;" id="deck-viewer-count">${cards.length} ${wt('catalog.cards_word', 'карточек')}</p>
+          </div>
+          <button type="button" data-close aria-label="${wt('catalog.btn_close', 'Закрыть')}" style="flex:none;width:2.1rem;height:2.1rem;border:none;border-radius:0.6rem;background:transparent;color:var(--color-text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div style="padding:0 1.25rem 0.6rem;">
+          <input id="deck-viewer-search" type="search" autocomplete="off" placeholder="${wt('catalog.deck_viewer_search', 'Поиск по карточкам…')}" style="width:100%;padding:0.55rem 0.8rem;border:1px solid var(--color-border-normal);border-radius:0.7rem;background:var(--color-bg-primary);color:var(--color-text-main);outline:none;" />
+        </div>
+        <div id="deck-viewer-list" class="custom-scrollbar" style="overflow-y:auto;padding:0 1.25rem 1rem;display:flex;flex-direction:column;gap:0.55rem;flex:1;">${renderItems(cards)}</div>
+        <div style="display:flex;justify-content:flex-end;gap:0.5rem;padding:0.85rem 1.25rem;border-top:1px solid var(--color-border-subtle);">
+          <button type="button" class="btn-secondary h-10 px-4" data-action="close">${wt('catalog.btn_cancel', 'Отмена')}</button>
+          <button type="button" class="btn-primary h-10 px-4" data-action-key="${already ? 'open' : 'confirm'}">${escapeHtml(primaryLabel)}</button>
+        </div>
+      </div>`;
+
+    return openModal(markup, (overlay) => {
+      const input = overlay.querySelector('#deck-viewer-search');
+      const list = overlay.querySelector('#deck-viewer-list');
+      const count = overlay.querySelector('#deck-viewer-count');
+      if (input && list) {
+        input.addEventListener('input', () => {
+          const q = input.value.trim().toLowerCase();
+          const filtered = !q ? cards : cards.filter((c) => (asString(c.front?.text) + ' ' + asString(c.back?.text)).toLowerCase().includes(q));
+          list.innerHTML = renderItems(filtered);
+          if (count) count.textContent = `${filtered.length} ${wt('catalog.cards_word', 'карточек')}${q ? ` ${wt('catalog.deck_viewer_of', 'из')} ${cards.length}` : ''}`;
+        });
+      }
+    }, { variant: 'confirm' });
+  }
+
+  // Act on the deck viewer's footer button (add or open), shared by both entry points.
+  async function actOnDeckViewerResult(item, result) {
+    if (result === 'confirm') {
+      await executeAddToLibrary(item);
+    } else if (result === 'open') {
+      const status = getStatus(item);
+      const deckId = asString(status?.library_status?.deck_id);
+      navigate(deckId ? `/microcards?deck=${encodeURIComponent(deckId)}` : '/microcards');
+    }
   }
 
   function resolveLibraryTarget(resultPayload) {
@@ -2679,13 +2798,21 @@
       state.statusByVersionKey.set(versionKey, {
         ok: true,
         item: item,
-        library_status: { already_in_library: true, in_library: true },
+        library_status: {
+          already_in_library: true,
+          in_library: true,
+          access_state: 'granted',
+          deck_id: payload && payload.deck && payload.deck.id || null,
+        },
       });
     }
     await loadWorkspaceLimits();
     render();
     if (item && item.content_type === 'flashcard_deck') {
-      showToast(wt('catalog.toast_flashcards_added', 'Колода добавлена в раздел Микрокарточки.'), 'success', 2800);
+      const alreadyHad = payload && payload.already_in_library;
+      showToast(alreadyHad
+        ? wt('catalog.toast_flashcards_already', 'Эта колода уже есть в ваших Микрокарточках.')
+        : wt('catalog.toast_flashcards_added', 'Колода добавлена в раздел Микрокарточки.'), 'success', 2800);
     } else {
       showToast(item && item.content_type === 'theory' ? wt('catalog.toast_theory_added', 'Теория добавлена в Теоретический центр.') : wt('catalog.toast_complex_added', 'Комплекс добавлен в сохранённые публикации каталога.'), 'success', 2800);
     }
@@ -2731,10 +2858,19 @@
          ? await openCatalogFlashcardConfirmModal(preview)
          : await openCatalogComplexConfirmModal(preview));
     if (!modalAction) return;
+    // «Посмотреть карточки» from the flashcard confirm modal → open the full viewer,
+    // then act on its footer button (add / open).
+    if (modalAction === 'view') {
+      const viewerResult = await openCatalogDeckViewer(item);
+      await actOnDeckViewerResult(item, viewerResult);
+      return;
+    }
     if (modalAction === 'open') {
       if (item && item.content_type === 'theory') {
         const target = resolveLibraryTarget(preview);
         if (target) navigate(target);
+      } else if (item && item.content_type === 'flashcard_deck') {
+        await actOnDeckViewerResult(item, 'open');
       } else {
         navigate(resolveComplexesLibraryUrl());
       }
@@ -2755,7 +2891,8 @@
     if (action.key === 'open-library') {
       const status = getStatus(item);
       if (item && item.content_type === 'flashcard_deck') {
-        navigate('/microcards');
+        const deckId = asString(status && status.library_status && status.library_status.deck_id);
+        navigate(deckId ? `/microcards?deck=${encodeURIComponent(deckId)}` : '/microcards');
         return;
       }
       if (item && item.content_type === 'theory') {
@@ -2923,7 +3060,7 @@
     global.document.addEventListener('click', (event) => {
       const isCard = event.target.closest('.catalog-card');
       const isDetailPanel = event.target.closest('#catalog-detail');
-      
+
       if (!isCard && !isDetailPanel && state.selectedItemId) {
         state.selectedItemId = '';
         const selectedElements = els.grid.querySelectorAll('.catalog-card.is-selected');

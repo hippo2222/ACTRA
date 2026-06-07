@@ -362,6 +362,23 @@ class MicrocardsServiceV2:
             return True
         return False
 
+    def find_deck_by_catalog_item_id(self, catalog_item_id: str) -> Optional[Dict[str, Any]]:
+        """Return the current user's deck imported from a given catalog item, if any.
+
+        Owner-scoped (via _owns_deck) so the catalog shows an honest «already added»
+        status and avoids creating duplicate copies on repeated import.
+        """
+        cid = _s(catalog_item_id)
+        if not cid:
+            return None
+        for path in self._decks_root.glob("*.json"):
+            deck = _read_json(path, None)
+            if (isinstance(deck, dict)
+                    and _s(deck.get("catalog_item_id")) == cid
+                    and self._owns_deck(deck)):
+                return deck
+        return None
+
     # ── Cards CRUD ────────────────────────────────────────────────────
 
     def list_cards(self, deck_id: str) -> List[Dict[str, Any]]:
