@@ -716,6 +716,8 @@ def import_deck_by_access_code():
             description=snapshot.get("description") or "",
             tags=snapshot.get("tags") or [],
             catalog_item_id=item_id,
+            author_name=item.get("owner_display_name") or item.get("owner_user_id"),
+            author_user_id=item.get("owner_user_id"),
         )
         imported = svc.import_json(deck["id"], snapshot, dedup=False)
         return jsonify({"ok": True, "deck": deck, "added_count": len(imported["items"]), "already_in_library": False})
@@ -744,12 +746,15 @@ def import_deck_from_catalog(catalog_item_id: str):
 
         result = catalog_svc.add_item_to_library(catalog_item_id, requested_by_user_id=svc.user_id)
         snapshot = result.get("snapshot") or {}
+        item = result.get("item") or {}
 
         deck = svc.create_deck(
             name=snapshot.get("name") or "Imported Deck",
             description=snapshot.get("description") or "",
             tags=snapshot.get("tags") or [],
-            catalog_item_id=catalog_item_id
+            catalog_item_id=catalog_item_id,
+            author_name=item.get("owner_display_name") or item.get("owner_user_id"),
+            author_user_id=item.get("owner_user_id"),
         )
 
         # Import the cards from the snapshot (fresh deck copy → no dedup)

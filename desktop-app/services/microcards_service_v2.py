@@ -310,6 +310,9 @@ class MicrocardsServiceV2:
                     "due_count": due_count,
                     "new_count": new_count,
                     "catalog_item_id": deck.get("catalog_item_id"),
+                    "created_by_user_id": deck.get("created_by_user_id"),
+                    "author_name": deck.get("author_name"),
+                    "author_user_id": deck.get("author_user_id"),
                     "created_at": deck.get("created_at"),
                     "updated_at": deck.get("updated_at"),
                 }
@@ -319,7 +322,8 @@ class MicrocardsServiceV2:
         decks.sort(key=lambda x: x.get("updated_at") or "", reverse=True)
         return decks[:limit]
 
-    def create_deck(self, name: str, description: str = "", tags: List[str] = None, catalog_item_id: Optional[str] = None) -> Dict[str, Any]:
+    def create_deck(self, name: str, description: str = "", tags: List[str] = None, catalog_item_id: Optional[str] = None,
+                    author_name: Optional[str] = None, author_user_id: Optional[str] = None) -> Dict[str, Any]:
         deck_id = f"deck_{uuid.uuid4().hex[:12]}"
         now_iso = _utc_now_iso()
         deck = {
@@ -330,6 +334,9 @@ class MicrocardsServiceV2:
             "cards": [],
             "catalog_item_id": catalog_item_id,
             "created_by_user_id": self.user_id,
+            # Original author (set when imported from the catalog); empty for own decks.
+            "author_name": _s(author_name) or None,
+            "author_user_id": _s(author_user_id) or None,
             "created_at": now_iso,
             "updated_at": now_iso,
         }

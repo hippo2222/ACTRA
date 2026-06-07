@@ -2020,7 +2020,9 @@
     "btn_close2": "Close",
     "btn_save_access": "Save",
     "btn_publish_deck": "Publish",
-    "imp_marker_hint": "You can list several characters in a row (e.g. ?# — both count as a question)."
+    "imp_marker_hint": "You can list several characters in a row (e.g. ?# — both count as a question).",
+    "author_label": "Author",
+    "author_you": "You"
   },
   "nav": {
     "home": "Home",

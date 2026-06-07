@@ -367,6 +367,12 @@
         popNumber($('libStatTotal'), state.decks.length);
     }
 
+    // Author byline: original author for imported decks, "Вы" for your own.
+    function deckAuthorHtml(deck) {
+        const name = (deck && deck.author_name) ? deck.author_name : t('microcards.author_you', 'Вы');
+        return `<span class="mc-author"><span class="material-symbols-outlined">person</span>${escHtml(name)}</span>`;
+    }
+
     function renderLibrary() {
         const grid = $('decksGrid');
         const empty = $('decksEmpty');
@@ -433,8 +439,9 @@
                 <div class="mc-deck-card__progress"><span style="width:${masteryPct}%"></span></div>
                 <div class="mc-deck-card__foot">
                     <span class="mc-deck-card__count">${t('microcards.cards_count_label', 'Карточек:')} <strong>${total}</strong></span>
-                    <div style="display:flex;gap:0.35rem;flex-wrap:wrap;justify-content:flex-end">${duePill}${newPill}</div>
+                    ${deckAuthorHtml(deck)}
                 </div>
+                <div style="display:flex;gap:0.35rem;flex-wrap:wrap;margin-top:0.5rem">${duePill}${newPill}</div>
             `;
             grid.appendChild(card);
         });
@@ -611,7 +618,9 @@
                 tagsZone.appendChild(badge);
             });
 
-            // Publication status pill
+            // Author byline + publication status
+            const authorEl = $('deckDetailsAuthor');
+            if (authorEl) authorEl.innerHTML = `<span class="mc-deckhero__author-lbl">${t('microcards.author_label', 'Автор')}:</span> ${deckAuthorHtml(state.activeDeck)}`;
             renderPublishStatus();
 
             // Load cards
@@ -1717,7 +1726,7 @@
         saveActiveCard,
         deleteActiveCard,
         closeDeckEditor,
-        openCardEditor: (id) => selectEditorTarget('card', id),
+        openCardEditor: (id) => { openDeckEditor(); selectEditorTarget('card', id); },
         initNewCardForm,
         previewEditorImage,
         openImportDialog,

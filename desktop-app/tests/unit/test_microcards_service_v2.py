@@ -335,6 +335,20 @@ def test_import_test_mytestx_hash_format():
     assert all("радуга" not in c["back"]["text"] for c in cards)
 
 
+def test_deck_author_fields():
+    tmp = tempfile.mkdtemp()
+    svc = MicrocardsServiceV2(tmp, user_id="u1")
+    own = svc.create_deck(name="Own")
+    assert own["author_name"] is None  # own deck → UI shows "Вы"
+    imported = svc.create_deck(name="Imported", catalog_item_id="cat_x",
+                               author_name="Alice Tester", author_user_id="user_alice")
+    assert imported["author_name"] == "Alice Tester"
+    # list_decks surfaces the author for the byline
+    rows = {d["name"]: d for d in svc.list_decks()}
+    assert rows["Imported"]["author_name"] == "Alice Tester"
+    assert rows["Own"]["author_name"] is None
+
+
 def test_update_deck_catalog_fields():
     # Publish denormalizes visibility/access_code onto the deck (and the publish
     # route relies on update_deck accepting catalog_item_id — was a 500 before).
