@@ -1380,11 +1380,16 @@ class MicrocardsServiceV2:
 
     def _parse_txt_simplified(self, content: Any, options: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         opts = options or {}
-        qa_sep = opts.get("qa_separator") or "auto"
+        # Accept both "qa_separator" (legacy) and "separator" (current UI) keys.
+        qa_sep = opts.get("qa_separator") or opts.get("separator") or "auto"
         card_sep = _s(opts.get("card_separator")).lower() or "line"
         # multiline: lines without a separator are appended to the previous card's back
         # (e.g. Quizlet exports where a definition spans several lines).
-        multiline = bool(opts.get("multiline"))
+        # "auto" — decide automatically (used by the Auto import mode): enable only
+        # for tab-hierarchy (dominant tab + tab-less continuation lines).
+        ml_opt = opts.get("multiline")
+        auto_ml = isinstance(ml_opt, str) and ml_opt.strip().lower() == "auto"
+        multiline = False if auto_ml else bool(ml_opt)
 
         text = _s(content)
         parsed: List[Dict[str, Any]] = []
@@ -1424,6 +1429,12 @@ class MicrocardsServiceV2:
             dominant = self._detect_dominant_separator(content_lines)
             if dominant:
                 line_sep = dominant
+
+        # Auto-multiline: turn it on only for a tab hierarchy (Quizlet tree) — a
+        # dominant tab with tab-less continuation lines. Flat lists keep it off so
+        # a stray separator-less line is flagged instead of silently merged.
+        if auto_ml:
+            multiline = (line_sep == "\t" and any("\t" not in ln for ln in content_lines))
 
         for stripped in content_lines:
             parts = self._split_simplified(stripped, line_sep)

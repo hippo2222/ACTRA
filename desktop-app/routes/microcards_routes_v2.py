@@ -48,7 +48,14 @@ def _read_import_text(req):
     """Extract raw import text + optional parser options from a multipart file or JSON body."""
     if "file" in req.files:
         f = req.files["file"]
-        return _decode_import_bytes(f.read()), None
+        raw_opts = req.form.get("options")
+        opts = None
+        if raw_opts:
+            try:
+                opts = json.loads(raw_opts)
+            except Exception:
+                opts = None
+        return _decode_import_bytes(f.read()), opts
     body = req.get_json(silent=True) or {}
     text = body.get("text")
     if text is None:
@@ -496,10 +503,21 @@ def import_analyze(deck_id: str):
     if guest_check:
         return guest_check
 
-    body = request.get_json(silent=True) or {}
-    fmt = body.get("format")
-    content = body.get("content")
-    options = body.get("options")
+    # Preview supports a multipart file upload too, so it decodes (e.g. cp1251)
+    # exactly like the real import instead of relying on the browser reading text.
+    if "file" in request.files:
+        content = _decode_import_bytes(request.files["file"].read())
+        fmt = request.form.get("format")
+        raw_opts = request.form.get("options")
+        try:
+            options = json.loads(raw_opts) if raw_opts else None
+        except Exception:
+            options = None
+    else:
+        body = request.get_json(silent=True) or {}
+        fmt = body.get("format")
+        content = body.get("content")
+        options = body.get("options")
     if not fmt:
         return jsonify({"ok": False, "error": "format_required"}), 400
     if content is None or not str(content).strip():

@@ -308,6 +308,27 @@ def test_import_test_messy_bank_is_lenient():
     assert len(cards) >= 3
 
 
+def test_import_auto_multiline_decision():
+    # multiline:"auto" — ON for a tab hierarchy (Quizlet tree), OFF for a flat list.
+    tmp = tempfile.mkdtemp()
+    svc = MicrocardsServiceV2(tmp, user_id="test_user")
+
+    quizlet = "Виды\tНапряжения\nВазоспастическая\nНестабильная\nСтатины\tЛовастатин\nСимвастатин\n"
+    rows = svc._parse_txt_simplified(quizlet, {"separator": "auto", "multiline": "auto"})
+    ok = [r for r in rows if r["status"] == "ok"]
+    assert len(ok) == 2  # tab-less lines merged into the previous card
+    assert ok[0]["back"] == "Напряжения\nВазоспастическая\nНестабильная"
+
+    flat = "Cor - сердце\nHepar - печень\nRen - почка\n"
+    rows2 = svc._parse_txt_simplified(flat, {"separator": "auto", "multiline": "auto"})
+    ok2 = [r for r in rows2 if r["status"] == "ok"]
+    assert len(ok2) == 3  # each line is its own card, no merging
+
+    # "separator" alias is honored (manual): pipe splits without auto.
+    rows3 = svc._parse_txt_simplified("A | 1\nB | 2\n", {"separator": " | "})
+    assert [r["front"] for r in rows3 if r["status"] == "ok"] == ["A", "B"]
+
+
 def test_import_simplified_separator_options():
     tmp = tempfile.mkdtemp()
     svc = MicrocardsServiceV2(tmp, user_id="test_user")

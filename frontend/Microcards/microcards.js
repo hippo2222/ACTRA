@@ -1299,12 +1299,12 @@
         state.importFormat = format;
         document.querySelectorAll('#impTabs .mc-tabbtn[data-fmt]').forEach(b =>
             b.classList.toggle('is-active', b.getAttribute('data-fmt') === format));
-        // Parser options apply to the simplified TXT parser and to Auto (which
-        // falls back to it for plain pasted text).
-        $('impOptions').classList.toggle('hidden', format !== 'txt_simplified' && format !== 'auto');
+        // Manual parser options only for the simplified TXT tab — Auto decides on
+        // its own (separator + multiline), so we don't burden the user with knobs.
+        $('impOptions').classList.toggle('hidden', format !== 'txt_simplified');
         const h = IMPORT_HINTS[format] || IMPORT_HINTS.csv;
         $('impHint').textContent = t(h[0], h[1]);
-        clearImportPreview();
+        schedulePreview();
     }
 
     function setImportSep(sep) {
@@ -1314,7 +1314,11 @@
     }
 
     function getImportOptions() {
-        if (state.importFormat === 'txt_simplified' || state.importFormat === 'auto') {
+        if (state.importFormat === 'auto') {
+            // Auto: backend picks the separator and decides multiline itself.
+            return { separator: 'auto', multiline: 'auto' };
+        }
+        if (state.importFormat === 'txt_simplified') {
             return { separator: state.importSep || 'auto', multiline: !!($('impMultiline') && $('impMultiline').checked) };
         }
         return null;
@@ -1324,30 +1328,67 @@
         if ($('impPreview')) $('impPreview').classList.add('hidden');
         if ($('impRows')) $('impRows').innerHTML = '';
         if ($('impCounts')) $('impCounts').innerHTML = '';
+        if ($('impBadges')) $('impBadges').innerHTML = '';
     }
-    function onImportInput() { clearImportPreview(); }
-    function onImportFile() { clearImportPreview(); }
+
+    function hasImportInput() {
+        const fi = $('importFile');
+        return (fi && fi.files.length > 0) || !!($('impContent').value || '').trim();
+    }
+
+    // Debounced live preview — fires automatically on file pick / typing / tab change.
+    let _importPreviewTimer = null;
+    function schedulePreview() {
+        if (_importPreviewTimer) clearTimeout(_importPreviewTimer);
+        if (!hasImportInput()) { clearImportPreview(); return; }
+        _importPreviewTimer = setTimeout(() => runImportPreview(false), 350);
+    }
+
+    function onImportInput() {
+        // Typing overrides a previously chosen file.
+        if ($('importFile').files.length) $('importFile').value = '';
+        schedulePreview();
+    }
+    function onImportFile() { schedulePreview(); }
 
     async function pasteImportClipboard() {
         try {
             const txt = await navigator.clipboard.readText();
-            if (txt) { $('impContent').value = txt; clearImportPreview(); }
+            if (txt) { $('impContent').value = txt; $('importFile').value = ''; schedulePreview(); }
         } catch (e) {
             showToast(t('microcards.imp_paste_fail', 'Не удалось прочитать буфер — вставьте вручную (Ctrl+V)'), 'warning');
         }
     }
 
-    async function previewImport() {
-        const content = $('impContent').value;
-        if (!content.trim()) {
-            showToast(t('microcards.error_import_empty', 'Введите текст или выберите файл'), 'error');
+    // Manual "Предпросмотр" button.
+    function previewImport() { runImportPreview(true); }
+
+    async function runImportPreview(showEmptyError) {
+        const fileInput = $('importFile');
+        const hasFile = fileInput && fileInput.files.length > 0;
+        const textContent = $('impContent').value;
+        if (!hasFile && !textContent.trim()) {
+            if (showEmptyError) showToast(t('microcards.error_import_empty', 'Введите текст или выберите файл'), 'error');
+            clearImportPreview();
             return;
         }
+        const url = `/api/v2/microcards/decks/${state.activeDeckId}/import/analyze`;
         try {
-            const result = await apiCall(`/api/v2/microcards/decks/${state.activeDeckId}/import/analyze`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ format: state.importFormat, content, options: getImportOptions() })
-            });
+            let result;
+            if (hasFile) {
+                // Send the file so preview decodes (e.g. Windows-1251) exactly like import.
+                const fd = new FormData();
+                fd.append('file', fileInput.files[0]);
+                fd.append('format', state.importFormat);
+                const o = getImportOptions();
+                if (o) fd.append('options', JSON.stringify(o));
+                result = await apiCall(url, { method: 'POST', body: fd });
+            } else {
+                result = await apiCall(url, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ format: state.importFormat, content: textContent, options: getImportOptions() })
+                });
+            }
             renderImportPreview(result.rows || [], result.counts || {}, result);
         } catch (err) { console.error(err); }
     }
@@ -1416,6 +1457,8 @@
         if (isFile) {
             const fd = new FormData();
             fd.append('file', fileInput.files[0]);
+            const parserOpts = getImportOptions();
+            if (parserOpts) fd.append('options', JSON.stringify(parserOpts));
             opts.body = fd;
         } else {
             const content = $('impContent').value;
