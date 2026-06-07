@@ -741,6 +741,27 @@
             .mc-stars .material-symbols-outlined { transform: scale(1); }
             .mc-arena .mc-flashcard-wrap { transition: none !important; transform: none !important; }
         }
+
+        /* Publication status + publish dialog */
+        .mc-deckhero__publish { margin-top: 0.55rem; }
+        .mc-pub-pill { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.25rem 0.65rem;
+            border: 1px solid var(--color-border-strong); border-radius: 999px; font-size: 0.72rem; font-weight: 700; }
+        .mc-pub-pill .material-symbols-outlined { font-size: 0.95rem; }
+        .mc-pub--public { color: var(--color-success); border-color: color-mix(in srgb, var(--color-success) 45%, transparent); }
+        .mc-pub--code   { color: var(--color-primary); border-color: color-mix(in srgb, var(--color-primary) 45%, transparent); }
+        .mc-pub--muted  { color: var(--color-text-secondary); }
+        .mc-btn--accent { border-color: var(--color-primary); color: var(--color-primary); }
+        .mc-pub-cur { color: var(--color-text-secondary); }
+        .mc-pub-options { display: flex; flex-direction: column; gap: 0.5rem; }
+        .mc-pub-option { display: flex; align-items: flex-start; gap: 0.6rem; padding: 0.6rem 0.7rem;
+            border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); cursor: pointer; transition: border-color .15s, background .15s; }
+        .mc-pub-option:hover { background: var(--color-bg-hover); }
+        .mc-pub-option:has(input:checked) { border-color: var(--color-primary); background: color-mix(in srgb, var(--color-primary) 7%, transparent); }
+        .mc-pub-option input { margin-top: 0.2rem; accent-color: var(--color-primary); }
+        .mc-pub-option__ic { font-size: 1.2rem; }
+        .mc-pub-option__txt { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
+        .mc-pub-option__title { font-size: 0.85rem; font-weight: 700; color: var(--color-text-main); }
+        .mc-pub-option__desc { font-size: 0.74rem; color: var(--color-text-secondary); }
     </style>
 </head>
 <body class="actra-page-booting bg-bg-main text-text-main min-h-screen flex flex-col font-display antialiased">
@@ -874,6 +895,7 @@
                         <h2 id="deckDetailsTitle" class="mc-deckhero__title">Название колоды</h2>
                         <p id="deckDetailsDesc" class="mc-deckhero__desc">Описание колоды отсутствует.</p>
                         <div id="deckDetailsTags" class="mc-deckhero__tags"></div>
+                        <div id="deckPublishStatus" class="mc-deckhero__publish"></div>
                     </div>
                     <div class="mc-deckhero__actions">
                         <button type="button" id="btnStudyDeck" onclick="mcApp.startLearningSession()" class="mc-btn mc-btn--primary mc-btn--lg">
@@ -888,6 +910,10 @@
                             <span class="material-symbols-outlined">upload</span>
                             <span data-i18n="microcards.btn_import">Импорт</span>
                         </button>
+                        <button type="button" onclick="mcApp.publishDeckToCatalog()" class="mc-btn mc-btn--ghost mc-btn--accent">
+                            <span class="material-symbols-outlined">public</span>
+                            <span data-i18n="microcards.btn_publish_deck">Опубликовать</span>
+                        </button>
                         <div class="relative">
                             <button type="button" onclick="mcApp.toggleDeckActionsMenu(event)" class="mc-iconbtn" aria-label="Ещё">
                                 <span class="material-symbols-outlined">more_horiz</span>
@@ -898,9 +924,6 @@
                                 </button>
                                 <button type="button" onclick="mcApp.exportDeck('csv')" class="mc-menu__item">
                                     <span class="material-symbols-outlined">download</span><span data-i18n="microcards.btn_menu_export_csv">Экспорт CSV</span>
-                                </button>
-                                <button type="button" onclick="mcApp.publishDeckToCatalog()" class="mc-menu__item">
-                                    <span class="material-symbols-outlined">publish</span><span data-i18n="microcards.btn_menu_publish">В каталог</span>
                                 </button>
                                 <div class="mc-menu__sep"></div>
                                 <button type="button" onclick="mcApp.confirmDeleteDeck()" class="mc-menu__item mc-menu__item--danger">
@@ -1371,19 +1394,53 @@
     </dialog>
 
     <dialog id="dialogPublishDeck" closedby="any" aria-labelledby="publishTitle">
-        <form method="dialog" style="display:flex;flex-direction:column;gap:1rem" onsubmit="mcApp.handlePublishSubmit(event)">
-            <h3 id="publishTitle" class="mc-dialog-title" data-i18n="microcards.dialog_publish_title">Публикация в Каталог</h3>
-            <p style="font-size:0.8rem;color:var(--color-text-secondary)" data-i18n="microcards.dialog_publish_hint">Публикация делает колоду доступной для импорта другими пользователями.</p>
-            <div class="mc-field">
-                <label for="publishVisibility" class="mc-field__label" data-i18n="microcards.dialog_publish_visibility_label">Видимость в каталоге</label>
-                <select id="publishVisibility" class="mc-select">
-                    <option value="public" data-i18n="microcards.dialog_publish_public">Публичная (всем в каталоге)</option>
-                    <option value="private" data-i18n="microcards.dialog_publish_private">Приватная (только по коду доступа)</option>
-                </select>
+        <form method="dialog" style="display:flex;flex-direction:column;gap:0.9rem" onsubmit="mcApp.handlePublishSubmit(event)">
+            <h3 id="publishTitle" class="mc-dialog-title" data-i18n="microcards.dialog_publish_title2">Доступ к колоде</h3>
+            <p style="font-size:0.8rem;color:var(--color-text-secondary)" data-i18n="microcards.dialog_publish_hint2">Выберите, кто может находить и импортировать эту колоду.</p>
+
+            <div id="publishCurrentStatus" style="font-size:0.78rem"></div>
+
+            <div id="publishOptions" class="mc-pub-options">
+                <label class="mc-pub-option">
+                    <input type="radio" name="publishVisibility" value="public" />
+                    <span class="material-symbols-outlined mc-pub-option__ic" style="color:var(--color-success)">public</span>
+                    <span class="mc-pub-option__txt">
+                        <span class="mc-pub-option__title" data-i18n="microcards.pub_public">Публичная</span>
+                        <span class="mc-pub-option__desc" data-i18n="microcards.pub_opt_public_desc">Видна всем в каталоге, любой может импортировать.</span>
+                    </span>
+                </label>
+                <label class="mc-pub-option">
+                    <input type="radio" name="publishVisibility" value="access_code" />
+                    <span class="material-symbols-outlined mc-pub-option__ic" style="color:var(--color-primary)">key</span>
+                    <span class="mc-pub-option__txt">
+                        <span class="mc-pub-option__title" data-i18n="microcards.pub_by_code">По коду доступа</span>
+                        <span class="mc-pub-option__desc" data-i18n="microcards.pub_opt_code_desc">Не показывается в общем каталоге — открыть можно только по коду.</span>
+                    </span>
+                </label>
+                <label class="mc-pub-option">
+                    <input type="radio" name="publishVisibility" value="private" />
+                    <span class="material-symbols-outlined mc-pub-option__ic" style="color:var(--color-text-secondary)">lock</span>
+                    <span class="mc-pub-option__txt">
+                        <span class="mc-pub-option__title" data-i18n="microcards.pub_private">Приватная</span>
+                        <span class="mc-pub-option__desc" data-i18n="microcards.pub_opt_private_desc">Только у вас. В каталоге не видна и недоступна по коду.</span>
+                    </span>
+                </label>
             </div>
+
+            <div id="publishCodeBox" class="hidden" style="padding:0.7rem 0.85rem;border:1px solid var(--color-primary);border-radius:var(--radius-md);background:var(--color-bg-primary)">
+                <p class="mc-field__label" style="margin:0 0 0.4rem" data-i18n="microcards.pub_code_label">Код доступа</p>
+                <div style="display:flex;align-items:center;gap:0.5rem">
+                    <code id="publishCodeValue" style="flex:1;padding:0.45rem 0.6rem;border-radius:var(--radius-sm);background:var(--color-surface-2);font-size:1rem;font-weight:800;letter-spacing:0.15em;text-align:center;color:var(--color-primary)"></code>
+                    <button type="button" onclick="mcApp.copyPublishCode()" class="mc-btn mc-btn--ghost" style="min-height:2.2rem">
+                        <span class="material-symbols-outlined">content_copy</span><span data-i18n="microcards.pub_copy">Копировать</span>
+                    </button>
+                </div>
+                <p style="font-size:0.72rem;color:var(--color-text-secondary);margin:0.5rem 0 0" data-i18n="microcards.pub_code_share">Поделитесь кодом — по нему колоду найдут и импортируют.</p>
+            </div>
+
             <div class="mc-dialog-actions">
-                <button type="button" onclick="this.closest('dialog').close()" class="mc-btn mc-btn--ghost" data-i18n="microcards.btn_cancel">Отмена</button>
-                <button type="submit" class="mc-btn mc-btn--primary" data-i18n="microcards.btn_publish">Опубликовать</button>
+                <button type="button" onclick="this.closest('dialog').close()" class="mc-btn mc-btn--ghost" data-i18n="microcards.btn_close2">Закрыть</button>
+                <button type="submit" class="mc-btn mc-btn--primary" data-i18n="microcards.btn_save_access">Сохранить</button>
             </div>
         </form>
     </dialog>

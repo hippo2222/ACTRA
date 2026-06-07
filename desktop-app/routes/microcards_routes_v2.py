@@ -660,11 +660,18 @@ def publish_deck_to_catalog(deck_id: str):
             catalog_visibility=catalog_visibility
         )
         
-        # Update deck catalog item ID reference
-        catalog_item_id = publish_result.get("item", {}).get("item_id")
+        # Denormalize catalog reference + visibility + access code onto the deck so
+        # the UI shows the publication status without a separate catalog lookup.
+        item = publish_result.get("item", {}) or {}
+        catalog_item_id = item.get("item_id")
         if catalog_item_id:
-            deck = svc.update_deck(deck_id, catalog_item_id=catalog_item_id)
-            
+            deck = svc.update_deck(
+                deck_id,
+                catalog_item_id=catalog_item_id,
+                catalog_visibility=item.get("catalog_visibility"),
+                access_code=(item.get("access_code") or ""),
+            )
+
         return jsonify({"ok": True, "publish": publish_result, "deck": deck})
     except LookupError as exc:
         return jsonify({"ok": False, "error": str(exc)}), 404

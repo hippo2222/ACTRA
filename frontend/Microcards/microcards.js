@@ -611,6 +611,9 @@
                 tagsZone.appendChild(badge);
             });
 
+            // Publication status pill
+            renderPublishStatus();
+
             // Load cards
             const cardsData = await apiCall(`/api/v2/microcards/decks/${deckId}/cards`);
             state.cards = cardsData.items || [];
@@ -1557,25 +1560,84 @@
         }
     }
 
-    // ── Catalog Integration ───────────────────────────────────────────────
+    // ── Publication status & catalog ──────────────────────────────────────
+    function publishStatusMeta(key) {
+        const M = {
+            unpublished: { label: t('microcards.pub_unpublished', 'Не опубликована'), hint: t('microcards.pub_only_you', 'Только у вас'), icon: 'lock', cls: 'mc-pub--muted' },
+            public:      { label: t('microcards.pub_public', 'Публичная'), hint: t('microcards.pub_public_hint', 'Видна всем в каталоге'), icon: 'public', cls: 'mc-pub--public' },
+            access_code: { label: t('microcards.pub_by_code', 'По коду доступа'), hint: '', icon: 'key', cls: 'mc-pub--code' },
+            private:     { label: t('microcards.pub_private', 'Приватная'), hint: t('microcards.pub_only_you', 'Только у вас'), icon: 'lock', cls: 'mc-pub--muted' },
+        };
+        return M[key] || M.unpublished;
+    }
+
+    function deckPublishState(deck) {
+        if (!deck || !deck.catalog_item_id) return 'unpublished';
+        return deck.catalog_visibility || 'public';
+    }
+
+    function publishStatusPillHtml(deck) {
+        const key = deckPublishState(deck);
+        const meta = publishStatusMeta(key);
+        let extra = meta.hint;
+        if (key === 'access_code' && deck.access_code) extra = t('microcards.pub_code_prefix', 'код: {c}').replace('{c}', deck.access_code);
+        return `<span class="mc-pub-pill ${meta.cls}"><span class="material-symbols-outlined">${meta.icon}</span>${escHtml(meta.label)}${extra ? ` · ${escHtml(extra)}` : ''}</span>`;
+    }
+
+    function renderPublishStatus() {
+        const el = $('deckPublishStatus');
+        if (el) el.innerHTML = publishStatusPillHtml(state.activeDeck || {});
+        const modalEl = $('publishCurrentStatus');
+        if (modalEl) modalEl.innerHTML = `<span class="mc-pub-cur">${t('microcards.pub_current', 'Текущий статус:')}</span> ${publishStatusPillHtml(state.activeDeck || {})}`;
+    }
+
+    function selectedPublishVisibility() {
+        const checked = document.querySelector('#publishOptions input[name="publishVisibility"]:checked');
+        return checked ? checked.value : 'public';
+    }
+    function setPublishVisibility(value) {
+        const radio = document.querySelector(`#publishOptions input[value="${value}"]`);
+        if (radio) radio.checked = true;
+    }
+    function showPublishCode(code) {
+        const box = $('publishCodeBox');
+        if (!box) return;
+        if (code) { $('publishCodeValue').textContent = code; box.classList.remove('hidden'); }
+        else { box.classList.add('hidden'); }
+    }
+
     function publishDeckToCatalog() {
-        $('publishVisibility').value = 'public';
+        const deck = state.activeDeck || {};
+        const key = deckPublishState(deck);
+        setPublishVisibility(key === 'unpublished' ? 'public' : key);
+        showPublishCode(key === 'access_code' ? deck.access_code : null);
+        renderPublishStatus();
         $('dialogPublishDeck').showModal();
     }
 
+    async function copyPublishCode() {
+        const code = ($('publishCodeValue').textContent || '').trim();
+        if (!code) return;
+        try { await navigator.clipboard.writeText(code); showToast(t('microcards.pub_code_copied', 'Код скопирован'), 'success'); }
+        catch (err) { showToast(t('microcards.pub_code_copy_fail', 'Не удалось скопировать код'), 'error'); }
+    }
+
     async function handlePublishSubmit(e) {
-        e.preventDefault();
-        const visibility = $('publishVisibility').value;
-        
+        if (e) e.preventDefault();
+        const visibility = selectedPublishVisibility();
         try {
             const result = await apiCall(`/api/v2/microcards/decks/${state.activeDeckId}/publish`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ catalog_visibility: visibility })
             });
-            $('dialogPublishDeck').close();
-            showToast(t('microcards.toast_published', 'Колода опубликована в каталог!'), 'success');
-            openDeckDetails(state.activeDeckId);
+            if (result.deck) state.activeDeck = result.deck;
+            renderPublishStatus();
+            const code = (result.publish && result.publish.item && result.publish.item.access_code) || null;
+            const labels = { public: t('microcards.pub_public', 'Публичная'), access_code: t('microcards.pub_by_code', 'По коду доступа'), private: t('microcards.pub_private', 'Приватная') };
+            showToast(t('microcards.pub_updated', 'Доступ обновлён: {v}').replace('{v}', labels[visibility] || visibility), 'success');
+            // Keep dialog open so the change (code/status) is visible immediately.
+            showPublishCode(visibility === 'access_code' ? code : null);
         } catch (err) {
             console.error(err);
         }
@@ -1670,7 +1732,8 @@
         saveSettings,
         selectDirection,
         publishDeckToCatalog,
-        handlePublishSubmit
+        handlePublishSubmit,
+        copyPublishCode
     };
 
     // Auto boot

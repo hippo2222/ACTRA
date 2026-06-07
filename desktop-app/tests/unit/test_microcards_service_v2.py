@@ -335,6 +335,29 @@ def test_import_test_mytestx_hash_format():
     assert all("радуга" not in c["back"]["text"] for c in cards)
 
 
+def test_update_deck_catalog_fields():
+    # Publish denormalizes visibility/access_code onto the deck (and the publish
+    # route relies on update_deck accepting catalog_item_id — was a 500 before).
+    tmp = tempfile.mkdtemp()
+    svc = MicrocardsServiceV2(tmp, user_id="test_user")
+    deck = svc.create_deck(name="Pub")
+    assert deck["catalog_item_id"] is None
+    assert svc.get_deck(deck["id"]).get("catalog_visibility") is None
+
+    up = svc.update_deck(deck["id"], catalog_item_id="cat_1",
+                         catalog_visibility="access_code", access_code="ABCDEF12")
+    assert up["catalog_item_id"] == "cat_1"
+    assert up["catalog_visibility"] == "access_code"
+    assert up["access_code"] == "ABCDEF12"
+
+    cleared = svc.update_deck(deck["id"], catalog_visibility="public", access_code="")
+    assert cleared["catalog_visibility"] == "public"
+    assert cleared["access_code"] is None
+    # editing name must not disturb catalog fields
+    renamed = svc.update_deck(deck["id"], name="New")
+    assert renamed["name"] == "New" and renamed["catalog_item_id"] == "cat_1"
+
+
 def test_import_test_custom_markers():
     # Variant A: adapt the parser to an unusual file via custom markers, no code change.
     tmp = tempfile.mkdtemp()

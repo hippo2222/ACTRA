@@ -336,18 +336,28 @@ class MicrocardsServiceV2:
         _write_json(self._deck_path(deck_id), deck)
         return deck
 
-    def update_deck(self, deck_id: str, name: Optional[str] = None, description: Optional[str] = None, tags: Optional[List[str]] = None) -> Dict[str, Any]:
+    def update_deck(self, deck_id: str, name: Optional[str] = None, description: Optional[str] = None,
+                    tags: Optional[List[str]] = None, catalog_item_id: Optional[str] = None,
+                    catalog_visibility: Optional[str] = None, access_code: Optional[str] = None) -> Dict[str, Any]:
         deck = self.get_deck(deck_id)
         if not deck:
             raise LookupError("deck_not_found")
-        
+
         if name is not None:
             deck["name"] = _s(name) or "Untitled Deck"
         if description is not None:
             deck["description"] = _s(description)
         if tags is not None:
             deck["tags"] = [t.strip().lower() for t in tags if t.strip()]
-            
+        # Catalog/publication fields are denormalized onto the deck so the UI can
+        # show the publication status without a second catalog round-trip.
+        if catalog_item_id is not None:
+            deck["catalog_item_id"] = catalog_item_id
+        if catalog_visibility is not None:
+            deck["catalog_visibility"] = catalog_visibility
+        if access_code is not None:
+            deck["access_code"] = _s(access_code) or None  # empty string clears the code
+
         deck["updated_at"] = _utc_now_iso()
         _write_json(self._deck_path(deck_id), deck)
         return deck
