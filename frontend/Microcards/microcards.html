@@ -298,6 +298,31 @@
         .mc-dhead__metatext { font-size: 0.82rem; color: var(--color-text-secondary); }
         .mc-dhead__tags { display: inline-flex; flex-wrap: wrap; gap: 0.35rem; }
         .mc-dhead__desc { font-size: 0.86rem; color: var(--color-text-secondary); line-height: 1.45; max-width: 48rem; margin-top: 0.45rem; }
+        /* Deck details: metric strip (4-up, reuses .mc-stat tile) */
+        .mc-dstats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.85rem; margin-bottom: 1rem; }
+        @media (max-width: 680px) { .mc-dstats { grid-template-columns: repeat(2, 1fr); } }
+        .mc-stat__icon--mastered { background: color-mix(in srgb, var(--color-success) 14%, transparent); color: var(--color-success); }
+        .mc-stat__icon--all { background: color-mix(in srgb, var(--color-text-secondary) 16%, transparent); color: var(--color-text-secondary); }
+        /* Mastery breakdown bar */
+        .mc-mastery { margin-bottom: 1.5rem; }
+        .mc-mastery__bar { display: flex; height: 0.5rem; border-radius: 999px; overflow: hidden; background: var(--color-surface-2); }
+        .mc-mastery__seg { height: 100%; transition: width .3s ease; }
+        .mc-mastery__seg--new { background: var(--color-border-strong); }
+        .mc-mastery__seg--learn { background: var(--color-warning); }
+        .mc-mastery__seg--master { background: var(--color-success); }
+        .mc-mastery__legend { display: flex; flex-wrap: wrap; gap: 0.35rem 1.1rem; margin-top: 0.55rem; font-size: 0.74rem; color: var(--color-text-secondary); }
+        .mc-mastery__legend > span { display: inline-flex; align-items: center; gap: 0.35rem; }
+        .mc-mastery__dot { width: 0.6rem; height: 0.6rem; border-radius: 50%; display: inline-block; }
+        .mc-mastery__dot--new { background: var(--color-border-strong); }
+        .mc-mastery__dot--learn { background: var(--color-warning); }
+        .mc-mastery__dot--master { background: var(--color-success); }
+        /* Cards section header */
+        .mc-cards__head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 1rem; }
+        .mc-cards__headactions { display: flex; align-items: center; gap: 0.6rem; flex-shrink: 0; }
+        .mc-count { display: inline-flex; align-items: center; justify-content: center; min-width: 1.6rem; height: 1.4rem; padding: 0 0.45rem; border-radius: 999px; background: var(--color-surface-2); border: 1px solid var(--color-border-subtle); font-size: 0.78rem; font-weight: 800; color: var(--color-text-secondary); }
+        /* Study-load chip on the primary CTA */
+        .mc-btn__count { display: inline-flex; align-items: center; justify-content: center; min-width: 1.4rem; height: 1.4rem; padding: 0 0.4rem; border-radius: 999px; background: rgba(255,255,255,0.22); font-size: 0.82rem; font-weight: 900; }
+        .mc-btn--sm { min-height: 2.1rem; padding: 0 0.75rem; font-size: 0.82rem; }
 
         /* Dropdown menu */
         .mc-menu { position: absolute; right: 0; margin-top: 0.5rem; width: 13rem; z-index: 30;
@@ -975,6 +1000,7 @@
                         <button type="button" id="btnStudyDeck" onclick="mcApp.startLearningSession()" class="mc-btn mc-btn--primary mc-btn--lg">
                             <span class="material-symbols-outlined">play_arrow</span>
                             <span data-i18n="microcards.btn_start_study">Начать обучение</span>
+                            <span id="btnStudyCount" class="mc-btn__count hidden"></span>
                         </button>
                         <div class="relative">
                             <button type="button" onclick="mcApp.toggleDeckActionsMenu(event)" class="mc-iconbtn" aria-label="Ещё" aria-haspopup="menu" data-i18n-aria="microcards.btn_more">
@@ -1013,43 +1039,66 @@
                     <p id="deckDetailsDesc" class="mc-dhead__desc hidden"></p>
                 </header>
 
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div class="mc-panel" style="height:fit-content">
-                        <h3 class="mc-panel-title" style="margin-bottom:1.2rem" data-i18n="microcards.progress_title">Прогресс обучения</h3>
-                        <div class="mc-levelrow">
-                            <div class="mc-levelrow__head">
-                                <span class="mc-levelrow__label" data-i18n="microcards.level1_label">Уровень 1 (Знаю / Не знаю)</span>
-                                <span class="mc-levelrow__count" id="progressL1Count">0</span>
-                            </div>
-                            <div class="mc-levelrow__track"><div id="progressL1Bar" class="mc-levelrow__bar mc-levelrow__bar--l1" style="width:0%"></div></div>
-                        </div>
-                        <div class="mc-levelrow">
-                            <div class="mc-levelrow__head">
-                                <span class="mc-levelrow__label" data-i18n="microcards.level2_label">Уровень 2 (Ввод ответа)</span>
-                                <span class="mc-levelrow__count" id="progressL2Count">0</span>
-                            </div>
-                            <div class="mc-levelrow__track"><div id="progressL2Bar" class="mc-levelrow__bar mc-levelrow__bar--l2" style="width:0%"></div></div>
-                        </div>
-                        <div style="display:flex;justify-content:space-between;align-items:center;padding-top:1rem;margin-top:0.4rem;border-top:1px solid var(--color-border-subtle)">
-                            <span class="mc-levelrow__label" data-i18n="microcards.total_cards_label">Всего карточек:</span>
-                            <span id="deckTotalCardsCount" style="font-weight:900;font-size:1.05rem;color:var(--color-text-main)">0</span>
+                <!-- Metric strip (reuses the .mc-stat tile component) -->
+                <section class="mc-dstats" aria-label="Статистика колоды">
+                    <div class="mc-stat">
+                        <span class="mc-stat__icon mc-stat__icon--due"><span class="material-symbols-outlined">pending_actions</span></span>
+                        <div>
+                            <p class="mc-stat__label" data-i18n="microcards.stat_due">К повтору</p>
+                            <p class="mc-stat__value" id="statDue">0</p>
                         </div>
                     </div>
-
-                    <div class="lg:col-span-2">
-                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;gap:0.6rem">
-                            <h3 class="mc-panel-title" data-i18n="microcards.deck_cards_heading">Карточки в колоде</h3>
-                            <div style="display:flex;align-items:center;gap:0.6rem;flex-shrink:0">
-                                <span id="deckCardsCountBadge" class="mc-level-chip">0</span>
-                                <button type="button" id="btnAddCardInline" onclick="mcApp.addNewCardInline()" class="mc-btn mc-btn--ghost">
-                                    <span class="material-symbols-outlined">add</span>
-                                    <span data-i18n="microcards.btn_add_card">Добавить карточку</span>
-                                </button>
-                            </div>
+                    <div class="mc-stat">
+                        <span class="mc-stat__icon mc-stat__icon--new"><span class="material-symbols-outlined">fiber_new</span></span>
+                        <div>
+                            <p class="mc-stat__label" data-i18n="microcards.stat_new">Новые</p>
+                            <p class="mc-stat__value" id="statNew">0</p>
                         </div>
-                        <div style="display:flex;flex-direction:column;gap:0.6rem" id="deckCardsListContainer"></div>
+                    </div>
+                    <div class="mc-stat">
+                        <span class="mc-stat__icon mc-stat__icon--mastered"><span class="material-symbols-outlined">military_tech</span></span>
+                        <div>
+                            <p class="mc-stat__label" data-i18n="microcards.stat_mastered">Освоено</p>
+                            <p class="mc-stat__value" id="statMastered">0%</p>
+                        </div>
+                    </div>
+                    <div class="mc-stat">
+                        <span class="mc-stat__icon mc-stat__icon--all"><span class="material-symbols-outlined">style</span></span>
+                        <div>
+                            <p class="mc-stat__label" data-i18n="microcards.stat_total">Всего</p>
+                            <p class="mc-stat__value" id="statTotal">0</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Mastery breakdown bar -->
+                <div class="mc-mastery">
+                    <div class="mc-mastery__bar" role="img" aria-label="Освоение колоды">
+                        <span class="mc-mastery__seg mc-mastery__seg--new" id="segNew" style="width:0%"></span>
+                        <span class="mc-mastery__seg mc-mastery__seg--learn" id="segLearn" style="width:0%"></span>
+                        <span class="mc-mastery__seg mc-mastery__seg--master" id="segMaster" style="width:0%"></span>
+                    </div>
+                    <div class="mc-mastery__legend">
+                        <span><i class="mc-mastery__dot mc-mastery__dot--new"></i><span data-i18n="microcards.legend_new">Новые</span></span>
+                        <span><i class="mc-mastery__dot mc-mastery__dot--learn"></i><span data-i18n="microcards.legend_learning">На изучении</span></span>
+                        <span><i class="mc-mastery__dot mc-mastery__dot--master"></i><span data-i18n="microcards.legend_mastered">Освоено</span></span>
                     </div>
                 </div>
+
+                <!-- Cards (full width) -->
+                <section class="mc-cards">
+                    <div class="mc-cards__head">
+                        <h3 class="mc-panel-title" data-i18n="microcards.deck_cards_heading">Карточки в колоде</h3>
+                        <div class="mc-cards__headactions">
+                            <span id="deckCardsCountBadge" class="mc-count">0</span>
+                            <button type="button" id="btnAddCardInline" onclick="mcApp.addNewCardInline()" class="mc-btn mc-btn--ghost mc-btn--sm">
+                                <span class="material-symbols-outlined">add</span>
+                                <span data-i18n="microcards.btn_add_card">Добавить карточку</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:0.6rem" id="deckCardsListContainer"></div>
+                </section>
             </div>
 
             <!-- ════════════ VIEW 3: SESSION ════════════ -->

@@ -666,44 +666,42 @@
         }
     }
 
-    // Update the progress panel (levels, bars, counters) from state.cards.
+    // Recompute the metric strip, mastery bar, study-load CTA and meta line.
     function updateDeckProgressUI() {
-        let l1 = 0, l2 = 0;
+        const now = Date.now();
+        let nw = 0, learning = 0, mastered = 0, due = 0;
         state.cards.forEach(c => {
-            const lvl = c.level || 1;
-            if (lvl === 1) l1++;
-            else if (lvl === 2) l2++;
+            if (c.is_new) nw++;
+            else if ((c.level || 0) >= 2) mastered++;
+            else learning++;
+            if (!c.is_new && c.due_at && new Date(c.due_at).getTime() <= now) due++;
         });
-        $('progressL1Count').textContent = l1;
-        $('progressL2Count').textContent = l2;
-        $('deckTotalCardsCount').textContent = state.cards.length;
-        $('deckCardsCountBadge').textContent = state.cards.length;
-        const total = state.cards.length || 1;
-        $('progressL1Bar').style.width = `${(l1 / total) * 100}%`;
-        $('progressL2Bar').style.width = `${(l2 / total) * 100}%`;
+        const total = state.cards.length;
+        const set = (id, v) => { const e = $(id); if (e) e.textContent = v; };
 
-        // Compact meta line: [author ·] real study load (FSRS due + new).
+        // Stat tiles
+        set('statDue', due);
+        set('statNew', nw);
+        set('statMastered', total ? Math.round((mastered / total) * 100) + '%' : '0%');
+        set('statTotal', total);
+        set('deckCardsCountBadge', total);
+
+        // Segmented mastery bar (new → learning → mastered)
+        const pct = n => total ? (n / total) * 100 : 0;
+        const seg = (id, n) => { const e = $(id); if (e) e.style.width = pct(n) + '%'; };
+        seg('segNew', nw);
+        seg('segLearn', learning);
+        seg('segMaster', mastered);
+
+        // Primary CTA shows today's study load (due + new)
+        const load = due + nw;
+        const chip = $('btnStudyCount');
+        if (chip) { chip.textContent = load; chip.classList.toggle('hidden', load === 0); }
+
+        // Header meta keeps only the author (for someone else's deck); counts
+        // now live in the metric strip — no duplication.
         const loadEl = $('deckLoadLine');
-        if (loadEl) {
-            let due = 0, nw = 0;
-            const now = Date.now();
-            state.cards.forEach(c => {
-                if (c.is_new) nw++;
-                else if (c.due_at && new Date(c.due_at).getTime() <= now) due++;
-            });
-            const parts = [];
-            const author = state.activeDeck && state.activeDeck.author_name;
-            if (author) parts.push(author); // only shown for someone else's deck
-            if (state.cards.length) {
-                if (due === 0 && nw === 0) {
-                    parts.push(t('microcards.load_all_done', 'На сегодня всё повторено 🎉'));
-                } else {
-                    if (due > 0) parts.push(t('microcards.badge_due', '{n} к повтору').replace('{n}', due));
-                    if (nw > 0) parts.push(t('microcards.badge_new_cards', '{n} новых').replace('{n}', nw));
-                }
-            }
-            loadEl.textContent = parts.join(' · ');
-        }
+        if (loadEl) loadEl.textContent = (state.activeDeck && state.activeDeck.author_name) || '';
     }
 
     // Read-only row for linked (catalog-referenced) decks — display only, no editing.
