@@ -623,7 +623,10 @@
             
             // Set details fields
             $('deckDetailsTitle').textContent = state.activeDeck.name;
-            $('deckDetailsDesc').textContent = state.activeDeck.description || t('microcards.no_description', 'Описание отсутствует.');
+            const descEl = $('deckDetailsDesc');
+            const descText = (state.activeDeck.description || '').trim();
+            descEl.textContent = descText;
+            descEl.classList.toggle('hidden', !descText);
             $('mcHeaderSubtitle').textContent = state.activeDeck.name;
             
             // Render tags
