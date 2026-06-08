@@ -627,8 +627,7 @@
             const descText = (state.activeDeck.description || '').trim();
             descEl.textContent = descText;
             descEl.classList.toggle('hidden', !descText);
-            $('mcHeaderSubtitle').textContent = state.activeDeck.name;
-            
+
             // Render tags
             const tagsZone = $('deckDetailsTags');
             tagsZone.innerHTML = '';
