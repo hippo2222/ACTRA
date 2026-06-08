@@ -858,10 +858,6 @@
         try { return JSON.parse(raw); } catch (e) { return null; }
     }
 
-    function _imgProxy(url) {
-        return `/api/v2/microcards/image-proxy?url=${encodeURIComponent(url)}`;
-    }
-
     function attributionHTML(attr) {
         if (!attr) return '';
         const author = attr.author ? escHtml(attr.author) : '';
@@ -947,7 +943,7 @@
             results.innerHTML = items.map((r, i) => `
                 <button type="button" class="mc-imgres" onclick="mcApp.imgPickerSelect(this)"
                     data-idx="${i}" title="${escHtml(r.title || '')}">
-                    <img src="${_imgProxy(r.thumb)}" alt="${escHtml(r.title || '')}" loading="lazy" fetchpriority="low" />
+                    <img src="${escHtml(r.thumb)}" alt="${escHtml(r.title || '')}" loading="lazy" fetchpriority="low" referrerpolicy="no-referrer" />
                 </button>`).join('');
             state.imgPicker.items = items;
         } catch (err) {
@@ -962,7 +958,8 @@
         state.imgPicker.selected = r;
         document.querySelectorAll('.mc-imgres.is-selected').forEach(el => el.classList.remove('is-selected'));
         btn.classList.add('is-selected');
-        $('imgPickerPreviewImg').src = _imgProxy(r.full);
+        $('imgPickerPreviewImg').src = r.full;
+        $('imgPickerPreviewImg').setAttribute('referrerpolicy', 'no-referrer');
         $('imgPickerPreviewAttr').innerHTML = attributionHTML(r.attribution);
         $('imgPickerPreview').classList.remove('hidden');
         $('imgPickerInsert').disabled = false;

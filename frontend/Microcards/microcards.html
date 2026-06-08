@@ -793,9 +793,12 @@
         .mc-img-btn--rm { color: var(--color-error); border-color: color-mix(in srgb, var(--color-error) 30%, transparent); }
         .mc-img-attr a { color: inherit; }
         /* Image picker dialog */
-        .mc-imgpicker { width: min(46rem, 94vw); max-width: 94vw; }
-        .mc-imgpicker__body { display: grid; grid-template-columns: 1fr; gap: 0.8rem; }
-        @media (min-width: 720px) { .mc-imgpicker__body { grid-template-columns: 1fr minmax(12rem, 16rem); } }
+        .mc-imgpicker { width: min(54rem, 94vw); max-width: 94vw; }
+        .mc-imgpicker__body { display: grid; grid-template-columns: 1fr; gap: 0.9rem; }
+        /* Reserve the preview column only once an image is actually selected. */
+        @media (min-width: 720px) {
+            .mc-imgpicker__body:has(.mc-imgpicker__preview:not(.hidden)) { grid-template-columns: 1fr minmax(12rem, 17rem); }
+        }
         .mc-imgpicker__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
             gap: 0.5rem; max-height: 22rem; overflow-y: auto; padding-right: 0.2rem; align-content: start; }
         .mc-imgres { padding: 0; border: 2px solid transparent; border-radius: 0.6rem; overflow: hidden;
