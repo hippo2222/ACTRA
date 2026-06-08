@@ -17,7 +17,11 @@
 set -euo pipefail
 
 REPO_DIR="${REPO_DIR:-$(pwd)}"
-COMPOSE_FILES="-f docker-compose.hosted.yml"
+# IMPORTANT: --env-file .env.hosted MUST be passed, otherwise every ${VAR} in
+# the compose file falls back to its insecure default (SECRET_KEY=change-me...,
+# S3=minioadmin, SMTP=mailpit). The app has no load_dotenv — secrets reach it
+# ONLY through this flag. See .env.hosted for the real values.
+COMPOSE_FILES="--env-file .env.hosted -f docker-compose.hosted.yml"
 BRANCH="online-hosting"
 APP_CONTAINER="actra-app-1"
 PUBLIC_BASE="${PUBLIC_BASE:-https://actra.site}"
