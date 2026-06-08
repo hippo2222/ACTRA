@@ -2023,8 +2023,8 @@
     "imp_marker_hint": "You can list several characters in a row (e.g. ?# — both count as a question).",
     "author_label": "Author",
     "author_you": "You",
-    "badge_linked": "Linked",
-    "linked_readonly": "Linked publication · read-only",
+    "badge_linked": "From catalog",
+    "linked_readonly": "From catalog · read-only",
     "btn_remove_from_library": "Remove from library"
   },
   "nav": {

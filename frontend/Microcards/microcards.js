@@ -429,7 +429,7 @@
             const newPill = deck.new_count > 0
                 ? `<span class="mc-pill mc-pill--new">${t('microcards.badge_new_cards', '{n} новых').replace('{n}', deck.new_count)}</span>` : '';
             const linkedPill = deck.linked
-                ? `<span class="mc-pill mc-pill--linked"><span class="material-symbols-outlined" style="font-size:0.9rem">link</span>${t('microcards.badge_linked', 'Связанная')}</span>` : '';
+                ? `<span class="mc-pill mc-pill--linked"><span class="material-symbols-outlined" style="font-size:0.9rem">link</span>${t('microcards.badge_linked', 'Из каталога')}</span>` : '';
 
             card.innerHTML = `
                 <div class="mc-deck-card__top">
@@ -636,7 +636,7 @@
                 ? t('microcards.btn_remove_from_library', 'Убрать из библиотеки')
                 : t('microcards.btn_menu_delete_deck', 'Удалить колоду');
             const pub = $('deckPublishStatus');
-            if (linked && pub) pub.innerHTML = `<span class="mc-pub-pill mc-pub--code"><span class="material-symbols-outlined">link</span>${t('microcards.linked_readonly', 'Связанная публикация · только чтение')}</span>`;
+            if (linked && pub) pub.innerHTML = `<span class="mc-pub-pill mc-pub--code"><span class="material-symbols-outlined">link</span>${t('microcards.linked_readonly', 'Из каталога · только чтение')}</span>`;
 
             // Load cards
             const cardsData = await apiCall(`/api/v2/microcards/decks/${deckId}/cards`);
