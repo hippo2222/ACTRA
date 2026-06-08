@@ -423,15 +423,6 @@
         .mc-errrow__q { font-size: 0.82rem; font-weight: 800; color: var(--color-text-main); }
         .mc-errrow__a { font-size: 0.8rem; font-weight: 600; color: var(--color-success); margin-top: 0.25rem; }
 
-        /* ── Editor ───────────────────────────────────────────────── */
-        .mc-editor { display: grid; grid-template-columns: 1fr; gap: var(--mc-gap); }
-        @media (min-width: 900px) { .mc-editor { grid-template-columns: minmax(0, 17rem) 1fr; } }
-        .mc-editor__sidebar { background: var(--color-surface-1); border: 1px solid var(--color-border-subtle);
-            border-radius: var(--mc-radius); padding: 1.1rem; align-self: start; }
-        .mc-editor__sidehead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.9rem; }
-        .mc-editor__list { display: flex; flex-direction: column; gap: 0.4rem; max-height: 30rem; overflow-y: auto; padding-right: 0.2rem; }
-        .mc-editor__main { background: var(--color-surface-1); border: 1px solid var(--color-border-subtle);
-            border-radius: var(--mc-radius); padding: 1.5rem; }
         .mc-field { display: flex; flex-direction: column; }
         .mc-field__label { font-size: 0.66rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;
             color: var(--color-text-secondary); margin-bottom: 0.45rem; }
@@ -442,15 +433,6 @@
         .mc-input:focus, .mc-textarea:focus, .mc-select:focus { border-color: var(--color-primary);
             box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 14%, transparent); }
         .mc-textarea { resize: vertical; min-height: 4.5rem; }
-        .mc-editimg { max-height: 5rem; border-radius: 0.6rem; object-fit: contain; border: 1px solid var(--color-border-subtle); margin-top: 0.5rem; }
-        .mc-side-item { width: 100%; text-align: left; padding: 0.6rem 0.7rem; border-radius: 0.6rem;
-            font-size: 0.78rem; border: 1px solid var(--color-border-subtle); color: var(--color-text-main);
-            transition: background .15s, border-color .15s;
-            display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
-        .mc-side-item:hover { background: var(--color-surface-2); border-color: var(--color-border-strong); }
-        .mc-side-item--meta { display: flex; align-items: center; gap: 0.5rem; font-weight: 700;
-            border-color: var(--color-border-strong); margin-bottom: 0.6rem; }
-        .mc-side-item--meta .material-symbols-outlined { font-size: 1rem; color: var(--color-text-secondary); }
 
         /* ── Focus visible ────────────────────────────────────────── */
         button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, a:focus-visible {
@@ -1205,95 +1187,6 @@
                 </div>
             </div>
 
-            <!-- ════════════ VIEW 5: EDITOR ════════════ -->
-            <div id="viewEditor" class="page-view hidden">
-                <div class="mc-editor">
-                    <div class="mc-editor__sidebar">
-                        <div class="mc-editor__sidehead">
-                            <h3 class="mc-panel-title" style="font-size:0.85rem" data-i18n="microcards.editor_cards_nav_title">Карточки колоды</h3>
-                            <button type="button" onclick="mcApp.initNewCardForm()" class="mc-iconbtn" style="width:2.25rem;height:2.25rem" aria-label="Добавить карточку">
-                                <span class="material-symbols-outlined" style="font-size:1.15rem">add</span>
-                            </button>
-                        </div>
-                        <div class="mc-editor__list" id="editorSidebarList"></div>
-                    </div>
-
-                    <div class="mc-editor__main">
-                        <div id="editorDeckMetaForm" style="margin-bottom:1.5rem;padding-bottom:1.5rem;border-bottom:1px solid var(--color-border-subtle)">
-                            <h3 class="mc-panel-title" style="margin-bottom:1.1rem" data-i18n="microcards.editor_deck_params_title">Параметры колоды</h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div class="mc-field">
-                                    <label for="editDeckName" class="mc-field__label" data-i18n="microcards.editor_deck_name_label">Название колоды</label>
-                                    <input type="text" id="editDeckName" class="mc-input" />
-                                </div>
-                                <div class="mc-field">
-                                    <label for="editDeckTags" class="mc-field__label" data-i18n="microcards.editor_deck_tags_label">Теги (через запятую)</label>
-                                    <input type="text" id="editDeckTags" class="mc-input" placeholder="протоколы, сети" />
-                                </div>
-                                <div class="mc-field md:col-span-2">
-                                    <label for="editDeckDesc" class="mc-field__label" data-i18n="microcards.editor_deck_desc_label">Описание колоды</label>
-                                    <textarea id="editDeckDesc" rows="2" class="mc-textarea"></textarea>
-                                </div>
-                            </div>
-                            <div style="margin-top:1rem;display:flex;justify-content:flex-end">
-                                <button type="button" onclick="mcApp.saveDeckMeta()" class="mc-btn mc-btn--success">
-                                    <span data-i18n="microcards.editor_save_params">Сохранить параметры</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        <div id="editorCardFormZone">
-                            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.1rem">
-                                <h3 class="mc-panel-title" id="editorCardFormTitle" data-i18n="microcards.editor_new_card_title">Новая карточка</h3>
-                                <button type="button" id="btnDeleteCard" onclick="mcApp.deleteActiveCard()" class="mc-btn mc-btn--ghost hidden" style="min-height:2.4rem;color:var(--color-error);border-color:color-mix(in srgb,var(--color-error) 30%,transparent)">
-                                    <span class="material-symbols-outlined" style="font-size:1rem">delete</span>
-                                    <span data-i18n="microcards.editor_delete_card_btn">Удалить карточку</span>
-                                </button>
-                            </div>
-                            <div style="display:flex;flex-direction:column;gap:1rem">
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div class="mc-field">
-                                        <label for="editCardFront" class="mc-field__label" data-i18n="microcards.editor_card_front_label">Вопрос (Лицевая сторона)</label>
-                                        <textarea id="editCardFront" rows="3" class="mc-textarea" placeholder="Что такое OSI?"></textarea>
-                                    </div>
-                                    <div class="mc-field">
-                                        <label for="editCardBack" class="mc-field__label" data-i18n="microcards.editor_card_back_label">Ответ (Обратная сторона)</label>
-                                        <textarea id="editCardBack" rows="3" class="mc-textarea" placeholder="Базовая эталонная модель взаимодействия открытых систем."></textarea>
-                                    </div>
-                                </div>
-                                <div class="mc-field">
-                                    <label for="editCardHint" class="mc-field__label" data-i18n="microcards.editor_card_hint_label">Подсказка (Опционально)</label>
-                                    <input type="text" id="editCardHint" class="mc-input" placeholder="Аббревиатура из 3 букв" />
-                                </div>
-                                <div class="mc-field">
-                                    <label for="editCardAcceptable" class="mc-field__label" data-i18n="microcards.editor_card_acceptable_label">Доп. верные ответы (по одному на строку, опционально)</label>
-                                    <textarea id="editCardAcceptable" rows="2" class="mc-textarea" placeholder="Синонимы, которые тоже засчитываются как верные" data-i18n-placeholder="microcards.editor_card_acceptable_ph"></textarea>
-                                </div>
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div class="mc-field">
-                                        <label for="editCardFrontImage" class="mc-field__label" data-i18n="microcards.editor_card_front_img_label">Ссылка на изображение к Вопросу (Опционально)</label>
-                                        <input type="url" id="editCardFrontImage" oninput="mcApp.previewEditorImage('front')" class="mc-input" placeholder="https://example.com/image.jpg" />
-                                        <img id="editCardFrontImagePreview" class="mc-editimg hidden" alt="Front preview">
-                                    </div>
-                                    <div class="mc-field">
-                                        <label for="editCardBackImage" class="mc-field__label" data-i18n="microcards.editor_card_back_img_label">Ссылка на изображение к Ответу (Опционально)</label>
-                                        <input type="url" id="editCardBackImage" oninput="mcApp.previewEditorImage('back')" class="mc-input" placeholder="https://example.com/image.jpg" />
-                                        <img id="editCardBackImagePreview" class="mc-editimg hidden" alt="Back preview">
-                                    </div>
-                                </div>
-                                <div style="display:flex;justify-content:flex-end;gap:0.6rem;padding-top:0.5rem">
-                                    <button type="button" onclick="mcApp.closeDeckEditor()" class="mc-btn mc-btn--ghost">
-                                        <span data-i18n="microcards.editor_close_btn">Закрыть редактор</span>
-                                    </button>
-                                    <button type="button" onclick="mcApp.saveActiveCard()" class="mc-btn mc-btn--primary">
-                                        <span data-i18n="microcards.editor_save_card_btn">Сохранить карточку</span>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
         </div>
     </main>

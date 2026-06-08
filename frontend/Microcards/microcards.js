@@ -27,14 +27,13 @@
 
     // ── App State ─────────────────────────────────────────────────────────
     const state = {
-        view: 'library', // 'library' | 'details' | 'session' | 'summary' | 'editor'
+        view: 'library', // 'library' | 'details' | 'session' | 'summary'
         decks: [],
         sortKey: 'name-asc', // library sort order
         activeTag: null, // active tag filter
         activeDeckId: null,
         activeDeck: null,
         cards: [], // active deck cards
-        activeCard: null, // card being edited
         
         // Session state
         session: null,
@@ -248,7 +247,6 @@
         if (viewName === 'details') targetId = 'viewDeckDetails';
         else if (viewName === 'session') targetId = 'viewSession';
         else if (viewName === 'summary') targetId = 'viewSummary';
-        else if (viewName === 'editor') targetId = 'viewEditor';
 
         const targetEl = $(targetId);
         if (targetEl) {
@@ -288,8 +286,6 @@
         } else if (state.view === 'session') {
             abortSession();
         } else if (state.view === 'summary') {
-            switchView('details');
-        } else if (state.view === 'editor') {
             switchView('details');
         }
     }
@@ -1350,196 +1346,6 @@
         loadLibraryData();
     }
 
-    // ── Deck & Cards Editor ───────────────────────────────────────────────
-    function openDeckEditor() {
-        switchView('editor');
-        
-        // Load metadata
-        $('editDeckName').value = state.activeDeck.name;
-        $('editDeckDesc').value = state.activeDeck.description || '';
-        $('editDeckTags').value = (state.activeDeck.tags || []).join(', ');
-
-        renderEditorSidebarList();
-        initNewCardForm();
-    }
-
-    function renderEditorSidebarList() {
-        const container = $('editorSidebarList');
-        container.innerHTML = '';
-
-        // Add Deck Metadata Button
-        const metaBtn = document.createElement('button');
-        metaBtn.type = 'button';
-        metaBtn.className = 'mc-side-item mc-side-item--meta';
-        metaBtn.onclick = () => selectEditorTarget('deck');
-        metaBtn.innerHTML = `<span class="material-symbols-outlined">settings</span><span>${t('microcards.editor_deck_params_title', 'Параметры колоды')}</span>`;
-        container.appendChild(metaBtn);
-
-        if (state.cards.length === 0) {
-            const emptyLabel = document.createElement('div');
-            emptyLabel.style.cssText = 'text-align:center;padding:1rem;font-size:0.7rem;color:var(--color-text-secondary)';
-            emptyLabel.textContent = t('microcards.editor_no_cards', 'Нет карточек');
-            container.appendChild(emptyLabel);
-            return;
-        }
-
-        state.cards.forEach(card => {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'mc-side-item';
-            btn.textContent = card.front.text || t('microcards.editor_card_untitled', '(без текста)');
-            btn.onclick = () => selectEditorTarget('card', card.id);
-            container.appendChild(btn);
-        });
-    }
-
-    function selectEditorTarget(type, id = null) {
-        if (type === 'deck') {
-            $('editorDeckMetaForm').classList.remove('hidden');
-            $('editorCardFormZone').classList.add('hidden');
-        } else {
-            $('editorDeckMetaForm').classList.add('hidden');
-            $('editorCardFormZone').classList.remove('hidden');
-            
-            const card = state.cards.find(c => c.id === id);
-            if (card) {
-                state.activeCard = card;
-                $('editorCardFormTitle').textContent = t('microcards.editor_edit_card_title', 'Редактировать карточку');
-                $('editCardFront').value = card.front.text;
-                $('editCardBack').value = card.back.text;
-                $('editCardHint').value = card.hint || '';
-                $('editCardAcceptable').value = (card.acceptable_answers || []).join('\n');
-                $('editCardFrontImage').value = card.front.image_url || '';
-                $('editCardBackImage').value = card.back.image_url || '';
-                
-                previewEditorImage('front');
-                previewEditorImage('back');
-                
-                $('btnDeleteCard').classList.remove('hidden');
-            }
-        }
-    }
-
-    function initNewCardForm() {
-        state.activeCard = null;
-        $('editorDeckMetaForm').classList.add('hidden');
-        $('editorCardFormZone').classList.remove('hidden');
-        
-        $('editorCardFormTitle').textContent = t('microcards.editor_new_card_title', 'Новая карточка');
-        $('editCardFront').value = '';
-        $('editCardBack').value = '';
-        $('editCardHint').value = '';
-        $('editCardAcceptable').value = '';
-        $('editCardFrontImage').value = '';
-        $('editCardBackImage').value = '';
-        
-        $('editCardFrontImagePreview').classList.add('hidden');
-        $('editCardBackImagePreview').classList.add('hidden');
-        $('btnDeleteCard').classList.add('hidden');
-    }
-
-    function previewEditorImage(face) {
-        const inputId = face === 'front' ? 'editCardFrontImage' : 'editCardBackImage';
-        const previewId = face === 'front' ? 'editCardFrontImagePreview' : 'editCardBackImagePreview';
-        const url = $(inputId).value.trim();
-        const img = $(previewId);
-        
-        if (url) {
-            img.src = url;
-            img.classList.remove('hidden');
-        } else {
-            img.classList.add('hidden');
-        }
-    }
-
-    async function saveDeckMeta() {
-        const name = $('editDeckName').value.trim();
-        const description = $('editDeckDesc').value.trim();
-        const tagsRaw = $('editDeckTags').value;
-        const tags = tagsRaw.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
-
-        if (!name) {
-            showToast(t('microcards.error_name_required', 'Название колоды обязательно'), 'error');
-            return;
-        }
-
-        try {
-            await apiCall(`/api/v2/microcards/decks/${state.activeDeckId}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, description, tags })
-            });
-            showToast(t('microcards.toast_deck_saved', 'Параметры колоды сохранены'), 'success');
-            openDeckDetails(state.activeDeckId);
-        } catch (err) {
-            console.error(err);
-        }
-    }
-
-    async function saveActiveCard() {
-        const frontText = $('editCardFront').value.trim();
-        const backText = $('editCardBack').value.trim();
-        const hint = $('editCardHint').value.trim();
-        const acceptable = $('editCardAcceptable').value.split('\n').map(s => s.trim()).filter(Boolean);
-        const frontImage = $('editCardFrontImage').value.trim();
-        const backImage = $('editCardBackImage').value.trim();
-
-        if (!frontText || !backText) {
-            showToast(t('microcards.error_front_back_required', 'Заполните лицевую и обратную стороны'), 'error');
-            return;
-        }
-
-        const payload = {
-            front_text: frontText,
-            back_text: backText,
-            hint: hint || null,
-            acceptable_answers: acceptable,
-            front_image_url: frontImage || null,
-            back_image_url: backImage || null
-        };
-
-        try {
-            if (state.activeCard) {
-                // Update existing card
-                await apiCall(`/api/v2/microcards/decks/${state.activeDeckId}/cards/${state.activeCard.id}`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                showToast(t('microcards.toast_card_saved', 'Карточка сохранена'), 'success');
-            } else {
-                // Create new card
-                await apiCall(`/api/v2/microcards/decks/${state.activeDeckId}/cards`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                showToast(t('microcards.toast_card_added', 'Карточка добавлена'), 'success');
-            }
-            openDeckDetails(state.activeDeckId).then(() => openDeckEditor());
-        } catch (err) {
-            console.error(err);
-        }
-    }
-
-    async function deleteActiveCard() {
-        if (!state.activeCard) return;
-        if (confirm(t('microcards.confirm_delete_card', 'Вы действительно хотите удалить эту карточку?'))) {
-            try {
-                await apiCall(`/api/v2/microcards/decks/${state.activeDeckId}/cards/${state.activeCard.id}`, {
-                    method: 'DELETE'
-                });
-                showToast(t('microcards.toast_card_deleted', 'Карточка удалена'), 'success');
-                openDeckDetails(state.activeDeckId).then(() => openDeckEditor());
-            } catch (err) {
-                console.error(err);
-            }
-        }
-    }
-
-    function closeDeckEditor() {
-        openDeckDetails(state.activeDeckId);
-    }
 
     // ── Import Decks Dialog ───────────────────────────────────────────────
     const IMPORT_HINTS = {
@@ -1984,14 +1790,6 @@
         addNewCardInline,
         saveCardInline,
         deleteCardInline,
-        openDeckEditor,
-        saveDeckMeta,
-        saveActiveCard,
-        deleteActiveCard,
-        closeDeckEditor,
-        openCardEditor: (id) => { openDeckEditor(); selectEditorTarget('card', id); },
-        initNewCardForm,
-        previewEditorImage,
         openImportDialog,
         switchImportTab,
         handleImportSubmit,
