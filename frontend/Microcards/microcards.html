@@ -332,13 +332,17 @@
 
         .mc-flashcard-wrap { perspective: 1600px; margin-bottom: 1.25rem; }
         .flashcard-inner {
-            position: relative; width: 100%; min-height: 24rem;
+            position: relative; width: 100%;
+            /* Stack both faces in one grid cell so the card height tracks the
+               taller face's content (no fixed height → no scrollbar), clamped. */
+            display: grid; grid-template-columns: 1fr;
+            min-block-size: 12rem; max-block-size: min(78vh, 42rem);
             transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
             transform-style: preserve-3d;
         }
         .flashcard-inner.flipped { transform: rotateY(180deg); }
         .flashcard-front, .flashcard-back {
-            position: absolute; inset: 0; width: 100%; height: 100%;
+            grid-area: 1 / 1; min-width: 0;
             display: flex; flex-direction: column;
             backface-visibility: hidden; -webkit-backface-visibility: hidden;
             border-radius: var(--mc-radius); border: 1px solid var(--color-border-strong);
@@ -354,8 +358,9 @@
             text-align: center; gap: 0.85rem; overflow-y: auto; padding: 0.75rem 0; }
         .mc-face__text { font-size: 1.4rem; font-weight: 800; color: var(--color-text-main); line-height: 1.35;
             white-space: pre-line; }
-        .mc-face__img { max-height: 9rem; border-radius: 0.75rem; object-fit: contain; border: 1px solid var(--color-border-subtle); }
+        .mc-face__img { max-height: 15rem; max-width: 100%; border-radius: 0.75rem; object-fit: contain; border: 1px solid var(--color-border-subtle); }
         .mc-face__actions { flex-shrink: 0; padding-top: 0.5rem; }
+        .mc-tap-hint { text-align: center; font-size: 0.74rem; font-weight: 600; color: var(--color-text-secondary); opacity: 0.8; }
         .mc-hint-text { font-size: 0.85rem; font-style: italic; font-weight: 600; color: var(--color-warning); }
         .mc-hint-btn { display: inline-flex; align-items: center; gap: 0.35rem; height: 2rem; padding: 0 0.7rem;
             border-radius: 0.6rem; border: 1px solid var(--color-border-strong); color: var(--color-text-secondary);
@@ -652,6 +657,17 @@
         @keyframes mc-glow-wrong {
             0%, 100% { box-shadow: var(--shadow-lg, 0 14px 32px rgba(0,0,0,0.12)); }
             40% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-error) 55%, transparent), 0 14px 40px color-mix(in srgb, var(--color-error) 30%, transparent); }
+        }
+        /* Whole-card click target (L1): flip on click/Enter/Space */
+        .mc-flashcard-wrap.is-clickable { cursor: pointer; }
+        .mc-flashcard-wrap.is-clickable:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 4px; border-radius: var(--mc-radius); }
+        /* Card flies off toward the chosen side when graded (works on any width) */
+        .mc-flashcard-wrap.mc-fly-yes { animation: mc-fly-yes 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+        .mc-flashcard-wrap.mc-fly-no  { animation: mc-fly-no  0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+        @keyframes mc-fly-yes { to { transform: translateX(62%) rotate(7deg);  opacity: 0; } }
+        @keyframes mc-fly-no  { to { transform: translateX(-62%) rotate(-7deg); opacity: 0; } }
+        @media (prefers-reduced-motion: reduce) {
+            .mc-flashcard-wrap.mc-fly-yes, .mc-flashcard-wrap.mc-fly-no { animation: none; opacity: 0; }
         }
         .flashcard-inner.mc-shake { animation: mc-card-shake 280ms linear; }
         @keyframes mc-card-shake {
@@ -1076,9 +1092,7 @@
                                 </div>
                                 <div class="mc-face__actions">
                                     <div id="frontActionsL1">
-                                        <button type="button" onclick="mcApp.revealAnswerL1()" class="mc-btn mc-btn--primary mc-btn--block mc-btn--lg">
-                                            <span data-i18n="microcards.btn_show_answer">Показать ответ</span>
-                                        </button>
+                                        <p class="mc-tap-hint" data-i18n="microcards.tap_to_reveal">Нажмите на карточку, чтобы увидеть ответ</p>
                                     </div>
                                     <div id="frontActionsL2" class="hidden">
                                         <form onsubmit="mcApp.submitAnswerL2(event)" class="mc-answer-form">

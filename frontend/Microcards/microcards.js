@@ -184,6 +184,11 @@
         if (arena) arena.classList.add('is-grading');
     }
     function bindSessionRails() {
+        const wrap = $('mcFlashWrap');
+        if (wrap) {
+            wrap.addEventListener('click', onCardActivate);
+            wrap.addEventListener('keydown', onCardKey);
+        }
         const arena = $('mcArena'), railNo = $('railNo'), railYes = $('railYes');
         if (!arena || !railNo || !railYes) return;
         railNo.addEventListener('mouseenter', () => arena.classList.add('lean-left'));
@@ -1155,6 +1160,14 @@
 
         // Reset card face state
         $('flashcardInner').classList.remove('flipped');
+        const _wrap = $('mcFlashWrap');
+        if (_wrap && (_wrap.classList.contains('mc-fly-yes') || _wrap.classList.contains('mc-fly-no'))) {
+            // Reset the fly-off without animating the card back across the screen.
+            _wrap.style.transition = 'none';
+            _wrap.classList.remove('mc-fly-yes', 'mc-fly-no');
+            void _wrap.offsetWidth;
+            _wrap.style.transition = '';
+        }
         hideRails(); // rails reappear only after the answer is revealed
         
         // Effective direction (reverse mode): which side is the question vs answer
@@ -1206,11 +1219,20 @@
         levelInd.style.color = accent;
 
         // Reset UI actions
+        state.currentLevel = level;
+        const wrap = $('mcFlashWrap');
         if (level === 1) {
             $('frontActionsL1').classList.remove('hidden');
             $('frontActionsL2').classList.add('hidden');
             $('backActionsL1').classList.remove('hidden');
             $('backActionsL2').classList.add('hidden');
+            // L1: whole card is the click target to reveal the answer.
+            if (wrap) {
+                wrap.classList.add('is-clickable');
+                wrap.setAttribute('role', 'button');
+                wrap.setAttribute('tabindex', '0');
+                wrap.setAttribute('aria-label', t('microcards.tap_to_reveal', 'Нажмите на карточку, чтобы увидеть ответ'));
+            }
         } else {
             $('frontActionsL1').classList.add('hidden');
             $('frontActionsL2').classList.remove('hidden');
@@ -1218,6 +1240,12 @@
             $('backActionsL2').classList.remove('hidden');
             $('inputL2Answer').value = '';
             $('inputL2Answer').focus();
+            if (wrap) {
+                wrap.classList.remove('is-clickable');
+                wrap.removeAttribute('role');
+                wrap.removeAttribute('tabindex');
+                wrap.removeAttribute('aria-label');
+            }
         }
 
         $('l2ComparisonZone').classList.add('hidden');
@@ -1236,11 +1264,36 @@
         showRails(); // reveal the swipe-style grading rails (desktop)
     }
 
+    // Whole-card click/keyboard toggle (L1 only): question ⇄ answer.
+    const _CARD_INTERACTIVE = 'button, a, input, textarea, select, form, .mc-rail, .mc-grade__btn, .mc-hint-btn';
+    function onCardActivate(e) {
+        if (state.currentLevel !== 1) return;
+        if (e.target.closest(_CARD_INTERACTIVE)) return; // let inner controls handle their own clicks
+        const inner = $('flashcardInner');
+        if (inner.classList.contains('flipped')) {
+            inner.classList.remove('flipped'); // flip back to the question
+            hideRails();
+        } else {
+            revealAnswerL1();
+        }
+    }
+    function onCardKey(e) {
+        if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+        if (state.currentLevel !== 1) return;
+        if (e.target.closest(_CARD_INTERACTIVE)) return;
+        e.preventDefault();
+        onCardActivate(e);
+    }
+
     async function submitAnswerL1(know) {
         const card = state.sessionCards[state.sessionIndex];
         const ratingValue = know ? 'know' : 'dont_know';
 
         hideRails(); // rails vanish + card un-leans as the answer is graded
+
+        // Card flies off toward the chosen side (visible on all widths).
+        const flyWrap = $('mcFlashWrap');
+        if (flyWrap) flyWrap.classList.add(know ? 'mc-fly-yes' : 'mc-fly-no');
 
         // Update stats locally
         if (know) {

@@ -1884,7 +1884,7 @@
     "btn_dont_know": "Не знаю",
     "btn_override": "Всё равно правильно",
     "btn_next": "Далее",
-    "btn_show_answer": "Показать ответ",
+    "tap_to_reveal": "Нажмите на карточку, чтобы увидеть ответ",
     "btn_check": "Проверить",
     "btn_exit_session": "Выйти из сессии",
     "btn_start_study": "Начать обучение",
