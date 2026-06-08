@@ -363,7 +363,8 @@
             background: var(--color-surface-2); border: 1px solid var(--color-border-subtle); color: var(--color-text-secondary); white-space: nowrap; }
 
         /* ── Session / flashcard ──────────────────────────────────── */
-        .mc-session { max-width: 52rem; margin: 0 auto; }
+        .mc-session { max-width: 52rem; margin: 0 auto; display: flex; flex-direction: column;
+            min-block-size: calc(100dvh - 16rem); }
         .mc-session__head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem; }
         .mc-level-indicator { padding: 0.4rem 0.9rem; border-radius: 999px; font-size: 0.72rem; font-weight: 800;
             border: 1px solid transparent; }
@@ -621,7 +622,7 @@
         @keyframes mc-combo-break { to { opacity: 0; transform: translateY(-6px) scale(0.8); } }
 
         /* ── L1 grading rails (swipe-style) ─────────────────────────── */
-        .mc-arena { display: flex; align-items: stretch; justify-content: center; gap: 1rem; }
+        .mc-arena { display: flex; align-items: stretch; justify-content: center; gap: 1rem; margin-block: auto; }
         .mc-arena .mc-flashcard-wrap { flex: 0 1 40rem; min-width: 0;
             transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1); }
         .mc-arena.lean-left .mc-flashcard-wrap { transform: rotate(-2.4deg) translateX(-12px); }
