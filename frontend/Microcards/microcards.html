@@ -29,7 +29,7 @@
 
         .mc-page {
             width: 100%;
-            max-width: 1360px;
+            max-width: 1120px;
             margin: 0 auto;
             padding: 1.5rem 1rem 4rem;
         }
@@ -279,17 +279,17 @@
         .mc-empty__hint { font-size: 0.85rem; color: var(--color-text-secondary); max-width: 24rem; margin-bottom: 1.5rem; }
 
         /* ── Deck details hero ────────────────────────────────────── */
-        .mc-deckhero { display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1rem;
+        .mc-deckhero { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem;
             padding-bottom: 1rem; border-bottom: 1px solid var(--color-border-subtle); }
-        @media (min-width: 768px) { .mc-deckhero { flex-direction: row; align-items: center; justify-content: space-between; } }
-        .mc-deckhero__main { min-width: 0; }
+        /* Title + actions sit together on one line, left-grouped (no dead-space space-between). */
+        .mc-deckhero__row { display: flex; align-items: center; flex-wrap: wrap; gap: 0.6rem 1rem; }
         .mc-deckhero__title { font-size: 1.5rem; font-weight: 900; letter-spacing: -0.02em;
             color: var(--color-text-main); line-height: 1.15; margin: 0; overflow-wrap: anywhere; }
-        .mc-deckhero__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.7rem; margin-top: 0.5rem; }
+        .mc-deckhero__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.6rem; }
         .mc-deckhero__metatext { font-size: 0.82rem; color: var(--color-text-secondary); }
-        .mc-deckhero__desc { font-size: 0.88rem; color: var(--color-text-secondary); line-height: 1.45; max-width: 46rem; margin-top: 0.5rem; }
-        .mc-deckhero__tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.55rem; }
-        .mc-deckhero__actions { display: flex; align-items: center; gap: 0.6rem; flex-shrink: 0; }
+        .mc-deckhero__desc { font-size: 0.88rem; color: var(--color-text-secondary); line-height: 1.45; max-width: 46rem; margin-top: 0.15rem; }
+        .mc-deckhero__tags { display: inline-flex; flex-wrap: wrap; gap: 0.35rem; }
+        .mc-deckhero__actions { display: flex; align-items: center; gap: 0.5rem; }
 
         /* Dropdown menu */
         .mc-menu { position: absolute; right: 0; margin-top: 0.5rem; width: 13rem; z-index: 30;
@@ -955,16 +955,9 @@
             <!-- ════════════ VIEW 2: DECK DETAILS ════════════ -->
             <div id="viewDeckDetails" class="page-view hidden">
                 <div class="mc-deckhero">
-                    <div class="mc-deckhero__main">
+                    <div class="mc-deckhero__row">
                         <h2 id="deckDetailsTitle" class="mc-deckhero__title">Название колоды</h2>
-                        <div class="mc-deckhero__meta">
-                            <span id="deckPublishStatus"></span>
-                            <span id="deckLoadLine" class="mc-deckhero__metatext"></span>
-                        </div>
-                        <p id="deckDetailsDesc" class="mc-deckhero__desc hidden"></p>
-                        <div id="deckDetailsTags" class="mc-deckhero__tags"></div>
-                    </div>
-                    <div class="mc-deckhero__actions">
+                        <div class="mc-deckhero__actions">
                         <button type="button" id="btnStudyDeck" onclick="mcApp.startLearningSession()" class="mc-btn mc-btn--primary mc-btn--lg">
                             <span class="material-symbols-outlined">play_arrow</span>
                             <span data-i18n="microcards.btn_start_study">Начать обучение</span>
@@ -996,7 +989,14 @@
                                 </button>
                             </div>
                         </div>
+                        </div>
                     </div>
+                    <div class="mc-deckhero__meta">
+                        <span id="deckPublishStatus"></span>
+                        <span id="deckLoadLine" class="mc-deckhero__metatext"></span>
+                        <span id="deckDetailsTags" class="mc-deckhero__tags"></span>
+                    </div>
+                    <p id="deckDetailsDesc" class="mc-deckhero__desc hidden"></p>
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
