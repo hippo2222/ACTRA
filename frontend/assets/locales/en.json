@@ -2058,6 +2058,8 @@
     "author_you": "You",
     "badge_linked": "From catalog",
     "linked_readonly": "From catalog · read-only",
+    "readonly_card_title": "Read-only — card from the catalog",
+    "readonly_card_note": "Catalog cards can't be edited — this is a link to the author's deck.",
     "btn_remove_from_library": "Remove from library"
   },
   "nav": {

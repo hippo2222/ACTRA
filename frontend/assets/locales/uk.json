@@ -2061,6 +2061,8 @@
     "author_you": "Ви",
     "badge_linked": "З каталогу",
     "linked_readonly": "З каталогу · лише читання",
+    "readonly_card_title": "Лише читання — картка з каталогу",
+    "readonly_card_note": "Картки з каталогу не можна редагувати — це посилання на колоду автора.",
     "btn_remove_from_library": "Прибрати з бібліотеки"
   },
   "nav": {

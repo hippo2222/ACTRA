@@ -707,7 +707,7 @@
     // Read-only row for linked (catalog-referenced) decks — display only, no editing.
     function cardDisplayRowHTML(card) {
         const hintHtml = card.hint ? `<p class="mc-cardrow__hint">${t('microcards.hint_label', 'Подсказка')}: ${escHtml(card.hint)}</p>` : '';
-        return `<div class="mc-cardrow">
+        return `<div class="mc-cardrow mc-cardrow--locked" onclick="mcApp.notifyReadonlyCard()" title="${escHtml(t('microcards.readonly_card_title', 'Только чтение — карточка из каталога'))}">
             <div style="min-width:0;flex:1">
                 <p class="mc-cardrow__front">${escHtml(card.front.text)}</p>
                 <p class="mc-cardrow__back">${escHtml(card.back.text)}</p>
@@ -715,8 +715,14 @@
             </div>
             <div style="display:flex;align-items:center;gap:0.6rem;flex-shrink:0">
                 <span class="mc-level-chip">${t('microcards.level_badge', 'Уровень {n}').replace('{n}', card.level || 1)}</span>
+                <span class="material-symbols-outlined mc-cardrow__lock">lock</span>
             </div>
         </div>`;
+    }
+
+    // Linked (catalog) decks are read-only references — explain on click.
+    function notifyReadonlyCard() {
+        showToast(t('microcards.readonly_card_note', 'Карточки из каталога нельзя редактировать — это ссылка на колоду автора.'), 'info');
     }
 
     function renderDeckCardsList() {
@@ -1994,6 +2000,7 @@
         deleteCardInline,
         openImagePicker,
         clearCardImage,
+        notifyReadonlyCard,
         imgPickerSearch,
         imgPickerSelect,
         imgPickerInsert,
