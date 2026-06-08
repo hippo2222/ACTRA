@@ -265,7 +265,9 @@
         // show it on every other view where the back button / progress matter.
         const toolbar = $('mcToolbar');
         const backBtn = $('mcHeaderBackBtn');
-        if (viewName === 'library') {
+        // Library has its own page heading; deck details has its own breadcrumb
+        // header — the shared toolbar is redundant on both. Keep it for session.
+        if (viewName === 'library' || viewName === 'details') {
             if (toolbar) toolbar.style.display = 'none';
         } else {
             if (toolbar) toolbar.style.display = 'flex';
