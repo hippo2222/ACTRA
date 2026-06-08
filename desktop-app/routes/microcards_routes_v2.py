@@ -14,7 +14,10 @@ def _get_svc() -> MicrocardsServiceV2:
     ctx = get_ctx()
     user_id = ctx.user_id if ctx else "default_user"
     data_dir = ctx.data_dir if ctx else "data"
-    return MicrocardsServiceV2(data_dir=str(data_dir), user_id=user_id)
+    svc = MicrocardsServiceV2(data_dir=str(data_dir), user_id=user_id)
+    # Inject the catalog service so linked decks resolve their read-only cards.
+    svc.catalog_service = getattr(ctx, "catalog_service", None) if ctx else None
+    return svc
 
 def _get_catalog_svc():
     ctx = get_ctx()
@@ -652,7 +655,9 @@ def publish_deck_to_catalog(deck_id: str):
         deck = svc.get_deck(deck_id)
         if not deck:
             return jsonify({"ok": False, "error": "deck_not_found"}), 404
-            
+        if deck.get("linked"):
+            return jsonify({"ok": False, "error": "cannot_publish_linked_deck"}), 400
+
         publish_result = catalog_svc.publish_deck(
             deck_id=deck_id,
             deck_data=deck,
@@ -711,16 +716,15 @@ def import_deck_by_access_code():
 
         result = catalog_svc.add_item_to_library(item_id, requested_by_user_id=svc.user_id, access_code=access_code)
         snapshot = result.get("snapshot") or {}
-        deck = svc.create_deck(
-            name=snapshot.get("name") or "Imported Deck",
-            description=snapshot.get("description") or "",
-            tags=snapshot.get("tags") or [],
-            catalog_item_id=item_id,
+        # Add a read-only LINK (not a copy), like complex/theory library entries.
+        deck = svc.create_linked_deck(
+            item_id, snapshot,
             author_name=item.get("owner_display_name") or item.get("owner_user_id"),
             author_user_id=item.get("owner_user_id"),
+            granted_access_code=access_code,
         )
-        imported = svc.import_json(deck["id"], snapshot, dedup=False)
-        return jsonify({"ok": True, "deck": deck, "added_count": len(imported["items"]), "already_in_library": False})
+        return jsonify({"ok": True, "deck": deck, "added_count": deck.get("card_count", 0),
+                        "already_in_library": False, "linked": True})
     except ValueError as exc:
         return jsonify({"ok": False, "error": str(exc)}), 400
     except Exception as exc:
@@ -748,19 +752,14 @@ def import_deck_from_catalog(catalog_item_id: str):
         snapshot = result.get("snapshot") or {}
         item = result.get("item") or {}
 
-        deck = svc.create_deck(
-            name=snapshot.get("name") or "Imported Deck",
-            description=snapshot.get("description") or "",
-            tags=snapshot.get("tags") or [],
-            catalog_item_id=catalog_item_id,
+        # Add a read-only LINK (not a copy), like complex/theory library entries.
+        deck = svc.create_linked_deck(
+            catalog_item_id, snapshot,
             author_name=item.get("owner_display_name") or item.get("owner_user_id"),
             author_user_id=item.get("owner_user_id"),
         )
-
-        # Import the cards from the snapshot (fresh deck copy → no dedup)
-        result = svc.import_json(deck["id"], snapshot, dedup=False)
-
-        return jsonify({"ok": True, "deck": deck, "added_count": len(result["items"]), "already_in_library": False})
+        return jsonify({"ok": True, "deck": deck, "added_count": deck.get("card_count", 0),
+                        "already_in_library": False, "linked": True})
     except ValueError as exc:
         return jsonify({"ok": False, "error": str(exc)}), 400
     except Exception as exc:

@@ -259,6 +259,9 @@
             border: 1px solid color-mix(in srgb, var(--color-error) 30%, transparent); color: var(--color-error); }
         .mc-pill--new { background: color-mix(in srgb, var(--color-info) 14%, transparent);
             border: 1px solid color-mix(in srgb, var(--color-info) 30%, transparent); color: var(--color-info); }
+        .mc-pill--linked { display: inline-flex; align-items: center; gap: 0.2rem;
+            background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+            border: 1px solid color-mix(in srgb, var(--color-primary) 30%, transparent); color: var(--color-primary); }
 
         /* ── Panels ───────────────────────────────────────────────── */
         .mc-panel { background: var(--color-surface-1); border: 1px solid var(--color-border-subtle);
@@ -921,15 +924,15 @@
                             <span class="material-symbols-outlined">play_arrow</span>
                             <span data-i18n="microcards.btn_start_study">Начать обучение</span>
                         </button>
-                        <button type="button" onclick="mcApp.openDeckEditor()" class="mc-btn mc-btn--ghost">
+                        <button type="button" id="btnDeckEditor" onclick="mcApp.openDeckEditor()" class="mc-btn mc-btn--ghost">
                             <span class="material-symbols-outlined">edit</span>
                             <span data-i18n="microcards.btn_editor">Редактор</span>
                         </button>
-                        <button type="button" onclick="mcApp.openImportDialog()" class="mc-btn mc-btn--ghost">
+                        <button type="button" id="btnDeckImport" onclick="mcApp.openImportDialog()" class="mc-btn mc-btn--ghost">
                             <span class="material-symbols-outlined">upload</span>
                             <span data-i18n="microcards.btn_import">Импорт</span>
                         </button>
-                        <button type="button" onclick="mcApp.publishDeckToCatalog()" class="mc-btn mc-btn--ghost mc-btn--accent">
+                        <button type="button" id="btnDeckPublish" onclick="mcApp.publishDeckToCatalog()" class="mc-btn mc-btn--ghost mc-btn--accent">
                             <span class="material-symbols-outlined">public</span>
                             <span data-i18n="microcards.btn_publish_deck">Опубликовать</span>
                         </button>
@@ -945,8 +948,8 @@
                                     <span class="material-symbols-outlined">download</span><span data-i18n="microcards.btn_menu_export_csv">Экспорт CSV</span>
                                 </button>
                                 <div class="mc-menu__sep"></div>
-                                <button type="button" onclick="mcApp.confirmDeleteDeck()" class="mc-menu__item mc-menu__item--danger">
-                                    <span class="material-symbols-outlined">delete</span><span data-i18n="microcards.btn_menu_delete_deck">Удалить колоду</span>
+                                <button type="button" id="btnDeckDelete" onclick="mcApp.confirmDeleteDeck()" class="mc-menu__item mc-menu__item--danger">
+                                    <span class="material-symbols-outlined">delete</span><span id="btnDeckDeleteLabel" data-i18n="microcards.btn_menu_delete_deck">Удалить колоду</span>
                                 </button>
                             </div>
                         </div>

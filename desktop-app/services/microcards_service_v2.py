@@ -106,6 +106,9 @@ class MicrocardsServiceV2:
         self.data_dir = Path(data_dir)
         self.user_id = _resolve_microcards_user_id(user_id)
         self.fsrs = FSRS()
+        # Set by the route layer; used to resolve linked (catalog-referenced) decks
+        # read-only without copying their content.
+        self.catalog_service = None
 
     def switch_user(self, user_id: Optional[str]) -> None:
         self.user_id = _resolve_microcards_user_id(user_id)
@@ -269,7 +272,46 @@ class MicrocardsServiceV2:
         # CRUD, sessions, import/export and publish to the owner.
         if not self._owns_deck(deck):
             return None
+        # Linked deck = a read-only reference to a catalog publication (like the
+        # complex/theory "linked library" model). Resolve its cards live from the
+        # catalog snapshot — never copied/editable.
+        if deck.get("linked"):
+            cards, access_state = self._resolve_linked_deck(deck)
+            deck["cards"] = cards
+            deck["read_only"] = True
+            deck["access_state"] = access_state
+            deck["card_count"] = len(cards) if access_state == "granted" else (deck.get("card_count") or 0)
         return deck
+
+    def _resolve_linked_deck(self, deck: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], str]:
+        """Fetch read-only cards for a linked deck from the catalog snapshot.
+
+        access_state: 'granted' | 'requires_access_code' | 'revoked' | 'unavailable'.
+        """
+        cat = self.catalog_service
+        item_id = _s(deck.get("catalog_item_id"))
+        if not cat or not item_id:
+            return [], "unavailable"
+        code = deck.get("granted_access_code")
+        try:
+            res = cat.add_item_to_library(item_id, requested_by_user_id=self.user_id, access_code=code)
+            snap = res.get("snapshot") or {}
+            cards = snap.get("cards") or []
+            return (cards if isinstance(cards, list) else []), "granted"
+        except ValueError as exc:
+            msg = str(exc).lower()
+            if "access_code" in msg or "access code" in msg:
+                return [], "requires_access_code"
+            if "not_found" in msg or "deleted" in msg or "revoked" in msg or "not_accessible" in msg:
+                return [], "revoked"
+            return [], "unavailable"
+        except Exception:
+            return [], "unavailable"
+
+    def _assert_editable(self, deck: Dict[str, Any]) -> None:
+        """Linked decks are read-only references — block content mutations."""
+        if deck.get("linked"):
+            raise ValueError("deck_is_linked_readonly")
 
     def list_decks(self, limit: int = 100) -> List[Dict[str, Any]]:
         paths = list(self._decks_root.glob("*.json"))
@@ -279,40 +321,45 @@ class MicrocardsServiceV2:
         for p in paths:
             deck = _read_json(p, None)
             if isinstance(deck, dict) and self._owns_deck(deck):
-                # Calculate stats
                 deck_id = deck.get("id")
-                deck_cards = deck.get("cards", [])
-                
-                # Filter cards
+                is_linked = bool(deck.get("linked"))
+                # Linked decks don't store cards locally — use the cached id list /
+                # count captured at link time (cheap; avoids a catalog read per deck).
+                if is_linked:
+                    card_ids = deck.get("linked_card_ids") or []
+                    card_count = deck.get("card_count") if deck.get("card_count") is not None else len(card_ids)
+                else:
+                    deck_cards = deck.get("cards", [])
+                    card_ids = [c.get("id") for c in deck_cards]
+                    card_count = len(deck_cards)
+
                 due_count = 0
                 new_count = 0
                 now = _utc_now()
-                
-                for card in deck_cards:
-                    card_id = card.get("id")
+                for card_id in card_ids:
                     state = states.get(card_id, {})
                     stability = state.get("stability", 0.0)
-                    
                     if not state or stability <= 0:
                         new_count += 1
                     else:
-                        due_at_str = state.get("due_at")
-                        due_at = _parse_iso(due_at_str)
+                        due_at = _parse_iso(state.get("due_at"))
                         if due_at and due_at <= now:
                             due_count += 1
-                
+
                 summary = {
                     "id": deck_id,
                     "name": deck.get("name", "Untitled Deck"),
                     "description": deck.get("description", ""),
                     "tags": deck.get("tags", []),
-                    "card_count": len(deck_cards),
+                    "card_count": card_count,
                     "due_count": due_count,
                     "new_count": new_count,
                     "catalog_item_id": deck.get("catalog_item_id"),
                     "created_by_user_id": deck.get("created_by_user_id"),
                     "author_name": deck.get("author_name"),
                     "author_user_id": deck.get("author_user_id"),
+                    "linked": is_linked,
+                    "read_only": is_linked,
                     "created_at": deck.get("created_at"),
                     "updated_at": deck.get("updated_at"),
                 }
@@ -343,12 +390,45 @@ class MicrocardsServiceV2:
         _write_json(self._deck_path(deck_id), deck)
         return deck
 
+    def create_linked_deck(self, catalog_item_id: str, snapshot: Dict[str, Any], *,
+                           author_name: Optional[str] = None, author_user_id: Optional[str] = None,
+                           granted_access_code: Optional[str] = None) -> Dict[str, Any]:
+        """Create a read-only LINK to a catalog deck (no content copied).
+
+        Cards are resolved live from the catalog on read; here we only cache light
+        metadata (name/tags/card ids/count) so the library list is cheap.
+        """
+        snapshot = snapshot or {}
+        cards = snapshot.get("cards") or []
+        deck_id = f"deck_{uuid.uuid4().hex[:12]}"
+        now_iso = _utc_now_iso()
+        deck = {
+            "id": deck_id,
+            "linked": True,
+            "catalog_item_id": _s(catalog_item_id) or None,
+            "granted_access_code": _s(granted_access_code) or None,
+            "name": _s(snapshot.get("name")) or "Imported Deck",
+            "description": _s(snapshot.get("description")),
+            "tags": [t.strip().lower() for t in (snapshot.get("tags") or []) if str(t).strip()],
+            "cards": [],  # never stored for linked decks
+            "card_count": len(cards),
+            "linked_card_ids": [c.get("id") for c in cards if isinstance(c, dict) and c.get("id")],
+            "created_by_user_id": self.user_id,
+            "author_name": _s(author_name) or None,
+            "author_user_id": _s(author_user_id) or None,
+            "created_at": now_iso,
+            "updated_at": now_iso,
+        }
+        _write_json(self._deck_path(deck_id), deck)
+        return deck
+
     def update_deck(self, deck_id: str, name: Optional[str] = None, description: Optional[str] = None,
                     tags: Optional[List[str]] = None, catalog_item_id: Optional[str] = None,
                     catalog_visibility: Optional[str] = None, access_code: Optional[str] = None) -> Dict[str, Any]:
         deck = self.get_deck(deck_id)
         if not deck:
             raise LookupError("deck_not_found")
+        self._assert_editable(deck)
 
         if name is not None:
             deck["name"] = _s(name) or "Untitled Deck"
@@ -438,6 +518,7 @@ class MicrocardsServiceV2:
         deck = self.get_deck(deck_id)
         if not deck:
             raise LookupError("deck_not_found")
+        self._assert_editable(deck)
 
         cards = deck.get("cards", [])
         if len(cards) >= 500:
@@ -472,7 +553,8 @@ class MicrocardsServiceV2:
         deck = self.get_deck(deck_id)
         if not deck:
             raise LookupError("deck_not_found")
-        
+        self._assert_editable(deck)
+
         cards = deck.get("cards", [])
         card = next((c for c in cards if c.get("id") == card_id), None)
         if not card:
@@ -502,7 +584,8 @@ class MicrocardsServiceV2:
         deck = self.get_deck(deck_id)
         if not deck:
             raise LookupError("deck_not_found")
-        
+        self._assert_editable(deck)
+
         cards = deck.get("cards", [])
         idx = next((i for i, c in enumerate(cards) if c.get("id") == card_id), None)
         if idx is None:

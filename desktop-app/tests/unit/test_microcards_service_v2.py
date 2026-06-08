@@ -646,3 +646,96 @@ def test_cross_user_deck_isolation():
             pass
     assert [d["name"] for d in alice.list_decks()] == ["Alice Private"]
     assert alice.delete_deck(did) is True
+
+
+class _FakeCatalog:
+    """Minimal catalog stub mirroring add_item_to_library's contract."""
+
+    def __init__(self, snapshot=None, *, error=None):
+        self._snapshot = snapshot or {}
+        self._error = error
+        self.calls = []
+
+    def add_item_to_library(self, item_id, requested_by_user_id=None, access_code=None):
+        self.calls.append((item_id, requested_by_user_id, access_code))
+        if self._error:
+            raise ValueError(self._error)
+        return {"item": {"id": item_id}, "snapshot": self._snapshot}
+
+
+def _linked_snapshot():
+    return {
+        "name": "Catalog Latin",
+        "description": "anatomy",
+        "tags": ["latin"],
+        "cards": [
+            {"id": "mc_a", "front": {"text": "os"}, "back": {"text": "bone"}},
+            {"id": "mc_b", "front": {"text": "cor"}, "back": {"text": "heart"}},
+        ],
+    }
+
+
+def test_linked_deck_resolves_readonly_from_catalog():
+    svc = MicrocardsServiceV2(tempfile.mkdtemp(), user_id="learner")
+    cat = _FakeCatalog(_linked_snapshot())
+    svc.catalog_service = cat
+
+    deck = svc.create_linked_deck("catalog_item_1", _linked_snapshot(),
+                                  author_name="Teacher", author_user_id="teacher_1")
+    assert deck["linked"] is True
+    # No content copied — cards resolved live on read.
+    assert deck.get("cards") in ([], None)
+
+    resolved = svc.get_deck(deck["id"])
+    assert resolved["read_only"] is True
+    assert resolved["access_state"] == "granted"
+    assert len(resolved["cards"]) == 2
+    assert resolved["card_count"] == 2
+    assert cat.calls and cat.calls[0][0] == "catalog_item_1"
+
+
+def test_linked_deck_blocks_content_mutations():
+    svc = MicrocardsServiceV2(tempfile.mkdtemp(), user_id="learner")
+    svc.catalog_service = _FakeCatalog(_linked_snapshot())
+    deck = svc.create_linked_deck("catalog_item_1", _linked_snapshot())
+    did = deck["id"]
+
+    for fn in (
+        lambda: svc.update_deck(did, name="hacked"),
+        lambda: svc.create_card(did, front_text="x", back_text="y"),
+        lambda: svc.update_card(did, "mc_a", front_text="x"),
+        lambda: svc.delete_card(did, "mc_a"),
+    ):
+        try:
+            fn(); raise AssertionError("expected ValueError(deck_is_linked_readonly)")
+        except ValueError as exc:
+            assert "deck_is_linked_readonly" in str(exc)
+
+
+def test_linked_deck_access_states():
+    snap = _linked_snapshot()
+    # requires access code
+    svc = MicrocardsServiceV2(tempfile.mkdtemp(), user_id="learner")
+    svc.catalog_service = _FakeCatalog(snap, error="access_code_required")
+    d = svc.create_linked_deck("c1", snap)
+    assert svc.get_deck(d["id"])["access_state"] == "requires_access_code"
+
+    # revoked / removed from catalog
+    svc2 = MicrocardsServiceV2(tempfile.mkdtemp(), user_id="learner")
+    svc2.catalog_service = _FakeCatalog(snap, error="item_not_found")
+    d2 = svc2.create_linked_deck("c1", snap)
+    assert svc2.get_deck(d2["id"])["access_state"] == "revoked"
+
+
+def test_linked_deck_listed_and_findable():
+    svc = MicrocardsServiceV2(tempfile.mkdtemp(), user_id="learner")
+    svc.catalog_service = _FakeCatalog(_linked_snapshot())
+    deck = svc.create_linked_deck("catalog_item_42", _linked_snapshot())
+
+    summaries = svc.list_decks()
+    assert len(summaries) == 1
+    assert summaries[0]["linked"] is True
+    assert summaries[0]["read_only"] is True
+
+    found = svc.find_deck_by_catalog_item_id("catalog_item_42")
+    assert found is not None and found["id"] == deck["id"]

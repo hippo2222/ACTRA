@@ -428,6 +428,8 @@
                 ? `<span class="mc-pill mc-pill--due">${t('microcards.badge_due', '{n} к повтору').replace('{n}', deck.due_count)}</span>` : '';
             const newPill = deck.new_count > 0
                 ? `<span class="mc-pill mc-pill--new">${t('microcards.badge_new_cards', '{n} новых').replace('{n}', deck.new_count)}</span>` : '';
+            const linkedPill = deck.linked
+                ? `<span class="mc-pill mc-pill--linked"><span class="material-symbols-outlined" style="font-size:0.9rem">link</span>${t('microcards.badge_linked', 'Связанная')}</span>` : '';
 
             card.innerHTML = `
                 <div class="mc-deck-card__top">
@@ -441,7 +443,7 @@
                     <span class="mc-deck-card__count">${t('microcards.cards_count_label', 'Карточек:')} <strong>${total}</strong></span>
                     ${deckAuthorHtml(deck)}
                 </div>
-                <div style="display:flex;gap:0.35rem;flex-wrap:wrap;margin-top:0.5rem">${duePill}${newPill}</div>
+                <div style="display:flex;gap:0.35rem;flex-wrap:wrap;margin-top:0.5rem">${linkedPill}${duePill}${newPill}</div>
             `;
             grid.appendChild(card);
         });
@@ -623,6 +625,19 @@
             if (authorEl) authorEl.innerHTML = `<span class="mc-deckhero__author-lbl">${t('microcards.author_label', 'Автор')}:</span> ${deckAuthorHtml(state.activeDeck)}`;
             renderPublishStatus();
 
+            // Linked (catalog-referenced) deck = read-only: hide edit/import/publish,
+            // turn "delete" into "remove from library", show a read-only badge.
+            const linked = !!state.activeDeck.linked;
+            ['btnDeckEditor', 'btnDeckImport', 'btnDeckPublish'].forEach(id => {
+                const el = $(id); if (el) el.classList.toggle('hidden', linked);
+            });
+            const delLabel = $('btnDeckDeleteLabel');
+            if (delLabel) delLabel.textContent = linked
+                ? t('microcards.btn_remove_from_library', 'Убрать из библиотеки')
+                : t('microcards.btn_menu_delete_deck', 'Удалить колоду');
+            const pub = $('deckPublishStatus');
+            if (linked && pub) pub.innerHTML = `<span class="mc-pub-pill mc-pub--code"><span class="material-symbols-outlined">link</span>${t('microcards.linked_readonly', 'Связанная публикация · только чтение')}</span>`;
+
             // Load cards
             const cardsData = await apiCall(`/api/v2/microcards/decks/${deckId}/cards`);
             state.cards = cardsData.items || [];
@@ -654,6 +669,7 @@
     function renderDeckCardsList() {
         const container = $('deckCardsListContainer');
         container.innerHTML = '';
+        const readOnly = !!(state.activeDeck && state.activeDeck.read_only);
 
         if (state.cards.length === 0) {
             container.innerHTML = `<div style="padding:2rem;text-align:center;font-size:0.8rem;color:var(--color-text-secondary);border:1px dashed var(--color-border-strong);border-radius:var(--mc-radius-sm)">${t('microcards.no_cards_yet', 'В колоде пока нет карточек.')}</div>`;
@@ -674,9 +690,9 @@
                 </div>
                 <div style="display:flex;align-items:center;gap:0.6rem;flex-shrink:0">
                     <span class="mc-level-chip">${t('microcards.level_badge', 'Уровень {n}').replace('{n}', card.level || 1)}</span>
-                    <button type="button" onclick="mcApp.openCardEditor('${card.id}')" class="mc-iconbtn" style="width:2.4rem;height:2.4rem" aria-label="Редактировать">
+                    ${readOnly ? '' : `<button type="button" onclick="mcApp.openCardEditor('${card.id}')" class="mc-iconbtn" style="width:2.4rem;height:2.4rem" aria-label="Редактировать">
                         <span class="material-symbols-outlined" style="font-size:1.05rem">edit</span>
-                    </button>
+                    </button>`}
                 </div>
             `;
             container.appendChild(item);
