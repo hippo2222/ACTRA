@@ -628,7 +628,7 @@
             // Linked (catalog-referenced) deck = read-only: hide edit/import/publish,
             // turn "delete" into "remove from library", show a read-only badge.
             const linked = !!state.activeDeck.linked;
-            ['btnDeckEditor', 'btnDeckImport', 'btnDeckPublish'].forEach(id => {
+            ['btnDeckEditor', 'btnDeckImport', 'btnDeckPublish', 'btnAddCardInline'].forEach(id => {
                 const el = $(id); if (el) el.classList.toggle('hidden', linked);
             });
             const delLabel = $('btnDeckDeleteLabel');
@@ -642,61 +642,265 @@
             const cardsData = await apiCall(`/api/v2/microcards/decks/${deckId}/cards`);
             state.cards = cardsData.items || [];
             
-            // Calculate progress by level
-            let l1 = 0, l2 = 0;
-            state.cards.forEach(c => {
-                // Determine level from local user stats if available, or default to level 1
-                const lvl = c.level || 1;
-                if (lvl === 1) l1++;
-                else if (lvl === 2) l2++;
-            });
-
-            $('progressL1Count').textContent = l1;
-            $('progressL2Count').textContent = l2;
-            $('deckTotalCardsCount').textContent = state.cards.length;
-            $('deckCardsCountBadge').textContent = state.cards.length;
-
-            const total = state.cards.length || 1;
-            $('progressL1Bar').style.width = `${(l1 / total) * 100}%`;
-            $('progressL2Bar').style.width = `${(l2 / total) * 100}%`;
-
+            updateDeckProgressUI();
             renderDeckCardsList();
         } catch (err) {
             console.error(err);
         }
     }
 
+    // Update the progress panel (levels, bars, counters) from state.cards.
+    function updateDeckProgressUI() {
+        let l1 = 0, l2 = 0;
+        state.cards.forEach(c => {
+            const lvl = c.level || 1;
+            if (lvl === 1) l1++;
+            else if (lvl === 2) l2++;
+        });
+        $('progressL1Count').textContent = l1;
+        $('progressL2Count').textContent = l2;
+        $('deckTotalCardsCount').textContent = state.cards.length;
+        $('deckCardsCountBadge').textContent = state.cards.length;
+        const total = state.cards.length || 1;
+        $('progressL1Bar').style.width = `${(l1 / total) * 100}%`;
+        $('progressL2Bar').style.width = `${(l2 / total) * 100}%`;
+    }
+
+    // Read-only row for linked (catalog-referenced) decks — display only, no editing.
+    function cardDisplayRowHTML(card) {
+        const hintHtml = card.hint ? `<p class="mc-cardrow__hint">${t('microcards.hint_label', 'Подсказка')}: ${escHtml(card.hint)}</p>` : '';
+        return `<div class="mc-cardrow">
+            <div style="min-width:0;flex:1">
+                <p class="mc-cardrow__front">${escHtml(card.front.text)}</p>
+                <p class="mc-cardrow__back">${escHtml(card.back.text)}</p>
+                ${hintHtml}
+            </div>
+            <div style="display:flex;align-items:center;gap:0.6rem;flex-shrink:0">
+                <span class="mc-level-chip">${t('microcards.level_badge', 'Уровень {n}').replace('{n}', card.level || 1)}</span>
+            </div>
+        </div>`;
+    }
+
     function renderDeckCardsList() {
         const container = $('deckCardsListContainer');
-        container.innerHTML = '';
-        const readOnly = !!(state.activeDeck && state.activeDeck.read_only);
+        const readOnly = !!(state.activeDeck && (state.activeDeck.read_only || state.activeDeck.linked));
 
         if (state.cards.length === 0) {
-            container.innerHTML = `<div style="padding:2rem;text-align:center;font-size:0.8rem;color:var(--color-text-secondary);border:1px dashed var(--color-border-strong);border-radius:var(--mc-radius-sm)">${t('microcards.no_cards_yet', 'В колоде пока нет карточек.')}</div>`;
+            const msg = readOnly
+                ? t('microcards.no_cards_yet', 'В колоде пока нет карточек.')
+                : t('microcards.no_cards_yet_editable', 'В колоде пока нет карточек. Нажмите «Добавить карточку».');
+            container.innerHTML = `<div style="padding:2rem;text-align:center;font-size:0.8rem;color:var(--color-text-secondary);border:1px dashed var(--color-border-strong);border-radius:var(--mc-radius-sm)">${msg}</div>`;
             return;
         }
 
-        state.cards.forEach(card => {
-            const item = document.createElement('div');
-            item.className = 'mc-cardrow';
+        container.innerHTML = readOnly
+            ? state.cards.map(c => cardDisplayRowHTML(c)).join('')
+            : state.cards.map(c => cardItemHTML(c)).join('');
+    }
 
-            const hintHtml = card.hint ? `<p class="mc-cardrow__hint">${t('microcards.hint_label', 'Подсказка')}: ${escHtml(card.hint)}</p>` : '';
+    // ── Editable cards accordion (inline editing on the deck page) ─────────
+    const CARD_STATUS = {
+        new:      { label: 'Новая',     varName: '--color-border-strong' },
+        learning: { label: 'Изучается', varName: '--color-warning' },
+        mastered: { label: 'Освоено',   varName: '--color-success' }
+    };
 
-            item.innerHTML = `
-                <div style="min-width:0;flex:1">
-                    <p class="mc-cardrow__front">${escHtml(card.front.text)}</p>
-                    <p class="mc-cardrow__back">${escHtml(card.back.text)}</p>
-                    ${hintHtml}
+    function cardStatusPill(card) {
+        const bucket = (!card || !card.id) ? 'new'
+            : (card.progress || (card.is_new ? 'new' : ((card.level || 0) >= 2 ? 'mastered' : 'learning')));
+        const s = CARD_STATUS[bucket] || CARD_STATUS.new;
+        return `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold whitespace-nowrap"
+            style="color:var(${s.varName});background:color-mix(in srgb, var(${s.varName}) 14%, transparent)">${s.label}</span>`;
+    }
+
+    const mcInputCls = 'w-full px-3 py-2 rounded-lg border border-border-strong bg-surface-2 text-sm text-text-main outline-none focus:border-primary transition-colors';
+
+    // Build one accordion item. `card` may be a real card or a blank {id:null} for a new one.
+    function cardItemHTML(card, opts = {}) {
+        const isNew = !card.id;
+        const front = card.front ? card.front.text : '';
+        const back = card.back ? card.back.text : '';
+        const hint = card.hint || '';
+        const acc = (card.acceptable_answers || []).join('\n');
+        const frontImg = card.front && card.front.image_url ? card.front.image_url : '';
+        const backImg = card.back && card.back.image_url ? card.back.image_url : '';
+        const openCls = opts.open ? ' open' : '';
+
+        return `
+        <div class="mc-card-item rounded-xl border border-border-subtle bg-surface-1${openCls}" data-card-id="${card.id || ''}">
+            <div class="mc-card-head flex items-center gap-3 p-3 cursor-pointer select-none" onclick="mcApp.toggleCardExpand(this)">
+                ${cardStatusPill(card)}
+                <div class="flex-1 min-w-0">
+                    <p class="mc-head-front text-sm font-bold text-text-main truncate">${escHtml(front) || '<span class="text-text-secondary font-normal">Новая карточка…</span>'}</p>
+                    <p class="mc-head-back text-xs text-text-secondary truncate">${escHtml(back)}</p>
                 </div>
-                <div style="display:flex;align-items:center;gap:0.6rem;flex-shrink:0">
-                    <span class="mc-level-chip">${t('microcards.level_badge', 'Уровень {n}').replace('{n}', card.level || 1)}</span>
-                    ${readOnly ? '' : `<button type="button" onclick="mcApp.openCardEditor('${card.id}')" class="mc-iconbtn" style="width:2.4rem;height:2.4rem" aria-label="Редактировать">
-                        <span class="material-symbols-outlined" style="font-size:1.05rem">edit</span>
-                    </button>`}
+                <span class="material-symbols-outlined mc-card-chevron text-text-secondary text-[20px]">expand_more</span>
+            </div>
+            <div class="mc-card-body">
+              <div class="px-3 pb-3 pt-0 space-y-3">
+                <div class="mc-form-row two">
+                    <div>
+                        <label class="block text-[10px] font-bold text-text-secondary uppercase mb-1">Вопрос</label>
+                        <textarea data-field="front" rows="3" class="${mcInputCls} resize-y" placeholder="Лицевая сторона">${escHtml(front)}</textarea>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-text-secondary uppercase mb-1">Ответ</label>
+                        <textarea data-field="back" rows="3" class="${mcInputCls} resize-y" placeholder="Обратная сторона">${escHtml(back)}</textarea>
+                    </div>
                 </div>
-            `;
-            container.appendChild(item);
-        });
+
+                <button type="button" onclick="mcApp.toggleCardAdvanced(this)" class="flex items-center gap-1 text-[11px] font-bold text-text-secondary hover:text-text-main transition-colors">
+                    <span class="material-symbols-outlined text-[16px] mc-adv-chevron">expand_more</span>
+                    Доп. настройки
+                </button>
+                <div class="mc-card-adv hidden space-y-3">
+                    <div>
+                        <label class="block text-[10px] font-bold text-text-secondary uppercase mb-1">Подсказка</label>
+                        <input data-field="hint" type="text" class="${mcInputCls}" placeholder="Опционально" value="${escHtml(hint)}" />
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-text-secondary uppercase mb-1">Доп. допустимые ответы (по одному на строку)</label>
+                        <textarea data-field="acceptable" rows="2" class="${mcInputCls} resize-y" placeholder="Синонимы, засчитываемые как верные">${escHtml(acc)}</textarea>
+                    </div>
+                    <div class="mc-form-row two">
+                        <div>
+                            <label class="block text-[10px] font-bold text-text-secondary uppercase mb-1">Картинка к вопросу (URL)</label>
+                            <input data-field="frontImage" type="url" class="${mcInputCls}" placeholder="https://…" value="${escHtml(frontImg)}" />
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-text-secondary uppercase mb-1">Картинка к ответу (URL)</label>
+                            <input data-field="backImage" type="url" class="${mcInputCls}" placeholder="https://…" value="${escHtml(backImg)}" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between pt-1">
+                    <button type="button" onclick="mcApp.deleteCardInline(this)" class="px-3 py-1.5 rounded-lg border border-error/40 text-error font-bold text-xs hover:bg-bg-hover transition-colors flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-[16px]">delete</span>${isNew ? 'Отмена' : 'Удалить'}
+                    </button>
+                    <button type="button" onclick="mcApp.saveCardInline(this)" class="px-4 py-1.5 rounded-lg bg-primary text-primary-fg hover:bg-primary-hover font-bold text-xs transition-colors flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-[16px]">check</span>Сохранить
+                    </button>
+                </div>
+              </div>
+            </div>
+        </div>`;
+    }
+
+    function toggleCardExpand(headEl) {
+        headEl.closest('.mc-card-item').classList.toggle('open');
+    }
+
+    function toggleCardAdvanced(btn) {
+        const panel = btn.parentElement.querySelector('.mc-card-adv');
+        const hidden = panel.classList.toggle('hidden');
+        const chev = btn.querySelector('.mc-adv-chevron');
+        if (chev) chev.style.transform = hidden ? '' : 'rotate(180deg)';
+    }
+
+    function addNewCardInline() {
+        if (state.activeDeck && (state.activeDeck.read_only || state.activeDeck.linked)) return;
+        const container = $('deckCardsListContainer');
+        if (!state.cards.length) container.innerHTML = '';
+        container.insertAdjacentHTML('afterbegin', cardItemHTML({ id: null }, { open: true }));
+        const first = container.querySelector('.mc-card-item');
+        if (first) first.querySelector('textarea[data-field="front"]').focus();
+    }
+
+    function readCardItem(item) {
+        const get = (f) => {
+            const el = item.querySelector(`[data-field="${f}"]`);
+            return el ? el.value.trim() : '';
+        };
+        return {
+            front_text: get('front'),
+            back_text: get('back'),
+            hint: get('hint') || null,
+            acceptable_answers: get('acceptable').split('\n').map(s => s.trim()).filter(Boolean),
+            front_image_url: get('frontImage') || null,
+            back_image_url: get('backImage') || null
+        };
+    }
+
+    async function saveCardInline(btn) {
+        const item = btn.closest('.mc-card-item');
+        const cardId = item.getAttribute('data-card-id');
+        const payload = readCardItem(item);
+        if (!payload.front_text || !payload.back_text) {
+            showToast(t('microcards.error_front_back_required', 'Заполните вопрос и ответ'), 'error');
+            return;
+        }
+        try {
+            const base = `/api/v2/microcards/decks/${state.activeDeckId}/cards`;
+            const url = cardId ? `${base}/${cardId}` : base;
+            await apiCall(url, {
+                method: cardId ? 'PATCH' : 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            showToast(cardId ? t('microcards.toast_card_saved', 'Карточка сохранена') : t('microcards.toast_card_added', 'Карточка добавлена'), 'success');
+            await reloadDeckCards();
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    async function deleteCardInline(btn) {
+        const item = btn.closest('.mc-card-item');
+        const cardId = item.getAttribute('data-card-id');
+        if (!cardId) { // unsaved new card → just drop the row
+            item.remove();
+            if (!$('deckCardsListContainer').children.length) renderDeckCardsList();
+            return;
+        }
+        if (!confirm(t('microcards.confirm_delete_card', 'Удалить эту карточку?'))) return;
+        try {
+            await apiCall(`/api/v2/microcards/decks/${state.activeDeckId}/cards/${cardId}`, { method: 'DELETE' });
+            showToast(t('microcards.toast_card_deleted', 'Карточка удалена'), 'success');
+            await reloadDeckCards();
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    // Reload just the cards + progress without leaving the deck view.
+    async function reloadDeckCards() {
+        const data = await apiCall(`/api/v2/microcards/decks/${state.activeDeckId}/cards`);
+        state.cards = data.items || [];
+        updateDeckProgressUI();
+        renderDeckCardsList();
+    }
+
+    // ── Deck parameters dialog (replaces the old separate editor page) ─────
+    function openDeckMetaDialog() {
+        if (!state.activeDeck) return;
+        $('metaDeckName').value = state.activeDeck.name || '';
+        $('metaDeckDesc').value = state.activeDeck.description || '';
+        $('metaDeckTags').value = (state.activeDeck.tags || []).join(', ');
+        $('dialogDeckMeta').showModal();
+    }
+
+    async function saveDeckMetaDialog(e) {
+        if (e) e.preventDefault();
+        const name = $('metaDeckName').value.trim();
+        const description = $('metaDeckDesc').value.trim();
+        const tags = $('metaDeckTags').value.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+        if (!name) {
+            showToast(t('microcards.error_name_required', 'Название колоды обязательно'), 'error');
+            return;
+        }
+        try {
+            await apiCall(`/api/v2/microcards/decks/${state.activeDeckId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, description, tags })
+            });
+            $('dialogDeckMeta').close();
+            showToast(t('microcards.toast_deck_saved', 'Параметры колоды сохранены'), 'success');
+            openDeckDetails(state.activeDeckId);
+        } catch (err) {
+            console.error(err);
+        }
     }
 
     function toggleDeckActionsMenu(e) {
@@ -1737,6 +1941,13 @@
         retrySessionErrors,
         restartLearningSession,
         backToDecks,
+        openDeckMetaDialog,
+        saveDeckMetaDialog,
+        toggleCardExpand,
+        toggleCardAdvanced,
+        addNewCardInline,
+        saveCardInline,
+        deleteCardInline,
         openDeckEditor,
         saveDeckMeta,
         saveActiveCard,
