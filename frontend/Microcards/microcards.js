@@ -183,12 +183,18 @@
         const arena = $('mcArena');
         if (arena) arena.classList.add('is-grading');
     }
+    let _fitTimer = null;
     function bindSessionRails() {
         const wrap = $('mcFlashWrap');
         if (wrap) {
             wrap.addEventListener('click', onCardActivate);
             wrap.addEventListener('keydown', onCardKey);
         }
+        // Re-fit the card text when the viewport size changes.
+        window.addEventListener('resize', () => {
+            clearTimeout(_fitTimer);
+            _fitTimer = setTimeout(fitCardText, 150);
+        });
         const arena = $('mcArena'), railNo = $('railNo'), railYes = $('railYes');
         if (!arena || !railNo || !railYes) return;
         railNo.addEventListener('mouseenter', () => arena.classList.add('lean-left'));
@@ -1206,6 +1212,7 @@
         const frontCap = $('cardFrontImageAttr');
         if (qSide.image_url) {
             frontImg.src = qSide.image_url; frontImg.classList.remove('hidden');
+            frontImg.onload = fitCardText; // refit once the image takes up space
             if (frontCap) { frontCap.innerHTML = attributionHTML(qSide.image_attribution); frontCap.classList.toggle('hidden', !qSide.image_attribution); }
         } else {
             frontImg.classList.add('hidden');
@@ -1216,6 +1223,7 @@
         const backCap = $('cardBackImageAttr');
         if (aSide.image_url) {
             backImg.src = aSide.image_url; backImg.classList.remove('hidden');
+            backImg.onload = fitCardText;
             if (backCap) { backCap.innerHTML = attributionHTML(aSide.image_attribution); backCap.classList.toggle('hidden', !aSide.image_attribution); }
         } else {
             backImg.classList.add('hidden');
@@ -1266,11 +1274,45 @@
         $('btnL2Override').classList.add('hidden');
 
         updateHeaderProgress();
+        // Fit the text to the card after layout settles (rAF for the common case,
+        // a short timeout to catch the height cap applying during view transitions).
+        requestAnimationFrame(fitCardText);
+        setTimeout(fitCardText, 130);
+    }
+
+    // Shrink the question/answer font so the text fits the card instead of the
+    // card growing tall or scrolling. Short cards keep the full size; long
+    // passages step down to a readable floor.
+    function fitCardText() {
+        const inner = $('flashcardInner');
+        if (!inner) return;
+        inner.style.height = ''; // let the card auto-size (capped by max-block-size)
+        const faces = ['front', 'back']
+            .map(s => document.querySelector('.flashcard-' + s + ' .mc-face__body'))
+            .filter(Boolean);
+        faces.forEach(b => { const tt = b.querySelector('.mc-face__text'); if (tt) tt.style.fontSize = ''; });
+        // If nothing overflows the (capped) card, the default size already fits.
+        if (!faces.some(b => b.scrollHeight > b.clientHeight + 1)) return;
+        // Pin the card at its capped height so shrinking text doesn't shrink the card.
+        inner.style.height = inner.clientHeight + 'px';
+        faces.forEach(b => {
+            const textEl = b.querySelector('.mc-face__text');
+            if (!textEl) return;
+            let size = parseFloat(getComputedStyle(textEl).fontSize) || 19;
+            let guard = 0;
+            while (b.scrollHeight > b.clientHeight + 1 && size > 12 && guard < 80) {
+                size -= 1;
+                textEl.style.fontSize = size + 'px';
+                guard++;
+            }
+        });
     }
 
     function toggleHint() {
         const hintText = $('cardHintText');
+        // a revealed hint changes the card's content height — refit afterwards
         hintText.classList.toggle('hidden');
+        requestAnimationFrame(fitCardText);
     }
 
     function revealAnswerL1() {

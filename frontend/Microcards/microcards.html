@@ -363,7 +363,7 @@
             background: var(--color-surface-2); border: 1px solid var(--color-border-subtle); color: var(--color-text-secondary); white-space: nowrap; }
 
         /* ── Session / flashcard ──────────────────────────────────── */
-        .mc-session { max-width: 38rem; margin: 0 auto; }
+        .mc-session { max-width: 52rem; margin: 0 auto; }
         .mc-session__head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem; }
         .mc-level-indicator { padding: 0.4rem 0.9rem; border-radius: 999px; font-size: 0.72rem; font-weight: 800;
             border: 1px solid transparent; }
@@ -398,8 +398,10 @@
         .mc-face__text { font-size: 1.2rem; font-weight: 800; color: var(--color-text-main); line-height: 1.35;
             white-space: pre-line; }
         /* Long passages: smaller, left-aligned, top-anchored so they read like text, not a banner */
+        /* Long passages read better left-aligned/top-anchored; the font size is
+           auto-fitted by JS (fitCardText) so the text — not the card — adapts. */
         .mc-face__body--long { justify-content: flex-start; text-align: left; }
-        .mc-face__body--long .mc-face__text { font-size: 1rem; font-weight: 700; line-height: 1.45; }
+        .mc-face__body--long .mc-face__text { font-weight: 700; line-height: 1.4; }
         .mc-face__img { max-height: 15rem; max-width: 100%; border-radius: 0.75rem; object-fit: contain; border: 1px solid var(--color-border-subtle); }
         .mc-face__actions { flex-shrink: 0; padding-top: 0.5rem; }
         .mc-tap-hint { text-align: center; font-size: 0.74rem; font-weight: 600; color: var(--color-text-secondary); opacity: 0.8; }
@@ -620,7 +622,7 @@
 
         /* ── L1 grading rails (swipe-style) ─────────────────────────── */
         .mc-arena { display: flex; align-items: stretch; justify-content: center; gap: 1rem; }
-        .mc-arena .mc-flashcard-wrap { flex: 0 1 36rem; min-width: 0;
+        .mc-arena .mc-flashcard-wrap { flex: 0 1 40rem; min-width: 0;
             transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1); }
         .mc-arena.lean-left .mc-flashcard-wrap { transform: rotate(-2.4deg) translateX(-12px); }
         .mc-arena.lean-right .mc-flashcard-wrap { transform: rotate(2.4deg) translateX(12px); }
