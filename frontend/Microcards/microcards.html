@@ -933,6 +933,7 @@
                         <p id="deckDetailsDesc" class="mc-deckhero__desc">Описание колоды отсутствует.</p>
                         <div id="deckDetailsTags" class="mc-deckhero__tags"></div>
                         <div id="deckPublishStatus" class="mc-deckhero__publish"></div>
+                        <div id="deckLoadLine" style="margin-top:0.5rem;font-size:0.85rem;font-weight:600;color:var(--color-text-secondary)"></div>
                     </div>
                     <div class="mc-deckhero__actions">
                         <button type="button" id="btnStudyDeck" onclick="mcApp.startLearningSession()" class="mc-btn mc-btn--primary mc-btn--lg">
@@ -1519,6 +1520,11 @@
                 <div class="mc-field">
                     <label for="setNewPerSession" class="mc-field__label" data-i18n="microcards.set_new_per_session">Новых карточек за сессию</label>
                     <input type="number" id="setNewPerSession" min="0" max="100" class="mc-input" />
+                    <label style="display:flex;align-items:center;gap:0.5rem;margin-top:0.5rem;font-size:0.8rem;color:var(--color-text-secondary);cursor:pointer">
+                        <input type="checkbox" id="setNewAuto" onchange="mcApp.onNewAutoToggle()" />
+                        <span data-i18n="microcards.set_new_auto">Авто — подстраивать под нагрузку</span>
+                    </label>
+                    <p id="setNewAutoHint" hidden style="margin-top:0.35rem;font-size:0.72rem;line-height:1.4;color:var(--color-text-secondary)" data-i18n="microcards.set_new_auto_hint">При накопившихся повторах новых добавляется меньше; заданное число — потолок, когда всё повторено.</p>
                 </div>
             </div>
             <div class="mc-field">

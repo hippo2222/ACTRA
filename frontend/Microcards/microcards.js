@@ -535,17 +535,32 @@
             const s = data.settings || {};
             $('setSessionSize').value = s.session_size ?? 20;
             $('setNewPerSession').value = s.new_per_session ?? 20;
+            $('setNewAuto').checked = s.new_per_session_mode === 'auto';
+            applyNewAutoUI();
             selectDirection(s.default_direction || 'front_back');
             $('dialogSettings').showModal();
         } catch (err) {
             showToast(t('microcards.settings_load_fail', 'Не удалось загрузить настройки'), 'error');
         }
     }
+
+    // Reflect the "auto new cards" toggle: the manual number becomes the ceiling.
+    function applyNewAutoUI() {
+        const auto = $('setNewAuto').checked;
+        const hint = $('setNewAutoHint');
+        if (hint) hint.hidden = !auto;
+        const label = document.querySelector('label[for="setNewPerSession"]');
+        if (label) label.textContent = auto
+            ? t('microcards.set_new_per_session_max', 'Новых за сессию (макс.)')
+            : t('microcards.set_new_per_session', 'Новых карточек за сессию');
+    }
+    function onNewAutoToggle() { applyNewAutoUI(); }
     async function saveSettings(e) {
         if (e) e.preventDefault();
         const payload = {
             session_size: parseInt($('setSessionSize').value, 10),
             new_per_session: parseInt($('setNewPerSession').value, 10),
+            new_per_session_mode: $('setNewAuto').checked ? 'auto' : 'manual',
             default_direction: $('setDirection').value
         };
         try {
@@ -664,6 +679,27 @@
         const total = state.cards.length || 1;
         $('progressL1Bar').style.width = `${(l1 / total) * 100}%`;
         $('progressL2Bar').style.width = `${(l2 / total) * 100}%`;
+
+        // Real study load (FSRS): cards due for review + brand-new cards.
+        const loadEl = $('deckLoadLine');
+        if (loadEl) {
+            let due = 0, nw = 0;
+            const now = Date.now();
+            state.cards.forEach(c => {
+                if (c.is_new) nw++;
+                else if (c.due_at && new Date(c.due_at).getTime() <= now) due++;
+            });
+            if (!state.cards.length) {
+                loadEl.textContent = '';
+            } else if (due === 0 && nw === 0) {
+                loadEl.textContent = t('microcards.load_all_done', 'На сегодня всё повторено 🎉');
+            } else {
+                loadEl.textContent = [
+                    t('microcards.badge_due', '{n} к повтору').replace('{n}', due),
+                    t('microcards.badge_new_cards', '{n} новых').replace('{n}', nw)
+                ].join(' · ');
+            }
+        }
     }
 
     // Read-only row for linked (catalog-referenced) decks — display only, no editing.
@@ -1968,6 +2004,7 @@
         selectTagFilter,
         openSettingsDialog,
         saveSettings,
+        onNewAutoToggle,
         selectDirection,
         publishDeckToCatalog,
         handlePublishSubmit,

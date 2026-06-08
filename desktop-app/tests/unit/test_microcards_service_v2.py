@@ -739,3 +739,29 @@ def test_linked_deck_listed_and_findable():
 
     found = svc.find_deck_by_catalog_item_id("catalog_item_42")
     assert found is not None and found["id"] == deck["id"]
+
+
+def test_auto_new_limit_throttles_with_backlog():
+    svc = MicrocardsServiceV2(tempfile.mkdtemp(), user_id="learner")
+    # Caught up → full ceiling; growing backlog → fewer new; heavy backlog → none.
+    assert svc._auto_new_limit(0, 20) == 20
+    assert svc._auto_new_limit(4, 20) == 20
+    assert svc._auto_new_limit(5, 20) == 15
+    assert svc._auto_new_limit(15, 20) == 10
+    assert svc._auto_new_limit(30, 20) == 5
+    assert svc._auto_new_limit(50, 20) == 0
+    # Monotonic non-increasing as backlog grows.
+    vals = [svc._auto_new_limit(d, 20) for d in range(0, 60, 5)]
+    assert all(a >= b for a, b in zip(vals, vals[1:]))
+    # Never exceeds the ceiling; empty ceiling falls back to a sane default.
+    assert svc._auto_new_limit(0, 3) == 3
+    assert svc._auto_new_limit(0, 0) == 10
+
+
+def test_settings_new_per_session_mode_sanitized():
+    svc = MicrocardsServiceV2(tempfile.mkdtemp(), user_id="learner")
+    assert svc.get_settings()["new_per_session_mode"] == "manual"  # default
+    svc.update_settings({"new_per_session_mode": "auto"})
+    assert svc.get_settings()["new_per_session_mode"] == "auto"
+    svc.update_settings({"new_per_session_mode": "nonsense"})
+    assert svc.get_settings()["new_per_session_mode"] == "manual"  # invalid → default

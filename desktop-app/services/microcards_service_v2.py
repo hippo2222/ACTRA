@@ -94,6 +94,7 @@ class MicrocardsServiceV2:
     DEFAULT_SETTINGS = {
         "session_size": 20,
         "new_per_session": 20,
+        "new_per_session_mode": "manual",  # manual | auto (adaptive to review backlog)
         "default_direction": "front_back",  # front_back | back_front | mixed
     }
     DIRECTIONS = ("front_back", "back_front", "mixed")
@@ -155,6 +156,8 @@ class MicrocardsServiceV2:
             s["new_per_session"] = max(0, min(int(s["new_per_session"]), 100))
         except Exception:
             s["new_per_session"] = self.DEFAULT_SETTINGS["new_per_session"]
+        if s.get("new_per_session_mode") not in ("manual", "auto"):
+            s["new_per_session_mode"] = self.DEFAULT_SETTINGS["new_per_session_mode"]
         if s["default_direction"] not in self.DIRECTIONS:
             s["default_direction"] = self.DEFAULT_SETTINGS["default_direction"]
         return s
@@ -622,6 +625,26 @@ class MicrocardsServiceV2:
 
     # ── Learning Sessions ─────────────────────────────────────────────
 
+    def _auto_new_limit(self, due_count: int, ceiling: int) -> int:
+        """Adaptive new-card intake for 'auto' mode.
+
+        Throttles new material while a review backlog exists and ramps back up to
+        the user's configured `new_per_session` (the ceiling = max when fully caught
+        up). Backlog-driven, like Anki's "don't bury yourself" behaviour.
+        """
+        ceiling = max(0, int(ceiling or 0)) or 10
+        if due_count >= 50:
+            stage = 0
+        elif due_count >= 30:
+            stage = ceiling // 4
+        elif due_count >= 15:
+            stage = ceiling // 2
+        elif due_count >= 5:
+            stage = (ceiling * 3) // 4
+        else:
+            stage = ceiling
+        return max(0, min(stage, ceiling))
+
     def start_session(self, deck_id: str, resume: bool = True, restart: bool = False,
                       direction: Optional[str] = None) -> Dict[str, Any]:
         deck = self.get_deck(deck_id)
@@ -661,6 +684,10 @@ class MicrocardsServiceV2:
                 due_at = _parse_iso(state.get("due_at"))
                 if due_at and due_at <= now:
                     due_cards.append(card_id)
+
+        # In 'auto' mode the new-card limit adapts to the current review backlog.
+        if settings.get("new_per_session_mode") == "auto":
+            new_limit = self._auto_new_limit(len(due_cards), new_limit)
 
         # Mix cards: due cards first, then new cards (capped by the new-per-session
         # limit), up to the configured session size.
