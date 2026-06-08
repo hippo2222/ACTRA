@@ -638,9 +638,6 @@
                 tagsZone.appendChild(badge);
             });
 
-            // Author byline + publication status
-            const authorEl = $('deckDetailsAuthor');
-            if (authorEl) authorEl.innerHTML = `<span class="mc-deckhero__author-lbl">${t('microcards.author_label', 'Автор')}:</span> ${deckAuthorHtml(state.activeDeck)}`;
             renderPublishStatus();
 
             // Linked (catalog-referenced) deck = read-only: hide edit/import/publish,
@@ -683,7 +680,7 @@
         $('progressL1Bar').style.width = `${(l1 / total) * 100}%`;
         $('progressL2Bar').style.width = `${(l2 / total) * 100}%`;
 
-        // Real study load (FSRS): cards due for review + brand-new cards.
+        // Compact meta line: [author ·] real study load (FSRS due + new).
         const loadEl = $('deckLoadLine');
         if (loadEl) {
             let due = 0, nw = 0;
@@ -692,16 +689,18 @@
                 if (c.is_new) nw++;
                 else if (c.due_at && new Date(c.due_at).getTime() <= now) due++;
             });
-            if (!state.cards.length) {
-                loadEl.textContent = '';
-            } else if (due === 0 && nw === 0) {
-                loadEl.textContent = t('microcards.load_all_done', 'На сегодня всё повторено 🎉');
-            } else {
-                loadEl.textContent = [
-                    t('microcards.badge_due', '{n} к повтору').replace('{n}', due),
-                    t('microcards.badge_new_cards', '{n} новых').replace('{n}', nw)
-                ].join(' · ');
+            const parts = [];
+            const author = state.activeDeck && state.activeDeck.author_name;
+            if (author) parts.push(author); // only shown for someone else's deck
+            if (state.cards.length) {
+                if (due === 0 && nw === 0) {
+                    parts.push(t('microcards.load_all_done', 'На сегодня всё повторено 🎉'));
+                } else {
+                    if (due > 0) parts.push(t('microcards.badge_due', '{n} к повтору').replace('{n}', due));
+                    if (nw > 0) parts.push(t('microcards.badge_new_cards', '{n} новых').replace('{n}', nw));
+                }
             }
+            loadEl.textContent = parts.join(' · ');
         }
     }
 
@@ -1839,10 +1838,10 @@
     // ── Publication status & catalog ──────────────────────────────────────
     function publishStatusMeta(key) {
         const M = {
-            unpublished: { label: t('microcards.pub_unpublished', 'Не опубликована'), hint: t('microcards.pub_only_you', 'Только у вас'), icon: 'lock', cls: 'mc-pub--muted' },
-            public:      { label: t('microcards.pub_public', 'Публичная'), hint: t('microcards.pub_public_hint', 'Видна всем в каталоге'), icon: 'public', cls: 'mc-pub--public' },
+            unpublished: { label: t('microcards.pub_unpublished', 'Не опубликована'), hint: '', icon: 'lock', cls: 'mc-pub--muted' },
+            public:      { label: t('microcards.pub_public', 'Публичная'), hint: '', icon: 'public', cls: 'mc-pub--public' },
             access_code: { label: t('microcards.pub_by_code', 'По коду доступа'), hint: '', icon: 'key', cls: 'mc-pub--code' },
-            private:     { label: t('microcards.pub_private', 'Приватная'), hint: t('microcards.pub_only_you', 'Только у вас'), icon: 'lock', cls: 'mc-pub--muted' },
+            private:     { label: t('microcards.pub_private', 'Приватная'), hint: '', icon: 'lock', cls: 'mc-pub--muted' },
         };
         return M[key] || M.unpublished;
     }

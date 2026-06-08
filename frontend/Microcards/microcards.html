@@ -279,14 +279,17 @@
         .mc-empty__hint { font-size: 0.85rem; color: var(--color-text-secondary); max-width: 24rem; margin-bottom: 1.5rem; }
 
         /* ── Deck details hero ────────────────────────────────────── */
-        .mc-deckhero { display: flex; flex-direction: column; gap: 0.85rem; margin-bottom: 1rem;
+        .mc-deckhero { display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1rem;
             padding-bottom: 1rem; border-bottom: 1px solid var(--color-border-subtle); }
-        @media (min-width: 900px) { .mc-deckhero { flex-direction: row; align-items: flex-start; justify-content: space-between; } }
+        @media (min-width: 768px) { .mc-deckhero { flex-direction: row; align-items: center; justify-content: space-between; } }
+        .mc-deckhero__main { min-width: 0; }
         .mc-deckhero__title { font-size: 1.5rem; font-weight: 900; letter-spacing: -0.02em;
-            color: var(--color-text-main); line-height: 1.15; margin-bottom: 0.3rem; }
-        .mc-deckhero__desc { font-size: 0.88rem; color: var(--color-text-secondary); line-height: 1.45; max-width: 42rem; margin-bottom: 0.45rem; }
-        .mc-deckhero__tags { display: flex; flex-wrap: wrap; gap: 0.45rem; }
-        .mc-deckhero__actions { display: flex; flex-wrap: wrap; gap: 0.6rem; flex-shrink: 0; }
+            color: var(--color-text-main); line-height: 1.15; margin: 0; overflow-wrap: anywhere; }
+        .mc-deckhero__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.7rem; margin-top: 0.5rem; }
+        .mc-deckhero__metatext { font-size: 0.82rem; color: var(--color-text-secondary); }
+        .mc-deckhero__desc { font-size: 0.88rem; color: var(--color-text-secondary); line-height: 1.45; max-width: 46rem; margin-top: 0.5rem; }
+        .mc-deckhero__tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.55rem; }
+        .mc-deckhero__actions { display: flex; align-items: center; gap: 0.6rem; flex-shrink: 0; }
 
         /* Dropdown menu */
         .mc-menu { position: absolute; right: 0; margin-top: 0.5rem; width: 13rem; z-index: 30;
@@ -755,14 +758,10 @@
             .mc-arena .mc-flashcard-wrap { transition: none !important; transform: none !important; }
         }
 
-        /* Publication status + publish dialog */
-        .mc-deckhero__publish { margin-top: 0.4rem; }
         /* Author byline */
         .mc-author { display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.74rem; font-weight: 600; color: var(--color-text-secondary); }
         .mc-author .material-symbols-outlined { font-size: 0.95rem; }
         .mc-deck-card__foot .mc-author { max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .mc-deckhero__author { margin-top: 0.15rem; font-size: 0.78rem; color: var(--color-text-secondary); }
-        .mc-deckhero__author-lbl { font-weight: 700; }
         .mc-pub-pill { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.25rem 0.65rem;
             border: 1px solid var(--color-border-strong); border-radius: 999px; font-size: 0.72rem; font-weight: 700; }
         .mc-pub-pill .material-symbols-outlined { font-size: 0.95rem; }
@@ -956,44 +955,43 @@
             <!-- ════════════ VIEW 2: DECK DETAILS ════════════ -->
             <div id="viewDeckDetails" class="page-view hidden">
                 <div class="mc-deckhero">
-                    <div style="min-width:0">
+                    <div class="mc-deckhero__main">
                         <h2 id="deckDetailsTitle" class="mc-deckhero__title">Название колоды</h2>
-                        <div id="deckDetailsAuthor" class="mc-deckhero__author"></div>
-                        <p id="deckDetailsDesc" class="mc-deckhero__desc">Описание колоды отсутствует.</p>
+                        <div class="mc-deckhero__meta">
+                            <span id="deckPublishStatus"></span>
+                            <span id="deckLoadLine" class="mc-deckhero__metatext"></span>
+                        </div>
+                        <p id="deckDetailsDesc" class="mc-deckhero__desc hidden"></p>
                         <div id="deckDetailsTags" class="mc-deckhero__tags"></div>
-                        <div id="deckPublishStatus" class="mc-deckhero__publish"></div>
-                        <div id="deckLoadLine" style="margin-top:0.35rem;font-size:0.85rem;font-weight:600;color:var(--color-text-secondary)"></div>
                     </div>
                     <div class="mc-deckhero__actions">
                         <button type="button" id="btnStudyDeck" onclick="mcApp.startLearningSession()" class="mc-btn mc-btn--primary mc-btn--lg">
                             <span class="material-symbols-outlined">play_arrow</span>
                             <span data-i18n="microcards.btn_start_study">Начать обучение</span>
                         </button>
-                        <button type="button" id="btnDeckEditor" onclick="mcApp.openDeckMetaDialog()" class="mc-btn mc-btn--ghost">
-                            <span class="material-symbols-outlined">settings</span>
-                            <span data-i18n="microcards.btn_deck_params">Параметры</span>
-                        </button>
-                        <button type="button" id="btnDeckImport" onclick="mcApp.openImportDialog()" class="mc-btn mc-btn--ghost">
-                            <span class="material-symbols-outlined">upload</span>
-                            <span data-i18n="microcards.btn_import">Импорт</span>
-                        </button>
-                        <button type="button" id="btnDeckPublish" onclick="mcApp.publishDeckToCatalog()" class="mc-btn mc-btn--ghost mc-btn--accent">
-                            <span class="material-symbols-outlined">public</span>
-                            <span data-i18n="microcards.btn_publish_deck">Опубликовать</span>
-                        </button>
                         <div class="relative">
-                            <button type="button" onclick="mcApp.toggleDeckActionsMenu(event)" class="mc-iconbtn" aria-label="Ещё">
+                            <button type="button" onclick="mcApp.toggleDeckActionsMenu(event)" class="mc-iconbtn" aria-label="Ещё" aria-haspopup="menu" data-i18n-aria="microcards.btn_more">
                                 <span class="material-symbols-outlined">more_horiz</span>
                             </button>
-                            <div id="deckActionsDropdown" class="mc-menu hidden">
-                                <button type="button" onclick="mcApp.exportDeck('json')" class="mc-menu__item">
+                            <div id="deckActionsDropdown" class="mc-menu hidden" role="menu">
+                                <button type="button" id="btnDeckEditor" onclick="mcApp.openDeckMetaDialog()" class="mc-menu__item" role="menuitem">
+                                    <span class="material-symbols-outlined">settings</span><span data-i18n="microcards.btn_deck_params">Параметры</span>
+                                </button>
+                                <button type="button" id="btnDeckImport" onclick="mcApp.openImportDialog()" class="mc-menu__item" role="menuitem">
+                                    <span class="material-symbols-outlined">upload</span><span data-i18n="microcards.btn_import">Импорт</span>
+                                </button>
+                                <button type="button" id="btnDeckPublish" onclick="mcApp.publishDeckToCatalog()" class="mc-menu__item" role="menuitem">
+                                    <span class="material-symbols-outlined">public</span><span data-i18n="microcards.btn_publish_deck">Опубликовать</span>
+                                </button>
+                                <div class="mc-menu__sep"></div>
+                                <button type="button" onclick="mcApp.exportDeck('json')" class="mc-menu__item" role="menuitem">
                                     <span class="material-symbols-outlined">download</span><span data-i18n="microcards.btn_menu_export_json">Экспорт JSON</span>
                                 </button>
-                                <button type="button" onclick="mcApp.exportDeck('csv')" class="mc-menu__item">
+                                <button type="button" onclick="mcApp.exportDeck('csv')" class="mc-menu__item" role="menuitem">
                                     <span class="material-symbols-outlined">download</span><span data-i18n="microcards.btn_menu_export_csv">Экспорт CSV</span>
                                 </button>
                                 <div class="mc-menu__sep"></div>
-                                <button type="button" id="btnDeckDelete" onclick="mcApp.confirmDeleteDeck()" class="mc-menu__item mc-menu__item--danger">
+                                <button type="button" id="btnDeckDelete" onclick="mcApp.confirmDeleteDeck()" class="mc-menu__item mc-menu__item--danger" role="menuitem">
                                     <span class="material-symbols-outlined">delete</span><span id="btnDeckDeleteLabel" data-i18n="microcards.btn_menu_delete_deck">Удалить колоду</span>
                                 </button>
                             </div>
