@@ -756,10 +756,12 @@
         const acc = (card.acceptable_answers || []).join('\n');
         const frontImg = card.front && card.front.image_url ? card.front.image_url : '';
         const backImg = card.back && card.back.image_url ? card.back.image_url : '';
+        const frontAttr = (card.front && card.front.image_attribution) || null;
+        const backAttr = (card.back && card.back.image_attribution) || null;
         const openCls = opts.open ? ' open' : '';
 
         return `
-        <div class="mc-card-item rounded-xl border border-border-subtle bg-surface-1${openCls}" data-card-id="${card.id || ''}">
+        <div class="mc-card-item rounded-xl border border-border-subtle bg-surface-1${openCls}" data-card-id="${card.id || ''}" data-front-image="${escHtml(frontImg)}" data-back-image="${escHtml(backImg)}" data-front-attr="${escHtml(JSON.stringify(frontAttr))}" data-back-attr="${escHtml(JSON.stringify(backAttr))}">
             <div class="mc-card-head flex items-center gap-3 p-3 cursor-pointer select-none" onclick="mcApp.toggleCardExpand(this)">
                 ${cardStatusPill(card)}
                 <div class="flex-1 min-w-0">
@@ -795,14 +797,8 @@
                         <textarea data-field="acceptable" rows="2" class="${mcInputCls} resize-y" placeholder="Синонимы, засчитываемые как верные">${escHtml(acc)}</textarea>
                     </div>
                     <div class="mc-form-row two">
-                        <div>
-                            <label class="block text-[10px] font-bold text-text-secondary uppercase mb-1">Картинка к вопросу (URL)</label>
-                            <input data-field="frontImage" type="url" class="${mcInputCls}" placeholder="https://…" value="${escHtml(frontImg)}" />
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-text-secondary uppercase mb-1">Картинка к ответу (URL)</label>
-                            <input data-field="backImage" type="url" class="${mcInputCls}" placeholder="https://…" value="${escHtml(backImg)}" />
-                        </div>
+                        <div class="mc-img-field" data-side="front">${cardImageFieldInner('front', frontImg, frontAttr)}</div>
+                        <div class="mc-img-field" data-side="back">${cardImageFieldInner('back', backImg, backAttr)}</div>
                     </div>
                 </div>
 
@@ -849,9 +845,152 @@
             back_text: get('back'),
             hint: get('hint') || null,
             acceptable_answers: get('acceptable').split('\n').map(s => s.trim()).filter(Boolean),
-            front_image_url: get('frontImage') || null,
-            back_image_url: get('backImage') || null
+            front_image_url: item.dataset.frontImage || null,
+            back_image_url: item.dataset.backImage || null,
+            front_image_attribution: _parseAttr(item.dataset.frontAttr),
+            back_image_attribution: _parseAttr(item.dataset.backAttr)
         };
+    }
+
+    // ── Card image field + Openverse/Wikimedia image picker ───────────────
+    function _parseAttr(raw) {
+        if (!raw) return null;
+        try { return JSON.parse(raw); } catch (e) { return null; }
+    }
+
+    function _imgProxy(url) {
+        return `/api/v2/microcards/image-proxy?url=${encodeURIComponent(url)}`;
+    }
+
+    function attributionHTML(attr) {
+        if (!attr) return '';
+        const author = attr.author ? escHtml(attr.author) : '';
+        const lic = attr.license ? escHtml(attr.license) : '';
+        const src = attr.source_page
+            ? `<a href="${escHtml(attr.source_page)}" target="_blank" rel="noopener noreferrer" class="underline">${t('microcards.img_source', 'источник')}</a>`
+            : '';
+        const parts = [author && `© ${author}`, lic, src].filter(Boolean);
+        return parts.join(' · ');
+    }
+
+    // Inner HTML of one image field (preview + actions + attribution).
+    function cardImageFieldInner(side, url, attr) {
+        const has = !!url;
+        const label = side === 'front'
+            ? t('microcards.img_for_question', 'Картинка к вопросу')
+            : t('microcards.img_for_answer', 'Картинка к ответу');
+        const findLabel = has ? t('microcards.img_replace', 'Заменить') : t('microcards.img_find', 'Найти картинку');
+        return `
+            <span class="block text-[10px] font-bold text-text-secondary uppercase mb-1">${label}</span>
+            <div class="mc-img-box">
+                ${has ? `<img class="mc-img-thumb" src="${escHtml(url)}" alt="" loading="lazy" />` : ''}
+                <div class="mc-img-controls">
+                    <button type="button" class="mc-img-btn" onclick="mcApp.openImagePicker(this,'${side}')">
+                        <span class="material-symbols-outlined text-[16px]">image_search</span>${findLabel}
+                    </button>
+                    ${has ? `<button type="button" class="mc-img-btn mc-img-btn--rm" onclick="mcApp.clearCardImage(this,'${side}')">
+                        <span class="material-symbols-outlined text-[16px]">close</span>${t('microcards.img_remove', 'Убрать')}
+                    </button>` : ''}
+                </div>
+            </div>
+            ${has && attr ? `<div class="mc-img-attr text-[10px] text-text-secondary mt-1">${attributionHTML(attr)}</div>` : ''}`;
+    }
+
+    function renderCardImageField(item, side) {
+        const field = item.querySelector(`.mc-img-field[data-side="${side}"]`);
+        if (!field) return;
+        const url = item.dataset[side + 'Image'] || '';
+        const attr = _parseAttr(item.dataset[side + 'Attr']);
+        field.innerHTML = cardImageFieldInner(side, url, attr);
+    }
+
+    function clearCardImage(btn, side) {
+        const item = btn.closest('.mc-card-item');
+        item.dataset[side + 'Image'] = '';
+        item.dataset[side + 'Attr'] = 'null';
+        renderCardImageField(item, side);
+    }
+
+    function openImagePicker(btn, side) {
+        state.imgPicker = { item: btn.closest('.mc-card-item'), side, selected: null };
+        $('imgPickerResults').innerHTML = '';
+        $('imgPickerPreview').classList.add('hidden');
+        $('imgPickerInsert').disabled = true;
+        $('imgPickerStatus').textContent = '';
+        const input = $('imgPickerQuery');
+        input.value = '';
+        // Seed the query from the card's question text for convenience.
+        const front = state.imgPicker.item.querySelector('textarea[data-field="front"]');
+        if (front && front.value.trim()) input.value = front.value.trim().slice(0, 60);
+        $('dialogImagePicker').showModal();
+        input.focus();
+        if (input.value) imgPickerSearch();
+    }
+
+    async function imgPickerSearch() {
+        const q = $('imgPickerQuery').value.trim();
+        if (!q) return;
+        const results = $('imgPickerResults');
+        const status = $('imgPickerStatus');
+        status.textContent = t('microcards.img_searching', 'Поиск…');
+        results.innerHTML = '';
+        $('imgPickerPreview').classList.add('hidden');
+        $('imgPickerInsert').disabled = true;
+        try {
+            const data = await apiCall(`/api/v2/microcards/image-search?q=${encodeURIComponent(q)}`);
+            const items = data.results || [];
+            if (!items.length) {
+                status.textContent = t('microcards.img_none', 'Ничего не найдено');
+                return;
+            }
+            status.textContent = '';
+            results.innerHTML = items.map((r, i) => `
+                <button type="button" class="mc-imgres" onclick="mcApp.imgPickerSelect(this)"
+                    data-idx="${i}" title="${escHtml(r.title || '')}">
+                    <img src="${_imgProxy(r.thumb)}" alt="${escHtml(r.title || '')}" loading="lazy" fetchpriority="low" />
+                </button>`).join('');
+            state.imgPicker.items = items;
+        } catch (err) {
+            status.textContent = t('microcards.img_search_failed', 'Поиск недоступен, попробуйте ещё раз');
+        }
+    }
+
+    function imgPickerSelect(btn) {
+        const idx = parseInt(btn.getAttribute('data-idx'), 10);
+        const r = (state.imgPicker.items || [])[idx];
+        if (!r) return;
+        state.imgPicker.selected = r;
+        document.querySelectorAll('.mc-imgres.is-selected').forEach(el => el.classList.remove('is-selected'));
+        btn.classList.add('is-selected');
+        $('imgPickerPreviewImg').src = _imgProxy(r.full);
+        $('imgPickerPreviewAttr').innerHTML = attributionHTML(r.attribution);
+        $('imgPickerPreview').classList.remove('hidden');
+        $('imgPickerInsert').disabled = false;
+    }
+
+    async function imgPickerInsert() {
+        const pick = state.imgPicker && state.imgPicker.selected;
+        if (!pick) return;
+        const insertBtn = $('imgPickerInsert');
+        insertBtn.disabled = true;
+        $('imgPickerStatus').textContent = t('microcards.img_importing', 'Сохранение…');
+        try {
+            const attr = pick.attribution || {};
+            const res = await apiCall(`/api/v2/microcards/decks/${state.activeDeckId}/image-import`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: pick.full, ...attr })
+            });
+            const { item, side } = state.imgPicker;
+            item.dataset[side + 'Image'] = res.asset_url;
+            item.dataset[side + 'Attr'] = JSON.stringify(res.attribution || attr || null);
+            renderCardImageField(item, side);
+            $('dialogImagePicker').close();
+            showToast(t('microcards.img_added', 'Картинка добавлена'), 'success');
+        } catch (err) {
+            $('imgPickerStatus').textContent = t('microcards.img_import_failed', 'Не удалось сохранить картинку');
+            insertBtn.disabled = false;
+        }
     }
 
     async function saveCardInline(btn) {
@@ -1040,12 +1179,24 @@
         }
 
         const frontImg = $('cardFrontImage');
-        if (qSide.image_url) { frontImg.src = qSide.image_url; frontImg.classList.remove('hidden'); }
-        else { frontImg.classList.add('hidden'); }
+        const frontCap = $('cardFrontImageAttr');
+        if (qSide.image_url) {
+            frontImg.src = qSide.image_url; frontImg.classList.remove('hidden');
+            if (frontCap) { frontCap.innerHTML = attributionHTML(qSide.image_attribution); frontCap.classList.toggle('hidden', !qSide.image_attribution); }
+        } else {
+            frontImg.classList.add('hidden');
+            if (frontCap) frontCap.classList.add('hidden');
+        }
 
         const backImg = $('cardBackImage');
-        if (aSide.image_url) { backImg.src = aSide.image_url; backImg.classList.remove('hidden'); }
-        else { backImg.classList.add('hidden'); }
+        const backCap = $('cardBackImageAttr');
+        if (aSide.image_url) {
+            backImg.src = aSide.image_url; backImg.classList.remove('hidden');
+            if (backCap) { backCap.innerHTML = attributionHTML(aSide.image_attribution); backCap.classList.toggle('hidden', !aSide.image_attribution); }
+        } else {
+            backImg.classList.add('hidden');
+            if (backCap) backCap.classList.add('hidden');
+        }
 
         // Set Level Indicator
         const level = card.level || 1;
@@ -1790,6 +1941,11 @@
         addNewCardInline,
         saveCardInline,
         deleteCardInline,
+        openImagePicker,
+        clearCardImage,
+        imgPickerSearch,
+        imgPickerSelect,
+        imgPickerInsert,
         openImportDialog,
         switchImportTab,
         handleImportSubmit,
