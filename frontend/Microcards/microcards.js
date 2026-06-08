@@ -1186,6 +1186,13 @@
         $('cardFrontText').textContent = qSide.text;
         $('cardBackText').textContent = aSide.text;
 
+        // Long passages read better small/left-aligned than as a big centered banner.
+        const LONG = 160;
+        const fb = document.querySelector('.flashcard-front .mc-face__body');
+        const bb = document.querySelector('.flashcard-back .mc-face__body');
+        if (fb) fb.classList.toggle('mc-face__body--long', (qSide.text || '').length > LONG);
+        if (bb) bb.classList.toggle('mc-face__body--long', (aSide.text || '').length > LONG);
+
         if (card.hint) {
             $('btnShowHint').classList.remove('hidden');
             $('cardHintText').classList.add('hidden');

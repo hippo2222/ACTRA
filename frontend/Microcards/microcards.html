@@ -371,16 +371,17 @@
         .mc-flashcard-wrap { perspective: 1600px; margin-bottom: 1.25rem; }
         .flashcard-inner {
             position: relative; width: 100%;
-            /* Stack both faces in one grid cell so the card height tracks the
-               taller face's content (no fixed height → no scrollbar), clamped. */
-            display: grid; grid-template-columns: 1fr;
-            min-block-size: 12rem; max-block-size: min(78vh, 42rem);
+            /* Stack both faces in one grid cell; the bounded row (minmax 0,1fr)
+               lets the card grow with content up to max-block-size, after which
+               the face body scrolls instead of overflowing the viewport. */
+            display: grid; grid-template: minmax(0, 1fr) / 1fr;
+            min-block-size: 12rem; max-block-size: min(68vh, 38rem);
             transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
             transform-style: preserve-3d;
         }
         .flashcard-inner.flipped { transform: rotateY(180deg); }
         .flashcard-front, .flashcard-back {
-            grid-area: 1 / 1; min-width: 0;
+            grid-area: 1 / 1; min-width: 0; min-height: 0;
             display: flex; flex-direction: column;
             backface-visibility: hidden; -webkit-backface-visibility: hidden;
             border-radius: var(--mc-radius); border: 1px solid var(--color-border-strong);
@@ -392,10 +393,13 @@
         .mc-face__meta { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-shrink: 0; }
         .mc-face__label { font-size: 0.68rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
             color: var(--color-text-secondary); }
-        .mc-face__body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        .mc-face__body { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
             text-align: center; gap: 0.85rem; overflow-y: auto; padding: 0.75rem 0; }
-        .mc-face__text { font-size: 1.4rem; font-weight: 800; color: var(--color-text-main); line-height: 1.35;
+        .mc-face__text { font-size: 1.2rem; font-weight: 800; color: var(--color-text-main); line-height: 1.35;
             white-space: pre-line; }
+        /* Long passages: smaller, left-aligned, top-anchored so they read like text, not a banner */
+        .mc-face__body--long { justify-content: flex-start; text-align: left; }
+        .mc-face__body--long .mc-face__text { font-size: 1rem; font-weight: 700; line-height: 1.45; }
         .mc-face__img { max-height: 15rem; max-width: 100%; border-radius: 0.75rem; object-fit: contain; border: 1px solid var(--color-border-subtle); }
         .mc-face__actions { flex-shrink: 0; padding-top: 0.5rem; }
         .mc-tap-hint { text-align: center; font-size: 0.74rem; font-weight: 600; color: var(--color-text-secondary); opacity: 0.8; }
