@@ -765,3 +765,28 @@ def test_settings_new_per_session_mode_sanitized():
     assert svc.get_settings()["new_per_session_mode"] == "auto"
     svc.update_settings({"new_per_session_mode": "nonsense"})
     assert svc.get_settings()["new_per_session_mode"] == "manual"  # invalid → default
+
+
+def test_card_image_attribution_stored_and_preserved():
+    svc = MicrocardsServiceV2(tempfile.mkdtemp(), user_id="learner")
+    deck = svc.create_deck(name="Imgs")
+    did = deck["id"]
+    attr = {"author": "Jane", "license": "BY-SA 4.0",
+            "source_page": "https://commons.wikimedia.org/wiki/File:X", "junk": "drop me"}
+    card = svc.create_card(did, front_text="q", back_text="a",
+                           front_image_url="/api/assets/asset_1/content",
+                           front_image_attribution=attr)
+    stored = card["front"]["image_attribution"]
+    assert stored["author"] == "Jane" and stored["license"] == "BY-SA 4.0"
+    assert "junk" not in stored  # only known fields kept
+    assert card["back"]["image_attribution"] is None
+
+    # Updating only the text must NOT wipe the existing attribution (_UNSET).
+    svc.update_card(did, card["id"], front_text="q2")
+    refreshed = next(c for c in svc.list_cards(did) if c["id"] == card["id"])
+    assert refreshed["front"]["image_attribution"]["author"] == "Jane"
+
+    # Explicitly clearing the image clears attribution too.
+    svc.update_card(did, card["id"], front_image_url=None, front_image_attribution=None)
+    refreshed2 = next(c for c in svc.list_cards(did) if c["id"] == card["id"])
+    assert refreshed2["front"]["image_attribution"] is None

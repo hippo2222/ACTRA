@@ -202,7 +202,9 @@ def create_card(deck_id: str):
             hint=hint,
             front_image_url=front_image_url,
             back_image_url=back_image_url,
-            acceptable_answers=acceptable_answers
+            acceptable_answers=acceptable_answers,
+            front_image_attribution=body.get("front_image_attribution"),
+            back_image_attribution=body.get("back_image_attribution"),
         )
         return jsonify({"ok": True, "card": card})
     except LookupError as exc:
@@ -227,6 +229,14 @@ def update_card(deck_id: str, card_id: str):
     status = body.get("status")
     acceptable_answers = body.get("acceptable_answers")
 
+    # Attribution is sent only alongside an image change; omit otherwise so the
+    # service leaves it untouched (uses an _UNSET sentinel).
+    attr_kwargs = {}
+    if "front_image_attribution" in body:
+        attr_kwargs["front_image_attribution"] = body.get("front_image_attribution")
+    if "back_image_attribution" in body:
+        attr_kwargs["back_image_attribution"] = body.get("back_image_attribution")
+
     try:
         svc = _get_svc()
         card = svc.update_card(
@@ -238,7 +248,8 @@ def update_card(deck_id: str, card_id: str):
             front_image_url=front_image_url,
             back_image_url=back_image_url,
             status=status,
-            acceptable_answers=acceptable_answers
+            acceptable_answers=acceptable_answers,
+            **attr_kwargs,
         )
         return jsonify({"ok": True, "card": card})
     except LookupError as exc:
@@ -265,6 +276,124 @@ def delete_card(deck_id: str, card_id: str):
     except Exception as exc:
         logger.exception("[HTTP] v2/microcards/cards delete failed: %s", exc)
         return jsonify({"ok": False, "error": "delete_failed"}), 500
+
+# ── Image search & import (Openverse → own-origin asset) ──────────────
+
+@microcards_v2_bp.route("/image-search", methods=["GET"])
+def image_search():
+    guest_check = _check_guest()
+    if guest_check:
+        return guest_check
+    from services import microcards_image_search as imgsvc
+    query = request.args.get("q", "")
+    try:
+        page = int(request.args.get("page", 1))
+    except (TypeError, ValueError):
+        page = 1
+    try:
+        result = imgsvc.search_images(query, page=page)
+        return jsonify({"ok": True, **result})
+    except imgsvc.ImageSearchError as exc:
+        logger.warning("[HTTP] image-search upstream failed: %s", exc)
+        return jsonify({"ok": False, "error": "search_unavailable"}), 502
+    except Exception as exc:
+        logger.exception("[HTTP] image-search failed: %s", exc)
+        return jsonify({"ok": False, "error": "search_failed"}), 500
+
+
+@microcards_v2_bp.route("/image-proxy", methods=["GET"])
+def image_proxy():
+    """Stream a remote thumbnail through our origin so the CSP (img-src 'self')
+    allows it in the search grid. SSRF-validated by the fetch helper."""
+    guest_check = _check_guest()
+    if guest_check:
+        return guest_check
+    from services import microcards_image_search as imgsvc
+    url = request.args.get("url", "")
+    try:
+        data, mime, _ext = imgsvc.fetch_image(url)
+    except imgsvc.ImageFetchError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+    except Exception as exc:
+        logger.exception("[HTTP] image-proxy failed: %s", exc)
+        return jsonify({"ok": False, "error": "proxy_failed"}), 500
+    resp = Response(data, mimetype=mime)
+    resp.headers["Cache-Control"] = "private, max-age=3600"
+    resp.headers["X-Content-Type-Options"] = "nosniff"
+    return resp
+
+
+@microcards_v2_bp.route("/decks/<string:deck_id>/image-import", methods=["POST"])
+def image_import(deck_id: str):
+    """Download a chosen image and store it as an own-origin asset; return its
+    self-origin URL + attribution to put on a card. Blocked on linked decks."""
+    guest_check = _check_guest()
+    if guest_check:
+        return guest_check
+    import os
+    import uuid
+    from services import microcards_image_search as imgsvc
+
+    body = request.get_json(silent=True) or {}
+    url = body.get("url")
+    if not url:
+        return jsonify({"ok": False, "error": "url_required"}), 400
+
+    svc = _get_svc()
+    deck = svc.get_deck(deck_id)
+    if not deck:
+        return jsonify({"ok": False, "error": "deck_not_found"}), 404
+    if deck.get("linked"):
+        return jsonify({"ok": False, "error": "deck_is_linked_readonly"}), 403
+
+    ctx = get_ctx()
+    asset_service = getattr(ctx, "asset_service", None) if ctx else None
+    if asset_service is None:
+        return jsonify({"ok": False, "error": "asset_service_unavailable"}), 503
+
+    try:
+        data, _mime, ext = imgsvc.fetch_image(url)
+    except imgsvc.ImageFetchError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+
+    attribution = {
+        k: body.get(k) for k in ("author", "license", "license_url", "source_page", "source")
+        if body.get(k)
+    }
+
+    # The asset store only accepts source files inside a managed root, so stage
+    # the download under data_dir (it is copied into the blob store on register).
+    data_dir = str(getattr(ctx, "data_dir", "data"))
+    staging_dir = os.path.join(data_dir, "microcards", "_import_staging")
+    os.makedirs(staging_dir, exist_ok=True)
+    tmp_path = os.path.join(staging_dir, f"{uuid.uuid4().hex}.{ext}")
+    try:
+        with open(tmp_path, "wb") as fh:
+            fh.write(data)
+        asset = asset_service.register_existing_file(
+            tmp_path,
+            owner_user_id=getattr(ctx, "user_id", None),
+            visibility_scope="private_workspace",
+            asset_kind="microcard_image",
+            original_filename=f"microcard.{ext}",
+            metadata={"attribution": attribution} if attribution else None,
+        )
+    except Exception as exc:
+        logger.exception("[HTTP] image-import store failed: %s", exc)
+        return jsonify({"ok": False, "error": "store_failed"}), 500
+    finally:
+        if tmp_path:
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
+
+    asset_id = asset.get("asset_id")
+    asset_url = asset.get("asset_url") or (asset_service.build_asset_url(asset_id) if asset_id else None)
+    if not asset_url:
+        return jsonify({"ok": False, "error": "store_failed"}), 500
+    return jsonify({"ok": True, "asset_url": asset_url, "attribution": attribution or None})
+
 
 @microcards_v2_bp.route("/decks/<string:deck_id>/cards/reorder", methods=["POST"])
 def reorder_cards(deck_id: str):

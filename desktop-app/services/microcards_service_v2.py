@@ -55,6 +55,26 @@ def _s(value: Any, default: str = "") -> str:
     return str(value if value is not None else default).strip()
 
 
+_UNSET = object()  # sentinel: "argument not provided" vs explicit None
+
+_ATTRIBUTION_FIELDS = ("author", "license", "license_url", "source_page", "source")
+
+
+def _clean_attribution(value: Any) -> Optional[Dict[str, Any]]:
+    """Keep only known attribution fields as trimmed strings; None if empty."""
+    if not isinstance(value, dict):
+        return None
+    out: Dict[str, Any] = {}
+    for k in _ATTRIBUTION_FIELDS:
+        v = value.get(k)
+        if v is None:
+            continue
+        s = str(v).strip()
+        if s:
+            out[k] = s
+    return out or None
+
+
 def _clean_answer_list(values: Any) -> List[str]:
     """Normalize an optional list of acceptable answers: trim, drop empties/dupes."""
     if not values:
@@ -517,7 +537,7 @@ class MicrocardsServiceV2:
             out.append(enriched)
         return out
 
-    def create_card(self, deck_id: str, front_text: str, back_text: str, hint: Optional[str] = None, front_image_url: Optional[str] = None, back_image_url: Optional[str] = None, acceptable_answers: Optional[List[str]] = None) -> Dict[str, Any]:
+    def create_card(self, deck_id: str, front_text: str, back_text: str, hint: Optional[str] = None, front_image_url: Optional[str] = None, back_image_url: Optional[str] = None, acceptable_answers: Optional[List[str]] = None, front_image_attribution: Optional[Dict[str, Any]] = None, back_image_attribution: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         deck = self.get_deck(deck_id)
         if not deck:
             raise LookupError("deck_not_found")
@@ -534,11 +554,13 @@ class MicrocardsServiceV2:
             "deck_id": deck_id,
             "front": {
                 "text": _s(front_text),
-                "image_url": front_image_url
+                "image_url": front_image_url,
+                "image_attribution": _clean_attribution(front_image_attribution),
             },
             "back": {
                 "text": _s(back_text),
-                "image_url": back_image_url
+                "image_url": back_image_url,
+                "image_attribution": _clean_attribution(back_image_attribution),
             },
             "hint": _s(hint) or None,
             "acceptable_answers": _clean_answer_list(acceptable_answers),
@@ -552,7 +574,7 @@ class MicrocardsServiceV2:
         _write_json(self._deck_path(deck_id), deck)
         return card
 
-    def update_card(self, deck_id: str, card_id: str, front_text: Optional[str] = None, back_text: Optional[str] = None, hint: Optional[str] = None, front_image_url: Optional[str] = None, back_image_url: Optional[str] = None, status: Optional[str] = None, acceptable_answers: Optional[List[str]] = None) -> Dict[str, Any]:
+    def update_card(self, deck_id: str, card_id: str, front_text: Optional[str] = None, back_text: Optional[str] = None, hint: Optional[str] = None, front_image_url: Optional[str] = None, back_image_url: Optional[str] = None, status: Optional[str] = None, acceptable_answers: Optional[List[str]] = None, front_image_attribution: Any = _UNSET, back_image_attribution: Any = _UNSET) -> Dict[str, Any]:
         deck = self.get_deck(deck_id)
         if not deck:
             raise LookupError("deck_not_found")
@@ -567,10 +589,14 @@ class MicrocardsServiceV2:
             card["front"]["text"] = _s(front_text)
         if front_image_url is not None:
             card["front"]["image_url"] = front_image_url
+        if front_image_attribution is not _UNSET:
+            card["front"]["image_attribution"] = _clean_attribution(front_image_attribution)
         if back_text is not None:
             card["back"]["text"] = _s(back_text)
         if back_image_url is not None:
             card["back"]["image_url"] = back_image_url
+        if back_image_attribution is not _UNSET:
+            card["back"]["image_attribution"] = _clean_attribution(back_image_attribution)
         if hint is not None:
             card["hint"] = _s(hint) or None
         if acceptable_answers is not None:
