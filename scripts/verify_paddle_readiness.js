@@ -105,15 +105,21 @@ async function checkHttpsAndRedirect(baseUrl) {
 }
 
 async function checkPublicPages(baseUrl) {
-  const rootRedirect = await fetch(new URL("/", baseUrl), { redirect: "manual" });
-  const rootLocation = rootRedirect.headers.get("location") || "";
+  const rootResult = await fetch(new URL("/", baseUrl), { redirect: "manual" });
   assert(
-    rootRedirect.status >= 300 && rootRedirect.status < 400,
-    `/ must redirect to /welcome, got status ${rootRedirect.status}`
+    rootResult.status === 200,
+    `/ must return 200 (welcome page), got status ${rootResult.status}`
+  );
+
+  const welcomeRedirect = await fetch(new URL("/welcome", baseUrl), { redirect: "manual" });
+  const welcomeLocation = welcomeRedirect.headers.get("location") || "";
+  assert(
+    welcomeRedirect.status >= 300 && welcomeRedirect.status < 400,
+    `/welcome must redirect to /, got status ${welcomeRedirect.status}`
   );
   assert(
-    rootLocation === "/welcome" || rootLocation.endsWith("/welcome"),
-    `/ redirects to unexpected location: ${rootLocation || "<empty>"}`
+    welcomeLocation === "/" || welcomeLocation.endsWith("/") || welcomeLocation === baseUrl.href,
+    `/welcome redirects to unexpected location: ${welcomeLocation || "<empty>"}`
   );
 
   const cache = new Map();
