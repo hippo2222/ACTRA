@@ -25,6 +25,26 @@
             --mc-radius: 1.25rem;
             --mc-radius-sm: 0.75rem;
             --mc-gap: 1.25rem;
+
+            /* transitions-dev Variables */
+            --modal-open-dur: 250ms;
+            --modal-close-dur: 150ms;
+            --modal-scale: 0.96;
+            --modal-scale-close: 0.96;
+            --modal-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+            --dropdown-open-dur: 250ms;
+            --dropdown-close-dur: 150ms;
+            --dropdown-pre-scale: 0.97;
+            --dropdown-closing-scale: 0.99;
+            --dropdown-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+            --tabs-dur: 200ms;
+            --tabs-ease: cubic-bezier(0.22, 1, 0.36, 1);
+            --tabs-text-muted: var(--color-text-secondary);
+            --tabs-text-active: var(--color-text-main);
+            --tabs-bar-bg: var(--color-surface-2);
+            --tabs-pill-bg: var(--color-surface-1);
         }
 
         .mc-page {
@@ -215,44 +235,104 @@
         .mc-deck-card {
             position: relative; display: flex; flex-direction: column;
             border-radius: var(--mc-radius); border: 1px solid var(--color-border-subtle);
-            background: var(--color-surface-1); padding: 1.25rem; cursor: pointer;
+            background: var(--color-surface-1); padding: 1.05rem 1.15rem 1.05rem 1.35rem; cursor: pointer;
             overflow: hidden;
             transition: border-color .2s, box-shadow .2s, transform .2s;
         }
+        /* Per-deck identity colour = a thin left spine (set via --deck-accent), not a busy tile. */
         .mc-deck-card::before {
-            content: ''; position: absolute; inset: 0 0 auto 0; height: 4px;
-            background: linear-gradient(90deg, var(--color-primary), color-mix(in srgb, var(--color-accent, var(--color-primary)) 70%, var(--color-primary)));
-            opacity: 0.85;
+            content: ''; position: absolute; inset: 0 auto 0 0; width: 4px;
+            border-radius: var(--mc-radius) 0 0 var(--mc-radius);
+            background: var(--deck-accent, var(--color-primary));
         }
+        /* While a card's ⋯ menu is open, lift overflow so the dropdown isn't clipped. */
+        .mc-deck-card--menu-open { overflow: visible; z-index: 5; }
         .mc-deck-card:hover {
             border-color: var(--color-primary);
             box-shadow: var(--shadow-lg, 0 12px 28px rgba(0,0,0,0.12));
             transform: translateY(-3px);
         }
-        .mc-deck-card__top { display: flex; align-items: flex-start; gap: 0.85rem; margin-bottom: 0.75rem; }
-        .mc-deck-card__medallion {
-            display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
-            width: 2.85rem; height: 2.85rem; border-radius: 0.85rem;
-            background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface-2));
-            color: var(--color-primary);
-        }
-        .mc-deck-card__medallion .material-symbols-outlined { font-size: 1.5rem; }
-        .mc-deck-card__title { font-size: 1.02rem; font-weight: 800; color: var(--color-text-main); line-height: 1.25;
-            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        .mc-deck-card__desc { font-size: 0.8rem; color: var(--color-text-secondary); line-height: 1.45;
+        /* Header: deck NAME is the focal element; only controls (expand, ⋯) sit to its right. */
+        .mc-deck-card__head { display: flex; align-items: flex-start; gap: 0.6rem; }
+        .mc-deck-card__headctl { display: flex; align-items: center; gap: 0.1rem; flex-shrink: 0; }
+        /* Header controls (⋯, expand) are small & borderless so they don't compete with the name. */
+        .mc-deck-card__headctl .mc-iconbtn { width: 1.85rem; height: 1.85rem; border: none; background: transparent; border-radius: 0.5rem; }
+        .mc-deck-card__headctl .mc-iconbtn:hover { background: var(--color-surface-2); border-color: transparent; color: var(--color-primary); }
+        .mc-deck-card__headctl .mc-iconbtn .material-symbols-outlined { font-size: 1.2rem; }
+        /* Name = focal: larger/bolder than the CTA. 2 lines reserved → every card aligns. */
+        .mc-deck-card__title { flex: 1 1 auto; min-width: 0; margin: 0;
+            font-size: 1.16rem; font-weight: 800; color: var(--color-text-main); line-height: 1.22;
             display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-            margin-bottom: 0.85rem; min-height: 2.3rem; }
-        .mc-deck-card__tags { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.9rem; }
-        .mc-tag { padding: 0.15rem 0.55rem; border-radius: 0.5rem; font-size: 0.65rem; font-weight: 700;
-            background: var(--color-surface-2); border: 1px solid var(--color-border-subtle); color: var(--color-text-secondary); }
-        .mc-deck-card__progress { height: 0.4rem; border-radius: 999px; background: var(--color-bg-secondary);
-            overflow: hidden; margin-bottom: 0.9rem; }
-        .mc-deck-card__progress > span { display: block; height: 100%; border-radius: 999px;
-            background: linear-gradient(90deg, var(--color-success), color-mix(in srgb, var(--color-success) 60%, var(--color-primary))); }
-        .mc-deck-card__foot { margin-top: auto; display: flex; align-items: center; justify-content: space-between;
-            gap: 0.5rem; padding-top: 0.85rem; border-top: 1px solid var(--color-border-subtle); }
-        .mc-deck-card__count { font-size: 0.75rem; color: var(--color-text-secondary); }
-        .mc-deck-card__count strong { color: var(--color-text-main); font-weight: 800; }
+            min-height: 2.84rem; }
+        /* Description + tags now live only inside the expandable details panel — natural height. */
+        .mc-deck-card__desc { font-size: 0.82rem; color: var(--color-text-secondary); line-height: 1.5; margin: 0 0 0.6rem; }
+        .mc-deck-card__tags { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0; }
+        /* Expand chevron in the card header (only present when there are details). */
+        .mc-deck-card__expand { display: inline-flex; align-items: center; justify-content: center;
+            width: 1.7rem; height: 1.7rem; border-radius: 0.5rem; flex-shrink: 0; color: var(--color-text-secondary);
+            transition: transform .2s, color .15s, background .15s; }
+        .mc-deck-card__expand:hover { color: var(--color-primary); background: var(--color-surface-2); }
+        .mc-deck-card__expand .material-symbols-outlined { font-size: 1.25rem; }
+        .mc-deck-card.is-expanded .mc-deck-card__expand { transform: rotate(180deg); color: var(--color-primary); }
+        /* Details panel: drops down from the card bottom as an overlay over the cards below. */
+        .mc-deck-card__details { position: absolute; top: 100%; left: -1px; right: -1px;
+            background: var(--color-surface-1); border: 1px solid var(--color-border-subtle); border-top: none;
+            border-radius: 0 0 var(--mc-radius) var(--mc-radius); box-shadow: 0 16px 30px rgba(0,0,0,0.16);
+            padding: 0.5rem 1.25rem 1.15rem; display: none; z-index: 31; }
+        .mc-deck-card.is-expanded { overflow: visible; z-index: 30;
+            border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+        .mc-deck-card.is-expanded .mc-deck-card__details { display: block; }
+        .mc-tag { padding: 0.15rem 0.55rem; border-radius: 0.5rem; font-size: 0.65rem; font-weight: 700; flex-shrink: 0;
+            background: var(--color-surface-2); border: 1px solid var(--color-border-subtle); color: var(--color-text-secondary); white-space: nowrap; }
+        .mc-deck-card__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem;
+            margin-top: 0.45rem; font-size: 0.72rem; color: var(--color-text-secondary); }
+        .mc-deck-card__meta strong { color: var(--color-text-main); font-weight: 800; }
+        .mc-deck-card__metaitem { display: inline-flex; align-items: center; gap: 0.2rem;
+            min-width: 0; max-width: 12rem; }
+        /* Ellipsis must live on the text element itself — text-overflow doesn't apply to a flex box. */
+        .mc-deck-card__metatext { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+        .mc-deck-card__metaitem--right { margin-left: auto; }
+        .mc-deck-card__metaitem .material-symbols-outlined { font-size: 0.9rem; color: var(--color-text-secondary); flex-shrink: 0; }
+        .mc-meta-sep { opacity: 0.45; }
+        /* One progress group: stars + status on one line, mastery bar tight underneath. */
+        .mc-deck-card__prog { margin-top: 1rem; }
+        .mc-deck-card__stars { display: flex; align-items: center; gap: 0.18rem; width: 100%; margin-bottom: 0.6rem; }
+        .mc-star { font-size: 1.6rem; line-height: 1; display: inline-block; font-variation-settings: 'FILL' 0; }
+        .mc-star--on { font-variation-settings: 'FILL' 1; }
+        .mc-star--off { color: var(--color-border-strong); opacity: 0.4; }
+        /* Earned silver = saturated cool steel-blue (a real colour, not flat grey) so it clearly
+           pops on a light card; gold stays warm. Crisp outline + soft glow give each star presence. */
+        .mc-star--on.mc-star--silver {
+            background: linear-gradient(155deg, #bcd2f2 0%, #4f73b3 46%, #88a6da 64%, #34548f 100%);
+            -webkit-background-clip: text; background-clip: text; color: transparent;
+            filter: drop-shadow(0 0 0.5px rgba(40,66,118,0.9)) drop-shadow(0 1px 2px rgba(60,95,160,0.45)); }
+        .mc-star--on.mc-star--gold {
+            background: linear-gradient(155deg, #ffe18a 0%, #df982a 46%, #ffc658 64%, #bd7c16 100%);
+            -webkit-background-clip: text; background-clip: text; color: transparent;
+            filter: drop-shadow(0 0 0.5px rgba(150,92,8,0.85)) drop-shadow(0 1px 2px rgba(200,140,30,0.5)); }
+        /* Right-slot status — always present so the row never reads as empty. */
+        .mc-deck-card__status { margin-left: auto; font-size: 0.76rem; font-weight: 800;
+            display: inline-flex; align-items: center; gap: 0.2rem; white-space: nowrap; }
+        .mc-deck-card__status .material-symbols-outlined { font-size: 0.95rem; }
+        .mc-deck-card__status--new { color: var(--color-text-secondary); font-weight: 700; font-style: italic; }
+        .mc-deck-card__status--progress { color: var(--color-primary); }
+        .mc-deck-card__status--mastered { color: var(--color-success); }
+        .mc-deck-card__status--paused { color: var(--color-warning); }
+        /* Mastery bar — livelier: thicker, success gradient, gold when fully mastered. */
+        .mc-deck-card__mastery { height: 5px; border-radius: 999px; background: var(--color-bg-secondary);
+            overflow: hidden; margin: 0; }
+        .mc-deck-card__mastery > span { display: block; height: 100%; border-radius: 999px;
+            background: linear-gradient(90deg, var(--color-success), color-mix(in srgb, var(--color-success) 55%, var(--color-primary))); }
+        .mc-deck-card__mastery.is-full > span { background: linear-gradient(90deg, #e3a52e, #ffd877); }
+        /* Action row at the card bottom: workload (left) + CTA (right) — single right edge. */
+        .mc-deck-card__action { margin-top: auto; padding-top: 1rem; display: flex; align-items: center; gap: 0.6rem; }
+        .mc-deck-card__load { font-size: 0.74rem; font-weight: 800; padding: 0.22rem 0.55rem; border-radius: 999px; white-space: nowrap; }
+        .mc-deck-card__load--due { background: color-mix(in srgb, var(--color-error) 14%, transparent); color: var(--color-error); }
+        .mc-deck-card__load--new { background: color-mix(in srgb, var(--color-info) 14%, transparent); color: var(--color-info); }
+        .mc-deck-card__study { margin-left: auto; padding: 0 1.15rem; }
+        .mc-card-menu-wrap { position: relative; flex-shrink: 0; }
+        /* ⋯ now sits in the header → menu opens downward, within the card (overflow:hidden). */
+        .mc-card-menu { top: calc(100% + 0.4rem); bottom: auto; right: 0; margin-top: 0; width: 12rem; }
 
         .mc-pill { padding: 0.18rem 0.55rem; border-radius: 999px; font-size: 0.62rem; font-weight: 800; }
         .mc-pill--due { background: color-mix(in srgb, var(--color-error) 14%, transparent);
@@ -279,8 +359,9 @@
         .mc-empty__hint { font-size: 0.85rem; color: var(--color-text-secondary); max-width: 24rem; margin-bottom: 1.5rem; }
 
         /* ── Deck details header (SaaS dashboard composition) ──────── */
-        .mc-dhead { margin-bottom: 1.25rem; padding-bottom: 0.9rem;
+        .mc-dhead { margin-bottom: 0.65rem; padding-bottom: 0.75rem;
             border-bottom: 1px solid var(--color-border-subtle); }
+        .mc-dhead__cta { flex-shrink: 0; min-width: 12rem; justify-content: center; }
         /* L1: breadcrumb */
         .mc-dhead__crumb { display: flex; align-items: center; gap: 0.25rem; margin-bottom: 0.4rem; }
         .mc-crumb-link { display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.78rem;
@@ -290,9 +371,19 @@
         /* L2: title + primary CTA */
         .mc-dhead__bar { display: flex; align-items: center; justify-content: space-between;
             gap: 1rem; flex-wrap: wrap; }
+        .mc-dhead__titlewrap { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; min-width: 0; }
+        .mc-dhead__renamebtn { display: inline-flex; align-items: center; justify-content: center;
+            width: 1.7rem; height: 1.7rem; border-radius: 0.5rem; flex-shrink: 0;
+            color: var(--color-text-secondary); opacity: 0.55; transition: opacity .15s, color .15s, background .15s; }
+        .mc-dhead__renamebtn:hover { opacity: 1; color: var(--color-primary); background: var(--color-surface-2); }
+        .mc-dhead__renamebtn .material-symbols-outlined { font-size: 1.1rem; }
+        .mc-dhead__title-input { font-size: 1.6rem; font-weight: 900; letter-spacing: -0.02em;
+            color: var(--color-text-main); line-height: 1.1; min-width: 0; flex: 1 1 14rem;
+            background: var(--color-surface-1); border: 1px solid var(--color-primary);
+            border-radius: 0.5rem; padding: 0.1rem 0.5rem; outline: none; }
         .mc-dhead__title { font-size: 1.6rem; font-weight: 900; letter-spacing: -0.02em;
             color: var(--color-text-main); line-height: 1.1; margin: 0; min-width: 0; overflow-wrap: anywhere; }
-        .mc-dhead__actions { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
+        .mc-dhead__actions { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
         /* L3: metadata (status · counts · tags) — one dense line */
         .mc-dhead__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.55rem; margin-top: 0.5rem; }
         .mc-dhead__metatext { font-size: 0.82rem; color: var(--color-text-secondary); }
@@ -363,9 +454,21 @@
             background: var(--color-surface-2); border: 1px solid var(--color-border-subtle); color: var(--color-text-secondary); white-space: nowrap; }
 
         /* ── Session / flashcard ──────────────────────────────────── */
-        .mc-session { max-width: 52rem; margin: 0 auto; display: flex; flex-direction: column;
-            min-block-size: calc(100dvh - 16rem); }
-        .mc-session__head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem; }
+        .mc-session { max-width: 100%; margin: 0 auto; display: flex; flex-direction: column;
+            min-block-size: calc(100dvh - 8rem); }
+        .mc-session__head {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: center;
+            gap: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+        .mc-session__head > :last-child {
+            justify-self: end;
+        }
+        .mc-session__head .mc-session-progress__track {
+            width: 8rem;
+        }
         .mc-level-indicator { padding: 0.4rem 0.9rem; border-radius: 999px; font-size: 0.72rem; font-weight: 800;
             border: 1px solid transparent; }
 
@@ -379,6 +482,13 @@
             min-block-size: 11rem; max-block-size: min(50vh, 28rem);
             transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
             transform-style: preserve-3d;
+            cursor: pointer;
+        }
+        .flashcard-inner:hover {
+            transform: translateY(-2px);
+        }
+        .flashcard-inner.flipped:hover {
+            transform: rotateY(180deg) translateY(-2px);
         }
         .flashcard-inner.flipped { transform: rotateY(180deg); }
         .flashcard-front, .flashcard-back {
@@ -389,6 +499,11 @@
             background: var(--color-surface-1);
             box-shadow: var(--shadow-lg, 0 14px 32px rgba(0,0,0,0.12));
             padding: 1.5rem; overflow: hidden;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .flashcard-front:hover, .flashcard-back:hover {
+            border-color: var(--color-primary);
+            box-shadow: 0 18px 44px rgba(0,0,0,0.16);
         }
         .flashcard-back { transform: rotateY(180deg); }
         .mc-face__meta { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-shrink: 0; }
@@ -442,17 +557,55 @@
         .mc-compare__val--ok { color: var(--color-success); }
 
         /* ── Summary ──────────────────────────────────────────────── */
+        .mc-summary-layout {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        @media (min-width: 992px) {
+            .mc-summary-layout {
+                display: grid;
+                grid-template-columns: 240px 1fr;
+                gap: 2.5rem;
+                align-items: start;
+            }
+            .mc-summary-layout #mcToolbar {
+                position: sticky;
+                top: 2rem;
+                flex-direction: column;
+                align-items: flex-start;
+                margin-bottom: 0;
+                min-height: auto;
+            }
+            .mc-summary-layout #mcToolbar .mc-toolbar__left {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+                width: 100%;
+            }
+            .mc-summary-layout #mcToolbar .mc-ctx-label {
+                font-size: 0.9rem;
+                font-weight: 700;
+                color: var(--color-text-main);
+                white-space: normal;
+                line-height: 1.4;
+            }
+            .mc-summary-layout .mc-summary {
+                margin: 0;
+                max-width: 34rem;
+            }
+        }
         .mc-summary { max-width: 34rem; margin: 0 auto; }
-        .mc-summary__card { text-align: center; padding: 2.25rem 1.75rem; border-radius: var(--mc-radius);
+        .mc-summary__card { text-align: center; padding: 2rem 1.75rem; border-radius: var(--mc-radius);
             background: var(--color-surface-1); border: 1px solid var(--color-border-subtle);
-            box-shadow: var(--shadow-md, 0 6px 20px rgba(0,0,0,0.08)); margin-bottom: 1.5rem; }
+            box-shadow: var(--shadow-md, 0 6px 20px rgba(0,0,0,0.08)); margin-bottom: 1.25rem; }
         .mc-summary__icon { display: inline-flex; align-items: center; justify-content: center;
             width: 4rem; height: 4rem; border-radius: 1.4rem; margin-bottom: 1rem;
             background: color-mix(in srgb, var(--color-success) 14%, transparent); color: var(--color-success); }
         .mc-summary__icon .material-symbols-outlined { font-size: 2.1rem; }
-        .mc-summary__title { font-size: 1.45rem; font-weight: 900; color: var(--color-text-main); margin-bottom: 0.35rem; }
-        .mc-summary__sub { font-size: 0.88rem; color: var(--color-text-secondary); margin-bottom: 1.75rem; }
-        .mc-summary__stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 1.75rem; }
+        .mc-summary__title { font-size: 1.35rem; font-weight: 900; color: var(--color-text-main); margin-bottom: 0.25rem; }
+        .mc-summary__sub { font-size: 0.85rem; color: var(--color-text-secondary); margin-bottom: 1.25rem; }
+        .mc-summary__stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 1.25rem; }
         .mc-sumstat { padding: 1rem 0.5rem; border-radius: var(--mc-radius-sm); border: 1px solid var(--color-border-subtle); }
         .mc-sumstat__val { font-size: 1.6rem; font-weight: 900; line-height: 1; }
         .mc-sumstat__label { font-size: 0.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.07em;
@@ -490,15 +643,212 @@
         }
 
         /* ── Dialogs ──────────────────────────────────────────────── */
-        dialog {
+        dialog.t-modal {
             background: var(--color-surface-1); color: var(--color-text-main);
             border: 1px solid var(--color-border-strong); border-radius: var(--mc-radius);
             padding: 1.6rem; max-width: 30rem; width: 92%;
             box-shadow: var(--shadow-xl, 0 24px 48px rgba(0,0,0,0.2));
-            transform: scale(0.96); opacity: 0; transition: opacity .2s ease-out, transform .2s ease-out;
+            transform-origin: center;
+            transform: scale(var(--modal-scale));
+            opacity: 0;
+            transition:
+              transform var(--modal-open-dur) var(--modal-ease),
+              opacity   var(--modal-open-dur) var(--modal-ease);
+            will-change: transform, opacity;
         }
-        dialog[open] { transform: scale(1); opacity: 1; }
-        dialog::backdrop { background-color: var(--color-scrim, rgba(0,0,0,0.5)); backdrop-filter: blur(4px); }
+        dialog.t-modal.is-open {
+            transform: scale(1);
+            opacity: 1;
+        }
+        dialog.t-modal.is-closing {
+            transform: scale(var(--modal-scale-close));
+            opacity: 0;
+            transition:
+              transform var(--modal-close-dur) var(--modal-ease),
+              opacity   var(--modal-close-dur) var(--modal-ease);
+        }
+        dialog.t-modal::backdrop { background-color: var(--color-scrim, rgba(0,0,0,0.5)); backdrop-filter: blur(4px); }
+
+        /* ── Transitions.dev Styles ─────────────────────────────────── */
+        /* Menu dropdown */
+        .t-dropdown {
+            transform-origin: top left;
+            transform: scale(var(--dropdown-pre-scale));
+            opacity: 0;
+            pointer-events: none;
+            transition:
+              transform var(--dropdown-open-dur) var(--dropdown-ease),
+              opacity   var(--dropdown-open-dur) var(--dropdown-ease);
+            will-change: transform, opacity;
+        }
+        .t-dropdown[data-origin="top-right"]     { transform-origin: top right; }
+        .t-dropdown[data-origin="top-center"]    { transform-origin: top center; }
+        .t-dropdown[data-origin="bottom-left"]   { transform-origin: bottom left; }
+        .t-dropdown[data-origin="bottom-center"] { transform-origin: bottom center; }
+        .t-dropdown[data-origin="bottom-right"]  { transform-origin: bottom right; }
+
+        .t-dropdown.is-open {
+            transform: scale(1);
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .t-dropdown.is-closing {
+            transform: scale(var(--dropdown-closing-scale));
+            opacity: 0;
+            pointer-events: none;
+            transition:
+              transform var(--dropdown-close-dur) var(--dropdown-ease),
+              opacity   var(--dropdown-close-dur) var(--dropdown-ease);
+        }
+
+        /* Tabs sliding */
+        .t-tabs {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            padding: 3px;
+            border-radius: 48px;
+            background: var(--tabs-bar-bg);
+            border: 1px solid var(--color-border-subtle);
+        }
+        .t-tab {
+            position: relative;
+            appearance: none;
+            border: 0;
+            background: transparent;
+            height: 30px;
+            padding: 4px 12px;
+            color: var(--tabs-text-muted);
+            cursor: pointer;
+            border-radius: 48px;
+            z-index: 1;
+            transition: color var(--tabs-dur) var(--tabs-ease);
+            font-size: 0.76rem;
+            font-weight: 700;
+        }
+        .t-tab:not([aria-selected="true"]):hover,
+        .t-tab[aria-selected="true"] {
+            color: var(--tabs-text-active);
+        }
+        .t-tabs-pill {
+            position: absolute;
+            top: 3px;
+            left: 0;
+            height: 30px;
+            width: 0;
+            background: var(--tabs-pill-bg);
+            border-radius: 48px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transform: translateX(0);
+            transition:
+              transform var(--tabs-dur) var(--tabs-ease),
+              width     var(--tabs-dur) var(--tabs-ease);
+            will-change: transform, width;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* Star Styling (Silver vs Gold) */
+        .mc-stars.silver .material-symbols-outlined.is-on {
+            background: linear-gradient(155deg, #bcd2f2 0%, #4f73b3 46%, #88a6da 64%, #34548f 100%);
+            -webkit-background-clip: text; background-clip: text; color: transparent;
+            opacity: 1;
+            font-variation-settings: 'FILL' 1;
+            filter: drop-shadow(0 0 0.5px rgba(40,66,118,0.9)) drop-shadow(0 1px 2px rgba(60,95,160,0.45));
+        }
+        .mc-stars.gold .material-symbols-outlined.is-on {
+            background: linear-gradient(155deg, #ffe18a 0%, #df982a 46%, #ffc658 64%, #bd7c16 100%);
+            -webkit-background-clip: text; background-clip: text; color: transparent;
+            opacity: 1;
+            font-variation-settings: 'FILL' 1;
+            filter: drop-shadow(0 0 0.5px rgba(150,92,8,0.85)) drop-shadow(0 1px 2px rgba(200,140,30,0.5));
+        }
+
+        /* Study modes section */
+        .mc-study-modes {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            margin-top: 0;
+        }
+        .mc-study-mode-card {
+            border-radius: var(--mc-radius);
+            border: 1px solid var(--color-border-subtle);
+            background: var(--color-surface-1);
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            transition: transform 0.2s, border-color 0.2s;
+            cursor: pointer;
+            text-align: left;
+        }
+        .mc-study-mode-card:hover {
+            border-color: var(--color-border-strong);
+            transform: translateY(-2px);
+        }
+        .mc-study-mode-card--silver {
+            border-left: 4px solid #b0b7bd;
+        }
+        .mc-study-mode-card--gold {
+            border-left: 4px solid var(--color-warning);
+        }
+        .mc-study-mode-card--locked {
+            opacity: 0.65;
+            background: var(--color-surface-2);
+            cursor: not-allowed;
+        }
+        .mc-study-mode-card--locked:hover {
+            transform: none;
+            border-color: var(--color-border-subtle);
+        }
+        .mc-study-mode-card__title {
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: var(--color-text-main);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .mc-study-mode-card__stats {
+            font-size: 0.82rem;
+            color: var(--color-text-secondary);
+        }
+        .mc-study-mode-card__lock-text {
+            font-size: 0.76rem;
+            color: var(--color-error);
+            font-weight: 600;
+        }
+        .mc-study-mode-card .mc-stars {
+            display: flex;
+            gap: 0.15rem;
+        }
+
+        .mc-record-badge {
+            background: linear-gradient(135deg, var(--color-warning) 0%, #ff8c00 100%);
+            color: #ffffff;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.35rem 0.8rem;
+            border-radius: 999px;
+            font-size: 0.76rem;
+            font-weight: 800;
+            box-shadow: 0 4px 12px rgba(255,140,0,0.3);
+            text-shadow: 0 1px 2px rgba(0,0,0,0.15);
+            animation: mc-pulse 1.5s infinite alternate;
+        }
+
+        @keyframes mc-pulse {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.04); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .t-modal, .t-dropdown, .t-tabs-pill, .t-tab { transition: none !important; }
+        }
         .mc-dialog-title { font-size: 1.15rem; font-weight: 900; color: var(--color-text-main); }
         .mc-dialog-actions { display: flex; justify-content: flex-end; gap: 0.6rem; padding-top: 0.4rem; }
         .mc-tabbtn { height: 2.1rem; padding: 0 1rem; border-radius: 0.6rem; font-size: 0.75rem; font-weight: 800;
@@ -506,10 +856,51 @@
         .mc-tabbtn.is-active { background: var(--color-primary); color: var(--color-primary-fg); border-color: var(--color-primary); }
 
         /* ── Advanced import dialog ─────────────────────────────────── */
-        .mc-import-dialog { max-width: 46rem; }
-        .mc-imp-tabs { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+        /* .t-modal is more specific (dialog.t-modal) and caps width at 30rem — qualify
+           with .t-modal here so the wide import layout actually wins. */
+        .mc-import-dialog.t-modal {
+            max-width: 58rem;
+            width: min(96vw, 58rem);
+            max-height: min(90vh, 860px);
+            overflow-y: auto;
+        }
+        #impInputZone { display: flex; flex-direction: column; gap: 0.9rem; }
+        .mc-imp-sourcebar { display: flex; align-items: center; gap: 0.6rem;
+            padding: 0.5rem 0.7rem; background: var(--color-surface-2);
+            border: 1px solid var(--color-border-subtle); border-radius: 0.7rem; }
+        .mc-imp-sourcebar__text { flex: 1 1 auto; min-width: 0; font-size: 0.82rem; font-weight: 700;
+            color: var(--color-text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .mc-imp-sourcebar > .material-symbols-outlined { color: var(--color-primary); flex-shrink: 0; }
+        .mc-import-dialog > form {
+            min-height: 0; /* allow flex children to shrink */
+        }
+        .mc-imp-tabs {
+            display: flex;
+            flex-wrap: nowrap;
+            gap: 0.4rem;
+            overflow-x: auto;
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none;
+            padding-bottom: 2px; /* room for focus ring */
+        }
+        .mc-imp-tabs::-webkit-scrollbar { display: none; }
+        .mc-imp-tabs .mc-tabbtn { flex-shrink: 0; white-space: nowrap; }
         .mc-imp-hint { font-size: 0.76rem; color: var(--color-text-secondary); line-height: 1.45; margin: 0;
             background: var(--color-surface-2); border: 1px solid var(--color-border-subtle); border-radius: 0.6rem; padding: 0.55rem 0.75rem; white-space: pre-line; }
+        /* AI prompt helper panel */
+        .mc-imp-ai { display: flex; flex-direction: column; gap: 0.6rem;
+            background: color-mix(in srgb, var(--color-primary) 6%, var(--color-surface-2));
+            border: 1px solid color-mix(in srgb, var(--color-primary) 28%, transparent);
+            border-radius: 0.7rem; padding: 0.85rem; }
+        .mc-imp-ai__intro { margin: 0; font-size: 0.78rem; line-height: 1.5; color: var(--color-text-main); }
+        .mc-imp-ai__opts { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+        .mc-imp-ai__seg { display: inline-flex; border: 1px solid var(--color-border-strong);
+            border-radius: 0.6rem; overflow: hidden; background: var(--color-surface-1); }
+        .mc-imp-ai__seg button { padding: 0.32rem 0.7rem; font-size: 0.74rem; font-weight: 700;
+            color: var(--color-text-secondary); white-space: nowrap; }
+        .mc-imp-ai__seg button + button { border-left: 1px solid var(--color-border-strong); }
+        .mc-imp-ai__seg button.is-active { background: var(--color-primary); color: var(--color-primary-fg); }
+        .mc-imp-ai textarea { resize: vertical; }
         .mc-imp-options { background: var(--color-surface-2); border: 1px solid var(--color-border-subtle); border-radius: 0.7rem; padding: 0.75rem 0.85rem; display: flex; flex-direction: column; gap: 0.55rem; }
         .mc-imp-seps { display: flex; flex-wrap: wrap; gap: 0.35rem; }
         .mc-sep-chip { min-height: 2rem; padding: 0 0.7rem; border-radius: 0.55rem; font-size: 0.74rem; font-weight: 800;
@@ -536,7 +927,7 @@
         .mc-imp-count--ok { background: color-mix(in srgb, var(--color-success) 14%, transparent); color: var(--color-success); }
         .mc-imp-count--dup { background: color-mix(in srgb, var(--color-warning) 14%, transparent); color: var(--color-warning); }
         .mc-imp-count--err { background: color-mix(in srgb, var(--color-error) 14%, transparent); color: var(--color-error); }
-        .mc-imp-rows { max-height: 15rem; overflow-y: auto; }
+        .mc-imp-rows { max-height: min(26rem, 48vh); overflow-y: auto; }
         .mc-imp-row { display: grid; grid-template-columns: 1.4rem 1fr 1fr; gap: 0.5rem; align-items: start;
             padding: 0.45rem 0.7rem; border-bottom: 1px solid var(--color-border-subtle); font-size: 0.76rem; }
         .mc-imp-row:last-child { border-bottom: none; }
@@ -547,6 +938,9 @@
         .mc-imp-row--err .mc-imp-row__icon { color: var(--color-error); }
         .mc-imp-row__front { font-weight: 700; color: var(--color-text-main); word-break: break-word; }
         .mc-imp-row__back { color: var(--color-text-secondary); word-break: break-word; }
+        .mc-imp-row__hint { display: inline-flex; align-items: center; gap: 0.2rem; margin-left: 0.4rem;
+            font-style: italic; color: var(--color-warning); }
+        .mc-imp-row__hint .material-symbols-outlined { font-size: 0.9rem; }
         .mc-imp-row__err { grid-column: 2 / 4; color: var(--color-error); font-style: italic; }
 
         /* ── Toasts ───────────────────────────────────────────────── */
@@ -566,7 +960,7 @@
         /* ── Reduced motion ───────────────────────────────────────── */
         @media (prefers-reduced-motion: reduce) {
             .page-view, .flashcard-inner, dialog, .mc-deck-card,
-            .mc-levelrow__bar, .mc-session-progress__bar, .mc-deck-card__progress > span {
+            .mc-levelrow__bar, .mc-session-progress__bar, .mc-deck-card__mastery > span {
                 transition: none !important; animation: none !important;
             }
             .mc-btn:active, .mc-grade__btn:active, .mc-iconbtn:active, .mc-back-btn:active { transform: none !important; }
@@ -622,36 +1016,64 @@
         @keyframes mc-combo-break { to { opacity: 0; transform: translateY(-6px) scale(0.8); } }
 
         /* ── L1 grading rails (swipe-style) ─────────────────────────── */
-        .mc-arena { display: flex; align-items: stretch; justify-content: center; gap: 1rem; margin-block: auto; }
-        .mc-arena .mc-flashcard-wrap { flex: 0 1 40rem; min-width: 0;
+        .mc-arena { display: flex; align-items: stretch; justify-content: center; gap: 1.5rem; flex: 1; margin-block: 1rem; }
+        .mc-arena .mc-flashcard-wrap { flex: 0 1 40rem; min-width: 0; align-self: center;
             transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1); }
         .mc-arena.lean-left .mc-flashcard-wrap { transform: rotate(-2.4deg) translateX(-12px); }
         .mc-arena.lean-right .mc-flashcard-wrap { transform: rotate(2.4deg) translateX(12px); }
-        .mc-rail {
-            flex: 0 0 6.5rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.6rem;
-            border-radius: 1.25rem; border: 2px solid transparent; cursor: pointer;
-            font-size: 0.95rem; font-weight: 900; opacity: 0; pointer-events: none;
-            transition: opacity 0.28s ease, background 0.2s ease, border-color 0.2s ease, transform 0.14s ease;
+        .mc-rail-wrapper {
+            flex: 1 1 12rem; display: flex; flex-direction: column; align-items: center; justify-content: stretch; gap: 0.5rem;
+            opacity: 0; pointer-events: none;
+            transition: opacity 0.28s ease;
         }
-        .mc-rail .material-symbols-outlined { font-size: 2.6rem; }
+        .mc-rail {
+            width: 100%; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem;
+            border-radius: 1.25rem; border: 1.5px solid transparent; cursor: pointer;
+            font-size: 0.95rem; font-weight: 900;
+            transition: background 0.24s ease, border-color 0.24s ease, transform 0.14s ease, box-shadow 0.24s ease;
+        }
+        .mc-rail .material-symbols-outlined { font-size: 2.85rem; }
+        .mc-rail-hotkey {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--color-text-secondary);
+            opacity: 0.5;
+            letter-spacing: 0.05em;
+            transition: opacity 0.2s ease;
+        }
+        .mc-rail-wrapper:hover .mc-rail-hotkey {
+            opacity: 0.85;
+        }
         .mc-rail--no { color: var(--color-error);
-            background: color-mix(in srgb, var(--color-error) 8%, transparent);
-            border-color: color-mix(in srgb, var(--color-error) 26%, transparent); }
-        .mc-rail--no:hover { background: color-mix(in srgb, var(--color-error) 18%, transparent); border-color: var(--color-error); }
+            background: linear-gradient(to left, color-mix(in srgb, var(--color-error) 12%, transparent) 0%, transparent 100%);
+            border-color: color-mix(in srgb, var(--color-error) 15%, transparent); }
+        .mc-rail--no:hover { background: linear-gradient(to left, color-mix(in srgb, var(--color-error) 24%, transparent) 0%, transparent 100%);
+            border-color: color-mix(in srgb, var(--color-error) 36%, transparent);
+            box-shadow: inset -4px 0 16px -4px color-mix(in srgb, var(--color-error) 12%, transparent); }
         .mc-rail--yes { color: var(--color-success);
-            background: color-mix(in srgb, var(--color-success) 8%, transparent);
-            border-color: color-mix(in srgb, var(--color-success) 26%, transparent); }
-        .mc-rail--yes:hover { background: color-mix(in srgb, var(--color-success) 18%, transparent); border-color: var(--color-success); }
-        .mc-rail:active { transform: scale(0.97); }
-        .mc-arena.is-grading .mc-rail { opacity: 1; pointer-events: auto; }
+            background: linear-gradient(to right, color-mix(in srgb, var(--color-success) 12%, transparent) 0%, transparent 100%);
+            border-color: color-mix(in srgb, var(--color-success) 15%, transparent); }
+        .mc-rail--yes:hover { background: linear-gradient(to right, color-mix(in srgb, var(--color-success) 24%, transparent) 0%, transparent 100%);
+            border-color: color-mix(in srgb, var(--color-success) 36%, transparent);
+            box-shadow: inset 4px 0 16px -4px color-mix(in srgb, var(--color-success) 12%, transparent); }
+        .mc-rail:active { transform: scale(0.985); }
+        .mc-arena.is-grading .mc-rail-wrapper { opacity: 1; pointer-events: auto; }
         @media (max-width: 859px) {
-            .mc-rail { display: none; }
+            .mc-rail-wrapper { display: none !important; }
             .mc-arena { gap: 0; }
             .mc-arena .mc-flashcard-wrap { flex: 1 1 auto; }
         }
         @media (min-width: 860px) {
             /* Rails are the desktop L1 grading affordance — hide the bottom buttons there */
             #backActionsL1 { display: none !important; }
+            .mc-page.mc-page--session-fullscreen {
+                max-width: 100% !important;
+                padding-left: 0 !important;
+                padding-right: 0 !important;
+            }
+            .mc-session__head {
+                padding-inline: 2rem;
+            }
         }
 
         /* ── Flashcard feedback overlay ─────────────────────────────── */
@@ -724,7 +1146,7 @@
         }
 
         /* ── Summary: accuracy ring + stars + rewards ───────────────── */
-        .mc-summary__hero { display: flex; flex-direction: column; align-items: center; gap: 0.85rem; margin-bottom: 1.5rem; }
+        .mc-summary__hero { display: flex; flex-direction: column; align-items: center; gap: 0.75rem; margin-bottom: 1.25rem; }
         .mc-acc-ring { position: relative; width: 132px; height: 132px; }
         .mc-acc-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
         .mc-acc-ring__track { fill: none; stroke: var(--color-bg-secondary); stroke-width: 11; }
@@ -738,16 +1160,40 @@
         .mc-acc-ring__cap { font-size: 0.6rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-text-secondary); margin-top: 0.25rem; }
         .mc-stars { display: inline-flex; gap: 0.3rem; }
         .mc-stars .material-symbols-outlined {
-            font-size: 2rem; color: var(--color-border-strong); transform: scale(0);
+            font-size: 2rem; color: var(--color-border-strong);
+            opacity: 0.35;
+            font-variation-settings: 'FILL' 0;
+        }
+        .mc-stars .material-symbols-outlined.is-on {
+            color: var(--color-warning);
+            opacity: 1;
             font-variation-settings: 'FILL' 1;
         }
-        .mc-stars .material-symbols-outlined.is-on { color: var(--color-warning); }
+        /* Summary screen plays a pop-in reveal, so its stars start hidden (scale 0).
+           Stars elsewhere (library cards, deck page) must stay visible — they never
+           get the .is-revealed class, so they must NOT be scaled to zero. */
+        #sumStars .material-symbols-outlined { transform: scale(0); }
         .mc-stars.is-revealed .material-symbols-outlined { animation: mc-star-pop 420ms cubic-bezier(0.34, 1.6, 0.64, 1) both; }
         .mc-stars.is-revealed .material-symbols-outlined:nth-child(2) { animation-delay: 130ms; }
         .mc-stars.is-revealed .material-symbols-outlined:nth-child(3) { animation-delay: 260ms; }
+        .mc-stars.is-revealed .material-symbols-outlined:nth-child(4) { animation-delay: 390ms; }
+        .mc-stars.is-revealed .material-symbols-outlined:nth-child(5) { animation-delay: 520ms; }
         @keyframes mc-star-pop { 0% { transform: scale(0) rotate(-25deg); } 60% { transform: scale(1.25) rotate(8deg); } 100% { transform: scale(1) rotate(0); } }
 
-        .mc-reward-row { display: flex; justify-content: center; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+        .mc-record-badge {
+            display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.75rem; border-radius: 999px;
+            font-size: 0.75rem; font-weight: 950; text-transform: uppercase; letter-spacing: 0.05em;
+            background: linear-gradient(135deg, #ffd700, #ffa500); color: #000;
+            box-shadow: 0 4px 12px rgba(255, 215, 0, 0.4); margin-bottom: 0.75rem;
+            animation: mc-record-pulse 1.2s ease-in-out infinite alternate;
+        }
+        .mc-record-badge .material-symbols-outlined { font-size: 1.05rem; }
+        @keyframes mc-record-pulse {
+            0% { transform: scale(0.96); box-shadow: 0 4px 10px rgba(255, 215, 0, 0.3); }
+            100% { transform: scale(1.04); box-shadow: 0 4px 16px rgba(255, 215, 0, 0.6); }
+        }
+
+        .mc-reward-row { display: flex; justify-content: center; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
         .mc-reward {
             display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0.9rem; border-radius: 999px;
             font-size: 0.85rem; font-weight: 800; background: var(--color-surface-2); border: 1px solid var(--color-border-subtle); color: var(--color-text-main);
@@ -796,14 +1242,14 @@
             .mc-feedback__check { opacity: 1; }
             .mc-feedback__check svg path { stroke-dashoffset: 0 !important; }
             .mc-acc-ring__fill { transition: none !important; }
-            .mc-stars .material-symbols-outlined { transform: scale(1); }
+            .mc-stars .material-symbols-outlined,
+            #sumStars .material-symbols-outlined { transform: scale(1) !important; }
             .mc-arena .mc-flashcard-wrap { transition: none !important; transform: none !important; }
         }
 
         /* Author byline */
         .mc-author { display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.74rem; font-weight: 600; color: var(--color-text-secondary); }
         .mc-author .material-symbols-outlined { font-size: 0.95rem; }
-        .mc-deck-card__foot .mc-author { max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .mc-pub-pill { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.25rem 0.65rem;
             border: 1px solid var(--color-border-strong); border-radius: 999px; font-size: 0.72rem; font-weight: 700; }
         .mc-pub-pill .material-symbols-outlined { font-size: 0.95rem; }
@@ -868,7 +1314,153 @@
         .mc-imgpicker__preview { display: flex; flex-direction: column; gap: 0.5rem; align-self: start; }
         .mc-imgpicker__preview img { width: 100%; max-height: 16rem; object-fit: contain;
             border-radius: 0.6rem; border: 1px solid var(--color-border-subtle); background: var(--color-surface-2); }
+        /* ── SVG Flame and progress bar states ────────────────────── */
+        .mc-session-progress__track { position: relative; overflow: visible !important; }
+        .mc-flame-container {
+            position: absolute; top: 50%; transform: translate(-50%, -50%) scale(0);
+            width: 1.6rem; height: 1.6rem; display: flex; align-items: center; justify-content: center;
+            pointer-events: none; opacity: 0;
+            transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1), transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease;
+            z-index: 10;
+        }
+        .mc-flame-container.is-active {
+            transform: translate(-50%, -50%) scale(1); opacity: 1;
+        }
+        .mc-flame-svg {
+            width: 100%; height: 100%; color: #ff5500;
+            filter: drop-shadow(0 2px 6px rgba(255, 85, 0, 0.7));
+            animation: mc-flame-burn 0.8s ease-in-out infinite alternate;
+        }
+        .mc-flame-container.flame--sm .mc-flame-svg { transform: scale(0.75); }
+        .mc-flame-container.flame--md .mc-flame-svg { transform: scale(1.0); }
+        .mc-flame-container.flame--lg .mc-flame-svg { transform: scale(1.3); }
+        
+        .mc-flame-container.flame--boost .mc-flame-svg {
+            color: #00d2ff;
+            filter: drop-shadow(0 2px 8px rgba(0, 210, 255, 0.9));
+            animation: mc-flame-burn-boost 0.6s ease-in-out infinite alternate;
+        }
+        
+        .mc-flame-container.flame--ember .mc-flame-svg {
+            color: #ffaa00;
+            filter: drop-shadow(0 0 10px rgba(255, 170, 0, 0.9));
+            animation: mc-ember-pulse 0.4s ease-in-out infinite alternate;
+            transform: scale(0.65);
+        }
+        
+        @keyframes mc-flame-burn {
+            0% { transform: scale(0.9) rotate(-3deg); }
+            100% { transform: scale(1.1) rotate(3deg); }
+        }
+        @keyframes mc-flame-burn-boost {
+            0% { transform: scale(0.95) rotate(-5deg); }
+            100% { transform: scale(1.25) rotate(5deg); }
+        }
+        @keyframes mc-ember-pulse {
+            0% { transform: scale(0.65); opacity: 0.7; }
+            100% { transform: scale(0.85); opacity: 1; }
+        }
+
+        /* On Fire card wrap */
+        .mc-flashcard-wrap.is-on-fire {
+            position: relative;
+        }
+        .mc-flashcard-wrap.is-on-fire::after {
+            content: '';
+            position: absolute;
+            inset: -4px;
+            z-index: -1;
+            border-radius: calc(var(--mc-radius) + 4px);
+            background: linear-gradient(45deg, #ff4500, #ff8c00, #ffd700, #ff4500);
+            background-size: 400% 400%;
+            filter: blur(8px);
+            opacity: 0.8;
+            animation: mc-fire-gradient 3s ease infinite, mc-fire-pulse 1.5s ease-in-out infinite alternate;
+        }
+        @keyframes mc-fire-gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        @keyframes mc-fire-pulse {
+            0% { transform: scale(0.99); opacity: 0.6; }
+            100% { transform: scale(1.01); opacity: 0.9; }
+        }
+
+        .mc-session-progress__bar.bar--orange {
+            background: linear-gradient(90deg, #ff4d4d, #ff944d) !important;
+            box-shadow: 0 0 8px rgba(255, 77, 77, 0.4);
+        }
+        .mc-session-progress__bar.bar--boost {
+            background: linear-gradient(90deg, #00d2ff, #0066ff) !important;
+            box-shadow: 0 0 12px rgba(0, 210, 255, 0.6);
+        }
+        .mc-session-progress__bar.bar--charcoal {
+            background: linear-gradient(90deg, #1f1f1f, #3a3a3a) !important;
+            box-shadow: inset 0 0 6px rgba(255, 85, 0, 0.5);
+        }
+
+        /* Resume Banner Styling */
+        .mc-resume-banner {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            border-radius: var(--mc-radius);
+            border: 1px solid var(--color-warning);
+            background: color-mix(in srgb, var(--color-warning) 8%, var(--color-surface-1));
+            padding: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+        .mc-resume-banner__icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 3rem;
+            height: 3rem;
+            border-radius: var(--mc-radius-sm);
+            background: color-mix(in srgb, var(--color-warning) 14%, transparent);
+            color: var(--color-warning);
+            flex-shrink: 0;
+        }
+        .mc-resume-banner__icon .material-symbols-outlined {
+            font-size: 1.8rem;
+        }
+        .mc-resume-banner__content {
+            flex: 1;
+            min-width: 0;
+        }
+        .mc-resume-banner__title {
+            font-size: 1.05rem;
+            font-weight: 800;
+            color: var(--color-text-main);
+            margin: 0 0 0.2rem 0;
+        }
+        .mc-resume-banner__desc {
+            font-size: 0.82rem;
+            color: var(--color-text-secondary);
+            margin: 0;
+        }
+        .mc-resume-banner__actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+        @media (max-width: 600px) {
+            .mc-resume-banner {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+            .mc-resume-banner__actions {
+                width: 100%;
+            }
+            .mc-resume-banner__actions .mc-btn {
+                flex: 1;
+            }
+        }
     </style>
+
 </head>
 <body class="actra-page-booting bg-bg-main text-text-main min-h-screen flex flex-col font-display antialiased">
 
@@ -885,23 +1477,7 @@
     <main id="mcMain" class="flex-1 w-full">
         <div class="mc-page">
 
-            <!-- Contextual toolbar: back + session progress -->
-            <div class="mc-toolbar" id="mcToolbar">
-                <div class="mc-toolbar__left">
-                    <button type="button" id="mcHeaderBackBtn" onclick="mcApp.handleBackNavigation()"
-                        class="mc-back-btn" title="Назад" aria-label="Назад" data-i18n-title="microcards.btn_back">
-                        <span class="material-symbols-outlined" style="font-size:1.2rem">arrow_back</span>
-                        <span data-i18n="microcards.btn_back">Назад</span>
-                    </button>
-                    <span class="mc-ctx-label" id="mcHeaderSubtitle" data-i18n="microcards.subtitle_default">Повторение и обучение</span>
-                </div>
-                <div id="mcHeaderProgress" class="mc-session-progress" style="display:none" aria-live="polite" aria-label="Прогресс сессии">
-                    <span class="mc-session-progress__text" id="mcHeaderProgressText">0/0</span>
-                    <div class="mc-session-progress__track">
-                        <div id="mcHeaderProgressBar" class="mc-session-progress__bar" style="width:0%"></div>
-                    </div>
-                </div>
-            </div>
+
 
             <!-- ════════════ VIEW 1: LIBRARY ════════════ -->
             <div id="viewLibrary" class="page-view hidden">
@@ -916,9 +1492,6 @@
                         </div>
                     </div>
                     <div style="display:flex;align-items:center;gap:0.6rem">
-                        <button type="button" onclick="mcApp.openSettingsDialog()" class="mc-iconbtn" aria-label="Настройки" data-i18n-title="microcards.settings_title" title="Настройки обучения">
-                            <span class="material-symbols-outlined">tune</span>
-                        </button>
                         <button type="button" onclick="mcApp.openImportByCodeDialog()" class="mc-btn mc-btn--ghost" data-i18n-title="microcards.import_by_code_title" title="Импорт колоды по коду доступа">
                             <span class="material-symbols-outlined">key</span>
                             <span data-i18n="microcards.btn_import_by_code">По коду</span>
@@ -954,28 +1527,20 @@
                     </div>
                 </div>
 
-                <div id="mcActivity" class="mc-activity hidden">
-                    <div id="mcHeatmapCard" class="mc-panel mc-activity__card hidden">
-                        <h3 class="mc-panel-title" style="margin-bottom:0.2rem" data-i18n="microcards.activity_heatmap_title">Активность (12 недель)</h3>
-                        <div id="anHeatmap" class="mc-heatmap"></div>
-                    </div>
-                    <div id="mcForecastCard" class="mc-panel mc-activity__card hidden">
-                        <h3 class="mc-panel-title" style="margin-bottom:0.2rem" data-i18n="microcards.activity_forecast_title">Прогноз повторений (7 дней)</h3>
-                        <div id="anForecast" class="mc-forecast"></div>
-                    </div>
-                </div>
+
 
                 <div class="mc-controls">
                     <div class="mc-search">
                         <span class="material-symbols-outlined">search</span>
                         <input id="libSearch" type="search" placeholder="Поиск колоды по названию..." data-i18n-placeholder="microcards.search_placeholder" />
                     </div>
-                    <div class="mc-sort" id="mcSort" role="group" aria-label="Сортировка колод" data-i18n-aria="microcards.sort_label">
-                        <button type="button" class="mc-sort-btn is-active" data-sort="name-asc" aria-pressed="true" data-i18n="microcards.sort_name_asc">А–Я</button>
-                        <button type="button" class="mc-sort-btn" data-sort="name-desc" aria-pressed="false" data-i18n="microcards.sort_name_desc">Я–А</button>
-                        <button type="button" class="mc-sort-btn" data-sort="date-desc" aria-pressed="false" data-i18n="microcards.sort_date_desc">Сначала новые</button>
-                        <button type="button" class="mc-sort-btn" data-sort="due-desc" aria-pressed="false" data-i18n="microcards.sort_due_desc">К повторению</button>
-                        <button type="button" class="mc-sort-btn" data-sort="cards-desc" aria-pressed="false" data-i18n="microcards.sort_cards_desc">Больше карточек</button>
+                    <div class="mc-sort t-tabs" id="mcSort" role="group" aria-label="Сортировка колод" data-i18n-aria="microcards.sort_label">
+                        <span class="t-tabs-pill" aria-hidden="true"></span>
+                        <button type="button" class="mc-sort-btn t-tab is-active" data-sort="name-asc" aria-pressed="true" data-i18n="microcards.sort_name_asc">А–Я</button>
+                        <button type="button" class="mc-sort-btn t-tab" data-sort="name-desc" aria-pressed="false" data-i18n="microcards.sort_name_desc">Я–А</button>
+                        <button type="button" class="mc-sort-btn t-tab" data-sort="date-desc" aria-pressed="false" data-i18n="microcards.sort_date_desc">Сначала новые</button>
+                        <button type="button" class="mc-sort-btn t-tab" data-sort="due-desc" aria-pressed="false" data-i18n="microcards.sort_due_desc">К повторению</button>
+                        <button type="button" class="mc-sort-btn t-tab" data-sort="cards-desc" aria-pressed="false" data-i18n="microcards.sort_cards_desc">Больше карточек</button>
                     </div>
                 </div>
 
@@ -1004,26 +1569,33 @@
                         </button>
                     </nav>
                     <div class="mc-dhead__bar">
-                        <h1 id="deckDetailsTitle" class="mc-dhead__title">Название колоды</h1>
+                        <div class="mc-dhead__titlewrap">
+                            <h1 id="deckDetailsTitle" class="mc-dhead__title">Название колоды</h1>
+                            <input id="deckTitleInput" type="text" class="mc-dhead__title-input hidden" maxlength="120"
+                                   onkeydown="mcApp.onRenameKey(event)" onblur="mcApp.commitInlineRename(true)" aria-label="Название колоды" />
+                            <button type="button" id="btnRenameDeck" class="mc-dhead__renamebtn" onclick="mcApp.startInlineRename()"
+                                    data-i18n-title="microcards.btn_rename" title="Переименовать" aria-label="Переименовать">
+                                <span class="material-symbols-outlined">edit</span>
+                            </button>
+                            <span id="deckPublishStatus"></span>
+                            <span id="deckPausedStatus"></span>
+                        </div>
                         <div class="mc-dhead__actions">
-                        <button type="button" id="btnStudyDeck" onclick="mcApp.startLearningSession()" class="mc-btn mc-btn--primary mc-btn--lg">
-                            <span class="material-symbols-outlined">play_arrow</span>
-                            <span data-i18n="microcards.btn_start_study">Начать обучение</span>
-                            <span id="btnStudyCount" class="mc-btn__count hidden"></span>
+                        <button type="button" id="btnDeckImport" class="mc-btn mc-btn--ghost" onclick="mcApp.openImportDialog()">
+                            <span class="material-symbols-outlined">upload</span>
+                            <span data-i18n="microcards.btn_import">Импорт</span>
+                        </button>
+                        <button type="button" id="btnDeckPublish" class="mc-btn mc-btn--ghost" onclick="mcApp.publishDeckToCatalog()">
+                            <span class="material-symbols-outlined">public</span>
+                            <span data-i18n="microcards.btn_publish_deck">Опубликовать</span>
                         </button>
                         <div class="relative">
                             <button type="button" onclick="mcApp.toggleDeckActionsMenu(event)" class="mc-iconbtn" aria-label="Ещё" aria-haspopup="menu" data-i18n-aria="microcards.btn_more">
                                 <span class="material-symbols-outlined">more_horiz</span>
                             </button>
-                            <div id="deckActionsDropdown" class="mc-menu hidden" role="menu">
+                            <div id="deckActionsDropdown" class="mc-menu t-dropdown hidden" data-origin="top-right" role="menu">
                                 <button type="button" id="btnDeckEditor" onclick="mcApp.openDeckMetaDialog()" class="mc-menu__item" role="menuitem">
                                     <span class="material-symbols-outlined">settings</span><span data-i18n="microcards.btn_deck_params">Параметры</span>
-                                </button>
-                                <button type="button" id="btnDeckImport" onclick="mcApp.openImportDialog()" class="mc-menu__item" role="menuitem">
-                                    <span class="material-symbols-outlined">upload</span><span data-i18n="microcards.btn_import">Импорт</span>
-                                </button>
-                                <button type="button" id="btnDeckPublish" onclick="mcApp.publishDeckToCatalog()" class="mc-menu__item" role="menuitem">
-                                    <span class="material-symbols-outlined">public</span><span data-i18n="microcards.btn_publish_deck">Опубликовать</span>
                                 </button>
                                 <div class="mc-menu__sep"></div>
                                 <button type="button" onclick="mcApp.exportDeck('json')" class="mc-menu__item" role="menuitem">
@@ -1038,15 +1610,82 @@
                                 </button>
                             </div>
                         </div>
+                        <button type="button" class="mc-btn mc-btn--primary mc-dhead__cta" onclick="mcApp.startLearningSession(false, 1)">
+                            <span class="material-symbols-outlined">school</span>
+                            <span data-i18n="microcards.btn_study">Учить</span>
+                            <span id="headStudyCount" class="mc-btn__count hidden"></span>
+                        </button>
                         </div>
                     </div>
-                    <div class="mc-dhead__meta">
-                        <span id="deckPublishStatus"></span>
+                    <div class="mc-dhead__meta" id="deckDetailsMeta">
                         <span id="deckLoadLine" class="mc-dhead__metatext"></span>
                         <span id="deckDetailsTags" class="mc-dhead__tags"></span>
                     </div>
-                    <p id="deckDetailsDesc" class="mc-dhead__desc hidden"></p>
                 </header>
+
+                <!-- Resume Pending Session Card -->
+                <div id="deckResumeSection" class="mc-resume-banner hidden">
+                    <div class="mc-resume-banner__icon">
+                        <span class="material-symbols-outlined">pause_circle</span>
+                    </div>
+                    <div class="mc-resume-banner__content">
+                        <h4 class="mc-resume-banner__title" data-i18n="microcards.resume_title">Прохождение приостановлено</h4>
+                        <p class="mc-resume-banner__desc">
+                            <span data-i18n="microcards.resume_progress_prefix">Прогресс:</span> 
+                            <strong id="deckResumeProgress">0/0</strong>. 
+                            <span data-i18n="microcards.resume_level_prefix">Режим:</span> 
+                            <strong id="deckResumeLevel">Уровень 1</strong>.
+                        </p>
+                    </div>
+                    <div class="mc-resume-banner__actions">
+                        <button type="button" class="mc-btn mc-btn--primary" id="btnResumeSession">
+                            <span class="material-symbols-outlined">play_arrow</span>
+                            <span data-i18n="microcards.btn_resume">Продолжить</span>
+                        </button>
+                        <button type="button" class="mc-btn mc-btn--ghost" id="btnRestartSession">
+                            <span class="material-symbols-outlined">refresh</span>
+                            <span data-i18n="microcards.btn_restart">Начать заново</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Study Modes (Level 1 & Level 2) -->
+                <section class="mc-study-modes" aria-label="Режимы обучения">
+                    <!-- Level 1 Card -->
+                    <div class="mc-study-mode-card mc-study-mode-card--silver" onclick="mcApp.startLearningSession(false, 1)">
+                        <div class="mc-study-mode-card__title">
+                            <span class="material-symbols-outlined" style="color:#b0b7bd">menu_book</span>
+                            <span data-i18n="microcards.mode_l1_title">Уровень 1: Карточки</span>
+                            <span id="btnStudyCount" class="mc-count hidden"></span>
+                        </div>
+                        <div class="mc-stars silver" id="detailsStarsL1">
+                            <!-- JS will populate 5 stars here -->
+                        </div>
+                        <div class="mc-study-mode-card__stats">
+                            <span data-i18n="microcards.record_label">Рекорд:</span> 
+                            <strong id="detailsScoreL1">0</strong> / <span data-i18n="microcards.max_label">Макс:</span> <strong id="detailsMaxPointsL1">0</strong>
+                        </div>
+                    </div>
+
+                    <!-- Level 2 Card -->
+                    <div id="cardStudyL2" class="mc-study-mode-card mc-study-mode-card--gold" onclick="mcApp.startLearningSession(false, 2)">
+                        <div class="mc-study-mode-card__title">
+                            <span class="material-symbols-outlined" style="color:var(--color-warning)">edit_note</span>
+                            <span data-i18n="microcards.mode_l2_title">Уровень 2: Открытый ответ</span>
+                        </div>
+                        <div class="mc-stars gold" id="detailsStarsL2">
+                            <!-- JS will populate 5 stars here -->
+                        </div>
+                        <div class="mc-study-mode-card__stats" id="statsL2Container">
+                            <span data-i18n="microcards.record_label">Рекорд:</span> 
+                            <strong id="detailsScoreL2">0</strong> / <span data-i18n="microcards.max_label">Макс:</span> <strong id="detailsMaxPointsL2">0</strong>
+                        </div>
+                        <div id="lockNoticeL2" class="mc-study-mode-card__lock-text hidden">
+                            <span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;margin-right:0.2rem">lock</span>
+                            <span data-i18n="microcards.l2_lock_hint">Пройдите Уровень 1 на 3+ звезды для разблокировки</span>
+                        </div>
+                    </div>
+                </section>
 
                 <!-- Metric strip (reuses the .mc-stat tile component) -->
                 <section class="mc-dstats" aria-label="Статистика колоды">
@@ -1118,25 +1757,43 @@
                             <span class="material-symbols-outlined" style="font-size:1.1rem">close</span>
                             <span data-i18n="microcards.btn_exit_session">Выйти из сессии</span>
                         </button>
+                        
+                        <!-- Consolidated Session Progress Bar -->
+                        <div id="mcSessionProgress" class="mc-session-progress" aria-live="polite" aria-label="Прогресс сессии">
+                            <span class="mc-session-progress__text" id="mcSessionProgressText">0/0</span>
+                            <div class="mc-session-progress__track" style="position:relative; overflow:visible;">
+                                <div id="mcSessionProgressBar" class="mc-session-progress__bar" style="width:0%"></div>
+                                <!-- SVG Flame Icon -->
+                                <div id="mcSessionProgressFlame" class="mc-flame-container" style="left:0%">
+                                    <svg viewBox="0 0 24 24" class="mc-flame-svg">
+                                        <path fill="currentColor" d="M12 2C11.5 2 10 3.5 10 5.5C10 7 11.5 8 12.5 9C13 9.5 13.5 10.5 13.5 11.5C13.5 13 12.5 14 11 14C9.5 14 8.5 13 8.5 11.5C8.5 9.5 10.5 8.5 10.5 6.5C10.5 4.5 8.5 3 8 3C7.5 3 6.5 4 6 5.5C5 8.5 6.5 11.5 6.5 13C6.5 16.5 9 19 12 19C15 19 17.5 16.5 17.5 13C17.5 9 14 5.5 13 4C12.5 3.2 12 2 12 2Z" />
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="mc-session__hud">
                             <div id="comboChip" class="mc-combo" style="display:none" aria-hidden="true">
                                 <span class="material-symbols-outlined" style="font-size:1rem;font-variation-settings:'FILL' 1">local_fire_department</span>
                                 <span id="comboChipText">×2</span>
                             </div>
                             <div id="xpChip" class="mc-xp-chip" aria-live="polite">
-                                <span class="material-symbols-outlined">bolt</span>
+                                <span class="material-symbols-outlined">stars</span>
                                 <span id="xpChipVal" class="t-digit-group"><span class="t-digit">0</span></span>
-                                <span>XP</span>
+                                <span data-i18n="microcards.points_label">Очки</span>
                             </div>
                             <div id="sessionLevelIndicator" class="mc-level-indicator" aria-live="polite" aria-atomic="true"></div>
                         </div>
                     </div>
 
                     <div class="mc-arena" id="mcArena">
-                        <button type="button" class="mc-rail mc-rail--no" id="railNo" aria-label="Не знаю" data-i18n-aria="microcards.btn_dont_know">
-                            <span class="material-symbols-outlined">thumb_down</span>
-                            <span class="mc-rail__label" data-i18n="microcards.btn_dont_know">Не знаю</span>
-                        </button>
+                        <div class="mc-rail-wrapper">
+                            <button type="button" class="mc-rail mc-rail--no" id="railNo" aria-label="Не знаю" data-i18n-aria="microcards.btn_dont_know">
+                                <span class="material-symbols-outlined">thumb_down</span>
+                                <span class="mc-rail__label" data-i18n="microcards.btn_dont_know">Не знаю</span>
+                            </button>
+                            <span class="mc-rail-hotkey">[1]</span>
+                        </div>
                         <div class="mc-flashcard-wrap" id="mcFlashWrap">
                         <div id="mcFeedback" class="mc-feedback">
                             <span id="mcFeedbackCheck" class="mc-feedback__check" data-state="out" aria-hidden="true">
@@ -1148,7 +1805,10 @@
                             <!-- Front -->
                             <div class="flashcard-front">
                                 <div class="mc-face__meta">
-                                    <span class="mc-face__label" data-i18n="microcards.card_question_label">Вопрос</span>
+                                    <span class="mc-face__label" style="display:inline-flex;align-items:center;gap:0.35rem">
+                                        <span data-i18n="microcards.card_question_label">Вопрос</span>
+                                        <span class="material-symbols-outlined select-none text-[15px] opacity-60" title="Перевернуть карту" style="transform:translateY(-1px)">autorenew</span>
+                                    </span>
                                     <button type="button" id="btnShowHint" onclick="mcApp.toggleHint()" class="mc-hint-btn hidden">
                                         <span class="material-symbols-outlined" style="font-size:0.95rem">lightbulb</span>
                                         <span data-i18n="microcards.hint_label">Подсказка</span>
@@ -1197,14 +1857,20 @@
                                 </div>
                                 <div class="mc-face__actions">
                                     <div id="backActionsL1" class="mc-grade hidden" role="group" aria-label="Оцените ответ">
-                                        <button type="button" onclick="mcApp.submitAnswerL1(false)" class="mc-grade__btn mc-grade__btn--no">
-                                            <span class="material-symbols-outlined">close</span>
-                                            <span data-i18n="microcards.btn_dont_know">Не знаю</span>
-                                        </button>
-                                        <button type="button" onclick="mcApp.submitAnswerL1(true)" class="mc-grade__btn mc-grade__btn--yes">
-                                            <span class="material-symbols-outlined">check</span>
-                                            <span data-i18n="microcards.btn_know">Знаю</span>
-                                        </button>
+                                        <div class="flex flex-col items-center gap-1.5 w-full">
+                                            <button type="button" onclick="mcApp.submitAnswerL1(false)" class="mc-grade__btn mc-grade__btn--no w-full flex items-center justify-center gap-1.5 min-h-[3.25rem]">
+                                                <span class="material-symbols-outlined">close</span>
+                                                <span data-i18n="microcards.btn_dont_know">Не знаю</span>
+                                            </button>
+                                            <span class="text-[10px] opacity-50 font-semibold select-none">[1]</span>
+                                        </div>
+                                        <div class="flex flex-col items-center gap-1.5 w-full">
+                                            <button type="button" onclick="mcApp.submitAnswerL1(true)" class="mc-grade__btn mc-grade__btn--yes w-full flex items-center justify-center gap-1.5 min-h-[3.25rem]">
+                                                <span class="material-symbols-outlined">check</span>
+                                                <span data-i18n="microcards.btn_know">Знаю</span>
+                                            </button>
+                                            <span class="text-[10px] opacity-50 font-semibold select-none">[2]</span>
+                                        </div>
                                     </div>
                                     <div id="backActionsL2" class="hidden" style="display:flex;align-items:center;gap:0.6rem">
                                         <button type="button" id="btnL2Override" onclick="mcApp.overrideL2Answer()" class="mc-btn mc-btn--warning hidden">
@@ -1219,17 +1885,39 @@
                             </div>
                         </div>
                         </div><!-- /mc-flashcard-wrap -->
-                        <button type="button" class="mc-rail mc-rail--yes" id="railYes" aria-label="Знаю" data-i18n-aria="microcards.btn_know">
-                            <span class="material-symbols-outlined">thumb_up</span>
-                            <span class="mc-rail__label" data-i18n="microcards.btn_know">Знаю</span>
-                        </button>
+                        <div class="mc-rail-wrapper">
+                            <button type="button" class="mc-rail mc-rail--yes" id="railYes" aria-label="Знаю" data-i18n-aria="microcards.btn_know">
+                                <span class="material-symbols-outlined">thumb_up</span>
+                                <span class="mc-rail__label" data-i18n="microcards.btn_know">Знаю</span>
+                            </button>
+                            <span class="mc-rail-hotkey">[2]</span>
+                        </div>
                     </div><!-- /mc-arena -->
                 </div>
             </div>
 
             <!-- ════════════ VIEW 4: SUMMARY ════════════ -->
             <div id="viewSummary" class="page-view hidden">
-                <div class="mc-summary">
+                <div class="mc-summary-layout">
+                    <!-- Contextual toolbar: back + session progress -->
+                    <div class="mc-toolbar" id="mcToolbar">
+                        <div class="mc-toolbar__left">
+                            <button type="button" id="mcHeaderBackBtn" onclick="mcApp.handleBackNavigation()"
+                                class="mc-back-btn" title="Назад" aria-label="Назад" data-i18n-title="microcards.btn_back">
+                                <span class="material-symbols-outlined" style="font-size:1.2rem">arrow_back</span>
+                                <span data-i18n="microcards.btn_back">Назад</span>
+                            </button>
+                            <span class="mc-ctx-label" id="mcHeaderSubtitle" data-i18n="microcards.subtitle_default">Повторение и обучение</span>
+                        </div>
+                        <div id="mcHeaderProgress" class="mc-session-progress" style="display:none" aria-live="polite" aria-label="Прогресс сессии">
+                            <span class="mc-session-progress__text" id="mcHeaderProgressText">0/0</span>
+                            <div class="mc-session-progress__track">
+                                <div id="mcHeaderProgressBar" class="mc-session-progress__bar" style="width:0%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mc-summary">
                     <div class="mc-summary__card">
                         <div class="mc-summary__hero">
                             <div class="mc-acc-ring">
@@ -1246,17 +1934,29 @@
                                 <span class="material-symbols-outlined">star</span>
                                 <span class="material-symbols-outlined">star</span>
                                 <span class="material-symbols-outlined">star</span>
+                                <span class="material-symbols-outlined">star</span>
+                                <span class="material-symbols-outlined">star</span>
                             </div>
                         </div>
 
+                        <div id="sumRecordBadge" class="mc-record-badge hidden">
+                            <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1">workspace_premium</span>
+                            <span data-i18n="microcards.new_record">НОВЫЙ РЕКОРД!</span>
+                        </div>
+                        <div id="sumLevel2UnlockBanner" class="mc-record-badge hidden" style="background:linear-gradient(135deg, var(--color-warning) 0%, #ff8c00 100%); margin-top: 0.5rem; animation: mc-pulse 1.5s infinite alternate;">
+                            <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1">lock_open</span>
+                            <span data-i18n="microcards.l2_unlocked">РАЗБЛОКИРОВАН УРОВЕНЬ 2!</span>
+                        </div>
                         <h2 class="mc-summary__title" id="sumTitle" data-i18n="microcards.summary_v2_title">Отличная работа!</h2>
                         <p class="mc-summary__sub" id="sumSubtitle" data-i18n="microcards.summary_subtitle">Вы успешно завершили текущую сессию.</p>
 
                         <div class="mc-reward-row">
                             <div class="mc-reward mc-reward--xp">
-                                <span class="material-symbols-outlined">bolt</span>
+                                <span class="material-symbols-outlined">stars</span>
                                 <span id="sumXp" class="t-digit-group"><span class="t-digit">0</span></span>
-                                <span>XP</span>
+                                <span style="opacity: 0.6; font-size: 0.85em; margin: 0 0.15rem;">/</span>
+                                <span id="sumMaxXp" style="opacity: 0.6; font-size: 0.85em;">0</span>
+                                <span style="margin-left:0.25rem" data-i18n="microcards.points_label">Очки</span>
                             </div>
                             <div class="mc-reward mc-reward--combo">
                                 <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1">local_fire_department</span>
@@ -1288,7 +1988,11 @@
                                 <span class="material-symbols-outlined">replay</span>
                                 <span data-i18n="microcards.btn_retry_errors">Работа над ошибками</span>
                             </button>
-                            <button type="button" onclick="mcApp.restartLearningSession()" class="mc-btn mc-btn--primary mc-btn--block">
+                            <button type="button" id="btnGoToLevel2" onclick="mcApp.startLearningSession(false, 2)" class="mc-btn mc-btn--primary mc-btn--block hidden" style="background:linear-gradient(135deg, var(--color-warning) 0%, #ff8c00 100%); border:0; color:#fff">
+                                <span class="material-symbols-outlined">edit_note</span>
+                                <span data-i18n="microcards.btn_start_l2">Начать Уровень 2</span>
+                            </button>
+                            <button type="button" id="btnStudyAgain" onclick="mcApp.restartLearningSession()" class="mc-btn mc-btn--primary mc-btn--block">
                                 <span data-i18n="microcards.btn_study_again">Учить снова</span>
                             </button>
                         </div>
@@ -1302,6 +2006,7 @@
                         <div style="display:flex;flex-direction:column;gap:0.6rem" id="summaryErrorsList"></div>
                     </div>
                 </div>
+                </div>
             </div>
 
 
@@ -1309,7 +2014,7 @@
     </main>
 
     <!-- ════════════ DIALOGS ════════════ -->
-    <dialog id="dialogCreateDeck" closedby="any" aria-labelledby="createDeckTitle">
+    <dialog id="dialogCreateDeck" class="t-modal" closedby="any" aria-labelledby="createDeckTitle">
         <form method="dialog" style="display:flex;flex-direction:column;gap:1rem" onsubmit="mcApp.handleCreateDeckSubmit(event)">
             <h3 id="createDeckTitle" class="mc-dialog-title" data-i18n="microcards.dialog_create_title">Создать колоду</h3>
             <div class="mc-field">
@@ -1321,24 +2026,47 @@
                 <textarea id="createDeckDesc" rows="2" class="mc-textarea"></textarea>
             </div>
             <div class="mc-dialog-actions">
-                <button type="button" onclick="this.closest('dialog').close()" class="mc-btn mc-btn--ghost" data-i18n="microcards.btn_cancel">Отмена</button>
+                <button type="button" onclick="mcApp.closeDialog(this.closest('dialog').id)" class="mc-btn mc-btn--ghost" data-i18n="microcards.btn_cancel">Отмена</button>
                 <button type="submit" class="mc-btn mc-btn--primary" data-i18n="microcards.btn_create">Создать</button>
             </div>
         </form>
     </dialog>
 
-    <dialog id="dialogConfirmDelete" closedby="any" aria-labelledby="deleteTitle">
+    <dialog id="dialogConfirmDelete" class="t-modal" closedby="any" aria-labelledby="deleteTitle">
         <div style="display:flex;flex-direction:column;gap:1rem">
             <h3 id="deleteTitle" class="mc-dialog-title" style="color:var(--color-error)" data-i18n="microcards.dialog_delete_title">Подтверждение удаления</h3>
             <p style="font-size:0.88rem;color:var(--color-text-secondary);line-height:1.5" id="deleteConfirmText" data-i18n="microcards.dialog_delete_text">Вы действительно хотите удалить колоду? Это действие невозможно отменить.</p>
             <div class="mc-dialog-actions">
-                <button type="button" onclick="this.closest('dialog').close()" class="mc-btn mc-btn--ghost" data-i18n="microcards.btn_cancel">Отмена</button>
+                <button type="button" onclick="mcApp.closeDialog(this.closest('dialog').id)" class="mc-btn mc-btn--ghost" data-i18n="microcards.btn_cancel">Отмена</button>
                 <button type="button" id="btnDeleteConfirmAction" class="mc-btn" style="background:var(--color-error);color:var(--color-error-fg,#fff)" data-i18n="microcards.btn_delete">Удалить</button>
             </div>
         </div>
     </dialog>
 
-    <dialog id="dialogDeckMeta" closedby="any" aria-labelledby="deckMetaTitle">
+    <dialog id="dialogConfirmExitSession" class="t-modal" closedby="any" aria-labelledby="exitSessionTitle">
+        <div style="display:flex;flex-direction:column;gap:1.2rem">
+            <h3 id="exitSessionTitle" class="mc-dialog-title" data-i18n="microcards.dialog_exit_title">Выход из обучения</h3>
+            <p style="font-size:0.88rem;color:var(--color-text-secondary);line-height:1.5" data-i18n="microcards.dialog_exit_text">
+                Вы можете временно приостановить прохождение и продолжить его позже с сохранением прогресса, либо полностью сбросить текущую попытку.
+            </p>
+            <div class="mc-dialog-actions" style="display:flex;flex-direction:column;gap:0.6rem;width:100%">
+                <button type="button" id="btnPauseAndExit" class="mc-btn mc-btn--primary mc-btn--block">
+                    <span class="material-symbols-outlined">pause</span>
+                    <span data-i18n="microcards.btn_pause_and_exit">Поставить на паузу и выйти</span>
+                </button>
+                <button type="button" id="btnDiscardAndExit" class="mc-btn mc-btn--block" style="background:color-mix(in srgb, var(--color-error) 12%, transparent);color:var(--color-error);border:1px solid color-mix(in srgb, var(--color-error) 25%, transparent)">
+                    <span class="material-symbols-outlined">delete_forever</span>
+                    <span data-i18n="microcards.btn_discard_and_exit">Сбросить прогресс и выйти</span>
+                </button>
+                <button type="button" onclick="mcApp.closeDialog('dialogConfirmExitSession')" class="mc-btn mc-btn--ghost mc-btn--block" data-i18n="microcards.btn_back_to_study">
+                    Вернуться к обучению
+                </button>
+            </div>
+        </div>
+    </dialog>
+
+
+    <dialog id="dialogDeckMeta" class="t-modal" closedby="any" aria-labelledby="deckMetaTitle">
         <form method="dialog" style="display:flex;flex-direction:column;gap:1rem" onsubmit="mcApp.saveDeckMetaDialog(event)">
             <h3 id="deckMetaTitle" class="mc-dialog-title" data-i18n="microcards.dialog_deck_params_title">Параметры колоды</h3>
             <div class="mc-field">
@@ -1354,15 +2082,41 @@
                 <textarea id="metaDeckDesc" rows="2" class="mc-textarea"></textarea>
             </div>
             <div class="mc-dialog-actions">
-                <button type="button" onclick="this.closest('dialog').close()" class="mc-btn mc-btn--ghost" data-i18n="microcards.btn_cancel">Отмена</button>
+                <button type="button" onclick="mcApp.closeDialog(this.closest('dialog').id)" class="mc-btn mc-btn--ghost" data-i18n="microcards.btn_cancel">Отмена</button>
                 <button type="submit" class="mc-btn mc-btn--primary" data-i18n="microcards.btn_save">Сохранить</button>
             </div>
         </form>
     </dialog>
 
-    <dialog id="dialogImportDeck" class="mc-import-dialog" closedby="any" aria-labelledby="importTitle">
+    <dialog id="dialogImportDeck" class="mc-import-dialog t-modal" closedby="any" aria-labelledby="importTitle">
         <form method="dialog" style="display:flex;flex-direction:column;gap:0.9rem" onsubmit="mcApp.handleImportSubmit(event)">
-            <h3 id="importTitle" class="mc-dialog-title" data-i18n="microcards.dialog_import_title">Импортировать карточки</h3>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:0.6rem">
+                <h3 id="importTitle" class="mc-dialog-title" style="margin:0" data-i18n="microcards.dialog_import_title">Импортировать карточки</h3>
+                <button type="button" class="mc-btn mc-btn--ghost mc-btn--sm" onclick="mcApp.toggleAiPromptPanel()">
+                    <span class="material-symbols-outlined">auto_awesome</span>
+                    <span data-i18n="microcards.imp_ai_btn">Хочу использовать ИИ</span>
+                </button>
+            </div>
+
+            <!-- AI helper: ready-made prompt the user pastes into ChatGPT/Claude to generate cards. -->
+            <div id="impAiPanel" class="mc-imp-ai hidden">
+                <p class="mc-imp-ai__intro" data-i18n="microcards.imp_ai_intro">Скопируйте промпт, вставьте в ChatGPT / Claude / любого ИИ и допишите внизу свой материал (конспект, текст лекции). ИИ вернёт карточки в нужном формате — вставьте их в поле ниже.</p>
+                <div class="mc-imp-ai__opts">
+                    <div class="mc-imp-ai__seg" id="impAiDetail">
+                        <button type="button" class="is-active" data-detail="short" onclick="mcApp.setAiVariant('detail','short')" data-i18n="microcards.imp_ai_short">Кратко (экономно)</button>
+                        <button type="button" data-detail="full" onclick="mcApp.setAiVariant('detail','full')" data-i18n="microcards.imp_ai_full">Подробно</button>
+                    </div>
+                    <div class="mc-imp-ai__seg" id="impAiHints">
+                        <button type="button" class="is-active" data-hints="no" onclick="mcApp.setAiVariant('hints','no')" data-i18n="microcards.imp_ai_nohints">Без подсказок</button>
+                        <button type="button" data-hints="yes" onclick="mcApp.setAiVariant('hints','yes')" data-i18n="microcards.imp_ai_hints">С подсказками</button>
+                    </div>
+                </div>
+                <textarea id="impAiPrompt" class="mc-textarea" readonly rows="9" style="font-size:0.78rem"></textarea>
+                <button type="button" class="mc-btn mc-btn--primary mc-btn--sm" onclick="mcApp.copyAiPrompt()" style="align-self:flex-start">
+                    <span class="material-symbols-outlined">content_copy</span>
+                    <span data-i18n="microcards.imp_ai_copy">Скопировать промпт</span>
+                </button>
+            </div>
 
             <div class="mc-imp-tabs" id="impTabs">
                 <button type="button" class="mc-tabbtn is-active" data-fmt="auto" data-i18n="microcards.imp_tab_auto">Авто</button>
@@ -1375,6 +2129,17 @@
 
             <p id="impHint" class="mc-imp-hint"></p>
 
+            <!-- Collapsed source summary — shown once input is recognized, frees space for the preview. -->
+            <div id="impSourceBar" class="mc-imp-sourcebar hidden">
+                <span class="material-symbols-outlined" id="impSourceIcon">description</span>
+                <span class="mc-imp-sourcebar__text" id="impSourceText"></span>
+                <button type="button" class="mc-btn mc-btn--ghost mc-btn--sm" onclick="mcApp.editImportSource()">
+                    <span class="material-symbols-outlined" style="font-size:1rem">edit</span>
+                    <span data-i18n="microcards.imp_edit">Изменить</span>
+                </button>
+            </div>
+
+            <div id="impInputZone">
             <div class="mc-field">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.45rem">
                     <label for="impContent" class="mc-field__label" style="margin:0" data-i18n="microcards.imp_content_label">Вставьте текст</label>
@@ -1383,10 +2148,9 @@
                         <span data-i18n="microcards.imp_paste">Вставить из буфера</span>
                     </button>
                 </div>
-                <textarea id="impContent" rows="7" class="mc-textarea" style="font-family:monospace;font-size:0.78rem" oninput="mcApp.onImportInput()"></textarea>
+                <textarea id="impContent" rows="7" class="mc-textarea" style="font-family:monospace;font-size:0.78rem" oninput="mcApp.onImportInput()" onblur="mcApp.onImportBlur()"></textarea>
             </div>
 
-            <!-- txt_simplified parser options -->
             <div id="impOptions" class="mc-imp-options hidden">
                 <div class="mc-field__label" data-i18n="microcards.imp_sep_label">Разделитель «вопрос / ответ»</div>
                 <div class="mc-imp-seps" id="impSeps">
@@ -1404,7 +2168,6 @@
                 </label>
             </div>
 
-            <!-- test-format parser options: configurable markers -->
             <div id="impTestOptions" class="mc-imp-options hidden">
                 <div class="mc-field__label" data-i18n="microcards.imp_markers_label">Маркеры разбора</div>
                 <div class="mc-imp-seps" id="impMarkerPresets">
@@ -1435,8 +2198,8 @@
                 <label for="importFile" class="mc-field__label" data-i18n="microcards.dialog_import_file_label">Или выберите файл</label>
                 <input type="file" id="importFile" accept=".csv,.json,.txt,.text,.md,.tsv,.qst" onchange="mcApp.onImportFile()" />
             </div>
+            </div><!-- /impInputZone -->
 
-            <!-- live preview -->
             <div id="impPreview" class="mc-imp-preview hidden">
                 <div class="mc-imp-badges" id="impBadges" style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-bottom:0.4rem"></div>
                 <div class="mc-imp-counts" id="impCounts"></div>
@@ -1444,14 +2207,14 @@
             </div>
 
             <div class="mc-dialog-actions">
-                <button type="button" onclick="this.closest('dialog').close()" class="mc-btn mc-btn--ghost" data-i18n="microcards.btn_cancel">Отмена</button>
+                <button type="button" onclick="mcApp.closeDialog(this.closest('dialog').id)" class="mc-btn mc-btn--ghost" data-i18n="microcards.btn_cancel">Отмена</button>
                 <button type="button" onclick="mcApp.previewImport()" class="mc-btn mc-btn--ghost" data-i18n="microcards.imp_preview_btn">Предпросмотр</button>
                 <button type="submit" class="mc-btn mc-btn--primary" data-i18n="microcards.btn_import_action">Импорт</button>
             </div>
         </form>
     </dialog>
 
-    <dialog id="dialogImportByCode" closedby="any" aria-labelledby="importByCodeTitle">
+    <dialog id="dialogImportByCode" class="t-modal" closedby="any" aria-labelledby="importByCodeTitle">
         <form method="dialog" style="display:flex;flex-direction:column;gap:0.9rem" onsubmit="mcApp.handleImportByCodeSubmit(event)">
             <h3 id="importByCodeTitle" class="mc-dialog-title" data-i18n="microcards.import_by_code_title">Импорт по коду</h3>
             <p style="font-size:0.8rem;color:var(--color-text-secondary)" data-i18n="microcards.import_by_code_hint">Введите код доступа к колоде — она скопируется в вашу библиотеку.</p>
@@ -1461,13 +2224,13 @@
                     placeholder="например  7NR72S7GQNVF759K" style="font-family:monospace;letter-spacing:0.12em;text-transform:uppercase" />
             </div>
             <div class="mc-dialog-actions">
-                <button type="button" onclick="this.closest('dialog').close()" class="mc-btn mc-btn--ghost" data-i18n="microcards.btn_cancel">Отмена</button>
+                <button type="button" onclick="mcApp.closeDialog(this.closest('dialog').id)" class="mc-btn mc-btn--ghost" data-i18n="microcards.btn_cancel">Отмена</button>
                 <button type="submit" id="importByCodeSubmit" class="mc-btn mc-btn--primary" data-i18n="microcards.btn_import_action">Импорт</button>
             </div>
         </form>
     </dialog>
 
-    <dialog id="dialogPublishDeck" closedby="any" aria-labelledby="publishTitle">
+    <dialog id="dialogPublishDeck" class="t-modal" closedby="any" aria-labelledby="publishTitle">
         <form method="dialog" style="display:flex;flex-direction:column;gap:0.9rem" onsubmit="mcApp.handlePublishSubmit(event)">
             <h3 id="publishTitle" class="mc-dialog-title" data-i18n="microcards.dialog_publish_title2">Доступ к колоде</h3>
             <p style="font-size:0.8rem;color:var(--color-text-secondary)" data-i18n="microcards.dialog_publish_hint2">Выберите, кто может находить и импортировать эту колоду.</p>
@@ -1513,47 +2276,13 @@
             </div>
 
             <div class="mc-dialog-actions">
-                <button type="button" onclick="this.closest('dialog').close()" class="mc-btn mc-btn--ghost" data-i18n="microcards.btn_close2">Закрыть</button>
+                <button type="button" onclick="mcApp.closeDialog(this.closest('dialog').id)" class="mc-btn mc-btn--ghost" data-i18n="microcards.btn_close2">Закрыть</button>
                 <button type="submit" class="mc-btn mc-btn--primary" data-i18n="microcards.btn_save_access">Сохранить</button>
             </div>
         </form>
     </dialog>
 
-    <dialog id="dialogSettings" closedby="any" aria-labelledby="settingsTitle">
-        <form method="dialog" style="display:flex;flex-direction:column;gap:1rem" onsubmit="mcApp.saveSettings(event)">
-            <h3 id="settingsTitle" class="mc-dialog-title" data-i18n="microcards.settings_title">Настройки обучения</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="mc-field">
-                    <label for="setSessionSize" class="mc-field__label" data-i18n="microcards.set_session_size">Карточек за сессию</label>
-                    <input type="number" id="setSessionSize" min="1" max="100" class="mc-input" />
-                </div>
-                <div class="mc-field">
-                    <label for="setNewPerSession" class="mc-field__label" data-i18n="microcards.set_new_per_session">Новых карточек за сессию</label>
-                    <input type="number" id="setNewPerSession" min="0" max="100" class="mc-input" />
-                    <label style="display:flex;align-items:center;gap:0.5rem;margin-top:0.5rem;font-size:0.8rem;color:var(--color-text-secondary);cursor:pointer">
-                        <input type="checkbox" id="setNewAuto" onchange="mcApp.onNewAutoToggle()" />
-                        <span data-i18n="microcards.set_new_auto">Авто — подстраивать под нагрузку</span>
-                    </label>
-                    <p id="setNewAutoHint" hidden style="margin-top:0.35rem;font-size:0.72rem;line-height:1.4;color:var(--color-text-secondary)" data-i18n="microcards.set_new_auto_hint">При накопившихся повторах новых добавляется меньше; заданное число — потолок, когда всё повторено.</p>
-                </div>
-            </div>
-            <div class="mc-field">
-                <span class="mc-field__label" data-i18n="microcards.set_direction">Направление по умолчанию</span>
-                <div class="mc-dir-group" id="settingsDirection">
-                    <button type="button" class="mc-dir-btn is-active" data-dir="front_back" data-i18n="microcards.dir_front_back">Вопрос → Ответ</button>
-                    <button type="button" class="mc-dir-btn" data-dir="back_front" data-i18n="microcards.dir_back_front">Ответ → Вопрос</button>
-                    <button type="button" class="mc-dir-btn" data-dir="mixed" data-i18n="microcards.dir_mixed">Вперемешку</button>
-                </div>
-                <input type="hidden" id="setDirection" value="front_back" />
-            </div>
-            <div class="mc-dialog-actions">
-                <button type="button" onclick="this.closest('dialog').close()" class="mc-btn mc-btn--ghost" data-i18n="microcards.btn_cancel">Отмена</button>
-                <button type="submit" class="mc-btn mc-btn--primary" data-i18n="microcards.set_save">Сохранить</button>
-            </div>
-        </form>
-    </dialog>
-
-    <dialog id="dialogImagePicker" class="mc-imgpicker" closedby="any" aria-labelledby="imgPickerTitle">
+    <dialog id="dialogImagePicker" class="mc-imgpicker t-modal" closedby="any" aria-labelledby="imgPickerTitle">
         <h3 id="imgPickerTitle" class="mc-dialog-title" data-i18n="microcards.img_picker_title">Поиск картинки</h3>
         <form method="dialog" style="display:flex;gap:0.5rem;margin:0.7rem 0" onsubmit="event.preventDefault(); mcApp.imgPickerSearch();">
             <input id="imgPickerQuery" type="search" class="mc-input" style="flex:1" aria-label="Поисковый запрос" data-i18n-placeholder="microcards.img_query_ph" placeholder="Например: митохондрия" />
@@ -1571,7 +2300,7 @@
         </div>
         <p style="font-size:0.68rem;color:var(--color-text-secondary);margin-top:0.6rem" data-i18n="microcards.img_license_note">Изображения из Wikimedia Commons под открытыми лицензиями. Источник и автор сохраняются автоматически.</p>
         <div class="mc-dialog-actions">
-            <button type="button" onclick="this.closest('dialog').close()" class="mc-btn mc-btn--ghost" data-i18n="microcards.btn_cancel">Отмена</button>
+            <button type="button" onclick="mcApp.closeDialog(this.closest('dialog').id)" class="mc-btn mc-btn--ghost" data-i18n="microcards.btn_cancel">Отмена</button>
             <button type="button" id="imgPickerInsert" onclick="mcApp.imgPickerInsert()" class="mc-btn mc-btn--primary" disabled data-i18n="microcards.img_insert">Вставить</button>
         </div>
     </dialog>
@@ -1597,7 +2326,13 @@
                         rect.top <= event.clientY && event.clientY <= rect.top + rect.height &&
                         rect.left <= event.clientX && event.clientX <= rect.left + rect.width
                     );
-                    if (!isInside) dialog.close();
+                    if (!isInside) {
+                        if (typeof mcApp !== 'undefined' && mcApp.closeDialog) {
+                            mcApp.closeDialog(dialog.id);
+                        } else {
+                            dialog.close();
+                        }
+                    }
                 });
             }
         });

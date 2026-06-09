@@ -1,6 +1,7 @@
 """Microcards V2 service with FSRS-4.5 scheduler and progressive levels."""
 
 import json
+import logging
 import os
 import random
 import re
@@ -11,6 +12,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from logic.fsrs import FSRS, Rating, State
+
+logger = logging.getLogger(__name__)
 
 
 def _utc_now() -> datetime:
@@ -114,7 +117,7 @@ class MicrocardsServiceV2:
     DEFAULT_SETTINGS = {
         "session_size": 20,
         "new_per_session": 20,
-        "new_per_session_mode": "manual",  # manual | auto (adaptive to review backlog)
+        "new_per_session_mode": "auto",  # manual | auto (adaptive to review backlog)
         "default_direction": "front_back",  # front_back | back_front | mixed
     }
     DIRECTIONS = ("front_back", "back_front", "mixed")
@@ -182,18 +185,13 @@ class MicrocardsServiceV2:
             s["default_direction"] = self.DEFAULT_SETTINGS["default_direction"]
         return s
 
-    def update_settings(self, patch: Dict[str, Any]) -> Dict[str, Any]:
-        s = self.get_settings()
-        if isinstance(patch, dict):
-            for k in self.DEFAULT_SETTINGS:
-                if patch.get(k) is not None:
-                    s[k] = patch[k]
-        _write_json(self._settings_path, s)
-        return self.get_settings()
-
     @property
     def _events_path(self) -> Path:
         return self._user_root / "review_events.json"
+
+    @property
+    def _records_path(self) -> Path:
+        return self._user_root / "deck_records.json"
 
     @property
     def _sessions_path(self) -> Path:
@@ -275,6 +273,71 @@ class MicrocardsServiceV2:
             return sessions["items"].get(session_id)
         return None
 
+    # ── Deck Records (per-user, server-side) ────────────────────────────
+
+    def _read_records(self) -> Dict[str, Dict[str, Any]]:
+        payload = _read_json(self._records_path, {"schema_version": "1.0", "user_id": self.user_id, "items": {}})
+        items = payload.get("items") if isinstance(payload, dict) else {}
+        if not isinstance(items, dict):
+            items = {}
+        return {str(k): dict(v) for k, v in items.items() if isinstance(v, dict)}
+
+    def _write_records(self, records: Dict[str, Dict[str, Any]]) -> None:
+        payload = {
+            "schema_version": "1.0",
+            "user_id": self.user_id,
+            "updated_at": _utc_now_iso(),
+            "items": records,
+        }
+        _write_json(self._records_path, payload)
+
+    def get_all_records(self) -> Dict[str, Dict[str, Any]]:
+        """Return all deck records for this user."""
+        return self._read_records()
+
+    def get_deck_record(self, deck_id: str) -> Dict[str, Any]:
+        """Return best score/stars for a deck across both levels."""
+        records = self._read_records()
+        rec = records.get(str(deck_id)) or {}
+        return {
+            "scoreL1": int(rec.get("scoreL1") or 0),
+            "starsL1": int(rec.get("starsL1") or 0),
+            "scoreL2": int(rec.get("scoreL2") or 0),
+            "starsL2": int(rec.get("starsL2") or 0),
+        }
+
+    def save_deck_record(self, deck_id: str, score: int, stars: int, level_mode: int = 1) -> Dict[str, Any]:
+        """Update deck record for a given level. Only keeps all-time best per level.
+        Returns the updated record dict and whether this was a new record (is_new_record).
+        """
+        records = self._read_records()
+        rec = dict(records.get(str(deck_id)) or {})
+        # Ensure all keys exist
+        for key in ("scoreL1", "starsL1", "scoreL2", "starsL2"):
+            if key not in rec:
+                rec[key] = 0
+
+        score = max(0, int(score))
+        stars = max(0, min(5, int(stars)))
+        is_new_record = False
+
+        if level_mode == 2:
+            if score > rec["scoreL2"]:
+                rec["scoreL2"] = score
+                is_new_record = True
+            if stars > rec["starsL2"]:
+                rec["starsL2"] = stars
+        else:
+            if score > rec["scoreL1"]:
+                rec["scoreL1"] = score
+                is_new_record = True
+            if stars > rec["starsL1"]:
+                rec["starsL1"] = stars
+
+        records[str(deck_id)] = rec
+        self._write_records(records)
+        return {"record": rec, "is_new_record": is_new_record}
+
     # ── Decks CRUD ────────────────────────────────────────────────────
 
     def _owns_deck(self, deck: Dict[str, Any]) -> bool:
@@ -283,10 +346,7 @@ class MicrocardsServiceV2:
         return _s(deck.get("created_by_user_id")) == _s(self.user_id)
 
     def get_deck(self, deck_id: str) -> Optional[Dict[str, Any]]:
-        clean_id = _s(deck_id)
-        if not clean_id:
-            return None
-        path = self._deck_path(clean_id)
+        path = self._deck_path(deck_id)
         deck = _read_json(path, None)
         if not isinstance(deck, dict):
             return None
@@ -303,7 +363,22 @@ class MicrocardsServiceV2:
             deck["cards"] = cards
             deck["read_only"] = True
             deck["access_state"] = access_state
-            deck["card_count"] = len(cards) if access_state == "granted" else (deck.get("card_count") or 0)
+            if access_state == "granted":
+                resolved_ids = [c.get("id") for c in cards if c.get("id")]
+                current_ids = deck.get("linked_card_ids") or []
+                current_count = deck.get("card_count")
+                if resolved_ids != current_ids or len(cards) != current_count:
+                    # Update cache on disk
+                    raw_deck = _read_json(path, None)
+                    if isinstance(raw_deck, dict):
+                        raw_deck["linked_card_ids"] = resolved_ids
+                        raw_deck["card_count"] = len(cards)
+                        raw_deck["updated_at"] = _utc_now_iso()
+                        _write_json(path, raw_deck)
+                    deck["linked_card_ids"] = resolved_ids
+                    deck["card_count"] = len(cards)
+            else:
+                deck["card_count"] = deck.get("card_count") or 0
         return deck
 
     def _resolve_linked_deck(self, deck: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], str]:
@@ -314,6 +389,10 @@ class MicrocardsServiceV2:
         cat = self.catalog_service
         item_id = _s(deck.get("catalog_item_id"))
         if not cat or not item_id:
+            logger.warning(
+                "[_resolve_linked_deck] Cannot resolve linked deck: "
+                f"catalog_service={cat}, item_id={item_id}"
+            )
             return [], "unavailable"
         code = deck.get("granted_access_code")
         try:
@@ -323,12 +402,19 @@ class MicrocardsServiceV2:
             return (cards if isinstance(cards, list) else []), "granted"
         except ValueError as exc:
             msg = str(exc).lower()
+            logger.warning(
+                f"[_resolve_linked_deck] ValueError resolving item {item_id}: {exc}",
+                exc_info=True
+            )
             if "access_code" in msg or "access code" in msg:
                 return [], "requires_access_code"
             if "not_found" in msg or "deleted" in msg or "revoked" in msg or "not_accessible" in msg:
                 return [], "revoked"
             return [], "unavailable"
-        except Exception:
+        except Exception as exc:
+            logger.exception(
+                f"[_resolve_linked_deck] Unexpected exception resolving item {item_id}"
+            )
             return [], "unavailable"
 
     def _assert_editable(self, deck: Dict[str, Any]) -> None:
@@ -369,6 +455,19 @@ class MicrocardsServiceV2:
                         if due_at and due_at <= now:
                             due_count += 1
 
+                active_sess = self._get_active_session_for_deck(deck_id)
+                is_paused = False
+                paused_progress = None
+                active_session_id = None
+                active_session_level_mode = None
+                if active_sess:
+                    is_paused = True
+                    cursor = active_sess.get("cursor", 0)
+                    total_q = len(active_sess.get("card_queue", []))
+                    paused_progress = f"{cursor}/{total_q}"
+                    active_session_id = active_sess.get("id")
+                    active_session_level_mode = active_sess.get("level_mode")
+
                 summary = {
                     "id": deck_id,
                     "name": deck.get("name", "Untitled Deck"),
@@ -385,6 +484,10 @@ class MicrocardsServiceV2:
                     "read_only": is_linked,
                     "created_at": deck.get("created_at"),
                     "updated_at": deck.get("updated_at"),
+                    "is_paused": is_paused,
+                    "paused_progress": paused_progress,
+                    "active_session_id": active_session_id,
+                    "active_session_level_mode": active_session_level_mode,
                 }
                 decks.append(summary)
 
@@ -672,7 +775,7 @@ class MicrocardsServiceV2:
         return max(0, min(stage, ceiling))
 
     def start_session(self, deck_id: str, resume: bool = True, restart: bool = False,
-                      direction: Optional[str] = None) -> Dict[str, Any]:
+                      direction: Optional[str] = None, level_mode: Optional[int] = None) -> Dict[str, Any]:
         deck = self.get_deck(deck_id)
         if not deck:
             raise LookupError("deck_not_found")
@@ -680,7 +783,12 @@ class MicrocardsServiceV2:
         if resume and not restart:
             active_session = self._get_active_session_for_deck(deck_id)
             if active_session:
-                return active_session
+                if active_session.get("level_mode") == level_mode:
+                    if active_session.get("paused"):
+                        active_session["paused"] = False
+                        active_session["paused_at"] = None
+                        self._save_session(active_session, set_active=True)
+                    return active_session
 
         # Create new session
         cards = deck.get("cards", [])
@@ -752,6 +860,14 @@ class MicrocardsServiceV2:
             "completed": False,
             "created_at": _utc_now_iso(),
             "completed_at": None,
+            "level_mode": level_mode,
+            "paused": False,
+            "paused_at": None,
+            "combo": 0,
+            "max_combo": 0,
+            "session_xp": 0,
+            "session_errors": [],
+            "is_errors_only_mode": False,
             "stats": {
                 "total": len(queue),
                 "correct": 0,
@@ -799,7 +915,8 @@ class MicrocardsServiceV2:
             "last_reviewed_at": None
         })
 
-        level = card_state.get("level", 1)
+        session_level_mode = session.get("level_mode")
+        level = session_level_mode if session_level_mode is not None else card_state.get("level", 1)
         consecutive_correct = card_state.get("consecutive_correct", 0)
         is_correct = False
         rating = Rating.AGAIN
@@ -975,6 +1092,41 @@ class MicrocardsServiceV2:
         if not session:
             raise LookupError("session_not_found")
         return session
+
+    def pause_session(self, session_id: str, combo: int = 0, max_combo: int = 0,
+                      session_xp: int = 0, session_errors: List[str] = None,
+                      is_errors_only_mode: bool = False) -> Dict[str, Any]:
+        session = self._get_session(session_id)
+        if not session:
+            raise LookupError("session_not_found")
+        session["paused"] = True
+        session["paused_at"] = _utc_now_iso()
+        session["combo"] = combo
+        session["max_combo"] = max_combo
+        session["session_xp"] = session_xp
+        session["session_errors"] = session_errors or []
+        session["is_errors_only_mode"] = is_errors_only_mode
+        self._save_session(session, set_active=True)
+        return session
+
+    def resume_session(self, session_id: str) -> Dict[str, Any]:
+        session = self._get_session(session_id)
+        if not session:
+            raise LookupError("session_not_found")
+        session["paused"] = False
+        session["paused_at"] = None
+        self._save_session(session, set_active=True)
+        return session
+
+    def discard_session(self, session_id: str) -> Dict[str, Any]:
+        session = self._get_session(session_id)
+        if not session:
+            raise LookupError("session_not_found")
+        session["completed"] = True
+        session["completed_at"] = _utc_now_iso()
+        self._save_session(session, set_active=True)
+        return session
+
 
     def get_analytics(self, *, retention_days: int = 30, heatmap_days: int = 84, forecast_days: int = 7) -> Dict[str, Any]:
         """Aggregate review history (events) and scheduler state into inline dashboard data.
@@ -1520,6 +1672,10 @@ class MicrocardsServiceV2:
             return stripped.split(" => ", 1)
         if " -> " in stripped:
             return stripped.split(" -> ", 1)
+        if " — " in stripped:   # em-dash (U+2014) — what AI assistants typically emit
+            return stripped.split(" — ", 1)
+        if " – " in stripped:   # en-dash (U+2013)
+            return stripped.split(" – ", 1)
         if " - " in stripped:
             return stripped.split(" - ", 1)
         if ";" in stripped:
@@ -1531,6 +1687,32 @@ class MicrocardsServiceV2:
         if "-" in stripped:
             return stripped.split("-", 1)
         return None
+
+    # Optional explicit hint marker at the END of a line. Two forms:
+    #   • slash form  "(/ ... /)"  — preferred & unambiguous: a plain "(...)" in the question
+    #     (e.g. "...(а ещё молоко — белое)") is NOT treated as a hint;
+    #   • keyword form "(подсказка|підказка|hint: ...)" — kept for back-compat.
+    # Extracted and stripped BEFORE separator detection so its inner chars can't skew the
+    # auto-detected separator.
+    _HINT_MARKER_RE = re.compile(
+        r"\s*(?:"
+        r"\(\s*/\s*(?P<sl>.+?)\s*/\s*\)"
+        r"|"
+        r"[\(\[\{]\s*(?:подсказка|підказка|hint)\s*[:=]\s*(?P<kw>.+?)\s*[\)\]\}]"
+        r")\s*$",
+        re.IGNORECASE)
+
+    def _extract_hint(self, line: str):
+        """Return (line_without_hint, hint_or_None). No marker → (line, None)."""
+        s = line if isinstance(line, str) else _s(line)
+        m = self._HINT_MARKER_RE.search(s)
+        if not m:
+            return s, None
+        hint = (m.group("sl") or m.group("kw") or "").strip()
+        clean = s[:m.start()].rstrip()
+        # Only treat it as a hint when something real remains as the card (front<sep>back);
+        # otherwise it was probably the whole line — leave it untouched.
+        return (clean, hint or None) if clean else (s, None)
 
     def _parse_txt_simplified(self, content: Any, options: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         opts = options or {}
@@ -1559,15 +1741,17 @@ class MicrocardsServiceV2:
                 if len(block_lines) >= 2:
                     front = block_lines[0]
                     back = "\n".join(block_lines[1:]).strip()
+                    back, hint = self._extract_hint(back)
                     if front and back:
-                        parsed.append(self._ok_item(front, back))
+                        parsed.append(self._ok_item(front, back, hint))
                     else:
                         parsed.append(self._err_item(block.strip(), "empty_front_or_back"))
                 else:
                     # Single-line block: fall back to inline separator split.
-                    parts = self._split_simplified(block_lines[0], qa_sep)
+                    clean0, hint0 = self._extract_hint(block_lines[0])
+                    parts = self._split_simplified(clean0, qa_sep)
                     if parts and len(parts) == 2 and parts[0].strip() and parts[1].strip():
-                        parsed.append(self._ok_item(parts[0].strip(), parts[1].strip()))
+                        parsed.append(self._ok_item(parts[0].strip(), parts[1].strip(), hint0))
                     else:
                         parsed.append(self._err_item(block_lines[0], "separator_not_found"))
             return parsed
@@ -1575,12 +1759,17 @@ class MicrocardsServiceV2:
         content_lines = [ln.strip() for ln in text.splitlines()
                          if ln.strip() and not ln.strip().startswith(("//", "#"))]
 
+        # Pull out optional hint markers FIRST, so the separator detection/split below only
+        # ever sees the front<sep>back text — the existing auto-detect stays untouched.
+        line_data = [self._extract_hint(ln) for ln in content_lines]   # [(clean, hint), ...]
+        clean_lines = [c for c, _ in line_data]
+
         # In auto mode, lock onto the separator that dominates the whole text. This keeps
         # the split consistent (e.g. a tab-separated Quizlet export where some definitions
         # themselves contain " - " won't be split on the dash).
         line_sep = qa_sep
         if _s(qa_sep).lower() in ("", "auto"):
-            dominant = self._detect_dominant_separator(content_lines)
+            dominant = self._detect_dominant_separator(clean_lines)
             if dominant:
                 line_sep = dominant
 
@@ -1588,18 +1777,20 @@ class MicrocardsServiceV2:
         # dominant tab with tab-less continuation lines. Flat lists keep it off so
         # a stray separator-less line is flagged instead of silently merged.
         if auto_ml:
-            multiline = (line_sep == "\t" and any("\t" not in ln for ln in content_lines))
+            multiline = (line_sep == "\t" and any("\t" not in ln for ln in clean_lines))
 
-        for stripped in content_lines:
-            parts = self._split_simplified(stripped, line_sep)
+        for clean, hint in line_data:
+            parts = self._split_simplified(clean, line_sep)
             if parts and len(parts) == 2 and parts[0].strip() and parts[1].strip():
-                parsed.append(self._ok_item(parts[0].strip(), parts[1].strip()))
+                parsed.append(self._ok_item(parts[0].strip(), parts[1].strip(), hint))
             elif multiline and parsed and parsed[-1].get("status") == "ok":
-                # Continuation line: append to the previous card's back.
+                # Continuation line: append to the previous card's back (and its hint, if any).
                 prev = parsed[-1]
-                prev["back"] = (prev["back"] + "\n" + stripped).strip()
+                prev["back"] = (prev["back"] + "\n" + clean).strip()
+                if hint and not prev.get("hint"):
+                    prev["hint"] = hint
             else:
-                parsed.append(self._err_item(stripped, "separator_not_found"))
+                parsed.append(self._err_item(clean, "separator_not_found"))
         return parsed
 
     @staticmethod
@@ -1618,7 +1809,7 @@ class MicrocardsServiceV2:
             return None
         if sum(1 for ln in lines if "\t" in ln) >= 2:
             return "\t"
-        candidates = ["\t", " => ", " -> ", " - ", ";", ":", ","]
+        candidates = ["\t", " => ", " -> ", " — ", " – ", " - ", ";", ":", ","]
         best, best_count = None, 0
         for sep in candidates:
             count = 0

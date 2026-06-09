@@ -25,6 +25,180 @@
         return result !== key ? result : fallback;
     }
 
+    function openDialog(id) {
+        const dialog = $(id);
+        if (!dialog) return;
+        dialog.classList.remove('is-closing');
+        dialog.showModal();
+        dialog.offsetWidth; // force reflow
+        dialog.classList.add('is-open');
+    }
+
+    function closeDialog(id) {
+        const dialog = $(id);
+        if (!dialog) return;
+        const closeMs = parseFloat(
+            getComputedStyle(document.documentElement).getPropertyValue('--modal-close-dur')
+        ) || 150;
+        dialog.classList.remove('is-open');
+        dialog.classList.add('is-closing');
+        setTimeout(() => {
+            dialog.classList.remove('is-closing');
+            dialog.close();
+        }, closeMs);
+    }
+
+    function openDropdown(menu) {
+        if (typeof menu === 'string') menu = $(menu);
+        if (!menu) return;
+        menu.classList.remove('hidden');
+        menu.classList.remove('is-closing');
+        menu.offsetWidth; // force reflow
+        menu.classList.add('is-open');
+    }
+
+    function closeDropdown(menu) {
+        if (typeof menu === 'string') menu = $(menu);
+        if (!menu || menu.classList.contains('hidden')) return;
+        const closeMs = parseFloat(
+            getComputedStyle(document.documentElement).getPropertyValue('--dropdown-close-dur')
+        ) || 150;
+        menu.classList.remove('is-open');
+        menu.classList.add('is-closing');
+        setTimeout(() => {
+            menu.classList.remove('is-closing');
+            menu.classList.add('hidden');
+        }, closeMs);
+    }
+
+    function moveTabPill(bar, activeTab, animate) {
+        if (typeof bar === 'string') bar = $(bar);
+        if (!bar) return;
+        const pill = bar.querySelector('.t-tabs-pill');
+        if (!pill) return;
+        if (!activeTab) {
+            activeTab = bar.querySelector('.t-tab.is-active') || bar.querySelector('.t-tab[aria-selected="true"]') || bar.querySelector('.t-tab');
+        }
+        if (!activeTab) return;
+        
+        if (!animate) {
+            const prev = pill.style.transition;
+            pill.style.transition = 'none';
+            pill.style.transform = `translateX(${activeTab.offsetLeft}px)`;
+            pill.style.width = `${activeTab.offsetWidth}px`;
+            void pill.offsetWidth;
+            pill.style.transition = prev;
+        } else {
+            pill.style.transform = `translateX(${activeTab.offsetLeft}px)`;
+            pill.style.width = `${activeTab.offsetWidth}px`;
+        }
+    }
+
+    // ── Web Audio API Dopamine Sound Synthesizer ──────────────────────────
+    const DopamineAudio = (function () {
+        let audioCtx = null;
+
+        function getAudioContext() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            return audioCtx;
+        }
+
+        function playNote(freq, type, duration, startTime, volume = 0.1) {
+            try {
+                const ctx = getAudioContext();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, startTime);
+
+                gain.gain.setValueAtTime(volume, startTime);
+                gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                osc.start(startTime);
+                osc.stop(startTime + duration);
+            } catch (e) {
+                console.warn('Web Audio synthesis failed:', e);
+            }
+        }
+
+        return {
+            playCorrect: function () {
+                const ctx = getAudioContext();
+                const now = ctx.currentTime;
+                playNote(523.25, 'sine', 0.15, now, 0.08); // C5
+                playNote(659.25, 'sine', 0.25, now + 0.08, 0.08); // E5
+            },
+            playBoost: function () {
+                const ctx = getAudioContext();
+                const now = ctx.currentTime;
+                playNote(523.25, 'sine', 0.12, now, 0.08); // C5
+                playNote(659.25, 'sine', 0.12, now + 0.07, 0.08); // E5
+                playNote(783.99, 'sine', 0.12, now + 0.14, 0.08); // G5
+                playNote(1046.50, 'sine', 0.35, now + 0.21, 0.08); // C6
+            },
+            playNearMiss: function () {
+                const ctx = getAudioContext();
+                const now = ctx.currentTime;
+                playNote(440.00, 'triangle', 0.22, now, 0.12); // A4
+            },
+            playRecovery: function () {
+                const ctx = getAudioContext();
+                const now = ctx.currentTime;
+                playNote(783.99, 'sine', 0.15, now, 0.08); // G5
+                playNote(1046.50, 'sine', 0.3, now + 0.09, 0.08); // C6
+            },
+            playComboLost: function () {
+                const ctx = getAudioContext();
+                const now = ctx.currentTime;
+                playNote(392.00, 'sine', 0.15, now, 0.08); // G4
+                playNote(311.13, 'sine', 0.35, now + 0.1, 0.08); // Eb4
+            },
+            playCardFlip: function () {
+                const ctx = getAudioContext();
+                const now = ctx.currentTime;
+                playNote(160, 'triangle', 0.07, now, 0.04);
+                playNote(110, 'triangle', 0.05, now + 0.03, 0.03);
+            },
+            playCardSwipe: function (know) {
+                const ctx = getAudioContext();
+                const now = ctx.currentTime;
+                if (know) {
+                    playNote(320, 'sine', 0.12, now, 0.05);
+                    playNote(480, 'sine', 0.12, now + 0.04, 0.03);
+                } else {
+                    playNote(260, 'sine', 0.12, now, 0.05);
+                    playNote(170, 'sine', 0.12, now + 0.04, 0.03);
+                }
+            },
+            playComboLevelUp: function (combo) {
+                const ctx = getAudioContext();
+                const now = ctx.currentTime;
+                const baseFreq = 523.25;
+                const multiplier = Math.min(2.0, 1 + (combo - 1) * 0.12);
+                const freq = baseFreq * multiplier;
+                playNote(freq, 'sine', 0.08, now, 0.06);
+                playNote(freq * 1.5, 'sine', 0.15, now + 0.04, 0.04);
+            },
+            playSessionFinish: function () {
+                const ctx = getAudioContext();
+                const now = ctx.currentTime;
+                playNote(523.25, 'sine', 0.1, now, 0.06);
+                playNote(659.25, 'sine', 0.1, now + 0.08, 0.06);
+                playNote(783.99, 'sine', 0.1, now + 0.16, 0.06);
+                playNote(1046.50, 'sine', 0.35, now + 0.24, 0.08);
+            }
+        };
+    })();
+
     // ── App State ─────────────────────────────────────────────────────────
     const state = {
         view: 'library', // 'library' | 'details' | 'session' | 'summary'
@@ -53,7 +227,10 @@
         importSep: 'auto',
         
         // Keyboard controls lock
-        keyboardLocked: false
+        keyboardLocked: false,
+
+        // Server-side records cache: { [deckId]: { scoreL1, starsL1, scoreL2, starsL2 } }
+        serverRecords: {}
     };
 
     // ── Toast Notifications ────────────────────────────────────────────────
@@ -71,7 +248,7 @@
         }, 3000);
     }
 
-    // ── Session progress (header toolbar) ──────────────────────────────────
+    // ── Session progress (header toolbar / inner session) ──────────────────
     function updateHeaderProgress() {
         const total = state.sessionCards.length || 0;
         const current = Math.min(state.sessionIndex + 1, total);
@@ -79,6 +256,13 @@
         const barEl = $('mcHeaderProgressBar');
         if (textEl) textEl.textContent = total > 0 ? `${current}/${total}` : '0/0';
         if (barEl) barEl.style.width = total > 0 ? `${(state.sessionIndex / total) * 100}%` : '0%';
+
+        const sTextEl = $('mcSessionProgressText');
+        const sBarEl = $('mcSessionProgressBar');
+        if (sTextEl) sTextEl.textContent = total > 0 ? `${current}/${total}` : '0/0';
+        if (sBarEl) sBarEl.style.width = total > 0 ? `${(state.sessionIndex / total) * 100}%` : '0%';
+
+        updateProgressVisuals();
     }
 
     // ══ Gamification ═══════════════════════════════════════════════════════
@@ -103,12 +287,104 @@
     }
 
     // Points for a correct answer: base + combo bonus (capped, satisfying ramp).
-    function pointsForCombo(combo) {
-        return 10 + Math.min(Math.max(combo - 1, 0), 9) * 3; // 10 → 37
+    function pointsForCombo(combo, threshold) {
+        let multiplier = 1;
+        if (combo >= threshold) {
+            multiplier = 3;
+        } else if (combo === 4) {
+            multiplier = 2;
+        } else if (combo === 3) {
+            multiplier = 1.5;
+        }
+        return Math.floor(100 * multiplier);
     }
 
+    function calculateMaxPossiblePoints(sessionSize, threshold) {
+        let maxPossible = 0;
+        let combo = 0;
+        for (let i = 0; i < sessionSize; i++) {
+            combo++;
+            let multiplier = 1;
+            if (combo >= threshold) {
+                multiplier = 3;
+            } else if (combo === 4) {
+                multiplier = 2;
+            } else if (combo === 3) {
+                multiplier = 1.5;
+            }
+            maxPossible += Math.floor(100 * multiplier);
+        }
+        return maxPossible;
+    }
+
+    function updateProgressVisuals() {
+        const bar = $('mcSessionProgressBar');
+        const flame = $('mcSessionProgressFlame');
+        if (!bar) return;
+
+        bar.classList.remove('bar--orange', 'bar--boost', 'bar--charcoal');
+        if (flame) {
+            flame.classList.remove('is-active', 'flame--sm', 'flame--md', 'flame--lg', 'flame--boost', 'flame--ember');
+        }
+
+        const widthPct = parseFloat(bar.style.width) || 0;
+        if (flame) {
+            flame.style.left = widthPct + '%';
+        }
+
+        const threshold = state.threshold || 5;
+
+        if (state.isNearMiss) {
+            bar.classList.add('bar--charcoal');
+            if (flame) {
+                flame.classList.add('is-active', 'flame--ember');
+            }
+        } else if (state.combo >= threshold) {
+            bar.classList.add('bar--boost');
+            if (flame) {
+                flame.classList.add('is-active', 'flame--boost');
+            }
+        } else if (state.combo >= 3) {
+            bar.classList.add('bar--orange');
+            if (flame) {
+                flame.classList.add('is-active');
+                if (state.combo === 3 || state.combo === 4) {
+                    flame.classList.add('flame--sm');
+                } else if (state.combo === 5 || state.combo === 6) {
+                    flame.classList.add('flame--md');
+                } else {
+                    flame.classList.add('flame--lg');
+                }
+            }
+        }
+    }
+
+    let lastXpValue = 0;
     function updateXpChip() {
-        popNumber($('xpChipVal'), state.sessionXp);
+        const el = $('xpChipVal');
+        if (!el) return;
+        const startVal = lastXpValue;
+        const endVal = state.sessionXp;
+        lastXpValue = endVal;
+        
+        if (startVal === endVal) {
+            popNumber(el, endVal);
+            return;
+        }
+        
+        const duration = 600;
+        const startTime = performance.now();
+        
+        function update(now) {
+            const progress = Math.min((now - startTime) / duration, 1);
+            const ease = progress * (2 - progress); // easeOutQuad
+            const currentVal = Math.round(startVal + (endVal - startVal) * ease);
+            popNumber(el, currentVal);
+            if (progress < 1) {
+                requestAnimationFrame(update);
+            }
+        }
+        requestAnimationFrame(update);
     }
 
     function showCombo() {
@@ -155,23 +431,66 @@
         }
     }
 
-    // Central hook for every graded answer — drives combo, XP and feedback.
+    // Central hook for every graded answer — drives combo, points and feedback.
     function registerAnswer(isCorrect) {
+        const threshold = state.threshold || 5;
         if (isCorrect) {
+            const wasNearMiss = state.isNearMiss;
+            if (state.isNearMiss) {
+                state.isNearMiss = false;
+                DopamineAudio.playRecovery();
+            }
+
             state.combo += 1;
             state.maxCombo = Math.max(state.maxCombo, state.combo);
-            const pts = pointsForCombo(state.combo);
+            
+            const pts = pointsForCombo(state.combo, threshold);
             state.sessionXp += pts;
             updateXpChip();
             floatXp(pts);
             playCheck();
             reactCard('correct');
             showCombo();
+
+            if (!wasNearMiss) {
+                if (state.combo === threshold) {
+                    DopamineAudio.playBoost();
+                    if (window.CelebrationEffects && typeof window.CelebrationEffects.launchConfetti === 'function') {
+                        try {
+                            window.CelebrationEffects.launchConfetti();
+                        } catch (e) {
+                            console.warn(e);
+                        }
+                    }
+                } else {
+                    DopamineAudio.playComboLevelUp(state.combo);
+                }
+            }
         } else {
-            state.combo = 0;
-            reactCard('wrong');
-            showCombo();
+            if (state.combo >= 3 && !state.isNearMiss) {
+                state.isNearMiss = true;
+                DopamineAudio.playNearMiss();
+                reactCard('wrong');
+                showCombo();
+            } else {
+                state.combo = 0;
+                state.isNearMiss = false;
+                DopamineAudio.playComboLost();
+                reactCard('wrong');
+                showCombo();
+            }
         }
+
+        const wrap = $('mcFlashWrap');
+        if (wrap) {
+            if (state.combo >= 5) {
+                wrap.classList.add('is-on-fire');
+            } else {
+                wrap.classList.remove('is-on-fire');
+            }
+        }
+
+        updateProgressVisuals();
     }
 
     // ── L1 grading rails (swipe-style side zones) ──────────────────────────
@@ -190,6 +509,42 @@
             wrap.addEventListener('click', onCardActivate);
             wrap.addEventListener('keydown', onCardKey);
         }
+
+        // Global document-level keydown handler for studying sessions
+        document.addEventListener('keydown', (e) => {
+            if (state.view !== 'session') return;
+            
+            // Bypass shortcuts when user is actively typing in text inputs/textareas
+            if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
+                return;
+            }
+
+            const inner = $('flashcardInner');
+            if (!inner) return;
+
+            const isFlipped = inner.classList.contains('flipped');
+
+            if (state.currentLevel === 1) {
+                if (e.key === ' ' || e.key === 'Spacebar') {
+                    e.preventDefault();
+                    onCardActivate(e);
+                } else if (isFlipped) {
+                    if (e.key === '1' || e.key === 'ArrowLeft') {
+                        e.preventDefault();
+                        submitAnswerL1(false);
+                    } else if (e.key === '2' || e.key === 'ArrowRight') {
+                        e.preventDefault();
+                        submitAnswerL1(true);
+                    }
+                }
+            } else if (state.currentLevel === 2) {
+                if (isFlipped && (e.key === ' ' || e.key === 'Enter')) {
+                    e.preventDefault();
+                    nextCard();
+                }
+            }
+        });
+
         // Re-fit the card text when the viewport size changes.
         window.addEventListener('resize', () => {
             clearTimeout(_fitTimer);
@@ -222,6 +577,89 @@
         const count = s.last === yKey ? (s.count || 0) + 1 : 1;
         try { localStorage.setItem('mc_streak', JSON.stringify({ last: today, count })); } catch (e) {}
         return count;
+    }
+    // ── High Scores & Stars Persistence (local, per-device) ────────────────
+    function getDeckRecord(deckId) {
+        // Prefer server-side record (hydrated on load and after saves)
+        const srv = state.serverRecords && state.serverRecords[deckId];
+        if (srv) {
+            return {
+                scoreL1: srv.scoreL1 || 0,
+                starsL1: srv.starsL1 || 0,
+                scoreL2: srv.scoreL2 || 0,
+                starsL2: srv.starsL2 || 0,
+            };
+        }
+        // Fallback: localStorage (migration path for existing data)
+        try {
+            const records = JSON.parse(localStorage.getItem('mc_deck_records') || '{}');
+            let rec = records[deckId];
+            if (!rec) {
+                return { scoreL1: 0, starsL1: 0, scoreL2: 0, starsL2: 0 };
+            }
+            // Migration: if legacy keys exist, migrate them to L1
+            let modified = false;
+            if (rec.score !== undefined) {
+                rec.scoreL1 = rec.scoreL1 !== undefined ? Math.max(rec.scoreL1, rec.score) : rec.score;
+                delete rec.score;
+                modified = true;
+            }
+            if (rec.stars !== undefined) {
+                rec.starsL1 = rec.starsL1 !== undefined ? Math.max(rec.starsL1, rec.stars) : rec.stars;
+                delete rec.stars;
+                modified = true;
+            }
+            if (rec.scoreL1 === undefined) rec.scoreL1 = 0;
+            if (rec.starsL1 === undefined) rec.starsL1 = 0;
+            if (rec.scoreL2 === undefined) rec.scoreL2 = 0;
+            if (rec.starsL2 === undefined) rec.starsL2 = 0;
+            if (modified) {
+                records[deckId] = rec;
+                localStorage.setItem('mc_deck_records', JSON.stringify(records));
+            }
+            return rec;
+        } catch (e) {
+            return { scoreL1: 0, starsL1: 0, scoreL2: 0, starsL2: 0 };
+        }
+    }
+    async function saveDeckRecord(deckId, score, stars) {
+        const isL2 = state.sessionLevelMode === 2;
+        let isNewRecord = false;
+        try {
+            // Save to server (fire-and-forget with fallback)
+            const res = await apiCall(`/api/v2/microcards/records/${deckId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ score, stars, level_mode: isL2 ? 2 : 1 })
+            });
+            if (res && res.record) {
+                state.serverRecords[deckId] = res.record;
+            }
+            isNewRecord = res && res.is_new_record;
+        } catch (e) {
+            // Fallback: localStorage only
+            try {
+                const records = JSON.parse(localStorage.getItem('mc_deck_records') || '{}');
+                let rec = records[deckId] || { scoreL1: 0, starsL1: 0, scoreL2: 0, starsL2: 0 };
+                if (isL2) {
+                    if (score > (rec.scoreL2 || 0)) { rec.scoreL2 = score; isNewRecord = true; }
+                    if (stars > (rec.starsL2 || 0)) rec.starsL2 = stars;
+                } else {
+                    if (score > (rec.scoreL1 || 0)) { rec.scoreL1 = score; isNewRecord = true; }
+                    if (stars > (rec.starsL1 || 0)) rec.starsL1 = stars;
+                }
+                records[deckId] = rec;
+                localStorage.setItem('mc_deck_records', JSON.stringify(records));
+            } catch (_) {}
+        }
+        // Also keep localStorage in sync as backup
+        try {
+            const records = JSON.parse(localStorage.getItem('mc_deck_records') || '{}');
+            const serverRec = state.serverRecords[deckId];
+            if (serverRec) records[deckId] = serverRec;
+            localStorage.setItem('mc_deck_records', JSON.stringify(records));
+        } catch (_) {}
+        return isNewRecord;
     }
     function pluralizeDays(n) {
         const a = Math.abs(n) % 100, d = a % 10;
@@ -266,6 +704,22 @@
             setTimeout(() => targetEl.classList.add('active-view'), 50);
         }
 
+        // Zen mode: Hide/show global navigation header
+        const globalHeader = document.querySelector('[data-global-header]');
+        if (globalHeader) {
+            globalHeader.style.display = (viewName === 'session') ? 'none' : 'block';
+        }
+
+        // Break out of container constraints during study session
+        const pageEl = document.querySelector('.mc-page');
+        if (pageEl) {
+            if (viewName === 'session') {
+                pageEl.classList.add('mc-page--session-fullscreen');
+            } else {
+                pageEl.classList.remove('mc-page--session-fullscreen');
+            }
+        }
+
         // The contextual toolbar (back + deck name + progress) is useless on the
         // library screen — the page heading already says everything. Hide it there;
         // show it on every other view where the back button / progress matter.
@@ -273,7 +727,7 @@
         const backBtn = $('mcHeaderBackBtn');
         // Library has its own page heading; deck details has its own breadcrumb
         // header — the shared toolbar is redundant on both. Keep it for session.
-        if (viewName === 'library' || viewName === 'details') {
+        if (viewName === 'library' || viewName === 'details' || viewName === 'session') {
             if (toolbar) toolbar.style.display = 'none';
         } else {
             if (toolbar) toolbar.style.display = 'flex';
@@ -283,10 +737,10 @@
         // Show/hide progress tracker in header
         const headerProgress = $('mcHeaderProgress');
         if (viewName === 'session') {
-            headerProgress.style.display = 'inline-flex';
+            if (headerProgress) headerProgress.style.display = 'none';
             updateHeaderProgress();
         } else {
-            headerProgress.style.display = 'none';
+            if (headerProgress) headerProgress.style.display = 'none';
         }
 
         // Dropdowns clean up
@@ -307,7 +761,13 @@
     async function apiCall(url, options = {}) {
         try {
             const resp = await fetch(url, options);
-            const data = await resp.json();
+            const contentType = resp.headers.get('content-type') || '';
+            let data;
+            if (contentType.includes('application/json')) {
+                data = await resp.json();
+            } else {
+                throw new Error(t('microcards.server_error_status', 'Ошибка сервера ({status})').replace('{status}', resp.status));
+            }
             if (!data.ok) {
                 throw new Error(data.error || 'API Error');
             }
@@ -318,15 +778,29 @@
         }
     }
 
-    // ── Library Screen ────────────────────────────────────────────────────
     async function loadLibraryData() {
         switchView('library');
         const grid = $('decksGrid');
         grid.innerHTML = `<div class="col-span-full py-8 text-center text-xs text-text-secondary">${t('microcards.loading_decks', 'Загрузка колод...')}</div>`;
         
         try {
-            const data = await apiCall('/api/v2/microcards/decks');
-            state.decks = data.items || [];
+            const [decksData, settingsData, recordsData] = await Promise.all([
+                apiCall('/api/v2/microcards/decks'),
+                apiCall('/api/v2/microcards/settings').catch(() => ({ settings: {} })),
+                apiCall('/api/v2/microcards/records').catch(() => ({ records: {} }))
+            ]);
+            state.settings = settingsData.settings || {};
+            state.decks = decksData.items || [];
+            // Hydrate server records cache (used by getDeckRecord)
+            if (recordsData && recordsData.records) {
+                state.serverRecords = Object.assign({}, state.serverRecords, recordsData.records);
+                // Also sync to localStorage for fallback
+                try {
+                    const lsRecs = JSON.parse(localStorage.getItem('mc_deck_records') || '{}');
+                    Object.assign(lsRecs, recordsData.records);
+                    localStorage.setItem('mc_deck_records', JSON.stringify(lsRecs));
+                } catch (_) {}
+            }
             state._entrance = true; // stagger deck cards in on fresh load only
             renderLibrary();
             animateLibraryStats();
@@ -359,11 +833,17 @@
 
     function setSort(key) {
         state.sortKey = SORT_KEYS.includes(key) ? key : 'name-asc';
+        let activeBtn = null;
         document.querySelectorAll('#mcSort .mc-sort-btn[data-sort]').forEach(btn => {
             const active = btn.getAttribute('data-sort') === state.sortKey;
             btn.classList.toggle('is-active', active);
             btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+            btn.setAttribute('aria-selected', active ? 'true' : 'false');
+            if (active) activeBtn = btn;
         });
+        if (activeBtn) {
+            moveTabPill('mcSort', activeBtn, true);
+        }
         renderLibrary();
     }
 
@@ -376,10 +856,11 @@
         popNumber($('libStatTotal'), state.decks.length);
     }
 
-    // Author byline: original author for imported decks, "Вы" for your own.
-    function deckAuthorHtml(deck) {
-        const name = (deck && deck.author_name) ? deck.author_name : t('microcards.author_you', 'Вы');
-        return `<span class="mc-author"><span class="material-symbols-outlined">person</span>${escHtml(name)}</span>`;
+    // Deterministic hue (0–359) from a string — gives each deck a stable accent colour.
+    function deckHue(s) {
+        let h = 0; const str = String(s || '');
+        for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+        return h % 360;
     }
 
     function renderLibrary() {
@@ -433,30 +914,186 @@
             const mastered = deck.level2_count || 0;
             const masteryPct = total > 0 ? Math.round((mastered / total) * 100) : 0;
 
-            const duePill = deck.due_count > 0
-                ? `<span class="mc-pill mc-pill--due">${t('microcards.badge_due', '{n} к повтору').replace('{n}', deck.due_count)}</span>` : '';
-            const newPill = deck.new_count > 0
-                ? `<span class="mc-pill mc-pill--new">${t('microcards.badge_new_cards', '{n} новых').replace('{n}', deck.new_count)}</span>` : '';
-            const linkedPill = deck.linked
-                ? `<span class="mc-pill mc-pill--linked"><span class="material-symbols-outlined" style="font-size:0.9rem">link</span>${t('microcards.badge_linked', 'Из каталога')}</span>` : '';
+            // Workload (what to do today) — lives in the ACTION row next to the CTA (info that
+            // drives the action sits with the action). Empty when nothing is due/new.
+            let workloadHtml = '';
+            if (deck.is_paused) {
+                workloadHtml = `<span class="mc-deck-card__load" style="background:color-mix(in srgb, var(--color-warning) 14%, transparent); color:var(--color-warning); border:1px solid color-mix(in srgb, var(--color-warning) 30%, transparent); display:inline-flex; align-items:center; gap:0.25rem;"><span class="material-symbols-outlined" style="font-size:0.95rem;">pause_circle</span><span>${t('microcards.badge_paused', 'На паузе')} (${deck.paused_progress})</span></span>`;
+            } else if (deck.due_count > 0) {
+                workloadHtml = `<span class="mc-deck-card__load mc-deck-card__load--due">${t('microcards.badge_due', '{n} к повтору').replace('{n}', `${deck.due_count} / ${total}`)}</span>`;
+            } else if (deck.new_count > 0) {
+                workloadHtml = `<span class="mc-deck-card__load mc-deck-card__load--new">${t('microcards.badge_new_cards', '{n} новых').replace('{n}', `${deck.new_count} / ${total}`)}</span>`;
+            }
 
+            // Stars — leading achievement metric: silver (L1) → gold (L2).
+            const record = getDeckRecord(deck.id);
+            const isGold = record.starsL2 > 0;
+            const starCount = isGold ? record.starsL2 : record.starsL1;
+            const bestScore = isGold ? record.scoreL2 : record.scoreL1;
+            const hasRecord = starCount > 0 || bestScore > 0;
+            // Qualitative status WORD — the mastery bar below carries the %, so no numeric dup.
+            const startedSrs = Math.max(0, total - (deck.new_count || 0)) > 0;
+            const started = startedSrs || hasRecord;
+            let statusText, statusMod, statusIcon = '';
+            if (deck.is_paused) { statusText = t('microcards.badge_paused', 'На паузе'); statusMod = 'paused'; statusIcon = 'pause_circle'; }
+            else if (!started) { statusText = t('microcards.not_attempted', 'Ещё не пройдено'); statusMod = 'new'; }
+            else if (masteryPct >= 100) { statusText = t('microcards.stat_mastered', 'Освоено'); statusMod = 'mastered'; statusIcon = 'verified'; }
+            else { statusText = t('microcards.in_progress', 'В процессе'); statusMod = 'progress'; }
+
+            const tier = isGold ? 'gold' : 'silver';
+            let starsHtml = `<div class="mc-deck-card__stars">`;
+            for (let i = 0; i < 5; i++) {
+                const on = i < starCount;
+                starsHtml += `<span class="material-symbols-outlined mc-star mc-star--${tier} ${on ? 'mc-star--on' : 'mc-star--off'}">star</span>`;
+            }
+            starsHtml += `<span class="mc-deck-card__status mc-deck-card__status--${statusMod}">${statusIcon ? `<span class="material-symbols-outlined">${statusIcon}</span>` : ''}${escHtml(statusText)}</span>`;
+            starsHtml += `</div>`;
+
+            // Description + tags live in a collapsible overlay panel (collapsed by default), so
+            // every card stays the same compact height. Expanding drops the panel down over the
+            // cards below (absolute → no grid reflow).
+            const descTrim = (deck.description || '').trim();
+            const hasDetails = !!descTrim || !!tagsHtml;
+            const detailsHtml = hasDetails ? `
+                <div class="mc-deck-card__details" onclick="event.stopPropagation()">
+                    ${descTrim ? `<p class="mc-deck-card__desc">${escHtml(descTrim)}</p>` : ''}
+                    ${tagsHtml ? `<div class="mc-deck-card__tags">${tagsHtml}</div>` : ''}
+                </div>` : '';
+            const detailsToggle = hasDetails
+                ? `<button type="button" class="mc-deck-card__expand" aria-label="${t('microcards.btn_details', 'Подробнее')}" aria-expanded="false" onclick="event.stopPropagation(); mcApp.toggleCardDetails('${deck.id}', event)"><span class="material-symbols-outlined">expand_more</span></button>`
+                : '';
+
+            // Compact meta line under the title: author · (catalog marker).
+            // The total card count now lives inside the workload badge (count / total).
+            const linked = !!deck.linked;
+            // Author: an owned deck falls back to "Вы"; a linked (catalog) deck must NEVER show
+            // "Вы" — show the original author if known, else let "Из каталога" stand alone.
+            const authorName = linked ? (deck.author_name || '') : (deck.author_name || t('microcards.author_you', 'Вы'));
+            const authorHtml = authorName
+                ? `<span class="mc-deck-card__metaitem"><span class="material-symbols-outlined">person</span><span class="mc-deck-card__metatext">${escHtml(authorName)}</span></span>`
+                : '';
+            // "Из каталога" is pushed to the far right of the meta line (margin-left:auto).
+            const linkedHtml = linked
+                ? `<span class="mc-deck-card__metaitem mc-deck-card__metaitem--right"><span class="material-symbols-outlined">link</span><span class="mc-deck-card__metatext">${t('microcards.badge_linked', 'Из каталога')}</span></span>`
+                : '';
+            const metaHtml = authorHtml + linkedHtml;
+
+            // Per-card action menu (⋯, top-right). Linked decks are read-only → no edit, "remove from library".
+            const menuItems = linked
+                ? `<button class="mc-menu__item" role="menuitem" onclick="event.stopPropagation(); mcApp.exportDeckFromLibrary('${deck.id}','json')"><span class="material-symbols-outlined">download</span>${t('microcards.btn_menu_export_json', 'Экспорт JSON')}</button>
+                   <button class="mc-menu__item" role="menuitem" onclick="event.stopPropagation(); mcApp.exportDeckFromLibrary('${deck.id}','csv')"><span class="material-symbols-outlined">download</span>${t('microcards.btn_menu_export_csv', 'Экспорт CSV')}</button>
+                   <button class="mc-menu__item mc-menu__item--danger" role="menuitem" onclick="event.stopPropagation(); mcApp.deleteDeckFromLibrary('${deck.id}')"><span class="material-symbols-outlined">link_off</span>${t('microcards.btn_remove_from_library', 'Убрать из библиотеки')}</button>`
+                : `<button class="mc-menu__item" role="menuitem" onclick="event.stopPropagation(); mcApp.editDeckFromLibrary('${deck.id}')"><span class="material-symbols-outlined">settings</span>${t('microcards.btn_deck_params', 'Параметры')}</button>
+                   <button class="mc-menu__item" role="menuitem" onclick="event.stopPropagation(); mcApp.exportDeckFromLibrary('${deck.id}','json')"><span class="material-symbols-outlined">download</span>${t('microcards.btn_menu_export_json', 'Экспорт JSON')}</button>
+                   <button class="mc-menu__item" role="menuitem" onclick="event.stopPropagation(); mcApp.exportDeckFromLibrary('${deck.id}','csv')"><span class="material-symbols-outlined">download</span>${t('microcards.btn_menu_export_csv', 'Экспорт CSV')}</button>
+                   <button class="mc-menu__item mc-menu__item--danger" role="menuitem" onclick="event.stopPropagation(); mcApp.deleteDeckFromLibrary('${deck.id}')"><span class="material-symbols-outlined">delete</span>${t('microcards.btn_menu_delete_deck', 'Удалить колоду')}</button>`;
+
+            // Per-deck accent → thin left spine (identity colour without a focal-competing tile).
+            card.style.setProperty('--deck-accent', `hsl(${deckHue(deck.name || deck.id)} 58% 48%)`);
+            const studyBtnText = deck.is_paused ? t('microcards.btn_continue', 'Продолжить') : t('microcards.btn_study', 'Учить');
+            const studyBtnIcon = deck.is_paused ? 'play_arrow' : 'school';
             card.innerHTML = `
-                <div class="mc-deck-card__top">
-                    <span class="mc-deck-card__medallion"><span class="material-symbols-outlined">style</span></span>
+                <div class="mc-deck-card__head">
                     <h3 class="mc-deck-card__title">${escHtml(deck.name)}</h3>
+                    <div class="mc-deck-card__headctl">
+                        ${detailsToggle}
+                        <div class="mc-card-menu-wrap">
+                            <button type="button" class="mc-iconbtn" aria-haspopup="menu" aria-label="${t('microcards.btn_more', 'Ещё')}" onclick="event.stopPropagation(); mcApp.toggleCardMenu('${deck.id}', event)">
+                                <span class="material-symbols-outlined">more_horiz</span>
+                            </button>
+                            <div class="mc-menu mc-card-menu hidden" id="cardMenu-${deck.id}" role="menu">${menuItems}</div>
+                        </div>
+                    </div>
                 </div>
-                <p class="mc-deck-card__desc">${escHtml(deck.description || t('microcards.no_description', 'Описание отсутствует.'))}</p>
-                ${tagsHtml ? `<div class="mc-deck-card__tags">${tagsHtml}</div>` : ''}
-                <div class="mc-deck-card__progress"><span style="width:${masteryPct}%"></span></div>
-                <div class="mc-deck-card__foot">
-                    <span class="mc-deck-card__count">${t('microcards.cards_count_label', 'Карточек:')} <strong>${total}</strong></span>
-                    ${deckAuthorHtml(deck)}
+                <p class="mc-deck-card__meta">${metaHtml}</p>
+                <div class="mc-deck-card__prog">
+                    ${starsHtml}
+                    <div class="mc-deck-card__mastery ${masteryPct >= 100 ? 'is-full' : ''}" title="${t('microcards.stat_mastered', 'Освоено')}: ${masteryPct}%" aria-label="${t('microcards.stat_mastered', 'Освоено')}: ${masteryPct}%">
+                        <span style="width:${masteryPct}%"></span>
+                    </div>
                 </div>
-                <div style="display:flex;gap:0.35rem;flex-wrap:wrap;margin-top:0.5rem">${linkedPill}${duePill}${newPill}</div>
+                <div class="mc-deck-card__action">
+                    ${workloadHtml}
+                    <button type="button" class="mc-btn mc-btn--primary mc-deck-card__study" onclick="event.stopPropagation(); mcApp.studyDeckFromLibrary('${deck.id}')">
+                        <span class="material-symbols-outlined">${studyBtnIcon}</span><span>${studyBtnText}</span>
+                    </button>
+                </div>
+                ${detailsHtml}
             `;
             grid.appendChild(card);
         });
         state._entrance = false; // entrance is a one-shot per fresh load
+    }
+
+    // ── Per-card actions (library) ─────────────────────────────────────────
+    // The action menu items reuse the existing deck-detail logic, which keys off
+    // state.activeDeck / state.activeDeckId — so we hydrate those from the library
+    // list before delegating.
+    function _setActiveDeckFromLibrary(deckId) {
+        const deck = state.decks.find(d => d.id === deckId);
+        if (deck) { state.activeDeck = deck; state.activeDeckId = deckId; }
+        return deck;
+    }
+    async function studyDeckFromLibrary(deckId) {
+        const deck = state.decks.find(d => d.id === deckId);
+        if (deck && deck.is_paused) {
+            state.activeDeckId = deckId;
+            state.activeDeck = deck;
+            try {
+                const cardsData = await apiCall(`/api/v2/microcards/decks/${deckId}/cards`);
+                state.cards = cardsData.items || [];
+                startLearningSession(deck.active_session_level_mode === 2, deck.active_session_level_mode);
+            } catch (err) {
+                console.error('[studyDeckFromLibrary] resume error:', err);
+                showToast(t('microcards.error_loading_cards', 'Не удалось загрузить карточки'), 'error');
+            }
+        } else {
+            openDeckDetails(deckId);
+        }
+    }
+    function editDeckFromLibrary(deckId) { closeAllCardMenus(); if (_setActiveDeckFromLibrary(deckId)) openDeckMetaDialog(); }
+    function exportDeckFromLibrary(deckId, format) { closeAllCardMenus(); _setActiveDeckFromLibrary(deckId); exportDeck(format); }
+    function deleteDeckFromLibrary(deckId) { closeAllCardMenus(); if (_setActiveDeckFromLibrary(deckId)) confirmDeleteDeck(); }
+
+    function closeAllCardMenus() {
+        document.querySelectorAll('.mc-card-menu').forEach(m => m.classList.add('hidden'));
+        // The card clips overflow; it's lifted only while its menu is open.
+        document.querySelectorAll('.mc-deck-card--menu-open').forEach(c => c.classList.remove('mc-deck-card--menu-open'));
+    }
+    function toggleCardMenu(deckId, e) {
+        if (e) e.stopPropagation();
+        const menu = document.getElementById('cardMenu-' + deckId);
+        if (!menu) return;
+        const willOpen = menu.classList.contains('hidden');
+        closeAllCardMenus();
+        if (willOpen) {
+            menu.classList.remove('hidden');
+            const card = menu.closest('.mc-deck-card');
+            if (card) card.classList.add('mc-deck-card--menu-open');  // let the dropdown spill past the card edge
+        }
+    }
+
+    // Expand/collapse a card's details panel (description + tags). The panel is absolute,
+    // so expanding overlays the cards below instead of reflowing the grid row.
+    function closeAllCardDetails() {
+        document.querySelectorAll('.mc-deck-card.is-expanded').forEach(c => {
+            c.classList.remove('is-expanded');
+            const b = c.querySelector('.mc-deck-card__expand');
+            if (b) b.setAttribute('aria-expanded', 'false');
+        });
+    }
+    function toggleCardDetails(deckId, e) {
+        if (e) e.stopPropagation();
+        const card = e && e.currentTarget && e.currentTarget.closest('.mc-deck-card');
+        if (!card) return;
+        const willExpand = !card.classList.contains('is-expanded');
+        closeAllCardDetails();
+        closeAllCardMenus();
+        if (willExpand) {
+            card.classList.add('is-expanded');
+            const b = card.querySelector('.mc-deck-card__expand');
+            if (b) b.setAttribute('aria-expanded', 'true');
+        }
     }
 
     // ── Tag filters ────────────────────────────────────────────────────────
@@ -481,13 +1118,12 @@
         renderLibrary();
     }
 
-    // ── Analytics widgets (streak / retention / overdue / heatmap / forecast) ──
+    // ── Analytics widgets (streak / retention / overdue) ──────────────────
     async function loadAnalytics() {
         try {
             const data = await apiCall('/api/v2/microcards/analytics');
             renderAnalytics(data);
         } catch (err) {
-            if ($('mcActivity')) $('mcActivity').classList.add('hidden');
             if ($('mcKpis')) $('mcKpis').style.display = 'none';
         }
     }
@@ -498,106 +1134,24 @@
         $('anOverdue').textContent = data.overdue || 0;
         const hasActivity = (data.total_reviews || 0) > 0 || (data.streak || 0) > 0 || (data.overdue || 0) > 0;
         $('mcKpis').style.display = hasActivity ? 'flex' : 'none';
-
-        const heatmap = data.heatmap || [];
-        const forecast = data.forecast || [];
-        const hasHeat = heatmap.some(c => (c.count || 0) > 0);
-        const hasFore = forecast.some(c => (c.count || 0) > 0);
-        $('mcHeatmapCard').classList.toggle('hidden', !hasHeat);
-        $('mcForecastCard').classList.toggle('hidden', !hasFore);
-        $('mcActivity').classList.toggle('hidden', !hasHeat && !hasFore);
-        if (hasHeat) renderHeatmap(heatmap);
-        if (hasFore) renderForecast(forecast);
-    }
-    function heatColor(count) {
-        if (count <= 0) return 'color-mix(in srgb, var(--color-text-main) 8%, transparent)';
-        const pct = count < 3 ? 35 : count < 6 ? 65 : 100;
-        return `color-mix(in srgb, var(--color-primary) ${pct}%, transparent)`;
-    }
-    function renderHeatmap(cells) {
-        $('anHeatmap').innerHTML = cells.map(c =>
-            `<div style="background:${heatColor(c.count)}" title="${escHtml(c.date)}: ${c.count}"></div>`).join('');
-    }
-    function renderForecast(days) {
-        const max = Math.max(1, ...days.map(d => d.count || 0));
-        $('anForecast').innerHTML = days.map(d => {
-            const h = Math.max(3, Math.round(((d.count || 0) / max) * 52));
-            const bg = d.count ? 'var(--color-primary)' : 'color-mix(in srgb, var(--color-text-main) 8%, transparent)';
-            let label = d.date;
-            try { label = new Date(d.date).toLocaleDateString(undefined, { weekday: 'short' }); } catch (e) {}
-            return `<div class="mc-forecast__day" title="${escHtml(d.date)}: ${d.count}">
-                <div class="mc-forecast__bar" style="height:${h}px;background:${bg}"></div>
-                <span class="mc-forecast__label">${escHtml(label)}</span>
-            </div>`;
-        }).join('');
     }
 
-    // ── Study settings (session size, new/session, direction) ──────────────
-    function selectDirection(value) {
-        $('setDirection').value = value;
-        document.querySelectorAll('#settingsDirection [data-dir]').forEach(btn =>
-            btn.classList.toggle('is-active', btn.getAttribute('data-dir') === value));
-    }
-    async function openSettingsDialog() {
-        try {
-            const data = await apiCall('/api/v2/microcards/settings');
-            const s = data.settings || {};
-            $('setSessionSize').value = s.session_size ?? 20;
-            $('setNewPerSession').value = s.new_per_session ?? 20;
-            $('setNewAuto').checked = s.new_per_session_mode === 'auto';
-            applyNewAutoUI();
-            selectDirection(s.default_direction || 'front_back');
-            $('dialogSettings').showModal();
-        } catch (err) {
-            showToast(t('microcards.settings_load_fail', 'Не удалось загрузить настройки'), 'error');
-        }
-    }
-
-    // Reflect the "auto new cards" toggle: the manual number becomes the ceiling.
-    function applyNewAutoUI() {
-        const auto = $('setNewAuto').checked;
-        const hint = $('setNewAutoHint');
-        if (hint) hint.hidden = !auto;
-        const label = document.querySelector('label[for="setNewPerSession"]');
-        if (label) label.textContent = auto
-            ? t('microcards.set_new_per_session_max', 'Новых за сессию (макс.)')
-            : t('microcards.set_new_per_session', 'Новых карточек за сессию');
-    }
-    function onNewAutoToggle() { applyNewAutoUI(); }
-    async function saveSettings(e) {
-        if (e) e.preventDefault();
-        const payload = {
-            session_size: parseInt($('setSessionSize').value, 10),
-            new_per_session: parseInt($('setNewPerSession').value, 10),
-            new_per_session_mode: $('setNewAuto').checked ? 'auto' : 'manual',
-            default_direction: $('setDirection').value
-        };
-        try {
-            await apiCall('/api/v2/microcards/settings', {
-                method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            $('dialogSettings').close();
-            showToast(t('microcards.settings_saved', 'Настройки сохранены'), 'success');
-        } catch (err) { console.error(err); }
-    }
+    // Study settings (session size, new-card pacing, direction) are no longer
+    // user-configurable — every deck uses the universal defaults from the backend
+    // (see MicrocardsServiceV2.DEFAULT_SETTINGS). state.settings is still hydrated
+    // read-only on load so the details page can show the per-session card count.
     function bindLibraryDelegates() {
         const tf = $('libTagFilters');
         if (tf) tf.addEventListener('click', (e) => {
             const b = e.target.closest('.mc-tag-chip[data-tag]');
             if (b) selectTagFilter(b.getAttribute('data-tag') || null);
         });
-        const dir = $('settingsDirection');
-        if (dir) dir.addEventListener('click', (e) => {
-            const b = e.target.closest('[data-dir]');
-            if (b) selectDirection(b.getAttribute('data-dir'));
-        });
     }
 
     function openCreateDeckDialog() {
         $('createDeckName').value = '';
         $('createDeckDesc').value = '';
-        $('dialogCreateDeck').showModal();
+        openDialog('dialogCreateDeck');
     }
 
     async function handleCreateDeckSubmit(e) {
@@ -612,7 +1166,7 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name, description })
             });
-            $('dialogCreateDeck').close();
+            closeDialog('dialogCreateDeck');
             showToast(t('microcards.toast_deck_created', 'Колода успешно создана!'), 'success');
             openDeckDetails(result.deck.id);
         } catch (err) {
@@ -623,35 +1177,42 @@
     // ── Deck Details Screen ───────────────────────────────────────────────
     async function openDeckDetails(deckId) {
         state.activeDeckId = deckId;
+        // Reset cards immediately so stale data from previous deck never bleeds through.
+        state.cards = [];
         switchView('details');
         
         try {
             const data = await apiCall(`/api/v2/microcards/decks/${deckId}`);
             state.activeDeck = data.deck;
             
-            // Set details fields
-            $('deckDetailsTitle').textContent = state.activeDeck.name;
+            // Set details fields (some are optional depending on the header layout)
+            const titleEl = $('deckDetailsTitle');
+            if (titleEl) titleEl.textContent = state.activeDeck.name;
             const descEl = $('deckDetailsDesc');
-            const descText = (state.activeDeck.description || '').trim();
-            descEl.textContent = descText;
-            descEl.classList.toggle('hidden', !descText);
+            if (descEl) {
+                const descText = (state.activeDeck.description || '').trim();
+                descEl.textContent = descText;
+                descEl.classList.toggle('hidden', !descText);
+            }
 
             // Render tags
             const tagsZone = $('deckDetailsTags');
-            tagsZone.innerHTML = '';
-            (state.activeDeck.tags || []).forEach(t => {
-                const badge = document.createElement('span');
-                badge.className = 'mc-tag';
-                badge.textContent = t;
-                tagsZone.appendChild(badge);
-            });
+            if (tagsZone) {
+                tagsZone.innerHTML = '';
+                (state.activeDeck.tags || []).forEach(t => {
+                    const badge = document.createElement('span');
+                    badge.className = 'mc-tag';
+                    badge.textContent = t;
+                    tagsZone.appendChild(badge);
+                });
+            }
 
             renderPublishStatus();
 
             // Linked (catalog-referenced) deck = read-only: hide edit/import/publish,
             // turn "delete" into "remove from library", show a read-only badge.
             const linked = !!state.activeDeck.linked;
-            ['btnDeckEditor', 'btnDeckImport', 'btnDeckPublish', 'btnAddCardInline'].forEach(id => {
+            ['btnDeckEditor', 'btnDeckImport', 'btnDeckPublish', 'btnAddCardInline', 'btnRenameDeck'].forEach(id => {
                 const el = $(id); if (el) el.classList.toggle('hidden', linked);
             });
             const delLabel = $('btnDeckDeleteLabel');
@@ -660,17 +1221,95 @@
                 : t('microcards.btn_menu_delete_deck', 'Удалить колоду');
             const pub = $('deckPublishStatus');
             if (linked && pub) pub.innerHTML = `<span class="mc-pub-pill mc-pub--code"><span class="material-symbols-outlined">link</span>${t('microcards.linked_readonly', 'Из каталога · только чтение')}</span>`;
+        } catch (err) {
+            console.error('[openDeckDetails] deck load error:', err);
+            showToast(t('microcards.error_loading_deck', 'Не удалось загрузить колоду'), 'error');
+            return;
+        }
+
+        try {
+            // Fetch per-deck record from server (ensure freshest data even if serverRecords is stale)
+            const recData = await apiCall(`/api/v2/microcards/records/${deckId}`).catch(() => null);
+            if (recData && recData.record) {
+                state.serverRecords[deckId] = recData.record;
+            }
 
             // Load cards
             const cardsData = await apiCall(`/api/v2/microcards/decks/${deckId}/cards`);
             state.cards = cardsData.items || [];
-            
-            updateDeckProgressUI();
-            renderDeckCardsList();
         } catch (err) {
-            console.error(err);
+            console.error('[openDeckDetails] cards load error:', err);
+            showToast(t('microcards.error_loading_cards', 'Не удалось загрузить карточки'), 'error');
+        }
+
+        updateDeckProgressUI();
+        renderDeckCardsList();
+
+        // Render paused status badge next to title
+        const pausedStatusEl = $('deckPausedStatus');
+        if (pausedStatusEl) {
+            if (state.activeDeck && state.activeDeck.is_paused) {
+                pausedStatusEl.innerHTML = `<span class="mc-pub-pill" style="background:color-mix(in srgb, var(--color-warning) 14%, transparent); color:var(--color-warning); border:1px solid color-mix(in srgb, var(--color-warning) 30%, transparent); display:inline-flex; align-items:center; gap:0.25rem;"><span class="material-symbols-outlined" style="font-size:0.95rem;">pause_circle</span><span>${t('microcards.badge_paused', 'На паузе')}</span></span>`;
+            } else {
+                pausedStatusEl.innerHTML = '';
+            }
+        }
+
+        // Dynamically update the header CTA button
+        const studyCta = document.querySelector('.mc-dhead__cta');
+        if (studyCta) {
+            const isPaused = state.activeDeck && state.activeDeck.is_paused;
+            const studyIcon = studyCta.querySelector('.material-symbols-outlined');
+            const studyText = studyCta.querySelector('[data-i18n="microcards.btn_study"]') || studyCta.querySelector('span:not(.material-symbols-outlined):not(.mc-btn__count)');
+            
+            studyCta.removeAttribute('onclick');
+            if (isPaused) {
+                if (studyIcon) studyIcon.textContent = 'play_arrow';
+                if (studyText) {
+                    studyText.textContent = t('microcards.btn_continue', 'Продолжить');
+                    studyText.removeAttribute('data-i18n'); // prevent i18n override
+                }
+                studyCta.onclick = () => {
+                    startLearningSession(state.activeDeck.active_session_level_mode === 2, state.activeDeck.active_session_level_mode);
+                };
+            } else {
+                if (studyIcon) studyIcon.textContent = 'school';
+                if (studyText) {
+                    studyText.textContent = t('microcards.btn_study', 'Учить');
+                    studyText.setAttribute('data-i18n', 'microcards.btn_study');
+                }
+                studyCta.onclick = () => {
+                    startLearningSession(false, 1);
+                };
+            }
+        }
+
+        // Render resume banner / prompt
+        const resumeSection = $('deckResumeSection');
+        if (resumeSection) {
+            if (state.activeDeck && state.activeDeck.is_paused) {
+                resumeSection.classList.remove('hidden');
+                const progressEl = $('deckResumeProgress');
+                if (progressEl) progressEl.textContent = state.activeDeck.paused_progress || '0/0';
+                const levelEl = $('deckResumeLevel');
+                if (levelEl) {
+                    const lvl = state.activeDeck.active_session_level_mode;
+                    levelEl.textContent = lvl === 2 ? t('microcards.mode_l2_title', 'Уровень 2: Открытый ответ') : t('microcards.mode_l1_title', 'Уровень 1: Карточки');
+                }
+                
+                // Wire up the button clicks
+                $('btnResumeSession').onclick = () => {
+                    startLearningSession(state.activeDeck.active_session_level_mode === 2, state.activeDeck.active_session_level_mode);
+                };
+                $('btnRestartSession').onclick = () => {
+                    startLearningSession(state.activeDeck.active_session_level_mode === 2, state.activeDeck.active_session_level_mode, true);
+                };
+            } else {
+                resumeSection.classList.add('hidden');
+            }
         }
     }
+
 
     // Recompute the metric strip, mastery bar, study-load CTA and meta line.
     function updateDeckProgressUI() {
@@ -699,15 +1338,100 @@
         seg('segLearn', learning);
         seg('segMaster', mastered);
 
-        // Primary CTA shows today's study load (due + new)
+        // Primary CTA shows today's study load (due + new) — both the L1 card badge
+        // and the header "Учить" button.
         const load = due + nw;
-        const chip = $('btnStudyCount');
-        if (chip) { chip.textContent = load; chip.classList.toggle('hidden', load === 0); }
+        [$('btnStudyCount'), $('headStudyCount')].forEach(chip => {
+            if (chip) { chip.textContent = load; chip.classList.toggle('hidden', load === 0); }
+        });
 
-        // Header meta keeps only the author (for someone else's deck); counts
-        // now live in the metric strip — no duplication.
+        // Header meta keeps only the author (for someone else's deck) + tags; counts
+        // now live in the metric strip. Publish status moved inline next to the title.
         const loadEl = $('deckLoadLine');
         if (loadEl) loadEl.textContent = (state.activeDeck && state.activeDeck.author_name) || '';
+        // Collapse the meta row entirely when there's nothing to show (no wasted line).
+        const metaEl = $('deckDetailsMeta');
+        if (metaEl) {
+            const hasAuthor = !!(loadEl && loadEl.textContent.trim());
+            const tagsEl = $('deckDetailsTags');
+            const hasTags = !!(tagsEl && tagsEl.children.length > 0);
+            metaEl.classList.toggle('hidden', !hasAuthor && !hasTags);
+        }
+
+        // Render records and stars for L1 and L2
+        const records = getDeckRecord(state.activeDeckId);
+        
+        // Calculate max possible points for the deck size based on settings limit
+        const sessionSizeSetting = (state.settings && state.settings.session_size) || 20;
+        const sessionSize = Math.min(total, sessionSizeSetting);
+        const threshold = Math.max(3, Math.min(8, Math.floor(sessionSize * 0.15)));
+        const maxPoints = calculateMaxPossiblePoints(sessionSize, threshold);
+
+        const detailsScoreL1 = $('detailsScoreL1');
+        const detailsMaxPointsL1 = $('detailsMaxPointsL1');
+        const detailsScoreL2 = $('detailsScoreL2');
+        const detailsMaxPointsL2 = $('detailsMaxPointsL2');
+
+        if (detailsScoreL1) detailsScoreL1.textContent = records.scoreL1;
+        if (detailsMaxPointsL1) detailsMaxPointsL1.textContent = maxPoints;
+        if (detailsScoreL2) detailsScoreL2.textContent = records.scoreL2;
+        if (detailsMaxPointsL2) detailsMaxPointsL2.textContent = maxPoints;
+
+        // Render stars L1 (silver)
+        const starsL1Container = $('detailsStarsL1');
+        if (starsL1Container) {
+            starsL1Container.innerHTML = '';
+            for (let i = 0; i < 5; i++) {
+                const active = i < records.starsL1;
+                const starSpan = document.createElement('span');
+                starSpan.className = `material-symbols-outlined${active ? ' is-on' : ''}`;
+                if (active) {
+                    starSpan.style.cssText = `font-size:1.4rem;`;
+                } else {
+                    starSpan.style.cssText = `font-size:1.4rem; font-variation-settings:'FILL' 0; color:var(--color-border-strong); opacity:0.35;`;
+                }
+                starSpan.textContent = 'star';
+                starsL1Container.appendChild(starSpan);
+            }
+        }
+
+        // Render stars L2 (gold)
+        const starsL2Container = $('detailsStarsL2');
+        if (starsL2Container) {
+            starsL2Container.innerHTML = '';
+            for (let i = 0; i < 5; i++) {
+                const active = i < records.starsL2;
+                const starSpan = document.createElement('span');
+                starSpan.className = `material-symbols-outlined${active ? ' is-on' : ''}`;
+                if (active) {
+                    starSpan.style.cssText = `font-size:1.4rem;`;
+                } else {
+                    starSpan.style.cssText = `font-size:1.4rem; font-variation-settings:'FILL' 0; color:var(--color-border-strong); opacity:0.35;`;
+                }
+                starSpan.textContent = 'star';
+                starsL2Container.appendChild(starSpan);
+            }
+        }
+
+        // Lock/Unlock L2 card
+        const cardL2 = $('cardStudyL2');
+        const lockNoticeL2 = $('lockNoticeL2');
+        const statsL2Container = $('statsL2Container');
+        const isL2Unlocked = records.starsL1 >= 3;
+
+        if (cardL2) {
+            if (isL2Unlocked) {
+                cardL2.classList.remove('is-locked');
+                cardL2.style.pointerEvents = 'auto';
+                if (lockNoticeL2) lockNoticeL2.classList.add('hidden');
+                if (statsL2Container) statsL2Container.classList.remove('hidden');
+            } else {
+                cardL2.classList.add('is-locked');
+                cardL2.style.pointerEvents = 'none';
+                if (lockNoticeL2) lockNoticeL2.classList.remove('hidden');
+                if (statsL2Container) statsL2Container.classList.add('hidden');
+            }
+        }
     }
 
     // Read-only row for linked (catalog-referenced) decks — display only, no editing.
@@ -936,7 +1660,7 @@
         // Seed the query from the card's question text for convenience.
         const front = state.imgPicker.item.querySelector('textarea[data-field="front"]');
         if (front && front.value.trim()) input.value = front.value.trim().slice(0, 60);
-        $('dialogImagePicker').showModal();
+        openDialog('dialogImagePicker');
         input.focus();
         if (input.value) imgPickerSearch();
     }
@@ -1000,7 +1724,7 @@
             item.dataset[side + 'Image'] = res.asset_url;
             item.dataset[side + 'Attr'] = JSON.stringify(res.attribution || attr || null);
             renderCardImageField(item, side);
-            $('dialogImagePicker').close();
+            closeDialog('dialogImagePicker');
             showToast(t('microcards.img_added', 'Картинка добавлена'), 'success');
         } catch (err) {
             $('imgPickerStatus').textContent = t('microcards.img_import_failed', 'Не удалось сохранить картинку');
@@ -1057,13 +1781,12 @@
         renderDeckCardsList();
     }
 
-    // ── Deck parameters dialog (replaces the old separate editor page) ─────
     function openDeckMetaDialog() {
         if (!state.activeDeck) return;
         $('metaDeckName').value = state.activeDeck.name || '';
         $('metaDeckDesc').value = state.activeDeck.description || '';
         $('metaDeckTags').value = (state.activeDeck.tags || []).join(', ');
-        $('dialogDeckMeta').showModal();
+        openDialog('dialogDeckMeta');
     }
 
     async function saveDeckMetaDialog(e) {
@@ -1081,7 +1804,7 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name, description, tags })
             });
-            $('dialogDeckMeta').close();
+            closeDialog('dialogDeckMeta');
             showToast(t('microcards.toast_deck_saved', 'Параметры колоды сохранены'), 'success');
             openDeckDetails(state.activeDeckId);
         } catch (err) {
@@ -1089,15 +1812,61 @@
         }
     }
 
-    function toggleDeckActionsMenu(e) {
-        e.stopPropagation();
-        const menu = $('deckActionsDropdown');
-        menu.classList.toggle('hidden');
+    // ── Inline deck rename (pencil next to the title) ─────────────────────
+    function startInlineRename() {
+        const h1 = $('deckDetailsTitle');
+        const input = $('deckTitleInput');
+        if (!h1 || !input) return;
+        input.value = (state.activeDeck && state.activeDeck.name) || h1.textContent || '';
+        h1.classList.add('hidden');
+        input.classList.remove('hidden');
+        input.focus();
+        input.select();
+    }
+    async function commitInlineRename(save) {
+        const h1 = $('deckDetailsTitle');
+        const input = $('deckTitleInput');
+        if (!h1 || !input || input.classList.contains('hidden')) return; // already committed (e.g. Enter then blur)
+        const newName = input.value.trim();
+        const cur = (state.activeDeck && state.activeDeck.name) || '';
+        // Swap back to the heading first so a failed/cancelled edit never leaves the field stuck open.
+        input.classList.add('hidden');
+        h1.classList.remove('hidden');
+        if (!save || !newName || newName === cur) return; // cancelled / empty / unchanged
+        try {
+            await apiCall(`/api/v2/microcards/decks/${state.activeDeckId}`, {
+                method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: newName,
+                    description: (state.activeDeck && state.activeDeck.description) || '',
+                    tags: (state.activeDeck && state.activeDeck.tags) || []
+                })
+            });
+            if (state.activeDeck) state.activeDeck.name = newName;
+            h1.textContent = newName;
+            showToast(t('microcards.toast_deck_saved', 'Параметры колоды сохранены'), 'success');
+        } catch (err) { console.error(err); }
+    }
+    function onRenameKey(e) {
+        if (e.key === 'Enter') { e.preventDefault(); commitInlineRename(true); }
+        else if (e.key === 'Escape') { e.preventDefault(); commitInlineRename(false); }
     }
 
-    // Close actions dropdown on outer click
+    function toggleDeckActionsMenu(e) {
+        if (e) e.stopPropagation();
+        const menu = $('deckActionsDropdown');
+        if (menu.classList.contains('is-open')) {
+            closeDropdown(menu);
+        } else {
+            openDropdown(menu);
+        }
+    }
+
+    // Close actions dropdown + any open per-card menus / expanded details on outer click
     document.addEventListener('click', () => {
-        $('deckActionsDropdown').classList.add('hidden');
+        closeDropdown($('deckActionsDropdown'));
+        closeAllCardMenus();
+        closeAllCardDetails();
     });
 
     async function exportDeck(format) {
@@ -1112,49 +1881,83 @@
         btn.onclick = async () => {
             try {
                 await apiCall(`/api/v2/microcards/decks/${state.activeDeckId}`, { method: 'DELETE' });
-                $('dialogConfirmDelete').close();
+                closeDialog('dialogConfirmDelete');
                 showToast(t('microcards.toast_deck_deleted', 'Колода успешно удалена'), 'success');
                 loadLibraryData();
             } catch (err) {
                 console.error(err);
             }
         };
-        $('dialogConfirmDelete').showModal();
+        openDialog('dialogConfirmDelete');
     }
 
     // ── Learning Session Screen ───────────────────────────────────────────
-    async function startLearningSession(errorsOnly = false) {
+    async function startLearningSession(errorsOnly = false, levelMode = null, forceRestart = false) {
         state.isErrorsOnlyMode = errorsOnly;
+        if (levelMode !== null) {
+            state.sessionLevelMode = levelMode;
+        } else if (!state.sessionLevelMode) {
+            state.sessionLevelMode = 1;
+        }
         // Reset gamification for the new run
         state.combo = 0;
         state.maxCombo = 0;
         state.sessionXp = 0;
+        lastXpValue = 0;
         const comboChip = $('comboChip');
         if (comboChip) comboChip.style.display = 'none';
         popNumber($('xpChipVal'), 0);
         switchView('session');
 
         try {
+            state.isNearMiss = false;
             if (errorsOnly) {
                 // Initialize queue with failed cards from current session stats
                 state.sessionCards = state.sessionErrors.map(id => state.cards.find(c => c.id === id)).filter(Boolean);
                 state.sessionStats = { total: state.sessionCards.length, correct: 0, errors: 0 };
                 state.sessionErrors = [];
                 state.sessionIndex = 0;
+                
+                state.threshold = Math.max(3, Math.min(8, Math.floor(state.sessionCards.length * 0.15)));
+                state.maxPossiblePoints = calculateMaxPossiblePoints(state.sessionCards.length, state.threshold);
+                
                 setupCurrentCard();
             } else {
                 const data = await apiCall(`/api/v2/microcards/decks/${state.activeDeckId}/session/start`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ resume: true, restart: true })
+                    body: JSON.stringify({ resume: true, restart: forceRestart, level_mode: state.sessionLevelMode })
                 });
                 state.session = data.session;
                 
                 // Map queue IDs to full card payloads
                 state.sessionCards = (state.session.card_queue || []).map(id => state.cards.find(c => c.id === id)).filter(Boolean);
-                state.sessionStats = { total: state.sessionCards.length, correct: 0, errors: 0 };
-                state.sessionErrors = [];
-                state.sessionIndex = 0;
+                
+                // Load states from session (pausing/resuming recovery)
+                state.sessionIndex = state.session.cursor || 0;
+                state.combo = state.session.combo || 0;
+                state.maxCombo = state.session.max_combo || 0;
+                state.sessionXp = state.session.session_xp || 0;
+                state.sessionErrors = state.session.session_errors || [];
+                state.isErrorsOnlyMode = state.session.is_errors_only_mode || false;
+                state.sessionStats = {
+                    total: state.sessionCards.length,
+                    correct: (state.session.stats && state.session.stats.correct) || 0,
+                    errors: (state.session.stats && state.session.stats.errors) || 0
+                };
+                
+                state.threshold = Math.max(3, Math.min(8, Math.floor(state.sessionCards.length * 0.15)));
+                state.maxPossiblePoints = calculateMaxPossiblePoints(state.sessionCards.length, state.threshold);
+                
+                // Update gamification UI
+                if (state.combo > 0) {
+                    showCombo();
+                } else {
+                    if (comboChip) comboChip.style.display = 'none';
+                }
+                popNumber($('xpChipVal'), state.sessionXp);
+                // Update progress bar
+                updateHeaderProgress();
                 
                 setupCurrentCard();
             }
@@ -1317,6 +2120,7 @@
 
     function revealAnswerL1() {
         $('flashcardInner').classList.add('flipped');
+        DopamineAudio.playCardFlip();
         showRails(); // reveal the swipe-style grading rails (desktop)
     }
 
@@ -1328,6 +2132,7 @@
         const inner = $('flashcardInner');
         if (inner.classList.contains('flipped')) {
             inner.classList.remove('flipped'); // flip back to the question
+            DopamineAudio.playCardFlip();
             hideRails();
         } else {
             revealAnswerL1();
@@ -1349,7 +2154,10 @@
 
         // Card flies off toward the chosen side (visible on all widths).
         const flyWrap = $('mcFlashWrap');
-        if (flyWrap) flyWrap.classList.add(know ? 'mc-fly-yes' : 'mc-fly-no');
+        if (flyWrap) {
+            flyWrap.classList.add(know ? 'mc-fly-yes' : 'mc-fly-no');
+            DopamineAudio.playCardSwipe(know);
+        }
 
         // Update stats locally
         if (know) {
@@ -1410,6 +2218,7 @@
 
             // Flip card and show details
             $('flashcardInner').classList.add('flipped');
+            DopamineAudio.playCardFlip();
             $('l2ComparisonZone').classList.remove('hidden');
             $('l2UserAnswerDisplay').textContent = answer || t('microcards.empty_answer', '(пусто)');
             $('l2CorrectAnswerDisplay').textContent = expected;
@@ -1489,14 +2298,65 @@
     }
 
     function abortSession() {
-        if (confirm(t('microcards.confirm_exit_session', 'Вы уверены, что хотите выйти из сессии? Прогресс текущих ответов не сохранится.'))) {
+        if (state.session && !state.isErrorsOnlyMode) {
+            openDialog('dialogConfirmExitSession');
+        } else {
             switchView('details');
         }
     }
 
+    async function pauseLearningSession() {
+        if (!state.session) return;
+        try {
+            await apiCall(`/api/v2/microcards/session/${state.session.id}/pause`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    combo: state.combo,
+                    max_combo: state.maxCombo,
+                    session_xp: state.sessionXp,
+                    session_errors: state.sessionErrors,
+                    is_errors_only_mode: state.isErrorsOnlyMode
+                })
+            });
+            showToast(t('microcards.session_paused', 'Сессия приостановлена'), 'info');
+        } catch (err) {
+            console.error('Failed to pause session:', err);
+            showToast(t('microcards.error_pausing_session', 'Не удалось приостановить сессию'), 'error');
+        }
+        if (state.activeDeckId) {
+            openDeckDetails(state.activeDeckId);
+        } else {
+            switchView('library');
+            loadLibraryData();
+        }
+    }
+
+    async function discardLearningSession() {
+        if (!state.session) return;
+        if (confirm(t('microcards.confirm_discard_session', 'Вы уверены, что хотите сбросить прогресс? Текущее прохождение будет удалено.'))) {
+            try {
+                await apiCall(`/api/v2/microcards/session/${state.session.id}/discard`, {
+                    method: 'POST'
+                });
+                showToast(t('microcards.session_discarded', 'Прогресс сессии сброшен'), 'info');
+            } catch (err) {
+                console.error('Failed to discard session:', err);
+            }
+            if (state.activeDeckId) {
+                openDeckDetails(state.activeDeckId);
+            } else {
+                switchView('library');
+                loadLibraryData();
+            }
+        }
+    }
+
+
     // ── Session Summary Screen ────────────────────────────────────────────
     function finishSession() {
         switchView('summary');
+        DopamineAudio.playSessionFinish();
 
         const total = state.sessionStats.total || 0;
         const correct = state.sessionStats.correct || 0;
@@ -1566,14 +2426,67 @@
             void ring.getBoundingClientRect();
             requestAnimationFrame(() => { ring.style.strokeDashoffset = circ * (1 - accuracy / 100); });
         }
+        const maxPoints = state.maxPossiblePoints || 100;
         if ($('sumAccVal')) $('sumAccVal').textContent = accuracy + '%';
+        if ($('sumMaxXp')) $('sumMaxXp').textContent = maxPoints;
 
-        // Stars: 3 ≥85, 2 ≥60, 1 ≥1
-        const starCount = accuracy >= 85 ? 3 : accuracy >= 60 ? 2 : accuracy >= 1 ? 1 : 0;
+        // Stars: based on accuracy directly (ensuring user gets 5 stars for 100% accuracy, L2 unlock etc.)
+        let starCount = 0;
+        if (accuracy >= 100) starCount = 5;
+        else if (accuracy >= 80) starCount = 4;
+        else if (accuracy >= 60) starCount = 3;
+        else if (accuracy >= 40) starCount = 2;
+        else if (accuracy >= 20) starCount = 1;
+
         const stars = $('sumStars');
         if (stars) {
+            if (state.sessionLevelMode === 2) {
+                stars.classList.remove('silver');
+                stars.classList.add('gold');
+            } else {
+                stars.classList.remove('gold');
+                stars.classList.add('silver');
+            }
             stars.querySelectorAll('.material-symbols-outlined').forEach((s, i) => s.classList.toggle('is-on', i < starCount));
             stars.classList.remove('is-revealed'); void stars.offsetWidth; stars.classList.add('is-revealed');
+        }
+
+        // Get records before saving to check L2 lock progression
+        const recordsBefore = getDeckRecord(state.activeDeckId);
+        const wasL2Locked = recordsBefore.starsL1 < 3;
+
+        // Determine "new record" locally from the pre-save snapshot, then persist
+        // asynchronously (saveDeckRecord is async — its Promise must not be used as a boolean).
+        const prevBestScore = state.sessionLevelMode === 2
+            ? (recordsBefore.scoreL2 || 0)
+            : (recordsBefore.scoreL1 || 0);
+        const isNewRecord = state.sessionXp > prevBestScore;
+        saveDeckRecord(state.activeDeckId, state.sessionXp, starCount);
+        const recordBadge = $('sumRecordBadge');
+        if (recordBadge) {
+            if (isNewRecord && state.sessionXp > 0) {
+                recordBadge.classList.remove('hidden');
+            } else {
+                recordBadge.classList.add('hidden');
+            }
+        }
+
+        // Level 2 Unlock Banner and GoToLevel2 button
+        const unlockBanner = $('sumLevel2UnlockBanner');
+        const goToL2Btn = $('btnGoToLevel2');
+        const isL2UnlockedNow = recordsBefore.starsL1 >= 3 || (state.sessionLevelMode === 1 && starCount >= 3);
+
+        if (state.sessionLevelMode === 1 && isL2UnlockedNow) {
+            if (goToL2Btn) goToL2Btn.classList.remove('hidden');
+            // Newly unlocked
+            if (starCount >= 3 && wasL2Locked) {
+                if (unlockBanner) unlockBanner.classList.remove('hidden');
+            } else {
+                if (unlockBanner) unlockBanner.classList.add('hidden');
+            }
+        } else {
+            if (unlockBanner) unlockBanner.classList.add('hidden');
+            if (goToL2Btn) goToL2Btn.classList.add('hidden');
         }
 
         // XP + best combo
@@ -1582,10 +2495,10 @@
 
         // Dynamic title / message
         let titleKey, titleFb, subKey, subFb;
-        if (accuracy >= 100) { titleKey = 'microcards.res_title_perfect'; titleFb = 'Идеально!'; subKey = 'microcards.res_sub_perfect'; subFb = 'Безупречно — ни одной ошибки!'; }
-        else if (accuracy >= 85) { titleKey = 'microcards.res_title_great'; titleFb = 'Великолепно!'; subKey = 'microcards.res_sub_great'; subFb = 'Отличный результат, так держать!'; }
-        else if (accuracy >= 60) { titleKey = 'microcards.res_title_good'; titleFb = 'Хорошая работа!'; subKey = 'microcards.res_sub_good'; subFb = 'Уверенный результат — ещё немного до идеала.'; }
-        else if (accuracy >= 30) { titleKey = 'microcards.res_title_ok'; titleFb = 'Неплохо!'; subKey = 'microcards.res_sub_ok'; subFb = 'Поработай над ошибками — и станет отлично.'; }
+        if (starCount === 5) { titleKey = 'microcards.res_title_perfect'; titleFb = 'Идеально!'; subKey = 'microcards.res_sub_perfect'; subFb = 'Безупречно — ни одной ошибки!'; }
+        else if (starCount >= 4) { titleKey = 'microcards.res_title_great'; titleFb = 'Великолепно!'; subKey = 'microcards.res_sub_great'; subFb = 'Отличный результат, так держать!'; }
+        else if (starCount >= 3) { titleKey = 'microcards.res_title_good'; titleFb = 'Хорошая работа!'; subKey = 'microcards.res_sub_good'; subFb = 'Уверенный результат — ещё немного до идеала.'; }
+        else if (starCount >= 1) { titleKey = 'microcards.res_title_ok'; titleFb = 'Неплохо!'; subKey = 'microcards.res_sub_ok'; subFb = 'Поработай над ошибками — и станет отлично.'; }
         else { titleKey = 'microcards.res_title_keep'; titleFb = 'Продолжай тренироваться'; subKey = 'microcards.res_sub_keep'; subFb = 'Повтори ошибки, чтобы закрепить материал.'; }
         if ($('sumTitle')) $('sumTitle').textContent = t(titleKey, titleFb);
         if ($('sumSubtitle')) $('sumSubtitle').textContent = t(subKey, subFb);
@@ -1624,7 +2537,101 @@
         setMarkerPreset('standard');
         switchImportTab('auto');
         clearImportPreview();
-        $('dialogImportDeck').showModal();
+        // AI prompt helper starts collapsed, default variant.
+        state.aiDetail = 'short'; state.aiHints = 'no';
+        if ($('impAiPanel')) $('impAiPanel').classList.add('hidden');
+        openDialog('dialogImportDeck');
+    }
+
+    // ── AI prompt helper ──────────────────────────────────────────────────
+    // Ready-made prompt the user pastes into an AI to generate cards in our format.
+    // Variants: detail (short = token-thrifty / full = thorough) × hints (no / yes).
+    function _aiPromptText(detail, hints) {
+        const fill = '<<вставьте сюда свой материал: конспект, текст лекции, статью>>';
+        if (detail === 'short' && hints === 'no') {
+            return `Сделай из текста ниже карточки для заучивания (вопрос и ответ).
+
+Правила. Каждая карточка — это одна строка вида «Вопрос — Ответ», между вопросом и ответом ставь длинное тире « — » с пробелами. Не используй нумерацию, маркированные списки, заголовки, markdown и тройные кавычки — в ответе должны быть только строки-карточки и ничего больше. Вопросы короткие и конкретные, ответы краткие.
+
+Пример правильного вывода:
+Столица Японии — Токио
+Сколько костей у взрослого человека? — 206
+
+Материал:
+${fill}`;
+        }
+        if (detail === 'short' && hints === 'yes') {
+            return `Сделай из текста ниже карточки для заучивания (вопрос и ответ).
+
+Правила. Каждая карточка — это одна строка вида «Вопрос — Ответ», между вопросом и ответом ставь длинное тире « — » с пробелами. К трудной карточке можно добавить подсказку в самом конце строки в особых скобках со слешами: (/короткий намёк/). Подсказка — это намёк, а не сам ответ. Не используй нумерацию, маркированные списки, заголовки, markdown и тройные кавычки — только строки-карточки.
+
+Пример правильного вывода:
+Столица Японии — Токио
+Что такое митоз? — Деление клетки на две одинаковые (/«мито» значит «нить»/)
+
+Материал:
+${fill}`;
+        }
+        if (detail === 'full' && hints === 'no') {
+            return `Ты — помощник, который делает качественные карточки для запоминания (вопрос → ответ). Преврати мой материал ниже в набор таких карточек.
+
+Как оформлять (соблюдай точно). Каждая карточка — это одна строка вида «Вопрос — Ответ»; между вопросом и ответом ставь длинное тире с пробелами « — ». Пустых строк между карточками нет. Не добавляй нумерацию, маркированные списки, заголовки, пояснения, markdown или тройные кавычки — в ответе должны быть только строки-карточки и ничего больше.
+
+Каким делать содержание. Одна карточка — одна мысль, не объединяй несколько фактов вместе. Вопрос короткий и однозначный (чтобы был ровно один правильный ответ), ответ краткий и точный (термин или 1–2 предложения). Не повторяй одинаковые карточки. Сохрани важные термины, даты, определения, причины и следствия. Пиши на том же языке, что и материал. Сделай от 10 до 40 карточек — по объёму материала.
+
+Пример правильного вывода:
+Столица Японии — Токио
+Что такое фотосинтез? — Образование глюкозы из углекислого газа и воды на свету
+Год начала Второй мировой войны — 1939
+
+Материал:
+${fill}`;
+        }
+        // full + hints
+        return `Ты — помощник, который делает качественные карточки для запоминания (вопрос → ответ). Преврати мой материал ниже в набор таких карточек.
+
+Как оформлять (соблюдай точно). Каждая карточка — это одна строка вида «Вопрос — Ответ»; между вопросом и ответом ставь длинное тире с пробелами « — ». Если карточка трудная, можешь добавить подсказку в самом конце строки в особых скобках со слешами: «Вопрос — Ответ (/короткий намёк/)». Подсказка — это лёгкая зацепка для памяти, а не сам ответ; добавляй её только там, где она правда помогает, не к каждой карточке. Обычные скобки без слешей подсказкой не считаются. Не используй нумерацию, маркированные списки, заголовки, пояснения, markdown или тройные кавычки — только строки-карточки.
+
+Каким делать содержание. Одна карточка — одна мысль. Вопрос короткий и однозначный, ответ краткий и точный. Не повторяй карточки, сохрани важные термины, даты, определения, причины и следствия. Пиши на том же языке, что и материал. Сделай от 10 до 40 карточек — по объёму материала.
+
+Пример правильного вывода:
+Столица Японии — Токио
+Что такое митоз? — Деление клетки на две одинаковые (/«мито» значит «нить»/)
+Год начала Второй мировой войны — 1939
+
+Материал:
+${fill}`;
+    }
+
+    function renderAiPrompt() {
+        const ta = $('impAiPrompt');
+        if (ta) ta.value = _aiPromptText(state.aiDetail || 'short', state.aiHints || 'no');
+    }
+    function toggleAiPromptPanel() {
+        const p = $('impAiPanel');
+        if (!p) return;
+        const willShow = p.classList.contains('hidden');
+        p.classList.toggle('hidden', !willShow);
+        if (willShow) renderAiPrompt();
+    }
+    function setAiVariant(kind, value) {
+        if (kind === 'detail') state.aiDetail = value; else state.aiHints = value;
+        const wrapId = kind === 'detail' ? 'impAiDetail' : 'impAiHints';
+        const wrap = $(wrapId);
+        if (wrap) wrap.querySelectorAll(`button[data-${kind}]`).forEach(b =>
+            b.classList.toggle('is-active', b.getAttribute('data-' + kind) === value));
+        renderAiPrompt();
+    }
+    async function copyAiPrompt() {
+        const ta = $('impAiPrompt');
+        if (!ta) return;
+        try {
+            await navigator.clipboard.writeText(ta.value);
+            showToast(t('microcards.imp_ai_copied', 'Промпт скопирован — вставьте его в ИИ'), 'success');
+        } catch (e) {
+            ta.focus(); ta.select();
+            showToast(t('microcards.imp_ai_copy_manual', 'Выделено — скопируйте вручную (Ctrl+C)'), 'warning');
+        }
     }
 
     function switchImportTab(format) {
@@ -1686,6 +2693,42 @@
         if ($('impRows')) $('impRows').innerHTML = '';
         if ($('impCounts')) $('impCounts').innerHTML = '';
         if ($('impBadges')) $('impBadges').innerHTML = '';
+        setImportCollapsed(false); // back to the full input zone
+    }
+
+    // ── Collapsing source (input ⇄ compact bar) ───────────────────────────
+    // While entering, the input zone is large; once recognized it collapses into a
+    // one-line source summary so the preview gets the height.
+    function setImportCollapsed(collapsed) {
+        const zone = $('impInputZone');
+        const bar = $('impSourceBar');
+        if (!zone || !bar) return;
+        if (collapsed) {
+            const fi = $('importFile');
+            const hasFile = fi && fi.files.length > 0;
+            const icon = $('impSourceIcon');
+            const txt = $('impSourceText');
+            if (icon) icon.textContent = hasFile ? 'description' : 'content_paste';
+            if (txt) txt.textContent = hasFile
+                ? fi.files[0].name
+                : t('microcards.imp_pasted_text', 'Вставленный текст');
+        }
+        zone.classList.toggle('hidden', collapsed);
+        bar.classList.toggle('hidden', !collapsed);
+    }
+    function editImportSource() {
+        setImportCollapsed(false);
+        const fi = $('importFile');
+        const ta = $('impContent');
+        if (ta && !(fi && fi.files.length)) ta.focus();
+    }
+    function onImportBlur() {
+        // Stepping away from the textarea with a valid result → collapse to free space.
+        const pv = $('impPreview');
+        if (pv && !pv.classList.contains('hidden')
+            && !($('importFile').files.length) && ($('impContent').value || '').trim()) {
+            setImportCollapsed(true);
+        }
     }
 
     function hasImportInput() {
@@ -1791,8 +2834,17 @@
                 return `<div class="mc-imp-row mc-imp-row--err"><span class="mc-imp-row__icon material-symbols-outlined">error</span><span class="mc-imp-row__front">${escHtml(row.front)}</span><span class="mc-imp-row__err">${escHtml(row.error || '')}</span></div>`;
             }
             const dup = row.duplicate;
-            return `<div class="mc-imp-row ${dup ? 'mc-imp-row--dup' : 'mc-imp-row--ok'}"><span class="mc-imp-row__icon material-symbols-outlined">${dup ? 'content_copy' : 'check_circle'}</span><span class="mc-imp-row__front">${escHtml(row.front)}</span><span class="mc-imp-row__back">${escHtml(row.back)}</span></div>`;
+            const hintHtml = row.hint ? `<span class="mc-imp-row__hint"><span class="material-symbols-outlined">lightbulb</span>${escHtml(row.hint)}</span>` : '';
+            return `<div class="mc-imp-row ${dup ? 'mc-imp-row--dup' : 'mc-imp-row--ok'}"><span class="mc-imp-row__icon material-symbols-outlined">${dup ? 'content_copy' : 'check_circle'}</span><span class="mc-imp-row__front">${escHtml(row.front)}</span><span class="mc-imp-row__back">${escHtml(row.back)}${hintHtml}</span></div>`;
         }).join('');
+
+        // Collapse the input once we have a result: always for a file, and for pasted
+        // text only when the user isn't actively typing (so live edits aren't interrupted).
+        const recognized = (counts.ok || 0) + (counts.duplicates || 0) + (counts.errors || 0);
+        const hasFile = $('importFile') && $('importFile').files.length > 0;
+        if (recognized > 0 && (hasFile || document.activeElement !== $('impContent'))) {
+            setImportCollapsed(true);
+        }
     }
 
     function bindImportControls() {
@@ -1848,7 +2900,7 @@
 
         try {
             const result = await apiCall(url, opts);
-            $('dialogImportDeck').close();
+            closeDialog('dialogImportDeck');
             let msg = t('microcards.toast_imported', 'Импортировано {n} карточек').replace('{n}', result.added_count || 0);
             if (result.skipped_duplicates) {
                 msg += ' · ' + t('microcards.toast_skipped_dup', 'дублей пропущено: {n}').replace('{n}', result.skipped_duplicates);
@@ -1860,10 +2912,9 @@
         }
     }
 
-    // ── Import by access code ─────────────────────────────────────────────
     function openImportByCodeDialog() {
         if ($('importCodeInput')) $('importCodeInput').value = '';
-        $('dialogImportByCode').showModal();
+        openDialog('dialogImportByCode');
         setTimeout(() => { try { $('importCodeInput').focus(); } catch (e) {} }, 50);
     }
 
@@ -1878,7 +2929,7 @@
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ access_code: code }),
             });
-            $('dialogImportByCode').close();
+            closeDialog('dialogImportByCode');
             showToast(result.already_in_library
                 ? t('microcards.toast_code_already', 'Эта колода уже в вашей библиотеке')
                 : t('microcards.toast_imported', 'Импортировано {n} карточек').replace('{n}', result.added_count || 0), 'success');
@@ -1942,7 +2993,7 @@
         setPublishVisibility(key === 'unpublished' ? 'public' : key);
         showPublishCode(key === 'access_code' ? deck.access_code : null);
         renderPublishStatus();
-        $('dialogPublishDeck').showModal();
+        openDialog('dialogPublishDeck');
     }
 
     async function copyPublishCode() {
@@ -1998,8 +3049,53 @@
             });
         }
 
+        // Bind exit confirmation dialog buttons
+        const pauseExitBtn = $('btnPauseAndExit');
+        if (pauseExitBtn) {
+            pauseExitBtn.addEventListener('click', async () => {
+                closeDialog('dialogConfirmExitSession');
+                await pauseLearningSession();
+            });
+        }
+        const discardExitBtn = $('btnDiscardAndExit');
+        if (discardExitBtn) {
+            discardExitBtn.addEventListener('click', async () => {
+                closeDialog('dialogConfirmExitSession');
+                await discardLearningSession();
+            });
+        }
+
+        // Auto-pause session on tab/browser closure via modern keepalive fetch
+        window.addEventListener('beforeunload', () => {
+            if (state.view === 'session' && state.session && !state.isErrorsOnlyMode) {
+                const url = `/api/v2/microcards/session/${state.session.id}/pause`;
+                const payload = JSON.stringify({
+                    combo: state.combo,
+                    max_combo: state.maxCombo,
+                    session_xp: state.sessionXp,
+                    session_errors: state.sessionErrors,
+                    is_errors_only_mode: state.isErrorsOnlyMode
+                });
+                fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: payload,
+                    keepalive: true
+                });
+            }
+        });
+
         // Bind swipe-style grading rails
         bindSessionRails();
+        
+        // Initial positioning of sliding tabs pill (without animation)
+        setTimeout(() => {
+            moveTabPill('mcSort', null, false);
+        }, 100);
+
+        window.addEventListener('resize', () => {
+            moveTabPill('mcSort', null, false);
+        });
 
         // Bind import dialog controls (format tabs + separator chips)
         bindImportControls();
@@ -2022,6 +3118,8 @@
     // Expose controls to global context
     window.mcApp = {
         init,
+        openDialog,
+        closeDialog,
         handleBackNavigation,
         openCreateDeckDialog,
         handleCreateDeckSubmit,
@@ -2060,16 +3158,28 @@
         pasteImportClipboard,
         onImportInput,
         onImportFile,
+        editImportSource,
+        onImportBlur,
+        toggleAiPromptPanel,
+        setAiVariant,
+        copyAiPrompt,
         openImportByCodeDialog,
         handleImportByCodeSubmit,
         selectTagFilter,
-        openSettingsDialog,
-        saveSettings,
-        onNewAutoToggle,
-        selectDirection,
+        startInlineRename,
+        commitInlineRename,
+        onRenameKey,
+        studyDeckFromLibrary,
+        editDeckFromLibrary,
+        exportDeckFromLibrary,
+        deleteDeckFromLibrary,
+        toggleCardMenu,
+        toggleCardDetails,
         publishDeckToCatalog,
         handlePublishSubmit,
-        copyPublishCode
+        copyPublishCode,
+        pauseLearningSession,
+        discardLearningSession
     };
 
     // Auto boot

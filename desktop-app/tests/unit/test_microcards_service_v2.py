@@ -4,8 +4,15 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from services.microcards_service_v2 import MicrocardsServiceV2
+from services.microcards_service_v2 import MicrocardsServiceV2, _write_json
 from logic.fsrs import Rating, State
+
+
+def _write_raw_settings(svc, payload):
+    """Persist a raw settings file (simulates legacy/stored settings).
+    Study settings are no longer user-editable via the service, so tests drive
+    get_settings() — which still clamps/sanitizes — through the file directly."""
+    _write_json(svc._settings_path, payload)
 
 def test_fsrs_math_and_transitions():
     svc = MicrocardsServiceV2(tempfile.mkdtemp(), user_id="test_user")
@@ -566,15 +573,15 @@ def test_settings_clamp_and_persist():
     svc = MicrocardsServiceV2(tmp, user_id="test_user")
     assert svc.get_settings()["session_size"] == 20
 
-    svc.update_settings({"session_size": 999, "new_per_session": -5,
-                         "default_direction": "bogus"})
+    _write_raw_settings(svc, {"session_size": 999, "new_per_session": -5,
+                              "default_direction": "bogus"})
     s = svc.get_settings()
     assert s["session_size"] == 100          # clamped to max
     assert s["new_per_session"] == 0         # clamped to min
     assert "fuzzy_threshold" not in s        # not a user-facing setting
     assert s["default_direction"] == "front_back"  # invalid → default
 
-    svc.update_settings({"session_size": 7, "default_direction": "back_front"})
+    _write_raw_settings(svc, {"session_size": 7, "default_direction": "back_front"})
     s2 = svc.get_settings()
     assert s2["session_size"] == 7
     assert s2["default_direction"] == "back_front"
@@ -587,7 +594,7 @@ def test_session_size_setting():
     for i in range(10):
         svc.create_card(deck["id"], front_text=f"Q{i}", back_text=f"A{i}")
 
-    svc.update_settings({"session_size": 4})
+    _write_raw_settings(svc, {"session_size": 4})
     session = svc.start_session(deck["id"], restart=True)
     assert len(session["card_queue"]) == 4
 
@@ -760,11 +767,11 @@ def test_auto_new_limit_throttles_with_backlog():
 
 def test_settings_new_per_session_mode_sanitized():
     svc = MicrocardsServiceV2(tempfile.mkdtemp(), user_id="learner")
-    assert svc.get_settings()["new_per_session_mode"] == "manual"  # default
-    svc.update_settings({"new_per_session_mode": "auto"})
-    assert svc.get_settings()["new_per_session_mode"] == "auto"
-    svc.update_settings({"new_per_session_mode": "nonsense"})
-    assert svc.get_settings()["new_per_session_mode"] == "manual"  # invalid → default
+    assert svc.get_settings()["new_per_session_mode"] == "auto"  # universal default
+    _write_raw_settings(svc, {"new_per_session_mode": "manual"})
+    assert svc.get_settings()["new_per_session_mode"] == "manual"
+    _write_raw_settings(svc, {"new_per_session_mode": "nonsense"})
+    assert svc.get_settings()["new_per_session_mode"] == "auto"  # invalid → default
 
 
 def test_card_image_attribution_stored_and_preserved():

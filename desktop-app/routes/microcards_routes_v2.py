@@ -108,6 +108,58 @@ def create_deck():
         logger.exception("[HTTP] v2/microcards/decks create failed: %s", exc)
         return jsonify({"ok": False, "error": "create_failed"}), 500
 
+# ── Deck Records (stars + scores, server-side) ───────────────────────────
+
+@microcards_v2_bp.route("/records", methods=["GET"])
+def get_all_records():
+    """Return all deck records for the current user (used to hydrate localStorage on load)."""
+    guest_check = _check_guest()
+    if guest_check:
+        return guest_check
+    try:
+        svc = _get_svc()
+        records = svc.get_all_records()
+        return jsonify({"ok": True, "records": records})
+    except Exception as exc:
+        logger.exception("[HTTP] v2/microcards/records get_all failed: %s", exc)
+        return jsonify({"ok": False, "error": "get_records_failed"}), 500
+
+@microcards_v2_bp.route("/records/<string:deck_id>", methods=["GET"])
+def get_deck_record_route(deck_id: str):
+    """Return record for one deck."""
+    guest_check = _check_guest()
+    if guest_check:
+        return guest_check
+    try:
+        svc = _get_svc()
+        record = svc.get_deck_record(deck_id)
+        return jsonify({"ok": True, "record": record})
+    except Exception as exc:
+        logger.exception("[HTTP] v2/microcards/records get failed: %s", exc)
+        return jsonify({"ok": False, "error": "get_record_failed"}), 500
+
+@microcards_v2_bp.route("/records/<string:deck_id>", methods=["POST"])
+def save_deck_record_route(deck_id: str):
+    """Save (upsert) a deck record — only keeps all-time best per level."""
+    guest_check = _check_guest()
+    if guest_check:
+        return guest_check
+    body = request.get_json(silent=True) or {}
+    score = body.get("score")
+    stars = body.get("stars")
+    level_mode = body.get("level_mode", 1)
+    if score is None or stars is None:
+        return jsonify({"ok": False, "error": "score_and_stars_required"}), 400
+    try:
+        svc = _get_svc()
+        result = svc.save_deck_record(deck_id, score=int(score), stars=int(stars), level_mode=int(level_mode or 1))
+        return jsonify({"ok": True, **result})
+    except (ValueError, TypeError) as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+    except Exception as exc:
+        logger.exception("[HTTP] v2/microcards/records save failed: %s", exc)
+        return jsonify({"ok": False, "error": "save_record_failed"}), 500
+
 @microcards_v2_bp.route("/decks/<string:deck_id>", methods=["GET"])
 def get_deck(deck_id: str):
     guest_check = _check_guest()
@@ -118,6 +170,22 @@ def get_deck(deck_id: str):
         deck = svc.get_deck(deck_id)
         if not deck:
             return jsonify({"ok": False, "error": "deck_not_found"}), 404
+        
+        # Add active session info
+        active_sess = svc._get_active_session_for_deck(deck_id)
+        if active_sess:
+            deck["is_paused"] = True
+            cursor = active_sess.get("cursor", 0)
+            total_q = len(active_sess.get("card_queue", []))
+            deck["paused_progress"] = f"{cursor}/{total_q}"
+            deck["active_session_id"] = active_sess.get("id")
+            deck["active_session_level_mode"] = active_sess.get("level_mode")
+        else:
+            deck["is_paused"] = False
+            deck["paused_progress"] = None
+            deck["active_session_id"] = None
+            deck["active_session_level_mode"] = None
+
         return jsonify({"ok": True, "deck": deck})
     except Exception as exc:
         logger.exception("[HTTP] v2/microcards/decks get failed: %s", exc)
@@ -426,10 +494,16 @@ def start_session(deck_id: str):
     resume = body.get("resume", True)
     restart = body.get("restart", False)
     direction = body.get("direction")
+    level_mode = body.get("level_mode")
+    if level_mode is not None:
+        try:
+            level_mode = int(level_mode)
+        except (ValueError, TypeError):
+            level_mode = None
 
     try:
         svc = _get_svc()
-        session = svc.start_session(deck_id, resume=resume, restart=restart, direction=direction)
+        session = svc.start_session(deck_id, resume=resume, restart=restart, direction=direction, level_mode=level_mode)
         return jsonify({"ok": True, "session": session})
     except LookupError as exc:
         return jsonify({"ok": False, "error": str(exc)}), 404
@@ -472,6 +546,66 @@ def submit_answer(session_id: str):
     except Exception as exc:
         logger.exception("[HTTP] v2/microcards/session answer failed: %s", exc)
         return jsonify({"ok": False, "error": "submit_answer_failed"}), 500
+
+@microcards_v2_bp.route("/session/<string:session_id>/pause", methods=["POST"])
+def pause_session(session_id: str):
+    guest_check = _check_guest()
+    if guest_check:
+        return guest_check
+    body = request.get_json(silent=True) or {}
+    combo = int(body.get("combo", 0))
+    max_combo = int(body.get("max_combo", 0))
+    session_xp = int(body.get("session_xp", 0))
+    session_errors = body.get("session_errors") or []
+    is_errors_only_mode = bool(body.get("is_errors_only_mode", False))
+    
+    try:
+        svc = _get_svc()
+        session = svc.pause_session(
+            session_id=session_id,
+            combo=combo,
+            max_combo=max_combo,
+            session_xp=session_xp,
+            session_errors=session_errors,
+            is_errors_only_mode=is_errors_only_mode
+        )
+        return jsonify({"ok": True, "session": session})
+    except LookupError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 404
+    except Exception as exc:
+        logger.exception("[HTTP] v2/microcards/session pause failed: %s", exc)
+        return jsonify({"ok": False, "error": "session_pause_failed"}), 500
+
+@microcards_v2_bp.route("/session/<string:session_id>/resume", methods=["POST"])
+def resume_session(session_id: str):
+    guest_check = _check_guest()
+    if guest_check:
+        return guest_check
+    try:
+        svc = _get_svc()
+        session = svc.resume_session(session_id)
+        return jsonify({"ok": True, "session": session})
+    except LookupError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 404
+    except Exception as exc:
+        logger.exception("[HTTP] v2/microcards/session resume failed: %s", exc)
+        return jsonify({"ok": False, "error": "session_resume_failed"}), 500
+
+@microcards_v2_bp.route("/session/<string:session_id>/discard", methods=["POST"])
+def discard_session(session_id: str):
+    guest_check = _check_guest()
+    if guest_check:
+        return guest_check
+    try:
+        svc = _get_svc()
+        session = svc.discard_session(session_id)
+        return jsonify({"ok": True, "session": session})
+    except LookupError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 404
+    except Exception as exc:
+        logger.exception("[HTTP] v2/microcards/session discard failed: %s", exc)
+        return jsonify({"ok": False, "error": "session_discard_failed"}), 500
+
 
 @microcards_v2_bp.route("/session/<string:session_id>/summary", methods=["GET"])
 def get_session_summary(session_id: str):
@@ -923,18 +1057,9 @@ def get_v2_settings():
         logger.exception("[HTTP] v2/microcards/settings get failed: %s", exc)
         return jsonify({"ok": False, "error": "settings_failed"}), 500
 
-@microcards_v2_bp.route("/settings", methods=["PATCH"])
-def update_v2_settings():
-    guest_check = _check_guest()
-    if guest_check:
-        return guest_check
-    body = request.get_json(silent=True) or {}
-    try:
-        svc = _get_svc()
-        return jsonify({"ok": True, "settings": svc.update_settings(body)})
-    except Exception as exc:
-        logger.exception("[HTTP] v2/microcards/settings update failed: %s", exc)
-        return jsonify({"ok": False, "error": "settings_update_failed"}), 500
+# Study settings are no longer user-configurable — every deck uses the universal
+# defaults (MicrocardsServiceV2.DEFAULT_SETTINGS). The GET above stays so the
+# frontend can hydrate them read-only; there is intentionally no PATCH endpoint.
 
 # ── Summary Statistics ────────────────────────────────────────────────
 
