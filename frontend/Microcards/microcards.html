@@ -1531,6 +1531,7 @@
                             <span class="mc-kpi mc-kpi--streak"><span class="material-symbols-outlined">local_fire_department</span><b id="anStreak">0</b>&nbsp;<span data-i18n="microcards.kpi_streak">дн. подряд</span></span>
                             <span class="mc-kpi mc-kpi--ret"><span class="material-symbols-outlined">target</span><b id="anRetention">0</b>%&nbsp;<span data-i18n="microcards.kpi_retention">удержание</span></span>
                             <span class="mc-kpi mc-kpi--over"><span class="material-symbols-outlined">schedule</span><b id="anOverdue">0</b>&nbsp;<span data-i18n="microcards.kpi_overdue">просрочено</span></span>
+                            <span class="mc-kpi mc-kpi--goal" id="mcGoalKpi"><span class="material-symbols-outlined" id="mcGoalIcon">flag</span><b id="anGoalToday">0</b>/<b id="anGoalTarget">20</b>&nbsp;<span data-i18n="microcards.kpi_goal">сегодня</span></span>
                         </div>
                     </div>
                     <div style="display:flex;align-items:center;gap:0.6rem">
@@ -2197,6 +2198,19 @@
                 </span>
                 <input type="checkbox" id="prefAnimations" style="width:1.15rem;height:1.15rem;accent-color:var(--color-primary);cursor:pointer">
             </label>
+            <hr style="border:0;border-top:1px solid var(--color-border-strong);opacity:0.4;margin:0">
+            <div class="mc-field">
+                <label for="prefDailyLoad" class="mc-field__label" data-i18n="microcards.settings_daily_load">Дневная нагрузка повторения</label>
+                <select id="prefDailyLoad" class="mc-input">
+                    <option value="light" data-i18n="microcards.load_light">Лайт — до 10 карточек за сессию</option>
+                    <option value="standard" data-i18n="microcards.load_standard">Стандарт — до 20 карточек за сессию</option>
+                    <option value="intense" data-i18n="microcards.load_intense">Интенсив — до 40 карточек за сессию</option>
+                </select>
+            </div>
+            <div class="mc-field">
+                <label for="prefDailyGoal" class="mc-field__label" data-i18n="microcards.settings_daily_goal">Дневная цель (повторений в день)</label>
+                <input type="number" id="prefDailyGoal" class="mc-input" min="5" max="200" step="5">
+            </div>
             <div class="mc-dialog-actions">
                 <button type="button" onclick="mcApp.closeDialog('dialogStudyPrefs')" class="mc-btn mc-btn--primary mc-btn--block" data-i18n="microcards.btn_done">Готово</button>
             </div>

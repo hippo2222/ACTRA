@@ -403,6 +403,32 @@ def test_deck_direction_preference_and_mixed_coercion():
     assert explicit["direction"] == "front_back"
 
 
+def test_update_settings_presets_and_goal():
+    """The daily-load preset writes the underlying review pacing numbers; the
+    daily goal is clamped; review sessions pick the preset up."""
+    tmp = tempfile.mkdtemp()
+    svc = MicrocardsServiceV2(tmp, user_id="test_user")
+
+    s = svc.update_settings(daily_load="intense", daily_goal=50)
+    assert s["daily_load"] == "intense"
+    assert s["session_size"] == 40
+    assert s["new_per_session"] == 40
+    assert s["daily_goal"] == 50
+
+    # Goal is clamped, an unknown preset is ignored (previous one survives).
+    assert svc.update_settings(daily_goal=99999)["daily_goal"] == 200
+    s3 = svc.update_settings(daily_load="bogus")
+    assert s3["daily_load"] == "intense"
+
+    # The preset actually drives review sessions.
+    deck = svc.create_deck(name="Pace Deck")
+    for i in range(15):
+        svc.create_card(deck["id"], front_text=f"Q{i}", back_text=f"A{i}")
+    svc.update_settings(daily_load="light")
+    review = svc.start_session(deck["id"], mode="review")
+    assert len(review["card_queue"]) == 10
+
+
 def test_legacy_records_are_wiped():
     """Pre-run (schema 1.0) records are discarded on first read — the agreed
     one-time reset when the run model shipped."""

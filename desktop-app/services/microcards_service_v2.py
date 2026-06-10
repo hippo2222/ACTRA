@@ -133,8 +133,13 @@ class MicrocardsServiceV2:
         "new_per_session": 20,
         "new_per_session_mode": "auto",  # manual | auto (adaptive to review backlog)
         "default_direction": "front_back",  # front_back | back_front | mixed
+        "daily_load": "standard",  # light | standard | intense (review pacing preset)
+        "daily_goal": 20,          # reviews per day the user aims for
     }
     DIRECTIONS = ("front_back", "back_front", "mixed")
+    # Daily-load presets drive the review session size / new-card ceiling.
+    # The user picks a pace, not raw numbers.
+    DAILY_LOAD_PRESETS = {"light": 10, "standard": 20, "intense": 40}
     # Fixed, typo-tolerant answer-matching threshold. Not user-configurable on purpose:
     # typos should pass by default, and genuinely borderline answers are resolved by the
     # learner via the "count as correct" (override) action during review.
@@ -197,7 +202,34 @@ class MicrocardsServiceV2:
             s["new_per_session_mode"] = self.DEFAULT_SETTINGS["new_per_session_mode"]
         if s["default_direction"] not in self.DIRECTIONS:
             s["default_direction"] = self.DEFAULT_SETTINGS["default_direction"]
+        if s.get("daily_load") not in self.DAILY_LOAD_PRESETS:
+            s["daily_load"] = self.DEFAULT_SETTINGS["daily_load"]
+        try:
+            s["daily_goal"] = max(5, min(int(s["daily_goal"]), 200))
+        except Exception:
+            s["daily_goal"] = self.DEFAULT_SETTINGS["daily_goal"]
         return s
+
+    def update_settings(self, daily_load: Optional[str] = None,
+                        daily_goal: Optional[Any] = None) -> Dict[str, Any]:
+        """Persist the user-facing study settings.
+
+        Only the pace preset and the daily goal are exposed — the preset writes
+        the underlying session_size / new-card ceiling so the user never deals
+        with raw numbers."""
+        current = self.get_settings()
+        if daily_load is not None and daily_load in self.DAILY_LOAD_PRESETS:
+            size = self.DAILY_LOAD_PRESETS[daily_load]
+            current["daily_load"] = daily_load
+            current["session_size"] = size
+            current["new_per_session"] = size
+        if daily_goal is not None:
+            try:
+                current["daily_goal"] = max(5, min(int(daily_goal), 200))
+            except (ValueError, TypeError):
+                pass
+        _write_json(self._settings_path, current)
+        return self.get_settings()
 
     @property
     def _events_path(self) -> Path:

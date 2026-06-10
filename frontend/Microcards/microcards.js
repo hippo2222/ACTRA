@@ -1127,6 +1127,7 @@
         $('anStreak').textContent = data.streak || 0;
         $('anRetention').textContent = data.retention || 0;
         $('anOverdue').textContent = data.overdue || 0;
+        renderGoalKpi(data);
         const hasActivity = (data.total_reviews || 0) > 0 || (data.streak || 0) > 0 || (data.overdue || 0) > 0;
         $('mcKpis').style.display = hasActivity ? 'flex' : 'none';
     }
@@ -2748,7 +2749,7 @@
         switchView('details');
     }
 
-    // ── Study settings dialog (sound / volume / animations) ───────────────
+    // ── Study settings dialog (sound / volume / animations / pace / goal) ──
     function openStudySettings() {
         const soundEl = $('prefSound');
         const volEl = $('prefVolume');
@@ -2756,6 +2757,11 @@
         if (soundEl) soundEl.checked = prefs.sound;
         if (volEl) volEl.value = Math.round(prefs.volume * 100);
         if (animEl) animEl.checked = prefs.animations;
+        // Server-backed study settings (pace preset + daily goal)
+        const loadSel = $('prefDailyLoad');
+        if (loadSel) loadSel.value = (state.settings && state.settings.daily_load) || 'standard';
+        const goalEl = $('prefDailyGoal');
+        if (goalEl) goalEl.value = (state.settings && state.settings.daily_goal) || 20;
         syncVolumeRowState();
         openDialog('dialogStudyPrefs');
     }
@@ -2790,6 +2796,51 @@
                 savePrefs();
             });
         }
+
+        // Pace preset + daily goal live on the server (follow the account).
+        const pushSettings = async (patch) => {
+            try {
+                const res = await apiCall('/api/v2/microcards/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(patch)
+                });
+                if (res && res.settings) {
+                    state.settings = res.settings;
+                    renderGoalKpi();
+                }
+            } catch (e) {
+                console.error('[settings]', e);
+            }
+        };
+        const loadSel = $('prefDailyLoad');
+        if (loadSel) {
+            loadSel.addEventListener('change', () => pushSettings({ daily_load: loadSel.value }));
+        }
+        const goalEl = $('prefDailyGoal');
+        if (goalEl) {
+            goalEl.addEventListener('change', () => {
+                const v = parseInt(goalEl.value, 10);
+                if (v) pushSettings({ daily_goal: v });
+            });
+        }
+    }
+
+    // «Сегодня: X/N» — progress toward the daily review goal (library KPI).
+    function renderGoalKpi(analytics) {
+        if (analytics) state._analytics = analytics;
+        const a = state._analytics || {};
+        const goal = (state.settings && state.settings.daily_goal) || 20;
+        const today = a.reviews_today || 0;
+        const todayEl = $('anGoalToday');
+        const targetEl = $('anGoalTarget');
+        if (todayEl) todayEl.textContent = today;
+        if (targetEl) targetEl.textContent = goal;
+        const met = today >= goal;
+        const icon = $('mcGoalIcon');
+        if (icon) icon.textContent = met ? 'check_circle' : 'flag';
+        const kpi = $('mcGoalKpi');
+        if (kpi) kpi.style.color = met ? 'var(--color-success)' : '';
     }
 
     function bindBrowseControls() {

@@ -1113,6 +1113,25 @@ def catalog_deck_library_status(catalog_item_id: str):
 
 # ── Settings ──────────────────────────────────────────────────────────
 
+@microcards_v2_bp.route("/settings", methods=["POST"])
+def update_v2_settings():
+    """Update the user-facing study settings (pace preset + daily goal)."""
+    guest_check = _check_guest()
+    if guest_check:
+        return guest_check
+    body = request.get_json(silent=True) or {}
+    try:
+        svc = _get_svc()
+        settings = svc.update_settings(
+            daily_load=body.get("daily_load"),
+            daily_goal=body.get("daily_goal"),
+        )
+        return jsonify({"ok": True, "settings": settings})
+    except Exception as exc:
+        logger.exception("[HTTP] v2/microcards/settings update failed: %s", exc)
+        return jsonify({"ok": False, "error": "settings_update_failed"}), 500
+
+
 @microcards_v2_bp.route("/settings", methods=["GET"])
 def get_v2_settings():
     guest_check = _check_guest()
