@@ -33,9 +33,7 @@ def test_service_pause_resume_discard():
         session_id=session_id,
         combo=3,
         max_combo=5,
-        session_xp=15,
-        session_errors=[card1["id"]],
-        is_errors_only_mode=False
+        session_xp=15
     )
 
     # 4. Check list_decks returns pause status
@@ -57,7 +55,6 @@ def test_service_pause_resume_discard():
     assert resumed["paused"] is False
     assert resumed["combo"] == 3
     assert resumed["session_xp"] == 15
-    assert resumed["session_errors"] == [card1["id"]]
 
     # 7. Pause again
     svc.pause_session(session_id, combo=1, max_combo=1)
@@ -109,9 +106,7 @@ def test_routes_pause_resume_discard(monkeypatch):
         res_pause = client.post(f"/api/v2/microcards/session/{session_id}/pause", json={
             "combo": 4,
             "max_combo": 10,
-            "session_xp": 40,
-            "session_errors": ["card_1"],
-            "is_errors_only_mode": False
+            "session_xp": 40
         })
         assert res_pause.status_code == 200
         assert res_pause.get_json()["ok"] is True

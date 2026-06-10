@@ -171,20 +171,34 @@ def get_deck(deck_id: str):
         if not deck:
             return jsonify({"ok": False, "error": "deck_not_found"}), 404
         
-        # Add active session info
-        active_sess = svc._get_active_session_for_deck(deck_id)
-        if active_sess:
+        # Active sessions per slot (review / run_l1 / run_l2) + legacy fields.
+        actives = svc._get_active_sessions_for_deck(deck_id)
+        deck["active_sessions"] = {
+            slot: svc._session_summary_light(sess) for slot, sess in actives.items()
+        }
+        preferred = None
+        for key in ("run_l1", "run_l2", "review"):
+            if key in actives:
+                preferred = actives[key]
+                break
+        if preferred is not None:
+            light = svc._session_summary_light(preferred)
             deck["is_paused"] = True
-            cursor = active_sess.get("cursor", 0)
-            total_q = len(active_sess.get("card_queue", []))
-            deck["paused_progress"] = f"{cursor}/{total_q}"
-            deck["active_session_id"] = active_sess.get("id")
-            deck["active_session_level_mode"] = active_sess.get("level_mode")
+            deck["paused_progress"] = f"{light['mastered']}/{light['unique_total']}"
+            deck["active_session_id"] = light["session_id"]
+            deck["active_session_level_mode"] = preferred.get("level_mode")
         else:
             deck["is_paused"] = False
             deck["paused_progress"] = None
             deck["active_session_id"] = None
             deck["active_session_level_mode"] = None
+
+        # Run-based gate for level 2 (mirrors list_decks summaries)
+        record = svc.get_deck_record(deck_id)
+        deck["l1_progress"] = record.get("l1_progress")
+        deck["l2_unlocked"] = record.get("l2_unlocked", False)
+        deck["record"] = {k: record.get(k) for k in (
+            "scoreL1", "starsL1", "sizeL1", "scoreL2", "starsL2", "sizeL2", "l1_run_completed")}
 
         return jsonify({"ok": True, "deck": deck})
     except Exception as exc:
@@ -494,6 +508,7 @@ def start_session(deck_id: str):
     resume = body.get("resume", True)
     restart = body.get("restart", False)
     direction = body.get("direction")
+    mode = body.get("mode")
     level_mode = body.get("level_mode")
     if level_mode is not None:
         try:
@@ -503,7 +518,8 @@ def start_session(deck_id: str):
 
     try:
         svc = _get_svc()
-        session = svc.start_session(deck_id, resume=resume, restart=restart, direction=direction, level_mode=level_mode)
+        session = svc.start_session(deck_id, resume=resume, restart=restart, direction=direction,
+                                    level_mode=level_mode, mode=mode)
         return jsonify({"ok": True, "session": session})
     except LookupError as exc:
         return jsonify({"ok": False, "error": str(exc)}), 404
@@ -534,13 +550,20 @@ def submit_answer(session_id: str):
             user_answer=user_answer,
             override=override
         )
-        return jsonify({
+        payload = {
             "ok": True,
             "is_correct": result["is_correct"],
             "card_state": result["card_state"],
             "session": result["session"],
-            "expected_answer": result["expected_answer"]
-        })
+            "expected_answer": result["expected_answer"],
+            "first_attempt": result.get("first_attempt", True),
+            "is_retry": result.get("is_retry", False),
+        }
+        if "deck_l1_progress" in result:
+            payload["deck_l1_progress"] = result["deck_l1_progress"]
+        if result.get("card_missing"):
+            payload["card_missing"] = True
+        return jsonify(payload)
     except LookupError as exc:
         return jsonify({"ok": False, "error": str(exc)}), 404
     except Exception as exc:
@@ -556,18 +579,14 @@ def pause_session(session_id: str):
     combo = int(body.get("combo", 0))
     max_combo = int(body.get("max_combo", 0))
     session_xp = int(body.get("session_xp", 0))
-    session_errors = body.get("session_errors") or []
-    is_errors_only_mode = bool(body.get("is_errors_only_mode", False))
-    
+
     try:
         svc = _get_svc()
         session = svc.pause_session(
             session_id=session_id,
             combo=combo,
             max_combo=max_combo,
-            session_xp=session_xp,
-            session_errors=session_errors,
-            is_errors_only_mode=is_errors_only_mode
+            session_xp=session_xp
         )
         return jsonify({"ok": True, "session": session})
     except LookupError as exc:
@@ -590,6 +609,53 @@ def resume_session(session_id: str):
     except Exception as exc:
         logger.exception("[HTTP] v2/microcards/session resume failed: %s", exc)
         return jsonify({"ok": False, "error": "session_resume_failed"}), 500
+
+@microcards_v2_bp.route("/session/<string:session_id>/abandon", methods=["POST"])
+def abandon_session(session_id: str):
+    """Exit without saving: a run rolls back to its last checkpoint (pause);
+    a never-paused run or a review is discarded."""
+    guest_check = _check_guest()
+    if guest_check:
+        return guest_check
+    try:
+        svc = _get_svc()
+        result = svc.abandon_session(session_id)
+        return jsonify({"ok": True, "restored": result["restored"], "session": result["session"]})
+    except LookupError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 404
+    except Exception as exc:
+        logger.exception("[HTTP] v2/microcards/session abandon failed: %s", exc)
+        return jsonify({"ok": False, "error": "session_abandon_failed"}), 500
+
+
+@microcards_v2_bp.route("/session/<string:session_id>/finish", methods=["POST"])
+def finish_session(session_id: str):
+    """Close out a completed run: server computes the stars and saves the
+    deck record (the only way to earn stars / unlock level 2)."""
+    guest_check = _check_guest()
+    if guest_check:
+        return guest_check
+    body = request.get_json(silent=True) or {}
+    try:
+        session_xp = int(body.get("session_xp", 0))
+    except (ValueError, TypeError):
+        session_xp = 0
+    try:
+        max_combo = int(body.get("max_combo", 0))
+    except (ValueError, TypeError):
+        max_combo = 0
+    try:
+        svc = _get_svc()
+        result = svc.finish_session(session_id, session_xp=session_xp, max_combo=max_combo)
+        return jsonify({"ok": True, "result": result})
+    except LookupError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 404
+    except ValueError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+    except Exception as exc:
+        logger.exception("[HTTP] v2/microcards/session finish failed: %s", exc)
+        return jsonify({"ok": False, "error": "session_finish_failed"}), 500
+
 
 @microcards_v2_bp.route("/session/<string:session_id>/discard", methods=["POST"])
 def discard_session(session_id: str):

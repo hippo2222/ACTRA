@@ -1,5 +1,7 @@
 """Microcards V2 service with FSRS-4.5 scheduler and progressive levels."""
 
+import copy
+import hashlib
 import json
 import logging
 import os
@@ -98,6 +100,18 @@ def _clean_answer_list(values: Any) -> List[str]:
 def _normalize_key(text: Any) -> str:
     """Lowercased, whitespace-collapsed key used for dedup comparisons."""
     return " ".join(_s(text).lower().split())
+
+
+def _card_content_key(card: Dict[str, Any]) -> str:
+    """Stable content fingerprint of a card (normalized front+back).
+
+    Stored on review states so that when a linked deck's author republishes
+    with re-created card ids, the subscriber's progress can be matched back
+    to the same content (see _reconcile_linked_states)."""
+    front = ((card.get("front") or {}).get("text")) or ""
+    back = ((card.get("back") or {}).get("text")) or ""
+    raw = _normalize_key(front) + "\x1f" + _normalize_key(back)
+    return hashlib.sha1(raw.encode("utf-8")).hexdigest()[:16]
 
 
 def _is_hosted_runtime() -> bool:
@@ -230,6 +244,16 @@ class MicrocardsServiceV2:
             events = events[-5000:]
         _write_json(self._events_path, events)
 
+    # Active-session slots per deck: a paused RUN must not block the daily
+    # REVIEW (and vice versa), and L1/L2 runs are tracked independently.
+    SESSION_SLOTS = ("review", "run_l1", "run_l2")
+
+    @staticmethod
+    def _session_slot(session: Dict[str, Any]) -> str:
+        if session.get("mode") == "run":
+            return "run_l2" if session.get("level_mode") == 2 else "run_l1"
+        return "review"
+
     def _read_sessions(self) -> Dict[str, Any]:
         payload = _read_json(self._sessions_path, {"schema_version": "2.0", "user_id": self.user_id, "items": {}, "active_by_deck": {}})
         items = payload.get("items")
@@ -238,11 +262,20 @@ class MicrocardsServiceV2:
             items = {}
         if not isinstance(active_by_deck, dict):
             active_by_deck = {}
+        # Normalize active pointers to the slot structure. Legacy string values
+        # (pre-run schema) are dropped on purpose: those sessions predate the
+        # run/record model and their partial queues must not become runs.
+        normalized: Dict[str, Dict[str, str]] = {}
+        for deck_id, value in active_by_deck.items():
+            if isinstance(value, dict):
+                slots = {k: v for k, v in value.items() if k in self.SESSION_SLOTS and isinstance(v, str) and v}
+                if slots:
+                    normalized[deck_id] = slots
         return {
             "schema_version": "2.0",
             "user_id": self.user_id,
             "items": items,
-            "active_by_deck": active_by_deck
+            "active_by_deck": normalized
         }
 
     def _write_sessions(self, sessions_payload: Dict[str, Any]) -> None:
@@ -260,31 +293,114 @@ class MicrocardsServiceV2:
             return
         sessions["items"][session_id] = session
         if set_active:
+            slot = self._session_slot(session)
+            deck_slots = sessions["active_by_deck"].setdefault(deck_id, {})
             if not session.get("completed"):
-                sessions["active_by_deck"][deck_id] = session_id
+                deck_slots[slot] = session_id
             else:
-                sessions["active_by_deck"].pop(deck_id, None)
+                deck_slots.pop(slot, None)
+                if not deck_slots:
+                    sessions["active_by_deck"].pop(deck_id, None)
         self._write_sessions(sessions)
 
-    def _get_active_session_for_deck(self, deck_id: str) -> Optional[Dict[str, Any]]:
+    def _get_active_sessions_for_deck(self, deck_id: str) -> Dict[str, Dict[str, Any]]:
+        """Active sessions of a deck by slot: review / run_l1 / run_l2."""
         sessions = self._read_sessions()
-        session_id = sessions["active_by_deck"].get(deck_id)
-        if session_id:
-            return sessions["items"].get(session_id)
+        out: Dict[str, Dict[str, Any]] = {}
+        for slot, session_id in (sessions["active_by_deck"].get(deck_id) or {}).items():
+            sess = sessions["items"].get(session_id)
+            if isinstance(sess, dict) and not sess.get("completed"):
+                out[slot] = sess
+        return out
+
+    @staticmethod
+    def _session_summary_light(session: Dict[str, Any]) -> Dict[str, Any]:
+        """Small per-slot summary for deck payloads (library/details)."""
+        stats = session.get("stats") or {}
+        unique_total = stats.get("unique_total")
+        mastered = stats.get("mastered")
+        if unique_total is None or mastered is None:
+            unique_total = len(session.get("card_queue", []))
+            mastered = session.get("cursor", 0)
+        return {
+            "session_id": session.get("id"),
+            "mode": session.get("mode") or "review",
+            "level_mode": session.get("level_mode"),
+            "mastered": int(mastered or 0),
+            "unique_total": int(unique_total or 0),
+            "paused": bool(session.get("paused")),
+        }
+
+    def _get_active_session_for_deck(self, deck_id: str, slot: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        actives = self._get_active_sessions_for_deck(deck_id)
+        if slot is not None:
+            return actives.get(slot)
+        # No slot requested: prefer a run (the long-lived object) over a review.
+        for key in ("run_l1", "run_l2", "review"):
+            if key in actives:
+                return actives[key]
         return None
+
+    def _scrub_cards_from_session(self, session: Dict[str, Any], valid_ids: set) -> bool:
+        """Drop queue entries whose cards no longer exist in the deck.
+
+        The deck can be edited while a session is paused (or from another tab),
+        leaving ghost ids in the queue that would 404 on answer. Removes the
+        ghosts everywhere (queue, first_results, mastered, errors, directions),
+        keeps the cursor on the same upcoming card and re-derives the progress
+        counters. Returns True when the session changed."""
+        queue = session.get("card_queue", [])
+        keep = [_s(cid) in valid_ids for cid in queue]
+        if all(keep):
+            return False
+
+        cursor = int(session.get("cursor", 0) or 0)
+        session["card_queue"] = [cid for cid, ok in zip(queue, keep) if ok]
+        session["cursor"] = sum(1 for ok in keep[:cursor] if ok)
+
+        removed = {_s(cid) for cid, ok in zip(queue, keep) if not ok}
+        first_results = session.setdefault("first_results", {})
+        for cid in removed:
+            first_results.pop(cid, None)
+        mastered_ids = [cid for cid in session.get("mastered_ids") or [] if _s(cid) not in removed]
+        session["mastered_ids"] = mastered_ids
+        directions = session.get("card_directions") or {}
+        for cid in removed:
+            directions.pop(cid, None)
+
+        stats = session.setdefault("stats", {})
+        stats["error_card_ids"] = [cid for cid in stats.get("error_card_ids") or [] if _s(cid) not in removed]
+        unique_total = len({_s(cid) for cid in session["card_queue"]})
+        stats["unique_total"] = unique_total
+        stats["total"] = unique_total
+        stats["mastered"] = len(mastered_ids)
+        stats["first_try_correct"] = sum(1 for ok in first_results.values() if ok)
+        stats["pending_retry"] = sum(1 for cid in first_results if cid not in mastered_ids)
+
+        if session["cursor"] >= len(session["card_queue"]) and not session.get("completed"):
+            session["completed"] = True
+            session["completed_at"] = _utc_now_iso()
+        return True
 
     # ── Deck Records (per-user, server-side) ────────────────────────────
 
+    # Records schema "2.0": scores/stars are earned ONLY by completed full-deck
+    # runs. Legacy (session-based) records are wiped on first read — agreed
+    # one-time reset when the run model shipped.
+    RECORDS_SCHEMA = "2.0"
+
     def _read_records(self) -> Dict[str, Dict[str, Any]]:
-        payload = _read_json(self._records_path, {"schema_version": "1.0", "user_id": self.user_id, "items": {}})
-        items = payload.get("items") if isinstance(payload, dict) else {}
+        payload = _read_json(self._records_path, {"schema_version": self.RECORDS_SCHEMA, "user_id": self.user_id, "items": {}})
+        if not isinstance(payload, dict) or payload.get("schema_version") != self.RECORDS_SCHEMA:
+            return {}
+        items = payload.get("items")
         if not isinstance(items, dict):
             items = {}
         return {str(k): dict(v) for k, v in items.items() if isinstance(v, dict)}
 
     def _write_records(self, records: Dict[str, Dict[str, Any]]) -> None:
         payload = {
-            "schema_version": "1.0",
+            "schema_version": self.RECORDS_SCHEMA,
             "user_id": self.user_id,
             "updated_at": _utc_now_iso(),
             "items": records,
@@ -295,16 +411,94 @@ class MicrocardsServiceV2:
         """Return all deck records for this user."""
         return self._read_records()
 
+    # ── L1 completion gate ──────────────────────────────────────────────
+    #
+    # Level 2 unlocks only after the whole deck is passed on level 1: every
+    # card closed with a correct answer at least once (the mastery cycle
+    # guarantees that for each completed session). Cards added to the deck
+    # later naturally re-lock progress until they are passed too.
+
+    @staticmethod
+    def _l1_progress_for_ids(card_ids: List[Any], states: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
+        ids = [_s(cid) for cid in card_ids if _s(cid)]
+        total = len(ids)
+        mastered = sum(1 for cid in ids if (states.get(cid) or {}).get("l1_mastered"))
+        return {
+            "mastered": mastered,
+            "total": total,
+            "complete": total > 0 and mastered >= total,
+        }
+
+    def _l1_progress(self, deck: Dict[str, Any], states: Optional[Dict[str, Dict[str, Any]]] = None) -> Dict[str, Any]:
+        if states is None:
+            states = self._read_states()
+        card_ids = [c.get("id") for c in (deck.get("cards") or [])]
+        if not card_ids and deck.get("linked"):
+            card_ids = deck.get("linked_card_ids") or []
+        return self._l1_progress_for_ids(card_ids, states)
+
+    @staticmethod
+    def _stars_for_accuracy(accuracy_pct: float) -> int:
+        """First-try accuracy → 0..5 stars (the mastery cycle guarantees 100%
+        completion, so repeats are what separate the star tiers)."""
+        if accuracy_pct >= 100:
+            return 5
+        if accuracy_pct >= 80:
+            return 4
+        if accuracy_pct >= 60:
+            return 3
+        if accuracy_pct >= 40:
+            return 2
+        if accuracy_pct >= 20:
+            return 1
+        return 0
+
     def get_deck_record(self, deck_id: str) -> Dict[str, Any]:
-        """Return best score/stars for a deck across both levels."""
+        """Best completed-run results per level + the L2 gate.
+
+        The gate is run-based: level 2 unlocks once at least one FULL-DECK
+        level-1 run has been completed. Adding cards later does not re-lock it
+        (the run was honestly completed) — but new star attempts always cover
+        the whole current deck."""
         records = self._read_records()
         rec = records.get(str(deck_id)) or {}
-        return {
+        out = {
             "scoreL1": int(rec.get("scoreL1") or 0),
             "starsL1": int(rec.get("starsL1") or 0),
+            "sizeL1": int(rec.get("sizeL1") or 0),
             "scoreL2": int(rec.get("scoreL2") or 0),
             "starsL2": int(rec.get("starsL2") or 0),
+            "sizeL2": int(rec.get("sizeL2") or 0),
+            "l1_run_completed": bool(rec.get("l1_run_completed")),
         }
+        out["l2_unlocked"] = out["l1_run_completed"]
+        deck = self.get_deck(deck_id)
+        if deck:
+            # Informational per-card metric (kept for deck stats; NOT the gate).
+            out["l1_progress"] = self._l1_progress(deck)
+        return out
+
+    def _apply_run_record(self, deck_id: str, *, level: int, score: int, stars: int,
+                          deck_size: int) -> Dict[str, Any]:
+        """Persist a completed run's result; keeps the all-time best per level."""
+        records = self._read_records()
+        rec = dict(records.get(str(deck_id)) or {})
+        score = max(0, int(score))
+        stars = max(0, min(5, int(stars)))
+        suffix = "L2" if level == 2 else "L1"
+        is_new_record = False
+        if score > int(rec.get(f"score{suffix}") or 0):
+            rec[f"score{suffix}"] = score
+            rec[f"size{suffix}"] = max(0, int(deck_size))
+            is_new_record = True
+        if stars > int(rec.get(f"stars{suffix}") or 0):
+            rec[f"stars{suffix}"] = stars
+        if level != 2:
+            # Any completed L1 run opens the gate, stars don't matter.
+            rec["l1_run_completed"] = True
+        records[str(deck_id)] = rec
+        self._write_records(records)
+        return {"record": rec, "is_new_record": is_new_record}
 
     def save_deck_record(self, deck_id: str, score: int, stars: int, level_mode: int = 1) -> Dict[str, Any]:
         """Update deck record for a given level. Only keeps all-time best per level.
@@ -368,6 +562,10 @@ class MicrocardsServiceV2:
                 current_ids = deck.get("linked_card_ids") or []
                 current_count = deck.get("card_count")
                 if resolved_ids != current_ids or len(cards) != current_count:
+                    # The author republished and card ids may have changed —
+                    # carry this user's review progress over to the matching
+                    # new cards before the old ids are forgotten.
+                    self._reconcile_linked_states(current_ids, cards)
                     # Update cache on disk
                     raw_deck = _read_json(path, None)
                     if isinstance(raw_deck, dict):
@@ -380,6 +578,47 @@ class MicrocardsServiceV2:
             else:
                 deck["card_count"] = deck.get("card_count") or 0
         return deck
+
+    def _reconcile_linked_states(self, old_ids: List[Any], new_cards: List[Dict[str, Any]]) -> None:
+        """Migrate review states orphaned by a linked-deck republish.
+
+        Linked decks resolve the author's LATEST snapshot live, so when the
+        author re-creates cards (re-import, delete+create) their ids change and
+        the subscriber's review states (FSRS schedule, level, l1_mastered)
+        would silently orphan — resetting the L2 gate and deck progress.
+        Old states are matched to the new cards by content fingerprint and
+        moved onto the new ids. Unmatched states are left in place (analytics
+        already ignores orphans) — never guess between edited cards."""
+        old_set = {_s(cid) for cid in old_ids if _s(cid)}
+        if not old_set:
+            return
+        new_by_id = {_s(c.get("id")): c for c in new_cards if _s(c.get("id"))}
+        gone = old_set - set(new_by_id)
+        if not gone:
+            return
+        states = self._read_states()
+        # Candidate targets: new cards without their own state yet, by content key.
+        key_to_new_id: Dict[str, str] = {}
+        for cid, c in new_by_id.items():
+            if cid in states:
+                continue
+            key_to_new_id.setdefault(_card_content_key(c), cid)
+        changed = False
+        for old_id in sorted(gone):
+            st = states.get(old_id)
+            if not st:
+                continue
+            key = st.get("content_key")
+            new_id = key_to_new_id.pop(key, None) if key else None
+            if not new_id:
+                continue
+            migrated = dict(st)
+            migrated["card_id"] = new_id
+            states[new_id] = migrated
+            del states[old_id]
+            changed = True
+        if changed:
+            self._write_states(states)
 
     def _resolve_linked_deck(self, deck: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], str]:
         """Fetch read-only cards for a linked deck from the catalog snapshot.
@@ -426,6 +665,7 @@ class MicrocardsServiceV2:
         paths = list(self._decks_root.glob("*.json"))
         decks: List[Dict[str, Any]] = []
         states = self._read_states()
+        records = self._read_records()
 
         for p in paths:
             deck = _read_json(p, None)
@@ -455,18 +695,30 @@ class MicrocardsServiceV2:
                         if due_at and due_at <= now:
                             due_count += 1
 
-                active_sess = self._get_active_session_for_deck(deck_id)
-                is_paused = False
+                actives = self._get_active_sessions_for_deck(deck_id)
+                active_sessions = {
+                    slot: self._session_summary_light(sess)
+                    for slot, sess in actives.items()
+                }
+                # Legacy single-session fields (library card UI): prefer a run.
+                preferred = None
+                for key in ("run_l1", "run_l2", "review"):
+                    if key in actives:
+                        preferred = actives[key]
+                        break
+                is_paused = preferred is not None
                 paused_progress = None
                 active_session_id = None
                 active_session_level_mode = None
-                if active_sess:
-                    is_paused = True
-                    cursor = active_sess.get("cursor", 0)
-                    total_q = len(active_sess.get("card_queue", []))
-                    paused_progress = f"{cursor}/{total_q}"
-                    active_session_id = active_sess.get("id")
-                    active_session_level_mode = active_sess.get("level_mode")
+                if preferred is not None:
+                    light = self._session_summary_light(preferred)
+                    paused_progress = f"{light['mastered']}/{light['unique_total']}"
+                    active_session_id = light["session_id"]
+                    active_session_level_mode = preferred.get("level_mode")
+
+                l1_progress = self._l1_progress_for_ids(card_ids, states)
+                rec = records.get(str(deck_id)) or {}
+                l2_unlocked = bool(rec.get("l1_run_completed"))
 
                 summary = {
                     "id": deck_id,
@@ -488,6 +740,9 @@ class MicrocardsServiceV2:
                     "paused_progress": paused_progress,
                     "active_session_id": active_session_id,
                     "active_session_level_mode": active_session_level_mode,
+                    "active_sessions": active_sessions,
+                    "l1_progress": l1_progress,
+                    "l2_unlocked": l2_unlocked,
                 }
                 decks.append(summary)
 
@@ -727,6 +982,13 @@ class MicrocardsServiceV2:
         deck["cards"] = cards
         deck["updated_at"] = _utc_now_iso()
         _write_json(self._deck_path(deck_id), deck)
+
+        # Active (e.g. paused) sessions may still hold this card in their
+        # queues — scrub every slot so resuming doesn't trip over a ghost id.
+        valid_ids = {_s(c.get("id")) for c in cards}
+        for active in self._get_active_sessions_for_deck(deck_id).values():
+            if self._scrub_cards_from_session(active, valid_ids):
+                self._save_session(active, set_active=True)
         return True
 
     def reorder_cards(self, deck_id: str, card_ids: List[str]) -> Dict[str, Any]:
@@ -775,20 +1037,55 @@ class MicrocardsServiceV2:
         return max(0, min(stage, ceiling))
 
     def start_session(self, deck_id: str, resume: bool = True, restart: bool = False,
-                      direction: Optional[str] = None, level_mode: Optional[int] = None) -> Dict[str, Any]:
+                      direction: Optional[str] = None, level_mode: Optional[int] = None,
+                      mode: Optional[str] = None) -> Dict[str, Any]:
+        """Start (or resume) a study session.
+
+        mode="run"    — Прохождение: the WHOLE deck at one fixed level; the only
+                        way to earn stars/records (via finish_session).
+        mode="review" — Повторение: SRS-dosed due+new cards, per-card adaptive
+                        form, points only.
+        When mode is omitted, a given level_mode implies a run (legacy callers).
+        """
         deck = self.get_deck(deck_id)
         if not deck:
             raise LookupError("deck_not_found")
 
-        if resume and not restart:
-            active_session = self._get_active_session_for_deck(deck_id)
-            if active_session:
-                if active_session.get("level_mode") == level_mode:
-                    if active_session.get("paused"):
-                        active_session["paused"] = False
-                        active_session["paused_at"] = None
-                        self._save_session(active_session, set_active=True)
-                    return active_session
+        if mode not in ("run", "review"):
+            mode = "run" if level_mode in (1, 2) else "review"
+        if mode == "run":
+            level_mode = 2 if level_mode == 2 else 1
+            if level_mode == 2 and not self.get_deck_record(deck_id).get("l2_unlocked"):
+                raise ValueError("level2_locked")
+            slot = f"run_l{level_mode}"
+        else:
+            level_mode = None
+            slot = "review"
+
+        active_session = self._get_active_session_for_deck(deck_id, slot)
+        if active_session and restart:
+            # Explicit reset: close the old session out without a record.
+            active_session["completed"] = True
+            active_session["completed_at"] = _utc_now_iso()
+            active_session["discarded"] = True
+            self._save_session(active_session, set_active=True)
+            active_session = None
+        if resume and not restart and active_session:
+            # The deck may have been edited while the session was paused —
+            # drop queue entries whose cards no longer exist.
+            valid_ids = {_s(c.get("id")) for c in deck.get("cards", [])}
+            changed = self._scrub_cards_from_session(active_session, valid_ids)
+            if not active_session.get("completed"):
+                if active_session.get("paused"):
+                    active_session["paused"] = False
+                    active_session["paused_at"] = None
+                    changed = True
+                if changed:
+                    self._save_session(active_session, set_active=True)
+                return active_session
+            # Scrubbing emptied the remaining queue — close that session
+            # out and fall through to start a fresh one.
+            self._save_session(active_session, set_active=True)
 
         # Create new session
         cards = deck.get("cards", [])
@@ -807,9 +1104,15 @@ class MicrocardsServiceV2:
         due_cards = []
         new_cards = []
 
+        # Lazy backfill: content fingerprints let linked-deck republishes carry
+        # review progress over (states written before the field existed).
+        states_changed = False
         for card in cards:
             card_id = card.get("id")
             state = states.get(card_id, {})
+            if state and not state.get("content_key"):
+                state["content_key"] = _card_content_key(card)
+                states_changed = True
             stability = state.get("stability", 0.0)
 
             if not state or stability <= 0:
@@ -818,27 +1121,49 @@ class MicrocardsServiceV2:
                 due_at = _parse_iso(state.get("due_at"))
                 if due_at and due_at <= now:
                     due_cards.append(card_id)
+        if states_changed:
+            self._write_states(states)
 
-        # In 'auto' mode the new-card limit adapts to the current review backlog.
-        if settings.get("new_per_session_mode") == "auto":
-            new_limit = self._auto_new_limit(len(due_cards), new_limit)
+        composition = None
+        card_forms: Dict[str, int] = {}
+        if mode == "run":
+            # Прохождение: the whole deck, shuffled, one fixed level.
+            queue = [c.get("id") for c in cards]
+            random.shuffle(queue)
+        else:
+            # In 'auto' mode the new-card limit adapts to the current review backlog.
+            if settings.get("new_per_session_mode") == "auto":
+                new_limit = self._auto_new_limit(len(due_cards), new_limit)
 
-        # Mix cards: due cards first, then new cards (capped by the new-per-session
-        # limit), up to the configured session size.
-        random.shuffle(due_cards)
-        random.shuffle(new_cards)
+            # Mix cards: due cards first, then new cards (capped by the
+            # new-per-session limit), up to the configured session size.
+            random.shuffle(due_cards)
+            random.shuffle(new_cards)
 
-        queue = []
-        queue.extend(due_cards[:size])
-        if len(queue) < size:
-            remaining = size - len(queue)
-            queue.extend(new_cards[:min(new_limit, remaining)])
+            queue = []
+            queue.extend(due_cards[:size])
+            due_in_queue = len(queue)
+            if len(queue) < size:
+                remaining = size - len(queue)
+                queue.extend(new_cards[:min(new_limit, remaining)])
+            new_in_queue = len(queue) - due_in_queue
 
-        if not queue:
-            # If nothing is due or new, let user study everything
-            all_ids = [c.get("id") for c in cards]
-            random.shuffle(all_ids)
-            queue = all_ids[:size]
+            if not queue:
+                # If nothing is due or new, let user study everything
+                all_ids = [c.get("id") for c in cards]
+                random.shuffle(all_ids)
+                queue = all_ids[:size]
+                due_in_queue, new_in_queue = len(queue), 0
+            composition = {"due": due_in_queue, "new": new_in_queue}
+
+            # Adaptive per-card form: cards that earned mastery level 2 are
+            # checked with typed input (worth more points) — but only once the
+            # deck's L2 is unlocked, so the input form is never a surprise.
+            l2_unlocked = self.get_deck_record(deck_id).get("l2_unlocked", False)
+            for cid in queue:
+                st = states.get(cid) or {}
+                strong = int(st.get("level") or 1) >= 2
+                card_forms[_s(cid)] = 2 if (l2_unlocked and strong) else 1
 
         # Resolve a concrete direction per card (mixed → random per card).
         card_directions = {}
@@ -853,9 +1178,12 @@ class MicrocardsServiceV2:
             "id": session_id,
             "deck_id": deck_id,
             "user_id": self.user_id,
+            "mode": mode,
             "card_queue": queue,
             "direction": direction,
             "card_directions": card_directions,
+            "card_forms": card_forms,
+            "composition": composition,
             "cursor": 0,
             "completed": False,
             "created_at": _utc_now_iso(),
@@ -866,13 +1194,22 @@ class MicrocardsServiceV2:
             "combo": 0,
             "max_combo": 0,
             "session_xp": 0,
-            "session_errors": [],
-            "is_errors_only_mode": False,
+            # Mastery cycle: outcome of the FIRST attempt per card (card_id -> bool)
+            # and the cards already closed with a correct answer. A wrong answer
+            # re-queues the card until it is answered correctly, so the session
+            # only completes once every card is mastered.
+            "first_results": {},
+            "mastered_ids": [],
             "stats": {
                 "total": len(queue),
+                "unique_total": len(queue),
                 "correct": 0,
+                "first_try_correct": 0,
                 "errors": 0,
-                "error_card_ids": []
+                "error_card_ids": [],
+                "mastered": 0,
+                "pending_retry": 0,
+                "attempts": 0
             }
         }
 
@@ -900,6 +1237,24 @@ class MicrocardsServiceV2:
         cards = deck.get("cards", [])
         card = next((c for c in cards if c.get("id") == card_id), None)
         if not card:
+            # The card was deleted while the session was running (another tab,
+            # a linked-deck refresh). If it is part of this session's queue,
+            # heal the session instead of failing the whole run.
+            queue_ids = {_s(cid) for cid in session.get("card_queue", [])}
+            if _s(card_id) in queue_ids:
+                valid_ids = {_s(c.get("id")) for c in cards}
+                if self._scrub_cards_from_session(session, valid_ids):
+                    self._save_session(session, set_active=True)
+                return {
+                    "card_missing": True,
+                    "is_correct": False,
+                    "card_state": None,
+                    "session": session,
+                    "expected_answer": "",
+                    "direction": session.get("direction") or "front_back",
+                    "first_attempt": False,
+                    "is_retry": False,
+                }
             raise LookupError("card_not_found")
 
         states = self._read_states()
@@ -914,12 +1269,55 @@ class MicrocardsServiceV2:
             "due_at": None,
             "last_reviewed_at": None
         })
+        # Content fingerprint keeps progress portable across linked-deck
+        # republishes (card ids may change, content survives).
+        card_state["content_key"] = _card_content_key(card)
 
+        # Mastery-cycle bookkeeping (sessions created before this schema get the
+        # fields lazily, so paused old sessions keep working).
+        first_results: Dict[str, Any] = session.setdefault("first_results", {})
+        mastered_ids: List[str] = session.setdefault("mastered_ids", [])
+        stats = session.setdefault("stats", {})
+        queue = session.setdefault("card_queue", [])
+        error_card_ids = stats.setdefault("error_card_ids", [])
+        stats.setdefault("unique_total", len({_s(cid) for cid in queue}))
+
+        card_key = _s(card_id)
+        first_attempt = card_key not in first_results
+
+        # How the answer is graded (self-grade vs typed answer):
+        # runs fix one level for the whole session; reviews carry a per-card
+        # form picked at session start (adaptive difficulty). The per-card
+        # state `level` itself is only a mastery metric for deck statistics.
         session_level_mode = session.get("level_mode")
-        level = session_level_mode if session_level_mode is not None else card_state.get("level", 1)
-        consecutive_correct = card_state.get("consecutive_correct", 0)
+        if session_level_mode is not None:
+            grade_level = session_level_mode
+        else:
+            grade_level = int((session.get("card_forms") or {}).get(card_key) or 1)
         is_correct = False
         rating = Rating.AGAIN
+
+        # An override is only valid as a correction of the immediately preceding
+        # wrong verdict on the same card (the "count as correct" button). Repeated
+        # or out-of-place overrides are a no-op so they can't double-count stats.
+        last_answer = session.get("last_answer") or {}
+        override_applies = bool(
+            override
+            and last_answer.get("card_id") == card_key
+            and not last_answer.get("correct", True)
+        )
+        if override and not override_applies:
+            return {
+                "is_correct": True,
+                "card_state": card_state,
+                "session": session,
+                "expected_answer": "",
+                "direction": (session.get("card_directions") or {}).get(card_id) or session.get("direction") or "front_back",
+                "first_attempt": False,
+                "is_retry": False,
+            }
+
+        is_retry = (not first_attempt) and not override
 
         # Direction of this card in the session decides which side is the answer.
         card_dir = (session.get("card_directions") or {}).get(card_id) or session.get("direction") or "front_back"
@@ -931,110 +1329,138 @@ class MicrocardsServiceV2:
             expected_text = card["back"]["text"]
             acceptable = card.get("acceptable_answers") or []
 
-        # 1. Check correctness based on Level
-        if level == 1:
+        # 1. Check correctness based on the session grading mode
+        if grade_level == 1:
             # Level 1: user_answer is expected to be "know" or "dont_know"
             ans_clean = _s(user_answer).lower()
-            if ans_clean == "know" or override:
-                is_correct = True
-                rating = Rating.GOOD
-            else:
-                is_correct = False
-                rating = Rating.AGAIN
+            is_correct = ans_clean == "know" or override
         else:
             # Level 2: open answer compared via fuzzy matching (back side + alternatives).
             # Typo-tolerant by a fixed threshold; borderline misses are handled by override.
             is_correct = override or self.verify_answer_against_card(
                 user_answer, expected_text, acceptable, self.FUZZY_THRESHOLD)
-            rating = Rating.GOOD if is_correct else Rating.AGAIN
+        rating = Rating.GOOD if is_correct else Rating.AGAIN
 
-        # 2. Update level and progression
-        if level == 1:
+        # 2. Card mastery metric (feeds deck progress buckets). Re-presentations
+        # inside the mastery cycle don't move it — only the first attempt and an
+        # explicit override do.
+        if first_attempt or override:
+            consecutive_correct = card_state.get("consecutive_correct", 0)
+            mastery_level = card_state.get("level", 1)
             if is_correct:
                 consecutive_correct += 1
-                if consecutive_correct >= 3:
-                    level = 2
+                if grade_level == 2:
+                    mastery_level = 2
+                elif consecutive_correct >= 3:
+                    mastery_level = 2
                     consecutive_correct = 0
             else:
                 consecutive_correct = 0
-        else: # level == 2
-            if not is_correct:
-                # Rollback to level 1 on failure
-                level = 1
-                consecutive_correct = 0
+                mastery_level = 1
+            card_state["level"] = mastery_level
+            card_state["consecutive_correct"] = consecutive_correct
 
-        # 3. Calculate spacing via FSRS
+        # A correct close (first try, retry inside the mastery cycle, or override)
+        # marks the card as passed for the deck-wide L1 completion gate.
+        if is_correct:
+            card_state["l1_mastered"] = True
+
+        # 3. FSRS scheduling: exactly one review per card per session. The first
+        # attempt drives the schedule; re-presentations of a re-queued card are
+        # intra-session learning steps and must not inflate the review history.
+        # An override re-grades the same presentation as GOOD.
         now = _utc_now()
-        last_reviewed_str = card_state.get("last_reviewed_at")
-        last_reviewed = _parse_iso(last_reviewed_str)
-        
-        if last_reviewed:
-            elapsed_days = max(0.0, (now - last_reviewed).total_seconds() / 86400.0)
-        else:
-            elapsed_days = 0.0
+        if first_attempt or override:
+            last_reviewed = _parse_iso(card_state.get("last_reviewed_at"))
+            if last_reviewed:
+                elapsed_days = max(0.0, (now - last_reviewed).total_seconds() / 86400.0)
+            else:
+                elapsed_days = 0.0
 
-        fsrs_state = {
-            "stability": card_state.get("stability", 0.0),
-            "difficulty": card_state.get("difficulty", 0.0),
-            "state": card_state.get("state", 0),
-        }
-        
-        # Advance FSRS
-        next_fsrs = self.fsrs.step(fsrs_state, rating, elapsed_days)
-        
-        # Update card_state
-        card_state.update(next_fsrs)
-        card_state["level"] = level
-        card_state["consecutive_correct"] = consecutive_correct
-        card_state["last_reviewed_at"] = now.isoformat().replace("+00:00", "Z")
-        card_state["due_at"] = (now + timedelta(days=next_fsrs["interval_days"])).isoformat().replace("+00:00", "Z")
+            fsrs_state = {
+                "stability": card_state.get("stability", 0.0),
+                "difficulty": card_state.get("difficulty", 0.0),
+                "state": card_state.get("state", 0),
+            }
+            next_fsrs = self.fsrs.step(fsrs_state, rating, elapsed_days)
+            card_state.update(next_fsrs)
+            card_state["last_reviewed_at"] = now.isoformat().replace("+00:00", "Z")
+            card_state["due_at"] = (now + timedelta(days=next_fsrs["interval_days"])).isoformat().replace("+00:00", "Z")
 
-        # Save card state
+            # Log event (review history feeds analytics — one entry per scheduled review)
+            event = {
+                "id": f"mcrev_{uuid.uuid4().hex[:12]}",
+                "user_id": self.user_id,
+                "deck_id": deck_id,
+                "card_id": card_id,
+                "session_id": session_id,
+                "level": grade_level,
+                "rating": int(rating),
+                "user_answer": user_answer,
+                "is_correct": is_correct,
+                "is_override": bool(override),
+                "reviewed_at": _utc_now_iso()
+            }
+            self._append_event(event)
+
+        # Save card state (l1_mastered may change even on a retry)
         states[card_id] = card_state
         self._write_states(states)
 
-        # 4. Log event
-        event = {
-            "id": f"mcrev_{uuid.uuid4().hex[:12]}",
-            "user_id": self.user_id,
-            "deck_id": deck_id,
-            "card_id": card_id,
-            "session_id": session_id,
-            "level": level,
-            "rating": int(rating),
-            "user_answer": user_answer,
-            "is_correct": is_correct,
-            "reviewed_at": _utc_now_iso()
-        }
-        self._append_event(event)
+        # 4. Update session stats + mastery queue
+        if first_attempt:
+            first_results[card_key] = bool(is_correct)
 
-        # 5. Update session stats
-        stats = session.get("stats", {})
-        error_card_ids = stats.get("error_card_ids", [])
-
-        if not is_correct:
-            stats["errors"] = stats.get("errors", 0) + 1
-            if card_id not in error_card_ids:
-                error_card_ids.append(card_id)
-        else:
+        cursor = session.get("cursor", 0)
+        if override:
+            # Correction of the preceding wrong verdict: undo its error accounting
+            # and pull the re-queued copy back out of the tail.
             stats["correct"] = stats.get("correct", 0) + 1
-            # If user corrected an error with override, remove it from errors
-            if override and card_id in error_card_ids:
-                error_card_ids.remove(card_id)
-                stats["errors"] = max(0, stats.get("errors", 1) - 1)
+            stats["errors"] = max(0, stats.get("errors", 0) - 1)
+            if card_key in error_card_ids:
+                error_card_ids.remove(card_key)
+            if last_answer.get("first_attempt"):
+                first_results[card_key] = True
+            for i in range(len(queue) - 1, max(cursor, 0) - 1, -1):
+                if _s(queue[i]) == card_key:
+                    queue.pop(i)
+                    break
+            if card_key not in mastered_ids:
+                mastered_ids.append(card_key)
+            session["last_answer"] = {"card_id": card_key, "first_attempt": False, "correct": True}
+        else:
+            stats["attempts"] = stats.get("attempts", 0) + 1
+            if is_correct:
+                stats["correct"] = stats.get("correct", 0) + 1
+                if card_key not in mastered_ids:
+                    mastered_ids.append(card_key)
+            else:
+                stats["errors"] = stats.get("errors", 0) + 1
+                if card_key not in error_card_ids:
+                    error_card_ids.append(card_key)
+            session["last_answer"] = {"card_id": card_key, "first_attempt": first_attempt, "correct": bool(is_correct)}
 
-        stats["error_card_ids"] = error_card_ids
+            # Advance past the answered card, then (on a wrong answer) re-queue it
+            # a few positions ahead — the mastery cycle.
+            if cursor < len(queue) and _s(queue[cursor]) == card_key:
+                cursor += 1
+                session["cursor"] = cursor
+            if not is_correct:
+                insert_pos = min(len(queue), cursor + random.randint(2, 4))
+                queue.insert(insert_pos, card_id)
+
+        # 5. Derived progress counters for the HUD
+        unique_total = stats.get("unique_total") or len({_s(cid) for cid in queue})
+        stats["unique_total"] = unique_total
+        stats["total"] = unique_total
+        stats["mastered"] = len(mastered_ids)
+        stats["first_try_correct"] = sum(1 for ok in first_results.values() if ok)
+        stats["pending_retry"] = sum(1 for cid in first_results if cid not in mastered_ids)
         session["stats"] = stats
 
-        # Update cursor in queue
-        queue = session.get("card_queue", [])
-        cursor = session.get("cursor", 0)
-        
-        if _s(queue[cursor]) == _s(card_id):
-            session["cursor"] = cursor + 1
-            if cursor + 1 >= len(queue):
-                session["completed"] = True
-                session["completed_at"] = _utc_now_iso()
+        if session.get("cursor", 0) >= len(queue):
+            session["completed"] = True
+            session["completed_at"] = _utc_now_iso()
 
         self._save_session(session, set_active=True)
 
@@ -1044,6 +1470,9 @@ class MicrocardsServiceV2:
             "session": session,
             "expected_answer": expected_text,
             "direction": card_dir,
+            "form": grade_level,
+            "first_attempt": first_attempt,
+            "is_retry": is_retry,
         }
 
     @staticmethod
@@ -1093,9 +1522,13 @@ class MicrocardsServiceV2:
             raise LookupError("session_not_found")
         return session
 
+    # Mutable fields snapshotted into a run checkpoint on pause. "Exit without
+    # saving" rolls the run back to exactly this point.
+    _CHECKPOINT_FIELDS = ("card_queue", "cursor", "first_results", "mastered_ids",
+                          "stats", "last_answer", "combo", "max_combo", "session_xp")
+
     def pause_session(self, session_id: str, combo: int = 0, max_combo: int = 0,
-                      session_xp: int = 0, session_errors: List[str] = None,
-                      is_errors_only_mode: bool = False) -> Dict[str, Any]:
+                      session_xp: int = 0) -> Dict[str, Any]:
         session = self._get_session(session_id)
         if not session:
             raise LookupError("session_not_found")
@@ -1104,8 +1537,12 @@ class MicrocardsServiceV2:
         session["combo"] = combo
         session["max_combo"] = max_combo
         session["session_xp"] = session_xp
-        session["session_errors"] = session_errors or []
-        session["is_errors_only_mode"] = is_errors_only_mode
+        if session.get("mode") == "run":
+            # A pause is a checkpoint: the sitting just played is committed,
+            # a later "exit without saving" only loses the NEXT sitting.
+            session["checkpoint"] = copy.deepcopy(
+                {k: session.get(k) for k in self._CHECKPOINT_FIELDS}
+            )
         self._save_session(session, set_active=True)
         return session
 
@@ -1118,14 +1555,85 @@ class MicrocardsServiceV2:
         self._save_session(session, set_active=True)
         return session
 
+    def abandon_session(self, session_id: str) -> Dict[str, Any]:
+        """Exit WITHOUT saving the current sitting.
+
+        Runs roll back to the last checkpoint (pause) and stay paused there;
+        a run that was never paused — and any review — is simply discarded."""
+        session = self._get_session(session_id)
+        if not session:
+            raise LookupError("session_not_found")
+        checkpoint = session.get("checkpoint")
+        if session.get("mode") == "run" and isinstance(checkpoint, dict):
+            for key in self._CHECKPOINT_FIELDS:
+                session[key] = copy.deepcopy(checkpoint.get(key))
+            session["paused"] = True
+            session["paused_at"] = _utc_now_iso()
+            session["completed"] = False
+            session["completed_at"] = None
+            self._save_session(session, set_active=True)
+            return {"restored": True, "session": session}
+        session["completed"] = True
+        session["completed_at"] = _utc_now_iso()
+        session["discarded"] = True
+        self._save_session(session, set_active=True)
+        return {"restored": False, "session": session}
+
     def discard_session(self, session_id: str) -> Dict[str, Any]:
         session = self._get_session(session_id)
         if not session:
             raise LookupError("session_not_found")
         session["completed"] = True
         session["completed_at"] = _utc_now_iso()
+        session["discarded"] = True
         self._save_session(session, set_active=True)
         return session
+
+    def finish_session(self, session_id: str, *, session_xp: int = 0, max_combo: int = 0) -> Dict[str, Any]:
+        """Close out a COMPLETED run: compute stars server-side and persist the
+        deck record (the only path that earns stars / opens the L2 gate).
+
+        Idempotent — a second call returns the stored result. Reviews have no
+        record to save; calling finish on one just returns its summary stats."""
+        session = self._get_session(session_id)
+        if not session:
+            raise LookupError("session_not_found")
+        if not session.get("completed") or session.get("discarded"):
+            raise ValueError("session_not_completed")
+        if session.get("finish_result"):
+            return session["finish_result"]
+
+        stats = session.get("stats") or {}
+        unique_total = int(stats.get("unique_total") or 0)
+        first_try = int(stats.get("first_try_correct") or 0)
+        accuracy = round((first_try / unique_total) * 100) if unique_total else 0
+        result: Dict[str, Any] = {
+            "mode": session.get("mode") or "review",
+            "accuracy": accuracy,
+            "first_try_correct": first_try,
+            "unique_total": unique_total,
+        }
+        if session.get("mode") == "run":
+            level = 2 if session.get("level_mode") == 2 else 1
+            stars = self._stars_for_accuracy(accuracy)
+            score = max(0, int(session_xp))
+            session["session_xp"] = score
+            session["max_combo"] = max(int(session.get("max_combo") or 0), int(max_combo or 0))
+            saved = self._apply_run_record(
+                session.get("deck_id"), level=level, score=score, stars=stars,
+                deck_size=unique_total,
+            )
+            result.update({
+                "level": level,
+                "stars": stars,
+                "score": score,
+                "record": saved["record"],
+                "is_new_record": saved["is_new_record"],
+                "l2_unlocked": bool(saved["record"].get("l1_run_completed")),
+            })
+        session["finish_result"] = result
+        self._save_session(session, set_active=True)
+        return result
 
 
     def get_analytics(self, *, retention_days: int = 30, heatmap_days: int = 84, forecast_days: int = 7) -> Dict[str, Any]:

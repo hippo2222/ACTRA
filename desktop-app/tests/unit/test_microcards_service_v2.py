@@ -4,7 +4,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from services.microcards_service_v2 import MicrocardsServiceV2, _write_json
+from services.microcards_service_v2 import MicrocardsServiceV2, _read_json, _write_json
 from logic.fsrs import Rating, State
 
 
@@ -95,47 +95,290 @@ def test_deck_and_card_crud():
     assert len(svc.list_decks()) == 0
 
 def test_session_flows_and_progression():
+    """Mastery cycle: a missed card is re-queued until answered correctly,
+    first-try stats drive the summary, FSRS fires once per card per session."""
     tmp = tempfile.mkdtemp()
     svc = MicrocardsServiceV2(tmp, user_id="test_user")
     deck = svc.create_deck(name="Test Deck")
-    
-    # Create 5 cards
-    card_ids = []
-    for i in range(5):
-        c = svc.create_card(deck["id"], front_text=f"Q{i}", back_text=f"A{i}")
-        card_ids.append(c["id"])
-        
-    # Start session
-    session = svc.start_session(deck["id"])
+
+    for i in range(3):
+        svc.create_card(deck["id"], front_text=f"Q{i}", back_text=f"A{i}")
+
+    session = svc.start_session(deck["id"], level_mode=1)
     assert session["id"].startswith("session_")
-    assert len(session["card_queue"]) == 5
     assert session["cursor"] == 0
-    
-    # Let's study card 0: level 1, answer 'know' -> correct, level 1, consecutive_correct + 1
-    card_0_id = session["card_queue"][0]
-    res1 = svc.submit_answer(session["id"], card_0_id, "know")
+    assert session["stats"]["unique_total"] == 3
+    q = list(session["card_queue"])
+
+    # Card 0: correct on the first try → mastered immediately.
+    res1 = svc.submit_answer(session["id"], q[0], "know")
     assert res1["is_correct"] is True
-    assert res1["card_state"]["level"] == 1
-    assert res1["card_state"]["consecutive_correct"] == 1
-    
-    # Answer 'know' two more times for card 0 to upgrade it to level 2
-    # First we start a new session (to review again or just use same card)
-    res2 = svc.submit_answer(session["id"], card_0_id, "know")
-    res3 = svc.submit_answer(session["id"], card_0_id, "know")
-    assert res3["card_state"]["level"] == 2
-    assert res3["card_state"]["consecutive_correct"] == 0
-    
-    # Now that card 0 is level 2, submitting "know" is not enough, it needs fuzzy matching back text "A0"
-    res4 = svc.submit_answer(session["id"], card_0_id, "wrong answer")
-    assert res4["is_correct"] is False
-    # Rolls back to level 1
-    assert res4["card_state"]["level"] == 1
-    
-    # Test override ("Всё равно правильно")
-    res5 = svc.submit_answer(session["id"], card_0_id, "wrong answer", override=True)
-    assert res5["is_correct"] is True
-    assert res5["card_state"]["level"] == 1
-    assert res5["card_state"]["consecutive_correct"] == 1
+    assert res1["first_attempt"] is True
+    assert res1["is_retry"] is False
+    assert res1["session"]["stats"]["mastered"] == 1
+    assert res1["session"]["stats"]["first_try_correct"] == 1
+
+    # Card 1: wrong → re-queued; the session cannot complete without it.
+    res2 = svc.submit_answer(session["id"], q[1], "dont_know")
+    assert res2["is_correct"] is False
+    s = res2["session"]
+    assert s["card_queue"].count(q[1]) == 2  # original + re-queued copy
+    assert s["stats"]["pending_retry"] == 1
+    assert s["stats"]["errors"] == 1
+    assert s["first_results"][q[1]] is False
+
+    # Card 2 correct — still not complete, the retry is pending.
+    res3 = svc.submit_answer(session["id"], q[2], "know")
+    assert res3["session"]["completed"] is False
+
+    # The re-queued copy of card 1 comes back and is closed correctly.
+    res4 = svc.submit_answer(session["id"], q[1], "know")
+    assert res4["is_retry"] is True
+    s = res4["session"]
+    assert s["completed"] is True
+    assert s["stats"]["mastered"] == 3
+    assert s["stats"]["first_try_correct"] == 2  # card 1 missed its first try
+    assert s["stats"]["pending_retry"] == 0
+
+    # Finishing the completed run computes stars server-side (2/3 first try →
+    # 67% → 3 stars), persists the record and opens the L2 gate.
+    fin = svc.finish_session(session["id"], session_xp=240, max_combo=2)
+    assert fin["mode"] == "run"
+    assert fin["accuracy"] == 67
+    assert fin["stars"] == 3
+    assert fin["is_new_record"] is True
+    assert fin["l2_unlocked"] is True
+    rec = svc.get_deck_record(deck["id"])
+    assert rec["scoreL1"] == 240
+    assert rec["starsL1"] == 3
+    assert rec["sizeL1"] == 3
+    assert rec["l2_unlocked"] is True
+
+    # finish is idempotent.
+    fin2 = svc.finish_session(session["id"], session_xp=999)
+    assert fin2 == fin
+
+    # FSRS/event history: exactly one review per card — the retry didn't double it.
+    events = _read_json(svc._events_path, [])
+    assert len(events) == 3
+    assert sum(1 for e in events if e["card_id"] == q[1]) == 1
+
+
+def _complete_l1_run(svc, deck_id):
+    """Helper: finish a full L1 run so the L2 gate opens."""
+    session = svc.start_session(deck_id, mode="run", level_mode=1, restart=True)
+    for cid in list(session["card_queue"]):
+        svc.submit_answer(session["id"], cid, "know")
+    svc.finish_session(session["id"], session_xp=100)
+
+
+def test_l2_override_corrects_previous_wrong():
+    """Override undoes the wrong verdict: error stats, the first-try result and
+    the re-queued copy are all rolled back; a duplicate override is a no-op."""
+    tmp = tempfile.mkdtemp()
+    svc = MicrocardsServiceV2(tmp, user_id="test_user")
+    deck = svc.create_deck(name="Override Deck")
+    svc.create_card(deck["id"], front_text="Q0", back_text="A0")
+    svc.create_card(deck["id"], front_text="Q1", back_text="A1")
+    _complete_l1_run(svc, deck["id"])
+
+    session = svc.start_session(deck["id"], level_mode=2)
+    q = list(session["card_queue"])
+
+    res_wrong = svc.submit_answer(session["id"], q[0], "blatantly wrong")
+    assert res_wrong["is_correct"] is False
+    assert res_wrong["session"]["card_queue"].count(q[0]) == 2
+
+    res_fix = svc.submit_answer(session["id"], q[0], "blatantly wrong", override=True)
+    assert res_fix["is_correct"] is True
+    s = res_fix["session"]
+    assert s["card_queue"].count(q[0]) == 1  # re-queued copy withdrawn
+    assert s["stats"]["errors"] == 0
+    assert s["stats"]["pending_retry"] == 0
+    assert s["first_results"][q[0]] is True  # first-try result restored
+    correct_after_fix = s["stats"]["correct"]
+
+    # Duplicate override (double click) must not double-count anything.
+    res_dup = svc.submit_answer(session["id"], q[0], "x", override=True)
+    assert res_dup["session"]["stats"]["correct"] == correct_after_fix
+
+
+def test_run_gate_unlocks_l2():
+    """L2 unlocks by COMPLETING a full L1 run (finish_session) — answering all
+    cards alone is not enough, and starting an L2 run while locked fails.
+    Adding cards later does not re-lock the honestly earned gate."""
+    tmp = tempfile.mkdtemp()
+    svc = MicrocardsServiceV2(tmp, user_id="test_user")
+    deck = svc.create_deck(name="Gate Deck")
+    for i in range(2):
+        svc.create_card(deck["id"], front_text=f"Q{i}", back_text=f"A{i}")
+
+    rec = svc.get_deck_record(deck["id"])
+    assert rec["l2_unlocked"] is False
+
+    # L2 run is locked before any completed L1 run.
+    try:
+        svc.start_session(deck["id"], mode="run", level_mode=2)
+        raise AssertionError("expected level2_locked")
+    except ValueError as exc:
+        assert "level2_locked" in str(exc)
+
+    session = svc.start_session(deck["id"], mode="run", level_mode=1)
+    for cid in list(session["card_queue"]):
+        svc.submit_answer(session["id"], cid, "know")
+    # All cards answered, but the gate opens only on finish.
+    assert svc.get_deck_record(deck["id"])["l2_unlocked"] is False
+    svc.finish_session(session["id"], session_xp=200)
+
+    rec = svc.get_deck_record(deck["id"])
+    assert rec["l1_run_completed"] is True
+    assert rec["l2_unlocked"] is True
+
+    decks = svc.list_decks()
+    assert decks[0]["l2_unlocked"] is True
+
+    # Adding a card does NOT retroactively close the gate (the run was honest);
+    # new star attempts simply cover the bigger deck.
+    svc.create_card(deck["id"], front_text="new", back_text="card")
+    rec = svc.get_deck_record(deck["id"])
+    assert rec["l2_unlocked"] is True
+
+    # And the L2 run now starts fine.
+    l2 = svc.start_session(deck["id"], mode="run", level_mode=2)
+    assert l2["level_mode"] == 2
+    assert len(l2["card_queue"]) == 3  # whole (grown) deck
+
+
+def test_run_checkpoint_abandon_rolls_back_to_pause():
+    """Pause = checkpoint. 'Exit without saving' loses only the current
+    sitting; a run that was never paused is discarded outright."""
+    tmp = tempfile.mkdtemp()
+    svc = MicrocardsServiceV2(tmp, user_id="test_user")
+    deck = svc.create_deck(name="Checkpoint Deck")
+    for i in range(3):
+        svc.create_card(deck["id"], front_text=f"Q{i}", back_text=f"A{i}")
+
+    run = svc.start_session(deck["id"], mode="run", level_mode=1)
+    q = list(run["card_queue"])
+
+    # Sitting 1: one card mastered, then pause (checkpoint).
+    svc.submit_answer(run["id"], q[0], "know")
+    svc.pause_session(run["id"], combo=1, max_combo=1, session_xp=100)
+
+    # Sitting 2: another card mastered... then exit WITHOUT saving.
+    resumed = svc.start_session(deck["id"], mode="run", level_mode=1)
+    assert resumed["id"] == run["id"]
+    svc.submit_answer(run["id"], q[1], "know")
+    res = svc.abandon_session(run["id"])
+    assert res["restored"] is True
+    rolled = res["session"]
+    assert rolled["paused"] is True
+    assert rolled["completed"] is False
+    assert rolled["stats"]["mastered"] == 1      # sitting 2 is gone
+    assert rolled["session_xp"] == 100           # checkpointed XP
+    assert q[1] not in rolled["mastered_ids"]
+
+    # The rolled-back run resumes and completes normally.
+    resumed2 = svc.start_session(deck["id"], mode="run", level_mode=1)
+    assert resumed2["id"] == run["id"]
+    for cid in (q[1], q[2]):
+        svc.submit_answer(run["id"], cid, "know")
+    fin = svc.finish_session(run["id"], session_xp=300)
+    assert fin["stars"] == 5  # every card first-try within the saved history
+
+    # A never-paused run abandons into a discard (no checkpoint to restore).
+    run2 = svc.start_session(deck["id"], mode="run", level_mode=1, restart=True)
+    svc.submit_answer(run2["id"], run2["card_queue"][0], "know")
+    res2 = svc.abandon_session(run2["id"])
+    assert res2["restored"] is False
+    assert res2["session"]["discarded"] is True
+    assert svc._get_active_session_for_deck(deck["id"], "run_l1") is None
+
+
+def test_review_composition_and_adaptive_forms():
+    """Review sessions say what they picked (due/new) and check strong cards
+    (mastery level 2) with typed input — but only after the L2 gate opened."""
+    tmp = tempfile.mkdtemp()
+    svc = MicrocardsServiceV2(tmp, user_id="test_user")
+    deck = svc.create_deck(name="Review Deck")
+    cards = [svc.create_card(deck["id"], front_text=f"Q{i}", back_text=f"A{i}") for i in range(3)]
+
+    # Fresh deck, gate locked: everything is new and self-graded (form 1).
+    review = svc.start_session(deck["id"], mode="review")
+    assert review["mode"] == "review"
+    assert review["level_mode"] is None
+    assert review["composition"] == {"due": 0, "new": 3}
+    assert all(f == 1 for f in review["card_forms"].values())
+    res = svc.submit_answer(review["id"], review["card_queue"][0], "know")
+    assert res["form"] == 1 and res["is_correct"] is True
+    svc.abandon_session(review["id"])
+
+    # Open the gate and make one card "strong" (mastery level 2).
+    _complete_l1_run(svc, deck["id"])
+    states = svc._read_states()
+    states[cards[0]["id"]]["level"] = 2
+    svc._write_states(states)
+
+    review2 = svc.start_session(deck["id"], mode="review", restart=True)
+    forms = review2["card_forms"]
+    assert forms[cards[0]["id"]] == 2          # strong card → typed input
+    assert forms[cards[1]["id"]] == 1
+
+    # Answer in queue order: the typed card is graded by fuzzy matching,
+    # the others by know/dont_know.
+    typed_result = None
+    for cid in list(review2["card_queue"]):
+        if cid == cards[0]["id"]:
+            typed_result = svc.submit_answer(review2["id"], cid, "A0")
+        else:
+            svc.submit_answer(review2["id"], cid, "know")
+    assert typed_result["form"] == 2 and typed_result["is_correct"] is True
+
+    # Reviews never write records, even when finished.
+    fin = svc.finish_session(review2["id"], session_xp=500)
+    assert fin["mode"] == "review"
+    assert "record" not in fin
+    rec = svc.get_deck_record(deck["id"])
+    assert rec["scoreL1"] == 100  # still the L1 run's record, untouched
+
+
+def test_run_and_review_slots_coexist():
+    """A paused run must not block the daily review (separate active slots)."""
+    tmp = tempfile.mkdtemp()
+    svc = MicrocardsServiceV2(tmp, user_id="test_user")
+    deck = svc.create_deck(name="Slots Deck")
+    for i in range(2):
+        svc.create_card(deck["id"], front_text=f"Q{i}", back_text=f"A{i}")
+
+    run = svc.start_session(deck["id"], mode="run", level_mode=1)
+    svc.pause_session(run["id"])
+    review = svc.start_session(deck["id"], mode="review")
+    assert review["id"] != run["id"]
+
+    actives = svc._get_active_sessions_for_deck(deck["id"])
+    assert set(actives.keys()) == {"run_l1", "review"}
+    assert actives["run_l1"]["id"] == run["id"]
+    assert actives["review"]["id"] == review["id"]
+
+    # Resuming the run later still finds it.
+    resumed = svc.start_session(deck["id"], mode="run", level_mode=1)
+    assert resumed["id"] == run["id"]
+
+
+def test_legacy_records_are_wiped():
+    """Pre-run (schema 1.0) records are discarded on first read — the agreed
+    one-time reset when the run model shipped."""
+    tmp = tempfile.mkdtemp()
+    svc = MicrocardsServiceV2(tmp, user_id="test_user")
+    _write_json(svc._records_path, {
+        "schema_version": "1.0",
+        "user_id": "test_user",
+        "items": {"deck_x": {"scoreL1": 999, "starsL1": 5}},
+    })
+    assert svc.get_all_records() == {}
+    rec = svc.get_deck_record("deck_x")
+    assert rec["scoreL1"] == 0
+    assert rec["l2_unlocked"] is False
 
 def test_import_export():
     tmp = tempfile.mkdtemp()
@@ -616,13 +859,11 @@ def test_reverse_direction_session():
     deck = svc.create_deck(name="Reverse Deck")
     card = svc.create_card(deck["id"], front_text="apple", back_text="яблоко")
     svc.create_card(deck["id"], front_text="dog", back_text="собака")  # keeps session open
+    _complete_l1_run(svc, deck["id"])
 
-    session = svc.start_session(deck["id"], restart=True, direction="back_front")
+    # Open-answer (L2) run: the run level decides the grading.
+    session = svc.start_session(deck["id"], restart=True, direction="back_front", level_mode=2)
     assert session["card_directions"][card["id"]] == "back_front"
-
-    # Promote to level 2 (three correct level-1 answers).
-    for _ in range(3):
-        svc.submit_answer(session["id"], card["id"], "know")
 
     # In reverse mode the expected answer is the FRONT text.
     res = svc.submit_answer(session["id"], card["id"], "apple")
@@ -682,6 +923,121 @@ def _linked_snapshot():
     }
 
 
+def test_delete_card_scrubs_active_session():
+    """Deleting a card while a session is paused must not leave a ghost id
+    in the queue (resuming would 404 on answer)."""
+    tmp = tempfile.mkdtemp()
+    svc = MicrocardsServiceV2(tmp, user_id="test_user")
+    deck = svc.create_deck(name="Scrub Deck")
+    for i in range(3):
+        svc.create_card(deck["id"], front_text=f"Q{i}", back_text=f"A{i}")
+
+    session = svc.start_session(deck["id"], level_mode=1)
+    q = list(session["card_queue"])
+    svc.submit_answer(session["id"], q[0], "know")
+    svc.pause_session(session["id"])
+
+    # Delete an unanswered card.
+    assert svc.delete_card(deck["id"], q[1]) is True
+
+    resumed = svc.start_session(deck["id"], level_mode=1)
+    assert resumed["id"] == session["id"]
+    assert q[1] not in resumed["card_queue"]
+    assert resumed["stats"]["unique_total"] == 2
+    assert resumed["stats"]["mastered"] == 1
+    # The session is still answerable to completion.
+    res = svc.submit_answer(resumed["id"], q[2], "know")
+    assert res["session"]["completed"] is True
+
+
+def test_resume_scrubs_cards_deleted_behind_sessions_back():
+    """Edits that bypass delete_card (other tab, linked refresh) are healed
+    when the session is resumed."""
+    tmp = tempfile.mkdtemp()
+    svc = MicrocardsServiceV2(tmp, user_id="test_user")
+    deck = svc.create_deck(name="Ghost Deck")
+    for i in range(2):
+        svc.create_card(deck["id"], front_text=f"Q{i}", back_text=f"A{i}")
+
+    session = svc.start_session(deck["id"], level_mode=1)
+    q = list(session["card_queue"])
+
+    # Remove a card by rewriting the deck file directly (no scrub hook).
+    raw = _read_json(svc._deck_path(deck["id"]), None)
+    raw["cards"] = [c for c in raw["cards"] if c["id"] != q[0]]
+    _write_json(svc._deck_path(deck["id"]), raw)
+
+    resumed = svc.start_session(deck["id"], level_mode=1)
+    assert resumed["id"] == session["id"]
+    assert q[0] not in resumed["card_queue"]
+    assert resumed["stats"]["unique_total"] == 1
+
+
+def test_submit_answer_heals_missing_card():
+    """Answering a card that was deleted mid-session returns card_missing and
+    a healed session instead of failing the run with a 404."""
+    tmp = tempfile.mkdtemp()
+    svc = MicrocardsServiceV2(tmp, user_id="test_user")
+    deck = svc.create_deck(name="Heal Deck")
+    for i in range(2):
+        svc.create_card(deck["id"], front_text=f"Q{i}", back_text=f"A{i}")
+
+    session = svc.start_session(deck["id"], level_mode=1)
+    q = list(session["card_queue"])
+
+    # Card vanishes between render and answer.
+    raw = _read_json(svc._deck_path(deck["id"]), None)
+    raw["cards"] = [c for c in raw["cards"] if c["id"] != q[0]]
+    _write_json(svc._deck_path(deck["id"]), raw)
+
+    res = svc.submit_answer(session["id"], q[0], "know")
+    assert res.get("card_missing") is True
+    healed = res["session"]
+    assert q[0] not in healed["card_queue"]
+    assert healed["stats"]["unique_total"] == 1
+    # The remaining card still completes the session normally.
+    res2 = svc.submit_answer(session["id"], q[1], "know")
+    assert res2["session"]["completed"] is True
+
+
+def test_scrub_to_empty_queue_completes_and_new_session_starts():
+    """If every remaining card is deleted, the old session closes out and a
+    fresh one is created on the next start."""
+    tmp = tempfile.mkdtemp()
+    svc = MicrocardsServiceV2(tmp, user_id="test_user")
+    deck = svc.create_deck(name="Empty Deck")
+    card = svc.create_card(deck["id"], front_text="Q", back_text="A")
+    extra = svc.create_card(deck["id"], front_text="Q2", back_text="A2")
+
+    session = svc.start_session(deck["id"], level_mode=1)
+    svc.pause_session(session["id"])
+    svc.delete_card(deck["id"], card["id"])
+    svc.delete_card(deck["id"], extra["id"])
+
+    # Both cards gone -> old session was completed by the scrub.
+    svc.create_card(deck["id"], front_text="Q3", back_text="A3")
+    fresh = svc.start_session(deck["id"], level_mode=1)
+    assert fresh["id"] != session["id"]
+    assert fresh["stats"]["unique_total"] == 1
+
+
+def test_reimport_dedup_preserves_card_ids():
+    """Author-side guarantee for linked progress: re-importing the same content
+    keeps existing card ids (dedup skips, never re-creates)."""
+    tmp = tempfile.mkdtemp()
+    svc = MicrocardsServiceV2(tmp, user_id="author")
+    deck = svc.create_deck(name="Reimport Deck")
+    csv = "front,back\nos,bone\ncor,heart\n"
+    svc.import_csv(deck["id"], csv)
+    ids_before = [c["id"] for c in svc.list_cards(deck["id"])]
+
+    result = svc.import_csv(deck["id"], csv)
+    assert result["items"] == []
+    assert result["skipped_duplicates"] == 2
+    ids_after = [c["id"] for c in svc.list_cards(deck["id"])]
+    assert ids_after == ids_before
+
+
 def test_linked_deck_resolves_readonly_from_catalog():
     svc = MicrocardsServiceV2(tempfile.mkdtemp(), user_id="learner")
     cat = _FakeCatalog(_linked_snapshot())
@@ -699,6 +1055,83 @@ def test_linked_deck_resolves_readonly_from_catalog():
     assert len(resolved["cards"]) == 2
     assert resolved["card_count"] == 2
     assert cat.calls and cat.calls[0][0] == "catalog_item_1"
+
+
+def test_linked_deck_republish_migrates_progress_by_content():
+    """When the author republishes with re-created card ids, the subscriber's
+    review states (FSRS schedule, l1_mastered → L2 gate) follow the content
+    instead of silently orphaning."""
+    svc = MicrocardsServiceV2(tempfile.mkdtemp(), user_id="learner")
+    cat = _FakeCatalog(_linked_snapshot())
+    svc.catalog_service = cat
+    deck = svc.create_linked_deck("catalog_item_1", _linked_snapshot())
+    did = deck["id"]
+
+    # Learner completes a full L1 run → gate opens, states written.
+    session = svc.start_session(did, level_mode=1)
+    for cid in list(session["card_queue"]):
+        svc.submit_answer(session["id"], cid, "know")
+    svc.finish_session(session["id"], session_xp=100)
+    rec = svc.get_deck_record(did)
+    assert rec["l1_progress"]["complete"] is True
+    assert rec["l2_unlocked"] is True
+    states_before = svc._read_states()
+    assert states_before["mc_a"]["l1_mastered"] is True
+    stability_before = states_before["mc_a"]["stability"]
+
+    # Author re-creates the cards: same content, brand-new ids.
+    cat._snapshot = {
+        "name": "Catalog Latin",
+        "cards": [
+            {"id": "mc_a2", "front": {"text": "os"}, "back": {"text": "bone"}},
+            {"id": "mc_b2", "front": {"text": "cor"}, "back": {"text": "heart"}},
+        ],
+    }
+    resolved = svc.get_deck(did)
+    assert [c["id"] for c in resolved["cards"]] == ["mc_a2", "mc_b2"]
+
+    states = svc._read_states()
+    assert "mc_a" not in states and "mc_b" not in states
+    assert states["mc_a2"]["l1_mastered"] is True
+    assert states["mc_a2"]["stability"] == stability_before
+    assert states["mc_a2"]["card_id"] == "mc_a2"
+
+    # The L2 gate survives the republish.
+    rec_after = svc.get_deck_record(did)
+    assert rec_after["l1_progress"]["complete"] is True
+    assert rec_after["l2_unlocked"] is True
+
+
+def test_linked_deck_republish_edited_card_resets_only_that_card():
+    """A card whose content AND id changed cannot be matched — it honestly
+    resets, while untouched cards keep their progress."""
+    svc = MicrocardsServiceV2(tempfile.mkdtemp(), user_id="learner")
+    cat = _FakeCatalog(_linked_snapshot())
+    svc.catalog_service = cat
+    deck = svc.create_linked_deck("catalog_item_1", _linked_snapshot())
+    did = deck["id"]
+
+    session = svc.start_session(did, level_mode=1)
+    for cid in list(session["card_queue"]):
+        svc.submit_answer(session["id"], cid, "know")
+
+    cat._snapshot = {
+        "name": "Catalog Latin",
+        "cards": [
+            # mc_a re-created with the same content → migrates.
+            {"id": "mc_a2", "front": {"text": "os"}, "back": {"text": "bone"}},
+            # mc_b re-created with REWRITTEN content → honest reset.
+            {"id": "mc_b2", "front": {"text": "pulmo"}, "back": {"text": "lung"}},
+        ],
+    }
+    svc.get_deck(did)
+
+    states = svc._read_states()
+    assert states["mc_a2"]["l1_mastered"] is True
+    assert "mc_b2" not in states            # fresh card, no inherited state
+    assert "mc_a" not in states             # migrated away
+    rec = svc.get_deck_record(did)
+    assert rec["l1_progress"] == {"mastered": 1, "total": 2, "complete": False}
 
 
 def test_linked_deck_blocks_content_mutations():

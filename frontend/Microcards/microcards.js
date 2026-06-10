@@ -209,13 +209,17 @@
         activeDeck: null,
         cards: [], // active deck cards
         
-        // Session state
+        // Session state (mirrors the server session — the queue/cursor live there)
         session: null,
+        sessionMode: 'review', // 'run' (full-deck pass, stars) | 'review' (SRS)
         sessionCards: [],
         sessionIndex: 0,
-        sessionStats: { total: 0, correct: 0, errors: 0 },
-        sessionErrors: [], // list of incorrect card objects
-        isErrorsOnlyMode: false,
+        currentCard: null, // the card on screen — survives queue re-syncs mid-presentation
+        currentForm: 1,    // how the current card is checked: 1 self-grade / 2 typed
+        sessionStats: { unique_total: 0, mastered: 0, first_try_correct: 0, correct: 0, errors: 0, pending_retry: 0 },
+
+        // Browse mode (free flipping, no grading)
+        browseIndex: 0,
 
         // Gamification (per session)
         combo: 0,
@@ -249,18 +253,33 @@
     }
 
     // ── Session progress (header toolbar / inner session) ──────────────────
+    // Progress = mastered cards / unique cards. The cursor would jump backwards
+    // every time a failed card is re-queued, so it never drives the bar.
     function updateHeaderProgress() {
-        const total = state.sessionCards.length || 0;
-        const current = Math.min(state.sessionIndex + 1, total);
+        const stats = state.sessionStats || {};
+        const total = stats.unique_total || state.sessionCards.length || 0;
+        const mastered = Math.min(stats.mastered || 0, total);
+        const text = total > 0 ? `${mastered}/${total}` : '0/0';
+        const width = total > 0 ? `${(mastered / total) * 100}%` : '0%';
+
         const textEl = $('mcHeaderProgressText');
         const barEl = $('mcHeaderProgressBar');
-        if (textEl) textEl.textContent = total > 0 ? `${current}/${total}` : '0/0';
-        if (barEl) barEl.style.width = total > 0 ? `${(state.sessionIndex / total) * 100}%` : '0%';
+        if (textEl) textEl.textContent = text;
+        if (barEl) barEl.style.width = width;
 
         const sTextEl = $('mcSessionProgressText');
         const sBarEl = $('mcSessionProgressBar');
-        if (sTextEl) sTextEl.textContent = total > 0 ? `${current}/${total}` : '0/0';
-        if (sBarEl) sBarEl.style.width = total > 0 ? `${(state.sessionIndex / total) * 100}%` : '0%';
+        if (sTextEl) sTextEl.textContent = text;
+        if (sBarEl) sBarEl.style.width = width;
+
+        // Repeat-queue chip: how many failed cards are still circling back.
+        const pending = stats.pending_retry || 0;
+        const repeatChip = $('mcRepeatChip');
+        if (repeatChip) {
+            const valEl = $('mcRepeatChipVal');
+            if (valEl) valEl.textContent = pending;
+            repeatChip.style.display = pending > 0 ? 'inline-flex' : 'none';
+        }
 
         updateProgressVisuals();
     }
@@ -286,8 +305,12 @@
         el.classList.add('is-animating');
     }
 
-    // Points for a correct answer: base + combo bonus (capped, satisfying ramp).
-    function pointsForCombo(combo, threshold) {
+    // Base points by card form: a typed answer (form 2) is objectively harder
+    // than a self-graded flip, so it pays double.
+    const FORM_BASE_POINTS = { 1: 100, 2: 200 };
+
+    // Points for a correct answer: form base × combo multiplier (capped ramp).
+    function pointsForCombo(combo, threshold, form = 1) {
         let multiplier = 1;
         if (combo >= threshold) {
             multiplier = 3;
@@ -296,23 +319,20 @@
         } else if (combo === 3) {
             multiplier = 1.5;
         }
-        return Math.floor(100 * multiplier);
+        return Math.floor((FORM_BASE_POINTS[form] || 100) * multiplier);
     }
 
-    function calculateMaxPossiblePoints(sessionSize, threshold) {
+    // A card closed on a re-presentation (after a miss) earns half the form
+    // base, flat: the mastery cycle guarantees everyone finishes at 100%, so
+    // full points are reserved for first-try answers.
+    function retryPoints(form = 1) {
+        return Math.floor((FORM_BASE_POINTS[form] || 100) / 2);
+    }
+
+    function calculateMaxPossiblePoints(sessionSize, threshold, form = 1) {
         let maxPossible = 0;
-        let combo = 0;
-        for (let i = 0; i < sessionSize; i++) {
-            combo++;
-            let multiplier = 1;
-            if (combo >= threshold) {
-                multiplier = 3;
-            } else if (combo === 4) {
-                multiplier = 2;
-            } else if (combo === 3) {
-                multiplier = 1.5;
-            }
-            maxPossible += Math.floor(100 * multiplier);
+        for (let combo = 1; combo <= sessionSize; combo++) {
+            maxPossible += pointsForCombo(combo, threshold, form);
         }
         return maxPossible;
     }
@@ -360,31 +380,41 @@
     }
 
     let lastXpValue = 0;
+    let _xpAnimFrame = null;
     function updateXpChip() {
         const el = $('xpChipVal');
         if (!el) return;
+        // A new gain can land mid-animation — restart the tween from wherever
+        // the previous one left off instead of stacking two rAF loops.
+        if (_xpAnimFrame) { cancelAnimationFrame(_xpAnimFrame); _xpAnimFrame = null; }
         const startVal = lastXpValue;
         const endVal = state.sessionXp;
         lastXpValue = endVal;
-        
+
         if (startVal === endVal) {
             popNumber(el, endVal);
             return;
         }
-        
+
         const duration = 600;
         const startTime = performance.now();
-        
+
         function update(now) {
             const progress = Math.min((now - startTime) / duration, 1);
             const ease = progress * (2 - progress); // easeOutQuad
             const currentVal = Math.round(startVal + (endVal - startVal) * ease);
-            popNumber(el, currentVal);
             if (progress < 1) {
-                requestAnimationFrame(update);
+                // Plain text while counting up — rebuilding the per-digit spans
+                // (popNumber) every frame restarts their CSS animation at 60fps
+                // and reads as flicker.
+                el.textContent = currentVal;
+                _xpAnimFrame = requestAnimationFrame(update);
+            } else {
+                _xpAnimFrame = null;
+                popNumber(el, endVal); // a single satisfying pop on landing
             }
         }
-        requestAnimationFrame(update);
+        _xpAnimFrame = requestAnimationFrame(update);
     }
 
     function showCombo() {
@@ -432,7 +462,10 @@
     }
 
     // Central hook for every graded answer — drives combo, points and feedback.
-    function registerAnswer(isCorrect) {
+    // `isRetry` = the card came back through the mastery cycle after a miss:
+    // it still feeds the combo, but only earns the flat reduced reward.
+    // `form` = how the card was checked (1 self-grade / 2 typed input).
+    function registerAnswer(isCorrect, isRetry = false, form = 1) {
         const threshold = state.threshold || 5;
         if (isCorrect) {
             const wasNearMiss = state.isNearMiss;
@@ -443,8 +476,8 @@
 
             state.combo += 1;
             state.maxCombo = Math.max(state.maxCombo, state.combo);
-            
-            const pts = pointsForCombo(state.combo, threshold);
+
+            const pts = isRetry ? retryPoints(form) : pointsForCombo(state.combo, threshold, form);
             state.sessionXp += pts;
             updateXpChip();
             floatXp(pts);
@@ -578,89 +611,26 @@
         try { localStorage.setItem('mc_streak', JSON.stringify({ last: today, count })); } catch (e) {}
         return count;
     }
-    // ── High Scores & Stars Persistence (local, per-device) ────────────────
+    // ── Run records (server-side; persisted only by completed runs) ────────
     function getDeckRecord(deckId) {
-        // Prefer server-side record (hydrated on load and after saves)
-        const srv = state.serverRecords && state.serverRecords[deckId];
-        if (srv) {
-            return {
-                scoreL1: srv.scoreL1 || 0,
-                starsL1: srv.starsL1 || 0,
-                scoreL2: srv.scoreL2 || 0,
-                starsL2: srv.starsL2 || 0,
-            };
-        }
-        // Fallback: localStorage (migration path for existing data)
-        try {
-            const records = JSON.parse(localStorage.getItem('mc_deck_records') || '{}');
-            let rec = records[deckId];
-            if (!rec) {
-                return { scoreL1: 0, starsL1: 0, scoreL2: 0, starsL2: 0 };
-            }
-            // Migration: if legacy keys exist, migrate them to L1
-            let modified = false;
-            if (rec.score !== undefined) {
-                rec.scoreL1 = rec.scoreL1 !== undefined ? Math.max(rec.scoreL1, rec.score) : rec.score;
-                delete rec.score;
-                modified = true;
-            }
-            if (rec.stars !== undefined) {
-                rec.starsL1 = rec.starsL1 !== undefined ? Math.max(rec.starsL1, rec.stars) : rec.stars;
-                delete rec.stars;
-                modified = true;
-            }
-            if (rec.scoreL1 === undefined) rec.scoreL1 = 0;
-            if (rec.starsL1 === undefined) rec.starsL1 = 0;
-            if (rec.scoreL2 === undefined) rec.scoreL2 = 0;
-            if (rec.starsL2 === undefined) rec.starsL2 = 0;
-            if (modified) {
-                records[deckId] = rec;
-                localStorage.setItem('mc_deck_records', JSON.stringify(records));
-            }
-            return rec;
-        } catch (e) {
-            return { scoreL1: 0, starsL1: 0, scoreL2: 0, starsL2: 0 };
-        }
+        const srv = (state.serverRecords && state.serverRecords[deckId]) || {};
+        return {
+            scoreL1: srv.scoreL1 || 0,
+            starsL1: srv.starsL1 || 0,
+            sizeL1: srv.sizeL1 || 0,
+            scoreL2: srv.scoreL2 || 0,
+            starsL2: srv.starsL2 || 0,
+            sizeL2: srv.sizeL2 || 0,
+            l1_run_completed: !!srv.l1_run_completed,
+        };
     }
-    async function saveDeckRecord(deckId, score, stars) {
-        const isL2 = state.sessionLevelMode === 2;
-        let isNewRecord = false;
-        try {
-            // Save to server (fire-and-forget with fallback)
-            const res = await apiCall(`/api/v2/microcards/records/${deckId}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ score, stars, level_mode: isL2 ? 2 : 1 })
-            });
-            if (res && res.record) {
-                state.serverRecords[deckId] = res.record;
-            }
-            isNewRecord = res && res.is_new_record;
-        } catch (e) {
-            // Fallback: localStorage only
-            try {
-                const records = JSON.parse(localStorage.getItem('mc_deck_records') || '{}');
-                let rec = records[deckId] || { scoreL1: 0, starsL1: 0, scoreL2: 0, starsL2: 0 };
-                if (isL2) {
-                    if (score > (rec.scoreL2 || 0)) { rec.scoreL2 = score; isNewRecord = true; }
-                    if (stars > (rec.starsL2 || 0)) rec.starsL2 = stars;
-                } else {
-                    if (score > (rec.scoreL1 || 0)) { rec.scoreL1 = score; isNewRecord = true; }
-                    if (stars > (rec.starsL1 || 0)) rec.starsL1 = stars;
-                }
-                records[deckId] = rec;
-                localStorage.setItem('mc_deck_records', JSON.stringify(records));
-            } catch (_) {}
-        }
-        // Also keep localStorage in sync as backup
-        try {
-            const records = JSON.parse(localStorage.getItem('mc_deck_records') || '{}');
-            const serverRec = state.serverRecords[deckId];
-            if (serverRec) records[deckId] = serverRec;
-            localStorage.setItem('mc_deck_records', JSON.stringify(records));
-        } catch (_) {}
-        return isNewRecord;
+    // L2 gate for the active deck: at least one completed full-deck L1 run.
+    function isDeckL2Unlocked() {
+        const deck = state.activeDeck || {};
+        if (typeof deck.l2_unlocked === 'boolean') return deck.l2_unlocked;
+        return getDeckRecord(state.activeDeckId).l1_run_completed;
     }
+
     function pluralizeDays(n) {
         const a = Math.abs(n) % 100, d = a % 10;
         if (a > 10 && a < 20) return t('microcards.days_many', 'дней');
@@ -696,6 +666,7 @@
         if (viewName === 'details') targetId = 'viewDeckDetails';
         else if (viewName === 'session') targetId = 'viewSession';
         else if (viewName === 'summary') targetId = 'viewSummary';
+        else if (viewName === 'browse') targetId = 'viewBrowse';
 
         const targetEl = $(targetId);
         if (targetEl) {
@@ -754,6 +725,8 @@
             abortSession();
         } else if (state.view === 'summary') {
             switchView('details');
+        } else if (state.view === 'browse') {
+            exitBrowse();
         }
     }
 
@@ -794,12 +767,6 @@
             // Hydrate server records cache (used by getDeckRecord)
             if (recordsData && recordsData.records) {
                 state.serverRecords = Object.assign({}, state.serverRecords, recordsData.records);
-                // Also sync to localStorage for fallback
-                try {
-                    const lsRecs = JSON.parse(localStorage.getItem('mc_deck_records') || '{}');
-                    Object.assign(lsRecs, recordsData.records);
-                    localStorage.setItem('mc_deck_records', JSON.stringify(lsRecs));
-                } catch (_) {}
             }
             state._entrance = true; // stagger deck cards in on fresh load only
             renderLibrary();
@@ -1042,7 +1009,7 @@
             try {
                 const cardsData = await apiCall(`/api/v2/microcards/decks/${deckId}/cards`);
                 state.cards = cardsData.items || [];
-                startLearningSession(deck.active_session_level_mode === 2, deck.active_session_level_mode);
+                resumeDeckSession(deck);
             } catch (err) {
                 console.error('[studyDeckFromLibrary] resume error:', err);
                 showToast(t('microcards.error_loading_cards', 'Не удалось загрузить карточки'), 'error');
@@ -1255,58 +1222,70 @@
             }
         }
 
-        // Dynamically update the header CTA button
+        // Header CTA = Повторение (the daily SRS habit); reflect an active one.
         const studyCta = document.querySelector('.mc-dhead__cta');
         if (studyCta) {
-            const isPaused = state.activeDeck && state.activeDeck.is_paused;
+            const slots = (state.activeDeck && state.activeDeck.active_sessions) || {};
             const studyIcon = studyCta.querySelector('.material-symbols-outlined');
-            const studyText = studyCta.querySelector('[data-i18n="microcards.btn_study"]') || studyCta.querySelector('span:not(.material-symbols-outlined):not(.mc-btn__count)');
-            
+            const studyText = studyCta.querySelector('[data-i18n="microcards.btn_review_mode"]') || studyCta.querySelector('span:not(.material-symbols-outlined):not(.mc-btn__count)');
+
             studyCta.removeAttribute('onclick');
-            if (isPaused) {
+            if (slots.review) {
                 if (studyIcon) studyIcon.textContent = 'play_arrow';
                 if (studyText) {
-                    studyText.textContent = t('microcards.btn_continue', 'Продолжить');
+                    studyText.textContent = t('microcards.btn_continue_review', 'Продолжить повторение');
                     studyText.removeAttribute('data-i18n'); // prevent i18n override
                 }
-                studyCta.onclick = () => {
-                    startLearningSession(state.activeDeck.active_session_level_mode === 2, state.activeDeck.active_session_level_mode);
-                };
             } else {
                 if (studyIcon) studyIcon.textContent = 'school';
                 if (studyText) {
-                    studyText.textContent = t('microcards.btn_study', 'Учить');
-                    studyText.setAttribute('data-i18n', 'microcards.btn_study');
+                    studyText.textContent = t('microcards.btn_review_mode', 'Повторение');
+                    studyText.setAttribute('data-i18n', 'microcards.btn_review_mode');
                 }
-                studyCta.onclick = () => {
-                    startLearningSession(false, 1);
-                };
             }
+            studyCta.onclick = () => { startReview(); };
         }
 
-        // Render resume banner / prompt
+        // Resume banner: an interrupted RUN is the long-lived object worth a banner.
         const resumeSection = $('deckResumeSection');
         if (resumeSection) {
-            if (state.activeDeck && state.activeDeck.is_paused) {
+            const slots = (state.activeDeck && state.activeDeck.active_sessions) || {};
+            const runSlot = slots.run_l1 ? { ...slots.run_l1, level: 1 } : (slots.run_l2 ? { ...slots.run_l2, level: 2 } : null);
+            if (runSlot) {
                 resumeSection.classList.remove('hidden');
                 const progressEl = $('deckResumeProgress');
-                if (progressEl) progressEl.textContent = state.activeDeck.paused_progress || '0/0';
+                if (progressEl) progressEl.textContent = `${runSlot.mastered}/${runSlot.unique_total}`;
                 const levelEl = $('deckResumeLevel');
                 if (levelEl) {
-                    const lvl = state.activeDeck.active_session_level_mode;
-                    levelEl.textContent = lvl === 2 ? t('microcards.mode_l2_title', 'Уровень 2: Открытый ответ') : t('microcards.mode_l1_title', 'Уровень 1: Карточки');
+                    levelEl.textContent = runSlot.level === 2
+                        ? t('microcards.run_indicator_l2', 'Прохождение · Уровень 2')
+                        : t('microcards.run_indicator_l1', 'Прохождение · Уровень 1');
                 }
-                
+
                 // Wire up the button clicks
-                $('btnResumeSession').onclick = () => {
-                    startLearningSession(state.activeDeck.active_session_level_mode === 2, state.activeDeck.active_session_level_mode);
-                };
-                $('btnRestartSession').onclick = () => {
-                    startLearningSession(state.activeDeck.active_session_level_mode === 2, state.activeDeck.active_session_level_mode, true);
-                };
+                $('btnResumeSession').onclick = () => { startRun(runSlot.level); };
+                $('btnRestartSession').onclick = () => { confirmResetRun(runSlot.level, true); };
             } else {
                 resumeSection.classList.add('hidden');
             }
+        }
+    }
+
+    // Reset a run (with an honest confirm showing how much progress is lost);
+    // optionally start a fresh one right away.
+    function confirmResetRun(level, startAfter = false) {
+        const slots = (state.activeDeck && state.activeDeck.active_sessions) || {};
+        const runSlot = level === 2 ? slots.run_l2 : slots.run_l1;
+        const progress = runSlot ? `${runSlot.mastered}/${runSlot.unique_total}` : '';
+        const msg = t('microcards.confirm_reset_run', 'Сбросить прогон {p}? Прогресс прогона будет потерян.')
+            .replace('{p}', progress);
+        if (!confirm(msg)) return;
+        if (startAfter) {
+            startRun(level, true);
+        } else if (runSlot && runSlot.session_id) {
+            apiCall(`/api/v2/microcards/session/${runSlot.session_id}/discard`, { method: 'POST' })
+                .then(() => openDeckDetails(state.activeDeckId))
+                .catch((e) => console.error('[resetRun]', e));
         }
     }
 
@@ -1338,12 +1317,13 @@
         seg('segLearn', learning);
         seg('segMaster', mastered);
 
-        // Primary CTA shows today's study load (due + new) — both the L1 card badge
-        // and the header "Учить" button.
+        // The Повторение CTA shows today's study load (due + new). The run cards
+        // don't carry it — a run always covers the whole deck.
         const load = due + nw;
-        [$('btnStudyCount'), $('headStudyCount')].forEach(chip => {
-            if (chip) { chip.textContent = load; chip.classList.toggle('hidden', load === 0); }
-        });
+        const headChip = $('headStudyCount');
+        if (headChip) { headChip.textContent = load; headChip.classList.toggle('hidden', load === 0); }
+        const l1Chip = $('btnStudyCount');
+        if (l1Chip) l1Chip.classList.add('hidden');
 
         // Header meta keeps only the author (for someone else's deck) + tags; counts
         // now live in the metric strip. Publish status moved inline next to the title.
@@ -1358,14 +1338,13 @@
             metaEl.classList.toggle('hidden', !hasAuthor && !hasTags);
         }
 
-        // Render records and stars for L1 and L2
+        // Render best-run records and stars for L1 and L2
         const records = getDeckRecord(state.activeDeckId);
-        
-        // Calculate max possible points for the deck size based on settings limit
-        const sessionSizeSetting = (state.settings && state.settings.session_size) || 20;
-        const sessionSize = Math.min(total, sessionSizeSetting);
-        const threshold = Math.max(3, Math.min(8, Math.floor(sessionSize * 0.15)));
-        const maxPoints = calculateMaxPossiblePoints(sessionSize, threshold);
+
+        // The "perfect run" ceiling covers the WHOLE deck (runs = full passes).
+        const threshold = Math.max(3, Math.min(8, Math.floor(total * 0.15)));
+        const maxPointsL1 = calculateMaxPossiblePoints(total, threshold, 1);
+        const maxPointsL2 = calculateMaxPossiblePoints(total, threshold, 2);
 
         const detailsScoreL1 = $('detailsScoreL1');
         const detailsMaxPointsL1 = $('detailsMaxPointsL1');
@@ -1373,9 +1352,34 @@
         const detailsMaxPointsL2 = $('detailsMaxPointsL2');
 
         if (detailsScoreL1) detailsScoreL1.textContent = records.scoreL1;
-        if (detailsMaxPointsL1) detailsMaxPointsL1.textContent = maxPoints;
+        if (detailsMaxPointsL1) detailsMaxPointsL1.textContent = maxPointsL1;
         if (detailsScoreL2) detailsScoreL2.textContent = records.scoreL2;
-        if (detailsMaxPointsL2) detailsMaxPointsL2.textContent = maxPoints;
+        if (detailsMaxPointsL2) detailsMaxPointsL2.textContent = maxPointsL2;
+
+        // Deck size the record was earned on (deck may have grown since).
+        const sizeFmt = (n) => n > 0 ? t('microcards.record_size', '· {n} карт.').replace('{n}', n) : '';
+        const sizeL1El = $('detailsSizeL1');
+        if (sizeL1El) sizeL1El.textContent = sizeFmt(records.sizeL1);
+        const sizeL2El = $('detailsSizeL2');
+        if (sizeL2El) sizeL2El.textContent = sizeFmt(records.sizeL2);
+
+        // Active run status inside the level cards.
+        const slots = (state.activeDeck && state.activeDeck.active_sessions) || {};
+        const renderRunStatus = (el, slot, level) => {
+            if (!el) return;
+            if (!slot) { el.classList.add('hidden'); el.innerHTML = ''; return; }
+            el.classList.remove('hidden');
+            el.innerHTML = `
+                <span class="mc-run-status__label">${t('microcards.run_in_progress', 'Прогон:')} <strong>${slot.mastered}/${slot.unique_total}</strong></span>
+                <button type="button" class="mc-btn mc-btn--primary" onclick="event.stopPropagation(); mcApp.startRun(${level})">
+                    <span class="material-symbols-outlined" style="font-size:0.95rem">play_arrow</span>${t('microcards.btn_resume', 'Продолжить')}
+                </button>
+                <button type="button" class="mc-btn mc-btn--ghost" onclick="event.stopPropagation(); mcApp.confirmResetRun(${level})">
+                    ${t('microcards.btn_reset_run', 'Сбросить')}
+                </button>`;
+        };
+        renderRunStatus($('runStatusL1'), slots.run_l1, 1);
+        renderRunStatus($('runStatusL2'), slots.run_l2, 2);
 
         // Render stars L1 (silver)
         const starsL1Container = $('detailsStarsL1');
@@ -1413,11 +1417,11 @@
             }
         }
 
-        // Lock/Unlock L2 card
+        // Lock/Unlock L2 card: gate = a completed full-deck L1 run
         const cardL2 = $('cardStudyL2');
         const lockNoticeL2 = $('lockNoticeL2');
         const statsL2Container = $('statsL2Container');
-        const isL2Unlocked = records.starsL1 >= 3;
+        const isL2Unlocked = isDeckL2Unlocked();
 
         if (cardL2) {
             if (isL2Unlocked) {
@@ -1892,14 +1896,67 @@
     }
 
     // ── Learning Session Screen ───────────────────────────────────────────
-    async function startLearningSession(errorsOnly = false, levelMode = null, forceRestart = false) {
-        state.isErrorsOnlyMode = errorsOnly;
-        if (levelMode !== null) {
-            state.sessionLevelMode = levelMode;
-        } else if (!state.sessionLevelMode) {
-            state.sessionLevelMode = 1;
+    // Mirror the server session into local state. The server owns the queue:
+    // failed cards are re-inserted there by the mastery cycle, so every sync
+    // can grow `sessionCards` (the same card may appear more than once).
+    function syncSessionState(session) {
+        state.session = session;
+        state.sessionCards = (session.card_queue || []).map(id => state.cards.find(c => c.id === id)).filter(Boolean);
+        state.sessionIndex = Math.min(session.cursor || 0, state.sessionCards.length);
+        const stats = Object.assign(
+            { unique_total: 0, mastered: 0, first_try_correct: 0, correct: 0, errors: 0, pending_retry: 0, error_card_ids: [] },
+            session.stats || {}
+        );
+        // Sessions paused before the mastery-cycle schema lack the new counters.
+        if (!stats.unique_total) stats.unique_total = new Set(session.card_queue || []).size;
+        state.sessionStats = stats;
+    }
+
+    // Has this card already been attempted in the session (i.e. a re-presentation)?
+    function isCardRetry(cardId) {
+        const fr = state.session && state.session.first_results;
+        return !!(fr && Object.prototype.hasOwnProperty.call(fr, cardId));
+    }
+
+    // Offline fallback: emulate the server's mastery cycle locally so the run
+    // stays playable if an answer request fails mid-session.
+    function advanceLocally(card, isCorrect) {
+        state.sessionIndex++;
+        const stats = state.sessionStats;
+        if (isCorrect) {
+            stats.correct++;
+            stats.mastered = Math.min((stats.mastered || 0) + 1, stats.unique_total || 0);
+            stats.pending_retry = Math.max(0, (stats.pending_retry || 0) - 1);
+        } else {
+            stats.errors++;
+            stats.pending_retry = (stats.pending_retry || 0) + 1;
+            if (!stats.error_card_ids.includes(card.id)) stats.error_card_ids.push(card.id);
+            const insertAt = Math.min(state.sessionCards.length, state.sessionIndex + 2 + Math.floor(Math.random() * 3));
+            state.sessionCards.splice(insertAt, 0, card);
         }
-        // Reset gamification for the new run
+    }
+
+    // Прохождение: the whole deck at one fixed level — the only way to earn
+    // stars and records (finalized server-side via the finish endpoint).
+    function startRun(level, forceRestart = false) {
+        return _startSession({ mode: 'run', level_mode: level === 2 ? 2 : 1, resume: true, restart: !!forceRestart });
+    }
+
+    // Повторение: SRS-dosed daily session (due + new), points only.
+    function startReview(forceRestart = false) {
+        return _startSession({ mode: 'review', resume: true, restart: !!forceRestart });
+    }
+
+    // Resume whatever the deck has active (used by library cards): runs first.
+    function resumeDeckSession(deck) {
+        const slots = (deck && deck.active_sessions) || {};
+        if (slots.run_l1) return startRun(1);
+        if (slots.run_l2) return startRun(2);
+        return startReview();
+    }
+
+    async function _startSession(body) {
+        // Reset gamification for the new sitting
         state.combo = 0;
         state.maxCombo = 0;
         state.sessionXp = 0;
@@ -1911,68 +1968,97 @@
 
         try {
             state.isNearMiss = false;
-            if (errorsOnly) {
-                // Initialize queue with failed cards from current session stats
-                state.sessionCards = state.sessionErrors.map(id => state.cards.find(c => c.id === id)).filter(Boolean);
-                state.sessionStats = { total: state.sessionCards.length, correct: 0, errors: 0 };
-                state.sessionErrors = [];
-                state.sessionIndex = 0;
-                
-                state.threshold = Math.max(3, Math.min(8, Math.floor(state.sessionCards.length * 0.15)));
-                state.maxPossiblePoints = calculateMaxPossiblePoints(state.sessionCards.length, state.threshold);
-                
-                setupCurrentCard();
+            const data = await apiCall(`/api/v2/microcards/decks/${state.activeDeckId}/session/start`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            syncSessionState(data.session);
+            state.sessionMode = data.session.mode || (data.session.level_mode ? 'run' : 'review');
+            state.sessionLevelMode = data.session.level_mode === 2 ? 2 : (data.session.level_mode === 1 ? 1 : null);
+
+            // Restore gamification state (pausing/resuming recovery)
+            state.combo = data.session.combo || 0;
+            state.maxCombo = data.session.max_combo || 0;
+            state.sessionXp = data.session.session_xp || 0;
+            lastXpValue = state.sessionXp;
+
+            const unique = state.sessionStats.unique_total || 1;
+            state.threshold = Math.max(3, Math.min(8, Math.floor(unique * 0.15)));
+            // The "perfect run" ceiling only makes sense for runs (records).
+            state.maxPossiblePoints = state.sessionMode === 'run'
+                ? calculateMaxPossiblePoints(unique, state.threshold, state.sessionLevelMode === 2 ? 2 : 1)
+                : 0;
+
+            // Update gamification UI
+            if (state.combo > 0) {
+                showCombo();
             } else {
-                const data = await apiCall(`/api/v2/microcards/decks/${state.activeDeckId}/session/start`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ resume: true, restart: forceRestart, level_mode: state.sessionLevelMode })
-                });
-                state.session = data.session;
-                
-                // Map queue IDs to full card payloads
-                state.sessionCards = (state.session.card_queue || []).map(id => state.cards.find(c => c.id === id)).filter(Boolean);
-                
-                // Load states from session (pausing/resuming recovery)
-                state.sessionIndex = state.session.cursor || 0;
-                state.combo = state.session.combo || 0;
-                state.maxCombo = state.session.max_combo || 0;
-                state.sessionXp = state.session.session_xp || 0;
-                state.sessionErrors = state.session.session_errors || [];
-                state.isErrorsOnlyMode = state.session.is_errors_only_mode || false;
-                state.sessionStats = {
-                    total: state.sessionCards.length,
-                    correct: (state.session.stats && state.session.stats.correct) || 0,
-                    errors: (state.session.stats && state.session.stats.errors) || 0
-                };
-                
-                state.threshold = Math.max(3, Math.min(8, Math.floor(state.sessionCards.length * 0.15)));
-                state.maxPossiblePoints = calculateMaxPossiblePoints(state.sessionCards.length, state.threshold);
-                
-                // Update gamification UI
-                if (state.combo > 0) {
-                    showCombo();
-                } else {
-                    if (comboChip) comboChip.style.display = 'none';
-                }
-                popNumber($('xpChipVal'), state.sessionXp);
-                // Update progress bar
-                updateHeaderProgress();
-                
-                setupCurrentCard();
+                if (comboChip) comboChip.style.display = 'none';
             }
+            popNumber($('xpChipVal'), state.sessionXp);
+            renderSessionLevelIndicator();
+            renderCompositionChip();
+            updateHeaderProgress();
+
+            setupCurrentCard();
         } catch (err) {
+            console.error('[startSession]', err);
             switchView('details');
         }
     }
 
+    // «Повторение: 12 · Новых: 5» — the review session says what it picked.
+    function renderCompositionChip() {
+        const chip = $('mcCompositionChip');
+        if (!chip) return;
+        const comp = state.session && state.session.composition;
+        if (state.sessionMode === 'review' && comp) {
+            chip.textContent = t('microcards.composition_chip', 'К повторению: {d} · Новых: {n}')
+                .replace('{d}', comp.due).replace('{n}', comp.new);
+            chip.style.display = 'inline-flex';
+        } else {
+            chip.style.display = 'none';
+        }
+    }
+
+    // Mode/form chip in the HUD. Runs are one level for the whole sitting;
+    // reviews show the CURRENT card's form (adaptive difficulty).
+    function renderSessionLevelIndicator(form = null) {
+        const levelInd = $('sessionLevelIndicator');
+        if (!levelInd) return;
+        let text, accent;
+        if (state.sessionMode === 'review') {
+            const f = form === 2 ? 2 : 1;
+            text = f === 1
+                ? t('microcards.review_form_l1', 'Повторение · Знаю / Не знаю')
+                : t('microcards.review_form_l2', 'Повторение · Ввод ответа');
+            accent = f === 1 ? 'var(--color-warning)' : 'var(--color-success)';
+        } else {
+            const level = state.sessionLevelMode === 2 ? 2 : 1;
+            text = level === 1
+                ? t('microcards.run_indicator_l1', 'Прохождение · Уровень 1')
+                : t('microcards.run_indicator_l2', 'Прохождение · Уровень 2');
+            accent = level === 1 ? 'var(--color-warning)' : 'var(--color-success)';
+        }
+        levelInd.textContent = text;
+        levelInd.className = 'mc-level-indicator';
+        levelInd.style.background = `color-mix(in srgb, ${accent} 12%, transparent)`;
+        levelInd.style.borderColor = `color-mix(in srgb, ${accent} 30%, transparent)`;
+        levelInd.style.color = accent;
+    }
+
     function setupCurrentCard() {
-        if (state.sessionIndex >= state.sessionCards.length) {
+        // The server completes the session only when every card is mastered;
+        // the local length check is the offline fallback.
+        if ((state.session && state.session.completed) || state.sessionIndex >= state.sessionCards.length) {
             finishSession();
             return;
         }
 
         const card = state.sessionCards[state.sessionIndex];
+        state.currentCard = card;
+        state._gradeBusy = false;
 
         // Reset card face state
         $('flashcardInner').classList.remove('flipped');
@@ -2033,15 +2119,17 @@
             if (backCap) backCap.classList.add('hidden');
         }
 
-        // Set Level Indicator
-        const level = card.level || 1;
-        const levelInd = $('sessionLevelIndicator');
-        levelInd.textContent = level === 1 ? t('microcards.level1_indicator', 'Уровень 1: Знаю / Не знаю') : t('microcards.level2_indicator', 'Уровень 2: Открытый ответ');
-        levelInd.className = 'mc-level-indicator';
-        const accent = level === 1 ? 'var(--color-warning)' : 'var(--color-success)';
-        levelInd.style.background = `color-mix(in srgb, ${accent} 12%, transparent)`;
-        levelInd.style.borderColor = `color-mix(in srgb, ${accent} 30%, transparent)`;
-        levelInd.style.color = accent;
+        // Runs fix one interaction level for the whole sitting; reviews use the
+        // per-card form picked by the server (adaptive difficulty).
+        const level = state.sessionMode === 'review'
+            ? (((state.session && state.session.card_forms) || {})[card.id] === 2 ? 2 : 1)
+            : (state.sessionLevelMode === 2 ? 2 : 1);
+        state.currentForm = level;
+        renderSessionLevelIndicator(level);
+
+        // Repeat badge: this card came back through the mastery cycle.
+        const retryBadge = $('mcRetryBadge');
+        if (retryBadge) retryBadge.classList.toggle('hidden', !isCardRetry(card.id));
 
         // Reset UI actions
         state.currentLevel = level;
@@ -2147,8 +2235,11 @@
     }
 
     async function submitAnswerL1(know) {
-        const card = state.sessionCards[state.sessionIndex];
+        if (state._gradeBusy) return; // ignore double-press before the next card renders
+        state._gradeBusy = true;
+        const card = state.currentCard || state.sessionCards[state.sessionIndex];
         const ratingValue = know ? 'know' : 'dont_know';
+        const isRetry = isCardRetry(card.id);
 
         hideRails(); // rails vanish + card un-leans as the answer is graded
 
@@ -2159,62 +2250,81 @@
             DopamineAudio.playCardSwipe(know);
         }
 
-        // Update stats locally
-        if (know) {
-            state.sessionStats.correct++;
-        } else {
-            state.sessionStats.errors++;
-            if (!state.sessionErrors.includes(card.id)) {
-                state.sessionErrors.push(card.id);
-            }
-        }
-
         // Immediate juicy feedback on the revealed card
-        registerAnswer(know);
+        registerAnswer(know, isRetry, state.currentForm || 1);
 
+        // The server applies the mastery cycle (advances the cursor and, on a
+        // miss, re-queues the card a few positions ahead) — mirror its session.
+        let synced = false;
         try {
-            // Sync with backend if not errors-only offline review
-            if (state.session && !state.isErrorsOnlyMode) {
-                await apiCall(`/api/v2/microcards/session/${state.session.id}/answer`, {
+            if (state.session) {
+                const result = await apiCall(`/api/v2/microcards/session/${state.session.id}/answer`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ card_id: card.id, user_answer: ratingValue })
                 });
+                if (result && result.session) {
+                    syncSessionState(result.session);
+                    maybeCelebrateCardLevelUp(card, result.card_state);
+                    synced = true;
+                }
+                if (result && result.card_missing) {
+                    showToast(t('microcards.card_removed_skip', 'Карточка была удалена из колоды — пропускаем'), 'info');
+                }
             }
         } catch (err) {
             console.error(err);
         }
+        if (!synced) advanceLocally(card, know);
+
+        updateHeaderProgress();
 
         // Let the feedback animation play before advancing
         setTimeout(() => {
-            state.sessionIndex++;
             setupCurrentCard();
         }, know ? 640 : 780);
     }
 
     async function submitAnswerL2(e) {
         if (e) e.preventDefault();
-        const card = state.sessionCards[state.sessionIndex];
+        if (state._gradeBusy) return; // answer already graded — waiting for "Далее"
+        state._gradeBusy = true;
+        const card = state.currentCard || state.sessionCards[state.sessionIndex];
         const answer = $('inputL2Answer').value.trim();
+        const isRetry = isCardRetry(card.id);
 
         try {
             let isCorrect = false;
             let expected = card.back.text;
-            let cardState = null;
+            let synced = false;
 
-            if (state.session && !state.isErrorsOnlyMode) {
+            if (state.session) {
                 const result = await apiCall(`/api/v2/microcards/session/${state.session.id}/answer`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ card_id: card.id, user_answer: answer })
                 });
+                if (result.card_missing) {
+                    // The card vanished from the deck mid-session — the server
+                    // healed the queue; skip ahead without grading anything.
+                    if (result.session) syncSessionState(result.session);
+                    showToast(t('microcards.card_removed_skip', 'Карточка была удалена из колоды — пропускаем'), 'info');
+                    state._gradeBusy = false;
+                    setupCurrentCard();
+                    return;
+                }
                 isCorrect = result.is_correct;
                 expected = result.expected_answer;
-                cardState = result.card_state;
+                if (result.session) {
+                    syncSessionState(result.session);
+                    maybeCelebrateCardLevelUp(card, result.card_state);
+                    synced = true;
+                }
             } else {
                 // Offline fallback math
                 isCorrect = answer.toLowerCase() === expected.toLowerCase();
             }
+            if (!synced) advanceLocally(card, isCorrect);
 
             // Flip card and show details
             $('flashcardInner').classList.add('flipped');
@@ -2229,52 +2339,63 @@
                 badge.textContent = t('microcards.badge_correct', 'Верно');
                 badge.className = 'mc-eval-badge';
                 badge.style.cssText = 'background:color-mix(in srgb,var(--color-success) 15%,transparent);border-color:var(--color-success);color:var(--color-success)';
-                state.sessionStats.correct++;
                 $('btnL2Override').classList.add('hidden');
             } else {
                 badge.textContent = t('microcards.badge_error', 'Ошибка');
                 badge.className = 'mc-eval-badge';
                 badge.style.cssText = 'background:color-mix(in srgb,var(--color-error) 15%,transparent);border-color:var(--color-error);color:var(--color-error)';
-                state.sessionStats.errors++;
-                if (!state.sessionErrors.includes(card.id)) {
-                    state.sessionErrors.push(card.id);
-                }
                 $('btnL2Override').classList.remove('hidden');
             }
 
-            // Update level locally
-            if (cardState) {
-                card.level = cardState.level;
-            }
-
             // Combo / XP / feedback
-            registerAnswer(isCorrect);
+            registerAnswer(isCorrect, isRetry, state.currentForm || 1);
+            updateHeaderProgress();
 
         } catch (err) {
             console.error(err);
+            state._gradeBusy = false; // grading didn't happen — let the user retry
         }
     }
 
+    // Review-only micro celebration: the card just earned its typed-input form.
+    function maybeCelebrateCardLevelUp(card, cardState) {
+        if (!cardState || !card) return;
+        const newLevel = cardState.level || 1;
+        if (state.sessionMode === 'review' && newLevel >= 2 && (card.level || 0) < 2) {
+            showToast(t('microcards.card_leveled_up', 'Карточка окрепла! Теперь она проверяется вводом ответа.'), 'success');
+            DopamineAudio.playBoost();
+        }
+        card.level = newLevel;
+    }
+
     async function overrideL2Answer() {
-        const card = state.sessionCards[state.sessionIndex];
+        const card = state.currentCard || state.sessionCards[state.sessionIndex];
         const answer = $('inputL2Answer').value.trim();
 
         try {
-            if (state.session && !state.isErrorsOnlyMode) {
-                await apiCall(`/api/v2/microcards/session/${state.session.id}/answer`, {
+            if (state.session) {
+                // The server undoes the wrong verdict: error count, the card's
+                // first-try result and the re-queued copy are all rolled back.
+                const result = await apiCall(`/api/v2/microcards/session/${state.session.id}/answer`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ card_id: card.id, user_answer: answer, override: true })
                 });
-            }
-
-            // Update stats
-            state.sessionStats.errors = Math.max(0, state.sessionStats.errors - 1);
-            state.sessionStats.correct++;
-            
-            const idx = state.sessionErrors.indexOf(card.id);
-            if (idx !== -1) {
-                state.sessionErrors.splice(idx, 1);
+                if (result && result.session) {
+                    syncSessionState(result.session);
+                }
+            } else {
+                const stats = state.sessionStats;
+                stats.errors = Math.max(0, stats.errors - 1);
+                stats.correct++;
+                stats.pending_retry = Math.max(0, (stats.pending_retry || 0) - 1);
+                stats.mastered = Math.min((stats.mastered || 0) + 1, stats.unique_total || 0);
+                const idx = stats.error_card_ids.indexOf(card.id);
+                if (idx !== -1) stats.error_card_ids.splice(idx, 1);
+                // Pull back the copy advanceLocally queued for the wrong verdict.
+                for (let i = state.sessionCards.length - 1; i >= state.sessionIndex; i--) {
+                    if (state.sessionCards[i].id === card.id) { state.sessionCards.splice(i, 1); break; }
+                }
             }
 
             // Update UI
@@ -2284,8 +2405,9 @@
             badge.style.cssText = 'background:color-mix(in srgb,var(--color-warning) 15%,transparent);border-color:var(--color-warning);color:var(--color-warning)';
             $('btnL2Override').classList.add('hidden');
 
-            // Reward the correction
-            registerAnswer(true);
+            // Reward the correction (full points — the verdict was wrong, not the user)
+            registerAnswer(true, false, state.currentForm || 1);
+            updateHeaderProgress();
 
         } catch (err) {
             console.error(err);
@@ -2293,16 +2415,32 @@
     }
 
     function nextCard() {
-        state.sessionIndex++;
+        // The answer submit already advanced the position (server cursor sync,
+        // or advanceLocally in the offline path) — just render it.
         setupCurrentCard();
     }
 
     function abortSession() {
-        if (state.session && !state.isErrorsOnlyMode) {
-            openDialog('dialogConfirmExitSession');
-        } else {
+        if (!state.session) {
             switchView('details');
+            return;
         }
+        // The exit dialog speaks the mode's language: a run rolls back to its
+        // last checkpoint, a review is simply not saved.
+        const isRun = state.sessionMode === 'run';
+        const text = $('exitSessionText');
+        if (text) {
+            text.textContent = isRun
+                ? t('microcards.dialog_exit_text_run', 'Пауза сохранит прогресс прогона (чекпойнт). «Выйти без сохранения» откатит прогон к последней паузе — текущий подход будет потерян.')
+                : t('microcards.dialog_exit_text_review', 'Вы можете приостановить повторение и продолжить позже, либо завершить его без сохранения этого подхода.');
+        }
+        const discardLabel = $('btnDiscardAndExitLabel');
+        if (discardLabel) {
+            discardLabel.textContent = isRun
+                ? t('microcards.btn_abandon_run', 'Выйти без сохранения')
+                : t('microcards.btn_discard_review', 'Завершить без сохранения');
+        }
+        openDialog('dialogConfirmExitSession');
     }
 
     async function pauseLearningSession() {
@@ -2314,9 +2452,7 @@
                 body: JSON.stringify({
                     combo: state.combo,
                     max_combo: state.maxCombo,
-                    session_xp: state.sessionXp,
-                    session_errors: state.sessionErrors,
-                    is_errors_only_mode: state.isErrorsOnlyMode
+                    session_xp: state.sessionXp
                 })
             });
             showToast(t('microcards.session_paused', 'Сессия приостановлена'), 'info');
@@ -2332,62 +2468,78 @@
         }
     }
 
-    async function discardLearningSession() {
+    // «Выйти без сохранения»: a run rolls back to its last pause checkpoint
+    // (only the current sitting is lost); a never-paused run or a review is
+    // simply discarded. The server decides which case applies.
+    async function abandonLearningSession() {
         if (!state.session) return;
-        if (confirm(t('microcards.confirm_discard_session', 'Вы уверены, что хотите сбросить прогресс? Текущее прохождение будет удалено.'))) {
-            try {
-                await apiCall(`/api/v2/microcards/session/${state.session.id}/discard`, {
-                    method: 'POST'
-                });
-                showToast(t('microcards.session_discarded', 'Прогресс сессии сброшен'), 'info');
-            } catch (err) {
-                console.error('Failed to discard session:', err);
-            }
-            if (state.activeDeckId) {
-                openDeckDetails(state.activeDeckId);
+        try {
+            const res = await apiCall(`/api/v2/microcards/session/${state.session.id}/abandon`, { method: 'POST' });
+            if (res.restored) {
+                showToast(t('microcards.run_rolled_back', 'Прогон откатился к последней паузе'), 'info');
             } else {
-                switchView('library');
-                loadLibraryData();
+                showToast(t('microcards.session_discarded', 'Подход не сохранён'), 'info');
             }
+        } catch (err) {
+            console.error('Failed to abandon session:', err);
+        }
+        if (state.activeDeckId) {
+            openDeckDetails(state.activeDeckId);
+        } else {
+            switchView('library');
+            loadLibraryData();
         }
     }
 
 
     // ── Session Summary Screen ────────────────────────────────────────────
-    function finishSession() {
+    // The mastery cycle guarantees the session ends at 100% completion, so the
+    // headline metric is FIRST-TRY accuracy: how much was right without repeats.
+    // Runs are finalized SERVER-side (stars, record, L2 gate) via /finish.
+    async function finishSession() {
         switchView('summary');
         DopamineAudio.playSessionFinish();
 
-        const total = state.sessionStats.total || 0;
-        const correct = state.sessionStats.correct || 0;
-        const accuracy = total > 0 ? Math.round((correct / total) * 100) : 0;
+        const stats = state.sessionStats || {};
+        const total = stats.unique_total || 0;
+        const firstTry = stats.first_try_correct || 0;
+        const accuracy = total > 0 ? Math.round((firstTry / total) * 100) : 0;
+        const reviewedIds = stats.error_card_ids || [];
 
-        $('sumStatTotal').textContent = state.sessionStats.total;
-        $('sumStatCorrect').textContent = state.sessionStats.correct;
-        $('sumStatErrors').textContent = state.sessionStats.errors;
+        $('sumStatTotal').textContent = total;
+        $('sumStatCorrect').textContent = firstTry;
+        $('sumStatErrors').textContent = reviewedIds.length;
 
-        // Gamified summary: accuracy ring, stars, XP, best combo, message
-        gamifySummary(accuracy);
+        // Finalize on the server (idempotent; only runs persist a record).
+        let finishResult = null;
+        if (state.session) {
+            try {
+                const res = await apiCall(`/api/v2/microcards/session/${state.session.id}/finish`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_xp: state.sessionXp, max_combo: state.maxCombo })
+                });
+                finishResult = res.result || null;
+            } catch (err) {
+                console.error('[finishSession]', err);
+            }
+        }
+
+        // Gamified summary: accuracy ring, stars (runs), XP, best combo, message
+        renderSummaryRewards(accuracy, finishResult);
 
         // Daily streak (count this completed session)
         recordStreak();
 
-        // Configure "Работа над ошибками" button
-        const retryBtn = $('btnRetryErrors');
-        if (state.sessionErrors.length > 0) {
-            retryBtn.classList.remove('hidden');
-        } else {
-            retryBtn.classList.add('hidden');
-        }
-
-        // Render errors list
+        // Cards that needed extra rounds in the mastery cycle (informational —
+        // they are already closed; the dedicated errors-replay mode is gone).
         const errorsList = $('summaryErrorsList');
         const errorsSection = $('summaryErrorsSection');
         errorsList.innerHTML = '';
 
-        if (state.sessionErrors.length > 0) {
+        if (reviewedIds.length > 0) {
             errorsSection.classList.remove('hidden');
-            state.sessionErrors.forEach(cardId => {
+            reviewedIds.forEach(cardId => {
                 const card = state.cards.find(c => c.id === cardId);
                 if (card) {
                     const row = document.createElement('div');
@@ -2404,8 +2556,7 @@
         }
 
         // Run celebration effect for strong results
-        const acc = total > 0 ? (correct / total) * 100 : 0;
-        if ((state.sessionStats.errors === 0 || acc >= 90) && window.CelebrationEffects) {
+        if ((reviewedIds.length === 0 || accuracy >= 90) && window.CelebrationEffects) {
             try {
                 window.CelebrationEffects.launchConfetti();
             } catch (e) {
@@ -2414,7 +2565,9 @@
         }
     }
 
-    function gamifySummary(accuracy) {
+    function renderSummaryRewards(accuracy, finishResult) {
+        const isRun = state.sessionMode === 'run';
+
         // Accuracy ring (r=56 → circumference ≈ 352)
         const circ = 352;
         const ring = $('sumAccRing');
@@ -2426,68 +2579,52 @@
             void ring.getBoundingClientRect();
             requestAnimationFrame(() => { ring.style.strokeDashoffset = circ * (1 - accuracy / 100); });
         }
-        const maxPoints = state.maxPossiblePoints || 100;
         if ($('sumAccVal')) $('sumAccVal').textContent = accuracy + '%';
-        if ($('sumMaxXp')) $('sumMaxXp').textContent = maxPoints;
 
-        // Stars: based on accuracy directly (ensuring user gets 5 stars for 100% accuracy, L2 unlock etc.)
-        let starCount = 0;
-        if (accuracy >= 100) starCount = 5;
-        else if (accuracy >= 80) starCount = 4;
-        else if (accuracy >= 60) starCount = 3;
-        else if (accuracy >= 40) starCount = 2;
-        else if (accuracy >= 20) starCount = 1;
+        // The "perfect run" ceiling only exists for runs.
+        const maxWrap = $('sumMaxWrap');
+        if (maxWrap) maxWrap.classList.toggle('hidden', !isRun);
+        if ($('sumMaxXp')) $('sumMaxXp').textContent = state.maxPossiblePoints || 0;
 
+        // Stars: runs only, computed server-side from first-try accuracy.
+        const starCount = isRun && finishResult ? (finishResult.stars || 0) : 0;
         const stars = $('sumStars');
         if (stars) {
-            if (state.sessionLevelMode === 2) {
-                stars.classList.remove('silver');
-                stars.classList.add('gold');
-            } else {
-                stars.classList.remove('gold');
-                stars.classList.add('silver');
+            stars.style.display = isRun ? '' : 'none';
+            if (isRun) {
+                if (state.sessionLevelMode === 2) {
+                    stars.classList.remove('silver');
+                    stars.classList.add('gold');
+                } else {
+                    stars.classList.remove('gold');
+                    stars.classList.add('silver');
+                }
+                stars.querySelectorAll('.material-symbols-outlined').forEach((s, i) => s.classList.toggle('is-on', i < starCount));
+                stars.classList.remove('is-revealed'); void stars.offsetWidth; stars.classList.add('is-revealed');
             }
-            stars.querySelectorAll('.material-symbols-outlined').forEach((s, i) => s.classList.toggle('is-on', i < starCount));
-            stars.classList.remove('is-revealed'); void stars.offsetWidth; stars.classList.add('is-revealed');
         }
 
-        // Get records before saving to check L2 lock progression
-        const recordsBefore = getDeckRecord(state.activeDeckId);
-        const wasL2Locked = recordsBefore.starsL1 < 3;
-
-        // Determine "new record" locally from the pre-save snapshot, then persist
-        // asynchronously (saveDeckRecord is async — its Promise must not be used as a boolean).
-        const prevBestScore = state.sessionLevelMode === 2
-            ? (recordsBefore.scoreL2 || 0)
-            : (recordsBefore.scoreL1 || 0);
-        const isNewRecord = state.sessionXp > prevBestScore;
-        saveDeckRecord(state.activeDeckId, state.sessionXp, starCount);
+        // Record badge + caches (server already persisted the run record).
         const recordBadge = $('sumRecordBadge');
-        if (recordBadge) {
-            if (isNewRecord && state.sessionXp > 0) {
-                recordBadge.classList.remove('hidden');
-            } else {
-                recordBadge.classList.add('hidden');
-            }
+        const isNewRecord = !!(isRun && finishResult && finishResult.is_new_record && state.sessionXp > 0);
+        if (recordBadge) recordBadge.classList.toggle('hidden', !isNewRecord);
+        if (isRun && finishResult && finishResult.record && state.activeDeckId) {
+            state.serverRecords[state.activeDeckId] = finishResult.record;
         }
 
-        // Level 2 Unlock Banner and GoToLevel2 button
+        // L2 gate: opened by completing an L1 run (server decides).
         const unlockBanner = $('sumLevel2UnlockBanner');
         const goToL2Btn = $('btnGoToLevel2');
-        const isL2UnlockedNow = recordsBefore.starsL1 >= 3 || (state.sessionLevelMode === 1 && starCount >= 3);
-
-        if (state.sessionLevelMode === 1 && isL2UnlockedNow) {
+        const wasL2Unlocked = !!(state.activeDeck && state.activeDeck.l2_unlocked);
+        const isL2UnlockedNow = wasL2Unlocked || !!(finishResult && finishResult.l2_unlocked);
+        if (isRun && state.sessionLevelMode === 1 && isL2UnlockedNow) {
             if (goToL2Btn) goToL2Btn.classList.remove('hidden');
-            // Newly unlocked
-            if (starCount >= 3 && wasL2Locked) {
-                if (unlockBanner) unlockBanner.classList.remove('hidden');
-            } else {
-                if (unlockBanner) unlockBanner.classList.add('hidden');
-            }
+            if (unlockBanner) unlockBanner.classList.toggle('hidden', wasL2Unlocked);
         } else {
             if (unlockBanner) unlockBanner.classList.add('hidden');
             if (goToL2Btn) goToL2Btn.classList.add('hidden');
         }
+        if (state.activeDeck) state.activeDeck.l2_unlocked = isL2UnlockedNow;
 
         // XP + best combo
         popNumber($('sumXp'), state.sessionXp);
@@ -2495,25 +2632,100 @@
 
         // Dynamic title / message
         let titleKey, titleFb, subKey, subFb;
-        if (starCount === 5) { titleKey = 'microcards.res_title_perfect'; titleFb = 'Идеально!'; subKey = 'microcards.res_sub_perfect'; subFb = 'Безупречно — ни одной ошибки!'; }
+        if (!isRun) {
+            titleKey = 'microcards.res_title_review'; titleFb = 'Повторение завершено!';
+            subKey = accuracy >= 80 ? 'microcards.res_sub_review_good' : 'microcards.res_sub_review_keep';
+            subFb = accuracy >= 80
+                ? 'Память держит материал крепко — так держать.'
+                : 'Сложные карточки вернутся чаще — память подтянется.';
+        }
+        else if (starCount === 5) { titleKey = 'microcards.res_title_perfect'; titleFb = 'Идеально!'; subKey = 'microcards.res_sub_perfect'; subFb = 'Безупречно — ни одной ошибки!'; }
         else if (starCount >= 4) { titleKey = 'microcards.res_title_great'; titleFb = 'Великолепно!'; subKey = 'microcards.res_sub_great'; subFb = 'Отличный результат, так держать!'; }
         else if (starCount >= 3) { titleKey = 'microcards.res_title_good'; titleFb = 'Хорошая работа!'; subKey = 'microcards.res_sub_good'; subFb = 'Уверенный результат — ещё немного до идеала.'; }
-        else if (starCount >= 1) { titleKey = 'microcards.res_title_ok'; titleFb = 'Неплохо!'; subKey = 'microcards.res_sub_ok'; subFb = 'Поработай над ошибками — и станет отлично.'; }
-        else { titleKey = 'microcards.res_title_keep'; titleFb = 'Продолжай тренироваться'; subKey = 'microcards.res_sub_keep'; subFb = 'Повтори ошибки, чтобы закрепить материал.'; }
+        else if (starCount >= 1) { titleKey = 'microcards.res_title_ok'; titleFb = 'Неплохо!'; subKey = 'microcards.res_sub_ok'; subFb = 'Сложные карточки вернулись и были закрыты — попробуй пройти их с первой попытки.'; }
+        else { titleKey = 'microcards.res_title_keep'; titleFb = 'Продолжай тренироваться'; subKey = 'microcards.res_sub_keep'; subFb = 'Пройди колоду ещё раз, чтобы закрепить материал.'; }
         if ($('sumTitle')) $('sumTitle').textContent = t(titleKey, titleFb);
         if ($('sumSubtitle')) $('sumSubtitle').textContent = t(subKey, subFb);
     }
 
-    function retrySessionErrors() {
-        startLearningSession(true);
-    }
-
     function restartLearningSession() {
-        startLearningSession(false);
+        if (state.sessionMode === 'run') {
+            startRun(state.sessionLevelMode === 2 ? 2 : 1);
+        } else {
+            startReview();
+        }
     }
 
     function backToDecks() {
         loadLibraryData();
+    }
+
+    // ── Browse mode (free flipping — no grading, no FSRS, no points) ───────
+    function startBrowse() {
+        if (!state.cards || state.cards.length === 0) {
+            showToast(t('microcards.browse_empty', 'В колоде пока нет карточек'), 'info');
+            return;
+        }
+        state.browseIndex = 0;
+        switchView('browse');
+        renderBrowseCard();
+    }
+
+    function renderBrowseCard() {
+        const card = state.cards[state.browseIndex];
+        if (!card) return;
+        const inner = $('browseCardInner');
+        if (inner) inner.classList.remove('flipped');
+        $('browseFrontText').textContent = card.front.text;
+        $('browseBackText').textContent = card.back.text;
+        const hint = $('browseHintText');
+        if (hint) {
+            hint.textContent = card.hint ? `${t('microcards.hint_label', 'Подсказка')}: ${card.hint}` : '';
+            hint.classList.toggle('hidden', !card.hint);
+        }
+        const setImg = (el, url) => {
+            if (!el) return;
+            if (url) { el.src = url; el.classList.remove('hidden'); }
+            else { el.classList.add('hidden'); }
+        };
+        setImg($('browseFrontImage'), card.front.image_url);
+        setImg($('browseBackImage'), card.back.image_url);
+        const counter = $('browseCounter');
+        if (counter) counter.textContent = `${state.browseIndex + 1}/${state.cards.length}`;
+    }
+
+    function browseFlip() {
+        const inner = $('browseCardInner');
+        if (!inner) return;
+        inner.classList.toggle('flipped');
+        DopamineAudio.playCardFlip();
+    }
+
+    function browsePrev() {
+        if (state.browseIndex > 0) { state.browseIndex--; renderBrowseCard(); }
+    }
+
+    function browseNext() {
+        if (state.browseIndex < state.cards.length - 1) { state.browseIndex++; renderBrowseCard(); }
+    }
+
+    function exitBrowse() {
+        switchView('details');
+    }
+
+    function bindBrowseControls() {
+        const wrap = $('browseCardWrap');
+        if (wrap) {
+            wrap.addEventListener('click', browseFlip);
+            wrap.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); browseFlip(); }
+            });
+        }
+        document.addEventListener('keydown', (e) => {
+            if (state.view !== 'browse') return;
+            if (e.key === 'ArrowLeft') { e.preventDefault(); browsePrev(); }
+            else if (e.key === 'ArrowRight') { e.preventDefault(); browseNext(); }
+        });
     }
 
 
@@ -3061,20 +3273,18 @@ ${fill}`;
         if (discardExitBtn) {
             discardExitBtn.addEventListener('click', async () => {
                 closeDialog('dialogConfirmExitSession');
-                await discardLearningSession();
+                await abandonLearningSession();
             });
         }
 
         // Auto-pause session on tab/browser closure via modern keepalive fetch
         window.addEventListener('beforeunload', () => {
-            if (state.view === 'session' && state.session && !state.isErrorsOnlyMode) {
+            if (state.view === 'session' && state.session) {
                 const url = `/api/v2/microcards/session/${state.session.id}/pause`;
                 const payload = JSON.stringify({
                     combo: state.combo,
                     max_combo: state.maxCombo,
-                    session_xp: state.sessionXp,
-                    session_errors: state.sessionErrors,
-                    is_errors_only_mode: state.isErrorsOnlyMode
+                    session_xp: state.sessionXp
                 });
                 fetch(url, {
                     method: 'POST',
@@ -3087,7 +3297,8 @@ ${fill}`;
 
         // Bind swipe-style grading rails
         bindSessionRails();
-        
+        bindBrowseControls();
+
         // Initial positioning of sliding tabs pill (without animation)
         setTimeout(() => {
             moveTabPill('mcSort', null, false);
@@ -3127,7 +3338,13 @@ ${fill}`;
         toggleDeckActionsMenu,
         exportDeck,
         confirmDeleteDeck,
-        startLearningSession,
+        startRun,
+        startReview,
+        startBrowse,
+        browsePrev,
+        browseNext,
+        exitBrowse,
+        confirmResetRun,
         abortSession,
         toggleHint,
         revealAnswerL1,
@@ -3135,7 +3352,6 @@ ${fill}`;
         submitAnswerL2,
         overrideL2Answer,
         nextCard,
-        retrySessionErrors,
         restartLearningSession,
         backToDecks,
         openDeckMetaDialog,
@@ -3179,7 +3395,7 @@ ${fill}`;
         handlePublishSubmit,
         copyPublishCode,
         pauseLearningSession,
-        discardLearningSession
+        abandonLearningSession
     };
 
     // Auto boot
