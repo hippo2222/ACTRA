@@ -805,11 +805,17 @@ class MicrocardsServiceV2:
 
     def update_deck(self, deck_id: str, name: Optional[str] = None, description: Optional[str] = None,
                     tags: Optional[List[str]] = None, catalog_item_id: Optional[str] = None,
-                    catalog_visibility: Optional[str] = None, access_code: Optional[str] = None) -> Dict[str, Any]:
+                    catalog_visibility: Optional[str] = None, access_code: Optional[str] = None,
+                    direction: Optional[str] = None) -> Dict[str, Any]:
         deck = self.get_deck(deck_id)
         if not deck:
             raise LookupError("deck_not_found")
-        self._assert_editable(deck)
+        # `direction` is a per-deck STUDY preference, not content — it stays
+        # editable even on linked (read-only) decks.
+        content_change = any(v is not None for v in (name, description, tags, catalog_item_id,
+                                                     catalog_visibility, access_code))
+        if content_change:
+            self._assert_editable(deck)
 
         if name is not None:
             deck["name"] = _s(name) or "Untitled Deck"
@@ -825,8 +831,20 @@ class MicrocardsServiceV2:
             deck["catalog_visibility"] = catalog_visibility
         if access_code is not None:
             deck["access_code"] = _s(access_code) or None  # empty string clears the code
+        if direction is not None:
+            deck["direction"] = direction if direction in self.DIRECTIONS else None
 
         deck["updated_at"] = _utc_now_iso()
+        if deck.get("linked"):
+            # Persist via the raw doc: get_deck inflates linked decks with
+            # resolved cards / access fields that must never hit the disk.
+            raw = _read_json(self._deck_path(deck_id), None)
+            if isinstance(raw, dict):
+                if direction is not None:
+                    raw["direction"] = deck["direction"]
+                raw["updated_at"] = deck["updated_at"]
+                _write_json(self._deck_path(deck_id), raw)
+            return deck
         _write_json(self._deck_path(deck_id), deck)
         return deck
 
@@ -1096,7 +1114,9 @@ class MicrocardsServiceV2:
         size = settings["session_size"]
         new_limit = settings["new_per_session"]
         if direction not in self.DIRECTIONS:
-            direction = settings["default_direction"]
+            # Per-deck study preference first, then the global default.
+            deck_direction = deck.get("direction")
+            direction = deck_direction if deck_direction in self.DIRECTIONS else settings["default_direction"]
 
         states = self._read_states()
         now = _utc_now()
@@ -1166,10 +1186,20 @@ class MicrocardsServiceV2:
                 card_forms[_s(cid)] = 2 if (l2_unlocked and strong) else 1
 
         # Resolve a concrete direction per card (mixed → random per card).
+        # Mixed is a self-grade/browse mechanic: typed checks (L2 runs, strong
+        # review cards) would turn it into a "guess what to type" lottery, so
+        # they are pinned to the straight direction. Explicit reverse stays
+        # honored everywhere — typing the term from its definition is a valid,
+        # intentionally harder drill.
+        if mode == "run" and level_mode == 2 and direction == "mixed":
+            direction = "front_back"
         card_directions = {}
         for cid in queue:
             if direction == "mixed":
-                card_directions[cid] = random.choice(("front_back", "back_front"))
+                if card_forms.get(_s(cid)) == 2:
+                    card_directions[cid] = "front_back"
+                else:
+                    card_directions[cid] = random.choice(("front_back", "back_front"))
             else:
                 card_directions[cid] = direction
 

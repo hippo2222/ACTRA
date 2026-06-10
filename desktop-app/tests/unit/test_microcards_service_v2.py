@@ -365,6 +365,44 @@ def test_run_and_review_slots_coexist():
     assert resumed["id"] == run["id"]
 
 
+def test_deck_direction_preference_and_mixed_coercion():
+    """Decks carry a study-direction preference; sessions pick it up. Mixed is
+    a self-grade mechanic: typed checks are pinned to the straight direction."""
+    tmp = tempfile.mkdtemp()
+    svc = MicrocardsServiceV2(tmp, user_id="test_user")
+    deck = svc.create_deck(name="Direction Deck")
+    cards = [svc.create_card(deck["id"], front_text=f"Q{i}", back_text=f"A{i}") for i in range(3)]
+
+    # Per-deck preference is stored and used by new sessions.
+    updated = svc.update_deck(deck["id"], direction="back_front")
+    assert updated["direction"] == "back_front"
+    run = svc.start_session(deck["id"], mode="run", level_mode=1)
+    assert run["direction"] == "back_front"
+    assert all(d == "back_front" for d in run["card_directions"].values())
+    # Reverse grading: the expected answer is the FRONT text.
+    res = svc.submit_answer(run["id"], run["card_queue"][0], "know")
+    assert res["expected_answer"].startswith("Q")
+    svc.abandon_session(run["id"])
+
+    # Mixed + L2 run → coerced to straight (typed reverse lottery is not a thing).
+    svc.update_deck(deck["id"], direction="mixed")
+    _complete_l1_run(svc, deck["id"])
+    l2_run = svc.start_session(deck["id"], mode="run", level_mode=2)
+    assert l2_run["direction"] == "front_back"
+
+    # Mixed review: strong (typed) cards are pinned straight, others may flip.
+    states = svc._read_states()
+    states[cards[0]["id"]]["level"] = 2
+    svc._write_states(states)
+    review = svc.start_session(deck["id"], mode="review", restart=True)
+    assert review["direction"] == "mixed"
+    assert review["card_directions"][cards[0]["id"]] == "front_back"
+
+    # An explicit per-session direction still overrides the deck preference.
+    explicit = svc.start_session(deck["id"], mode="review", restart=True, direction="front_back")
+    assert explicit["direction"] == "front_back"
+
+
 def test_legacy_records_are_wiped():
     """Pre-run (schema 1.0) records are discarded on first read — the agreed
     one-time reset when the run model shipped."""

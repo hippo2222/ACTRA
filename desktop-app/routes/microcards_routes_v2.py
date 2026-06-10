@@ -214,10 +214,12 @@ def update_deck(deck_id: str):
     name = body.get("name")
     description = body.get("description")
     tags = body.get("tags")
-    
+    direction = body.get("direction")
+
     try:
         svc = _get_svc()
-        deck = svc.update_deck(deck_id=deck_id, name=name, description=description, tags=tags)
+        deck = svc.update_deck(deck_id=deck_id, name=name, description=description, tags=tags,
+                               direction=direction)
         return jsonify({"ok": True, "deck": deck})
     except LookupError as exc:
         return jsonify({"ok": False, "error": str(exc)}), 404

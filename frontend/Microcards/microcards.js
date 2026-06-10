@@ -94,6 +94,32 @@
         }
     }
 
+    // ── Study preferences (sound / animations) — device-local ──────────────
+    const REDUCED_MOTION = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    function loadPrefs() {
+        try {
+            const raw = JSON.parse(localStorage.getItem('mc_prefs') || '{}');
+            return {
+                sound: raw.sound !== false,
+                volume: typeof raw.volume === 'number' ? Math.min(1, Math.max(0, raw.volume)) : 1,
+                // Reduced-motion users get animations OFF by default (can opt back in).
+                animations: raw.animations !== undefined ? !!raw.animations : !REDUCED_MOTION,
+            };
+        } catch (e) {
+            return { sound: true, volume: 1, animations: !REDUCED_MOTION };
+        }
+    }
+    const prefs = loadPrefs();
+    function savePrefs() {
+        try { localStorage.setItem('mc_prefs', JSON.stringify(prefs)); } catch (e) {}
+        applyAnimationPrefs();
+    }
+    function applyAnimationPrefs() {
+        document.documentElement.classList.toggle('mc-no-anim', !prefs.animations);
+    }
+    // Confetti and other JS-driven effects funnel through this guard.
+    function fxAllowed() { return prefs.animations; }
+
     // ── Web Audio API Dopamine Sound Synthesizer ──────────────────────────
     const DopamineAudio = (function () {
         let audioCtx = null;
@@ -109,6 +135,8 @@
         }
 
         function playNote(freq, type, duration, startTime, volume = 0.1) {
+            if (!prefs.sound || prefs.volume <= 0) return;
+            volume *= prefs.volume;
             try {
                 const ctx = getAudioContext();
                 const osc = ctx.createOscillator();
@@ -488,7 +516,7 @@
             if (!wasNearMiss) {
                 if (state.combo === threshold) {
                     DopamineAudio.playBoost();
-                    if (window.CelebrationEffects && typeof window.CelebrationEffects.launchConfetti === 'function') {
+                    if (fxAllowed() && window.CelebrationEffects && typeof window.CelebrationEffects.launchConfetti === 'function') {
                         try {
                             window.CelebrationEffects.launchConfetti();
                         } catch (e) {
@@ -1790,6 +1818,11 @@
         $('metaDeckName').value = state.activeDeck.name || '';
         $('metaDeckDesc').value = state.activeDeck.description || '';
         $('metaDeckTags').value = (state.activeDeck.tags || []).join(', ');
+        const dirSel = $('metaDeckDirection');
+        if (dirSel) {
+            const dir = state.activeDeck.direction;
+            dirSel.value = (dir === 'back_front' || dir === 'mixed') ? dir : 'front_back';
+        }
         openDialog('dialogDeckMeta');
     }
 
@@ -1798,6 +1831,8 @@
         const name = $('metaDeckName').value.trim();
         const description = $('metaDeckDesc').value.trim();
         const tags = $('metaDeckTags').value.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+        const dirSel = $('metaDeckDirection');
+        const direction = dirSel ? dirSel.value : null;
         if (!name) {
             showToast(t('microcards.error_name_required', 'Название колоды обязательно'), 'error');
             return;
@@ -1806,7 +1841,7 @@
             await apiCall(`/api/v2/microcards/decks/${state.activeDeckId}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, description, tags })
+                body: JSON.stringify({ name, description, tags, direction })
             });
             closeDialog('dialogDeckMeta');
             showToast(t('microcards.toast_deck_saved', 'Параметры колоды сохранены'), 'success');
@@ -2556,7 +2591,7 @@
         }
 
         // Run celebration effect for strong results
-        if ((reviewedIds.length === 0 || accuracy >= 90) && window.CelebrationEffects) {
+        if ((reviewedIds.length === 0 || accuracy >= 90) && fxAllowed() && window.CelebrationEffects) {
             try {
                 window.CelebrationEffects.launchConfetti();
             } catch (e) {
@@ -2711,6 +2746,50 @@
 
     function exitBrowse() {
         switchView('details');
+    }
+
+    // ── Study settings dialog (sound / volume / animations) ───────────────
+    function openStudySettings() {
+        const soundEl = $('prefSound');
+        const volEl = $('prefVolume');
+        const animEl = $('prefAnimations');
+        if (soundEl) soundEl.checked = prefs.sound;
+        if (volEl) volEl.value = Math.round(prefs.volume * 100);
+        if (animEl) animEl.checked = prefs.animations;
+        syncVolumeRowState();
+        openDialog('dialogStudyPrefs');
+    }
+
+    function syncVolumeRowState() {
+        const row = $('prefVolumeRow');
+        if (row) row.style.opacity = prefs.sound ? '1' : '0.45';
+    }
+
+    function bindStudyPrefsControls() {
+        const soundEl = $('prefSound');
+        if (soundEl) {
+            soundEl.addEventListener('change', () => {
+                prefs.sound = soundEl.checked;
+                savePrefs();
+                syncVolumeRowState();
+                if (prefs.sound) DopamineAudio.playCorrect(); // instant feedback
+            });
+        }
+        const volEl = $('prefVolume');
+        if (volEl) {
+            volEl.addEventListener('change', () => {
+                prefs.volume = Math.min(1, Math.max(0, (parseInt(volEl.value, 10) || 0) / 100));
+                savePrefs();
+                DopamineAudio.playCorrect(); // hear the new level right away
+            });
+        }
+        const animEl = $('prefAnimations');
+        if (animEl) {
+            animEl.addEventListener('change', () => {
+                prefs.animations = animEl.checked;
+                savePrefs();
+            });
+        }
     }
 
     function bindBrowseControls() {
@@ -3298,6 +3377,8 @@ ${fill}`;
         // Bind swipe-style grading rails
         bindSessionRails();
         bindBrowseControls();
+        bindStudyPrefsControls();
+        applyAnimationPrefs();
 
         // Initial positioning of sliding tabs pill (without animation)
         setTimeout(() => {
@@ -3395,7 +3476,8 @@ ${fill}`;
         handlePublishSubmit,
         copyPublishCode,
         pauseLearningSession,
-        abandonLearningSession
+        abandonLearningSession,
+        openStudySettings
     };
 
     // Auto boot
