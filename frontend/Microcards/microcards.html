@@ -1046,6 +1046,18 @@
         .mc-browse-nav { display: flex; align-items: center; justify-content: center; gap: 0.8rem; margin-top: 1.1rem; }
         .mc-browse-nav .mc-btn { min-width: 8.5rem; justify-content: center; }
         .mc-browse-counter { font-size: 0.82rem; font-weight: 800; color: var(--color-text-secondary); min-width: 4.5rem; text-align: center; }
+        /* Daily-goal progress ring (library KPI strip) */
+        .mc-goal-ring { width: 1.1rem; height: 1.1rem; transform: rotate(-90deg); flex-shrink: 0; }
+        .mc-goal-ring circle { fill: none; stroke-width: 3.4; }
+        .mc-goal-ring__track { stroke: color-mix(in srgb, var(--color-border-strong) 60%, transparent); }
+        .mc-goal-ring__fill {
+            stroke: var(--color-primary); stroke-linecap: round;
+            stroke-dasharray: 56.55; stroke-dashoffset: 56.55;
+            transition: stroke-dashoffset 0.6s cubic-bezier(0.22, 1, 0.36, 1), stroke 0.3s ease;
+        }
+        .mc-kpi--goal.is-met .mc-goal-ring__fill { stroke: var(--color-success); }
+        .mc-kpi--goal.is-met { color: var(--color-success); }
+
         /* Animations off (user pref / prefers-reduced-motion): everything snaps
            instead of animating — flips, fly-offs, pops, shakes, confetti is
            guarded in JS separately. */
@@ -1531,7 +1543,14 @@
                             <span class="mc-kpi mc-kpi--streak"><span class="material-symbols-outlined">local_fire_department</span><b id="anStreak">0</b>&nbsp;<span data-i18n="microcards.kpi_streak">дн. подряд</span></span>
                             <span class="mc-kpi mc-kpi--ret"><span class="material-symbols-outlined">target</span><b id="anRetention">0</b>%&nbsp;<span data-i18n="microcards.kpi_retention">удержание</span></span>
                             <span class="mc-kpi mc-kpi--over"><span class="material-symbols-outlined">schedule</span><b id="anOverdue">0</b>&nbsp;<span data-i18n="microcards.kpi_overdue">просрочено</span></span>
-                            <span class="mc-kpi mc-kpi--goal" id="mcGoalKpi"><span class="material-symbols-outlined" id="mcGoalIcon">flag</span><b id="anGoalToday">0</b>/<b id="anGoalTarget">20</b>&nbsp;<span data-i18n="microcards.kpi_goal">сегодня</span></span>
+                            <span class="mc-kpi mc-kpi--goal" id="mcGoalKpi">
+                                <svg class="mc-goal-ring" viewBox="0 0 24 24" aria-hidden="true">
+                                    <circle class="mc-goal-ring__track" cx="12" cy="12" r="9"></circle>
+                                    <circle class="mc-goal-ring__fill" id="mcGoalRingFill" cx="12" cy="12" r="9"></circle>
+                                </svg>
+                                <b id="anGoalToday">0</b>/<b id="anGoalTarget">20</b>&nbsp;<span data-i18n="microcards.kpi_goal">сегодня</span>
+                                <span class="material-symbols-outlined" id="mcGoalIcon" style="display:none;font-size:1rem;font-variation-settings:'FILL' 1">check_circle</span>
+                            </span>
                         </div>
                     </div>
                     <div style="display:flex;align-items:center;gap:0.6rem">

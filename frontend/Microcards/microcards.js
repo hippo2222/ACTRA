@@ -158,14 +158,59 @@
             }
         }
 
+        // ── Pre-rendered samples (tools/generate_microcards_sounds.py) ─────
+        // Warm baked "plucks"/whooshes instead of raw oscillator beeps. Loaded
+        // lazily; the synth below stays as the fallback while they load (or if
+        // they fail), so sound never goes missing.
+        const SAMPLE_NAMES = ['correct', 'boost', 'near_miss', 'recovery', 'combo_lost',
+                              'card_flip', 'swipe_yes', 'swipe_no', 'combo_up', 'finish'];
+        const sampleBuffers = {};
+        let samplesRequested = false;
+        function ensureSamples() {
+            if (samplesRequested) return;
+            samplesRequested = true;
+            let ctx;
+            try { ctx = getAudioContext(); } catch (e) { return; }
+            SAMPLE_NAMES.forEach(name => {
+                fetch(`/assets/sounds/mc/${name}.wav`)
+                    .then(r => { if (!r.ok) throw new Error(String(r.status)); return r.arrayBuffer(); })
+                    .then(ab => ctx.decodeAudioData(ab))
+                    .then(buf => { sampleBuffers[name] = buf; })
+                    .catch(() => {}); // missing sample → synth fallback covers it
+            });
+        }
+        function playSample(name, rate = 1, volume = 1) {
+            if (!prefs.sound || prefs.volume <= 0) return true; // muted: swallow
+            ensureSamples();
+            const buf = sampleBuffers[name];
+            if (!buf) return false; // not loaded (yet) → caller falls back to synth
+            try {
+                const ctx = getAudioContext();
+                const src = ctx.createBufferSource();
+                src.buffer = buf;
+                src.playbackRate.value = rate;
+                const gain = ctx.createGain();
+                gain.gain.value = volume * prefs.volume;
+                src.connect(gain);
+                gain.connect(ctx.destination);
+                src.start();
+                return true;
+            } catch (e) {
+                return false;
+            }
+        }
+
         return {
+            preload: ensureSamples,
             playCorrect: function () {
+                if (playSample('correct')) return;
                 const ctx = getAudioContext();
                 const now = ctx.currentTime;
                 playNote(523.25, 'sine', 0.15, now, 0.08); // C5
                 playNote(659.25, 'sine', 0.25, now + 0.08, 0.08); // E5
             },
             playBoost: function () {
+                if (playSample('boost')) return;
                 const ctx = getAudioContext();
                 const now = ctx.currentTime;
                 playNote(523.25, 'sine', 0.12, now, 0.08); // C5
@@ -174,29 +219,34 @@
                 playNote(1046.50, 'sine', 0.35, now + 0.21, 0.08); // C6
             },
             playNearMiss: function () {
+                if (playSample('near_miss')) return;
                 const ctx = getAudioContext();
                 const now = ctx.currentTime;
                 playNote(440.00, 'triangle', 0.22, now, 0.12); // A4
             },
             playRecovery: function () {
+                if (playSample('recovery')) return;
                 const ctx = getAudioContext();
                 const now = ctx.currentTime;
                 playNote(783.99, 'sine', 0.15, now, 0.08); // G5
                 playNote(1046.50, 'sine', 0.3, now + 0.09, 0.08); // C6
             },
             playComboLost: function () {
+                if (playSample('combo_lost')) return;
                 const ctx = getAudioContext();
                 const now = ctx.currentTime;
                 playNote(392.00, 'sine', 0.15, now, 0.08); // G4
                 playNote(311.13, 'sine', 0.35, now + 0.1, 0.08); // Eb4
             },
             playCardFlip: function () {
+                if (playSample('card_flip', 1, 0.8)) return;
                 const ctx = getAudioContext();
                 const now = ctx.currentTime;
                 playNote(160, 'triangle', 0.07, now, 0.04);
                 playNote(110, 'triangle', 0.05, now + 0.03, 0.03);
             },
             playCardSwipe: function (know) {
+                if (playSample(know ? 'swipe_yes' : 'swipe_no')) return;
                 const ctx = getAudioContext();
                 const now = ctx.currentTime;
                 if (know) {
@@ -208,15 +258,18 @@
                 }
             },
             playComboLevelUp: function (combo) {
+                const multiplier = Math.min(2.0, 1 + (combo - 1) * 0.12);
+                // The baked pluck is pitch-shifted per combo — same ramp the
+                // synth used, but with the warm timbre.
+                if (playSample('combo_up', multiplier)) return;
                 const ctx = getAudioContext();
                 const now = ctx.currentTime;
-                const baseFreq = 523.25;
-                const multiplier = Math.min(2.0, 1 + (combo - 1) * 0.12);
-                const freq = baseFreq * multiplier;
+                const freq = 523.25 * multiplier;
                 playNote(freq, 'sine', 0.08, now, 0.06);
                 playNote(freq * 1.5, 'sine', 0.15, now + 0.04, 0.04);
             },
             playSessionFinish: function () {
+                if (playSample('finish')) return;
                 const ctx = getAudioContext();
                 const now = ctx.currentTime;
                 playNote(523.25, 'sine', 0.1, now, 0.06);
@@ -621,24 +674,6 @@
         railYes.addEventListener('click', () => { if (arena.classList.contains('is-grading')) submitAnswerL1(true); });
     }
 
-    // ── Daily streak (local, per-device) ───────────────────────────────────
-    function _todayKey() {
-        const d = new Date();
-        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    }
-    function loadStreak() {
-        try { return JSON.parse(localStorage.getItem('mc_streak') || '{}'); } catch (e) { return {}; }
-    }
-    function recordStreak() {
-        const s = loadStreak();
-        const today = _todayKey();
-        if (s.last === today) return s.count || 1;
-        const y = new Date(); y.setDate(y.getDate() - 1);
-        const yKey = `${y.getFullYear()}-${String(y.getMonth() + 1).padStart(2, '0')}-${String(y.getDate()).padStart(2, '0')}`;
-        const count = s.last === yKey ? (s.count || 0) + 1 : 1;
-        try { localStorage.setItem('mc_streak', JSON.stringify({ last: today, count })); } catch (e) {}
-        return count;
-    }
     // ── Run records (server-side; persisted only by completed runs) ────────
     function getDeckRecord(deckId) {
         const srv = (state.serverRecords && state.serverRecords[deckId]) || {};
@@ -659,25 +694,9 @@
         return getDeckRecord(state.activeDeckId).l1_run_completed;
     }
 
-    function pluralizeDays(n) {
-        const a = Math.abs(n) % 100, d = a % 10;
-        if (a > 10 && a < 20) return t('microcards.days_many', 'дней');
-        if (d > 1 && d < 5) return t('microcards.days_few', 'дня');
-        if (d === 1) return t('microcards.days_one', 'день');
-        return t('microcards.days_many', 'дней');
-    }
-    function renderStreak() {
-        const s = loadStreak();
-        const chip = $('mcStreakChip');
-        if (!chip) return;
-        if (s.count && s.last) {
-            $('mcStreakText').textContent = t('microcards.streak_label', 'Серия: {n} {unit}')
-                .replace('{n}', s.count).replace('{unit}', pluralizeDays(s.count));
-            chip.style.display = 'inline-flex';
-        } else {
-            chip.style.display = 'none';
-        }
-    }
+    // The streak lives SERVER-side only (review events → analytics.streak,
+    // rendered in the library KPI strip) — the old per-device localStorage
+    // streak double-counted and diverged between devices.
 
     // ── Navigation & View Switching ────────────────────────────────────────
     function switchView(viewName) {
@@ -2564,9 +2583,6 @@
         // Gamified summary: accuracy ring, stars (runs), XP, best combo, message
         renderSummaryRewards(accuracy, finishResult);
 
-        // Daily streak (count this completed session)
-        recordStreak();
-
         // Cards that needed extra rounds in the mastery cycle (informational —
         // they are already closed; the dedicated errors-replay mode is gone).
         const errorsList = $('summaryErrorsList');
@@ -2826,7 +2842,7 @@
         }
     }
 
-    // «Сегодня: X/N» — progress toward the daily review goal (library KPI).
+    // Daily-goal progress ring «X/N сегодня» (library KPI strip).
     function renderGoalKpi(analytics) {
         if (analytics) state._analytics = analytics;
         const a = state._analytics || {};
@@ -2836,11 +2852,18 @@
         const targetEl = $('anGoalTarget');
         if (todayEl) todayEl.textContent = today;
         if (targetEl) targetEl.textContent = goal;
+
         const met = today >= goal;
-        const icon = $('mcGoalIcon');
-        if (icon) icon.textContent = met ? 'check_circle' : 'flag';
+        const CIRC = 56.55; // 2π·r, r=9 (matches the SVG)
+        const fill = $('mcGoalRingFill');
+        if (fill) {
+            const progress = Math.min(1, goal > 0 ? today / goal : 0);
+            fill.style.strokeDashoffset = (CIRC * (1 - progress)).toFixed(2);
+        }
         const kpi = $('mcGoalKpi');
-        if (kpi) kpi.style.color = met ? 'var(--color-success)' : '';
+        if (kpi) kpi.classList.toggle('is-met', met);
+        const icon = $('mcGoalIcon');
+        if (icon) icon.style.display = met ? 'inline' : 'none';
     }
 
     function bindBrowseControls() {
@@ -3430,6 +3453,9 @@ ${fill}`;
         bindBrowseControls();
         bindStudyPrefsControls();
         applyAnimationPrefs();
+        // Fetch+decode the baked sounds after the first interaction (autoplay
+        // policies) so the first real answer already plays the warm samples.
+        document.addEventListener('pointerdown', () => DopamineAudio.preload(), { once: true });
 
         // Initial positioning of sliding tabs pill (without animation)
         setTimeout(() => {
