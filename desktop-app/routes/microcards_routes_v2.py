@@ -3,10 +3,38 @@
 import logging
 import json
 from flask import Blueprint, jsonify, request, Response
-from routes._context import get_ctx
+from routes._context import get_ctx, get_extra
 from services.microcards_service_v2 import MicrocardsServiceV2
 
 logger = logging.getLogger(__name__)
+
+
+def _server_helpers() -> dict:
+    """server.py-registered helpers (ai_run access, calendar orchestration).
+    Empty in unit tests that mount the blueprint standalone."""
+    try:
+        helpers = get_extra("microcards_helpers")
+        return helpers if isinstance(helpers, dict) else {}
+    except Exception:
+        return {}
+
+
+def _notify_calendar_review(deck_id: str, card_id: str, review_event) -> None:
+    """Calendar live integration for V2 reviews (plan M2).
+
+    Fires once per SCHEDULED review (submit_answer emits review_event only on
+    first attempts / overrides, never on mastery-cycle retries) and must never
+    break the review flow itself."""
+    if not isinstance(review_event, dict) or not review_event:
+        return
+    orchestrate = _server_helpers().get("orchestrate_microcards_review_post_submit")
+    if not callable(orchestrate):
+        return
+    try:
+        orchestrate(deck_id=str(deck_id or ""), card_id=str(card_id or ""),
+                    review_result={"review_event": review_event})
+    except Exception as exc:
+        logger.warning("[HTTP] v2/microcards calendar live integration failed: %s", exc)
 
 microcards_v2_bp = Blueprint("microcards_v2", __name__)
 
@@ -612,6 +640,10 @@ def submit_answer(session_id: str):
             payload["deck_l1_progress"] = result["deck_l1_progress"]
         if result.get("card_missing"):
             payload["card_missing"] = True
+        # Calendar live integration (M2): one ping per scheduled review.
+        _notify_calendar_review(
+            (result.get("session") or {}).get("deck_id"), card_id, result.get("review_event")
+        )
         return jsonify(payload)
     except LookupError as exc:
         return jsonify({"ok": False, "error": str(exc)}), 404
@@ -876,6 +908,105 @@ def import_test_format(deck_id: str):
     except Exception as exc:
         logger.exception("[HTTP] v2/microcards/import test failed: %s", exc)
         return jsonify({"ok": False, "error": "test_import_failed"}), 500
+
+def _load_analysis_rows_for_request(body: dict):
+    """Shared prologue for the from-analysis endpoints: validate ai_run_id,
+    load + sanitize the stored analysis, convert to importer rows (D2)."""
+    from services.microcards_analysis_import import analysis_to_rows
+
+    h = _server_helpers()
+    run_id = str(body.get("ai_run_id") or "").strip()
+    if not run_id:
+        return None, None, (jsonify({"ok": False, "error": "ai_run_id_required"}), 400)
+    is_valid = h.get("is_valid_ai_run_id")
+    if callable(is_valid) and not is_valid(run_id):
+        return None, None, (jsonify({"ok": False, "error": "invalid_ai_run_id"}), 400)
+    build_analysis = h.get("ai_run_build_reopen_analysis_response")
+    if not callable(build_analysis):
+        return None, None, (jsonify({"ok": False, "error": "analysis_helpers_unavailable"}), 503)
+    analysis_payload = build_analysis(run_id, apply_feature_flags=False)
+    if analysis_payload is None:
+        return None, None, (jsonify({"ok": False, "error": "analysis_not_found"}), 404)
+    sanitize = h.get("sanitize_analysis_for_microcards_backend")
+    if callable(sanitize):
+        analysis_payload = sanitize(analysis_payload)
+
+    selector = body.get("selector") if isinstance(body.get("selector"), dict) else {}
+    rows = analysis_to_rows(analysis_payload, selector)
+    if not any(r.get("status") == "ok" for r in rows):
+        return None, None, (jsonify({"ok": False, "error": "no_cards_in_selection"}), 400)
+    return run_id, (selector, rows), None
+
+
+@microcards_v2_bp.route("/decks/from-analysis", methods=["POST"])
+def create_deck_from_analysis_v2():
+    """Editor flow: build a V2 deck from a stored AI analysis (plan M1).
+    Pair-match candidates are flattened into ordinary Q/A cards (D2)."""
+    guest_check = _check_guest()
+    if guest_check:
+        return guest_check
+    body = request.get_json(silent=True) or {}
+    run_id, loaded, error = _load_analysis_rows_for_request(body)
+    if error:
+        return error
+    selector, rows = loaded
+    try:
+        from services.microcards_analysis_import import deck_name_for_analysis
+        svc = _get_svc()
+        name = deck_name_for_analysis(run_id, selector, body.get("name"))
+        deck = svc.create_deck(name=name, description="", tags=["analysis"])
+        result = svc._create_from_parsed(deck["id"], rows, dedup=True)
+        deck = svc.get_deck(deck["id"])
+        return jsonify({
+            "ok": True,
+            "deck": deck,
+            "deck_summary": {
+                "id": deck.get("id"),
+                "name": deck.get("name"),
+                "cards_total": len(deck.get("cards") or []),
+                "selector": selector,
+            },
+            "added_count": len(result["items"]),
+            "skipped_duplicates": result.get("skipped_duplicates", 0),
+        })
+    except Exception as exc:
+        logger.exception("[HTTP] v2/microcards/decks from-analysis failed: %s", exc)
+        return jsonify({"ok": False, "error": "microcards_create_failed"}), 500
+
+
+@microcards_v2_bp.route("/decks/<string:deck_id>/append-from-analysis", methods=["POST"])
+def append_deck_from_analysis_v2(deck_id: str):
+    """Editor flow: append analysis cards to an existing V2 deck (dedup on)."""
+    guest_check = _check_guest()
+    if guest_check:
+        return guest_check
+    body = request.get_json(silent=True) or {}
+    _run_id, loaded, error = _load_analysis_rows_for_request(body)
+    if error:
+        return error
+    _selector, rows = loaded
+    try:
+        svc = _get_svc()
+        result = svc._create_from_parsed(deck_id, rows, dedup=True)
+        deck = svc.get_deck(deck_id)
+        return jsonify({
+            "ok": True,
+            "deck_summary": {
+                "id": deck_id,
+                "name": (deck or {}).get("name"),
+                "cards_total": len((deck or {}).get("cards") or []),
+            },
+            "added_count": len(result["items"]),
+            "skipped_duplicates": result.get("skipped_duplicates", 0),
+        })
+    except LookupError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 404
+    except ValueError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+    except Exception as exc:
+        logger.exception("[HTTP] v2/microcards/decks append-from-analysis failed: %s", exc)
+        return jsonify({"ok": False, "error": "microcards_append_failed"}), 500
+
 
 @microcards_v2_bp.route("/decks/<string:deck_id>/import/file", methods=["POST"])
 def import_binary_file(deck_id: str):

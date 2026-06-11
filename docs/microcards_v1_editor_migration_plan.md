@@ -53,7 +53,9 @@ D5. **M14-телеметрия/rollout**: удалить целиком; про�
 
 ## Этапы
 
-M1 — V2-эндпоинты для редактора (бэкенд, деплоится раньше фронта):
+Решения D1–D5 ПОДТВЕРЖДЕНЫ владельцем 2026-06-11.
+
+M1 — ✅ ВЫПОЛНЕН 2026-06-11. V2-эндпоинты для редактора:
   - POST /api/v2/microcards/decks/from-analysis {ai_run_id, selector, name}:
     серверная выборка кандидатов из ai_run (переиспользовать существующие
     server.py-хелперы через ctx), маппинг fact_recall → front/back/hint,
@@ -63,12 +65,20 @@ M1 — V2-эндпоинты для редактора (бэкенд, депло
   - Всё остальное уже есть в V2: list/get (decks), PATCH (rename/direction),
     DELETE, cards CRUD, bulk-delete/restore.
 
-M2 — Календарный live-хук в V2 (закрывает реальный пробел):
-  - из v2 submit_answer (только first_attempt/override — есть review event)
-    вызывать record_microcards_review с дедуп-ключом как в server.py;
-    state дедупа — через v2 storage (user doc kind="calendar_sync" или
-    переиспользовать существующий механизм);
-  - бэкфилл остаётся recovery-инструментом.
+  Реализация: services/microcards_analysis_import.py (analysis_to_rows с
+  селектором V1-семантики, D2-конвертация pair→Q/A, фолбэки unit/chunk,
+  синтетические пары по future_capabilities; deck_name_for_analysis в
+  V1-стиле); роуты POST /api/v2/microcards/decks/from-analysis и
+  /decks/<id>/append-from-analysis (ai_run-хелперы через
+  get_extra("microcards_helpers"), дедуп общим _create_from_parsed).
+
+M2 — ✅ ВЫПОЛНЕН 2026-06-11. Календарный live-хук в V2:
+  Реализация: submit_answer возвращает review_event (только для
+  запланированных повторений — first attempt/override, НЕ для пересдач
+  мастери-цикла); v2 answer-роут вызывает существующий оркестратор
+  _orchestrate_microcards_review_post_submit (helpers) — он сам ведёт
+  дедуп-state и статистику; ошибки календаря не ломают ревью.
+  Бэкфилл остаётся recovery-инструментом.
 
 M3 — Editor-фронтенд (import_manager.js):
   - list/get/create-manual/rename/delete/cards → /api/v2/microcards/*

@@ -1499,6 +1499,7 @@ class MicrocardsServiceV2:
         # intra-session learning steps and must not inflate the review history.
         # An override re-grades the same presentation as GOOD.
         now = _utc_now()
+        review_event: Optional[Dict[str, Any]] = None
         if first_attempt or override:
             last_reviewed = _parse_iso(card_state.get("last_reviewed_at"))
             if last_reviewed:
@@ -1531,6 +1532,7 @@ class MicrocardsServiceV2:
                 "reviewed_at": _utc_now_iso()
             }
             self._append_event(event)
+            review_event = event
 
         # Save card state (l1_mastered may change even on a retry)
         states[card_id] = card_state
@@ -1602,6 +1604,9 @@ class MicrocardsServiceV2:
             "form": grade_level,
             "first_attempt": first_attempt,
             "is_retry": is_retry,
+            # The scheduled review (if one was written) — feeds the calendar
+            # live integration in the route layer. None for mastery retries.
+            "review_event": review_event,
         }
 
     @staticmethod
