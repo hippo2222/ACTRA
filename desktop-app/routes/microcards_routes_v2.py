@@ -479,6 +479,53 @@ def image_import(deck_id: str):
     return jsonify({"ok": True, "asset_url": asset_url, "attribution": attribution or None})
 
 
+@microcards_v2_bp.route("/decks/<string:deck_id>/cards/bulk-delete", methods=["POST"])
+def bulk_delete_cards(deck_id: str):
+    """Delete several cards at once; the response carries everything needed
+    for an undo (cards + their original positions)."""
+    guest_check = _check_guest()
+    if guest_check:
+        return guest_check
+    body = request.get_json(silent=True) or {}
+    card_ids = body.get("card_ids")
+    if not isinstance(card_ids, list) or not card_ids:
+        return jsonify({"ok": False, "error": "card_ids_required"}), 400
+    try:
+        svc = _get_svc()
+        result = svc.delete_cards(deck_id, card_ids)
+        return jsonify({"ok": True, "deleted": result["deleted"], "remaining": result["remaining"]})
+    except LookupError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 404
+    except ValueError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+    except Exception as exc:
+        logger.exception("[HTTP] v2/microcards/cards bulk-delete failed: %s", exc)
+        return jsonify({"ok": False, "error": "bulk_delete_failed"}), 500
+
+
+@microcards_v2_bp.route("/decks/<string:deck_id>/cards/bulk-restore", methods=["POST"])
+def bulk_restore_cards(deck_id: str):
+    """Undo of bulk-delete: re-insert the returned cards at their positions."""
+    guest_check = _check_guest()
+    if guest_check:
+        return guest_check
+    body = request.get_json(silent=True) or {}
+    entries = body.get("entries")
+    if not isinstance(entries, list) or not entries:
+        return jsonify({"ok": False, "error": "entries_required"}), 400
+    try:
+        svc = _get_svc()
+        result = svc.restore_cards(deck_id, entries)
+        return jsonify({"ok": True, "restored": result["restored"], "total": result["total"]})
+    except LookupError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 404
+    except ValueError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+    except Exception as exc:
+        logger.exception("[HTTP] v2/microcards/cards bulk-restore failed: %s", exc)
+        return jsonify({"ok": False, "error": "bulk_restore_failed"}), 500
+
+
 @microcards_v2_bp.route("/decks/<string:deck_id>/cards/reorder", methods=["POST"])
 def reorder_cards(deck_id: str):
     guest_check = _check_guest()

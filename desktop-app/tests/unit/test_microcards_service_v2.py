@@ -568,6 +568,48 @@ def test_import_docx_table_to_cards():
     assert cards == {"Os coxae": "Тазовая кость", "Femur": "Бедренная кость"}
 
 
+def test_bulk_delete_and_restore_with_undo():
+    """Bulk delete removes everything in one pass (deck write + session scrub);
+    restore puts the cards back at their positions with the SAME ids, so the
+    review progress that was never deleted re-attaches."""
+    tmp = tempfile.mkdtemp()
+    svc = MicrocardsServiceV2(tmp, user_id="test_user")
+    deck = svc.create_deck(name="Bulk Deck")
+    cards = [svc.create_card(deck["id"], front_text=f"Q{i}", back_text=f"A{i}") for i in range(4)]
+
+    # Earn some progress on a card that will be deleted and restored.
+    run = svc.start_session(deck["id"], mode="run", level_mode=1)
+    svc.submit_answer(run["id"], cards[1]["id"], "know")
+    svc.pause_session(run["id"])
+    stability_before = svc._read_states()[cards[1]["id"]]["stability"]
+
+    # Delete cards 1 and 3 in one call.
+    result = svc.delete_cards(deck["id"], [cards[1]["id"], cards[3]["id"]])
+    assert [e["index"] for e in result["deleted"]] == [1, 3]
+    assert result["remaining"] == 2
+    assert [c["front"]["text"] for c in svc.list_cards(deck["id"])] == ["Q0", "Q2"]
+    # The paused run was scrubbed, not broken.
+    active = svc._get_active_session_for_deck(deck["id"], "run_l1")
+    assert cards[1]["id"] not in active["card_queue"]
+    assert active["stats"]["unique_total"] == 2
+
+    # Undo: same ids, original positions, progress intact.
+    restored = svc.restore_cards(deck["id"], result["deleted"])
+    assert restored["restored"] == 2
+    assert [c["front"]["text"] for c in svc.list_cards(deck["id"])] == ["Q0", "Q1", "Q2", "Q3"]
+    assert [c["id"] for c in svc.list_cards(deck["id"])] == [c["id"] for c in cards]
+    assert svc._read_states()[cards[1]["id"]]["stability"] == stability_before
+
+    # Restore is idempotent — re-posting the same entries adds nothing.
+    again = svc.restore_cards(deck["id"], result["deleted"])
+    assert again["restored"] == 0
+    assert again["total"] == 4
+
+    # Unknown ids are a no-op, junk entries are ignored.
+    assert svc.delete_cards(deck["id"], ["mc_nope"])["deleted"] == []
+    assert svc.restore_cards(deck["id"], [{"index": 0, "card": "junk"}, {}])["restored"] == 0
+
+
 def test_legacy_records_are_wiped():
     """Pre-run (schema 1.0) records are discarded on first read — the agreed
     one-time reset when the run model shipped."""

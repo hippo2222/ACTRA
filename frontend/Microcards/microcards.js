@@ -302,6 +302,9 @@
         // Browse mode (free flipping, no grading)
         browseIndex: 0,
 
+        // Bulk selection in the deck editor (card ids)
+        selectedCards: new Set(),
+
         // Gamification (per session)
         combo: 0,
         maxCombo: 0,
@@ -1511,6 +1514,14 @@
         const container = $('deckCardsListContainer');
         const readOnly = !!(state.activeDeck && (state.activeDeck.read_only || state.activeDeck.linked));
 
+        // Drop selections that no longer correspond to a card (or to this deck).
+        const liveIds = new Set(state.cards.map(c => c.id));
+        state.selectedCards.forEach(id => { if (!liveIds.has(id)) state.selectedCards.delete(id); });
+        updateBulkBar();
+        // Linked decks are read-only — no selection affordances at all.
+        const selectAllBtn = $('btnSelectAllCards');
+        if (selectAllBtn) selectAllBtn.classList.toggle('hidden', readOnly || state.cards.length === 0);
+
         if (state.cards.length === 0) {
             const msg = readOnly
                 ? t('microcards.no_cards_yet', 'В колоде пока нет карточек.')
@@ -1522,6 +1533,112 @@
         container.innerHTML = readOnly
             ? state.cards.map(c => cardDisplayRowHTML(c)).join('')
             : state.cards.map(c => cardItemHTML(c)).join('');
+    }
+
+    // ── Bulk selection & delete with undo (editor pattern) ─────────────────
+    function toggleCardSelect(el) {
+        const id = el.getAttribute('data-select-id');
+        if (!id) return;
+        if (el.checked) state.selectedCards.add(id);
+        else state.selectedCards.delete(id);
+        updateBulkBar();
+    }
+
+    function updateBulkBar() {
+        const bar = $('bulkCardsBar');
+        if (!bar) return;
+        const n = state.selectedCards.size;
+        bar.classList.toggle('hidden', n === 0);
+        const count = $('bulkSelectedCount');
+        if (count) count.textContent = t('microcards.bulk_selected', 'Выбрано: {n}').replace('{n}', n);
+        // The "select all" toggle is always visible next to the count badge.
+        const allBtn = $('btnSelectAllCards');
+        if (allBtn) {
+            const total = state.cards.filter(c => c.id).length;
+            const all = total > 0 && n >= total;
+            allBtn.textContent = all
+                ? t('microcards.btn_clear_selection', 'Снять выбор')
+                : t('microcards.btn_select_all', 'Выбрать все');
+        }
+    }
+
+    function toggleSelectAllCards() {
+        const ids = state.cards.filter(c => c.id).map(c => c.id);
+        const all = ids.length > 0 && state.selectedCards.size >= ids.length;
+        state.selectedCards = all ? new Set() : new Set(ids);
+        document.querySelectorAll('#deckCardsListContainer .mc-card-select').forEach(cb => {
+            cb.checked = state.selectedCards.has(cb.getAttribute('data-select-id'));
+        });
+        updateBulkBar();
+    }
+
+    // Toast with a single action button (used for undo).
+    function showActionToast(msg, actionLabel, onAction, duration = 7000) {
+        const container = $('mcToastContainer');
+        if (!container) return;
+        const el = document.createElement('div');
+        el.className = 'mc-toast mc-toast--info';
+        el.style.display = 'flex';
+        el.style.alignItems = 'center';
+        el.style.gap = '0.7rem';
+        const text = document.createElement('span');
+        text.textContent = msg;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = actionLabel;
+        btn.style.cssText = 'background:transparent;border:0;color:var(--color-primary);font-weight:800;cursor:pointer;padding:0;font-size:inherit;text-transform:uppercase';
+        btn.addEventListener('click', () => { el.remove(); onAction(); });
+        el.appendChild(text);
+        el.appendChild(btn);
+        container.appendChild(el);
+        setTimeout(() => {
+            el.style.opacity = '0';
+            setTimeout(() => el.remove(), 300);
+        }, duration);
+    }
+
+    async function _refreshDeckCards() {
+        try {
+            const cardsData = await apiCall(`/api/v2/microcards/decks/${state.activeDeckId}/cards`);
+            state.cards = cardsData.items || [];
+        } catch (e) { console.error(e); }
+        renderDeckCardsList();
+        updateDeckProgressUI();
+    }
+
+    async function bulkDeleteSelected() {
+        const ids = Array.from(state.selectedCards);
+        if (!ids.length) return;
+        try {
+            const result = await apiCall(`/api/v2/microcards/decks/${state.activeDeckId}/cards/bulk-delete`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ card_ids: ids })
+            });
+            const deleted = result.deleted || [];
+            state.selectedCards = new Set();
+            const deckId = state.activeDeckId;
+            await _refreshDeckCards();
+            showActionToast(
+                t('microcards.toast_bulk_deleted', 'Удалено карточек: {n}').replace('{n}', deleted.length),
+                t('microcards.btn_undo', 'Отменить'),
+                async () => {
+                    // Same ids go back to the same positions — review progress
+                    // (states were never touched) re-attaches automatically.
+                    try {
+                        await apiCall(`/api/v2/microcards/decks/${deckId}/cards/bulk-restore`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ entries: deleted })
+                        });
+                        if (state.activeDeckId === deckId) await _refreshDeckCards();
+                        showToast(t('microcards.toast_bulk_restored', 'Карточки восстановлены'), 'success');
+                    } catch (e) { console.error(e); }
+                }
+            );
+        } catch (err) {
+            console.error(err);
+        }
     }
 
     // ── Editable cards accordion (inline editing on the deck page) ─────────
@@ -1557,6 +1674,7 @@
         return `
         <div class="mc-card-item rounded-xl border border-border-subtle bg-surface-1${openCls}" data-card-id="${card.id || ''}" data-front-image="${escHtml(frontImg)}" data-back-image="${escHtml(backImg)}" data-front-attr="${escHtml(JSON.stringify(frontAttr))}" data-back-attr="${escHtml(JSON.stringify(backAttr))}">
             <div class="mc-card-head flex items-center gap-3 p-3 cursor-pointer select-none" onclick="mcApp.toggleCardExpand(this)">
+                ${isNew ? '' : `<input type="checkbox" class="mc-card-select" data-select-id="${card.id}" ${state.selectedCards.has(card.id) ? 'checked' : ''} onclick="event.stopPropagation(); mcApp.toggleCardSelect(this)" aria-label="Выбрать карточку" />`}
                 ${cardStatusPill(card)}
                 <div class="flex-1 min-w-0">
                     <p class="mc-head-front text-sm font-bold text-text-main truncate">${escHtml(front) || '<span class="text-text-secondary font-normal">Новая карточка…</span>'}</p>
@@ -3563,7 +3681,10 @@ ${fill}`;
         copyPublishCode,
         pauseLearningSession,
         abandonLearningSession,
-        openStudySettings
+        openStudySettings,
+        toggleCardSelect,
+        toggleSelectAllCards,
+        bulkDeleteSelected
     };
 
     // Auto boot

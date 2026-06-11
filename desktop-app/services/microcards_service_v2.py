@@ -1041,6 +1041,77 @@ class MicrocardsServiceV2:
                 self._save_session(active, set_active=True)
         return True
 
+    # Whitelist for restoring deleted cards (undo): only the fields a card
+    # legitimately carries — never arbitrary client payload.
+    _CARD_RESTORE_KEYS = ("id", "front", "back", "hint", "acceptable_answers",
+                          "status", "created_at", "updated_at")
+
+    def delete_cards(self, deck_id: str, card_ids: List[str]) -> Dict[str, Any]:
+        """Bulk delete with undo support.
+
+        Removes all requested cards in ONE deck write + ONE session scrub, and
+        returns the removed cards together with their original positions so
+        restore_cards can put them back exactly where they were."""
+        deck = self.get_deck(deck_id)
+        if not deck:
+            raise LookupError("deck_not_found")
+        self._assert_editable(deck)
+
+        wanted = {_s(cid) for cid in (card_ids or []) if _s(cid)}
+        cards = deck.get("cards", [])
+        deleted = [{"index": i, "card": c} for i, c in enumerate(cards) if _s(c.get("id")) in wanted]
+        if not deleted:
+            return {"deleted": [], "remaining": len(cards)}
+
+        remaining = [c for c in cards if _s(c.get("id")) not in wanted]
+        deck["cards"] = remaining
+        deck["updated_at"] = _utc_now_iso()
+        _write_json(self._deck_path(deck_id), deck)
+
+        valid_ids = {_s(c.get("id")) for c in remaining}
+        for active in self._get_active_sessions_for_deck(deck_id).values():
+            if self._scrub_cards_from_session(active, valid_ids):
+                self._save_session(active, set_active=True)
+        return {"deleted": deleted, "remaining": len(remaining)}
+
+    def restore_cards(self, deck_id: str, entries: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Undo a bulk delete: re-insert cards at their original positions.
+
+        Ids are preserved, so review states (FSRS schedule, l1_mastered) that
+        were never deleted simply re-attach — progress survives the round-trip."""
+        deck = self.get_deck(deck_id)
+        if not deck:
+            raise LookupError("deck_not_found")
+        self._assert_editable(deck)
+
+        cards = deck.get("cards", [])
+        existing = {_s(c.get("id")) for c in cards}
+        clean: List[Tuple[int, Dict[str, Any]]] = []
+        for entry in entries or []:
+            card = entry.get("card") if isinstance(entry, dict) else None
+            if not isinstance(card, dict):
+                continue
+            cid = _s(card.get("id"))
+            if not cid or cid in existing:
+                continue
+            sanitized = {k: card[k] for k in self._CARD_RESTORE_KEYS if k in card}
+            try:
+                idx = int(entry.get("index"))
+            except (ValueError, TypeError):
+                idx = len(cards)
+            clean.append((max(0, idx), sanitized))
+            existing.add(cid)
+
+        # Insert in ascending original order so earlier indices stay accurate.
+        clean.sort(key=lambda pair: pair[0])
+        for idx, card in clean:
+            cards.insert(min(idx, len(cards)), card)
+        if clean:
+            deck["cards"] = cards
+            deck["updated_at"] = _utc_now_iso()
+            _write_json(self._deck_path(deck_id), deck)
+        return {"restored": len(clean), "total": len(cards)}
+
     def reorder_cards(self, deck_id: str, card_ids: List[str]) -> Dict[str, Any]:
         deck = self.get_deck(deck_id)
         if not deck:
