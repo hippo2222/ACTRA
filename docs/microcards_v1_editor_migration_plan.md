@@ -80,7 +80,21 @@ M2 — ✅ ВЫПОЛНЕН 2026-06-11. Календарный live-хук в V2
   дедуп-state и статистику; ошибки календаря не ломают ревью.
   Бэкфилл остаётся recovery-инструментом.
 
-M3 — Editor-фронтенд (import_manager.js):
+M3 — ✅ ВЫПОЛНЕН 2026-06-11. Editor-фронтенд (import_manager.js):
+  Реализация: список колод → /api/v2 (декоратор приводит V2-сводки к
+  привычным полям stats/meta); from-analysis/append → M1-роуты; мини-плеер
+  (queue + review/submit + pair_match UI, ~8 методов) удалён —
+  openMicrocardsDeckQueue() теперь deep-link /microcards?deck=<id>
+  (query-параметр уже поддерживался режимом); панель «Сессия повторения»
+  заменена пояснением. Manual editor: GET/POST/DELETE колод и карточек,
+  PATCH-rename, reorder → /api/v2; archive удалён (вместо него кнопка
+  «Открыть в Микрокарточках»); pair_match-тип убран из формы (D2), сейв
+  pair-карточек блокируется с пояснением. Text-import: предпросмотр →
+  новый deckless POST /api/v2/microcards/import/analyze (адаптер ответа в
+  старую форму items/summary), исполнение → создание колоды + /import/auto
+  тем же сырым текстом.
+
+  (Исходный план M3:)
   - list/get/create-manual/rename/delete/cards → /api/v2/microcards/*
     (внимание: у v2 другие поля ответа — items/deck, name через PATCH);
   - from-analysis/append → новые M1-роуты;

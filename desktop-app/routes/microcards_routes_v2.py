@@ -1037,6 +1037,32 @@ def import_binary_file(deck_id: str):
         return jsonify({"ok": False, "error": "file_import_failed"}), 500
 
 
+@microcards_v2_bp.route("/import/analyze", methods=["POST"])
+def import_analyze_deckless():
+    """Deck-independent dry-run parse (editor text-import preview): same rows
+    and counts as the deck-scoped analyze, just without duplicate marking."""
+    guest_check = _check_guest()
+    if guest_check:
+        return guest_check
+    body = request.get_json(silent=True) or {}
+    fmt = body.get("format") or "auto"
+    content = body.get("content")
+    if content is None or not str(content).strip():
+        return jsonify({"ok": False, "error": "content_required"}), 400
+    try:
+        svc = _get_svc()
+        detected = svc._detect_format(content) if str(fmt) == "auto" else str(fmt)
+        parsed = svc._parse_by_format(fmt, content, body.get("options"))
+        result = svc._preview_parsed({"cards": []}, parsed)
+        return jsonify({"ok": True, "rows": result["rows"], "counts": result["counts"],
+                        "detected_format": detected})
+    except ValueError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+    except Exception as exc:
+        logger.exception("[HTTP] v2/microcards/import analyze (deckless) failed: %s", exc)
+        return jsonify({"ok": False, "error": "analyze_failed"}), 500
+
+
 @microcards_v2_bp.route("/decks/<string:deck_id>/import/analyze", methods=["POST"])
 def import_analyze(deck_id: str):
     """Dry-run preview: parse content with given format/options, no cards are created."""

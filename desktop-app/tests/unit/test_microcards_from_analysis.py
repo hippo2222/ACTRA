@@ -165,3 +165,18 @@ def test_v2_review_pings_calendar_once_per_scheduled_review(monkeypatch):
     assert res3.get_json()["is_retry"] is True
     assert len(calls) == 2
 
+
+
+def test_deckless_analyze_for_editor_preview(monkeypatch):
+    """The editor text-import preview parses without a target deck (M3)."""
+    tmp = tempfile.mkdtemp()
+    client = _make_client(monkeypatch, tmp, {})
+    res = client.post("/api/v2/microcards/import/analyze",
+                      json={"format": "auto", "content": "os\tbone\ncor\theart"})
+    assert res.status_code == 200
+    data = res.get_json()
+    assert data["ok"] is True
+    assert data["counts"]["ok"] == 2
+    assert all(r["duplicate"] is False for r in data["rows"])
+    assert client.post("/api/v2/microcards/import/analyze",
+                       json={"content": "   "}).status_code == 400

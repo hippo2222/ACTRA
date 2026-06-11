@@ -6207,10 +6207,19 @@ text: Сердце человека состоит из [трёх] камер. �
         this.microcardsDecksError = '';
         if (this.modalPurpose === 'theory_analysis' && this.theorySubMode === 'microcards') this.renderTheoryAnalysisMode();
         try {
-            const resp = await fetch('/api/editor/microcards/decks?limit=100');
+            const resp = await fetch('/api/v2/microcards/decks?limit=100');
             const data = await resp.json();
             if (data.ok) {
-                this.microcardsDecks = Array.isArray(data.items) ? data.items : [];
+                // V2 summaries → the field shape this panel has always rendered.
+                this.microcardsDecks = (Array.isArray(data.items) ? data.items : []).map(d => ({
+                    ...d,
+                    stats: {
+                        cards_due: d.due_count ?? 0,
+                        cards_new: d.new_count ?? 0,
+                        cards_total: d.card_count ?? 0,
+                    },
+                    meta: { created_by_user_id: d.created_by_user_id || null },
+                }));
                 this.microcardsDecksError = '';
             } else {
                 this.microcardsDecks = [];
@@ -6248,7 +6257,7 @@ text: Сердце человека состоит из [трёх] камер. �
         this.microcardsCreateLoading = true;
         if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
         try {
-            const resp = await fetch('/api/editor/microcards/decks/from-analysis', {
+            const resp = await fetch('/api/v2/microcards/decks/from-analysis', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ ai_run_id: runId, selector }),
@@ -6359,7 +6368,7 @@ text: Сердце человека состоит из [трёх] камер. �
         this.microcardsCreateLoading = true;
         if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
         try {
-            const resp = await fetch(`/api/editor/microcards/decks/${encodeURIComponent(deckId)}/append-from-analysis`, {
+            const resp = await fetch(`/api/v2/microcards/decks/${encodeURIComponent(deckId)}/append-from-analysis`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ ai_run_id: runId, selector }),
@@ -6425,76 +6434,17 @@ text: Сердце человека состоит из [трёх] камер. �
         return this.appendMicrocardsToExistingDeckFromCurrentAnalysis({ scope: 'all', pair_match_only: true }, { open: true });
     }
 
-    async openMicrocardsDeckQueue(deckId, options = {}) {
-        if (!this.ensureTheoryFeatureEnabled('microcards_mode', wt('im.k334', 'Режим микрокарточек отключён (feature flag).'))) {
-            return { ok: false, error: 'microcards_mode_disabled' };
-        }
+    // D1: the embedded mini-player is gone — runs/reviews live in the
+    // Microcards mode, which the deep link opens right on the deck.
+    openMicrocardsDeckQueue(deckId) {
         const id = String(deckId || '').trim();
         if (!id) return { ok: false, error: 'deck_id_required' };
-        const restart = !!options?.restart;
-        this.theorySubMode = 'microcards';
-        this.microcardsQueueLoading = true;
-        this.microcardsReviewReveal = false;
-        this.microcardsReviewEvaluation = null;
-        if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
-        try {
-            const params = new URLSearchParams({ limit: '50' });
-            if (restart) params.set('restart', '1');
-            const resp = await fetch(`/api/editor/microcards/decks/${encodeURIComponent(id)}/queue?${params.toString()}`);
-            const data = await resp.json();
-            if (data.ok) {
-                this.microcardsActiveDeck = data.deck || { id };
-                this.microcardsSession = data.session || null;
-                if (Array.isArray(this.microcardsDecks)) {
-                    const summary = this.microcardsDecks.find(d => String(d?.id || '') === id);
-                    if (summary) {
-                        this.microcardsActiveDeck.selector = summary.selector || this.microcardsActiveDeck.selector;
-                        this.microcardsActiveDeck.meta = summary.meta || this.microcardsActiveDeck.meta;
-                        this.microcardsActiveDeck.stats = data.stats || summary.stats;
-                    }
-                }
-                this.microcardsQueue = Array.isArray(data.queue) ? data.queue : [];
-                this.microcardsQueueIndex = Math.max(0, Number(data.cursor) || 0);
-                this.microcardsReviewReveal = false;
-                this.microcardsReviewEvaluation = null;
-                this.microcardsReviewStartedAt = Date.now();
-            } else {
-                this.showVoiceToast({
-                    severity: 'error',
-                    what: wt('im.k335', 'Очередь колоды не открыта.'),
-                    impact: wt('im.k336', 'Сессию повторения нельзя начать.'),
-                    next: data.message || data.error || wt('im.k337', 'Проверьте состояние колоды и повторите открытие.'),
-                });
-            }
-            return data;
-        } catch (e) {
-            console.error('[Microcards] open queue failed:', e);
-            this.showVoiceToast({
-                severity: 'error',
-                what: wt('im.k338', 'Открытие колоды недоступно из-за сетевой ошибки.'),
-                impact: wt('im.k339', 'Очередь карточек не загружена.'),
-                next: wt('im.k340', 'Проверьте сеть и повторите открытие колоды.'),
-            });
-            return { ok: false, error: 'network_error' };
-        } finally {
-            this.microcardsQueueLoading = false;
-            if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
-        }
-    }
-
-    getCurrentMicrocard() {
-        if (!Array.isArray(this.microcardsQueue)) return null;
-        if (this.microcardsQueueIndex < 0 || this.microcardsQueueIndex >= this.microcardsQueue.length) return null;
-        return this.microcardsQueue[this.microcardsQueueIndex] || null;
+        window.open(`/microcards?deck=${encodeURIComponent(id)}`, '_blank');
+        return { ok: true, deep_link: true };
     }
 
     renderTheoryMicrocardsMode() {
         const decks = Array.isArray(this.microcardsDecks) ? this.microcardsDecks : [];
-        const current = this.getCurrentMicrocard();
-        const activeDeck = this.microcardsActiveDeck || null;
-        const queueCount = Array.isArray(this.microcardsQueue) ? this.microcardsQueue.length : 0;
-        const doneCount = Math.min(this.microcardsQueueIndex, queueCount);
-        const remainingCount = Math.max(0, queueCount - doneCount);
 
         const deckListHtml = this.microcardsDecksLoading
             ? `<div class="text-sm text-text-secondary">${wt('im.k934', 'Загрузка колод...')}</div>`
@@ -6518,7 +6468,7 @@ text: Сердце человека состоит из [трёх] камер. �
                                     <button type="button"
                                         onclick="dashboard.importManager.openMicrocardsDeckQueue('${this.escapeInlineJsString(String(deck?.id || ''))}')"
                                         class="px-2.5 py-1.5 text-xs font-medium rounded-md border ${isActive ? 'border-primary text-primary bg-primary-lighter' : 'border-border-strong text-text-secondary hover:bg-bg-hover'}">
-                                        ${wt('im.k582', 'Повторять')}
+                                        ${wt('im.k946', 'Открыть в Микрокарточках')}
                                     </button>
                                 </div>
                             </div>
@@ -6567,313 +6517,11 @@ text: Сердце человека состоит из [трёх] камер. �
                 </div>
 
                 <div class="rounded-xl border border-border-strong bg-surface-1 p-4">
-                    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
-                        <div>
-                            <div class="text-sm font-semibold text-text-main">${this.escapeHtml(String(activeDeck?.name || wt('im.k937', 'Сессия повторения')))}</div>
-                            <div class="text-xs text-text-secondary mt-1">
-                                ${activeDeck?.id ? `<span class="font-mono">${this.escapeHtml(String(activeDeck.id))}</span>` : wt('im.k344', 'Выберите колоду слева')}
-                                ${queueCount ? ` · ${doneCount}/${queueCount} ${wt('im.k698', 'пройдено')}` : ''}
-                                ${remainingCount ? ` · ${wt('im.k699', 'осталось')} ${remainingCount}` : ''}
-                            </div>
-                            ${activeDeck?.id ? `<div class="mt-2 flex flex-wrap gap-1">${this.renderMicrocardsDeckOwnershipBadges(activeDeck)}</div>` : ''}
-                        </div>
-                        ${activeDeck?.id ? `
-                            <button type="button"
-                                onclick="dashboard.importManager.openMicrocardsDeckQueue('${this.escapeInlineJsString(String(activeDeck.id))}')"
-                                ${this.microcardsQueueLoading ? 'disabled' : ''}
-                                class="px-3 py-1.5 text-xs font-medium rounded-lg border border-border-strong text-text-secondary hover:bg-bg-hover disabled:opacity-60">
-                                ${this.microcardsQueueLoading ? wt('im.k345', 'Обновление...') : wt('im.k346', 'Продолжить / обновить')}
-                            </button>
-                            <button type="button"
-                                onclick="dashboard.importManager.openMicrocardsDeckQueue('${this.escapeInlineJsString(String(activeDeck.id))}', { restart: true })"
-                                ${this.microcardsQueueLoading ? 'disabled' : ''}
-                                class="px-3 py-1.5 text-xs font-medium rounded-lg border border-warning-light text-warning-text bg-warning-lighter hover:bg-warning-light disabled:opacity-60">
-                                ${wt('im.k583', 'Новая сессия')}
-                            </button>
-                        ` : ''}
-                    </div>
-                    ${this.renderMicrocardsReviewArea(current)}
+                    <div class="text-sm font-semibold text-text-main">${wt('im.k947', 'Прохождение и повторение — в режиме «Микрокарточки»')}</div>
+                    <div class="text-xs text-text-secondary mt-1">${wt('im.k948', 'У колод там три режима (Просмотр, Повторение, Прохождение на звёзды), импорт и полноценный редактор. Кнопка «Открыть в Микрокарточках» ведёт прямо на колоду.')}</div>
                 </div>
             </div>
         `;
-    }
-
-    renderMicrocardsReviewArea(card) {
-        if (this.microcardsQueueLoading) {
-            return wt('im.k347', '<div class="text-sm text-text-secondary">Загрузка очереди повторения...</div>');
-        }
-        if (!this.microcardsActiveDeck?.id) {
-            return wt('im.k348', '<div class="text-sm text-text-secondary">Откройте колоду, чтобы начать повторение.</div>');
-        }
-        if (!card) {
-            return wt('im.k349', '<div class="text-sm text-text-secondary">На сейчас нет карточек к повторению в выбранной колоде.</div>');
-        }
-
-        const cardType = String(card?.card_type || 'fact_recall');
-        const front = (card && typeof card.front === 'object') ? card.front : {};
-        const back = (card && typeof card.back === 'object') ? card.back : {};
-        const frontText = String(front.text || '').trim() || wt('im.k584', 'Карточка');
-        const backText = String(back.text || '').trim() || wt('im.k585', 'Ответ');
-        const isPair = cardType === 'pair_match';
-        const evalData = this.microcardsReviewEvaluation || null;
-
-        return `
-            <div class="space-y-4">
-                <div class="flex flex-wrap items-center gap-2">
-                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border border-border-strong bg-surface-1 text-text-secondary uppercase">${this.escapeHtml(cardType === 'pair_match' ? wt('im.k938', 'сопоставление') : wt('im.k939', 'вопрос/ответ'))}</span>
-                    ${isPair ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold border border-info-light bg-info-lighter text-info-text uppercase">${wt('im.k940', 'ПАРА')}</span>` : ''}
-                    <span class="text-[11px] text-text-secondary font-mono">${this.escapeHtml(String(card?.id || ''))}</span>
-                </div>
-
-                <div class="rounded-lg border border-border-strong bg-surface-2 p-3">
-                    <div class="text-[11px] uppercase tracking-wide text-text-secondary mb-1">${wt('im.k941', 'Лицевая')}</div>
-                    <div class="text-sm text-text-main whitespace-pre-line">${this.escapeHtml(frontText)}</div>
-                </div>
-
-                ${isPair ? this.renderMicrocardsPairMatchUI(card) : ''}
-
-                ${(!isPair && this.microcardsReviewReveal) ? `
-                    <div class="rounded-lg border border-border-strong bg-surface-2 p-3">
-                        <div class="text-[11px] uppercase tracking-wide text-text-secondary mb-1">${wt('im.k942', 'Обратная')}</div>
-                        <div class="text-sm text-text-main whitespace-pre-line">${this.escapeHtml(backText)}</div>
-                    </div>
-                ` : ''}
-
-                ${(isPair && this.microcardsReviewReveal) ? this.renderMicrocardsPairMatchResult(card, evalData) : ''}
-
-                <div class="flex flex-wrap gap-2">
-                    ${!this.microcardsReviewReveal ? (isPair ? `
-                        <button type="button" onclick="dashboard.importManager.revealCurrentMicrocardPairMatch()"
-                            class="px-3 py-1.5 text-xs font-medium rounded-lg border border-primary text-primary hover:bg-primary hover:text-primary-fg">
-                            ${wt('im.k586', 'Проверить пары')}
-                        </button>
-                    ` : `
-                        <button type="button" onclick="dashboard.importManager.revealCurrentMicrocard()"
-                            class="px-3 py-1.5 text-xs font-medium rounded-lg border border-primary text-primary hover:bg-primary hover:text-primary-fg">
-                            ${wt('im.k587', 'Показать ответ')}
-                        </button>
-                    `) : `
-                        <button type="button" onclick="dashboard.importManager.submitCurrentMicrocardRating('again')"
-                            ${this.microcardsReviewSubmitting ? 'disabled' : ''}
-                            class="px-3 py-1.5 text-xs font-medium rounded-lg border border-error-light text-error-text bg-error-lighter hover:bg-error-light disabled:opacity-60">
-                            ${wt('im.k588', 'Снова')}
-                        </button>
-                        <button type="button" onclick="dashboard.importManager.submitCurrentMicrocardRating('hard')"
-                            ${this.microcardsReviewSubmitting ? 'disabled' : ''}
-                            class="px-3 py-1.5 text-xs font-medium rounded-lg border border-warning-light text-warning-text bg-warning-lighter hover:bg-warning-light disabled:opacity-60">
-                            ${wt('im.k589', 'Трудно')}
-                        </button>
-                        <button type="button" onclick="dashboard.importManager.submitCurrentMicrocardRating('good')"
-                            ${this.microcardsReviewSubmitting ? 'disabled' : ''}
-                            class="px-3 py-1.5 text-xs font-medium rounded-lg border border-success-light text-success-text bg-success-lighter hover:bg-success-light disabled:opacity-60">
-                            ${wt('im.k590', 'Хорошо')}
-                        </button>
-                        <button type="button" onclick="dashboard.importManager.submitCurrentMicrocardRating('easy')"
-                            ${this.microcardsReviewSubmitting ? 'disabled' : ''}
-                            class="px-3 py-1.5 text-xs font-medium rounded-lg border border-info-light text-info-text bg-info-lighter hover:bg-info-light disabled:opacity-60">
-                            ${wt('im.k591', 'Легко')}
-                        </button>
-                    `}
-                </div>
-            </div>
-        `;
-    }
-
-    renderMicrocardsPairMatchUI(card) {
-        const frontPayload = (card?.front && typeof card.front.payload === 'object') ? card.front.payload : {};
-        const leftItems = Array.isArray(frontPayload.left_items) ? frontPayload.left_items : [];
-        const rightItems = Array.isArray(frontPayload.right_items) ? frontPayload.right_items : [];
-        if (!leftItems.length || !rightItems.length) {
-            return wt('im.k350', '<div class="text-xs text-text-secondary">pair_match payload пустой.</div>');
-        }
-        const cardId = String(card?.id || '');
-        const saved = (this.microcardsPairSelections && this.microcardsPairSelections[cardId]) ? this.microcardsPairSelections[cardId] : {};
-        return `
-            <div class="rounded-lg border border-border-strong bg-surface-2 p-3">
-                <div class="text-[11px] uppercase tracking-wide text-text-secondary mb-2">${wt('im.k943', 'Сопоставление пар')}</div>
-                <div class="space-y-2">
-                    ${leftItems.map((left) => {
-                        const leftId = String(left?.id || '');
-                        const currentVal = String(saved?.[leftId] || '');
-                        return `
-                            <div class="grid grid-cols-1 md:grid-cols-[1fr_1fr] gap-2 items-center">
-                                <div class="text-xs text-text-main p-2 rounded-md border border-border-strong bg-surface-1">${this.escapeHtml(String(left?.text || leftId))}</div>
-                                <select onchange="dashboard.importManager.setMicrocardsPairSelection('${this.escapeInlineJsString(cardId)}','${this.escapeInlineJsString(leftId)}', this.value)"
-                                    class="rounded-md border border-border-strong bg-surface-1 px-2 py-2 text-xs text-text-main">
-                                    <option value="">${wt('im.k944', 'Выберите соответствие...')}</option>
-                                    ${rightItems.map((right) => {
-                                        const rid = String(right?.id || '');
-                                        return `<option value="${this.escapeHtmlAttr(rid)}" ${currentVal === rid ? 'selected' : ''}>${this.escapeHtml(String(right?.text || rid))}</option>`;
-                                    }).join('')}
-                                </select>
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
-            </div>
-        `;
-    }
-
-    renderMicrocardsPairMatchResult(card, evalData) {
-        const backPayload = (card?.back && typeof card.back.payload === 'object') ? card.back.payload : {};
-        const pairs = Array.isArray(backPayload.pairs) ? backPayload.pairs : [];
-        const exps = Array.isArray(backPayload.explanations) ? backPayload.explanations : [];
-        const expByLeft = new Map(exps.map(e => [String(e?.left_id || ''), String(e?.text || '')]));
-        const score = Number(evalData?.partial_score);
-        return `
-            <div class="rounded-lg border border-border-strong bg-surface-2 p-3">
-                <div class="flex flex-wrap items-center gap-2 mb-2">
-                    <div class="text-[11px] uppercase tracking-wide text-text-secondary">${wt('im.k945', 'Результат')}</div>
-                    ${Number.isFinite(score) ? `<span class="px-2 py-0.5 rounded-full text-[10px] border border-info-light bg-info-lighter text-info-text">${this.escapeHtml(String(score))}%</span>` : ''}
-                </div>
-                <div class="space-y-1">
-                    ${pairs.map((p) => `
-                        <div class="text-xs text-text-main">
-                            <span class="font-mono text-text-secondary">${this.escapeHtml(String(p?.left_id || '?'))}</span>
-                            →
-                            <span class="font-mono text-text-secondary">${this.escapeHtml(String(p?.right_id || '?'))}</span>
-                            ${expByLeft.get(String(p?.left_id || '')) ? `<span class="text-text-secondary"> · ${this.escapeHtml(expByLeft.get(String(p?.left_id || '')))}</span>` : ''}
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        `;
-    }
-
-    setMicrocardsPairSelection(cardId, leftId, rightId) {
-        const cid = String(cardId || '');
-        const lid = String(leftId || '');
-        if (!cid || !lid) return;
-        if (!this.microcardsPairSelections || typeof this.microcardsPairSelections !== 'object') {
-            this.microcardsPairSelections = {};
-        }
-        if (!this.microcardsPairSelections[cid]) this.microcardsPairSelections[cid] = {};
-        this.microcardsPairSelections[cid][lid] = String(rightId || '');
-    }
-
-    revealCurrentMicrocard() {
-        this.microcardsReviewReveal = true;
-        this.microcardsReviewEvaluation = null;
-        if (this.modalPurpose === 'theory_analysis' && this.theorySubMode === 'microcards') this.renderTheoryAnalysisMode();
-    }
-
-    revealCurrentMicrocardPairMatch() {
-        const card = this.getCurrentMicrocard();
-        if (!card) return;
-        const cardId = String(card?.id || '');
-        const saved = (this.microcardsPairSelections && this.microcardsPairSelections[cardId]) ? this.microcardsPairSelections[cardId] : {};
-        const response = { mapping: saved || {} };
-        const backPayload = (card?.back && typeof card.back.payload === 'object') ? card.back.payload : {};
-        const pairs = Array.isArray(backPayload.pairs) ? backPayload.pairs : [];
-        let total = 0;
-        let correct = 0;
-        for (const p of pairs) {
-            const lid = String(p?.left_id || '');
-            const rid = String(p?.right_id || '');
-            if (!lid || !rid) continue;
-            total += 1;
-            if (String(saved?.[lid] || '') === rid) correct += 1;
-        }
-        this.microcardsReviewEvaluation = {
-            partial_score: total ? Math.round((correct / total) * 10000) / 100 : 0,
-            correct_pairs: correct,
-            total_pairs: total,
-        };
-        this.microcardsReviewReveal = true;
-        if (this.modalPurpose === 'theory_analysis' && this.theorySubMode === 'microcards') this.renderTheoryAnalysisMode();
-    }
-
-    async submitCurrentMicrocardRating(rating) {
-        const card = this.getCurrentMicrocard();
-        const deckId = String(this.microcardsActiveDeck?.id || '');
-        if (!card || !deckId) return { ok: false, error: 'no_active_card' };
-        if (!this.microcardsReviewReveal) {
-            this.showVoiceToast({
-                severity: 'warning',
-                what: wt('im.k351', 'Оценка карточки приостановлена.'),
-                impact: wt('im.k352', 'Ответ ещё не открыт.'),
-                next: wt('im.k353', 'Сначала откройте ответ или завершите проверку пар.'),
-            });
-            return { ok: false, error: 'reveal_required' };
-        }
-        this.microcardsReviewSubmitting = true;
-        if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
-        const startedAt = Number(this.microcardsReviewStartedAt || Date.now());
-        const responseTimeMs = Math.max(0, Date.now() - startedAt);
-        const responsePayload = String(card?.card_type || '') === 'pair_match'
-            ? { mapping: (this.microcardsPairSelections && this.microcardsPairSelections[String(card.id || '')]) ? this.microcardsPairSelections[String(card.id || '')] : {} }
-            : null;
-        try {
-            const resp = await fetch('/api/editor/microcards/review/submit', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    deck_id: deckId,
-                    card_id: card.id,
-                    rating: String(rating || 'good').toLowerCase(),
-                    session_id: this.microcardsSession?.id || null,
-                    response: responsePayload,
-                    response_time_ms: responseTimeMs,
-                }),
-            });
-            const data = await resp.json();
-            if (data.ok) {
-                if (data.session && typeof data.session === 'object') {
-                    this.microcardsSession = data.session;
-                }
-                if (this.microcardsActiveDeck && data.deck_stats) {
-                    this.microcardsActiveDeck.stats = data.deck_stats;
-                }
-                if (Number.isFinite(Number(data?.session?.cursor))) {
-                    this.microcardsQueueIndex = Math.max(0, Number(data.session.cursor));
-                } else {
-                    this.microcardsQueueIndex += 1;
-                }
-                this.microcardsReviewReveal = false;
-                this.microcardsReviewEvaluation = null;
-                this.microcardsReviewStartedAt = Date.now();
-                if (this.microcardsQueueIndex >= this.microcardsQueue.length) {
-                    this.showVoiceToast({
-                        severity: 'success',
-                        what: wt('im.k354', 'Сессия повторения завершена.'),
-                        impact: wt('im.k355', 'Очередь текущей колоды пройдена полностью.'),
-                        next: wt('im.k356', 'Можно запустить новую очередь или перейти к другой колоде.'),
-                    });
-                    this.microcardsSession = null;
-                    await this.loadMicrocardsDecks();
-                }
-            } else {
-                const err = String(data.error || '');
-                if (err.startsWith('session_')) {
-                    this.showVoiceToast({
-                        severity: 'warning',
-                        what: wt('im.k357', 'Текущая сессия устарела.'),
-                        impact: wt('im.k358', 'Рейтинг не сохранён.'),
-                        next: wt('im.k359', 'Откройте очередь колоды заново и повторите оценку.'),
-                    });
-                } else {
-                    this.showVoiceToast({
-                        severity: 'error',
-                        what: wt('im.k360', 'Оценка карточки не сохранена.'),
-                        impact: wt('im.k361', 'Прогресс этой карточки не обновлён.'),
-                        next: data.message || data.error || wt('im.k362', 'Повторите отправку оценки.'),
-                    });
-                }
-            }
-            return data;
-        } catch (e) {
-            console.error('[Microcards] submit review failed:', e);
-            this.showVoiceToast({
-                severity: 'error',
-                what: wt('im.k363', 'Сохранение оценки недоступно из-за сетевой ошибки.'),
-                impact: wt('im.k364', 'Прогресс карточки не обновлён.'),
-                next: wt('im.k365', 'Проверьте сеть и повторите отправку.'),
-            });
-            return { ok: false, error: 'network_error' };
-        } finally {
-            this.microcardsReviewSubmitting = false;
-            if (this.modalPurpose === 'theory_analysis' && this.theorySubMode === 'microcards') this.renderTheoryAnalysisMode();
-        }
     }
 
     // ── M11: Manual Microcards Editor ────────────────────────────────
@@ -6901,7 +6549,7 @@ text: Сердце человека состоит из [трёх] камер. �
         this.manualEditorPreviewCard = null;
         if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
         try {
-            const resp = await fetch(`/api/editor/microcards/decks/${encodeURIComponent(id)}`);
+            const resp = await fetch(`/api/v2/microcards/decks/${encodeURIComponent(id)}`);
             const data = await resp.json();
             if (data.ok && data.deck) {
                 this.manualEditorDeck = data.deck;
@@ -6924,7 +6572,7 @@ text: Сердце человека состоит из [трёх] камер. �
         this.manualEditorSaving = true;
         if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
         try {
-            const resp = await fetch('/api/editor/microcards/decks/create-manual', {
+            const resp = await fetch('/api/v2/microcards/decks', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name }),
@@ -6953,8 +6601,8 @@ text: Сердце человека состоит из [трёх] камер. �
         this.manualEditorSaving = true;
         if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
         try {
-            const resp = await fetch(`/api/editor/microcards/decks/${encodeURIComponent(deckId)}/rename`, {
-                method: 'POST',
+            const resp = await fetch(`/api/v2/microcards/decks/${encodeURIComponent(deckId)}`, {
+                method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name }),
             });
@@ -6978,29 +6626,6 @@ text: Сердце человека состоит из [трёх] камер. �
         }
     }
 
-    async manualEditorArchiveDeck(deckId, archive = true) {
-        try {
-            const resp = await fetch(`/api/editor/microcards/decks/${encodeURIComponent(deckId)}/archive`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ archive }),
-            });
-            const data = await resp.json();
-            if (data.ok) {
-                this.showToast(archive ? wt('im.k377', 'Колода архивирована') : wt('im.k378', 'Колода восстановлена'), 'success');
-                await this.loadMicrocardsDecks();
-                if (this.manualEditorDeck?.id === deckId) {
-                    this.manualEditorDeck = null;
-                }
-            } else {
-                this.showToast(data.error || wt('im.k379', 'Ошибка'), 'error');
-            }
-        } catch (e) {
-            console.error('[M11] archive deck failed:', e);
-            this.showToast(wt('im.k380', 'Ошибка сети'), 'error');
-        }
-        if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
-    }
 
     async manualEditorDeleteDeck(deckId) {
         const confirmed = await this.confirmAction({
@@ -7012,7 +6637,7 @@ text: Сердце человека состоит из [трёх] камер. �
         });
         if (!confirmed) return;
         try {
-            const resp = await fetch(`/api/editor/microcards/decks/${encodeURIComponent(deckId)}`, { method: 'DELETE' });
+            const resp = await fetch(`/api/v2/microcards/decks/${encodeURIComponent(deckId)}`, { method: 'DELETE' });
             const data = await resp.json();
             if (data.ok) {
                 this.showToast(wt('im.k385', 'Колода удалена'), 'success');
@@ -7174,6 +6799,10 @@ text: Сердце человека состоит из [трёх] камер. �
         const difficulty_hint = String(diffEl?.value || 'medium');
 
         const isPairMatch = form.card_type === 'pair_match';
+        if (isPairMatch) {
+            this.showToast(wt('im.k949', 'pair_match-карточки больше не поддерживаются: пары хранятся как обычные «вопрос → ответ».'), 'warning');
+            return;
+        }
 
         // M15: pair_match validation
         let pairs = null;
@@ -7197,17 +6826,13 @@ text: Сердце человека состоит из [трёх] камер. �
         try {
             let url, method, body;
             if (form.mode === 'edit' && form.card_id) {
-                url = `/api/editor/microcards/decks/${encodeURIComponent(deckId)}/cards/${encodeURIComponent(form.card_id)}`;
-                method = 'PUT';
-                body = isPairMatch
-                    ? { card_type: 'pair_match', front_text, pairs, tags, difficulty_hint }
-                    : { front_text, back_text, tags, difficulty_hint };
+                url = `/api/v2/microcards/decks/${encodeURIComponent(deckId)}/cards/${encodeURIComponent(form.card_id)}`;
+                method = 'PATCH';
+                body = { front_text, back_text };
             } else {
-                url = `/api/editor/microcards/decks/${encodeURIComponent(deckId)}/cards`;
+                url = `/api/v2/microcards/decks/${encodeURIComponent(deckId)}/cards`;
                 method = 'POST';
-                body = isPairMatch
-                    ? { card_type: 'pair_match', front_text, pairs, tags, difficulty_hint }
-                    : { front_text, back_text, tags, difficulty_hint };
+                body = { front_text, back_text };
             }
             const resp = await fetch(url, {
                 method,
@@ -7253,7 +6878,7 @@ text: Сердце человека состоит из [трёх] камер. �
         });
         if (!confirmed) return;
         try {
-            const resp = await fetch(`/api/editor/microcards/decks/${encodeURIComponent(deckId)}/cards/${encodeURIComponent(cardId)}`, { method: 'DELETE' });
+            const resp = await fetch(`/api/v2/microcards/decks/${encodeURIComponent(deckId)}/cards/${encodeURIComponent(cardId)}`, { method: 'DELETE' });
             const data = await resp.json();
             if (data.ok) {
                 this.showToast(wt('im.k412', 'Карточка удалена'), 'success');
@@ -7277,7 +6902,7 @@ text: Сердце человека состоит из [трёх] камер. �
         if (targetIdx < 0 || targetIdx >= ids.length) return;
         [ids[idx], ids[targetIdx]] = [ids[targetIdx], ids[idx]];
         try {
-            await fetch(`/api/editor/microcards/decks/${encodeURIComponent(deck.id)}/reorder-cards`, {
+            await fetch(`/api/v2/microcards/decks/${encodeURIComponent(deck.id)}/cards/reorder`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ card_ids: ids }),
@@ -7798,12 +7423,29 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
         this.mcImportExecuteResult = null;
         if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
         try {
-            const resp = await fetch('/api/editor/microcards/import/parse-text', {
+            const resp = await fetch('/api/v2/microcards/import/analyze', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: this.mcImportText }),
+                body: JSON.stringify({ format: 'auto', content: this.mcImportText }),
             });
-            const data = await resp.json();
+            const raw = await resp.json();
+            // V2 analyze rows → the {items, summary} shape this panel renders.
+            const okRows = Array.isArray(raw.rows) ? raw.rows.filter(r => r && r.status === 'ok') : [];
+            const data = {
+                ok: !!raw.ok,
+                error: raw.error,
+                items: okRows.map(r => ({
+                    card_type: 'fact_recall',
+                    front: { text: String(r.front || '') },
+                    back: { text: String(r.back || '') },
+                    hint: r.hint || null,
+                })),
+                summary: {
+                    total: raw.counts?.total ?? 0,
+                    ok: raw.counts?.ok ?? 0,
+                    errors: raw.counts?.errors ?? 0,
+                },
+            };
             this.mcImportParsedResult = data;
             if (!data.ok && !data.items?.length) {
                 this.showToast(data.error || wt('im.k440', 'Ошибка парсинга'), 'error');
@@ -7831,17 +7473,28 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
         this.mcImportExecuting = true;
         if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
         try {
-            const resp = await fetch('/api/editor/microcards/import/execute-text', {
+            let deckId = this.mcImportTargetDeckId;
+            if (this.mcImportMode === 'create_deck') {
+                const created = await fetch('/api/v2/microcards/decks', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: this.mcImportDeckName || wt('im.k950', 'Импортированная колода') }),
+                });
+                const createdData = await created.json();
+                if (!createdData.ok || !createdData.deck?.id) {
+                    this.mcImportExecuteResult = createdData;
+                    this.showToast(createdData.error || wt('im.k444', 'Ошибка импорта'), 'error');
+                    return createdData;
+                }
+                deckId = createdData.deck.id;
+            }
+            const resp = await fetch(`/api/v2/microcards/decks/${encodeURIComponent(deckId)}/import/auto`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    items: parsed.items,
-                    mode: this.mcImportMode,
-                    target_deck_id: this.mcImportMode === 'append_to_deck' ? this.mcImportTargetDeckId : undefined,
-                    deck_name: this.mcImportMode === 'create_deck' ? (this.mcImportDeckName || undefined) : undefined,
-                }),
+                body: JSON.stringify({ text: this.mcImportText }),
             });
-            const data = await resp.json();
+            const raw = await resp.json();
+            const data = { ...raw, added_cards: raw.added_count || 0 };
             this.mcImportExecuteResult = data;
             if (data.ok) {
                 this.showToast(`${wt('im.k709', 'Импортировано')} ${data.added_cards || 0} ${wt('im.k706', 'карточек')}.`, 'success');
@@ -7918,18 +7571,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
             <div class="rounded-xl border border-primary-light bg-primary-lighter/10 p-4 space-y-3">
                 <div class="flex items-center justify-between gap-2">
                     <div class="text-xs font-bold text-text-main">${form.mode === 'edit' ? wt('im.k967', 'Редактирование карточки') : wt('im.k968', 'Новая карточка')}</div>
-                    ${form.mode !== 'edit' ? `
-                        <div class="flex rounded-lg border border-border-strong overflow-hidden text-[10px] font-bold">
-                            <button onclick="dashboard.importManager.manualEditorCardForm.card_type='fact_recall'; dashboard.importManager.renderTheoryAnalysisMode();"
-                                class="px-3 py-1.5 transition-colors ${!isPairMatch ? 'bg-primary text-primary-fg' : 'bg-surface-1 text-text-secondary hover:bg-bg-hover'}">
-                                ${wt('im.k596', 'Вопрос/Ответ')}
-                            </button>
-                            <button onclick="dashboard.importManager.manualEditorCardForm.card_type='pair_match'; if(!dashboard.importManager.manualEditorCardForm.pairs||dashboard.importManager.manualEditorCardForm.pairs.length<2) dashboard.importManager.manualEditorCardForm.pairs=[{left:'',right:''},{left:'',right:''}]; dashboard.importManager.renderTheoryAnalysisMode();"
-                                class="px-3 py-1.5 transition-colors ${isPairMatch ? 'bg-primary text-primary-fg' : 'bg-surface-1 text-text-secondary hover:bg-bg-hover'}">
-                                ${wt('im.k597', 'Сопоставление')}
-                            </button>
-                        </div>
-                    ` : (isPairMatch ? '<span class="px-2 py-0.5 rounded text-[9px] font-bold border border-primary-light bg-primary-lighter text-primary uppercase">pair_match</span>' : '')}
+                    ${''/* D2: pair_match card type is retired — pairs live as plain Q/A cards */}
                 </div>
                 <div>
                     <label class="block text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1">${isPairMatch ? wt('im.k969', 'Инструкция (лицевая сторона)') : wt('im.k970', 'Лицевая сторона (вопрос)')}</label>
@@ -8124,10 +7766,10 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                                             <span class="material-symbols-outlined text-[14px]">add</span> ${wt('im.k988', 'Карточка')}
                                         </button>
                                     ` : ''}
-                                    <button onclick="dashboard.importManager.manualEditorArchiveDeck('${this.escapeInlineJsString(String(deck.id))}', ${!isArchived})"
+                                    <button onclick="dashboard.importManager.openMicrocardsDeckQueue('${this.escapeInlineJsString(String(deck.id))}')"
                                         class="flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold rounded-lg border border-border-strong text-text-secondary hover:bg-bg-hover transition-colors"
-                                        title=wt('im.k461', "${isArchived ? wt('im.k459', 'Разархивировать') : wt('im.k460', 'Архивировать')}")>
-                                        <span class="material-symbols-outlined text-[14px]">${isArchived ? 'unarchive' : 'archive'}</span>
+                                        title="${wt('im.k946', 'Открыть в Микрокарточках')}">
+                                        <span class="material-symbols-outlined text-[14px]">open_in_new</span>
                                     </button>
                                     <button onclick="dashboard.importManager.manualEditorDeleteDeck('${this.escapeInlineJsString(String(deck.id))}')"
                                         class="flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold rounded-lg border border-error-light text-error-text hover:bg-error-lighter transition-colors"
