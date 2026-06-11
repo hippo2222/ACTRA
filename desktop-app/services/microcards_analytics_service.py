@@ -87,6 +87,10 @@ class MicrocardsAnalyticsService:
     ) -> None:
         self.data_dir = Path(data_dir)
         self.logger = logging.getLogger(self.__class__.__name__)
+        # Same source of truth as MicrocardsServiceV2 (files on desktop,
+        # Postgres in the hosted runtime).
+        from persistence.microcards_v2_storage import resolve_microcards_storage
+        self._storage = resolve_microcards_storage(self.data_dir)
         self._summary_cache_ttl_seconds = max(10, int(summary_cache_ttl_seconds or 180))
         self._dynamics_cache_ttl_seconds = max(10, int(dynamics_cache_ttl_seconds or 180))
         self._summary_cache: Dict[str, Tuple[Dict[str, Any], float]] = {}
@@ -108,6 +112,10 @@ class MicrocardsAnalyticsService:
 
     def _guard_hosted_shadow_read(self, operation: str) -> None:
         if not _is_hosted_runtime():
+            return
+        # The V2 storage resolver gives this service a Postgres-backed source
+        # of truth in hosted runs — nothing legacy/filesystem about it anymore.
+        if getattr(self._storage, "backend_name", "") == "postgres":
             return
         self.logger.error(
             "[HOSTED][DEGRADED] Blocked legacy filesystem microcards analytics read for %s because hosted source of truth is not implemented",
@@ -439,20 +447,16 @@ class MicrocardsAnalyticsService:
             return default
 
     def _load_review_events(self, user_id: str) -> List[Dict[str, Any]]:
-        payload = self._read_json_file(
-            self.data_dir / "users" / user_id / "microcards" / "review_events.json",
-            {"items": []},
-        )
-        items = payload.get("items") if isinstance(payload, dict) else []
+        payload = self._storage.get_user_doc(user_id, "events", [])
+        # V2 stores events as a bare list; the legacy V1 file used an
+        # {"items": [...]} envelope — accept both.
+        items = payload.get("items") if isinstance(payload, dict) else payload
         if not isinstance(items, list):
             return []
         return [item for item in items if isinstance(item, dict)]
 
     def _load_review_states(self, user_id: str) -> Dict[str, Dict[str, Any]]:
-        payload = self._read_json_file(
-            self.data_dir / "users" / user_id / "microcards" / "review_states.json",
-            {"items": {}},
-        )
+        payload = self._storage.get_user_doc(user_id, "states", {"items": {}})
         items = payload.get("items") if isinstance(payload, dict) else {}
         if not isinstance(items, dict):
             return {}
@@ -468,12 +472,6 @@ class MicrocardsAnalyticsService:
         return out
 
     def _load_decks(self) -> List[Dict[str, Any]]:
-        decks_root = self.data_dir / "microcards" / "decks"
-        if not decks_root.exists():
-            return []
-        decks: List[Dict[str, Any]] = []
-        for path in sorted(decks_root.glob("*.json"), key=lambda item: item.name):
-            payload = self._read_json_file(path, None)
-            if isinstance(payload, dict):
-                decks.append(payload)
+        decks = [d for d in self._storage.list_deck_docs() if isinstance(d, dict)]
+        decks.sort(key=lambda d: str(d.get("id") or ""))
         return decks

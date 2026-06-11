@@ -678,17 +678,19 @@ class CatalogService:
             requester = self._normalize_optional_text(requested_by_user_id)
             in_library = False
             if requester:
-                user_decks_dir = self.users_dir / requester / "microcards" / "decks"
-                if user_decks_dir.exists():
-                    for p in user_decks_dir.glob("*.json"):
-                        try:
-                            with open(p, "r", encoding="utf-8") as f:
-                                deck_data = json.load(f)
-                                if str(deck_data.get("catalog_item_id")) == item_id:
-                                    in_library = True
-                                    break
-                        except Exception:
-                            pass
+                # V2 decks live in the shared store (files or Postgres) — go
+                # through the same storage resolver the microcards service
+                # uses. (The old per-user path here was the V1 layout and
+                # always reported "not in library" for V2 decks.)
+                try:
+                    from persistence.microcards_v2_storage import resolve_microcards_storage
+                    storage = resolve_microcards_storage(self.users_dir.parent)
+                    for deck_data in storage.list_deck_docs(owner_user_id=requester):
+                        if str(deck_data.get("catalog_item_id")) == item_id:
+                            in_library = True
+                            break
+                except Exception:
+                    pass
             result = {
                 "ok": True,
                 "requested_by_user_id": requester,

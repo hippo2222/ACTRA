@@ -196,18 +196,41 @@ first-try-звёзды, покарточный L1-гейт, прозрачный
   `/cards/bulk-delete` и `/cards/bulk-restore`. Undo — action-тост
   «Отменить» (7 сек) вместо confirm. Без переноса между колодами (решение).
 
-## Фаза 5 — инфраструктура (параллелизуется, но завершается последней)
+## Фаза 5 — инфраструктура
 
-5.1 V2-хранение → Postgres: выделить storage-интерфейс в MicrocardsServiceV2
-  (decks/states/events/sessions/records/runs), Postgres-реализация JSONB по
-  образцу Hosted*-репозиториев, скрипт миграции из ./data, cutover на проде
-  (Hetzner, docker compose --env-file .env.hosted).
-5.2 Выпил V1: предварительно переселить НЕ-микрокарточные роуты из
-  `routes/microcards_routes.py` (theory rollout и пр.); удалить
-  MicrocardsService(V1), HostedMicrocardsService, V1-роуты, M14-флаги
-  перенацелить на V2 или удалить; обновить welcome/paddle-readiness скрипты,
-  smoke-гейты (`npm run smoke:microcards:hosted`) и server.py контракт
-  (source_of_truth).
+5.1 ✅ ВЫПОЛНЕНА 2026-06-11. V2-хранение за интерфейсом:
+  `persistence/microcards_v2_storage.py` — FileMicrocardsStorage (байт-в-байт
+  историческая раскладка, дефолт) и PostgresMicrocardsStorage (JSONB:
+  `actra_microcards_v2_decks` + `actra_microcards_v2_user_docs`, ленивый
+  ensure_schema, owner-индекс). Выбор: hosted_web + ACTRA_POSTGRES_DSN →
+  Postgres, иначе файлы. Сервис V2 целиком на бэкенде (34 точки IO).
+  Через ТОТ ЖЕ резолвер читают M5-аналитика и calendar backfill — попутно
+  починен их давний баг: оба ждали V1-обёртку {"items": []}, а V2 хранит
+  события голым списком, т.е. событийные агрегаты/бэкфилл для V2 были
+  пустыми (теперь принимаются оба формата). Каталожный preview
+  «уже в библиотеке» для колод тоже переведён на резолвер (смотрел в
+  V1-путь users/<uid>/microcards/decks). Удаление аккаунта чистит новые
+  таблицы. Миграция: `tools/migrate_microcards_files_to_postgres.py`
+  (идемпотентный upsert, --dry-run, чеклист cutover в докстринге).
+  ВАЖНО для деплоя: в hosted-окружении бэкенд переключится сам — миграцию
+  запускать в том же maintenance-окне, что и деплой.
+
+5.2 ПЕРЕОЦЕНЕНА (находка аудита 2026-06-11): V1 — НЕ мёртвый код.
+  Редактор комплексов живёт на `/api/editor/microcards/*` (~15 вызовов в
+  frontend/Editor/import_manager.js): колоды из AI-анализа
+  (from-analysis/append-from-analysis), своя очередь повторения + review
+  submit, ручной CRUD/rename/archive. Поэтому «выпил V1» = отдельный
+  подпроект «миграция editor-поверхности микрокарточек на V2»:
+  (а) перевести editor-фронт на /api/v2 (или v1-роуты на V2-сервис) —
+      внимание: у V1 другая схема колод (per-user, payload.meta) и свой
+      мини-режим прохождения в редакторе;
+  (б) после этого удалить MicrocardsService(V1), HostedMicrocardsService,
+      Hosted*-репозитории V1, M14-rollout-машинерию в server.py,
+      v1-роуты (theory-rollout роуты предварительно переселить);
+  (в) обновить smoke-гейты и контракт server.py.
+  Контракт server.py уже актуализирован: source_of_truth = V2 Postgres
+  storage (user surface) + V1 hosted-репозитории (editor surface, до
+  миграции).
 
 ## Приоритет
 

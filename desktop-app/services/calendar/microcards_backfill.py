@@ -357,8 +357,12 @@ def _save_settings(path: Path, settings: UserCalendarSettings) -> None:
 
 
 def _load_review_events(data_root: Path, user_id: str) -> List[Dict[str, Any]]:
-    payload = _read_json_file(_review_events_path(data_root, user_id), {})
-    items = payload.get("items") if isinstance(payload, dict) else []
+    # Same source of truth as MicrocardsServiceV2 (files on desktop, Postgres
+    # in the hosted runtime). V2 stores events as a bare list; the legacy V1
+    # file used an {"items": [...]} envelope — accept both.
+    from persistence.microcards_v2_storage import resolve_microcards_storage
+    payload = resolve_microcards_storage(data_root).get_user_doc(user_id, "events", [])
+    items = payload.get("items") if isinstance(payload, dict) else payload
     if not isinstance(items, list):
         return []
     return [item for item in items if isinstance(item, dict)]

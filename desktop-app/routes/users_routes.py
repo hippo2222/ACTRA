@@ -524,6 +524,9 @@ def _delete_owned_hosted_postgres_records(ctx: Any, user_id: str) -> Dict[str, i
     HostedCalendarRepository(dsn).ensure_schema()
     HostedMicrocardsReviewRepository(dsn).ensure_schema()
     HostedMicrocardsRepository(dsn).ensure_schema()
+    # Microcards V2 storage tables (current stack)
+    from persistence.microcards_v2_storage import PostgresMicrocardsStorage
+    PostgresMicrocardsStorage(dsn).ensure_schema()
     HostedCatalogRepository(dsn).ensure_schema()
     HostedAssetRepository(dsn).ensure_schema()
 
@@ -632,6 +635,19 @@ def _delete_owned_hosted_postgres_records(ctx: Any, user_id: str) -> Dict[str, i
             )
             report["microcards_review_docs_deleted"] = int(cur.rowcount or 0)
 
+            # Microcards V2 storage (current stack): per-user documents and
+            # owned deck documents (see persistence/microcards_v2_storage.py).
+            cur.execute(
+                "DELETE FROM actra_microcards_v2_user_docs WHERE user_id = %s",
+                (clean_user_id,),
+            )
+            report["microcards_review_docs_deleted"] += int(cur.rowcount or 0)
+            cur.execute(
+                "DELETE FROM actra_microcards_v2_decks WHERE owner_user_id = %s",
+                (clean_user_id,),
+            )
+            report["microcards_decks_deleted"] += int(cur.rowcount or 0)
+
             cur.execute(
                 """
                 DELETE FROM actra_complex_library_entries
@@ -695,7 +711,7 @@ def _delete_owned_hosted_postgres_records(ctx: Any, user_id: str) -> Dict[str, i
                 """,
                 (clean_user_id,),
             )
-            report["microcards_decks_deleted"] = int(cur.rowcount or 0)
+            report["microcards_decks_deleted"] += int(cur.rowcount or 0)
 
             cur.execute(
                 """

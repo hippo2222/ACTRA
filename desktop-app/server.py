@@ -453,7 +453,7 @@ def _build_finish_line_subsystems(
         "microcards": {
             "finish_line_status": "green",
             "official_gate": "npm run smoke:microcards:hosted",
-            "source_of_truth": "HostedMicrocardsRepository + HostedMicrocardsReviewRepository",
+            "source_of_truth": "PostgresMicrocardsStorage (V2 user surface) + HostedMicrocardsRepository/HostedMicrocardsReviewRepository (legacy V1 editor surface)",
             "required_signals": {
                 "user_service_storage_ready": bool(checks.get("user_service_storage_ready")),
                 "storage_service_storage_ready": bool(checks.get("storage_service_storage_ready")),
@@ -462,6 +462,8 @@ def _build_finish_line_subsystems(
             "degraded_signals": {},
             "notes": [
                 "AI-driven deck generation remains outside this contour under the separate AI placeholder contract.",
+                "The /api/v2/microcards user surface persists via persistence/microcards_v2_storage.py (Postgres in hosted runs; migrate files with tools/migrate_microcards_files_to_postgres.py).",
+                "The /api/editor/microcards V1 surface is still live (editor deck-from-analysis flows) and keeps its own hosted repositories until that surface migrates to V2.",
             ],
         },
         "readiness_degraded_signaling": {

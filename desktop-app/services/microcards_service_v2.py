@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from logic.fsrs import FSRS, Rating, State
+from persistence.microcards_v2_storage import resolve_microcards_storage
 
 logger = logging.getLogger(__name__)
 
@@ -149,6 +150,9 @@ class MicrocardsServiceV2:
         self.data_dir = Path(data_dir)
         self.user_id = _resolve_microcards_user_id(user_id)
         self.fsrs = FSRS()
+        # Files on desktop, Postgres in the hosted runtime (one source of truth
+        # shared with analytics/backfill readers).
+        self.storage = resolve_microcards_storage(self.data_dir)
         # Set by the route layer; used to resolve linked (catalog-referenced) decks
         # read-only without copying their content.
         self.catalog_service = None
@@ -184,7 +188,7 @@ class MicrocardsServiceV2:
 
     def get_settings(self) -> Dict[str, Any]:
         """User study settings with defaults applied and values clamped to safe ranges."""
-        raw = _read_json(self._settings_path, {})
+        raw = self.storage.get_user_doc(self.user_id, "settings", {})
         s = dict(self.DEFAULT_SETTINGS)
         if isinstance(raw, dict):
             for k in s:
@@ -228,7 +232,7 @@ class MicrocardsServiceV2:
                 current["daily_goal"] = max(5, min(int(daily_goal), 200))
             except (ValueError, TypeError):
                 pass
-        _write_json(self._settings_path, current)
+        self.storage.put_user_doc(self.user_id, "settings", current)
         return self.get_settings()
 
     @property
@@ -247,7 +251,7 @@ class MicrocardsServiceV2:
         return self._decks_root / f"{deck_id}.json"
 
     def _read_states(self) -> Dict[str, Dict[str, Any]]:
-        payload = _read_json(self._states_path, {"schema_version": "2.0", "user_id": self.user_id, "items": {}})
+        payload = self.storage.get_user_doc(self.user_id, "states", {"schema_version": "2.0", "user_id": self.user_id, "items": {}})
         items = payload.get("items") if isinstance(payload, dict) else {}
         if not isinstance(items, dict):
             items = {}
@@ -264,17 +268,17 @@ class MicrocardsServiceV2:
             "updated_at": _utc_now_iso(),
             "items": states
         }
-        _write_json(self._states_path, payload)
+        self.storage.put_user_doc(self.user_id, "states", payload)
 
     def _append_event(self, event: Dict[str, Any]) -> None:
-        events = _read_json(self._events_path, [])
+        events = self.storage.get_user_doc(self.user_id, "events", [])
         if not isinstance(events, list):
             events = []
         events.append(event)
         # Cap events to prevent bloating
         if len(events) > 5000:
             events = events[-5000:]
-        _write_json(self._events_path, events)
+        self.storage.put_user_doc(self.user_id, "events", events)
 
     # Active-session slots per deck: a paused RUN must not block the daily
     # REVIEW (and vice versa), and L1/L2 runs are tracked independently.
@@ -287,7 +291,7 @@ class MicrocardsServiceV2:
         return "review"
 
     def _read_sessions(self) -> Dict[str, Any]:
-        payload = _read_json(self._sessions_path, {"schema_version": "2.0", "user_id": self.user_id, "items": {}, "active_by_deck": {}})
+        payload = self.storage.get_user_doc(self.user_id, "sessions", {"schema_version": "2.0", "user_id": self.user_id, "items": {}, "active_by_deck": {}})
         items = payload.get("items")
         active_by_deck = payload.get("active_by_deck")
         if not isinstance(items, dict):
@@ -311,7 +315,7 @@ class MicrocardsServiceV2:
         }
 
     def _write_sessions(self, sessions_payload: Dict[str, Any]) -> None:
-        _write_json(self._sessions_path, sessions_payload)
+        self.storage.put_user_doc(self.user_id, "sessions", sessions_payload)
 
     def _get_session(self, session_id: str) -> Optional[Dict[str, Any]]:
         sessions = self._read_sessions()
@@ -422,7 +426,7 @@ class MicrocardsServiceV2:
     RECORDS_SCHEMA = "2.0"
 
     def _read_records(self) -> Dict[str, Dict[str, Any]]:
-        payload = _read_json(self._records_path, {"schema_version": self.RECORDS_SCHEMA, "user_id": self.user_id, "items": {}})
+        payload = self.storage.get_user_doc(self.user_id, "records", {"schema_version": self.RECORDS_SCHEMA, "user_id": self.user_id, "items": {}})
         if not isinstance(payload, dict) or payload.get("schema_version") != self.RECORDS_SCHEMA:
             return {}
         items = payload.get("items")
@@ -437,7 +441,7 @@ class MicrocardsServiceV2:
             "updated_at": _utc_now_iso(),
             "items": records,
         }
-        _write_json(self._records_path, payload)
+        self.storage.put_user_doc(self.user_id, "records", payload)
 
     def get_all_records(self) -> Dict[str, Dict[str, Any]]:
         """Return all deck records for this user."""
@@ -572,8 +576,7 @@ class MicrocardsServiceV2:
         return _s(deck.get("created_by_user_id")) == _s(self.user_id)
 
     def get_deck(self, deck_id: str) -> Optional[Dict[str, Any]]:
-        path = self._deck_path(deck_id)
-        deck = _read_json(path, None)
+        deck = self.storage.get_deck_doc(deck_id)
         if not isinstance(deck, dict):
             return None
         # Ownership guard: prevents cross-user read/update/delete (IDOR).
@@ -598,13 +601,13 @@ class MicrocardsServiceV2:
                     # carry this user's review progress over to the matching
                     # new cards before the old ids are forgotten.
                     self._reconcile_linked_states(current_ids, cards)
-                    # Update cache on disk
-                    raw_deck = _read_json(path, None)
+                    # Update the cached metadata on the stored doc
+                    raw_deck = self.storage.get_deck_doc(deck_id)
                     if isinstance(raw_deck, dict):
                         raw_deck["linked_card_ids"] = resolved_ids
                         raw_deck["card_count"] = len(cards)
                         raw_deck["updated_at"] = _utc_now_iso()
-                        _write_json(path, raw_deck)
+                        self.storage.put_deck_doc(deck_id, raw_deck)
                     deck["linked_card_ids"] = resolved_ids
                     deck["card_count"] = len(cards)
             else:
@@ -694,13 +697,11 @@ class MicrocardsServiceV2:
             raise ValueError("deck_is_linked_readonly")
 
     def list_decks(self, limit: int = 100) -> List[Dict[str, Any]]:
-        paths = list(self._decks_root.glob("*.json"))
         decks: List[Dict[str, Any]] = []
         states = self._read_states()
         records = self._read_records()
 
-        for p in paths:
-            deck = _read_json(p, None)
+        for deck in self.storage.list_deck_docs(owner_user_id=self.user_id):
             if isinstance(deck, dict) and self._owns_deck(deck):
                 deck_id = deck.get("id")
                 is_linked = bool(deck.get("linked"))
@@ -800,7 +801,7 @@ class MicrocardsServiceV2:
             "created_at": now_iso,
             "updated_at": now_iso,
         }
-        _write_json(self._deck_path(deck_id), deck)
+        self.storage.put_deck_doc(deck_id, deck)
         return deck
 
     def create_linked_deck(self, catalog_item_id: str, snapshot: Dict[str, Any], *,
@@ -832,7 +833,7 @@ class MicrocardsServiceV2:
             "created_at": now_iso,
             "updated_at": now_iso,
         }
-        _write_json(self._deck_path(deck_id), deck)
+        self.storage.put_deck_doc(deck_id, deck)
         return deck
 
     def update_deck(self, deck_id: str, name: Optional[str] = None, description: Optional[str] = None,
@@ -870,25 +871,21 @@ class MicrocardsServiceV2:
         if deck.get("linked"):
             # Persist via the raw doc: get_deck inflates linked decks with
             # resolved cards / access fields that must never hit the disk.
-            raw = _read_json(self._deck_path(deck_id), None)
+            raw = self.storage.get_deck_doc(deck_id)
             if isinstance(raw, dict):
                 if direction is not None:
                     raw["direction"] = deck["direction"]
                 raw["updated_at"] = deck["updated_at"]
-                _write_json(self._deck_path(deck_id), raw)
+                self.storage.put_deck_doc(deck_id, raw)
             return deck
-        _write_json(self._deck_path(deck_id), deck)
+        self.storage.put_deck_doc(deck_id, deck)
         return deck
 
     def delete_deck(self, deck_id: str) -> bool:
         # Ownership guard: get_deck returns None for decks the user doesn't own.
         if not self.get_deck(deck_id):
             return False
-        path = self._deck_path(deck_id)
-        if path.exists():
-            path.unlink()
-            return True
-        return False
+        return self.storage.delete_deck_doc(deck_id)
 
     def find_deck_by_catalog_item_id(self, catalog_item_id: str) -> Optional[Dict[str, Any]]:
         """Return the current user's deck imported from a given catalog item, if any.
@@ -899,8 +896,7 @@ class MicrocardsServiceV2:
         cid = _s(catalog_item_id)
         if not cid:
             return None
-        for path in self._decks_root.glob("*.json"):
-            deck = _read_json(path, None)
+        for deck in self.storage.list_deck_docs(owner_user_id=self.user_id):
             if (isinstance(deck, dict)
                     and _s(deck.get("catalog_item_id")) == cid
                     and self._owns_deck(deck)):
@@ -979,7 +975,7 @@ class MicrocardsServiceV2:
         cards.append(card)
         deck["cards"] = cards
         deck["updated_at"] = now_iso
-        _write_json(self._deck_path(deck_id), deck)
+        self.storage.put_deck_doc(deck_id, deck)
         return card
 
     def update_card(self, deck_id: str, card_id: str, front_text: Optional[str] = None, back_text: Optional[str] = None, hint: Optional[str] = None, front_image_url: Optional[str] = None, back_image_url: Optional[str] = None, status: Optional[str] = None, acceptable_answers: Optional[List[str]] = None, front_image_attribution: Any = _UNSET, back_image_attribution: Any = _UNSET) -> Dict[str, Any]:
@@ -1014,7 +1010,7 @@ class MicrocardsServiceV2:
 
         card["updated_at"] = _utc_now_iso()
         deck["updated_at"] = _utc_now_iso()
-        _write_json(self._deck_path(deck_id), deck)
+        self.storage.put_deck_doc(deck_id, deck)
         return card
 
     def delete_card(self, deck_id: str, card_id: str) -> bool:
@@ -1031,7 +1027,7 @@ class MicrocardsServiceV2:
         cards.pop(idx)
         deck["cards"] = cards
         deck["updated_at"] = _utc_now_iso()
-        _write_json(self._deck_path(deck_id), deck)
+        self.storage.put_deck_doc(deck_id, deck)
 
         # Active (e.g. paused) sessions may still hold this card in their
         # queues — scrub every slot so resuming doesn't trip over a ghost id.
@@ -1066,7 +1062,7 @@ class MicrocardsServiceV2:
         remaining = [c for c in cards if _s(c.get("id")) not in wanted]
         deck["cards"] = remaining
         deck["updated_at"] = _utc_now_iso()
-        _write_json(self._deck_path(deck_id), deck)
+        self.storage.put_deck_doc(deck_id, deck)
 
         valid_ids = {_s(c.get("id")) for c in remaining}
         for active in self._get_active_sessions_for_deck(deck_id).values():
@@ -1109,7 +1105,7 @@ class MicrocardsServiceV2:
         if clean:
             deck["cards"] = cards
             deck["updated_at"] = _utc_now_iso()
-            _write_json(self._deck_path(deck_id), deck)
+            self.storage.put_deck_doc(deck_id, deck)
         return {"restored": len(clean), "total": len(cards)}
 
     def reorder_cards(self, deck_id: str, card_ids: List[str]) -> Dict[str, Any]:
@@ -1132,7 +1128,7 @@ class MicrocardsServiceV2:
                 
         deck["cards"] = new_cards
         deck["updated_at"] = _utc_now_iso()
-        _write_json(self._deck_path(deck_id), deck)
+        self.storage.put_deck_doc(deck_id, deck)
         return deck
 
     # ── Learning Sessions ─────────────────────────────────────────────
@@ -1777,7 +1773,7 @@ class MicrocardsServiceV2:
         """
         from collections import Counter
 
-        events = _read_json(self._events_path, [])
+        events = self.storage.get_user_doc(self.user_id, "events", [])
         if not isinstance(events, list):
             events = []
         states = self._read_states()
