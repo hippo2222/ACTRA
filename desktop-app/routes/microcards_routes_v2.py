@@ -830,6 +830,35 @@ def import_test_format(deck_id: str):
         logger.exception("[HTTP] v2/microcards/import test failed: %s", exc)
         return jsonify({"ok": False, "error": "test_import_failed"}), 500
 
+@microcards_v2_bp.route("/decks/<string:deck_id>/import/file", methods=["POST"])
+def import_binary_file(deck_id: str):
+    """Import a binary upload (.apkg Anki export / .docx Word document)."""
+    guest_check = _check_guest()
+    if guest_check:
+        return guest_check
+    if "file" not in request.files:
+        return jsonify({"ok": False, "error": "file_required"}), 400
+    f = request.files["file"]
+    fname = (f.filename or "").lower()
+    raw_opts = request.form.get("options")
+    try:
+        options = json.loads(raw_opts) if raw_opts else None
+    except Exception:
+        options = None
+    try:
+        svc = _get_svc()
+        result = svc.import_file(deck_id, fname, f.read(), options=options)
+        return jsonify({"ok": True, "added_count": len(result["items"]),
+                        "skipped_duplicates": result.get("skipped_duplicates", 0)})
+    except LookupError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 404
+    except ValueError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+    except Exception as exc:
+        logger.exception("[HTTP] v2/microcards/import file failed: %s", exc)
+        return jsonify({"ok": False, "error": "file_import_failed"}), 500
+
+
 @microcards_v2_bp.route("/decks/<string:deck_id>/import/analyze", methods=["POST"])
 def import_analyze(deck_id: str):
     """Dry-run preview: parse content with given format/options, no cards are created."""
@@ -840,13 +869,31 @@ def import_analyze(deck_id: str):
     # Preview supports a multipart file upload too, so it decodes (e.g. cp1251)
     # exactly like the real import instead of relying on the browser reading text.
     if "file" in request.files:
-        content = _decode_import_bytes(request.files["file"].read())
-        fmt = request.form.get("format")
+        f = request.files["file"]
         raw_opts = request.form.get("options")
         try:
             options = json.loads(raw_opts) if raw_opts else None
         except Exception:
             options = None
+        # Binary formats (.apkg / .docx) are routed by extension — the tab
+        # selection doesn't matter for them.
+        fname = (f.filename or "").lower()
+        if fname.endswith(MicrocardsServiceV2.FILE_IMPORT_EXTENSIONS):
+            try:
+                svc = _get_svc()
+                result = svc.analyze_file_import(deck_id, fname, f.read(), options=options)
+                return jsonify({"ok": True, "rows": result["rows"], "counts": result["counts"],
+                                "detected_format": result.get("detected_format"),
+                                "hierarchy": result.get("hierarchy")})
+            except LookupError as exc:
+                return jsonify({"ok": False, "error": str(exc)}), 404
+            except ValueError as exc:
+                return jsonify({"ok": False, "error": str(exc)}), 400
+            except Exception as exc:
+                logger.exception("[HTTP] v2/microcards/import analyze (file) failed: %s", exc)
+                return jsonify({"ok": False, "error": "analyze_failed"}), 500
+        content = _decode_import_bytes(f.read())
+        fmt = request.form.get("format")
     else:
         body = request.get_json(silent=True) or {}
         fmt = body.get("format")

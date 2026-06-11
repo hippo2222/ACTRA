@@ -429,6 +429,145 @@ def test_update_settings_presets_and_goal():
     assert len(review["card_queue"]) == 10
 
 
+def _build_apkg(member="collection.anki21", notes=None, models=None):
+    """Assemble a minimal legacy .apkg in memory (zip + sqlite)."""
+    import io
+    import json as _json
+    import os
+    import sqlite3
+    import tempfile
+    import zipfile
+
+    fd, db_path = tempfile.mkstemp(suffix=".anki2")
+    os.close(fd)
+    con = sqlite3.connect(db_path)
+    con.execute("CREATE TABLE col (id INTEGER PRIMARY KEY, models TEXT)")
+    con.execute("INSERT INTO col VALUES (1, ?)", (_json.dumps(models or {}),))
+    con.execute("CREATE TABLE notes (id INTEGER PRIMARY KEY, mid INTEGER, flds TEXT)")
+    for i, (mid, flds) in enumerate(notes or []):
+        con.execute("INSERT INTO notes VALUES (?, ?, ?)", (i + 1, mid, flds))
+    con.commit()
+    con.close()
+    with open(db_path, "rb") as fh:
+        db_bytes = fh.read()
+    os.remove(db_path)
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr(member, db_bytes)
+        zf.writestr("media", "{}")
+    return buf.getvalue()
+
+
+def test_import_apkg_basic_and_cloze():
+    """Anki .apkg: basic notes map field1/field2/rest → front/back/hint with
+    HTML stripped; cloze notes expand to one card per cloze index."""
+    tmp = tempfile.mkdtemp()
+    svc = MicrocardsServiceV2(tmp, user_id="test_user")
+    deck = svc.create_deck(name="Anki Deck")
+
+    sep = "\x1f"
+    models = {
+        "100": {"name": "Basic", "type": 0},
+        "200": {"name": "Cloze", "type": 1},
+    }
+    notes = [
+        # HTML + [sound:...] + an extra field that becomes the hint.
+        (100, f"Os <b>coxae</b><br>[sound:os.mp3]{sep}Тазовая <i>кость</i>{sep}анатомия"),
+        # Two cloze indices → two cards; c2 carries an inline hint.
+        (200, f"{{{{c1::Аорта}}}} отходит от {{{{c2::левого желудочка::камера}}}}{sep}Кровообращение"),
+        # Broken note (no second field) → error row, skipped on import.
+        (100, "Одинокий вопрос"),
+    ]
+    data = _build_apkg(notes=notes, models=models)
+
+    # Preview first: shape mirrors the text analyze pipeline.
+    preview = svc.analyze_file_import(deck["id"], "deck.apkg", data)
+    assert preview["detected_format"] == "apkg"
+    assert preview["counts"] == {"total": 4, "ok": 3, "errors": 1, "duplicates": 0}
+
+    result = svc.import_file(deck["id"], "deck.apkg", data)
+    cards = {c["front"]["text"]: c for c in svc.list_cards(deck["id"])}
+    assert len(result["items"]) == 3
+
+    basic = cards["Os coxae"]
+    assert basic["back"]["text"] == "Тазовая кость"
+    assert basic["hint"] == "анатомия"
+
+    c1 = cards["[...] отходит от левого желудочка"]
+    assert c1["back"]["text"] == "Аорта"
+    assert c1["hint"] == "Кровообращение"
+    c2 = cards["Аорта отходит от [камера]"]
+    assert c2["back"]["text"] == "левого желудочка"
+
+    # Re-import: dedup keeps existing ids, nothing new is created.
+    again = svc.import_file(deck["id"], "deck.apkg", data)
+    assert again["items"] == []
+    assert again["skipped_duplicates"] == 3
+
+
+def test_import_apkg_new_format_rejected():
+    """The zstd 'anki21b' format is rejected with a clear, actionable code."""
+    import io
+    import zipfile
+
+    tmp = tempfile.mkdtemp()
+    svc = MicrocardsServiceV2(tmp, user_id="test_user")
+    deck = svc.create_deck(name="New Anki Deck")
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("collection.anki21b", b"\x28\xb5\x2f\xfd zstd-ish")
+    try:
+        svc.import_file(deck["id"], "deck.apkg", buf.getvalue())
+        raise AssertionError("expected apkg_new_format_unsupported")
+    except ValueError as exc:
+        assert "apkg_new_format_unsupported" in str(exc)
+
+
+def _build_docx(paragraphs=(), table_rows=()):
+    import io
+    import zipfile
+
+    W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+    body = []
+    for p in paragraphs:
+        body.append(f"<w:p><w:r><w:t>{p}</w:t></w:r></w:p>")
+    if table_rows:
+        rows = "".join(
+            "<w:tr>" + "".join(
+                f"<w:tc><w:p><w:r><w:t>{cell}</w:t></w:r></w:p></w:tc>" for cell in row
+            ) + "</w:tr>"
+            for row in table_rows
+        )
+        body.append(f"<w:tbl>{rows}</w:tbl>")
+    xml = (f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+           f'<w:document xmlns:w="{W}"><w:body>{"".join(body)}</w:body></w:document>')
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("word/document.xml", xml.encode("utf-8"))
+        zf.writestr("[Content_Types].xml", "<Types/>")
+    return buf.getvalue()
+
+
+def test_import_docx_table_to_cards():
+    """Word: a two-column table flattens to tab lines and runs through the
+    existing text auto-parser (front = column 1, back = column 2)."""
+    tmp = tempfile.mkdtemp()
+    svc = MicrocardsServiceV2(tmp, user_id="test_user")
+    deck = svc.create_deck(name="Word Deck")
+
+    data = _build_docx(table_rows=[("Os coxae", "Тазовая кость"), ("Femur", "Бедренная кость")])
+    preview = svc.analyze_file_import(deck["id"], "cards.docx", data)
+    assert preview["detected_format"] == "docx"
+    assert preview["counts"]["ok"] == 2
+
+    result = svc.import_file(deck["id"], "cards.docx", data)
+    assert len(result["items"]) == 2
+    cards = {c["front"]["text"]: c["back"]["text"] for c in svc.list_cards(deck["id"])}
+    assert cards == {"Os coxae": "Тазовая кость", "Femur": "Бедренная кость"}
+
+
 def test_legacy_records_are_wiped():
     """Pre-run (schema 1.0) records are discarded on first read — the agreed
     one-time reset when the run model shipped."""

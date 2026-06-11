@@ -2884,7 +2884,7 @@
 
     // ── Import Decks Dialog ───────────────────────────────────────────────
     const IMPORT_HINTS = {
-        auto: ['microcards.imp_hint_auto', 'Вставьте что угодно — формат определится сам: Quizlet/Excel (таб), «вопрос — ответ», CSV, JSON или тест. Разделитель и иерархия распознаются автоматически.'],
+        auto: ['microcards.imp_hint_auto', 'Вставьте что угодно — формат определится сам: Quizlet/Excel (таб), «вопрос — ответ», CSV, JSON или тест. Файлы тоже: Anki (.apkg, без медиа) и Word (.docx — таблица «вопрос|ответ» или абзацы). Разделитель и иерархия распознаются автоматически.'],
         csv: ['microcards.imp_hint_csv', 'Колонки: front, back, hint. Строки в кавычках. Совместимо с Quizlet (term/definition).'],
         json: ['microcards.imp_hint_json', 'Схема actra_flashcards_v1: { "cards": [ { "front": "Q", "back": "A", "hint": "H" } ] }'],
         txt_full: ['microcards.imp_hint_txt_full', 'Блочный формат @MICROCARD с полями Q:/A: — несколько строк на карточку, поддержка изображений и подсказок.'],
@@ -3235,7 +3235,13 @@ ${fill}`;
         const fmt = state.importFormat;
         const fileInput = $('importFile');
         const isFile = fileInput.files.length > 0;
-        const url = `/api/v2/microcards/decks/${state.activeDeckId}/import/${fmt}`;
+        // Binary uploads (.apkg / .docx) go to the file endpoint regardless of
+        // the selected tab — the server routes them by extension.
+        const fname = isFile ? (fileInput.files[0].name || '').toLowerCase() : '';
+        const isBinaryFile = isFile && (fname.endsWith('.apkg') || fname.endsWith('.docx'));
+        const url = isBinaryFile
+            ? `/api/v2/microcards/decks/${state.activeDeckId}/import/file`
+            : `/api/v2/microcards/decks/${state.activeDeckId}/import/${fmt}`;
         const opts = { method: 'POST' };
 
         if (isFile) {
@@ -3274,6 +3280,9 @@ ${fill}`;
             openDeckDetails(state.activeDeckId);
         } catch (err) {
             console.error(err);
+            if (String(err && err.message).includes('apkg_new_format_unsupported')) {
+                showToast(t('microcards.apkg_new_format_hint', 'Этот .apkg в новом формате Anki. Экспортируйте колоду с галочкой «Поддержка старых версий Anki» и попробуйте снова.'), 'warning');
+            }
         }
     }
 

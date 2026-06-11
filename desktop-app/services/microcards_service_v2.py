@@ -1925,6 +1925,62 @@ class MicrocardsServiceV2:
             imported.append(card)
         return {"items": imported, "skipped_duplicates": skipped}
 
+    # ── Binary file imports (.apkg / .docx) ────────────────────────────
+    FILE_IMPORT_EXTENSIONS = (".apkg", ".docx")
+
+    def _parse_file_import(self, filename: str, data: bytes,
+                           options: Optional[Dict[str, Any]] = None) -> Tuple[str, List[Dict[str, Any]]]:
+        """Route a binary upload to its parser; returns (kind, parser rows)."""
+        from services import microcards_file_import as fimp
+        name = _s(filename).lower()
+        if name.endswith(".apkg"):
+            return "apkg", fimp.parse_apkg(data)
+        if name.endswith(".docx"):
+            # Word → text lines → the existing auto-parser (same preview/dedup).
+            text = fimp.extract_docx_text(data)
+            return "docx", self._parse_by_format("auto", text, options)
+        raise ValueError("unsupported_file_format")
+
+    def analyze_file_import(self, deck_id: str, filename: str, data: bytes,
+                            options: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Dry-run preview for a binary upload — mirrors analyze_import's shape."""
+        deck = self.get_deck(deck_id)
+        if not deck:
+            raise LookupError("deck_not_found")
+        kind, parsed = self._parse_file_import(filename, data, options)
+        result = self._preview_parsed(deck, parsed)
+        result["detected_format"] = kind
+        result["hierarchy"] = self._hierarchy_stats(result["rows"])
+        return result
+
+    def import_file(self, deck_id: str, filename: str, data: bytes,
+                    options: Optional[Dict[str, Any]] = None, dedup: bool = True) -> Dict[str, Any]:
+        _kind, parsed = self._parse_file_import(filename, data, options)
+        return self._create_from_parsed(deck_id, parsed, dedup=dedup)
+
+    def _preview_parsed(self, deck: Dict[str, Any], parsed: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Shared dry-run counting for text and file imports."""
+        existing = {_normalize_key(c.get("front", {}).get("text", "")) for c in deck.get("cards", [])}
+        seen: set = set()
+        rows: List[Dict[str, Any]] = []
+        counts = {"total": 0, "ok": 0, "errors": 0, "duplicates": 0}
+        for item in parsed:
+            counts["total"] += 1
+            row = dict(item)
+            row["duplicate"] = False
+            if item.get("status") == "error":
+                counts["errors"] += 1
+            else:
+                key = _normalize_key(item.get("front"))
+                if key in existing or key in seen:
+                    row["duplicate"] = True
+                    counts["duplicates"] += 1
+                else:
+                    seen.add(key)
+                    counts["ok"] += 1
+            rows.append(row)
+        return {"rows": rows, "counts": counts}
+
     def analyze_import(self, deck_id: str, fmt: str, content: Any, options: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Dry-run: parse content and report preview rows + counts WITHOUT writing."""
         deck = self.get_deck(deck_id)
