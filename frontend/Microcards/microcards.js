@@ -2221,6 +2221,26 @@
         levelInd.style.color = accent;
     }
 
+    // Un-flip without playing the flip-back transition: the next card's content
+    // is loaded onto the faces right after, so an animated un-flip would flash
+    // the new card's answer mid-rotation.
+    function resetFlipInstant(inner) {
+        if (!inner || !inner.classList.contains('flipped')) return;
+        inner.style.transition = 'none';
+        inner.classList.remove('flipped');
+        void inner.offsetWidth;
+        inner.style.transition = '';
+    }
+
+    // Card→card entry slide: replay the .mc-card-enter animation on the wrap
+    // (remove → reflow → re-add guarantees the replay).
+    function playCardEnter(wrap) {
+        if (!wrap) return;
+        wrap.classList.remove('mc-card-enter');
+        void wrap.offsetWidth;
+        wrap.classList.add('mc-card-enter');
+    }
+
     function setupCurrentCard() {
         // The server completes the session only when every card is mastered;
         // the local length check is the offline fallback.
@@ -2234,7 +2254,7 @@
         state._gradeBusy = false;
 
         // Reset card face state
-        $('flashcardInner').classList.remove('flipped');
+        resetFlipInstant($('flashcardInner'));
         const _wrap = $('mcFlashWrap');
         if (_wrap && (_wrap.classList.contains('mc-fly-yes') || _wrap.classList.contains('mc-fly-no'))) {
             // Reset the fly-off without animating the card back across the screen.
@@ -2243,6 +2263,7 @@
             void _wrap.offsetWidth;
             _wrap.style.transition = '';
         }
+        playCardEnter(_wrap); // the new card slides in
         hideRails(); // rails reappear only after the answer is revealed
         
         // Effective direction (reverse mode): which side is the question vs answer
@@ -2844,8 +2865,8 @@
     function renderBrowseCard() {
         const card = state.cards[state.browseIndex];
         if (!card) return;
-        const inner = $('browseCardInner');
-        if (inner) inner.classList.remove('flipped');
+        resetFlipInstant($('browseCardInner'));
+        playCardEnter($('browseCardWrap'));
         $('browseFrontText').textContent = card.front.text;
         $('browseBackText').textContent = card.back.text;
         const hint = $('browseHintText');
