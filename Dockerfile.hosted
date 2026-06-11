@@ -13,6 +13,7 @@ COPY common /app/common
 COPY desktop-app /app/desktop-app
 COPY frontend /app/frontend
 COPY task_system /app/task_system
+COPY tools /app/tools
 COPY data /app/data
 COPY config.json /app/config.json
 
