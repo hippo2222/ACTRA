@@ -915,6 +915,12 @@ def _load_analysis_rows_for_request(body: dict):
     from services.microcards_analysis_import import analysis_to_rows
 
     h = _server_helpers()
+    # AI placeholder contract: while ai_mode is off, every AI-driven surface
+    # answers with the same hidden-feature payload (carried over from V1).
+    is_enabled = h.get("is_editor_feature_enabled")
+    disabled_json = h.get("feature_disabled_json")
+    if callable(is_enabled) and callable(disabled_json) and not is_enabled("ai_mode"):
+        return None, None, disabled_json("ai_mode_in_progress", status_code=404)
     run_id = str(body.get("ai_run_id") or "").strip()
     if not run_id:
         return None, None, (jsonify({"ok": False, "error": "ai_run_id_required"}), 400)
@@ -957,6 +963,14 @@ def create_deck_from_analysis_v2():
         deck = svc.create_deck(name=name, description="", tags=["analysis"])
         result = svc._create_from_parsed(deck["id"], rows, dedup=True)
         deck = svc.get_deck(deck["id"])
+        emit = _server_helpers().get("emit_theory_rollout_telemetry")
+        if callable(emit):
+            try:
+                emit("microcards_deck_created_from_analysis",
+                     ai_run_id=run_id, deck_id=deck.get("id"),
+                     cards_total=len(deck.get("cards") or []))
+            except Exception:
+                pass
         return jsonify({
             "ok": True,
             "deck": deck,
@@ -989,6 +1003,14 @@ def append_deck_from_analysis_v2(deck_id: str):
         svc = _get_svc()
         result = svc._create_from_parsed(deck_id, rows, dedup=True)
         deck = svc.get_deck(deck_id)
+        emit = _server_helpers().get("emit_theory_rollout_telemetry")
+        if callable(emit):
+            try:
+                emit("microcards_deck_appended_from_analysis",
+                     ai_run_id=_run_id, deck_id=deck_id,
+                     added_count=len(result["items"]))
+            except Exception:
+                pass
         return jsonify({
             "ok": True,
             "deck_summary": {

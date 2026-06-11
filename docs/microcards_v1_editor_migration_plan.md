@@ -102,7 +102,16 @@ M3 — ✅ ВЫПОЛНЕН 2026-06-11. Editor-фронтенд (import_manager.
     (D1) — удалить мини-плеер, score_pair_match-обвязку и flag-гейты
     microcards_mode/pair_match из этого пути.
 
-M4 — Миграция данных V1 → V2:
+M4 — ✅ ВЫПОЛНЕН 2026-06-11. Миграция данных V1 → V2:
+  Реализация: tools/migrate_microcards_v1_decks_to_v2.py — источники: файлы
+  (V1 и V2 делят одну папку data/microcards/decks; V1 распознаётся по
+  meta-конверту/card_type) и hosted-таблица actra_hosted_microcards_decks;
+  pair_match → Q/A на каждую пару, дедуп по front; архив → тег «архив» (+тег
+  «v1»); владелец из meta.created_by_user_id (без владельца — пропуск с
+  отчётом); идемпотентность через migrated_from_v1; оригиналы не трогаются;
+  --dry-run. Прогнать на проде ДО деплоя M5.
+
+  (Исходный план M4:)
   - tools/migrate_microcards_v1_decks_to_v2.py: источники — файловые
     per-user колоды (data/users/<uid>/microcards/decks/*.json, если есть) И
     hosted-репозиторий actra_hosted_microcards_decks; маппинг по D2/D3/D4;
@@ -110,7 +119,21 @@ M4 — Миграция данных V1 → V2:
     v2-колод пользователя; идемпотентно, --dry-run.
   - Прогон на проде ДО M5.
 
-M5 — Выпил V1 (один PR, после M1–M4 на проде):
+M5 — ✅ ВЫПОЛНЕН 2026-06-11 (в репозитории; прод-деплой после прогона M4!).
+  Реализация: theory-rollout роуты → routes/theory_rollout_routes.py;
+  удалены routes/microcards_routes.py, microcards_service.py,
+  hosted_microcards_service.py, hosted_microcards_analytics_service.py,
+  scripts/microcards_m14_rollout_smoke.py; server.py: M14-блок (~350 строк),
+  _microcards_service, hosted-ветка аналитики, импорты, 7 записей helpers;
+  finish-line контракт = PostgresMicrocardsStorage; смоук
+  smoke:microcards:hosted → v2-сьюты; browser_smoke_helpers и
+  theory_p13_rollout_smoke переведены на /api/v2 (телеметрия
+  microcards_deck_created_from_analysis теперь эмитится v2-роутом; v2
+  from-analysis получил ai_mode-плейсхолдер-гейт — контракт сохранён).
+  V1-репозитории persistence/hosted_microcards_*.py и чистка их таблиц при
+  удалении аккаунта ОСТАВЛЕНЫ до отдельной drop-миграции таблиц.
+
+  (Исходный план M5:)
   - theory-rollout роуты (/api/editor/theory/rollout/*) → новый
     routes/theory_rollout_routes.py (они про теорию, не про микрокарточки);
   - удалить: routes/microcards_routes.py (v1-часть), services/microcards_service.py,
@@ -126,7 +149,14 @@ M5 — Выпил V1 (один PR, после M1–M4 на проде):
   - смоук-гейт smoke:microcards:hosted → новые контракты (v2 storage +
     v2 роуты); обновить server.py finish-line контракт.
 
-M6 — Тесты:
+M6 — ✅ ВЫПОЛНЕН 2026-06-11: удалены v1-сьюты (test_microcards_service.py,
+  test_microcards_api.py, test_microcards_hosted_route_contracts.py,
+  test_hosted_microcards_service.py, test_hosted_microcards_analytics_service.py,
+  test_microcards_pair_match.py, test_microcards_service_crud.py,
+  test_microcard_import_integration.py); добавлены тесты M4-миграции;
+  test_ai_placeholder_contract перенацелен на v2-роуты. 109 тестов зелёные.
+
+  (Исходный план M6:)
   - удалить v1-сьюты (desktop-app/tests/unit/test_microcards_service.py,
     tests/test_microcards_hosted_route_contracts.py,
     tests/test_hosted_microcards_service.py,

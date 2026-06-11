@@ -47,7 +47,7 @@ def test_microcards_from_analysis_routes_follow_ai_placeholder_contract(client, 
     monkeypatch.setenv("RP_EDITOR_FF_MICROCARDS_MODE", "1")
 
     create_resp = client.post(
-        "/api/editor/microcards/decks/from-analysis",
+        "/api/v2/microcards/decks/from-analysis",
         json={"ai_run_id": "ai_run_20260419T120000Z_aihide1", "selector": {"scope": "all"}},
     )
     assert create_resp.status_code == 404
@@ -57,7 +57,7 @@ def test_microcards_from_analysis_routes_follow_ai_placeholder_contract(client, 
     assert create_data["feature_flags"]["ai_mode"] is False
 
     append_resp = client.post(
-        "/api/editor/microcards/decks/deck_demo/append-from-analysis",
+        "/api/v2/microcards/decks/deck_demo/append-from-analysis",
         json={"ai_run_id": "ai_run_20260419T120000Z_aihide1", "selector": {"scope": "all"}},
     )
     assert append_resp.status_code == 404

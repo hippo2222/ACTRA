@@ -830,14 +830,14 @@ async function ensureStatisticsSeed(baseUrl, userId) {
 }
 
 async function listMicrocardsDecks(baseUrl) {
-  const result = await fetchJson(baseUrl, "/api/editor/microcards/decks?limit=200");
+  const result = await fetchJson(baseUrl, "/api/v2/microcards/decks?limit=200");
   return assertApiOk(result, "list_microcards_decks");
 }
 
 async function getMicrocardsDeck(baseUrl, deckId) {
   const result = await fetchJson(
     baseUrl,
-    `/api/editor/microcards/decks/${encodeURIComponent(deckId)}`
+    `/api/v2/microcards/decks/${encodeURIComponent(deckId)}`
   );
   return assertApiOk(result, "get_microcards_deck");
 }
@@ -845,7 +845,7 @@ async function getMicrocardsDeck(baseUrl, deckId) {
 async function deleteMicrocardsDeck(baseUrl, deckId) {
   const result = await fetchJson(
     baseUrl,
-    `/api/editor/microcards/decks/${encodeURIComponent(deckId)}`,
+    `/api/v2/microcards/decks/${encodeURIComponent(deckId)}`,
     {
       method: "DELETE",
     }
@@ -865,14 +865,13 @@ async function deleteMicrocardsDeck(baseUrl, deckId) {
 async function createMicrocardsDeck(baseUrl) {
   const result = await fetchJson(
     baseUrl,
-    "/api/editor/microcards/decks/create-manual",
+    "/api/v2/microcards/decks",
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name: FIXTURE.microcardsDeckName,
         tags: [FIXTURE.microcardsDeckTag],
-        target_language: FIXTURE.microcardsDeckLanguage,
       }),
     }
   );
@@ -883,16 +882,13 @@ async function createMicrocardsDeck(baseUrl) {
 async function createMicrocardsCard(baseUrl, deckId) {
   const result = await fetchJson(
     baseUrl,
-    `/api/editor/microcards/decks/${encodeURIComponent(deckId)}/cards`,
+    `/api/v2/microcards/decks/${encodeURIComponent(deckId)}/cards`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        card_type: "fact_recall",
         front_text: FIXTURE.microcardsFrontText,
         back_text: FIXTURE.microcardsBackText,
-        tags: [FIXTURE.microcardsDeckTag],
-        difficulty_hint: "easy",
       }),
     }
   );

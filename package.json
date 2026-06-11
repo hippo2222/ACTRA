@@ -35,7 +35,7 @@
     "smoke:ai-placeholder:hosted": "pytest desktop-app/tests/integration/test_ai_placeholder_contract.py desktop-app/tests/integration/test_server_smoke.py -q --basetemp=.pytest_tmp_ai_placeholder --cov-fail-under=0 && npx vitest run tests/import_manager_ai_placeholder.test.mjs",
     "smoke:import-export:hosted": "pytest tests/test_import_export_route_contracts.py tests/test_import_export_service.py tests/test_complex_import_export_service.py -q --cov-fail-under=0",
     "smoke:main-quick-access:hosted": "pytest tests/test_main_screen_http.py tests/test_quick_access_hosted_ui_state.py tests/test_quick_access_hosted_gate.py -q --cov-fail-under=0",
-    "smoke:microcards:hosted": "pytest tests/test_microcards_hosted_route_contracts.py tests/test_hosted_microcards_service.py tests/test_hosted_microcards_analytics_service.py -q --cov-fail-under=0",
+    "smoke:microcards:hosted": "pytest desktop-app/tests/unit/test_microcards_v2_storage.py desktop-app/tests/unit/test_microcards_service_v2.py desktop-app/tests/unit/test_microcards_from_analysis.py -q --cov-fail-under=0",
     "smoke:readiness:hosted": "pytest tests/test_readiness_hosted_gate.py tests/test_hosted_shadow_write_policy.py -q --cov-fail-under=0",
     "smoke:launch-contract:hosted": "pytest tests/test_launch_contract_hosted_gate.py tests/test_readiness_hosted_gate.py -q --cov-fail-under=0",
     "smoke:launch-acceptance:hosted": "node scripts/run_hosted_launch_acceptance.js",

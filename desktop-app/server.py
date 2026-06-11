@@ -453,7 +453,7 @@ def _build_finish_line_subsystems(
         "microcards": {
             "finish_line_status": "green",
             "official_gate": "npm run smoke:microcards:hosted",
-            "source_of_truth": "PostgresMicrocardsStorage (V2 user surface) + HostedMicrocardsRepository/HostedMicrocardsReviewRepository (legacy V1 editor surface)",
+            "source_of_truth": "PostgresMicrocardsStorage (persistence/microcards_v2_storage.py)",
             "required_signals": {
                 "user_service_storage_ready": bool(checks.get("user_service_storage_ready")),
                 "storage_service_storage_ready": bool(checks.get("storage_service_storage_ready")),
@@ -462,8 +462,8 @@ def _build_finish_line_subsystems(
             "degraded_signals": {},
             "notes": [
                 "AI-driven deck generation remains outside this contour under the separate AI placeholder contract.",
-                "The /api/v2/microcards user surface persists via persistence/microcards_v2_storage.py (Postgres in hosted runs; migrate files with tools/migrate_microcards_files_to_postgres.py).",
-                "The /api/editor/microcards V1 surface is still live (editor deck-from-analysis flows) and keeps its own hosted repositories until that surface migrates to V2.",
+                "All surfaces (mode + editor panels) run on /api/v2/microcards; storage migrates via tools/migrate_microcards_files_to_postgres.py, legacy V1 decks via tools/migrate_microcards_v1_decks_to_v2.py.",
+                "The V1 stack is removed; the legacy hosted V1 tables remain until a separate drop migration (account deletion still scrubs them).",
             ],
         },
         "readiness_degraded_signaling": {
@@ -902,10 +902,7 @@ from services.hosted_catalog_service import HostedCatalogService  # type: ignore
 from services.workspace_limits_service import WorkspaceLimitsService  # type: ignore
 from services.billing_service import BillingService  # type: ignore
 from services.workspace_import_service import WorkspaceImportService  # type: ignore
-from services.microcards_service import MicrocardsService  # type: ignore
-from services.hosted_microcards_service import HostedMicrocardsService  # type: ignore
 from services.microcards_analytics_service import MicrocardsAnalyticsService  # type: ignore
-from services.hosted_microcards_analytics_service import HostedMicrocardsAnalyticsService  # type: ignore
 from common.watchdog import WatchdogService  # type: ignore
 
 from logic import (  # type: ignore
@@ -1555,7 +1552,7 @@ from routes.complexes_routes import complexes_bp
 from routes.session_routes import session_bp
 from routes.editor_routes import editor_bp
 from routes.quick_access_routes import quick_access_bp
-from routes.microcards_routes import microcards_bp
+from routes.theory_rollout_routes import theory_rollout_bp
 from routes.microcards_routes_v2 import microcards_v2_bp
 from routes.ai_routes import ai_bp
 from routes.import_routes import import_bp
@@ -1609,7 +1606,7 @@ app.register_blueprint(complexes_bp)
 app.register_blueprint(session_bp)
 app.register_blueprint(editor_bp)
 app.register_blueprint(quick_access_bp)
-app.register_blueprint(microcards_bp)
+app.register_blueprint(theory_rollout_bp)
 app.register_blueprint(microcards_v2_bp, url_prefix="/api/v2/microcards")
 app.register_blueprint(ai_bp)
 app.register_blueprint(import_bp)
@@ -4161,11 +4158,11 @@ from routes._helpers import _is_within_data_dir, _resolve_editor_image_path
 # routes moved to routes/ai_routes.py
 
 
-# NOTE: /api/editor/theory/rollout/* routes moved to routes/microcards_routes.py
+# NOTE: /api/editor/theory/rollout/* routes live in routes/theory_rollout_routes.py
 
 
 
-# NOTE: /api/microcards/*, /api/editor/microcards/* routes moved to routes/microcards_routes.py
+# NOTE: the legacy /api/microcards & /api/editor/microcards V1 surface is removed; everything runs on /api/v2/microcards (routes/microcards_routes_v2.py)
 
 
 ## NOTE: /api/editor/ai/generate route moved to routes/ai_routes.py
@@ -4975,350 +4972,6 @@ def _sanitize_analysis_for_microcards_backend(payload: Dict[str, Any], *, flags:
     return out
 
 
-# в”Ђв”Ђ M14: Microcards Productization Rollout Layer (independent from P13 theory rollout) в”Ђв”Ђ
-
-_MICROCARDS_PROD_FEATURE_FLAG_DEFAULTS: Dict[str, bool] = {
-    "microcards_runtime_ui": True,
-    "microcards_home_entry": True,
-    "microcards_calendar_integration": True,
-    "microcards_statistics_integration": True,
-    "microcards_manual_editor": True,
-    "microcards_text_import": True,
-    "microcards_review_fx": True,
-    "microcards_pair_match_runtime": True,
-}
-
-_MICROCARDS_ROLLOUT_STAGE_ENV_KEY = "RP_MICROCARDS_ROLLOUT_STAGE"
-
-_MICROCARDS_ROLLOUT_STAGE_SEQUENCE = [
-    "disabled",
-    "runtime_hidden",
-    "calendar_stats_only",
-    "runtime_ui",
-    "home_entry",
-    "manual_editor",
-    "text_import",
-    "full",
-]
-
-_MICROCARDS_ROLLOUT_STAGE_ALIASES: Dict[str, str] = {
-    "off": "disabled",
-    "none": "disabled",
-    "backend_only": "runtime_hidden",
-    "hidden": "runtime_hidden",
-    "cal_stats": "calendar_stats_only",
-    "calendar": "calendar_stats_only",
-    "runtime": "runtime_ui",
-    "home": "home_entry",
-    "manual": "manual_editor",
-    "import": "text_import",
-    "all": "full",
-    "complete": "full",
-    "enabled": "full",
-}
-
-_MICROCARDS_ROLLOUT_STAGE_FLAG_CAPS: Dict[str, Dict[str, bool]] = {
-    "disabled": {
-        "microcards_runtime_ui": False,
-        "microcards_home_entry": False,
-        "microcards_calendar_integration": False,
-        "microcards_statistics_integration": False,
-        "microcards_manual_editor": False,
-        "microcards_text_import": False,
-        "microcards_review_fx": False,
-        "microcards_pair_match_runtime": False,
-    },
-    "runtime_hidden": {
-        "microcards_runtime_ui": False,
-        "microcards_home_entry": False,
-        "microcards_calendar_integration": False,
-        "microcards_statistics_integration": False,
-        "microcards_manual_editor": False,
-        "microcards_text_import": False,
-        "microcards_review_fx": False,
-        "microcards_pair_match_runtime": False,
-    },
-    "calendar_stats_only": {
-        "microcards_runtime_ui": False,
-        "microcards_home_entry": False,
-        "microcards_calendar_integration": True,
-        "microcards_statistics_integration": True,
-        "microcards_manual_editor": False,
-        "microcards_text_import": False,
-        "microcards_review_fx": False,
-        "microcards_pair_match_runtime": False,
-    },
-    "runtime_ui": {
-        "microcards_runtime_ui": True,
-        "microcards_home_entry": False,
-        "microcards_calendar_integration": True,
-        "microcards_statistics_integration": True,
-        "microcards_manual_editor": False,
-        "microcards_text_import": False,
-        "microcards_review_fx": True,
-        "microcards_pair_match_runtime": True,
-    },
-    "home_entry": {
-        "microcards_runtime_ui": True,
-        "microcards_home_entry": True,
-        "microcards_calendar_integration": True,
-        "microcards_statistics_integration": True,
-        "microcards_manual_editor": False,
-        "microcards_text_import": False,
-        "microcards_review_fx": True,
-        "microcards_pair_match_runtime": True,
-    },
-    "manual_editor": {
-        "microcards_runtime_ui": True,
-        "microcards_home_entry": True,
-        "microcards_calendar_integration": True,
-        "microcards_statistics_integration": True,
-        "microcards_manual_editor": True,
-        "microcards_text_import": False,
-        "microcards_review_fx": True,
-        "microcards_pair_match_runtime": True,
-    },
-    "text_import": {
-        "microcards_runtime_ui": True,
-        "microcards_home_entry": True,
-        "microcards_calendar_integration": True,
-        "microcards_statistics_integration": True,
-        "microcards_manual_editor": True,
-        "microcards_text_import": True,
-        "microcards_review_fx": True,
-        "microcards_pair_match_runtime": True,
-    },
-    "full": {
-        "microcards_runtime_ui": True,
-        "microcards_home_entry": True,
-        "microcards_calendar_integration": True,
-        "microcards_statistics_integration": True,
-        "microcards_manual_editor": True,
-        "microcards_text_import": True,
-        "microcards_review_fx": True,
-        "microcards_pair_match_runtime": True,
-    },
-}
-
-
-def _get_microcards_rollout_stage() -> str:
-    raw = str(os.environ.get(_MICROCARDS_ROLLOUT_STAGE_ENV_KEY, "") or "").strip().lower()
-    if not raw:
-        return "full"
-    stage = _MICROCARDS_ROLLOUT_STAGE_ALIASES.get(raw, raw)
-    if stage not in _MICROCARDS_ROLLOUT_STAGE_FLAG_CAPS:
-        return "full"
-    return stage
-
-
-def _get_microcards_rollout_stage_caps(stage: Optional[str] = None) -> Dict[str, bool]:
-    resolved = stage or _get_microcards_rollout_stage()
-    caps = _MICROCARDS_ROLLOUT_STAGE_FLAG_CAPS.get(resolved) or _MICROCARDS_ROLLOUT_STAGE_FLAG_CAPS["full"]
-    return {name: bool(caps.get(name, True)) for name in _MICROCARDS_PROD_FEATURE_FLAG_DEFAULTS.keys()}
-
-
-def _get_microcards_prod_feature_flags() -> Dict[str, bool]:
-    flags: Dict[str, bool] = {}
-    for name, default in _MICROCARDS_PROD_FEATURE_FLAG_DEFAULTS.items():
-        env_key = f"RP_MICROCARDS_FF_{str(name).strip().upper()}"
-        flags[name] = _parse_env_bool(os.environ.get(env_key), default)
-    caps = _get_microcards_rollout_stage_caps()
-    for name in flags:
-        flags[name] = bool(flags[name] and caps.get(name, True))
-    if not flags.get("microcards_runtime_ui", True):
-        flags["microcards_review_fx"] = False
-        flags["microcards_pair_match_runtime"] = False
-    return flags
-
-
-def _is_microcards_prod_feature_enabled(flag_name: str) -> bool:
-    return bool(_get_microcards_prod_feature_flags().get(str(flag_name or "").strip(), True))
-
-
-def _microcards_prod_feature_disabled_json(error_code: str, *, status_code: int = 404) -> Tuple[Any, int]:
-    _emit_microcards_prod_telemetry(
-        "microcards_prod_feature_blocked",
-        error_code=str(error_code or "").strip() or "feature_disabled",
-        status_code=int(status_code),
-    )
-    return jsonify({"ok": False, "error": error_code, "microcards_feature_flags": _get_microcards_prod_feature_flags()}), status_code
-
-
-def _microcards_rollout_prev_next(stage: Optional[str] = None) -> Tuple[Optional[str], Optional[str]]:
-    current = stage or _get_microcards_rollout_stage()
-    try:
-        idx = _MICROCARDS_ROLLOUT_STAGE_SEQUENCE.index(current)
-    except ValueError:
-        idx = _MICROCARDS_ROLLOUT_STAGE_SEQUENCE.index("full")
-    prev_stage = _MICROCARDS_ROLLOUT_STAGE_SEQUENCE[idx - 1] if idx > 0 else None
-    next_stage = _MICROCARDS_ROLLOUT_STAGE_SEQUENCE[idx + 1] if idx + 1 < len(_MICROCARDS_ROLLOUT_STAGE_SEQUENCE) else None
-    return prev_stage, next_stage
-
-
-_MICROCARDS_PROD_TELEMETRY_LOCK = threading.Lock()
-_MICROCARDS_PROD_TELEMETRY_SCHEMA_VERSION = "1.0"
-
-
-def _microcards_prod_telemetry_events_path() -> Path:
-    root = Path(_headless_app_ctx.data_dir) / "telemetry"
-    root.mkdir(parents=True, exist_ok=True)
-    return root / "microcards_prod_rollout_events.jsonl"
-
-
-def _emit_microcards_prod_telemetry(event_name: str, **fields: Any) -> None:
-    name = str(event_name or "").strip()
-    if not name:
-        return
-    try:
-        from routes._context import get_current_user_id
-
-        mc_flags = _get_microcards_prod_feature_flags()
-        stage = _get_microcards_rollout_stage()
-        payload = {
-            "schema_version": _MICROCARDS_PROD_TELEMETRY_SCHEMA_VERSION,
-            "id": f"mcpevt_{uuid.uuid4().hex[:12]}",
-            "event": name,
-            "created_at": _utc_now_iso(),
-            "rollout_stage": stage,
-            "user_id": get_current_user_id() or "guest",
-            "microcards_feature_flags": mc_flags,
-            "request_path": (request.path if has_request_context() else None),
-            "request_method": (request.method if has_request_context() else None),
-            "fields": _telemetry_safe_value(fields, depth=0),
-        }
-        line = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
-        with _MICROCARDS_PROD_TELEMETRY_LOCK:
-            path = _microcards_prod_telemetry_events_path()
-            with open(path, "a", encoding="utf-8") as f:
-                f.write(line + "\n")
-    except Exception as exc:
-        logger.debug("[HTTP] microcards prod telemetry emit failed: %s", exc)
-
-
-def _read_microcards_prod_telemetry_events(limit: int = 5000) -> List[Dict[str, Any]]:
-    path = _microcards_prod_telemetry_events_path()
-    if not path.exists():
-        return []
-    max_items = max(1, min(int(limit or 5000), 20000))
-    recent_lines: deque[str] = deque(maxlen=max_items)
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if line:
-                    recent_lines.append(line)
-    except Exception:
-        logger.exception("[HTTP] Failed to read microcards prod telemetry events: %s", path)
-        return []
-    out: List[Dict[str, Any]] = []
-    for line in recent_lines:
-        try:
-            item = json.loads(line)
-            if isinstance(item, dict):
-                out.append(item)
-        except Exception:
-            continue
-    return out
-
-
-def _build_microcards_prod_telemetry_summary(limit: int = 5000) -> Dict[str, Any]:
-    events = _read_microcards_prod_telemetry_events(limit=limit)
-    by_event: Dict[str, int] = {}
-    by_stage: Dict[str, int] = {}
-    runtime_opens = 0
-    runtime_sessions_started = 0
-    runtime_sessions_completed = 0
-    manual_deck_creates = 0
-    manual_card_creates = 0
-    text_import_parses = 0
-    text_import_executes = 0
-    text_import_errors = 0
-    backfill_runs = 0
-    backfill_verify_failures = 0
-    feature_blocks = 0
-    first_event_at = events[0].get("created_at") if events else None
-    last_event_at = events[-1].get("created_at") if events else None
-
-    for evt in events:
-        event_name = str(evt.get("event") or "").strip() or "unknown"
-        stage = str(evt.get("rollout_stage") or "").strip() or "unknown"
-        by_event[event_name] = by_event.get(event_name, 0) + 1
-        by_stage[stage] = by_stage.get(stage, 0) + 1
-
-        if event_name == "microcards_runtime_opened":
-            runtime_opens += 1
-        elif event_name == "microcards_runtime_session_started":
-            runtime_sessions_started += 1
-        elif event_name == "microcards_runtime_session_completed":
-            runtime_sessions_completed += 1
-        elif event_name == "microcards_manual_deck_created":
-            manual_deck_creates += 1
-        elif event_name == "microcards_manual_card_created":
-            manual_card_creates += 1
-        elif event_name == "microcards_text_import_parsed":
-            text_import_parses += 1
-        elif event_name == "microcards_text_import_executed":
-            text_import_executes += 1
-        elif event_name == "microcards_text_import_parse_error":
-            text_import_errors += 1
-        elif event_name == "microcards_backfill_run":
-            backfill_runs += 1
-        elif event_name == "microcards_backfill_verify_failed":
-            backfill_verify_failures += 1
-        elif event_name == "microcards_prod_feature_blocked":
-            feature_blocks += 1
-
-    return {
-        "schema_version": "1.0",
-        "events_window": len(events),
-        "events_first_at": first_event_at,
-        "events_last_at": last_event_at,
-        "by_event": by_event,
-        "by_rollout_stage": by_stage,
-        "metrics": {
-            "runtime_opens": runtime_opens,
-            "runtime_sessions_started": runtime_sessions_started,
-            "runtime_sessions_completed": runtime_sessions_completed,
-            "manual_deck_creates": manual_deck_creates,
-            "manual_card_creates": manual_card_creates,
-            "text_import_parses": text_import_parses,
-            "text_import_executes": text_import_executes,
-            "text_import_errors": text_import_errors,
-            "backfill_runs": backfill_runs,
-            "backfill_verify_failures": backfill_verify_failures,
-            "feature_blocks": feature_blocks,
-        },
-    }
-
-
-def _build_microcards_prod_rollout_status_payload(*, include_telemetry: bool = False, telemetry_limit: int = 5000) -> Dict[str, Any]:
-    stage = _get_microcards_rollout_stage()
-    prev_stage, next_stage = _microcards_rollout_prev_next(stage)
-    mc_flags = _get_microcards_prod_feature_flags()
-    theory_flags = _get_editor_feature_flags()
-    payload: Dict[str, Any] = {
-        "stage": stage,
-        "stage_env_key": _MICROCARDS_ROLLOUT_STAGE_ENV_KEY,
-        "available_stages": list(_MICROCARDS_ROLLOUT_STAGE_SEQUENCE),
-        "previous_stage": prev_stage,
-        "next_stage": next_stage,
-        "effective_feature_flags": mc_flags,
-        "stage_caps": _get_microcards_rollout_stage_caps(stage),
-        "theory_rollout_stage": _get_theory_rollout_stage(),
-        "theory_feature_flags": theory_flags,
-        "rollback_guarantees": [
-            "Microcards prod rollout stage only gates feature exposure via flags; lowering stage does not delete deck/review/calendar data.",
-            "Backend data (decks, review_events, activity.json) persists across all stage transitions.",
-            "Disabling calendar/statistics integration hides mixed-activity fields in UI but does not revert backfill data.",
-            "Re-enabling a stage restores full functionality without data loss.",
-            "Backfill can be re-run safely (idempotent) after any stage change.",
-        ],
-    }
-    if include_telemetry:
-        payload["telemetry"] = _build_microcards_prod_telemetry_summary(limit=telemetry_limit)
-    return payload
-
-
 def _ai_run_merge_manifest(run_id: str, patch_data: Dict[str, Any]) -> None:
     run_dir = _ai_run_dir(run_id)
     manifest_path = run_dir / "run.json"
@@ -5402,31 +5055,14 @@ def _ai_run_build_reopen_analysis_response(run_id: str, *, apply_feature_flags: 
     return _sanitize_analysis_response_for_client(response)
 
 
-def _microcards_service() -> MicrocardsService:
-    from routes._context import get_current_user_id
-
-    user_id = str(get_current_user_id() or "guest").strip() or "guest"
-    if _runtime_mode() == "hosted_web":
-        return HostedMicrocardsService(
-            data_dir=str(_headless_app_ctx.data_dir),
-            user_id=user_id,
-            persistence_settings=_headless_app_ctx.persistence_runtime,
-        )
-    return MicrocardsService(str(_headless_app_ctx.data_dir), user_id=user_id)
-
-
 def _microcards_analytics_service() -> MicrocardsAnalyticsService:
+    """M5 analytics service. Hosted runs are covered by the V2 storage
+    resolver inside the service itself (Postgres source of truth)."""
     current_data_dir = str(_headless_app_ctx.data_dir)
     cached = getattr(_headless_app_ctx, "microcards_analytics_service", None)
     if isinstance(cached, MicrocardsAnalyticsService) and str(cached.data_dir) == current_data_dir:
         return cached
-    if _runtime_mode() == "hosted_web":
-        service = HostedMicrocardsAnalyticsService(
-            current_data_dir,
-            persistence_settings=_headless_app_ctx.persistence_runtime,
-        )
-    else:
-        service = MicrocardsAnalyticsService(current_data_dir)
+    service = MicrocardsAnalyticsService(current_data_dir)
     setattr(_headless_app_ctx, "microcards_analytics_service", service)
     return service
 
@@ -5626,29 +5262,20 @@ def _orchestrate_microcards_review_post_submit(
 
 
 
-# в”Ђв”Ђ Register microcards helpers for routes/microcards_routes.py в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+# в”Ђв”Ђ Register microcards helpers (theory rollout routes + V2 from-analysis/calendar) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 from routes._context import set_extra as _set_extra_mc  # noqa: E402
 _set_extra_mc("microcards_helpers", {
     "build_theory_rollout_status_payload": _build_theory_rollout_status_payload,
     "build_theory_rollout_telemetry_summary": _build_theory_rollout_telemetry_summary,
-    "build_microcards_prod_rollout_status_payload": _build_microcards_prod_rollout_status_payload,
-    "build_microcards_prod_telemetry_summary": _build_microcards_prod_telemetry_summary,
-    "emit_microcards_prod_telemetry": _emit_microcards_prod_telemetry,
     "emit_theory_rollout_telemetry": _emit_theory_rollout_telemetry,
     "is_editor_feature_enabled": _is_editor_feature_enabled,
     "feature_disabled_json": _feature_disabled_json,
-    "microcards_service": _microcards_service,
     "microcards_analytics_service": _microcards_analytics_service,
     "invalidate_microcards_analytics_cache": _invalidate_microcards_analytics_cache,
-    "get_microcards_prod_feature_flags": _get_microcards_prod_feature_flags,
-    "is_microcards_prod_feature_enabled": _is_microcards_prod_feature_enabled,
-    "microcards_prod_feature_disabled_json": _microcards_prod_feature_disabled_json,
     "is_valid_ai_run_id": _is_valid_ai_run_id,
     "ai_run_build_reopen_analysis_response": _ai_run_build_reopen_analysis_response,
     "sanitize_analysis_for_microcards_backend": _sanitize_analysis_for_microcards_backend,
     "orchestrate_microcards_review_post_submit": _orchestrate_microcards_review_post_submit,
-    "PARSERS_AVAILABLE": PARSERS_AVAILABLE,
-    "MicrocardParser": MicrocardParser if PARSERS_AVAILABLE else None,
 })
 
 

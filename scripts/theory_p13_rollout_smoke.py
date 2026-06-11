@@ -295,15 +295,13 @@ def _check_stage_behavior(client: Any, run_id: str, stage: str, expected_flags: 
     _assert(has_v2 is expected_flags["analysis_v2_schema"], f"stage={stage} v2 field visibility mismatch")
     _assert(has_report_blocks is expected_flags["analysis_report_blocks_v1"], f"stage={stage} report_blocks visibility mismatch")
 
-    if expected_flags["microcards_mode"]:
-        list_data = _get_json(client, "/api/editor/microcards/decks")
-        _assert(list_data.get("ok") is True, f"microcards list should be enabled at stage={stage}")
-    else:
-        disabled = _get_json(client, "/api/editor/microcards/decks", expected_status=404)
-        _assert(disabled.get("error") == "microcards_mode_disabled", f"microcards should be disabled at stage={stage}")
+    # The V2 microcards surface is not stage-gated (the V1 gated surface was
+    # removed); deck listing stays available at every stage.
+    list_data = _get_json(client, "/api/v2/microcards/decks")
+    _assert(list_data.get("ok") is True, f"v2 microcards list should work at stage={stage}")
 
     if verbose:
-        print(f"[OK] stage={stage} flags + analysis/microcards gating verified")
+        print(f"[OK] stage={stage} flags + analysis gating verified")
 
 
 def run_smoke(*, keep_temp: bool = False, verbose: bool = False) -> int:
@@ -325,7 +323,7 @@ def run_smoke(*, keep_temp: bool = False, verbose: bool = False) -> int:
             with _env_override("RP_THEORY_ROLLOUT_STAGE", "full"):
                 created = _post_json(
                     client,
-                    "/api/editor/microcards/decks/from-analysis",
+                    "/api/v2/microcards/decks/from-analysis",
                     {"ai_run_id": run_id, "selector": {"scope": "all"}},
                 )
                 _assert(created.get("ok") is True, "microcards deck creation failed at full stage")
@@ -333,43 +331,24 @@ def run_smoke(*, keep_temp: bool = False, verbose: bool = False) -> int:
                 deck_id = str(deck.get("id") or "").strip()
                 _assert(bool(deck_id), "deck_id missing after create")
                 cards = deck.get("cards") if isinstance(deck.get("cards"), list) else []
-                pair_match_cards = [
-                    c for c in cards if isinstance(c, dict) and str(c.get("card_type") or "").lower() == "pair_match"
-                ]
                 _assert(len(cards) >= 1, "created deck has no cards")
-                _assert(len(pair_match_cards) >= 1, "created deck should contain pair_match cards at full stage")
-
-                queue = _get_json(client, f"/api/editor/microcards/decks/{deck_id}/queue?limit=20")
-                _assert(queue.get("ok") is True, "queue fetch failed")
-                current_card = queue.get("current_card")
-                _assert(isinstance(current_card, dict), "current_card missing")
-                submit = _post_json(
-                    client,
-                    "/api/editor/microcards/review/submit",
-                    {
-                        "deck_id": deck_id,
-                        "card_id": current_card["id"],
-                        "rating": "good",
-                        "session_id": (queue.get("session") or {}).get("id"),
-                    },
-                )
-                _assert(submit.get("ok") is True, "review submit failed")
+                # D2: pair candidates arrive flattened as ordinary Q/A cards;
+                # the embedded queue/review player no longer exists (study runs
+                # in the Microcards mode itself).
                 if verbose:
-                    print(f"[OK] created deck={deck_id}, queue+review completed")
+                    print(f"[OK] created v2 deck={deck_id} with {len(cards)} cards")
 
             # Rollback stage: microcards API disabled but deck file remains.
             deck_path = temp_root / "microcards" / "decks" / f"{deck_id}.json"
             _assert(deck_path.exists(), "deck file missing before rollback check")
             with _env_override("RP_THEORY_ROLLOUT_STAGE", "coverage"):
-                blocked = _get_json(client, "/api/editor/microcards/decks", expected_status=404)
-                _assert(blocked.get("error") == "microcards_mode_disabled", "rollback should block microcards list")
                 _assert(deck_path.exists(), "rollback gating must not delete deck file")
                 if verbose:
-                    print("[OK] rollback to coverage disables microcards but preserves deck data")
+                    print("[OK] rollback to coverage preserves deck data (v2 surface is not staged)")
 
             # Re-enable and reopen persisted deck.
             with _env_override("RP_THEORY_ROLLOUT_STAGE", "full"):
-                reopened = _get_json(client, f"/api/editor/microcards/decks/{deck_id}")
+                reopened = _get_json(client, f"/api/v2/microcards/decks/{deck_id}")
                 _assert(reopened.get("ok") is True, "reopen deck failed after re-enable")
                 _assert((reopened.get("deck") or {}).get("id") == deck_id, "reopened deck id mismatch")
 
@@ -381,13 +360,10 @@ def run_smoke(*, keep_temp: bool = False, verbose: bool = False) -> int:
                 for event_name in (
                     "analysis_payload_served",
                     "microcards_deck_created_from_analysis",
-                    "microcards_queue_opened",
-                    "microcards_review_submitted",
                     "feature_flag_blocked",
                 ):
                     _assert(int(by_event.get(event_name, 0)) >= 1, f"telemetry missing event {event_name}")
                 _assert(int(metrics.get("microdeck_creations_from_analysis", 0)) >= 1, "microdeck creation metric missing")
-                _assert(int(metrics.get("microcards_reviews_total", 0)) >= 1, "microcards review metric missing")
                 ratio = (metrics.get("analysis_v2_valid_ratio") or {})
                 _assert(int(ratio.get("denominator") or 0) >= 1, "analysis_v2_valid_ratio denominator should be >=1")
                 _assert(int(ratio.get("numerator") or 0) >= 1, "analysis_v2_valid_ratio numerator should be >=1")
