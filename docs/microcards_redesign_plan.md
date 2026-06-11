@@ -231,6 +231,8 @@ first-try-звёзды, покарточный L1-гейт, прозрачный
   Контракт server.py уже актуализирован: source_of_truth = V2 Postgres
   storage (user surface) + V1 hosted-репозитории (editor surface, до
   миграции).
+  ДЕТАЛЬНЫЙ ПЛАН ПОДПРОЕКТА: docs/microcards_v1_editor_migration_plan.md
+  (этапы M1–M6, продуктовые решения D1–D5, порядок деплоя и риски).
 
 ## Приоритет
 
