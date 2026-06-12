@@ -420,14 +420,33 @@ class MicrocardsServiceV2:
 
     # ── Deck Records (per-user, server-side) ────────────────────────────
 
-    # Records schema "2.0": scores/stars are earned ONLY by completed full-deck
-    # runs. Legacy (session-based) records are wiped on first read — agreed
-    # one-time reset when the run model shipped.
-    RECORDS_SCHEMA = "2.0"
+    # Records schema "2.2": cumulative SW (synaptic weight) with decay driven
+    # by the deck's real SRS stability, deck levels normalized to deck size
+    # (capped at MAX_DECK_LEVEL), and review combo bests. Reads accept the
+    # older "2.0"/"2.1" payloads.
+    RECORDS_SCHEMA = "2.2"
+    RECORDS_SCHEMA_COMPAT = ("2.0", "2.1", "2.2")
+
+    # Deck mastery thresholds in SW *per card*: the absolute threshold for a
+    # deck is per-card value × current deck size, so a level means the same
+    # thing for a 10-card deck and a 200-card one. Level 10 is the ceiling.
+    LEVEL_SW_PER_CARD = (0, 60, 140, 240, 360, 520, 720, 960, 1240, 1560)
+    MAX_DECK_LEVEL = 10
+
+    # SW decays exponentially (Ebbinghaus), but the half-life is the deck's
+    # measured memory strength: mean FSRS stability of its studied cards,
+    # scaled. A fresh deck forgets in days; a deck living on month-long
+    # review intervals barely decays — yet never stops entirely.
+    SW_HALF_LIFE_STABILITY_FACTOR = 3.0
+    SW_HALF_LIFE_MIN_DAYS = 4.0
+    SW_HALF_LIFE_MAX_DAYS = 270.0
+
+    # Per-answer SW economy (server-authoritative; the client only animates).
+    COMBO_BASE_SW = {1: 100, 2: 200}
 
     def _read_records(self) -> Dict[str, Dict[str, Any]]:
         payload = self.storage.get_user_doc(self.user_id, "records", {"schema_version": self.RECORDS_SCHEMA, "user_id": self.user_id, "items": {}})
-        if not isinstance(payload, dict) or payload.get("schema_version") != self.RECORDS_SCHEMA:
+        if not isinstance(payload, dict) or payload.get("schema_version") not in self.RECORDS_SCHEMA_COMPAT:
             return {}
         items = payload.get("items")
         if not isinstance(items, dict):
@@ -443,9 +462,136 @@ class MicrocardsServiceV2:
         }
         self.storage.put_user_doc(self.user_id, "records", payload)
 
+    @staticmethod
+    def _rec_sw_base(rec: Dict[str, Any]) -> float:
+        """Raw stored SW (pre-decay). Reads the transitional 2.1 field too."""
+        raw = rec.get("sw", rec.get("cumulative_xp"))
+        try:
+            return max(0.0, float(raw or 0))
+        except Exception:
+            return 0.0
+
+    @staticmethod
+    def _rec_sw_today(rec: Dict[str, Any], now: Optional[datetime] = None) -> int:
+        """SW earned today (UTC); the counter silently expires at midnight."""
+        today = (now or _utc_now()).date().isoformat()
+        if rec.get("sw_today_date") != today:
+            return 0
+        try:
+            return max(0, int(rec.get("sw_today") or 0))
+        except Exception:
+            return 0
+
+    def _deck_half_life_days(self, card_ids: List[Any], states: Dict[str, Dict[str, Any]]) -> float:
+        """SW half-life for a deck = scaled mean FSRS stability of its studied
+        cards. Unstudied cards don't drag it down — deck *coverage* is already
+        priced into the size-normalized level thresholds."""
+        stabilities = []
+        for cid in card_ids:
+            st = states.get(_s(cid)) or {}
+            try:
+                stab = float(st.get("stability") or 0)
+            except Exception:
+                stab = 0.0
+            if stab > 0:
+                stabilities.append(stab)
+        if not stabilities:
+            return self.SW_HALF_LIFE_MIN_DAYS
+        h = (sum(stabilities) / len(stabilities)) * self.SW_HALF_LIFE_STABILITY_FACTOR
+        return max(self.SW_HALF_LIFE_MIN_DAYS, min(self.SW_HALF_LIFE_MAX_DAYS, h))
+
+    @classmethod
+    def _effective_sw(cls, rec: Dict[str, Any], half_life_days: float,
+                      now: Optional[datetime] = None) -> float:
+        """Decayed SW as of `now`, computed on the fly — reads never write."""
+        base = cls._rec_sw_base(rec)
+        if base <= 0:
+            return 0.0
+        ts = _parse_iso(rec.get("sw_updated_at") or rec.get("last_decay_at"))
+        if ts is None:
+            return base
+        days = ((now or _utc_now()) - ts).total_seconds() / 86400.0
+        if days <= 0:
+            return base
+        return base * (2.0 ** (-days / max(0.001, float(half_life_days))))
+
+    @classmethod
+    def _deck_level_info(cls, effective_sw: float, deck_size: int) -> Dict[str, Any]:
+        """Effective SW → deck mastery level with this deck's absolute
+        thresholds (per-card values × size). next_level_sw is None at the cap."""
+        size = max(1, int(deck_size or 0))
+        sw = max(0.0, float(effective_sw))
+        level = 1
+        floor_abs = 0
+        ceil_abs: Optional[int] = cls.LEVEL_SW_PER_CARD[1] * size
+        for i in range(len(cls.LEVEL_SW_PER_CARD) - 1, -1, -1):
+            thr = cls.LEVEL_SW_PER_CARD[i] * size
+            if sw >= thr:
+                level = i + 1
+                floor_abs = thr
+                ceil_abs = (cls.LEVEL_SW_PER_CARD[i + 1] * size
+                            if i + 1 < len(cls.LEVEL_SW_PER_CARD) else None)
+                break
+        return {"level": level, "current_level_sw": floor_abs, "next_level_sw": ceil_abs}
+
+    def _deck_card_ids(self, deck: Optional[Dict[str, Any]]) -> List[Any]:
+        if not deck:
+            return []
+        ids = [c.get("id") for c in (deck.get("cards") or [])]
+        if not ids and deck.get("linked"):
+            ids = deck.get("linked_card_ids") or []
+        return ids
+
+    @staticmethod
+    def _record_view(rec: Dict[str, Any], *, effective_sw: float,
+                     level_info: Dict[str, Any], half_life_days: float,
+                     sw_today: int) -> Dict[str, Any]:
+        out = {
+            "scoreL1": int(rec.get("scoreL1") or 0),
+            "starsL1": int(rec.get("starsL1") or 0),
+            "sizeL1": int(rec.get("sizeL1") or 0),
+            "scoreL2": int(rec.get("scoreL2") or 0),
+            "starsL2": int(rec.get("starsL2") or 0),
+            "sizeL2": int(rec.get("sizeL2") or 0),
+            "l1_run_completed": bool(rec.get("l1_run_completed")),
+            "l2_unlocked": bool(rec.get("l1_run_completed")),
+            "cumulative_sw": int(round(max(0.0, effective_sw))),
+            "sw_today": max(0, int(sw_today)),
+            "comboSRS": int(rec.get("comboSRS") or 0),
+            "sw_half_life_days": round(float(half_life_days), 1),
+        }
+        out.update(level_info)
+        return out
+
+    def _l2_unlocked(self, deck_id: str) -> bool:
+        """Light L2-gate check (no deck/states reads — for hot paths)."""
+        rec = self._read_records().get(str(deck_id)) or {}
+        return bool(rec.get("l1_run_completed"))
+
     def get_all_records(self) -> Dict[str, Dict[str, Any]]:
-        """Return all deck records for this user."""
-        return self._read_records()
+        """Record views for every deck with a record (computed levels included)."""
+        records = self._read_records()
+        if not records:
+            return {}
+        states = self._read_states()
+        now = _utc_now()
+        deck_card_ids: Dict[str, List[Any]] = {}
+        for deck in self.storage.list_deck_docs(owner_user_id=self.user_id):
+            if isinstance(deck, dict) and self._owns_deck(deck):
+                deck_card_ids[str(deck.get("id"))] = self._deck_card_ids(deck)
+        out: Dict[str, Dict[str, Any]] = {}
+        for deck_id, rec in records.items():
+            card_ids = deck_card_ids.get(deck_id, [])
+            half_life = self._deck_half_life_days(card_ids, states)
+            eff = self._effective_sw(rec, half_life, now)
+            out[deck_id] = self._record_view(
+                rec,
+                effective_sw=eff,
+                level_info=self._deck_level_info(eff, len(card_ids)),
+                half_life_days=half_life,
+                sw_today=self._rec_sw_today(rec, now),
+            )
+        return out
 
     # ── L1 completion gate ──────────────────────────────────────────────
     #
@@ -473,6 +619,53 @@ class MicrocardsServiceV2:
             card_ids = deck.get("linked_card_ids") or []
         return self._l1_progress_for_ids(card_ids, states)
 
+    # ── Per-answer SW scoring (mirrors the client's combo animations) ────
+
+    @staticmethod
+    def _combo_threshold(unique_total: int) -> int:
+        """Combo size that turns on the max multiplier (15% of the deck, 3..8)."""
+        return max(3, min(8, int(max(0, unique_total) * 0.15)))
+
+    @staticmethod
+    def _combo_multiplier(combo: int, threshold: int) -> float:
+        if combo >= threshold:
+            return 3.0
+        if combo == 4:
+            return 2.0
+        if combo == 3:
+            return 1.5
+        return 1.0
+
+    def _score_answer(self, session: Dict[str, Any], *, is_correct: bool,
+                      is_retry: bool, form: int) -> int:
+        """Apply one graded answer to the session's SW economy and return the
+        SW awarded. Rules (identical to the client's animation layer):
+        correct answers grow the combo and earn base × combo multiplier;
+        mastery-cycle retries earn a flat half base; the first miss on a hot
+        streak (combo ≥ 3) is absorbed by the shield, the next one resets."""
+        threshold = int(session.get("combo_threshold") or 0) or self._combo_threshold(
+            int((session.get("stats") or {}).get("unique_total") or 0))
+        base = self.COMBO_BASE_SW.get(int(form or 1), 100)
+        combo = int(session.get("combo") or 0)
+        near_miss = bool(session.get("near_miss"))
+        points = 0
+        if is_correct:
+            near_miss = False
+            combo += 1
+            points = base // 2 if is_retry else int(base * self._combo_multiplier(combo, threshold))
+        else:
+            if combo >= 3 and not near_miss:
+                near_miss = True
+            else:
+                combo = 0
+                near_miss = False
+        session["combo"] = combo
+        session["max_combo"] = max(int(session.get("max_combo") or 0), combo)
+        session["near_miss"] = near_miss
+        session["session_sw"] = int(session.get("session_sw") or session.get("session_xp") or 0) + points
+        session.pop("session_xp", None)
+        return points
+
     @staticmethod
     def _stars_for_accuracy(accuracy_pct: float) -> int:
         """First-try accuracy → 0..5 stars (the mastery cycle guarantees 100%
@@ -490,83 +683,101 @@ class MicrocardsServiceV2:
         return 0
 
     def get_deck_record(self, deck_id: str) -> Dict[str, Any]:
-        """Best completed-run results per level + the L2 gate.
+        """Best completed-run results per level + the L2 gate + SW & deck level.
 
         The gate is run-based: level 2 unlocks once at least one FULL-DECK
         level-1 run has been completed. Adding cards later does not re-lock it
         (the run was honestly completed) — but new star attempts always cover
-        the whole current deck."""
+        the whole current deck.
+
+        SW decay is computed on the fly — this read never writes."""
         records = self._read_records()
         rec = records.get(str(deck_id)) or {}
-        out = {
-            "scoreL1": int(rec.get("scoreL1") or 0),
-            "starsL1": int(rec.get("starsL1") or 0),
-            "sizeL1": int(rec.get("sizeL1") or 0),
-            "scoreL2": int(rec.get("scoreL2") or 0),
-            "starsL2": int(rec.get("starsL2") or 0),
-            "sizeL2": int(rec.get("sizeL2") or 0),
-            "l1_run_completed": bool(rec.get("l1_run_completed")),
-        }
-        out["l2_unlocked"] = out["l1_run_completed"]
         deck = self.get_deck(deck_id)
+        states = self._read_states()
+        card_ids = self._deck_card_ids(deck)
+        half_life = self._deck_half_life_days(card_ids, states)
+        now = _utc_now()
+        eff = self._effective_sw(rec, half_life, now)
+        out = self._record_view(
+            rec,
+            effective_sw=eff,
+            level_info=self._deck_level_info(eff, len(card_ids)),
+            half_life_days=half_life,
+            sw_today=self._rec_sw_today(rec, now),
+        )
         if deck:
             # Informational per-card metric (kept for deck stats; NOT the gate).
-            out["l1_progress"] = self._l1_progress(deck)
+            out["l1_progress"] = self._l1_progress(deck, states)
         return out
 
-    def _apply_run_record(self, deck_id: str, *, level: int, score: int, stars: int,
-                          deck_size: int) -> Dict[str, Any]:
-        """Persist a completed run's result; keeps the all-time best per level."""
+    def _apply_session_result(self, deck_id: str, *, mode: str, level: int, score: int, stars: int,
+                              deck_size: int, max_combo: int = 0) -> Dict[str, Any]:
+        """Persist a finished session: the earned SW joins the deck's cumulative
+        pool (decayed to 'now' first), runs update their all-time bests, reviews
+        update the best-combo record. The only place cumulative SW is written."""
         records = self._read_records()
         rec = dict(records.get(str(deck_id)) or {})
         score = max(0, int(score))
         stars = max(0, min(5, int(stars)))
-        suffix = "L2" if level == 2 else "L1"
+        max_combo = max(0, int(max_combo))
+
+        deck = self.get_deck(deck_id)
+        states = self._read_states()
+        card_ids = self._deck_card_ids(deck)
+        half_life = self._deck_half_life_days(card_ids, states)
+        now = _utc_now()
+
+        eff_before = self._effective_sw(rec, half_life, now)
+        eff_after = eff_before + score
+        rec["sw"] = round(eff_after, 2)
+        rec["sw_updated_at"] = _utc_now_iso()
+        rec["sw_today"] = self._rec_sw_today(rec, now) + score
+        rec["sw_today_date"] = now.date().isoformat()
+        # Transitional 2.1 fields — superseded by sw/sw_updated_at and the
+        # combo record respectively.
+        for legacy_key in ("cumulative_xp", "last_decay_at", "scoreSRS", "starsSRS"):
+            rec.pop(legacy_key, None)
+
         is_new_record = False
-        if score > int(rec.get(f"score{suffix}") or 0):
-            rec[f"score{suffix}"] = score
-            rec[f"size{suffix}"] = max(0, int(deck_size))
-            is_new_record = True
-        if stars > int(rec.get(f"stars{suffix}") or 0):
-            rec[f"stars{suffix}"] = stars
-        if level != 2:
-            # Any completed L1 run opens the gate, stars don't matter.
-            rec["l1_run_completed"] = True
-        records[str(deck_id)] = rec
-        self._write_records(records)
-        return {"record": rec, "is_new_record": is_new_record}
-
-    def save_deck_record(self, deck_id: str, score: int, stars: int, level_mode: int = 1) -> Dict[str, Any]:
-        """Update deck record for a given level. Only keeps all-time best per level.
-        Returns the updated record dict and whether this was a new record (is_new_record).
-        """
-        records = self._read_records()
-        rec = dict(records.get(str(deck_id)) or {})
-        # Ensure all keys exist
-        for key in ("scoreL1", "starsL1", "scoreL2", "starsL2"):
-            if key not in rec:
-                rec[key] = 0
-
-        score = max(0, int(score))
-        stars = max(0, min(5, int(stars)))
-        is_new_record = False
-
-        if level_mode == 2:
-            if score > rec["scoreL2"]:
-                rec["scoreL2"] = score
+        if mode == "run":
+            suffix = "L2" if level == 2 else "L1"
+            if score > int(rec.get(f"score{suffix}") or 0):
+                rec[f"score{suffix}"] = score
+                rec[f"size{suffix}"] = max(0, int(deck_size))
                 is_new_record = True
-            if stars > rec["starsL2"]:
-                rec["starsL2"] = stars
+            if stars > int(rec.get(f"stars{suffix}") or 0):
+                rec[f"stars{suffix}"] = stars
+            if level != 2:
+                rec["l1_run_completed"] = True
         else:
-            if score > rec["scoreL1"]:
-                rec["scoreL1"] = score
+            # Reviews are dosed by the SRS schedule, so a per-session score is
+            # mostly a function of how much was due — the best COMBO is the
+            # only review stat honest enough to call a record.
+            if max_combo > int(rec.get("comboSRS") or 0):
+                rec["comboSRS"] = max_combo
                 is_new_record = True
-            if stars > rec["starsL1"]:
-                rec["starsL1"] = stars
 
         records[str(deck_id)] = rec
         self._write_records(records)
-        return {"record": rec, "is_new_record": is_new_record}
+
+        size = len(card_ids)
+        info_before = self._deck_level_info(eff_before, size)
+        info_after = self._deck_level_info(eff_after, size)
+        out_record = self._record_view(
+            rec,
+            effective_sw=eff_after,
+            level_info=info_after,
+            half_life_days=half_life,
+            sw_today=self._rec_sw_today(rec, now),
+        )
+        return {
+            "record": out_record,
+            "is_new_record": is_new_record,
+            "level_up": info_after["level"] > info_before["level"],
+            "previous_level": info_before["level"],
+            "current_level": info_after["level"],
+        }
 
     # ── Decks CRUD ────────────────────────────────────────────────────
 
@@ -704,6 +915,8 @@ class MicrocardsServiceV2:
         for deck in self.storage.list_deck_docs(owner_user_id=self.user_id):
             if isinstance(deck, dict) and self._owns_deck(deck):
                 deck_id = deck.get("id")
+                
+                rec = records.get(str(deck_id)) or {}
                 is_linked = bool(deck.get("linked"))
                 # Linked decks don't store cards locally — use the cached id list /
                 # count captured at link time (cheap; avoids a catalog read per deck).
@@ -750,8 +963,13 @@ class MicrocardsServiceV2:
                     active_session_level_mode = preferred.get("level_mode")
 
                 l1_progress = self._l1_progress_for_ids(card_ids, states)
-                rec = records.get(str(deck_id)) or {}
                 l2_unlocked = bool(rec.get("l1_run_completed"))
+
+                # Deck mastery level for the library grid — decay computed on
+                # the fly from the states already in hand; no writes.
+                half_life = self._deck_half_life_days(card_ids, states)
+                eff_sw = self._effective_sw(rec, half_life, now)
+                level_info = self._deck_level_info(eff_sw, len(card_ids))
 
                 summary = {
                     "id": deck_id,
@@ -776,6 +994,8 @@ class MicrocardsServiceV2:
                     "active_sessions": active_sessions,
                     "l1_progress": l1_progress,
                     "l2_unlocked": l2_unlocked,
+                    "level": level_info["level"],
+                    "cumulative_sw": int(round(eff_sw)),
                 }
                 decks.append(summary)
 
@@ -1172,7 +1392,7 @@ class MicrocardsServiceV2:
             mode = "run" if level_mode in (1, 2) else "review"
         if mode == "run":
             level_mode = 2 if level_mode == 2 else 1
-            if level_mode == 2 and not self.get_deck_record(deck_id).get("l2_unlocked"):
+            if level_mode == 2 and not self._l2_unlocked(deck_id):
                 raise ValueError("level2_locked")
             slot = f"run_l{level_mode}"
         else:
@@ -1278,7 +1498,7 @@ class MicrocardsServiceV2:
             # Adaptive per-card form: cards that earned mastery level 2 are
             # checked with typed input (worth more points) — but only once the
             # deck's L2 is unlocked, so the input form is never a surprise.
-            l2_unlocked = self.get_deck_record(deck_id).get("l2_unlocked", False)
+            l2_unlocked = self._l2_unlocked(deck_id)
             for cid in queue:
                 st = states.get(cid) or {}
                 strong = int(st.get("level") or 1) >= 2
@@ -1320,9 +1540,13 @@ class MicrocardsServiceV2:
             "level_mode": level_mode,
             "paused": False,
             "paused_at": None,
+            # Server-authoritative SW economy: combo, shield and earned SW are
+            # tracked per answer here; the client only animates them.
             "combo": 0,
             "max_combo": 0,
-            "session_xp": 0,
+            "session_sw": 0,
+            "near_miss": False,
+            "combo_threshold": self._combo_threshold(len(queue)),
             # Mastery cycle: outcome of the FIRST attempt per card (card_id -> bool)
             # and the cards already closed with a correct answer. A wrong answer
             # re-queues the card until it is answered correctly, so the session
@@ -1559,6 +1783,10 @@ class MicrocardsServiceV2:
             if card_key not in mastered_ids:
                 mastered_ids.append(card_key)
             session["last_answer"] = {"card_id": card_key, "first_attempt": False, "correct": True}
+            # The wrong verdict being corrected already went through scoring
+            # (shield/combo reset); the correction earns full points on top —
+            # same sequence the client animates.
+            sw_awarded = self._score_answer(session, is_correct=True, is_retry=False, form=grade_level)
         else:
             stats["attempts"] = stats.get("attempts", 0) + 1
             if is_correct:
@@ -1570,6 +1798,7 @@ class MicrocardsServiceV2:
                 if card_key not in error_card_ids:
                     error_card_ids.append(card_key)
             session["last_answer"] = {"card_id": card_key, "first_attempt": first_attempt, "correct": bool(is_correct)}
+            sw_awarded = self._score_answer(session, is_correct=is_correct, is_retry=is_retry, form=grade_level)
 
             # Advance past the answered card, then (on a wrong answer) re-queue it
             # a few positions ahead — the mastery cycle.
@@ -1604,6 +1833,7 @@ class MicrocardsServiceV2:
             "form": grade_level,
             "first_attempt": first_attempt,
             "is_retry": is_retry,
+            "sw_awarded": sw_awarded,
             # The scheduled review (if one was written) — feeds the calendar
             # live integration in the route layer. None for mastery retries.
             "review_event": review_event,
@@ -1659,18 +1889,17 @@ class MicrocardsServiceV2:
     # Mutable fields snapshotted into a run checkpoint on pause. "Exit without
     # saving" rolls the run back to exactly this point.
     _CHECKPOINT_FIELDS = ("card_queue", "cursor", "first_results", "mastered_ids",
-                          "stats", "last_answer", "combo", "max_combo", "session_xp")
+                          "stats", "last_answer", "combo", "max_combo", "session_sw",
+                          "near_miss")
 
-    def pause_session(self, session_id: str, combo: int = 0, max_combo: int = 0,
-                      session_xp: int = 0) -> Dict[str, Any]:
+    def pause_session(self, session_id: str) -> Dict[str, Any]:
+        """Pause a session. Combo/SW already live server-side (scored per
+        answer), so the client reports nothing here."""
         session = self._get_session(session_id)
         if not session:
             raise LookupError("session_not_found")
         session["paused"] = True
         session["paused_at"] = _utc_now_iso()
-        session["combo"] = combo
-        session["max_combo"] = max_combo
-        session["session_xp"] = session_xp
         if session.get("mode") == "run":
             # A pause is a checkpoint: the sitting just played is committed,
             # a later "exit without saving" only loses the NEXT sitting.
@@ -1723,12 +1952,12 @@ class MicrocardsServiceV2:
         self._save_session(session, set_active=True)
         return session
 
-    def finish_session(self, session_id: str, *, session_xp: int = 0, max_combo: int = 0) -> Dict[str, Any]:
-        """Close out a COMPLETED run: compute stars server-side and persist the
-        deck record (the only path that earns stars / opens the L2 gate).
+    def finish_session(self, session_id: str) -> Dict[str, Any]:
+        """Close out a COMPLETED run or review session: compute stars, save
+        records and grow the deck's cumulative SW / level. Score and combo are
+        the server-tracked values — nothing is taken from the client.
 
-        Idempotent — a second call returns the stored result. Reviews have no
-        record to save; calling finish on one just returns its summary stats."""
+        Idempotent — a second call returns the stored result."""
         session = self._get_session(session_id)
         if not session:
             raise LookupError("session_not_found")
@@ -1747,24 +1976,37 @@ class MicrocardsServiceV2:
             "first_try_correct": first_try,
             "unique_total": unique_total,
         }
-        if session.get("mode") == "run":
-            level = 2 if session.get("level_mode") == 2 else 1
-            stars = self._stars_for_accuracy(accuracy)
-            score = max(0, int(session_xp))
-            session["session_xp"] = score
-            session["max_combo"] = max(int(session.get("max_combo") or 0), int(max_combo or 0))
-            saved = self._apply_run_record(
-                session.get("deck_id"), level=level, score=score, stars=stars,
-                deck_size=unique_total,
-            )
-            result.update({
-                "level": level,
-                "stars": stars,
-                "score": score,
-                "record": saved["record"],
-                "is_new_record": saved["is_new_record"],
-                "l2_unlocked": bool(saved["record"].get("l1_run_completed")),
-            })
+
+        stars = self._stars_for_accuracy(accuracy)
+        score = max(0, int(session.get("session_sw") or session.get("session_xp") or 0))
+        max_combo = max(0, int(session.get("max_combo") or 0))
+
+        mode = session.get("mode") or "review"
+        level = 2 if session.get("level_mode") == 2 else 1
+
+        saved = self._apply_session_result(
+            session.get("deck_id"),
+            mode=mode,
+            level=level,
+            score=score,
+            stars=stars,
+            deck_size=unique_total,
+            max_combo=max_combo,
+        )
+
+        result.update({
+            "level": level,
+            "stars": stars,
+            "score": score,
+            "max_combo": max_combo,
+            "record": saved["record"],
+            "is_new_record": saved["is_new_record"],
+            "level_up": saved["level_up"],
+            "previous_level": saved["previous_level"],
+            "current_level": saved["current_level"],
+            "l2_unlocked": saved["record"]["l2_unlocked"],
+        })
+
         session["finish_result"] = result
         self._save_session(session, set_active=True)
         return result

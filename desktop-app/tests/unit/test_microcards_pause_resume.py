@@ -28,19 +28,15 @@ def test_service_pause_resume_discard():
     assert session["combo"] == 0
     assert len(session["card_queue"]) == 2
 
-    # 3. Pause session and store metrics
-    svc.pause_session(
-        session_id=session_id,
-        combo=3,
-        max_combo=5,
-        session_xp=15
-    )
+    # 3. Earn some server-side SW/combo, then pause (a checkpoint).
+    svc.submit_answer(session_id, card1["id"], "know")
+    svc.pause_session(session_id=session_id)
 
     # 4. Check list_decks returns pause status
     decks = svc.list_decks()
     assert len(decks) == 1
     assert decks[0]["is_paused"] is True
-    assert decks[0]["paused_progress"] == "0/2"
+    assert decks[0]["paused_progress"] == "1/2"
     assert decks[0]["active_session_id"] == session_id
     assert decks[0]["active_session_level_mode"] == 1
 
@@ -49,15 +45,16 @@ def test_service_pause_resume_discard():
     # Check that service-level get_deck itself is unaltered, but routes layer adds dynamic fields.
     # So we test route serialization later.
 
-    # 6. Resume session (resume=True, restart=False)
+    # 6. Resume session (resume=True, restart=False) — server-tracked
+    # combo/SW survive the pause.
     resumed = svc.start_session(deck_id, resume=True, restart=False, level_mode=1)
     assert resumed["id"] == session_id
     assert resumed["paused"] is False
-    assert resumed["combo"] == 3
-    assert resumed["session_xp"] == 15
+    assert resumed["combo"] == 1
+    assert resumed["session_sw"] == 100
 
     # 7. Pause again
-    svc.pause_session(session_id, combo=1, max_combo=1)
+    svc.pause_session(session_id)
     
     # 8. Discard session
     svc.discard_session(session_id)
@@ -102,12 +99,8 @@ def test_routes_pause_resume_discard(monkeypatch):
         assert data["ok"] is True
         session_id = data["session"]["id"]
 
-        # 2. Pause session
-        res_pause = client.post(f"/api/v2/microcards/session/{session_id}/pause", json={
-            "combo": 4,
-            "max_combo": 10,
-            "session_xp": 40
-        })
+        # 2. Pause session (no body — combo/SW are tracked server-side)
+        res_pause = client.post(f"/api/v2/microcards/session/{session_id}/pause", json={})
         assert res_pause.status_code == 200
         assert res_pause.get_json()["ok"] is True
 

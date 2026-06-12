@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <filter id="med-glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="2" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+    <linearGradient id="active-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00F0FF" />
+      <stop offset="100%" stop-color="#00FFD1" />
+    </linearGradient>
+    <style>
+      @keyframes lvl4-pulse {
+        0%, 100% { opacity: 0.7; transform: scale(0.93); }
+        50% { opacity: 1; transform: scale(1.07); }
+      }
+      @keyframes lvl4-flow {
+        to { stroke-dashoffset: -12; }
+      }
+      .lvl4-node {
+        transform-origin: center;
+        transform-box: fill-box;
+        animation: lvl4-pulse 2.2s infinite ease-in-out;
+      }
+      .lvl4-flow-line {
+        animation: lvl4-flow 3s infinite linear;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .lvl4-node, .lvl4-flow-line { animation: none; }
+        .lvl4-node { opacity: 0.9; }
+      }
+    </style>
+  </defs>
+  <rect width="64" height="64" fill="none" />
+
+  <!-- Сформированная сеть: ромб из четырёх нейронов -->
+  <g stroke="url(#active-grad)" stroke-width="2.2" stroke-linecap="round" opacity="0.9">
+    <line x1="32" y1="13" x2="14" y2="32" />
+    <line x1="32" y1="13" x2="50" y2="32" />
+    <line x1="14" y1="32" x2="32" y2="51" />
+    <line x1="50" y1="32" x2="32" y2="51" />
+  </g>
+  <!-- Перекрёстные связи с бегущим сигналом — контур замкнулся -->
+  <line x1="14" y1="32" x2="50" y2="32" class="lvl4-flow-line" stroke="#00FFD1" stroke-width="1.8" stroke-dasharray="4,3" stroke-linecap="round" opacity="0.75" />
+  <line x1="32" y1="13" x2="32" y2="51" class="lvl4-flow-line" stroke="#00F0FF" stroke-width="1.8" stroke-dasharray="4,3" stroke-linecap="round" opacity="0.6" />
+
+  <!-- Узлы сети -->
+  <circle cx="32" cy="13" r="4" class="lvl4-node" fill="#00FFD1" filter="url(#med-glow)" style="animation-delay: 0s;" />
+  <circle cx="14" cy="32" r="4" class="lvl4-node" fill="#00F0FF" filter="url(#med-glow)" style="animation-delay: 0.3s;" />
+  <circle cx="50" cy="32" r="4" class="lvl4-node" fill="#00F0FF" filter="url(#med-glow)" style="animation-delay: 0.6s;" />
+  <circle cx="32" cy="51" r="4" class="lvl4-node" fill="#00FFD1" filter="url(#med-glow)" style="animation-delay: 0.9s;" />
+</svg>

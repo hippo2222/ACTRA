@@ -141,21 +141,24 @@ def test_session_flows_and_progression():
     assert s["stats"]["pending_retry"] == 0
 
     # Finishing the completed run computes stars server-side (2/3 first try →
-    # 67% → 3 stars), persists the record and opens the L2 gate.
-    fin = svc.finish_session(session["id"], session_xp=240, max_combo=2)
+    # 67% → 3 stars), persists the record and opens the L2 gate. The score is
+    # the SERVER-tracked SW: know(100) + miss(0) + know(100) + retry(50) = 250.
+    fin = svc.finish_session(session["id"])
     assert fin["mode"] == "run"
     assert fin["accuracy"] == 67
     assert fin["stars"] == 3
+    assert fin["score"] == 250
+    assert fin["max_combo"] == 2
     assert fin["is_new_record"] is True
     assert fin["l2_unlocked"] is True
     rec = svc.get_deck_record(deck["id"])
-    assert rec["scoreL1"] == 240
+    assert rec["scoreL1"] == 250
     assert rec["starsL1"] == 3
     assert rec["sizeL1"] == 3
     assert rec["l2_unlocked"] is True
 
     # finish is idempotent.
-    fin2 = svc.finish_session(session["id"], session_xp=999)
+    fin2 = svc.finish_session(session["id"])
     assert fin2 == fin
 
     # FSRS/event history: exactly one review per card — the retry didn't double it.
@@ -169,7 +172,7 @@ def _complete_l1_run(svc, deck_id):
     session = svc.start_session(deck_id, mode="run", level_mode=1, restart=True)
     for cid in list(session["card_queue"]):
         svc.submit_answer(session["id"], cid, "know")
-    svc.finish_session(session["id"], session_xp=100)
+    svc.finish_session(session["id"])
 
 
 def test_l2_override_corrects_previous_wrong():
@@ -228,7 +231,7 @@ def test_run_gate_unlocks_l2():
         svc.submit_answer(session["id"], cid, "know")
     # All cards answered, but the gate opens only on finish.
     assert svc.get_deck_record(deck["id"])["l2_unlocked"] is False
-    svc.finish_session(session["id"], session_xp=200)
+    svc.finish_session(session["id"])
 
     rec = svc.get_deck_record(deck["id"])
     assert rec["l1_run_completed"] is True
@@ -263,7 +266,7 @@ def test_run_checkpoint_abandon_rolls_back_to_pause():
 
     # Sitting 1: one card mastered, then pause (checkpoint).
     svc.submit_answer(run["id"], q[0], "know")
-    svc.pause_session(run["id"], combo=1, max_combo=1, session_xp=100)
+    svc.pause_session(run["id"])
 
     # Sitting 2: another card mastered... then exit WITHOUT saving.
     resumed = svc.start_session(deck["id"], mode="run", level_mode=1)
@@ -275,7 +278,7 @@ def test_run_checkpoint_abandon_rolls_back_to_pause():
     assert rolled["paused"] is True
     assert rolled["completed"] is False
     assert rolled["stats"]["mastered"] == 1      # sitting 2 is gone
-    assert rolled["session_xp"] == 100           # checkpointed XP
+    assert rolled["session_sw"] == 100           # checkpointed server-side SW
     assert q[1] not in rolled["mastered_ids"]
 
     # The rolled-back run resumes and completes normally.
@@ -283,8 +286,10 @@ def test_run_checkpoint_abandon_rolls_back_to_pause():
     assert resumed2["id"] == run["id"]
     for cid in (q[1], q[2]):
         svc.submit_answer(run["id"], cid, "know")
-    fin = svc.finish_session(run["id"], session_xp=300)
+    fin = svc.finish_session(run["id"])
     assert fin["stars"] == 5  # every card first-try within the saved history
+    # SW continued from the checkpoint: 100 + combo2(100) + combo3(×3 → 300).
+    assert fin["score"] == 500
 
     # A never-paused run abandons into a discard (no checkpoint to restore).
     run2 = svc.start_session(deck["id"], mode="run", level_mode=1, restart=True)
@@ -325,21 +330,35 @@ def test_review_composition_and_adaptive_forms():
     assert forms[cards[1]["id"]] == 1
 
     # Answer in queue order: the typed card is graded by fuzzy matching,
-    # the others by know/dont_know.
+    # the others by know/dont_know. Track the SW the server should award:
+    # base 200 for the typed form, 100 for self-grade, ×3 at combo ≥ 3.
     typed_result = None
-    for cid in list(review2["card_queue"]):
+    expected_sw = 0
+    threshold = review2["combo_threshold"]
+    for pos, cid in enumerate(list(review2["card_queue"]), start=1):
+        base = 200 if cid == cards[0]["id"] else 100
+        mult = 3 if pos >= threshold else (2 if pos == 4 else (1.5 if pos == 3 else 1))
+        expected_sw += int(base * mult)
         if cid == cards[0]["id"]:
             typed_result = svc.submit_answer(review2["id"], cid, "A0")
         else:
             svc.submit_answer(review2["id"], cid, "know")
     assert typed_result["form"] == 2 and typed_result["is_correct"] is True
 
-    # Reviews never write records, even when finished.
-    fin = svc.finish_session(review2["id"], session_xp=500)
+    # Reviews feed cumulative SW and the best-combo record — but never the
+    # run records, and there is no per-session "review score" record (it
+    # would only measure how much happened to be due).
+    run_sw = svc.get_deck_record(deck["id"])["scoreL1"]
+    fin = svc.finish_session(review2["id"])
     assert fin["mode"] == "review"
-    assert "record" not in fin
+    assert fin["score"] == expected_sw
+    assert fin["record"]["comboSRS"] == 3
+    assert "scoreSRS" not in fin["record"]
     rec = svc.get_deck_record(deck["id"])
-    assert rec["scoreL1"] == 100  # still the L1 run's record, untouched
+    assert rec["scoreL1"] == run_sw  # L1 run's record is untouched
+    assert rec["comboSRS"] == 3
+    assert rec["cumulative_sw"] == run_sw + expected_sw
+    assert rec["sw_today"] == run_sw + expected_sw
 
 
 def test_run_and_review_slots_coexist():
@@ -1316,7 +1335,7 @@ def test_linked_deck_republish_migrates_progress_by_content():
     session = svc.start_session(did, level_mode=1)
     for cid in list(session["card_queue"]):
         svc.submit_answer(session["id"], cid, "know")
-    svc.finish_session(session["id"], session_xp=100)
+    svc.finish_session(session["id"])
     rec = svc.get_deck_record(did)
     assert rec["l1_progress"]["complete"] is True
     assert rec["l2_unlocked"] is True
@@ -1475,3 +1494,179 @@ def test_card_image_attribution_stored_and_preserved():
     svc.update_card(did, card["id"], front_image_url=None, front_image_attribution=None)
     refreshed2 = next(c for c in svc.list_cards(did) if c["id"] == card["id"])
     assert refreshed2["front"]["image_attribution"] is None
+
+
+def test_deck_mastery_level_normalized_to_deck_size():
+    """Cumulative SW accrues; level thresholds are per-card × deck size and
+    capped at MAX_DECK_LEVEL, so a level means the same for any deck size."""
+    svc = MicrocardsServiceV2(tempfile.mkdtemp(), user_id="test_user")
+    deck = svc.create_deck(name="Mastery Deck")
+    did = deck["id"]
+    for i in range(5):
+        svc.create_card(did, front_text=f"Q{i}", back_text=f"A{i}")
+    # 5 cards → L2 at 60×5=300 SW, L3 at 140×5=700 SW.
+
+    rec = svc.get_deck_record(did)
+    assert rec["cumulative_sw"] == 0
+    assert rec["level"] == 1
+    assert rec["current_level_sw"] == 0
+    assert rec["next_level_sw"] == 300
+
+    # 1. Earn 250 SW — below the L2 threshold.
+    res = svc._apply_session_result(did, mode="review", level=1, score=250, stars=4, deck_size=5, max_combo=5)
+    assert res["level_up"] is False
+    assert res["current_level"] == 1
+    assert res["record"]["cumulative_sw"] == 250
+    assert res["record"]["comboSRS"] == 5
+    assert res["record"]["sw_today"] == 250
+
+    # 2. Earn another 200 SW → 450, crosses the 300 line → level 2.
+    res2 = svc._apply_session_result(did, mode="review", level=1, score=200, stars=5, deck_size=5, max_combo=12)
+    assert res2["level_up"] is True
+    assert res2["previous_level"] == 1
+    assert res2["current_level"] == 2
+    assert res2["record"]["cumulative_sw"] == 450
+    assert res2["record"]["comboSRS"] == 12
+
+    rec = svc.get_deck_record(did)
+    assert rec["cumulative_sw"] == 450
+    assert rec["level"] == 2
+    assert rec["current_level_sw"] == 300
+    assert rec["next_level_sw"] == 700
+
+    # 3. The same 450 SW in a BIGGER deck is still level 1: add 5 more cards
+    # (L2 now needs 60×10=600) — the level honestly reflects coverage.
+    for i in range(5):
+        svc.create_card(did, front_text=f"X{i}", back_text=f"Y{i}")
+    rec = svc.get_deck_record(did)
+    assert rec["level"] == 1
+    assert rec["next_level_sw"] == 600
+
+    # 4. Level 10 is the ceiling: even absurd SW does not exceed it.
+    res3 = svc._apply_session_result(did, mode="review", level=1, score=10_000_000, stars=5, deck_size=10)
+    assert res3["current_level"] == 10
+    assert res3["record"]["next_level_sw"] is None
+
+
+def test_sw_decay_follows_deck_stability_and_reads_never_write():
+    """SW decays with a half-life tied to the deck's real FSRS stability:
+    fragile (fresh) decks forget in days, mature decks barely move — but
+    nothing is forever. Reads compute decay on the fly and never write."""
+    from unittest.mock import patch
+    from datetime import timedelta
+    from services.microcards_service_v2 import _utc_now
+
+    tmp = tempfile.mkdtemp()
+    svc = MicrocardsServiceV2(tmp, user_id="test_user")
+    deck = svc.create_deck(name="Decay Deck")
+    did = deck["id"]
+    for i in range(5):
+        svc.create_card(did, front_text=f"Q{i}", back_text=f"A{i}")
+
+    svc._apply_session_result(did, mode="review", level=1, score=1000, stars=5, deck_size=5)
+    rec = svc.get_deck_record(did)
+    assert rec["cumulative_sw"] == 1000
+
+    # No studied cards yet → minimal half-life (4 days). After 4 days half
+    # the SW is gone; after 40 days it is dust.
+    base_time = _utc_now()
+    with patch("services.microcards_service_v2._utc_now", return_value=base_time + timedelta(days=4)):
+        decayed = svc.get_deck_record(did)
+    assert 480 <= decayed["cumulative_sw"] <= 520
+    with patch("services.microcards_service_v2._utc_now", return_value=base_time + timedelta(days=40)):
+        assert svc.get_deck_record(did)["cumulative_sw"] <= 2
+
+    # Mature deck: every card at stability 30 days → half-life 90 days.
+    # The same 4-day wait barely dents it.
+    states = svc._read_states()
+    for c in svc.list_cards(did):
+        states[c["id"]] = {"card_id": c["id"], "stability": 30.0, "level": 2}
+    svc._write_states(states)
+    with patch("services.microcards_service_v2._utc_now", return_value=base_time + timedelta(days=4)):
+        mature = svc.get_deck_record(did)
+    assert mature["cumulative_sw"] >= 960
+    # ...yet a year of silence still erodes it (nothing is forever).
+    with patch("services.microcards_service_v2._utc_now", return_value=base_time + timedelta(days=365)):
+        assert svc.get_deck_record(did)["cumulative_sw"] < 100
+
+    # Reads never write: the stored payload is byte-identical after reads.
+    stored_before = svc._read_records().get(did, {})
+    with patch("services.microcards_service_v2._utc_now", return_value=base_time + timedelta(days=400)):
+        svc.get_deck_record(did)
+        svc.list_decks()
+        svc.get_all_records()
+    assert svc._read_records().get(did, {}) == stored_before
+
+
+def test_list_decks_and_all_records_expose_levels():
+    """The library grid gets level/cumulative_sw per deck; the records hydrate
+    endpoint returns computed views too."""
+    svc = MicrocardsServiceV2(tempfile.mkdtemp(), user_id="test_user")
+    deck = svc.create_deck(name="Level Deck")
+    did = deck["id"]
+    for i in range(3):
+        svc.create_card(did, front_text=f"Q{i}", back_text=f"A{i}")
+    svc._apply_session_result(did, mode="review", level=1, score=400, stars=5, deck_size=3, max_combo=4)
+
+    summary = next(d for d in svc.list_decks() if d["id"] == did)
+    assert summary["cumulative_sw"] == 400
+    assert summary["level"] == 2  # 3 cards: L2 at 180, L3 at 420 — 400 sits in L2
+
+    views = svc.get_all_records()
+    assert views[did]["cumulative_sw"] == 400
+    assert views[did]["level"] == summary["level"]
+    assert views[did]["comboSRS"] == 4
+
+
+def test_server_side_sw_scoring_shield_and_multipliers():
+    """The SW economy is server-authoritative: combo multipliers, the flat
+    half-base retry reward and the near-miss shield are applied per answer in
+    submit_answer; finish_session takes nothing from the client."""
+    svc = MicrocardsServiceV2(tempfile.mkdtemp(), user_id="test_user")
+    deck = svc.create_deck(name="Scoring Deck")
+    did = deck["id"]
+    for i in range(6):
+        svc.create_card(did, front_text=f"Q{i}", back_text=f"A{i}")
+
+    run = svc.start_session(did, mode="run", level_mode=1)
+    q = list(run["card_queue"])
+    assert run["combo_threshold"] == 3  # max(3, min(8, 6×0.15))
+
+    # Three correct: 100 (combo 1) + 100 (combo 2) + 300 (combo 3 ≥ threshold).
+    for cid in q[:3]:
+        res = svc.submit_answer(run["id"], cid, "know")
+    s = res["session"]
+    assert s["session_sw"] == 500
+    assert s["combo"] == 3 and s["max_combo"] == 3
+
+    # First miss on a hot streak → shield absorbs it, combo survives.
+    res = svc.submit_answer(run["id"], q[3], "dont_know")
+    s = res["session"]
+    assert res["sw_awarded"] == 0
+    assert s["near_miss"] is True and s["combo"] == 3
+
+    # Next correct keeps riding the streak: combo 4 ≥ threshold → ×3.
+    res = svc.submit_answer(run["id"], q[4], "know")
+    s = res["session"]
+    assert res["sw_awarded"] == 300
+    assert s["near_miss"] is False and s["combo"] == 4
+
+    # A recovery clears the shield, so the streak's NEXT miss re-arms it
+    # (mirrors the client: combo ≥ 3 and no active shield).
+    res = svc.submit_answer(run["id"], q[5], "dont_know")
+    s = res["session"]
+    assert s["combo"] == 4 and s["near_miss"] is True
+
+    # The mastery-cycle retries close the missed cards at half base (50).
+    res = svc.submit_answer(run["id"], q[3], "know")
+    assert res["sw_awarded"] == 50
+    res = svc.submit_answer(run["id"], q[5], "know")
+    assert res["sw_awarded"] == 50
+    assert res["session"]["completed"] is True
+
+    fin = svc.finish_session(run["id"])
+    assert fin["score"] == 900  # 500 + 300 + 50 + 50
+    assert fin["max_combo"] == 6  # retries keep feeding the combo
+    rec = svc.get_deck_record(did)
+    assert rec["scoreL1"] == 900
+    assert rec["cumulative_sw"] == 900

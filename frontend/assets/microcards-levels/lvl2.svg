@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <filter id="dim-glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="2" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+    <style>
+      @keyframes lvl2-breath {
+        0%, 100% { opacity: 0.6; }
+        50% { opacity: 1; }
+      }
+      @keyframes lvl2-flow {
+        to { stroke-dashoffset: -14; }
+      }
+      .lvl2-node {
+        animation: lvl2-breath 3s infinite ease-in-out;
+      }
+      .lvl2-flow-line {
+        animation: lvl2-flow 4s infinite linear;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .lvl2-node, .lvl2-flow-line { animation: none; }
+        .lvl2-node { opacity: 0.85; }
+      }
+    </style>
+  </defs>
+  <rect width="64" height="64" fill="none" />
+
+  <!-- Первый путь: два нейрона, ещё пунктирная связь с бегущим сигналом -->
+  <line x1="20" y1="42" x2="44" y2="22" class="lvl2-flow-line" stroke="#00F0FF" stroke-width="2.2" stroke-dasharray="5,4" stroke-linecap="round" opacity="0.8" />
+
+  <!-- Боковой обрывающийся отросток — путь ещё нестабилен -->
+  <line x1="44" y1="22" x2="52" y2="38" stroke="#00F0FF" stroke-width="1.8" stroke-dasharray="2,4" stroke-linecap="round" opacity="0.4" />
+
+  <!-- Два узла -->
+  <circle cx="20" cy="42" r="4" class="lvl2-node" fill="#00F0FF" filter="url(#dim-glow)" />
+  <circle cx="44" cy="22" r="4.5" class="lvl2-node" fill="#00F0FF" filter="url(#dim-glow)" style="animation-delay: 1.5s;" />
+</svg>

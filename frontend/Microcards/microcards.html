@@ -297,6 +297,17 @@
         /* One progress group: stars + status on one line, mastery bar tight underneath. */
         .mc-deck-card__prog { margin-top: 1rem; }
         .mc-deck-card__stars { display: flex; align-items: center; gap: 0.18rem; width: 100%; margin-bottom: 0.6rem; }
+        /* Compact deck mastery level badge on the library card. Same fixed
+           dark well as the details badge — the neon art needs it in light themes. */
+        .mc-deck-card__lvl { position: relative; width: 1.9rem; height: 1.9rem; border-radius: 50%; flex-shrink: 0;
+            margin-right: 0.4rem; background-color: #0d1430; background-size: 130% 130%;
+            background-position: center; background-repeat: no-repeat;
+            border: 1px solid color-mix(in srgb, var(--color-border-strong) 40%, transparent);
+            box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.5); }
+        .mc-deck-card__lvl b { position: absolute; bottom: -0.25rem; right: -0.35rem; min-width: 0.95rem; height: 0.95rem;
+            padding: 0 0.15rem; display: inline-flex; align-items: center; justify-content: center;
+            background: var(--color-primary); color: var(--color-primary-fg, #fff); border-radius: 999px;
+            font-size: 0.62rem; font-weight: 900; border: 1px solid var(--color-surface-1); }
         .mc-star { font-size: 1.6rem; line-height: 1; display: inline-block; font-variation-settings: 'FILL' 0; }
         .mc-star--on { font-variation-settings: 'FILL' 1; }
         .mc-star--off { color: var(--color-border-strong); opacity: 0.4; }
@@ -394,17 +405,37 @@
         @media (max-width: 680px) { .mc-dstats { grid-template-columns: repeat(2, 1fr); } }
         .mc-stat__icon--mastered { background: color-mix(in srgb, var(--color-success) 14%, transparent); color: var(--color-success); }
         .mc-stat__icon--all { background: color-mix(in srgb, var(--color-text-secondary) 16%, transparent); color: var(--color-text-secondary); }
+
+        /* Analytics box wrapping stats and mastery bar */
+        .mc-analytics-box {
+            border-radius: var(--mc-radius);
+            border: 1px solid var(--color-border-strong);
+            background: var(--color-surface-1);
+            padding: 1.25rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+        .mc-analytics-box .mc-dstats {
+            margin-bottom: 0;
+        }
+        .mc-analytics-box .mc-stat {
+            background: var(--color-surface-2);
+            border-color: var(--color-border-subtle);
+        }
+
         /* Mastery breakdown bar */
-        .mc-mastery { margin-bottom: 1.5rem; }
+        .mc-mastery { margin-bottom: 0; }
         .mc-mastery__bar { display: flex; height: 0.5rem; border-radius: 999px; overflow: hidden; background: var(--color-surface-2); }
         .mc-mastery__seg { height: 100%; transition: width .3s ease; }
-        .mc-mastery__seg--new { background: var(--color-border-strong); }
+        .mc-mastery__seg--new { background: var(--color-info); }
         .mc-mastery__seg--learn { background: var(--color-warning); }
         .mc-mastery__seg--master { background: var(--color-success); }
         .mc-mastery__legend { display: flex; flex-wrap: wrap; gap: 0.35rem 1.1rem; margin-top: 0.55rem; font-size: 0.74rem; color: var(--color-text-secondary); }
         .mc-mastery__legend > span { display: inline-flex; align-items: center; gap: 0.35rem; }
         .mc-mastery__dot { width: 0.6rem; height: 0.6rem; border-radius: 50%; display: inline-block; }
-        .mc-mastery__dot--new { background: var(--color-border-strong); }
+        .mc-mastery__dot--new { background: var(--color-info); }
         .mc-mastery__dot--learn { background: var(--color-warning); }
         .mc-mastery__dot--master { background: var(--color-success); }
         /* Cards section header */
@@ -779,10 +810,15 @@
         /* Study modes section */
         .mc-study-modes {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            grid-template-columns: repeat(2, 1fr);
             gap: 1rem;
             margin-bottom: 1.5rem;
             margin-top: 0;
+        }
+        @media (max-width: 680px) {
+            .mc-study-modes {
+                grid-template-columns: 1fr;
+            }
         }
         .mc-study-mode-card {
             border-radius: var(--mc-radius);
@@ -792,7 +828,7 @@
             display: flex;
             flex-direction: column;
             gap: 0.75rem;
-            transition: transform 0.2s, border-color 0.2s;
+            transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
             cursor: pointer;
             text-align: left;
         }
@@ -805,6 +841,17 @@
         }
         .mc-study-mode-card--gold {
             border-left: 4px solid var(--color-warning);
+        }
+        .mc-study-mode-card--blue {
+            border-left: 4px solid var(--color-primary);
+            background: linear-gradient(180deg, var(--color-surface-1) 0%, color-mix(in srgb, var(--color-primary) 6%, var(--color-surface-1)) 100%);
+        }
+        .mc-study-mode-card--blue:hover {
+            /* Glow in the theme's accent, not a hardcoded neon cyan. */
+            box-shadow: 0 0 16px color-mix(in srgb, var(--color-primary) 18%, transparent);
+        }
+        .mc-study-mode-card--gray {
+            border-left: 4px solid var(--color-text-secondary);
         }
         .mc-study-mode-card--locked {
             opacity: 0.65;
@@ -859,6 +906,7 @@
 
         @media (prefers-reduced-motion: reduce) {
             .t-modal, .t-dropdown, .t-tabs-pill, .t-tab { transition: none !important; }
+            .mc-record-badge, .mc-float-hint-item, .mc-mastery-level-bar { animation: none !important; transition: none !important; }
         }
         .mc-dialog-title { font-size: 1.15rem; font-weight: 900; color: var(--color-text-main); }
         .mc-dialog-actions { display: flex; justify-content: flex-end; gap: 0.6rem; padding-top: 0.4rem; }
@@ -1536,6 +1584,251 @@
                 flex: 1;
             }
         }
+
+        /* Mastery Level Styling */
+        .mc-mastery-level-box {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            border-radius: var(--mc-radius);
+            border: 1px solid var(--color-border-strong);
+            background: var(--color-surface-1);
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+        .mc-mastery-level-badge {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 4.2rem;
+            height: 4.2rem;
+            border-radius: 50%;
+            /* The level art (lvlN.svg) is neon-on-dark by design — the badge
+               carries its own fixed dark well so the art reads identically in
+               all six themes, light or dark. */
+            background-color: #0d1430;
+            background-size: 130% 130%;
+            background-repeat: no-repeat;
+            background-position: center;
+            border: 1px solid color-mix(in srgb, var(--color-border-strong) 45%, transparent);
+            box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.55), inset 0 0 28px rgba(0, 240, 255, 0.06);
+            flex-shrink: 0;
+            filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.18));
+        }
+
+        .mc-mastery-level-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            flex: 1;
+            min-width: 0;
+        }
+        .mc-mastery-level-header {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        .mc-mastery-level-title {
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: var(--color-text-main);
+            margin: 0;
+            display: flex;
+            align-items: center;
+        }
+        .mc-mastery-level-num-badge {
+            position: absolute;
+            bottom: -0.2rem;
+            right: -0.2rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 1.55rem;
+            height: 1.55rem;
+            background: var(--color-primary);
+            border: 1px solid var(--color-surface-1);
+            /* primary-fg is the theme's on-primary text colour (dark themes
+               have LIGHT primaries — white would wash out there). */
+            color: var(--color-primary-fg, #ffffff);
+            border-radius: 50%;
+            font-size: 0.82rem;
+            font-weight: 900;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+        .mc-mastery-level-xp {
+            font-size: 0.82rem;
+            color: var(--color-text-secondary);
+            margin: 0;
+            font-weight: 600;
+        }
+        .mc-mastery-level-progress-wrapper {
+            width: 100%;
+        }
+        .mc-mastery-level-track {
+            height: 0.6rem;
+            background: var(--color-surface-2);
+            border-radius: 999px;
+            border: 1px solid var(--color-border-subtle);
+            overflow: hidden;
+            position: relative;
+        }
+        .mc-mastery-level-bar {
+            height: 100%;
+            background: var(--color-primary);
+            border-radius: 999px;
+            transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Custom Glossary Tooltips */
+        .mc-tooltip-trigger {
+            position: relative;
+            cursor: help;
+        }
+        /* Inline-text triggers advertise themselves (the badge trigger is
+           obviously interactive already; plain words are not). */
+        .mc-tooltip-trigger--text {
+            text-decoration: underline dotted 1px;
+            text-underline-offset: 3px;
+            text-decoration-color: color-mix(in srgb, currentColor 55%, transparent);
+        }
+        .mc-tooltip-trigger:focus-visible {
+            outline: 2px solid var(--color-primary);
+            outline-offset: 2px;
+            border-radius: 4px;
+        }
+        .mc-tooltip-trigger::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%) scale(0.95);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            background: rgba(15, 15, 20, 0.95);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: #ffffff !important;
+            font-size: 0.8rem;
+            font-weight: 500;
+            line-height: 1.4;
+            white-space: normal;
+            /* Never wider than the viewport (260px plate near a screen edge
+               used to clip on mobile). */
+            width: max-content;
+            max-width: min(260px, calc(100vw - 2rem));
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            text-align: center;
+        }
+        /* End-aligned variant for triggers that sit near the right edge. */
+        .mc-tooltip-trigger--end::after {
+            left: auto;
+            right: 0;
+            transform: scale(0.95);
+        }
+        .mc-tooltip-trigger:hover::after,
+        .mc-tooltip-trigger:focus-visible::after {
+            opacity: 1;
+            transform: translateX(-50%) scale(1);
+            pointer-events: auto;
+        }
+        .mc-tooltip-trigger--end:hover::after,
+        .mc-tooltip-trigger--end:focus-visible::after {
+            transform: scale(1);
+        }
+        /* Narrow screens: centering a 260px plate on an edge-hugging trigger
+           pushes it off-viewport — align to the trigger's edge instead. */
+        @media (max-width: 680px) {
+            .mc-tooltip-trigger::after {
+                left: 0;
+                transform: scale(0.95);
+            }
+            .mc-tooltip-trigger:hover::after,
+            .mc-tooltip-trigger:focus-visible::after {
+                transform: scale(1);
+            }
+            .mc-tooltip-trigger--end::after {
+                left: auto;
+                right: 0;
+            }
+        }
+
+        /* In-session Float Hints */
+        #mcFloatHint {
+            position: absolute;
+            left: 50%;
+            bottom: 5.5rem; /* Centered above buttons, below card */
+            transform: translateX(-50%);
+            z-index: 200;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            width: 90%;
+            max-width: 400px;
+        }
+        .mc-float-hint-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.6rem 1rem;
+            border-radius: 999px;
+            background: rgba(18, 18, 22, 0.8);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff;
+            font-size: 0.8rem;
+            font-weight: 700;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+            animation: mc-hint-reveal 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
+                       mc-hint-fadeout 0.3s cubic-bezier(0.4, 0, 1, 1) 2.2s forwards;
+            text-align: center;
+        }
+        @keyframes mc-hint-reveal {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes mc-hint-fadeout {
+            to { opacity: 0; transform: translateY(-5px); }
+        }
+
+        /* Hint colors/styles based on type */
+        .mc-float-hint-item.hint-resonance {
+            border-color: rgba(6, 182, 212, 0.4);
+            box-shadow: 0 0 12px rgba(6, 182, 212, 0.2), 0 8px 24px rgba(0,0,0,0.35);
+        }
+        .mc-float-hint-item.hint-shield {
+            border-color: rgba(6, 182, 212, 0.5);
+            box-shadow: 0 0 12px rgba(6, 182, 212, 0.25), 0 8px 24px rgba(0,0,0,0.35);
+        }
+        .mc-float-hint-item.hint-fire {
+            border-color: rgba(168, 85, 247, 0.4);
+            box-shadow: 0 0 12px rgba(168, 85, 247, 0.25), 0 8px 24px rgba(0,0,0,0.35);
+            animation: mc-hint-reveal 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
+                       mc-pulse-fast 1.5s infinite alternate,
+                       mc-hint-fadeout 0.3s cubic-bezier(0.4, 0, 1, 1) 2.2s forwards;
+        }
+        .mc-float-hint-item.hint-lost {
+            border-color: rgba(239, 68, 68, 0.4);
+            box-shadow: 0 0 12px rgba(239, 68, 68, 0.2), 0 8px 24px rgba(0,0,0,0.35);
+        }
+        .mc-float-hint-item.hint-super {
+            border-color: rgba(234, 179, 8, 0.4);
+            box-shadow: 0 0 12px rgba(234, 179, 8, 0.25), 0 8px 24px rgba(0,0,0,0.35);
+        }
+
+        @keyframes mc-pulse-fast {
+            from { transform: scale(1); }
+            to { transform: scale(1.03); }
+        }
     </style>
 
 </head>
@@ -1670,10 +1963,6 @@
                             <span id="deckPausedStatus"></span>
                         </div>
                         <div class="mc-dhead__actions">
-                        <button type="button" id="btnDeckImport" class="mc-btn mc-btn--ghost" onclick="mcApp.openImportDialog()">
-                            <span class="material-symbols-outlined">upload</span>
-                            <span data-i18n="microcards.btn_import">Импорт</span>
-                        </button>
                         <button type="button" id="btnDeckPublish" class="mc-btn mc-btn--ghost" onclick="mcApp.publishDeckToCatalog()">
                             <span class="material-symbols-outlined">public</span>
                             <span data-i18n="microcards.btn_publish_deck">Опубликовать</span>
@@ -1699,15 +1988,6 @@
                                 </button>
                             </div>
                         </div>
-                        <button type="button" id="btnBrowseDeck" class="mc-btn mc-btn--ghost" onclick="mcApp.startBrowse()">
-                            <span class="material-symbols-outlined">style</span>
-                            <span data-i18n="microcards.btn_browse">Просмотр</span>
-                        </button>
-                        <button type="button" class="mc-btn mc-btn--primary mc-dhead__cta" onclick="mcApp.startReview()">
-                            <span class="material-symbols-outlined">school</span>
-                            <span data-i18n="microcards.btn_review_mode">Повторение</span>
-                            <span id="headStudyCount" class="mc-btn__count hidden"></span>
-                        </button>
                         </div>
                     </div>
                     <div class="mc-dhead__meta" id="deckDetailsMeta">
@@ -1715,6 +1995,28 @@
                         <span id="deckDetailsTags" class="mc-dhead__tags"></span>
                     </div>
                 </header>
+
+                <!-- Mastery Level Box -->
+                <div class="mc-mastery-level-box">
+                    <div class="mc-mastery-level-badge mc-tooltip-trigger" id="deckMasteryLevelBadge" tabindex="0" style="background-image: url('/assets/microcards-levels/lvl1.svg');" data-tooltip="">
+                        <span class="mc-mastery-level-num-badge" id="deckMasteryLevelNumber">1</span>
+                    </div>
+                    <div class="mc-mastery-level-info">
+                        <div class="mc-mastery-level-header">
+                            <h4 class="mc-mastery-level-title">
+                                <span class="mc-tooltip-trigger mc-tooltip-trigger--text" tabindex="0" data-i18n="microcards.mastery_level_title" data-i18n-tooltip="microcards.mastery_tooltip_engram">Уровень мастерства колоды</span>
+                            </h4>
+                            <p class="mc-mastery-level-xp">
+                                <span class="mc-tooltip-trigger mc-tooltip-trigger--text mc-tooltip-trigger--end" tabindex="0" id="deckMasteryLevelXp" data-i18n-tooltip="microcards.mastery_tooltip_sw">0 / 1 000 SW</span>
+                            </p>
+                        </div>
+                        <div class="mc-mastery-level-progress-wrapper">
+                            <div class="mc-mastery-level-track">
+                                <div class="mc-mastery-level-bar" id="deckMasteryLevelBar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Resume Pending Session Card -->
                 <div id="deckResumeSection" class="mc-resume-banner hidden">
@@ -1742,8 +2044,8 @@
                     </div>
                 </div>
 
-                <!-- Run modes (full-deck passes, the only source of stars) -->
-                <section class="mc-study-modes" aria-label="Прохождение колоды">
+                <!-- Run and Study modes -->
+                <section class="mc-study-modes" aria-label="Режимы обучения">
                     <!-- Level 1 run -->
                     <div class="mc-study-mode-card mc-study-mode-card--silver" onclick="mcApp.startRun(1)">
                         <div class="mc-study-mode-card__title">
@@ -1754,6 +2056,7 @@
                         <div class="mc-stars silver" id="detailsStarsL1">
                             <!-- JS will populate 5 stars here -->
                         </div>
+                        <div class="mc-study-mode-card__desc" data-i18n="microcards.run_l1_desc">Знаю / Не знаю. Прохождение всей колоды без штрафа за опечатки.</div>
                         <div class="mc-study-mode-card__stats">
                             <span data-i18n="microcards.record_label">Рекорд:</span>
                             <strong id="detailsScoreL1">0</strong> / <strong id="detailsMaxPointsL1">0</strong>
@@ -1771,6 +2074,7 @@
                         <div class="mc-stars gold" id="detailsStarsL2">
                             <!-- JS will populate 5 stars here -->
                         </div>
+                        <div class="mc-study-mode-card__desc" data-i18n="microcards.run_l2_desc">Ввод ответа с клавиатуры. Для максимального запоминания.</div>
                         <div class="mc-study-mode-card__stats" id="statsL2Container">
                             <span data-i18n="microcards.record_label">Рекорд:</span>
                             <strong id="detailsScoreL2">0</strong> / <strong id="detailsMaxPointsL2">0</strong>
@@ -1782,51 +2086,81 @@
                             <span data-i18n="microcards.l2_lock_hint">Откроется после полного прохождения колоды на Уровне 1</span>
                         </div>
                     </div>
-                </section>
 
-                <!-- Metric strip (reuses the .mc-stat tile component) -->
-                <section class="mc-dstats" aria-label="Статистика колоды">
-                    <div class="mc-stat">
-                        <span class="mc-stat__icon mc-stat__icon--due"><span class="material-symbols-outlined">pending_actions</span></span>
-                        <div>
-                            <p class="mc-stat__label" data-i18n="microcards.stat_due">К повтору</p>
-                            <p class="mc-stat__value" id="statDue">0</p>
+                    <!-- Повторение (SRS) -->
+                    <div class="mc-study-mode-card mc-study-mode-card--blue mc-dhead__cta" onclick="mcApp.startReview()">
+                        <div class="mc-study-mode-card__title">
+                            <span class="material-symbols-outlined" style="color:var(--color-primary)">school</span>
+                            <span data-i18n="microcards.btn_review_mode">Повторение</span>
+                            <span id="headStudyCount" class="mc-count hidden"></span>
+                        </div>
+                        <div class="mc-study-mode-card__desc" data-i18n="microcards.review_mode_desc">Ежедневное повторение долгов и изучение новых карт. Поддерживает синаптический вес (SW) и уровень колоды.</div>
+                        <div class="mc-study-mode-card__stats">
+                            <span data-i18n="microcards.sw_today_label">SW сегодня:</span>
+                            <strong id="detailsSwToday">0</strong> SW
+                            <span id="detailsComboSRS" class="mc-record-size mc-tooltip-trigger mc-tooltip-trigger--text" data-i18n-tooltip="microcards.mastery_tooltip_resonance"></span>
                         </div>
                     </div>
-                    <div class="mc-stat">
-                        <span class="mc-stat__icon mc-stat__icon--new"><span class="material-symbols-outlined">fiber_new</span></span>
-                        <div>
-                            <p class="mc-stat__label" data-i18n="microcards.stat_new">Новые</p>
-                            <p class="mc-stat__value" id="statNew">0</p>
+
+                    <!-- Просмотр -->
+                    <div class="mc-study-mode-card mc-study-mode-card--gray" onclick="mcApp.startBrowse()">
+                        <div class="mc-study-mode-card__title">
+                            <span class="material-symbols-outlined" style="color:var(--color-text-secondary)">style</span>
+                            <span data-i18n="microcards.btn_browse">Просмотр</span>
                         </div>
-                    </div>
-                    <div class="mc-stat">
-                        <span class="mc-stat__icon mc-stat__icon--mastered"><span class="material-symbols-outlined">military_tech</span></span>
-                        <div>
-                            <p class="mc-stat__label" data-i18n="microcards.stat_mastered">Освоено</p>
-                            <p class="mc-stat__value" id="statMastered">0%</p>
-                        </div>
-                    </div>
-                    <div class="mc-stat">
-                        <span class="mc-stat__icon mc-stat__icon--all"><span class="material-symbols-outlined">style</span></span>
-                        <div>
-                            <p class="mc-stat__label" data-i18n="microcards.stat_total">Всего</p>
-                            <p class="mc-stat__value" id="statTotal">0</p>
+                        <div class="mc-study-mode-card__desc" data-i18n="microcards.browse_mode_desc">Листание карточек без оценивания и очков.</div>
+                        <div class="mc-study-mode-card__stats">
+                            <span data-i18n="microcards.browse_mode_stat">Свободный просмотр</span>
                         </div>
                     </div>
                 </section>
 
-                <!-- Mastery breakdown bar -->
-                <div class="mc-mastery">
-                    <div class="mc-mastery__bar" role="img" aria-label="Освоение колоды">
-                        <span class="mc-mastery__seg mc-mastery__seg--new" id="segNew" style="width:0%"></span>
-                        <span class="mc-mastery__seg mc-mastery__seg--learn" id="segLearn" style="width:0%"></span>
-                        <span class="mc-mastery__seg mc-mastery__seg--master" id="segMaster" style="width:0%"></span>
-                    </div>
-                    <div class="mc-mastery__legend">
-                        <span><i class="mc-mastery__dot mc-mastery__dot--new"></i><span data-i18n="microcards.legend_new">Новые</span></span>
-                        <span><i class="mc-mastery__dot mc-mastery__dot--learn"></i><span data-i18n="microcards.legend_learning">На изучении</span></span>
-                        <span><i class="mc-mastery__dot mc-mastery__dot--master"></i><span data-i18n="microcards.legend_mastered">Освоено</span></span>
+                <!-- Analytics Box (groups stats and mastery breakdown) -->
+                <div class="mc-analytics-box">
+                    <!-- Metric strip (reuses the .mc-stat tile component) -->
+                    <section class="mc-dstats" aria-label="Статистика колоды">
+                        <div class="mc-stat">
+                            <span class="mc-stat__icon mc-stat__icon--due"><span class="material-symbols-outlined">pending_actions</span></span>
+                            <div>
+                                <p class="mc-stat__label" data-i18n="microcards.stat_due">К повтору</p>
+                                <p class="mc-stat__value" id="statDue">0</p>
+                            </div>
+                        </div>
+                        <div class="mc-stat">
+                            <span class="mc-stat__icon mc-stat__icon--new"><span class="material-symbols-outlined">fiber_new</span></span>
+                            <div>
+                                <p class="mc-stat__label" data-i18n="microcards.stat_new">Новые</p>
+                                <p class="mc-stat__value" id="statNew">0</p>
+                            </div>
+                        </div>
+                        <div class="mc-stat">
+                            <span class="mc-stat__icon mc-stat__icon--mastered"><span class="material-symbols-outlined">military_tech</span></span>
+                            <div>
+                                <p class="mc-stat__label" data-i18n="microcards.stat_mastered">Освоено</p>
+                                <p class="mc-stat__value" id="statMastered">0%</p>
+                            </div>
+                        </div>
+                        <div class="mc-stat">
+                            <span class="mc-stat__icon mc-stat__icon--all"><span class="material-symbols-outlined">style</span></span>
+                            <div>
+                                <p class="mc-stat__label" data-i18n="microcards.stat_total">Всего</p>
+                                <p class="mc-stat__value" id="statTotal">0</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Mastery breakdown bar -->
+                    <div class="mc-mastery">
+                        <div class="mc-mastery__bar" role="img" aria-label="Освоение колоды">
+                            <span class="mc-mastery__seg mc-mastery__seg--new" id="segNew" style="width:0%"></span>
+                            <span class="mc-mastery__seg mc-mastery__seg--learn" id="segLearn" style="width:0%"></span>
+                            <span class="mc-mastery__seg mc-mastery__seg--master" id="segMaster" style="width:0%"></span>
+                        </div>
+                        <div class="mc-mastery__legend">
+                            <span><i class="mc-mastery__dot mc-mastery__dot--new"></i><span data-i18n="microcards.legend_new">Новые</span></span>
+                            <span><i class="mc-mastery__dot mc-mastery__dot--learn"></i><span data-i18n="microcards.legend_learning">На изучении</span></span>
+                            <span><i class="mc-mastery__dot mc-mastery__dot--master"></i><span data-i18n="microcards.legend_mastered">Освоено</span></span>
+                        </div>
                     </div>
                 </div>
 
@@ -1844,6 +2178,10 @@
                             </span>
                             <button type="button" id="btnSelectAllCards" onclick="mcApp.toggleSelectAllCards()" class="mc-btn mc-btn--ghost mc-btn--sm" data-i18n="microcards.btn_select_all">Выбрать все</button>
                             <span id="deckCardsCountBadge" class="mc-count">0</span>
+                            <button type="button" id="btnDeckImport" class="mc-btn mc-btn--ghost mc-btn--sm" onclick="mcApp.openImportDialog()">
+                                <span class="material-symbols-outlined">upload</span>
+                                <span data-i18n="microcards.btn_import">Импорт</span>
+                            </button>
                             <button type="button" id="btnAddCardInline" onclick="mcApp.addNewCardInline()" class="mc-btn mc-btn--ghost mc-btn--sm">
                                 <span class="material-symbols-outlined">add</span>
                                 <span data-i18n="microcards.btn_add_card">Добавить карточку</span>
@@ -1889,7 +2227,7 @@
                             <div id="xpChip" class="mc-xp-chip" aria-live="polite">
                                 <span class="material-symbols-outlined">stars</span>
                                 <span id="xpChipVal" class="t-digit-group"><span class="t-digit">0</span></span>
-                                <span data-i18n="microcards.points_label">Очки</span>
+                                <span data-i18n="microcards.points_label">SW</span>
                             </div>
                             <div id="mcCompositionChip" class="mc-level-indicator" style="display:none" aria-live="polite"></div>
                             <div id="sessionLevelIndicator" class="mc-level-indicator" aria-live="polite" aria-atomic="true"></div>
@@ -2007,6 +2345,9 @@
                             <span class="mc-rail-hotkey">[2]</span>
                         </div>
                     </div><!-- /mc-arena -->
+                    
+                    <!-- Всплывающие подсказки комбо/резонанса -->
+                    <div id="mcFloatHint"></div>
                 </div>
             </div>
 
@@ -2061,6 +2402,14 @@
                             <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1">lock_open</span>
                             <span data-i18n="microcards.l2_unlocked">РАЗБЛОКИРОВАН УРОВЕНЬ 2!</span>
                         </div>
+                        <!-- Same dark-glass language as the float hints: a fixed dark plate with a
+                             theme-tinted glow keeps white text legible in every theme (the primary
+                             colour itself is LIGHT in dark themes). -->
+                        <div id="sumLevelUpBanner" class="mc-record-badge hidden" style="background:linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 45%, #14101f) 0%, #1a1430 100%); border: 1px solid color-mix(in srgb, var(--color-primary) 55%, transparent); margin-top: 0.5rem; animation: mc-pulse 1.5s infinite alternate; box-shadow: 0 4px 14px color-mix(in srgb, var(--color-primary) 30%, transparent);">
+                            <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1">rocket_launch</span>
+                            <!-- No data-i18n here: JS substitutes {n}; a re-applied translation would resurrect the raw template. -->
+                            <span id="sumLevelUpText">УРОВЕНЬ КОЛОДЫ ПОВЫШЕН!</span>
+                        </div>
                         <h2 class="mc-summary__title" id="sumTitle" data-i18n="microcards.summary_v2_title">Отличная работа!</h2>
                         <p class="mc-summary__sub" id="sumSubtitle" data-i18n="microcards.summary_subtitle">Вы успешно завершили текущую сессию.</p>
 
@@ -2069,7 +2418,7 @@
                                 <span class="material-symbols-outlined">stars</span>
                                 <span id="sumXp" class="t-digit-group"><span class="t-digit">0</span></span>
                                 <span id="sumMaxWrap"><span style="opacity: 0.6; font-size: 0.85em; margin: 0 0.15rem;">/</span><span id="sumMaxXp" style="opacity: 0.6; font-size: 0.85em;">0</span></span>
-                                <span style="margin-left:0.25rem" data-i18n="microcards.points_label">Очки</span>
+                                <span style="margin-left:0.25rem" data-i18n="microcards.points_label">SW</span>
                             </div>
                             <div class="mc-reward mc-reward--combo">
                                 <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1">local_fire_department</span>
@@ -2247,6 +2596,12 @@
                     <span style="display:block;font-size:0.7rem;color:var(--color-text-secondary)" data-i18n="microcards.settings_animations_hint">Конфетти, тряска карточки, полёты — выключите, если отвлекает</span>
                 </span>
                 <input type="checkbox" id="prefAnimations" style="width:1.15rem;height:1.15rem;accent-color:var(--color-primary);cursor:pointer">
+            </label>
+            <label class="mc-field" style="flex-direction:row;align-items:center;justify-content:space-between;gap:0.8rem;cursor:pointer">
+                <span style="margin:0">
+                    <span class="mc-field__label" style="margin:0" data-i18n="microcards.settings_disable_hints">Отключить всплывающие подсказки комбо</span>
+                </span>
+                <input type="checkbox" id="prefDisableFloatHints" style="width:1.15rem;height:1.15rem;accent-color:var(--color-primary);cursor:pointer">
             </label>
             <hr style="border:0;border-top:1px solid var(--color-border-strong);opacity:0.4;margin:0">
             <div class="mc-field">

@@ -104,9 +104,11 @@
                 volume: typeof raw.volume === 'number' ? Math.min(1, Math.max(0, raw.volume)) : 1,
                 // Reduced-motion users get animations OFF by default (can opt back in).
                 animations: raw.animations !== undefined ? !!raw.animations : !REDUCED_MOTION,
+                // Float hints are animated overlays — same reduced-motion default.
+                disableFloatHints: raw.disableFloatHints !== undefined ? !!raw.disableFloatHints : REDUCED_MOTION,
             };
         } catch (e) {
-            return { sound: true, volume: 1, animations: !REDUCED_MOTION };
+            return { sound: true, volume: 1, animations: !REDUCED_MOTION, disableFloatHints: REDUCED_MOTION };
         }
     }
     const prefs = loadPrefs();
@@ -119,6 +121,32 @@
     }
     // Confetti and other JS-driven effects funnel through this guard.
     function fxAllowed() { return prefs.animations; }
+
+    function showFloatHint(text, type) {
+        if (prefs.disableFloatHints) return;
+        const container = $('mcFloatHint');
+        if (!container) return;
+        
+        container.innerHTML = '';
+        const item = document.createElement('div');
+        item.className = `mc-float-hint-item hint-${type}`;
+        
+        let icon = '';
+        if (type === 'resonance') icon = 'electric_bolt';
+        else if (type === 'shield') icon = 'shield';
+        else if (type === 'fire') icon = 'local_fire_department';
+        else if (type === 'lost') icon = 'flash_off';
+        else if (type === 'super') icon = 'stars';
+        
+        item.innerHTML = `<span class="material-symbols-outlined select-none text-[15px]" style="font-variation-settings:'FILL' 1">${icon}</span> <span>${text}</span>`;
+        container.appendChild(item);
+        
+        setTimeout(() => {
+            if (item.parentNode === container) {
+                container.removeChild(item);
+            }
+        }, 2500);
+    }
 
     // ── Web Audio API Dopamine Sound Synthesizer ──────────────────────────
     const DopamineAudio = (function () {
@@ -276,6 +304,15 @@
                 playNote(659.25, 'sine', 0.1, now + 0.08, 0.06);
                 playNote(783.99, 'sine', 0.1, now + 0.16, 0.06);
                 playNote(1046.50, 'sine', 0.35, now + 0.24, 0.08);
+            },
+            playLevelUp: function () {
+                const ctx = getAudioContext();
+                const now = ctx.currentTime;
+                playNote(523.25, 'sine', 0.15, now, 0.08); // C5
+                playNote(659.25, 'sine', 0.15, now + 0.08, 0.08); // E5
+                playNote(783.99, 'sine', 0.15, now + 0.16, 0.08); // G5
+                playNote(1046.50, 'sine', 0.2, now + 0.24, 0.08); // C6
+                playNote(1318.51, 'sine', 0.4, now + 0.32, 0.08); // E6
             }
         };
     })();
@@ -308,7 +345,7 @@
         // Gamification (per session)
         combo: 0,
         maxCombo: 0,
-        sessionXp: 0,
+        sessionSw: 0,
         
         // Import modal state
         importFormat: 'csv',
@@ -472,7 +509,7 @@
         // the previous one left off instead of stacking two rAF loops.
         if (_xpAnimFrame) { cancelAnimationFrame(_xpAnimFrame); _xpAnimFrame = null; }
         const startVal = lastXpValue;
-        const endVal = state.sessionXp;
+        const endVal = state.sessionSw;
         lastXpValue = endVal;
 
         if (startVal === endVal) {
@@ -562,7 +599,7 @@
             state.maxCombo = Math.max(state.maxCombo, state.combo);
 
             const pts = isRetry ? retryPoints(form) : pointsForCombo(state.combo, threshold, form);
-            state.sessionXp += pts;
+            state.sessionSw += pts;
             updateXpChip();
             floatXp(pts);
             playCheck();
@@ -572,6 +609,7 @@
             if (!wasNearMiss) {
                 if (state.combo === threshold) {
                     DopamineAudio.playBoost();
+                    showFloatHint(t('microcards.hint_super_conductive'), 'super');
                     if (fxAllowed() && window.CelebrationEffects && typeof window.CelebrationEffects.launchConfetti === 'function') {
                         try {
                             window.CelebrationEffects.launchConfetti();
@@ -581,18 +619,28 @@
                     }
                 } else {
                     DopamineAudio.playComboLevelUp(state.combo);
+                    if (state.combo === 3) {
+                        showFloatHint(t('microcards.hint_resonance_start'), 'resonance');
+                    } else if (state.combo === 5) {
+                        showFloatHint(t('microcards.hint_on_fire'), 'fire');
+                    }
                 }
             }
         } else {
             if (state.combo >= 3 && !state.isNearMiss) {
                 state.isNearMiss = true;
                 DopamineAudio.playNearMiss();
+                showFloatHint(t('microcards.hint_shield_active'), 'shield');
                 reactCard('wrong');
                 showCombo();
             } else {
+                const wasResonance = state.combo >= 3;
                 state.combo = 0;
                 state.isNearMiss = false;
                 DopamineAudio.playComboLost();
+                if (wasResonance) {
+                    showFloatHint(t('microcards.hint_combo_lost'), 'lost');
+                }
                 reactCard('wrong');
                 showCombo();
             }
@@ -688,6 +736,15 @@
             starsL2: srv.starsL2 || 0,
             sizeL2: srv.sizeL2 || 0,
             l1_run_completed: !!srv.l1_run_completed,
+            // SW & deck level are computed SERVER-side (size-normalized
+            // thresholds + stability-driven decay) — no client math here.
+            cumulative_sw: srv.cumulative_sw || 0,
+            sw_today: srv.sw_today || 0,
+            comboSRS: srv.comboSRS || 0,
+            level: srv.level || 1,
+            current_level_sw: srv.current_level_sw || 0,
+            // null at the level-10 cap
+            next_level_sw: srv.next_level_sw !== undefined ? srv.next_level_sw : null,
         };
     }
     // L2 gate for the active deck: at least one completed full-deck L1 run.
@@ -958,7 +1015,11 @@
             else { statusText = t('microcards.in_progress', 'В процессе'); statusMod = 'progress'; }
 
             const tier = isGold ? 'gold' : 'silver';
+            // Deck mastery level (server-computed: normalized thresholds +
+            // stability decay) leads the achievements row.
+            const deckLevel = Math.min(deck.level || 1, 10);
             let starsHtml = `<div class="mc-deck-card__stars">`;
+            starsHtml += `<span class="mc-deck-card__lvl" title="${t('microcards.mastery_level_title', 'Уровень мастерства колоды')}: ${deckLevel}" style="background-image:url('/assets/microcards-levels/lvl${deckLevel}.svg')"><b>${deckLevel}</b></span>`;
             for (let i = 0; i < 5; i++) {
                 const on = i < starCount;
                 starsHtml += `<span class="material-symbols-outlined mc-star mc-star--${tier} ${on ? 'mc-star--on' : 'mc-star--off'}">star</span>`;
@@ -1197,11 +1258,27 @@
         state.activeDeckId = deckId;
         // Reset cards immediately so stale data from previous deck never bleeds through.
         state.cards = [];
+
+        // The click must respond instantly: switch now with the cached name
+        // as a placeholder; the full data lands a moment later.
+        const cachedDeck = (state.decks || []).find(d => d.id === deckId);
+        const placeholderTitle = $('deckDetailsTitle');
+        if (placeholderTitle) placeholderTitle.textContent = (cachedDeck && cachedDeck.name) || '…';
         switchView('details');
-        
+
         try {
-            const data = await apiCall(`/api/v2/microcards/decks/${deckId}`);
-            state.activeDeck = data.deck;
+            // Load deck details, records, and cards in parallel
+            const [deckData, recData, cardsData] = await Promise.all([
+                apiCall(`/api/v2/microcards/decks/${deckId}`),
+                apiCall(`/api/v2/microcards/records/${deckId}`).catch(() => null),
+                apiCall(`/api/v2/microcards/decks/${deckId}/cards`).catch(() => null)
+            ]);
+            
+            state.activeDeck = deckData.deck;
+            if (recData && recData.record) {
+                state.serverRecords[deckId] = recData.record;
+            }
+            state.cards = (cardsData && cardsData.items) || [];
             
             // Set details fields (some are optional depending on the header layout)
             const titleEl = $('deckDetailsTitle');
@@ -1239,86 +1316,73 @@
                 : t('microcards.btn_menu_delete_deck', 'Удалить колоду');
             const pub = $('deckPublishStatus');
             if (linked && pub) pub.innerHTML = `<span class="mc-pub-pill mc-pub--code"><span class="material-symbols-outlined">link</span>${t('microcards.linked_readonly', 'Из каталога · только чтение')}</span>`;
+            
+            updateDeckProgressUI();
+            renderDeckCardsList();
+
+            // Render paused status badge next to title
+            const pausedStatusEl = $('deckPausedStatus');
+            if (pausedStatusEl) {
+                if (state.activeDeck && state.activeDeck.is_paused) {
+                    pausedStatusEl.innerHTML = `<span class="mc-pub-pill" style="background:color-mix(in srgb, var(--color-warning) 14%, transparent); color:var(--color-warning); border:1px solid color-mix(in srgb, var(--color-warning) 30%, transparent); display:inline-flex; align-items:center; gap:0.25rem;"><span class="material-symbols-outlined" style="font-size:0.95rem;">pause_circle</span><span>${t('microcards.badge_paused', 'На паузе')}</span></span>`;
+                } else {
+                    pausedStatusEl.innerHTML = '';
+                }
+            }
+
+            // Header CTA = Повторение (the daily SRS habit); reflect an active one.
+            const studyCta = document.querySelector('.mc-dhead__cta');
+            if (studyCta) {
+                const slots = (state.activeDeck && state.activeDeck.active_sessions) || {};
+                const studyIcon = studyCta.querySelector('.material-symbols-outlined');
+                const studyText = studyCta.querySelector('[data-i18n="microcards.btn_review_mode"]') || studyCta.querySelector('span:not(.material-symbols-outlined):not(.mc-btn__count)');
+
+                studyCta.removeAttribute('onclick');
+                if (slots.review) {
+                    if (studyIcon) studyIcon.textContent = 'play_arrow';
+                    if (studyText) {
+                        studyText.textContent = t('microcards.btn_continue_review', 'Продолжить повторение');
+                        studyText.removeAttribute('data-i18n'); // prevent i18n override
+                    }
+                } else {
+                    if (studyIcon) studyIcon.textContent = 'school';
+                    if (studyText) {
+                        studyText.textContent = t('microcards.btn_review_mode', 'Повторение');
+                        studyText.setAttribute('data-i18n', 'microcards.btn_review_mode');
+                    }
+                }
+                studyCta.onclick = () => { startReview(); };
+            }
+
+            // Resume banner: an interrupted RUN is the long-lived object worth a banner.
+            const resumeSection = $('deckResumeSection');
+            if (resumeSection) {
+                const slots = (state.activeDeck && state.activeDeck.active_sessions) || {};
+                const runSlot = slots.run_l1 ? { ...slots.run_l1, level: 1 } : (slots.run_l2 ? { ...slots.run_l2, level: 2 } : null);
+                if (runSlot) {
+                    resumeSection.classList.remove('hidden');
+                    const progressEl = $('deckResumeProgress');
+                    if (progressEl) progressEl.textContent = `${runSlot.mastered}/${runSlot.unique_total}`;
+                    const levelEl = $('deckResumeLevel');
+                    if (levelEl) {
+                        levelEl.textContent = runSlot.level === 2
+                            ? t('microcards.run_indicator_l2', 'Прохождение · Уровень 2')
+                            : t('microcards.run_indicator_l1', 'Прохождение · Уровень 1');
+                    }
+
+                    // Wire up the button clicks
+                    $('btnResumeSession').onclick = () => { startRun(runSlot.level); };
+                    $('btnRestartSession').onclick = () => { confirmResetRun(runSlot.level, true); };
+                } else {
+                    resumeSection.classList.add('hidden');
+                }
+            }
+
         } catch (err) {
-            console.error('[openDeckDetails] deck load error:', err);
+            console.error('[openDeckDetails] load error:', err);
             showToast(t('microcards.error_loading_deck', 'Не удалось загрузить колоду'), 'error');
-            return;
-        }
-
-        try {
-            // Fetch per-deck record from server (ensure freshest data even if serverRecords is stale)
-            const recData = await apiCall(`/api/v2/microcards/records/${deckId}`).catch(() => null);
-            if (recData && recData.record) {
-                state.serverRecords[deckId] = recData.record;
-            }
-
-            // Load cards
-            const cardsData = await apiCall(`/api/v2/microcards/decks/${deckId}/cards`);
-            state.cards = cardsData.items || [];
-        } catch (err) {
-            console.error('[openDeckDetails] cards load error:', err);
-            showToast(t('microcards.error_loading_cards', 'Не удалось загрузить карточки'), 'error');
-        }
-
-        updateDeckProgressUI();
-        renderDeckCardsList();
-
-        // Render paused status badge next to title
-        const pausedStatusEl = $('deckPausedStatus');
-        if (pausedStatusEl) {
-            if (state.activeDeck && state.activeDeck.is_paused) {
-                pausedStatusEl.innerHTML = `<span class="mc-pub-pill" style="background:color-mix(in srgb, var(--color-warning) 14%, transparent); color:var(--color-warning); border:1px solid color-mix(in srgb, var(--color-warning) 30%, transparent); display:inline-flex; align-items:center; gap:0.25rem;"><span class="material-symbols-outlined" style="font-size:0.95rem;">pause_circle</span><span>${t('microcards.badge_paused', 'На паузе')}</span></span>`;
-            } else {
-                pausedStatusEl.innerHTML = '';
-            }
-        }
-
-        // Header CTA = Повторение (the daily SRS habit); reflect an active one.
-        const studyCta = document.querySelector('.mc-dhead__cta');
-        if (studyCta) {
-            const slots = (state.activeDeck && state.activeDeck.active_sessions) || {};
-            const studyIcon = studyCta.querySelector('.material-symbols-outlined');
-            const studyText = studyCta.querySelector('[data-i18n="microcards.btn_review_mode"]') || studyCta.querySelector('span:not(.material-symbols-outlined):not(.mc-btn__count)');
-
-            studyCta.removeAttribute('onclick');
-            if (slots.review) {
-                if (studyIcon) studyIcon.textContent = 'play_arrow';
-                if (studyText) {
-                    studyText.textContent = t('microcards.btn_continue_review', 'Продолжить повторение');
-                    studyText.removeAttribute('data-i18n'); // prevent i18n override
-                }
-            } else {
-                if (studyIcon) studyIcon.textContent = 'school';
-                if (studyText) {
-                    studyText.textContent = t('microcards.btn_review_mode', 'Повторение');
-                    studyText.setAttribute('data-i18n', 'microcards.btn_review_mode');
-                }
-            }
-            studyCta.onclick = () => { startReview(); };
-        }
-
-        // Resume banner: an interrupted RUN is the long-lived object worth a banner.
-        const resumeSection = $('deckResumeSection');
-        if (resumeSection) {
-            const slots = (state.activeDeck && state.activeDeck.active_sessions) || {};
-            const runSlot = slots.run_l1 ? { ...slots.run_l1, level: 1 } : (slots.run_l2 ? { ...slots.run_l2, level: 2 } : null);
-            if (runSlot) {
-                resumeSection.classList.remove('hidden');
-                const progressEl = $('deckResumeProgress');
-                if (progressEl) progressEl.textContent = `${runSlot.mastered}/${runSlot.unique_total}`;
-                const levelEl = $('deckResumeLevel');
-                if (levelEl) {
-                    levelEl.textContent = runSlot.level === 2
-                        ? t('microcards.run_indicator_l2', 'Прохождение · Уровень 2')
-                        : t('microcards.run_indicator_l1', 'Прохождение · Уровень 1');
-                }
-
-                // Wire up the button clicks
-                $('btnResumeSession').onclick = () => { startRun(runSlot.level); };
-                $('btnRestartSession').onclick = () => { confirmResetRun(runSlot.level, true); };
-            } else {
-                resumeSection.classList.add('hidden');
-            }
+            // Don't leave the user on a half-empty details screen.
+            switchView('library');
         }
     }
 
@@ -1391,6 +1455,45 @@
 
         // Render best-run records and stars for L1 and L2
         const records = getDeckRecord(state.activeDeckId);
+
+        // Mastery Level and Progress Bar (all values computed server-side:
+        // size-normalized thresholds, stability-driven decay, level cap 10).
+        const lvl = Math.min(records.level || 1, 10);
+        const masteryBadge = $('deckMasteryLevelBadge');
+        if (masteryBadge) {
+            masteryBadge.style.backgroundImage = `url('/assets/microcards-levels/lvl${lvl}.svg')`;
+            masteryBadge.setAttribute('data-tooltip', t(`microcards.mastery_lvl_desc_${lvl}`, `Уровень ${lvl}`));
+        }
+        const masteryLevelNumber = $('deckMasteryLevelNumber');
+        if (masteryLevelNumber) {
+            masteryLevelNumber.textContent = lvl;
+        }
+        const masterySwText = $('deckMasteryLevelXp');
+        if (masterySwText) {
+            const sw = records.cumulative_sw || 0;
+            const floor = records.current_level_sw || 0;
+            const ceil = records.next_level_sw; // null at the level-10 cap
+            const masteryBar = $('deckMasteryLevelBar');
+            if (ceil === null || ceil === undefined) {
+                masterySwText.textContent = `${sw.toLocaleString()} SW · ${t('microcards.mastery_max_level', 'Максимальный уровень')}`;
+                if (masteryBar) masteryBar.style.width = '100%';
+            } else {
+                // Both the text and the bar speak in-level progress.
+                const range = Math.max(1, ceil - floor);
+                const inLevel = Math.max(0, sw - floor);
+                masterySwText.textContent = `${inLevel.toLocaleString()} / ${range.toLocaleString()} SW`;
+                if (masteryBar) masteryBar.style.width = `${Math.max(0, Math.min(100, (inLevel / range) * 100))}%`;
+            }
+        }
+
+        // Review card stats: SW earned today + the best combo (the only
+        // review stat honest enough to be a record).
+        const detailsSwToday = $('detailsSwToday');
+        if (detailsSwToday) detailsSwToday.textContent = (records.sw_today || 0).toLocaleString();
+        const detailsComboSRS = $('detailsComboSRS');
+        if (detailsComboSRS) {
+            detailsComboSRS.textContent = records.comboSRS ? ` · ${t('microcards.combo_best_fmt', 'лучшее комбо: {n}').replace('{n}', records.comboSRS)}` : '';
+        }
 
         // The "perfect run" ceiling covers the WHOLE deck (runs = full passes).
         const threshold = Math.max(3, Math.min(8, Math.floor(total * 0.15)));
@@ -2085,6 +2188,21 @@
         state.sessionStats = stats;
     }
 
+    // The server is the authority on the SW economy (combo, shield, earned
+    // SW) — adopt its counters after each graded answer. The optimistic
+    // animation in registerAnswer normally lands on the same numbers, so
+    // this is a silent reconcile, not a visual jump.
+    function syncEconomy(session) {
+        if (!session || typeof session.session_sw !== 'number') return;
+        const comboChanged = state.combo !== (session.combo || 0);
+        state.sessionSw = session.session_sw || 0;
+        state.combo = session.combo || 0;
+        state.maxCombo = session.max_combo || 0;
+        state.isNearMiss = !!session.near_miss;
+        updateXpChip();
+        if (comboChanged) showCombo();
+    }
+
     // Has this card already been attempted in the session (i.e. a re-presentation)?
     function isCardRetry(cardId) {
         const fr = state.session && state.session.first_results;
@@ -2132,7 +2250,7 @@
         // Reset gamification for the new sitting
         state.combo = 0;
         state.maxCombo = 0;
-        state.sessionXp = 0;
+        state.sessionSw = 0;
         lastXpValue = 0;
         const comboChip = $('comboChip');
         if (comboChip) comboChip.style.display = 'none';
@@ -2150,14 +2268,17 @@
             state.sessionMode = data.session.mode || (data.session.level_mode ? 'run' : 'review');
             state.sessionLevelMode = data.session.level_mode === 2 ? 2 : (data.session.level_mode === 1 ? 1 : null);
 
-            // Restore gamification state (pausing/resuming recovery)
+            // Restore gamification state (pausing/resuming recovery) — all
+            // server-tracked now, including the near-miss shield.
             state.combo = data.session.combo || 0;
             state.maxCombo = data.session.max_combo || 0;
-            state.sessionXp = data.session.session_xp || 0;
-            lastXpValue = state.sessionXp;
+            state.sessionSw = data.session.session_sw || 0;
+            state.isNearMiss = !!data.session.near_miss;
+            lastXpValue = state.sessionSw;
 
             const unique = state.sessionStats.unique_total || 1;
-            state.threshold = Math.max(3, Math.min(8, Math.floor(unique * 0.15)));
+            state.threshold = data.session.combo_threshold
+                || Math.max(3, Math.min(8, Math.floor(unique * 0.15)));
             // The "perfect run" ceiling only makes sense for runs (records).
             state.maxPossiblePoints = state.sessionMode === 'run'
                 ? calculateMaxPossiblePoints(unique, state.threshold, state.sessionLevelMode === 2 ? 2 : 1)
@@ -2169,7 +2290,7 @@
             } else {
                 if (comboChip) comboChip.style.display = 'none';
             }
-            popNumber($('xpChipVal'), state.sessionXp);
+            popNumber($('xpChipVal'), state.sessionSw);
             renderSessionLevelIndicator();
             renderCompositionChip();
             updateHeaderProgress();
@@ -2459,6 +2580,7 @@
                 });
                 if (result && result.session) {
                     syncSessionState(result.session);
+                    syncEconomy(result.session);
                     maybeCelebrateCardLevelUp(card, result.card_state);
                     synced = true;
                 }
@@ -2541,8 +2663,9 @@
                 $('btnL2Override').classList.remove('hidden');
             }
 
-            // Combo / XP / feedback
+            // Combo / SW / feedback (then reconcile with the server's counters)
             registerAnswer(isCorrect, isRetry, state.currentForm || 1);
+            if (synced) syncEconomy(state.session);
             updateHeaderProgress();
 
         } catch (err) {
@@ -2599,8 +2722,10 @@
             badge.style.cssText = 'background:color-mix(in srgb,var(--color-warning) 15%,transparent);border-color:var(--color-warning);color:var(--color-warning)';
             $('btnL2Override').classList.add('hidden');
 
-            // Reward the correction (full points — the verdict was wrong, not the user)
+            // Reward the correction (full points — the verdict was wrong, not
+            // the user), then reconcile with the server's counters.
             registerAnswer(true, false, state.currentForm || 1);
+            syncEconomy(state.session);
             updateHeaderProgress();
 
         } catch (err) {
@@ -2640,14 +2765,11 @@
     async function pauseLearningSession() {
         if (!state.session) return;
         try {
+            // Combo/SW already live on the server (scored per answer).
             await apiCall(`/api/v2/microcards/session/${state.session.id}/pause`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    combo: state.combo,
-                    max_combo: state.maxCombo,
-                    session_xp: state.sessionXp
-                })
+                body: JSON.stringify({})
             });
             showToast(t('microcards.session_paused', 'Сессия приостановлена'), 'info');
         } catch (err) {
@@ -2704,14 +2826,15 @@
         $('sumStatCorrect').textContent = firstTry;
         $('sumStatErrors').textContent = reviewedIds.length;
 
-        // Finalize on the server (idempotent; only runs persist a record).
+        // Finalize on the server (idempotent). Score/combo are the values the
+        // server tracked per answer — nothing is reported from here.
         let finishResult = null;
         if (state.session) {
             try {
                 const res = await apiCall(`/api/v2/microcards/session/${state.session.id}/finish`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ session_xp: state.sessionXp, max_combo: state.maxCombo })
+                    body: JSON.stringify({})
                 });
                 finishResult = res.result || null;
             } catch (err) {
@@ -2746,8 +2869,8 @@
             errorsSection.classList.add('hidden');
         }
 
-        // Run celebration effect for strong results
-        if ((reviewedIds.length === 0 || accuracy >= 90) && fxAllowed() && window.CelebrationEffects) {
+        // Run celebration effect for strong results or level up
+        if (((reviewedIds.length === 0 || accuracy >= 90) || (finishResult && finishResult.level_up)) && fxAllowed() && window.CelebrationEffects) {
             try {
                 window.CelebrationEffects.launchConfetti();
             } catch (e) {
@@ -2795,12 +2918,26 @@
             }
         }
 
-        // Record badge + caches (server already persisted the run record).
+        // Record badge + caches (server already persisted the record).
         const recordBadge = $('sumRecordBadge');
-        const isNewRecord = !!(isRun && finishResult && finishResult.is_new_record && state.sessionXp > 0);
+        const isNewRecord = !!(finishResult && finishResult.is_new_record && state.sessionSw > 0);
         if (recordBadge) recordBadge.classList.toggle('hidden', !isNewRecord);
-        if (isRun && finishResult && finishResult.record && state.activeDeckId) {
+        if (finishResult && finishResult.record && state.activeDeckId) {
             state.serverRecords[state.activeDeckId] = finishResult.record;
+        }
+
+        // Level Up banner
+        const levelUpBanner = $('sumLevelUpBanner');
+        if (levelUpBanner) {
+            const hasLeveledUp = !!(finishResult && finishResult.level_up);
+            levelUpBanner.classList.toggle('hidden', !hasLeveledUp);
+            if (hasLeveledUp) {
+                const levelTextEl = $('sumLevelUpText');
+                if (levelTextEl) {
+                    levelTextEl.textContent = t('microcards.level_up_unlocked', 'УРОВЕНЬ КОЛОДЫ ПОВЫШЕН ДО {n}!').replace('{n}', finishResult.current_level || 1);
+                }
+                DopamineAudio.playLevelUp();
+            }
         }
 
         // L2 gate: opened by completing an L1 run (server decides).
@@ -2818,7 +2955,7 @@
         if (state.activeDeck) state.activeDeck.l2_unlocked = isL2UnlockedNow;
 
         // XP + best combo
-        popNumber($('sumXp'), state.sessionXp);
+        popNumber($('sumXp'), state.sessionSw);
         if ($('sumCombo')) $('sumCombo').textContent = state.maxCombo;
 
         // Dynamic title / message
@@ -2909,9 +3046,11 @@
         const soundEl = $('prefSound');
         const volEl = $('prefVolume');
         const animEl = $('prefAnimations');
+        const hintEl = $('prefDisableFloatHints');
         if (soundEl) soundEl.checked = prefs.sound;
         if (volEl) volEl.value = Math.round(prefs.volume * 100);
         if (animEl) animEl.checked = prefs.animations;
+        if (hintEl) hintEl.checked = prefs.disableFloatHints;
         // Server-backed study settings (pace preset + daily goal)
         const loadSel = $('prefDailyLoad');
         if (loadSel) loadSel.value = (state.settings && state.settings.daily_load) || 'standard';
@@ -2948,6 +3087,13 @@
         if (animEl) {
             animEl.addEventListener('change', () => {
                 prefs.animations = animEl.checked;
+                savePrefs();
+            });
+        }
+        const hintEl = $('prefDisableFloatHints');
+        if (hintEl) {
+            hintEl.addEventListener('change', () => {
+                prefs.disableFloatHints = hintEl.checked;
                 savePrefs();
             });
         }
@@ -3579,18 +3725,13 @@ ${fill}`;
         }
 
         // Auto-pause session on tab/browser closure via modern keepalive fetch
+        // (combo/SW already live on the server — scored per answer).
         window.addEventListener('beforeunload', () => {
             if (state.view === 'session' && state.session) {
-                const url = `/api/v2/microcards/session/${state.session.id}/pause`;
-                const payload = JSON.stringify({
-                    combo: state.combo,
-                    max_combo: state.maxCombo,
-                    session_xp: state.sessionXp
-                });
-                fetch(url, {
+                fetch(`/api/v2/microcards/session/${state.session.id}/pause`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: payload,
+                    body: JSON.stringify({}),
                     keepalive: true
                 });
             }

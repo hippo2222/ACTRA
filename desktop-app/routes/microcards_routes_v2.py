@@ -166,28 +166,6 @@ def get_deck_record_route(deck_id: str):
         logger.exception("[HTTP] v2/microcards/records get failed: %s", exc)
         return jsonify({"ok": False, "error": "get_record_failed"}), 500
 
-@microcards_v2_bp.route("/records/<string:deck_id>", methods=["POST"])
-def save_deck_record_route(deck_id: str):
-    """Save (upsert) a deck record — only keeps all-time best per level."""
-    guest_check = _check_guest()
-    if guest_check:
-        return guest_check
-    body = request.get_json(silent=True) or {}
-    score = body.get("score")
-    stars = body.get("stars")
-    level_mode = body.get("level_mode", 1)
-    if score is None or stars is None:
-        return jsonify({"ok": False, "error": "score_and_stars_required"}), 400
-    try:
-        svc = _get_svc()
-        result = svc.save_deck_record(deck_id, score=int(score), stars=int(stars), level_mode=int(level_mode or 1))
-        return jsonify({"ok": True, **result})
-    except (ValueError, TypeError) as exc:
-        return jsonify({"ok": False, "error": str(exc)}), 400
-    except Exception as exc:
-        logger.exception("[HTTP] v2/microcards/records save failed: %s", exc)
-        return jsonify({"ok": False, "error": "save_record_failed"}), 500
-
 @microcards_v2_bp.route("/decks/<string:deck_id>", methods=["GET"])
 def get_deck(deck_id: str):
     guest_check = _check_guest()
@@ -656,19 +634,11 @@ def pause_session(session_id: str):
     guest_check = _check_guest()
     if guest_check:
         return guest_check
-    body = request.get_json(silent=True) or {}
-    combo = int(body.get("combo", 0))
-    max_combo = int(body.get("max_combo", 0))
-    session_xp = int(body.get("session_xp", 0))
-
     try:
         svc = _get_svc()
-        session = svc.pause_session(
-            session_id=session_id,
-            combo=combo,
-            max_combo=max_combo,
-            session_xp=session_xp
-        )
+        # Combo/SW already live server-side (scored per answer) — the body
+        # carries nothing the server would trust.
+        session = svc.pause_session(session_id=session_id)
         return jsonify({"ok": True, "session": session})
     except LookupError as exc:
         return jsonify({"ok": False, "error": str(exc)}), 404
@@ -711,23 +681,14 @@ def abandon_session(session_id: str):
 
 @microcards_v2_bp.route("/session/<string:session_id>/finish", methods=["POST"])
 def finish_session(session_id: str):
-    """Close out a completed run: server computes the stars and saves the
-    deck record (the only way to earn stars / unlock level 2)."""
+    """Close out a completed session: stars, score and combo are the
+    server-tracked values — nothing is taken from the client."""
     guest_check = _check_guest()
     if guest_check:
         return guest_check
-    body = request.get_json(silent=True) or {}
-    try:
-        session_xp = int(body.get("session_xp", 0))
-    except (ValueError, TypeError):
-        session_xp = 0
-    try:
-        max_combo = int(body.get("max_combo", 0))
-    except (ValueError, TypeError):
-        max_combo = 0
     try:
         svc = _get_svc()
-        result = svc.finish_session(session_id, session_xp=session_xp, max_combo=max_combo)
+        result = svc.finish_session(session_id)
         return jsonify({"ok": True, "result": result})
     except LookupError as exc:
         return jsonify({"ok": False, "error": str(exc)}), 404

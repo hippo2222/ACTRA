@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="platinum-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="45%" stop-color="#E5E4E2" />
+      <stop offset="70%" stop-color="#B0B0B0" />
+      <stop offset="100%" stop-color="#E5E4E2" />
+    </linearGradient>
+    <linearGradient id="gold-grad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#D4AF37" />
+      <stop offset="50%" stop-color="#FFDF00" />
+      <stop offset="100%" stop-color="#FFFFFF" />
+    </linearGradient>
+    <filter id="ultra-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  <rect width="64" height="64" fill="none" />
+
+  <!-- Тонкие золотые орбиты -->
+  <ellipse cx="32" cy="32" rx="24" ry="8" fill="none" stroke="url(#gold-grad)" stroke-width="1.2" opacity="0.75" transform="rotate(-30, 32, 32)" />
+  <ellipse cx="32" cy="32" rx="24" ry="8" fill="none" stroke="url(#gold-grad)" stroke-width="1.2" opacity="0.75" transform="rotate(30, 32, 32)" />
+
+  <!-- Орбитальные микро-нейроны -->
+  <circle cx="14" cy="22" r="2.2" fill="url(#gold-grad)" filter="url(#ultra-glow)" />
+  <circle cx="50" cy="42" r="2.2" fill="url(#gold-grad)" filter="url(#ultra-glow)" />
+  <circle cx="14" cy="42" r="1.5" fill="url(#platinum-grad)" />
+
+  <!-- Центральное платиновое ядро в золотой оправе -->
+  <g filter="url(#ultra-glow)">
+    <polygon points="32,12 48,32 32,52 16,32" fill="url(#gold-grad)" />
+    <polygon points="32,16 44,32 32,48 20,32" fill="url(#platinum-grad)" />
+    <polygon points="32,22 39,32 32,42 25,32" fill="#FFFFFF" opacity="0.8" />
+  </g>
+  <circle cx="32" cy="32" r="2.5" fill="#FFFFFF" filter="url(#ultra-glow)" />
+</svg>

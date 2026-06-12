@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <filter id="med-glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="2" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+    <linearGradient id="active-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00F0FF" />
+      <stop offset="100%" stop-color="#00FFD1" />
+    </linearGradient>
+    <style>
+      @keyframes lvl3-breath {
+        0%, 100% { opacity: 0.7; }
+        50% { opacity: 1; }
+      }
+      .lvl3-node {
+        animation: lvl3-breath 4s infinite ease-in-out;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .lvl3-node { animation: none; opacity: 0.9; }
+      }
+    </style>
+  </defs>
+  <rect width="64" height="64" fill="none" />
+
+  <!-- Первый контур: треугольник из трёх нейронов, связи уже сплошные -->
+  <g stroke="url(#active-grad)" stroke-width="2.2" stroke-linecap="round" opacity="0.85">
+    <line x1="32" y1="15" x2="17" y2="44" />
+    <line x1="32" y1="15" x2="47" y2="44" />
+    <line x1="17" y1="44" x2="47" y2="44" />
+  </g>
+
+  <!-- Узлы сети -->
+  <circle cx="32" cy="15" r="4.2" class="lvl3-node" fill="#00FFD1" filter="url(#med-glow)" />
+  <circle cx="17" cy="44" r="4.2" class="lvl3-node" fill="#00F0FF" filter="url(#med-glow)" style="animation-delay: 1.3s;" />
+  <circle cx="47" cy="44" r="4.2" class="lvl3-node" fill="#00F0FF" filter="url(#med-glow)" style="animation-delay: 2.6s;" />
+</svg>

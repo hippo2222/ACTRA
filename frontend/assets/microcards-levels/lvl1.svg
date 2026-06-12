@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <filter id="dim-glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="2" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+    <style>
+      @keyframes lvl1-breath {
+        0%, 100% { opacity: 0.55; }
+        50% { opacity: 0.95; }
+      }
+      .lvl1-node {
+        animation: lvl1-breath 5s infinite ease-in-out;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .lvl1-node { animation: none; opacity: 0.8; }
+      }
+    </style>
+  </defs>
+  <rect width="64" height="64" fill="none" />
+
+  <!-- Одинокий нейрон: пара коротких обрывающихся отростков -->
+  <line x1="32" y1="32" x2="18" y2="20" stroke="#00F0FF" stroke-width="2" stroke-dasharray="3,4" stroke-linecap="round" opacity="0.55" />
+  <line x1="32" y1="32" x2="46" y2="44" stroke="#00F0FF" stroke-width="2" stroke-dasharray="3,4" stroke-linecap="round" opacity="0.45" />
+
+  <!-- Слабый ореол -->
+  <circle cx="32" cy="32" r="9" fill="#00F0FF" opacity="0.10" />
+
+  <!-- Единственный мерцающий узел -->
+  <circle cx="32" cy="32" r="4.5" class="lvl1-node" fill="#00F0FF" filter="url(#dim-glow)" />
+</svg>

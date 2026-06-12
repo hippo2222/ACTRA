@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Microcards visual audit — все темы</title>
+<link href="/assets/fonts.css" rel="stylesheet" />
+<link href="/assets/lightB-variables.css" rel="stylesheet" />
+<link href="/assets/lightB-components.css" rel="stylesheet" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+<style>
+  body { margin: 0; font-family: system-ui, sans-serif; }
+  .theme-block { padding: 1.2rem 1.5rem 1.6rem; background: var(--color-bg-secondary); color: var(--color-text-main); }
+  .theme-block h2 { margin: 0 0 0.8rem; font-size: 1rem; }
+  .row { display: flex; align-items: center; gap: 0.9rem; flex-wrap: wrap; margin-bottom: 0.9rem; }
+  .surface { background: var(--color-surface-1); border: 1px solid var(--color-border-subtle, var(--color-border-strong)); border-radius: 12px; padding: 1rem; }
+  /* Harness-only: make transient elements visible statically */
+  .mc-float-hint-item { position: static !important; animation: mc-hint-reveal 0.3s forwards !important; }
+  #mcFloatHintDemo { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  .force-tip .mc-tooltip-trigger::after { opacity: 1 !important; transform: translateX(-50%) scale(1) !important; }
+</style>
+</head>
+<body>
+<div id="themes"></div>
+<template id="tpl">
+  <section class="theme-block">
+    <h2></h2>
+    <div class="row" data-role="badges-big"></div>
+    <div class="row" data-role="badges-small"></div>
+    <div class="row">
+      <div class="mc-mastery-level-box" style="flex:1; min-width: 320px; margin-bottom: 0;">
+        <div class="mc-mastery-level-badge mc-tooltip-trigger" style="background-image: url('/assets/microcards-levels/lvl5.svg');" data-tooltip="">
+          <span class="mc-mastery-level-num-badge">5</span>
+        </div>
+        <div class="mc-mastery-level-info">
+          <div class="mc-mastery-level-header">
+            <h4 class="mc-mastery-level-title"><span class="mc-tooltip-trigger mc-tooltip-trigger--text">Уровень мастерства колоды</span></h4>
+            <p class="mc-mastery-level-xp"><span class="mc-tooltip-trigger mc-tooltip-trigger--text mc-tooltip-trigger--end">1 250 / 2 400 SW</span></p>
+          </div>
+          <div class="mc-mastery-level-progress-wrapper">
+            <div class="mc-mastery-level-track"><div class="mc-mastery-level-bar" style="width: 52%"></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="mc-record-badge" style="background:linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 45%, #14101f) 0%, #1a1430 100%); border: 1px solid color-mix(in srgb, var(--color-primary) 55%, transparent); box-shadow: 0 4px 14px color-mix(in srgb, var(--color-primary) 30%, transparent); animation: none;">
+        <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1">rocket_launch</span>
+        <span>УРОВЕНЬ КОЛОДЫ ПОВЫШЕН ДО 6!</span>
+      </div>
+    </div>
+    <div class="row" id="">
+      <div id="mcFloatHintDemo">
+        <div class="mc-float-hint-item hint-resonance"><span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1; font-size:15px">electric_bolt</span> <span>Нейронный Резонанс: SW умножается!</span></div>
+        <div class="mc-float-hint-item hint-shield"><span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1; font-size:15px">shield</span> <span>Нейронный щит активен</span></div>
+        <div class="mc-float-hint-item hint-fire"><span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1; font-size:15px">local_fire_department</span> <span>Синапсы в огне!</span></div>
+        <div class="mc-float-hint-item hint-lost"><span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1; font-size:15px">flash_off</span> <span>Связь оборвалась</span></div>
+        <div class="mc-float-hint-item hint-super"><span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1; font-size:15px">stars</span> <span>Сверхпроводимость!</span></div>
+      </div>
+    </div>
+    <div class="row force-tip" style="padding-top: 5.5rem;">
+      <span class="mc-tooltip-trigger mc-tooltip-trigger--text" data-tooltip="Синаптический Вес (SW) — мера прочности связей между нейронами. Растёт с каждым верным ответом и угасает со временем из-за забывания.">Тултип: наведение/фокус</span>
+    </div>
+  </section>
+</template>
+<script>
+(async function () {
+  // Pull the REAL component CSS from the live page — no copy-paste drift.
+  const html = await fetch('/Microcards/microcards.html').then(r => r.text());
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  doc.querySelectorAll('style').forEach(s => {
+    const st = document.createElement('style');
+    st.textContent = s.textContent;
+    document.head.appendChild(st);
+  });
+
+  const themes = ['light-a', 'light-b', 'neutral-a', 'neutral-b', 'dark-a', 'dark-b'];
+  const root = document.getElementById('themes');
+  for (const theme of themes) {
+    const frag = document.getElementById('tpl').content.cloneNode(true);
+    const section = frag.querySelector('section');
+    section.setAttribute('data-theme', theme);
+    section.querySelector('h2').textContent = theme;
+    const big = section.querySelector('[data-role="badges-big"]');
+    const small = section.querySelector('[data-role="badges-small"]');
+    for (let lvl = 1; lvl <= 10; lvl++) {
+      const b = document.createElement('div');
+      b.className = 'mc-mastery-level-badge';
+      b.style.backgroundImage = `url('/assets/microcards-levels/lvl${lvl}.svg')`;
+      b.innerHTML = `<span class="mc-mastery-level-num-badge">${lvl}</span>`;
+      big.appendChild(b);
+      const s = document.createElement('span');
+      s.className = 'mc-deck-card__lvl';
+      s.style.backgroundImage = `url('/assets/microcards-levels/lvl${lvl}.svg')`;
+      s.innerHTML = `<b>${lvl}</b>`;
+      small.appendChild(s);
+    }
+    root.appendChild(frag);
+  }
+})();
+</script>
+</body>
+</html>
