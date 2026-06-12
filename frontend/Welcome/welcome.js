@@ -1647,9 +1647,8 @@
                 showError('loginError', wt('welcome.error_login_required', 'Введите логин или email'));
                 return;
             }
-            const passwordError = validatePassword(password);
-            if (passwordError) {
-                showError('loginError', passwordError);
+            if (!password) {
+                showError('loginError', wt('welcome.validate_password_required', 'Введите пароль'));
                 return;
             }
 

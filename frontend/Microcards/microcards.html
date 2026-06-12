@@ -13,6 +13,7 @@
     <link href="/assets/lightB-components.css" rel="stylesheet" />
     <link href="/assets/animations.css" rel="stylesheet" />
     <link href="/assets/global-header.css" rel="stylesheet" />
+    <link href="/assets/onboarding-tour.css?v=microcards-onboarding-1" rel="stylesheet" />
     <link href="/assets/PageBoot.css" rel="stylesheet" />
     <script src="/assets/celebration-effects.js"></script>
     <style>
@@ -1869,7 +1870,7 @@
                             </span>
                         </div>
                     </div>
-                    <div style="display:flex;align-items:center;gap:0.6rem">
+                    <div style="display:flex;align-items:center;gap:0.6rem" data-onboarding-target="microcards-create-actions">
                         <button type="button" onclick="mcApp.openImportByCodeDialog()" class="mc-btn mc-btn--ghost" data-i18n-title="microcards.import_by_code_title" title="Импорт колоды по коду доступа">
                             <span class="material-symbols-outlined">key</span>
                             <span data-i18n="microcards.btn_import_by_code">По коду</span>
@@ -1881,7 +1882,7 @@
                     </div>
                 </div>
 
-                <div class="mc-stats">
+                <div class="mc-stats" data-onboarding-target="microcards-library-stats">
                     <div class="mc-stat">
                         <span class="mc-stat__icon mc-stat__icon--due"><span class="material-symbols-outlined">pending_actions</span></span>
                         <div>
@@ -1908,11 +1909,11 @@
 
 
                 <div class="mc-controls">
-                    <div class="mc-search">
+                    <div class="mc-search" data-onboarding-target="microcards-search">
                         <span class="material-symbols-outlined">search</span>
                         <input id="libSearch" type="search" placeholder="Поиск колоды по названию..." data-i18n-placeholder="microcards.search_placeholder" />
                     </div>
-                    <div class="mc-sort t-tabs" id="mcSort" role="group" aria-label="Сортировка колод" data-i18n-aria="microcards.sort_label">
+                    <div class="mc-sort t-tabs" id="mcSort" data-onboarding-target="microcards-sort" role="group" aria-label="Сортировка колод" data-i18n-aria="microcards.sort_label">
                         <span class="t-tabs-pill" aria-hidden="true"></span>
                         <button type="button" class="mc-sort-btn t-tab is-active" data-sort="name-asc" aria-pressed="true" data-i18n="microcards.sort_name_asc">А–Я</button>
                         <button type="button" class="mc-sort-btn t-tab" data-sort="name-desc" aria-pressed="false" data-i18n="microcards.sort_name_desc">Я–А</button>
@@ -1928,7 +1929,7 @@
 
                 <div id="libTagFilters" class="mc-tagfilters hidden" role="group" aria-label="Фильтр по тегам"></div>
 
-                <div id="decksGrid" class="mc-deck-grid"></div>
+                <div id="decksGrid" class="mc-deck-grid" data-onboarding-target="microcards-decks-grid"></div>
 
                 <div id="decksEmpty" class="mc-empty hidden">
                     <span class="mc-empty__icon"><span class="material-symbols-outlined">style</span></span>
@@ -1962,7 +1963,7 @@
                             <span id="deckPublishStatus"></span>
                             <span id="deckPausedStatus"></span>
                         </div>
-                        <div class="mc-dhead__actions">
+                        <div class="mc-dhead__actions" data-onboarding-target="microcards-deck-actions">
                         <button type="button" id="btnDeckPublish" class="mc-btn mc-btn--ghost" onclick="mcApp.publishDeckToCatalog()">
                             <span class="material-symbols-outlined">public</span>
                             <span data-i18n="microcards.btn_publish_deck">Опубликовать</span>
@@ -1997,7 +1998,7 @@
                 </header>
 
                 <!-- Mastery Level Box -->
-                <div class="mc-mastery-level-box">
+                <div class="mc-mastery-level-box" data-onboarding-target="microcards-deck-mastery">
                     <div class="mc-mastery-level-badge mc-tooltip-trigger" id="deckMasteryLevelBadge" tabindex="0" style="background-image: url('/assets/microcards-levels/lvl1.svg');" data-tooltip="">
                         <span class="mc-mastery-level-num-badge" id="deckMasteryLevelNumber">1</span>
                     </div>
@@ -2019,7 +2020,7 @@
                 </div>
 
                 <!-- Resume Pending Session Card -->
-                <div id="deckResumeSection" class="mc-resume-banner hidden">
+                <div id="deckResumeSection" class="mc-resume-banner hidden" data-onboarding-target="microcards-deck-resume">
                     <div class="mc-resume-banner__icon">
                         <span class="material-symbols-outlined">pause_circle</span>
                     </div>
@@ -2045,9 +2046,9 @@
                 </div>
 
                 <!-- Run and Study modes -->
-                <section class="mc-study-modes" aria-label="Режимы обучения">
+                <section class="mc-study-modes" aria-label="Режимы обучения" data-onboarding-target="microcards-study-modes">
                     <!-- Level 1 run -->
-                    <div class="mc-study-mode-card mc-study-mode-card--silver" onclick="mcApp.startRun(1)">
+                    <div class="mc-study-mode-card mc-study-mode-card--silver" onclick="mcApp.startRun(1)" data-onboarding-target="microcards-mode-l1">
                         <div class="mc-study-mode-card__title">
                             <span class="material-symbols-outlined" style="color:#b0b7bd">menu_book</span>
                             <span data-i18n="microcards.run_l1_title">Прохождение · Уровень 1</span>
@@ -2066,7 +2067,7 @@
                     </div>
 
                     <!-- Level 2 run -->
-                    <div id="cardStudyL2" class="mc-study-mode-card mc-study-mode-card--gold" onclick="mcApp.startRun(2)">
+                    <div id="cardStudyL2" class="mc-study-mode-card mc-study-mode-card--gold" onclick="mcApp.startRun(2)" data-onboarding-target="microcards-mode-l2">
                         <div class="mc-study-mode-card__title">
                             <span class="material-symbols-outlined" style="color:var(--color-warning)">edit_note</span>
                             <span data-i18n="microcards.run_l2_title">Прохождение · Уровень 2</span>
@@ -2088,7 +2089,7 @@
                     </div>
 
                     <!-- Повторение (SRS) -->
-                    <div class="mc-study-mode-card mc-study-mode-card--blue mc-dhead__cta" onclick="mcApp.startReview()">
+                    <div class="mc-study-mode-card mc-study-mode-card--blue mc-dhead__cta" onclick="mcApp.startReview()" data-onboarding-target="microcards-mode-review">
                         <div class="mc-study-mode-card__title">
                             <span class="material-symbols-outlined" style="color:var(--color-primary)">school</span>
                             <span data-i18n="microcards.btn_review_mode">Повторение</span>
@@ -2103,7 +2104,7 @@
                     </div>
 
                     <!-- Просмотр -->
-                    <div class="mc-study-mode-card mc-study-mode-card--gray" onclick="mcApp.startBrowse()">
+                    <div class="mc-study-mode-card mc-study-mode-card--gray" onclick="mcApp.startBrowse()" data-onboarding-target="microcards-mode-browse">
                         <div class="mc-study-mode-card__title">
                             <span class="material-symbols-outlined" style="color:var(--color-text-secondary)">style</span>
                             <span data-i18n="microcards.btn_browse">Просмотр</span>
@@ -2116,7 +2117,7 @@
                 </section>
 
                 <!-- Analytics Box (groups stats and mastery breakdown) -->
-                <div class="mc-analytics-box">
+                <div class="mc-analytics-box" data-onboarding-target="microcards-deck-analytics">
                     <!-- Metric strip (reuses the .mc-stat tile component) -->
                     <section class="mc-dstats" aria-label="Статистика колоды">
                         <div class="mc-stat">
@@ -2165,7 +2166,7 @@
                 </div>
 
                 <!-- Cards (full width) -->
-                <section class="mc-cards">
+                <section class="mc-cards" data-onboarding-target="microcards-deck-cards">
                     <div class="mc-cards__head">
                         <h3 class="mc-panel-title" data-i18n="microcards.deck_cards_heading">Карточки в колоде</h3>
                         <div class="mc-cards__headactions">
@@ -2202,7 +2203,7 @@
                         </button>
                         
                         <!-- Consolidated Session Progress Bar -->
-                        <div id="mcSessionProgress" class="mc-session-progress" aria-live="polite" aria-label="Прогресс сессии">
+                        <div id="mcSessionProgress" class="mc-session-progress" data-onboarding-target="microcards-session-progress" aria-live="polite" aria-label="Прогресс сессии">
                             <span class="mc-session-progress__text" id="mcSessionProgressText">0/0</span>
                             <div class="mc-session-progress__track" style="position:relative; overflow:visible;">
                                 <div id="mcSessionProgressBar" class="mc-session-progress__bar" style="width:0%"></div>
@@ -2215,7 +2216,7 @@
                             </div>
                         </div>
 
-                        <div class="mc-session__hud">
+                        <div class="mc-session__hud" data-onboarding-target="microcards-session-hud">
                             <div id="comboChip" class="mc-combo" style="display:none" aria-hidden="true">
                                 <span class="material-symbols-outlined" style="font-size:1rem;font-variation-settings:'FILL' 1">local_fire_department</span>
                                 <span id="comboChipText">×2</span>
@@ -2235,14 +2236,14 @@
                     </div>
 
                     <div class="mc-arena" id="mcArena">
-                        <div class="mc-rail-wrapper">
+                        <div class="mc-rail-wrapper" data-onboarding-target="microcards-session-rail-no">
                             <button type="button" class="mc-rail mc-rail--no" id="railNo" aria-label="Не знаю" data-i18n-aria="microcards.btn_dont_know">
                                 <span class="material-symbols-outlined">thumb_down</span>
                                 <span class="mc-rail__label" data-i18n="microcards.btn_dont_know">Не знаю</span>
                             </button>
                             <span class="mc-rail-hotkey">[1]</span>
                         </div>
-                        <div class="mc-flashcard-wrap" id="mcFlashWrap">
+                        <div class="mc-flashcard-wrap" id="mcFlashWrap" data-onboarding-target="microcards-session-card">
                         <div id="mcFeedback" class="mc-feedback">
                             <span id="mcFeedbackCheck" class="mc-feedback__check" data-state="out" aria-hidden="true">
                                 <svg viewBox="0 0 48 48" fill="none"><path d="M14 25 L21 32 L35 16" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -2276,7 +2277,7 @@
                                     <div id="frontActionsL1">
                                         <p class="mc-tap-hint" data-i18n="microcards.tap_to_reveal">Нажмите на карточку, чтобы увидеть ответ</p>
                                     </div>
-                                    <div id="frontActionsL2" class="hidden">
+                                    <div id="frontActionsL2" class="hidden" data-onboarding-target="microcards-session-answer-form">
                                         <form onsubmit="mcApp.submitAnswerL2(event)" class="mc-answer-form">
                                             <input type="text" id="inputL2Answer" class="mc-answer-input" placeholder="Введите ответ..." autocomplete="off" data-i18n-placeholder="microcards.input_answer_ph" />
                                             <button type="submit" class="mc-btn mc-btn--primary">
@@ -2308,7 +2309,7 @@
                                     </div>
                                 </div>
                                 <div class="mc-face__actions">
-                                    <div id="backActionsL1" class="mc-grade hidden" role="group" aria-label="Оцените ответ">
+                                    <div id="backActionsL1" class="mc-grade hidden" data-onboarding-target="microcards-session-grade" role="group" aria-label="Оцените ответ">
                                         <div class="flex flex-col items-center gap-1.5 w-full">
                                             <button type="button" onclick="mcApp.submitAnswerL1(false)" class="mc-grade__btn mc-grade__btn--no w-full flex items-center justify-center gap-1.5 min-h-[3.25rem]">
                                                 <span class="material-symbols-outlined">close</span>
@@ -2324,7 +2325,7 @@
                                             <span class="text-[10px] opacity-50 font-semibold select-none">[2]</span>
                                         </div>
                                     </div>
-                                    <div id="backActionsL2" class="hidden" style="display:flex;align-items:center;gap:0.6rem">
+                                    <div id="backActionsL2" class="hidden" data-onboarding-target="microcards-session-next" style="display:flex;align-items:center;gap:0.6rem">
                                         <button type="button" id="btnL2Override" onclick="mcApp.overrideL2Answer()" class="mc-btn mc-btn--warning hidden">
                                             <span data-i18n="microcards.btn_override">Всё равно правильно</span>
                                         </button>
@@ -2337,7 +2338,7 @@
                             </div>
                         </div>
                         </div><!-- /mc-flashcard-wrap -->
-                        <div class="mc-rail-wrapper">
+                        <div class="mc-rail-wrapper" data-onboarding-target="microcards-session-rail-yes">
                             <button type="button" class="mc-rail mc-rail--yes" id="railYes" aria-label="Знаю" data-i18n-aria="microcards.btn_know">
                                 <span class="material-symbols-outlined">thumb_up</span>
                                 <span class="mc-rail__label" data-i18n="microcards.btn_know">Знаю</span>
@@ -2373,7 +2374,7 @@
                     </div>
 
                     <div class="mc-summary">
-                    <div class="mc-summary__card">
+                    <div class="mc-summary__card" data-onboarding-target="microcards-summary-result">
                         <div class="mc-summary__hero">
                             <div class="mc-acc-ring">
                                 <svg viewBox="0 0 132 132">
@@ -2456,7 +2457,7 @@
                         </div>
                     </div>
 
-                    <div id="summaryErrorsSection" class="hidden">
+                    <div id="summaryErrorsSection" class="hidden" data-onboarding-target="microcards-summary-errors">
                         <h3 class="mc-panel-title" style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.85rem">
                             <span class="material-symbols-outlined" style="color:var(--color-error);font-size:1.1rem">replay</span>
                             <span data-i18n="microcards.errors_breakdown_title">Потребовали повторения</span>
@@ -2881,6 +2882,8 @@
     <script src="../assets/GlobalHeader.js"></script>
     <script src="/assets/PageBoot.js"></script>
     <script src="../assets/ConnectionMonitor.js"></script>
+    <script src="/assets/onboarding_tours.js?v=microcards-onboarding-1"></script>
+    <script src="/assets/OnboardingTour.js?v=microcards-onboarding-1"></script>
 
     <script>
         // Safari light-dismiss fallback for dialogs without closedBy support

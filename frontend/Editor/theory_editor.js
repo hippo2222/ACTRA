@@ -2981,7 +2981,7 @@ function renderTheoryLibraryList() {
         const empty = document.createElement("div");
         empty.className = "empty-state-card empty-state-card--compact";
         empty.textContent = query
-            : wt('te.k104', 'По этому запросу теории не найдены.')
+            ? wt('te.k104', 'По этому запросу теории не найдены.')
             : wt('te.k105', 'В библиотеке пока нет теорий. Можно начать с пустой заготовки.');
         host.appendChild(empty);
         return;

@@ -472,4 +472,80 @@ describe('welcome hosted auth flow', () => {
     expect(fetchMock.mock.calls.some(([url]) => url === '/api/auth/reset-password')).toBe(true);
     expect(navigateSpy).toHaveBeenCalledWith('/main');
   });
+
+  it('submits hosted login successfully even with a password under 8 characters', async () => {
+    const navigateSpy = vi.fn();
+    const fetchMock = vi.fn(async (input, init) => {
+      const url = typeof input === 'string' ? input : String(input?.url || '');
+
+      if (url === '/api/users/should-welcome') {
+        return {
+          ok: true,
+          json: async () => ({ ok: true, show_welcome: true, mode: 'auth', authenticated: false, profiles: [] }),
+        };
+      }
+
+      if (url === '/api/auth/login') {
+        const payload = JSON.parse(init.body);
+        expect(payload.identifier).toBe('test-user');
+        expect(payload.password).toBe('short');
+        return {
+          ok: true,
+          json: async () => ({
+            ok: true,
+            user: {
+              user_id: 'user_short_pwd',
+              email: 'test@example.com',
+              authenticated: true,
+            },
+          }),
+        };
+      }
+
+      if (url === '/api/legal/current') {
+        return {
+          ok: true,
+          json: async () => ({
+            ok: true,
+            documents: {
+              terms: { version: 'terms-v1' },
+              privacy: { version: 'privacy-v1' },
+              refund: { version: 'refund-v1' },
+            },
+          }),
+        };
+      }
+
+      if (url === '/api/consent/status?user_id=user_short_pwd') {
+        return {
+          ok: true,
+          json: async () => ({
+            ok: true,
+            status: 'up_to_date',
+          }),
+        };
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    const dom = setupDom(fetchMock);
+    dom.window.navigateWithTransition = navigateSpy;
+    defineGlobal('window', dom.window);
+    dom.window.eval(loadFile('frontend/Welcome/welcome.js'));
+    dom.window.document.dispatchEvent(new dom.window.Event('DOMContentLoaded'));
+    await flushPromises();
+
+    dom.window.welcomeShowAuthLogin();
+    await flushPromises();
+
+    dom.window.document.getElementById('loginIdentifier').value = 'test-user';
+    dom.window.document.getElementById('loginPassword').value = 'short';
+
+    await dom.window.welcomeLoginSubmit();
+    await flushPromises();
+
+    expect(fetchMock.mock.calls.some(([url]) => url === '/api/auth/login')).toBe(true);
+    expect(navigateSpy).toHaveBeenCalledWith('/main');
+  });
 });
