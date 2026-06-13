@@ -1670,3 +1670,65 @@ def test_server_side_sw_scoring_shield_and_multipliers():
     rec = svc.get_deck_record(did)
     assert rec["scoreL1"] == 900
     assert rec["cumulative_sw"] == 900
+
+
+def test_list_decks_reports_level2_count():
+    """The library grid's mastery bar reads deck.level2_count — list_decks must
+    emit it: 0 until studied cards reach level 2, then the count of L2 cards."""
+    tmp = tempfile.mkdtemp()
+    svc = MicrocardsServiceV2(tmp, user_id="test_user")
+    deck = svc.create_deck(name="Lvl Deck")
+    did = deck["id"]
+    backs = {}
+    for i in range(3):
+        c = svc.create_card(did, front_text=f"Q{i}", back_text=f"A{i}")
+        backs[c["id"]] = f"A{i}"
+
+    # Brand-new deck: nothing studied yet → empty mastery bar.
+    assert svc.list_decks()[0]["level2_count"] == 0
+
+    # A full L1 run studies every card (level 1) and unlocks L2.
+    run1 = svc.start_session(did, mode="run", level_mode=1)
+    for cid in list(run1["card_queue"]):
+        svc.submit_answer(run1["id"], cid, "know")
+    svc.finish_session(run1["id"])
+    # Studied but still level 1 → mastery bar stays empty.
+    assert svc.list_decks()[0]["level2_count"] == 0
+
+    # A full L2 run (typed answers) promotes every card to level 2.
+    run2 = svc.start_session(did, mode="run", level_mode=2)
+    for cid in list(run2["card_queue"]):
+        svc.submit_answer(run2["id"], cid, backs[cid])
+    svc.finish_session(run2["id"])
+
+    summary = svc.list_decks()[0]
+    assert summary["level2_count"] == 3
+    assert summary["card_count"] == 3
+
+
+def test_linked_deck_revoked_midsession_heals_instead_of_crashing():
+    """If the author revokes/deletes the publication while a subscriber has an
+    active session, reads resolve to 'revoked' and the next answer heals the
+    session (card_missing) instead of raising."""
+    svc = MicrocardsServiceV2(tempfile.mkdtemp(), user_id="learner")
+    cat = _FakeCatalog(_linked_snapshot())
+    svc.catalog_service = cat
+    deck = svc.create_linked_deck("catalog_item_1", _linked_snapshot())
+    did = deck["id"]
+
+    session = svc.start_session(did, level_mode=1)
+    q = list(session["card_queue"])
+    # First card answered while the publication is still granted.
+    svc.submit_answer(session["id"], q[0], "know")
+
+    # Author deletes the publication mid-session.
+    cat._error = "catalog_item_source_deleted"
+
+    resolved = svc.get_deck(did)
+    assert resolved["access_state"] == "revoked"
+    assert resolved["cards"] == []
+
+    # Answering the remaining card heals the queue instead of throwing.
+    res = svc.submit_answer(session["id"], q[1], "know")
+    assert res.get("card_missing") is True
+    assert q[1] not in res["session"]["card_queue"]

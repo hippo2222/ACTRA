@@ -1,12 +1,14 @@
 """Microcards V2 service with FSRS-4.5 scheduler and progressive levels."""
 
 import copy
+import functools
 import hashlib
 import json
 import logging
 import os
 import random
 import re
+import threading
 import uuid
 import difflib
 from datetime import datetime, timedelta, timezone
@@ -128,6 +130,43 @@ def _resolve_microcards_user_id(user_id: Optional[str], *, legacy_default: str =
     return _s(legacy_default, "default_user") or "default_user"
 
 
+# ── Per-user serialization (concurrency guard) ─────────────────────────────
+# The storage layer does a full-document read-modify-write (states / records /
+# sessions / settings, and deck docs), so two concurrent writers for the SAME
+# user — e.g. two browser tabs or two devices — could clobber each other
+# (last-write-wins). The hosted runtime serves on a single process (waitress
+# thread pool; desktop uses Flask threaded=True), so an in-process per-user
+# lock is enough to make those critical sections atomic. A reentrant lock lets
+# nested calls (finish_session → _apply_session_result, the mutators →
+# get_deck) re-acquire it on the same thread without deadlocking.
+#
+# NOTE: this guards within ONE process only. A future multi-process worker
+# deployment would need row versioning or pg_advisory_xact_lock instead.
+_USER_LOCKS: Dict[str, threading.RLock] = {}
+_USER_LOCKS_GUARD = threading.Lock()
+
+
+def _user_lock(user_id: str) -> threading.RLock:
+    """Return the process-global reentrant lock for a user id (lazily created)."""
+    key = str(user_id or "")
+    with _USER_LOCKS_GUARD:
+        lock = _USER_LOCKS.get(key)
+        if lock is None:
+            lock = _USER_LOCKS[key] = threading.RLock()
+        return lock
+
+
+def _serialized(method):
+    """Run a MicrocardsServiceV2 mutator under its user's lock so the
+    read-modify-write stays atomic across concurrent tabs/devices. Reentrant —
+    safe to nest (e.g. an import that calls create_card per row)."""
+    @functools.wraps(method)
+    def wrapper(self, *args, **kwargs):
+        with _user_lock(self.user_id):
+            return method(self, *args, **kwargs)
+    return wrapper
+
+
 class MicrocardsServiceV2:
     DEFAULT_SETTINGS = {
         "session_size": 20,
@@ -214,6 +253,7 @@ class MicrocardsServiceV2:
             s["daily_goal"] = self.DEFAULT_SETTINGS["daily_goal"]
         return s
 
+    @_serialized
     def update_settings(self, daily_load: Optional[str] = None,
                         daily_goal: Optional[Any] = None) -> Dict[str, Any]:
         """Persist the user-facing study settings.
@@ -809,18 +849,21 @@ class MicrocardsServiceV2:
                 current_count = deck.get("card_count")
                 if resolved_ids != current_ids or len(cards) != current_count:
                     # The author republished and card ids may have changed —
-                    # carry this user's review progress over to the matching
-                    # new cards before the old ids are forgotten.
-                    self._reconcile_linked_states(current_ids, cards)
-                    # Update the cached metadata on the stored doc
-                    raw_deck = self.storage.get_deck_doc(deck_id)
-                    if isinstance(raw_deck, dict):
-                        raw_deck["linked_card_ids"] = resolved_ids
-                        raw_deck["card_count"] = len(cards)
-                        raw_deck["updated_at"] = _utc_now_iso()
-                        self.storage.put_deck_doc(deck_id, raw_deck)
-                    deck["linked_card_ids"] = resolved_ids
-                    deck["card_count"] = len(cards)
+                    # carry this user's review progress over to the matching new
+                    # cards before the old ids are forgotten. Serialize the
+                    # reconcile read-modify-write so two reads right after a
+                    # republish can't clobber each other (per-user, reentrant).
+                    with _user_lock(self.user_id):
+                        self._reconcile_linked_states(current_ids, cards)
+                        # Update the cached metadata on the stored doc
+                        raw_deck = self.storage.get_deck_doc(deck_id)
+                        if isinstance(raw_deck, dict):
+                            raw_deck["linked_card_ids"] = resolved_ids
+                            raw_deck["card_count"] = len(cards)
+                            raw_deck["updated_at"] = _utc_now_iso()
+                            self.storage.put_deck_doc(deck_id, raw_deck)
+                        deck["linked_card_ids"] = resolved_ids
+                        deck["card_count"] = len(cards)
             else:
                 deck["card_count"] = deck.get("card_count") or 0
         return deck
@@ -930,6 +973,7 @@ class MicrocardsServiceV2:
 
                 due_count = 0
                 new_count = 0
+                level2_count = 0
                 now = _utc_now()
                 for card_id in card_ids:
                     state = states.get(card_id, {})
@@ -937,6 +981,10 @@ class MicrocardsServiceV2:
                     if not state or stability <= 0:
                         new_count += 1
                     else:
+                        # Mastery for the grid bar = share of STUDIED cards that
+                        # reached level 2 (same bucket as list_cards_with_state).
+                        if int(state.get("level") or 1) >= 2:
+                            level2_count += 1
                         due_at = _parse_iso(state.get("due_at"))
                         if due_at and due_at <= now:
                             due_count += 1
@@ -979,6 +1027,7 @@ class MicrocardsServiceV2:
                     "card_count": card_count,
                     "due_count": due_count,
                     "new_count": new_count,
+                    "level2_count": level2_count,
                     "catalog_item_id": deck.get("catalog_item_id"),
                     "created_by_user_id": deck.get("created_by_user_id"),
                     "author_name": deck.get("author_name"),
@@ -1003,6 +1052,7 @@ class MicrocardsServiceV2:
         decks.sort(key=lambda x: x.get("updated_at") or "", reverse=True)
         return decks[:limit]
 
+    @_serialized
     def create_deck(self, name: str, description: str = "", tags: List[str] = None, catalog_item_id: Optional[str] = None,
                     author_name: Optional[str] = None, author_user_id: Optional[str] = None) -> Dict[str, Any]:
         deck_id = f"deck_{uuid.uuid4().hex[:12]}"
@@ -1024,6 +1074,7 @@ class MicrocardsServiceV2:
         self.storage.put_deck_doc(deck_id, deck)
         return deck
 
+    @_serialized
     def create_linked_deck(self, catalog_item_id: str, snapshot: Dict[str, Any], *,
                            author_name: Optional[str] = None, author_user_id: Optional[str] = None,
                            granted_access_code: Optional[str] = None) -> Dict[str, Any]:
@@ -1056,6 +1107,7 @@ class MicrocardsServiceV2:
         self.storage.put_deck_doc(deck_id, deck)
         return deck
 
+    @_serialized
     def update_deck(self, deck_id: str, name: Optional[str] = None, description: Optional[str] = None,
                     tags: Optional[List[str]] = None, catalog_item_id: Optional[str] = None,
                     catalog_visibility: Optional[str] = None, access_code: Optional[str] = None,
@@ -1101,6 +1153,7 @@ class MicrocardsServiceV2:
         self.storage.put_deck_doc(deck_id, deck)
         return deck
 
+    @_serialized
     def delete_deck(self, deck_id: str) -> bool:
         # Ownership guard: get_deck returns None for decks the user doesn't own.
         if not self.get_deck(deck_id):
@@ -1161,6 +1214,7 @@ class MicrocardsServiceV2:
             out.append(enriched)
         return out
 
+    @_serialized
     def create_card(self, deck_id: str, front_text: str, back_text: str, hint: Optional[str] = None, front_image_url: Optional[str] = None, back_image_url: Optional[str] = None, acceptable_answers: Optional[List[str]] = None, front_image_attribution: Optional[Dict[str, Any]] = None, back_image_attribution: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         deck = self.get_deck(deck_id)
         if not deck:
@@ -1198,6 +1252,7 @@ class MicrocardsServiceV2:
         self.storage.put_deck_doc(deck_id, deck)
         return card
 
+    @_serialized
     def update_card(self, deck_id: str, card_id: str, front_text: Optional[str] = None, back_text: Optional[str] = None, hint: Optional[str] = None, front_image_url: Optional[str] = None, back_image_url: Optional[str] = None, status: Optional[str] = None, acceptable_answers: Optional[List[str]] = None, front_image_attribution: Any = _UNSET, back_image_attribution: Any = _UNSET) -> Dict[str, Any]:
         deck = self.get_deck(deck_id)
         if not deck:
@@ -1233,6 +1288,7 @@ class MicrocardsServiceV2:
         self.storage.put_deck_doc(deck_id, deck)
         return card
 
+    @_serialized
     def delete_card(self, deck_id: str, card_id: str) -> bool:
         deck = self.get_deck(deck_id)
         if not deck:
@@ -1262,6 +1318,7 @@ class MicrocardsServiceV2:
     _CARD_RESTORE_KEYS = ("id", "front", "back", "hint", "acceptable_answers",
                           "status", "created_at", "updated_at")
 
+    @_serialized
     def delete_cards(self, deck_id: str, card_ids: List[str]) -> Dict[str, Any]:
         """Bulk delete with undo support.
 
@@ -1290,6 +1347,7 @@ class MicrocardsServiceV2:
                 self._save_session(active, set_active=True)
         return {"deleted": deleted, "remaining": len(remaining)}
 
+    @_serialized
     def restore_cards(self, deck_id: str, entries: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Undo a bulk delete: re-insert cards at their original positions.
 
@@ -1328,6 +1386,7 @@ class MicrocardsServiceV2:
             self.storage.put_deck_doc(deck_id, deck)
         return {"restored": len(clean), "total": len(cards)}
 
+    @_serialized
     def reorder_cards(self, deck_id: str, card_ids: List[str]) -> Dict[str, Any]:
         deck = self.get_deck(deck_id)
         if not deck:
@@ -1373,6 +1432,7 @@ class MicrocardsServiceV2:
             stage = ceiling
         return max(0, min(stage, ceiling))
 
+    @_serialized
     def start_session(self, deck_id: str, resume: bool = True, restart: bool = False,
                       direction: Optional[str] = None, level_mode: Optional[int] = None,
                       mode: Optional[str] = None) -> Dict[str, Any]:
@@ -1569,6 +1629,7 @@ class MicrocardsServiceV2:
         self._save_session(session, set_active=True)
         return session
 
+    @_serialized
     def submit_answer(self, session_id: str, card_id: str, user_answer: str, override: bool = False) -> Dict[str, Any]:
         """Submit answer to a card in session. Checks correctness and schedules via FSRS.
 
@@ -1892,6 +1953,7 @@ class MicrocardsServiceV2:
                           "stats", "last_answer", "combo", "max_combo", "session_sw",
                           "near_miss")
 
+    @_serialized
     def pause_session(self, session_id: str) -> Dict[str, Any]:
         """Pause a session. Combo/SW already live server-side (scored per
         answer), so the client reports nothing here."""
@@ -1909,6 +1971,7 @@ class MicrocardsServiceV2:
         self._save_session(session, set_active=True)
         return session
 
+    @_serialized
     def resume_session(self, session_id: str) -> Dict[str, Any]:
         session = self._get_session(session_id)
         if not session:
@@ -1918,6 +1981,7 @@ class MicrocardsServiceV2:
         self._save_session(session, set_active=True)
         return session
 
+    @_serialized
     def abandon_session(self, session_id: str) -> Dict[str, Any]:
         """Exit WITHOUT saving the current sitting.
 
@@ -1942,6 +2006,7 @@ class MicrocardsServiceV2:
         self._save_session(session, set_active=True)
         return {"restored": False, "session": session}
 
+    @_serialized
     def discard_session(self, session_id: str) -> Dict[str, Any]:
         session = self._get_session(session_id)
         if not session:
@@ -1952,6 +2017,7 @@ class MicrocardsServiceV2:
         self._save_session(session, set_active=True)
         return session
 
+    @_serialized
     def finish_session(self, session_id: str) -> Dict[str, Any]:
         """Close out a COMPLETED run or review session: compute stars, save
         records and grow the deck's cumulative SW / level. Score and combo are
@@ -2267,6 +2333,7 @@ class MicrocardsServiceV2:
         result["hierarchy"] = self._hierarchy_stats(result["rows"])
         return result
 
+    @_serialized
     def import_file(self, deck_id: str, filename: str, data: bytes,
                     options: Optional[Dict[str, Any]] = None, dedup: bool = True) -> Dict[str, Any]:
         _kind, parsed = self._parse_file_import(filename, data, options)
@@ -2394,6 +2461,7 @@ class MicrocardsServiceV2:
             parsed.append(self._ok_item(front_text, back_text, hint))
         return parsed
 
+    @_serialized
     def import_csv(self, deck_id: str, csv_content: str, options: Optional[Dict[str, Any]] = None, dedup: bool = True) -> Dict[str, Any]:
         parsed = self._parse_csv(csv_content, options)
         return self._create_from_parsed(deck_id, parsed, dedup=dedup)
@@ -2429,6 +2497,7 @@ class MicrocardsServiceV2:
             parsed.append(self._ok_item(front_text, back_text, hint, acceptable))
         return parsed
 
+    @_serialized
     def import_json(self, deck_id: str, data: Any, options: Optional[Dict[str, Any]] = None, dedup: bool = True) -> Dict[str, Any]:
         # JSON keeps its richer create path (image URLs) rather than the generic loop.
         deck = self.get_deck(deck_id)
@@ -2580,6 +2649,7 @@ class MicrocardsServiceV2:
                     parsed.append(self._ok_item(left, right))
         return parsed
 
+    @_serialized
     def import_txt_full(self, deck_id: str, content: str, options: Optional[Dict[str, Any]] = None, dedup: bool = True) -> Dict[str, Any]:
         parsed = self._parse_txt_full(content, options)
         return self._create_from_parsed(deck_id, parsed, dedup=dedup)
@@ -2764,10 +2834,12 @@ class MicrocardsServiceV2:
             return best
         return None
 
+    @_serialized
     def import_txt_simplified(self, deck_id: str, content: str, options: Optional[Dict[str, Any]] = None, dedup: bool = True) -> Dict[str, Any]:
         parsed = self._parse_txt_simplified(content, options)
         return self._create_from_parsed(deck_id, parsed, dedup=dedup)
 
+    @_serialized
     def import_auto(self, deck_id: str, content: str, options: Optional[Dict[str, Any]] = None, dedup: bool = True) -> Dict[str, Any]:
         """Detect the format from the content and import with the matching parser."""
         fmt = self._detect_format(content)
@@ -2817,6 +2889,7 @@ class MicrocardsServiceV2:
                 except Exception:
                     pass
 
+    @_serialized
     def import_test(self, deck_id: str, content: str, options: Optional[Dict[str, Any]] = None, dedup: bool = True) -> Dict[str, Any]:
         parsed = self._parse_test(content, options)
         return self._create_from_parsed(deck_id, parsed, dedup=dedup)
