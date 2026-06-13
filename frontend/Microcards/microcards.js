@@ -323,6 +323,9 @@
         decks: [],
         sortKey: 'name-asc', // library sort order
         activeTag: null, // active tag filter
+        activeFilter: 'all', // 'all' | 'archived' (Premium archive filter)
+        decksLimit: null, // /api/workspace-limits/summary -> decks (counts + free-plan limits)
+        archivedDeckIds: new Set(), // ids/refs of decks in the Premium archive
         activeDeckId: null,
         activeDeck: null,
         cards: [], // active deck cards
@@ -837,6 +840,35 @@
         }
     }
 
+    // ── Premium plan: limit / archive block UX ────────────────────────────
+    // Free plan caps decks (4 own / 8 total incl. catalog). The backend answers
+    // 409 workspace_limit_reached (creating past the cap) and premium_archived_content
+    // (acting on a deck that lapsed into the Premium archive). Both are surfaced
+    // centrally here so every call gets the right UX instead of a raw error toast.
+    function openMicrocardsPremiumPromo() {
+        if (window.PremiumPromo && typeof window.PremiumPromo.open === 'function') {
+            window.PremiumPromo.open({
+                title: t('microcards.premium_limit_title', 'Больше колод микрокарточек в Premium'),
+                lead: t('microcards.premium_limit_lead', 'Free-план: до 4 своих колод и 8 всего, включая каталог. Premium снимает лимит.'),
+            });
+        } else {
+            showToast(t('microcards.premium_limit_toast', 'Достигнут лимит колод free-плана. Откройте Premium, чтобы добавить больше.'), 'warning');
+        }
+    }
+    function notifyArchivedDeck() {
+        showToast(t('microcards.premium_archived_toast', 'Колода в архиве Premium: её можно открыть и удалить, но для прохождения, редактирования, импорта и публикации продлите Premium или удалите лишние колоды.'), 'warning');
+        openMicrocardsPremiumPromo();
+    }
+    function handlePremiumBlock(data) {
+        const code = data && data.error;
+        if (code === 'workspace_limit_reached') { openMicrocardsPremiumPromo(); return true; }
+        if (code === 'premium_archived_content') {
+            showToast(t('microcards.premium_archived_toast', 'Колода в архиве Premium: её можно открыть и удалить, но для прохождения, редактирования, импорта и публикации продлите Premium или удалите лишние колоды.'), 'warning');
+            return true;
+        }
+        return false;
+    }
+
     // ── API Service Calls ─────────────────────────────────────────────────
     async function apiCall(url, options = {}) {
         try {
@@ -849,13 +881,103 @@
                 throw new Error(t('microcards.server_error_status', 'Ошибка сервера ({status})').replace('{status}', resp.status));
             }
             if (!data.ok) {
+                // Premium limit/archive get a dedicated promo/toast, not a raw error toast.
+                // err.handled tells callers with their own catch-toast to stay quiet.
+                if (handlePremiumBlock(data)) {
+                    const err = new Error(data.error);
+                    err.code = data.error;
+                    err.details = data.details || {};
+                    err.handled = true;
+                    throw err;
+                }
                 throw new Error(data.error || 'API Error');
             }
             return data;
         } catch (err) {
-            showToast(err.message, 'error');
+            if (!err.handled) showToast(err.message, 'error');
             throw err;
         }
+    }
+
+    // Workspace-limits summary (deck counts + free-plan limits + archived refs).
+    // A background enhancement: failure leaves limits/archive UI simply hidden.
+    async function loadDecksLimitSummary() {
+        try {
+            const resp = await fetch('/api/workspace-limits/summary', { headers: { Accept: 'application/json' } });
+            const data = await resp.json();
+            return data && data.ok ? data : null;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function refreshArchivedDeckState(summary) {
+        const decks = summary && typeof summary.decks === 'object' ? summary.decks : null;
+        const ids = new Set();
+        if (decks && Array.isArray(decks.archived_items)) {
+            decks.archived_items.forEach((item) => {
+                if (item && item.id != null) ids.add(String(item.id));
+                if (item && item.ref != null) ids.add(String(item.ref));
+            });
+        }
+        state.archivedDeckIds = ids;
+        state.decksLimit = decks;
+    }
+
+    function isDeckArchived(deckId) {
+        return state.archivedDeckIds.has(String(deckId));
+    }
+
+    function renderDeckLimitUI() {
+        const decks = state.decksLimit;
+        const badge = $('mcLimitBadge');
+        if (badge) {
+            const hasLimit = decks && (decks.personal_limit != null || decks.library_limit != null);
+            if (hasLimit) {
+                const own = decks.personal_count || 0;
+                const ownLim = decks.personal_limit != null ? decks.personal_limit : '∞';
+                const tot = decks.library_total_count || 0;
+                const totLim = decks.library_limit != null ? decks.library_limit : '∞';
+                badge.innerHTML = `<span class="material-symbols-outlined" aria-hidden="true">style</span><span>${escHtml(
+                    t('microcards.limit_badge', 'свои {own}/{ownLim} · всего {tot}/{totLim}')
+                        .replace('{own}', own).replace('{ownLim}', ownLim)
+                        .replace('{tot}', tot).replace('{totLim}', totLim)
+                )}</span>`;
+                badge.classList.toggle('mc-limit-badge--full', decks.is_blocked === true);
+                badge.classList.remove('hidden');
+            } else {
+                // Premium/admin: limits are null -> no badge.
+                badge.classList.add('hidden');
+            }
+        }
+
+        const archivedCount = (decks && decks.archived_count) || state.archivedDeckIds.size;
+        const hasArchived = archivedCount > 0;
+        const notice = $('mcArchiveNotice');
+        const filter = $('mcArchiveFilter');
+        const copy = $('mcArchiveNoticeCopy');
+        if (notice) notice.classList.toggle('hidden', !hasArchived);
+        if (filter) filter.classList.toggle('hidden', !hasArchived);
+        if (copy && hasArchived) {
+            copy.textContent = t('microcards.archive_notice_copy', 'В архиве колод: {n}. Их можно открыть и удалить, но для прохождения, редактирования, импорта и публикации продлите Premium или удалите лишние колоды.')
+                .replace('{n}', archivedCount);
+        }
+        if (!hasArchived && state.activeFilter === 'archived') state.activeFilter = 'all';
+        syncFilterChips();
+    }
+
+    function syncFilterChips() {
+        document.querySelectorAll('#mcArchiveFilter .mc-filter-chip[data-mcfilter]').forEach((btn) => {
+            const active = btn.getAttribute('data-mcfilter') === state.activeFilter;
+            btn.classList.toggle('is-active', active);
+            btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+    }
+
+    function setMcFilter(filter) {
+        state.activeFilter = filter === 'archived' ? 'archived' : 'all';
+        syncFilterChips();
+        renderLibrary();
     }
 
     async function loadLibraryData() {
@@ -864,10 +986,11 @@
         grid.innerHTML = `<div class="col-span-full py-8 text-center text-xs text-text-secondary">${t('microcards.loading_decks', 'Загрузка колод...')}</div>`;
         
         try {
-            const [decksData, settingsData, recordsData] = await Promise.all([
+            const [decksData, settingsData, recordsData, limitSummary] = await Promise.all([
                 apiCall('/api/v2/microcards/decks'),
                 apiCall('/api/v2/microcards/settings').catch(() => ({ settings: {} })),
-                apiCall('/api/v2/microcards/records').catch(() => ({ records: {} }))
+                apiCall('/api/v2/microcards/records').catch(() => ({ records: {} })),
+                loadDecksLimitSummary()
             ]);
             state.settings = settingsData.settings || {};
             state.decks = decksData.items || [];
@@ -875,6 +998,8 @@
             if (recordsData && recordsData.records) {
                 state.serverRecords = Object.assign({}, state.serverRecords, recordsData.records);
             }
+            refreshArchivedDeckState(limitSummary);
+            renderDeckLimitUI();
             state._entrance = true; // stagger deck cards in on fresh load only
             renderLibrary();
             animateLibraryStats();
@@ -950,7 +1075,8 @@
                     || (d.description || '').toLowerCase().includes(searchQuery)
                     || (d.tags || []).some(tag => (tag || '').toLowerCase().includes(searchQuery));
                 const matchesTag = !state.activeTag || (d.tags || []).includes(state.activeTag);
-                return matchesSearch && matchesTag;
+                const matchesFilter = state.activeFilter !== 'archived' || isDeckArchived(d.id);
+                return matchesSearch && matchesTag && matchesFilter;
             }),
             state.sortKey
         );
@@ -976,9 +1102,12 @@
 
         const entrance = !!state._entrance;
         filtered.forEach((deck, idx) => {
+            const archived = isDeckArchived(deck.id);
             const card = document.createElement('div');
-            card.className = entrance ? 'mc-deck-card mc-enter' : 'mc-deck-card';
+            card.className = (entrance ? 'mc-deck-card mc-enter' : 'mc-deck-card')
+                + (archived ? ' mc-deck-card--premium-archived' : '');
             if (entrance) card.style.animationDelay = Math.min(idx, 8) * 45 + 'ms';
+            // Opening details is read-only and stays allowed for archived decks.
             card.onclick = () => openDeckDetails(deck.id);
 
             const tagsHtml = (deck.tags || []).slice(0, 4).map(tag => `<span class="mc-tag">${escHtml(tag)}</span>`).join('');
@@ -991,7 +1120,9 @@
             // Workload (what to do today) — lives in the ACTION row next to the CTA (info that
             // drives the action sits with the action). Empty when nothing is due/new.
             let workloadHtml = '';
-            if (deck.is_paused) {
+            if (archived) {
+                workloadHtml = '';
+            } else if (deck.is_paused) {
                 workloadHtml = `<span class="mc-deck-card__load" style="background:color-mix(in srgb, var(--color-warning) 14%, transparent); color:var(--color-warning); border:1px solid color-mix(in srgb, var(--color-warning) 30%, transparent); display:inline-flex; align-items:center; gap:0.25rem;"><span class="material-symbols-outlined" style="font-size:0.95rem;">pause_circle</span><span>${t('microcards.badge_paused', 'На паузе')} (${deck.paused_progress})</span></span>`;
             } else if (deck.due_count > 0) {
                 workloadHtml = `<span class="mc-deck-card__load mc-deck-card__load--due">${t('microcards.badge_due', '{n} к повтору').replace('{n}', `${deck.due_count} / ${total}`)}</span>`;
@@ -1054,22 +1185,31 @@
             const linkedHtml = linked
                 ? `<span class="mc-deck-card__metaitem mc-deck-card__metaitem--right"><span class="material-symbols-outlined">link</span><span class="mc-deck-card__metatext">${t('microcards.badge_linked', 'Из каталога')}</span></span>`
                 : '';
-            const metaHtml = authorHtml + linkedHtml;
+            const archivedBadgeHtml = archived
+                ? `<span class="mc-deck-card__archived-badge"><span class="material-symbols-outlined">inventory_2</span>${t('microcards.badge_archived', 'Архив Premium')}</span>`
+                : '';
+            const metaHtml = archivedBadgeHtml + authorHtml + linkedHtml;
 
-            // Per-card action menu (⋯, top-right). Linked decks are read-only → no edit, "remove from library".
-            const menuItems = linked
-                ? `<button class="mc-menu__item" role="menuitem" onclick="event.stopPropagation(); mcApp.exportDeckFromLibrary('${deck.id}','json')"><span class="material-symbols-outlined">download</span>${t('microcards.btn_menu_export_json', 'Экспорт JSON')}</button>
-                   <button class="mc-menu__item" role="menuitem" onclick="event.stopPropagation(); mcApp.exportDeckFromLibrary('${deck.id}','csv')"><span class="material-symbols-outlined">download</span>${t('microcards.btn_menu_export_csv', 'Экспорт CSV')}</button>
-                   <button class="mc-menu__item mc-menu__item--danger" role="menuitem" onclick="event.stopPropagation(); mcApp.deleteDeckFromLibrary('${deck.id}')"><span class="material-symbols-outlined">link_off</span>${t('microcards.btn_remove_from_library', 'Убрать из библиотеки')}</button>`
-                : `<button class="mc-menu__item" role="menuitem" onclick="event.stopPropagation(); mcApp.editDeckFromLibrary('${deck.id}')"><span class="material-symbols-outlined">settings</span>${t('microcards.btn_deck_params', 'Параметры')}</button>
-                   <button class="mc-menu__item" role="menuitem" onclick="event.stopPropagation(); mcApp.exportDeckFromLibrary('${deck.id}','json')"><span class="material-symbols-outlined">download</span>${t('microcards.btn_menu_export_json', 'Экспорт JSON')}</button>
-                   <button class="mc-menu__item" role="menuitem" onclick="event.stopPropagation(); mcApp.exportDeckFromLibrary('${deck.id}','csv')"><span class="material-symbols-outlined">download</span>${t('microcards.btn_menu_export_csv', 'Экспорт CSV')}</button>
-                   <button class="mc-menu__item mc-menu__item--danger" role="menuitem" onclick="event.stopPropagation(); mcApp.deleteDeckFromLibrary('${deck.id}')"><span class="material-symbols-outlined">delete</span>${t('microcards.btn_menu_delete_deck', 'Удалить колоду')}</button>`;
+            // Per-card action menu (⋯, top-right). Both linked and Premium-archived
+            // decks are read-only → no edit/params; export + delete (own) / remove
+            // (linked) stay available so the user can still trim to clear the limit.
+            const exportMenu = `<button class="mc-menu__item" role="menuitem" onclick="event.stopPropagation(); mcApp.exportDeckFromLibrary('${deck.id}','json')"><span class="material-symbols-outlined">download</span>${t('microcards.btn_menu_export_json', 'Экспорт JSON')}</button>
+                   <button class="mc-menu__item" role="menuitem" onclick="event.stopPropagation(); mcApp.exportDeckFromLibrary('${deck.id}','csv')"><span class="material-symbols-outlined">download</span>${t('microcards.btn_menu_export_csv', 'Экспорт CSV')}</button>`;
+            const removeMenu = linked
+                ? `<button class="mc-menu__item mc-menu__item--danger" role="menuitem" onclick="event.stopPropagation(); mcApp.deleteDeckFromLibrary('${deck.id}')"><span class="material-symbols-outlined">link_off</span>${t('microcards.btn_remove_from_library', 'Убрать из библиотеки')}</button>`
+                : `<button class="mc-menu__item mc-menu__item--danger" role="menuitem" onclick="event.stopPropagation(); mcApp.deleteDeckFromLibrary('${deck.id}')"><span class="material-symbols-outlined">delete</span>${t('microcards.btn_menu_delete_deck', 'Удалить колоду')}</button>`;
+            const editMenu = `<button class="mc-menu__item" role="menuitem" onclick="event.stopPropagation(); mcApp.editDeckFromLibrary('${deck.id}')"><span class="material-symbols-outlined">settings</span>${t('microcards.btn_deck_params', 'Параметры')}</button>`;
+            const menuItems = (linked || archived) ? exportMenu + removeMenu : editMenu + exportMenu + removeMenu;
 
             // Per-deck accent → thin left spine (identity colour without a focal-competing tile).
             card.style.setProperty('--deck-accent', `hsl(${deckHue(deck.name || deck.id)} 58% 48%)`);
-            const studyBtnText = deck.is_paused ? t('microcards.btn_continue', 'Продолжить') : t('microcards.btn_study', 'Учить');
-            const studyBtnIcon = deck.is_paused ? 'play_arrow' : 'school';
+            const studyBtnHtml = archived
+                ? `<button type="button" class="mc-btn mc-deck-card__study mc-deck-card__study--locked" onclick="event.stopPropagation(); mcApp.notifyArchivedDeck()">
+                        <span class="material-symbols-outlined">workspace_premium</span><span>${t('microcards.archived_locked_cta', 'Архив · Premium')}</span>
+                    </button>`
+                : `<button type="button" class="mc-btn mc-btn--primary mc-deck-card__study" onclick="event.stopPropagation(); mcApp.studyDeckFromLibrary('${deck.id}')">
+                        <span class="material-symbols-outlined">${deck.is_paused ? 'play_arrow' : 'school'}</span><span>${deck.is_paused ? t('microcards.btn_continue', 'Продолжить') : t('microcards.btn_study', 'Учить')}</span>
+                    </button>`;
             card.innerHTML = `
                 <div class="mc-deck-card__head">
                     <h3 class="mc-deck-card__title">${escHtml(deck.name)}</h3>
@@ -1092,9 +1232,7 @@
                 </div>
                 <div class="mc-deck-card__action">
                     ${workloadHtml}
-                    <button type="button" class="mc-btn mc-btn--primary mc-deck-card__study" onclick="event.stopPropagation(); mcApp.studyDeckFromLibrary('${deck.id}')">
-                        <span class="material-symbols-outlined">${studyBtnIcon}</span><span>${studyBtnText}</span>
-                    </button>
+                    ${studyBtnHtml}
                 </div>
                 ${detailsHtml}
             `;
@@ -1249,6 +1387,9 @@
             showToast(t('microcards.toast_deck_created', 'Колода успешно создана!'), 'success');
             openDeckDetails(result.deck.id);
         } catch (err) {
+            // The deck-limit promo (err.handled) already explained the block; just
+            // close the create dialog so it isn't left hanging behind the modal.
+            if (err && err.code === 'workspace_limit_reached') closeDialog('dialogCreateDeck');
             console.error(err);
         }
     }
@@ -2296,6 +2437,14 @@
             updateHeaderProgress();
 
             setupCurrentCard();
+
+            // First real session ever → offer the review-session tour once. It snapshots
+            // this session, plays over a demo, and restores it on finish (startIfUnseen
+            // no-ops on later sessions). Skipped while a demo tour is already running.
+            if (!document.body.dataset.microcardsOnboardingDemo
+                && window.OnboardingTour && typeof window.OnboardingTour.startIfUnseen === 'function') {
+                window.OnboardingTour.startIfUnseen('microcards-review-session');
+            }
         } catch (err) {
             console.error('[startSession]', err);
             switchView('details');
@@ -3594,7 +3743,10 @@ ${fill}`;
                 : t('microcards.toast_imported', 'Импортировано {n} карточек').replace('{n}', result.added_count || 0), 'success');
             if (result.deck && result.deck.id) openDeckDetails(result.deck.id); else loadLibraryData();
         } catch (err) {
-            showToast(t('microcards.toast_code_not_found', 'Колода по такому коду не найдена'), 'error');
+            // A handled premium block (limit / archive) already showed its own UX.
+            if (!(err && err.handled)) {
+                showToast(t('microcards.toast_code_not_found', 'Колода по такому коду не найдена'), 'error');
+            }
         } finally {
             if (btn) btn.disabled = false;
         }
@@ -3685,9 +3837,16 @@ ${fill}`;
 
     // ── Init & Event Binding ──────────────────────────────────────────────
     function init() {
-        // Deep-link: /microcards?deck=<id> opens that deck directly (e.g. from the catalog).
+        // Deep-link: /microcards?deck=<id> opens that deck directly (e.g. from the catalog);
+        // ?filter=archived lands on the Premium-archive view (from the main-page banner).
         let deepLinkDeck = null;
-        try { deepLinkDeck = new URLSearchParams(window.location.search).get('deck'); } catch (e) {}
+        let filterParam = null;
+        try {
+            const params = new URLSearchParams(window.location.search);
+            deepLinkDeck = params.get('deck');
+            filterParam = params.get('filter');
+        } catch (e) {}
+        if (filterParam === 'archived') state.activeFilter = 'archived';
         if (deepLinkDeck) {
             openDeckDetails(deepLinkDeck);
         } else {
@@ -3771,6 +3930,351 @@ ${fill}`;
                 }
             }
         });
+
+        // Onboarding tour A: swap in demo decks/details while the tour runs.
+        setupMicrocardsOnboardingDemoObserver();
+    }
+
+    // ══ Onboarding demo (tour "microcards-library-overview") ═══════════════
+    // First-visit / reference-preview learning needs believable content even when
+    // the user's library is empty. We swap in demo decks (library steps) and a demo
+    // deck-details view (mastery step) without touching the backend, then restore the
+    // real state when the tour ends. Mirrors the Catalog/Statistics demo pattern, plus
+    // an event-driven view switch (like the complex editor) because tour A spans two views.
+    const MC_LIBRARY_TOUR_ID = 'microcards-library-overview';
+    const MC_SESSION_TOUR_ID = 'microcards-review-session';
+    const MC_DEMO_DECK_ID = 'mc-demo-deck-radio';
+    const MC_DEMO_DETAILS_STEP = 3; // 0-based index of the library tour's "deck-mastery" step
+    const MC_SESSION_GRADE_STEP = 2; // session tour: step from which the demo card is flipped
+    const MC_SESSION_SUMMARY_STEP = 4; // session tour: step that shows the demo summary
+
+    function activeOnboardingTourId() {
+        return (document.body && document.body.dataset.onboardingTourId) || '';
+    }
+
+    function isMicrocardsLibraryDemoRequested() {
+        return activeOnboardingTourId() === MC_LIBRARY_TOUR_ID;
+    }
+
+    function buildMicrocardsDemoDecks() {
+        const day = 86400000;
+        const iso = (offsetMs) => new Date(Date.now() + offsetMs).toISOString();
+        return [
+            {
+                id: MC_DEMO_DECK_ID,
+                name: 'Радиофизика: основы',
+                description: 'Демоколода для обучения: ключевые термины и формулы по основам радиофизики.',
+                tags: ['радиофизика', 'демо'],
+                card_count: 24, new_count: 6, due_count: 9, level2_count: 12,
+                level: 3, is_paused: false, linked: false, author_name: '',
+                updated_at: iso(-2 * day), created_at: iso(-30 * day),
+            },
+            {
+                id: 'mc-demo-deck-antennas',
+                name: 'Антенны и распространение',
+                description: 'Параметры антенн, диаграмма направленности, усиление.',
+                tags: ['антенны'],
+                card_count: 16, new_count: 4, due_count: 0, level2_count: 9,
+                level: 2, is_paused: false, linked: true, author_name: 'RadioLab',
+                updated_at: iso(-5 * day), created_at: iso(-20 * day),
+            },
+            {
+                id: 'mc-demo-deck-modulation',
+                name: 'Модуляция сигналов',
+                description: 'AM, FM, фазовая модуляция и их применение.',
+                tags: ['сигналы', 'демо'],
+                card_count: 18, new_count: 0, due_count: 3, level2_count: 5,
+                level: 1, is_paused: true, paused_progress: '7/18', linked: false, author_name: '',
+                updated_at: iso(-1 * day), created_at: iso(-12 * day),
+            },
+        ];
+    }
+
+    function buildMicrocardsDemoRecord() {
+        return {
+            scoreL1: 1850, starsL1: 4, sizeL1: 24,
+            scoreL2: 0, starsL2: 0, sizeL2: 0,
+            l1_run_completed: true,
+            cumulative_sw: 3900, sw_today: 120, comboSRS: 7,
+            level: 3, current_level_sw: 3000, next_level_sw: 4500,
+        };
+    }
+
+    function buildMicrocardsDemoCards() {
+        const hour = 3600000, day = 86400000;
+        const due = (offsetMs) => new Date(Date.now() + offsetMs).toISOString();
+        return [
+            { id: 'mc-demo-card-1', front: { text: 'Что такое длина волны?' }, back: { text: 'Расстояние между соседними точками волны в одинаковой фазе.' }, is_new: false, level: 2, due_at: due(5 * day) },
+            { id: 'mc-demo-card-2', front: { text: 'Единица измерения частоты?' }, back: { text: 'Герц (Гц) — одно колебание в секунду.' }, is_new: false, level: 2, due_at: due(3 * day) },
+            { id: 'mc-demo-card-3', front: { text: 'Связь скорости, частоты и длины волны' }, back: { text: 'v = λ · f' }, is_new: false, level: 1, due_at: due(-1 * hour) },
+            { id: 'mc-demo-card-4', front: { text: 'Что такое поляризация волны?' }, back: { text: 'Ориентация колебаний вектора электрического поля.' }, is_new: false, level: 1, due_at: due(1 * day) },
+            { id: 'mc-demo-card-5', front: { text: 'Что описывает диаграмма направленности антенны?' }, back: { text: 'Распределение излучаемой мощности по направлениям.' }, is_new: true, level: 0, due_at: null },
+            { id: 'mc-demo-card-6', front: { text: 'Что такое резонанс в колебательном контуре?' }, back: { text: 'Резкое возрастание амплитуды на собственной частоте.' }, is_new: true, level: 0, due_at: null },
+        ];
+    }
+
+    // Tag the first rendered deck card so the "library-deck-card" step has a stable anchor.
+    function markMicrocardsDemoDeckCard() {
+        const grid = $('decksGrid');
+        if (!grid) return;
+        grid.querySelectorAll('[data-onboarding-target="microcards-deck-card"]').forEach(el => el.removeAttribute('data-onboarding-target'));
+        const first = grid.querySelector('.mc-deck-card');
+        if (first) first.setAttribute('data-onboarding-target', 'microcards-deck-card');
+    }
+
+    function showMicrocardsDemoLibrary() {
+        const search = $('libSearch');
+        if (search) search.value = '';
+        state.activeTag = null;
+        state._entrance = false;
+        // Skip the view fade when we're already on the library (tour start), only
+        // switch when coming back from the demo details view (step-back).
+        if (state.view !== 'library') switchView('library');
+        renderLibrary();
+        markMicrocardsDemoDeckCard();
+    }
+
+    function showMicrocardsDemoDetails() {
+        const demoDeck = (state.decks || []).find(d => d.id === MC_DEMO_DECK_ID) || buildMicrocardsDemoDecks()[0];
+        state.activeDeckId = MC_DEMO_DECK_ID;
+        state.activeDeck = Object.assign({}, demoDeck, { active_sessions: {}, l2_unlocked: true, read_only: false, linked: false });
+        state.cards = buildMicrocardsDemoCards();
+        switchView('details');
+        const titleEl = $('deckDetailsTitle');
+        if (titleEl) titleEl.textContent = demoDeck.name;
+        const tagsZone = $('deckDetailsTags');
+        if (tagsZone) {
+            tagsZone.innerHTML = '';
+            (demoDeck.tags || []).forEach(tag => {
+                const badge = document.createElement('span');
+                badge.className = 'mc-tag';
+                badge.textContent = tag;
+                tagsZone.appendChild(badge);
+            });
+        }
+        const resume = $('deckResumeSection');
+        if (resume) resume.classList.add('hidden');
+        updateDeckProgressUI();
+        renderDeckCardsList();
+    }
+
+    // ── Tour B (review session) demo ───────────────────────────────────────
+    function buildMicrocardsDemoSession() {
+        return {
+            id: 'mc-demo-session',
+            completed: false,
+            mode: 'review',
+            direction: 'front_back',
+            card_directions: {},
+            card_forms: {}, // all level-1 (Знаю/Не знаю) in the demo
+            composition: { due: 9, new: 6 },
+            combo: 2,
+            max_combo: 3,
+            session_sw: 340,
+            combo_threshold: 4,
+            // card 3 was missed once → it circles back through the mastery queue.
+            first_results: { 'mc-demo-card-3': { correct: false } },
+        };
+    }
+
+    function demoSessionStats() {
+        return {
+            unique_total: 6, mastered: 2, first_try_correct: 5,
+            correct: 5, errors: 1, pending_retry: 1,
+            error_card_ids: ['mc-demo-card-3'],
+        };
+    }
+
+    // Render a believable in-progress review session by reusing the real card
+    // renderer (setupCurrentCard) with fabricated session state — no backend call.
+    function showMicrocardsDemoSession() {
+        const demoDeck = (state.decks || []).find(d => d.id === MC_DEMO_DECK_ID) || buildMicrocardsDemoDecks()[0];
+        const cards = buildMicrocardsDemoCards();
+        state.activeDeckId = MC_DEMO_DECK_ID;
+        state.activeDeck = Object.assign({}, demoDeck, { active_sessions: {}, l2_unlocked: true });
+        state.cards = cards;
+        state.sessionCards = cards;
+        state.sessionIndex = 0;
+        state.session = buildMicrocardsDemoSession();
+        state.sessionMode = 'review';
+        state.sessionLevelMode = null;
+        state.sessionStats = demoSessionStats();
+        state.combo = 2;
+        state.maxCombo = 3;
+        state.sessionSw = 340;
+        state.threshold = 4;
+        state.maxPossiblePoints = 0;
+        switchView('session');
+        popNumber($('xpChipVal'), state.sessionSw);
+        showCombo();
+        renderCompositionChip();
+        updateHeaderProgress();
+        setupCurrentCard(); // paints the front face + level indicator
+    }
+
+    // Demo summary screen — reuses renderSummaryRewards with finishResult=null so it
+    // never finalizes a (non-existent) server session.
+    function showMicrocardsDemoSummary() {
+        const total = 6, firstTry = 5, reviewed = ['mc-demo-card-3'];
+        state.sessionMode = 'review';
+        state.sessionLevelMode = null;
+        state.sessionSw = 340;
+        state.maxCombo = 3;
+        state.maxPossiblePoints = 0;
+        state.sessionStats = demoSessionStats();
+        switchView('summary');
+        const set = (id, v) => { const e = $(id); if (e) e.textContent = v; };
+        set('sumStatTotal', total);
+        set('sumStatCorrect', firstTry);
+        set('sumStatErrors', reviewed.length);
+        renderSummaryRewards(Math.round((firstTry / total) * 100), null);
+        const errorsList = $('summaryErrorsList');
+        const errorsSection = $('summaryErrorsSection');
+        if (errorsList && errorsSection) {
+            errorsList.innerHTML = '';
+            reviewed.forEach(id => {
+                const card = state.cards.find(c => c.id === id);
+                if (!card) return;
+                const row = document.createElement('div');
+                row.className = 'mc-errrow';
+                row.innerHTML = `<p class="mc-errrow__q">${escHtml(card.front.text)}</p><p class="mc-errrow__a">${escHtml(card.back.text)}</p>`;
+                errorsList.appendChild(row);
+            });
+            errorsSection.classList.remove('hidden');
+        }
+    }
+
+    // ── Snapshot / restore (shared by both tours) ──────────────────────────
+    function captureMicrocardsDemoSnapshot() {
+        if (state._onbDemoSnapshot) return;
+        state._onbDemoSnapshot = {
+            view: state.view,
+            decks: state.decks.slice(),
+            activeDeckId: state.activeDeckId,
+            activeDeck: state.activeDeck,
+            cards: state.cards.slice(),
+            serverRecords: Object.assign({}, state.serverRecords),
+            sortKey: state.sortKey,
+            activeTag: state.activeTag,
+            session: state.session,
+            sessionCards: state.sessionCards.slice(),
+            sessionIndex: state.sessionIndex,
+            sessionStats: state.sessionStats,
+            sessionMode: state.sessionMode,
+            sessionLevelMode: state.sessionLevelMode,
+            sessionSw: state.sessionSw,
+            combo: state.combo,
+            maxCombo: state.maxCombo,
+        };
+    }
+
+    function restoreMicrocardsDemoSnapshot() {
+        const snap = state._onbDemoSnapshot;
+        if (!snap) return;
+        Object.assign(state, {
+            decks: snap.decks,
+            activeDeckId: snap.activeDeckId,
+            activeDeck: snap.activeDeck,
+            cards: snap.cards,
+            serverRecords: snap.serverRecords,
+            sortKey: snap.sortKey,
+            activeTag: snap.activeTag,
+            session: snap.session,
+            sessionCards: snap.sessionCards,
+            sessionIndex: snap.sessionIndex,
+            sessionStats: snap.sessionStats,
+            sessionMode: snap.sessionMode,
+            sessionLevelMode: snap.sessionLevelMode,
+            sessionSw: snap.sessionSw,
+            combo: snap.combo,
+            maxCombo: snap.maxCombo,
+        });
+        const hadRealSession = snap.view === 'session' && snap.session;
+        state._onbDemoSnapshot = null;
+        delete document.body.dataset.microcardsOnboardingDemo;
+        const search = $('libSearch');
+        if (search) search.value = '';
+        if (hadRealSession) {
+            // The tour ran over a real session (first-run trigger) — bring it back.
+            switchView('session');
+            setupCurrentCard();
+        } else {
+            // Re-render the restored real library (no refetch → no loading flash).
+            switchView('library');
+            renderLibrary();
+        }
+    }
+
+    // Dispatcher: data-onboarding-tour-id drives which demo (if any) is active.
+    function applyMicrocardsOnboardingDemo(tourId) {
+        if (tourId === MC_LIBRARY_TOUR_ID || tourId === MC_SESSION_TOUR_ID) {
+            captureMicrocardsDemoSnapshot();
+            state.decks = buildMicrocardsDemoDecks();
+            state.serverRecords = Object.assign({}, state.serverRecords, { [MC_DEMO_DECK_ID]: buildMicrocardsDemoRecord() });
+            if (tourId === MC_SESSION_TOUR_ID) {
+                document.body.dataset.microcardsOnboardingDemo = 'session';
+                showMicrocardsDemoSession();
+            } else {
+                document.body.dataset.microcardsOnboardingDemo = 'library';
+                showMicrocardsDemoLibrary();
+            }
+            return;
+        }
+        restoreMicrocardsDemoSnapshot();
+    }
+
+    // Tour A spans two views: library (steps 0-2) and deck details (step 3). Switch
+    // the demo view as the step changes so each callout has its target on screen.
+    function syncMicrocardsDemoStep(stepIndex) {
+        if (!isMicrocardsLibraryDemoRequested()) return;
+        if (Number(stepIndex) >= MC_DEMO_DETAILS_STEP) {
+            showMicrocardsDemoDetails();
+        } else if (state.view !== 'library') {
+            showMicrocardsDemoLibrary();
+        }
+    }
+
+    // Tour B: steps 0-1 show the question side, step 2-3 flip to the graded answer,
+    // step 4 shows the summary. Drives flip + view per step.
+    function syncMicrocardsSessionStep(stepIndex) {
+        if (activeOnboardingTourId() !== MC_SESSION_TOUR_ID) return;
+        const i = Number(stepIndex) || 0;
+        if (i >= MC_SESSION_SUMMARY_STEP) {
+            showMicrocardsDemoSummary();
+            return;
+        }
+        if (state.view !== 'session') showMicrocardsDemoSession();
+        const inner = $('flashcardInner');
+        if (!inner) return;
+        if (i >= MC_SESSION_GRADE_STEP) {
+            if (!inner.classList.contains('flipped')) { inner.classList.add('flipped'); showRails(); }
+        } else if (inner.classList.contains('flipped')) {
+            resetFlipInstant(inner);
+            hideRails();
+        }
+    }
+
+    function setupMicrocardsOnboardingDemoObserver() {
+        if (state._onbDemoObserver || typeof MutationObserver !== 'function' || !document.body) return;
+        // Toggling data-onboarding-tour-id drives demo on/off (start + finish) and
+        // picks the matching demo (library vs session).
+        state._onbDemoObserver = new MutationObserver(() => {
+            applyMicrocardsOnboardingDemo(activeOnboardingTourId());
+        });
+        state._onbDemoObserver.observe(document.body, {
+            attributes: true,
+            attributeFilter: ['data-onboarding-tour-id'],
+        });
+        // Step changes switch the demo view/flip (the tour-id attribute stays constant).
+        window.addEventListener('onboarding:before-step', (event) => {
+            const id = event.detail && event.detail.tourId;
+            const stepIndex = Number((event.detail && event.detail.stepIndex) || 0);
+            if (id === MC_LIBRARY_TOUR_ID) syncMicrocardsDemoStep(stepIndex);
+            else if (id === MC_SESSION_TOUR_ID) syncMicrocardsSessionStep(stepIndex);
+        });
+        // Apply immediately in case the tour started before this observer was wired
+        // (e.g. reference-preview auto-start).
+        applyMicrocardsOnboardingDemo(activeOnboardingTourId());
     }
 
     // Expose controls to global context
@@ -3834,6 +4338,8 @@ ${fill}`;
         onRenameKey,
         studyDeckFromLibrary,
         editDeckFromLibrary,
+        setMcFilter,
+        notifyArchivedDeck,
         exportDeckFromLibrary,
         deleteDeckFromLibrary,
         toggleCardMenu,

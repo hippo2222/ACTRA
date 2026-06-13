@@ -634,6 +634,244 @@
             ]
         },
         {
+            tourId: 'microcards-library-overview',
+            version: 1,
+            referenceCategory: 'Проходим и повторяем',
+            referenceTags: ["микрокарточки", "повторение", "колоды", "интервальные повторения", "уровень колоды"],
+            referenceOrder: 25,
+            route: ['/microcards'],
+            autoStart: true,
+            autoStartDelay: 1200,
+            totalStates: 4,
+            persistControl: true,
+            title: wt('tours.microcards_library_overview.title', 'Микрокарточки: колоды и повторение'),
+            summary: wt('tours.microcards_library_overview.summary', 'Короткие карточки для интервального повторения: где видеть долги, как устроена колода и какие режимы обучения у неё есть.'),
+            steps: [
+                {
+                    id: 'library-pulse',
+                    targets: [
+                        '[data-onboarding-target="microcards-library-stats"]'
+                    ],
+                    placement: 'bottom',
+                    controlPlacement: 'bottom-right',
+                    controlPlacementLocked: true,
+                    kicker: wt('tours.microcards_library_overview.library_pulse.kicker', 'Пульс повторения'),
+                    callouts: [
+                        {
+                            target: '[data-onboarding-target="microcards-library-stats"]',
+                            placement: 'bottom',
+                            offsetY: 18,
+                            title: wt('tours.microcards_library_overview.library_pulse.c0_title', 'Что требует внимания сегодня'),
+                            body: wt('tours.microcards_library_overview.library_pulse.c0_body', '"К повтору" - карточки, по которым подошёл срок повторения: чем дольше их откладывать, тем быстрее забывается материал. "Новых" - карточки, которые вы ещё не изучали. Эти цифры важнее общего числа колод.')
+                        }
+                    ]
+                },
+                {
+                    id: 'library-find',
+                    targets: [
+                        '[data-onboarding-target="microcards-search"]',
+                        '[data-onboarding-target="microcards-sort"]',
+                        '[data-onboarding-target="microcards-create-actions"]'
+                    ],
+                    placement: 'bottom',
+                    controlPlacement: 'bottom-right',
+                    controlPlacementLocked: true,
+                    kicker: wt('tours.microcards_library_overview.library_find.kicker', 'Найти и создать'),
+                    callouts: [
+                        {
+                            target: '[data-onboarding-target="microcards-search"]',
+                            placement: 'bottom',
+                            offsetY: 18,
+                            title: wt('tours.microcards_library_overview.library_find.c0_title', 'Поиск и порядок'),
+                            body: wt('tours.microcards_library_overview.library_find.c0_body', 'Поиск находит колоду по названию, а сортировка рядом помогает поднять наверх то, что важно сейчас, - например, колоды с долгами по повторению.')
+                        },
+                        {
+                            target: '[data-onboarding-target="microcards-create-actions"]',
+                            placement: 'bottom',
+                            offsetX: -40,
+                            offsetY: 18,
+                            title: wt('tours.microcards_library_overview.library_find.c1_title', 'Новые колоды'),
+                            body: wt('tours.microcards_library_overview.library_find.c1_body', 'Колоду можно создать с нуля или получить готовую: по коду доступа от автора либо из каталога учебных материалов.')
+                        }
+                    ]
+                },
+                {
+                    id: 'library-deck-card',
+                    targets: [
+                        '[data-onboarding-target="microcards-deck-card"]',
+                        '[data-onboarding-target="microcards-decks-grid"]'
+                    ],
+                    placement: 'right',
+                    controlPlacement: 'bottom-right',
+                    controlPlacementLocked: true,
+                    kicker: wt('tours.microcards_library_overview.library_deck_card.kicker', 'Карточка колоды'),
+                    callouts: [
+                        {
+                            target: '[data-onboarding-target="microcards-deck-card"]',
+                            placement: 'right',
+                            offsetY: -10,
+                            title: wt('tours.microcards_library_overview.library_deck_card.c0_title', 'Колода в библиотеке'),
+                            body: wt('tours.microcards_library_overview.library_deck_card.c0_body', 'На карточке видно размер колоды и сколько карточек ждёт повторения. Клик открывает страницу колоды с режимами обучения и списком карточек.')
+                        }
+                    ]
+                },
+                {
+                    id: 'deck-mastery',
+                    targets: [
+                        '[data-onboarding-target="microcards-deck-mastery"]',
+                        '[data-onboarding-target="microcards-study-modes"]'
+                    ],
+                    placement: 'bottom',
+                    controlPlacement: 'bottom-right',
+                    controlPlacementLocked: true,
+                    kicker: wt('tours.microcards_library_overview.deck_mastery.kicker', 'Внутри колоды'),
+                    callouts: [
+                        {
+                            target: '[data-onboarding-target="microcards-deck-mastery"]',
+                            placement: 'bottom',
+                            offsetY: 14,
+                            title: wt('tours.microcards_library_overview.deck_mastery.c0_title', 'Уровень колоды'),
+                            body: wt('tours.microcards_library_overview.deck_mastery.c0_body', 'Каждое занятие приносит синаптический вес (SW) и поднимает уровень колоды. Без повторений вес постепенно тает - так видно, какие колоды держатся в памяти, а какие пора освежить.')
+                        },
+                        {
+                            target: '[data-onboarding-target="microcards-study-modes"]',
+                            placement: 'top',
+                            offsetY: -14,
+                            title: wt('tours.microcards_library_overview.deck_mastery.c1_title', 'Режимы обучения'),
+                            body: wt('tours.microcards_library_overview.deck_mastery.c1_body', 'Прохождения - изучение всей колоды: Уровень 1 в формате "знаю / не знаю", Уровень 2 с вводом ответа. "Повторение" - ежедневная работа с долгами, "Просмотр" - свободное листание. Подсказки по самой сессии появятся при первом запуске, а позже их можно найти в справочнике.')
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            tourId: 'microcards-review-session',
+            version: 1,
+            referenceCategory: 'Проходим и повторяем',
+            referenceTags: ["микрокарточки", "повторение", "сессия", "оценка знаю не знаю", "очередь ошибок", "синаптический вес"],
+            referenceOrder: 26,
+            route: ['/microcards'],
+            autoStart: false,
+            autoStartDelay: 900,
+            totalStates: 5,
+            persistControl: true,
+            title: wt('tours.microcards_review_session.title', 'Микрокарточки: сессия повторения'),
+            summary: wt('tours.microcards_review_session.summary', 'Как проходит сессия: показать ответ, честно оценить себя, вернуть ошибки и прочитать итоги.'),
+            steps: [
+                {
+                    id: 'session-card',
+                    targets: [
+                        '[data-onboarding-target="microcards-session-card"]'
+                    ],
+                    placement: 'right',
+                    controlPlacement: 'bottom-right',
+                    controlPlacementLocked: true,
+                    kicker: wt('tours.microcards_review_session.session_card.kicker', 'Карточка'),
+                    callouts: [
+                        {
+                            target: '[data-onboarding-target="microcards-session-card"]',
+                            placement: 'right',
+                            offsetX: 24,
+                            title: wt('tours.microcards_review_session.session_card.c0_title', 'Лицевая сторона'),
+                            body: wt('tours.microcards_review_session.session_card.c0_body', 'Сначала показывается вопрос. Карточка переворачивается на ответ. В «обратных» колодах вопрос и ответ меняются местами, поэтому полезно знать обе стороны.')
+                        }
+                    ]
+                },
+                {
+                    id: 'session-reveal',
+                    targets: [
+                        '[data-onboarding-target="microcards-session-card"]'
+                    ],
+                    placement: 'right',
+                    controlPlacement: 'bottom-right',
+                    controlPlacementLocked: true,
+                    kicker: wt('tours.microcards_review_session.session_reveal.kicker', 'Ответ'),
+                    callouts: [
+                        {
+                            target: '[data-onboarding-target="microcards-session-card"]',
+                            placement: 'right',
+                            offsetX: 24,
+                            title: wt('tours.microcards_review_session.session_reveal.c0_title', 'Сначала вспомните сами'),
+                            body: wt('tours.microcards_review_session.session_reveal.c0_body', 'Попробуйте вспомнить ответ, затем откройте обратную сторону. В колодах с вводом ответа здесь будет поле для печати — ответ проверится автоматически.')
+                        }
+                    ]
+                },
+                {
+                    id: 'session-grade',
+                    targets: [
+                        '[data-onboarding-target="microcards-session-grade"]'
+                    ],
+                    placement: 'top',
+                    controlPlacement: 'bottom-right',
+                    controlPlacementLocked: true,
+                    kicker: wt('tours.microcards_review_session.session_grade.kicker', 'Оценка'),
+                    callouts: [
+                        {
+                            target: '[data-onboarding-target="microcards-session-grade"]',
+                            placement: 'top',
+                            offsetY: -14,
+                            title: wt('tours.microcards_review_session.session_grade.c0_title', 'Знаю или не знаю'),
+                            body: wt('tours.microcards_review_session.session_grade.c0_body', 'После ответа честно оцените себя — это единственная оценка, по ней планируется следующее повторение карточки. Если ответили текстом и верный ответ не засчитался, есть кнопка «Всё равно правильно».')
+                        }
+                    ]
+                },
+                {
+                    id: 'session-queue',
+                    targets: [
+                        '[data-onboarding-target="microcards-session-hud"]',
+                        '[data-onboarding-target="microcards-session-progress"]'
+                    ],
+                    placement: 'bottom',
+                    controlPlacement: 'bottom-right',
+                    controlPlacementLocked: true,
+                    kicker: wt('tours.microcards_review_session.session_queue.kicker', 'Прогресс и ошибки'),
+                    callouts: [
+                        {
+                            target: '[data-onboarding-target="microcards-session-hud"]',
+                            placement: 'bottom',
+                            offsetY: 14,
+                            title: wt('tours.microcards_review_session.session_queue.c0_title', 'SW, серия и возвраты'),
+                            body: wt('tours.microcards_review_session.session_queue.c0_body', 'Здесь виден набранный синаптический вес (SW) и серия правильных ответов подряд. Значок повтора показывает карточки с ошибкой — они вернутся в этой же сессии, пока вы не ответите верно.')
+                        },
+                        {
+                            target: '[data-onboarding-target="microcards-session-progress"]',
+                            placement: 'bottom',
+                            offsetY: 14,
+                            title: wt('tours.microcards_review_session.session_queue.c1_title', 'Полоса прогресса'),
+                            body: wt('tours.microcards_review_session.session_queue.c1_body', 'Полоса считает освоенные карточки, а не пройденные подряд, поэтому при ошибке она не откатывается назад.')
+                        }
+                    ]
+                },
+                {
+                    id: 'session-summary',
+                    targets: [
+                        '[data-onboarding-target="microcards-summary-result"]',
+                        '[data-onboarding-target="microcards-summary-errors"]'
+                    ],
+                    placement: 'right',
+                    controlPlacement: 'bottom-right',
+                    controlPlacementLocked: true,
+                    kicker: wt('tours.microcards_review_session.session_summary.kicker', 'Итоги'),
+                    callouts: [
+                        {
+                            target: '[data-onboarding-target="microcards-summary-result"]',
+                            placement: 'right',
+                            offsetX: 24,
+                            title: wt('tours.microcards_review_session.session_summary.c0_title', 'Результат сессии'),
+                            body: wt('tours.microcards_review_session.session_summary.c0_body', 'Итоги показывают точность с первой попытки, набранный SW и лучшую серию. Отсюда можно вернуться к колодам или пройти повторение ещё раз.')
+                        },
+                        {
+                            target: '[data-onboarding-target="microcards-summary-errors"]',
+                            placement: 'left',
+                            offsetX: -24,
+                            title: wt('tours.microcards_review_session.session_summary.c1_title', 'Что потребовало повтора'),
+                            body: wt('tours.microcards_review_session.session_summary.c1_body', 'Карточки, которые вернулись через очередь ошибок, собраны отдельно — это подсказка, что повторить в следующий раз.')
+                        }
+                    ]
+                }
+            ]
+        },
+        {
             tourId: 'statistics-learning-signals',
             version: 1,
             referenceCategory: 'Смотрим статистику',

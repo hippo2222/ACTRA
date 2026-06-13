@@ -1463,6 +1463,7 @@
     "qa_load_error": "Failed to load",
     "qa_retry": "Try again",
     "qa_open_complexes": "Open complexes",
+    "qa_open_microcards": "Open microcards",
     "qa_card_remove": "Remove",
     "calendar_title": "Calendar",
     "calendar_empty_title": "Start learning",
@@ -1638,6 +1639,9 @@
     "form_theory_1": "theory",
     "form_theory_2": "theories",
     "form_theory_5": "theories",
+    "form_deck_1": "deck",
+    "form_deck_2": "decks",
+    "form_deck_5": "decks",
     "profiles_inline_error": "Load error",
     "profile_name_empty": "Enter a profile name",
     "profile_name_min": "Name must be at least 2 characters",
@@ -1788,6 +1792,18 @@
     "filter_urgent": "Urgent",
     "filter_new": "Has new",
     "filter_recent": "Recent",
+    "filter_archived": "Premium archive",
+    "archive_filter_label": "Deck archive filter",
+    "archive_notice_title": "Some decks moved to the Premium archive",
+    "archive_notice_copy": "Decks in the archive: {n}. You can open and delete them, but to study, edit, import or publish them, renew Premium or delete extra decks.",
+    "archive_notice_cta": "Restore with Premium",
+    "badge_archived": "Premium archive",
+    "archived_locked_cta": "Archived · Premium",
+    "limit_badge": "own {own}/{ownLim} · total {tot}/{totLim}",
+    "premium_limit_title": "More flashcard decks with Premium",
+    "premium_limit_lead": "Free plan: up to 4 own decks and 8 in total including the catalog. Premium removes the limit.",
+    "premium_limit_toast": "Free-plan deck limit reached. Open Premium to add more.",
+    "premium_archived_toast": "This deck is in the Premium archive: you can open and delete it, but to study, edit, import or publish it, renew Premium or delete extra decks.",
     "ownership_label": "Ownership",
     "ownership_list_aria": "Deck ownership filters",
     "own_all": "All",
@@ -2416,6 +2432,7 @@
     "confirm_theory_already_title": "Theory already in library",
     "summary_type_saved": "saved complexes",
     "summary_type_complex": "complexes",
+    "summary_type_flashcards": "decks",
     "summary_type_theory": "theories",
     "summary_type_default": "publications",
     "summary_slots": " · Slots: theories {t_count}/{t_limit}, complexes {c_count}/{c_limit}",
@@ -2900,7 +2917,7 @@
     "loading": "Loading...",
     "loading_profile": "Loading profile...",
     "account_subline": "Name, email, password and appearance are saved for the current account.",
-    "premium_description": "More library space and access to full Calendar and Statistics pages.",
+    "premium_description": "More library space — tasks, complexes, theories and flashcard decks — plus access to full Calendar and Statistics pages.",
     "loading_premium": "Checking Premium status...",
     "profile_title": "Profile",
     "profile_description": "Basic account data and profile photo.",
@@ -3646,6 +3663,67 @@
         "c1_body": "Publishing makes the complex available via the catalogue or a chosen access mode. The draft can continue to be edited separately.",
         "c2_title": "Save",
         "c2_body": "Saving locks in the current editor version: name, theory, selected tasks, order, and chains."
+      }
+    },
+    "microcards_library_overview": {
+      "title": "Microcards: decks and review",
+      "summary": "Short cards for spaced repetition: where to see what is due, how a deck is built, and which study modes it has.",
+      "library_pulse": {
+        "kicker": "Review pulse",
+        "c0_title": "What needs attention today",
+        "c0_body": "\"Due\" are cards whose review time has come: the longer you put them off, the faster the material fades. \"New\" are cards you haven't studied yet. These numbers matter more than the total deck count."
+      },
+      "library_find": {
+        "kicker": "Find and create",
+        "c0_title": "Search and order",
+        "c0_body": "Search finds a deck by name, and the sort next to it brings what matters now to the top — for example, decks with review debt.",
+        "c1_title": "New decks",
+        "c1_body": "You can create a deck from scratch or get a ready one: by an author's access code or from the catalog of learning materials."
+      },
+      "library_deck_card": {
+        "kicker": "Deck card",
+        "c0_title": "A deck in your library",
+        "c0_body": "The card shows the deck size and how many cards are due. A click opens the deck page with its study modes and the card list."
+      },
+      "deck_mastery": {
+        "kicker": "Inside a deck",
+        "c0_title": "Deck level",
+        "c0_body": "Every session earns synaptic weight (SW) and raises the deck level. Without reviews the weight slowly decays — so you can see which decks hold in memory and which need refreshing.",
+        "c1_title": "Study modes",
+        "c1_body": "Runs cover the whole deck: Level 1 in a \"know / don't know\" format, Level 2 with typed answers. \"Review\" is the daily work on due and new cards, \"Browse\" is free flipping. Tips for the session itself appear on the first run, and later you can find them in the reference."
+      }
+    },
+    "microcards_review_session": {
+      "title": "Microcards: review session",
+      "summary": "How a session goes: reveal the answer, grade yourself honestly, bring back mistakes, and read the summary.",
+      "session_card": {
+        "kicker": "Card",
+        "c0_title": "Front side",
+        "c0_body": "The question is shown first. The card flips to the answer. In \"reverse\" decks the question and answer swap places, so it helps to know both sides."
+      },
+      "session_reveal": {
+        "kicker": "Answer",
+        "c0_title": "Recall it first",
+        "c0_body": "Try to recall the answer, then reveal the back side. In decks with typed answers there will be an input field here — the answer is checked automatically."
+      },
+      "session_grade": {
+        "kicker": "Grade",
+        "c0_title": "Know or don't know",
+        "c0_body": "After answering, grade yourself honestly — this is the only grade, and the card's next review is scheduled from it. If you typed an answer and a correct one wasn't accepted, there is a \"Correct anyway\" button."
+      },
+      "session_queue": {
+        "kicker": "Progress and mistakes",
+        "c0_title": "SW, streak and returns",
+        "c0_body": "Here you see the synaptic weight (SW) you earned and your streak of correct answers in a row. The repeat icon shows missed cards — they come back within this same session until you answer them correctly.",
+        "c1_title": "Progress bar",
+        "c1_body": "The bar counts mastered cards, not cards passed in a row, so a mistake does not roll it back."
+      },
+      "session_summary": {
+        "kicker": "Summary",
+        "c0_title": "Session result",
+        "c0_body": "The summary shows first-try accuracy, the SW you earned, and your best streak. From here you can go back to the decks or run the review again.",
+        "c1_title": "What needed a repeat",
+        "c1_body": "Cards that came back through the mistake queue are collected separately — a hint of what to review next time."
       }
     },
     "calendar_daily_plan": {
@@ -5679,7 +5757,7 @@
     "k081": "90 days",
     "k082": "$0.22/day · 38% cheaper",
     "k083": "No limit blockers",
-    "k084": "The free plan is good for getting started but limits the number of your own materials and catalog connections. Premium removes these limits so you can expand your library without stopping.",
+    "k084": "The free plan is good for getting started but limits the number of your own tasks, complexes, theories and flashcard decks, plus catalog connections. Premium removes these limits so you can expand your library without stopping.",
     "k085": "Full Calendar",
     "k086": "The full page with Daily Mix, schedule, activity, and memory health is unlocked. Widgets on the home screen remain available to everyone, but the full working view is in Premium.",
     "k087": "Full Statistics",

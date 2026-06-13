@@ -297,6 +297,13 @@
             target: '/theory-center',
             actionLabel: wt('main.theory_center_cta', 'Открыть теории'),
         },
+        {
+            key: 'decks',
+            icon: 'style',
+            forms: [wt('main.form_deck_1', 'колода'), wt('main.form_deck_2', 'колоды'), wt('main.form_deck_5', 'колод')],
+            target: '/microcards?filter=archived',
+            actionLabel: wt('main.qa_open_microcards', 'Открыть микрокарточки'),
+        },
     ]);
 
     function toMainArchiveCount(value) {

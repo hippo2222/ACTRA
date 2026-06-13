@@ -78,8 +78,10 @@ def _make_service(
     modules=None,
     linked_theories=None,
     linked_complexes=None,
+    decks=None,
     premium_expires_at=None,
 ):
+    deck_items = list(decks or [])
     return WorkspaceLimitsService(
         user_service=_FakeUserService(
             plan=plan,
@@ -93,7 +95,26 @@ def _make_service(
             theory_entries=linked_theories,
             complex_entries=linked_complexes,
         ),
+        microcards_decks_provider=lambda _user_id, _items=deck_items: list(_items),
     )
+
+
+def _own_deck(i):
+    return {
+        "id": f"d{i}",
+        "created_by_user_id": "u1",
+        "created_at": f"2026-05-{i + 1:02d}T00:00:00",
+    }
+
+
+def _linked_deck(i):
+    return {
+        "id": f"ld{i}",
+        "created_by_user_id": "u1",
+        "linked": True,
+        "catalog_item_id": f"cat-{i}",
+        "created_at": f"2026-06-{i + 1:02d}T00:00:00",
+    }
 
 
 def test_summary_counts_personal_and_library_items_separately():
@@ -410,3 +431,163 @@ def test_admin_with_free_plan_is_treated_as_effective_premium():
     assert evaluation["ok"] is True
     assert evaluation["blocked"] is False
     assert evaluation["plan"] == USER_PLAN_PREMIUM
+
+
+# ── Microcards decks (B1): own + linked into the complex-shaped limit ──────
+
+
+def test_deck_summary_splits_own_and_linked_decks():
+    service = _make_service(decks=[_own_deck(i) for i in range(3)] + [_linked_deck(i) for i in range(2)])
+
+    decks = service.get_summary("u1")["decks"]
+
+    assert decks["personal_count"] == 3
+    assert decks["workspace_total_count"] == 3
+    assert decks["linked_library_count"] == 2
+    assert decks["library_total_count"] == 5
+    assert decks["personal_limit"] == 4
+    assert decks["library_limit"] == 8
+    assert decks["active_count"] == 5
+    assert decks["archived_count"] == 0
+
+
+def test_deck_free_blocked_by_own_limit():
+    service = _make_service(decks=[_own_deck(i) for i in range(4)])
+
+    with pytest.raises(WorkspaceLimitError) as excinfo:
+        service.assert_can_create_workspace_entity("u1", "deck")
+
+    payload = excinfo.value.to_payload()
+    assert payload["error"] == "workspace_limit_reached"
+    assert payload["details"]["entity_kind"] == "deck"
+    assert payload["details"]["limit_kind"] == "personal"
+
+
+def test_deck_free_blocked_by_library_total_even_below_own_limit():
+    service = _make_service(decks=[_own_deck(i) for i in range(3)] + [_linked_deck(i) for i in range(5)])
+
+    with pytest.raises(WorkspaceLimitError) as excinfo:
+        service.assert_can_create_workspace_entity("u1", "deck")
+
+    payload = excinfo.value.to_payload()
+    assert payload["details"]["entity_kind"] == "deck"
+    assert payload["details"]["limit_kind"] == "library_total"
+
+
+def test_deck_linked_import_checks_only_library_total():
+    service = _make_service(decks=[_own_deck(i) for i in range(4)] + [_linked_deck(i) for i in range(4)])
+
+    # 4 own already hits the own-limit, but importing a linked deck must ignore
+    # the own-only limit and block solely on the combined total (8/8 -> full).
+    with pytest.raises(WorkspaceLimitError) as excinfo:
+        service.assert_can_add_linked_deck("u1")
+
+    assert excinfo.value.to_payload()["details"]["limit_kind"] == "library_total"
+
+
+def test_deck_premium_user_has_no_limit_or_archive():
+    service = _make_service(
+        plan=USER_PLAN_PREMIUM,
+        decks=[_own_deck(i) for i in range(6)] + [_linked_deck(i) for i in range(6)],
+    )
+
+    evaluation = service.assert_can_create_workspace_entity("u1", "deck")
+    decks = service.get_summary("u1")["decks"]
+
+    assert evaluation["blocked"] is False
+    assert decks["active_count"] == 12
+    assert decks["archived_count"] == 0
+    assert decks["archived_items"] == []
+
+
+def test_deck_archives_newest_own_beyond_personal_limit():
+    service = _make_service(decks=[_own_deck(i) for i in range(6)])
+
+    decks = service.get_summary("u1")["decks"]
+
+    assert decks["active_count"] == 4
+    assert decks["archived_count"] == 2
+    assert [item["id"] for item in decks["archived_items"]] == ["d4", "d5"]
+    assert {item["limit_kind"] for item in decks["archived_items"]} == {"personal"}
+
+
+def test_deck_archives_newest_linked_beyond_library_total():
+    service = _make_service(decks=[_own_deck(i) for i in range(4)] + [_linked_deck(i) for i in range(6)])
+
+    decks = service.get_summary("u1")["decks"]
+
+    assert decks["library_total_count"] == 10
+    assert decks["active_count"] == 8
+    assert decks["archived_count"] == 2
+    assert [item["id"] for item in decks["archived_items"]] == ["ld4", "ld5"]
+    assert {item["scope"] for item in decks["archived_items"]} == {"linked_library"}
+
+
+def test_deck_archived_guard_blocks_mutations_but_allows_delete():
+    service = _make_service(decks=[_own_deck(i) for i in range(6)])
+
+    with pytest.raises(PremiumArchivedContentError) as excinfo:
+        service.assert_entity_not_archived("u1", "deck", "d5", action="start", scope="workspace")
+
+    payload = excinfo.value.to_payload()
+    assert payload["error"] == "premium_archived_content"
+    assert payload["details"]["entity_kind"] == "deck"
+    assert payload["details"]["action"] == "start"
+    assert payload["details"]["allowed_actions"]["delete"] is True
+    assert payload["details"]["allowed_actions"]["start"] is False
+
+    active_state = service.assert_entity_not_archived("u1", "deck", "d0", action="start", scope="workspace")
+    assert active_state["is_premium_archived"] is False
+
+
+def test_deck_without_provider_reads_as_empty():
+    service = WorkspaceLimitsService(
+        user_service=_FakeUserService(),
+        theory_service=_FakeTheoryService(),
+        complex_service=_FakeComplexService(),
+        storage_service=_FakeStorageService(),
+        catalog_service=_FakeCatalogService(),
+    )
+
+    decks = service.get_summary("u1")["decks"]
+
+    assert decks["library_total_count"] == 0
+    assert decks["archived_count"] == 0
+    assert service.assert_can_create_workspace_entity("u1", "deck")["blocked"] is False
+
+
+def test_deck_provider_integration_with_real_microcards_service():
+    """B2 wiring: a real MicrocardsServiceV2.list_decks() payload must flow
+    through the provider into the limit/archive partition (validates the real
+    deck-summary field shape, not just hand-rolled fakes)."""
+    import tempfile
+
+    from services.microcards_service_v2 import MicrocardsServiceV2
+
+    data_dir = tempfile.mkdtemp()
+    author = MicrocardsServiceV2(data_dir, user_id="u1")
+    for i in range(6):
+        author.create_deck(name=f"Deck {i}")
+
+    service = WorkspaceLimitsService(
+        user_service=_FakeUserService(),
+        theory_service=_FakeTheoryService(),
+        complex_service=_FakeComplexService(),
+        storage_service=_FakeStorageService(),
+        catalog_service=_FakeCatalogService(),
+        microcards_decks_provider=(
+            lambda user_id: MicrocardsServiceV2(data_dir, user_id=user_id).list_decks(limit=500)
+        ),
+    )
+
+    decks = service.get_summary("u1")["decks"]
+
+    # All 6 are own (not linked); free splits into 4 active + 2 archived.
+    assert decks["personal_count"] == 6
+    assert decks["linked_library_count"] == 0
+    assert decks["library_total_count"] == 6
+    assert decks["active_count"] == 4
+    assert decks["archived_count"] == 2
+    assert {item["limit_kind"] for item in decks["archived_items"]} == {"personal"}
+    with pytest.raises(WorkspaceLimitError):
+        service.assert_can_create_workspace_entity("u1", "deck")

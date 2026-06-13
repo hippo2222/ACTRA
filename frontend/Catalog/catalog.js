@@ -985,7 +985,7 @@
   }
 
   function getWorkspaceLimitEntity(kind) {
-    const key = kind === 'theory' ? 'theories' : kind === 'complex' ? 'complexes' : 'tasks';
+    const key = kind === 'theory' ? 'theories' : kind === 'complex' ? 'complexes' : kind === 'deck' ? 'decks' : 'tasks';
     return state.workspaceLimits && typeof state.workspaceLimits[key] === 'object'
       ? state.workspaceLimits[key]
       : null;
@@ -2779,8 +2779,14 @@
     } catch (error) {
       if (error?.status === 409 && error?.payload?.error === 'workspace_limit_reached') {
         await loadWorkspaceLimits();
-        const summary = getWorkspaceLimitEntity(item?.content_type === 'theory' ? 'theory' : 'complex');
-        showToast(getWorkspaceLimitMessage(summary, { label: item?.content_type === 'theory' ? wt('catalog.summary_type_theory', 'теорий') : wt('catalog.summary_type_complex', 'комплексов') }) || wt('catalog.toast_limit_reached', 'Лимит библиотеки достигнут.'), 'warning', 4200);
+        const limitKind = item?.content_type === 'theory' ? 'theory'
+          : item?.content_type === 'flashcard_deck' ? 'deck'
+          : 'complex';
+        const limitLabel = item?.content_type === 'theory' ? wt('catalog.summary_type_theory', 'теорий')
+          : item?.content_type === 'flashcard_deck' ? wt('catalog.summary_type_flashcards', 'колод')
+          : wt('catalog.summary_type_complex', 'комплексов');
+        const summary = getWorkspaceLimitEntity(limitKind);
+        showToast(getWorkspaceLimitMessage(summary, { label: limitLabel }) || wt('catalog.toast_limit_reached', 'Лимит библиотеки достигнут.'), 'warning', 4200);
       }
       throw error;
     }

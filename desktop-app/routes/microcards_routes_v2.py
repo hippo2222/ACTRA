@@ -5,6 +5,7 @@ import json
 from flask import Blueprint, jsonify, request, Response
 from routes._context import get_ctx, get_extra
 from services.microcards_service_v2 import MicrocardsServiceV2
+from services.workspace_limits_service import PremiumArchivedContentError, WorkspaceLimitError
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +57,78 @@ def _check_guest():
     if not ctx or ctx.user_id == "guest":
         return jsonify({"ok": False, "error": "guest_cannot_use_microcards"}), 403
     return None
+
+# ── Premium plan limit / archive guards ───────────────────────────────
+# Decks are a workspace entity like complexes: free plan caps own decks at 4
+# and the total (own + linked-from-catalog) at 8; when Premium lapses above the
+# cap, the newest decks become read-only "Premium archive". Each helper returns
+# a 409 response tuple to return early, or None when the action is allowed.
+# No-ops when the limits service is absent (unit tests mounting the blueprint
+# standalone) or for Premium/admin users (the service resolves them unlimited).
+
+def _limits_service():
+    ctx = get_ctx()
+    return getattr(ctx, "workspace_limits_service", None) if ctx else None
+
+
+def _check_deck_create_limit():
+    """Block a new OWN deck once own >= 4 or total >= 8 on the free plan."""
+    service = _limits_service()
+    if service is None:
+        return None
+    try:
+        service.assert_can_create_workspace_entity(get_ctx().user_id, "deck")
+        return None
+    except WorkspaceLimitError as exc:
+        return jsonify(exc.to_payload()), 409
+
+
+def _check_linked_deck_limit():
+    """Block importing a catalog deck once the library total would exceed 8."""
+    service = _limits_service()
+    if service is None:
+        return None
+    try:
+        service.assert_can_add_linked_deck(get_ctx().user_id)
+        return None
+    except WorkspaceLimitError as exc:
+        return jsonify(exc.to_payload()), 409
+
+
+def _check_deck_archived(deck_id, action):
+    """Block a mutating action on a deck that sits in the Premium archive.
+    No scope filter, so an archived deck is caught whether it is own or linked."""
+    service = _limits_service()
+    if service is None:
+        return None
+    try:
+        service.assert_entity_not_archived(get_ctx().user_id, "deck", deck_id, action=action)
+        return None
+    except PremiumArchivedContentError as exc:
+        return jsonify(exc.to_payload()), 409
+
+
+def _revoke_deck_publication_on_delete(svc, deck_id):
+    """Author deletes their OWN published deck → mark the catalog publication as
+    source-deleted so linked subscribers resolve it as revoked (parity with
+    complex/theory source deletion). Best-effort: a catalog hiccup must not fail
+    the deck deletion that already happened. Never call this for linked decks —
+    those point at someone else's publication."""
+    catalog_svc = _get_catalog_svc()
+    handler = getattr(catalog_svc, "handle_workspace_source_deleted", None) if catalog_svc else None
+    if not callable(handler):
+        return None
+    try:
+        return handler(
+            "flashcard_deck",
+            owner_user_id=svc.user_id,
+            source_workspace_id=deck_id,
+            source_workspace_kind="flashcard_deck",
+            reason="workspace_source_deleted",
+        )
+    except Exception as exc:
+        logger.warning("[HTTP] v2/microcards deck publication revoke-on-delete failed: %s", exc)
+        return None
 
 def _decode_import_bytes(raw: bytes) -> str:
     """Decode uploaded text trying UTF-8 (incl. BOM) first, then common legacy
@@ -126,6 +199,10 @@ def create_deck():
     if not name:
         return jsonify({"ok": False, "error": "name_required"}), 400
         
+    block = _check_deck_create_limit()
+    if block:
+        return block
+
     try:
         svc = _get_svc()
         deck = svc.create_deck(name=name, description=description, tags=tags)
@@ -216,6 +293,9 @@ def update_deck(deck_id: str):
     guest_check = _check_guest()
     if guest_check:
         return guest_check
+    block = _check_deck_archived(deck_id, "edit")
+    if block:
+        return block
     body = request.get_json(silent=True) or {}
     name = body.get("name")
     description = body.get("description")
@@ -242,10 +322,20 @@ def delete_deck(deck_id: str):
         return guest_check
     try:
         svc = _get_svc()
+        # Capture the publication link BEFORE deletion (a deleted deck can't be
+        # looked up afterwards). Linked decks reference someone else's
+        # publication — never cascade-delete those.
+        existing = svc.get_deck(deck_id)
+        catalog_item_id = (existing or {}).get("catalog_item_id")
+        is_own_publication = bool(catalog_item_id) and not (existing or {}).get("linked")
         deleted = svc.delete_deck(deck_id)
         if not deleted:
             return jsonify({"ok": False, "error": "deck_not_found"}), 404
-        return jsonify({"ok": True})
+        source_delete = _revoke_deck_publication_on_delete(svc, deck_id) if is_own_publication else None
+        payload = {"ok": True}
+        if source_delete is not None:
+            payload["catalog_source_delete"] = source_delete
+        return jsonify(payload)
     except Exception as exc:
         logger.exception("[HTTP] v2/microcards/decks delete failed: %s", exc)
         return jsonify({"ok": False, "error": "delete_failed"}), 500
@@ -272,6 +362,9 @@ def create_card(deck_id: str):
     guest_check = _check_guest()
     if guest_check:
         return guest_check
+    block = _check_deck_archived(deck_id, "edit")
+    if block:
+        return block
     body = request.get_json(silent=True) or {}
     front_text = body.get("front_text")
     back_text = body.get("back_text")
@@ -310,6 +403,9 @@ def update_card(deck_id: str, card_id: str):
     guest_check = _check_guest()
     if guest_check:
         return guest_check
+    block = _check_deck_archived(deck_id, "edit")
+    if block:
+        return block
     body = request.get_json(silent=True) or {}
     front_text = body.get("front_text")
     back_text = body.get("back_text")
@@ -355,6 +451,9 @@ def delete_card(deck_id: str, card_id: str):
     guest_check = _check_guest()
     if guest_check:
         return guest_check
+    block = _check_deck_archived(deck_id, "edit")
+    if block:
+        return block
     try:
         svc = _get_svc()
         deleted = svc.delete_card(deck_id, card_id)
@@ -420,6 +519,9 @@ def image_import(deck_id: str):
     guest_check = _check_guest()
     if guest_check:
         return guest_check
+    block = _check_deck_archived(deck_id, "edit")
+    if block:
+        return block
     import os
     import uuid
     from services import microcards_image_search as imgsvc
@@ -492,6 +594,9 @@ def bulk_delete_cards(deck_id: str):
     guest_check = _check_guest()
     if guest_check:
         return guest_check
+    block = _check_deck_archived(deck_id, "edit")
+    if block:
+        return block
     body = request.get_json(silent=True) or {}
     card_ids = body.get("card_ids")
     if not isinstance(card_ids, list) or not card_ids:
@@ -515,6 +620,9 @@ def bulk_restore_cards(deck_id: str):
     guest_check = _check_guest()
     if guest_check:
         return guest_check
+    block = _check_deck_archived(deck_id, "edit")
+    if block:
+        return block
     body = request.get_json(silent=True) or {}
     entries = body.get("entries")
     if not isinstance(entries, list) or not entries:
@@ -537,6 +645,9 @@ def reorder_cards(deck_id: str):
     guest_check = _check_guest()
     if guest_check:
         return guest_check
+    block = _check_deck_archived(deck_id, "edit")
+    if block:
+        return block
     body = request.get_json(silent=True) or {}
     card_ids = body.get("card_ids")
     if not isinstance(card_ids, list):
@@ -559,6 +670,9 @@ def start_session(deck_id: str):
     guest_check = _check_guest()
     if guest_check:
         return guest_check
+    block = _check_deck_archived(deck_id, "start")
+    if block:
+        return block
     body = request.get_json(silent=True) or {}
     resume = body.get("resume", True)
     restart = body.get("restart", False)
@@ -737,6 +851,9 @@ def import_csv(deck_id: str):
     guest_check = _check_guest()
     if guest_check:
         return guest_check
+    block = _check_deck_archived(deck_id, "import")
+    if block:
+        return block
         
     csv_content = ""
     options = None
@@ -767,6 +884,9 @@ def import_json(deck_id: str):
     guest_check = _check_guest()
     if guest_check:
         return guest_check
+    block = _check_deck_archived(deck_id, "import")
+    if block:
+        return block
     body = request.get_json(silent=True)
     if not body:
         return jsonify({"ok": False, "error": "json_data_required"}), 400
@@ -789,6 +909,9 @@ def import_txt_full(deck_id: str):
     guest_check = _check_guest()
     if guest_check:
         return guest_check
+    block = _check_deck_archived(deck_id, "import")
+    if block:
+        return block
         
     text_content, options = _read_import_text(request)
     if not text_content.strip():
@@ -810,6 +933,9 @@ def import_txt_simplified(deck_id: str):
     guest_check = _check_guest()
     if guest_check:
         return guest_check
+    block = _check_deck_archived(deck_id, "import")
+    if block:
+        return block
         
     text_content, options = _read_import_text(request)
     if not text_content.strip():
@@ -832,6 +958,9 @@ def import_auto(deck_id: str):
     guest_check = _check_guest()
     if guest_check:
         return guest_check
+    block = _check_deck_archived(deck_id, "import")
+    if block:
+        return block
 
     text_content, options = _read_import_text(request)
     if not text_content.strip():
@@ -854,6 +983,9 @@ def import_test_format(deck_id: str):
     guest_check = _check_guest()
     if guest_check:
         return guest_check
+    block = _check_deck_archived(deck_id, "import")
+    if block:
+        return block
         
     text_content, options = _read_import_text(request)
     if not text_content.strip():
@@ -917,6 +1049,9 @@ def create_deck_from_analysis_v2():
     if error:
         return error
     selector, rows = loaded
+    block = _check_deck_create_limit()
+    if block:
+        return block
     try:
         from services.microcards_analysis_import import deck_name_for_analysis
         svc = _get_svc()
@@ -955,6 +1090,9 @@ def append_deck_from_analysis_v2(deck_id: str):
     guest_check = _check_guest()
     if guest_check:
         return guest_check
+    block = _check_deck_archived(deck_id, "import")
+    if block:
+        return block
     body = request.get_json(silent=True) or {}
     _run_id, loaded, error = _load_analysis_rows_for_request(body)
     if error:
@@ -997,6 +1135,9 @@ def import_binary_file(deck_id: str):
     guest_check = _check_guest()
     if guest_check:
         return guest_check
+    block = _check_deck_archived(deck_id, "import")
+    if block:
+        return block
     if "file" not in request.files:
         return jsonify({"ok": False, "error": "file_required"}), 400
     f = request.files["file"]
@@ -1133,6 +1274,10 @@ def import_csv_to_new_deck():
     if not deck_name:
         deck_name = "Imported CSV Deck"
         
+    block = _check_deck_create_limit()
+    if block:
+        return block
+
     try:
         svc = _get_svc()
         deck = svc.create_deck(name=deck_name)
@@ -1207,6 +1352,9 @@ def publish_deck_to_catalog(deck_id: str):
     guest_check = _check_guest()
     if guest_check:
         return guest_check
+    block = _check_deck_archived(deck_id, "publish")
+    if block:
+        return block
         
     body = request.get_json(silent=True) or {}
     catalog_visibility = body.get("catalog_visibility")
@@ -1279,6 +1427,10 @@ def import_deck_by_access_code():
         if existing:
             return jsonify({"ok": True, "deck": existing, "added_count": 0, "already_in_library": True})
 
+        block = _check_linked_deck_limit()
+        if block:
+            return block
+
         result = catalog_svc.add_item_to_library(item_id, requested_by_user_id=svc.user_id, access_code=access_code)
         snapshot = result.get("snapshot") or {}
         # Add a read-only LINK (not a copy), like complex/theory library entries.
@@ -1312,6 +1464,10 @@ def import_deck_from_catalog(catalog_item_id: str):
         existing = svc.find_deck_by_catalog_item_id(catalog_item_id)
         if existing:
             return jsonify({"ok": True, "deck": existing, "added_count": 0, "already_in_library": True})
+
+        block = _check_linked_deck_limit()
+        if block:
+            return block
 
         result = catalog_svc.add_item_to_library(catalog_item_id, requested_by_user_id=svc.user_id)
         snapshot = result.get("snapshot") or {}

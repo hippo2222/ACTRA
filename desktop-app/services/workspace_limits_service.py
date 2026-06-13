@@ -11,6 +11,7 @@ _ENTITY_KEY_BY_KIND = {
     "theory": "theories",
     "complex": "complexes",
     "task": "tasks",
+    "deck": "decks",
 }
 
 _ENTITY_KIND_BY_KEY = {value: key for key, value in _ENTITY_KEY_BY_KIND.items()}
@@ -19,12 +20,16 @@ _ENTITY_LABELS = {
     "theory": "теорий",
     "complex": "комплексов",
     "task": "заданий",
+    "deck": "колод",
 }
 
 _LIMIT_SPECS = {
     "theory": {"personal_limit": 5, "library_limit": 10},
     "complex": {"personal_limit": 5, "library_limit": 10},
     "task": {"personal_limit": 20, "library_limit": None},
+    # Microcards decks mirror the complex limit shape (personal + library_total),
+    # just with different numbers: 8 total, of which at most 4 may be own.
+    "deck": {"personal_limit": 4, "library_limit": 8},
 }
 
 
@@ -110,12 +115,17 @@ class WorkspaceLimitsService:
         complex_service: Any,
         storage_service: Any,
         catalog_service: Any,
+        microcards_decks_provider: Any = None,
     ) -> None:
         self.user_service = user_service
         self.theory_service = theory_service
         self.complex_service = complex_service
         self.storage_service = storage_service
         self.catalog_service = catalog_service
+        # Callable(user_id) -> list[deck dict] for the user (own + linked).
+        # Injected by the route/server layer (B2); when absent, deck limits
+        # simply read as empty so this service stays usable in isolation.
+        self.microcards_decks_provider = microcards_decks_provider
 
     def get_summary(self, user_id: Any) -> Dict[str, Any]:
         clean_user_id = self._normalize_optional_text(user_id)
@@ -135,7 +145,7 @@ class WorkspaceLimitsService:
     def assert_can_create_workspace_entity(self, user_id: Any, entity_kind: str) -> Dict[str, Any]:
         clean_entity_kind = self._normalize_entity_kind(entity_kind)
         requests = [{"entity_kind": clean_entity_kind, "limit_kind": "personal", "slots": 1}]
-        if clean_entity_kind in {"theory", "complex"}:
+        if clean_entity_kind in {"theory", "complex", "deck"}:
             requests.append({"entity_kind": clean_entity_kind, "limit_kind": "library_total", "slots": 1})
         evaluation = self.evaluate_capacity(user_id, requests=requests)
         self._raise_for_blocked_evaluation(evaluation)
@@ -153,6 +163,14 @@ class WorkspaceLimitsService:
             requests.append({"entity_kind": "theory", "limit_kind": "library_total", "slots": int(theory_slots or 0)})
         if int(complex_slots or 0) > 0:
             requests.append({"entity_kind": "complex", "limit_kind": "library_total", "slots": int(complex_slots or 0)})
+        evaluation = self.evaluate_capacity(user_id, requests=requests)
+        self._raise_for_blocked_evaluation(evaluation)
+        return evaluation
+
+    def assert_can_add_linked_deck(self, user_id: Any, *, slots: int = 1) -> Dict[str, Any]:
+        """Importing a catalog deck adds a linked entry: only the combined
+        library total (own + linked <= 8) applies, never the own-only limit."""
+        requests = [{"entity_kind": "deck", "limit_kind": "library_total", "slots": int(slots or 0)}]
         evaluation = self.evaluate_capacity(user_id, requests=requests)
         self._raise_for_blocked_evaluation(evaluation)
         return evaluation
@@ -468,6 +486,8 @@ class WorkspaceLimitsService:
                 for item in self._to_plain_dicts(raw_items)
                 if self._normalize_optional_text(item.get("created_by_user_id")) == clean_user_id
             ]
+        if entity_kind == "deck":
+            return [deck for deck in self._list_user_decks(clean_user_id) if not deck.get("linked")]
         if entity_kind == "task":
             return self._list_user_tasks(clean_user_id)
         raise ValueError(f"unsupported_entity_kind:{entity_kind}")
@@ -489,6 +509,19 @@ class WorkspaceLimitsService:
                         continue
                     tasks.append(metadata)
         return tasks
+
+    def _list_user_decks(self, user_id: str) -> List[Dict[str, Any]]:
+        """All microcards decks for the user (own + linked) via the injected
+        provider. Tolerant: returns [] when no provider is wired or it fails,
+        so deck limits never block on a transient microcards-storage error."""
+        provider = self.microcards_decks_provider
+        if not callable(provider):
+            return []
+        try:
+            decks = provider(user_id)
+        except Exception:
+            return []
+        return [dict(deck) for deck in (decks or []) if isinstance(deck, dict)]
 
     def _extract_task_metadata(self, task: Any) -> Dict[str, Any]:
         payload = task if isinstance(task, dict) else {}
@@ -513,6 +546,8 @@ class WorkspaceLimitsService:
             payload = self.catalog_service.list_complex_library_entries(requested_by_user_id=clean_user_id)
             entries = payload.get("entries") if isinstance(payload, dict) else []
             return [dict(item) for item in entries if isinstance(item, dict)] if isinstance(entries, list) else []
+        if entity_kind == "deck":
+            return [deck for deck in self._list_user_decks(clean_user_id) if deck.get("linked")]
         return []
 
     def _build_access_items(

@@ -231,6 +231,41 @@
             .mc-sort-btn:active { transform: none !important; }
         }
 
+        /* ── Premium plan: deck-limit badge, archive notice + filter ─── */
+        .mc-limit-badge {
+            display: inline-flex; align-items: center; gap: 0.35rem;
+            padding: 0.3rem 0.6rem; border-radius: 999px; white-space: nowrap;
+            border: 1px solid var(--color-border-strong); background: var(--color-surface-1);
+            color: var(--color-text-secondary); font-size: 0.74rem; font-weight: 800;
+        }
+        .mc-limit-badge .material-symbols-outlined { font-size: 1rem; }
+        .mc-limit-badge--full {
+            border-color: color-mix(in srgb, var(--color-warning) 45%, transparent);
+            color: var(--color-warning);
+            background: color-mix(in srgb, var(--color-warning) 12%, transparent);
+        }
+        .mc-archive-notice {
+            display: flex; align-items: flex-start; gap: 0.75rem; margin-bottom: 1.25rem;
+            padding: 0.85rem 1rem; border-radius: var(--mc-radius, 1rem);
+            border: 1px solid color-mix(in srgb, var(--color-warning) 35%, transparent);
+            background: color-mix(in srgb, var(--color-warning) 10%, transparent);
+        }
+        .mc-archive-notice__icon { color: var(--color-warning); font-size: 1.4rem; flex-shrink: 0; }
+        .mc-archive-notice__body { flex: 1 1 auto; min-width: 0; }
+        .mc-archive-notice__title { margin: 0 0 0.15rem; font-size: 0.85rem; font-weight: 850; color: var(--color-text-main); }
+        .mc-archive-notice__copy { margin: 0; font-size: 0.78rem; line-height: 1.4; color: var(--color-text-secondary); }
+        .mc-archive-filter { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1.25rem; }
+        .mc-filter-chip {
+            padding: 0.3rem 0.75rem; border-radius: 999px; font-size: 0.74rem; font-weight: 800;
+            border: 1px solid var(--color-border-strong); background: var(--color-surface-1);
+            color: var(--color-text-secondary); transition: all .15s;
+        }
+        .mc-filter-chip:hover { border-color: var(--color-primary); color: var(--color-text-main); }
+        .mc-filter-chip.is-active { background: var(--color-primary); color: var(--color-primary-fg); border-color: var(--color-primary); }
+        @media (max-width: 680px) {
+            .mc-archive-notice { flex-wrap: wrap; }
+        }
+
         /* ── Deck grid + card ─────────────────────────────────────── */
         .mc-deck-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--mc-gap); }
         .mc-deck-card {
@@ -253,6 +288,18 @@
             box-shadow: var(--shadow-lg, 0 12px 28px rgba(0,0,0,0.12));
             transform: translateY(-3px);
         }
+        /* Premium-archived deck: read-only, desaturated, locked CTA. */
+        .mc-deck-card--premium-archived { filter: grayscale(0.62) saturate(0.6); opacity: 0.94; }
+        .mc-deck-card--premium-archived:hover { filter: grayscale(0.42) saturate(0.75); }
+        .mc-deck-card--premium-archived::before { background: var(--color-text-disabled, #94a3b8); }
+        .mc-deck-card__archived-badge {
+            display: inline-flex; align-items: center; gap: 0.25rem;
+            padding: 0.16rem 0.5rem; border-radius: 999px; font-size: 0.66rem; font-weight: 850;
+            border: 1px solid var(--color-border-strong); background: var(--color-surface-2); color: var(--color-text-secondary);
+        }
+        .mc-deck-card__archived-badge .material-symbols-outlined { font-size: 0.85rem; }
+        .mc-deck-card__study--locked { background: var(--color-surface-2); color: var(--color-text-secondary); border: 1px solid var(--color-border-strong); }
+        .mc-deck-card__study--locked:hover { color: var(--color-primary); border-color: var(--color-primary); }
         /* Header: deck NAME is the focal element; only controls (expand, ⋯) sit to its right. */
         .mc-deck-card__head { display: flex; align-items: flex-start; gap: 0.6rem; }
         .mc-deck-card__headctl { display: flex; align-items: center; gap: 0.1rem; flex-shrink: 0; }
@@ -1871,6 +1918,7 @@
                         </div>
                     </div>
                     <div style="display:flex;align-items:center;gap:0.6rem" data-onboarding-target="microcards-create-actions">
+                        <span id="mcLimitBadge" class="mc-limit-badge hidden" aria-live="polite"></span>
                         <button type="button" onclick="mcApp.openImportByCodeDialog()" class="mc-btn mc-btn--ghost" data-i18n-title="microcards.import_by_code_title" title="Импорт колоды по коду доступа">
                             <span class="material-symbols-outlined">key</span>
                             <span data-i18n="microcards.btn_import_by_code">По коду</span>
@@ -1925,6 +1973,20 @@
                             aria-label="Настройки звука и анимаций" data-i18n-aria="microcards.settings_title" title="Настройки" data-i18n-title="microcards.settings_title">
                         <span class="material-symbols-outlined">settings</span>
                     </button>
+                </div>
+
+                <div id="mcArchiveNotice" class="mc-archive-notice hidden" role="status" aria-live="polite">
+                    <span class="material-symbols-outlined mc-archive-notice__icon" aria-hidden="true">inventory_2</span>
+                    <div class="mc-archive-notice__body">
+                        <p class="mc-archive-notice__title" data-i18n="microcards.archive_notice_title">Часть колод перенесена в архив Premium</p>
+                        <p id="mcArchiveNoticeCopy" class="mc-archive-notice__copy"></p>
+                    </div>
+                    <button type="button" class="mc-btn mc-btn--ghost" data-premium-promo-trigger data-premium-promo-feature="microcards-limit" data-i18n="microcards.archive_notice_cta">Вернуть с Premium</button>
+                </div>
+
+                <div id="mcArchiveFilter" class="mc-archive-filter hidden" role="group" aria-label="Фильтр архива" data-i18n-aria="microcards.archive_filter_label">
+                    <button type="button" class="mc-filter-chip is-active" data-mcfilter="all" onclick="mcApp.setMcFilter('all')" data-i18n="microcards.filter_all">Все</button>
+                    <button type="button" class="mc-filter-chip" data-mcfilter="archived" onclick="mcApp.setMcFilter('archived')" data-i18n="microcards.filter_archived">Архив Premium</button>
                 </div>
 
                 <div id="libTagFilters" class="mc-tagfilters hidden" role="group" aria-label="Фильтр по тегам"></div>
@@ -2876,6 +2938,7 @@
     <!-- Toasts -->
     <div id="mcToastContainer" role="status" aria-live="polite" aria-atomic="false"></div>
 
+    <script src="../assets/PremiumPromoModal.js"></script>
     <script src="/microcards/microcards.js"></script>
     <script src="../assets/SharedProfileModal.js"></script>
     <script src="/assets/i18n.js"></script>

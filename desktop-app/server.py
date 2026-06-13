@@ -1314,12 +1314,26 @@ class AppContextHeadless:
             self.user_service = UserService(data_dir=str(self.data_dir))
             logger.info("[HTTP] UserService initialized")
 
+        # Microcards decks live in their own per-user service (files / Postgres).
+        # Hand the limits service a lazy lister so a deck counts toward the
+        # workspace limit/archive exactly like a complex (own vs linked). The
+        # call is wrapped defensively inside the limits service, so a missing
+        # store or read error simply reads as zero decks.
+        _microcards_data_dir = str(self.data_dir)
+
+        def _microcards_decks_provider(user_id):
+            from services.microcards_service_v2 import MicrocardsServiceV2
+            return MicrocardsServiceV2(
+                data_dir=_microcards_data_dir, user_id=user_id
+            ).list_decks(limit=500)
+
         self.workspace_limits_service = WorkspaceLimitsService(
             user_service=self.user_service,
             theory_service=self.theory_service,
             complex_service=self.complex_service,
             storage_service=self.storage_service,
             catalog_service=self.catalog_service,
+            microcards_decks_provider=_microcards_decks_provider,
         )
         setattr(self.catalog_service, "workspace_limits_service", self.workspace_limits_service)
         logger.info("[HTTP] WorkspaceLimitsService initialized")
