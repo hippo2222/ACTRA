@@ -173,7 +173,10 @@ export function runAffordanceAudit({ htmlSource = "", jsSources = [], ignoreButt
     for (const match of htmlText.matchAll(buttonPattern)) {
         const attrs = match[1] || "";
         const innerHtml = match[2] || "";
-        const idMatch = attrs.match(/\bid="([^"]+)"/i);
+        // Anchor to start/whitespace so this matches the real `id` attribute and
+        // NOT data-*-id attributes (e.g. data-onboarding-tour-id), where the `-`
+        // before "id" is also a \b word boundary and caused false positives.
+        const idMatch = attrs.match(/(?:^|\s)id="([^"]+)"/i);
         const buttonId = idMatch?.[1] || null;
         const titleMatch = attrs.match(/\btitle="([^"]+)"/i);
         const ariaLabelMatch = attrs.match(/\baria-label="([^"]+)"/i);
