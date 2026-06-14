@@ -216,62 +216,6 @@ class UserProgressManager(HostedShadowFallbackMixin):
         )
         return data
 
-        if self.progress_file.exists():
-            try:
-                with open(self.progress_file, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                
-                # Валидируем данные
-                errors = ProgressSchema.validate(data)
-                if errors:
-                    self.logger.error(f"Invalid progress data for user {self.user_id}: {errors}")
-                    # Создаем новую структуру при ошибке валидации и сохраняем
-                    data = self._get_default_progress_structure()
-                    self._save_progress(data)
-                    return data
-                
-                # Проверяем версию и выполняем миграцию при необходимости
-                version = data.get("version", "2.0")
-                if version == "2.0":
-                    self.logger.info(
-                        f"Detected version 2.0 for user {self.user_id}, "
-                        "migrating to version 3.0..."
-                    )
-                    data = self._migrate_v2_to_v3(data)
-                    # Сохраняем мигрированные данные
-                    self._save_progress(data)
-                    self.logger.info(f"Migration completed for user {self.user_id}")
-                
-                # Логируем информацию о загруженных данных
-                task_count = len(data.get("task_history", {}))
-                total_attempts = sum(
-                    len(task_data.get("attempts", []))
-                    for task_data in data.get("task_history", {}).values()
-                )
-                self.logger.debug(
-                    f"Progress loaded for user {self.user_id}: "
-                    f"{task_count} tasks, {total_attempts} total attempts"
-                )
-                return data
-                
-            except json.JSONDecodeError as e:
-                self.logger.error(f"Failed to parse progress.json for user {self.user_id}: {e}")
-                # Восстанавливаем структуру и сохраняем в файл
-                data = self._get_default_progress_structure()
-                self._save_progress(data)
-                return data
-            except Exception as e:
-                self.logger.error(f"Error loading progress for user {self.user_id}: {e}")
-                # Восстанавливаем структуру и сохраняем в файл
-                data = self._get_default_progress_structure()
-                self._save_progress(data)
-                return data
-        else:
-            # Создаем новую структуру
-            data = self._get_default_progress_structure()
-            self._save_progress(data)
-            return data
-    
     def _read_progress_file(self) -> Optional[Dict[str, Any]]:
         if not self.progress_file.exists():
             return None
@@ -516,44 +460,6 @@ class UserProgressManager(HostedShadowFallbackMixin):
         self._write_progress_shadow(data)
         self.logger.debug(f"Progress saved atomically for user {self.user_id}")
         return
-        
-        # Получаем директорию файла (преобразуем Path в строку)
-        dir_path = str(self.progress_file.parent)
-        progress_file_str = str(self.progress_file)
-        
-        # Создаем временный файл в той же директории
-        try:
-            with tempfile.NamedTemporaryFile(
-                mode='w',
-                dir=dir_path,
-                delete=False,
-                encoding='utf-8',
-                suffix='.tmp'
-            ) as tf:
-                json.dump(data, tf, ensure_ascii=False, indent=2)
-                temp_name = tf.name
-            
-            # Атомарная замена файла
-            try:
-                os.replace(temp_name, progress_file_str)
-            except OSError:
-                # Fallback для Windows, если файл заблокирован
-                # Сначала удаляем оригинальный файл, затем переименовываем временный
-                if os.path.exists(progress_file_str):
-                    os.remove(progress_file_str)
-                os.rename(temp_name, progress_file_str)
-            
-            self.logger.debug(f"Progress saved atomically for user {self.user_id}")
-            
-        except Exception as e:
-            self.logger.error(f"Failed to save progress for user {self.user_id}: {e}")
-            # Пытаемся удалить временный файл, если он остался
-            if 'temp_name' in locals() and os.path.exists(temp_name):
-                try:
-                    os.remove(temp_name)
-                except Exception:
-                    pass
-            raise
 
     def add_complex_completion(self, complex_id: str, session_id: Optional[str] = None, timestamp: Optional[str] = None):
         """

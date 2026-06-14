@@ -252,22 +252,30 @@ class TestNotificationService:
         assert "Неделя" in streak_notif[0].title
     
     def test_mode_suggestion_at_30_days(self):
-        """Предложение гибкого режима после 30 дней."""
+        """A mode_suggestion notification fires once on a 30+ day streak.
+
+        The legacy "flexible 3-4x/week" schedule mode this once suggested was
+        merged into DAILY (UserCalendarSettings.from_dict coerces "flexible" ->
+        "daily"), so we assert the durable contract — type, single fire, the
+        streak carried in action_data and a non-empty informational message —
+        rather than the obsolete copy.
+        """
         settings = UserCalendarSettings(
             user_id="u1",
             streak_days=30,
             schedule_mode=ScheduleMode.DAILY,
         )
-        
+
         notifications = self.service.generate_notifications(
             user_id="u1",
             settings=settings,
             all_progress=[],
         )
-        
+
         mode_notif = [n for n in notifications if n.type.value == "mode_suggestion"]
         assert len(mode_notif) == 1
-        assert "3–4 раза в неделю" in mode_notif[0].message
+        assert mode_notif[0].action_data.get("current_streak") == 30
+        assert mode_notif[0].message.strip()
 
 
 class TestCalendarServiceIntegration:
