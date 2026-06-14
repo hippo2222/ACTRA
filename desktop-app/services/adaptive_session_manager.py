@@ -1301,7 +1301,8 @@ class AdaptiveSessionManager:
             # Partial retry path: narrow down to questions that were previously wrong
             # AND are still wrong now.
             known_failed_set = set(known_failed)
-            still_wrong = [i for i in current_failed_indices if i in known_failed_set]
+            current_failed_set = set(current_failed_indices)
+            still_wrong = sorted(current_failed_set & known_failed_set)
             still_wrong_set = set(still_wrong)
             filtered_items: List[Dict[str, Any]] = []
             for item in (failed_subtests_raw or []):
@@ -1315,10 +1316,26 @@ class AdaptiveSessionManager:
             details["failed_subtests"] = filtered_items
             result.details = details
 
-            if not still_wrong:
-                # All previously-wrong questions are now correct → mastered, delete key.
+            # Update the tracked set by removing only the question(s) THIS submit
+            # actually COVERED and answered correctly, keeping every other tracked
+            # question. A scattered submit covers one question at a time (its index
+            # is in details["shown_question_indices"]); replacing the whole set with
+            # just this submit's failures would silently drop sibling failures. A
+            # together submit omits shown_question_indices → it covers all tracked.
+            shown_covered: set = set()
+            for _v in (details.get("shown_question_indices") or []):
+                try:
+                    shown_covered.add(int(_v))
+                except (TypeError, ValueError):
+                    pass
+            covered = shown_covered if shown_covered else known_failed_set
+            resolved = (covered & known_failed_set) - current_failed_set
+            remaining = sorted(known_failed_set - resolved)
+
+            if not remaining:
+                # Every tracked question is now correct → mastered, delete key.
                 logger.info(
-                    "[submit_result] All previously failed subtests for %s corrected"
+                    "[submit_result] All tracked subtests for %s corrected"
                     " — marking as success",
                     task_ref,
                 )
@@ -1326,8 +1343,9 @@ class AdaptiveSessionManager:
                 result.success = True
                 return True
 
-            session.test_failed_subtests[task_ref] = still_wrong
-            return False
+            session.test_failed_subtests[task_ref] = remaining
+            # This submit is successful iff it left none of its covered questions wrong.
+            return not still_wrong
 
 
         # First attempt: store failures so retry copies know which questions to show.
@@ -2134,12 +2152,9 @@ class AdaptiveSessionManager:
             if seed_base:
                 seed_material = f"{seed_base}:vkey:{vkey}:{phase_id}".encode("utf-8", errors="ignore")
                 seed_int = int.from_bytes(hashlib.sha256(seed_material).digest()[:8], "big", signed=False)
-                state = random.getstate()
-                try:
-                    random.seed(seed_int)
-                    random.shuffle(group_chunks)
-                finally:
-                    random.setstate(state)
+                # Local RNG: deterministic per seed without reseeding the process-
+                # global random state (which would race across concurrent sessions).
+                random.Random(seed_int).shuffle(group_chunks)
             else:
                 random.shuffle(group_chunks)
 
@@ -2165,15 +2180,11 @@ class AdaptiveSessionManager:
         if seed_base:
             seed_material = f"{seed_base}:phase:{phase_id}:window".encode("utf-8", errors="ignore")
             seed_int = int.from_bytes(hashlib.sha256(seed_material).digest()[:8], "big", signed=False)
-            state = random.getstate()
-            try:
-                random.seed(seed_int)
-                for i in range(0, len(distributed), window_size):
-                    window = distributed[i:i + window_size]
-                    random.shuffle(window)
-                    distributed[i:i + window_size] = window
-            finally:
-                random.setstate(state)
+            rng = random.Random(seed_int)
+            for i in range(0, len(distributed), window_size):
+                window = distributed[i:i + window_size]
+                rng.shuffle(window)
+                distributed[i:i + window_size] = window
         else:
             for i in range(0, len(distributed), window_size):
                 window = distributed[i:i + window_size]

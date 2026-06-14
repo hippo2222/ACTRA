@@ -405,6 +405,40 @@ class TestC_StateContamination:
         assert total_retries >= 1, "Expected at least some retry slots after 3 wrong answers"
         assert total_retries <= 5, f"Exceeded max_copies=5: {total_retries}"
 
+    def test_C4_two_failures_one_retry_correct_keeps_other_tracked(self, sim):
+        """Two scattered questions fail (Q5 and Q7), then the Q5 retry is answered
+        correctly. The partial-retry path must remove ONLY the covered-and-correct
+        question (Q5) from test_failed_subtests and KEEP the sibling failure (Q7).
+        Before the hardening, a single-question scattered submit replaced the whole
+        key, silently dropping Q7. C1–C3 only ever track one failed question on the
+        partial-retry path, so this multi-failure case was an uncovered gap."""
+        mgr, session, sid, _ = sim
+        advance_to(mgr, sid, session, stop_ref=IMG11_REF, stop_q=5)
+        submit_scattered_q(mgr, sid, session, IMG11_REF, 5, success=False)
+        submit_scattered_q(mgr, sid, session, IMG11_REF, 7, success=False)
+
+        tfs = set((getattr(session, "test_failed_subtests", {}) or {}).get(IMG11_REF, []))
+        assert {5, 7} <= tfs, f"Precondition: both Q5 and Q7 tracked. Got: {tfs}"
+
+        # Answer the Q5 retry correctly (direct submit simulating its retry slot).
+        submit_scattered_q(mgr, sid, session, IMG11_REF, 5, success=True)
+
+        tfs_after = set((getattr(session, "test_failed_subtests", {}) or {}).get(IMG11_REF, []))
+        assert 7 in tfs_after, (
+            "Sibling failure Q7 was dropped from test_failed_subtests after the Q5 "
+            f"retry was answered correctly. Got: {tfs_after}"
+        )
+        assert 5 not in tfs_after, (
+            f"Resolved question Q5 must be removed from tracking. Got: {tfs_after}"
+        )
+        # Defense-in-depth: Q7 also remains a pending/deferred retry slot.
+        q7_pending = any(
+            getattr(t, "test_question_index", None) == 7 and t.is_retry
+            for t in list(session.queue[session.current_task_index:])
+            + (getattr(session, "deferred_retry_tasks", None) or [])
+        )
+        assert q7_pending, "Q7 retry slot must remain pending"
+
 
 # ── Group D: Together-mode test ───────────────────────────────────────────────
 
