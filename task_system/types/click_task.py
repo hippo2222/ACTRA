@@ -54,7 +54,10 @@ class ClickTaskEvaluator(BaseTaskEvaluator):
                         "options_total": len(options),
                     },
                 }
-            # text_errors пока не оцениваем
+            # LEGACY: text_errors (error_detection) is scored by the running app
+            # via TaskEvaluatorService.evaluate_click_task (see desktop-app). This
+            # standalone task_system evaluator does not implement it and is not on
+            # the live submit path; the explicit guard avoids a misleading score.
             return {
                 "success": False,
                 "score": 0.0,
@@ -246,7 +249,28 @@ class ClickTask(BaseTaskType):
         return {"tolerancePx": 10}
     
     def validate_task_data(self, task_data: Dict[str, Any]) -> bool:
-        """Валидирует данные задания типа click"""
-        required_fields = ["type", "image", "prompt"]
-        return all(field in task_data for field in required_fields)
+        """Валидирует данные задания типа click.
+
+        Image is required ONLY for the image-click subtype. Text-based click
+        subtypes (text_choice / text_errors / error_detection) have no image, so
+        the previous unconditional ``image`` requirement wrongly rejected them.
+
+        NOTE: legacy task_system validator. The running app validates via the task
+        schema (TaskData.to_validated) and scores via TaskEvaluatorService; this is
+        kept only for the standalone task_system registry/tooling.
+        """
+        if not isinstance(task_data, dict):
+            return False
+        if "type" not in task_data or "prompt" not in task_data:
+            return False
+        subtype = str(task_data.get("subtype") or task_data.get("task_subtype") or "").strip().lower()
+        mode = str(task_data.get("mode") or (task_data.get("content") or {}).get("mode") or "").strip().lower()
+        is_text_based = (
+            subtype == "error_detection"
+            or mode in ("text_choice", "text_errors")
+            or bool(task_data.get("options"))
+        )
+        if is_text_based:
+            return True
+        return "image" in task_data
 
