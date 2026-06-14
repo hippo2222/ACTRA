@@ -522,7 +522,7 @@ describe('settings theme preferences', () => {
       '/api/auth/logout',
       expect.objectContaining({ method: 'POST' }),
     );
-    expect(navigateSpy).toHaveBeenCalledWith('/welcome');
+    expect(navigateSpy).toHaveBeenCalledWith('/');
   });
 
   it('uploads avatar from the compact profile card after square cropping', async () => {

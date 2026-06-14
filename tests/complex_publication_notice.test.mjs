@@ -17,6 +17,7 @@ function loadComplexPublicationHelpers() {
 
   const helperSource = match[0].replace(/\n\s*function updateComplexPublishUi\(\) \{$/, '');
   const factory = new Function(`
+    const wt = (k, f) => f || k;
     const state = {
       editingId: '',
       currentVersion: null,

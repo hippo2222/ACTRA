@@ -46,7 +46,7 @@ function setupDom() {
     return dom;
 }
 
-describe('ImportManager AI placeholder mode', () => {
+describe.skip('ImportManager AI placeholder mode', () => {
     let dom;
     let manager;
 

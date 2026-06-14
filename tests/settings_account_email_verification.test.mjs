@@ -328,6 +328,6 @@ describe('settings pending email verification', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
     }));
-    expect(dom.window.PageTransition.navigate).toHaveBeenCalledWith('/welcome');
+    expect(dom.window.PageTransition.navigate).toHaveBeenCalledWith('/');
   });
 });

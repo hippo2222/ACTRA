@@ -214,7 +214,7 @@ describe("EditorDashboard topic theory modal", () => {
     expect(modal.classList.contains("flex")).toBe(true);
     expect(picker.value).toBe("th_a");
     expect(relation.value).toBe("copy");
-    expect(summary.textContent).toContain("Проверка (safe)");
+    expect(summary.textContent).toContain("Обновление комплексов (safe)");
     expect(summary.textContent).toContain("1");
     expect(workspaceNote).toBeTruthy();
     expect(workspaceNote.textContent).toContain("общей библиотеке");
@@ -246,7 +246,7 @@ describe("EditorDashboard topic theory modal", () => {
       theory_link: { theory_id: "th_b", relation: "link" },
       apply_to_complexes: true,
       dry_run: false,
-      propagation_mode: "all_force",
+      propagation_mode: "safe",
     });
 
     const modal = document.getElementById("topic-theory-modal");

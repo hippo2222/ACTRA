@@ -10,7 +10,7 @@ const complexesIndexHtml = fs.readFileSync(
 describe("Complexes workspace limit badge", () => {
   it("renders a dedicated breadcrumb badge host for complex limits", () => {
     expect(complexesIndexHtml).toContain('id="complex-library-limit-badge"');
-    expect(complexesIndexHtml).toContain("cx-breadcrumb-row");
+    expect(complexesIndexHtml).toContain("cx-toolbar-main");
     expect(complexesIndexHtml).toContain("cx-breadcrumb-limit");
   });
 

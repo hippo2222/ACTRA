@@ -92,7 +92,7 @@ describe('premium UI wiring', () => {
   });
 
   it('closes the shared premium promo modal from the acknowledgement button', () => {
-    const promo = read('frontend/assets/PremiumPromoModal.js');
+    const promo = read('frontend/assets/PremiumPromoModal.js').replace(/\r\n/g, '\n');
 
     expect(promo).toContain("const settings = event.target.closest('[data-premium-promo-settings]');");
     expect(promo).toContain(`if (settings) {

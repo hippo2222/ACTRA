@@ -54,7 +54,7 @@ describe('Catalog visibility merge helpers', () => {
       'utf8'
     );
 
-    expect(source).toContain("return '\\u0412\\u044b';");
-    expect(source).toContain("|| '\\u041d\\u0435 \\u0443\\u043a\\u0430\\u0437\\u0430\\u043d';");
+    expect(source).toContain("wt('catalog.owner_you', '\\u0412\\u044b')");
+    expect(source).toContain("wt('catalog.owner_unknown', '\\u041d\\u0435 \\u0443\\u043a\\u0430\\u0437\\u0430\\u043d')");
   });
 });

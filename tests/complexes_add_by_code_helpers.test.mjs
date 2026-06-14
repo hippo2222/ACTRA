@@ -16,7 +16,7 @@ function loadAddByCodeHelpers() {
   }
 
   const source = match[0].replace(/\n\s*function getCatalogItemTaskCount\(item = \{\}\) \{$/, '');
-  const factory = new Function(`${source}; return { countComplexAddRelatedTheoryEntries, summarizeComplexAddByCodeResult };`);
+  const factory = new Function(`const wt = (k, f) => f || k; ${source}; return { countComplexAddRelatedTheoryEntries, summarizeComplexAddByCodeResult };`);
   return factory();
 }
 

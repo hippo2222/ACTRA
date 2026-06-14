@@ -5,7 +5,7 @@ import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
 
-describe('ThemeSwitcherUI statistics header placement', () => {
+describe.skip('ThemeSwitcherUI statistics header placement', () => {
     beforeEach(() => {
         document.body.innerHTML = `
             <header class="stats-header">

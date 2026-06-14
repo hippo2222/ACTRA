@@ -27,6 +27,7 @@ describe("UIHelpers navigation visibility", () => {
       paused: false,
       isLoading: false,
       canGoNext: false,
+      currentTaskChecked: true,
     };
   });
 

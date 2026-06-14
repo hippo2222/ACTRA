@@ -17,6 +17,7 @@ function loadTheoryPublicationHelpers() {
 
   const helperSource = match[0].replace(/\nfunction updateTheoryPublicationControls\(\) \{$/, '');
   const factory = new Function(`
+    const wt = (k, f) => f || k;
     const theoryEditorState = { activeItem: null, publicationItem: null };
     function resolveTheoryPublication(item = null) {
       return item?.publication || theoryEditorState.publicationItem || null;

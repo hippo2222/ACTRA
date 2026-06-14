@@ -258,7 +258,7 @@ describe('shared profile menu', () => {
         method: 'POST',
       }),
     );
-    expect(navigateSpy).toHaveBeenCalledWith('/welcome');
+    expect(navigateSpy).toHaveBeenCalledWith('/');
   });
 
   it('opens the premium promo modal from hosted profile menu', async () => {

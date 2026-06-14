@@ -83,7 +83,7 @@ async function flushAsync(times = 4) {
 
 async function setupDom(payload = createFinalResultsPayload()) {
   const dom = new JSDOM(s3Markup, {
-    url: "http://localhost/session/sess-1/results",
+    url: "http://localhost/complex-passage/session/sess-1/results",
     runScripts: "dangerously",
   });
 
