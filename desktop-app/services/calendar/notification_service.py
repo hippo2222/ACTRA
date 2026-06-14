@@ -20,6 +20,7 @@ from .models import (
     UserCalendarSettings,
     Session,
     ComplexStatus,
+    SessionType,
 )
 from .health_score_service import HealthScoreService
 
@@ -197,7 +198,7 @@ class NotificationService:
             message = "Возможно, стоит сделать лёгкий день, чтобы избежать выгорания."
         elif streak == 30:
             title = "🎉 Месяц занятий!"
-            message = "Невероятный результат! Рекомендуем попробовать гибкий режим."
+            message = "Невероятный результат! Так держать."
         else:
             return None
         
@@ -216,19 +217,32 @@ class NotificationService:
         user_id: str,
         settings: UserCalendarSettings
     ) -> Optional[Notification]:
-        """Поздравление после 30 дней подряд."""
-        if settings.streak_days < self.MODE_SUGGESTION_THRESHOLD:
+        """Suggest the Daily Mix (Повторение) review session on a sustained streak.
+
+        Fires on 30-day milestones (30, 60, 90, …) — not every day past 30 — so it
+        stays a gentle periodic nudge rather than a daily repeat. Repurposed from
+        the removed "flexible 3-4x/week" schedule mode this once suggested.
+        """
+        streak = settings.streak_days
+        if streak < self.MODE_SUGGESTION_THRESHOLD:
             return None
-        
+        if streak % self.MODE_SUGGESTION_THRESHOLD != 0:
+            return None
+
         return Notification(
             user_id=user_id,
             type=NotificationType.MODE_SUGGESTION,
             priority=self.PRIORITY_MEDIUM,
-            title=f"{settings.streak_days} дней подряд!",
-            message="Вы отлично держитесь! Регулярность — ключ к запоминанию.",
+            title=f"{streak} дней подряд!",
+            message=(
+                "Отличная регулярность! Чтобы закреплять пройденное без "
+                "перегрузки, попробуйте режим «Повторение» (Daily Mix) — "
+                "он сам подбирает, что повторить сегодня."
+            ),
             action_type=None,
             action_data={
-                "current_streak": settings.streak_days,
+                "current_streak": streak,
+                "suggested_mode": SessionType.DAILY_MIX.value,
             },
         )
     
@@ -297,7 +311,7 @@ class NotificationService:
                       "Продолжайте в своём ритме.")
         else:
             message = ("Это нормально — пропускать дни. Ваш прогресс сохраняется. "
-                      "Если график стал слишком плотным, попробуйте гибкий режим.")
+                      "Занимайтесь в своём темпе — пропуски не сбивают прогресс.")
         
         return Notification(
             user_id=user_id,

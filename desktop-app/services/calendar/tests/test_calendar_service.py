@@ -252,13 +252,9 @@ class TestNotificationService:
         assert "Неделя" in streak_notif[0].title
     
     def test_mode_suggestion_at_30_days(self):
-        """A mode_suggestion notification fires once on a 30+ day streak.
-
-        The legacy "flexible 3-4x/week" schedule mode this once suggested was
-        merged into DAILY (UserCalendarSettings.from_dict coerces "flexible" ->
-        "daily"), so we assert the durable contract — type, single fire, the
-        streak carried in action_data and a non-empty informational message —
-        rather than the obsolete copy.
+        """On a 30-day streak (plain DAILY schedule) the mode_suggestion now
+        recommends the Daily Mix (Повторение) review mode — repurposed from the
+        removed "flexible 3-4x/week" mode.
         """
         settings = UserCalendarSettings(
             user_id="u1",
@@ -275,7 +271,24 @@ class TestNotificationService:
         mode_notif = [n for n in notifications if n.type.value == "mode_suggestion"]
         assert len(mode_notif) == 1
         assert mode_notif[0].action_data.get("current_streak") == 30
+        assert mode_notif[0].action_data.get("suggested_mode") == "daily_mix"
         assert mode_notif[0].message.strip()
+
+    def test_mode_suggestion_fires_on_30day_cadence(self):
+        """Fires on 30-day milestones only (30, 60, …) — not every day past 30."""
+        def _mode_notifs(streak):
+            settings = UserCalendarSettings(
+                user_id="u1", streak_days=streak, schedule_mode=ScheduleMode.DAILY
+            )
+            notifications = self.service.generate_notifications(
+                user_id="u1", settings=settings, all_progress=[]
+            )
+            return [n for n in notifications if n.type.value == "mode_suggestion"]
+
+        # 60-day milestone -> fires again.
+        assert len(_mode_notifs(60)) == 1
+        # Between milestones (31 days) -> no daily spam.
+        assert _mode_notifs(31) == []
 
 
 class TestCalendarServiceIntegration:
