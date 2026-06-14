@@ -143,7 +143,11 @@ def test_apply_registration_premium_promo_sets_timed_premium():
     assert applied is True
     assert user.plan == USER_PLAN_PREMIUM
     assert user.premium_expires_at == "2026-06-10T07:00:00Z"
-    assert user.effective_plan == USER_PLAN_PREMIUM
+    # NB: effective_plan is a LIVE computation (premium_expires_at vs now) and the
+    # registration promo is a fixed launch campaign, so its granted window is in
+    # the past — asserting effective_plan here would be a time-bomb. Live active/
+    # lapse behaviour is covered by test_active_timed_premium_is_effective_premium
+    # and test_expired_timed_premium_resolves_to_free.
 
 
 def test_profile_schema_rejects_invalid_role_and_plan():
