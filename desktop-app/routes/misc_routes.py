@@ -60,7 +60,7 @@ def should_welcome() -> Any:
         h = _mh()
         if is_hosted_web_runtime():
             user_id = get_authenticated_user_id()
-            if user_id:
+            if user_id and h["user_service"].get_user(user_id):
                 return jsonify(
                     {
                         "ok": True,
@@ -71,6 +71,9 @@ def should_welcome() -> Any:
                         "auth_providers": _auth_providers_payload(),
                     }
                 )
+            if user_id:
+                from routes._context import logout_authenticated_user
+                logout_authenticated_user()
             return jsonify(
                 {
                     "ok": True,
