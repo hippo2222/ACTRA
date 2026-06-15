@@ -3436,6 +3436,7 @@
     "error_password_wrong": "Неправильний пароль",
     "error_login_required": "Введіть логін або email",
     "error_credentials_wrong": "Неправильний логін, email або пароль",
+    "error_consent_check_failed": "Не вдалося перевірити статус згод. Спробуйте увійти ще раз.",
     "error_profile_not_found": "Профіль не знайдено",
     "profile_password_hint": "Потрібен пароль",
     "profile_click_hint": "Натисніть для входу",

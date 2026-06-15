@@ -3431,6 +3431,7 @@
     "error_password_wrong": "Incorrect password",
     "error_login_required": "Enter login or email",
     "error_credentials_wrong": "Incorrect login, email or password",
+    "error_consent_check_failed": "Failed to verify consent status. Please try signing in again.",
     "error_profile_not_found": "Profile not found",
     "profile_password_hint": "Password required",
     "profile_click_hint": "Click to sign in",
