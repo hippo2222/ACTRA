@@ -23,7 +23,31 @@
     async function apiFetch(url, options = {}) {
         try {
             const resp = await fetch(url, options);
-            const data = await resp.json();
+            let data = null;
+            let parseFailed = false;
+            try {
+                data = await resp.json();
+            } catch (jsonErr) {
+                parseFailed = true;
+            }
+
+            const errorStr = data?.error || '';
+            const isStaleSession = resp.status === 401 || 
+                                   errorStr === 'user_not_found' || 
+                                   errorStr === 'auth_user_not_found';
+
+            if (isStaleSession && url !== '/api/auth/logout') {
+                console.warn(`[Welcome] Stale session detected on request ${url}. Clearing cookie...`);
+                // Clear the cookie in the background
+                fetch('/api/auth/logout', { method: 'POST' }).catch(err => {
+                    console.error('[Welcome] Stale session logout call failed:', err);
+                });
+            }
+
+            if (parseFailed) {
+                return { ok: resp.ok, error: 'Invalid JSON response' };
+            }
+
             return { ok: data.ok && resp.ok, data };
         } catch (e) {
             console.error(`[Welcome] API Error (${url}):`, e);

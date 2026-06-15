@@ -869,6 +869,9 @@ def get_current_user() -> Any:
             return jsonify({"ok": False, "error": "authentication_required"}), 401
         user_info = _get_user_info_dict(user_id)
         if not user_info:
+            if is_hosted_web_runtime():
+                logout_authenticated_user()
+                return jsonify({"ok": False, "error": "user_not_found"}), 401
             return jsonify({"ok": False, "error": "user_not_found"}), 404
         return jsonify({"ok": True, "user": user_info})
     except Exception as exc:

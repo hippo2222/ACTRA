@@ -36,8 +36,46 @@
                 return { ok: false, error: 'Cancelled', cancelled: true };
             }
 
-            const data = await resp.json();
-            return { ok: data.ok, data };
+            let data = null;
+            let parseFailed = false;
+            try {
+                data = await resp.json();
+            } catch (jsonErr) {
+                parseFailed = true;
+            }
+
+            // Check for stale session/cookie indicators:
+            // - HTTP status 401 Unauthorized
+            // - HTTP status 403 Forbidden with user_not_found/auth_user_not_found error
+            // - Any response containing user_not_found/auth_user_not_found error
+            const errorStr = data?.error || '';
+            const isStaleSession = resp.status === 401 || 
+                                   errorStr === 'user_not_found' || 
+                                   errorStr === 'auth_user_not_found';
+
+            if (isStaleSession) {
+                console.warn(`[MainLogic] Stale/invalid session detected for ${url}. Redirecting...`);
+                if (!mainBootRedirecting) {
+                    mainBootRedirecting = true;
+                    // Trigger logout to clear HttpOnly cookies on the backend
+                    fetch('/api/auth/logout', { method: 'POST' }).catch(err => {
+                        console.error('[MainLogic] Stale session logout call failed:', err);
+                    });
+                    // Redirect back to welcome screen
+                    if (typeof window.navigateWithTransition === 'function') {
+                        window.navigateWithTransition('/');
+                    } else {
+                        window.location.href = '/';
+                    }
+                }
+                return { ok: false, error: 'session_expired', data };
+            }
+
+            if (parseFailed) {
+                return { ok: resp.ok, error: 'Invalid JSON response' };
+            }
+
+            return { ok: data.ok && resp.ok, data };
         } catch (e) {
             // AbortError срабатывает при abort()
             if (e.name === 'AbortError') {
