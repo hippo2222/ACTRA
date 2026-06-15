@@ -1167,13 +1167,16 @@
 
         .welcome-shell {
             display: grid !important;
-            grid-template-columns: minmax(0, 1fr);
+            grid-template-columns: minmax(0, 1fr) 0px;
             align-items: start;
-            gap: clamp(1rem, 2.4vw, 1.75rem);
+            gap: 0px;
             width: min(1200px, calc(100% - 32px)) !important;
             min-height: auto !important;
             margin: 0 auto;
             padding: clamp(1rem, 2.4vw, 2rem) 0 clamp(2rem, 4vw, 3rem);
+            transition:
+                grid-template-columns 420ms cubic-bezier(0.22, 1, 0.36, 1),
+                gap 420ms cubic-bezier(0.22, 1, 0.36, 1);
         }
 
         .welcome-hero {
@@ -5294,6 +5297,21 @@
             grid-template-columns: minmax(0, 1fr) minmax(21rem, 28rem);
             grid-template-rows: auto;
             align-items: stretch;
+            gap: clamp(1rem, 2.4vw, 1.75rem);
+        }
+
+        body.welcome-auth-entering .welcome-shell {
+            transition:
+                grid-template-columns 420ms cubic-bezier(0.22, 1, 0.36, 1),
+                gap 420ms cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        body.welcome-auth-closing .welcome-shell {
+            grid-template-columns: minmax(0, 1fr) 0px !important;
+            gap: 0px !important;
+            transition:
+                grid-template-columns 220ms cubic-bezier(0.22, 1, 0.36, 1),
+                gap 220ms cubic-bezier(0.22, 1, 0.36, 1) !important;
         }
 
         body[data-mode="auth"] .welcome-public-nav {
@@ -5315,12 +5333,24 @@
             padding-right: min(36vw, 31rem) !important;
         }
 
+        body.welcome-auth-entering .welcome-hero {
+            transition: padding 420ms cubic-bezier(0.22, 1, 0.36, 1) !important;
+        }
+
+        body.welcome-auth-closing .welcome-hero {
+            padding-right: 0 !important;
+            transition: padding 220ms cubic-bezier(0.22, 1, 0.36, 1) !important;
+        }
+
         body[data-mode="auth"] .welcome-hero > .relative {
             max-width: min(35rem, 100%);
         }
 
         body[data-mode="auth"] .welcome-hero-actions {
-            display: none !important;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity 260ms ease, visibility 260ms ease;
         }
 
         body[data-mode="auth"] .welcome-panel-right,
@@ -5343,6 +5373,11 @@
             background: transparent !important;
             box-shadow: none !important;
             backdrop-filter: none !important;
+        }
+
+        body.welcome-auth-entering .welcome-panel-right,
+        body.welcome-auth-closing .welcome-panel-right {
+            overflow: hidden !important;
         }
 
         body[data-mode="auth"] .panel-right {
@@ -5878,6 +5913,25 @@
                 justify-self: center;
                 width: min(100% - 1.5rem, 28rem) !important;
                 margin: 1rem 0 1rem !important;
+                max-height: 1000px;
+                opacity: 1;
+                transition: max-height 420ms cubic-bezier(0.22, 1, 0.36, 1), opacity 420ms ease;
+                overflow: hidden;
+            }
+
+            @starting-style {
+                body[data-mode="auth"] .welcome-panel-right,
+                body.welcome-auth-open .welcome-panel-right {
+                    max-height: 0;
+                    opacity: 0;
+                }
+            }
+
+            body.welcome-auth-closing .welcome-panel-right {
+                max-height: 0 !important;
+                opacity: 0 !important;
+                overflow: hidden !important;
+                transition: max-height 220ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease !important;
             }
 
             body[data-mode="auth"] .welcome-main {
