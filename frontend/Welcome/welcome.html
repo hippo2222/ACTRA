@@ -598,11 +598,11 @@
             display: flex;
             align-items: center;
             gap: 1rem;
-            border: 1px dashed rgba(255, 108, 56, 0.3) !important;
+            border: 1px dashed color-mix(in srgb, var(--color-primary, #ff3e00) 30%, transparent) !important;
             border-radius: 16px !important;
-            background: rgba(255, 108, 56, 0.05) !important;
+            background: color-mix(in srgb, var(--color-primary, #ff3e00) 5%, var(--color-surface-2, #fffdfa)) !important;
             padding: 0.9rem 1.1rem !important;
-            color: #241f1a !important;
+            color: var(--color-text-main, #241f1a) !important;
         }
 
         .registration-promo-card__icon-wrap {
@@ -612,8 +612,8 @@
             width: 2.5rem;
             height: 2.5rem;
             border-radius: 10px;
-            background: rgba(255, 108, 56, 0.12) !important;
-            color: var(--welcome-orange) !important;
+            background: color-mix(in srgb, var(--color-primary, #ff3e00) 12%, transparent) !important;
+            color: var(--color-primary, #ff3e00) !important;
             flex-shrink: 0;
         }
 
@@ -624,7 +624,7 @@
 
         .registration-promo-card__title {
             margin: 0;
-            color: #241f1a !important;
+            color: var(--color-text-main, #241f1a) !important;
             font-size: 0.94rem;
             font-weight: 800;
             line-height: 1.25;
@@ -633,7 +633,7 @@
 
         .registration-promo-card__copy {
             margin: 0.2rem 0 0;
-            color: #5a524b !important;
+            color: var(--color-text-secondary, #5a524b) !important;
             font-size: 0.8rem;
             font-weight: 500;
             line-height: 1.35;
@@ -937,6 +937,10 @@
         body *::before,
         body *::after {
             letter-spacing: 0 !important;
+        }
+
+        .font-display {
+            font-family: 'Inter', sans-serif !important;
         }
 
         .welcome-public-nav {
@@ -6143,7 +6147,7 @@
                 <header class="welcome-header text-center mb-10 md:mb-12 w-full max-w-3xl">
                     <h2 id="welcomeHeaderTitle" data-i18n="wl.k001"
                         class="text-4xl md:text-6xl font-black text-text-main mb-4 tracking-tighter leading-tight"
-                        style="color: var(--color-primary-dark);">
+                        style="color: var(--color-primary-dark); font-size: clamp(2.2rem, 5vw, 3.8rem);">
                         Добро пожаловать
                     </h2>
                     <p id="welcomeHeaderKicker" class="welcome-header-kicker hidden"></p>
@@ -6169,6 +6173,7 @@
                                 <div id="onboardingNameField" class="w-full text-center">
                                     <span id="onboardingNameIcon"
                                         class="hidden absolute left-4 top-3.5 text-text-secondary material-symbols-outlined pointer-events-none">person</span>
+                                    <label for="onboardingName" class="sr-only" data-i18n="welcome.placeholder_name_desktop">Ваше имя</label>
                                     <input type="text" id="onboardingName" autocomplete="name" placeholder="Ваше имя" data-i18n-placeholder="welcome.placeholder_name_desktop"
                                         class="welcome-name-input w-full text-center bg-transparent border-b-2 border-border-subtle focus:border-primary px-4 py-2 text-2xl font-bold text-text-main outline-none transition-colors placeholder:text-text-secondary"
                                         maxlength="50"
@@ -6197,6 +6202,7 @@
                                 </div>
                                 <div id="onboardingLoginField" class="relative">
                                     <span class="absolute left-4 top-3.5 text-text-secondary material-symbols-outlined pointer-events-none">alternate_email</span>
+                                    <label for="onboardingLogin" class="sr-only" data-i18n="welcome.placeholder_login">Логин</label>
                                     <input type="text" id="onboardingLogin" autocomplete="username" placeholder="Логин" data-i18n-placeholder="welcome.placeholder_login"
                                         class="w-full pl-12 pr-4 py-3.5 bg-surface-2 border border-border-strong rounded-xl outline-none focus:ring-2 focus:ring-primary transition-all font-medium text-base placeholder:text-text-secondary"
                                         maxlength="32"
@@ -6204,12 +6210,14 @@
                                 </div>
                                 <div class="relative">
                                     <span class="absolute left-4 top-3.5 text-text-secondary material-symbols-outlined pointer-events-none">mail</span>
+                                    <label for="onboardingEmail" class="sr-only">Email</label>
                                     <input type="email" id="onboardingEmail" autocomplete="email" placeholder="Email"
                                         class="w-full pl-12 pr-4 py-3.5 bg-surface-2 border border-border-strong rounded-xl outline-none focus:ring-2 focus:ring-primary transition-all font-medium text-base placeholder:text-text-secondary"
                                         onkeydown="if(event.key==='Enter'){event.preventDefault();window.welcomeCreateProfile()}">
                                 </div>
                                 <div class="relative">
                                     <span class="absolute left-4 top-3.5 text-text-secondary material-symbols-outlined pointer-events-none">lock</span>
+                                    <label for="onboardingPassword" class="sr-only" data-i18n="welcome.placeholder_password">Пароль</label>
                                     <input type="password" id="onboardingPassword" autocomplete="new-password" placeholder="Пароль" data-i18n-placeholder="welcome.placeholder_password"
                                         class="w-full pl-12 pr-12 py-3.5 bg-surface-2 border border-border-strong rounded-xl outline-none focus:ring-2 focus:ring-primary transition-all font-medium text-base placeholder:text-text-secondary"
                                         onkeydown="if(event.key==='Enter'){event.preventDefault();window.welcomeCreateProfile()}">
@@ -6221,6 +6229,7 @@
                                 </div>
                                 <div class="relative">
                                     <span class="absolute left-4 top-3.5 text-text-secondary material-symbols-outlined pointer-events-none">verified_user</span>
+                                    <label for="onboardingPasswordConfirm" class="sr-only" data-i18n="welcome.forgot_confirm_password_label">Повторите пароль</label>
                                     <input type="password" id="onboardingPasswordConfirm" autocomplete="new-password" placeholder="Повторите пароль" data-i18n-placeholder="welcome.forgot_confirm_password_label"
                                         class="w-full pl-12 pr-12 py-3.5 bg-surface-2 border border-border-strong rounded-xl outline-none focus:ring-2 focus:ring-primary transition-all font-medium text-base placeholder:text-text-secondary"
                                         onkeydown="if(event.key==='Enter'){event.preventDefault();window.welcomeCreateProfile()}">
@@ -6331,11 +6340,9 @@
                             <button type="button"
                                 onclick="window.welcomeStartGoogleAuth()"
                                 data-google-auth-button
-                                data-google-enabled-label="Зарегистрироваться через Google"
-                                data-google-disabled-label="Зарегистрироваться через Google"
                                 class="google-auth-button px-4 py-3 outline-none focus:ring-4 focus:ring-primary/20">
                                 <span class="google-auth-mark" aria-hidden="true">G</span>
-                                <span data-google-auth-label>Зарегистрироваться через Google</span>
+                                <span data-google-auth-label></span>
                             </button>
                         </div>
 
@@ -6399,11 +6406,9 @@
                                 <button type="button" id="hostedGoogleAuthBtn"
                                     onclick="window.welcomeStartGoogleAuth()"
                                     data-google-auth-button
-                                    data-google-enabled-label="Войти с аккаунтом Google"
-                                    data-google-disabled-label="Войти с аккаунтом Google"
                                     class="google-auth-button px-4 py-3 outline-none focus:ring-4 focus:ring-primary/20">
                                     <span class="google-auth-mark" aria-hidden="true">G</span>
-                                    <span data-google-auth-label>Войти с аккаунтом Google</span>
+                                    <span data-google-auth-label></span>
                                 </button>
                             </div>
                         </div>
@@ -6511,11 +6516,9 @@
                                     <button type="button"
                                         onclick="window.welcomeStartGoogleAuth()"
                                         data-google-auth-button
-                                        data-google-enabled-label="Войти через Google"
-                                        data-google-disabled-label="Войти через Google"
                                         class="google-auth-button px-4 py-3 outline-none focus:ring-4 focus:ring-primary/20">
                                         <span class="google-auth-mark" aria-hidden="true">G</span>
-                                        <span data-google-auth-label>Войти через Google</span>
+                                        <span data-google-auth-label></span>
                                     </button>
                                 </div>
                                 <p id="loginError"
@@ -7229,8 +7232,8 @@
 
     <!-- Legal Document Modal -->
     <div id="legalDocModal"
-        class="fixed inset-0 z-[100] hidden items-center justify-center bg-scrim-strong backdrop-blur-md p-4">
-        <div class="w-full max-w-3xl rounded-2xl bg-surface-1 border border-border-subtle shadow-2xl overflow-hidden">
+        class="fixed inset-0 z-[100] modal-animated flex items-center justify-center bg-scrim-strong backdrop-blur-md p-4">
+        <div class="w-full max-w-3xl rounded-2xl bg-surface-1 border border-border-subtle shadow-2xl overflow-hidden modal-content">
             <div class="px-5 py-4 border-b border-border-subtle bg-surface-2 flex items-center justify-between">
                 <div>
                     <h3 id="legalDocTitle" class="text-lg font-bold text-text-main" data-i18n="welcome.legal_doc_fallback">Документ</h3>
@@ -7256,8 +7259,8 @@
 
     <!-- Consent Gate Modal (for outdated/missing consent) -->
     <div id="consentGateModal"
-        class="fixed inset-0 z-[95] hidden items-center justify-center bg-scrim-strong backdrop-blur-md p-4">
-        <div class="consent-gate-card w-full max-w-xl">
+        class="fixed inset-0 z-[95] modal-animated flex items-center justify-center bg-scrim-strong backdrop-blur-md p-4">
+        <div class="consent-gate-card w-full max-w-xl modal-content">
             <div class="consent-gate-header">
                 <div class="consent-gate-icon" aria-hidden="true">
                     <span class="consent-gate-icon-mark">✓</span>
@@ -7333,8 +7336,8 @@
     </div>
 
     <div id="forgotPasswordStubModal"
-        class="fixed inset-0 z-[96] hidden items-center justify-center bg-scrim-strong backdrop-blur-md p-4">
-        <div class="w-full max-w-lg rounded-2xl bg-surface-1 border border-border-subtle shadow-2xl overflow-hidden">
+        class="fixed inset-0 z-[96] modal-animated flex items-center justify-center bg-scrim-strong backdrop-blur-md p-4">
+        <div class="w-full max-w-lg rounded-2xl bg-surface-1 border border-border-subtle shadow-2xl overflow-hidden modal-content">
             <div class="px-5 py-4 border-b border-border-subtle bg-surface-2 flex items-center justify-between">
                 <div>
                     <h3 class="text-lg font-bold text-text-main" data-i18n="welcome.forgot_title_request">Восстановление пароля</h3>
@@ -7360,9 +7363,9 @@
     </div>
 
     <form id="forgotPasswordModal"
-        class="fixed inset-0 z-[97] hidden items-center justify-center bg-scrim-strong backdrop-blur-md p-4"
+        class="fixed inset-0 z-[97] modal-animated flex items-center justify-center bg-scrim-strong backdrop-blur-md p-4"
         onsubmit="event.preventDefault(); if (document.getElementById('forgotPasswordResetPanel').classList.contains('hidden')) { window.welcomeSubmitForgotPassword() } else { window.welcomeSubmitPasswordReset() }">
-        <div class="w-full max-w-lg rounded-2xl bg-surface-1 border border-border-subtle shadow-2xl overflow-hidden">
+        <div class="w-full max-w-lg rounded-2xl bg-surface-1 border border-border-subtle shadow-2xl overflow-hidden modal-content">
             <div class="px-5 py-4 border-b border-border-subtle bg-surface-2 flex items-center justify-between">
                 <div>
                     <h3 id="forgotPasswordTitle" class="text-lg font-bold text-text-main" data-i18n="welcome.forgot_title_request">Восстановление пароля</h3>

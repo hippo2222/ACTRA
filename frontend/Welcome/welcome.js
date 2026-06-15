@@ -620,15 +620,23 @@
     function openBlockModal(modalId) {
         const modal = document.getElementById(modalId);
         if (!modal) return;
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
+        if (modal.classList.contains('modal-animated')) {
+            modal.classList.add('open');
+        } else {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
     }
 
     function closeBlockModal(modalId) {
         const modal = document.getElementById(modalId);
         if (!modal) return;
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
+        if (modal.classList.contains('modal-animated')) {
+            modal.classList.remove('open');
+        } else {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
     }
 
     window.welcomeOpenLegalDocument = async function (docType) {
@@ -1197,12 +1205,55 @@
     };
 
     // --- Mode switching ---
-    function showMode(mode) {
+    async function showMode(mode) {
+        const oldMode = currentMode;
         currentMode = mode;
-        document.getElementById('modeOnboarding').classList.toggle('hidden', mode !== 'onboarding');
-        document.getElementById('modeSelect').classList.toggle('hidden', mode !== 'select');
-        document.getElementById('modeLogin').classList.toggle('hidden', mode !== 'login');
+
+        const modeElMap = {
+            onboarding: document.getElementById('modeOnboarding'),
+            select: document.getElementById('modeSelect'),
+            login: document.getElementById('modeLogin')
+        };
+
+        const oldEl = modeElMap[oldMode];
+        const newEl = modeElMap[mode];
+
         updateWelcomeHeader(mode);
+
+        if (!oldEl || oldEl === newEl) {
+            Object.keys(modeElMap).forEach(k => {
+                if (modeElMap[k]) {
+                    modeElMap[k].classList.toggle('hidden', k !== mode);
+                    modeElMap[k].style.opacity = k === mode ? '1' : '0';
+                }
+            });
+            return;
+        }
+
+        [oldEl, newEl].forEach(el => {
+            if (el && !el.classList.contains('app-page-transition')) {
+                el.classList.add('app-page-transition');
+            }
+        });
+
+        const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        oldEl.style.opacity = '0';
+        oldEl.style.pointerEvents = 'none';
+
+        if (!prefersReduced) {
+            await new Promise(r => setTimeout(r, 140));
+        }
+
+        oldEl.classList.add('hidden');
+
+        if (newEl) {
+            newEl.style.opacity = '0';
+            newEl.classList.remove('hidden');
+            void newEl.offsetHeight; // force reflow
+            newEl.style.opacity = '1';
+            newEl.style.pointerEvents = '';
+        }
     }
 
     const updateWelcomeHeaderLegacy = function (mode) {
@@ -2453,6 +2504,7 @@
             resultFrame.srcdoc = buildWelcomeResultPreviewDoc();
         }
 
+        setAuthProviders(authProviders);
         if (window.i18n) window.i18n.updateDOM();
     }
 
