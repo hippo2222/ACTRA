@@ -1506,13 +1506,20 @@
         // Check if edit is protected
         if (user.has_password && user.security_settings?.require_password_on_edit) {
             passwordPromptUserId = userId;
-            const verified = await showPasswordPrompt(wt('main.settings_protection', 'Защита настроек: {name}').replace('{name}', user.name));
+            const verified = await showPasswordPrompt(
+                wt('main.settings_protection', 'Защита настроек: {name}').replace('{name}', user.name),
+                user.login || user.name || ''
+            );
             if (!verified) return;
         }
 
         editingUserId = userId;
         document.getElementById('editName').value = user.name;
         document.getElementById('editAvatarSeed').value = user.avatar_seed || user.user_id;
+        const usernameInput = document.getElementById('editPasswordUsername');
+        if (usernameInput) {
+            usernameInput.value = user.login || user.name || '';
+        }
         document.getElementById('editPassword').value = '';
         document.getElementById('requirePassLogin').checked = !!user.security_settings?.require_password_on_login;
         document.getElementById('requirePassEdit').checked = !!user.security_settings?.require_password_on_edit;
@@ -1586,7 +1593,10 @@
 
         if (user && user.has_password) {
             passwordPromptUserId = editingUserId;
-            const verified = await showPasswordPrompt(wt('main.delete_pw_prompt', 'Подтверждение удаления: {name}').replace('{name}', user.name));
+            const verified = await showPasswordPrompt(
+                wt('main.delete_pw_prompt', 'Подтверждение удаления: {name}').replace('{name}', user.name),
+                user.login || user.name || ''
+            );
             if (!verified) return;
             verificationPassword = verified;
         }
@@ -1640,10 +1650,14 @@
         }
     }
 
-    async function showPasswordPrompt(title = null) {
+    async function showPasswordPrompt(title = null, username = '') {
         title = title ?? wt('main.pw_default_title', 'Вход в профиль');
         document.getElementById('passPromptTitle').textContent = title;
         document.getElementById('promptPasswordInput').value = '';
+        const usernameInput = document.getElementById('promptPasswordUsername');
+        if (usernameInput) {
+            usernameInput.value = username;
+        }
         openModal('passwordPromptModal');
         document.getElementById('promptPasswordInput').focus();
 
@@ -1691,7 +1705,10 @@
 
         if (user && user.has_password && user.security_settings?.require_password_on_login) {
             passwordPromptUserId = userId;
-            const verified = await showPasswordPrompt(wt('main.pw_login_title', 'Вход в профиль: {name}').replace('{name}', user.name));
+            const verified = await showPasswordPrompt(
+                wt('main.pw_login_title', 'Вход в профиль: {name}').replace('{name}', user.name),
+                user.login || user.name || ''
+            );
             if (verified) return originalSelectProfile(userId);
             return;
         }
@@ -1708,6 +1725,10 @@
     function cleanupPrompt() {
         closeModal('passwordPromptModal');
         passwordPromptResolve = null;
+        const usernameInput = document.getElementById('promptPasswordUsername');
+        if (usernameInput) {
+            usernameInput.value = '';
+        }
         passwordPromptUserId = null;
     }
 

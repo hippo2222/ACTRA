@@ -561,7 +561,7 @@
                                 </div>
                                 <span id="settings-email-pending-status" class="mt-4 hidden"></span>
                             </div>
-                            <div id="settings-email-form" class="mt-4 hidden rounded-2xl border border-border-subtle bg-bg-secondary p-4">
+                            <form id="settings-email-form" class="mt-4 hidden rounded-2xl border border-border-subtle bg-bg-secondary p-4" onsubmit="event.preventDefault(); document.getElementById('settings-email-save-btn').click();">
                                 <label class="block">
                                     <span class="mb-2 block text-sm font-semibold text-text-main" data-i18n="settings.email_new_label">Новая почта</span>
                                     <input id="settings-email-input" type="email" autocomplete="email"
@@ -581,7 +581,7 @@
                                     </button>
                                     <span id="settings-email-save-status" class="hidden"></span>
                                 </div>
-                            </div>
+                            </form>
                         </div>
                     </div>
                 </div>

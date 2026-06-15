@@ -1376,6 +1376,10 @@
 
     // --- Public: Onboarding create profile ---
     window.welcomeCreateProfile = async function () {
+        const btn = document.getElementById('onboardingCreateBtn');
+        if (btn && btn.disabled) {
+            return;
+        }
         if (isHostedAuthMode()) {
             const name = document.getElementById('onboardingName').value;
             const email = document.getElementById('onboardingEmail').value;
@@ -1585,6 +1589,11 @@
             pwdSection.classList.remove('hidden');
             document.getElementById('passwordInlineError').classList.add('hidden');
 
+            const usernameInput = document.getElementById('passwordInlineUsername');
+            if (usernameInput) {
+                usernameInput.value = profile.login || profile.name || '';
+            }
+
             const input = document.getElementById('passwordInlineInput');
             input.value = '';
 
@@ -1636,6 +1645,10 @@
     window.welcomeCancelPassword = function () {
         pendingPasswordUserId = null;
         document.getElementById('passwordInline').classList.add('hidden');
+        const usernameInput = document.getElementById('passwordInlineUsername');
+        if (usernameInput) {
+            usernameInput.value = '';
+        }
     };
 
     // --- Public: Login mode submit ---

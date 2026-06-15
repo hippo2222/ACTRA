@@ -1800,6 +1800,14 @@ def _sync_hosted_request_ai_context():
     if _runtime_mode() != "hosted_web":
         return None
 
+    path = str(request.path or "")
+    needs_ai_sync = (
+        path.startswith("/api/editor/ai")
+        or path.startswith("/api/users/ai-keys")
+    )
+    if not needs_ai_sync:
+        return None
+
     from routes._context import get_authenticated_user_id, logout_authenticated_user
 
     user_id = get_authenticated_user_id()
@@ -1810,14 +1818,6 @@ def _sync_hosted_request_ai_context():
     if user is None:
         logout_authenticated_user()
         return jsonify({"ok": False, "error": "auth_user_not_found"}), 401
-
-    path = str(request.path or "")
-    needs_ai_sync = (
-        path.startswith("/api/editor/ai")
-        or path.startswith("/api/users/ai-keys")
-    )
-    if not needs_ai_sync:
-        return None
 
     _hosted_ai_user_lock.acquire()
     g._actra_hosted_ai_lock = True

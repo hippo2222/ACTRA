@@ -11,7 +11,12 @@
     <link rel="stylesheet" href="styles.css">
     <script>
         (function () {
-            const state = JSON.parse(localStorage.getItem('editorDashboardState') || '{}');
+            let state = {};
+            try {
+                state = JSON.parse(localStorage.getItem('editorDashboardState') || '{}');
+            } catch (e) {
+                console.warn('Failed to parse editorDashboardState:', e);
+            }
             const params = new URLSearchParams(window.location.search);
             if (typeof state.pendingNavigation === 'object') {
                 const pending = state.pendingNavigation;
