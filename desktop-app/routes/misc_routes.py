@@ -185,13 +185,20 @@ def consent_status() -> Any:
         h = _mh()
         ctx = get_ctx()
         if is_hosted_web_runtime():
-            user_id = get_authenticated_user_id()
+            auth_user_id = get_authenticated_user_id()
+            user_id = request.args.get("user_id")
+            if auth_user_id and h["user_service"].get_user(auth_user_id):
+                if user_id and user_id != auth_user_id:
+                    return jsonify({"ok": False, "error": "forbidden"}), 403
+                user_id = auth_user_id
+            if not user_id:
+                user_id = auth_user_id
             if not user_id:
                 return jsonify({"ok": False, "error": "authentication_required"}), 401
         else:
             user_id = request.args.get("user_id") or ctx.user_id
-        if not user_id:
-            return jsonify({"ok": False, "error": "user_id_required"}), 400
+            if not user_id:
+                return jsonify({"ok": False, "error": "user_id_required"}), 400
         user = h["user_service"].get_user(user_id)
         if not user:
             return jsonify({"ok": False, "error": "user_not_found"}), 404
@@ -211,13 +218,20 @@ def consent_accept() -> Any:
         ctx = get_ctx()
         payload = request.get_json(silent=True) or {}
         if is_hosted_web_runtime():
-            user_id = get_authenticated_user_id()
+            auth_user_id = get_authenticated_user_id()
+            user_id = payload.get("user_id")
+            if auth_user_id and h["user_service"].get_user(auth_user_id):
+                if user_id and user_id != auth_user_id:
+                    return jsonify({"ok": False, "error": "forbidden"}), 403
+                user_id = auth_user_id
+            if not user_id:
+                user_id = auth_user_id
             if not user_id:
                 return jsonify({"ok": False, "error": "authentication_required"}), 401
         else:
             user_id = payload.get("user_id") or ctx.user_id
-        if not user_id:
-            return jsonify({"ok": False, "error": "user_id_required"}), 400
+            if not user_id:
+                return jsonify({"ok": False, "error": "user_id_required"}), 400
         user = h["user_service"].get_user(user_id)
         if not user:
             return jsonify({"ok": False, "error": "user_not_found"}), 404
