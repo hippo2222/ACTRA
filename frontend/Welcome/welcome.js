@@ -31,10 +31,11 @@
                 parseFailed = true;
             }
 
-            const errorStr = data?.error || '';
-            const isStaleSession = resp.status === 401 || 
-                                   errorStr === 'user_not_found' || 
-                                   errorStr === 'auth_user_not_found';
+            // Only a true 401 Unauthorized is a reliable stale-session signal.
+            // 'user_not_found' / 'auth_user_not_found' may be legitimate server-side
+            // errors (e.g. the user exists in auth but not in user_service) and must
+            // NOT silently log the user out — the caller should surface the error.
+            const isStaleSession = resp.status === 401;
 
             if (isStaleSession && url !== '/api/auth/logout') {
                 console.warn(`[Welcome] Stale session detected on request ${url}. Clearing cookie...`);
@@ -763,7 +764,15 @@
         if (!hasRequiredConsentVersions()) return false;
 
         const { ok, data } = await apiFetch(`/api/consent/status?user_id=${encodeURIComponent(userId)}`);
-        if (!ok || !data) return false;
+        if (!ok || !data) {
+            // Surface a real error to the user instead of silently doing nothing.
+            const errCode = data?.error || 'unknown';
+            console.error(`[Welcome] ensureUserConsent failed for ${userId}: ${errCode}`);
+            showStartupLoadError(
+                wt('welcome.error_consent_check_failed', 'Не удалось проверить статус согласий. Попробуйте войти ещё раз.')
+            );
+            return false;
+        }
         if (data.status === 'up_to_date') return true;
 
         const required = data.required || getRequiredConsentVersions();
