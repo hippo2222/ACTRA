@@ -926,12 +926,15 @@
         const nextMode = mode === 'auth' ? 'auth' : 'landing';
         document.body.dataset.mode = nextMode;
         document.body.classList.toggle('welcome-auth-open', nextMode === 'auth');
-        document.body.classList.remove('welcome-auth-entering', 'welcome-auth-closing');
-        if (nextMode === 'auth') {
-            document.body.classList.add('welcome-auth-entering');
-            window.setTimeout(() => {
-                document.body?.classList.remove('welcome-auth-entering');
-            }, 420);
+        
+        const modal = document.querySelector('.welcome-panel-right');
+        if (modal) {
+            if (nextMode === 'auth') {
+                modal.classList.remove('is-closing');
+                modal.classList.add('is-open');
+            } else {
+                modal.classList.remove('is-open', 'is-closing');
+            }
         }
     }
 
@@ -999,6 +1002,10 @@
             clearHostedVerificationState();
             setHostedAuthChoiceVisible(false);
             setWelcomePageMode('landing');
+            const modal = document.querySelector('.welcome-panel-right');
+            if (modal) {
+                modal.classList.remove('is-closing');
+            }
             if (!welcomeAuthShouldScrollToHero) {
                 window.requestAnimationFrame(() => {
                     window.scrollTo({ top: welcomeAuthEntryScrollY, left: 0, behavior: 'auto' });
@@ -1006,10 +1013,14 @@
             }
         };
 
-        if (document.body?.dataset.mode === 'auth') {
-            document.body.classList.remove('welcome-auth-entering');
-            document.body.classList.add('welcome-auth-closing');
-            window.setTimeout(finishReturn, 220);
+        const modal = document.querySelector('.welcome-panel-right');
+        if (document.body?.dataset.mode === 'auth' && modal) {
+            modal.classList.remove('is-open');
+            modal.classList.add('is-closing');
+            const closeMs = parseFloat(
+                getComputedStyle(document.documentElement).getPropertyValue('--modal-close-dur')
+            ) || 150;
+            window.setTimeout(finishReturn, closeMs);
             return;
         }
 
@@ -1225,34 +1236,68 @@
                 if (modeElMap[k]) {
                     modeElMap[k].classList.toggle('hidden', k !== mode);
                     modeElMap[k].style.opacity = k === mode ? '1' : '0';
+                    modeElMap[k].style.pointerEvents = k === mode ? '' : 'none';
                 }
             });
             return;
         }
 
-        [oldEl, newEl].forEach(el => {
-            if (el && !el.classList.contains('app-page-transition')) {
-                el.classList.add('app-page-transition');
-            }
-        });
-
+        const mainCard = document.querySelector('.welcome-panel-right .welcome-main');
+        let startHeight = 0;
         const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+        if (mainCard && !prefersReduced) {
+            // Lock height to start height before any changes
+            startHeight = mainCard.offsetHeight;
+            mainCard.style.height = `${startHeight}px`;
+            mainCard.style.transition = 'none';
+            void mainCard.offsetHeight; // force reflow
+        }
+
+        // Fade out the old element
+        oldEl.style.transition = prefersReduced ? 'none' : 'opacity 100ms ease-in-out';
         oldEl.style.opacity = '0';
         oldEl.style.pointerEvents = 'none';
 
         if (!prefersReduced) {
-            await new Promise(r => setTimeout(r, 140));
+            await new Promise(r => setTimeout(r, 100));
         }
 
         oldEl.classList.add('hidden');
 
         if (newEl) {
             newEl.style.opacity = '0';
+            newEl.style.transition = 'none';
             newEl.classList.remove('hidden');
+            
+            if (mainCard && !prefersReduced) {
+                // Measure the target height now that newEl is in the DOM (but opacity 0)
+                mainCard.style.height = 'auto';
+                const targetHeight = mainCard.offsetHeight;
+                
+                // Reset to start height for transition
+                mainCard.style.height = `${startHeight}px`;
+                void mainCard.offsetHeight; // force reflow
+                
+                // Animate height and fade in content simultaneously
+                mainCard.style.transition = 'height 250ms cubic-bezier(0.22, 1, 0.36, 1)';
+                mainCard.style.height = `${targetHeight}px`;
+            }
+
+            newEl.style.transition = prefersReduced ? 'none' : 'opacity 200ms ease-in-out';
             void newEl.offsetHeight; // force reflow
             newEl.style.opacity = '1';
             newEl.style.pointerEvents = '';
+
+            if (mainCard && !prefersReduced) {
+                setTimeout(() => {
+                    // Only clear height if we are still in this mode (avoid clashing with a newer transition)
+                    if (currentMode === mode) {
+                        mainCard.style.height = 'auto';
+                        mainCard.style.transition = '';
+                    }
+                }, 250);
+            }
         }
     }
 

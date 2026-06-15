@@ -919,6 +919,13 @@
             --welcome-card-bg: color-mix(in srgb, var(--color-surface-1, #ffffff) 94%, #fbfaf9 6%);
             --welcome-card-shadow: 0 18px 38px rgba(38, 22, 20, 0.08), inset 0 0 0 1px var(--welcome-stone);
             --welcome-section-gap: clamp(4.5rem, 9vw, 8rem);
+
+            /* Modal Transitions */
+            --modal-open-dur: 250ms;
+            --modal-close-dur: 150ms;
+            --modal-scale: 0.96;
+            --modal-scale-close: 0.96;
+            --modal-ease: cubic-bezier(0.22, 1, 0.36, 1);
         }
 
         html {
@@ -1434,27 +1441,124 @@
         }
 
         .welcome-panel-right {
-            display: none !important;
-            width: 100% !important;
-            max-width: 48rem;
-            margin: 0 auto;
-            scroll-margin-top: 5.5rem;
-            overflow: visible !important;
+            position: fixed !important;
+            inset: 0 !important;
+            z-index: 70 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            max-width: none !important;
+            min-height: auto !important;
+            margin: 0 !important;
+            padding: clamp(1rem, 3vw, 2rem) !important;
+            background: rgba(12, 10, 14, 0) !important;
+            backdrop-filter: blur(0px) !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+            visibility: hidden !important;
+            transition:
+                opacity var(--modal-open-dur) var(--modal-ease),
+                backdrop-filter var(--modal-open-dur) var(--modal-ease),
+                background-color var(--modal-open-dur) var(--modal-ease),
+                visibility var(--modal-open-dur) allow-discrete !important;
+            overflow-y: auto !important;
         }
 
-        body[data-mode="auth"] .welcome-panel-right,
-        body.welcome-auth-open .welcome-panel-right {
+        .welcome-panel-right.is-open {
+            opacity: 1 !important;
+            pointer-events: auto !important;
+            visibility: visible !important;
+            background: rgba(12, 10, 14, 0.42) !important;
+            backdrop-filter: blur(14px) !important;
+        }
+
+        .welcome-panel-right.is-closing {
+            opacity: 0 !important;
+            pointer-events: none !important;
+            visibility: hidden !important;
+            background: rgba(12, 10, 14, 0) !important;
+            backdrop-filter: blur(0px) !important;
+            transition:
+                opacity var(--modal-close-dur) var(--modal-ease),
+                backdrop-filter var(--modal-close-dur) var(--modal-ease),
+                background-color var(--modal-close-dur) var(--modal-ease),
+                visibility var(--modal-close-dur) allow-discrete !important;
+        }
+
+        .welcome-panel-right .welcome-main {
+            width: 100% !important;
+            max-width: 28rem !important; /* Locked width to prevent any squeezing or layout resizing jank */
+            min-height: auto !important;
+            margin: auto !important;
             display: flex !important;
-            position: fixed;
-            inset: 0;
-            z-index: 70;
-            max-width: none;
-            min-height: 100vh;
-            margin: 0;
-            overflow-y: auto !important;
-            padding: clamp(1rem, 3vw, 2rem);
-            background: color-mix(in srgb, var(--welcome-midnight) 34%, transparent);
-            backdrop-filter: blur(14px);
+            flex-direction: column !important;
+            align-items: stretch !important;
+            background:
+                radial-gradient(circle at top right, rgba(255, 108, 56, 0.08), transparent 34%),
+                rgba(255, 253, 250, 0.98) !important;
+            border: 1px solid rgba(217, 202, 184, 0.78) !important;
+            border-radius: 24px !important;
+            box-shadow: 0 24px 54px rgba(38, 22, 20, 0.16) !important;
+            padding: clamp(1.4rem, 3vw, 2rem) !important;
+            transform: scale(var(--modal-scale)) !important;
+            opacity: 0 !important;
+            transition:
+                transform var(--modal-open-dur) var(--modal-ease),
+                opacity var(--modal-open-dur) var(--modal-ease) !important;
+            will-change: transform, opacity, height;
+            overflow: hidden !important; /* prevents layout elements from spilling during height transitions */
+        }
+
+        .welcome-panel-right.is-open .welcome-main {
+            transform: scale(1) !important;
+            opacity: 1 !important;
+        }
+
+        .welcome-panel-right.is-closing .welcome-main {
+            transform: scale(var(--modal-scale-close)) !important;
+            opacity: 0 !important;
+            transition:
+                transform var(--modal-close-dur) var(--modal-ease),
+                opacity var(--modal-close-dur) var(--modal-ease) !important;
+        }
+
+        .welcome-panel-right .welcome-main::before,
+        .welcome-panel-right .welcome-main::after {
+            display: none !important;
+            content: none !important;
+        }
+
+        .welcome-panel-right .welcome-header {
+            margin: 0 0 1.25rem 0 !important;
+            padding: 0 !important;
+            text-align: center !important;
+            align-self: stretch !important;
+        }
+
+        .welcome-panel-right #welcomeHeaderTitle {
+            font-size: clamp(1.4rem, 2.5vw, 1.8rem) !important;
+            font-weight: 800 !important;
+            line-height: 1.15 !important;
+            color: var(--welcome-midnight) !important;
+            text-shadow: none !important;
+            margin-bottom: 0.4rem !important;
+        }
+
+        .welcome-panel-right #welcomeHeaderSubtitle {
+            font-size: 0.95rem !important;
+            line-height: 1.4 !important;
+            color: var(--welcome-graphite) !important;
+            opacity: 1 !important;
+            margin: 0 !important;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .welcome-panel-right,
+            .welcome-panel-right .welcome-main {
+                transition: none !important;
+            }
         }
 
         body[data-mode="auth"] {
@@ -5049,6 +5153,188 @@
             background: rgba(255, 253, 250, 0.18);
         }
 
+        /* ─── Form components inside auth modal ──────────────────────────── */
+        .welcome-panel-right input,
+        .welcome-panel-right textarea {
+            background: #fffdf9 !important;
+            border-color: #cdb7a7 !important;
+            color: #2f2824 !important;
+            border-radius: 16px !important;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75) !important;
+        }
+
+        .welcome-panel-right input::placeholder,
+        .welcome-panel-right textarea::placeholder {
+            color: #6a5f58 !important;
+            opacity: 1 !important;
+        }
+
+        .welcome-panel-right .welcome-main .text-text-secondary.material-symbols-outlined {
+            color: rgba(156, 66, 21, 0.58) !important;
+        }
+
+        .welcome-panel-right .password-toggle .material-symbols-outlined {
+            color: rgba(90, 50, 45, 0.58) !important;
+        }
+
+        .welcome-panel-right .auth-divider {
+            color: #7b6476 !important;
+        }
+
+        .welcome-panel-right .auth-divider::before,
+        .welcome-panel-right .auth-divider::after {
+            background: #d8c6bb !important;
+            border-color: #d8c6bb !important;
+        }
+
+        .welcome-panel-right .google-auth-button {
+            background: #4a2633 !important;
+            border-color: #4a2633 !important;
+            color: #fffdfa !important;
+            box-shadow: 0 10px 22px rgba(74, 38, 51, 0.18) !important;
+        }
+
+        .welcome-panel-right #loginSubmitBtn,
+        .welcome-panel-right #onboardingCreateBtn {
+            color: #fffdfa !important;
+            text-shadow: 0 1px 0 rgba(0, 0, 0, 0.16) !important;
+            box-shadow:
+                0 12px 24px rgba(255, 88, 48, 0.22),
+                0 0 0 4px rgba(255, 108, 56, 0.12) !important;
+            background: linear-gradient(135deg, var(--welcome-orange), color-mix(in srgb, var(--welcome-primary) 85%, black 15%)) !important;
+            border-color: var(--welcome-orange) !important;
+        }
+
+        .welcome-panel-right #onboardingCreateBtn:disabled {
+            opacity: 0.72 !important;
+            filter: saturate(0.82) !important;
+        }
+
+        .welcome-panel-right #onboardingSecondaryAction,
+        .welcome-panel-right #loginBackBtn {
+            background: #fffdf9 !important;
+            border-color: #d9cab8 !important;
+            color: #4a2633 !important;
+            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease !important;
+        }
+
+        .welcome-panel-right #onboardingSecondaryAction:not(:disabled):hover,
+        .welcome-panel-right #loginBackBtn:not(:disabled):hover {
+            background: #f7f3eb !important;
+            border-color: #cdbfab !important;
+            color: #241f1a !important;
+            transform: translateY(-1px) !important;
+        }
+
+        .welcome-panel-right #onboardingCreateBtn:not(:disabled):hover,
+        .welcome-panel-right #loginSubmitBtn:not(:disabled):hover {
+            background: linear-gradient(135deg, var(--welcome-orange), color-mix(in srgb, var(--welcome-primary) 85%, black 15%)) !important;
+            border-color: var(--welcome-orange) !important;
+            box-shadow:
+                0 16px 36px rgba(156, 66, 21, 0.32),
+                0 0 0 6px rgba(255, 108, 56, 0.15) !important;
+            transform: translateY(-1.5px) !important;
+        }
+
+        .welcome-panel-right .google-auth-button:not(:disabled):hover {
+            background: #2e2a24 !important;
+            border-color: #2e2a24 !important;
+            transform: translateY(-1px) !important;
+        }
+
+        .welcome-panel-right #onboardingConsentBox {
+            color: var(--welcome-graphite) !important;
+            border: 1px solid var(--welcome-stone) !important;
+            border-radius: 12px !important;
+            padding: 0.75rem !important;
+            background: rgba(0, 0, 0, 0.02) !important;
+        }
+
+        .welcome-panel-right #onboardingConsentBox p,
+        .welcome-panel-right #onboardingConsentBox label {
+            color: var(--welcome-graphite) !important;
+        }
+
+        .welcome-panel-right #onboardingConsentBox button {
+            color: var(--welcome-orange) !important;
+        }
+
+        .welcome-panel-right #onboardingConsentBox input[type="checkbox"] {
+            flex: 0 0 1.08rem !important;
+            width: 1.08rem !important;
+            min-width: 1.08rem !important;
+            height: 1.08rem !important;
+            min-height: 1.08rem !important;
+            margin-top: 0.08rem !important;
+            padding: 0 !important;
+            border-radius: 0.35rem !important;
+            background: #fffdfa !important;
+            border-color: #cdbfab !important;
+            accent-color: var(--welcome-orange) !important;
+        }
+
+        @media (min-width: 981px) {
+            .welcome-panel-right input,
+            .welcome-panel-right textarea {
+                min-height: 2.62rem !important;
+            }
+
+            .welcome-panel-right #modeOnboarding input,
+            .welcome-panel-right #modeLogin input {
+                padding-top: 0.58rem !important;
+                padding-bottom: 0.58rem !important;
+                font-size: 0.94rem !important;
+            }
+
+            .welcome-panel-right #onboardingConsentBox {
+                margin-top: 0.52rem !important;
+                padding: 0.62rem 0.7rem !important;
+                border-radius: 14px !important;
+            }
+
+            .welcome-panel-right #onboardingConsentBox p {
+                margin-bottom: 0.42rem !important;
+                font-size: 0.68rem !important;
+                line-height: 1.25 !important;
+            }
+
+            .welcome-panel-right #onboardingConsentBox label {
+                gap: 0.5rem !important;
+                font-size: 0.8rem !important;
+                line-height: 1.25 !important;
+            }
+
+            .welcome-panel-right #onboardingConsentBox label + label {
+                margin-top: 0.28rem !important;
+            }
+
+            .welcome-panel-right #onboardingSocialAuth,
+            .welcome-panel-right #loginSocialAuth {
+                gap: 0.45rem !important;
+            }
+
+            .welcome-panel-right .auth-divider {
+                gap: 0.72rem !important;
+                font-size: 0.72rem !important;
+            }
+
+            .welcome-panel-right .google-auth-button,
+            .welcome-panel-right #loginSubmitBtn,
+            .welcome-panel-right #onboardingCreateBtn,
+            .welcome-panel-right #onboardingSecondaryAction,
+            .welcome-panel-right #loginBackBtn {
+                min-height: 2.82rem !important;
+                padding-top: 0.5rem !important;
+                padding-bottom: 0.5rem !important;
+                font-size: 0.9rem !important;
+            }
+
+            .welcome-panel-right #onboardingSecondaryAction,
+            .welcome-panel-right #loginBackBtn {
+                min-height: 2.58rem !important;
+            }
+        }
+
         body[data-mode="landing"] .welcome-public-links a.is-active {
             color: var(--welcome-midnight) !important;
             background: color-mix(in srgb, var(--welcome-primary-soft) 86%, white 14%) !important;
@@ -5845,124 +6131,7 @@
                 min-height: clamp(21rem, 58vw, 29rem);
             }
 
-            body[data-mode="auth"] .welcome-main {
-                grid-template-columns: 1fr;
-                gap: 1.25rem;
-                min-height: auto !important;
-                max-width: min(34rem, calc(100vw - 28px)) !important;
-                padding: 1.15rem !important;
-                background:
-                    linear-gradient(180deg, rgba(10, 9, 14, 0.92) 0%, rgba(24, 19, 25, 0.86) 38%, rgba(255, 253, 250, 0.98) 38.2%, rgba(255, 253, 250, 0.98) 100%) !important;
-            }
 
-            body[data-mode="auth"] .welcome-main::before {
-                width: 100%;
-                height: 42%;
-            }
-
-            body[data-mode="auth"] .welcome-main::after {
-                display: none;
-            }
-
-            body[data-mode="auth"] .welcome-header {
-                padding-right: 0;
-            }
-
-            body[data-mode="auth"] .welcome-header::after {
-                display: none;
-            }
-
-            body[data-mode="auth"] #welcomeHeaderTitle {
-                font-size: clamp(2rem, 9vw, 2.85rem) !important;
-            }
-
-            body[data-mode="auth"] .welcome-main > .w-full.relative {
-                grid-column: 1;
-            }
-
-            body[data-mode="auth"] .welcome-shell {
-                grid-template-columns: 1fr;
-                overflow: hidden;
-                border: 1px solid rgba(255, 255, 255, 0.12);
-                border-radius: 24px;
-                background:
-                    linear-gradient(90deg, rgba(8, 7, 10, 0.94) 0%, rgba(18, 14, 18, 0.88) 42%, rgba(24, 19, 22, 0.74) 100%),
-                    linear-gradient(180deg, rgba(8, 7, 10, 0.4), rgba(8, 7, 10, 0.64)),
-                    url("/assets/images/dashboard/main_training_bg.jpg") center / cover no-repeat !important;
-            }
-
-            body[data-mode="auth"] .welcome-hero {
-                grid-column: 1;
-                grid-row: 1;
-                min-height: auto;
-                padding: clamp(1.75rem, 7vw, 2.5rem) 1.25rem 0 !important;
-                border: 0 !important;
-                border-radius: 0 !important;
-                background: transparent !important;
-                box-shadow: none !important;
-            }
-
-            body[data-mode="auth"] .welcome-hero::before,
-            body[data-mode="auth"] .welcome-hero::after {
-                display: none !important;
-            }
-
-            body[data-mode="auth"] .welcome-hero > .relative {
-                max-width: 100%;
-            }
-
-            body[data-mode="auth"] .welcome-hero .hero-title {
-                font-size: clamp(3rem, 16vw, 4.5rem) !important;
-            }
-
-            body[data-mode="auth"] .welcome-hero-copy p {
-                max-width: 32rem;
-            }
-
-            body[data-mode="auth"] .welcome-panel-right,
-            body.welcome-auth-open .welcome-panel-right {
-                grid-column: 1;
-                grid-row: 2;
-                align-self: start;
-                justify-self: center;
-                width: min(100% - 1.5rem, 28rem) !important;
-                margin: 1rem 0 1rem !important;
-                max-height: 1000px;
-                opacity: 1;
-                transition: max-height 420ms cubic-bezier(0.22, 1, 0.36, 1), opacity 420ms ease;
-                overflow: hidden;
-            }
-
-            @starting-style {
-                body[data-mode="auth"] .welcome-panel-right,
-                body.welcome-auth-open .welcome-panel-right {
-                    max-height: 0;
-                    opacity: 0;
-                }
-            }
-
-            body.welcome-auth-closing .welcome-panel-right {
-                max-height: 0 !important;
-                opacity: 0 !important;
-                overflow: hidden !important;
-                transition: max-height 200ms cubic-bezier(0.22, 1, 0.36, 1), opacity 200ms ease !important;
-            }
-
-            body[data-mode="auth"] .welcome-main {
-                max-width: 100% !important;
-                padding: 1rem !important;
-                background:
-                    radial-gradient(circle at top right, rgba(255, 108, 56, 0.08), transparent 34%),
-                    rgba(255, 253, 250, 0.96) !important;
-            }
-
-            body[data-mode="auth"] #welcomeHeaderTitle {
-                font-size: clamp(1.35rem, 6vw, 1.65rem) !important;
-            }
-
-            body[data-mode="auth"] #welcomeHeaderSubtitle {
-                font-size: 0.9rem !important;
-            }
 
             #hostedAuthChoice .auth-choice-grid,
             .welcome-feature-grid,
