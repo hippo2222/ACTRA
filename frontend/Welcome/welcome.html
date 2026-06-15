@@ -5310,8 +5310,8 @@
             grid-template-columns: minmax(0, 1fr) 0px !important;
             gap: 0px !important;
             transition:
-                grid-template-columns 220ms cubic-bezier(0.22, 1, 0.36, 1),
-                gap 220ms cubic-bezier(0.22, 1, 0.36, 1) !important;
+                grid-template-columns 200ms cubic-bezier(0.22, 1, 0.36, 1),
+                gap 200ms cubic-bezier(0.22, 1, 0.36, 1) !important;
         }
 
         body[data-mode="auth"] .welcome-public-nav {
@@ -5339,7 +5339,7 @@
 
         body.welcome-auth-closing .welcome-hero {
             padding-right: 0 !important;
-            transition: padding 220ms cubic-bezier(0.22, 1, 0.36, 1) !important;
+            transition: padding 200ms cubic-bezier(0.22, 1, 0.36, 1) !important;
         }
 
         body[data-mode="auth"] .welcome-hero > .relative {
@@ -5564,7 +5564,7 @@
         }
 
         body.welcome-auth-closing .welcome-main {
-            animation: welcomeAuthCardOut 220ms ease both;
+            animation: welcomeAuthCardOut 200ms ease both;
         }
 
         body[data-mode="auth"] #welcomeHeaderTitle {
@@ -5719,6 +5719,13 @@
             body[data-mode="auth"] .welcome-main {
                 padding: 0.85rem 0.95rem !important;
                 border-radius: 22px;
+            }
+
+            body.welcome-auth-entering .welcome-main,
+            body.welcome-auth-closing .welcome-main {
+                width: 26.75rem !important;
+                min-width: 26.75rem !important;
+                flex-shrink: 0 !important;
             }
 
             body[data-mode="auth"] .welcome-header {
@@ -5931,7 +5938,7 @@
                 max-height: 0 !important;
                 opacity: 0 !important;
                 overflow: hidden !important;
-                transition: max-height 220ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease !important;
+                transition: max-height 200ms cubic-bezier(0.22, 1, 0.36, 1), opacity 200ms ease !important;
             }
 
             body[data-mode="auth"] .welcome-main {
