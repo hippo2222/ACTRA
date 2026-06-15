@@ -74,15 +74,138 @@
             caret-color: var(--color-primary, #27187e) !important;
         }
 
-        /* Autofill Styling Overrides */
-        input:-webkit-autofill,
-        input:-webkit-autofill:hover, 
-        input:-webkit-autofill:focus, 
-        input:-webkit-autofill:active,
-        textarea:-webkit-autofill,
-        textarea:-webkit-autofill:hover,
-        textarea:-webkit-autofill:focus,
-        textarea:-webkit-autofill:active {
+        /* ─── Login field component ─────────────────────────────────────── */
+        .login-field-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .login-field-label {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+        }
+
+        .login-field-icon {
+            font-size: 1.25rem;
+            color: var(--color-text-secondary);
+            transition: color 0.15s;
+        }
+
+        .login-field-input {
+            width: 100%;
+            padding: 1rem 1rem 1rem 3rem;
+            background: var(--color-surface-2);
+            border: 1.5px solid var(--color-border-strong);
+            border-radius: 0.75rem;
+            font-size: 1.125rem;
+            font-weight: 500;
+            font-family: inherit;
+            color: var(--color-text-main);
+            /* Cursor always visible in all themes */
+            caret-color: var(--color-primary) !important;
+            outline: none;
+            transition: border-color 0.15s, box-shadow 0.15s;
+            /* Prevent browser from collapsing the field before autofill resolves */
+            min-height: 3.5rem;
+        }
+
+        .login-field-input::placeholder {
+            color: var(--color-text-secondary);
+            opacity: 1;
+        }
+
+        /* Text selection always visible */
+        .login-field-input::selection {
+            background: var(--color-primary);
+            color: #ffffff;
+        }
+
+        .login-field-input:focus {
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 20%, transparent);
+        }
+
+        .login-field-input:focus + .login-field-label .login-field-icon,
+        .login-field-wrap:focus-within .login-field-icon {
+            color: var(--color-primary);
+        }
+
+        .login-field-input--password {
+            padding-right: 3rem;
+        }
+
+        .login-field-toggle {
+            position: absolute;
+            right: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--color-text-secondary);
+            display: flex;
+            align-items: center;
+            padding: 0.25rem;
+            border-radius: 0.375rem;
+            transition: color 0.15s;
+        }
+
+        .login-field-toggle:hover { color: var(--color-primary); }
+        .login-field-toggle:focus-visible {
+            outline: 2px solid var(--color-primary);
+            outline-offset: 2px;
+        }
+
+        /* ─── Autofill overrides (per modern-web-guidance standard) ─────── */
+        /* Chrome/Edge fill the background with their own colour — override via inset box-shadow */
+        .login-field-input:-webkit-autofill,
+        .login-field-input:-webkit-autofill:hover,
+        .login-field-input:-webkit-autofill:focus,
+        .login-field-input:-webkit-autofill:active {
+            -webkit-box-shadow: 0 0 0 1000px var(--color-surface-2, #fffdfa) inset !important;
+            -webkit-text-fill-color: var(--color-text-main, #241f1a) !important;
+            caret-color: var(--color-primary, #27187e) !important;
+            /* Delay background transition so the browser yellow doesn't flash */
+            transition: background-color 5000s ease-in-out 0s;
+            /* Keep correct border */
+            border-color: var(--color-border-strong) !important;
+        }
+
+        .login-field-input:-webkit-autofill:focus {
+            border-color: var(--color-primary) !important;
+            box-shadow:
+                0 0 0 1000px var(--color-surface-2, #fffdfa) inset,
+                0 0 0 3px color-mix(in srgb, var(--color-primary, #27187e) 20%, transparent) !important;
+        }
+
+        /* `:autofill` standard pseudo-class (Chrome 110+, Edge 110+, Safari 15+) */
+        .login-field-input:autofill {
+            border-color: var(--color-border-strong);
+        }
+
+        /* Highlight autofilled but not-yet-edited fields so user knows data is there */
+        .login-field-input:autofill:not(:focus) {
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 1.5px var(--color-primary);
+        }
+
+        /* MANDATORY per guide: explicit focus indicator on autofilled fields */
+        .login-field-input:autofill:focus-visible,
+        .login-field-input:-webkit-autofill:focus-visible {
+            outline: 3px solid var(--color-primary);
+            outline-offset: 2px;
+        }
+
+        /* Legacy global autofill — keep for non-login inputs on this page */
+        input:-webkit-autofill:not(.login-field-input),
+        textarea:-webkit-autofill {
             -webkit-box-shadow: 0 0 0 1000px var(--color-surface-2, #fffdfa) inset !important;
             -webkit-text-fill-color: var(--color-text-main, #241f1a) !important;
             caret-color: var(--color-primary, #27187e) !important;
@@ -6339,20 +6462,43 @@
 
                             <form class="w-full space-y-5"
                                 onsubmit="event.preventDefault();window.welcomeLoginSubmit()">
-                                <div id="loginIdentifierWrap" class="hidden relative">
-                                    <span
-                                        class="absolute left-4 top-3.5 text-text-secondary material-symbols-outlined pointer-events-none">alternate_email</span>
-                                    <input type="text" id="loginIdentifier" autocomplete="off" readonly placeholder="Логин или email" data-i18n-placeholder="welcome.placeholder_identifier"
-                                        class="w-full pl-12 pr-4 py-4 bg-surface-2 border border-border-strong rounded-xl outline-none focus:ring-2 focus:ring-primary focus:border-border-normal transition-all font-medium text-lg placeholder:text-text-secondary">
+                                <div id="loginIdentifierWrap" class="login-field-wrap hidden">
+                                    <label for="loginIdentifier" class="login-field-label">
+                                        <span class="material-symbols-outlined login-field-icon" aria-hidden="true">alternate_email</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        id="loginIdentifier"
+                                        name="username"
+                                        autocomplete="username"
+                                        required
+                                        placeholder="Логин или email"
+                                        data-i18n-placeholder="welcome.placeholder_identifier"
+                                        class="login-field-input"
+                                    >
                                 </div>
-                                <div class="relative">
-                                    <span
-                                        class="absolute left-4 top-3.5 text-text-secondary material-symbols-outlined pointer-events-none">lock</span>
-                                    <input type="password" id="loginPassword" autocomplete="new-password" readonly placeholder="Пароль" data-i18n-placeholder="welcome.placeholder_password"
-                                        class="w-full pl-12 pr-12 py-4 bg-surface-2 border border-border-strong rounded-xl outline-none focus:ring-2 focus:ring-primary focus:border-border-normal transition-all font-medium text-lg placeholder:text-text-secondary">
-                                    <button type="button" class="password-toggle" aria-label="Показать пароль" data-i18n-aria="welcome.pw_toggle_show"
+                                <div class="login-field-wrap">
+                                    <label for="loginPassword" class="login-field-label">
+                                        <span class="material-symbols-outlined login-field-icon" aria-hidden="true">lock</span>
+                                    </label>
+                                    <input
+                                        type="password"
+                                        id="loginPassword"
+                                        name="current-password"
+                                        autocomplete="current-password"
+                                        required
+                                        placeholder="Пароль"
+                                        data-i18n-placeholder="welcome.placeholder_password"
+                                        class="login-field-input login-field-input--password"
+                                    >
+                                    <button
+                                        type="button"
+                                        class="login-field-toggle password-toggle"
+                                        aria-label="Показать пароль"
+                                        data-i18n-aria="welcome.pw_toggle_show"
                                         onmousedown="event.preventDefault()"
-                                        onclick="window.welcomeTogglePassword('loginPassword', this)">
+                                        onclick="window.welcomeTogglePassword('loginPassword', this)"
+                                    >
                                         <span class="material-symbols-outlined">visibility</span>
                                     </button>
                                 </div>

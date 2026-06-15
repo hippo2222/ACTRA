@@ -887,25 +887,9 @@
         toggleHidden('loginName', true);
 
         const passwordInput = document.getElementById('loginPassword');
-        const identifierInput = document.getElementById('loginIdentifier');
-
-        // Explicitly wipe values and restore readonly so the browser cannot
-        // pre-fill them. readonly is lifted only when the user focuses the field.
-        function _armInput(el) {
-            if (!el) return;
-            el.value = '';
-            el.readOnly = true;
-            el.addEventListener('focus', function _unlock() {
-                el.readOnly = false;
-                el.removeEventListener('focus', _unlock);
-            }, { once: true });
-        }
-
-        _armInput(identifierInput);
-        _armInput(passwordInput);
-
         if (passwordInput) passwordInput.placeholder = wt('welcome.placeholder_password', 'Пароль');
 
+        const identifierInput = document.getElementById('loginIdentifier');
         if (identifierInput) identifierInput.focus();
 
         const submitButton = document.getElementById('loginSubmitBtn');
