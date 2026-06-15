@@ -56,7 +56,7 @@
         input::selection,
         textarea::selection,
         [contenteditable]::selection {
-            background-color: var(--color-primary-light, #758bfd) !important;
+            background-color: var(--color-primary, #27187e) !important;
             color: var(--color-primary-fg, #ffffff) !important;
         }
 
@@ -64,8 +64,13 @@
         input::-moz-selection,
         textarea::-moz-selection,
         [contenteditable]::-moz-selection {
-            background-color: var(--color-primary-light, #758bfd) !important;
+            background-color: var(--color-primary, #27187e) !important;
             color: var(--color-primary-fg, #ffffff) !important;
+        }
+
+        input,
+        textarea {
+            caret-color: var(--color-primary, #27187e) !important;
         }
 
         ::-webkit-scrollbar {
