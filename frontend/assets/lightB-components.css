@@ -1,10 +1,16 @@
 /* Глобальное выделение текста */
-::selection {
+::selection,
+input::selection,
+textarea::selection,
+[contenteditable]::selection {
   background-color: var(--color-primary-light, #758bfd) !important;
   color: var(--color-primary-fg, #ffffff) !important;
 }
 
-::-moz-selection {
+::-moz-selection,
+input::-moz-selection,
+textarea::-moz-selection,
+[contenteditable]::-moz-selection {
   background-color: var(--color-primary-light, #758bfd) !important;
   color: var(--color-primary-fg, #ffffff) !important;
 }
