@@ -215,7 +215,7 @@
   }
 
   function isGenericOptionLabel(value) {
-    return /^вариант\s+\d+$/i.test(String(value == null ? "" : value).trim());
+    return /^(вариант|варіант|option)\s+\d+$/i.test(String(value == null ? "" : value).trim());
   }
 
   function normalizeReviewItems(value) {
@@ -1485,8 +1485,8 @@
     return;
 
     subtitle.textContent = summary.failed
-      ? `Ниже только то, что стоит учесть перед продолжением.`
-      : "Критичных замечаний нет.";
+      ? wt('s2.review_subtitle_errors', 'Короткий снимок ошибки перед следующей итерацией.')
+      : wt('s2.review_subtitle_no_errors', 'Критичных замечаний нет.');
     body.innerHTML = "";
 
     if (!summary.failedTasks.length) {
@@ -1495,11 +1495,11 @@
 
       const title = document.createElement("p");
       title.className = "s2-dialog-item-title";
-      title.textContent = "Все задания приняты";
+      title.textContent = wt('s2.all_tasks_accepted', 'Все задания приняты');
 
       const copy = document.createElement("p");
       copy.className = "s2-dialog-item-copy";
-      copy.textContent = "Можно переходить дальше.";
+      copy.textContent = wt('s2.can_continue', 'Можно переходить дальше.');
 
       item.appendChild(title);
       item.appendChild(copy);
@@ -1526,7 +1526,7 @@
         const copy = document.createElement("p");
         copy.className = "s2-dialog-item-copy";
         const label = document.createElement("strong");
-        label.textContent = "Твой ответ: ";
+        label.textContent = wt('s2.your_answer_label', 'Твой ответ') + ': ';
         copy.appendChild(label);
         copy.appendChild(document.createTextNode(compactText(task.userAnswer, 140)));
         item.appendChild(copy);
@@ -1536,7 +1536,7 @@
         const copy = document.createElement("p");
         copy.className = "s2-dialog-item-copy";
         const label = document.createElement("strong");
-        label.textContent = "Верный ответ: ";
+        label.textContent = wt('s2.correct_answer_label', 'Правильный ответ') + ': ';
         copy.appendChild(label);
         copy.appendChild(document.createTextNode(compactText(task.correctAnswer, 140)));
         item.appendChild(copy);
@@ -1774,7 +1774,7 @@
     updateIterationNextStepGuidance();
     if (
       state.sessionId &&
-      (!rawFailedTaskNames || /^Задание \d+(,\s*Задание \d+)*$/.test(rawFailedTaskNames))
+      (!rawFailedTaskNames || /^(Задание|Завдання|Task) \d+(,\s*(Задание|Завдання|Task) \d+)*$/.test(rawFailedTaskNames))
     ) {
       const query = new URLSearchParams();
       if (summary.iteration) {

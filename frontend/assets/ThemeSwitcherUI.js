@@ -23,6 +23,12 @@
         return;
     }
 
+    function wt(key, fallback) {
+        if (!window.i18n || typeof window.i18n.t !== 'function') return fallback;
+        var v = window.i18n.t(key);
+        return v !== key ? v : fallback;
+    }
+
     const THEMES = typeof window.ThemeManager?.getThemes === 'function'
         ? window.ThemeManager.getThemes()
         : [];
@@ -44,11 +50,11 @@
         container.className = 'relative';
 
         toggleBtn.type = 'button';
-        toggleBtn.title = (window.i18n && typeof window.i18n.t === 'function' ? window.i18n.t('theme.switch_title') : null) || 'Сменить тему';
+        toggleBtn.title = wt('theme.switch_title', 'Сменить тему');
         toggleBtn.className = sidebarTarget
             ? 'flex items-center gap-3 px-3 py-2 text-text-secondary hover:text-text-main hover:bg-bg-hover rounded-lg transition-colors w-full text-left'
             : 'flex size-8 items-center justify-center rounded-full bg-surface-2 text-text-muted border border-border-strong transition-colors hover:bg-surface-1 hover:text-primary';
-        const switchLabel = (window.i18n && typeof window.i18n.t === 'function' ? window.i18n.t('theme.switch_title') : null) || 'Сменить тему';
+        const switchLabel = wt('theme.switch_title', 'Сменить тему');
         toggleBtn.innerHTML = sidebarTarget
             ? `<span class="material-symbols-outlined text-[20px]">palette</span><span class="text-sm font-medium">${switchLabel}</span>`
             : '<span class="material-symbols-outlined text-[18px]">palette</span>';

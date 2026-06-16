@@ -74,6 +74,12 @@ window.NotificationUI = (function () {
         return _SEVERITY_TO_VARIANT[normalized] || 'info';
     }
 
+    function _wt(key, fallback) {
+        if (!window.i18n || typeof window.i18n.t !== 'function') return fallback;
+        var v = window.i18n.t(key);
+        return v !== key ? v : fallback;
+    }
+
     function voiceMessage({ what = '', impact = '', next = '' } = {}) {
         const parts = [];
         const whatPart = String(what || '').trim();
@@ -140,7 +146,7 @@ window.NotificationUI = (function () {
             const secondsLeft = Math.max(1, Math.ceil((deadline - Date.now()) / 1000));
             timerEl.textContent = typeof options.timerFormatter === 'function'
                 ? String(options.timerFormatter(secondsLeft))
-                : `${secondsLeft} ${(window.i18n?.t('notify.timer_seconds') ?? 'с')}`;
+                : `${secondsLeft} ${_wt('notify.timer_seconds', 'с')}`;
         };
         const dismiss = () => {
             if (dismissed) return;
@@ -207,10 +213,10 @@ window.NotificationUI = (function () {
 
     // ── confirm dialog ──────────────────────────────────────────────────
     function confirm({
-        title = (window.i18n?.t('notify.confirm_title') ?? 'Подтверждение'),
-        message = (window.i18n?.t('notify.confirm_message') ?? 'Вы уверены?'),
-        confirmText = (window.i18n?.t('notify.confirm_ok') ?? 'Подтвердить'),
-        cancelText = (window.i18n?.t('notify.confirm_cancel') ?? 'Отмена'),
+        title = _wt('notify.confirm_title', 'Подтверждение'),
+        message = _wt('notify.confirm_message', 'Вы уверены?'),
+        confirmText = _wt('notify.confirm_ok', 'Подтвердить'),
+        cancelText = _wt('notify.confirm_cancel', 'Отмена'),
         variant = 'error',
     } = {}) {
         return new Promise((resolve) => {

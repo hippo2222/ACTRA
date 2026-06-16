@@ -1212,7 +1212,7 @@
         setText('statSolvedTasks', '18');
         setText('statTotalAvailable', '24');
         setText('statSuccessRate', '86%');
-        setText('statTimeSpent', '1ч 42м');
+        setText('statTimeSpent', wt('main.demo_time_spent', '1ч 42м'));
         setText('statComplexesLabel', wt('main.stat_complexes_today', 'Комплексов сегодня'));
         setText('statTodayCount', '3');
     }
@@ -1233,7 +1233,7 @@
         list.hidden = false;
         list.className = 'main-quick-access-grid main-quick-access-grid--rail';
         list.innerHTML = `
-            <div class="main-quick-access-card interactive-card group" data-tone="paused" role="button" tabindex="0" title="Подготовка к контрольной: электричество">
+            <div class="main-quick-access-card interactive-card group" data-tone="paused" role="button" tabindex="0" title="${wt('main.demo_card1_title', 'Подготовка к контрольной: электричество')}">
                 <button type="button" class="main-quick-access-remove icon-button-muted" title="${wt('main.qa_card_remove', 'Убрать')}">
                     <span class="material-symbols-outlined text-[14px]">close</span>
                 </button>
@@ -1252,8 +1252,8 @@
                             <span class="main-quick-access-pill pill-neutral pill-sm pill-kicker">${wt('main.card_status_paused', 'На паузе')}</span>
                             <span class="main-quick-access-meta-tag">${wt('main.card_step', 'Шаг {n}/{total}').replace('{n}', '7').replace('{total}', '12')}</span>
                         </div>
-                        <div class="main-quick-access-title">Подготовка к контрольной</div>
-                        <div class="main-quick-access-description">Электричество: закон Ома, цепи, мощность.</div>
+                        <div class="main-quick-access-title">${wt('main.demo_card1_title_short', 'Подготовка к контрольной')}</div>
+                        <div class="main-quick-access-description">${wt('main.demo_card1_desc', 'Электричество: закон Ома, цепи, мощность.')}</div>
                     </div>
                 </div>
                 <div class="main-quick-access-footer">
@@ -1264,22 +1264,22 @@
                     <div class="main-quick-access-action"><span>${wt('main.card_action_continue', 'Продолжить')}</span><span class="material-symbols-outlined">restart_alt</span></div>
                 </div>
             </div>
-            <div class="main-quick-access-card interactive-card group" data-tone="critical" role="button" tabindex="0" title="Кинематика: графики движения">
+            <div class="main-quick-access-card interactive-card group" data-tone="critical" role="button" tabindex="0" title="${wt('main.demo_card2_title', 'Кинематика: графики движения')}">
                 <button type="button" class="main-quick-access-remove icon-button-muted" title="${wt('main.qa_card_remove', 'Убрать')}">
                     <span class="material-symbols-outlined text-[14px]">close</span>
                 </button>
                 <div class="main-quick-access-card-head">
                     <div class="main-quick-access-media">
-                        <div class="w-8 h-8 rounded-lg border border-border-subtle bg-surface-2 flex items-center justify-center text-text-secondary font-bold text-[10px] uppercase shrink-0">КИ</div>
+                        <div class="w-8 h-8 rounded-lg border border-border-subtle bg-surface-2 flex items-center justify-center text-text-secondary font-bold text-[10px] uppercase shrink-0">${wt('main.demo_card2_abbr', 'КИ')}</div>
                         <div class="absolute -top-1 -right-1 flex h-3 w-3"><span class="relative inline-flex rounded-full h-3 w-3 bg-status-error"></span></div>
                     </div>
                     <div class="main-quick-access-body">
                         <div class="main-quick-access-topline">
                             <span class="main-quick-access-pill pill-neutral pill-sm pill-kicker">${wt('main.action_recommended_review', 'Нужен повтор')}</span>
-                            <span class="main-quick-access-meta-tag">Риск забывания</span>
+                            <span class="main-quick-access-meta-tag">${wt('main.demo_card2_meta', 'Риск забывания')}</span>
                         </div>
-                        <div class="main-quick-access-title">Кинематика: графики</div>
-                        <div class="main-quick-access-description">Материал просит внимания после перерыва.</div>
+                        <div class="main-quick-access-title">${wt('main.demo_card2_title_short', 'Кинематика: графики')}</div>
+                        <div class="main-quick-access-description">${wt('main.demo_card2_desc', 'Материал просит внимания после перерыва.')}</div>
                     </div>
                 </div>
                 <div class="main-quick-access-footer">
@@ -1290,7 +1290,7 @@
                     <div class="main-quick-access-action"><span>${wt('main.card_action_return', 'Вернуться')}</span><span class="material-symbols-outlined">local_fire_department</span></div>
                 </div>
             </div>
-            <div class="main-quick-access-card interactive-card group" data-tone="mastered" role="button" tabindex="0" title="Магнитное поле: повторение">
+            <div class="main-quick-access-card interactive-card group" data-tone="mastered" role="button" tabindex="0" title="${wt('main.demo_card3_title', 'Магнитное поле: повторение')}">
                 <button type="button" class="main-quick-access-remove icon-button-muted" title="${wt('main.qa_card_remove', 'Убрать')}">
                     <span class="material-symbols-outlined text-[14px]">close</span>
                 </button>
@@ -1303,8 +1303,8 @@
                             <span class="main-quick-access-pill pill-neutral pill-sm pill-kicker">${wt('main.card_status_mastered', 'Закреплено')}</span>
                             <span class="main-quick-access-meta-tag">100%</span>
                         </div>
-                        <div class="main-quick-access-title">Магнитное поле</div>
-                        <div class="main-quick-access-description">Повторение перед итоговой проверкой.</div>
+                        <div class="main-quick-access-title">${wt('main.demo_card3_title_short', 'Магнитное поле')}</div>
+                        <div class="main-quick-access-description">${wt('main.demo_card3_desc', 'Повторение перед итоговой проверкой.')}</div>
                     </div>
                 </div>
                 <div class="main-quick-access-footer">

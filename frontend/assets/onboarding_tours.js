@@ -11,7 +11,7 @@
         {
             tourId: 'main-dashboard-work-contour',
             version: 1,
-            referenceCategory: 'Знакомимся с проектом',
+            referenceCategory: 'intro',
             referenceTags: ["главная","быстрый доступ","комплексы","старт"],
             referenceOrder: 10,
             route: ['/main'],
@@ -140,7 +140,7 @@
         {
             tourId: 'complexes-library-navigation',
             version: 1,
-            referenceCategory: 'Проходим и повторяем',
+            referenceCategory: 'practice',
             referenceTags: ["комплексы","поиск","фильтры","библиотека"],
             referenceOrder: 20,
             route: ['/complexes'],
@@ -258,7 +258,7 @@
         {
             tourId: 'complex-editor-authoring',
             version: 1,
-            referenceCategory: 'Объединяем задания в комплексы',
+            referenceCategory: 'assemble',
             referenceTags: ["редактор комплексов","комплекс","теория","публикация"],
             referenceOrder: 70,
             route: ['/complexes/create'],
@@ -522,7 +522,7 @@
         {
             tourId: 'calendar-daily-plan',
             version: 1,
-            referenceCategory: 'Проходим и повторяем',
+            referenceCategory: 'practice',
             referenceTags: ["календарь","план","повторение","память"],
             referenceOrder: 30,
             route: ['/calendar'],
@@ -636,7 +636,7 @@
         {
             tourId: 'microcards-library-overview',
             version: 1,
-            referenceCategory: 'Проходим и повторяем',
+            referenceCategory: 'practice',
             referenceTags: ["микрокарточки", "повторение", "колоды", "интервальные повторения", "уровень колоды"],
             referenceOrder: 25,
             route: ['/microcards'],
@@ -747,7 +747,7 @@
         {
             tourId: 'microcards-review-session',
             version: 1,
-            referenceCategory: 'Проходим и повторяем',
+            referenceCategory: 'practice',
             referenceTags: ["микрокарточки", "повторение", "сессия", "оценка знаю не знаю", "очередь ошибок", "синаптический вес"],
             referenceOrder: 26,
             route: ['/microcards'],
@@ -874,7 +874,7 @@
         {
             tourId: 'statistics-learning-signals',
             version: 1,
-            referenceCategory: 'Смотрим статистику',
+            referenceCategory: 'stats',
             referenceTags: ["статистика","метрики","ритм","прогресс"],
             referenceOrder: 40,
             route: ['/statistics'],
@@ -984,7 +984,7 @@
         {
             tourId: 'catalog-discovery-library',
             version: 3,
-            referenceCategory: 'Находим материалы',
+            referenceCategory: 'find',
             referenceTags: ["каталог","поиск","материалы","библиотека"],
             referenceOrder: 50,
             route: ['/catalog'],
@@ -1084,7 +1084,7 @@
         {
             tourId: 'theory-center-library',
             version: 1,
-            referenceCategory: 'Работаем с теорией',
+            referenceCategory: 'theory',
             referenceTags: ["теория","центр теории","связи","материалы"],
             referenceOrder: 60,
             route: ['/theory-center', '/editor/Theory_Center.html'],
@@ -1174,7 +1174,7 @@
         {
             tourId: 'theory-editor-authoring',
             version: 1,
-            referenceCategory: 'Работаем с теорией',
+            referenceCategory: 'theory',
             referenceTags: ["редактор теории","материал","изображения","публикация"],
             referenceOrder: 80,
             route: ['/theory-editor', '/editor/Theory_Editor.html'],
@@ -1316,7 +1316,7 @@
         {
             tourId: 'test-editor-authoring',
             version: 1,
-            referenceCategory: 'Создаем задания',
+            referenceCategory: 'create',
             referenceTags: ["тест","вопросы","ответы","редактор заданий"],
             referenceOrder: 100,
             route: [
@@ -1645,7 +1645,7 @@
         {
             tourId: 'open-answer-authoring',
             version: 1,
-            referenceCategory: 'Создаем задания',
+            referenceCategory: 'create',
             referenceTags: ["открытый ответ","эталон","ключевые слова","редактор заданий"],
             referenceOrder: 110,
             route: ['/editor/Open%20Answer%20Editor%20Textual%20Reasoning.html'],
@@ -1862,7 +1862,7 @@
         {
             tourId: 'click-editor-authoring',
             version: 1,
-            referenceCategory: 'Создаем задания',
+            referenceCategory: 'create',
             referenceTags: ["click","клик","области","изображение"],
             referenceOrder: 120,
             route: ['/editor/Point_Annotation.html', '/Editor/Point_Annotation.html'],
@@ -2182,7 +2182,7 @@
         {
             tourId: 'draw-editor-authoring',
             version: 1,
-            referenceCategory: 'Создаем задания',
+            referenceCategory: 'create',
             referenceTags: ["рисование","контур","области","изображение"],
             referenceOrder: 130,
             route: ['/editor/Point_Annotation.html', '/Editor/Point_Annotation.html'],
@@ -2489,7 +2489,7 @@
         {
             tourId: 'click-editor-errors-authoring',
             version: 1,
-            referenceCategory: 'Создаем задания',
+            referenceCategory: 'create',
             referenceTags: ["click","ошибки","текст","референс"],
             referenceOrder: 140,
             route: ['/editor/Point_Annotation.html', '/Editor/Point_Annotation.html'],
@@ -2690,7 +2690,7 @@
         {
             tourId: 'click-editor-errors-texts-authoring',
             version: 1,
-            referenceCategory: 'Создаем задания',
+            referenceCategory: 'create',
             referenceTags: ["click","тексты","варианты","ошибки"],
             referenceOrder: 150,
             route: ['/editor/Point_Annotation.html', '/Editor/Point_Annotation.html'],
@@ -2777,7 +2777,7 @@
         {
             tourId: 'sequence-editor-authoring',
             version: 1,
-            referenceCategory: 'Создаем задания',
+            referenceCategory: 'create',
             referenceTags: ["последовательность","уровни","шаги","порядок"],
             referenceOrder: 160,
             route: ['/editor/Sequence%20Assembly%20Editor%20Procedural%20Steps.html'],
@@ -3013,7 +3013,7 @@
         {
             tourId: 'editor-dashboard-authoring',
             version: 1,
-            referenceCategory: 'Создаем задания',
+            referenceCategory: 'create',
             referenceTags: ["редактор","модули","темы","задания"],
             referenceOrder: 90,
             route: ['/editor', '/editor/Main_Dashboard.html'],

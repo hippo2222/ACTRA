@@ -8,28 +8,28 @@
     }
 
     const CATEGORY_ORDER = [
-        'Знакомимся с проектом',
-        'Находим материалы',
-        'Создаем задания',
-        'Объединяем задания в комплексы',
-        'Работаем с теорией',
-        'Проходим и повторяем',
-        'Смотрим статистику',
+        'intro',
+        'find',
+        'create',
+        'assemble',
+        'theory',
+        'practice',
+        'stats',
     ];
-    const CATEGORY_KEYS = {
-        'Знакомимся с проектом': 'intro',
-        'Находим материалы': 'find',
-        'Создаем задания': 'create',
-        'Объединяем задания в комплексы': 'assemble',
-        'Работаем с теорией': 'theory',
-        'Проходим и повторяем': 'practice',
-        'Смотрим статистику': 'stats'
+    const CATEGORY_LABELS = {
+        'intro':    { ru: 'Знакомимся с проектом', en: 'Getting started', uk: 'Знайомимося з проєктом' },
+        'find':     { ru: 'Находим материалы', en: 'Finding materials', uk: 'Шукаємо матеріали' },
+        'create':   { ru: 'Создаем задания', en: 'Creating tasks', uk: 'Створюємо завдання' },
+        'assemble': { ru: 'Объединяем задания в комплексы', en: 'Assembling complexes', uk: 'Об\'єднуємо завдання в комплекси' },
+        'theory':   { ru: 'Работаем с теорией', en: 'Working with theory', uk: 'Працюємо з теорією' },
+        'practice': { ru: 'Проходим и повторяем', en: 'Practising and reviewing', uk: 'Проходимо і повторюємо' },
+        'stats':    { ru: 'Смотрим статистику', en: 'Viewing statistics', uk: 'Переглядаємо статистику' },
     };
 
     function translateCategory(category) {
-        const keySuffix = CATEGORY_KEYS[category];
-        if (!keySuffix) return category;
-        return wt('reference.cat_' + keySuffix, category);
+        const labels = CATEGORY_LABELS[category];
+        if (!labels) return category;
+        return wt('reference.cat_' + category, labels.ru);
     }
 
     const PREVIEW_VIEWPORT_WIDTH = 1440;
@@ -74,7 +74,7 @@
 
     function getCategory(tour) {
         const category = String(tour?.referenceCategory || '').trim();
-        return category || wt('reference.default_category', 'Знакомимся с проектом');
+        return category || 'intro';
     }
 
     function getStepTitle(step, index) {
