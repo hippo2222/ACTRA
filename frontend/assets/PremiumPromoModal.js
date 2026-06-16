@@ -1,45 +1,53 @@
 (function () {
     'use strict';
 
-    const PERIODS = Object.freeze([
-        {
-            days: 14,
-            label: '\u041d\u0430 14 \u0434\u043d\u0435\u0439',
-            price: '$4.99',
-            note: '$0.36/\u0434\u0435\u043d\u044c',
-        },
-        {
-            days: 30,
-            label: '\u041d\u0430 30 \u0434\u043d\u0435\u0439',
-            price: '$7.99',
-            note: '$0.27/\u0434\u0435\u043d\u044c \u00b7 \u0432\u044b\u0433\u043e\u0434\u043d\u0435\u0435 \u043d\u0430 25%',
-            featured: true,
-        },
-        {
-            days: 90,
-            label: '\u041d\u0430 90 \u0434\u043d\u0435\u0439',
-            price: '$19.99',
-            note: '$0.22/\u0434\u0435\u043d\u044c \u00b7 \u0432\u044b\u0433\u043e\u0434\u043d\u0435\u0435 \u043d\u0430 38%',
-        },
-    ]);
+    function t(key, fallback) {
+        return window.i18n?.t(key) || fallback || key;
+    }
 
-    const FEATURES = Object.freeze([
-        {
-            icon: 'inventory_2',
-            title: '\u0411\u0435\u0437 \u043b\u0438\u043c\u0438\u0442\u043e\u0432',
-            text: '\u0411\u043e\u043b\u044c\u0448\u0435 \u043b\u0438\u0447\u043d\u044b\u0445 \u0437\u0430\u0434\u0430\u043d\u0438\u0439, \u043a\u043e\u043c\u043f\u043b\u0435\u043a\u0441\u043e\u0432 \u0438 \u043a\u043e\u043b\u043e\u0434 \u043c\u0438\u043a\u0440\u043e\u043a\u0430\u0440\u0442\u043e\u0447\u0435\u043a.',
-        },
-        {
-            icon: 'calendar_month',
-            title: '\u041f\u043e\u043b\u043d\u044b\u0439 \u041a\u0430\u043b\u0435\u043d\u0434\u0430\u0440\u044c',
-            text: 'Daily Mix, \u0440\u0430\u0441\u043f\u0438\u0441\u0430\u043d\u0438\u0435, streak \u0438 \u0437\u0434\u043e\u0440\u043e\u0432\u044c\u0435 \u043f\u0430\u043c\u044f\u0442\u0438.',
-        },
-        {
-            icon: 'bar_chart',
-            title: '\u041f\u043e\u043b\u043d\u0430\u044f \u0421\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u0430',
-            text: '\u041c\u0435\u0442\u0440\u0438\u043a\u0438, \u0433\u0440\u0430\u0444\u0438\u043a, \u0442\u0438\u043f\u044b \u0437\u0430\u0434\u0430\u043d\u0438\u0439 \u0438 \u043a\u043e\u043c\u043f\u043b\u0435\u043a\u0441\u044b.',
-        },
-    ]);
+    function getPeriods() {
+        return [
+            {
+                days: 14,
+                label: t('premium_promo_period_14d', '14 days'),
+                price: '$4.99',
+                note: t('premium_promo_period_14d_note', '$0.36/day'),
+            },
+            {
+                days: 30,
+                label: t('premium_promo_period_30d', '30 days'),
+                price: '$7.99',
+                note: t('premium_promo_period_30d_note', '$0.27/day · 25% cheaper'),
+                featured: true,
+            },
+            {
+                days: 90,
+                label: t('premium_promo_period_90d', '90 days'),
+                price: '$19.99',
+                note: t('premium_promo_period_90d_note', '$0.22/day · 38% cheaper'),
+            },
+        ];
+    }
+
+    function getFeatures() {
+        return [
+            {
+                icon: 'inventory_2',
+                title: t('premium_promo_feature_limits_title', 'No limits'),
+                text: t('premium_promo_feature_limits_text', 'More personal tasks, complexes and microcard decks.'),
+            },
+            {
+                icon: 'calendar_month',
+                title: t('premium_promo_feature_calendar_title', 'Full Calendar'),
+                text: t('premium_promo_feature_calendar_text', 'Daily Mix, schedule, streak and memory health.'),
+            },
+            {
+                icon: 'bar_chart',
+                title: t('premium_promo_feature_stats_title', 'Full Statistics'),
+                text: t('premium_promo_feature_stats_text', 'Metrics, charts, task types and complexes.'),
+            },
+        ];
+    }
 
     let activeModal = null;
     let activeTrigger = null;
@@ -57,12 +65,12 @@
 
     function getOffer(days) {
         const normalized = Number(days || 0);
-        return PERIODS.find((item) => item.days === normalized) || null;
+        return getPeriods().find((item) => item.days === normalized) || null;
     }
 
     function formatPeriod(days) {
         const offer = getOffer(days);
-        return offer ? offer.label : `${Number(days || 0)} \u0434\u043d\u0435\u0439`;
+        return offer ? offer.label : `${Number(days || 0)} days`;
     }
 
     function formatPeriodWithPrice(days) {
@@ -410,7 +418,7 @@
 
     function acknowledgePaymentPending() {
         if (activeModal) {
-            setStatus(activeModal, '\u041c\u044b \u043f\u043e\u0434\u043a\u043b\u044e\u0447\u0430\u0435\u043c \u043e\u043f\u043b\u0430\u0442\u0443. \u041a\u0430\u043a \u0442\u043e\u043b\u044c\u043a\u043e checkout \u0431\u0443\u0434\u0435\u0442 \u0433\u043e\u0442\u043e\u0432, \u043a\u043d\u043e\u043f\u043a\u0438 \u043e\u043f\u043b\u0430\u0442\u044b \u043f\u043e\u044f\u0432\u044f\u0442\u0441\u044f \u0437\u0434\u0435\u0441\u044c.', 'neutral');
+            setStatus(activeModal, t('premium_promo_payment_pending', 'We are processing your payment. Once checkout is ready, the payment buttons will appear here.'), 'neutral');
         }
     }
 
@@ -437,7 +445,7 @@
     }
 
     function renderFeatures() {
-        return FEATURES.map((feature) => `
+        return getFeatures().map((feature) => `
             <section class="premium-promo-modal__feature">
                 <span class="premium-promo-modal__feature-icon material-symbols-outlined" aria-hidden="true">${escapeHtml(feature.icon)}</span>
                 <h3 class="premium-promo-modal__feature-title">${escapeHtml(feature.title)}</h3>
@@ -447,9 +455,9 @@
     }
 
     function renderOffers() {
-        return PERIODS.map((offer) => `
+        return getPeriods().map((offer) => `
             <section class="premium-promo-modal__offer${offer.featured ? ' premium-promo-modal__offer--featured' : ''}">
-                ${offer.featured ? '<span class="premium-promo-modal__offer-badge">\u0412\u044b\u0431\u043e\u0440</span>' : ''}
+                ${offer.featured ? `<span class="premium-promo-modal__offer-badge">${escapeHtml(t('premium_promo_offer_badge', 'Best value'))}</span>` : ''}
                 <div>
                     <p class="premium-promo-modal__offer-title">${escapeHtml(offer.label)}</p>
                     <p class="premium-promo-modal__offer-price">${escapeHtml(offer.price)}</p>
@@ -464,8 +472,11 @@
         if (activeModal) close();
         activeTrigger = document.activeElement instanceof HTMLElement ? document.activeElement : null;
 
-        const title = String(options.title || '\u041e\u0442\u043a\u0440\u043e\u0439\u0442\u0435 ACTRA Premium').trim();
-        const lead = String(options.lead || '\u0411\u0435\u0437 \u043b\u0438\u043c\u0438\u0442\u043d\u044b\u0445 \u0441\u0442\u043e\u043f\u043e\u0440\u043e\u0432, \u0441 \u043f\u043e\u043b\u043d\u044b\u043c \u043a\u0430\u043b\u0435\u043d\u0434\u0430\u0440\u0435\u043c \u0438 \u0441\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u043e\u0439.').trim();
+        const title = String(options.title || t('premium_promo_title', 'Unlock ACTRA Premium')).trim();
+        const lead = String(options.lead || t('premium_promo_lead', 'Premium checkout is being set up. You can explore plans and features now.')).trim();
+        const closeLabel = t('premium_promo_close_label', 'Close');
+        const statusText = t('premium_promo_status_wip', 'Premium payment is being set up. For now this window shows plans.');
+        const settingsBtn = t('premium_promo_settings_btn', 'Got it');
 
         const modal = document.createElement('div');
         modal.className = 'premium-promo-modal';
@@ -481,7 +492,7 @@
                             <span class="material-symbols-outlined" aria-hidden="true">workspace_premium</span>
                             <span>Premium</span>
                         </span>
-                        <button class="premium-promo-modal__close" type="button" data-premium-promo-close aria-label="\u0417\u0430\u043a\u0440\u044b\u0442\u044c">
+                        <button class="premium-promo-modal__close" type="button" data-premium-promo-close aria-label="${escapeHtml(closeLabel)}">
                             <span class="material-symbols-outlined" aria-hidden="true">close</span>
                         </button>
                     </div>
@@ -495,10 +506,10 @@
                     <div class="premium-promo-modal__offers">${renderOffers()}</div>
                     <div class="premium-promo-modal__footer">
                         <div class="premium-promo-modal__status" data-premium-promo-status>
-                            \u041c\u0435\u0445\u0430\u043d\u0438\u0437\u043c \u043e\u043f\u043b\u0430\u0442\u044b Premium \u0443\u0436\u0435 \u0432 \u0440\u0430\u0431\u043e\u0442\u0435. \u041f\u043e\u043a\u0430 \u044d\u0442\u043e \u043e\u043a\u043d\u043e \u043f\u043e\u043a\u0430\u0437\u044b\u0432\u0430\u0435\u0442 \u0442\u0430\u0440\u0438\u0444\u044b.
+                            ${escapeHtml(statusText)}
                         </div>
                         <button class="premium-promo-modal__settings" type="button" data-premium-promo-settings>
-                            \u041f\u043e\u043d\u044f\u0442\u043d\u043e
+                            ${escapeHtml(settingsBtn)}
                         </button>
                     </div>
                 </div>
@@ -536,32 +547,32 @@
         const feature = String(trigger?.dataset?.premiumPromoFeature || '').trim();
         if (feature === 'calendar') {
             return {
-                title: '\u041f\u043e\u043b\u043d\u044b\u0439 \u041a\u0430\u043b\u0435\u043d\u0434\u0430\u0440\u044c \u0434\u043e\u0441\u0442\u0443\u043f\u0435\u043d \u0432 Premium',
-                lead: '\u041f\u043e\u043b\u043d\u0430\u044f \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0430: Daily Mix, \u043d\u043e\u0432\u044b\u0439 \u043c\u0430\u0442\u0435\u0440\u0438\u0430\u043b, \u0440\u0430\u0441\u043f\u0438\u0441\u0430\u043d\u0438\u0435, \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c \u0438 \u0437\u0434\u043e\u0440\u043e\u0432\u044c\u0435 \u043f\u0430\u043c\u044f\u0442\u0438.',
+                title: t('premium_promo_trigger_calendar_title', 'Full Calendar available in Premium'),
+                lead: t('premium_promo_trigger_calendar_lead', 'Full page: Daily Mix, new material, schedule, activity and memory health.'),
             };
         }
         if (feature === 'statistics') {
             return {
-                title: '\u041f\u043e\u043b\u043d\u0430\u044f \u0421\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u0430 \u0434\u043e\u0441\u0442\u0443\u043f\u043d\u0430 \u0432 Premium',
-                lead: '\u041f\u043e\u043b\u043d\u0430\u044f \u0441\u0432\u043e\u0434\u043a\u0430: \u0437\u0430\u0434\u0430\u0447\u0438, \u0432\u0440\u0435\u043c\u044f, \u043c\u0438\u043a\u0440\u043e\u043a\u0430\u0440\u0442\u043e\u0447\u043a\u0438, \u0441\u0435\u0440\u0438\u044f, \u0433\u0440\u0430\u0444\u0438\u043a, \u0442\u0438\u043f\u044b \u0437\u0430\u0434\u0430\u043d\u0438\u0439 \u0438 \u043a\u043e\u043c\u043f\u043b\u0435\u043a\u0441\u044b.',
+                title: t('premium_promo_trigger_statistics_title', 'Full Statistics available in Premium'),
+                lead: t('premium_promo_trigger_statistics_lead', 'Full dashboard: tasks, time, microcards, streaks, charts, task types and complexes.'),
             };
         }
         if (feature === 'tasks-limit') {
             return {
-                title: '\u041b\u0438\u043c\u0438\u0442 \u0437\u0430\u0434\u0430\u043d\u0438\u0439 \u0443\u0445\u043e\u0434\u0438\u0442 \u0432 Premium',
-                lead: '\u0411\u043e\u043b\u044c\u0448\u0435 \u043b\u0438\u0447\u043d\u044b\u0445 \u0437\u0430\u0434\u0430\u043d\u0438\u0439 \u0431\u0435\u0437 \u043e\u0441\u0442\u0430\u043d\u043e\u0432\u043a\u0438 \u043d\u0430 \u0441\u0447\u0435\u0442\u0447\u0438\u043a\u0435.',
+                title: t('premium_promo_trigger_tasks_limit_title', 'Tasks limit goes away in Premium'),
+                lead: t('premium_promo_trigger_tasks_limit_lead', 'More personal tasks without a cap on the counter.'),
             };
         }
         if (feature === 'complexes-limit') {
             return {
-                title: '\u0411\u043e\u043b\u044c\u0448\u0435 \u043a\u043e\u043c\u043f\u043b\u0435\u043a\u0441\u043e\u0432 \u0432 Premium',
-                lead: '\u0411\u043e\u043b\u044c\u0448\u0435 \u043b\u0438\u0447\u043d\u044b\u0445 \u043a\u043e\u043c\u043f\u043b\u0435\u043a\u0441\u043e\u0432 \u0438 \u043c\u0430\u0442\u0435\u0440\u0438\u0430\u043b\u043e\u0432 \u0432 \u0431\u0438\u0431\u043b\u0438\u043e\u0442\u0435\u043a\u0435.',
+                title: t('premium_promo_trigger_complexes_limit_title', 'More complexes in Premium'),
+                lead: t('premium_promo_trigger_complexes_limit_lead', 'More personal complexes and materials in the library.'),
             };
         }
         if (feature === 'microcards-limit') {
             return {
-                title: '\u0411\u043e\u043b\u044c\u0448\u0435 \u043a\u043e\u043b\u043e\u0434 \u043c\u0438\u043a\u0440\u043e\u043a\u0430\u0440\u0442\u043e\u0447\u0435\u043a \u0432 Premium',
-                lead: 'Free-\u043f\u043b\u0430\u043d: \u0434\u043e 4 \u0441\u0432\u043e\u0438\u0445 \u043a\u043e\u043b\u043e\u0434 \u0438 8 \u0432\u0441\u0435\u0433\u043e \u0441 \u043a\u0430\u0442\u0430\u043b\u043e\u0433\u043e\u043c. Premium \u0441\u043d\u0438\u043c\u0430\u0435\u0442 \u043b\u0438\u043c\u0438\u0442.',
+                title: t('premium_promo_trigger_microcards_limit_title', 'More microcard decks in Premium'),
+                lead: t('premium_promo_trigger_microcards_limit_lead', 'Free plan: up to 4 personal decks and 8 total with the catalog. Premium removes the limit.'),
             };
         }
         return {};
@@ -593,8 +604,8 @@
     }
 
     window.PremiumPromo = {
-        PERIODS,
-        FEATURES,
+        getPeriods,
+        getFeatures,
         open,
         close,
         getOffer,
