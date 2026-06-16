@@ -829,12 +829,8 @@
         }
 
         const nameField = document.getElementById('onboardingNameField');
-        const promo = document.getElementById('registrationPremiumPromo');
         if (nameField) {
             nameField.className = 'relative w-full';
-            if (promo) {
-                promo.parentNode.insertBefore(nameField, promo.nextSibling);
-            }
         }
 
         const button = document.getElementById('onboardingCreateBtn');
@@ -956,7 +952,11 @@
     function openWelcomeAuthLayer() {
         welcomeAuthEntryScrollY = window.scrollY || document.documentElement.scrollTop || 0;
         welcomeAuthShouldScrollToHero = !isWelcomeShellAlreadyFramed();
+        document.body.classList.add('welcome-auth-entering');
         setWelcomePageMode('auth');
+        setTimeout(() => {
+            document.body.classList.remove('welcome-auth-entering');
+        }, 250);
     }
 
     function keepHeroInViewIfNeeded() {
@@ -973,8 +973,8 @@
 
     window.welcomeShowAuthLogin = function () {
         openWelcomeAuthLayer();
-        showMode('login');
         configureHostedLoginMode();
+        showMode('login');
         setTimeout(() => {
             if (welcomeAuthShouldScrollToHero) keepHeroInViewIfNeeded();
         }, 0);
@@ -982,8 +982,8 @@
 
     window.welcomeShowAuthRegister = function () {
         openWelcomeAuthLayer();
-        showMode('onboarding');
         configureHostedRegistrationMode();
+        showMode('onboarding');
         setTimeout(() => {
             if (welcomeAuthShouldScrollToHero) keepHeroInViewIfNeeded();
         }, 0);
@@ -1002,6 +1002,7 @@
             clearHostedVerificationState();
             setHostedAuthChoiceVisible(false);
             setWelcomePageMode('landing');
+            document.body.classList.remove('welcome-auth-closing');
             const modal = document.querySelector('.welcome-panel-right');
             if (modal) {
                 modal.classList.remove('is-closing');
@@ -1017,6 +1018,7 @@
         if (document.body?.dataset.mode === 'auth' && modal) {
             modal.classList.remove('is-open');
             modal.classList.add('is-closing');
+            document.body.classList.add('welcome-auth-closing');
             const closeMs = parseFloat(
                 getComputedStyle(document.documentElement).getPropertyValue('--modal-close-dur')
             ) || 150;
@@ -1030,8 +1032,8 @@
     window.welcomeBackToAuthChoice = function () {
         openWelcomeAuthLayer();
         clearHostedVerificationState();
-        showMode('select');
         setHostedAuthChoiceVisible(true);
+        showMode('select');
     };
 
     function openDesktopCreateProfileForm() {
@@ -1045,8 +1047,8 @@
     window.welcomeContinueAfterVerification = function () {
         if (hostedVerificationState?.status === 'error' && !hostedVerificationState?.user?.user_id) {
             clearHostedVerificationState();
-            showMode('select');
             setHostedAuthChoiceVisible(true);
+            showMode('select');
             return;
         }
         goToMain();
@@ -2397,8 +2399,8 @@
             if (verifyEmailToken) {
                 removeSearchParam('verify_email_token');
                 openWelcomeAuthLayer();
-                showMode('onboarding');
                 configureHostedRegistrationMode();
+                showMode('onboarding');
                 await submitWelcomeEmailVerificationToken(verifyEmailToken);
                 return;
             }
@@ -2406,8 +2408,8 @@
             if (resetPasswordToken) {
                 removeSearchParam('reset_password_token');
                 openWelcomeAuthLayer();
-                showMode('login');
                 configureHostedLoginMode();
+                showMode('login');
                 window.welcomeOpenForgotPasswordModal({ resetToken: resetPasswordToken });
                 return;
             }
@@ -2469,20 +2471,20 @@
                     } else if (requestedWelcomeView === 'login') {
                         window.welcomeShowAuthLogin();
                     } else {
-                        showMode('select');
                         setHostedAuthChoiceVisible(true);
+                        showMode('select');
                     }
                     break;
 
                 case 'onboarding':
-                    showMode('onboarding');
                     configureDesktopRegistrationMode();
+                    showMode('onboarding');
                     setTimeout(() => document.getElementById('onboardingName').focus(), 400);
                     break;
 
                 case 'select':
-                    showMode('select');
                     setHostedAuthChoiceVisible(false);
+                    showMode('select');
                     renderProfilesList();
                     if (requestedWelcomeView === 'register') {
                         setTimeout(openDesktopCreateProfileForm, 0);
@@ -2490,8 +2492,8 @@
                     break;
 
                 case 'login':
-                    showMode('login');
                     configureDesktopLoginMode();
+                    showMode('login');
                     if (profiles.length > 0) {
                         const user = profiles[0];
                         document.getElementById('loginAvatar').src = getAvatarUrl(user.avatar_seed);

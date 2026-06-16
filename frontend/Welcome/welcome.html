@@ -594,70 +594,7 @@
             max-width: 38rem;
         }
 
-        .registration-promo-card {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            border: 1px dashed color-mix(in srgb, var(--color-primary, #ff3e00) 30%, transparent) !important;
-            border-radius: 16px !important;
-            background: color-mix(in srgb, var(--color-primary, #ff3e00) 5%, var(--color-surface-2, #fffdfa)) !important;
-            padding: 0.9rem 1.1rem !important;
-            color: var(--color-text-main, #241f1a) !important;
-        }
 
-        .registration-promo-card__icon-wrap {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 2.5rem;
-            height: 2.5rem;
-            border-radius: 10px;
-            background: color-mix(in srgb, var(--color-primary, #ff3e00) 12%, transparent) !important;
-            color: var(--color-primary, #ff3e00) !important;
-            flex-shrink: 0;
-        }
-
-        .registration-promo-card__icon-wrap .material-symbols-outlined {
-            font-size: 22px !important;
-            line-height: 1 !important;
-        }
-
-        .registration-promo-card__title {
-            margin: 0;
-            color: var(--color-text-main, #241f1a) !important;
-            font-size: 0.94rem;
-            font-weight: 800;
-            line-height: 1.25;
-            text-box: trim-both cap alphabetic;
-        }
-
-        .registration-promo-card__copy {
-            margin: 0.2rem 0 0;
-            color: var(--color-text-secondary, #5a524b) !important;
-            font-size: 0.8rem;
-            font-weight: 500;
-            line-height: 1.35;
-        }
-
-        .auth-choice-card__promo {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.4rem;
-            width: fit-content;
-            margin-top: 1rem;
-            border: 1px solid color-mix(in srgb, var(--color-primary) 20%, var(--color-border-subtle));
-            border-radius: 999px;
-            background: color-mix(in srgb, var(--color-primary) 7%, var(--color-surface-1));
-            padding: 0.42rem 0.7rem;
-            color: var(--color-primary-dark);
-            font-size: 0.78rem;
-            font-weight: 850;
-            line-height: 1;
-        }
-
-        .auth-choice-card__promo .material-symbols-outlined {
-            font-size: 1rem;
-        }
 
         #modeLogin[data-hosted-auth="1"] {
             max-width: 36rem;
@@ -918,7 +855,7 @@
             --welcome-yellow: #ffbb26;
             --welcome-card-bg: color-mix(in srgb, var(--color-surface-1, #ffffff) 94%, #fbfaf9 6%);
             --welcome-card-shadow: 0 18px 38px rgba(38, 22, 20, 0.08), inset 0 0 0 1px var(--welcome-stone);
-            --welcome-section-gap: clamp(4.5rem, 9vw, 8rem);
+            --welcome-section-gap: clamp(2rem, 4vw, 3.5rem);
 
             /* Modal Transitions */
             --modal-open-dur: 250ms;
@@ -1181,28 +1118,25 @@
             min-height: auto !important;
             margin: 0 auto;
             padding: clamp(1rem, 2.4vw, 2rem) 0 clamp(2rem, 4vw, 3rem);
-            transition:
-                grid-template-columns 420ms cubic-bezier(0.22, 1, 0.36, 1),
-                gap 420ms cubic-bezier(0.22, 1, 0.36, 1);
+            position: relative;
+            z-index: 1;
         }
 
         .welcome-hero {
-            align-items: flex-start !important;
+            align-items: center !important;
             justify-content: center !important;
             width: 100% !important;
-            min-height: clamp(22rem, 43vw, 33rem);
+            min-height: clamp(16rem, 34vh, 24rem);
             overflow: hidden;
-            isolation: isolate;
             padding: clamp(2rem, 4.8vw, 4.4rem) !important;
             border: 1px solid color-mix(in srgb, var(--welcome-stone) 82%, transparent);
             border-radius: 24px;
             background:
                 linear-gradient(90deg, rgba(12, 10, 14, 0.92) 0%, rgba(20, 16, 21, 0.84) 38%, rgba(23, 18, 22, 0.68) 100%),
-                linear-gradient(180deg, rgba(15, 11, 16, 0.26), rgba(15, 11, 16, 0.48)),
-                url("/assets/images/dashboard/main_training_bg.jpg") center / cover no-repeat !important;
+                linear-gradient(180deg, rgba(15, 11, 16, 0.26), rgba(15, 11, 16, 0.48));
             box-shadow: 0 24px 54px rgba(38, 22, 20, 0.22), inset 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
             color: #fffdfa !important;
-            text-align: left !important;
+            text-align: center !important;
         }
 
         .welcome-hero::before {
@@ -1231,7 +1165,7 @@
         }
 
         .welcome-hero > .relative {
-            align-items: flex-start !important;
+            align-items: center !important;
             width: 100%;
             max-width: min(44rem, 62%);
             z-index: 2 !important;
@@ -1247,6 +1181,7 @@
             filter: blur(5px);
             transform: translateY(50%) rotate(-7deg);
             pointer-events: none;
+            display: none !important;
         }
 
         .welcome-hero-mark-img {
@@ -1256,7 +1191,7 @@
         }
 
         .welcome-hero .hero-title {
-            margin-bottom: 0.9rem !important;
+            margin-bottom: 0.4rem !important;
             color: #fffdfa !important;
             font-family: Inter, ui-sans-serif, system-ui, sans-serif !important;
             font-size: clamp(3.5rem, 8vw, 6.75rem) !important;
@@ -1264,6 +1199,15 @@
             line-height: 0.9 !important;
             text-transform: none !important;
             text-shadow: 0 14px 34px rgba(0, 0, 0, 0.32) !important;
+        }
+
+        .welcome-hero-subtitle {
+            display: block;
+            margin-bottom: 1rem;
+            color: #e8a87c;
+            font-size: clamp(0.92rem, 1.3vw, 1.08rem);
+            font-weight: 500;
+            letter-spacing: 0.01em;
         }
 
         .welcome-hero-copy {
@@ -1279,6 +1223,22 @@
             flex-wrap: wrap;
             gap: 0.75rem;
             margin-top: 1.25rem;
+            justify-content: center;
+        }
+
+        .welcome-hero-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            color: rgba(255, 253, 250, 0.7);
+            font-size: 0.88rem;
+            text-decoration: none;
+            transition: color 180ms ease;
+        }
+
+        .welcome-hero-link:hover,
+        .welcome-hero-link:focus-visible {
+            color: #fffdfa;
         }
 
         .welcome-hero .welcome-pill,
@@ -5105,10 +5065,19 @@
         body[data-mode="landing"] .welcome-hero {
             background:
                 linear-gradient(90deg, rgba(8, 7, 10, 0.94) 0%, rgba(18, 14, 18, 0.88) 42%, rgba(24, 19, 22, 0.74) 100%),
-                linear-gradient(180deg, rgba(8, 7, 10, 0.4), rgba(8, 7, 10, 0.64)),
-                url("/assets/images/dashboard/main_training_bg.jpg") center / cover no-repeat !important;
+                linear-gradient(180deg, rgba(8, 7, 10, 0.4), rgba(8, 7, 10, 0.64));
             border-color: rgba(255, 255, 255, 0.12) !important;
             color: #fffdfa !important;
+            text-align: center !important;
+            align-items: center !important;
+        }
+
+        body[data-mode="landing"] .welcome-panel-right {
+            display: none !important;
+        }
+
+        body[data-mode="landing"] .welcome-hero > .relative {
+            align-items: center !important;
         }
 
         body[data-mode="landing"] .welcome-public-brand,
@@ -5122,6 +5091,10 @@
         body[data-mode="landing"] .welcome-hero .hero-title {
             color: #fffdfa !important;
             text-shadow: 0 18px 42px rgba(0, 0, 0, 0.42) !important;
+        }
+
+        body[data-mode="landing"] .welcome-hero .welcome-hero-subtitle {
+            color: #e8a87c !important;
         }
 
         body[data-mode="landing"] .welcome-hero .welcome-hero-copy {
@@ -5586,20 +5559,6 @@
             gap: clamp(1rem, 2.4vw, 1.75rem);
         }
 
-        body.welcome-auth-entering .welcome-shell {
-            transition:
-                grid-template-columns 420ms cubic-bezier(0.22, 1, 0.36, 1),
-                gap 420ms cubic-bezier(0.22, 1, 0.36, 1);
-        }
-
-        body.welcome-auth-closing .welcome-shell {
-            grid-template-columns: minmax(0, 1fr) 0px !important;
-            gap: 0px !important;
-            transition:
-                grid-template-columns 200ms cubic-bezier(0.22, 1, 0.36, 1),
-                gap 200ms cubic-bezier(0.22, 1, 0.36, 1) !important;
-        }
-
         body.welcome-auth-entering .welcome-shell,
         body.welcome-auth-closing .welcome-shell {
             overflow: hidden !important;
@@ -5622,19 +5581,13 @@
             align-self: stretch;
             min-height: clamp(36rem, 70vh, 46rem);
             padding-right: min(36vw, 31rem) !important;
-        }
-
-        body.welcome-auth-entering .welcome-hero {
-            transition: padding 420ms cubic-bezier(0.22, 1, 0.36, 1) !important;
-        }
-
-        body.welcome-auth-closing .welcome-hero {
-            padding-right: 0 !important;
-            transition: padding 200ms cubic-bezier(0.22, 1, 0.36, 1) !important;
+            text-align: center !important;
+            justify-content: flex-start !important;
         }
 
         body[data-mode="auth"] .welcome-hero > .relative {
             max-width: min(35rem, 100%);
+            align-items: center !important;
         }
 
         body[data-mode="auth"] .welcome-hero-actions {
@@ -5656,10 +5609,12 @@
             justify-self: end;
             width: min(100%, 28rem) !important;
             max-width: 28rem !important;
+            max-height: calc(100vh - 6rem) !important;
             min-height: auto !important;
             margin: clamp(1rem, 2.2vw, 1.5rem) clamp(1rem, 2.2vw, 1.5rem) clamp(1rem, 2.2vw, 1.5rem) 0 !important;
             padding: 0 !important;
-            overflow: visible !important;
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
             border-radius: 0;
             background: transparent !important;
             box-shadow: none !important;
@@ -5796,13 +5751,11 @@
         .welcome-panel-right,
         .welcome-main {
             transition:
-                min-height 420ms cubic-bezier(0.2, 0.8, 0.2, 1),
-                padding 420ms cubic-bezier(0.2, 0.8, 0.2, 1),
-                opacity 260ms ease,
-                transform 360ms cubic-bezier(0.2, 0.8, 0.2, 1),
-                box-shadow 360ms ease,
-                background-color 360ms ease,
-                border-color 360ms ease;
+                opacity 250ms ease-in-out,
+                transform 250ms cubic-bezier(0.22, 1, 0.36, 1),
+                box-shadow 250ms ease,
+                background-color 250ms ease,
+                border-color 250ms ease;
         }
 
         .welcome-hero::after {
@@ -5820,8 +5773,7 @@
 
         body[data-mode="auth"] .welcome-hero {
             background:
-                linear-gradient(90deg, rgba(8, 7, 10, 0.9) 0%, rgba(15, 13, 16, 0.82) 44%, rgba(17, 15, 18, 0.68) 100%),
-                url("/assets/images/dashboard/main_training_bg.jpg") center / cover no-repeat !important;
+                linear-gradient(90deg, rgba(8, 7, 10, 0.9) 0%, rgba(15, 13, 16, 0.82) 44%, rgba(17, 15, 18, 0.68) 100%);
             box-shadow: 0 18px 42px rgba(34, 22, 28, 0.18), inset 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
         }
 
@@ -5844,6 +5796,10 @@
             text-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
         }
 
+        body[data-mode="auth"] .welcome-hero-subtitle {
+            color: #e8a87c !important;
+        }
+
         body[data-mode="auth"] .welcome-main {
             background: rgba(255, 250, 246, 0.97) !important;
             border-color: rgba(255, 255, 255, 0.5) !important;
@@ -5851,11 +5807,11 @@
                 0 18px 38px rgba(20, 15, 17, 0.22),
                 0 0 0 1px rgba(90, 50, 45, 0.06),
                 inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
-            animation: welcomeAuthCardIn 360ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+            animation: welcomeAuthCardIn 250ms cubic-bezier(0.22, 1, 0.36, 1) both;
         }
 
         body.welcome-auth-closing .welcome-main {
-            animation: welcomeAuthCardOut 200ms ease both;
+            animation: welcomeAuthCardOut 150ms cubic-bezier(0.22, 1, 0.36, 1) both;
         }
 
         body[data-mode="auth"] #welcomeHeaderTitle {
@@ -5994,7 +5950,7 @@
             }
 
             body[data-mode="auth"] .welcome-hero {
-                min-height: min(34.75rem, calc(100vh - 7rem));
+                min-height: min(40rem, calc(100vh - 7rem));
                 padding-top: clamp(1.8rem, 3.4vw, 3.2rem) !important;
                 padding-bottom: clamp(1.8rem, 3.4vw, 3.2rem) !important;
             }
@@ -6320,9 +6276,9 @@
     <div class="welcome-shell flex w-full flex-col md:flex-row">
 
         <!-- ===== LANDING HERO ===== -->
-        <section class="welcome-hero flex flex-col items-center justify-center text-center p-8 relative z-20">
+        <section class="welcome-hero flex flex-col items-center justify-center text-center p-8 relative z-0">
 
-            <div class="welcome-hero-mark" aria-hidden="true">
+            <div class="welcome-hero-mark" aria-hidden="true" style="display:none">
                 <svg class="welcome-hero-mark-img" viewBox="0 0 357.306133 248.000000"
                     preserveAspectRatio="xMidYMid meet">
                     <g transform="translate(-333.139632,636.000000) scale(0.100000,-0.100000)" fill="currentColor"
@@ -6346,6 +6302,7 @@
                 <h1 class="hero-title">
                     ACTRA
                 </h1>
+                <span class="welcome-hero-subtitle" data-i18n="welcome.hero_subtitle">Превращайте теорию в навык</span>
 
                 <div class="welcome-hero-copy">
                     <p data-i18n="welcome.hero_copy">
@@ -6355,14 +6312,14 @@
                     <div class="welcome-hero-actions">
                         <button type="button" class="welcome-pill"
                             onclick="window.welcomeShowAuthRegister && window.welcomeShowAuthRegister()">
-                            <span data-i18n="welcome.btn_create_account">Создать аккаунт</span>
+                            <span data-i18n="welcome.btn_start_learning">Начать обучение</span>
                             <span class="material-symbols-outlined text-[18px]" aria-hidden="true">arrow_forward</span>
                         </button>
                         <button type="button" class="welcome-pill-light"
                             onclick="window.welcomeShowAuthLogin && window.welcomeShowAuthLogin()" data-i18n="welcome.btn_login">
                             Войти
                         </button>
-                        <a class="welcome-pill-light welcome-pill-discover"
+                        <a class="welcome-hero-link"
                             href="#workflow">
                             <span data-i18n="welcome.nav_learn_more">Узнать подробнее</span>
                             <span class="material-symbols-outlined text-[18px]" aria-hidden="true">south</span>
@@ -6425,18 +6382,6 @@
                             <input type="hidden" id="onboardingAvatarSeed" value="1.png">
 
                             <div id="hostedRegistrationFields" class="hidden space-y-4 mt-4">
-                                <div id="registrationPremiumPromo" class="registration-promo-card"
-                                    data-registration-premium-promo>
-                                    <div class="registration-promo-card__icon-wrap">
-                                        <span class="material-symbols-outlined" aria-hidden="true">workspace_premium</span>
-                                    </div>
-                                    <div>
-                                        <p class="registration-promo-card__title" data-i18n="welcome.promo_title">21 день Premium бесплатно</p>
-                                        <p class="registration-promo-card__copy" data-i18n="welcome.promo_copy">
-                                            Premium активируется автоматически при регистрации до 1 июня 2026.
-                                        </p>
-                                    </div>
-                                </div>
                                 <div id="onboardingLoginField" class="relative">
                                     <span class="absolute left-4 top-3.5 text-text-secondary material-symbols-outlined pointer-events-none">alternate_email</span>
                                     <label for="onboardingLogin" class="sr-only" data-i18n="welcome.placeholder_login">Логин</label>
@@ -6628,10 +6573,6 @@
                                         <p class="auth-choice-card__eyebrow" data-i18n="welcome.choice_register_eyebrow">Для нового доступа</p>
                                         <p class="auth-choice-card__title" data-i18n="welcome.btn_create_account">Создать аккаунт</p>
                                         <p class="auth-choice-card__copy" data-i18n="welcome.choice_register_copy">Создайте отдельный аккаунт для библиотеки, прогресса, календаря и собственных публикаций.</p>
-                                        <p class="auth-choice-card__promo" data-registration-premium-promo>
-                                            <span class="material-symbols-outlined" aria-hidden="true">workspace_premium</span>
-                                            <span data-i18n="welcome.choice_register_promo">21 день Premium до 1 июня</span>
-                                        </p>
                                     </div>
                                     <div class="auth-choice-card__bottom">
                                         <p class="auth-choice-card__footer-note" data-i18n="welcome.choice_register_note">Имя, email и пароль</p>

@@ -67,14 +67,6 @@ describe('welcome hosted auth flow', () => {
     expect(html).not.toContain('welcomeTheoryPreviewFrame');
   });
 
-  it('advertises the registration premium promo on welcome and register surfaces', () => {
-    const html = loadFile('frontend/Welcome/welcome.html');
-
-    expect(html).toContain('21 день Premium бесплатно');
-    expect(html).toContain('Premium активируется автоматически при регистрации до 1 июня 2026.');
-    expect(html).toContain('21 день Premium до 1 июня');
-  });
-
   it('shows auth choice in hosted mode and switches to login form', async () => {
     const fetchMock = vi.fn(async (input) => {
       const url = typeof input === 'string' ? input : String(input?.url || '');
