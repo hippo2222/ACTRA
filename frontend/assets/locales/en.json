@@ -2799,7 +2799,12 @@
     "cancel_cancel": "Cancel",
     "cancel_failed": "Could not finish the complex.",
     "finish_btn_label": "Complex results",
-    "load_failed": "Could not load iteration results."
+    "load_failed": "Could not load iteration results.",
+    "image_open_label": "Open image",
+    "image_answer_alt": "Answer option",
+    "image_preview_title": "Image preview",
+    "image_preview_close": "Close preview",
+    "image_alt_fallback": "Answer image"
   },
   "s3": {
     "page_title": "Complex Final Results",

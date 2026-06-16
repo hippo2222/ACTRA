@@ -1107,12 +1107,12 @@
       thumb.className = "s2-review-media-thumb";
       thumb.setAttribute("role", "button");
       thumb.tabIndex = 0;
-      thumb.setAttribute("aria-label", titleText || fallbackText || "\u041E\u0442\u043A\u0440\u044B\u0442\u044C \u0438\u0437\u043E\u0431\u0440\u0430\u0436\u0435\u043D\u0438\u0435");
+      thumb.setAttribute("aria-label", titleText || fallbackText || wt('s2.image_open_label', 'Open image'));
 
       const image = document.createElement("img");
       image.className = "s2-review-media-image";
       image.src = item.imageUrl;
-      image.alt = titleText || fallbackText || "\u0412\u0430\u0440\u0438\u0430\u043D\u0442 \u043E\u0442\u0432\u0435\u0442\u0430";
+      image.alt = titleText || fallbackText || wt('s2.image_answer_alt', 'Answer option');
       thumb.appendChild(image);
 
       const openPreview = function () {
@@ -1163,13 +1163,13 @@
     const title = document.createElement("p");
     title.id = "image-preview-title";
     title.className = "s2-image-preview-title";
-    title.textContent = "\u041F\u0440\u043E\u0441\u043C\u043E\u0442\u0440 \u0438\u0437\u043E\u0431\u0440\u0430\u0436\u0435\u043D\u0438\u044F";
+    title.textContent = wt('s2.image_preview_title', 'Image preview');
 
     const closeBtn = document.createElement("button");
     closeBtn.type = "button";
     closeBtn.id = "image-preview-close-btn";
     closeBtn.className = "s2-dialog-close";
-    closeBtn.setAttribute("aria-label", "\u0417\u0430\u043A\u0440\u044B\u0442\u044C \u043F\u0440\u043E\u0441\u043C\u043E\u0442\u0440");
+    closeBtn.setAttribute("aria-label", wt('s2.image_preview_close', 'Close preview'));
     closeBtn.textContent = "\u00D7";
 
     const body = document.createElement("div");
@@ -1208,10 +1208,10 @@
     const title = getById("image-preview-title");
     if (image) {
       image.src = src;
-      image.alt = alt || "\u0418\u0437\u043E\u0431\u0440\u0430\u0436\u0435\u043D\u0438\u0435 \u043E\u0442\u0432\u0435\u0442\u0430";
+      image.alt = alt || wt('s2.image_alt_fallback', 'Answer image');
     }
     if (title) {
-      title.textContent = alt || "\u041F\u0440\u043E\u0441\u043C\u043E\u0442\u0440 \u0438\u0437\u043E\u0431\u0440\u0430\u0436\u0435\u043D\u0438\u044F";
+      title.textContent = alt || wt('s2.image_preview_title', 'Image preview');
     }
     state.imagePreviewOpen = true;
     setHidden("image-preview-backdrop", false);

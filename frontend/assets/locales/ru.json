@@ -2804,7 +2804,12 @@
     "cancel_failed": "Не удалось завершить комплекс.",
     "finish_btn_label": "К итогам комплекса",
     "load_failed": "Не удалось загрузить результаты итерации.",
-    "errors_shown_of": "Показаны 3 из {n} ошибок"
+    "errors_shown_of": "Показаны 3 из {n} ошибок",
+    "image_open_label": "Открыть изображение",
+    "image_answer_alt": "Вариант ответа",
+    "image_preview_title": "Просмотр изображения",
+    "image_preview_close": "Закрыть просмотр",
+    "image_alt_fallback": "Изображение ответа"
   },
   "s3": {
     "page_title": "Итоговые результаты комплекса",
