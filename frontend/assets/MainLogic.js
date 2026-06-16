@@ -3351,7 +3351,11 @@
         if (window.i18n) window.i18n.updateDOM();
         // Re-render pure-logic widgets (no server round-trip needed)
         renderMainNextStepBanner();
-        // Server-data widgets (stats, microcards, calendar, QA) will pick up
-        // fresh translations on their next scheduled data refresh.
+        // Reload server-data widgets to pick up fresh translations immediately
+        loadPremiumArchiveBanner().catch(() => {});
+        loadCalendarWidget().catch(() => {});
+        loadMicrocardsWidget().catch(() => {});
+        loadQuickAccess().catch(() => {});
+        loadStatistics().catch(() => {});
     });
 })();

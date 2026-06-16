@@ -3084,6 +3084,15 @@
 
           function _applyCreateI18n() {
             if (window.i18n) window.i18n.updateDOM();
+            COMPLEX_VOICE = Object.freeze({
+              saveCreateSuccess: wt('create.save_create_success', 'Комплекс создан. Данные сохранены в библиотеке.'),
+              saveUpdateSuccess: wt('create.save_update_success', 'Комплекс сохранён. Изменения записаны в библиотеке.'),
+              saveFailed: wt('create.save_failed', 'Сохранение не выполнено. Проверьте данные и попробуйте ещё раз.'),
+              inheritSyncSuccess: wt('create.inherit_sync_success', 'Наследуемая теория синхронизирована.'),
+              inheritSyncComposite: wt('create.inherit_sync_composite', 'Собрана составная теория комплекса.'),
+              inheritSyncUnchanged: wt('create.inherit_sync_unchanged', 'Синхронизация не требуется: контекст уже актуален.'),
+              inheritSyncFailed: wt('create.inherit_sync_failed', 'Синхронизация не выполнена. Проверьте сеть и повторите действие.'),
+            });
           }
 
           window.addEventListener('i18n:changed', _applyCreateI18n);
@@ -3106,7 +3115,7 @@
       };
     }
 
-    const COMPLEX_VOICE = Object.freeze({
+    let COMPLEX_VOICE = Object.freeze({
       saveCreateSuccess: wt('create.save_create_success', 'Комплекс создан. Данные сохранены в библиотеке.'),
       saveUpdateSuccess: wt('create.save_update_success', 'Комплекс сохранён. Изменения записаны в библиотеке.'),
       saveFailed: wt('create.save_failed', 'Сохранение не выполнено. Проверьте данные и попробуйте ещё раз.'),

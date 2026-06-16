@@ -35,12 +35,12 @@
       volume: wt('catalog.sort_volume', 'По объёму'),
     };
   }
-  const CATALOG_SORT_LABELS = getCatalogSortLabels();
+  let CATALOG_SORT_LABELS = getCatalogSortLabels();
 
   const VALID_CATALOG_SORTS = Object.keys(CATALOG_SORT_LABELS);
   const catalogCollator = new Intl.Collator('ru-RU', { sensitivity: 'base', numeric: true });
 
-  const TASK_TYPE_LABELS = {
+  let TASK_TYPE_LABELS = {
     click: wt('catalog.type_click', 'Клик'),
     test: wt('catalog.type_test', 'Тест'),
     open_answer: wt('catalog.type_open_answer', 'Открытый ответ'),
@@ -3109,6 +3109,19 @@
       await loadCurrentUser();
       await loadWorkspaceLimits();
       await loadCatalogItems();
+      global.addEventListener('i18n:changed', () => {
+        CATALOG_SORT_LABELS = getCatalogSortLabels();
+        TASK_TYPE_LABELS = {
+          click: wt('catalog.type_click', 'Клик'),
+          test: wt('catalog.type_test', 'Тест'),
+          open_answer: wt('catalog.type_open_answer', 'Открытый ответ'),
+          sequence_assembly: wt('catalog.type_sequence_assembly', 'Последовательность'),
+          draw: wt('catalog.type_draw', 'Рисование'),
+          video: wt('catalog.type_video', 'Видео'),
+        };
+        updateCatalogSortControls();
+        render();
+      });
     } finally {
       global.PageBoot?.ready();
     }
