@@ -3,6 +3,9 @@
 
 <head>
     <meta charset="utf-8" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title data-i18n="page.welcome">ACTRA — платформа для обучения и практики</title>
     <meta name="description"
@@ -233,44 +236,6 @@
             box-shadow: var(--shadow-lg);
         }
 
-        /* ===== LEFT HERO PANEL V3 ===== */
-        .welcome-hero {
-            /* SOLID DARK BACKGROUND FALLBACK — canvas replaces gradient */
-            background-color: var(--color-primary-darker, #1e1b4b);
-            /* Fallback gradient for no-JS / reduced-motion */
-            background: radial-gradient(circle at 100% 0%, var(--color-accent-dark) 0%, transparent 60%),
-                linear-gradient(135deg, var(--color-primary-darker) 0%, var(--color-primary-dark) 100%);
-            position: relative;
-            overflow: hidden;
-            color: #FFFFFF !important;
-            /* Force white text */
-            box-shadow: 10px 0 20px -5px rgba(0, 0, 0, 0.1);
-            /* Separator shadow */
-        }
-
-        /* Subtle mesh pattern */
-        .welcome-hero::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            z-index: 2;
-            background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-            background-size: 24px 24px;
-            opacity: 0.5;
-            pointer-events: none;
-        }
-
-        /* Animated ambient glow */
-        .welcome-hero::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            z-index: 2;
-            background: radial-gradient(circle at 50% 120%, var(--color-primary) 0%, transparent 70%);
-            opacity: 0.25;
-            pointer-events: none;
-        }
-
         /* ===== RIGHT PANEL V3 ===== */
         .panel-right {
             background-color: var(--color-bg-main);
@@ -283,7 +248,7 @@
         .profile-card-v3 {
             width: 220px;
             /* Even wider */
-            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
             position: relative;
             background: var(--color-surface-1);
             border: 1px solid var(--color-border-subtle);
@@ -859,7 +824,7 @@
 
             /* Modal Transitions */
             --modal-open-dur: 250ms;
-            --modal-close-dur: 150ms;
+            --modal-close-dur: 250ms;
             --modal-scale: 0.96;
             --modal-scale-close: 0.96;
             --modal-ease: cubic-bezier(0.22, 1, 0.36, 1);
@@ -884,7 +849,7 @@
         }
 
         .font-display {
-            font-family: 'Inter', sans-serif !important;
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         }
 
         .welcome-public-nav {
@@ -920,11 +885,13 @@
 
         .welcome-public-progress__bar {
             display: block;
-            width: calc(var(--welcome-scroll-progress, 0) * 100%);
+            width: 100%;
             height: 100%;
             border-radius: inherit;
             background: linear-gradient(90deg, var(--welcome-primary), var(--welcome-orange));
-            transition: width 120ms ease;
+            transform: scaleX(var(--welcome-scroll-progress, 0));
+            transform-origin: left;
+            transition: transform 120ms ease;
         }
 
         .welcome-public-brand {
@@ -1011,6 +978,16 @@
             box-shadow: rgba(0, 0, 0, 0.04) 0 1px 6px 0, rgba(0, 0, 0, 0.05) 0 0 24px 0;
         }
 
+        /* Active pressed state for all welcome interactive elements (physics-active-state) */
+        .welcome-pill:not(:disabled):active,
+        .welcome-pill-light:not(:disabled):active,
+        .welcome-shell button:not(:disabled):active,
+        .welcome-public-nav button:not(:disabled):active,
+        .welcome-lang-btn:not(:disabled):active {
+            transform: scale(0.97) translateY(0) !important;
+            transition: transform 0.1s cubic-bezier(0.22, 1, 0.36, 1) !important;
+        }
+
         .welcome-pill:hover .material-symbols-outlined,
         .welcome-pill-light:hover .material-symbols-outlined,
         .welcome-pill:focus-visible .material-symbols-outlined,
@@ -1082,7 +1059,7 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 18px 38px rgba(47, 33, 137, 0.2);
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.16), 0 0 0 1px rgba(255, 255, 255, 0.08);
             opacity: 0;
             pointer-events: none;
             transform: translateY(0.6rem) scale(0.96);
@@ -1097,7 +1074,7 @@
 
         .welcome-scroll-top:hover,
         .welcome-scroll-top:focus-visible {
-            box-shadow: 0 20px 42px rgba(47, 33, 137, 0.28);
+            box-shadow: 0 16px 36px rgba(0, 0, 0, 0.24), 0 0 0 1px rgba(255, 255, 255, 0.12);
             transform: translateY(-1px) scale(1);
         }
 
@@ -1123,20 +1100,23 @@
         }
 
         .welcome-hero {
-            align-items: center !important;
-            justify-content: center !important;
-            width: 100% !important;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
             min-height: clamp(16rem, 34vh, 24rem);
             overflow: hidden;
-            padding: clamp(2rem, 4.8vw, 4.4rem) !important;
-            border: 1px solid color-mix(in srgb, var(--welcome-stone) 82%, transparent);
+            padding: clamp(2rem, 4.8vw, 4.4rem);
+            border: 1px solid color-mix(in srgb, var(--welcome-stone) 90%, transparent);
             border-radius: 24px;
             background:
-                linear-gradient(90deg, rgba(12, 10, 14, 0.92) 0%, rgba(20, 16, 21, 0.84) 38%, rgba(23, 18, 22, 0.68) 100%),
-                linear-gradient(180deg, rgba(15, 11, 16, 0.26), rgba(15, 11, 16, 0.48));
-            box-shadow: 0 24px 54px rgba(38, 22, 20, 0.22), inset 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
-            color: #fffdfa !important;
-            text-align: center !important;
+                linear-gradient(90deg, rgba(6, 5, 8, 0.98) 0%, rgba(12, 10, 14, 0.95) 44%, rgba(18, 14, 20, 0.88) 100%),
+                linear-gradient(180deg, rgba(6, 5, 8, 0.96), rgba(12, 10, 14, 0.96)) !important;
+            box-shadow: 0 24px 54px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+            color: #fffdfa;
+            text-align: center;
         }
 
         .welcome-hero::before {
@@ -1144,10 +1124,10 @@
             position: absolute;
             inset: 0;
             z-index: 0;
-            display: block !important;
+            display: block;
             background:
-                linear-gradient(105deg, rgba(0, 0, 0, 0.54), rgba(0, 0, 0, 0.18) 58%, rgba(0, 0, 0, 0.44)),
-                linear-gradient(180deg, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.5));
+                linear-gradient(105deg, rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0.35) 60%, rgba(0, 0, 0, 0.65)),
+                linear-gradient(180deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.65));
             pointer-events: none;
         }
 
@@ -1155,20 +1135,35 @@
             content: "";
             position: absolute;
             inset: 0;
-            z-index: 0;
-            display: block !important;
-            background-image: linear-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px);
-            background-size: 100% 18px;
-            opacity: 0.28;
-            mix-blend-mode: screen;
+            z-index: 10; /* sits between the canvas (z-index 1) and the content (z-index 20) */
+            display: block;
+            background:
+                radial-gradient(circle at center, rgba(8, 7, 10, 0.84) 0%, rgba(8, 7, 10, 0.15) 75%),
+                linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+            background-size: 100% 100%, 100% 18px;
+            opacity: 0.85;
+            mix-blend-mode: normal;
             pointer-events: none;
         }
 
+        .welcome-hero-canvas {
+            position: absolute !important;
+            top: 50% !important;
+            left: 50% !important;
+            transform: translate(-50%, -50%) translate3d(0, 0, 0) !important;
+            width: 100% !important;
+            height: 40rem !important; /* Lock height to prevent WebGL/CSS transition resize jank */
+            pointer-events: none !important;
+            z-index: 1 !important;
+            will-change: transform !important;
+            opacity: 0.30 !important;
+        }
+
         .welcome-hero > .relative {
-            align-items: center !important;
+            align-items: center;
             width: 100%;
-            max-width: min(44rem, 62%);
-            z-index: 2 !important;
+            max-width: min(36rem, 100%);
+            z-index: 2;
         }
 
         .welcome-hero-mark {
@@ -1191,14 +1186,14 @@
         }
 
         .welcome-hero .hero-title {
-            margin-bottom: 0.4rem !important;
-            color: #fffdfa !important;
-            font-family: Inter, ui-sans-serif, system-ui, sans-serif !important;
-            font-size: clamp(3.5rem, 8vw, 6.75rem) !important;
-            font-weight: 600 !important;
-            line-height: 0.9 !important;
-            text-transform: none !important;
-            text-shadow: 0 14px 34px rgba(0, 0, 0, 0.32) !important;
+            margin-bottom: 0.4rem;
+            color: #fffdfa;
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-size: clamp(3.5rem, 8vw, 6.75rem);
+            font-weight: 600;
+            line-height: 0.9;
+            text-transform: none;
+            text-shadow: 0 14px 34px rgba(0, 0, 0, 0.32);
         }
 
         .welcome-hero-subtitle {
@@ -1401,15 +1396,13 @@
         }
 
         .welcome-panel-right {
-            position: fixed !important;
-            inset: 0 !important;
+            position: relative !important;
+            inset: auto !important;
             z-index: 70 !important;
-            display: flex !important;
+            display: none !important;
             align-items: center !important;
             justify-content: center !important;
-            width: 100vw !important;
-            height: 100vh !important;
-            max-width: none !important;
+            width: 100% !important;
             min-height: auto !important;
             margin: 0 !important;
             padding: clamp(1rem, 3vw, 2rem) !important;
@@ -1417,34 +1410,27 @@
             backdrop-filter: blur(0px) !important;
             opacity: 0 !important;
             pointer-events: none !important;
-            visibility: hidden !important;
-            transition:
-                opacity var(--modal-open-dur) var(--modal-ease),
-                backdrop-filter var(--modal-open-dur) var(--modal-ease),
-                background-color var(--modal-open-dur) var(--modal-ease),
-                visibility var(--modal-open-dur) allow-discrete !important;
             overflow-y: auto !important;
         }
 
         .welcome-panel-right.is-open {
+            display: flex !important;
             opacity: 1 !important;
             pointer-events: auto !important;
-            visibility: visible !important;
             background: rgba(12, 10, 14, 0.42) !important;
             backdrop-filter: blur(14px) !important;
         }
 
         .welcome-panel-right.is-closing {
+            display: flex !important;
             opacity: 0 !important;
             pointer-events: none !important;
-            visibility: hidden !important;
             background: rgba(12, 10, 14, 0) !important;
             backdrop-filter: blur(0px) !important;
             transition:
-                opacity var(--modal-close-dur) var(--modal-ease),
-                backdrop-filter var(--modal-close-dur) var(--modal-ease),
-                background-color var(--modal-close-dur) var(--modal-ease),
-                visibility var(--modal-close-dur) allow-discrete !important;
+                opacity var(--modal-close-dur) cubic-bezier(0.22, 1, 0.36, 1),
+                backdrop-filter var(--modal-close-dur) cubic-bezier(0.22, 1, 0.36, 1),
+                background-color var(--modal-close-dur) cubic-bezier(0.22, 1, 0.36, 1) !important;
         }
 
         .welcome-panel-right .welcome-main {
@@ -1462,8 +1448,8 @@
             border-radius: 24px !important;
             box-shadow: 0 24px 54px rgba(38, 22, 20, 0.16) !important;
             padding: clamp(1.4rem, 3vw, 2rem) !important;
-            transform: scale(var(--modal-scale)) !important;
-            opacity: 0 !important;
+            transform: scale(var(--modal-scale));
+            opacity: 0;
             transition:
                 transform var(--modal-open-dur) var(--modal-ease),
                 opacity var(--modal-open-dur) var(--modal-ease) !important;
@@ -1480,8 +1466,8 @@
             transform: scale(var(--modal-scale-close)) !important;
             opacity: 0 !important;
             transition:
-                transform var(--modal-close-dur) var(--modal-ease),
-                opacity var(--modal-close-dur) var(--modal-ease) !important;
+                transform var(--modal-close-dur) cubic-bezier(0.22, 1, 0.36, 1),
+                opacity var(--modal-close-dur) cubic-bezier(0.22, 1, 0.36, 1) !important;
         }
 
         .welcome-panel-right .welcome-main::before,
@@ -1574,17 +1560,21 @@
         .panel-right {
             align-self: start;
             border-radius: 24px;
-            background:
-                radial-gradient(circle at top right, color-mix(in srgb, var(--color-primary-lighter, #e8d4c5) 30%, transparent), transparent 44%),
-                var(--welcome-card-bg) !important;
-            background-image: radial-gradient(circle at top right, color-mix(in srgb, var(--color-primary-lighter, #e8d4c5) 30%, transparent), transparent 44%) !important;
-            box-shadow: var(--welcome-card-shadow);
+            background: transparent !important;
+            background-image: none !important;
+            box-shadow: none !important;
         }
 
         .welcome-main {
             max-width: 100% !important;
             min-height: auto !important;
             padding: clamp(1rem, 2.2vw, 1.5rem) !important;
+            border-radius: 24px;
+            background:
+                radial-gradient(circle at top right, color-mix(in srgb, var(--color-primary-lighter, #e8d4c5) 30%, transparent), transparent 44%),
+                var(--welcome-card-bg) !important;
+            background-image: radial-gradient(circle at top right, color-mix(in srgb, var(--color-primary-lighter, #e8d4c5) 30%, transparent), transparent 44%) !important;
+            box-shadow: var(--welcome-card-shadow);
         }
 
         .welcome-header {
@@ -1772,7 +1762,7 @@
             border-radius: 16px;
             background: #ffffff;
             color: var(--welcome-orange);
-            box-shadow: 0 10px 22px rgba(156, 66, 21, 0.12);
+            box-shadow: 0 10px 22px rgba(0, 0, 0, 0.08);
         }
 
         .consent-gate-title {
@@ -2937,8 +2927,10 @@
         .welcome-origin-note {
             display: grid;
             gap: 0.95rem;
-            border-left: 4px solid var(--welcome-primary);
-            padding: 0.25rem 0 0.25rem clamp(1.15rem, 3vw, 1.7rem);
+            background-color: color-mix(in srgb, var(--welcome-primary) 4%, transparent);
+            border: 1px solid color-mix(in srgb, var(--welcome-primary) 12%, transparent);
+            border-radius: 12px;
+            padding: 1.25rem clamp(1.15rem, 3vw, 1.7rem);
         }
 
         .welcome-origin-note p {
@@ -3553,7 +3545,7 @@
             border-radius: 16px;
             background: #f4f5f7;
             color: #1f2937;
-            font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         }
 
         .welcome-real-page * {
@@ -5063,17 +5055,16 @@
         }
 
         body[data-mode="landing"] .welcome-hero {
-            background:
-                linear-gradient(90deg, rgba(8, 7, 10, 0.94) 0%, rgba(18, 14, 18, 0.88) 42%, rgba(24, 19, 22, 0.74) 100%),
-                linear-gradient(180deg, rgba(8, 7, 10, 0.4), rgba(8, 7, 10, 0.64));
             border-color: rgba(255, 255, 255, 0.12) !important;
             color: #fffdfa !important;
             text-align: center !important;
             align-items: center !important;
         }
 
-        body[data-mode="landing"] .welcome-panel-right {
+        body[data-mode="landing"]:not(.welcome-auth-closing) .welcome-panel-right {
             display: none !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
         }
 
         body[data-mode="landing"] .welcome-hero > .relative {
@@ -5164,7 +5155,7 @@
             background: #4a2633 !important;
             border-color: #4a2633 !important;
             color: #fffdfa !important;
-            box-shadow: 0 10px 22px rgba(74, 38, 51, 0.18) !important;
+            box-shadow: 0 10px 22px rgba(0, 0, 0, 0.16) !important;
         }
 
         .welcome-panel-right #loginSubmitBtn,
@@ -5172,8 +5163,8 @@
             color: #fffdfa !important;
             text-shadow: 0 1px 0 rgba(0, 0, 0, 0.16) !important;
             box-shadow:
-                0 12px 24px rgba(255, 88, 48, 0.22),
-                0 0 0 4px rgba(255, 108, 56, 0.12) !important;
+                0 12px 24px rgba(0, 0, 0, 0.24),
+                0 0 0 4px rgba(255, 108, 56, 0.08) !important;
             background: linear-gradient(135deg, var(--welcome-orange), color-mix(in srgb, var(--welcome-primary) 85%, black 15%)) !important;
             border-color: var(--welcome-orange) !important;
         }
@@ -5204,8 +5195,8 @@
             background: linear-gradient(135deg, var(--welcome-orange), color-mix(in srgb, var(--welcome-primary) 85%, black 15%)) !important;
             border-color: var(--welcome-orange) !important;
             box-shadow:
-                0 16px 36px rgba(156, 66, 21, 0.32),
-                0 0 0 6px rgba(255, 108, 56, 0.15) !important;
+                0 16px 36px rgba(0, 0, 0, 0.28),
+                0 0 0 6px rgba(255, 108, 56, 0.1) !important;
             transform: translateY(-1.5px) !important;
         }
 
@@ -5232,7 +5223,8 @@
             color: var(--welcome-orange) !important;
         }
 
-        .welcome-panel-right #onboardingConsentBox input[type="checkbox"] {
+        .welcome-panel-right #onboardingConsentBox input[type="checkbox"],
+        #consentGateModal input[type="checkbox"] {
             flex: 0 0 1.08rem !important;
             width: 1.08rem !important;
             min-width: 1.08rem !important;
@@ -5241,9 +5233,15 @@
             margin-top: 0.08rem !important;
             padding: 0 !important;
             border-radius: 0.35rem !important;
-            background: #fffdfa !important;
+            background-color: #fffdfa !important;
             border-color: #cdbfab !important;
             accent-color: var(--welcome-orange) !important;
+        }
+
+        .welcome-panel-right #onboardingConsentBox input[type="checkbox"]:checked,
+        #consentGateModal input[type="checkbox"]:checked {
+            background-color: var(--welcome-orange) !important;
+            border-color: var(--welcome-orange) !important;
         }
 
         @media (min-width: 981px) {
@@ -5321,7 +5319,8 @@
         }
 
         body[data-mode="auth"] .welcome-panel-right,
-        body.welcome-auth-open .welcome-panel-right {
+        body.welcome-auth-open .welcome-panel-right,
+        body.welcome-auth-closing .welcome-panel-right {
             background:
                 linear-gradient(120deg, rgba(12, 10, 18, 0.92), rgba(37, 26, 38, 0.82)),
                 url("/assets/images/dashboard/main_training_bg.jpg") center / cover no-repeat !important;
@@ -5515,8 +5514,8 @@
                 linear-gradient(135deg, color-mix(in srgb, var(--welcome-orange) 92%, #fffdfa 8%), var(--welcome-primary)) !important;
             border-color: rgba(255, 108, 56, 0.72) !important;
             box-shadow:
-                0 14px 30px rgba(156, 66, 21, 0.24),
-                0 0 0 5px rgba(255, 108, 56, 0.1) !important;
+                0 14px 30px rgba(0, 0, 0, 0.26),
+                0 0 0 5px rgba(255, 108, 56, 0.08) !important;
         }
 
         body[data-mode="auth"] .google-auth-button {
@@ -5576,17 +5575,11 @@
         }
 
         body[data-mode="auth"] .welcome-hero {
-            grid-column: 1 / -1;
-            grid-row: 1;
             align-self: stretch;
-            min-height: clamp(36rem, 70vh, 46rem);
-            padding-right: min(36vw, 31rem) !important;
-            text-align: center !important;
-            justify-content: flex-start !important;
         }
 
         body[data-mode="auth"] .welcome-hero > .relative {
-            max-width: min(35rem, 100%);
+            max-width: min(36rem, 100%);
             align-items: center !important;
         }
 
@@ -5594,24 +5587,18 @@
             opacity: 0;
             visibility: hidden;
             pointer-events: none;
-            transition: opacity 260ms ease, visibility 260ms ease;
+            transition: opacity 250ms cubic-bezier(0.22, 1, 0.36, 1), visibility 250ms cubic-bezier(0.22, 1, 0.36, 1);
         }
 
         body[data-mode="auth"] .welcome-panel-right,
         body.welcome-auth-open .welcome-panel-right {
-            display: flex !important;
             position: relative !important;
             inset: auto !important;
             z-index: 30;
-            grid-column: 2;
-            grid-row: 1;
-            align-self: center;
-            justify-self: end;
             width: min(100%, 28rem) !important;
             max-width: 28rem !important;
             max-height: calc(100vh - 6rem) !important;
             min-height: auto !important;
-            margin: clamp(1rem, 2.2vw, 1.5rem) clamp(1rem, 2.2vw, 1.5rem) clamp(1rem, 2.2vw, 1.5rem) 0 !important;
             padding: 0 !important;
             overflow-y: auto !important;
             overflow-x: hidden !important;
@@ -5753,13 +5740,61 @@
             transition:
                 opacity 250ms ease-in-out,
                 transform 250ms cubic-bezier(0.22, 1, 0.36, 1),
-                box-shadow 250ms ease,
                 background-color 250ms ease,
-                border-color 250ms ease;
+                border-color 250ms ease,
+                box-shadow 250ms cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        /* Hero gets its own padding/min-height transition synced with card slide-in */
+        .welcome-hero {
+            transition:
+                opacity 250ms ease-in-out,
+                transform 250ms cubic-bezier(0.22, 1, 0.36, 1),
+                background-color 250ms ease,
+                border-color 250ms ease,
+                padding 250ms cubic-bezier(0.22, 1, 0.36, 1),
+                min-height 250ms cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        /* During close, hero layout transitions back smoothly in parallel */
+        body.welcome-auth-closing .welcome-hero {
+            transition:
+                opacity 250ms cubic-bezier(0.22, 1, 0.36, 1),
+                transform 250ms cubic-bezier(0.22, 1, 0.36, 1),
+                background-color 250ms ease,
+                border-color 250ms ease,
+                padding 250ms cubic-bezier(0.22, 1, 0.36, 1),
+                min-height 250ms cubic-bezier(0.22, 1, 0.36, 1) !important;
+        }
+
+        /* Exit transition built on 12-principles-of-animation (easing-exit-ease-in) */
+        body.welcome-auth-closing .welcome-hero,
+        body.welcome-auth-closing .welcome-hero > .relative,
+        body.welcome-auth-closing .welcome-hero-mark,
+        body.welcome-auth-closing .welcome-hero-actions,
+        body.welcome-auth-closing .welcome-panel-right,
+        body.welcome-auth-closing .welcome-main {
+            transition:
+                opacity 250ms cubic-bezier(0.22, 1, 0.36, 1),
+                transform 250ms cubic-bezier(0.22, 1, 0.36, 1),
+                background-color 250ms ease,
+                backdrop-filter 250ms cubic-bezier(0.22, 1, 0.36, 1),
+                border-color 250ms ease,
+                box-shadow 250ms cubic-bezier(0.22, 1, 0.36, 1) !important;
         }
 
         .welcome-hero::after {
             opacity: 0.12;
+        }
+
+        .welcome-hero::before,
+        .welcome-hero::after {
+            transition: opacity 250ms ease-in-out !important;
+        }
+
+        body.welcome-auth-closing .welcome-hero::before,
+        body.welcome-auth-closing .welcome-hero::after {
+            transition: opacity 150ms cubic-bezier(0.32, 0, 0.67, 0) !important;
         }
 
         .welcome-hero-mark {
@@ -5771,19 +5806,9 @@
             animation: welcomeHeroActionsIn 280ms ease both;
         }
 
-        body[data-mode="auth"] .welcome-hero {
-            background:
-                linear-gradient(90deg, rgba(8, 7, 10, 0.9) 0%, rgba(15, 13, 16, 0.82) 44%, rgba(17, 15, 18, 0.68) 100%);
-            box-shadow: 0 18px 42px rgba(34, 22, 28, 0.18), inset 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
-        }
-
-        body[data-mode="auth"] .welcome-hero::before {
-            background:
-                linear-gradient(105deg, rgba(0, 0, 0, 0.34), rgba(0, 0, 0, 0.06) 62%, rgba(0, 0, 0, 0.3));
-        }
 
         body[data-mode="auth"] .welcome-hero::after {
-            opacity: 0.04;
+            opacity: 0.35;
         }
 
         body[data-mode="auth"] .welcome-hero-mark {
@@ -5803,16 +5828,14 @@
         body[data-mode="auth"] .welcome-main {
             background: rgba(255, 250, 246, 0.97) !important;
             border-color: rgba(255, 255, 255, 0.5) !important;
-            box-shadow:
-                0 18px 38px rgba(20, 15, 17, 0.22),
-                0 0 0 1px rgba(90, 50, 45, 0.06),
-                inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+            box-shadow: 0 24px 54px rgba(38, 22, 20, 0.16) !important;
             animation: welcomeAuthCardIn 250ms cubic-bezier(0.22, 1, 0.36, 1) both;
         }
 
         body.welcome-auth-closing .welcome-main {
-            animation: welcomeAuthCardOut 150ms cubic-bezier(0.22, 1, 0.36, 1) both;
+            animation: welcomeAuthCardOut 250ms cubic-bezier(0.22, 1, 0.36, 1) both;
         }
+
 
         body[data-mode="auth"] #welcomeHeaderTitle {
             color: #3b252b !important;
@@ -5858,7 +5881,7 @@
             background: #4a2633 !important;
             border-color: #4a2633 !important;
             color: #fffdfa !important;
-            box-shadow: 0 10px 22px rgba(74, 38, 51, 0.18) !important;
+            box-shadow: 0 10px 22px rgba(0, 0, 0, 0.16) !important;
         }
 
         body[data-mode="auth"] #loginSubmitBtn,
@@ -5866,8 +5889,8 @@
             color: #fffdfa !important;
             text-shadow: 0 1px 0 rgba(0, 0, 0, 0.16);
             box-shadow:
-                0 12px 24px rgba(255, 88, 48, 0.22),
-                0 0 0 4px rgba(255, 108, 56, 0.12) !important;
+                0 12px 24px rgba(0, 0, 0, 0.24),
+                0 0 0 4px rgba(255, 108, 56, 0.08) !important;
         }
 
         body[data-mode="auth"] #onboardingCreateBtn:disabled {
@@ -5903,8 +5926,8 @@
             background: linear-gradient(135deg, var(--welcome-orange), color-mix(in srgb, var(--welcome-primary) 85%, black 15%)) !important;
             border-color: var(--welcome-orange) !important;
             box-shadow:
-                0 16px 36px rgba(156, 66, 21, 0.32),
-                0 0 0 6px rgba(255, 108, 56, 0.15) !important;
+                0 16px 36px rgba(0, 0, 0, 0.28),
+                0 0 0 6px rgba(255, 108, 56, 0.1) !important;
             transform: translateY(-1.5px);
         }
 
@@ -5929,7 +5952,8 @@
             color: var(--welcome-orange) !important;
         }
 
-        body[data-mode="auth"] #onboardingConsentBox input[type="checkbox"] {
+        body[data-mode="auth"] #onboardingConsentBox input[type="checkbox"],
+        #consentGateModal input[type="checkbox"] {
             flex: 0 0 1.08rem !important;
             width: 1.08rem !important;
             min-width: 1.08rem !important;
@@ -5938,9 +5962,15 @@
             margin-top: 0.08rem !important;
             padding: 0 !important;
             border-radius: 0.35rem !important;
-            background: #fffdfa !important;
+            background-color: #fffdfa !important;
             border-color: #cdbfab !important;
-            accent-color: var(--welcome-orange);
+            accent-color: var(--welcome-orange) !important;
+        }
+
+        body[data-mode="auth"] #onboardingConsentBox input[type="checkbox"]:checked,
+        #consentGateModal input[type="checkbox"]:checked {
+            background-color: var(--welcome-orange) !important;
+            border-color: var(--welcome-orange) !important;
         }
 
         @media (min-width: 981px) {
@@ -5950,14 +5980,29 @@
             }
 
             body[data-mode="auth"] .welcome-hero {
+                grid-column: 1 / -1;
+                grid-row: 1;
                 min-height: min(40rem, calc(100vh - 7rem));
                 padding-top: clamp(1.8rem, 3.4vw, 3.2rem) !important;
                 padding-bottom: clamp(1.8rem, 3.4vw, 3.2rem) !important;
             }
 
+            body[data-mode="auth"] .welcome-hero > .relative {
+                transform: translate3d(-14.25rem, 0, 0) !important;
+            }
+
             body[data-mode="auth"] .welcome-panel-right,
-            body.welcome-auth-open .welcome-panel-right {
-                align-self: start;
+            body.welcome-auth-open .welcome-panel-right,
+            body.welcome-auth-closing .welcome-panel-right {
+                position: relative !important;
+                height: auto !important;
+                inset: auto !important;
+                backdrop-filter: none !important;
+                background: transparent !important;
+                grid-column: 2 !important;
+                grid-row: 1 !important;
+                align-self: center !important;
+                justify-self: end;
                 width: min(100%, 26.75rem) !important;
                 max-width: 26.75rem !important;
                 margin: 2rem 0.9rem 0.35rem 0 !important;
@@ -5966,6 +6011,9 @@
             body[data-mode="auth"] .welcome-main {
                 padding: 0.85rem 0.95rem !important;
                 border-radius: 22px;
+                /* Override mobile-modal opacity:0 + opacity transition — the keyframe handles the entrance animation */
+                opacity: 1;
+                transition: none !important;
             }
 
             body.welcome-auth-entering .welcome-panel-right,
@@ -6085,6 +6133,18 @@
 
             .welcome-hero {
                 min-height: clamp(21rem, 58vw, 29rem);
+            }
+
+            body[data-mode="auth"] .welcome-panel-right,
+            body.welcome-auth-open .welcome-panel-right,
+            body.welcome-auth-closing .welcome-panel-right {
+                grid-column: 1 !important;
+                grid-row: auto !important;
+                align-self: auto !important;
+                justify-self: center !important;
+                width: 100% !important;
+                max-width: 28rem !important;
+                margin: 1.5rem auto !important;
             }
 
 
@@ -6277,6 +6337,8 @@
 
         <!-- ===== LANDING HERO ===== -->
         <section class="welcome-hero flex flex-col items-center justify-center text-center p-8 relative z-0">
+            <!-- Interactive 3D Background Canvas -->
+            <canvas class="welcome-hero-canvas pointer-events-none" id="welcomeHeroCanvas"></canvas>
 
             <div class="welcome-hero-mark" aria-hidden="true" style="display:none">
                 <svg class="welcome-hero-mark-img" viewBox="0 0 357.306133 248.000000"
@@ -6524,7 +6586,7 @@
                                 data-google-auth-button
                                 class="google-auth-button px-4 py-3 outline-none focus:ring-4 focus:ring-primary/20">
                                 <span class="google-auth-mark" aria-hidden="true">G</span>
-                                <span data-google-auth-label></span>
+                                <span data-google-auth-label data-i18n="welcome.google_btn_enabled">Продолжить через Google</span>
                             </button>
                         </div>
 
@@ -6586,7 +6648,7 @@
                                     data-google-auth-button
                                     class="google-auth-button px-4 py-3 outline-none focus:ring-4 focus:ring-primary/20">
                                     <span class="google-auth-mark" aria-hidden="true">G</span>
-                                    <span data-google-auth-label></span>
+                                    <span data-google-auth-label data-i18n="welcome.google_btn_enabled">Продолжить через Google</span>
                                 </button>
                             </div>
                         </div>
@@ -6696,7 +6758,7 @@
                                         data-google-auth-button
                                         class="google-auth-button px-4 py-3 outline-none focus:ring-4 focus:ring-primary/20">
                                         <span class="google-auth-mark" aria-hidden="true">G</span>
-                                        <span data-google-auth-label></span>
+                                        <span data-google-auth-label data-i18n="welcome.google_btn_enabled">Продолжить через Google</span>
                                     </button>
                                 </div>
                                 <p id="loginError"
@@ -7665,7 +7727,8 @@
     <script src="/assets/i18n.js"></script>
     <script src="/assets/NotificationUI.js"></script>
     <script src="/assets/ThemeSwitcherUI.js"></script>
-    <script src="/Welcome/welcome.js"></script>
+    <script src="/assets/three.min.js"></script>
+    <script src="/Welcome/welcome.js?v=20260616"></script>
 </body>
 
 </html>

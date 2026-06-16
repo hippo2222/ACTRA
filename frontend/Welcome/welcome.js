@@ -18,6 +18,7 @@
     let hostedVerificationState = null;
     let forgotPasswordState = { mode: 'request', resetToken: '', requestBusy: false, resetBusy: false };
     let initStarted = false;
+    let currentHeightTransitionId = 0;
 
     // --- API Helper ---
     async function apiFetch(url, options = {}) {
@@ -64,6 +65,49 @@
         const el = document.getElementById(elementId);
         if (!el) return;
         el.classList.toggle('hidden', !!shouldHide);
+    }
+
+    async function animateMainCardHeight(action) {
+        const mainCard = document.querySelector('.welcome-panel-right .welcome-main');
+        const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (!mainCard || prefersReduced) {
+            action();
+            return;
+        }
+
+        // Check if the auth modal is actually open and not closing
+        const modal = document.querySelector('.welcome-panel-right');
+        const isModalOpen = modal && modal.classList.contains('is-open') && !modal.classList.contains('is-closing');
+
+        // If the modal is not open yet, bypass height animation to prevent zero-height (squished pill) layout jank
+        if (!isModalOpen) {
+            action();
+            return;
+        }
+
+        const startHeight = mainCard.offsetHeight;
+        mainCard.style.height = `${startHeight}px`;
+        mainCard.style.transition = 'none';
+        void mainCard.offsetHeight; // force reflow
+
+        action();
+
+        mainCard.style.height = 'auto';
+        const targetHeight = mainCard.offsetHeight;
+        mainCard.style.height = `${startHeight}px`;
+        void mainCard.offsetHeight; // force reflow
+
+        const myTransitionId = ++currentHeightTransitionId;
+
+        mainCard.style.transition = 'height 250ms cubic-bezier(0.22, 1, 0.36, 1)';
+        mainCard.style.height = `${targetHeight}px`;
+
+        setTimeout(() => {
+            if (currentHeightTransitionId === myTransitionId) {
+                mainCard.style.height = 'auto';
+                mainCard.style.transition = '';
+            }
+        }, 250);
     }
 
     function setText(elementId, value) {
@@ -252,19 +296,30 @@
 
     function showError(elementId, message) {
         const el = document.getElementById(elementId);
-        if (message) {
-            if (el.querySelector('#onboardingErrorMsg')) {
-                el.querySelector('#onboardingErrorMsg').textContent = message;
+        if (!el) return;
+
+        animateMainCardHeight(() => {
+            if (message) {
+                if (el.querySelector('#onboardingErrorMsg')) {
+                    el.querySelector('#onboardingErrorMsg').textContent = message;
+                } else {
+                    el.textContent = message;
+                }
+                el.classList.remove('hidden');
             } else {
-                el.textContent = message;
+                el.classList.add('hidden');
             }
-            el.classList.remove('hidden');
+        });
+
+        if (message) {
             // Auto hide after 5 seconds
             setTimeout(() => {
-                if (!el.classList.contains('hidden')) el.classList.add('hidden');
+                if (!el.classList.contains('hidden')) {
+                    animateMainCardHeight(() => {
+                        el.classList.add('hidden');
+                    });
+                }
             }, 5000);
-        } else {
-            el.classList.add('hidden');
         }
     }
 
@@ -293,13 +348,16 @@
     function setHostedVerificationError(message) {
         const el = document.getElementById('onboardingVerificationError');
         if (!el) return;
-        if (!message) {
-            el.textContent = '';
-            el.classList.add('hidden');
-            return;
-        }
-        el.textContent = message;
-        el.classList.remove('hidden');
+
+        animateMainCardHeight(() => {
+            if (!message) {
+                el.textContent = '';
+                el.classList.add('hidden');
+            } else {
+                el.textContent = message;
+                el.classList.remove('hidden');
+            }
+        });
     }
 
     function setForgotPasswordStatus(elementId, message, tone = 'neutral') {
@@ -427,14 +485,17 @@
 
     function applyHostedVerificationState() {
         const isActive = currentMode === 'onboarding' && isHostedAuthMode() && !!hostedVerificationState;
-        toggleHidden('onboardingVerificationPanel', !isActive);
-        toggleHidden('modeOnboardingCard', isActive);
-        toggleHidden('onboardingCreateBtn', isActive);
-        toggleHidden('onboardingSocialAuth', isActive || !isHostedAuthMode());
-        if (isActive) {
-            toggleHidden('onboardingSecondaryAction', true);
-            toggleHidden('onboardingError', true);
-        }
+
+        animateMainCardHeight(() => {
+            toggleHidden('onboardingVerificationPanel', !isActive);
+            toggleHidden('modeOnboardingCard', isActive);
+            toggleHidden('onboardingCreateBtn', isActive);
+            toggleHidden('onboardingSocialAuth', isActive || !isHostedAuthMode());
+            if (isActive) {
+                toggleHidden('onboardingSecondaryAction', true);
+                toggleHidden('onboardingError', true);
+            }
+        });
 
         if (!isActive) {
             updateWelcomeHeader(currentMode);
@@ -790,8 +851,8 @@
     function setHostedAuthChoiceVisible(visible) {
         toggleHidden('hostedAuthChoice', !visible);
         toggleHidden('profilesList', visible);
-        toggleHidden('passwordInline', visible);
-        toggleHidden('createProfileSection', visible);
+        toggleHidden('passwordInline', true);
+        toggleHidden('createProfileSection', true);
     }
 
     window.welcomeTogglePassword = function (inputId, button) {
@@ -953,10 +1014,23 @@
         welcomeAuthEntryScrollY = window.scrollY || document.documentElement.scrollTop || 0;
         welcomeAuthShouldScrollToHero = !isWelcomeShellAlreadyFramed();
         document.body.classList.add('welcome-auth-entering');
-        setWelcomePageMode('auth');
+
+        // Set body mode to 'auth' which triggers grid layout columns change
+        document.body.dataset.mode = 'auth';
+        document.body.classList.add('welcome-auth-open');
+
+        // Show the right panel immediately in parallel with the layout transition
+        const modal = document.querySelector('.welcome-panel-right');
+        if (modal) {
+            modal.classList.remove('is-closing');
+            modal.classList.add('is-open');
+        }
+
+        // Remove the transient class after layout transitions (250ms) are complete
+        const LAYOUT_TRANSITION_MS = 280;
         setTimeout(() => {
             document.body.classList.remove('welcome-auth-entering');
-        }, 250);
+        }, LAYOUT_TRANSITION_MS);
     }
 
     function keepHeroInViewIfNeeded() {
@@ -972,18 +1046,18 @@
     }
 
     window.welcomeShowAuthLogin = function () {
-        openWelcomeAuthLayer();
         configureHostedLoginMode();
         showMode('login');
+        openWelcomeAuthLayer();
         setTimeout(() => {
             if (welcomeAuthShouldScrollToHero) keepHeroInViewIfNeeded();
         }, 0);
     };
 
     window.welcomeShowAuthRegister = function () {
-        openWelcomeAuthLayer();
         configureHostedRegistrationMode();
         showMode('onboarding');
+        openWelcomeAuthLayer();
         setTimeout(() => {
             if (welcomeAuthShouldScrollToHero) keepHeroInViewIfNeeded();
         }, 0);
@@ -1001,7 +1075,6 @@
         const finishReturn = () => {
             clearHostedVerificationState();
             setHostedAuthChoiceVisible(false);
-            setWelcomePageMode('landing');
             document.body.classList.remove('welcome-auth-closing');
             const modal = document.querySelector('.welcome-panel-right');
             if (modal) {
@@ -1019,21 +1092,29 @@
             modal.classList.remove('is-open');
             modal.classList.add('is-closing');
             document.body.classList.add('welcome-auth-closing');
+            
+            // Set body dataset mode and auth-open class manually to 'landing' immediately,
+            // so the hero padding transitions back concurrently with the card close!
+            document.body.dataset.mode = 'landing';
+            document.body.classList.remove('welcome-auth-open');
+            
             const closeMs = parseFloat(
                 getComputedStyle(document.documentElement).getPropertyValue('--modal-close-dur')
-            ) || 150;
+            ) || 250;
             window.setTimeout(finishReturn, closeMs);
             return;
         }
 
+        // Just in case finishReturn is called directly, make sure page mode is set
+        setWelcomePageMode('landing');
         finishReturn();
     };
 
     window.welcomeBackToAuthChoice = function () {
-        openWelcomeAuthLayer();
         clearHostedVerificationState();
         setHostedAuthChoiceVisible(true);
         showMode('select');
+        openWelcomeAuthLayer();
     };
 
     function openDesktopCreateProfileForm() {
@@ -1231,9 +1312,10 @@
         const oldEl = modeElMap[oldMode];
         const newEl = modeElMap[mode];
 
-        updateWelcomeHeader(mode);
+        const isPanelOpen = document.body && document.body.dataset.mode === 'auth';
 
-        if (!oldEl || oldEl === newEl) {
+        if (!isPanelOpen || !oldEl || oldEl === newEl) {
+            updateWelcomeHeader(mode);
             Object.keys(modeElMap).forEach(k => {
                 if (modeElMap[k]) {
                     modeElMap[k].classList.toggle('hidden', k !== mode);
@@ -1267,6 +1349,8 @@
 
         oldEl.classList.add('hidden');
 
+        updateWelcomeHeader(mode);
+
         if (newEl) {
             newEl.style.opacity = '0';
             newEl.style.transition = 'none';
@@ -1282,24 +1366,22 @@
                 void mainCard.offsetHeight; // force reflow
                 
                 // Animate height and fade in content simultaneously
+                const myTransitionId = ++currentHeightTransitionId;
                 mainCard.style.transition = 'height 250ms cubic-bezier(0.22, 1, 0.36, 1)';
                 mainCard.style.height = `${targetHeight}px`;
+
+                setTimeout(() => {
+                    if (currentHeightTransitionId === myTransitionId && currentMode === mode) {
+                        mainCard.style.height = 'auto';
+                        mainCard.style.transition = '';
+                    }
+                }, 250);
             }
 
             newEl.style.transition = prefersReduced ? 'none' : 'opacity 200ms ease-in-out';
             void newEl.offsetHeight; // force reflow
             newEl.style.opacity = '1';
             newEl.style.pointerEvents = '';
-
-            if (mainCard && !prefersReduced) {
-                setTimeout(() => {
-                    // Only clear height if we are still in this mode (avoid clashing with a newer transition)
-                    if (currentMode === mode) {
-                        mainCard.style.height = 'auto';
-                        mainCard.style.transition = '';
-                    }
-                }, 250);
-            }
         }
     }
 
@@ -2340,10 +2422,320 @@
         }
     }
 
+    // --- Three.js Welcome Hero Animation ---
+    function initWelcomeThreeAnimation() {
+        if (typeof THREE === 'undefined') {
+            console.warn('[Welcome] Three.js library not loaded.');
+            return;
+        }
+
+        const canvas = document.getElementById('welcomeHeroCanvas');
+        if (!canvas) return;
+
+        const hero = document.querySelector('.welcome-hero');
+        if (!hero) return;
+
+        const scene = new THREE.Scene();
+        
+        // Perspective Camera matching z=25 bounds
+        const camera = new THREE.PerspectiveCamera(60, canvas.clientWidth / canvas.clientHeight, 0.1, 100);
+        camera.position.z = 25;
+
+        const renderer = new THREE.WebGLRenderer({
+            canvas: canvas,
+            alpha: true,
+            antialias: true,
+            powerPreference: 'high-performance'
+        });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
+
+        // Constellation nodes settings
+        const particleCount = 70;
+        const positions = new Float32Array(particleCount * 3);
+        const velocities = [];
+        const bounds = { x: 22, y: 14 };
+
+        for (let i = 0; i < particleCount; i++) {
+            positions[i * 3] = (Math.random() - 0.5) * bounds.x * 2;
+            positions[i * 3 + 1] = (Math.random() - 0.5) * bounds.y * 2;
+            positions[i * 3 + 2] = (Math.random() - 0.5) * 8 - 4; // depth range
+
+            velocities.push({
+                x: (Math.random() - 0.5) * 1.6,
+                y: (Math.random() - 0.5) * 1.6,
+                z: (Math.random() - 0.5) * 0.4
+            });
+        }
+
+        const particleGeometry = new THREE.BufferGeometry();
+        particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        
+        const particleMaterial = new THREE.PointsMaterial({
+            color: 0xe8a87c, // Brand orange color
+            size: 1.8,
+            transparent: true,
+            opacity: 0.48,
+            sizeAttenuation: true
+        });
+
+        const particleSystem = new THREE.Points(particleGeometry, particleMaterial);
+        scene.add(particleSystem);
+
+        // Dynamic Line Connections
+        const maxConnections = 180;
+        const linePositions = new Float32Array(maxConnections * 2 * 3);
+        const lineColors = new Float32Array(maxConnections * 2 * 3);
+        
+        const lineGeometry = new THREE.BufferGeometry();
+        lineGeometry.setAttribute('position', new THREE.BufferAttribute(linePositions, 3));
+        lineGeometry.setAttribute('color', new THREE.BufferAttribute(lineColors, 3));
+
+        const lineMaterial = new THREE.LineBasicMaterial({
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.14,
+            blending: THREE.AdditiveBlending
+        });
+
+        const lineSegments = new THREE.LineSegments(lineGeometry, lineMaterial);
+        scene.add(lineSegments);
+
+        // Interactive mouse force tracking
+        let mouse = { x: 0, y: 0, active: false };
+
+        hero.addEventListener('mousemove', (e) => {
+            const rect = hero.getBoundingClientRect();
+            mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+            mouse.active = true;
+        }, { passive: true });
+
+        hero.addEventListener('mouseleave', () => {
+            mouse.active = false;
+        });
+
+        // Performance polish constraints (Intersection Observer + Tab Visibility change)
+        let isVisible = true;
+        
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                isVisible = entry.isIntersecting;
+            });
+        }, { threshold: 0.05 });
+        observer.observe(hero);
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                isVisible = false;
+            } else {
+                const rect = hero.getBoundingClientRect();
+                isVisible = rect.bottom > 0 && rect.top < window.innerHeight;
+            }
+        });
+
+        // Resize Observer (listens to canvas dimension changes, avoiding layout thrashing during transitions)
+        const resizeObserver = new ResizeObserver((entries) => {
+            for (let entry of entries) {
+                const { width, height } = entry.contentRect;
+                camera.aspect = width / height;
+                camera.updateProjectionMatrix();
+                renderer.setSize(width, height, false);
+            }
+        });
+        resizeObserver.observe(canvas);
+
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            if (!isVisible) return;
+
+            const delta = Math.min(clock.getDelta(), 0.1);
+            const time = clock.getElapsedTime();
+            const posAttr = particleGeometry.attributes.position;
+            
+            const targetX = mouse.x * bounds.x;
+            const targetY = mouse.y * bounds.y;
+
+            // Update node positions
+            for (let i = 0; i < particleCount; i++) {
+                let px = posAttr.getX(i);
+                let py = posAttr.getY(i);
+                let pz = posAttr.getZ(i);
+
+                let vx = velocities[i].x;
+                let vy = velocities[i].y;
+                let vz = velocities[i].z;
+
+                // 1. Organic fluid-like sway/drift (multi-frequency wave force)
+                const swayX = Math.sin(time * 0.25 + i * 0.73) * 0.08 + Math.sin(time * 0.6 + i * 1.4) * 0.04;
+                const swayY = Math.cos(time * 0.22 + i * 0.81) * 0.08 + Math.cos(time * 0.52 + i * 1.1) * 0.04;
+                const swayZ = Math.sin(time * 0.35 + i * 0.95) * 0.02;
+                vx += swayX * delta * 5;
+                vy += swayY * delta * 5;
+                vz += swayZ * delta * 5;
+
+                // 2. Mouse deflection (magnetic push away from the cursor)
+                if (mouse.active) {
+                    const dx = px - targetX; // Vector pointing away from the mouse
+                    const dy = py - targetY;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const forceRadius = 11;
+                    if (dist < forceRadius && dist > 0.05) {
+                        const strength = (forceRadius - dist) / forceRadius; // Linear falloff
+                        const push = strength * strength * 14.5 * delta; // Quadratic curve for softer outer edges
+                        vx += (dx / dist) * push;
+                        vy += (dy / dist) * push;
+                    }
+                }
+
+                // 3. Soft magnetic boundary steering forces (gently direct particles back inward)
+                const marginX = 2.5;
+                if (px > bounds.x - marginX) {
+                    const depth = px - (bounds.x - marginX);
+                    vx -= depth * depth * 2.2 * delta;
+                } else if (px < -bounds.x + marginX) {
+                    const depth = -bounds.x + marginX - px;
+                    vx += depth * depth * 2.2 * delta;
+                }
+
+                const marginY = 2.0;
+                if (py > bounds.y - marginY) {
+                    const depth = py - (bounds.y - marginY);
+                    vy -= depth * depth * 2.2 * delta;
+                } else if (py < -bounds.y + marginY) {
+                    const depth = -bounds.y + marginY - py;
+                    vy += depth * depth * 2.2 * delta;
+                }
+
+                const marginZ = 1.5;
+                if (pz > 8 - marginZ) {
+                    const depth = pz - (8 - marginZ);
+                    vz -= depth * depth * 1.5 * delta;
+                } else if (pz < -8 + marginZ) {
+                    const depth = -8 + marginZ - pz;
+                    vz += depth * depth * 1.5 * delta;
+                }
+
+                // 4. Move
+                px += vx * delta * 5;
+                py += vy * delta * 5;
+                pz += vz * delta * 5;
+
+                // 5. Subtle drag / friction to prevent perpetual acceleration
+                vx *= 0.975;
+                vy *= 0.975;
+                vz *= 0.975;
+
+                // 6. Velocity limit & baseline float speed restoration
+                const speed = Math.sqrt(vx * vx + vy * vy + vz * vz);
+                const maxSpeed = 3.5;
+                if (speed > maxSpeed) {
+                    vx = (vx / speed) * maxSpeed;
+                    vy = (vy / speed) * maxSpeed;
+                    vz = (vz / speed) * maxSpeed;
+                }
+
+                const minSpeed = 0.35;
+                if (speed < minSpeed && speed > 0.001) {
+                    const ratio = minSpeed / speed;
+                    // Slowly adjust speed towards baseline
+                    vx += (vx * ratio - vx) * 0.05;
+                    vy += (vy * ratio - vy) * 0.05;
+                    vz += (vz * ratio - vz) * 0.05;
+                } else if (speed === 0) {
+                    vx = (Math.random() - 0.5) * 0.5;
+                    vy = (Math.random() - 0.5) * 0.5;
+                    vz = (Math.random() - 0.5) * 0.1;
+                }
+
+                // Hard boundary fallback clamp and dampening bounce
+                if (Math.abs(px) > bounds.x) {
+                    px = Math.sign(px) * bounds.x;
+                    vx *= -0.5;
+                }
+                if (Math.abs(py) > bounds.y) {
+                    py = Math.sign(py) * bounds.y;
+                    vy *= -0.5;
+                }
+                if (Math.abs(pz) > 8) {
+                    pz = Math.sign(pz) * 8;
+                    vz *= -0.5;
+                }
+
+                velocities[i].x = vx;
+                velocities[i].y = vy;
+                velocities[i].z = vz;
+
+                posAttr.setXYZ(i, px, py, pz);
+            }
+
+            // Update line geometry dynamically
+            let lineIndex = 0;
+            const linePosAttr = lineGeometry.attributes.position;
+            const lineColorAttr = lineGeometry.attributes.color;
+
+            for (let i = 0; i < particleCount; i++) {
+                const ix = posAttr.getX(i);
+                const iy = posAttr.getY(i);
+                const iz = posAttr.getZ(i);
+
+                for (let j = i + 1; j < particleCount; j++) {
+                    const jx = posAttr.getX(j);
+                    const jy = posAttr.getY(j);
+                    const jz = posAttr.getZ(j);
+
+                    const dx = ix - jx;
+                    const dy = iy - jy;
+                    const dz = iz - jz;
+                    const distSq = dx * dx + dy * dy + dz * dz;
+                    const limitSq = 36; // maximum line distance squared
+
+                    if (distSq < limitSq && lineIndex < maxConnections) {
+                        const dist = Math.sqrt(distSq);
+                        const alpha = 1 - (dist / 6); // fades out as distance increases
+
+                        linePosAttr.setXYZ(lineIndex * 2, ix, iy, iz);
+                        linePosAttr.setXYZ(lineIndex * 2 + 1, jx, jy, jz);
+
+                        // Line color gradients (brand theme)
+                        const r = 0.91 * alpha;
+                        const g = 0.66 * alpha;
+                        const b = 0.49 * alpha;
+                        lineColorAttr.setXYZ(lineIndex * 2, r, g, b);
+                        lineColorAttr.setXYZ(lineIndex * 2 + 1, r, g, b);
+
+                        lineIndex++;
+                    }
+                }
+            }
+
+            // Zero out remaining line attributes
+            for (let i = lineIndex; i < maxConnections; i++) {
+                linePosAttr.setXYZ(i * 2, 0, 0, 0);
+                linePosAttr.setXYZ(i * 2 + 1, 0, 0, 0);
+                lineColorAttr.setXYZ(i * 2, 0, 0, 0);
+                lineColorAttr.setXYZ(i * 2 + 1, 0, 0, 0);
+            }
+
+            posAttr.needsUpdate = true;
+            linePosAttr.needsUpdate = true;
+            lineColorAttr.needsUpdate = true;
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
+    }
+
     // --- Initialize ---
     async function init() {
         if (initStarted) return;
         initStarted = true;
+        setAuthProviders(authProviders);
+        initWelcomeThreeAnimation();
         markDecorativeMaterialIcons();
         setupWelcomePreviewFrames();
         setupWelcomePreviewStages();
@@ -2398,18 +2790,18 @@
 
             if (verifyEmailToken) {
                 removeSearchParam('verify_email_token');
-                openWelcomeAuthLayer();
                 configureHostedRegistrationMode();
                 showMode('onboarding');
+                openWelcomeAuthLayer();
                 await submitWelcomeEmailVerificationToken(verifyEmailToken);
                 return;
             }
 
             if (resetPasswordToken) {
                 removeSearchParam('reset_password_token');
-                openWelcomeAuthLayer();
                 configureHostedLoginMode();
                 showMode('login');
+                openWelcomeAuthLayer();
                 window.welcomeOpenForgotPasswordModal({ resetToken: resetPasswordToken });
                 return;
             }
