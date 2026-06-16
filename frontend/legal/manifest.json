@@ -2,31 +2,37 @@
   "terms": {
     "title": "Условия пользования",
     "title_en": "Terms of Service",
+    "title_uk": "Умови використання",
     "version": "2026-05-25.2",
     "effective_at": "2026-05-25T00:00:00Z",
     "last_reviewed_at": "2026-05-13T00:00:00Z",
     "filename": "terms.md",
     "filename_en": "terms.en.md",
+    "filename_uk": "terms.uk.md",
     "format": "markdown"
   },
   "privacy": {
     "title": "Политика приватности",
     "title_en": "Privacy Policy",
+    "title_uk": "Політика конфіденційності",
     "version": "2026-05-25.1",
     "effective_at": "2026-05-25T00:00:00Z",
     "last_reviewed_at": "2026-05-11T00:00:00Z",
     "filename": "privacy.md",
     "filename_en": "privacy.en.md",
+    "filename_uk": "privacy.uk.md",
     "format": "markdown"
   },
   "refund": {
     "title": "Политика возвратов",
     "title_en": "Refund Policy",
+    "title_uk": "Політика повернень",
     "version": "2026-05-25.1",
     "effective_at": "2026-05-25T00:00:00Z",
     "last_reviewed_at": "2026-05-11T00:00:00Z",
     "filename": "refund.md",
     "filename_en": "refund.en.md",
+    "filename_uk": "refund.uk.md",
     "format": "markdown"
   }
 }

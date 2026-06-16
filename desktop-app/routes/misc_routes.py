@@ -157,17 +157,29 @@ def legal_document(doc_type: str) -> Any:
         h = _mh()
         manifest = h["load_legal_manifest"]()
         meta = manifest.get(doc_type) or {}
-        path = h["legal_doc_path"](doc_type, manifest=manifest)
+        
+        lang = request.args.get("lang", "ru")
+        if lang not in ("ru", "en", "uk"):
+            lang = "ru"
+        
+        path = h["legal_doc_path"](doc_type, manifest=manifest, lang=lang)
         if path is None or not path.exists():
             return jsonify({"ok": False, "error": "document_not_found"}), 404
 
         content = path.read_text(encoding="utf-8")
+        
+        title = meta.get("title")
+        if lang == "en" and meta.get("title_en"):
+            title = meta["title_en"]
+        elif lang == "uk" and meta.get("title_uk"):
+            title = meta["title_uk"]
+        
         return jsonify(
             {
                 "ok": True,
                 "document": {
                     "doc_type": doc_type,
-                    "title": meta.get("title"),
+                    "title": title,
                     "version": meta.get("version"),
                     "effective_at": meta.get("effective_at"),
                     "last_reviewed_at": meta.get("last_reviewed_at"),

@@ -25,7 +25,7 @@ static_bp = Blueprint("static_ui", __name__)
 
 
 _LEGAL_DOC_TYPES = {"terms", "privacy", "refund"}
-_PUBLIC_LANGS = {"en", "ru"}
+_PUBLIC_LANGS = {"en", "ru", "uk"}
 
 _PREMIUM_OFFERS = (
     {"days": 14, "label": "14 days", "price": "$4.99", "per_day": "$0.36/day"},
@@ -61,6 +61,20 @@ _PUBLIC_LABELS = {
         "support": "Поддержка",
         "version": "Версия",
         "effective": "Действует с",
+        "premium": "ACTRA Premium",
+    },
+    "uk": {
+        "pricing": "Ціни",
+        "refund": "Повернення",
+        "terms": "Умови",
+        "privacy": "Конфіденційність",
+        "home": "Головна",
+        "back_home": "Повернутися на головну",
+        "language": "Мова",
+        "support": "Підтримка",
+        "version": "Версія",
+        "effective": "Діє з",
+        "reviewed": "Останній перегляд",
         "premium": "ACTRA Premium",
     },
 }
@@ -106,7 +120,7 @@ def _public_nav_html(lang: str, current_path: str = "") -> str:
 def _language_switch_html(current_path: str, lang: str) -> str:
     labels = _PUBLIC_LABELS.get(lang, _PUBLIC_LABELS["en"])
     items = []
-    for code, label in (("en", "English"), ("ru", "Русский")):
+    for code, label in (("en", "English"), ("ru", "Русский"), ("uk", "Українська")):
         active = code == lang
         attrs = ' aria-current="page"' if active else ""
         cls = "active" if active else ""
@@ -591,6 +605,7 @@ def _public_legal_document_page(doc_type: str) -> Any:
     legal_dir = Path(__file__).resolve().parents[2] / "frontend" / "legal"
     manifest_path = legal_dir / "manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.exists() else {}
+    
     if lang == "en":
         meta = dict((manifest or {}).get(clean_type) or {})
         path = legal_dir / str(meta.get("filename_en") or f"{clean_type}.en.md")
@@ -600,6 +615,30 @@ def _public_legal_document_page(doc_type: str) -> Any:
             "refund": "Refund Policy",
         }
         title = str(meta.get("title_en") or fallback_titles.get(clean_type) or "Legal document")
+        version = str(meta.get("version") or "").strip()
+        effective_at = str(meta.get("effective_at") or "").strip()
+        last_reviewed_at = str(meta.get("last_reviewed_at") or "").strip()
+    elif lang == "uk":
+        meta = dict((manifest or {}).get(clean_type) or {})
+        filename_uk = meta.get("filename_uk")
+        if filename_uk:
+            path = legal_dir / filename_uk
+        else:
+            helpers = get_extra("misc_helpers", {}) or {}
+            load_manifest = helpers.get("load_legal_manifest")
+            resolve_doc_path = helpers.get("legal_doc_path")
+            if callable(load_manifest) and callable(resolve_doc_path):
+                manifest = load_manifest()
+                path = resolve_doc_path(clean_type, manifest=manifest, lang="uk")
+            else:
+                filename = str(meta.get("filename") or f"{clean_type}.md")
+                path = legal_dir / filename
+        fallback_titles = {
+            "terms": "Умови використання",
+            "privacy": "Політика конфіденційності",
+            "refund": "Політика повернень",
+        }
+        title = str(meta.get("title_uk") or fallback_titles.get(clean_type) or "Legal document")
         version = str(meta.get("version") or "").strip()
         effective_at = str(meta.get("effective_at") or "").strip()
         last_reviewed_at = str(meta.get("last_reviewed_at") or "").strip()
@@ -629,7 +668,7 @@ def _public_legal_document_page(doc_type: str) -> Any:
     last_reviewed_date = (
         last_reviewed_at.split("T", 1)[0] if "T" in last_reviewed_at else last_reviewed_at
     )
-    reviewed_label = "Дата последнего пересмотра" if lang == "ru" else labels.get("reviewed", "Last reviewed")
+    reviewed_label = labels.get("reviewed", "Last reviewed")
     meta_parts = [
         part
         for part in (

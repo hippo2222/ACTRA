@@ -2140,13 +2140,21 @@ def _load_legal_manifest() -> Dict[str, Dict[str, str]]:
 
 
 def _legal_doc_path(
-    doc_type: str, manifest: Optional[Dict[str, Dict[str, str]]] = None
+    doc_type: str, manifest: Optional[Dict[str, Dict[str, str]]] = None, lang: str = "ru"
 ) -> Optional[Path]:
     if doc_type not in ("terms", "privacy", "refund"):
         return None
     if manifest is None:
         manifest = _load_legal_manifest()
-    filename = manifest.get(doc_type, {}).get("filename")
+    doc_meta = manifest.get(doc_type, {})
+    
+    if lang == "en" and doc_meta.get("filename_en"):
+        filename = doc_meta["filename_en"]
+    elif lang == "uk" and doc_meta.get("filename_uk"):
+        filename = doc_meta["filename_uk"]
+    else:
+        filename = doc_meta.get("filename")
+    
     if not filename:
         return None
     return _legal_dir() / filename

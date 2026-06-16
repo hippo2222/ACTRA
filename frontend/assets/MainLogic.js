@@ -729,7 +729,8 @@
             return;
         }
 
-        const { ok, data } = await apiFetch(`/api/legal/document/${docType}`);
+        const lang = window.i18n && typeof window.i18n.getLang === 'function' ? window.i18n.getLang() : 'ru';
+        const { ok, data } = await apiFetch(`/api/legal/document/${docType}?lang=${encodeURIComponent(lang)}`);
         if (!ok || !data?.document) {
             NotificationUI.toast(wt('main.toast_legal_open_error', 'Не удалось открыть документ'), 'error');
             return;
