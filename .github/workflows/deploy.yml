@@ -1,0 +1,55 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [online-hosting]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST || '91.99.223.246' }}
+          username: root
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            set -e
+            cd /opt/actra
+
+            echo "==> Current branch:"
+            git branch --show-current
+
+            echo "==> Fetching..."
+            git fetch origin online-hosting
+
+            LOCAL=$(git rev-parse HEAD)
+            REMOTE=$(git rev-parse origin/online-hosting)
+
+            if [ "$LOCAL" = "$REMOTE" ]; then
+              echo "==> Already up-to-date, but rebuilding..."
+            else
+              echo "==> Pulling new changes..."
+              git pull --ff-only origin online-hosting
+            fi
+
+            echo "==> Rebuilding containers..."
+            docker compose -f docker-compose.hosted.yml up -d --build app
+
+            echo "==> Waiting for container..."
+            for i in $(seq 1 30); do
+              if curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/welcome | grep -qE "200|301|302"; then
+                echo "==> App is ready!"
+                exit 0
+              fi
+              sleep 2
+            done
+
+            echo "ERROR: App did not start in 60s"
+            docker logs --tail 30 actra-app-1
+            exit 1
+
+      - name: Notify on failure
+        if: failure()
+        run: echo "Deployment failed! Check GitHub Actions logs."
