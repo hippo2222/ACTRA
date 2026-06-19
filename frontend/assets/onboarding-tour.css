@@ -1180,7 +1180,10 @@ body[data-onboarding-step-id="click-difficulty-levels"] [data-onboarding-target=
     100% {
         opacity: 0;
         transform: scale(1.9);
-    }
+}
+
+.onboarding-tour-spotlight-clone .hidden {
+    display: none !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

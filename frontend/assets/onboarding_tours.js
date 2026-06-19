@@ -687,9 +687,10 @@
                         },
                         {
                             target: '[data-onboarding-target="microcards-create-actions"]',
-                            placement: 'bottom',
-                            offsetX: -40,
-                            offsetY: 18,
+                            placement: 'left',
+                            keepPlacement: true,
+                            offsetX: 0,
+                            offsetY: 0,
                             title: wt('tours.microcards_library_overview.library_find.c1_title', 'Новые колоды'),
                             body: wt('tours.microcards_library_overview.library_find.c1_body', 'Колоду можно создать с нуля или получить готовую: по коду доступа от автора либо из каталога учебных материалов.')
                         }
@@ -742,12 +743,16 @@
                     placement: 'bottom',
                     controlPlacement: 'bottom-right',
                     controlPlacementLocked: true,
+                    scrollBlock: 'start',
+                    forceAutoScroll: true,
                     kicker: wt('tours.microcards_library_overview.study_modes.kicker', 'Режимы обучения'),
                     callouts: [
                         {
                             target: '[data-onboarding-target="microcards-study-modes"]',
-                            placement: 'top',
-                            offsetY: -12,
+                            placement: 'bottom',
+                            keepPlacement: true,
+                            offsetX: 0,
+                            offsetY: 0,
                             title: wt('tours.microcards_library_overview.study_modes.c0_title', 'Режимы обучения'),
                             body: wt('tours.microcards_library_overview.study_modes.c0_body', 'Прохождения - изучение всей колоды: Уровень 1 в формате "знаю / не знаю", Уровень 2 с вводом ответа. "Повторение" - ежедневная работа с долгами, "Просмотр" - свободное листание. Подсказки по самой сессии появятся при первом запуске, а позже их можно найти в справочнике.')
                         }
