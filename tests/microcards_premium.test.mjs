@@ -120,12 +120,12 @@ describe('Microcards premium (F2) — main-page archive banner', () => {
 
 describe('Microcards premium (F3) — shared promo modal', () => {
     it('mentions flashcard decks in the no-limits feature', () => {
-        expect(premiumPromoSrc).toContain('колод микрокарточек');
+        expect(premiumPromoSrc).toContain('microcard decks');
     });
 
     it('exposes a microcards-limit trigger variant with its own copy', () => {
         expect(premiumPromoSrc).toContain("feature === 'microcards-limit'");
-        expect(premiumPromoSrc).toContain('Больше колод микрокарточек в Premium');
+        expect(premiumPromoSrc).toContain('premium_promo_trigger_microcards_limit_title');
     });
 });
 

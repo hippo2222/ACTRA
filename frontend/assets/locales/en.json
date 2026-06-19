@@ -3737,6 +3737,11 @@
         "c0_body": "Every session earns synaptic weight (SW) and raises the deck level. Without reviews the weight slowly decays — so you can see which decks hold in memory and which need refreshing.",
         "c1_title": "Study modes",
         "c1_body": "Runs cover the whole deck: Level 1 in a \"know / don't know\" format, Level 2 with typed answers. \"Review\" is the daily work on due and new cards, \"Browse\" is free flipping. Tips for the session itself appear on the first run, and later you can find them in the reference."
+      },
+      "study_modes": {
+        "kicker": "Study modes",
+        "c0_title": "Study modes",
+        "c0_body": "Runs cover the whole deck: Level 1 in a \"know / don't know\" format, Level 2 with typed answers. \"Review\" is the daily work on due and new cards, \"Browse\" is free flipping. Tips for the session itself appear on the first run, and later you can find them in the reference."
       }
     },
     "microcards_review_session": {

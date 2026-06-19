@@ -50,11 +50,11 @@ describe('Microcards onboarding tours', () => {
         expect(tour).toBeTruthy();
         expect(tour.route).toEqual(['/microcards']);
         expect(tour.autoStart).toBe(true);
-        expect(tour.referenceCategory).toBe('Проходим и повторяем');
-        expect(tour.steps).toHaveLength(4);
-        expect(tour.totalStates).toBe(4);
+        expect(tour.referenceCategory).toBe('practice');
+        expect(tour.steps).toHaveLength(5);
+        expect(tour.totalStates).toBe(5);
         expect(tour.steps.map((step) => step.id)).toEqual([
-            'library-pulse', 'library-find', 'library-deck-card', 'deck-mastery',
+            'library-pulse', 'library-find', 'library-deck-card', 'deck-mastery', 'study-modes',
         ]);
     });
 
@@ -64,11 +64,11 @@ describe('Microcards onboarding tours', () => {
         expect(tour).toBeTruthy();
         expect(tour.route).toEqual(['/microcards']);
         expect(Boolean(tour.autoStart)).toBe(false);
-        expect(tour.referenceCategory).toBe('Проходим и повторяем');
-        expect(tour.steps).toHaveLength(5);
-        expect(tour.totalStates).toBe(5);
+        expect(tour.referenceCategory).toBe('practice');
+        expect(tour.steps).toHaveLength(4);
+        expect(tour.totalStates).toBe(4);
         expect(tour.steps.map((step) => step.id)).toEqual([
-            'session-card', 'session-reveal', 'session-grade', 'session-queue', 'session-summary',
+            'session-card', 'session-grade', 'session-queue', 'session-summary',
         ]);
     });
 

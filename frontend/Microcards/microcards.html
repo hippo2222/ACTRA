@@ -168,9 +168,9 @@
             width: 2.75rem; height: 2.75rem; border-radius: 0.85rem; flex-shrink: 0;
         }
         .mc-stat__icon .material-symbols-outlined { font-size: 1.4rem; }
-        .mc-stat__icon--due { background: color-mix(in srgb, var(--color-error) 14%, transparent); color: var(--color-error); }
-        .mc-stat__icon--new { background: color-mix(in srgb, var(--color-info) 14%, transparent); color: var(--color-info); }
-        .mc-stat__icon--total { background: color-mix(in srgb, var(--color-success) 14%, transparent); color: var(--color-success); }
+        .mc-stat__icon--due { background: color-mix(in srgb, var(--color-error) 14%, transparent); color: var(--color-error-text); }
+        .mc-stat__icon--new { background: color-mix(in srgb, var(--color-info) 14%, transparent); color: var(--color-info-text); }
+        .mc-stat__icon--total { background: color-mix(in srgb, var(--color-success) 14%, transparent); color: var(--color-success-text); }
         .mc-stat__label { font-size: 0.62rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
             color: var(--color-text-secondary); }
         .mc-stat__value { font-size: 1.5rem; font-weight: 900; color: var(--color-text-main); line-height: 1.05; }
@@ -375,8 +375,8 @@
         .mc-deck-card__status .material-symbols-outlined { font-size: 0.95rem; }
         .mc-deck-card__status--new { color: var(--color-text-secondary); font-weight: 700; font-style: italic; }
         .mc-deck-card__status--progress { color: var(--color-primary); }
-        .mc-deck-card__status--mastered { color: var(--color-success); }
-        .mc-deck-card__status--paused { color: var(--color-warning); }
+        .mc-deck-card__status--mastered { color: var(--color-success-text); }
+        .mc-deck-card__status--paused { color: var(--color-warning-text); }
         /* Mastery bar — livelier: thicker, success gradient, gold when fully mastered. */
         .mc-deck-card__mastery { height: 5px; border-radius: 999px; background: var(--color-bg-secondary);
             overflow: hidden; margin: 0; }
@@ -386,8 +386,8 @@
         /* Action row at the card bottom: workload (left) + CTA (right) — single right edge. */
         .mc-deck-card__action { margin-top: auto; padding-top: 1rem; display: flex; align-items: center; gap: 0.6rem; }
         .mc-deck-card__load { font-size: 0.74rem; font-weight: 800; padding: 0.22rem 0.55rem; border-radius: 999px; white-space: nowrap; }
-        .mc-deck-card__load--due { background: color-mix(in srgb, var(--color-error) 14%, transparent); color: var(--color-error); }
-        .mc-deck-card__load--new { background: color-mix(in srgb, var(--color-info) 14%, transparent); color: var(--color-info); }
+        .mc-deck-card__load--due { background: color-mix(in srgb, var(--color-error) 14%, transparent); color: var(--color-error-text); }
+        .mc-deck-card__load--new { background: color-mix(in srgb, var(--color-info) 14%, transparent); color: var(--color-info-text); }
         .mc-deck-card__study { margin-left: auto; padding: 0 1.15rem; }
         .mc-card-menu-wrap { position: relative; flex-shrink: 0; }
         /* ⋯ now sits in the header → menu opens downward, within the card (overflow:hidden). */
@@ -395,9 +395,9 @@
 
         .mc-pill { padding: 0.18rem 0.55rem; border-radius: 999px; font-size: 0.62rem; font-weight: 800; }
         .mc-pill--due { background: color-mix(in srgb, var(--color-error) 14%, transparent);
-            border: 1px solid color-mix(in srgb, var(--color-error) 30%, transparent); color: var(--color-error); }
+            border: 1px solid color-mix(in srgb, var(--color-error) 30%, transparent); color: var(--color-error-text); }
         .mc-pill--new { background: color-mix(in srgb, var(--color-info) 14%, transparent);
-            border: 1px solid color-mix(in srgb, var(--color-info) 30%, transparent); color: var(--color-info); }
+            border: 1px solid color-mix(in srgb, var(--color-info) 30%, transparent); color: var(--color-info-text); }
         .mc-pill--linked { display: inline-flex; align-items: center; gap: 0.2rem;
             background: color-mix(in srgb, var(--color-primary) 12%, transparent);
             border: 1px solid color-mix(in srgb, var(--color-primary) 30%, transparent); color: var(--color-primary); }
@@ -624,10 +624,10 @@
         .mc-grade__btn:active { transform: scale(0.97); }
         .mc-grade__btn .material-symbols-outlined { font-size: 1.25rem; }
         .mc-grade__btn--no { background: color-mix(in srgb, var(--color-error) 12%, transparent);
-            border-color: color-mix(in srgb, var(--color-error) 28%, transparent); color: var(--color-error); }
+            border-color: color-mix(in srgb, var(--color-error) 28%, transparent); color: var(--color-error-text); }
         .mc-grade__btn--no:hover { background: color-mix(in srgb, var(--color-error) 20%, transparent); }
         .mc-grade__btn--yes { background: color-mix(in srgb, var(--color-success) 12%, transparent);
-            border-color: color-mix(in srgb, var(--color-success) 28%, transparent); color: var(--color-success); }
+            border-color: color-mix(in srgb, var(--color-success) 28%, transparent); color: var(--color-success-text); }
         .mc-grade__btn--yes:hover { background: color-mix(in srgb, var(--color-success) 20%, transparent); }
 
         .mc-answer-form { display: flex; gap: 0.6rem; }
@@ -644,7 +644,7 @@
         .mc-compare__row + .mc-compare__row { margin-top: 0.6rem; }
         .mc-compare__label { display: block; font-size: 0.68rem; font-weight: 700; color: var(--color-text-secondary); }
         .mc-compare__val { display: block; font-size: 0.85rem; font-weight: 700; color: var(--color-text-main); margin-top: 0.1rem; }
-        .mc-compare__val--ok { color: var(--color-success); }
+        .mc-compare__val--ok { color: var(--color-success-text); }
 
         /* ── Summary ──────────────────────────────────────────────── */
         .mc-summary-layout {
@@ -704,17 +704,17 @@
         .mc-sumstat--total .mc-sumstat__val { color: var(--color-text-main); }
         .mc-sumstat--correct { background: color-mix(in srgb, var(--color-success) 10%, transparent);
             border-color: color-mix(in srgb, var(--color-success) 25%, transparent); }
-        .mc-sumstat--correct .mc-sumstat__val { color: var(--color-success); }
+        .mc-sumstat--correct .mc-sumstat__val { color: var(--color-success-text); }
         .mc-sumstat--errors { background: color-mix(in srgb, var(--color-error) 10%, transparent);
             border-color: color-mix(in srgb, var(--color-error) 25%, transparent); }
-        .mc-sumstat--errors .mc-sumstat__val { color: var(--color-error); }
+        .mc-sumstat--errors .mc-sumstat__val { color: var(--color-error-text); }
         .mc-summary__actions { display: flex; flex-direction: column; gap: 0.6rem; }
         @media (min-width: 520px) { .mc-summary__actions { flex-direction: row; justify-content: center; } }
 
         .mc-errrow { padding: 0.9rem 1rem; border-radius: var(--mc-radius-sm); text-align: left;
             background: var(--color-surface-1); border: 1px solid var(--color-border-subtle); }
         .mc-errrow__q { font-size: 0.82rem; font-weight: 800; color: var(--color-text-main); }
-        .mc-errrow__a { font-size: 0.8rem; font-weight: 600; color: var(--color-success); margin-top: 0.25rem; }
+        .mc-errrow__a { font-size: 0.8rem; font-weight: 600; color: var(--color-success-text); margin-top: 0.25rem; }
 
         .mc-field { display: flex; flex-direction: column; }
         .mc-field__label { font-size: 0.66rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;
@@ -932,20 +932,7 @@
             gap: 0.15rem;
         }
 
-        .mc-record-badge {
-            background: linear-gradient(135deg, var(--color-warning) 0%, #ff8c00 100%);
-            color: #ffffff;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.4rem;
-            padding: 0.35rem 0.8rem;
-            border-radius: 999px;
-            font-size: 0.76rem;
-            font-weight: 800;
-            box-shadow: 0 4px 12px rgba(255,140,0,0.3);
-            text-shadow: 0 1px 2px rgba(0,0,0,0.15);
-            animation: mc-pulse 1.5s infinite alternate;
-        }
+
 
         @keyframes mc-pulse {
             0% { transform: scale(1); }
@@ -1031,9 +1018,9 @@
         .mc-imp-preview { border: 1px solid var(--color-border-subtle); border-radius: 0.7rem; overflow: hidden; }
         .mc-imp-counts { display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0.6rem 0.7rem; background: var(--color-surface-2); border-bottom: 1px solid var(--color-border-subtle); font-size: 0.72rem; font-weight: 800; }
         .mc-imp-count { padding: 0.15rem 0.55rem; border-radius: 999px; }
-        .mc-imp-count--ok { background: color-mix(in srgb, var(--color-success) 14%, transparent); color: var(--color-success); }
-        .mc-imp-count--dup { background: color-mix(in srgb, var(--color-warning) 14%, transparent); color: var(--color-warning); }
-        .mc-imp-count--err { background: color-mix(in srgb, var(--color-error) 14%, transparent); color: var(--color-error); }
+        .mc-imp-count--ok { background: color-mix(in srgb, var(--color-success) 14%, transparent); color: var(--color-success-text); }
+        .mc-imp-count--dup { background: color-mix(in srgb, var(--color-warning) 14%, transparent); color: var(--color-warning-text); }
+        .mc-imp-count--err { background: color-mix(in srgb, var(--color-error) 14%, transparent); color: var(--color-error-text); }
         .mc-imp-rows { max-height: min(26rem, 48vh); overflow-y: auto; }
         .mc-imp-row { display: grid; grid-template-columns: 1.4rem 1fr 1fr; gap: 0.5rem; align-items: start;
             padding: 0.45rem 0.7rem; border-bottom: 1px solid var(--color-border-subtle); font-size: 0.76rem; }
@@ -1056,11 +1043,11 @@
         .mc-toast { padding: 0.75rem 1rem; border-radius: 0.85rem; font-size: 0.8rem; font-weight: 700;
             box-shadow: var(--shadow-lg, 0 10px 24px rgba(0,0,0,0.15)); border: 1px solid; transition: opacity .3s; }
         .mc-toast--success { background: color-mix(in srgb, var(--color-success) 14%, var(--color-surface-1));
-            border-color: var(--color-success); color: var(--color-success); }
+            border-color: var(--color-success); color: var(--color-success-text); }
         .mc-toast--error { background: color-mix(in srgb, var(--color-error) 14%, var(--color-surface-1));
-            border-color: var(--color-error); color: var(--color-error); }
+            border-color: var(--color-error); color: var(--color-error-text); }
         .mc-toast--warning { background: color-mix(in srgb, var(--color-warning) 14%, var(--color-surface-1));
-            border-color: var(--color-warning); color: var(--color-warning); }
+            border-color: var(--color-warning); color: var(--color-warning-text); }
         .mc-toast--info { background: color-mix(in srgb, var(--color-primary) 14%, var(--color-surface-1));
             border-color: var(--color-primary); color: var(--color-primary); }
 
@@ -1958,8 +1945,8 @@
 
                 <div class="mc-controls">
                     <div class="mc-search" data-onboarding-target="microcards-search">
-                        <span class="material-symbols-outlined">search</span>
-                        <input id="libSearch" type="search" placeholder="Поиск колоды по названию..." data-i18n-placeholder="microcards.search_placeholder" />
+                        <span class="material-symbols-outlined" aria-hidden="true">search</span>
+                        <input id="libSearch" type="search" placeholder="Поиск колоды по названию..." data-i18n-placeholder="microcards.search_placeholder" aria-label="Найти колоду по названию или теме" data-i18n-aria="microcards.search_placeholder" />
                     </div>
                     <div class="mc-sort t-tabs" id="mcSort" data-onboarding-target="microcards-sort" role="group" aria-label="Сортировка колод" data-i18n-aria="microcards.sort_label">
                         <span class="t-tabs-pill" aria-hidden="true"></span>
@@ -1971,7 +1958,7 @@
                     </div>
                     <button type="button" id="btnStudyPrefs" class="mc-iconbtn" onclick="mcApp.openStudySettings()"
                             aria-label="Настройки звука и анимаций" data-i18n-aria="microcards.settings_title" title="Настройки" data-i18n-title="microcards.settings_title">
-                        <span class="material-symbols-outlined">settings</span>
+                        <span class="material-symbols-outlined" aria-hidden="true">settings</span>
                     </button>
                 </div>
 
@@ -2009,7 +1996,7 @@
                 <header class="mc-dhead">
                     <nav class="mc-dhead__crumb" aria-label="breadcrumb">
                         <button type="button" onclick="mcApp.handleBackNavigation()" class="mc-crumb-link">
-                            <span class="material-symbols-outlined">arrow_back</span>
+                            <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
                             <span data-i18n="microcards.page_heading">Микрокарточки</span>
                         </button>
                     </nav>
@@ -2020,34 +2007,34 @@
                                    onkeydown="mcApp.onRenameKey(event)" onblur="mcApp.commitInlineRename(true)" aria-label="Название колоды" />
                             <button type="button" id="btnRenameDeck" class="mc-dhead__renamebtn" onclick="mcApp.startInlineRename()"
                                     data-i18n-title="microcards.btn_rename" title="Переименовать" aria-label="Переименовать">
-                                <span class="material-symbols-outlined">edit</span>
+                                <span class="material-symbols-outlined" aria-hidden="true">edit</span>
                             </button>
                             <span id="deckPublishStatus"></span>
                             <span id="deckPausedStatus"></span>
                         </div>
                         <div class="mc-dhead__actions" data-onboarding-target="microcards-deck-actions">
                         <button type="button" id="btnDeckPublish" class="mc-btn mc-btn--ghost" onclick="mcApp.publishDeckToCatalog()">
-                            <span class="material-symbols-outlined">public</span>
+                            <span class="material-symbols-outlined" aria-hidden="true">public</span>
                             <span data-i18n="microcards.btn_publish_deck">Опубликовать</span>
                         </button>
                         <div class="relative">
                             <button type="button" onclick="mcApp.toggleDeckActionsMenu(event)" class="mc-iconbtn" aria-label="Ещё" aria-haspopup="menu" data-i18n-aria="microcards.btn_more">
-                                <span class="material-symbols-outlined">more_horiz</span>
+                                <span class="material-symbols-outlined" aria-hidden="true">more_horiz</span>
                             </button>
                             <div id="deckActionsDropdown" class="mc-menu t-dropdown hidden" data-origin="top-right" role="menu">
                                 <button type="button" id="btnDeckEditor" onclick="mcApp.openDeckMetaDialog()" class="mc-menu__item" role="menuitem">
-                                    <span class="material-symbols-outlined">settings</span><span data-i18n="microcards.btn_deck_params">Параметры</span>
+                                    <span class="material-symbols-outlined" aria-hidden="true">settings</span><span data-i18n="microcards.btn_deck_params">Параметры</span>
                                 </button>
                                 <div class="mc-menu__sep"></div>
                                 <button type="button" onclick="mcApp.exportDeck('json')" class="mc-menu__item" role="menuitem">
-                                    <span class="material-symbols-outlined">download</span><span data-i18n="microcards.btn_menu_export_json">Экспорт JSON</span>
+                                    <span class="material-symbols-outlined" aria-hidden="true">download</span><span data-i18n="microcards.btn_menu_export_json">Экспорт JSON</span>
                                 </button>
                                 <button type="button" onclick="mcApp.exportDeck('csv')" class="mc-menu__item" role="menuitem">
-                                    <span class="material-symbols-outlined">download</span><span data-i18n="microcards.btn_menu_export_csv">Экспорт CSV</span>
+                                    <span class="material-symbols-outlined" aria-hidden="true">download</span><span data-i18n="microcards.btn_menu_export_csv">Экспорт CSV</span>
                                 </button>
                                 <div class="mc-menu__sep"></div>
                                 <button type="button" id="btnDeckDelete" onclick="mcApp.confirmDeleteDeck()" class="mc-menu__item mc-menu__item--danger" role="menuitem">
-                                    <span class="material-symbols-outlined">delete</span><span id="btnDeckDeleteLabel" data-i18n="microcards.btn_menu_delete_deck">Удалить колоду</span>
+                                    <span class="material-symbols-outlined" aria-hidden="true">delete</span><span id="btnDeckDeleteLabel" data-i18n="microcards.btn_menu_delete_deck">Удалить колоду</span>
                                 </button>
                             </div>
                         </div>
@@ -2288,7 +2275,7 @@
                                 <span id="mcRepeatChipVal">0</span>
                             </div>
                             <div id="xpChip" class="mc-xp-chip" aria-live="polite">
-                                <span class="material-symbols-outlined">stars</span>
+                                <span class="material-symbols-outlined" aria-hidden="true">stars</span>
                                 <span id="xpChipVal" class="t-digit-group"><span class="t-digit">0</span></span>
                                 <span data-i18n="microcards.points_label">SW</span>
                             </div>
@@ -2300,7 +2287,7 @@
                     <div class="mc-arena" id="mcArena">
                         <div class="mc-rail-wrapper">
                             <button type="button" class="mc-rail mc-rail--no" id="railNo" aria-label="Не знаю" data-i18n-aria="microcards.btn_dont_know" data-onboarding-target="microcards-session-rail-no" data-onboarding-spotlight="frame">
-                                <span class="material-symbols-outlined">thumb_down</span>
+                                <span class="material-symbols-outlined" aria-hidden="true">thumb_down</span>
                                 <span class="mc-rail__label" data-i18n="microcards.btn_dont_know">Не знаю</span>
                             </button>
                             <span class="mc-rail-hotkey">[1]</span>
@@ -2461,8 +2448,8 @@
                             <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1">workspace_premium</span>
                             <span data-i18n="microcards.new_record">НОВЫЙ РЕКОРД!</span>
                         </div>
-                        <div id="sumLevel2UnlockBanner" class="mc-record-badge hidden" style="background:linear-gradient(135deg, var(--color-warning) 0%, #ff8c00 100%); margin-top: 0.5rem; animation: mc-pulse 1.5s infinite alternate;">
-                            <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1">lock_open</span>
+                        <div id="sumLevel2UnlockBanner" class="mc-record-badge hidden" style="margin-top: 0.5rem; animation: mc-pulse 1.5s infinite alternate;">
+                            <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1" aria-hidden="true">lock_open</span>
                             <span data-i18n="microcards.l2_unlocked">РАЗБЛОКИРОВАН УРОВЕНЬ 2!</span>
                         </div>
                         <!-- Same dark-glass language as the float hints: a fixed dark plate with a
@@ -2509,8 +2496,8 @@
                             <button type="button" onclick="mcApp.backToDecks()" class="mc-btn mc-btn--ghost mc-btn--block">
                                 <span data-i18n="microcards.btn_back_to_decks">Назад к колодам</span>
                             </button>
-                            <button type="button" id="btnGoToLevel2" onclick="mcApp.startRun(2)" class="mc-btn mc-btn--primary mc-btn--block hidden" style="background:linear-gradient(135deg, var(--color-warning) 0%, #ff8c00 100%); border:0; color:#fff">
-                                <span class="material-symbols-outlined">edit_note</span>
+                            <button type="button" id="btnGoToLevel2" onclick="mcApp.startRun(2)" class="mc-btn mc-btn--warning mc-btn--block hidden">
+                                <span class="material-symbols-outlined" aria-hidden="true">edit_note</span>
                                 <span data-i18n="microcards.btn_start_l2">Начать Уровень 2</span>
                             </button>
                             <button type="button" id="btnStudyAgain" onclick="mcApp.restartLearningSession()" class="mc-btn mc-btn--primary mc-btn--block">

@@ -1123,7 +1123,7 @@
             if (archived) {
                 workloadHtml = '';
             } else if (deck.is_paused) {
-                workloadHtml = `<span class="mc-deck-card__load" style="background:color-mix(in srgb, var(--color-warning) 14%, transparent); color:var(--color-warning); border:1px solid color-mix(in srgb, var(--color-warning) 30%, transparent); display:inline-flex; align-items:center; gap:0.25rem;"><span class="material-symbols-outlined" style="font-size:0.95rem;">pause_circle</span><span>${t('microcards.badge_paused', 'На паузе')} (${deck.paused_progress})</span></span>`;
+                workloadHtml = `<span class="mc-deck-card__load" style="background:color-mix(in srgb, var(--color-warning) 14%, transparent); color:var(--color-warning-text); border:1px solid color-mix(in srgb, var(--color-warning) 30%, transparent); display:inline-flex; align-items:center; gap:0.25rem;"><span class="material-symbols-outlined" style="font-size:0.95rem;" aria-hidden="true">pause_circle</span><span>${t('microcards.badge_paused', 'На паузе')} (${deck.paused_progress})</span></span>`;
             } else if (deck.due_count > 0) {
                 workloadHtml = `<span class="mc-deck-card__load mc-deck-card__load--due">${t('microcards.badge_due', '{n} к повтору').replace('{n}', `${deck.due_count} / ${total}`)}</span>`;
             } else if (deck.new_count > 0) {
@@ -1465,7 +1465,7 @@
             const pausedStatusEl = $('deckPausedStatus');
             if (pausedStatusEl) {
                 if (state.activeDeck && state.activeDeck.is_paused) {
-                    pausedStatusEl.innerHTML = `<span class="mc-pub-pill" style="background:color-mix(in srgb, var(--color-warning) 14%, transparent); color:var(--color-warning); border:1px solid color-mix(in srgb, var(--color-warning) 30%, transparent); display:inline-flex; align-items:center; gap:0.25rem;"><span class="material-symbols-outlined" style="font-size:0.95rem;">pause_circle</span><span>${t('microcards.badge_paused', 'На паузе')}</span></span>`;
+                    pausedStatusEl.innerHTML = `<span class="mc-pub-pill" style="background:color-mix(in srgb, var(--color-warning) 14%, transparent); color:var(--color-warning-text); border:1px solid color-mix(in srgb, var(--color-warning) 30%, transparent); display:inline-flex; align-items:center; gap:0.25rem;"><span class="material-symbols-outlined" style="font-size:0.95rem;" aria-hidden="true">pause_circle</span><span>${t('microcards.badge_paused', 'На паузе')}</span></span>`;
                 } else {
                     pausedStatusEl.innerHTML = '';
                 }
@@ -1887,9 +1887,9 @@
 
     // ── Editable cards accordion (inline editing on the deck page) ─────────
     const CARD_STATUS = {
-        new:      { label: 'Новая',     varName: '--color-border-strong' },
-        learning: { label: 'Изучается', varName: '--color-warning' },
-        mastered: { label: 'Освоено',   varName: '--color-success' }
+        new:      { label: 'Новая',     varName: '--color-border-strong', textVarName: '--color-text-secondary' },
+        learning: { label: 'Изучается', varName: '--color-warning', textVarName: '--color-warning-text' },
+        mastered: { label: 'Освоено',   varName: '--color-success', textVarName: '--color-success-text' }
     };
 
     function cardStatusPill(card) {
@@ -1897,7 +1897,7 @@
             : (card.progress || (card.is_new ? 'new' : ((card.level || 0) >= 2 ? 'mastered' : 'learning')));
         const s = CARD_STATUS[bucket] || CARD_STATUS.new;
         return `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold whitespace-nowrap"
-            style="color:var(${s.varName});background:color-mix(in srgb, var(${s.varName}) 14%, transparent)">${s.label}</span>`;
+            style="color:var(${s.textVarName});background:color-mix(in srgb, var(${s.varName}) 14%, transparent)">${s.label}</span>`;
     }
 
     const mcInputCls = 'w-full px-3 py-2 rounded-lg border border-border-strong bg-surface-2 text-sm text-text-main outline-none focus:border-primary transition-colors';
@@ -1905,6 +1905,7 @@
     // Build one accordion item. `card` may be a real card or a blank {id:null} for a new one.
     function cardItemHTML(card, opts = {}) {
         const isNew = !card.id;
+        const cardSuffix = card.id || 'new-' + Math.floor(Math.random() * 1000000);
         const front = card.front ? card.front.text : '';
         const back = card.back ? card.back.text : '';
         const hint = card.hint || '';
@@ -1924,33 +1925,33 @@
                     <p class="mc-head-front text-sm font-bold text-text-main truncate">${escHtml(front) || '<span class="text-text-secondary font-normal">Новая карточка…</span>'}</p>
                     <p class="mc-head-back text-xs text-text-secondary truncate">${escHtml(back)}</p>
                 </div>
-                <span class="material-symbols-outlined mc-card-chevron text-text-secondary text-[20px]">expand_more</span>
+                <span class="material-symbols-outlined mc-card-chevron text-text-secondary text-[20px]" aria-hidden="true">expand_more</span>
             </div>
             <div class="mc-card-body">
               <div class="px-3 pb-3 pt-0 space-y-3">
                 <div class="mc-form-row two">
                     <div>
-                        <label class="block text-[10px] font-bold text-text-secondary uppercase mb-1">Вопрос</label>
-                        <textarea data-field="front" rows="3" class="${mcInputCls} resize-y" placeholder="Лицевая сторона">${escHtml(front)}</textarea>
+                        <label for="front-${cardSuffix}" class="block text-[10px] font-bold text-text-secondary uppercase mb-1">Вопрос</label>
+                        <textarea id="front-${cardSuffix}" data-field="front" rows="3" class="${mcInputCls} resize-y" placeholder="Лицевая сторона">${escHtml(front)}</textarea>
                     </div>
                     <div>
-                        <label class="block text-[10px] font-bold text-text-secondary uppercase mb-1">Ответ</label>
-                        <textarea data-field="back" rows="3" class="${mcInputCls} resize-y" placeholder="Обратная сторона">${escHtml(back)}</textarea>
+                        <label for="back-${cardSuffix}" class="block text-[10px] font-bold text-text-secondary uppercase mb-1">Ответ</label>
+                        <textarea id="back-${cardSuffix}" data-field="back" rows="3" class="${mcInputCls} resize-y" placeholder="Обратная сторона">${escHtml(back)}</textarea>
                     </div>
                 </div>
 
                 <button type="button" onclick="mcApp.toggleCardAdvanced(this)" class="flex items-center gap-1 text-[11px] font-bold text-text-secondary hover:text-text-main transition-colors">
-                    <span class="material-symbols-outlined text-[16px] mc-adv-chevron">expand_more</span>
+                    <span class="material-symbols-outlined text-[16px] mc-adv-chevron" aria-hidden="true">expand_more</span>
                     Доп. настройки
                 </button>
                 <div class="mc-card-adv hidden space-y-3">
                     <div>
-                        <label class="block text-[10px] font-bold text-text-secondary uppercase mb-1">Подсказка</label>
-                        <input data-field="hint" type="text" class="${mcInputCls}" placeholder="Опционально" value="${escHtml(hint)}" />
+                        <label for="hint-${cardSuffix}" class="block text-[10px] font-bold text-text-secondary uppercase mb-1">Подсказка</label>
+                        <input id="hint-${cardSuffix}" data-field="hint" type="text" class="${mcInputCls}" placeholder="Опционально" value="${escHtml(hint)}" />
                     </div>
                     <div>
-                        <label class="block text-[10px] font-bold text-text-secondary uppercase mb-1">Доп. допустимые ответы (по одному на строку)</label>
-                        <textarea data-field="acceptable" rows="2" class="${mcInputCls} resize-y" placeholder="Синонимы, засчитываемые как верные">${escHtml(acc)}</textarea>
+                        <label for="acceptable-${cardSuffix}" class="block text-[10px] font-bold text-text-secondary uppercase mb-1">Доп. допустимые ответы (по одному на строку)</label>
+                        <textarea id="acceptable-${cardSuffix}" data-field="acceptable" rows="2" class="${mcInputCls} resize-y" placeholder="Синонимы, засчитываемые как верные">${escHtml(acc)}</textarea>
                     </div>
                     <div class="mc-form-row two">
                         <div class="mc-img-field" data-side="front">${cardImageFieldInner('front', frontImg, frontAttr)}</div>
@@ -1960,10 +1961,10 @@
 
                 <div class="flex items-center justify-between pt-1">
                     <button type="button" onclick="mcApp.deleteCardInline(this)" class="px-3 py-1.5 rounded-lg border border-error/40 text-error font-bold text-xs hover:bg-bg-hover transition-colors flex items-center gap-1.5">
-                        <span class="material-symbols-outlined text-[16px]">delete</span>${isNew ? 'Отмена' : 'Удалить'}
+                        <span class="material-symbols-outlined text-[16px]" aria-hidden="true">delete</span>${isNew ? 'Отмена' : 'Удалить'}
                     </button>
                     <button type="button" onclick="mcApp.saveCardInline(this)" class="px-4 py-1.5 rounded-lg bg-primary text-primary-fg hover:bg-primary-hover font-bold text-xs transition-colors flex items-center gap-1.5">
-                        <span class="material-symbols-outlined text-[16px]">check</span>Сохранить
+                        <span class="material-symbols-outlined text-[16px]" aria-hidden="true">check</span>Сохранить
                     </button>
                 </div>
               </div>
@@ -2038,10 +2039,10 @@
                 ${has ? `<img class="mc-img-thumb" src="${escHtml(url)}" alt="" loading="lazy" />` : ''}
                 <div class="mc-img-controls">
                     <button type="button" class="mc-img-btn" onclick="mcApp.openImagePicker(this,'${side}')">
-                        <span class="material-symbols-outlined text-[16px]">image_search</span>${findLabel}
+                        <span class="material-symbols-outlined text-[16px]" aria-hidden="true">image_search</span>${findLabel}
                     </button>
                     ${has ? `<button type="button" class="mc-img-btn mc-img-btn--rm" onclick="mcApp.clearCardImage(this,'${side}')">
-                        <span class="material-symbols-outlined text-[16px]">close</span>${t('microcards.img_remove', 'Убрать')}
+                        <span class="material-symbols-outlined text-[16px]" aria-hidden="true">close</span>${t('microcards.img_remove', 'Убрать')}
                     </button>` : ''}
                 </div>
             </div>
@@ -2803,12 +2804,12 @@
             if (isCorrect) {
                 badge.textContent = t('microcards.badge_correct', 'Верно');
                 badge.className = 'mc-eval-badge';
-                badge.style.cssText = 'background:color-mix(in srgb,var(--color-success) 15%,transparent);border-color:var(--color-success);color:var(--color-success)';
+                badge.style.cssText = 'background:color-mix(in srgb,var(--color-success) 15%,transparent);border-color:var(--color-success);color:var(--color-success-text)';
                 $('btnL2Override').classList.add('hidden');
             } else {
                 badge.textContent = t('microcards.badge_error', 'Ошибка');
                 badge.className = 'mc-eval-badge';
-                badge.style.cssText = 'background:color-mix(in srgb,var(--color-error) 15%,transparent);border-color:var(--color-error);color:var(--color-error)';
+                badge.style.cssText = 'background:color-mix(in srgb,var(--color-error) 15%,transparent);border-color:var(--color-error);color:var(--color-error-text)';
                 $('btnL2Override').classList.remove('hidden');
             }
 
@@ -2868,7 +2869,7 @@
             const badge = $('answerEvaluationBadge');
             badge.textContent = t('microcards.badge_overridden', 'Исправлено');
             badge.className = 'mc-eval-badge';
-            badge.style.cssText = 'background:color-mix(in srgb,var(--color-warning) 15%,transparent);border-color:var(--color-warning);color:var(--color-warning)';
+            badge.style.cssText = 'background:color-mix(in srgb,var(--color-warning) 15%,transparent);border-color:var(--color-warning);color:var(--color-warning-text)';
             $('btnL2Override').classList.add('hidden');
 
             // Reward the correction (full points — the verdict was wrong, not
