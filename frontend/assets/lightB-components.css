@@ -33,7 +33,9 @@ textarea:-webkit-autofill:focus,
 textarea:-webkit-autofill:active {
   -webkit-box-shadow: 0 0 0 1000px var(--color-surface-2, #fffdfa) inset !important;
   -webkit-text-fill-color: var(--color-text-main, #241f1a) !important;
+  color: var(--color-text-main, #241f1a) !important;
   caret-color: var(--color-primary, #27187e) !important;
+  cursor: text !important;
   transition: background-color 5000s ease-in-out 0s;
 }
 

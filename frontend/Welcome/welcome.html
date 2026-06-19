@@ -174,7 +174,9 @@
         .login-field-input:-webkit-autofill:active {
             -webkit-box-shadow: 0 0 0 1000px var(--color-surface-2, #fffdfa) inset !important;
             -webkit-text-fill-color: var(--color-text-main, #241f1a) !important;
+            color: var(--color-text-main, #241f1a) !important;
             caret-color: var(--color-primary, #27187e) !important;
+            cursor: text !important;
             /* Delay background transition so the browser yellow doesn't flash */
             transition: background-color 5000s ease-in-out 0s;
             /* Keep correct border */
@@ -191,6 +193,8 @@
         /* `:autofill` standard pseudo-class (Chrome 110+, Edge 110+, Safari 15+) */
         .login-field-input:autofill {
             border-color: var(--color-border-strong);
+            color: var(--color-text-main, #241f1a) !important;
+            cursor: text !important;
         }
 
         /* Highlight autofilled but not-yet-edited fields so user knows data is there */
@@ -211,7 +215,9 @@
         textarea:-webkit-autofill {
             -webkit-box-shadow: 0 0 0 1000px var(--color-surface-2, #fffdfa) inset !important;
             -webkit-text-fill-color: var(--color-text-main, #241f1a) !important;
+            color: var(--color-text-main, #241f1a) !important;
             caret-color: var(--color-primary, #27187e) !important;
+            cursor: text !important;
             transition: background-color 5000s ease-in-out 0s;
         }
 
@@ -6453,14 +6459,14 @@
                                         onkeydown="if(event.key==='Enter'){event.preventDefault();window.welcomeCreateProfile()}">
                                 </div>
                                 <div class="relative">
-                                    <span class="absolute left-4 top-3.5 text-text-secondary material-symbols-outlined pointer-events-none">mail</span>
+                                    <span class="absolute left-4 top-3.5 text-text-secondary material-symbols-outlined pointer-events-none" aria-hidden="true">mail</span>
                                     <label for="onboardingEmail" class="sr-only">Email</label>
                                     <input type="email" id="onboardingEmail" autocomplete="email" placeholder="Email"
                                         class="w-full pl-12 pr-4 py-3.5 bg-surface-2 border border-border-strong rounded-xl outline-none focus:ring-2 focus:ring-primary transition-all font-medium text-base placeholder:text-text-secondary"
                                         onkeydown="if(event.key==='Enter'){event.preventDefault();window.welcomeCreateProfile()}">
                                 </div>
                                 <div class="relative">
-                                    <span class="absolute left-4 top-3.5 text-text-secondary material-symbols-outlined pointer-events-none">lock</span>
+                                    <span class="absolute left-4 top-3.5 text-text-secondary material-symbols-outlined pointer-events-none" aria-hidden="true">lock</span>
                                     <label for="onboardingPassword" class="sr-only" data-i18n="welcome.placeholder_password">Пароль</label>
                                     <input type="password" id="onboardingPassword" autocomplete="new-password" placeholder="Пароль" data-i18n-placeholder="welcome.placeholder_password"
                                         class="w-full pl-12 pr-12 py-3.5 bg-surface-2 border border-border-strong rounded-xl outline-none focus:ring-2 focus:ring-primary transition-all font-medium text-base placeholder:text-text-secondary"
@@ -6468,11 +6474,11 @@
                                     <button type="button" class="password-toggle" aria-label="Показать пароль" data-i18n-aria="welcome.pw_toggle_show"
                                         onmousedown="event.preventDefault()"
                                         onclick="window.welcomeTogglePassword('onboardingPassword', this)">
-                                        <span class="material-symbols-outlined">visibility</span>
+                                        <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
                                     </button>
                                 </div>
                                 <div class="relative">
-                                    <span class="absolute left-4 top-3.5 text-text-secondary material-symbols-outlined pointer-events-none">verified_user</span>
+                                    <span class="absolute left-4 top-3.5 text-text-secondary material-symbols-outlined pointer-events-none" aria-hidden="true">verified_user</span>
                                     <label for="onboardingPasswordConfirm" class="sr-only" data-i18n="welcome.forgot_confirm_password_label">Повторите пароль</label>
                                     <input type="password" id="onboardingPasswordConfirm" autocomplete="new-password" placeholder="Повторите пароль" data-i18n-placeholder="welcome.forgot_confirm_password_label"
                                         class="w-full pl-12 pr-12 py-3.5 bg-surface-2 border border-border-strong rounded-xl outline-none focus:ring-2 focus:ring-primary transition-all font-medium text-base placeholder:text-text-secondary"
@@ -6480,7 +6486,7 @@
                                     <button type="button" class="password-toggle" aria-label="Показать пароль" data-i18n-aria="welcome.pw_toggle_show"
                                         onmousedown="event.preventDefault()"
                                         onclick="window.welcomeTogglePassword('onboardingPasswordConfirm', this)">
-                                        <span class="material-symbols-outlined">visibility</span>
+                                        <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
                                     </button>
                                 </div>
                             </div>
@@ -6668,13 +6674,14 @@
                                     <input type="text" id="passwordInlineUsername" autocomplete="username" class="hidden">
                                     <div class="relative mb-4">
                                         <span
-                                            class="absolute left-4 top-3.5 text-text-secondary material-symbols-outlined pointer-events-none">lock</span>
-                                        <input type="password" id="passwordInlineInput" autocomplete="current-password" placeholder="Введите пароль..." data-i18n-placeholder="welcome.placeholder_password"
+                                            class="absolute left-4 top-3.5 text-text-secondary material-symbols-outlined pointer-events-none" aria-hidden="true">lock</span>
+                                        <label for="passwordInlineInput" class="sr-only" data-i18n="welcome.placeholder_password">Пароль</label>
+                                        <input type="password" id="passwordInlineInput" autocomplete="current-password" placeholder="Введите пароль..." data-i18n-placeholder="welcome.placeholder_password" required
                                             class="w-full pl-12 pr-12 py-3.5 bg-surface-2 border border-border-strong rounded-xl outline-none focus:ring-2 focus:ring-primary transition-all font-medium text-lg placeholder:text-text-secondary">
                                         <button type="button" class="password-toggle" aria-label="Показать пароль" data-i18n-aria="welcome.pw_toggle_show"
                                             onmousedown="event.preventDefault()"
                                             onclick="window.welcomeTogglePassword('passwordInlineInput', this)">
-                                            <span class="material-symbols-outlined">visibility</span>
+                                            <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
                                         </button>
                                     </div>
                                     <p id="passwordInlineError"
@@ -6709,6 +6716,7 @@
                                 onsubmit="event.preventDefault();window.welcomeLoginSubmit()">
                                 <div id="loginIdentifierWrap" class="login-field-wrap hidden">
                                     <label for="loginIdentifier" class="login-field-label">
+                                        <span class="sr-only" data-i18n="welcome.placeholder_identifier">Логин или email</span>
                                         <span class="material-symbols-outlined login-field-icon" aria-hidden="true">alternate_email</span>
                                     </label>
                                     <input
@@ -6724,6 +6732,7 @@
                                 </div>
                                 <div class="login-field-wrap">
                                     <label for="loginPassword" class="login-field-label">
+                                        <span class="sr-only" data-i18n="welcome.placeholder_password">Пароль</span>
                                         <span class="material-symbols-outlined login-field-icon" aria-hidden="true">lock</span>
                                     </label>
                                     <input
@@ -6744,7 +6753,7 @@
                                         onmousedown="event.preventDefault()"
                                         onclick="window.welcomeTogglePassword('loginPassword', this)"
                                     >
-                                        <span class="material-symbols-outlined">visibility</span>
+                                        <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
                                     </button>
                                 </div>
                                 <button type="button" id="forgotPasswordLink" onclick="window.welcomeOpenForgotPasswordModal()"
@@ -7618,9 +7627,9 @@
             </div>
             <div class="p-5">
                 <div id="forgotPasswordRequestPanel" class="space-y-4">
-                    <label class="block">
+                    <label class="block" for="forgotPasswordIdentifierInput">
                         <span class="mb-2 block text-sm font-semibold text-text-main" data-i18n="welcome.forgot_identifier_label">Логин или email</span>
-                        <input type="text" id="forgotPasswordIdentifierInput" autocomplete="username" placeholder="reader@example.com"
+                        <input type="text" id="forgotPasswordIdentifierInput" autocomplete="username" placeholder="reader@example.com" required
                             class="w-full rounded-xl border border-border-strong bg-surface-2 px-4 py-3 outline-none focus:ring-2 focus:ring-primary focus:border-border-normal transition-all font-medium text-base placeholder:text-text-secondary">
                     </label>
                     <div class="rounded-2xl border border-border-subtle bg-surface-2 p-4 text-sm text-text-main leading-relaxed" data-i18n="welcome.forgot_request_hint">
@@ -7633,27 +7642,27 @@
                     <div class="rounded-2xl border border-border-subtle bg-surface-2 p-4 text-sm text-text-main leading-relaxed" data-i18n="welcome.forgot_reset_hint">
                         Придумайте новый пароль для этого аккаунта. Ссылка из письма действует ограниченное время.
                     </div>
-                    <label class="block">
+                    <label class="block" for="forgotPasswordNewPassword">
                         <span class="mb-2 block text-sm font-semibold text-text-main" data-i18n="welcome.forgot_new_password_label">Новый пароль</span>
                         <div class="relative">
-                            <input type="password" id="forgotPasswordNewPassword" autocomplete="new-password" placeholder="Минимум 8 символов" data-i18n-placeholder="welcome.placeholder_min8"
+                            <input type="password" id="forgotPasswordNewPassword" autocomplete="new-password" placeholder="Минимум 8 символов" data-i18n-placeholder="welcome.placeholder_min8" required
                                 class="w-full rounded-xl border border-border-strong bg-surface-2 px-4 py-3 pr-12 outline-none focus:ring-2 focus:ring-primary focus:border-border-normal transition-all font-medium text-base placeholder:text-text-secondary">
                             <button type="button" class="password-toggle" aria-label="Показать пароль" data-i18n-aria="welcome.pw_toggle_show"
                                 onmousedown="event.preventDefault()"
                                 onclick="window.welcomeTogglePassword('forgotPasswordNewPassword', this)">
-                                <span class="material-symbols-outlined">visibility</span>
+                                <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
                             </button>
                         </div>
                     </label>
-                    <label class="block">
+                    <label class="block" for="forgotPasswordConfirmPassword">
                         <span class="mb-2 block text-sm font-semibold text-text-main" data-i18n="welcome.forgot_confirm_password_label">Повторите пароль</span>
                         <div class="relative">
-                            <input type="password" id="forgotPasswordConfirmPassword" autocomplete="new-password" placeholder="Ещё раз новый пароль" data-i18n-placeholder="welcome.placeholder_confirm_password"
+                            <input type="password" id="forgotPasswordConfirmPassword" autocomplete="new-password" placeholder="Ещё раз новый пароль" data-i18n-placeholder="welcome.placeholder_confirm_password" required
                                 class="w-full rounded-xl border border-border-strong bg-surface-2 px-4 py-3 pr-12 outline-none focus:ring-2 focus:ring-primary focus:border-border-normal transition-all font-medium text-base placeholder:text-text-secondary">
                             <button type="button" class="password-toggle" aria-label="Показать пароль" data-i18n-aria="welcome.pw_toggle_show"
                                 onmousedown="event.preventDefault()"
                                 onclick="window.welcomeTogglePassword('forgotPasswordConfirmPassword', this)">
-                                <span class="material-symbols-outlined">visibility</span>
+                                <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
                             </button>
                         </div>
                     </label>
