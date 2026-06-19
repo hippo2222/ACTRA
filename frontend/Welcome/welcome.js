@@ -859,6 +859,7 @@
     window.welcomeTogglePassword = function (inputId, button) {
         const input = document.getElementById(inputId);
         if (!input) return;
+        input.focus();
         const willShow = input.type === 'password';
         input.type = willShow ? 'text' : 'password';
         if (button) {
@@ -866,7 +867,6 @@
             const icon = button.querySelector('.material-symbols-outlined');
             if (icon) icon.textContent = willShow ? 'visibility_off' : 'visibility';
         }
-        input.focus();
     };
 
     window.welcomeStartGoogleAuth = function () {
