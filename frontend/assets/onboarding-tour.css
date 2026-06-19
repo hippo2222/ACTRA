@@ -179,6 +179,15 @@ body[data-onboarding-step-id="click-difficulty-levels"] [data-onboarding-target=
     box-shadow: var(--shadow-card, 0 14px 34px rgba(15, 23, 42, 0.12)) !important;
 }
 
+.onboarding-tour-spotlight-clone--errors-title > * {
+    background-color: var(--color-surface-1, #ffffff) !important;
+    background-image: none !important;
+    border: 2px solid var(--onboarding-target-ring, #f97316) !important;
+    border-radius: 6px !important;
+    box-shadow: 0 0 0 1px var(--onboarding-target-ring, #f97316), 0 0 8px 2px rgba(249, 115, 22, 0.35) !important;
+    padding: 4px 8px !important;
+}
+
 .onboarding-tour-spotlight-clone--test-editor-inspector-text > * {
     height: auto !important;
     min-height: 100% !important;

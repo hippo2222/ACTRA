@@ -268,8 +268,7 @@
         return Boolean(
             tourId
             && (
-                tourId === state.selectedTourId
-                || state.expandedTourIds.has(tourId)
+                state.expandedTourIds.has(tourId)
                 || hasMatchingStep(tour)
             )
         );
@@ -487,6 +486,9 @@
             || null;
         state.selectedTourId = nextTour?.tourId || '';
         state.selectedStepIndex = normalizeStepIndex(nextTour, stepIndex);
+        if (state.selectedTourId) {
+            state.expandedTourIds.add(state.selectedTourId);
+        }
         if (nextTour?.referenceCategory) {
             state.expandedCategoryIds.add(nextTour.referenceCategory);
         }
@@ -539,6 +541,12 @@
                 const tourId = toggle.getAttribute('data-reference-toggle-tour-id') || '';
                 if (state.expandedTourIds.has(tourId)) {
                     state.expandedTourIds.delete(tourId);
+                    if (tourId === state.selectedTourId) {
+                        state.selectedTourId = '';
+                        state.selectedStepIndex = 0;
+                        history.replaceState(null, '', window.location.pathname);
+                        renderPreview(root, null);
+                    }
                 } else {
                     state.expandedTourIds.add(tourId);
                 }

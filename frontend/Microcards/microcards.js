@@ -3945,8 +3945,8 @@ ${fill}`;
     const MC_SESSION_TOUR_ID = 'microcards-review-session';
     const MC_DEMO_DECK_ID = 'mc-demo-deck-radio';
     const MC_DEMO_DETAILS_STEP = 3; // 0-based index of the library tour's "deck-mastery" step
-    const MC_SESSION_GRADE_STEP = 2; // session tour: step from which the demo card is flipped
-    const MC_SESSION_SUMMARY_STEP = 4; // session tour: step that shows the demo summary
+    const MC_SESSION_GRADE_STEP = 1; // session tour: step from which the demo card is flipped
+    const MC_SESSION_SUMMARY_STEP = 3; // session tour: step that shows the demo summary
 
     function activeOnboardingTourId() {
         return (document.body && document.body.dataset.onboardingTourId) || '';
@@ -4110,6 +4110,13 @@ ${fill}`;
         renderCompositionChip();
         updateHeaderProgress();
         setupCurrentCard(); // paints the front face + level indicator
+        // Demo always uses L1 grading (rails). Force-hide L2 controls via
+        // inline !important so they can't leak through on desktop even when
+        // the element carries style="display:flex".
+        const forceHide = (el) => { if (el) el.style.setProperty('display', 'none', 'important'); };
+        forceHide($('backActionsL2'));
+        forceHide($('frontActionsL2'));
+        forceHide($('btnL2Override'));
     }
 
     // Demo summary screen — reuses renderSummaryRewards with finishResult=null so it
@@ -4206,8 +4213,21 @@ ${fill}`;
     }
 
     // Dispatcher: data-onboarding-tour-id drives which demo (if any) is active.
+    // Skip re-init when the same demo mode is already active (prevents the
+    // MutationObserver callback from resetting card flip / rails mid-tour).
     function applyMicrocardsOnboardingDemo(tourId) {
         if (tourId === MC_LIBRARY_TOUR_ID || tourId === MC_SESSION_TOUR_ID) {
+            const desiredMode = tourId === MC_SESSION_TOUR_ID ? 'session' : 'library';
+            if (document.body.dataset.microcardsOnboardingDemo === desiredMode) return;
+            // Also skip if the view is already active with the demo deck (syncMicrocardsSessionStep
+            // may have set up the session without setting microcardsOnboardingDemo).
+            const alreadyActive = tourId === MC_SESSION_TOUR_ID
+                ? state.view === 'session' && state.activeDeckId === MC_DEMO_DECK_ID
+                : state.view === 'library' && (state.decks || []).some(d => d.id === MC_DEMO_DECK_ID);
+            if (alreadyActive) {
+                document.body.dataset.microcardsOnboardingDemo = desiredMode;
+                return;
+            }
             captureMicrocardsDemoSnapshot();
             state.decks = buildMicrocardsDemoDecks();
             state.serverRecords = Object.assign({}, state.serverRecords, { [MC_DEMO_DECK_ID]: buildMicrocardsDemoRecord() });
@@ -4217,6 +4237,12 @@ ${fill}`;
             } else {
                 document.body.dataset.microcardsOnboardingDemo = 'library';
                 showMicrocardsDemoLibrary();
+                const stepId = document.body.dataset.onboardingStepId || '';
+                const tour = (window.ACTRA_ONBOARDING_TOURS || []).find(t => t.tourId === tourId);
+                if (tour && stepId) {
+                    const idx = (tour.steps || []).findIndex(s => s.id === stepId);
+                    if (idx >= 0) syncMicrocardsDemoStep(idx);
+                }
             }
             return;
         }
@@ -4269,8 +4295,15 @@ ${fill}`;
         window.addEventListener('onboarding:before-step', (event) => {
             const id = event.detail && event.detail.tourId;
             const stepIndex = Number((event.detail && event.detail.stepIndex) || 0);
-            if (id === MC_LIBRARY_TOUR_ID) syncMicrocardsDemoStep(stepIndex);
-            else if (id === MC_SESSION_TOUR_ID) syncMicrocardsSessionStep(stepIndex);
+            if (id === MC_LIBRARY_TOUR_ID) {
+                const prevView = state.view;
+                syncMicrocardsDemoStep(stepIndex);
+                if (state.view !== prevView && typeof event.detail?.waitUntil === 'function') {
+                    event.detail.waitUntil(new Promise((resolve) => {
+                        requestAnimationFrame(() => requestAnimationFrame(resolve));
+                    }));
+                }
+            } else if (id === MC_SESSION_TOUR_ID) syncMicrocardsSessionStep(stepIndex);
         });
         // Apply immediately in case the tour started before this observer was wired
         // (e.g. reference-preview auto-start).

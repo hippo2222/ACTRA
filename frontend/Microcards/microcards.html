@@ -2060,7 +2060,7 @@
                 </header>
 
                 <!-- Mastery Level Box -->
-                <div class="mc-mastery-level-box" data-onboarding-target="microcards-deck-mastery">
+                <div class="mc-mastery-level-box" data-onboarding-target="microcards-deck-mastery" data-onboarding-spotlight="frame">
                     <div class="mc-mastery-level-badge mc-tooltip-trigger" id="deckMasteryLevelBadge" tabindex="0" style="background-image: url('/assets/microcards-levels/lvl1.svg');" data-tooltip="">
                         <span class="mc-mastery-level-num-badge" id="deckMasteryLevelNumber">1</span>
                     </div>
@@ -2108,7 +2108,7 @@
                 </div>
 
                 <!-- Run and Study modes -->
-                <section class="mc-study-modes" aria-label="Режимы обучения" data-onboarding-target="microcards-study-modes">
+                <section class="mc-study-modes" aria-label="Режимы обучения" data-onboarding-target="microcards-study-modes" data-onboarding-spotlight="frame">
                     <!-- Level 1 run -->
                     <div class="mc-study-mode-card mc-study-mode-card--silver" onclick="mcApp.startRun(1)" data-onboarding-target="microcards-mode-l1">
                         <div class="mc-study-mode-card__title">
@@ -2278,7 +2278,7 @@
                             </div>
                         </div>
 
-                        <div class="mc-session__hud" data-onboarding-target="microcards-session-hud">
+                        <div class="mc-session__hud" data-onboarding-target="microcards-session-hud" data-onboarding-spotlight="frame">
                             <div id="comboChip" class="mc-combo" style="display:none" aria-hidden="true">
                                 <span class="material-symbols-outlined" style="font-size:1rem;font-variation-settings:'FILL' 1">local_fire_department</span>
                                 <span id="comboChipText">×2</span>
@@ -2298,8 +2298,8 @@
                     </div>
 
                     <div class="mc-arena" id="mcArena">
-                        <div class="mc-rail-wrapper" data-onboarding-target="microcards-session-rail-no">
-                            <button type="button" class="mc-rail mc-rail--no" id="railNo" aria-label="Не знаю" data-i18n-aria="microcards.btn_dont_know">
+                        <div class="mc-rail-wrapper">
+                            <button type="button" class="mc-rail mc-rail--no" id="railNo" aria-label="Не знаю" data-i18n-aria="microcards.btn_dont_know" data-onboarding-target="microcards-session-rail-no" data-onboarding-spotlight="frame">
                                 <span class="material-symbols-outlined">thumb_down</span>
                                 <span class="mc-rail__label" data-i18n="microcards.btn_dont_know">Не знаю</span>
                             </button>
@@ -2400,8 +2400,8 @@
                             </div>
                         </div>
                         </div><!-- /mc-flashcard-wrap -->
-                        <div class="mc-rail-wrapper" data-onboarding-target="microcards-session-rail-yes">
-                            <button type="button" class="mc-rail mc-rail--yes" id="railYes" aria-label="Знаю" data-i18n-aria="microcards.btn_know">
+                        <div class="mc-rail-wrapper">
+                            <button type="button" class="mc-rail mc-rail--yes" id="railYes" aria-label="Знаю" data-i18n-aria="microcards.btn_know" data-onboarding-target="microcards-session-rail-yes" data-onboarding-spotlight="frame">
                                 <span class="material-symbols-outlined">thumb_up</span>
                                 <span class="mc-rail__label" data-i18n="microcards.btn_know">Знаю</span>
                             </button>
@@ -2468,7 +2468,7 @@
                         <!-- Same dark-glass language as the float hints: a fixed dark plate with a
                              theme-tinted glow keeps white text legible in every theme (the primary
                              colour itself is LIGHT in dark themes). -->
-                        <div id="sumLevelUpBanner" class="mc-record-badge hidden" style="background:linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 45%, #14101f) 0%, #1a1430 100%); border: 1px solid color-mix(in srgb, var(--color-primary) 55%, transparent); margin-top: 0.5rem; animation: mc-pulse 1.5s infinite alternate; box-shadow: 0 4px 14px color-mix(in srgb, var(--color-primary) 30%, transparent);">
+                        <div id="sumLevelUpBanner" class="mc-record-badge hidden" style="background:linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 45%, #14101f) 0%, #1a1430 100%); border: 1px solid color-mix(in srgb, var(--color-primary) 55%, transparent); margin-top: 0.5rem; animation: mc-pulse 1.5s infinite alternate; box-shadow: 0 4px 14px color-mix(in srgb, var(--color-primary) 30%, transparent); color:#fff !important;">
                             <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1">rocket_launch</span>
                             <!-- No data-i18n here: JS substitutes {n}; a re-applied translation would resurrect the raw template. -->
                             <span id="sumLevelUpText">УРОВЕНЬ КОЛОДЫ ПОВЫШЕН!</span>
@@ -2520,7 +2520,7 @@
                     </div>
 
                     <div id="summaryErrorsSection" class="hidden" data-onboarding-target="microcards-summary-errors">
-                        <h3 class="mc-panel-title" style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.85rem">
+                        <h3 class="mc-panel-title" data-onboarding-target="microcards-summary-errors-title" data-onboarding-clone-variant="errors-title" style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.85rem">
                             <span class="material-symbols-outlined" style="color:var(--color-error);font-size:1.1rem">replay</span>
                             <span data-i18n="microcards.errors_breakdown_title">Потребовали повторения</span>
                         </h3>

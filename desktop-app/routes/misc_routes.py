@@ -56,12 +56,17 @@ def _mh() -> Dict[str, Any]:
 @misc_bp.route("/api/users/should-welcome", methods=["GET"])
 def should_welcome() -> Any:
     """Determine whether the Welcome Screen should be shown and in which mode."""
+    def _nocache(payload, status=200):
+        r = jsonify(payload)
+        r.status_code = status
+        r.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+        return r
     try:
         h = _mh()
         if is_hosted_web_runtime():
             user_id = get_authenticated_user_id()
             if user_id and h["user_service"].get_user(user_id):
-                return jsonify(
+                return _nocache(
                     {
                         "ok": True,
                         "show_welcome": False,
@@ -74,7 +79,7 @@ def should_welcome() -> Any:
             if user_id:
                 from routes._context import logout_authenticated_user
                 logout_authenticated_user()
-            return jsonify(
+            return _nocache(
                 {
                     "ok": True,
                     "show_welcome": True,
@@ -89,7 +94,7 @@ def should_welcome() -> Any:
         items = [u.to_api_dict() for u in users]
 
         if len(users) == 0:
-            return jsonify(
+            return _nocache(
                 {
                     "ok": True,
                     "show_welcome": True,
@@ -105,7 +110,7 @@ def should_welcome() -> Any:
                 "security_settings", {}
             ).get("require_password_on_login")
             if has_login_password:
-                return jsonify(
+                return _nocache(
                     {
                         "ok": True,
                         "show_welcome": True,
@@ -114,7 +119,7 @@ def should_welcome() -> Any:
                     }
                 )
             else:
-                return jsonify(
+                return _nocache(
                     {
                         "ok": True,
                         "show_welcome": False,
@@ -122,7 +127,7 @@ def should_welcome() -> Any:
                     }
                 )
 
-        return jsonify(
+        return _nocache(
             {
                 "ok": True,
                 "show_welcome": True,

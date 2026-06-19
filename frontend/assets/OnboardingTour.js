@@ -411,9 +411,9 @@
     }
 
     function isBlockingModalOpen() {
-        return Boolean(
-            document.querySelector('.modal.open, .import-modal:not(.hidden), [role="dialog"]:not(.hidden)')
-        );
+        const el = document.querySelector('.modal.open, .import-modal:not(.hidden), [role="dialog"]:not(.hidden)');
+        if (!el) return false;
+        return !el.closest('[hidden]');
     }
 
     function isFirstRunPromptSeen(settings = remoteSettings || {}) {

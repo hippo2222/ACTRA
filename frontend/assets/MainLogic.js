@@ -55,7 +55,7 @@
 
             if (isStaleSession) {
                 console.warn(`[MainLogic] Stale/invalid session detected for ${url}. Redirecting...`);
-                if (!mainBootRedirecting) {
+                if (!mainBootRedirecting && !isReferenceEmbedRequest()) {
                     mainBootRedirecting = true;
                     // Trigger logout to clear HttpOnly cookies on the backend
                     fetch('/api/auth/logout', { method: 'POST' }).catch(err => {
@@ -1030,6 +1030,9 @@
     }
 
     async function initialize() {
+        if (isReferenceEmbedRequest()) {
+            finishMainBoot();
+        }
         try {
             // 1. Update UI baseline
             updateDateTime();
@@ -1049,11 +1052,13 @@
             }
 
             retryPendingFeedbackDelivery();
-            const consentOk = await ensureUserConsent(currentUser.user_id);
-            if (!consentOk) {
-                mainBootRedirecting = true;
-                window.navigateWithTransition('/');
-                return;
+            if (!isReferenceEmbedRequest()) {
+                const consentOk = await ensureUserConsent(currentUser.user_id);
+                if (!consentOk) {
+                    mainBootRedirecting = true;
+                    window.navigateWithTransition('/');
+                    return;
+                }
             }
 
             initEscKeyHandler(); // WEAK-5 fix: ESC closes modals
@@ -1318,6 +1323,11 @@
             </div>
         `;
         setupQuickAccessRail(3);
+    }
+
+    function isReferenceEmbedRequest() {
+        const params = new URLSearchParams(window.location.search || '');
+        return params.get('reference_embed') === '1' || params.get('reference_preview') === '1';
     }
 
     async function loadCurrentUser() {
