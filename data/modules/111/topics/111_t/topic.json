@@ -1,0 +1,32 @@
+{
+  "id": "111_t",
+  "name": "111 Т",
+  "tasks": [],
+  "created_by_user_id": "user_3506210d420d",
+  "updated_by_user_id": "user_3506210d420d",
+  "created_via": "manual_editor",
+  "content_scope": "shared_local",
+  "workspace_entity_kind": "topic",
+  "workspace_entity_id": "111_t",
+  "workspace_entity_ref": "111/111_t",
+  "workspace_entity": {
+    "kind": "topic",
+    "id": "111_t",
+    "ref": "111/111_t"
+  },
+  "source_catalog_item_id": null,
+  "source_catalog_version_id": null,
+  "source_entity_kind": null,
+  "source_entity_id": null,
+  "has_source_lineage": false,
+  "source_lineage": null,
+  "source_lineage_key": null,
+  "workspace_copy_kind": "local_draft",
+  "workspace_copy": {
+    "kind": "local_draft",
+    "source_lineage_key": null,
+    "has_source_lineage": false
+  },
+  "module_id": "111",
+  "module": "111"
+}

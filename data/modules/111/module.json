@@ -1,0 +1,30 @@
+{
+  "id": "111",
+  "name": "111",
+  "topics": [],
+  "created_by_user_id": "user_3506210d420d",
+  "updated_by_user_id": "user_3506210d420d",
+  "created_via": "manual_editor",
+  "content_scope": "shared_local",
+  "workspace_entity_kind": "module",
+  "workspace_entity_id": "111",
+  "workspace_entity_ref": "111",
+  "workspace_entity": {
+    "kind": "module",
+    "id": "111",
+    "ref": "111"
+  },
+  "source_catalog_item_id": null,
+  "source_catalog_version_id": null,
+  "source_entity_kind": null,
+  "source_entity_id": null,
+  "has_source_lineage": false,
+  "source_lineage": null,
+  "source_lineage_key": null,
+  "workspace_copy_kind": "local_draft",
+  "workspace_copy": {
+    "kind": "local_draft",
+    "source_lineage_key": null,
+    "has_source_lineage": false
+  }
+}
