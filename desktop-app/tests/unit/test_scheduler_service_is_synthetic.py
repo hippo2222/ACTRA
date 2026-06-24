@@ -32,6 +32,7 @@ def mock_complex_progress():
     progress.last_reviewed_at = date.today() - timedelta(days=1)
     progress.needs_review_on_date = Mock(return_value=True)
     progress.get_mastery_category = Mock(return_value=MasteryCategory.NEEDS_PRACTICE)
+    progress.get_next_review_date = Mock(return_value=date.today())
     return progress
 
 
@@ -89,6 +90,9 @@ def test_daily_mix_excluded_from_schedule_strip(scheduler_service):
     daily_mix_progress.complex_id = "daily_mix"
     daily_mix_progress.status = ComplexStatus.IN_PROGRESS
     daily_mix_progress.health_score = 50
+    daily_mix_progress.needs_review_on_date = Mock(return_value=True)
+    daily_mix_progress.get_mastery_category = Mock(return_value=MasteryCategory.NEEDS_PRACTICE)
+    daily_mix_progress.get_next_review_date = Mock(return_value=date.today())
     
     real_progress = Mock(spec=ComplexProgress)
     real_progress.complex_id = "python_basics"
@@ -96,6 +100,7 @@ def test_daily_mix_excluded_from_schedule_strip(scheduler_service):
     real_progress.health_score = 75
     real_progress.needs_review_on_date = Mock(return_value=True)
     real_progress.get_mastery_category = Mock(return_value=MasteryCategory.NEEDS_PRACTICE)
+    real_progress.get_next_review_date = Mock(return_value=date.today())
     
     task_pool = {
         "python_basics": [{"id": "task1", "name": "Task 1"}],
@@ -187,6 +192,7 @@ def test_is_synthetic_false_for_real_complexes(scheduler_service):
         progress.health_score = 50 + i * 10
         progress.needs_review_on_date = Mock(return_value=True)
         progress.get_mastery_category = Mock(return_value=MasteryCategory.NEEDS_PRACTICE)
+        progress.get_next_review_date = Mock(return_value=date.today())
         progress_list.append(progress)
     
     task_pool = {c["id"]: [{"id": f"{c['id']}_t1", "name": "Task 1"}] for c in complexes}
