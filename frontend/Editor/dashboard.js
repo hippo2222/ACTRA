@@ -2987,15 +2987,10 @@ class EditorDashboard {
         const forceResolveBtn = document.getElementById('theory-hub-force-resolve-btn');
         if (forceResolveBtn) {
             forceResolveBtn.addEventListener('click', async () => {
-                const confirmed = (typeof NotificationUI !== 'undefined' && typeof NotificationUI.confirm === 'function')
-                    ? await NotificationUI.confirm({
-                        title: wt('db.k145', 'Force resolve конфликтов?'),
-                        message: wt('db.k146', 'Будет запущен sync в режиме all_force для выбранных элементов очереди.'),
-                        confirmText: wt('db.k147', 'Запустить'),
-                        cancelText: wt('db.k148', 'Отмена'),
-                        variant: 'warning'
-                    })
-                    : window.confirm(wt('db.k149', 'Запустить force resolve для выбранных элементов?'));
+                // Поскольку theory-hub-modal открывается как native dialog через showModal,
+                // кастомный NotificationUI.confirm становится inert (некликбельным).
+                // Поэтому используем нативный window.confirm.
+                const confirmed = window.confirm(wt('db.k146', 'Будет запущен sync в режиме all_force для выбранных элементов очереди.'));
                 if (!confirmed) return;
                 await this.runTheoryHubBatchSync('selected', {
                     propagationMode: 'all_force',
@@ -5982,6 +5977,7 @@ class EditorDashboard {
                         modal.removeEventListener('animationend', handleEnd);
                         modal.close();
                         modal.classList.remove('closing');
+                        this.resetImportModalStateAfterClose();
                     }
                 };
                 if (modal && typeof modal.close === 'function') {
@@ -5993,31 +5989,12 @@ class EditorDashboard {
                             modal.removeEventListener('animationend', handleEnd);
                             modal.close();
                             modal.classList.remove('closing');
+                            this.resetImportModalStateAfterClose();
                         }
                     }, 250);
                 } else if (modal) {
                     modal.classList.add('hidden');
-                }
-
-                if (this.importManager.modalPurpose === 'theory_analysis') {
-                    this.importManager.setModalPurpose('import');
-                    this.importManager.materialText = '';
-                    this.importManager.aiUploadedFile = null;
-                    this.importManager.aiFileInfo = null;
-                    this.importManager.analysisResult = null;
-                    this.importManager.generationResult = null;
-                    this.importManager.aiProvider = null;
-                    this.importManager.aiProviderModel = null;
-                    this.importManager.aiRunId = null;
-                    this.importManager.aiSelectedRecs.clear();
-                    this.importManager.aiGenerating = false;
-                    this.importManager.aiAnalyzing = false;
-                    this.importManager.theoryOpeningRunId = null;
-                    this.importManager.importRequestKey = null;
-                } else {
-                    if (typeof this.importManager.resetImportModalState === 'function') {
-                        await this.importManager.resetImportModalState();
-                    }
+                    this.resetImportModalStateAfterClose();
                 }
             };
 
@@ -6034,6 +6011,36 @@ class EditorDashboard {
         }
         return true;
     }
+
+    resetImportModalStateAfterClose() {
+        if (!this.importManager) return;
+
+        if (this.importManager.modalPurpose === 'theory_analysis') {
+            this.importManager.setModalPurpose('import');
+            this.importManager.materialText = '';
+            this.importManager.aiUploadedFile = null;
+            this.importManager.aiFileInfo = null;
+            this.importManager.analysisResult = null;
+            this.importManager.generationResult = null;
+            this.importManager.aiProvider = null;
+            this.importManager.aiProviderModel = null;
+            this.importManager.aiRunId = null;
+            this.importManager.aiSelectedRecs.clear();
+            this.importManager.aiGenerating = false;
+            this.importManager.aiAnalyzing = false;
+            this.importManager.theoryOpeningRunId = null;
+            this.importManager.importRequestKey = null;
+            this.importManager.currentStep = 1;
+            this.importManager.importMode = 'text';
+        } else {
+            if (typeof this.importManager.resetImportModalState === 'function') {
+                this.importManager.resetImportModalState().catch((e) => {
+                    console.error('[Dashboard] Failed to reset import modal state after close:', e);
+                });
+            }
+        }
+    }
+
 
     showRecoveryCenter() {
         const modal = document.getElementById('recovery-center-modal');

@@ -2500,13 +2500,31 @@ ${remaining}
         cancelText = wt('im.k109', 'Отмена'),
         variant = 'error',
     } = {}) {
-        if (typeof NotificationUI !== 'undefined' && typeof NotificationUI.confirm === 'function') {
-            return NotificationUI.confirm({ title, message, confirmText, cancelText, variant });
-        }
+        // Поскольку import-modal открывается как native dialog через showModal,
+        // кастомный NotificationUI.confirm (добавляемый в document.body) становится inert (некликбельным).
+        // Поэтому для надежности используем нативный window.confirm.
         return window.confirm(message);
     }
 
     getImportModalCloseGuardState() {
+        if (this.modalPurpose === 'theory_analysis') {
+            const hasMeaningfulState = !!(
+                String(this.materialText || '').trim()
+                || this.aiUploadedFile
+                || this.aiAnalyzing
+                || this.aiGenerating
+                || this.generationResult
+                || this.analysisResult
+            );
+            return {
+                hasMeaningfulState,
+                hasImportedProgress: false,
+                importedRecommendationTypes: 0,
+                draftRecommendationTypes: 0,
+                isTheoryAnalysis: true
+            };
+        }
+
         const session = this.normalizeManualAnalysisSession(this.manualAnalysisSession);
         const recommendationState = (session?.recommendation_state && typeof session.recommendation_state === 'object')
             ? session.recommendation_state
@@ -2539,12 +2557,23 @@ ${remaining}
             hasImportedProgress: importedRecommendationTypes > 0,
             importedRecommendationTypes,
             draftRecommendationTypes,
+            isTheoryAnalysis: false
         };
     }
 
     async confirmImportModalCloseIfNeeded() {
         const guard = this.getImportModalCloseGuardState();
         if (!guard.hasMeaningfulState) return true;
+
+        if (guard.isTheoryAnalysis) {
+            return await this.confirmAction({
+                title: wt('im.k285', 'Закрыть анализ теории?'),
+                message: wt('im.k286', 'Окно анализа будет закрыто. Несохранённые результаты анализа и генерации задач будут потеряны.'),
+                confirmText: wt('im.k112', 'Закрыть и сбросить'),
+                cancelText: wt('im.k113', 'Продолжить работу'),
+                variant: 'warning',
+            });
+        }
 
         const title = guard.hasImportedProgress
             ? wt('im.k110', 'Закрыть импорт и сбросить локальные данные?')
