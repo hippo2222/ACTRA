@@ -15,12 +15,13 @@ from unittest.mock import patch, MagicMock, PropertyMock
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from server import app, _ai_service, _file_processor
+from server import app, _ai_service, _file_processor, _headless_app_ctx
 
 @pytest.fixture
-def client():
+def client(monkeypatch):
     """Create a test client for the Flask app."""
     app.config['TESTING'] = True
+    monkeypatch.setattr(_headless_app_ctx, "user_id", "test_user")
     with app.test_client() as client:
         yield client
 
