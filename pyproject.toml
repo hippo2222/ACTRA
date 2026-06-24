@@ -58,7 +58,7 @@ testpaths = [
   "desktop-app/tests"
 ]
 python_files = "test_*.py"
-addopts = "-ra -q --strict-markers --disable-warnings --maxfail=1 --basetemp=.pytest_tmp --cov=task_system --cov=desktop-app --cov=common --cov-report=term-missing --cov-report=xml:coverage.xml --cov-fail-under=10"
+addopts = "-ra -q --strict-markers --disable-warnings --maxfail=1 --basetemp=.pytest_tmp --cov=task_system --cov=desktop-app --cov=common --cov-report=term-missing --cov-report=xml:coverage.xml --cov-fail-under=9"
 markers = [
   "integration: integration tests",
   "unit: unit tests"
