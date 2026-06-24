@@ -75,11 +75,15 @@ def convert_v1_cards(cards: Any) -> List[Tuple[str, str, Optional[str]]]:
         if not isinstance(card, dict):
             continue
         ctype = _s(card.get("card_type")).lower() or "fact_recall"
-        front = card.get("front") if isinstance(card.get("front"), dict) else {}
-        back = card.get("back") if isinstance(card.get("back"), dict) else {}
+        front_val = card.get("front")
+        front = front_val if isinstance(front_val, dict) else {}
+        back_val = card.get("back")
+        back = back_val if isinstance(back_val, dict) else {}
         if ctype == "pair_match":
-            fp = front.get("payload") if isinstance(front.get("payload"), dict) else {}
-            bp = back.get("payload") if isinstance(back.get("payload"), dict) else {}
+            fp_val = front.get("payload")
+            fp = fp_val if isinstance(fp_val, dict) else {}
+            bp_val = back.get("payload")
+            bp = bp_val if isinstance(bp_val, dict) else {}
             left = {_s(i.get("id")): _s(i.get("text"))
                     for i in (fp.get("left_items") or []) if isinstance(i, dict)}
             right = {_s(i.get("id")): _s(i.get("text"))
@@ -101,12 +105,13 @@ def convert_v1_cards(cards: Any) -> List[Tuple[str, str, Optional[str]]]:
 
 def convert_v1_deck(doc: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """Build a V2 deck document; None when there is no owner or no content."""
-    meta = doc.get("meta") if isinstance(doc.get("meta"), dict) else {}
+    meta_val = doc.get("meta")
+    meta = meta_val if isinstance(meta_val, dict) else {}
     owner = _s(meta.get("created_by_user_id")) or _s(doc.get("user_id"))
     if not owner:
         return None
 
-    seen: set = set()
+    seen: set[str] = set()
     cards: List[Dict[str, Any]] = []
     for front, back, hint in convert_v1_cards(doc.get("cards")):
         key = _norm(front)
@@ -202,7 +207,7 @@ def main() -> int:
         return 0
 
     # Idempotency map: owner -> set of already-migrated v1 ids.
-    migrated_by_owner: Dict[str, set] = {}
+    migrated_by_owner: Dict[str, set[str]] = {}
 
     migrated = skipped = empty = 0
     for doc in sources:

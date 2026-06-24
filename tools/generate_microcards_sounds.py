@@ -28,7 +28,7 @@ def buf(seconds: float) -> list[float]:
 
 
 def add_pluck(b: list[float], t0: float, freq: float, dur: float, vol: float,
-              harmonics=((1, 1.0), (2, 0.45), (3, 0.18), (4, 0.08)),
+              harmonics: tuple[tuple[int, float], ...] = ((1, 1.0), (2, 0.45), (3, 0.18), (4, 0.08)),
               attack: float = 0.004, detune_cents: float = 4.0,
               vibrato_hz: float = 0.0, vibrato_depth: float = 0.0) -> None:
     """A warm marimba-ish pluck: detuned harmonic stack with exponential decay."""

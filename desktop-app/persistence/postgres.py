@@ -1,24 +1,24 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
-from typing import Iterator, Optional
+from typing import Any, Iterator, Optional
 
 
 class PostgresUnavailableError(RuntimeError):
     """Raised when psycopg is unavailable or the DSN is missing."""
 
 
-def _import_psycopg():
+def _import_psycopg() -> Any:
     try:
-        import psycopg  # type: ignore
+        import importlib
 
-        return psycopg
+        return importlib.import_module("psycopg")
     except Exception as exc:  # pragma: no cover - import depends on environment
         raise PostgresUnavailableError(f"psycopg_unavailable:{exc}") from exc
 
 
 @contextmanager
-def postgres_connection(dsn: Optional[str]) -> Iterator[object]:
+def postgres_connection(dsn: Optional[str]) -> Iterator[Any]:
     clean_dsn = str(dsn or "").strip()
     if not clean_dsn:
         raise PostgresUnavailableError("postgres_dsn_missing")

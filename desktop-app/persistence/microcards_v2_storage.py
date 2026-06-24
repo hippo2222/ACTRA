@@ -271,7 +271,7 @@ def _is_hosted_runtime() -> bool:
     return str(os.environ.get("ACTRA_RUNTIME_MODE") or "").strip().lower() == "hosted_web"
 
 
-def resolve_microcards_storage(data_dir: Any):
+def resolve_microcards_storage(data_dir: Any) -> PostgresMicrocardsStorage | FileMicrocardsStorage:
     """Pick the backend for this process: Postgres in hosted runs, files otherwise.
 
     Every consumer of microcards V2 data (service, analytics, backfill) must go

@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 ACTRA release build script for Windows.
 
@@ -60,7 +60,7 @@ def version_tuple(version: str) -> tuple[int, int, int, int]:
         numbers.append(int(digits) if digits else 0)
     while len(numbers) < 4:
         numbers.append(0)
-    return tuple(numbers[:4])
+    return (numbers[0], numbers[1], numbers[2], numbers[3])
 
 
 def build_version_info_content(version: str) -> str:

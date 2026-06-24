@@ -36,6 +36,7 @@ import json
 import os
 import sys
 from pathlib import Path
+from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "desktop-app"))
 
@@ -45,7 +46,7 @@ from persistence.microcards_v2_storage import (  # noqa: E402
 )
 
 
-def _read_json(path: Path):
+def _read_json(path: Path) -> Any:
     try:
         with open(path, "r", encoding="utf-8") as fh:
             return json.load(fh)
