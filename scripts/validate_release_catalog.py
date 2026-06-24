@@ -481,7 +481,9 @@ def _validate_non_demo_minimums(data_dir: Path, stats: Dict[str, int]) -> List[V
     return errors
 
 
-def _validate_empty_release_baseline(data_dir: Path, stats: Dict[str, int]) -> List[ValidationIssue]:
+def _validate_empty_release_baseline(
+    data_dir: Path, stats: Dict[str, int]
+) -> List[ValidationIssue]:
     errors: List[ValidationIssue] = []
     for key in ("modules", "topics", "tasks", "complexes", "theories"):
         actual = int(stats.get(key, 0))

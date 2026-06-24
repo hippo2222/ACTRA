@@ -96,6 +96,7 @@ def build_version_info_content(version: str) -> str:
   ]
 )"""
 
+
 # Directories to bundle as data
 DATA_DIRS = [
     ("frontend", "frontend"),
