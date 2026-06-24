@@ -1,0 +1,35 @@
+{
+  "id": "task_c0df4e66",
+  "type": "click",
+  "subtype": "error_detection",
+  "meta": {
+    "id": "task_c0df4e66",
+    "module": "test_tsentr_teorii",
+    "topic": "test_tema_bez_teorii",
+    "name": "Test Text Choice Task",
+    "author": "",
+    "content_scope": "shared_local",
+    "created": "2026-05-28T00:00:00Z",
+    "modified": "2026-05-28T00:00:00Z"
+  },
+  "content": {
+    "mode": "text_choice",
+    "prompt": "Choose the correct text option",
+    "choice_prompt": "Выберите правильный вариант текста",
+    "options": [
+      {
+        "id": "opt1",
+        "text": "Correct version of text",
+        "is_correct": true
+      },
+      {
+        "id": "opt2",
+        "text": "Incorrect version of text",
+        "is_correct": false
+      }
+    ]
+  },
+  "settings": {
+    "difficulty": 1
+  }
+}

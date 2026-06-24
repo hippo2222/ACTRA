@@ -1,0 +1,32 @@
+{
+  "id": "task_5ab28efd",
+  "type": "click",
+  "subtype": "error_detection",
+  "meta": {
+    "id": "task_5ab28efd",
+    "module": "test_tsentr_teorii",
+    "topic": "test_tema_bez_teorii",
+    "name": "Test Error Task",
+    "author": "",
+    "content_scope": "shared_local",
+    "created": "2026-05-28T00:00:00Z",
+    "modified": "2026-05-28T00:00:00Z"
+  },
+  "content": {
+    "mode": "text_errors",
+    "prompt": "Identify errors in the text",
+    "text": "This is a test text.",
+    "error_spans": [
+      {
+        "start": 0,
+        "end": 4,
+        "label": "error",
+        "is_correct": false
+      }
+    ],
+    "require_all_errors": true
+  },
+  "settings": {
+    "difficulty": 1
+  }
+}
