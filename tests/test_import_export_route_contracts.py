@@ -109,6 +109,9 @@ class _DummyHostedImportExportService:
             "service_contract": dict(self.SERVICE_CONTRACT),
         }
 
+    def validate_import_archive(self, archive_path):
+        return {"tasks": []}
+
     def create_export_archive(self, tasks):
         if self.raise_on_export is not None:
             raise self.raise_on_export
@@ -154,6 +157,12 @@ class _DummyHostedComplexImportExportService:
             "complex_errors": 0,
             "rollback": False,
             "service_contract": dict(self.SERVICE_CONTRACT),
+        }
+
+    def validate_import_archive(self, archive_path):
+        return {
+            "summary": {"total": 0},
+            "manifest": {"entities": {"tasks": []}}
         }
 
     def create_export_archive(self, complex_ids, options=None):
