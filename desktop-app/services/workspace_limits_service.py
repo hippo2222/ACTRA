@@ -303,7 +303,7 @@ class WorkspaceLimitsService:
         spec = dict(_LIMIT_SPECS[clean_entity_kind])
         workspace_items = self._list_workspace_items(user_id, clean_entity_kind)
         workspace_total_count = len(workspace_items)
-        personal_count = sum(1 for item in workspace_items if self._is_personal_workspace_item(item))
+        personal_count = sum(1 for item in workspace_items if self._is_personal_workspace_item(item, clean_entity_kind))
         linked_library_items = self._list_linked_library_entries(user_id, clean_entity_kind)
         linked_library_count = len(linked_library_items)
         library_total_count = workspace_total_count + linked_library_count
@@ -567,7 +567,7 @@ class WorkspaceLimitsService:
                     "ref": self._item_ref(item),
                     "created_at": self._item_created_at(item),
                     "updated_at": self._item_updated_at(item),
-                    "is_personal": self._is_personal_workspace_item(item),
+                    "is_personal": self._is_personal_workspace_item(item, entity_kind),
                     "payload": item,
                 }
             )
@@ -753,9 +753,16 @@ class WorkspaceLimitsService:
                 return value
         return ""
 
-    def _is_personal_workspace_item(self, payload: Dict[str, Any]) -> bool:
+    def _is_personal_workspace_item(
+        self,
+        payload: Dict[str, Any],
+        entity_kind: Optional[str] = None,
+    ) -> bool:
         if not isinstance(payload, dict):
             return False
+        clean_kind = str(entity_kind or payload.get("workspace_entity_kind") or "").strip().lower()
+        if clean_kind in {"task", "complex", "theory"}:
+            return True
         if has_source_lineage(payload):
             return False
         created_via = str(payload.get("created_via") or "").strip().lower()

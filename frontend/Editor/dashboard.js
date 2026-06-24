@@ -1459,6 +1459,7 @@ class EditorDashboard {
                 this.applyPendingInitialView();
                 await this.applyPendingTheoryHubIntent();
                 this.applyPendingMicrocardsManualIntent();
+                this.loadWorkspaceLimits(); // Reload limits/counter automatically when catalog updates!
             } else {
                 this.log(`Server returned error: ${data.error}`);
                 this.showVoiceToast({
@@ -1947,21 +1948,21 @@ class EditorDashboard {
         ['create-task-modal', 'create-module-modal', 'create-topic-modal', 'topic-theory-modal', 'theory-hub-modal', 'import-modal'].forEach(id => {
             if (id === 'topic-theory-modal') {
                 const theoryModal = document.getElementById('topic-theory-modal');
-                if (theoryModal && !theoryModal.classList.contains('hidden')) {
+                if (theoryModal && (!theoryModal.classList.contains('hidden') || theoryModal.open)) {
                     this.closeTopicTheoryModal();
                 }
                 return;
             }
             if (id === 'theory-hub-modal') {
                 const theoryHubModal = document.getElementById('theory-hub-modal');
-                if (theoryHubModal && !theoryHubModal.classList.contains('hidden')) {
+                if (theoryHubModal && (!theoryHubModal.classList.contains('hidden') || theoryHubModal.open)) {
                     this.closeTheoryHub();
                 }
                 return;
             }
             if (id === 'import-modal') {
                 const importModal = document.getElementById('import-modal');
-                if (importModal && !importModal.classList.contains('hidden')) {
+                if (importModal && (!importModal.classList.contains('hidden') || importModal.open)) {
                     this.closeImportModal();
                 }
                 return;
@@ -1972,8 +1973,16 @@ class EditorDashboard {
             if (content) {
                 content.classList.remove('animate-scale-in');
             }
-            m.classList.add('hidden');
-            m.classList.remove('flex');
+            if (m.close) {
+                try {
+                    m.close();
+                } catch (e) {
+                    console.warn('[Dashboard] Failed to close dialog natively:', e);
+                }
+            } else {
+                m.classList.add('hidden');
+                m.classList.remove('flex');
+            }
         });
     }
 
@@ -2629,6 +2638,14 @@ class EditorDashboard {
         const modal = document.getElementById('topic-theory-modal');
         if (!modal) return;
 
+        if (!modal._cancelListenerAdded) {
+            modal.addEventListener('cancel', (e) => {
+                e.preventDefault();
+                this.closeTopicTheoryModal();
+            });
+            modal._cancelListenerAdded = true;
+        }
+
         const topic = this.getTopicRow(moduleId, topicId);
         const module = this.catalog.find((m) => m.id === moduleId);
         const metaEl = document.getElementById('topic-theory-meta');
@@ -2649,10 +2666,11 @@ class EditorDashboard {
         }
         this.setTopicTheorySummary(wt('db.k115', 'Загружаем текущее состояние темы...'), 'info');
 
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
         if (typeof modal.showModal === 'function' && !modal.open) {
             modal.showModal();
+        } else {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
         }
 
         await this.loadTopicTheoryCatalog(false);
@@ -2999,12 +3017,20 @@ class EditorDashboard {
         const modal = document.getElementById('theory-hub-modal');
         if (!modal) return;
 
+        if (!modal._cancelListenerAdded) {
+            modal.addEventListener('cancel', (e) => {
+                e.preventDefault();
+                this.closeTheoryHub();
+            });
+            modal._cancelListenerAdded = true;
+        }
+
         const requestedFocus = String(options?.focusTheoryId || '').trim();
         if (requestedFocus) {
             this.theoryHubState.focusTheoryId = requestedFocus;
         }
 
-        if (typeof modal.showModal === 'function') {
+        if (typeof modal.showModal === 'function' && !modal.open) {
             modal.showModal();
         } else {
             modal.classList.remove('hidden');
@@ -5836,7 +5862,19 @@ class EditorDashboard {
             return;
         }
 
-        modal.classList.remove('hidden');
+        if (!modal._cancelListenerAdded) {
+            modal.addEventListener('cancel', (e) => {
+                e.preventDefault();
+                this.closeImportModal();
+            });
+            modal._cancelListenerAdded = true;
+        }
+
+        if (typeof modal.showModal === 'function' && !modal.open) {
+            modal.showModal();
+        } else {
+            modal.classList.remove('hidden');
+        }
 
         if (this.importManager) {
             this.openDirectImportWorkspace();
@@ -5890,7 +5928,19 @@ class EditorDashboard {
             return;
         }
 
-        modal.classList.remove('hidden');
+        if (!modal._cancelListenerAdded) {
+            modal.addEventListener('cancel', (e) => {
+                e.preventDefault();
+                this.closeImportModal();
+            });
+            modal._cancelListenerAdded = true;
+        }
+
+        if (typeof modal.showModal === 'function' && !modal.open) {
+            modal.showModal();
+        } else {
+            modal.classList.remove('hidden');
+        }
 
         if (this.importManager) {
             if (intent === 'microcards_manual') {
@@ -5920,44 +5970,67 @@ class EditorDashboard {
         const skipConfirm = options && options.skipConfirm === true;
         const modal = document.getElementById('import-modal');
 
-        // Reset import manager state
         if (this.importManager) {
-            if (this.importManager.modalPurpose === 'theory_analysis') {
-                if (modal) {
-                    modal.classList.add('hidden');
-                }
-                this.importManager.setModalPurpose('import');
-                this.importManager.materialText = '';
-                this.importManager.aiUploadedFile = null;
-                this.importManager.aiFileInfo = null;
-                this.importManager.analysisResult = null;
-                this.importManager.generationResult = null;
-                this.importManager.aiProvider = null;
-                this.importManager.aiProviderModel = null;
-                this.importManager.aiRunId = null;
-                this.importManager.aiSelectedRecs.clear();
-                this.importManager.aiGenerating = false;
-                this.importManager.aiAnalyzing = false;
-                this.importManager.theoryOpeningRunId = null;
-                this.importManager.importRequestKey = null;
-                return true;
-            }
-
             if (!skipConfirm && typeof this.importManager.confirmImportModalCloseIfNeeded === 'function') {
                 const confirmed = await this.importManager.confirmImportModalCloseIfNeeded();
                 if (!confirmed) return false;
             }
-            if (modal) {
-                modal.classList.add('hidden');
-            }
-            if (typeof this.importManager.resetImportModalState === 'function') {
-                await this.importManager.resetImportModalState();
-            }
+
+            const performClose = async () => {
+                const handleEnd = (event) => {
+                    if (event.animationName === 'scaleOut') {
+                        modal.removeEventListener('animationend', handleEnd);
+                        modal.close();
+                        modal.classList.remove('closing');
+                    }
+                };
+                if (modal && typeof modal.close === 'function') {
+                    modal.classList.add('closing');
+                    modal.addEventListener('animationend', handleEnd);
+                    // Fallback
+                    setTimeout(() => {
+                        if (modal.classList.contains('closing')) {
+                            modal.removeEventListener('animationend', handleEnd);
+                            modal.close();
+                            modal.classList.remove('closing');
+                        }
+                    }, 250);
+                } else if (modal) {
+                    modal.classList.add('hidden');
+                }
+
+                if (this.importManager.modalPurpose === 'theory_analysis') {
+                    this.importManager.setModalPurpose('import');
+                    this.importManager.materialText = '';
+                    this.importManager.aiUploadedFile = null;
+                    this.importManager.aiFileInfo = null;
+                    this.importManager.analysisResult = null;
+                    this.importManager.generationResult = null;
+                    this.importManager.aiProvider = null;
+                    this.importManager.aiProviderModel = null;
+                    this.importManager.aiRunId = null;
+                    this.importManager.aiSelectedRecs.clear();
+                    this.importManager.aiGenerating = false;
+                    this.importManager.aiAnalyzing = false;
+                    this.importManager.theoryOpeningRunId = null;
+                    this.importManager.importRequestKey = null;
+                } else {
+                    if (typeof this.importManager.resetImportModalState === 'function') {
+                        await this.importManager.resetImportModalState();
+                    }
+                }
+            };
+
+            await performClose();
             return true;
         }
 
         if (modal) {
-            modal.classList.add('hidden');
+            if (typeof modal.close === 'function') {
+                modal.close();
+            } else {
+                modal.classList.add('hidden');
+            }
         }
         return true;
     }
@@ -7049,7 +7122,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const modalIds = ['create-task-modal', 'create-module-modal', 'create-topic-modal', 'topic-theory-modal', 'theory-hub-modal', 'import-modal'];
         for (const id of modalIds) {
             const el = document.getElementById(id);
-            if (el && !el.classList.contains('hidden')) {
+            if (el && (!el.classList.contains('hidden') || el.open)) {
+                if (el.tagName === 'DIALOG') {
+                    // Let the native dialog cancel event handler handle it to avoid duplicate calls
+                    break;
+                }
                 if (id === 'import-modal') {
                     window.dashboard.closeImportModal();
                 } else {

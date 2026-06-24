@@ -2065,6 +2065,9 @@ ${remaining}
         }
 
         try {
+            if (this.dashboard && typeof this.dashboard.loadWorkspaceLimits === 'function') {
+                this.dashboard.loadWorkspaceLimits().catch(() => {});
+            }
             if (this.dashboard && typeof this.dashboard.loadCatalog === 'function') {
                 await this.dashboard.loadCatalog();
             }
@@ -2344,6 +2347,16 @@ ${remaining}
         prevBtn.disabled = this.currentStep === 1;
         prevBtn.textContent = wt('im.k098', 'Назад');
 
+        const limits = this.parsedResult?.workspace_limits;
+        let limitExceeded = false;
+        if (limits && limits.plan !== 'premium') {
+            const remainingTasks = limits.tasks?.remaining_personal ?? 0;
+            const importableTasksCount = this.getPreviewImportableTasks().length;
+            if (importableTasksCount > remainingTasks) {
+                limitExceeded = true;
+            }
+        }
+
         const nothingToImport = this.currentStep === 4 && this.getPreviewImportableTasks().length === 0;
 
         // Next button label
@@ -2360,10 +2373,12 @@ ${remaining}
 
         if (this.currentStep === 4 && nothingToImport && !this.importInProgress) {
             nextBtn.textContent = wt('im.k105', 'Нечего импортировать');
+        } else if (limitExceeded && !this.importInProgress) {
+            nextBtn.textContent = wt('im.limit_exceeded_btn', 'Превышен лимит');
         }
 
-        // Disable next during AI processing
-        nextBtn.disabled = this.aiAnalyzing || this.aiGenerating || this.importInProgress || nothingToImport;
+        // Disable next during AI processing or if limits are exceeded
+        nextBtn.disabled = this.aiAnalyzing || this.aiGenerating || this.importInProgress || nothingToImport || limitExceeded;
     }
 
     // =========================================================================
@@ -3338,6 +3353,50 @@ ${remaining}
         `;
     }
 
+    resolveDisplayName(id, type, moduleId = null) {
+        if (!id) return '';
+        if (id === wt('im.k144', 'из архива') || id === wt('im.k145', 'из архива')) {
+            return id;
+        }
+        
+        if (this.dashboard && Array.isArray(this.dashboard.catalog)) {
+            if (type === 'module') {
+                const mod = this.dashboard.catalog.find(m => m.id === id);
+                if (mod && mod.name) return mod.name;
+            } else if (type === 'topic' && moduleId) {
+                const mod = this.dashboard.catalog.find(m => m.id === moduleId);
+                if (mod && Array.isArray(mod.topics)) {
+                    const top = mod.topics.find(t => t.id === id);
+                    if (top && top.name) return top.name;
+                }
+            }
+        }
+
+        if (this.parsedResult) {
+            if (type === 'module' && this.parsedResult.module_names && this.parsedResult.module_names[id]) {
+                return this.parsedResult.module_names[id];
+            }
+            if (type === 'topic' && moduleId && this.parsedResult.topic_names && this.parsedResult.topic_names[moduleId] && this.parsedResult.topic_names[moduleId][id]) {
+                return this.parsedResult.topic_names[moduleId][id];
+            }
+        }
+        
+        if (type === 'module' && id === this.selectedModule && this.selectedModuleName) {
+            return this.selectedModuleName;
+        }
+        if (type === 'topic' && id === this.selectedTopic && this.selectedTopicName) {
+            return this.selectedTopicName;
+        }
+        
+        if (id.includes('_') || id === id.toLowerCase()) {
+            return id.replace(/_/g, ' ')
+                     .split(' ')
+                     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                     .join(' ');
+        }
+        return id;
+    }
+
     getArchiveTaskPreviewStatus(task = {}) {
         return String(task?.status || 'valid').trim().toLowerCase();
     }
@@ -3421,8 +3480,13 @@ ${remaining}
         const taskName = String(task.name || task.id || `${wt('im.k665', 'Задание')} ${index + 1}`);
         const taskId = String(task.id || '');
         const taskType = String(task.type || 'unknown');
-        const targetModule = String(task.target_module || this.selectedModuleName || this.selectedModule || wt('im.k144', 'из архива'));
-        const targetTopic = String(task.target_topic || this.selectedTopicName || this.selectedTopic || wt('im.k145', 'из архива'));
+        
+        const rawModule = task.target_module || this.selectedModule || '';
+        const targetModule = this.resolveDisplayName(rawModule, 'module') || wt('im.k144', 'из архива');
+        
+        const rawTopic = task.target_topic || this.selectedTopic || '';
+        const targetTopic = this.resolveDisplayName(rawTopic, 'topic', rawModule) || wt('im.k145', 'из архива');
+
         const warnings = Array.isArray(task.warnings) ? task.warnings.filter(Boolean) : [];
         const diffKeys = Array.isArray(task.diff_keys) ? task.diff_keys.filter(Boolean) : [];
         const existingPath = String(task.existing_path || '').trim();
@@ -3460,13 +3524,13 @@ ${remaining}
 
                 <div class="p-4 bg-surface-1 space-y-3">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                        <div class="rounded-lg border border-border-subtle bg-surface-2 px-3 py-2">
+                        <div class="rounded-lg border border-border-subtle bg-surface-2 px-3 py-2 min-w-0">
                             <div class="text-text-muted uppercase tracking-wide">${wt('im.k768', 'Модуль')}</div>
-                            <div class="mt-1 font-semibold text-text-main">${this.escapeHtml(targetModule)}</div>
+                            <div class="mt-1 font-semibold text-text-main break-words">${this.escapeHtml(targetModule)}</div>
                         </div>
-                        <div class="rounded-lg border border-border-subtle bg-surface-2 px-3 py-2">
+                        <div class="rounded-lg border border-border-subtle bg-surface-2 px-3 py-2 min-w-0">
                             <div class="text-text-muted uppercase tracking-wide">${wt('im.k769', 'Тема')}</div>
-                            <div class="mt-1 font-semibold text-text-main">${this.escapeHtml(targetTopic)}</div>
+                            <div class="mt-1 font-semibold text-text-main break-words">${this.escapeHtml(targetTopic)}</div>
                         </div>
                     </div>
 
@@ -3527,6 +3591,28 @@ ${remaining}
         `;
     }
 
+    renderLimitWarningHtml() {
+        const limits = this.parsedResult?.workspace_limits;
+        if (!limits || limits.plan === 'premium') return '';
+
+        const remainingTasks = limits.tasks?.remaining_personal ?? 0;
+        const importableTasksCount = this.getPreviewImportableTasks().length;
+
+        if (importableTasksCount > remainingTasks) {
+            return `
+                <div class="rounded-xl border border-error-light bg-error-lighter px-4 py-3 text-sm text-error-text animate-slide-up-fade">
+                    <div class="font-semibold">${wt('im.limit_exceeded_title', 'Недостаточно свободных слотов для импорта')}</div>
+                    <div class="mt-1">
+                        ${wt('im.limit_exceeded_desc', 'Свободно слотов: {remaining}, требуется: {required}. Освободите место или исключите лишние задания из импорта.')
+                            .replace('{remaining}', remainingTasks)
+                            .replace('{required}', importableTasksCount)}
+                    </div>
+                </div>
+            `;
+        }
+        return '';
+    }
+
     renderStep3Archive() {
         if (!this.parsedResult) {
             return `
@@ -3569,6 +3655,10 @@ ${remaining}
                         <div class="mt-1 break-words">${this.escapeHtml(this.parsedResult.critical_error)}</div>
                     </div>
                 ` : ''}
+
+                <div id="import-limit-warning-container">
+                    ${this.renderLimitWarningHtml()}
+                </div>
 
                 <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
                     <div class="rounded-xl border border-border-subtle bg-surface-2 px-4 py-3">
@@ -3734,14 +3824,45 @@ ${remaining}
         const excludedTasksCount = this.excludedTasks.size;
         const nothingToImport = validTasks.length === 0;
 
+        const limits = this.parsedResult?.workspace_limits;
+        let limitExceeded = false;
+        let remainingTasks = 0;
+        if (limits && limits.plan !== 'premium') {
+            remainingTasks = limits.tasks?.remaining_personal ?? 0;
+            if (validTasks.length > remainingTasks) {
+                limitExceeded = true;
+            }
+        }
+        const isBlocked = nothingToImport || limitExceeded;
+
+        let description = '';
+        if (nothingToImport) {
+            description = wt('im.k163', 'После проверки и фильтрации не осталось заданий, которые можно импортировать.');
+        } else if (limitExceeded) {
+            description = wt('im.limit_exceeded_desc_step4', 'Количество импортируемых заданий превышает доступный лимит. Свободно слотов: {remaining}, требуется: {required}.')
+                .replace('{remaining}', remainingTasks)
+                .replace('{required}', validTasks.length);
+        } else {
+            description = `${wt('im.k793', 'Будет импортировано ')}${validTasks.length}${wt('im.k794', ' заданий')}`;
+        }
+
+        let boxText = '';
+        if (nothingToImport) {
+            boxText = wt('im.k164', 'Кнопка импорта отключена, потому что все задания либо битые, либо исключены вручную.');
+        } else if (limitExceeded) {
+            boxText = wt('im.limit_exceeded_box', 'Кнопка импорта отключена, так как количество импортируемых заданий превышает доступный лимит свободных слотов. Пожалуйста, вернитесь на предыдущий шаг и исключите некоторые задания из списка импорта.');
+        } else {
+            boxText = `${wt('im.k800', 'Задания со статусом «Ошибка» не будут добавлены. Импорт продолжится только для оставшихся ')}${validTasks.length}${wt('im.k801', ' заданий.')}`;
+        }
+
         return `
             <div class="max-w-3xl mx-auto text-center py-8 animate-slide-up-fade">
-                <div class="w-20 h-20 ${nothingToImport ? 'bg-error-light' : 'bg-success-light'} rounded-full flex items-center justify-center mx-auto mb-6">
-                    <span class="material-symbols-outlined ${nothingToImport ? 'text-error-text' : 'text-success-text'} text-[48px]">${nothingToImport ? 'block' : 'check_circle'}</span>
+                <div class="w-20 h-20 ${isBlocked ? 'bg-error-light' : 'bg-success-light'} rounded-full flex items-center justify-center mx-auto mb-6">
+                    <span class="material-symbols-outlined ${isBlocked ? 'text-error-text' : 'text-success-text'} text-[48px]">${isBlocked ? 'block' : 'check_circle'}</span>
                 </div>
                 
-                <h3 class="text-xl font-bold text-text-main mb-2">${nothingToImport ? wt('im.k791', 'Импорт недоступен') : wt('im.k792', 'Готово к импорту')}</h3>
-                <p class="text-text-secondary mb-6">${nothingToImport ? wt('im.k163', 'После проверки и фильтрации не осталось заданий, которые можно импортировать.') : `${wt('im.k793', 'Будет импортировано ')}${validTasks.length}${wt('im.k794', ' заданий')}`}</p>
+                <h3 class="text-xl font-bold text-text-main mb-2">${isBlocked ? wt('im.k791', 'Импорт недоступен') : wt('im.k792', 'Готово к импорту')}</h3>
+                <p class="text-text-secondary mb-6">${description}</p>
                 
                 <div class="bg-surface-2 rounded-lg p-6 text-left">
                     <div class="space-y-2 text-sm">
@@ -3767,12 +3888,10 @@ ${remaining}
                         </div>
                     </div>
                 </div>
-                <div class="mt-4 rounded-lg ${nothingToImport ? 'border border-error-light bg-error-lighter text-error-text' : 'border border-warning-light bg-warning-lighter text-warning-text'} px-4 py-3 text-left text-sm">
-                    <div class="font-semibold">${nothingToImport ? wt('im.k798', 'Импорт отключён') : wt('im.k799', 'Что будет при импорте')}</div>
+                <div class="mt-4 rounded-lg ${isBlocked ? 'border border-error-light bg-error-lighter text-error-text' : 'border border-warning-light bg-warning-lighter text-warning-text'} px-4 py-3 text-left text-sm">
+                    <div class="font-semibold">${isBlocked ? wt('im.k798', 'Импорт отключён') : wt('im.k799', 'Что будет при импорте')}</div>
                     <div class="mt-1">
-                        ${nothingToImport
-                            ? wt('im.k164', 'Кнопка импорта отключена, потому что все задания либо битые, либо исключены вручную.')
-                            : `${wt('im.k800', 'Задания со статусом «Ошибка» не будут добавлены. Импорт продолжится только для оставшихся ')}${validTasks.length}${wt('im.k801', ' заданий.')}`}
+                        ${boxText}
                     </div>
                 </div>
             </div>
@@ -4387,11 +4506,23 @@ ${remaining}
             this.excludedTasks.add(index);
         }
 
-        // Update button text
+        // Update button text and card opacity
         const btn = document.querySelector(`[data-task-exclude-btn="${index}"]`);
         if (btn) {
             btn.textContent = this.excludedTasks.has(index) ? wt('im.k195', 'Включить') : wt('im.k196', 'Исключить');
+            const card = btn.closest('[data-role="archive-import-task-card"]');
+            if (card) {
+                card.classList.toggle('opacity-60', this.excludedTasks.has(index));
+            }
         }
+
+        // Update limit warning container dynamically
+        const warningContainer = document.getElementById('import-limit-warning-container');
+        if (warningContainer) {
+            warningContainer.innerHTML = this.renderLimitWarningHtml();
+        }
+
+        this.updateNavigationButtons();
     }
 
     // =========================================================================
@@ -5493,6 +5624,9 @@ text: Сердце человека состоит из [трёх] камер. �
                         next: wt('im.k249', 'Каталог будет обновлён, после чего можно открыть импортированную версию в рабочем пространстве.'),
                     });
                     try {
+                        if (this.dashboard && typeof this.dashboard.loadWorkspaceLimits === 'function') {
+                            this.dashboard.loadWorkspaceLimits().catch(() => {});
+                        }
                         if (this.dashboard && typeof this.dashboard.loadCatalog === 'function') {
                             await this.dashboard.loadCatalog();
                         }
@@ -5574,6 +5708,9 @@ text: Сердце человека состоит из [трёх] камер. �
                         this.importRequestKey = null;
                         this.currentStep = 2;
                         this.theorySubMode = 'coverage_map';
+                        if (this.dashboard && typeof this.dashboard.loadWorkspaceLimits === 'function') {
+                            this.dashboard.loadWorkspaceLimits().catch(() => {});
+                        }
                         await this.dashboard.loadCatalog();
                         this.showToast(wt('im.k255', 'Тип импортирован. Можно продолжить с другим типом в карте покрытия ниже.'), 'success');
                         this.renderCurrentStep();
@@ -5585,6 +5722,9 @@ text: Сердце человека состоит из [трёх] камер. �
                             impact: `${wt('im.k680', 'Добавлено:')} ${result.imported}.`,
                             next: wt('im.k257', 'Каталог обновлён, можно переходить к редактуре.'),
                         });
+                        if (this.dashboard && typeof this.dashboard.loadWorkspaceLimits === 'function') {
+                            this.dashboard.loadWorkspaceLimits().catch(() => {});
+                        }
                         this.dashboard.closeImportModal({ skipConfirm: true });
                         this.dashboard.loadCatalog();
                     }
@@ -5631,6 +5771,10 @@ text: Сердце человека состоит из [трёх] камер. �
                     const overrides = {};
                     this.perTaskConflictRes.forEach((v, k) => { overrides[k] = v; });
                     formData.append('per_task_conflict', JSON.stringify(overrides));
+                }
+                // Excluded tasks
+                if (this.excludedTasks.size > 0) {
+                    formData.append('excluded_tasks', JSON.stringify(Array.from(this.excludedTasks)));
                 }
 
                 // UI Loading State
@@ -5728,6 +5872,9 @@ text: Сердце человека состоит из [трёх] камер. �
                                     ? wt('im.k263', 'Проверьте проблемные задания и при необходимости повторите импорт.')
                                     : wt('im.k264', 'Каталог обновлён и готов к работе.'),
                             });
+                            if (this.dashboard && typeof this.dashboard.loadWorkspaceLimits === 'function') {
+                                this.dashboard.loadWorkspaceLimits().catch(() => {});
+                            }
                             this.dashboard.closeImportModal({ skipConfirm: true });
                             this.dashboard.loadCatalog();
                         } else {

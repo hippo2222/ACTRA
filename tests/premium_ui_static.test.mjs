@@ -83,7 +83,9 @@ describe('premium UI wiring', () => {
     expect(promo).toContain('$4.99');
     expect(promo).toContain('$7.99');
     expect(promo).toContain('$19.99');
-    expect(promo).toContain('\\u0432\\u044b\\u0433\\u043e\\u0434\\u043d\\u0435\\u0435');
+    expect(promo).toContain('premium_promo_period_30d_note');
+    const ruLoc = read('frontend/assets/locales/ru.json');
+    expect(ruLoc).toContain('выгоднее');
     expect(promo).not.toContain('data-premium-order-days');
     expect(editor).toContain('data-premium-promo-feature="tasks-limit"');
     expect(complexBuilder).toContain("data-premium-promo-feature', 'complexes-limit'");

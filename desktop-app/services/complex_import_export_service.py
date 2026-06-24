@@ -111,6 +111,9 @@ class ComplexImportExportService:
         missing_tasks: List[str] = []
         missing_theories: List[str] = []
 
+        module_names = {}
+        topic_names = {}
+
         try:
             with zipfile.ZipFile(temp_zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
                 for complex_id in complex_ids:
@@ -143,6 +146,25 @@ class ComplexImportExportService:
                             missing_tasks.append(task_ref)
                             continue
                         module_id, topic_id, task_id = parsed
+
+                        if module_id not in module_names:
+                            try:
+                                mod = self.storage.get_module(module_id)
+                                if isinstance(mod, dict) and isinstance(mod.get("name"), str):
+                                    module_names[module_id] = mod["name"]
+                            except Exception as e:
+                                self.logger.warning(f"Could not retrieve module name for {module_id}: {e}")
+
+                        if module_id not in topic_names:
+                            topic_names[module_id] = {}
+                        if topic_id not in topic_names[module_id]:
+                            try:
+                                top = self.storage.get_topic(module_id, topic_id)
+                                if isinstance(top, dict) and isinstance(top.get("name"), str):
+                                    topic_names[module_id][topic_id] = top["name"]
+                            except Exception as e:
+                                self.logger.warning(f"Could not retrieve topic name for {module_id}/{topic_id}: {e}")
+
                         if not self._write_task_payload_to_archive(
                             zf,
                             module_id,
@@ -179,6 +201,8 @@ class ComplexImportExportService:
                         "tasks": sorted(set(missing_tasks)),
                         "theories": sorted(set(missing_theories)),
                     },
+                    "module_names": module_names,
+                    "topic_names": topic_names
                 }
                 manifest_bytes = json.dumps(manifest, indent=2, ensure_ascii=False).encode("utf-8")
                 zf.writestr("manifest.json", manifest_bytes)
@@ -581,6 +605,7 @@ class ComplexImportExportService:
                 task_params = {
                     "conflict_resolution": task_conflict,
                     "skip_errors": False if atomic_mode == "bundle" else skip_errors,
+                    "current_user_id": params.get("current_user_id"),
                 }
                 task_result = self.task_import_export_service.import_tasks_atomic(
                     archive_path,
@@ -648,6 +673,7 @@ class ComplexImportExportService:
                     payload,
                     complex_conflict_policy=complex_conflict,
                     theory_id_remap=result["id_remap"]["theories"],
+                    current_user_id=params.get("current_user_id"),
                 )
                 incoming_id = import_status.get("incoming_id")
                 final_id = import_status.get("final_id")
@@ -1072,6 +1098,7 @@ class ComplexImportExportService:
         payload: Dict[str, Any],
         complex_conflict_policy: str,
         theory_id_remap: Dict[str, str],
+        current_user_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         if not isinstance(payload, dict):
             return {"status": "error", "error": "complex_payload_must_be_object"}
@@ -1126,14 +1153,22 @@ class ComplexImportExportService:
             "theory_link": normalized.get("theory_link"),
             "theory_mode": normalized.get("theory_mode"),
             "created_by_user_id": (
-                str(cloned.get("created_by_user_id")).strip()
-                if isinstance(cloned.get("created_by_user_id"), str) and str(cloned.get("created_by_user_id")).strip()
-                else None
+                current_user_id
+                if current_user_id
+                else (
+                    str(cloned.get("created_by_user_id")).strip()
+                    if isinstance(cloned.get("created_by_user_id"), str) and str(cloned.get("created_by_user_id")).strip()
+                    else None
+                )
             ),
             "updated_by_user_id": (
-                str(cloned.get("updated_by_user_id")).strip()
-                if isinstance(cloned.get("updated_by_user_id"), str) and str(cloned.get("updated_by_user_id")).strip()
-                else None
+                current_user_id
+                if current_user_id
+                else (
+                    str(cloned.get("updated_by_user_id")).strip()
+                    if isinstance(cloned.get("updated_by_user_id"), str) and str(cloned.get("updated_by_user_id")).strip()
+                    else None
+                )
             ),
             # Imported complexes must be explicitly marked as archive-originated,
             # otherwise ownership filters cannot distinguish them from local edits.

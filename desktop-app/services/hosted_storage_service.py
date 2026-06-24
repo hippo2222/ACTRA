@@ -337,22 +337,31 @@ class HostedStorageService(HostedShadowFallbackMixin, StorageService):
         clean_name = str(name or "").strip()
         if not clean_name:
             return False
-        module_dir = self.modules_dir / module_id
-        if module_dir.exists():
-            self.logger.warning("[HOSTED] Module already exists: %s", module_id)
+        # Check existence in Postgres catalog (source of truth)
+        current_catalog = self.repository.load_catalog()
+        if any(isinstance(m, dict) and m.get("id") == module_id for m in current_catalog):
+            self.logger.warning("[HOSTED] Module already exists in catalog: %s", module_id)
             return False
-
+        payload: Dict[str, Any] = {"id": module_id, "name": clean_name, "topics": []}
+        payload = self._apply_workspace_meta_fields(payload, workspace_meta)
+        payload = self._normalize_module_payload(payload)
+        # Best-effort: write shadow files
+        module_dir = self.modules_dir / module_id
         try:
-            module_dir.mkdir(parents=True, exist_ok=False)
-            payload: Dict[str, Any] = {"id": module_id, "name": clean_name, "topics": []}
-            payload = self._apply_workspace_meta_fields(payload, workspace_meta)
-            payload = self._normalize_module_payload(payload)
+            module_dir.mkdir(parents=True, exist_ok=True)
             self._atomic_json_dump(module_dir / "module.json", payload)
-            self._sync_catalog_from_shadow()
+        except Exception as exc:
+            self.logger.warning("[HOSTED] Failed to write shadow for module %s: %s", module_id, exc)
+        # Write to Postgres catalog directly
+        try:
+            new_catalog = list(current_catalog) + [payload]
+            self.repository.replace_catalog(new_catalog)
+            self._modules_cache = None
+            self.logger.info("[HOSTED] Module added to catalog: %s", module_id)
             return True
-        except Exception:
-            shutil.rmtree(module_dir, ignore_errors=True)
-            raise
+        except Exception as exc:
+            self.logger.exception("[HOSTED] Failed to add module %s to catalog: %s", module_id, exc)
+            return False
 
     def create_topic(
         self,
@@ -379,29 +388,49 @@ class HostedStorageService(HostedShadowFallbackMixin, StorageService):
         clean_name = str(name or "").strip()
         if not clean_name:
             return False
-        module_dir = self.modules_dir / module_id
-        if not module_dir.exists():
-            self.logger.warning("[HOSTED] Cannot create topic for missing module: %s", module_id)
+        # Check existence in Postgres catalog (source of truth — not filesystem)
+        current_catalog = self.repository.load_catalog()
+        module_entry = next(
+            (m for m in current_catalog if isinstance(m, dict) and m.get("id") == module_id), None
+        )
+        if module_entry is None:
+            self.logger.warning("[HOSTED] Cannot create topic: module not found in catalog: %s", module_id)
             return False
-
-        topic_dir = module_dir / "topics" / topic_id
-        if topic_dir.exists():
-            self.logger.warning("[HOSTED] Topic already exists: %s/%s", module_id, topic_id)
+        existing_topics = module_entry.get("topics") or []
+        if any(isinstance(t, dict) and t.get("id") == topic_id for t in existing_topics):
+            self.logger.warning("[HOSTED] Topic already exists in catalog: %s/%s", module_id, topic_id)
             return False
-
+        payload: Dict[str, Any] = {"id": topic_id, "name": clean_name, "tasks": []}
+        if isinstance(theory_link, dict):
+            payload["theory_link"] = dict(theory_link)
+        payload = self._apply_workspace_meta_fields(payload, workspace_meta)
+        payload = self._normalize_topic_payload(module_id, payload)
+        # Best-effort: write shadow files
+        topic_dir = self.modules_dir / module_id / "topics" / topic_id
         try:
-            (topic_dir / "tasks").mkdir(parents=True, exist_ok=False)
-            payload: Dict[str, Any] = {"id": topic_id, "name": clean_name, "tasks": []}
-            if isinstance(theory_link, dict):
-                payload["theory_link"] = dict(theory_link)
-            payload = self._apply_workspace_meta_fields(payload, workspace_meta)
-            payload = self._normalize_topic_payload(module_id, payload)
+            (topic_dir / "tasks").mkdir(parents=True, exist_ok=True)
             self._atomic_json_dump(topic_dir / "topic.json", payload)
-            self._sync_catalog_from_shadow()
+        except Exception as exc:
+            self.logger.warning("[HOSTED] Failed to write shadow for topic %s/%s: %s", module_id, topic_id, exc)
+        # Update Postgres catalog directly
+        try:
+            new_catalog = []
+            for module in current_catalog:
+                if not isinstance(module, dict) or module.get("id") != module_id:
+                    new_catalog.append(module)
+                    continue
+                module = dict(module)
+                topics = list(module.get("topics") or [])
+                topics.append(payload)
+                module["topics"] = topics
+                new_catalog.append(module)
+            self.repository.replace_catalog(new_catalog)
+            self._modules_cache = None
+            self.logger.info("[HOSTED] Topic added to catalog: %s/%s", module_id, topic_id)
             return True
-        except Exception:
-            shutil.rmtree(topic_dir, ignore_errors=True)
-            raise
+        except Exception as exc:
+            self.logger.exception("[HOSTED] Failed to add topic %s/%s to catalog: %s", module_id, topic_id, exc)
+            return False
 
     def save_task(
         self,
@@ -514,20 +543,55 @@ class HostedStorageService(HostedShadowFallbackMixin, StorageService):
         except PostgresUnavailableError as exc:
             self._guard_shadow_write_fallback("delete_task", exc)
             return StorageService.delete_task(self, module_id, topic_id, task_id)
-        success = super().delete_task(module_id, topic_id, task_id)
-        if not success:
+        self._validate_id(module_id, "module_id")
+        self._validate_id(topic_id, "topic_id")
+        self._validate_id(task_id, "task_id")
+        # Build new catalog without the target task, check existence
+        current_catalog = self.repository.load_catalog()
+        task_exists_in_catalog = False
+        new_catalog = []
+        for module in current_catalog:
+            if not isinstance(module, dict) or module.get("id") != module_id:
+                new_catalog.append(module)
+                continue
+            module = dict(module)
+            new_topics = []
+            for topic in module.get("topics") or []:
+                if not isinstance(topic, dict) or topic.get("id") != topic_id:
+                    new_topics.append(topic)
+                    continue
+                topic = dict(topic)
+                tasks = topic.get("tasks") or []
+                new_tasks = [t for t in tasks if not (isinstance(t, dict) and t.get("id") == task_id)]
+                if len(new_tasks) < len(tasks):
+                    task_exists_in_catalog = True
+                topic["tasks"] = new_tasks
+                new_topics.append(topic)
+            module["topics"] = new_topics
+            new_catalog.append(module)
+        # Best-effort: delete shadow folder
+        task_dir = self.modules_dir / module_id / "topics" / topic_id / "tasks" / task_id
+        if task_dir.exists():
+            try:
+                shutil.rmtree(task_dir)
+                self.logger.info("[HOSTED] Shadow task directory deleted: %s/%s/%s", module_id, topic_id, task_id)
+            except Exception as exc:
+                self.logger.warning(
+                    "[HOSTED] Failed to remove shadow task dir %s/%s/%s: %s", module_id, topic_id, task_id, exc
+                )
+        if not task_exists_in_catalog:
+            self.logger.warning("[HOSTED] Task delete: not found in catalog %s/%s/%s", module_id, topic_id, task_id)
             return False
         try:
             self.content_repository.delete_task_content(module_id, topic_id, task_id)
-            self._sync_catalog_from_shadow()
+            self.repository.replace_catalog(new_catalog)
+            self._modules_cache = None
+            self.logger.info("[HOSTED] Task deleted from catalog: %s/%s/%s", module_id, topic_id, task_id)
             return True
         except Exception as exc:
             self.logger.exception(
-                "[HOSTED] Failed to sync hosted task delete %s/%s/%s: %s",
-                module_id,
-                topic_id,
-                task_id,
-                exc,
+                "[HOSTED] Failed to delete task %s/%s/%s from catalog: %s",
+                module_id, topic_id, task_id, exc,
             )
             return False
 
@@ -537,15 +601,34 @@ class HostedStorageService(HostedShadowFallbackMixin, StorageService):
         except PostgresUnavailableError as exc:
             self._guard_shadow_write_fallback("delete_module", exc)
             return StorageService.delete_module(self, module_id)
-        success = super().delete_module(module_id)
-        if not success:
+        self._validate_id(module_id, "module_id")
+        # Check existence in Postgres catalog (source of truth in hosted mode)
+        current_catalog = self.repository.load_catalog()
+        module_exists_in_catalog = any(
+            isinstance(m, dict) and m.get("id") == module_id
+            for m in current_catalog
+        )
+        # Also try to remove shadow directory if it exists (best effort)
+        module_dir = self.modules_dir / module_id
+        if module_dir.exists():
+            try:
+                shutil.rmtree(module_dir)
+                self.logger.info("[HOSTED] Shadow module directory deleted: %s", module_id)
+            except Exception as exc:
+                self.logger.warning("[HOSTED] Failed to remove shadow module dir %s: %s", module_id, exc)
+        if not module_exists_in_catalog:
+            self.logger.warning("[HOSTED] Module delete requested but not found in catalog: %s", module_id)
             return False
         try:
-            self._sync_catalog_from_shadow()
+            # Remove from Postgres catalog directly
+            new_catalog = [m for m in current_catalog if not (isinstance(m, dict) and m.get("id") == module_id)]
+            self.repository.replace_catalog(new_catalog)
+            self._modules_cache = None
             self._prune_task_content_to_catalog()
+            self.logger.info("[HOSTED] Module deleted from catalog: %s", module_id)
             return True
         except Exception as exc:
-            self.logger.exception("[HOSTED] Failed to prune module task content %s: %s", module_id, exc)
+            self.logger.exception("[HOSTED] Failed to delete module %s from catalog: %s", module_id, exc)
             return False
 
     def delete_topic(self, module_id: str, topic_id: str) -> bool:
@@ -554,16 +637,46 @@ class HostedStorageService(HostedShadowFallbackMixin, StorageService):
         except PostgresUnavailableError as exc:
             self._guard_shadow_write_fallback("delete_topic", exc)
             return StorageService.delete_topic(self, module_id, topic_id)
-        success = super().delete_topic(module_id, topic_id)
-        if not success:
+        self._validate_id(module_id, "module_id")
+        self._validate_id(topic_id, "topic_id")
+        # Check existence in Postgres catalog (source of truth in hosted mode)
+        current_catalog = self.repository.load_catalog()
+        topic_exists_in_catalog = False
+        new_catalog = []
+        for module in current_catalog:
+            if not isinstance(module, dict):
+                new_catalog.append(module)
+                continue
+            if module.get("id") != module_id:
+                new_catalog.append(module)
+                continue
+            topics = module.get("topics") or []
+            new_topics = [t for t in topics if not (isinstance(t, dict) and t.get("id") == topic_id)]
+            if len(new_topics) < len(topics):
+                topic_exists_in_catalog = True
+            module = dict(module)
+            module["topics"] = new_topics
+            new_catalog.append(module)
+        # Also try to remove shadow topic directory if it exists (best effort)
+        topic_dir = self.modules_dir / module_id / "topics" / topic_id
+        if topic_dir.exists():
+            try:
+                shutil.rmtree(topic_dir)
+                self.logger.info("[HOSTED] Shadow topic directory deleted: %s/%s", module_id, topic_id)
+            except Exception as exc:
+                self.logger.warning("[HOSTED] Failed to remove shadow topic dir %s/%s: %s", module_id, topic_id, exc)
+        if not topic_exists_in_catalog:
+            self.logger.warning("[HOSTED] Topic delete requested but not found in catalog: %s/%s", module_id, topic_id)
             return False
         try:
-            self._sync_catalog_from_shadow()
+            self.repository.replace_catalog(new_catalog)
+            self._modules_cache = None
             self._prune_task_content_to_catalog()
+            self.logger.info("[HOSTED] Topic deleted from catalog: %s/%s", module_id, topic_id)
             return True
         except Exception as exc:
             self.logger.exception(
-                "[HOSTED] Failed to prune topic task content %s/%s: %s",
+                "[HOSTED] Failed to delete topic %s/%s from catalog: %s",
                 module_id,
                 topic_id,
                 exc,
@@ -576,10 +689,41 @@ class HostedStorageService(HostedShadowFallbackMixin, StorageService):
         except PostgresUnavailableError as exc:
             self._guard_shadow_write_fallback("rename_module", exc)
             return StorageService.rename_module(self, module_id, new_name)
-        success = super().rename_module(module_id, new_name)
-        if success:
-            self._sync_catalog_from_shadow()
-        return success
+        self._validate_id(module_id, "module_id")
+        clean_name = str(new_name or "").strip()
+        if not clean_name:
+            return False
+        # Update in Postgres catalog directly
+        current_catalog = self.repository.load_catalog()
+        found = False
+        new_catalog = []
+        for module in current_catalog:
+            if isinstance(module, dict) and module.get("id") == module_id:
+                module = dict(module)
+                module["name"] = clean_name
+                found = True
+            new_catalog.append(module)
+        if not found:
+            self.logger.warning("[HOSTED] Module rename: not found in catalog: %s", module_id)
+            return False
+        try:
+            self.repository.replace_catalog(new_catalog)
+            self._modules_cache = None
+            self.logger.info("[HOSTED] Module renamed in catalog: %s -> '%s'", module_id, clean_name)
+        except Exception as exc:
+            self.logger.exception("[HOSTED] Failed to rename module %s in catalog: %s", module_id, exc)
+            return False
+        # Best-effort: update shadow module.json
+        module_json_path = self.modules_dir / module_id / "module.json"
+        if module_json_path.exists():
+            try:
+                with open(module_json_path, "r", encoding="utf-8") as fh:
+                    shadow = json.load(fh)
+                shadow["name"] = clean_name
+                self._atomic_json_dump(module_json_path, shadow)
+            except Exception as exc:
+                self.logger.warning("[HOSTED] Failed to update shadow module.json for rename %s: %s", module_id, exc)
+        return True
 
     def rename_topic(self, module_id: str, topic_id: str, new_name: str) -> bool:
         try:
@@ -587,10 +731,52 @@ class HostedStorageService(HostedShadowFallbackMixin, StorageService):
         except PostgresUnavailableError as exc:
             self._guard_shadow_write_fallback("rename_topic", exc)
             return StorageService.rename_topic(self, module_id, topic_id, new_name)
-        success = super().rename_topic(module_id, topic_id, new_name)
-        if success:
-            self._sync_catalog_from_shadow()
-        return success
+        self._validate_id(module_id, "module_id")
+        self._validate_id(topic_id, "topic_id")
+        clean_name = str(new_name or "").strip()
+        if not clean_name:
+            return False
+        # Update in Postgres catalog directly
+        current_catalog = self.repository.load_catalog()
+        found = False
+        new_catalog = []
+        for module in current_catalog:
+            if not isinstance(module, dict) or module.get("id") != module_id:
+                new_catalog.append(module)
+                continue
+            module = dict(module)
+            new_topics = []
+            for topic in module.get("topics") or []:
+                if isinstance(topic, dict) and topic.get("id") == topic_id:
+                    topic = dict(topic)
+                    topic["name"] = clean_name
+                    found = True
+                new_topics.append(topic)
+            module["topics"] = new_topics
+            new_catalog.append(module)
+        if not found:
+            self.logger.warning("[HOSTED] Topic rename: not found in catalog: %s/%s", module_id, topic_id)
+            return False
+        try:
+            self.repository.replace_catalog(new_catalog)
+            self._modules_cache = None
+            self.logger.info("[HOSTED] Topic renamed in catalog: %s/%s -> '%s'", module_id, topic_id, clean_name)
+        except Exception as exc:
+            self.logger.exception("[HOSTED] Failed to rename topic %s/%s in catalog: %s", module_id, topic_id, exc)
+            return False
+        # Best-effort: update shadow topic.json
+        topic_json_path = self.modules_dir / module_id / "topics" / topic_id / "topic.json"
+        if topic_json_path.exists():
+            try:
+                with open(topic_json_path, "r", encoding="utf-8") as fh:
+                    shadow = json.load(fh)
+                shadow["name"] = clean_name
+                self._atomic_json_dump(topic_json_path, shadow)
+            except Exception as exc:
+                self.logger.warning(
+                    "[HOSTED] Failed to update shadow topic.json for rename %s/%s: %s", module_id, topic_id, exc
+                )
+        return True
 
     def set_topic_theory_link(
         self,
@@ -608,9 +794,50 @@ class HostedStorageService(HostedShadowFallbackMixin, StorageService):
                 topic_id,
                 theory_link,
             )
-        payload = super().set_topic_theory_link(module_id, topic_id, theory_link)
-        self._sync_catalog_from_shadow()
-        return payload
+        self._validate_id(module_id, "module_id")
+        self._validate_id(topic_id, "topic_id")
+        # Update theory_link in Postgres catalog directly
+        current_catalog = self.repository.load_catalog()
+        found = False
+        updated_topic: Dict[str, Any] = {}
+        new_catalog = []
+        for module in current_catalog:
+            if not isinstance(module, dict) or module.get("id") != module_id:
+                new_catalog.append(module)
+                continue
+            module = dict(module)
+            new_topics = []
+            for topic in module.get("topics") or []:
+                if isinstance(topic, dict) and topic.get("id") == topic_id:
+                    topic = dict(topic)
+                    if isinstance(theory_link, dict):
+                        topic["theory_link"] = dict(theory_link)
+                    else:
+                        topic.pop("theory_link", None)
+                    found = True
+                    updated_topic = topic
+                new_topics.append(topic)
+            module["topics"] = new_topics
+            new_catalog.append(module)
+        if not found:
+            raise ValueError("topic_not_found")
+        try:
+            self.repository.replace_catalog(new_catalog)
+            self._modules_cache = None
+            self.logger.info("[HOSTED] Theory link updated in catalog: %s/%s", module_id, topic_id)
+        except Exception as exc:
+            self.logger.exception(
+                "[HOSTED] Failed to update theory link %s/%s in catalog: %s", module_id, topic_id, exc
+            )
+            raise
+        # Best-effort: update shadow files
+        try:
+            StorageService.set_topic_theory_link(self, module_id, topic_id, theory_link)
+        except Exception as exc:
+            self.logger.warning(
+                "[HOSTED] Failed to update shadow for theory link %s/%s: %s", module_id, topic_id, exc
+            )
+        return updated_topic
 
     @staticmethod
     def _atomic_json_dump(path: Path, payload: Dict[str, Any]) -> None:

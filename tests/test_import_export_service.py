@@ -74,13 +74,31 @@ def _make_svc(tmp_path):
         return _scan_modules_tree(storage.modules_dir)
 
     def get_module(module_id):
-        return next((module for module in load_modules() if module["id"] == module_id), None)
+        raw_mod = next((module for module in load_modules() if module["id"] == module_id), None)
+        if raw_mod:
+            module_json_path = storage.modules_dir / module_id / "module.json"
+            if module_json_path.exists():
+                try:
+                    meta = json.loads(module_json_path.read_text(encoding="utf-8"))
+                    raw_mod["name"] = meta.get("name")
+                except Exception:
+                    pass
+        return raw_mod
 
     def get_topic(module_id, topic_id):
         module = get_module(module_id)
         if not module:
             return None
-        return next((topic for topic in module.get("topics", []) if topic["id"] == topic_id), None)
+        raw_topic = next((topic for topic in module.get("topics", []) if topic["id"] == topic_id), None)
+        if raw_topic:
+            topic_json_path = storage.modules_dir / module_id / "topics" / topic_id / "topic.json"
+            if topic_json_path.exists():
+                try:
+                    meta = json.loads(topic_json_path.read_text(encoding="utf-8"))
+                    raw_topic["name"] = meta.get("name")
+                except Exception:
+                    pass
+        return raw_topic
 
     def create_module(module_id, name, workspace_meta=None):
         module_dir = storage.modules_dir / module_id
@@ -377,6 +395,26 @@ class TestEnsureModuleTopic:
         svc._ensure_module_topic_exists("m1", "t1")
         svc._ensure_module_topic_exists("m1", "t1")  # should not raise
 
+    def test_creates_dirs_with_original_names(self, tmp_path):
+        svc = _make_svc(tmp_path)
+        module_names = {"new_mod": "Лучевая диагностика"}
+        topic_names = {"new_mod": {"new_topic": "Глава 1: Введение"}}
+        
+        svc._ensure_module_topic_exists(
+            "new_mod", 
+            "new_topic", 
+            module_names=module_names, 
+            topic_names=topic_names
+        )
+        
+        mod = svc.storage.get_module("new_mod")
+        assert mod is not None
+        assert mod["name"] == "Лучевая диагностика"
+        
+        topic = svc.storage.get_topic("new_mod", "new_topic")
+        assert topic is not None
+        assert topic["name"] == "Глава 1: Введение"
+
 
 # ═══════════════════════════════════════════════════════════════════
 # _log_import
@@ -579,6 +617,26 @@ class TestImportAtomic:
         result = svc.import_tasks_atomic(zip_path, {"conflict_resolution": "new_id"})
         assert result["ok"] is True
         assert result["imported"] == 1
+
+    def test_import_tasks_with_excluded_list(self, tmp_path):
+        svc = _make_svc(tmp_path)
+        task_data_1 = {"id": "tk1", "name": "Task 1", "type": "click"}
+        task_data_2 = {"id": "tk2", "name": "Task 2", "type": "click"}
+        zip_path = _create_zip(tmp_path, {
+            "modules/m1/topics/t1/tasks/tk1/task.json": json.dumps(task_data_1),
+            "modules/m1/topics/t1/tasks/tk2/task.json": json.dumps(task_data_2),
+        })
+
+        result = svc.import_tasks_atomic(
+            zip_path,
+            {
+                "conflict_resolution": "skip",
+                "excluded_tasks": [0, "1"]
+            }
+        )
+        assert result["ok"] is True
+        assert result["imported"] == 0
+        assert result["skipped"] == 2
 
     def test_import_overwrite_uses_existing_location_without_creating_archive_target(self, tmp_path):
         svc = _make_svc(tmp_path)

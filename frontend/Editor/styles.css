@@ -2,7 +2,7 @@
     --primary: var(--color-primary);
     --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
     --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
-    --easing-out: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --easing-out: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes pulseSoft {
@@ -207,7 +207,7 @@ body {
 
 /* Import modal content slide-in */
 #import-modal>div {
-    animation: modalSlideUp 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    animation: modalSlideUp 300ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes modalSlideUp {

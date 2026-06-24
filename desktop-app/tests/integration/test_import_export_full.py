@@ -31,6 +31,28 @@ class TestImportExportSystem(unittest.TestCase):
         self.mock_storage.data_dir = Path(self.test_dir)
         self.mock_storage.load_modules.return_value = []
         
+        def default_save_task(module, topic, task_id, payload, validate=False):
+            p = self.modules_dir / module / "topics" / topic / "tasks" / task_id / "task.json"
+            p.parent.mkdir(parents=True, exist_ok=True)
+            
+            def make_paths_relative(node):
+                if isinstance(node, dict):
+                    return {k: make_paths_relative(v) for k, v in node.items()}
+                elif isinstance(node, list):
+                    return [make_paths_relative(x) for x in node]
+                elif isinstance(node, str):
+                    if "images" in node:
+                        parts = node.replace("\\", "/").split("/images/")
+                        if len(parts) > 1:
+                            return "images/" + parts[-1]
+                return node
+                
+            sanitized_payload = make_paths_relative(payload)
+            with open(p, "w", encoding="utf-8") as f:
+                json.dump(sanitized_payload, f, indent=2, ensure_ascii=False)
+            return True
+        self.mock_storage.save_task.side_effect = default_save_task
+        
         self.service = ImportExportService(self.mock_storage)
         
         # Setup Flask client
@@ -467,21 +489,19 @@ class TestImportExportSystem(unittest.TestCase):
     def test_atomic_rollback_on_error(self):
         """Verify partially failed import leaves no debris (cleanup)."""
         # This is hard to test without injecting failure in the middle of the loop.
-        # We can mock shutil.move to fail on the 2nd item
         zip_path = Path(self.test_dir) / "rollback.zip"
         with zipfile.ZipFile(zip_path, 'w') as zf:
             zf.writestr("modules/m/topics/t/tasks/t1/task.json", json.dumps({"id": "t1"}))
             zf.writestr("modules/m/topics/t/tasks/t2/task.json", json.dumps({"id": "t2"}))
             
-        # We mock shutil.move to fail for t2
-        original_move = shutil.move
-        def side_effect(src, dst):
-            if "t2" in str(dst):
+        # We mock save_task to fail for t2
+        def save_task_side_effect(module, topic, task_id, payload, validate=False):
+            if task_id == "t2":
                 raise IOError("Disk full or something")
-            return original_move(src, dst)
+            return True
             
-        with patch('shutil.move', side_effect=side_effect):
-            res = self.service.import_tasks_atomic(str(zip_path), {})
+        self.mock_storage.save_task.side_effect = save_task_side_effect
+        res = self.service.import_tasks_atomic(str(zip_path), {})
             
         self.assertEqual(res["imported"], 1)
         self.assertEqual(res["errors"], 1)
@@ -521,6 +541,174 @@ class TestImportExportSystem(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             self.service._validate_zip_security(str(zip_path))
         self.assertIn("Suspicious compression ratio", str(cm.exception))
+
+    def test_cyrillic_names_preservation(self):
+        """Test that Cyrillic module and topic names are preserved on export and restored on import."""
+        # 1. Setup mock storage state
+        module_name = "Модуль Лучевая диагностика"
+        topic_name = "Тема Глава 1"
+        
+        # We need a stateful mock for get_module and get_topic to simulate existence checks
+        existing_modules = {"cyr_mod": {"id": "cyr_mod", "name": module_name}}
+        existing_topics = {("cyr_mod", "cyr_topic"): {"id": "cyr_topic", "name": topic_name}}
+        
+        def mock_get_module(module_id):
+            return existing_modules.get(module_id)
+            
+        def mock_get_topic(module_id, topic_id):
+            return existing_topics.get((module_id, topic_id))
+            
+        def mock_create_module(module_id, name, workspace_meta=None):
+            existing_modules[module_id] = {"id": module_id, "name": name}
+            return True
+            
+        def mock_create_topic(module_id, topic_id, name, theory_link=None, workspace_meta=None):
+            existing_topics[(module_id, topic_id)] = {"id": topic_id, "name": name}
+            return True
+            
+        self.mock_storage.get_module.side_effect = mock_get_module
+        self.mock_storage.get_topic.side_effect = mock_get_topic
+        self.mock_storage.create_module.side_effect = mock_create_module
+        self.mock_storage.create_topic.side_effect = mock_create_topic
+        
+        # Create a task folder structure on disk
+        mod_id = "cyr_mod"
+        top_id = "cyr_topic"
+        task_id = "cyr_task"
+        task_dir = self.modules_dir / mod_id / "topics" / top_id / "tasks" / task_id
+        task_dir.mkdir(parents=True, exist_ok=True)
+        (task_dir / "task.json").write_text(
+            json.dumps({"id": task_id, "name": "Задача 1", "type": "click"}), 
+            encoding="utf-8"
+        )
+        
+        # 2. Export the task
+        zip_path = self.service.create_export_archive([
+            {"module_id": mod_id, "topic_id": top_id, "task_id": task_id}
+        ])
+        
+        self.assertTrue(os.path.exists(zip_path))
+        
+        # 3. Verify manifest contains original names
+        with zipfile.ZipFile(zip_path, 'r') as zf:
+            manifest = json.loads(zf.read("manifest.json").decode("utf-8"))
+            self.assertIn("module_names", manifest)
+            self.assertIn("topic_names", manifest)
+            self.assertEqual(manifest["module_names"][mod_id], module_name)
+            self.assertEqual(manifest["topic_names"][mod_id][top_id], topic_name)
+            
+        # 4. Validate the archive and verify original names are in the report
+        report = self.service.validate_import_archive(zip_path)
+        self.assertTrue(report["ok"])
+        self.assertEqual(report["module_names"][mod_id], module_name)
+        self.assertEqual(report["topic_names"][mod_id][top_id], topic_name)
+        
+        # 5. Clear the mock state to simulate dynamic recreation upon import
+        existing_modules.clear()
+        existing_topics.clear()
+        
+        # 6. Import the archive
+        import_result = self.service.import_tasks_atomic(
+            zip_path, 
+            {"conflict_resolution": "skip", "skip_errors": False}
+        )
+        self.assertTrue(import_result["ok"])
+        
+        # 7. Verify the recreated module and topic have their Cyrillic names
+        self.assertIn(mod_id, existing_modules)
+        self.assertEqual(existing_modules[mod_id]["name"], module_name)
+        
+        self.assertIn((mod_id, top_id), existing_topics)
+        self.assertEqual(existing_topics[(mod_id, top_id)]["name"], topic_name)
+        
+        # Clean up
+        os.remove(zip_path)
+
+    def test_import_confirm_limits_check(self):
+        """Test that /api/editor/import/confirm blocks import if limits are exceeded."""
+        mock_limits_svc = MagicMock()
+        mock_limits_svc.get_summary.return_value = {
+            "plan": "free",
+            "tasks": {
+                "remaining_personal": 1
+            }
+        }
+        
+        with patch.object(_headless_app_ctx, "workspace_limits_service", mock_limits_svc):
+            task_data_1 = {"id": "tk1", "name": "Task 1", "type": "click"}
+            task_data_2 = {"id": "tk2", "name": "Task 2", "type": "click"}
+            
+            temp_zip = Path(self.test_dir) / "limit_test.zip"
+            with zipfile.ZipFile(temp_zip, 'w') as zf:
+                zf.writestr("manifest.json", json.dumps({
+                    "app_version": "1.0.0",
+                    "entities": {
+                        "tasks": ["tk1", "tk2"]
+                    }
+                }))
+                zf.writestr("modules/m1/topics/t1/tasks/tk1/task.json", json.dumps(task_data_1))
+                zf.writestr("modules/m1/topics/t1/tasks/tk2/task.json", json.dumps(task_data_2))
+            
+            with open(temp_zip, "rb") as f:
+                resp = self.client.post(
+                    "/api/editor/import/confirm",
+                    data={
+                        "file": f,
+                        "conflict_resolution": "skip",
+                        "idempotency_key": "limit_test_key"
+                    }
+                )
+            
+            self.assertEqual(resp.status_code, 409)
+            data = json.loads(resp.data.decode("utf-8"))
+            self.assertFalse(data["ok"])
+            self.assertEqual(data["error"], "limits_exceeded")
+
+    def test_complex_import_confirm_limits_check(self):
+        """Test that /api/complexes/import/confirm blocks import if limits are exceeded."""
+        mock_limits_svc = MagicMock()
+        mock_limits_svc.get_summary.return_value = {
+            "plan": "free",
+            "complexes": {
+                "remaining_personal": 1
+            },
+            "tasks": {
+                "remaining_personal": 2
+            }
+        }
+        
+        mock_complex_svc = MagicMock()
+        mock_complex_svc.validate_import_archive.return_value = {
+            "ok": True,
+            "summary": {
+                "total": 2
+            },
+            "manifest": {
+                "entities": {
+                    "tasks": ["tk1"]
+                }
+            }
+        }
+        
+        with patch.object(_headless_app_ctx, "workspace_limits_service", mock_limits_svc):
+            with patch.object(_headless_app_ctx, "complex_import_export_service", mock_complex_svc):
+                temp_file = Path(self.test_dir) / "dummy.zip"
+                temp_file.write_text("dummy content")
+                
+                with open(temp_file, "rb") as f:
+                    resp = self.client.post(
+                        "/api/complexes/import/confirm",
+                        data={
+                            "file": f,
+                            "complex_conflict_resolution": "new_id",
+                            "idempotency_key": "complex_limit_test_key"
+                        }
+                    )
+                
+                self.assertEqual(resp.status_code, 409)
+                data = json.loads(resp.data.decode("utf-8"))
+                self.assertFalse(data["ok"])
+                self.assertEqual(data["error"], "limits_exceeded")
 
 if __name__ == '__main__':
     unittest.main()

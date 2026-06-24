@@ -119,12 +119,32 @@ class ImportExportService:
             manifest_tasks = []
             manifest_modules = set()
             manifest_topics = set()
+            module_names = {}
+            topic_names = {}
             
             with zipfile.ZipFile(temp_zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
                 for item in tasks_list:
                     module_id = item['module_id']
                     topic_id = item['topic_id']
                     task_id = item['task_id']
+
+                    if module_id not in module_names:
+                        try:
+                            mod = self.storage.get_module(module_id)
+                            if isinstance(mod, dict) and isinstance(mod.get("name"), str):
+                                module_names[module_id] = mod["name"]
+                        except Exception as e:
+                            self.logger.warning(f"Could not retrieve module name for {module_id}: {e}")
+
+                    if module_id not in topic_names:
+                        topic_names[module_id] = {}
+                    if topic_id not in topic_names[module_id]:
+                        try:
+                            top = self.storage.get_topic(module_id, topic_id)
+                            if isinstance(top, dict) and isinstance(top.get("name"), str):
+                                topic_names[module_id][topic_id] = top["name"]
+                        except Exception as e:
+                            self.logger.warning(f"Could not retrieve topic name for {module_id}/{topic_id}: {e}")
 
                     loaded_task = None
                     if hasattr(self.storage, "load_task"):
@@ -220,9 +240,11 @@ class ImportExportService:
                         "modules": list(manifest_modules),
                         "topics": list(manifest_topics),
                         "tasks": manifest_tasks
-                    }
+                    },
+                    "module_names": module_names,
+                    "topic_names": topic_names
                 }
-                zf.writestr("manifest.json", json.dumps(manifest, indent=2))
+                zf.writestr("manifest.json", json.dumps(manifest, indent=2, ensure_ascii=False))
                 
             self.logger.info(f"Exported {len(manifest_tasks)} tasks to {temp_zip_path}")
             return temp_zip_path
@@ -402,6 +424,8 @@ class ImportExportService:
                 try:
                     manifest_raw = zf.read("manifest.json")
                     manifest_data = json.loads(manifest_raw)
+                    report["module_names"] = manifest_data.get("module_names", {})
+                    report["topic_names"] = manifest_data.get("topic_names", {})
                     archive_version = manifest_data.get("app_version", "")
                     report["archive_version"] = archive_version
                     if archive_version:
@@ -867,6 +891,12 @@ class ImportExportService:
                     zf.extract(member, temp_extract_dir)
                 
             # 2. Process extracted files
+            module_names = None
+            topic_names = None
+            if isinstance(archive_manifest, dict):
+                module_names = archive_manifest.get("module_names")
+                topic_names = archive_manifest.get("topic_names")
+
             # Scan for all task.json files in extracted structure
             task_files = list(temp_extract_dir.rglob("task.json"))
             total_tasks = len(task_files)
@@ -875,6 +905,10 @@ class ImportExportService:
             task_index = self._build_task_index()
             
             for i, task_file in enumerate(task_files):
+                excluded_list = params.get('excluded_tasks', [])
+                if i in excluded_list or str(i) in excluded_list:
+                    skipped_count += 1
+                    continue
                 task_dir = task_file.parent
                 
                 try:
@@ -955,7 +989,12 @@ class ImportExportService:
                             )
 
                     # Ensure the final write target exists only after conflict resolution.
-                    creation_info = self._ensure_module_topic_exists(target_module, target_topic)
+                    creation_info = self._ensure_module_topic_exists(
+                        target_module,
+                        target_topic,
+                        module_names=module_names,
+                        topic_names=topic_names,
+                    )
                     if creation_info.get("created_module"):
                         key = ("module", target_module, None)
                         if key not in created_target_keys:
@@ -971,6 +1010,16 @@ class ImportExportService:
                     import_payload["id"] = task_id
                     if not import_payload.get("name"):
                         import_payload["name"] = task_name
+
+                    current_user_id = params.get("current_user_id") or params.get("requested_by_user_id")
+                    if current_user_id:
+                        if "meta" not in import_payload or not isinstance(import_payload["meta"], dict):
+                            import_payload["meta"] = {}
+                        import_payload["meta"]["created_by_user_id"] = current_user_id
+                        import_payload["meta"]["updated_by_user_id"] = current_user_id
+                        import_payload["meta"]["created_via"] = "archive_import"
+                        import_payload["meta"]["content_scope"] = "shared_local"
+
                     success = self.storage.save_task(
                         target_module,
                         target_topic,
@@ -1110,17 +1159,26 @@ class ImportExportService:
         except Exception as e:
             self.logger.warning(f"Failed to write import journal: {e}")
 
-    def _ensure_module_topic_exists(self, module_id: str, topic_id: str) -> Dict[str, bool]:
-        """Create module/topic via storage service when absent."""
+    def _ensure_module_topic_exists(
+        self,
+        module_id: str,
+        topic_id: str,
+        module_names: Optional[Dict[str, str]] = None,
+        topic_names: Optional[Dict[str, Dict[str, str]]] = None,
+    ) -> Dict[str, bool]:
+        """Create module/topic via storage service when absent, preserving original names if provided."""
         created_module = False
         created_topic = False
 
         existing_module = self.storage.get_module(module_id)
         if not existing_module:
+            module_name = module_id
+            if isinstance(module_names, dict) and module_id in module_names:
+                module_name = module_names[module_id]
             created_module = bool(
                 self.storage.create_module(
                     module_id,
-                    module_id,
+                    module_name,
                     workspace_meta={
                         "created_via": "archive_import",
                         "content_scope": "shared_local",
@@ -1130,11 +1188,16 @@ class ImportExportService:
 
         existing_topic = self.storage.get_topic(module_id, topic_id)
         if not existing_topic:
+            topic_name = topic_id
+            if isinstance(topic_names, dict) and module_id in topic_names:
+                inner = topic_names[module_id]
+                if isinstance(inner, dict) and topic_id in inner:
+                    topic_name = inner[topic_id]
             created_topic = bool(
                 self.storage.create_topic(
                     module_id,
                     topic_id,
-                    topic_id,
+                    topic_name,
                     workspace_meta={
                         "created_via": "archive_import",
                         "content_scope": "shared_local",

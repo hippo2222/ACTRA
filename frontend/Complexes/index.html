@@ -35,17 +35,18 @@
 
     /* Detail panel expand */
     .detail-panel {
-      max-height: 0;
+      display: grid;
+      grid-template-rows: 0fr;
       opacity: 0;
       overflow: hidden;
       background:
         linear-gradient(180deg,
           color-mix(in srgb, var(--color-surface-2) 68%, transparent) 0%,
           color-mix(in srgb, var(--color-surface-1) 92%, transparent) 100%);
-      transition: max-height 0.3s ease, opacity 0.25s ease;
+      transition: grid-template-rows 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
     }
     .detail-panel.expanded {
-      max-height: 520px;
+      grid-template-rows: 1fr;
       opacity: 1;
     }
 
@@ -1014,6 +1015,7 @@
     }
 
     .cx-detail-panel__inner {
+      min-height: 0;
       display: flex;
       flex-direction: column;
       gap: 0.85rem;
@@ -5100,7 +5102,7 @@
                 "box-shadow:0 20px 48px -8px rgba(0,0,0,0.35)",
                 "transform:scale(0.95) translateY(8px)",
                 "opacity:0",
-                "transition:transform 0.25s cubic-bezier(0.34,1.3,0.64,1),opacity 0.2s ease",
+                "transition:transform 0.25s cubic-bezier(0.16,1,0.3,1),opacity 0.2s ease",
                 "overflow:hidden",
               ].join(";");
 
@@ -5307,6 +5309,329 @@
 
             syncComplexSelectionUi();
             applyComplexFilters();
+          }
+
+          async function chooseComplexImportFile() {
+            return new Promise((resolve) => {
+              const overlay = document.createElement("div");
+              overlay.className = "fixed inset-0 z-[1220] bg-scrim backdrop-blur-sm flex items-center justify-center p-4";
+              overlay.setAttribute("data-role", "dialog");
+
+              overlay.innerHTML = `
+                <div class="w-full max-w-2xl rounded-[28px] border border-border-subtle bg-surface-1 shadow-xl overflow-hidden">
+                  <div class="border-b border-border-subtle px-5 py-4">
+                    <p class="text-xs font-bold uppercase tracking-[0.16em] text-text-muted">${wt('complexes.import_kicker', 'Импорт')}</p>
+                    <p class="mt-2 text-xl font-black text-text-main">${wt('complexes.import_dialog_title', 'Импорт комплекса заданий')}</p>
+                  </div>
+                  <div class="space-y-4 px-5 py-5 text-sm text-text-secondary" id="import-dialog-body">
+                    <p>${wt('complexes.import_dialog_desc', 'Выберите ZIP-архив с комплексами для импорта в вашу библиотеку.')}</p>
+                    <input type="file" id="complex-file-input" accept=".zip" style="display: none" />
+                  </div>
+                  <div class="flex justify-end gap-3 border-t border-border-subtle px-5 py-4">
+                    <button type="button" class="btn-secondary h-10 px-4" data-role="cancel">${wt('complexes.btn_cancel', 'Отмена')}</button>
+                    <button type="button" class="btn-primary h-10 px-4" data-role="confirm">${wt('complexes.btn_choose_file', 'Выбрать файл')}</button>
+                  </div>
+                </div>
+              `;
+
+              const fileInput = overlay.querySelector("#complex-file-input");
+              const bodyContainer = overlay.querySelector("#import-dialog-body");
+              const confirmBtn = overlay.querySelector('[data-role="confirm"]');
+              const cancelBtn = overlay.querySelector('[data-role="cancel"]');
+
+              const close = (resultValue = false) => {
+                overlay.remove();
+                resolve(Boolean(resultValue));
+              };
+
+              overlay.addEventListener("click", (event) => {
+                if (event.target === overlay) close(false);
+              });
+
+              cancelBtn?.addEventListener("click", () => close(false));
+
+              confirmBtn?.addEventListener("click", () => {
+                fileInput.click();
+              });
+
+              fileInput.addEventListener("change", async () => {
+                const file = fileInput.files[0];
+                if (!file) return;
+
+                // Show loading state while checking the archive
+                bodyContainer.innerHTML = `
+                  <div class="flex flex-col items-center justify-center py-8 space-y-3">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    <p class="text-sm text-text-secondary">${wt('complexes.import_checking', 'Проверка архива...')}</p>
+                  </div>
+                `;
+                if (confirmBtn) confirmBtn.style.display = "none";
+                if (cancelBtn) cancelBtn.style.display = "none";
+
+                try {
+                  const formData = new FormData();
+                  formData.append("file", file);
+
+                  const checkResp = await fetch("/api/complexes/import/check", {
+                    method: "POST",
+                    body: formData,
+                  });
+                  const checkData = await checkResp.json();
+
+                  if (!checkData.ok) {
+                    throw new Error(checkData.error || "validation_failed");
+                  }
+
+                  // Change dialog to the confirmation card layout
+                  overlay.setAttribute("data-role", "confirm-card");
+                  
+                  const limits = checkData.workspace_limits;
+                  let limitExceeded = false;
+                  let limitWarningHtml = "";
+                  if (limits && limits.plan !== "premium") {
+                    const remainingComplexes = limits.complexes?.remaining_personal ?? 0;
+                    const remainingTasks = limits.tasks?.remaining_personal ?? 0;
+                    const complexesToImport = checkData.summary?.total || 0;
+                    const tasksToImport = checkData.manifest?.entities?.tasks?.length || 0;
+
+                    let complexExceeded = complexesToImport > remainingComplexes;
+                    let taskExceeded = tasksToImport > remainingTasks;
+
+                    if (complexExceeded || taskExceeded) {
+                      limitExceeded = true;
+                      let messages = [];
+                      if (complexExceeded) {
+                        messages.push(
+                          wt('complexes.limit_complex_desc', 'Комплексов для импорта: {required}, доступно слотов: {remaining}.')
+                            .replace('{required}', complexesToImport)
+                            .replace('{remaining}', remainingComplexes)
+                        );
+                      }
+                      if (taskExceeded) {
+                        messages.push(
+                          wt('complexes.limit_task_desc', 'Заданий для импорта: {required}, доступно слотов: {remaining}.')
+                            .replace('{required}', tasksToImport)
+                            .replace('{remaining}', remainingTasks)
+                        );
+                      }
+                      limitWarningHtml = `
+                        <div class="rounded-2xl border border-error-light bg-error-lighter px-4 py-3 text-sm text-error-text animate-slide-up-fade">
+                          <div class="font-bold">${wt('complexes.limit_exceeded_title', 'Недостаточно свободных слотов для импорта')}</div>
+                          <div class="mt-1 space-y-1">
+                            ${messages.map(msg => `<div>${escapeHtml(msg)}</div>`).join('')}
+                          </div>
+                          <div class="mt-2 text-xs font-semibold text-error-text/80">
+                            ${wt('complexes.limit_exceeded_action', 'Пожалуйста, освободите место в вашем аккаунте, чтобы продолжить импорт.')}
+                          </div>
+                        </div>
+                      `;
+                    }
+                  }
+
+                  // Re-render overlay content for confirmation card
+                  overlay.innerHTML = `
+                    <div class="w-full max-w-2xl rounded-[28px] border border-border-subtle bg-surface-1 shadow-xl overflow-hidden animate-slide-up-fade">
+                      <div class="border-b border-border-subtle px-5 py-4">
+                        <p class="text-xs font-bold uppercase tracking-[0.16em] text-text-muted">${wt('complexes.import_kicker', 'Импорт')}</p>
+                        <p class="mt-2 text-xl font-black text-text-main">${wt('complexes.import_preview_title', 'Подтверждение импорта')}</p>
+                      </div>
+                      <div class="space-y-4 px-5 py-5 text-sm text-text-secondary" id="import-dialog-body">
+                        <p class="font-bold text-text-main">${wt('complexes.import_preview_subtitle', 'Будут импортированы следующие элементы:')}</p>
+                        <div class="grid grid-cols-2 gap-3">
+                          <div class="rounded-2xl border border-border-subtle bg-bg-secondary px-4 py-3">
+                            <div class="text-xs uppercase tracking-wide text-text-muted">${wt('complexes.import_total', 'Всего комплексов')}</div>
+                            <div class="mt-1 text-2xl font-bold text-text-main">${checkData.summary?.total || 0}</div>
+                          </div>
+                          <div class="rounded-2xl border border-border-subtle bg-bg-secondary px-4 py-3">
+                            <div class="text-xs uppercase tracking-wide text-text-muted">${wt('complexes.import_conflicts', 'Конфликты')}</div>
+                            <div class="mt-1 text-2xl font-bold text-text-main">${checkData.summary?.conflicts || 0}</div>
+                          </div>
+                        </div>
+
+                        ${limitWarningHtml}
+
+                        <!-- Resolution options -->
+                        <div class="space-y-3 pt-2">
+                          <div class="flex flex-col space-y-1">
+                            <label class="text-xs font-bold text-text-secondary">${wt('complexes.import_opt_complexes', 'Разрешение конфликтов для комплексов')}</label>
+                            <select id="complex-conflict-resolution" class="rounded-xl border border-border-subtle bg-surface-2 px-3 py-2 text-text-main outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 text-sm">
+                              <option value="new_id" selected>${wt('complexes.opt_new_id_comp', 'Создать новые ID (копия)')}</option>
+                              <option value="overwrite">${wt('complexes.opt_overwrite', 'Перезаписать существующие')}</option>
+                              <option value="skip">${wt('complexes.opt_skip', 'Пропустить импорт')}</option>
+                            </select>
+                          </div>
+
+                          <div class="flex flex-col space-y-1">
+                            <label class="text-xs font-bold text-text-secondary">${wt('complexes.import_opt_tasks', 'Разрешение конфликтов для заданий')}</label>
+                            <select id="task-conflict-resolution" class="rounded-xl border border-border-subtle bg-surface-2 px-3 py-2 text-text-main outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 text-sm">
+                              <option value="skip" selected>${wt('complexes.opt_skip', 'Пропустить импорт')}</option>
+                              <option value="overwrite">${wt('complexes.opt_overwrite', 'Перезаписать существующие')}</option>
+                              <option value="new_id">${wt('complexes.opt_new_id_task', 'Создать новые ID')}</option>
+                            </select>
+                          </div>
+
+                          <div class="flex flex-col space-y-1">
+                            <label class="text-xs font-bold text-text-secondary">${wt('complexes.import_opt_theories', 'Разрешение конфликтов для теорий')}</label>
+                            <select id="theory-conflict-resolution" class="rounded-xl border border-border-subtle bg-surface-2 px-3 py-2 text-text-main outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 text-sm">
+                              <option value="reuse_if_same_hash" selected>${wt('complexes.opt_reuse_same', 'Переиспользовать при совпадении хэша')}</option>
+                              <option value="overwrite">${wt('complexes.opt_overwrite', 'Перезаписать существующие')}</option>
+                              <option value="new_id">${wt('complexes.opt_new_id_theo', 'Создать новые ID')}</option>
+                              <option value="skip">${wt('complexes.opt_skip', 'Пропустить импорт')}</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        ${checkData.errors && checkData.errors.length > 0 ? `
+                          <div class="rounded-2xl border border-error-light bg-error-lighter px-4 py-3">
+                            <div class="text-xs uppercase tracking-wide text-error-text font-bold">${wt('complexes.import_errors', 'Ошибки')}</div>
+                            <ul class="mt-1 list-disc list-inside text-xs text-error-text space-y-1">
+                              ${checkData.errors.map(err => `<li>${escapeHtml(err.name || err.id)}: ${escapeHtml(err.error)}</li>`).join('')}
+                            </ul>
+                          </div>
+                        ` : ''}
+
+                        ${checkData.warnings && checkData.warnings.length > 0 ? `
+                          <div class="rounded-2xl border border-warning-light bg-warning-lighter px-4 py-3">
+                            <div class="text-xs uppercase tracking-wide text-warning-darker font-bold">${wt('complexes.import_warnings', 'Предупреждения')}</div>
+                            <ul class="mt-1 list-disc list-inside text-xs text-warning-darker space-y-1">
+                              ${checkData.warnings.map(warn => `<li>${escapeHtml(warn)}</li>`).join('')}
+                            </ul>
+                          </div>
+                        ` : ''}
+                      </div>
+                      <div class="flex justify-end gap-3 border-t border-border-subtle px-5 py-4">
+                        <button type="button" class="btn-secondary h-10 px-4" data-role="cancel">${wt('complexes.btn_cancel', 'Отмена')}</button>
+                        <button type="button" class="btn-primary h-10 px-4 ${limitExceeded ? 'opacity-50 cursor-not-allowed' : ''}" data-role="confirm" ${limitExceeded ? "disabled" : ""}>${wt('complexes.btn_import_confirm', 'Импортировать')}</button>
+                      </div>
+                    </div>
+                  `;
+
+                  const confirmCancelBtn = overlay.querySelector('[data-role="cancel"]');
+                  const confirmSubmitBtn = overlay.querySelector('[data-role="confirm"]');
+                  const confirmBody = overlay.querySelector("#import-dialog-body");
+
+                  confirmCancelBtn?.addEventListener("click", () => close(false));
+
+                  confirmSubmitBtn?.addEventListener("click", async () => {
+                    const complexRes = overlay.querySelector("#complex-conflict-resolution")?.value || "new_id";
+                    const taskRes = overlay.querySelector("#task-conflict-resolution")?.value || "skip";
+                    const theoryRes = overlay.querySelector("#theory-conflict-resolution")?.value || "reuse_if_same_hash";
+
+                    // Show progress bar
+                    confirmBody.innerHTML = `
+                      <div class="space-y-4 py-4">
+                        <div class="flex items-center justify-between text-sm text-text-secondary mb-1">
+                          <span id="import-progress-label">${wt('complexes.import_progress_start', 'Подготовка...')}</span>
+                          <span id="import-progress-percent">0%</span>
+                        </div>
+                        <div class="w-full bg-surface-alt rounded-full h-3 overflow-hidden">
+                          <div id="import-progress-fill" class="h-full bg-primary rounded-full transition-all duration-300 ease-out" style="width: 0%"></div>
+                        </div>
+                      </div>
+                    `;
+                    if (confirmSubmitBtn) confirmSubmitBtn.style.display = "none";
+                    if (confirmCancelBtn) confirmCancelBtn.style.display = "none";
+
+                    try {
+                      const confirmForm = new FormData();
+                      confirmForm.append("cache_id", checkData.cache_id);
+                      confirmForm.append("complex_conflict_resolution", complexRes);
+                      confirmForm.append("task_conflict_resolution", taskRes);
+                      confirmForm.append("theory_conflict_resolution", theoryRes);
+                      confirmForm.append("atomic_mode", "bundle");
+                      confirmForm.append("skip_errors", "false");
+                      confirmForm.append("idempotency_key", "complex-import-" + Math.random().toString(36).substring(2, 15));
+
+                      const confirmResp = await fetch("/api/complexes/import/confirm", {
+                        method: "POST",
+                        body: confirmForm,
+                      });
+
+                      if (!confirmResp.ok) {
+                        let errText = `HTTP ${confirmResp.status}`;
+                        try {
+                          const errJson = await confirmResp.json();
+                          errText = errJson?.error || errText;
+                        } catch (_) {}
+                        throw new Error(errText);
+                      }
+
+                      const reader = confirmResp.body.getReader();
+                      const decoder = new TextDecoder();
+                      let buffer = "";
+                      let finalResult = null;
+
+                      while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+
+                        buffer += decoder.decode(value, { stream: true });
+                        const lines = buffer.split("\n");
+                        buffer = lines.pop();
+
+                        for (const line of lines) {
+                          if (!line.trim()) continue;
+                          try {
+                            const msg = JSON.parse(line);
+                            if (msg.type === "progress") {
+                              const pct = Math.round((msg.current / (msg.total || 1)) * 100);
+                              const fill = document.getElementById("import-progress-fill");
+                              const label = document.getElementById("import-progress-label");
+                              const pctEl = document.getElementById("import-progress-percent");
+                              if (fill) fill.style.width = `${pct}%`;
+                              if (label) label.textContent = msg.status || `Импорт: ${msg.current} из ${msg.total}`;
+                              if (pctEl) pctEl.textContent = `${pct}%`;
+                            } else if (msg.type === "result") {
+                              finalResult = msg.data;
+                            } else if (msg.type === "error") {
+                              throw new Error(msg.error);
+                            }
+                          } catch (e) {
+                            console.error("Error parsing stream line:", e);
+                          }
+                        }
+                      }
+
+                      if (finalResult && finalResult.ok) {
+                        showComplexVoiceToast({
+                          severity: "success",
+                          what: wt('complexes.import_success_what', 'Импорт успешно завершён.'),
+                          impact: `${wt('im.k680', 'Добавлено:')} ${finalResult.imported_complexes || 0} комплексов.`,
+                          next: wt('complexes.import_success_next', 'Список комплексов обновлён.'),
+                        });
+                        close(true);
+                        // Refresh complexes
+                        fetchComplexes();
+                      } else {
+                        throw new Error(finalResult?.error || "import_failed");
+                      }
+
+                    } catch (err) {
+                      console.error("Confirm import failed:", err);
+                      showComplexVoiceToast({
+                        severity: "error",
+                        what: wt('complexes.import_failed_what', 'Импорт завершился ошибкой.'),
+                        impact: wt('complexes.import_failed_impact', 'Данные не были импортированы.'),
+                        next: String(err?.message || "").trim() || "Проверьте архив и повторите попытку.",
+                      });
+                      close(false);
+                    }
+                  });
+
+                } catch (err) {
+                  console.error("Check import failed:", err);
+                  showComplexVoiceToast({
+                    severity: "error",
+                    what: wt('complexes.import_failed_what', 'Проверка архива завершилась ошибкой.'),
+                    impact: wt('complexes.import_failed_impact', 'Не удалось прочитать данные архива.'),
+                    next: String(err?.message || "").trim() || "Проверьте корректность zip-файла.",
+                  });
+                  close(false);
+                }
+              });
+
+              document.body.appendChild(overlay);
+            });
           }
           document.addEventListener("DOMContentLoaded", () => {
             activeTheoryFilterId = readInitialTheoryFilterFromUrl();

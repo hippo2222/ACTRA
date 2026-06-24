@@ -2,7 +2,17 @@
     'use strict';
 
     function t(key, fallback) {
-        return window.i18n?.t(key) || fallback || key;
+        if (window.i18n && typeof window.i18n.t === 'function') {
+            const val = window.i18n.t(key);
+            if (val !== key) {
+                return val;
+            }
+            const prefixed = window.i18n.t('profile_modal.' + key);
+            if (prefixed !== 'profile_modal.' + key) {
+                return prefixed;
+            }
+        }
+        return fallback || key;
     }
 
     function getPeriods() {

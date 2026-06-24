@@ -1251,6 +1251,9 @@ def import_check() -> Any:
 
         if isinstance(report, dict):
             report["cache_id"] = cache_id
+            limits_svc = getattr(ctx, "workspace_limits_service", None)
+            if limits_svc:
+                report["workspace_limits"] = limits_svc.get_summary(ctx.user_id)
 
         return jsonify(
             _with_public_import_route_contract(
@@ -1331,12 +1334,22 @@ def import_confirm() -> Any:
         except (json.JSONDecodeError, TypeError):
             pass
 
+        excluded_tasks = []
+        try:
+            raw_excluded = request.form.get("excluded_tasks", "")
+            if raw_excluded:
+                excluded_tasks = json.loads(raw_excluded)
+        except (json.JSONDecodeError, TypeError):
+            pass
+
         params = {
             "conflict_resolution": request.form.get("conflict_resolution", "skip"),
             "target_module_id": request.form.get("target_module_id"),
             "target_topic_id": request.form.get("target_topic_id"),
             "skip_errors": request.form.get("skip_errors") == "true",
             "per_task_conflict": per_task_conflict,
+            "current_user_id": ctx.user_id,
+            "excluded_tasks": excluded_tasks,
         }
 
         temp_path = None
@@ -1400,6 +1413,53 @@ def import_confirm() -> Any:
             temp_path = tmp.name
             tmp.close()
             upload_file.save(temp_path)
+
+        # Check workspace limits
+        limits_svc = getattr(ctx, "workspace_limits_service", None)
+        if limits_svc:
+            summary = limits_svc.get_summary(ctx.user_id)
+            if summary.get("plan") != "premium":
+                try:
+                    report = svc.validate_import_archive(temp_path)
+                    all_tasks = report.get("tasks", [])
+                    importable_count = 0
+                    for idx, t in enumerate(all_tasks):
+                        status = str(t.get("status") or "valid").strip().lower()
+                        if status == "error":
+                            continue
+                        if idx in excluded_tasks or str(idx) in excluded_tasks:
+                            continue
+                        importable_count += 1
+
+                    remaining_slots = summary.get("tasks", {}).get("remaining_personal")
+                    if remaining_slots is not None and importable_count > remaining_slots:
+                        _archive_confirm_idempotency_release(
+                            _TASK_ARCHIVE_CONFIRM_IDEMPOTENCY_CACHE,
+                            idempotency_key,
+                            request_fingerprint,
+                        )
+                        if os.path.exists(temp_path):
+                            try:
+                                os.remove(temp_path)
+                            except Exception:
+                                pass
+                        return jsonify({
+                            "ok": False,
+                            "error": "limits_exceeded",
+                            "message": f"Недостаточно свободных слотов для импорта заданий. Доступно: {remaining_slots}, требуется: {importable_count}."
+                        }), 409
+                except Exception as e:
+                    _archive_confirm_idempotency_release(
+                        _TASK_ARCHIVE_CONFIRM_IDEMPOTENCY_CACHE,
+                        idempotency_key,
+                        request_fingerprint,
+                    )
+                    if os.path.exists(temp_path):
+                        try:
+                            os.remove(temp_path)
+                        except Exception:
+                            pass
+                    return jsonify({"ok": False, "error": str(e)}), 400
 
         q = queue.Queue()
 
@@ -1625,6 +1685,9 @@ def import_complexes_check() -> Any:
         _complex_import_archive_cache[cache_id] = (temp_path, time.time())
         if isinstance(report, dict):
             report["cache_id"] = cache_id
+            limits_svc = getattr(ctx, "workspace_limits_service", None)
+            if limits_svc:
+                report["workspace_limits"] = limits_svc.get_summary(ctx.user_id)
         return jsonify(
             _with_public_import_route_contract(
                 report,
@@ -1673,6 +1736,7 @@ def import_complexes_confirm() -> Any:
             ),
             "skip_errors": request.form.get("skip_errors") == "true",
             "atomic_mode": request.form.get("atomic_mode", "bundle"),
+            "current_user_id": ctx.user_id,
         }
 
         request_fingerprint = ""
@@ -1736,6 +1800,59 @@ def import_complexes_confirm() -> Any:
             temp_path = tmp.name
             tmp.close()
             upload_file.save(temp_path)
+
+        # Check workspace limits
+        limits_svc = getattr(ctx, "workspace_limits_service", None)
+        if limits_svc:
+            summary = limits_svc.get_summary(ctx.user_id)
+            if summary.get("plan") != "premium":
+                try:
+                    report = svc.validate_import_archive(temp_path)
+                    complexes_count = report.get("summary", {}).get("total", 0)
+                    manifest = report.get("manifest", {})
+                    tasks_count = len(manifest.get("entities", {}).get("tasks", []))
+
+                    remaining_complex_slots = summary.get("complexes", {}).get("remaining_personal")
+                    remaining_task_slots = summary.get("tasks", {}).get("remaining_personal")
+
+                    limit_exceeded = False
+                    error_msg = ""
+
+                    if remaining_complex_slots is not None and complexes_count > remaining_complex_slots:
+                        limit_exceeded = True
+                        error_msg = f"Недостаточно свободных слотов для комплексов. Доступно: {remaining_complex_slots}, требуется: {complexes_count}."
+                    elif remaining_task_slots is not None and tasks_count > remaining_task_slots:
+                        limit_exceeded = True
+                        error_msg = f"Недостаточно свободных слотов для заданий в комплексе. Доступно: {remaining_task_slots}, требуется: {tasks_count}."
+
+                    if limit_exceeded:
+                        _archive_confirm_idempotency_release(
+                            _COMPLEX_ARCHIVE_CONFIRM_IDEMPOTENCY_CACHE,
+                            idempotency_key,
+                            request_fingerprint,
+                        )
+                        if os.path.exists(temp_path):
+                            try:
+                                os.remove(temp_path)
+                            except Exception:
+                                pass
+                        return jsonify({
+                            "ok": False,
+                            "error": "limits_exceeded",
+                            "message": error_msg
+                        }), 409
+                except Exception as e:
+                    _archive_confirm_idempotency_release(
+                        _COMPLEX_ARCHIVE_CONFIRM_IDEMPOTENCY_CACHE,
+                        idempotency_key,
+                        request_fingerprint,
+                    )
+                    if os.path.exists(temp_path):
+                        try:
+                            os.remove(temp_path)
+                        except Exception:
+                            pass
+                    return jsonify({"ok": False, "error": str(e)}), 400
 
         q = queue.Queue()
 
