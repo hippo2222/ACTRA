@@ -428,7 +428,7 @@ class StorageService:
             if 'sequence_matters' not in base:
                 if 'sequence_matters' in content and content.get('sequence_matters') is not None:
                     base['sequence_matters'] = content['sequence_matters']
-                elif 'settings' in task_data and 'sequence_matters' in task_data['settings'] and task_data['settings'].get('sequence_matters') is not None:
+                elif 'settings' in task_data and isinstance(task_data['settings'], dict) and 'sequence_matters' in task_data['settings'] and task_data['settings'].get('sequence_matters') is not None:
                     base['sequence_matters'] = task_data['settings']['sequence_matters']
             
             # Reference answer (D-2 fix)
@@ -439,7 +439,7 @@ class StorageService:
             if 'max_length' not in base:
                 if 'max_length' in content and content.get('max_length') is not None:
                     base['max_length'] = content['max_length']
-                elif 'settings' in task_data and 'max_length' in task_data['settings'] and task_data['settings'].get('max_length') is not None:
+                elif 'settings' in task_data and isinstance(task_data['settings'], dict) and 'max_length' in task_data['settings'] and task_data['settings'].get('max_length') is not None:
                     base['max_length'] = task_data['settings']['max_length']
             
             # min_keywords / require_all_keywords (D-1 fix)

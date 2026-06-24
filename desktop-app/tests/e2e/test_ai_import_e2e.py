@@ -36,34 +36,44 @@ def test_ai_generation_full_cycle_e2e(page, local_server):
     # Wait for the re-rendering of AI mode step 1 to complete (the button gets highlighted)
     page.locator("[data-role='import-mode-ai'].border-primary").wait_for()
 
-    # 3. We need to select a module and topic inside the modal
-    # Wait for module "111" to be available in the dropdown options
-    try:
-        page.wait_for_selector("#import-module-select option[value='111']", state="attached", timeout=10000)
-    except Exception as e:
-        select_html = page.evaluate("() => document.getElementById('import-module-select') ? document.getElementById('import-module-select').outerHTML : 'NOT_FOUND'")
-        modal_html = page.evaluate("() => document.getElementById('import-tasks-modal') ? document.getElementById('import-tasks-modal').innerHTML : 'MODAL_NOT_FOUND'")
-        print(f"\n--- DEBUG E2E SELECT HTML:\n{select_html}")
-        print(f"\n--- DEBUG E2E MODAL HTML:\n{modal_html}")
-        raise e
-    
-    # Print module options for debugging
-    modules_opts = page.evaluate("() => Array.from(document.querySelectorAll('#import-module-select option')).map(o => ({text: o.textContent, value: o.value}))")
-    print("\n--- DEBUG: MODULE OPTIONS:", modules_opts)
-    
-    # Select module "111"
-    page.locator("#import-module-select").select_option(value="111")
-    
-    # Wait for the topic "111_t" to be populated in the topic dropdown
-    page.wait_for_selector("#import-topic-select option[value='111_t']", state="attached", timeout=10000)
-    
-    # Print topic options for debugging
-    topics_opts = page.locator("#import-topic-select option").all_text_contents()
-    print("\n--- DEBUG: TOPIC OPTIONS:", topics_opts)
-    print("\n--- DEBUG: TOPIC SELECT DISABLED:", page.locator("#import-topic-select").is_disabled())
-    
-    # Select topic "111_t"
-    page.locator("#import-topic-select").select_option(value="111_t")
+    # 3. We need to select a module and topic inside the modal dynamically
+    # Wait for the module select to have at least one valid option (non-empty value)
+    page.wait_for_function("""
+        () => {
+            const select = document.getElementById('import-module-select');
+            return select && Array.from(select.options).some(opt => opt.value !== "");
+        }
+    """, timeout=15000)
+
+    # Resolve and select the first valid module option
+    module_value = page.evaluate("""
+        () => {
+            const select = document.getElementById('import-module-select');
+            const validOpt = Array.from(select.options).find(opt => opt.value !== "");
+            return validOpt ? validOpt.value : null;
+        }
+    """)
+    assert module_value is not None, "No valid module option found in dropdown"
+    page.locator("#import-module-select").select_option(value=module_value)
+
+    # Wait for the topic select to have at least one valid option (non-empty value)
+    page.wait_for_function("""
+        () => {
+            const select = document.getElementById('import-topic-select');
+            return select && Array.from(select.options).some(opt => opt.value !== "");
+        }
+    """, timeout=15000)
+
+    # Resolve and select the first valid topic option
+    topic_value = page.evaluate("""
+        () => {
+            const select = document.getElementById('import-topic-select');
+            const validOpt = Array.from(select.options).find(opt => opt.value !== "");
+            return validOpt ? validOpt.value : null;
+        }
+    """)
+    assert topic_value is not None, "No valid topic option found in dropdown"
+    page.locator("#import-topic-select").select_option(value=topic_value)
 
     # 4. Upload a file
     # Create a temporary test file

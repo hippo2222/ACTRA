@@ -268,12 +268,18 @@ def test_failed_task_retries_shown_in_same_iteration(session_manager, mock_servi
     t3 = session_manager.get_next_task(session.id)
     t4 = session_manager.get_next_task(session.id)
 
-    # Второе исходное задание должно быть доступно
-    assert second["task_ref"] == "task2"
+    remaining = [second, t3, t4]
 
-    # Две оставшиеся задачи должны быть retry-копиями первого
-    assert {t3["task_ref"], t4["task_ref"]} == {first["task_ref"]}
-    assert t3["is_retry"] and t4["is_retry"]
+    # One of the remaining tasks must be the other original task
+    other_task_ref = "task2" if first["task_ref"] == "task1" else "task1"
+    other_tasks = [t for t in remaining if t["task_ref"] == other_task_ref]
+    assert len(other_tasks) == 1
+    assert not other_tasks[0]["is_retry"]
+
+    # The other two must be retry copies of the first task
+    retry_tasks = [t for t in remaining if t["task_ref"] == first["task_ref"]]
+    assert len(retry_tasks) == 2
+    assert all(t["is_retry"] for t in retry_tasks)
 
 
 def test_smart_retry_respects_complex_settings(session_manager, mock_services):

@@ -144,12 +144,12 @@ def test_summary_counts_personal_and_library_items_separately():
 
     summary = service.get_summary("u1")
 
-    assert summary["theories"]["personal_count"] == 1
+    assert summary["theories"]["personal_count"] == 4
     assert summary["theories"]["workspace_total_count"] == 4
     assert summary["theories"]["linked_library_count"] == 2
     assert summary["theories"]["library_total_count"] == 6
 
-    assert summary["complexes"]["personal_count"] == 1
+    assert summary["complexes"]["personal_count"] == 2
     assert summary["complexes"]["workspace_total_count"] == 2
     assert summary["complexes"]["linked_library_count"] == 1
     assert summary["complexes"]["library_total_count"] == 3

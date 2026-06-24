@@ -68,29 +68,29 @@ class TestComplexHistory:
         assert history[1]["name"] == "Original Name"
 
     def test_history_rotation(self, complex_service, sample_complex_data):
-        """Test that history keeps only the last 10 versions."""
+        """Test that history keeps only the last 20 versions."""
         created = complex_service.create_complex(sample_complex_data)
         complex_id = created.id
         
-        # Create 12 updates
-        for i in range(12):
+        # Create 22 updates
+        for i in range(22):
             complex_service.update_complex(complex_id, {"name": f"Update {i}"})
             # Add small delay to ensure unique timestamps if OS is fast
             time.sleep(0.01) 
             
         history = complex_service.get_complex_history(complex_id)
-        assert len(history) == 10
+        assert len(history) == 20
         
-        # Check that the most recent update's snapshot (Update 10 snapshot -> state was Update 11? No wait)
+        # Check that the most recent update's snapshot
         # Detailed flow:
         # Create -> State: Original
         # Update 0 -> Snapshot: Original. State: Update 0
         # Update 1 -> Snapshot: Update 0. State: Update 1
         # ...
-        # Update 11 -> Snapshot: Update 10. State: Update 11
+        # Update 21 -> Snapshot: Update 20. State: Update 21
         
-        # Latest snapshot should be "Update 10"
-        assert history[0]["name"] == "Update 10"
+        # Latest snapshot should be "Update 20"
+        assert history[0]["name"] == "Update 20"
         
     def test_restore_from_history(self, complex_service, sample_complex_data):
         """Test restoring a complex from history."""

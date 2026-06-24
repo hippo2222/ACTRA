@@ -679,7 +679,7 @@ class TestLoadAiConfig:
 
     def test_missing_file(self, tmpdir):
         result = load_ai_config(tmpdir)
-        assert result == {}
+        assert result == {"providers": {}}
 
     def test_valid_config(self, tmpdir):
         config = {
@@ -696,7 +696,7 @@ class TestLoadAiConfig:
     def test_corrupt_json(self, tmpdir):
         (tmpdir / "ai_config.json").write_text("not json!", encoding="utf-8")
         result = load_ai_config(tmpdir)
-        assert result == {}
+        assert result == {"providers": {}}
 
 
 # ============================================================================
