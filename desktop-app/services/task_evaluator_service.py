@@ -5293,16 +5293,16 @@ class TaskEvaluatorService:
                     normalized_blocks.append(semantic_value or f"id:{block_id}")
                 return normalized_blocks
 
-            def sequence_blocks_match(user_blocks, correct_blocks, order_matters, user_block_names=None):
+            def sequence_blocks_match(user_blocks, correct_blocks, order_matters, user_block_names=None, correct_block_names=None):
                 normalized_user = normalize_sequence_blocks(user_blocks, user_block_names)
-                normalized_correct = normalize_sequence_blocks(correct_blocks)
+                normalized_correct = normalize_sequence_blocks(correct_blocks, correct_block_names)
                 if order_matters:
                     return tuple(normalized_user) == tuple(normalized_correct)
                 return Counter(normalized_user) == Counter(normalized_correct)
 
-            def count_sequence_block_matches(user_blocks, correct_blocks, order_matters, user_block_names=None):
+            def count_sequence_block_matches(user_blocks, correct_blocks, order_matters, user_block_names=None, correct_block_names=None):
                 normalized_user = normalize_sequence_blocks(user_blocks, user_block_names)
-                normalized_correct = normalize_sequence_blocks(correct_blocks)
+                normalized_correct = normalize_sequence_blocks(correct_blocks, correct_block_names)
                 if order_matters:
                     return sum(
                         1
@@ -5311,10 +5311,10 @@ class TaskEvaluatorService:
                     )
                 return sum((Counter(normalized_user) & Counter(normalized_correct)).values())
 
-            def collect_matching_user_block_ids(user_blocks, correct_blocks, order_matters, user_block_names=None):
+            def collect_matching_user_block_ids(user_blocks, correct_blocks, order_matters, user_block_names=None, correct_block_names=None):
                 matched_ids = []
                 normalized_user = normalize_sequence_blocks(user_blocks, user_block_names)
-                normalized_correct = normalize_sequence_blocks(correct_blocks)
+                normalized_correct = normalize_sequence_blocks(correct_blocks, correct_block_names)
                 if order_matters:
                     matched_ids = [None] * len(normalized_correct)
                     for idx, correct_block in enumerate(normalized_correct):
@@ -5406,14 +5406,14 @@ class TaskEvaluatorService:
                                            f"block_names={user_block_names}, "
                                            f"level_name='{user_level_name}'")
                                 
-                                if sequence_blocks_match(ublocks, cblocks, sequence_matters, user_block_names):
+                                if sequence_blocks_match(ublocks, cblocks, sequence_matters, user_block_names, correct_block_names):
                                     logger.debug(f"[SequenceEval Level3] ✓ НАЙДЕНО STRUCTURAL СООТВЕТСТВИЕ: "
                                                f"correct_level_id={cid} <-> user_level[{idx}]")
                                     used_user_indices.add(idx)
                                     correct_level_ids.append(cid)
                                     level_mapping[cid] = idx
                                     total_correct_blocks += len(cblocks)
-                                    correct_blocks_by_level[cid] = collect_matching_user_block_ids(ublocks, cblocks, sequence_matters, user_block_names)
+                                    correct_blocks_by_level[cid] = collect_matching_user_block_ids(ublocks, cblocks, sequence_matters, user_block_names, correct_block_names)
                                     found_match = True
                                     break
                             
