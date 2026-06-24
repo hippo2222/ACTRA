@@ -23,6 +23,7 @@ def test_smart_retry_respects_complex_settings(monkeypatch):
     # No file checks / metadata issues
     mgr._check_task_file_exists = lambda task_ref: True
     mgr._get_task_type = lambda ref: "test"
+    mgr._rebalance_queue_tail = lambda *args, **kwargs: None
 
     complex_obj = Complex(
         id="c1",
