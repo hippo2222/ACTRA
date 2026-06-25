@@ -46,8 +46,11 @@ def test_resolve_active_sessions_user_id_prefers_ctx_user(monkeypatch):
     fake_session_api = SimpleNamespace(default_user_id="default_user")
 
     monkeypatch.setattr(session_routes, "get_ctx", lambda: fake_ctx)
+    import routes._helpers as session_helpers
+    monkeypatch.setattr(session_helpers, "get_ctx", lambda: fake_ctx)
 
     assert session_routes._resolve_active_sessions_user_id(fake_session_api) == "audit_user"
+
 
 
 def test_resolve_active_sessions_user_id_prefers_explicit_request_user(monkeypatch):
@@ -365,8 +368,8 @@ def test_iteration_results_route_forwards_requested_iteration(monkeypatch):
     app = Flask(__name__)
     calls = []
 
-    def fake_get_iteration_results(session_id, iteration_number=None):
-        calls.append((session_id, iteration_number))
+    def fake_get_iteration_results(session_id, iteration_number=None, user_id=None):
+        calls.append((session_id, iteration_number, user_id))
         return {"iteration": 1, "total_tasks": 1}
 
     fake_session_api = SimpleNamespace(get_iteration_results=fake_get_iteration_results)
@@ -381,4 +384,5 @@ def test_iteration_results_route_forwards_requested_iteration(monkeypatch):
 
     assert response.get_json()["ok"] is True
     assert response.get_json()["results"]["iteration"] == 1
-    assert calls == [("session_resume", 1)]
+    assert calls == [("session_resume", 1, "audit_user")]
+
