@@ -30,7 +30,7 @@ ACTRA предоставляет инструменты для перевода 
 На текущем срезе:
 
 - `green`: `main + quick access`, `statistics + progress`, `calendar + memory health`, `catalog + library + publication`, `complex passage`, `linked theory / open flows`, `task editor`, `complex editor`, `theory editor + theory center`, `assets + media`, `microcards`, `readiness + degraded signaling`
-- `transitional`: `auth + email lifecycle`, `import/export`, `hosted infra + production launch`
+- `transitional`: `auth + email lifecycle`, `import/export`, `hosted infra + production launch` (в продакшн-контуре уже работает автоматический деплой, бэкапы, SMTP и Google OAuth, но сохраняются переходные compatibility-мосты в коде)
 - `AI editor extras`: в hosted-продукте намеренно закрыты честным placeholder-состоянием `in progress`, а не считаются живым rollout-контуром
 
 Важно: AI-генерация заданий, AI-анализ теории и AI-driven microcards сейчас не должны описываться как доступная hosted-функция. Для публичного hosted runtime они переведены в явный placeholder-контракт.
@@ -45,12 +45,20 @@ ACTRA предоставляет инструменты для перевода 
 - Тренировочный complex passage flow.
 - Microcards как отдельный пользовательский режим с hosted persistence и аналитикой.
 - `/api/ready` как канонический readiness/degraded-сигнал для hosted контуров.
+- **Ограничения бесплатного тарифа (Free plan limits) и архивация (`premium_archived`)**:
+  - Лимиты на создание личного контента и добавление в библиотеку (5 complexes/theories лично, 10 complexes/theories в библиотеке, 20 tasks, 4 decks лично, 8 decks всего).
+  - При превышении лимитов или истечении Premium-подписки новые объекты блокируются, а избыточные автоматически переводятся в режим архива (доступны для чтения/удаления, но заблокированы для редактирования/прохождения/публикации).
+- **Мультиязычность (i18n)**: полная локализация интерфейса и юридических документов на русский, английский и украинский языки с поддержкой динамического переключения.
+- **Интерактивный онбординг**: встроенные интерактивные туры (onboarding tours) для быстрого знакомства пользователя с интерфейсом (например, на странице Microcards).
+- **Автоматизация инфраструктуры**:
+  - Автоматический деплой на продакшн-сервер через GitHub Actions (`.github/workflows/deploy.yml`) по SSH.
+  - Ежедневное резервное копирование базы данных PostgreSQL (`scripts/backup_postgres.sh`) по расписанию cron.
 
 ## Что еще в переходном статусе
 
-- `Auth + email lifecycle`: базовый hosted auth flow уже работает, включая `register -> verify -> me -> logout -> login -> forgot-password`, но production proof для реального домена, SMTP и публичного env еще не закрыт.
+- `Auth + email lifecycle`: отправка писем через реальный SMTP (Brevo) и авторизация через Google OAuth полностью настроены и работают, но в кодовой базе всё ещё сохраняется legacy local dev auth bridge для удобства локального тестирования.
 - `Import/export`: strict hosted gate уже есть, но контур еще остается transitional и требует дальнейшей зачистки compatibility-мостов.
-- `Hosted infra + production launch`: локальный Docker acceptance run уже зеленый, но финальный production proof по public domain / reverse proxy / real SMTP / backup drill еще не завершен.
+- `Hosted infra + production launch`: деплой-контур и резервное копирование автоматизированы. Автоматические тесты контракта запуска (`/api/ready.launch_contract`) проходят успешно. Контур считается transitional до полного удаления compatibility-мостов и shadow-файлов.
 
 ## Что намеренно отключено
 
@@ -253,7 +261,7 @@ package.json                    Frontend tooling и smoke scripts
 
 Исторические GitHub releases `v1.0.0` и `v1.1.0` относятся именно к этой legacy desktop-линейке.
 
-Будущий hosted release line стоит вести отдельно: без `latest.json`/`.exe` как основного канала поставки и с опорой на hosted smoke + launch acceptance. Для этого контура см. [docs/hosted_web_migration/hosted_release_v2.md](docs/hosted_web_migration/hosted_release_v2.md).
+Будущий hosted release line ведется отдельно: без `latest.json`/`.exe` как основного канала поставки и с опорой на hosted smoke + launch acceptance (см. [docs/hosted_web_migration/hosted_release_v2.md](docs/hosted_web_migration/hosted_release_v2.md)). Сборка и автоматическая проверка hosted-релизов (теги `v2.*`) осуществляются через GitHub Actions workflow [hosted-release-gate.yml](.github/workflows/hosted-release-gate.yml).
 
 Но это уже не лучший entry point для понимания проекта. Если README читается впервые, ориентироваться нужно на hosted runtime, а desktop/webview воспринимать как вторичный или legacy-контур.
 
