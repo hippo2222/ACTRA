@@ -2,7 +2,7 @@
 
 # ACTRA
 
-Веб-платформа активного обучения с инструментами для работы с интерактивными заданиями, контентом, тренировочными сессиями, статистикой, календарем и microcards.
+**Эффективное активное обучение**: перевод пассивных учебных материалов в прочную практику через интерактивные сессии, планирование повторений и наглядную аналитику прогресса.
 
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python&logoColor=white)](https://python.org)
 [![Flask](https://img.shields.io/badge/Flask-3.0-green?logo=flask&logoColor=white)](https://flask.palletsprojects.com)
@@ -16,161 +16,141 @@
 
 ## О проекте
 
-ACTRA предоставляет инструменты для перевода пассивного учебного контента в практику: интерактивные задания, теории, связанные комплексы, повторение, календарь и аналитику прогресса в hosted web-runtime.
+**ACTRA** помогает студентам, преподавателям и специалистам превратить пассивное чтение теории в активное усвоение знаний:
 
-Текущий фокус проекта - hosted web-версия. Репозиторий уже не стоит воспринимать как desktop-first приложение для локальной установки на отдельные компьютеры. Desktop/webview и Windows release-сборка в кодовой базе еще присутствуют, но основной продуктовый и инфраструктурный контур сейчас hosted-first.
+*   **Активное закрепление материала** — прохождение интерактивных тренировок и мгновенная проверка ответов.
+*   **Борьба с забыванием** — интеграция интервального повторения на базе умных карточек (microcards) и календаря здоровья памяти.
+*   **Удобная публикация** — единый каталог, позволяющий авторам делиться комплексами заданий, а читателям — добавлять их в личную библиотеку.
 
-## Текущее состояние
+> [!IMPORTANT]
+> **Hosted-First продукт**: основной контур проекта сейчас полностью ориентирован на hosted web-версию. Desktop/webview и Windows release-сборка в кодовой базе сохранены как legacy, но весь актуальный функционал, биллинг и автодеплой спроектированы под веб-платформу.
 
-Канонический источник статуса hosted-перехода:
+---
 
-- [docs/hosted_web_migration/current_state.md](docs/hosted_web_migration/current_state.md)
-- [docs/hosted_web_migration/hosted_finish_line_matrix.md](docs/hosted_web_migration/hosted_finish_line_matrix.md)
+## Текущее состояние hosted-перехода
 
-На текущем срезе:
+Канонические источники детального статуса:
+*   [docs/hosted_web_migration/current_state.md](docs/hosted_web_migration/current_state.md) — сводный статус внедрения.
+*   [docs/hosted_web_migration/hosted_finish_line_matrix.md](docs/hosted_web_migration/hosted_finish_line_matrix.md) — детальная матрица готовности компонентов.
 
-- `green`: `main + quick access`, `statistics + progress`, `calendar + memory health`, `catalog + library + publication`, `complex passage`, `linked theory / open flows`, `task editor`, `complex editor`, `theory editor + theory center`, `assets + media`, `microcards`, `readiness + degraded signaling`
-- `transitional`: `auth + email lifecycle`, `import/export`, `hosted infra + production launch` (в продакшн-контуре уже работает автоматический деплой, бэкапы, SMTP и Google OAuth, но сохраняются переходные compatibility-мосты в коде)
-- `AI editor extras`: в hosted-продукте намеренно закрыты честным placeholder-состоянием `in progress`, а не считаются живым rollout-контуром
+### Готовность компонентов:
 
-Важно: AI-генерация заданий, AI-анализ теории и AI-driven microcards сейчас не должны описываться как доступная hosted-функция. Для публичного hosted runtime они переведены в явный placeholder-контракт.
+*   `green` (Полностью готовы):
+    *   **Main & Quick Access** — главный экран, панель быстрого доступа и состояние UI.
+    *   **Statistics & Progress** — отслеживание динамики прохождений и прогресса.
+    *   **Calendar & Memory Health** — планирование занятий и аналитика удержания знаний.
+    *   **Catalog & Library** — публикация материалов, добавление в библиотеку, разграничение прав.
+    *   **Complex Passage** — прохождение комплексов с серверным сохранением состояния сессии.
+    *   **Task & Complex & Theory Editors** — редакторы интерактивных заданий, комплексов и теории.
+    *   **Assets & Media** — загрузка и оптимизация медиафайлов (хранилище S3).
+    *   **Microcards** — заучивание и аналитика ответов по карточкам.
+    *   **Readiness Signaling** — API проверки готовности и деградации сервисов (`/api/ready`).
+*   `transitional` (В процессе полировки):
+    *   **Auth & Email Lifecycle** — авторизация, регистрация, подтверждение почты и сброс паролей. Интеграция с Brevo SMTP и Google OAuth полностью работает, но в коде сохранен локальный dev-мост.
+    *   **Import/Export** — импорт и экспорт архивов заданий/комплексов.
+    *   **Hosted Infra & Production Launch** — автоматический деплой на продакшн по SSH и скрипты резервного копирования базы данных.
+*   `AI editor extras` (Намеренно отключено):
+    *   AI-генерация заданий, анализ теории и авто-генерация карточек в hosted-версии скрыты под честным placeholder-состоянием «Функционал в разработке».
 
-## Что уже работает в hosted
-
-- Интерактивные типы заданий: click, draw, test, open answer, sequence и связанные runtime/UI-контракты.
-- Главный экран, quick access, статистика, календарь, schedule block и memory health.
-- Каталог публикаций, пользовательская библиотека и linked-theory/open flows.
-- Hosted CRUD для task editor, complex editor и theory editor.
-- Hosted assets/media-контур с `asset_id` / `asset_url` как каноническим источником.
-- Тренировочный complex passage flow.
-- Microcards как отдельный пользовательский режим с hosted persistence и аналитикой.
-- `/api/ready` как канонический readiness/degraded-сигнал для hosted контуров.
-- **Ограничения бесплатного тарифа (Free plan limits) и архивация (`premium_archived`)**:
-  - Лимиты на создание личного контента и добавление в библиотеку (5 complexes/theories лично, 10 complexes/theories в библиотеке, 20 tasks, 4 decks лично, 8 decks всего).
-  - При превышении лимитов или истечении Premium-подписки новые объекты блокируются, а избыточные автоматически переводятся в режим архива (доступны для чтения/удаления, но заблокированы для редактирования/прохождения/публикации).
-- **Мультиязычность (i18n)**: полная локализация интерфейса и юридических документов на русский, английский и украинский языки с поддержкой динамического переключения.
-- **Интерактивный онбординг**: встроенные интерактивные туры (onboarding tours) для быстрого знакомства пользователя с интерфейсом (например, на странице Microcards).
-- **Автоматизация инфраструктуры**:
-  - Автоматический деплой на продакшн-сервер через GitHub Actions (`.github/workflows/deploy.yml`) по SSH.
-  - Ежедневное резервное копирование базы данных PostgreSQL (`scripts/backup_postgres.sh`) по расписанию cron.
-
-## Что еще в переходном статусе
-
-- `Auth + email lifecycle`: отправка писем через реальный SMTP (Brevo) и авторизация через Google OAuth полностью настроены и работают, но в кодовой базе всё ещё сохраняется legacy local dev auth bridge для удобства локального тестирования.
-- `Import/export`: strict hosted gate уже есть, но контур еще остается transitional и требует дальнейшей зачистки compatibility-мостов.
-- `Hosted infra + production launch`: деплой-контур и резервное копирование автоматизированы. Автоматические тесты контракта запуска (`/api/ready.launch_contract`) проходят успешно. Контур считается transitional до полного удаления compatibility-мостов и shadow-файлов.
-
-## Что намеренно отключено
-
-- AI-генерация заданий в редакторе
-- AI-анализ теории
-- AI-driven microcards generation
-
-В hosted-продукте эти поверхности сейчас должны показывать честное состояние "Функционал в разработке", а не частично работающий функционал.
-
-## Архитектура
-
-ACTRA сейчас стоит воспринимать как hosted web-систему с таким основным контуром:
-
-```text
-Frontend (HTML / JS / Tailwind)
-        |
-        v
-Flask application (`desktop-app/server.py`)
-        |
-        +-- hosted entrypoint (`desktop-app/hosted_entrypoint.py`)
-        +-- routes / services / hosted repositories
-        |
-        +-- Postgres-backed hosted persistence
-        +-- S3-compatible asset storage
-        +-- readiness / degraded signaling
-```
-
-Локальный production-like запуск строится вокруг:
-
-- [`desktop-app/hosted_entrypoint.py`](desktop-app/hosted_entrypoint.py)
-- [`docker-compose.hosted.yml`](docker-compose.hosted.yml)
-- [`Dockerfile.hosted`](Dockerfile.hosted)
-- [`.env.hosted.example`](.env.hosted.example)
+---
 
 ## Ключевые возможности
 
-### Контент и прохождение
+### 1. Прохождение тренировок (Practice Loop)
+*   **5 интерактивных типов заданий**:
+    *   *Click* — выбор областей на изображениях;
+    *   *Draw* — рисование контуров и траекторий;
+    *   *Test* — классические тесты с выбором одного или нескольких вариантов;
+    *   *Open Answer* — ввод текстового ответа с гибким оцениванием;
+    *   *Sequence* — сборка логических цепочек и блоков.
+*   **Session Persistence** — автоматическое сохранение прогресса. Можно приостановить тренировку на одном устройстве и продолжить с того же места на другом.
+*   **Связь с теорией** — возможность открыть прикреплённые теоретические материалы прямо во время решения задач.
 
-- Интерактивные задания нескольких типов: click, draw, test, open answer, sequence.
-- Complex passage runtime с hosted session persistence.
-- Связка complex -> theory -> library/open flows.
-- Assets/media pipeline для изображений и контента в runtime и редакторах.
+### 2. Создание и публикация (Authoring & Publishing)
+*   **Редакторы контента** — CRUD-инструменты для создания отдельных заданий (Task Editor), комплексов (Complex Editor) с поддержкой автосохранения и истории изменений, а также статей (Theory Editor).
+*   **Управление доступом** — публикация комплексов в каталоге с гибкими уровнями видимости: *Публично*, *По коду доступа* или *Приватно*.
+*   **Модель связанных библиотек** — добавление публикации из каталога создает ссылку в библиотеке пользователя (linked entry), предотвращая неконтролируемое дублирование и форканье исходного авторского контента.
 
-### Авторинг
+### 3. Тарифы и ограничения (Free & Premium Limits)
+Для пользователей бесплатного тарифа действуют автоматические лимиты на объем хранимого контента:
+*   *Теории*: до 5 личных статей и до 10 статей в библиотеке суммарно.
+*   *Комплексы*: до 5 личных комплексов и до 10 комплексов в библиотеке суммарно.
+*   *Задания*: до 20 личных заданий.
+*   *Колоды карточек*: до 4 личных колод и до 8 колод в библиотеке суммарно.
 
-- Task editor CRUD.
-- Complex editor CRUD, autosave, history, restore.
-- Theory editor и theory center.
-- Каталог и публикация контента в hosted-модели.
+При превышении лимитов (или при истечении Premium-подписки) избыточные материалы автоматически переходят в статус **`premium_archived`**: они остаются доступными для чтения и удаления, но блокируются для редактирования, прохождения или публикации до перехода на Premium или удаления лишнего контента.
 
-### Обучающий цикл
+### 4. Мультиязычность и UX
+*   **Локализация (i18n)** — динамическое переключение интерфейса на русский, английский или украинский языки.
+*   **Умное открытие документов** — лицензионные соглашения и политики конфиденциальности автоматически открываются на текущем языке пользователя.
+*   **Интерактивный онбординг** — встроенные пошаговые туры для быстрого знакомства новых пользователей с интерфейсом (например, при первом открытии Microcards).
 
-- Main dashboard и quick access.
-- Statistics + progress.
-- Calendar + schedule + memory health.
-- Microcards с hosted review/runtime/analytics.
+---
 
-### Надежность и качество
+## Архитектура системы
 
-- Hosted readiness/degraded matrix через `/api/ready`.
-- GitHub Actions CI.
-- Secret scanning через `gitleaks` в pre-commit и CI.
-- Набор strict hosted smoke/gate-команд для ключевых контуров.
+ACTRA спроектирована как современное hosted web-приложение:
 
-## Hosted quickstart
+```text
+Frontend (HTML5 / Vanilla JS / TailwindCSS)
+        |
+        v  (REST API / JSON)
+Flask Application (`desktop-app/server.py`)
+        |
+        +-- Точка входа для хостинга (`desktop-app/hosted_entrypoint.py`)
+        +-- Сервисы и репозитории бизнес-логики
+        |
+        +-- База данных PostgreSQL (Пользователи, сессии, прогресс, метаданные)
+        +-- Облачное хранилище S3-compatible (Изображения, вложения, медиа)
+        +-- readiness / degraded signaling (Контроль работоспособности)
+```
 
-Основной локальный путь для проверки hosted-контура - через Docker stack.
+---
 
-### 1. Подготовить env
+## Быстрый запуск в Docker (Hosted Stack)
 
+Основной способ развертывания и проверки hosted-версии приложения — использование Docker Compose стека.
+
+### 1. Подготовка конфигурации
+Скопируйте шаблон переменных окружения:
 ```bash
 cp .env.hosted.example .env.hosted
 ```
+Замените значения по умолчанию на реальные секреты и настройки. Важные параметры:
+*   `ACTRA_SECRET_KEY` — стойкий случайный ключ для шифрования сессий.
+*   `ACTRA_AUTH_PUBLIC_BASE_URL` — публичный домен приложения (например, `https://actra.site`).
+*   `ACTRA_AUTH_SMTP_*` — данные SMTP-сервера (например, Brevo) для отправки писем подтверждения.
+*   `POSTGRES_PASSWORD` и DSN для подключения к базе данных.
+*   `ACTRA_S3_*` — настройки подключения к S3-совместимому облаку для медиафайлов.
 
-Заполни реальные значения там, где это нужно. Для локального verification-run важны как минимум:
-
-- `ACTRA_SECRET_KEY`
-- `ACTRA_AUTH_PUBLIC_BASE_URL`
-- `ACTRA_AUTH_SMTP_*`
-- `POSTGRES_PASSWORD`
-- `ACTRA_POSTGRES_DSN`
-- `ACTRA_S3_*`
-
-В [.env.hosted.example](.env.hosted.example) уже зафиксирован hosted baseline:
-
-- `ACTRA_RUNTIME_MODE=hosted_web`
-- `ACTRA_HOSTED_PERSISTENCE_STRICT=1`
-- `ACTRA_HOSTED_DEV_AUTH_BRIDGE=0`
-- `ACTRA_ENABLE_HOSTED_SHADOW_WRITE_FALLBACK=0`
-
-### 2. Поднять локальный hosted stack
-
+### 2. Запуск стека
+Запустите контейнеры в фоновом режиме со сборкой:
 ```bash
-docker compose --env-file .env.hosted -f docker-compose.hosted.yml up --build
+docker compose --env-file .env.hosted -f docker-compose.hosted.yml up -d --build
 ```
+Доступные адреса после успешного запуска:
+*   Приложение: `http://localhost:8000`
+*   Тестовый SMTP-клиент Mailpit (для локальной отладки писем): `http://localhost:8025`
 
-После старта основные точки:
-
-- приложение: `http://localhost:8000`
-- Mailpit UI: `http://localhost:8025`
-
-Остановить стек:
-
+### 3. Остановка стека
 ```bash
 docker compose --env-file .env.hosted -f docker-compose.hosted.yml down
 ```
 
-## Hosted smoke и acceptance
+---
 
-Канонические команды из текущего hosted-контура:
+## Запуск авто-тестов инфраструктуры (Smoke & Acceptance)
+
+В репозитории подготовлены команды для сквозной проверки работоспособности всех модулей в hosted-окружении:
 
 ```bash
+# Проверка интеграции компонентов и готовности к запуску
+npm run smoke:launch-contract:hosted
+
+# Запуск полного Docker-сценария локальной приемки (включая регистрацию и прохождение)
+npm run smoke:launch-acceptance:hosted
+
+# Точечные проверки отдельных модулей
 npm run smoke:main-quick-access:hosted
 npm run smoke:statistics:hosted
 npm run smoke:calendar:hosted
@@ -185,86 +165,77 @@ npm run smoke:microcards:hosted
 npm run smoke:ai-placeholder:hosted
 npm run smoke:import-export:hosted
 npm run smoke:readiness:hosted
-npm run smoke:launch-contract:hosted
-npm run smoke:launch-acceptance:hosted
 ```
 
-Полезные ориентиры:
+---
 
-- [docs/hosted_web_migration/hosted_launch_acceptance.md](docs/hosted_web_migration/hosted_launch_acceptance.md)
-- [docs/hosted_web_migration/qa_runbook.md](docs/hosted_web_migration/qa_runbook.md)
-- [docs/hosted_web_migration/smoke_matrix.md](docs/hosted_web_migration/smoke_matrix.md)
+## Локальная разработка без Docker
 
-## Разработка без Docker
+Используется для быстрой разработки и отладки отдельных компонентов интерфейса или логики.
 
-Этот путь полезен для локальной разработки отдельных частей, но он уже не является главным способом верификации hosted runtime.
-
+### 1. Настройка окружения
 ```bash
+# Создание и активация виртуального окружения Python
 python -m venv .venv
-.venv\Scripts\activate
+.venv\Scripts\activate  # Для Windows
+source .venv/bin/activate  # Для Linux/macOS
+
+# Установка зависимостей проекта в режиме разработки
 pip install -e ".[dev]"
 
+# Установка зависимостей фронтенда
 npm ci
+
+# Сборка Tailwind CSS стилей
 npm run build:css
 ```
 
-Локальные базовые проверки:
-
+### 2. Запуск базовых тестов
 ```bash
-pytest
-npm test
-npm run validate:themes
-python -m pre_commit run --all-files
+pytest                                  # Тесты Python (бэкенд)
+npm test                                # Тесты Vitest (фронтенд)
+npm run validate:themes                 # Проверка валидности CSS-переменных тем
+python -m pre_commit run --all-files   # Статический анализ кода и проверка секретов
 ```
 
-Если нужен именно production-like hosted proof, ориентироваться нужно не на `python desktop-app/server.py`, а на Docker stack и hosted smoke-команды.
+---
 
 ## Технологический стек
 
-| Слой | Технологии |
+| Слой | Используемые технологии |
 | --- | --- |
-| Backend | Python 3.10+, Flask 3.x, Pydantic 2.x |
-| Hosted runtime | Waitress / Flask app entrypoint, Docker Compose |
-| Frontend | Vanilla JS, TailwindCSS 3.4 |
-| Persistence | Postgres-backed hosted repositories |
-| Assets | S3-compatible storage |
-| Testing | pytest, vitest, Playwright |
-| CI | GitHub Actions |
-| Security | pre-commit + gitleaks |
+| **Backend** | Python 3.10+, Flask 3.x, Pydantic 2.x, PyMuPDF |
+| **Hosted Runtime** | Waitress WSGI, Docker, Docker Compose |
+| **Frontend** | Vanilla JS, TailwindCSS 3.4, PostCSS, JSDom |
+| **База данных** | PostgreSQL |
+| **Файловое хранилище** | S3-compatible Object Storage (MinIO / AWS S3) |
+| **Тестирование** | pytest, vitest, Playwright |
+| **CI/CD** | GitHub Actions (деплой по SSH при пуше в `online-hosting`) |
+| **Безопасность** | pre-commit, gitleaks, bcrypt |
+
+---
 
 ## Структура репозитория
 
-```text
-desktop-app/                    Flask app, routes, services, hosted entrypoint
-frontend/                       Клиентский UI
-task_system/                    Ядро моделей и task system
-common/                         Общие утилиты и конфигурация
-data/                           Локальные data/artifact каталоги для dev/runtime сценариев
-docs/hosted_web_migration/      Каноническая документация hosted transition
-tests/                          Python и frontend тесты
-scripts/                        Smoke, acceptance, audit и service scripts
-.github/workflows/              CI и release workflows
-docker-compose.hosted.yml       Локальный hosted stack
-Dockerfile.hosted               Hosted container image
-.env.hosted.example             Пример hosted env
-pyproject.toml                  Python dependencies и tooling
-package.json                    Frontend tooling и smoke scripts
-```
+*   `desktop-app/` — Flask-приложение: API-маршруты, сервисы интеграции, модели баз данных.
+*   `frontend/` — клиентская часть: HTML-страницы, JS-модули интерфейса, стили и шрифты.
+*   `task_system/` — ядро обработки заданий, валидаторы схем, парсеры и логика оценки ответов.
+*   `common/` — вспомогательные утилиты, конфигурации и общие хелперы.
+*   `docs/hosted_web_migration/` — подробная проектная документация по этапам миграции в web.
+*   `tests/` — тесты интеграции, регрессий фронтенда и бэкенда.
+*   `scripts/` — скрипты сборки релизов, аудита контрастности интерфейса и проверки базы данных.
+*   `.github/workflows/` — автоматизированные сценарии CI и релизные гейты.
 
-## Legacy desktop / Windows notes
+---
 
-В кодовой базе все еще есть legacy desktop/webview и Windows release tooling:
+## Выпуск релизов и совместимость
 
-- `desktop-app/webview_launcher.py`
-- `scripts/build_release.py`
-- [docs/windows_release_build.md](docs/windows_release_build.md)
+Сборка и автоматическая проверка hosted-релизов (теги `v2.*`) осуществляются через GitHub Actions workflow [hosted-release-gate.yml](.github/workflows/hosted-release-gate.yml).
 
-Исторические GitHub releases `v1.0.0` и `v1.1.0` относятся именно к этой legacy desktop-линейке.
+Исторические теги `v1.0.0` и `v1.1.0` относятся к legacy-линейке Windows Desktop приложения. Переход к hosted-модели подробно описан в документе [docs/hosted_web_migration/hosted_release_v2.md](docs/hosted_web_migration/hosted_release_v2.md).
 
-Будущий hosted release line ведется отдельно: без `latest.json`/`.exe` как основного канала поставки и с опорой на hosted smoke + launch acceptance (см. [docs/hosted_web_migration/hosted_release_v2.md](docs/hosted_web_migration/hosted_release_v2.md)). Сборка и автоматическая проверка hosted-релизов (теги `v2.*`) осуществляются через GitHub Actions workflow [hosted-release-gate.yml](.github/workflows/hosted-release-gate.yml).
-
-Но это уже не лучший entry point для понимания проекта. Если README читается впервые, ориентироваться нужно на hosted runtime, а desktop/webview воспринимать как вторичный или legacy-контур.
+---
 
 ## Лицензия
 
-[Apache License 2.0](LICENSE)
+Распространяется под лицензией [Apache License 2.0](LICENSE).
