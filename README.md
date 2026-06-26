@@ -45,10 +45,10 @@
     *   **Assets & Media** — загрузка и оптимизация медиафайлов (хранилище S3).
     *   **Microcards** — заучивание и аналитика ответов по карточкам.
     *   **Readiness Signaling** — API проверки готовности и деградации сервисов (`/api/ready`).
+    *   **Auth & Email Lifecycle** — авторизация, регистрация, подтверждение почты и сброс паролей. Интеграция с Brevo SMTP и Google OAuth, strict release-gate (`smoke:auth:hosted`) и production-like smoke на публичном домене успешно подтверждены.
+    *   **Hosted Infra & Production Launch** — деплой на VPS (Hetzner), reverse proxy (Nginx + Let's Encrypt), резервное копирование и восстановление (Postgres + MinIO) подтверждены на живом окружении `https://actra.site`.
 *   `transitional` (В процессе полировки):
-    *   **Auth & Email Lifecycle** — авторизация, регистрация, подтверждение почты и сброс паролей. Интеграция с Brevo SMTP и Google OAuth полностью работает, но в коде сохранен локальный dev-мост.
     *   **Import/Export** — импорт и экспорт архивов заданий/комплексов.
-    *   **Hosted Infra & Production Launch** — автоматический деплой на продакшн по SSH и скрипты резервного копирования базы данных.
 *   `AI editor extras` (Намеренно отключено):
     *   AI-генерация заданий, анализ теории и авто-генерация карточек в hosted-версии скрыты под честным placeholder-состоянием «Функционал в разработке».
 

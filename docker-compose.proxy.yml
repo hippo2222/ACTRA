@@ -1,0 +1,51 @@
+# docker-compose.proxy.yml
+#
+# Overlay для запуска Caddy reverse proxy поверх основного hosted stack.
+#
+# Использование на сервере:
+#
+#   # Запустить основной стек + proxy:
+#   docker compose \
+#     --env-file .env.hosted \
+#     -f docker-compose.hosted.yml \
+#     -f docker-compose.proxy.yml \
+#     up -d --build
+#
+#   # Остановить:
+#   docker compose \
+#     --env-file .env.hosted \
+#     -f docker-compose.hosted.yml \
+#     -f docker-compose.proxy.yml \
+#     down
+#
+# Требования:
+#   - Порты 80 и 443 свободны на хосте.
+#   - DNS-запись домена указывает на IP сервера.
+#   - Файл Caddyfile находится рядом с этим файлом.
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"   # HTTP/3 (QUIC)
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+      - caddy_logs:/var/log/caddy
+    # Caddy должен иметь доступ к сети приложения, чтобы проксировать на app:8000
+    networks:
+      - default
+
+  # Переопределяем сервис приложения: убираем прямое маппирование порта 8000 наружу,
+  # чтобы он был доступен только через Caddy proxy.
+  app:
+    ports: !reset []
+
+volumes:
+  caddy_data:
+  caddy_config:
+  caddy_logs:

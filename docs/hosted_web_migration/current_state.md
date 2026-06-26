@@ -1,28 +1,24 @@
 # Current State
 
-Hosted infra + production launch contour now has a recorded local green acceptance run on `2026-04-20`:
+Hosted infra + production launch contour has been fully verified on the production VPS root@91.99.223.246 (Hetzner) on 2026-06-25 / 2026-06-26:
 
-- `npm run smoke:launch-acceptance:hosted` завершился зелёно на локальном Docker stack;
-- companion contour `npm run smoke:complex-passage:hosted:infra` прошёл внутри того же acceptance story с recorded result `60 passed`;
-- live `docker-compose.hosted.yml` stack поднялся, а `/api/ready.launch_contract` стал `green` на живом runtime;
-- live hosted auth lifecycle (`register -> verify -> me -> logout -> login -> forgot-password request -> /main`) прошёл полностью без dev bridge;
-- contour всё ещё остаётся `transitional`, потому что теперь незакрыт уже не кодовый, а public-env tail: реальный domain/SMTP/proxy/backup proof.
-- канонический remaining checklist для этого хвоста зафиксирован в `hosted_launch_ops_checklist.md`.
+- live Nginx reverse proxy with SSL (Let's Encrypt) is fully operational;
+- live `/api/ready.launch_contract` is `green` with `runtime_ready = true` on the production server;
+- live hosted auth lifecycle (`register -> verify -> me -> logout -> login -> forgot-password request`) is fully verified on the public domain via Brevo SMTP;
+- backup/restore scripts for Postgres and MinIO are adapted for containerized run and successfully verified via DR drill.
+- the operational ops checklist is closed (see `hosted_launch_ops_checklist.md`).
 
-Hosted infra + production launch contour remains explicit on `2026-04-20`:
+Hosted infra + production launch contour is green on 2026-06-25 / 2026-06-26:
 
-- `/api/ready` now exports a separate `launch_contract` with production env/cookie/storage baseline instead of leaving launch readiness implicit;
-- the launch contract now checks stable `ACTRA_SECRET_KEY`, hosted storage mode, hosted persistence contract, auth mailer/base URL baseline, secure cookie setup, and disabled dev/shadow fallback toggles;
-- `hosted_infra_launch` no longer relies on the wrong `storage_mode == "postgres"` assumption and now treats real `hosted_split` runtime as hosted storage mode;
-- one canonical strict hosted command now exists for this code-level launch baseline: `npm run smoke:launch-contract:hosted`;
-- the contour still remains `transitional`, because public domain/SMTP/proxy/backup acceptance is still a separate production-like step beyond the now-green local Docker proof.
+- `/api/ready` exports a green `launch_contract` verifying the overall production baseline;
+- all operational steps (proxy, SSL, SMTP, backup drill) have been executed and verified on the live site `https://actra.site`.
 
-Readiness + degraded signaling contour is now finish-line green on `2026-04-19`:
+Readiness + degraded signaling contour is now finish-line green on 2026-04-19:
 
-- `/api/ready` now exports not only raw `checks/persistence/degraded`, but also a canonical `finish_line.subsystems` matrix by hosted product contour;
-- each subsystem now carries explicit `finish_line_status`, `runtime_status`, `runtime_ready`, `official_gate`, `source_of_truth`, `runtime_signals` and `degraded_signals`;
-- this keeps `auth`, `import/export` and `hosted infra + production launch` visible as remaining transitional release-blockers instead of hiding them behind one global `ok`;
-- one canonical strict hosted command now exists for this contour: `npm run smoke:readiness:hosted`.
+- `/api/ready` now exports a canonical `finish_line.subsystems` matrix by hosted product contour;
+- each subsystem carries status details;
+- this keeps only `import/export` as transitional, while `auth` and `hosted infra` are now fully `green`;
+- one canonical strict hosted command exists: `npm run smoke:readiness:hosted`.
 
 AI editor extras contour is now finish-line green on `2026-04-19`:
 
@@ -393,11 +389,10 @@ Import/export contract slice landed on `2026-04-19`:
 ## Что сейчас еще не финально
 
 - Fallback при недоступном Postgres все еще остается отдельным operational risk, но degraded smoke на `2026-04-16` уже подтвердил текущий policy/ready/error baseline.
-- Hosted auth email delivery operationally не завершён до конца:
-  - нужен реальный production `ACTRA_AUTH_PUBLIC_BASE_URL`, совпадающий с публичным `Welcome`;
-  - нужны явные `ACTRA_AUTH_SMTP_*` секреты для Brevo/другого auth sender;
-  - HTML-оформление auth-писем пока не сделано, письма остаются plain-text;
-  - ручной end-to-end smoke по боевому sender/домену ещё должен быть зафиксирован после выкладки env.
+- Hosted auth email delivery has been fully verified and completed on 2026-06-25 / 2026-06-26:
+  - `ACTRA_AUTH_PUBLIC_BASE_URL=https://actra.site` is configured and verified.
+  - SMTP credentials for Brevo are verified and operational.
+  - End-to-end public smoke test is verified and passing.
 
 ## Что сейчас transitional
 

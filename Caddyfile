@@ -1,0 +1,47 @@
+# Caddyfile — reverse proxy для ACTRA hosted stack
+#
+# Использование:
+#   Положить этот файл рядом с docker-compose.proxy.yml на сервере.
+#   Заменить actra.site на реальный домен.
+#   TLS-сертификат автоматически выпускается и продлевается Let's Encrypt.
+#
+# Требования:
+#   - 80/443 порты открыты на сервере (файервол/security group).
+#   - DNS A-запись для домена указывает на IP сервера.
+#   - Docker-сеть actra_net должна быть создана: docker network create actra_net
+#     (или использовать docker-compose.proxy.yml, который создаёт её автоматически).
+
+actra.site {
+    # Передаём реальный IP клиента в приложение
+    header_up X-Real-IP {remote_host}
+    header_up X-Forwarded-For {remote_host}
+    header_up X-Forwarded-Proto {scheme}
+
+    # Проксируем весь трафик на Flask-приложение
+    reverse_proxy app:8000
+
+    # Сжатие ответов
+    encode gzip
+
+    # Заголовки безопасности
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+
+    # Логи доступа
+    log {
+        output file /var/log/caddy/access.log {
+            roll_size 10mb
+            roll_keep 5
+        }
+    }
+}
+
+# Перенаправление www → bare domain
+www.actra.site {
+    redir https://actra.site{uri} permanent
+}
