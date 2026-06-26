@@ -17,16 +17,15 @@ Convert static theory, reading lists, and lectures into interactive study sessio
 
 ---
 
-## What is ACTRA?
+## The Vision: Active Recall & Spaced Repetition
 
 ACTRA is built for active learners, students, educators, and professionals who want to maximize retention and study efficiency. By bridging theoretical content with interactive retrieval practice, ACTRA prevents passive-reading fatigue and helps you build durable memory.
 
-> [!IMPORTANT]
-> **Hosted-First Platform**: ACTRA is fully optimized for hosted web environments. The legacy desktop/webview and Windows release targets remain in the codebase for reference, but the core active development, billing integrations, and automated pipelines are tailored for high-performance web deployment.
+The platform is designed around the core principle that **simply reading text is not enough to store information**. ACTRA transforms passive study materials into interactive tasks, links them back to their theoretical foundations, and systematically feeds them to users through a memory health tracking schedule.
 
 ---
 
-## Core Architecture
+## Core System Architecture
 
 ACTRA is engineered as a modern, lightweight hosted web application with client-side interactivity and robust backend storage:
 
@@ -56,30 +55,34 @@ graph TD
 
 ---
 
-## Key Capabilities
+## Platform Capabilities & Technical Highlights
 
-### 1. The Interactive Practice Loop
-ACTRA goes beyond standard text inputs, offering **5 distinct, kinetic task types** to suit any learning style:
-*   **Spatial Recognition (Click)**: Tap precise hot areas on images to test visual structure, anatomy, or layout memory.
-*   **Trace & Path (Draw)**: Draw shapes, paths, or flows with real-time vector path evaluation.
-*   **Knowledge Checkpoints (Test)**: Select single or multiple correct choices with immediate feedback.
-*   **Recall Recall (Open Answer)**: Type descriptive text responses validated with smart, flexible grading filters.
-*   **Logical Ordering (Sequence)**: Reorder blocks or timeline steps into the correct chronological sequence.
+### 1. The Interactive Practice Loop & Dynamic Evaluation Engines
+ACTRA goes beyond standard text inputs, offering **5 distinct, kinetic task types** powered by custom evaluation algorithms on the backend:
 
-### 2. Contextual Theory Linkage
-Never study blindly. If a task gets difficult, open the linked reference article in a split pane directly next to your workspace. Study the theory, then immediately apply it to solve the challenge.
+*   **Spatial Recognition (Click)**: Tap precise hotspot zones on images. The system uses coordinate-matching and point-in-polygon containment checks to verify spatial recall of anatomical structures, maps, or technical schematics.
+*   **Trace & Path (Draw)**: Draw vectors, paths, or custom flows. The engine evaluates user coordinate inputs against reference vector paths in real time on an SVG canvas.
+*   **Knowledge Checkpoints (Test)**: Traditional single or multi-select formats featuring immediate correction feedback and pedagogical explanation routing.
+*   **Recall Recall (Open Answer)**: Type text-based answers validated by a smart, rules-based fuzzy matching engine. It ignores casing, minor punctuation, or layout typos while ensuring key concept term containment.
+*   **Logical Ordering (Sequence)**: Drag-and-drop chronological sorting to test historical events, code execution lines, or operational procedures.
+
+### 2. Context-Aware Theory Split-Pane
+Study is more effective when references are immediately available. If a task becomes too difficult, users can open the linked reference article in a split pane directly next to their workspace. Read the theory, study the explanation, and immediately apply it to solve the challenge in the same tab.
 
 ### 3. Session Persistence
-Progress is synced server-side in real time. Start a complex quiz on your laptop, pause, and continue on your phone exactly where you left off.
+Progress is synced server-side at each task boundary in real time. Start a complex quiz on your laptop, pause, and continue on your mobile device exactly where you left off, without losing your state.
 
-### 4. Direct Authoring Suite
-Construct your learning catalog with built-in editors for tasks, complexes, and reference articles. Features real-time autosave, change histories, and seamless S3 media attachment uploads.
+### 4. The Visual Authoring Suite (CRUD Editors)
+Construct your learning catalog with custom visual tools:
+*   **Task Editor**: Visual polygon-tracing controls for Click tasks, reference coordinate builders, and media attachments.
+*   **Complex Editor**: Drag-and-drop ordering tools to organize tasks into structured modules, map related theory links, and manage publication settings.
+*   **Theory Article Editor**: Rich text article creation with automatic background autosaving, draft history logs, and direct S3 cloud storage uploads for attachments.
 
-### 5. Smart Sharing (Catalog & Libraries)
-Publish your study collections to a shared directory. Other users can add a *linked entry* to their library—letting them practice your material while preserving the original source without messy forks or duplicate database records.
+### 5. Smart Sharing & Central Library Sync
+Publish study collections with granular visibility levels (Public Catalog, Access Code, or Private). Other users subscribe to a collection by adding a *linked entry* to their personal library. This prevents database record duplication, allows the author to distribute updates centrally, and keeps the catalog organized.
 
-### 6. Memory Health Calendar (Microcards)
-Beat the forgetting curve using the integrated flashcard system. Track your daily review schedules and monitor memory retention health scores directly from your dashboard.
+### 6. Spaced Repetition Engine (Microcards)
+Beat the forgetting curve using the integrated flashcard system. Daily reviews are dynamically scheduled based on user response histories, while the memory health dashboard calculates retention scores and charts review consistency.
 
 ---
 
@@ -97,94 +100,9 @@ Free tier accounts contain generous quotas to get started. Exceeding these limit
 
 ## Developer Guide & Deployment
 
-<details>
-<summary><b>1. Running with Docker Compose (Recommended)</b></summary>
-<p></p>
+Instructions on how to configure environment variables, run the Docker stack, launch local development, or run the test suites (`pytest`, `Vitest`, `Playwright` smoke scripts) have been moved to a separate guide:
 
-The most robust way to run the entire hosted stack locally:
-
-1. **Configure Environment Variables**:
-   Copy the template and replace placeholders with your secrets (such as OAuth IDs, S3 credentials, SMTP servers):
-   ```bash
-   cp .env.hosted.example .env.hosted
-   ```
-2. **Build and Spin Up the Stack**:
-   ```bash
-   docker compose --env-file .env.hosted -f docker-compose.hosted.yml up -d --build
-   ```
-3. **Explore**:
-   - Web App: `http://localhost:8000`
-   - Mailpit (Local SMTP capture tool): `http://localhost:8025`
-4. **Shutdown**:
-   ```bash
-   docker compose --env-file .env.hosted -f docker-compose.hosted.yml down
-   ```
-
-</details>
-
-<details>
-<summary><b>2. Local Development Setup (Without Docker)</b></summary>
-<p></p>
-
-For fast client-side debugging or quick code modifications:
-
-1. **Python Virtual Environment**:
-   ```bash
-   python -m venv .venv
-   # Windows:
-   .venv\Scripts\activate
-   # macOS/Linux:
-   source .venv/bin/activate
-   ```
-2. **Install Dependencies**:
-   ```bash
-   pip install -e ".[dev]"
-   npm ci
-   ```
-3. **Asset Compilation**:
-   ```bash
-   npm run build:css
-   ```
-
-</details>
-
-<details>
-<summary><b>3. Automated Testing Suite</b></summary>
-<p></p>
-
-Ensure codebase reliability across all modules:
-
-```bash
-# Run backend Python tests (pytest)
-pytest
-
-# Run frontend Vanilla JS/Tailwind tests (Vitest)
-npm test
-
-# Audit Tailwind theme custom variable definitions
-npm run validate:themes
-
-# Run static checkers and secret detectors
-python -m pre_commit run --all-files
-```
-
-### Infrastructure & Smoke Tests
-ACTRA includes a series of smoke and acceptance suites to confirm hosted compatibility:
-```bash
-# Verify component contracts and launch readiness
-npm run smoke:launch-contract:hosted
-
-# Run the complete user registration & practice loop acceptance test
-npm run smoke:launch-acceptance:hosted
-
-# Test specific modules individually
-npm run smoke:complex-passage:hosted
-npm run smoke:catalog-library:hosted
-npm run smoke:microcards:hosted
-npm run smoke:import-export:hosted
-```
-
-</details>
+👉 **[docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md)**
 
 ---
 
@@ -209,7 +127,7 @@ npm run smoke:import-export:hosted
 *   `frontend/` - Responsive client files (templates, UI modules, typography, stylesheets).
 *   `task_system/` - Execution engine for validation, input parsing, and scoring algorithms.
 *   `common/` - shared constants, configuration parsers, and utilities.
-*   `docs/` - Comprehensive migration docs, database schemas, and architectural outlines.
+*   `docs/` - Comprehensive migration docs, developer guides, database schemas, and architectural outlines.
 *   `tests/` - Acceptance, integration, and regression suites.
 *   `scripts/` - Automated audits (contrast checks, schema verifications).
 
