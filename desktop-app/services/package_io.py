@@ -44,10 +44,13 @@ class PackageIO:
                 raise ValueError(f"Unpacked size too large: {total_size} bytes")
 
     def validate_member_path(self, member_name: str) -> None:
-        normalized = self.normalize_member_name(member_name).lstrip("./")
-        if not normalized:
+        raw_normalized = self.normalize_member_name(member_name)
+        normalized = raw_normalized
+        if normalized.startswith("./"):
+            normalized = normalized[2:]
+        if not normalized or normalized in {".", "./"}:
             raise ValueError("Empty archive member path")
-        if os.path.isabs(normalized):
+        if normalized.startswith("/") or os.path.isabs(normalized):
             raise ValueError(f"Absolute path is not allowed: {member_name}")
 
         parts = [p for p in normalized.split("/") if p not in {"", "."}]

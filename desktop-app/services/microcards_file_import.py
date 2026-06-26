@@ -40,6 +40,22 @@ _BREAK_TAG_RE = re.compile(r"<\s*(?:br|/div|/p|/li|/tr)\s*/?\s*>", re.IGNORECASE
 _TAG_RE = re.compile(r"<[^>]+>")
 
 
+def _validate_zip_security_in_memory(zf: zipfile.ZipFile, max_size: int = 200 * 1024 * 1024) -> None:
+    from services.package_io import PackageIO
+    package_io = PackageIO()
+    total_size = 0
+    for info in zf.infolist():
+        normalized = package_io.normalize_member_name(info.filename)
+        package_io.validate_member_path(normalized)
+        total_size += info.file_size
+        if info.file_size > 0:
+            ratio = info.file_size / (info.compress_size if info.compress_size > 0 else 1)
+            if ratio > package_io.MAX_UNCOMPRESSED_RATIO and info.file_size > 10 * 1024 * 1024:
+                raise ValueError(f"Suspicious compression ratio for {normalized}")
+    if total_size > max_size * 2:
+        raise ValueError(f"Unpacked size too large: {total_size} bytes")
+
+
 def strip_html(text: Any) -> str:
     """Anki fields are HTML — flatten to readable plain text, keep line breaks."""
     t = str(text or "")
@@ -100,6 +116,7 @@ def parse_apkg(data: bytes) -> List[Dict[str, Any]]:
         zf = zipfile.ZipFile(io.BytesIO(data))
     except zipfile.BadZipFile:
         raise ValueError("apkg_invalid")
+    _validate_zip_security_in_memory(zf)
     names = set(zf.namelist())
     member = next((c for c in ("collection.anki21", "collection.anki2") if c in names), None)
     if member is None:
@@ -168,8 +185,12 @@ def extract_docx_text(data: bytes) -> str:
     detection), so a two-column Word table imports exactly like a Quizlet paste."""
     try:
         zf = zipfile.ZipFile(io.BytesIO(data))
+    except zipfile.BadZipFile:
+        raise ValueError("docx_invalid")
+    _validate_zip_security_in_memory(zf)
+    try:
         xml = zf.read("word/document.xml")
-    except (zipfile.BadZipFile, KeyError):
+    except KeyError:
         raise ValueError("docx_invalid")
     try:
         root = ET.fromstring(xml)

@@ -267,6 +267,10 @@ class ComplexImportExportService:
                 checksums[arc_name] = self.package_io.sha256_file(source_path)
             return True
 
+        from routes._context import is_hosted_web_runtime
+        if is_hosted_web_runtime():
+            return False
+
         task_dir = self.storage.modules_dir / module_id / "topics" / topic_id / "tasks" / task_id
         if not task_dir.exists():
             return False
@@ -336,6 +340,10 @@ class ComplexImportExportService:
             zf.writestr(delta_arc, delta_bytes)
             checksums[delta_arc] = self.package_io.sha256_bytes(delta_bytes)
             wrote_anything = True
+
+        from routes._context import is_hosted_web_runtime
+        if is_hosted_web_runtime():
+            return wrote_anything
 
         source_dir = self.theory_service.theories_dir / theory_id
         if source_dir.exists():

@@ -617,7 +617,10 @@ def get_quick_access() -> Any:
     health_map = {}
     try:
         if calendar_service:
-            all_p = calendar_service._get_all_progress(user_id)
+            if hasattr(calendar_service, "_get_all_progress"):
+                all_p = calendar_service._get_all_progress(user_id)
+            else:
+                all_p = calendar_service.get_all_progress()
             for item in all_p:
                 health_map[item.complex_id] = {
                     "health_percent": item.health_percent,

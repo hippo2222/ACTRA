@@ -17,7 +17,7 @@ Readiness + degraded signaling contour is now finish-line green on 2026-04-19:
 
 - `/api/ready` now exports a canonical `finish_line.subsystems` matrix instead of forcing release state to be inferred from raw service booleans alone;
 - each hosted contour is now visible there with `finish_line_status`, `runtime_status`, `runtime_ready`, `official_gate`, `source_of_truth`, `runtime_signals` and `degraded_signals`;
-- this keeps only `import/export` as transitional, while `auth` and `hosted infra` are now fully `green`;
+- all core subsystems (including import/export, auth, and hosted infra) are now fully green;
 - one official strict hosted command now exists: `npm run smoke:readiness:hosted`.
 
 AI placeholder contour is now finish-line green on `2026-04-19`:
@@ -138,7 +138,7 @@ Import/export contract slice landed on `2026-04-19`:
 - public complex archive `confirm` now also runs through hosted-backed rollback actions for task/module/topic, theory and complex mutations instead of full state backup/restore.
 - public complex archive `confirm` route no longer hard-blocks in hosted mode and now streams either canonical result or explicit hosted degraded payload for blocked hosted writes.
 - import/export contour now has one official strict hosted gate: `npm run smoke:import-export:hosted`.
-- new gate was verified green by a local run on `2026-04-19`.
+- new gate was verified green on `2026-06-26` after aligning ZIP logic, resolving Zip Slip vulnerability via PackageIO, cleaning up all file-system fallbacks in hosted mode, and passing all contracts and unit tests.
 
 ## Current Finish-Line Tracker
 

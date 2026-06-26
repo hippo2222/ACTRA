@@ -89,24 +89,31 @@ def test_activity_no_missed_when_no_history():
     """is_missed не выставляется, если has_any_activity == False."""
     base_url = _resolve_base_url()
 
-    resp = requests.get(
+    # Query 365 days to check if there is ANY activity in history overall
+    resp_large = requests.get(
         f"{base_url}/api/calendar/activity",
-        params={"days": 7},
+        params={"days": 365},
         proxies={"http": None, "https": None},
         timeout=5,
     )
-    assert resp.status_code == 200
-    payload = resp.json()
-    activity = payload.get("activity", [])
-
-    # Если нет активности вообще, все прошлые дни не должны быть is_missed
-    has_any_solved = any(
-        d.get("tasks_solved", 0) > 0 or d.get("tasks_attempted", 0) > 0
-        for d in activity
+    assert resp_large.status_code == 200
+    activity_large = resp_large.json().get("activity", [])
+    has_any_history = any(
+        d.get("activity_attempts_total", 0) > 0 or d.get("completion_percent", 0) > 0
+        for d in activity_large
         if not d.get("is_future")
     )
 
-    if not has_any_solved:
+    if not has_any_history:
+        resp = requests.get(
+            f"{base_url}/api/calendar/activity",
+            params={"days": 7},
+            proxies={"http": None, "https": None},
+            timeout=5,
+        )
+        assert resp.status_code == 200
+        payload = resp.json()
+        activity = payload.get("activity", [])
         for day in activity:
             if not day.get("is_today") and not day.get("is_future"):
                 assert not day.get("is_missed"), f"Day {day['date']} should not be marked as missed when no activity history"

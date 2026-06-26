@@ -16,6 +16,7 @@ from services.hosted_shadow_fallback import (
     HostedShadowReadFallbackDisabledError,
     HostedShadowWriteFallbackDisabledError,
 )
+from services.package_io import PackageIO
 
 # Type definitions
 TaskConflict = Dict[str, Any]
@@ -63,6 +64,7 @@ class ImportExportService:
         self.asset_service = asset_service
         self.logger = logging.getLogger(self.__class__.__name__)
         self._app_version = self._read_app_version()
+        self.package_io = PackageIO()
 
     def _read_app_version(self) -> str:
         """Read app version from the shared task_system version source."""
@@ -183,6 +185,11 @@ class ImportExportService:
                         for portable_rel_path, source_path in staged_assets.items():
                             arc_name = f"{arc_root}/{portable_rel_path}".replace("\\", "/")
                             zf.write(source_path, arc_name)
+                        continue
+
+                    from routes._context import is_hosted_web_runtime
+                    if is_hosted_web_runtime():
+                        self.logger.warning(f"Task not found in hosted storage for export: {task_id}")
                         continue
 
                     task_dir = self.storage.modules_dir / module_id / "topics" / topic_id / "tasks" / task_id
@@ -481,33 +488,15 @@ class ImportExportService:
 
     def _validate_zip_security(self, archive_path: str):
         """Perform security checks on the ZIP file."""
-        path_obj = Path(archive_path)
-        
-        # Check size
-        if path_obj.stat().st_size > self.MAX_ARCHIVE_SIZE:
-            raise ValueError(f"Archive too large: {path_obj.stat().st_size} bytes")
-            
-        with zipfile.ZipFile(archive_path, 'r') as zf:
-            total_size = 0
-            for info in zf.infolist():
-                # Zip Slip check
-                if '..' in info.filename or os.path.isabs(info.filename):
-                    raise ValueError(f"Malicious path detected: {info.filename}")
-                
-                # Nesting check
-                if info.filename.count('/') > self.MAX_NESTING_LEVEL:
-                    raise ValueError(f"Directory nesting too deep: {info.filename}")
-                    
-                # Compression ratio check (Zip Bomb)
-                if info.file_size > 0: # Avoid division by zero
-                    ratio = info.file_size / (info.compress_size if info.compress_size > 0 else 1)
-                    if ratio > self.MAX_UNCOMPRESSED_RATIO and info.file_size > 10 * 1024 * 1024:
-                        raise ValueError(f"Suspicious compression ratio for {info.filename}")
-                
-                total_size += info.file_size
-                
-            if total_size > self.MAX_ARCHIVE_SIZE * 2: # Limit unpacked size too
-                 raise ValueError(f"Unpacked size too large: {total_size} bytes")
+        try:
+            self.package_io.validate_zip_security(archive_path)
+        except ValueError as e:
+            msg = str(e)
+            if "Path traversal" in msg or "Absolute path" in msg:
+                raise ValueError(f"Malicious path: {msg}")
+            if "too deep" in msg:
+                raise ValueError(f"nesting too deep: {msg}")
+            raise
 
     def _analyze_task_in_archive(self, zf: zipfile.ZipFile, task_file_path: str) -> Dict[str, Any]:
         """Analyze a single task within the archive."""
@@ -558,11 +547,24 @@ class ImportExportService:
                 res["exists"] = True
                 res["existing_path"] = str(existing_path.relative_to(self.storage.data_dir))
                 
-                # Check for content match (duplicate)
-                # Parse existing file
                 try:
-                    with open(existing_path / "task.json", 'r', encoding='utf-8') as ef:
-                        existing_data = json.load(ef)
+                    existing_data = None
+                    existing_ref = self._extract_task_ref_from_storage_path(existing_path)
+                    if existing_ref:
+                        existing_module_id, existing_topic_id, _ = existing_ref
+                        try:
+                            existing_payload = self.storage.load_task(existing_module_id, existing_topic_id, task_id)
+                            if existing_payload and isinstance(existing_payload, dict):
+                                existing_data = existing_payload.get("task_data")
+                        except Exception:
+                            pass
+
+                    if not existing_data:
+                        with open(existing_path / "task.json", 'r', encoding='utf-8') as ef:
+                            existing_data = json.load(ef)
+
+                    if not existing_data:
+                        raise ValueError("No existing task data found")
                     
                     # Compute hashes (normalized)
                     hash_new = self._compute_json_hash(data)
@@ -776,7 +778,7 @@ class ImportExportService:
         return None
 
     def _build_task_index(self) -> Dict[str, Path]:
-        """Build a task_id → path index from storage (called once per import)."""
+        """Build a task_id → task_dir path index from storage."""
         index: Dict[str, Path] = {}
         modules = self.storage.load_modules()
         for module in modules:
@@ -797,7 +799,7 @@ class ImportExportService:
         """
         if index is not None:
             return index.get(task_id)
-        # Fallback: full scan (used outside batch context)
+        # Fallback: full scan
         modules = self.storage.load_modules()
         for module in modules:
             for topic in module.get('topics', []):
@@ -872,23 +874,19 @@ class ImportExportService:
             if progress_callback:
                 progress_callback(0, 0, "Extracting archive...")
 
-            # 1. Extract only allowed files (BUG-2 fix: filter by ALLOWED_EXTENSIONS)
+            # 1. Extract only allowed files using PackageIO
             archive_manifest = None
-            with zipfile.ZipFile(archive_path, 'r') as zf:
-                # Read manifest before extraction for later saving
-                try:
-                    archive_manifest = json.loads(zf.read("manifest.json"))
-                except (KeyError, json.JSONDecodeError):
-                    pass
+            try:
+                with zipfile.ZipFile(archive_path, 'r') as zf:
+                    archive_manifest = self.package_io.read_json_member(zf, "manifest.json")
+            except Exception:
+                pass
 
-                for member in zf.infolist():
-                    if member.is_dir():
-                        continue
-                    ext = Path(member.filename).suffix.lower()
-                    if ext not in self.ALLOWED_EXTENSIONS:
-                        self.logger.warning(f"Skipping disallowed file in archive: {member.filename}")
-                        continue
-                    zf.extract(member, temp_extract_dir)
+            self.package_io.extract_filtered(
+                archive_path,
+                temp_extract_dir,
+                allowed_extensions=self.ALLOWED_EXTENSIONS,
+            )
                 
             # 2. Process extracted files
             module_names = None
@@ -958,8 +956,6 @@ class ImportExportService:
                     existing_path = self._find_task_in_storage(task_id, index=task_index)
                     
                     if existing_path:
-                        existing_ref = self._extract_task_ref_from_storage_path(existing_path)
-                        
                         if conflict_res == 'skip':
                             skipped_count += 1
                             continue
@@ -974,9 +970,11 @@ class ImportExportService:
                             
                             task_id = new_id
                         elif conflict_res == 'overwrite':
+                            existing_ref = self._extract_task_ref_from_storage_path(existing_path)
                             if existing_ref is None:
                                 raise ValueError(f"Cannot resolve existing task ref for overwrite: {task_id}")
-                            target_module, target_topic, task_id = existing_ref
+                            existing_module_id, existing_topic_id, _ = existing_ref
+                            target_module, target_topic, task_id = existing_module_id, existing_topic_id, task_id
                             backup_payload = self._backup_existing_task_payload(
                                 target_module,
                                 target_topic,
@@ -1110,19 +1108,21 @@ class ImportExportService:
             }
             # Save archive manifest for provenance tracking (MISSING-7)
             if archive_manifest and imported_count > 0:
-                try:
-                    manifests_dir = self.storage.modules_dir.parent / "import_manifests"
-                    manifests_dir.mkdir(exist_ok=True)
-                    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-                    manifest_file = manifests_dir / f"manifest_{ts}.json"
-                    archive_manifest["import_date"] = datetime.now().isoformat()
-                    archive_manifest["imported_count"] = imported_count
-                    manifest_file.write_text(
-                        json.dumps(archive_manifest, indent=2, ensure_ascii=False),
-                        encoding="utf-8"
-                    )
-                except Exception as e:
-                    self.logger.warning(f"Failed to save import manifest: {e}")
+                from routes._context import is_hosted_web_runtime
+                if not is_hosted_web_runtime():
+                    try:
+                        manifests_dir = self.storage.modules_dir.parent / "import_manifests"
+                        manifests_dir.mkdir(exist_ok=True)
+                        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+                        manifest_file = manifests_dir / f"manifest_{ts}.json"
+                        archive_manifest["import_date"] = datetime.now().isoformat()
+                        archive_manifest["imported_count"] = imported_count
+                        manifest_file.write_text(
+                            json.dumps(archive_manifest, indent=2, ensure_ascii=False),
+                            encoding="utf-8"
+                        )
+                    except Exception as e:
+                        self.logger.warning(f"Failed to save import manifest: {e}")
 
             self._log_import(archive_path, result)
             return self._with_service_contract(result)
@@ -1134,6 +1134,9 @@ class ImportExportService:
 
     def _log_import(self, archive_path: str, result: Dict[str, Any]):
         """Append import event to import_journal.json."""
+        from routes._context import is_hosted_web_runtime
+        if is_hosted_web_runtime():
+            return
         try:
             journal_path = self.storage.modules_dir.parent / "import_journal.json"
             entries = []

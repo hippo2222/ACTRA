@@ -47,8 +47,7 @@
     *   **Readiness Signaling** — API проверки готовности и деградации сервисов (`/api/ready`).
     *   **Auth & Email Lifecycle** — авторизация, регистрация, подтверждение почты и сброс паролей. Интеграция с Brevo SMTP и Google OAuth, strict release-gate (`smoke:auth:hosted`) и production-like smoke на публичном домене успешно подтверждены.
     *   **Hosted Infra & Production Launch** — деплой на VPS (Hetzner), reverse proxy (Nginx + Let's Encrypt), резервное копирование и восстановление (Postgres + MinIO) подтверждены на живом окружении `https://actra.site`.
-*   `transitional` (В процессе полировки):
-    *   **Import/Export** — импорт и экспорт архивов заданий/комплексов.
+    *   **Import/Export** — импорт и экспорт архивов заданий/комплексов. Логика полностью унифицирована, устранены локальные filesystem fallbacks в hosted-окружении, безопасность распаковки ZIP-архивов от Zip Slip/Bomb гарантирована с помощью PackageIO и проверена через `smoke:import-export:hosted`.
 *   `AI editor extras` (Намеренно отключено):
     *   AI-генерация заданий, анализ теории и авто-генерация карточек в hosted-версии скрыты под честным placeholder-состоянием «Функционал в разработке».
 
