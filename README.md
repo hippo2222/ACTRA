@@ -2,7 +2,10 @@
 
 # ACTRA
 
-**Эффективное активное обучение**: перевод пассивных учебных материалов в прочную практику через интерактивные сессии, планирование повторений и наглядную аналитику прогресса.
+**Turn Passive Learning into Active Practice.** 
+Convert static theory, reading lists, and lectures into interactive study sessions, smart spaced repetition, and retention analytics.
+
+**English** | [Читать на русском](README.ru.md)
 
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python&logoColor=white)](https://python.org)
 [![Flask](https://img.shields.io/badge/Flask-3.0-green?logo=flask&logoColor=white)](https://flask.palletsprojects.com)
@@ -14,227 +17,204 @@
 
 ---
 
-## О проекте
+## What is ACTRA?
 
-**ACTRA** помогает студентам, преподавателям и специалистам превратить пассивное чтение теории в активное усвоение знаний:
-
-*   **Активное закрепление материала** — прохождение интерактивных тренировок и мгновенная проверка ответов.
-*   **Борьба с забыванием** — интеграция интервального повторения на базе умных карточек (microcards) и календаря здоровья памяти.
-*   **Удобная публикация** — единый каталог, позволяющий авторам делиться комплексами заданий, а читателям — добавлять их в личную библиотеку.
+ACTRA is built for active learners, students, educators, and professionals who want to maximize retention and study efficiency. By bridging theoretical content with interactive retrieval practice, ACTRA prevents passive-reading fatigue and helps you build durable memory.
 
 > [!IMPORTANT]
-> **Hosted-First продукт**: основной контур проекта сейчас полностью ориентирован на hosted web-версию. Desktop/webview и Windows release-сборка в кодовой базе сохранены как legacy, но весь актуальный функционал, биллинг и автодеплой спроектированы под веб-платформу.
+> **Hosted-First Platform**: ACTRA is fully optimized for hosted web environments. The legacy desktop/webview and Windows release targets remain in the codebase for reference, but the core active development, billing integrations, and automated pipelines are tailored for high-performance web deployment.
 
 ---
 
-## Текущее состояние hosted-перехода
+## Core Architecture
 
-Канонические источники детального статуса:
-*   [docs/hosted_web_migration/current_state.md](docs/hosted_web_migration/current_state.md) — сводный статус внедрения.
-*   [docs/hosted_web_migration/hosted_finish_line_matrix.md](docs/hosted_web_migration/hosted_finish_line_matrix.md) — детальная матрица готовности компонентов.
+ACTRA is engineered as a modern, lightweight hosted web application with client-side interactivity and robust backend storage:
 
-### Готовность компонентов:
+```mermaid
+graph TD
+    subgraph Client ["Client Layer (Responsive Frontend)"]
+        UI["Vanilla JS + TailwindCSS 3.4"]
+    end
 
-*   `green` (Полностью готовы):
-    *   **Main & Quick Access** — главный экран, панель быстрого доступа и состояние UI.
-    *   **Statistics & Progress** — отслеживание динамики прохождений и прогресса.
-    *   **Calendar & Memory Health** — планирование занятий и аналитика удержания знаний.
-    *   **Catalog & Library** — публикация материалов, добавление в библиотеку, разграничение прав.
-    *   **Complex Passage** — прохождение комплексов с серверным сохранением состояния сессии.
-    *   **Task & Complex & Theory Editors** — редакторы интерактивных заданий, комплексов и теории.
-    *   **Assets & Media** — загрузка и оптимизация медиафайлов (хранилище S3).
-    *   **Microcards** — заучивание и аналитика ответов по карточкам.
-    *   **Readiness Signaling** — API проверки готовности и деградации сервисов (`/api/ready`).
-    *   **Auth & Email Lifecycle** — авторизация, регистрация, подтверждение почты и сброс паролей. Интеграция с Brevo SMTP и Google OAuth, strict release-gate (`smoke:auth:hosted`) и production-like smoke на публичном домене успешно подтверждены.
-    *   **Hosted Infra & Production Launch** — деплой на VPS (Hetzner), reverse proxy (Nginx + Let's Encrypt), резервное копирование и восстановление (Postgres + MinIO) подтверждены на живом окружении `https://actra.site`.
-    *   **Import/Export** — импорт и экспорт архивов заданий/комплексов. Логика полностью унифицирована, устранены локальные filesystem fallbacks в hosted-окружении, безопасность распаковки ZIP-архивов от Zip Slip/Bomb гарантирована с помощью PackageIO и проверена через `smoke:import-export:hosted`.
-*   `AI editor extras` (Намеренно отключено):
-    *   AI-генерация заданий, анализ теории и авто-генерация карточек в hosted-версии скрыты под честным placeholder-состоянием «Функционал в разработке».
+    subgraph Server ["Server Layer (Python / Flask)"]
+        API["Flask Web API"]
+        Tasks["Task System (Validation & Evaluation)"]
+    end
 
----
+    subgraph Storage ["Storage & Infra Layer"]
+        DB[(PostgreSQL)]
+        S3[(S3-compatible Object Storage)]
+        SMTP[Brevo SMTP / OAuth]
+    end
 
-## Ключевые возможности
-
-### 1. Прохождение тренировок (Practice Loop)
-*   **5 интерактивных типов заданий**:
-    *   *Click* — выбор областей на изображениях;
-    *   *Draw* — рисование контуров и траекторий;
-    *   *Test* — классические тесты с выбором одного или нескольких вариантов;
-    *   *Open Answer* — ввод текстового ответа с гибким оцениванием;
-    *   *Sequence* — сборка логических цепочек и блоков.
-*   **Session Persistence** — автоматическое сохранение прогресса. Можно приостановить тренировку на одном устройстве и продолжить с того же места на другом.
-*   **Связь с теорией** — возможность открыть прикреплённые теоретические материалы прямо во время решения задач.
-
-### 2. Создание и публикация (Authoring & Publishing)
-*   **Редакторы контента** — CRUD-инструменты для создания отдельных заданий (Task Editor), комплексов (Complex Editor) с поддержкой автосохранения и истории изменений, а также статей (Theory Editor).
-*   **Управление доступом** — публикация комплексов в каталоге с гибкими уровнями видимости: *Публично*, *По коду доступа* или *Приватно*.
-*   **Модель связанных библиотек** — добавление публикации из каталога создает ссылку в библиотеке пользователя (linked entry), предотвращая неконтролируемое дублирование и форканье исходного авторского контента.
-
-### 3. Тарифы и ограничения (Free & Premium Limits)
-Для пользователей бесплатного тарифа действуют автоматические лимиты на объем хранимого контента:
-*   *Теории*: до 5 личных статей и до 10 статей в библиотеке суммарно.
-*   *Комплексы*: до 5 личных комплексов и до 10 комплексов в библиотеке суммарно.
-*   *Задания*: до 20 личных заданий.
-*   *Колоды карточек*: до 4 личных колод и до 8 колод в библиотеке суммарно.
-
-При превышении лимитов (или при истечении Premium-подписки) избыточные материалы автоматически переходят в статус **`premium_archived`**: они остаются доступными для чтения и удаления, но блокируются для редактирования, прохождения или публикации до перехода на Premium или удаления лишнего контента.
-
-### 4. Мультиязычность и UX
-*   **Локализация (i18n)** — динамическое переключение интерфейса на русский, английский или украинский языки.
-*   **Умное открытие документов** — лицензионные соглашения и политики конфиденциальности автоматически открываются на текущем языке пользователя.
-*   **Интерактивный онбординг** — встроенные пошаговые туры для быстрого знакомства новых пользователей с интерфейсом (например, при первом открытии Microcards).
-
----
-
-## Архитектура системы
-
-ACTRA спроектирована как современное hosted web-приложение:
-
-```text
-Frontend (HTML5 / Vanilla JS / TailwindCSS)
-        |
-        v  (REST API / JSON)
-Flask Application (`desktop-app/server.py`)
-        |
-        +-- Точка входа для хостинга (`desktop-app/hosted_entrypoint.py`)
-        +-- Сервисы и репозитории бизнес-логики
-        |
-        +-- База данных PostgreSQL (Пользователи, сессии, прогресс, метаданные)
-        +-- Облачное хранилище S3-compatible (Изображения, вложения, медиа)
-        +-- readiness / degraded signaling (Контроль работоспособности)
+    UI -->|REST API / JSON| API
+    API --> Tasks
+    API -->|Auth & Session| DB
+    API -->|Media Assets| S3
+    API -->|Notifications| SMTP
 ```
 
 ---
 
-## Быстрый запуск в Docker (Hosted Stack)
+## Key Capabilities
 
-Основной способ развертывания и проверки hosted-версии приложения — использование Docker Compose стека.
+### 1. The Interactive Practice Loop
+ACTRA goes beyond standard text inputs, offering **5 distinct, kinetic task types** to suit any learning style:
+*   **Spatial Recognition (Click)**: Tap precise hot areas on images to test visual structure, anatomy, or layout memory.
+*   **Trace & Path (Draw)**: Draw shapes, paths, or flows with real-time vector path evaluation.
+*   **Knowledge Checkpoints (Test)**: Select single or multiple correct choices with immediate feedback.
+*   **Recall Recall (Open Answer)**: Type descriptive text responses validated with smart, flexible grading filters.
+*   **Logical Ordering (Sequence)**: Reorder blocks or timeline steps into the correct chronological sequence.
 
-### 1. Подготовка конфигурации
-Скопируйте шаблон переменных окружения:
-```bash
-cp .env.hosted.example .env.hosted
-```
-Замените значения по умолчанию на реальные секреты и настройки. Важные параметры:
-*   `ACTRA_SECRET_KEY` — стойкий случайный ключ для шифрования сессий.
-*   `ACTRA_AUTH_PUBLIC_BASE_URL` — публичный домен приложения (например, `https://actra.site`).
-*   `ACTRA_AUTH_SMTP_*` — данные SMTP-сервера (например, Brevo) для отправки писем подтверждения.
-*   `POSTGRES_PASSWORD` и DSN для подключения к базе данных.
-*   `ACTRA_S3_*` — настройки подключения к S3-совместимому облаку для медиафайлов.
+### 2. Contextual Theory Linkage
+Never study blindly. If a task gets difficult, open the linked reference article in a split pane directly next to your workspace. Study the theory, then immediately apply it to solve the challenge.
 
-### 2. Запуск стека
-Запустите контейнеры в фоновом режиме со сборкой:
-```bash
-docker compose --env-file .env.hosted -f docker-compose.hosted.yml up -d --build
-```
-Доступные адреса после успешного запуска:
-*   Приложение: `http://localhost:8000`
-*   Тестовый SMTP-клиент Mailpit (для локальной отладки писем): `http://localhost:8025`
+### 3. Session Persistence
+Progress is synced server-side in real time. Start a complex quiz on your laptop, pause, and continue on your phone exactly where you left off.
 
-### 3. Остановка стека
-```bash
-docker compose --env-file .env.hosted -f docker-compose.hosted.yml down
-```
+### 4. Direct Authoring Suite
+Construct your learning catalog with built-in editors for tasks, complexes, and reference articles. Features real-time autosave, change histories, and seamless S3 media attachment uploads.
+
+### 5. Smart Sharing (Catalog & Libraries)
+Publish your study collections to a shared directory. Other users can add a *linked entry* to their library—letting them practice your material while preserving the original source without messy forks or duplicate database records.
+
+### 6. Memory Health Calendar (Microcards)
+Beat the forgetting curve using the integrated flashcard system. Track your daily review schedules and monitor memory retention health scores directly from your dashboard.
 
 ---
 
-## Запуск авто-тестов инфраструктуры (Smoke & Acceptance)
+## Free vs. Premium Limits
+Free tier accounts contain generous quotas to get started. Exceeding these limits gracefully pauses editing/publishing while keeping existing content fully readable:
 
-В репозитории подготовлены команды для сквозной проверки работоспособности всех модулей в hosted-окружении:
+*   **Articles (Theory)**: Up to 5 personal articles; up to 10 articles total in the library.
+*   **Practice Sets (Complexes)**: Up to 5 personal complexes; up to 10 complexes total in the library.
+*   **Interactive Tasks**: Up to 20 personal tasks.
+*   **Card Decks (Microcards)**: Up to 4 personal decks; up to 8 decks total in the library.
+
+*If you exceed these limits or your Premium subscription expires, excess content enters a **`premium_archived`** status. You can view, read, and delete archived materials, but editing, publishing, or active practice is suspended until you clear the excess or upgrade.*
+
+---
+
+## Developer Guide & Deployment
+
+<details>
+<summary><b>1. Running with Docker Compose (Recommended)</b></summary>
+<p></p>
+
+The most robust way to run the entire hosted stack locally:
+
+1. **Configure Environment Variables**:
+   Copy the template and replace placeholders with your secrets (such as OAuth IDs, S3 credentials, SMTP servers):
+   ```bash
+   cp .env.hosted.example .env.hosted
+   ```
+2. **Build and Spin Up the Stack**:
+   ```bash
+   docker compose --env-file .env.hosted -f docker-compose.hosted.yml up -d --build
+   ```
+3. **Explore**:
+   - Web App: `http://localhost:8000`
+   - Mailpit (Local SMTP capture tool): `http://localhost:8025`
+4. **Shutdown**:
+   ```bash
+   docker compose --env-file .env.hosted -f docker-compose.hosted.yml down
+   ```
+
+</details>
+
+<details>
+<summary><b>2. Local Development Setup (Without Docker)</b></summary>
+<p></p>
+
+For fast client-side debugging or quick code modifications:
+
+1. **Python Virtual Environment**:
+   ```bash
+   python -m venv .venv
+   # Windows:
+   .venv\Scripts\activate
+   # macOS/Linux:
+   source .venv/bin/activate
+   ```
+2. **Install Dependencies**:
+   ```bash
+   pip install -e ".[dev]"
+   npm ci
+   ```
+3. **Asset Compilation**:
+   ```bash
+   npm run build:css
+   ```
+
+</details>
+
+<details>
+<summary><b>3. Automated Testing Suite</b></summary>
+<p></p>
+
+Ensure codebase reliability across all modules:
 
 ```bash
-# Проверка интеграции компонентов и готовности к запуску
+# Run backend Python tests (pytest)
+pytest
+
+# Run frontend Vanilla JS/Tailwind tests (Vitest)
+npm test
+
+# Audit Tailwind theme custom variable definitions
+npm run validate:themes
+
+# Run static checkers and secret detectors
+python -m pre_commit run --all-files
+```
+
+### Infrastructure & Smoke Tests
+ACTRA includes a series of smoke and acceptance suites to confirm hosted compatibility:
+```bash
+# Verify component contracts and launch readiness
 npm run smoke:launch-contract:hosted
 
-# Запуск полного Docker-сценария локальной приемки (включая регистрацию и прохождение)
+# Run the complete user registration & practice loop acceptance test
 npm run smoke:launch-acceptance:hosted
 
-# Точечные проверки отдельных модулей
-npm run smoke:main-quick-access:hosted
-npm run smoke:statistics:hosted
-npm run smoke:calendar:hosted
+# Test specific modules individually
 npm run smoke:complex-passage:hosted
-npm run smoke:task-editor:hosted
-npm run smoke:complex-editor:hosted
-npm run smoke:theory-editor:hosted
 npm run smoke:catalog-library:hosted
-npm run smoke:linked-theory-open:hosted
-npm run smoke:assets-media:hosted
 npm run smoke:microcards:hosted
-npm run smoke:ai-placeholder:hosted
 npm run smoke:import-export:hosted
-npm run smoke:readiness:hosted
 ```
+
+</details>
 
 ---
 
-## Локальная разработка без Docker
+## Tech Stack Overview
 
-Используется для быстрой разработки и отладки отдельных компонентов интерфейса или логики.
-
-### 1. Настройка окружения
-```bash
-# Создание и активация виртуального окружения Python
-python -m venv .venv
-.venv\Scripts\activate  # Для Windows
-source .venv/bin/activate  # Для Linux/macOS
-
-# Установка зависимостей проекта в режиме разработки
-pip install -e ".[dev]"
-
-# Установка зависимостей фронтенда
-npm ci
-
-# Сборка Tailwind CSS стилей
-npm run build:css
-```
-
-### 2. Запуск базовых тестов
-```bash
-pytest                                  # Тесты Python (бэкенд)
-npm test                                # Тесты Vitest (фронтенд)
-npm run validate:themes                 # Проверка валидности CSS-переменных тем
-python -m pre_commit run --all-files   # Статический анализ кода и проверка секретов
-```
-
----
-
-## Технологический стек
-
-| Слой | Используемые технологии |
+| Layer | Technologies Used |
 | --- | --- |
 | **Backend** | Python 3.10+, Flask 3.x, Pydantic 2.x, PyMuPDF |
-| **Hosted Runtime** | Waitress WSGI, Docker, Docker Compose |
-| **Frontend** | Vanilla JS, TailwindCSS 3.4, PostCSS, JSDom |
-| **База данных** | PostgreSQL |
-| **Файловое хранилище** | S3-compatible Object Storage (MinIO / AWS S3) |
-| **Тестирование** | pytest, vitest, Playwright |
-| **CI/CD** | GitHub Actions (деплой по SSH при пуше в `online-hosting`) |
-| **Безопасность** | pre-commit, gitleaks, bcrypt |
+| **Server Engine** | Waitress WSGI |
+| **Frontend** | HTML5, Vanilla JavaScript, TailwindCSS 3.4, PostCSS, JSDom |
+| **Database** | PostgreSQL |
+| **File Server** | S3-compatible Object Storage (MinIO / AWS S3) |
+| **Testing Core** | pytest, Vitest, Playwright |
+| **CI / CD** | GitHub Actions (automated deployments via SSH on push to `online-hosting`) |
+| **Security Audit** | pre-commit, gitleaks, bcrypt |
 
 ---
 
-## Структура репозитория
+## Repository Structure
 
-*   `desktop-app/` — Flask-приложение: API-маршруты, сервисы интеграции, модели баз данных.
-*   `frontend/` — клиентская часть: HTML-страницы, JS-модули интерфейса, стили и шрифты.
-*   `task_system/` — ядро обработки заданий, валидаторы схем, парсеры и логика оценки ответов.
-*   `common/` — вспомогательные утилиты, конфигурации и общие хелперы.
-*   `docs/hosted_web_migration/` — подробная проектная документация по этапам миграции в web.
-*   `tests/` — тесты интеграции, регрессий фронтенда и бэкенда.
-*   `scripts/` — скрипты сборки релизов, аудита контрастности интерфейса и проверки базы данных.
-*   `.github/workflows/` — автоматизированные сценарии CI и релизные гейты.
-
----
-
-## Выпуск релизов и совместимость
-
-Сборка и автоматическая проверка hosted-релизов (теги `v2.*`) осуществляются через GitHub Actions workflow [hosted-release-gate.yml](.github/workflows/hosted-release-gate.yml).
-
-Исторические теги `v1.0.0` и `v1.1.0` относятся к legacy-линейке Windows Desktop приложения. Переход к hosted-модели подробно описан в документе [docs/hosted_web_migration/hosted_release_v2.md](docs/hosted_web_migration/hosted_release_v2.md).
+*   `desktop-app/` - Core Flask backend (API handlers, database models, S3 integration, authentication flows).
+*   `frontend/` - Responsive client files (templates, UI modules, typography, stylesheets).
+*   `task_system/` - Execution engine for validation, input parsing, and scoring algorithms.
+*   `common/` - shared constants, configuration parsers, and utilities.
+*   `docs/` - Comprehensive migration docs, database schemas, and architectural outlines.
+*   `tests/` - Acceptance, integration, and regression suites.
+*   `scripts/` - Automated audits (contrast checks, schema verifications).
 
 ---
 
-## Лицензия
+## License
 
-Распространяется под лицензией [Apache License 2.0](LICENSE).
+This project is licensed under the Apache License 2.0. See [LICENSE](LICENSE) for details.
