@@ -30,8 +30,8 @@ jobs:
             if [ "$LOCAL" = "$REMOTE" ]; then
               echo "==> Already up-to-date, but rebuilding..."
             else
-              echo "==> Pulling new changes..."
-              git pull --ff-only origin online-hosting
+              echo "==> Resetting to new changes..."
+              git reset --hard origin/online-hosting
             fi
 
             echo "==> Rebuilding containers..."
