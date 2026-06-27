@@ -67,7 +67,7 @@ ACTRA goes beyond standard text inputs, offering **5 distinct, kinetic task type
 *   **Logical Ordering (Sequence)**: Drag-and-drop chronological sorting to test historical events, code execution lines, or operational procedures.
 
 ### 2. Contextual Theory Linkage (Theory Bridge)
-ACTRA establishes a clear pedagogical bridge between study sets (complexes) and reference articles. During practice, a persistent notice banner reminds you of the linked theory context. Once the session is completed, a direct "To Theory" button appears on the final results screen, allowing you to instantly jump back to the corresponding article in the Theory Center or editor for deep revision.
+ACTRA establishes a clear pedagogical bridge between study sets (complexes) and reference articles. Once the practice session is completed, a direct "To Theory" button appears on the final results screen, allowing you to instantly jump back to the corresponding article in the Theory Center or editor for deep revision and mistake analysis.
 
 ### 3. Real-Time Session Persistence
 Progress is synced server-side at each task boundary in real time. Start a complex quiz on your laptop, pause, and continue on your mobile device exactly where you left off, without losing your state.
