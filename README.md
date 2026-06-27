@@ -58,16 +58,17 @@ graph TD
 ## Platform Capabilities & Technical Highlights
 
 ### 1. The Interactive Practice Loop & Dynamic Evaluation Engines
-ACTRA goes beyond standard text inputs, offering **5 distinct, kinetic task types** powered by custom evaluation algorithms on the backend:
+ACTRA goes beyond standard text inputs, offering **6 distinct, kinetic task types** powered by custom evaluation algorithms on the backend:
 
 *   **Spatial Recognition (Click)**: Tap precise hotspot zones on images. The system uses coordinate-matching and point-in-polygon containment checks to verify spatial recall of anatomical structures, maps, or technical schematics.
 *   **Trace & Path (Draw)**: Draw vectors, paths, or custom flows. The engine evaluates user coordinate inputs against reference vector paths in real time on an SVG canvas.
-*   **Knowledge Checkpoints (Test)**: Traditional single or multi-select formats featuring immediate correction feedback and pedagogical explanation routing.
+*   **Knowledge Checkpoints (Test)**: Standard single or multiple-choice formats supporting multiple correct answers, layout images embedded in the question itself (up to 3 images), and images for individual choice options. Features immediate correction feedback and pedagogical explanation routing.
+*   **Error Detection (Mistakes)**: Tap specific words or tokens in a text block containing deliberate grammatical, semantic, or factual errors. The backend matches user selection indices against a correct error index key to evaluate true vs. false positives.
 *   **Recall Recall (Open Answer)**: Type text-based answers validated by a smart, rules-based fuzzy matching engine. It ignores casing, minor punctuation, or layout typos (translating keyboard layouts, e.g. qwerty to cyrillic) while ensuring key concept term containment and Levenshtein edit distance typo tolerance.
 *   **Logical Ordering (Sequence)**: Drag-and-drop chronological sorting to test historical events, code execution lines, or operational procedures.
 
 ### 2. Contextual Theory Linkage (Theory Bridge)
-ACTRA establishes a clear pedagogical bridge between study sets (complexes) and reference articles. Once the practice session is completed, a direct "To Theory" button appears on the final results screen, allowing you to instantly jump back to the corresponding article in the Theory Center or editor for deep revision and mistake analysis.
+ACTRA establishes a clear pedagogical bridge between study sets (complexes) and reference articles. Before starting any complex, you can open and read its linked theory article directly from the Complexes list screen with a single click—providing a fast, convenient way to review key concepts before starting active practice.
 
 ### 3. Real-Time Session Persistence
 Progress is synced server-side at each task boundary in real time. Start a complex quiz on your laptop, pause, and continue on your mobile device exactly where you left off, without losing your state.
@@ -100,7 +101,7 @@ Construct your learning catalog with custom visual tools:
 Publish study collections with granular visibility levels (Public Catalog, Access Code, or Private). Other users subscribe to a collection by adding a *linked entry* to their personal library. This prevents database record duplication, allows the author to distribute updates centrally, and keeps the catalog organized.
 
 ### 7. Spaced Repetition Engine (Microcards)
-Beat the forgetting curve using the integrated flashcard system. Daily reviews are dynamically scheduled based on user response histories, while the memory health dashboard calculates retention scores and charts review consistency.
+Beat the forgetting curve using the integrated flashcard system. Daily reviews are dynamically scheduled based on user response histories, while the memory health dashboard calculates retention scores and charts review consistency. It supports bulk importing flashcards from text files or external analyses. To comply with security policies (CSP), hot-linking third-party images is blocked; however, you can enrich cards with openly-licensed illustrations fetched safely via an SSRF-hardened server proxy from **Wikimedia Commons** or **Openverse** (Flickr CC) with automatic attribution details.
 
 ---
 
