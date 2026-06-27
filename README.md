@@ -5,7 +5,7 @@
 **Turn Passive Learning into Active Practice.** 
 Convert static theory, reading lists, and lectures into interactive study sessions, smart spaced repetition, and retention analytics.
 
-**English** | [Читать на русском](README.ru.md)
+**English** | [Читать на русском](README.ru.md) | [Читати українською](README.uk.md)
 
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python&logoColor=white)](https://python.org)
 [![Flask](https://img.shields.io/badge/Flask-3.0-green?logo=flask&logoColor=white)](https://flask.palletsprojects.com)
@@ -63,25 +63,43 @@ ACTRA goes beyond standard text inputs, offering **5 distinct, kinetic task type
 *   **Spatial Recognition (Click)**: Tap precise hotspot zones on images. The system uses coordinate-matching and point-in-polygon containment checks to verify spatial recall of anatomical structures, maps, or technical schematics.
 *   **Trace & Path (Draw)**: Draw vectors, paths, or custom flows. The engine evaluates user coordinate inputs against reference vector paths in real time on an SVG canvas.
 *   **Knowledge Checkpoints (Test)**: Traditional single or multi-select formats featuring immediate correction feedback and pedagogical explanation routing.
-*   **Recall Recall (Open Answer)**: Type text-based answers validated by a smart, rules-based fuzzy matching engine. It ignores casing, minor punctuation, or layout typos while ensuring key concept term containment.
+*   **Recall Recall (Open Answer)**: Type text-based answers validated by a smart, rules-based fuzzy matching engine. It ignores casing, minor punctuation, or layout typos (translating keyboard layouts, e.g. qwerty to cyrillic) while ensuring key concept term containment and Levenshtein edit distance typo tolerance.
 *   **Logical Ordering (Sequence)**: Drag-and-drop chronological sorting to test historical events, code execution lines, or operational procedures.
 
-### 2. Context-Aware Theory Split-Pane
-Study is more effective when references are immediately available. If a task becomes too difficult, users can open the linked reference article in a split pane directly next to their workspace. Read the theory, study the explanation, and immediately apply it to solve the challenge in the same tab.
+### 2. Contextual Theory Linkage (Theory Bridge)
+ACTRA establishes a clear pedagogical bridge between study sets (complexes) and reference articles. During practice, a persistent notice banner reminds you of the linked theory context. Once the session is completed, a direct "To Theory" button appears on the final results screen, allowing you to instantly jump back to the corresponding article in the Theory Center or editor for deep revision.
 
-### 3. Session Persistence
+### 3. Real-Time Session Persistence
 Progress is synced server-side at each task boundary in real time. Start a complex quiz on your laptop, pause, and continue on your mobile device exactly where you left off, without losing your state.
 
-### 4. The Visual Authoring Suite (CRUD Editors)
+### 4. Dynamic Difficulty Levels
+Tasks dynamically adjust their content and input requirements based on 3 pedagogical difficulty levels managed by the `DifficultyManager`:
+*   **Spatial Recognition (Click)**:
+    *   *Level 1*: Direct click-only matching of target hotspots.
+    *   *Level 2*: Click and label matching (user must tap the hotspot and type the exact name).
+    *   *Level 3*: Draw and label matching (user must draw the boundary outline using coordinate tracing and type its label).
+*   **Trace & Path (Draw)**:
+    *   *Level 1*: Single outline path drawing with tolerance checking.
+    *   *Level 2*: Drawing plus text labeling of the structure.
+    *   *Level 3*: Drawing multiple connected structures and explaining their relational linkage.
+*   **Knowledge Checkpoints (Test)**:
+    *   *Level 1*: Standard single or multiple-choice options.
+    *   *Level 2+*: Options are hidden, converting the task into an open question requiring textual answer entry.
+*   **Logical Ordering (Sequence)**:
+    *   *Level 1*: Ordered sorting with helpful element level and block labels displayed.
+    *   *Level 2*: Level labels are hidden, requiring text entry of level names while block labels are visible.
+    *   *Level 3*: All labels are hidden, requiring text entry of both level and block names.
+
+### 5. The Visual Authoring Suite (CRUD Editors)
 Construct your learning catalog with custom visual tools:
 *   **Task Editor**: Visual polygon-tracing controls for Click tasks, reference coordinate builders, and media attachments.
 *   **Complex Editor**: Drag-and-drop ordering tools to organize tasks into structured modules, map related theory links, and manage publication settings.
 *   **Theory Article Editor**: Rich text article creation with automatic background autosaving, draft history logs, and direct S3 cloud storage uploads for attachments.
 
-### 5. Smart Sharing & Central Library Sync
+### 6. Smart Sharing & Central Library Sync
 Publish study collections with granular visibility levels (Public Catalog, Access Code, or Private). Other users subscribe to a collection by adding a *linked entry* to their personal library. This prevents database record duplication, allows the author to distribute updates centrally, and keeps the catalog organized.
 
-### 6. Spaced Repetition Engine (Microcards)
+### 7. Spaced Repetition Engine (Microcards)
 Beat the forgetting curve using the integrated flashcard system. Daily reviews are dynamically scheduled based on user response histories, while the memory health dashboard calculates retention scores and charts review consistency.
 
 ---
