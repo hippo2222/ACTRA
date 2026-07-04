@@ -1721,7 +1721,11 @@
     function navigateWithoutPrompt(url) {
         if (!url) return;
         allowNavigationWithoutPrompt();
-        window.location.href = url;
+        if (typeof window.navigateWithTransition === 'function') {
+            window.navigateWithTransition(url);
+        } else {
+            window.location.href = url;
+        }
     }
 
     return {

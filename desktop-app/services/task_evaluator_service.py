@@ -4368,6 +4368,7 @@ class TaskEvaluatorService:
         image_w = user_drawing.get('image_width') or user_drawing.get('imageWidth')
         image_h = user_drawing.get('image_height') or user_drawing.get('imageHeight')
         display_w = user_drawing.get('display_width') or user_drawing.get('displayWidth')
+        display_h = user_drawing.get('display_height') or user_drawing.get('displayHeight')
         ratios: List[float] = []
         try:
             if image_w is not None and display_w is not None:
