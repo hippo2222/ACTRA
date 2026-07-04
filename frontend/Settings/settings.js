@@ -1024,13 +1024,11 @@
                 : wt('settings.premium_active', 'Premium активен'))
             : 'Free';
 
-        const periodBtnTitle = wt('settings.premium_action_status', 'Оплата Premium скоро появится здесь.');
+        const periodBtnTitle = wt('settings.premium_action_btn_title', 'Оформить Premium на {n}');
         const periodButtons = periods.map((days) => `
             <button type="button"
                 data-premium-period="${Number(days)}"
-                class="btn-secondary inline-flex cursor-default items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold opacity-80"
-                disabled aria-disabled="true"
-                title="${escapeHtml(periodBtnTitle)}">
+                class="btn-secondary inline-flex cursor-pointer items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all hover:border-primary hover:bg-bg-hover">
                 <span class="material-symbols-outlined text-[18px]">workspace_premium</span>
                 <span>${escapeHtml(getPremiumPeriodLabel(days))}</span>
                 ${getPremiumPeriodPrice(days) ? `<span class="text-text-secondary">${escapeHtml(getPremiumPeriodPrice(days))}</span>` : ''}
@@ -1045,14 +1043,8 @@
                 ? wt('settings.premium_active_desc_until', 'Доступ действует до {date}.').replace('{date}', escapeHtml(formatPremiumDate(premiumExpiresAt)))
                 : wt('settings.premium_active_desc_no_date', 'Доступ действует без даты окончания.'))
             : wt('settings.premium_inactive_desc', 'Полные страницы Календаря и Статистики доступны после активации Premium. Виджеты на главной остаются доступны всем.');
-        const billingNotice = wt('settings.premium_pay_notice', 'Механизм оплаты Premium сейчас подключается. Тарифы уже можно посмотреть, но покупка временно недоступна: безопасный checkout появится здесь после завершения интеграции.');
 
         body.innerHTML = `
-            ${!isPremium ? `
-                <div class="mb-4 rounded-2xl border border-info-light bg-info-lighter/60 p-4 text-sm leading-6 text-text-main">
-                    ${escapeHtml(billingNotice)}
-                </div>
-            ` : ''}
             <div class="grid gap-4 lg:grid-cols-[1fr,auto] lg:items-center">
                 <div>
                     <p class="text-base font-semibold text-text-main">
@@ -1064,7 +1056,15 @@
                 </div>
                 <div class="flex flex-wrap gap-3">${periodButtons}</div>
             </div>
+            <div id="settings-premium-action-status" class="mt-3 text-sm"></div>
         `;
+
+        body.querySelectorAll('[data-premium-period]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const days = Number(btn.getAttribute('data-premium-period') || 30);
+                void createPremiumOrder(days);
+            });
+        });
     }
 
     async function loadBillingStatus() {
@@ -1085,13 +1085,34 @@
         }
     }
 
+    // Event listener for checkout completion
+    if (typeof window !== 'undefined' && !window._actraPaddleListenerBound) {
+        window._actraPaddleListenerBound = true;
+        window.addEventListener('actra:paddle:checkout_completed', () => {
+            void loadBillingStatus();
+        });
+    }
+
     async function createPremiumOrder(periodDays) {
         if (_isPremiumOrderSaving) return;
         _isPremiumOrderSaving = true;
-        renderPremiumSection();
-        setInlineStatus('settings-premium-action-status', wt('settings.premium_action_status', 'Оплата Premium скоро появится здесь.'), 'neutral');
-        _isPremiumOrderSaving = false;
-        renderPremiumSection();
+        setInlineStatus('settings-premium-action-status', wt('settings.premium_checkout_opening', 'Открываем форму оплаты...'), 'neutral');
+
+        try {
+            if (window.PremiumPromo && typeof window.PremiumPromo.triggerPaddleCheckout === 'function') {
+                const statusEl = document.getElementById('settings-premium-action-status');
+                await window.PremiumPromo.triggerPaddleCheckout(periodDays, statusEl);
+            } else if (window.PremiumPromo && typeof window.PremiumPromo.open === 'function') {
+                window.PremiumPromo.open({ defaultDays: periodDays });
+            } else {
+                setInlineStatus('settings-premium-action-status', wt('settings.premium_promo_unavailable', 'Модуль оплаты временно недоступен.'), 'error');
+            }
+        } catch (err) {
+            console.error('[Settings] Error launching Paddle Checkout:', err);
+            setInlineStatus('settings-premium-action-status', wt('settings.premium_checkout_failed', 'Не удалось открыть форму оплаты.'), 'error');
+        } finally {
+            _isPremiumOrderSaving = false;
+        }
     }
 
     function renderAdminUsersList() {

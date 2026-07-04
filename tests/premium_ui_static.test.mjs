@@ -15,8 +15,8 @@ describe('premium UI wiring', () => {
     expect(html).toContain('settings-premium-body');
     expect(js).toContain('/api/billing/status');
     expect(js).not.toContain('/api/billing/orders');
-    expect(js).toContain('checkout');
-    expect(js).toContain('disabled aria-disabled="true"');
+    expect(js).toContain('createPremiumOrder');
+    expect(js).toContain('triggerPaddleCheckout');
   });
 
   it('renders plan badges in global header and profile menu', () => {

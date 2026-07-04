@@ -547,7 +547,14 @@
             if (!window.Paddle) throw new Error('Paddle SDK not available');
 
             window.Paddle.Environment.set(config.environment || 'production');
-            window.Paddle.Initialize({ token: config.client_token });
+            window.Paddle.Initialize({
+                token: config.client_token,
+                eventCallback: function(data) {
+                    if (data && (data.name === 'checkout.completed' || data.name === 'checkout.payment.complete')) {
+                        window.dispatchEvent(new CustomEvent('actra:paddle:checkout_completed', { detail: data }));
+                    }
+                }
+            });
 
             const priceId = config.prices ? config.prices[`${days}d`] : null;
             if (!priceId) {
@@ -736,6 +743,7 @@
         formatPeriod,
         formatPeriodWithPrice,
         navigateToSettings,
+        triggerPaddleCheckout,
     };
 
     bindTriggers();
