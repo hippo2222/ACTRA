@@ -555,7 +555,7 @@
                 return;
             }
 
-            setStatus(modalNode, t('premium_promo_checkout_opened', 'Checkout window opened.'), 'success');
+            setStatus(modalNode, '', 'neutral');
 
             window.Paddle.Checkout.open({
                 items: [{ priceId: priceId, quantity: 1 }],
