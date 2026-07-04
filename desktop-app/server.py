@@ -1968,7 +1968,7 @@ def _start_timing():
 def _add_security_headers(response):
     response.headers.setdefault(
         "Content-Security-Policy",
-        "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.paddle.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://upload.wikimedia.org https://*.paddle.com; connect-src 'self' https://*.paddle.com; frame-src 'self' https://*.paddle.com; frame-ancestors 'self'",
+        "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.paddle.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://upload.wikimedia.org https://*.paddle.com https://*.paddle.io https://*.amazonaws.com; connect-src 'self' https://*.paddle.com; frame-src 'self' https://*.paddle.com; frame-ancestors 'self'",
     )
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
