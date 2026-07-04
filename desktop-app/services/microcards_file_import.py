@@ -133,6 +133,11 @@ def parse_apkg(data: bytes) -> List[Dict[str, Any]]:
             fh.write(db_bytes)
         con = sqlite3.connect(tmp_path)
         try:
+            con.execute("PRAGMA journal_mode=WAL;")
+            con.execute("PRAGMA busy_timeout=5000;")
+        except Exception:
+            pass
+        try:
             cur = con.cursor()
             models: Dict[str, Any] = {}
             try:

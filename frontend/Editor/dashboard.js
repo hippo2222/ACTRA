@@ -4493,6 +4493,7 @@ class EditorDashboard {
                 theoryId: normalizedTheoryId,
                 theoryTitle: String(theoryRow?.title || normalizedTheoryId).trim() || normalizedTheoryId,
                 complexId,
+                complexTitle: String(candidate?.title || candidate?.name || '').trim() || complexId,
                 origin: 'editor_theory_hub',
                 returnUrl: this.buildTheoryEditorUrl(normalizedTheoryId, {
                     returnUrl: '/editor',

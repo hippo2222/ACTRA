@@ -18,6 +18,7 @@
   function shouldRedirectToFinalResults(nextStatus, nextResponse) {
     if (nextStatus === 410) return true;
     if (!nextResponse || typeof nextResponse !== "object") return false;
+    if (nextResponse.error === "iteration_completed" || nextResponse.has_next_iteration) return false;
     return nextResponse.error === "session_completed";
   }
 

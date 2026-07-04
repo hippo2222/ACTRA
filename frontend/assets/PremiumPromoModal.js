@@ -464,16 +464,107 @@
         `).join('');
     }
 
+    let _paddleConfigCache = null;
+
+    async function fetchPaddleConfig() {
+        if (_paddleConfigCache) return _paddleConfigCache;
+        try {
+            const res = await fetch('/api/billing/paddle/config', { credentials: 'same-origin' });
+            if (!res.ok) return null;
+            const data = await res.json();
+            if (data && data.ok) {
+                _paddleConfigCache = data;
+                return data;
+            }
+        } catch (e) {
+            console.warn('[Paddle] Failed to fetch config:', e);
+        }
+        return null;
+    }
+
+    function loadPaddleScript(environment = 'production') {
+        return new Promise((resolve, reject) => {
+            if (window.Paddle) return resolve(window.Paddle);
+            const existing = document.getElementById('paddle-v2-script');
+            if (existing) {
+                existing.addEventListener('load', () => resolve(window.Paddle));
+                existing.addEventListener('error', reject);
+                return;
+            }
+            const script = document.createElement('script');
+            script.id = 'paddle-v2-script';
+            script.src = 'https://cdn.paddle.com/paddle/v2/paddle.js';
+            script.onload = () => {
+                if (window.Paddle) resolve(window.Paddle);
+                else reject(new Error('Paddle SDK missing after script load'));
+            };
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+    }
+
+    async function triggerPaddleCheckout(days, modalNode) {
+        setStatus(modalNode, t('premium_promo_payment_pending', 'Preparing Paddle Checkout...'), 'neutral');
+        const config = await fetchPaddleConfig();
+        if (!config || !config.client_token) {
+            setStatus(modalNode, t('premium_promo_payment_error', 'Failed to load billing configuration.'), 'error');
+            return;
+        }
+
+        try {
+            await loadPaddleScript(config.environment);
+            if (!window.Paddle) throw new Error('Paddle SDK not available');
+
+            window.Paddle.Environment.set(config.environment || 'production');
+            window.Paddle.Initialize({ token: config.client_token });
+
+            const priceId = config.prices ? config.prices[`${days}d`] : null;
+            if (!priceId) {
+                setStatus(modalNode, t('premium_promo_price_missing', 'Price configuration missing for selected period.'), 'error');
+                return;
+            }
+
+            // Get current user ID if available
+            let userId = '';
+            try {
+                const statusRes = await fetch('/api/billing/status', { credentials: 'same-origin' });
+                if (statusRes.ok) {
+                    const statusData = await statusRes.json();
+                    if (statusData && statusData.user) {
+                        userId = statusData.user.user_id || statusData.user.id || '';
+                    }
+                }
+            } catch (err) {
+                // Ignore
+            }
+
+            setStatus(modalNode, t('premium_promo_checkout_opened', 'Checkout window opened.'), 'success');
+
+            window.Paddle.Checkout.open({
+                items: [{ priceId: priceId, quantity: 1 }],
+                customData: userId ? { user_id: userId } : {},
+                settings: {
+                    displayMode: 'overlay',
+                    theme: 'dark',
+                    locale: window.i18n && window.i18n.locale === 'ru' ? 'ru' : 'en',
+                },
+            });
+        } catch (err) {
+            console.error('[Paddle Checkout] Error opening checkout:', err);
+            setStatus(modalNode, t('premium_promo_checkout_failed', 'Could not launch Paddle checkout.'), 'error');
+        }
+    }
+
     function renderOffers() {
         return getPeriods().map((offer) => `
-            <section class="premium-promo-modal__offer${offer.featured ? ' premium-promo-modal__offer--featured' : ''}">
+            <button type="button" class="premium-promo-modal__offer${offer.featured ? ' premium-promo-modal__offer--featured' : ''}" data-premium-promo-buy="${offer.days}">
                 ${offer.featured ? `<span class="premium-promo-modal__offer-badge">${escapeHtml(t('premium_promo_offer_badge', 'Best value'))}</span>` : ''}
                 <div>
                     <p class="premium-promo-modal__offer-title">${escapeHtml(offer.label)}</p>
                     <p class="premium-promo-modal__offer-price">${escapeHtml(offer.price)}</p>
                 </div>
                 <p class="premium-promo-modal__offer-note">${escapeHtml(offer.note)}</p>
-            </section>
+            </button>
         `).join('');
     }
 
@@ -529,6 +620,12 @@
         modal.addEventListener('click', (event) => {
             if (event.target === modal || event.target.closest('[data-premium-promo-close]')) {
                 close();
+                return;
+            }
+            const buyBtn = event.target.closest('[data-premium-promo-buy]');
+            if (buyBtn) {
+                const days = Number(buyBtn.dataset.premiumPromoBuy || 30);
+                triggerPaddleCheckout(days, modal);
                 return;
             }
             const settings = event.target.closest('[data-premium-promo-settings]');

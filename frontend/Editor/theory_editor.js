@@ -2076,7 +2076,7 @@ async function openTheoryPublicationDialog() {
     );
 
     const modal = document.createElement("div");
-    modal.className = "fixed inset-0 z-[9999] overflow-y-auto bg-scrim p-4 sm:p-6";
+    modal.className = "fixed inset-0 z-[9999] overflow-x-hidden overflow-y-auto bg-scrim p-4 sm:p-6";
     modal.innerHTML = `
         <div class="mx-auto flex min-h-full w-full max-w-4xl items-center justify-center">
             <div class="flex max-h-[92vh] w-full flex-col overflow-hidden rounded-[28px] border border-border-subtle bg-surface-1 shadow-xl">

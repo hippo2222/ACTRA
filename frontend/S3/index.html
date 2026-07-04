@@ -234,7 +234,7 @@
       const url = new URL(window.location.href);
       const segments = url.pathname.split("/").filter(Boolean);
       const len = segments.length;
-      if (len >= 4 && segments[len - 3] === "session" && segments[len - 1] === "results") {
+      if (len >= 3 && segments[len - 3] === "session" && segments[len - 1] === "results") {
         return segments[len - 2];
       }
       return url.searchParams.get("sessionId");
@@ -318,7 +318,22 @@
 
       const label = theoryBtn.querySelector(".s3-btn-label");
       const theoryLabel = String(theoryBridge.theoryTitle || theoryBridge.theoryId || "").trim() || theoryBridge.theoryId;
-      if (label) label.textContent = `${wt('s3.btn_to_theory_prefix', 'К теории')} ${theoryLabel}`;
+      if (label) {
+        let prefix = wt('s3.btn_to_theory_prefix', 'К теории');
+        let displayLabel = theoryLabel;
+        if (theoryLabel.toLowerCase().startsWith('теория ')) {
+          const rawDisplay = theoryLabel.slice(7).trim();
+          displayLabel = rawDisplay.charAt(0).toUpperCase() + rawDisplay.slice(1);
+          prefix = `${prefix}:`;
+        } else if (theoryLabel.toLowerCase().startsWith('теория')) {
+          const rawDisplay = theoryLabel.slice(6).trim();
+          displayLabel = rawDisplay.charAt(0).toUpperCase() + rawDisplay.slice(1);
+          prefix = `${prefix}:`;
+        } else {
+          prefix = `${prefix}:`;
+        }
+        label.textContent = `${prefix} «${displayLabel}»`;
+      }
     }
 
     async function hydrateTheoryBridgeFromResults(summary) {

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Session Controls Module
  * Handles session flow actions: submit, next, pause, resume, cancel.
  */
@@ -662,14 +662,14 @@
     // -------------------------------------------------------------------
     // Helper: maybeRedirectToResults (Internal)
     // -------------------------------------------------------------------
-    async function maybeRedirectToResults() {
+    async function maybeRedirectToResults(targetIteration) {
         if (!SessionState.sessionId) return false;
 
         try {
             const currentIteration =
-                (SessionState.currentTask && SessionState.currentTask.iteration) || 1;
+                targetIteration || (SessionState.currentTask && SessionState.currentTask.iteration) || 1;
 
-            const { status, data } = await SessionAPI.getIterationResults(SessionState.sessionId);
+            const { status, data } = await SessionAPI.getIterationResults(SessionState.sessionId, currentIteration);
             if (!data || !data.ok || !data.results) {
                 return false;
             }
@@ -1409,14 +1409,14 @@
                 return;
             }
 
-            const nextTask = response.task;
+            const nextTask = response.task || response;
 
             // Iteration end check
             if (prevTask && nextTask) {
                 const prevIter = typeof prevTask.iteration === "number" ? prevTask.iteration : null;
                 const nextIter = typeof nextTask.iteration === "number" ? nextTask.iteration : null;
                 if (prevIter !== null && nextIter !== null && nextIter > prevIter) {
-                    const redirected = await maybeRedirectToResults();
+                    const redirected = await maybeRedirectToResults(prevIter);
                     if (redirected) return;
                 }
             }
@@ -1721,7 +1721,7 @@
     function navigateWithoutPrompt(url) {
         if (!url) return;
         allowNavigationWithoutPrompt();
-        window.navigateWithTransition(url);
+        window.location.href = url;
     }
 
     return {

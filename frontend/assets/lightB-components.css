@@ -604,7 +604,7 @@ textarea:-webkit-autofill::selection {
 .status-cluster[data-tone="warning"] {
   background: var(--color-component-pill-warning-bg);
   border-color: var(--color-component-pill-warning-border);
-  color: var(--color-component-pill-warning-fg);
+  color: var(--color-warning-darker);
 }
 
 .status-cluster[data-tone="info"] {

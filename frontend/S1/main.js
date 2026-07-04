@@ -1,4 +1,4 @@
-﻿(function (root, factory) {
+(function (root, factory) {
     if (typeof define === 'function' && define.amd) {
         define(['SessionState', 'SessionAPI', 'UIHelpers', 'TaskRenderer', 'SessionControls', 'SessionRoutes', 'SessionValidation'], factory);
     } else if (typeof module === 'object' && module.exports) {
@@ -149,10 +149,14 @@
 
         const theoryTitle = String(context?.theoryTitle || '').trim() || theoryId;
         const complexId = String(context?.complexId || '').trim();
+        const complexTitle = String(context?.complexTitle || '').trim();
         const origin = String(context?.origin || '').trim();
         const metaParts = [];
 
-        if (complexId) metaParts.push(wt('s1.meta_complex', 'Комплекс: {id}').replace('{id}', complexId));
+        if (complexId) {
+            const displayComplex = complexTitle || complexId;
+            metaParts.push(wt('s1.meta_complex', 'Комплекс: {id}').replace('{id}', displayComplex));
+        }
         if (origin === 'editor_theory_hub') {
             metaParts.push(wt('s1.meta_theory_hub', 'Сессия запущена из Theory Hub.'));
         } else if (origin === 'complex_theory_link') {
@@ -169,6 +173,7 @@
             theoryId,
             theoryTitle,
             complexId,
+            complexTitle,
             origin,
         };
     }
@@ -196,6 +201,7 @@
                 theoryId,
                 theoryTitle: String(theoryLink?.title_cache || '').trim() || theoryId,
                 complexId,
+                complexTitle: String(data.item?.name || data.item?.title || '').trim() || complexId,
                 origin: 'complex_theory_link',
             };
         } catch (error) {

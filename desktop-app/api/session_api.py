@@ -4024,9 +4024,16 @@ class SessionAPI:
             or getattr(self._controller, "current_task_ref", None) is None
         )
 
+        has_next_iteration = False
+        if session_after is not None:
+            curr_iter = getattr(session_after, "iteration", 1) or 1
+            max_iter = getattr(session_after, "max_iterations", 1) or 1
+            if curr_iter < max_iter:
+                has_next_iteration = True
+
         if session_inactive or queue_exhausted or all_tasks_completed or controller_detached:
             logger.info(
-                "[SessionAPI.next_task] session completed after controller call: session=%s is_active=%s queue_len=%s current_idx=%s completed=%s completed_in_current_iteration=%s controller_session=%s controller_task_ref=%s",
+                "[SessionAPI.next_task] transition check after controller call: session=%s is_active=%s queue_len=%s current_idx=%s completed=%s completed_in_current_iteration=%s controller_session=%s controller_task_ref=%s has_next_iteration=%s",
                 session_after,
                 session_after.is_active if session_after else None,
                 queue_len_after,
@@ -4035,7 +4042,17 @@ class SessionAPI:
                 completed_in_current_iteration,
                 getattr(self._controller, "current_session_id", None),
                 getattr(self._controller, "current_task_ref", None),
+                has_next_iteration,
             )
+            if all_tasks_completed and has_next_iteration:
+                logger.info("[SessionAPI.next_task] ========== КОНЕЦ next_task, result=iteration_completed ==========")
+                return {
+                    "ok": False,
+                    "error": "iteration_completed",
+                    "iteration": getattr(session_after, "iteration", 1),
+                    "has_next_iteration": True,
+                }
+
             try:
                 self._controller.current_task_ref = None
                 if getattr(self._controller, "task_controller", None):

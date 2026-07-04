@@ -4368,8 +4368,6 @@ class TaskEvaluatorService:
         image_w = user_drawing.get('image_width') or user_drawing.get('imageWidth')
         image_h = user_drawing.get('image_height') or user_drawing.get('imageHeight')
         display_w = user_drawing.get('display_width') or user_drawing.get('displayWidth')
-        display_h = user_drawing.get('display_height') or user_drawing.get('displayHeight')
-
         ratios: List[float] = []
         try:
             if image_w is not None and display_w is not None:
@@ -4798,6 +4796,18 @@ class TaskEvaluatorService:
         # Fallback: поддержка формата task.json, где ключевые слова лежат в content
         if not keywords:
             keywords = answer_key.get('content', {}).get('keywords', [])
+        
+        # Normalize dict elements like [{'text': 'амплитуда'}] to plain strings
+        if isinstance(keywords, list):
+            clean_keywords = []
+            for kw in keywords:
+                if isinstance(kw, dict):
+                    txt = kw.get('text') or kw.get('word') or kw.get('name') or ''
+                    if txt:
+                        clean_keywords.append(str(txt))
+                elif isinstance(kw, str):
+                    clean_keywords.append(kw)
+            keywords = clean_keywords
         
         if not keywords:
             return EvaluationResult(

@@ -162,6 +162,42 @@ class HostedTheoryService(HostedShadowFallbackMixin, TheoryService):
         if theory_dir.exists():
             shutil.rmtree(str(theory_dir), ignore_errors=True)
 
+    def _summarize_delta_payload(self, delta: Any) -> Dict[str, Any]:
+        """Return basic stats about the Delta content (images, text) from a dict payload."""
+        summary: Dict[str, Any] = {
+            "image_count": 0,
+            "text_chars": 0,
+            "has_text": False,
+            "ops_count": 0,
+        }
+        if not isinstance(delta, dict):
+            return summary
+
+        ops = delta.get("ops", [])
+        if not isinstance(ops, list):
+            return summary
+
+        summary["ops_count"] = len(ops)
+        image_paths = set()
+
+        for op in ops:
+            if not isinstance(op, dict):
+                continue
+            insert = op.get("insert")
+            if isinstance(insert, dict) and "image" in insert:
+                image_path = insert["image"]
+                if self._image_ref_exists(image_path):
+                    image_paths.add(image_path)
+                continue
+            if isinstance(insert, str):
+                stripped = insert.replace("\n", "").strip()
+                if stripped:
+                    summary["text_chars"] += len(stripped)
+
+        summary["image_count"] = len(image_paths)
+        summary["has_text"] = summary["text_chars"] > 0
+        return summary
+
     def list_theories(self, query: Optional[str] = None) -> List[Dict[str, Any]]:
         try:
             self.ensure_persistence_ready()

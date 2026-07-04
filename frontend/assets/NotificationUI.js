@@ -14,12 +14,12 @@ window.NotificationUI = (function () {
         if (!c) {
             c = document.createElement('div');
             c.id = 'notify-toast-container';
-            c.className = 'pointer-events-none fixed bottom-0 right-0 z-[100010] flex max-w-sm flex-col items-end gap-3 overflow-x-hidden p-4 sm:p-6';
+            c.className = 'pointer-events-none fixed top-0 right-0 z-[100010] flex max-w-sm flex-col items-end gap-3 overflow-x-hidden p-4 sm:p-6';
             c.style.position = 'fixed';
             c.style.right = '0';
-            c.style.bottom = '0';
+            c.style.top = '0';
             c.style.left = 'auto';
-            c.style.top = 'auto';
+            c.style.bottom = 'auto';
             c.style.zIndex = "100010";
             (document.body || document.documentElement).appendChild(c);
         }

@@ -6156,6 +6156,11 @@
                 grid-template-columns: 1fr;
             }
 
+            body[data-mode="auth"] .welcome-shell {
+                grid-template-columns: 1fr !important;
+                grid-template-rows: auto auto !important;
+            }
+
             .welcome-hero {
                 min-height: clamp(21rem, 58vw, 29rem);
             }
@@ -6170,6 +6175,13 @@
                 width: 100% !important;
                 max-width: 28rem !important;
                 margin: 1.5rem auto !important;
+            }
+
+            body[data-mode="auth"] .welcome-main {
+                grid-template-columns: 1fr !important;
+                min-height: auto !important;
+                gap: 1.5rem !important;
+                padding: 1.5rem 1rem !important;
             }
 
 

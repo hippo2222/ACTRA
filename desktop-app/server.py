@@ -901,6 +901,7 @@ from services.catalog_service import CatalogService  # type: ignore
 from services.hosted_catalog_service import HostedCatalogService  # type: ignore
 from services.workspace_limits_service import WorkspaceLimitsService  # type: ignore
 from services.billing_service import BillingService  # type: ignore
+from services.paddle_service import PaddleService  # type: ignore
 from services.workspace_import_service import WorkspaceImportService  # type: ignore
 from services.microcards_analytics_service import MicrocardsAnalyticsService  # type: ignore
 from common.watchdog import WatchdogService  # type: ignore
@@ -1349,6 +1350,13 @@ class AppContextHeadless:
             logger.warning("[HTTP] BillingService schema initialization skipped: %s", exc)
         logger.info("[HTTP] BillingService initialized")
 
+        self.paddle_service = PaddleService(
+            billing_service=self.billing_service,
+            user_service=self.user_service,
+            data_dir=str(self.data_dir),
+        )
+        logger.info("[HTTP] PaddleService initialized")
+
         # Statistics Service (with EventBus for cache invalidation)
         self.statistics_service = StatisticsService(
             progress_service=self.progress_service,
@@ -1575,6 +1583,7 @@ from routes.theory_center_routes import theory_center_bp
 from routes.workspace_import_routes import workspace_import_bp
 from routes.catalog_routes import catalog_bp
 from routes.billing_routes import billing_bp
+from routes.paddle_routes import paddle_bp
 
 init_context(
     _headless_app_ctx,
@@ -1629,6 +1638,7 @@ app.register_blueprint(theory_center_bp)
 app.register_blueprint(workspace_import_bp)
 app.register_blueprint(catalog_bp)
 app.register_blueprint(billing_bp)
+app.register_blueprint(paddle_bp)
 
 # Register Calendar routes if available
 if calendar_service:

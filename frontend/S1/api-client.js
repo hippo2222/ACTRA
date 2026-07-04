@@ -212,11 +212,12 @@
             );
         },
 
-        async getIterationResults(sessionId) {
-            return requestJson(
-                SessionRoutes.API.ITERATION_RESULTS(sessionId),
-                { method: "GET" }
-            );
+        async getIterationResults(sessionId, iterationNumber) {
+            const baseUrl = SessionRoutes.API.ITERATION_RESULTS(sessionId);
+            const url = iterationNumber != null
+                ? `${baseUrl}?iteration=${encodeURIComponent(iterationNumber)}`
+                : baseUrl;
+            return requestJson(url, { method: "GET" });
         },
 
         async getFinalResults(sessionId) {
