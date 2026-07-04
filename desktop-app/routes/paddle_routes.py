@@ -67,9 +67,6 @@ def paddle_webhook() -> Any:
 @paddle_bp.route("/api/billing/paddle/config", methods=["GET"])
 def get_paddle_config() -> Any:
     """Return public Paddle configuration for frontend SDK (Paddle.js)."""
-    user_id = _current_user_id()
-    if not user_id or user_id == "guest":
-        return jsonify({"ok": False, "error": "authentication_required"}), 401
     try:
         config = _paddle_service().get_public_config()
         return jsonify(config), 200

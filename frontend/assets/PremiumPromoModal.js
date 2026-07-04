@@ -505,9 +505,40 @@
 
     async function triggerPaddleCheckout(days, modalNode) {
         setStatus(modalNode, t('premium_promo_payment_pending', 'Preparing Paddle Checkout...'), 'neutral');
+
+        // Check if user is logged in
+        let userId = '';
+        try {
+            const statusRes = await fetch('/api/billing/status', { credentials: 'same-origin' });
+            if (statusRes.ok) {
+                const statusData = await statusRes.json();
+                if (statusData && statusData.user) {
+                    const candidateId = statusData.user.user_id || statusData.user.id || '';
+                    if (candidateId && candidateId !== 'guest') {
+                        userId = candidateId;
+                    }
+                }
+            }
+        } catch (err) {
+            // Ignore
+        }
+
+        if (!userId) {
+            setStatus(
+                modalNode,
+                t('premium_promo_auth_required', 'Для оформления подписки необходимо войти в аккаунт.'),
+                'error'
+            );
+            return;
+        }
+
         const config = await fetchPaddleConfig();
         if (!config || !config.client_token) {
-            setStatus(modalNode, t('premium_promo_payment_error', 'Failed to load billing configuration.'), 'error');
+            setStatus(
+                modalNode,
+                t('premium_promo_payment_error', 'Платёжный шлюз временно недоступен или не настроен.'),
+                'error'
+            );
             return;
         }
 
@@ -522,20 +553,6 @@
             if (!priceId) {
                 setStatus(modalNode, t('premium_promo_price_missing', 'Price configuration missing for selected period.'), 'error');
                 return;
-            }
-
-            // Get current user ID if available
-            let userId = '';
-            try {
-                const statusRes = await fetch('/api/billing/status', { credentials: 'same-origin' });
-                if (statusRes.ok) {
-                    const statusData = await statusRes.json();
-                    if (statusData && statusData.user) {
-                        userId = statusData.user.user_id || statusData.user.id || '';
-                    }
-                }
-            } catch (err) {
-                // Ignore
             }
 
             setStatus(modalNode, t('premium_promo_checkout_opened', 'Checkout window opened.'), 'success');
