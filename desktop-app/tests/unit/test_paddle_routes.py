@@ -115,3 +115,12 @@ def test_paddle_webhook_endpoint_valid(client, user_service):
 
     user = user_service.get_user("user_route_test")
     assert user.plan == "premium"
+
+
+def test_csp_header_allows_paddle():
+    from server import _add_security_headers
+    from flask import Response
+    resp = _add_security_headers(Response())
+    csp = resp.headers.get("Content-Security-Policy", "")
+    assert "https://cdn.paddle.com" in csp
+    assert "https://*.paddle.com" in csp
