@@ -3,6 +3,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.hosted
+    env_file:
+      - .env
     environment:
       ACTRA_RUNTIME_MODE: hosted_web
       ACTRA_BIND_HOST: 0.0.0.0
