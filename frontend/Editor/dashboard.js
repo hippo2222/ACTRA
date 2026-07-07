@@ -2019,6 +2019,15 @@ class EditorDashboard {
             });
             return;
         }
+        if (task_name.length > 100) {
+            this.showVoiceToast({
+                severity: 'warning',
+                what: wt('db.k079_too_long', 'Создание задания приостановлено.'),
+                impact: wt('db.k080_too_long', 'Название задания слишком длинное.'),
+                next: wt('db.k081_too_long', 'Введите название до 100 символов.'),
+            });
+            return;
+        }
 
         await this.createNewTask(module_id, topic_id, task_name, task_type);
         document.querySelector('#task-name-input').value = '';
@@ -2051,6 +2060,15 @@ class EditorDashboard {
                 what: wt('db.k082', 'Создание модуля приостановлено.'),
                 impact: wt('db.k083', 'Название модуля пустое.'),
                 next: wt('db.k084', 'Введите название и повторите действие.'),
+            });
+            return;
+        }
+        if (name.length > 100) {
+            this.showVoiceToast({
+                severity: 'warning',
+                what: wt('db.k082_too_long', 'Создание модуля приостановлено.'),
+                impact: wt('db.k083_too_long', 'Название модуля слишком длинное.'),
+                next: wt('db.k084_too_long', 'Введите название до 100 символов.'),
             });
             return;
         }
@@ -4538,6 +4556,15 @@ class EditorDashboard {
             });
             return;
         }
+        if (name.length > 100) {
+            this.showVoiceToast({
+                severity: 'warning',
+                what: wt('db.k251_too_long', 'Создание темы приостановлено.'),
+                impact: wt('db.k252_too_long', 'Название темы слишком длинное.'),
+                next: wt('db.k253_too_long', 'Введите название до 100 символов.'),
+            });
+            return;
+        }
 
         try {
             const response = await fetch('/api/editor/topic/new', {
@@ -4896,7 +4923,7 @@ class EditorDashboard {
                 </div>
             </div>
             <div class="flex-1 min-w-0">
-                <h3 class="editor-task-card-title text-text-main text-lg font-bold mb-2 group-hover:text-primary transition-colors cursor-pointer truncate">${safeTaskName}</h3>
+                <h3 class="editor-task-card-title text-text-main text-lg font-bold mb-2 group-hover:text-primary transition-colors cursor-pointer" title="${safeTaskName}">${safeTaskName}</h3>
                 <p class="text-text-secondary text-xs font-medium truncate">${wt('db.k285', 'Создано')} ${createdLabel}${updatedLabel && updatedLabel !== createdLabel ? ` ${wt('db.k390', 'В· Изм.')} ${updatedLabel}` : ''}</p>
             </div>
             <div class="flex gap-2 mt-4 flex-wrap items-center">
