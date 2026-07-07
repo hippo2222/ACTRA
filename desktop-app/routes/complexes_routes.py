@@ -725,6 +725,11 @@ def update_complex(complex_id: str) -> Any:
         if not existing:
             return jsonify({"ok": False, "error": "complex_not_found"}), 404
 
+        # Check ownership
+        serialized_existing = _serialize_complex_payload(existing, current_user_id=ctx.user_id)
+        if not serialized_existing.get("ownership", {}).get("is_owned_by_current_user"):
+            return jsonify({"ok": False, "error": "complex_forbidden", "message": "You do not own this complex and cannot edit it."}), 403
+
         theory_link = normalized.get("theory_link")
         resolved_theory_link = None
         if isinstance(theory_link, dict):
@@ -820,6 +825,11 @@ def sync_complex_theory_from_topics(complex_id: str) -> Any:
         complex_obj = ctx.complex_service.get_complex(complex_id)
         if not complex_obj:
             return jsonify({"ok": False, "error": "complex_not_found"}), 404
+
+        # Check ownership
+        serialized_existing = _serialize_complex_payload(complex_obj, current_user_id=ctx.user_id)
+        if not serialized_existing.get("ownership", {}).get("is_owned_by_current_user"):
+            return jsonify({"ok": False, "error": "complex_forbidden", "message": "You do not own this complex and cannot edit it."}), 403
 
         current_payload = complex_obj.dict()
         current_mode = _resolve_complex_theory_mode(current_payload)
@@ -1065,6 +1075,12 @@ def save_complex_autosave(complex_id: str) -> Any:
     payload = request.get_json(silent=True) or {}
     try:
         _assert_complex_not_archived(ctx, complex_id, action="edit")
+        existing = ctx.complex_service.get_complex(complex_id)
+        if not existing:
+            return jsonify({"ok": False, "error": "complex_not_found"}), 404
+        serialized_existing = _serialize_complex_payload(existing, current_user_id=ctx.user_id)
+        if not serialized_existing.get("ownership", {}).get("is_owned_by_current_user"):
+            return jsonify({"ok": False, "error": "complex_forbidden", "message": "You do not own this complex and cannot edit it."}), 403
         snapshot = ctx.complex_service.save_autosave_snapshot(complex_id, payload)
         return jsonify(
             {
@@ -1088,10 +1104,17 @@ def save_complex_autosave(complex_id: str) -> Any:
 
 @complexes_bp.route("/api/complexes/<string:complex_id>/autosave", methods=["DELETE"])
 def delete_complex_autosave(complex_id: str) -> Any:
-    if get_ctx().user_id == "guest":
+    ctx = get_ctx()
+    if ctx.user_id == "guest":
         return jsonify({"ok": False, "error": "guest_cannot_edit"}), 403
     try:
-        deleted_count = get_ctx().complex_service.delete_autosave_snapshots(complex_id)
+        existing = ctx.complex_service.get_complex(complex_id)
+        if not existing:
+            return jsonify({"ok": False, "error": "complex_not_found"}), 404
+        serialized_existing = _serialize_complex_payload(existing, current_user_id=ctx.user_id)
+        if not serialized_existing.get("ownership", {}).get("is_owned_by_current_user"):
+            return jsonify({"ok": False, "error": "complex_forbidden", "message": "You do not own this complex and cannot edit it."}), 403
+        deleted_count = ctx.complex_service.delete_autosave_snapshots(complex_id)
         return jsonify({"ok": True, "deleted_count": deleted_count})
     except Exception as exc:
         degraded_response = _maybe_hosted_shadow_write_error_response(exc)
@@ -1125,6 +1148,12 @@ def restore_complex_from_history(complex_id: str, snapshot_timestamp: str) -> An
     """Восстановить комплекс из исторического snapshot."""
     try:
         _assert_complex_not_archived(ctx, complex_id, action="edit")
+        existing = ctx.complex_service.get_complex(complex_id)
+        if not existing:
+            return jsonify({"ok": False, "error": "complex_not_found"}), 404
+        serialized_existing = _serialize_complex_payload(existing, current_user_id=ctx.user_id)
+        if not serialized_existing.get("ownership", {}).get("is_owned_by_current_user"):
+            return jsonify({"ok": False, "error": "complex_forbidden", "message": "You do not own this complex and cannot edit it."}), 403
         restored = ctx.complex_service.restore_from_history(
             complex_id, snapshot_timestamp
         )

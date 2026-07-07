@@ -4286,7 +4286,9 @@
                   <div class="cx-card-actions-secondary">
                     <button class="${pinBtnClass} cx-card-action-btn cx-card-action-btn--icon" data-complex-id="${safeComplexId}" title="${isPinned ? wt('complexes.pin_already', 'Уже в быстром доступе') : wt('complexes.pin_title', 'Закрепить в быстром доступе')}"><span class="material-symbols-outlined text-lg">push_pin</span></button>
                     <button class="export-btn cx-card-action-btn cx-card-action-btn--wide btn-secondary inline-flex items-center justify-center gap-2 text-sm font-medium" data-complex-id="${safeComplexId}" ${blockedActionAttr}><span class="material-symbols-outlined text-lg">download</span><span class="truncate">${wt('complexes.btn_export', 'Экспорт')}</span></button>
+                    ${ownershipContext.ownership.isOwnedByCurrentUser ? `
                     <button class="edit-btn cx-card-action-btn cx-card-action-btn--wide btn-secondary inline-flex items-center justify-center gap-2 text-sm font-medium" data-complex-id="${safeComplexId}" ${blockedActionAttr}><span class="material-symbols-outlined text-lg">edit</span><span class="truncate">${wt('complexes.btn_edit', 'Редактировать')}</span></button>
+                    ` : ""}
                     <button class="delete-btn cx-card-action-btn cx-card-action-btn--wide btn-secondary inline-flex items-center justify-center gap-2 text-sm font-medium border-error-light bg-error-lighter text-error-text hover:border-error hover:bg-error-lighter hover:text-error" data-complex-id="${safeComplexId}" title="${wt('complexes.btn_delete_title', 'Удалить комплекс')}"><span class="material-symbols-outlined text-lg">delete</span><span class="truncate">${wt('complexes.btn_delete', 'Удалить')}</span></button>
                   </div>
                 </div>

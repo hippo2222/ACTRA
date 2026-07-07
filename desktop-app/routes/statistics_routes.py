@@ -13,8 +13,13 @@ from typing import Any
 
 from flask import Blueprint, jsonify, request
 
-from routes._context import get_ctx
-from routes._helpers import _maybe_hosted_shadow_write_error_response, _resolve_effective_user_id
+from routes._context import get_ctx, is_hosted_web_runtime
+from routes._helpers import (
+    _maybe_hosted_shadow_write_error_response,
+    _resolve_effective_user_id,
+    _serialize_workspace_catalog_modules,
+)
+from routes.editor_routes import _filter_hosted_workspace_catalog_modules
 from services.linked_complex_runtime import build_linked_runtime_complex_id
 
 logger = logging.getLogger(__name__)
@@ -153,7 +158,17 @@ def get_recent_sessions() -> Any:
 @statistics_bp.route("/api/task-catalog", methods=["GET"])
 def task_catalog() -> Any:
     try:
-        modules = get_ctx().storage_service.load_modules()
+        ctx = get_ctx()
+        modules = ctx.storage_service.load_modules()
+        modules = _serialize_workspace_catalog_modules(
+            modules,
+            current_user_id=ctx.user_id,
+        )
+        if is_hosted_web_runtime():
+            modules = _filter_hosted_workspace_catalog_modules(
+                modules,
+                current_user_id=ctx.user_id,
+            )
         items = []
         for m in modules or []:
             if not isinstance(m, dict):
