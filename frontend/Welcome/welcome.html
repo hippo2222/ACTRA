@@ -2287,6 +2287,39 @@
             color: inherit;
         }
 
+        .welcome-premium-note .welcome-pill {
+            width: 100%;
+        }
+
+        .welcome-info-actions {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+            width: 100%;
+        }
+
+        .welcome-social-actions {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+            width: 100%;
+        }
+
+        @media (max-width: 580px) {
+            .welcome-info-actions {
+                grid-template-columns: 1fr;
+            }
+            .welcome-social-actions {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 400px) {
+            .welcome-social-actions {
+                grid-template-columns: 1fr;
+            }
+        }
+
         .welcome-showcase {
             display: grid;
             grid-template-columns: minmax(0, 0.85fr) minmax(340px, 1.15fr);
@@ -7532,7 +7565,7 @@
                             <span data-i18n="wl.k097">Создать аккаунт!</span>
                         </button>
                     </div>
-                    <div class="welcome-premium-actions mt-3" aria-label="ACTRA Product Information">
+                    <div class="welcome-premium-actions welcome-info-actions mt-3" aria-label="ACTRA Product Information">
                         <a class="welcome-pill-light" href="/pricing?lang=ru">
                             <span data-i18n="wl.pricing">Pricing</span>
                             <span class="material-symbols-outlined text-[18px]" aria-hidden="true">arrow_forward</span>
@@ -7552,6 +7585,7 @@
                         <a class="welcome-social-pill" href="https://t.me/ACTRAsite" target="_blank" rel="noopener">Telegram</a>
                         <a class="welcome-social-pill" href="https://x.com/ValeriiHl21" target="_blank" rel="noopener">X (Twitter)</a>
                         <a class="welcome-social-pill" href="https://www.threads.net/@sorry.aboutthecarpet" target="_blank" rel="noopener">Threads</a>
+                        <a class="welcome-social-pill" href="#" target="_blank" rel="noopener">LinkedIn</a>
                         <a class="welcome-social-pill" href="mailto:actrafb@proton.me">actrafb@proton.me</a>
                     </div>
                 </div>
