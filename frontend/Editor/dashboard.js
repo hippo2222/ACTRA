@@ -4900,8 +4900,8 @@ class EditorDashboard {
                 <p class="text-text-secondary text-xs font-medium truncate">${wt('db.k285', 'Создано')} ${createdLabel}${updatedLabel && updatedLabel !== createdLabel ? ` ${wt('db.k390', 'В· Изм.')} ${updatedLabel}` : ''}</p>
             </div>
             <div class="flex gap-2 mt-4 flex-wrap items-center">
-                <span class="editor-task-card-chip inline-flex items-center rounded bg-surface-1 px-2 py-1 text-xs font-medium text-text-secondary border-2 border-border-normal whitespace-nowrap">${safeModuleLabel}</span>
-                <span class="editor-task-card-chip inline-flex items-center rounded bg-surface-1 px-2 py-1 text-xs font-medium text-text-secondary border-2 border-border-normal whitespace-nowrap">${safeTopicLabel}</span>
+                <span class="editor-task-card-chip inline-block rounded bg-surface-1 px-2 py-0.5 text-[11px] font-medium text-text-secondary border border-border-subtle whitespace-nowrap" title="${safeModuleLabel}">${safeModuleLabel}</span>
+                <span class="editor-task-card-chip inline-block rounded bg-surface-1 px-2 py-0.5 text-[11px] font-medium text-text-secondary border border-border-subtle whitespace-nowrap" title="${safeTopicLabel}">${safeTopicLabel}</span>
             </div>
         `;
 
