@@ -186,78 +186,6 @@ class TestEditor extends BaseEditor {
         return false;
     }
 
-    buildClipboardImageFile(fileLike) {
-        if (!fileLike) return null;
-        const mimeType = fileLike.type || 'image/png';
-        const extension = mimeType === 'image/jpeg'
-            ? 'jpg'
-            : (mimeType.split('/')[1] || 'png').replace(/[^a-z0-9]+/gi, '') || 'png';
-        const fileName = fileLike.name && String(fileLike.name).trim()
-            ? fileLike.name
-            : `pasted-image-${Date.now()}.${extension}`;
-        return fileLike instanceof File
-            ? fileLike
-            : new File([fileLike], fileName, { type: mimeType });
-    }
-
-    extractImageFileFromDataTransfer(clipboardData) {
-        if (!clipboardData) return null;
-
-        const items = Array.from(clipboardData.items || []);
-        const imageItem = items.find((item) => item?.kind === 'file' && String(item.type || '').startsWith('image/'));
-        if (imageItem && typeof imageItem.getAsFile === 'function') {
-            const file = imageItem.getAsFile();
-            if (file) {
-                return this.buildClipboardImageFile(file);
-            }
-        }
-
-        const files = Array.from(clipboardData.files || []);
-        const imageFile = files.find((file) => String(file?.type || '').startsWith('image/'));
-        if (imageFile) {
-            return this.buildClipboardImageFile(imageFile);
-        }
-
-        return null;
-    }
-
-    async readImageFileFromNavigatorClipboard() {
-        if (!navigator?.clipboard || typeof navigator.clipboard.read !== 'function') {
-            return null;
-        }
-
-        try {
-            const clipboardItems = await navigator.clipboard.read();
-            for (const item of clipboardItems || []) {
-                const imageType = Array.isArray(item?.types)
-                    ? item.types.find((type) => String(type || '').startsWith('image/'))
-                    : null;
-                if (!imageType || typeof item.getType !== 'function') {
-                    continue;
-                }
-                const blob = await item.getType(imageType);
-                const file = this.buildClipboardImageFile(
-                    new File([blob], `pasted-image.${String(imageType).split('/')[1] || 'png'}`, { type: imageType })
-                );
-                if (file) {
-                    return file;
-                }
-            }
-        } catch (error) {
-            console.warn('Navigator clipboard image read failed', error);
-        }
-
-        return null;
-    }
-
-    async extractImageFileFromClipboardEvent(event) {
-        const directFile = this.extractImageFileFromDataTransfer(event?.clipboardData);
-        if (directFile) {
-            return directFile;
-        }
-        return this.readImageFileFromNavigatorClipboard();
-    }
-
     buildImageUploadFormData(file) {
         const formData = new FormData();
         formData.append('file', file);
@@ -3419,6 +3347,9 @@ class TestEditor extends BaseEditor {
 
     async requestJson(url, options = {}) {
         const response = await fetch(url, options);
+        if (response.status === 413) {
+            throw new Error(wt("editor_base.error_request_too_large", "Размер файла слишком велик. Пожалуйста, выберите файл меньшего размера."));
+        }
         const text = await response.text();
         let data = null;
         if (text) {

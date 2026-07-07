@@ -621,6 +621,15 @@ class OpenAnswerEditor extends BaseEditor {
                     body: formData
                 });
 
+                if (response.status === 413) {
+                    this.showToast(wt("editor_base.error_request_too_large", "Размер файла слишком велик. Пожалуйста, выберите файл меньшего размера."), "error");
+                    continue;
+                }
+                if (response.ok === false) {
+                    this.showToast(wt('open_answer_editor.err_upload', 'Ошибка загрузки: {err}').replace('{err}', response.statusText || 'Unknown error'), 'error');
+                    continue;
+                }
+
                 const data = await response.json();
                 if (response.ok !== false && data.ok && (data.path || data.asset_id || data.asset_url)) {
                     if (!this.task.task_data.content.images) this.task.task_data.content.images = [];

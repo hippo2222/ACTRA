@@ -418,6 +418,13 @@ class DrawEditor extends BaseEditor {
             changeImgBtn.onclick = () => mainFileInput.click();
             mainFileInput.onchange = (e) => this.handleMainImageUpload(e);
         }
+
+        document.addEventListener('paste', (e) => {
+            this.handleClipboardPaste(e).catch((error) => {
+                console.error('Clipboard image paste failed', error);
+                this.showToast(error.message || wt('xt.k074', 'Не удалось вставить изображение'), 'error');
+            });
+        });
     }
 
     async handleMainImageUpload(event) {
@@ -435,6 +442,15 @@ class DrawEditor extends BaseEditor {
                 method: 'POST',
                 body: formData
             });
+
+            if (response.status === 413) {
+                this.showToast(wt("editor_base.error_request_too_large", "Размер файла слишком велик. Пожалуйста, выберите файл меньшего размера."), "error");
+                return;
+            }
+            if (response.ok === false) {
+                this.showToast(`Upload failed: ${response.statusText || 'Unknown error'}`, 'error');
+                return;
+            }
 
             const data = await response.json();
             if (data.ok && (data.path || data.asset_id || data.asset_url)) {
@@ -455,6 +471,35 @@ class DrawEditor extends BaseEditor {
         } finally {
             event.target.value = '';
         }
+    }
+
+    shouldSuppressImagePasteForElement(element) {
+        if (!element || element.nodeType !== 1 || typeof element.closest !== 'function') {
+            return false;
+        }
+        if (element.closest('.modal') || element.closest('[role="dialog"]')) {
+            return true;
+        }
+        return false;
+    }
+
+    async handleClipboardPaste(event) {
+        const eventTarget = event?.target?.nodeType === 1 ? event.target : document.activeElement;
+        if (this.shouldSuppressImagePasteForElement(eventTarget)) {
+            return;
+        }
+
+        const imageFile = await this.extractImageFileFromClipboardEvent(event);
+        if (!imageFile) return;
+
+        event.preventDefault();
+
+        await this.handleMainImageUpload({
+            target: {
+                files: [imageFile],
+                value: ''
+            }
+        });
     }
 
     /**

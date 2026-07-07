@@ -568,8 +568,16 @@ class ClickEditor extends BaseEditor {
                 method: "POST",
                 body: formData
             });
+            if (response.status === 413) {
+                this.showToast(wt("editor_base.error_request_too_large", "Размер файла слишком велик. Пожалуйста, выберите файл меньшего размера."), "error");
+                return;
+            }
+            if (response.ok === false) {
+                this.showToast(`${wt('ce.k004', 'Ошибка загрузки дополнительного изображения: ')}${response.statusText || 'Unknown error'}`, "error");
+                return;
+            }
             const data = await response.json();
-            if (!response.ok || !data?.ok || (!data?.path && !data?.asset_id && !data?.asset_url)) {
+            if (!data?.ok || (!data?.path && !data?.asset_id && !data?.asset_url)) {
                 this.showToast(`${wt('ce.k004', 'Ошибка загрузки дополнительного изображения: ')}${data?.error || "upload_failed"}`, "error");
                 return;
             }
@@ -3584,6 +3592,13 @@ class ClickEditor extends BaseEditor {
             this.imageUploadInput.addEventListener("change", (event) => this.handleMainImageUpload(event));
         }
 
+        document.addEventListener('paste', (e) => {
+            this.handleClipboardPaste(e).catch((error) => {
+                console.error('Clipboard image paste failed', error);
+                this.showToast(error.message || wt('xt.k074', 'Не удалось вставить изображение'), 'error');
+            });
+        });
+
         if (this.promptArea) {
             this.promptArea.addEventListener("input", () => {
                 this.markUnsaved();
@@ -5696,6 +5711,14 @@ class ClickEditor extends BaseEditor {
                 method: "POST",
                 body: formData
             });
+            if (response.status === 413) {
+                this.showToast(wt("editor_base.error_request_too_large", "Размер файла слишком велик. Пожалуйста, выберите файл меньшего размера."), "error");
+                return;
+            }
+            if (response.ok === false) {
+                this.showToast(`${wt('ce.k108', 'Ошибка загрузки: ')}${response.statusText || 'Unknown error'}`, "error");
+                return;
+            }
             const data = await response.json();
             if (!data.ok) {
                 this.showToast(`${wt('ce.k108', 'Ошибка загрузки: ')}${data.error || "upload_failed"}`, "error");
@@ -5729,6 +5752,50 @@ class ClickEditor extends BaseEditor {
             this.showToast(wt("ce.k106", "Ошибка при загрузке изображения. Подробности в консоли."), "error");
         } finally {
             event.target.value = "";
+        }
+    }
+
+    shouldSuppressImagePasteForElement(element) {
+        if (!element || element.nodeType !== 1 || typeof element.closest !== 'function') {
+            return false;
+        }
+        if (element.closest('.modal') || element.closest('[role="dialog"]')) {
+            return true;
+        }
+        return false;
+    }
+
+    async handleClipboardPaste(event) {
+        const eventTarget = event?.target?.nodeType === 1 ? event.target : document.activeElement;
+        if (this.shouldSuppressImagePasteForElement(eventTarget)) {
+            return;
+        }
+
+        const imageFile = await this.extractImageFileFromClipboardEvent(event);
+        if (!imageFile) return;
+
+        event.preventDefault();
+
+        const isAdditionalTarget = eventTarget && (
+            eventTarget.id === 'additional-textarea' ||
+            eventTarget.closest('#additional-info-content') ||
+            eventTarget.closest('#additional-images-group')
+        );
+
+        if (isAdditionalTarget) {
+            await this.handleAdditionalImageUpload({
+                target: {
+                    files: [imageFile],
+                    value: ''
+                }
+            });
+        } else {
+            await this.handleMainImageUpload({
+                target: {
+                    files: [imageFile],
+                    value: ''
+                }
+            });
         }
     }
 

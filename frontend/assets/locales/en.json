@@ -1266,6 +1266,7 @@
   "editor_base.error_load_task_failed": "Failed to load task",
   "editor_base.error_load_title": "Load error",
   "editor_base.error_network_prefix": "Network error:",
+  "editor_base.error_request_too_large": "File size is too large. Please select a smaller file.",
   "editor_base.history.redo_disabled": "No actions to redo",
   "editor_base.history.redo_tooltip": "Redo (Ctrl+Y)",
   "editor_base.history.undo_disabled": "No actions to undo",

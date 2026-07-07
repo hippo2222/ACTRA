@@ -1266,6 +1266,7 @@
   "editor_base.error_load_task_failed": "Помилка завантаження завдання",
   "editor_base.error_load_title": "Помилка завантаження",
   "editor_base.error_network_prefix": "Помилка мережі:",
+  "editor_base.error_request_too_large": "Розмір файлу занадто великий. Будь ласка, виберіть файл меншого розміру.",
   "editor_base.history.redo_disabled": "Немає дій для повторення",
   "editor_base.history.redo_tooltip": "Повторити (Ctrl+Y)",
   "editor_base.history.undo_disabled": "Немає дій для скасування",

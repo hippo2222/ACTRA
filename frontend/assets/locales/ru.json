@@ -1266,6 +1266,7 @@
   "editor_base.error_load_task_failed": "Ошибка загрузки задания",
   "editor_base.error_load_title": "Ошибка загрузки",
   "editor_base.error_network_prefix": "Ошибка сети:",
+  "editor_base.error_request_too_large": "Размер файла слишком велик. Пожалуйста, выберите файл меньшего размера.",
   "editor_base.history.redo_disabled": "Нет действий для повтора",
   "editor_base.history.redo_tooltip": "Повторить (Ctrl+Y)",
   "editor_base.history.undo_disabled": "Нет действий для отмены",
