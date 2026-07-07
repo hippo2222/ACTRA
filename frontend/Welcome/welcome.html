@@ -937,7 +937,7 @@
         .welcome-public-links {
             display: flex;
             align-items: center;
-            gap: 1rem;
+            gap: 0.5rem;
             color: var(--welcome-charcoal);
             font-size: 0.9rem;
             font-weight: 500;
@@ -946,8 +946,9 @@
         .welcome-public-links a {
             color: inherit;
             border-radius: 999px;
-            padding: 0.35rem 0.5rem;
+            padding: 0.4rem 0.75rem;
             text-decoration: none;
+            white-space: nowrap;
             transition: background 0.18s ease, color 0.18s ease;
         }
 
@@ -6420,8 +6421,6 @@
             <a href="#benefits" data-welcome-nav-link data-i18n="welcome.nav_benefits">Преимущества</a>
             <a href="#premium" data-welcome-nav-link>Premium</a>
             <a href="/pricing?lang=ru" data-i18n="wl.pricing">Pricing</a>
-            <a href="/refund?lang=ru" data-i18n="wl.refund">Refund</a>
-            <a href="/terms?lang=ru" data-i18n="wl.terms">Terms</a>
         </nav>
         <div class="flex items-center gap-2">
             <div class="welcome-lang-switcher" role="group" aria-label="Language selection" data-i18n-aria="settings.lang_group_aria">
