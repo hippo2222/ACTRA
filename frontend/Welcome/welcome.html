@@ -7487,25 +7487,29 @@
                         рассмотрен при дублирующей или случайной оплате, технической ошибке активации или другой
                         очевидной биллинговой ошибке.
                     </p>
-                    <div class="welcome-premium-actions" aria-label="ACTRA Premium documents">
+                    <div class="welcome-premium-actions" aria-label="ACTRA Main Actions">
                         <button type="button" class="welcome-pill"
                             onclick="window.welcomeScrollToRegister && window.welcomeScrollToRegister()">
                             <span data-i18n="wl.k097">Создать аккаунт!</span>
-                            <span class="material-symbols-outlined text-[18px]" aria-hidden="true">arrow_upward</span>
                         </button>
-                        <a class="welcome-pill" href="/pricing?lang=ru">
+                        <a class="welcome-pill-light" href="/pricing?lang=ru">
                             Pricing
                             <span class="material-symbols-outlined text-[18px]" aria-hidden="true">arrow_forward</span>
                         </a>
-                        <a class="welcome-pill-light" href="/terms?lang=ru">Terms</a>
-                        <a class="welcome-pill-light" href="/refund?lang=ru">Refund policy</a>
                     </div>
-                    <div class="welcome-premium-actions mt-1" aria-label="ACTRA Social and Support">
+                    <div class="welcome-premium-actions mt-2" aria-label="ACTRA Social and Support">
                         <a class="welcome-pill-light" href="https://github.com/hippo2222" target="_blank" rel="noopener">GitHub</a>
                         <a class="welcome-pill-light" href="https://t.me/ACTRAsite" target="_blank" rel="noopener">Telegram</a>
                         <a class="welcome-pill-light" href="https://x.com/ValeriiHl21" target="_blank" rel="noopener">X (Twitter)</a>
                         <a class="welcome-pill-light" href="https://www.threads.net/@sorry.aboutthecarpet" target="_blank" rel="noopener">Threads</a>
-                        <a class="welcome-orange-link font-semibold md:ml-2" href="mailto:actrafb@proton.me">actrafb@proton.me</a>
+                        <a class="welcome-pill-light" href="mailto:actrafb@proton.me">
+                            <span class="material-symbols-outlined text-[18px]" aria-hidden="true">mail</span>
+                            <span>actrafb@proton.me</span>
+                        </a>
+                    </div>
+                    <div class="border-t border-border-subtle/40 pt-3 mt-1 flex flex-wrap gap-x-4 text-[10px] font-bold text-text-secondary tracking-wider uppercase">
+                        <a href="/terms?lang=ru" class="hover:text-primary transition-colors underline underline-offset-4">Terms of Service</a>
+                        <a href="/refund?lang=ru" class="hover:text-primary transition-colors underline underline-offset-4">Refund policy</a>
                     </div>
                 </div>
             </section>
