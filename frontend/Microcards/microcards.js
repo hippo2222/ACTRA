@@ -381,8 +381,14 @@
     // every time a failed card is re-queued, so it never drives the bar.
     function updateHeaderProgress() {
         const stats = state.sessionStats || {};
-        const total = stats.unique_total || state.sessionCards.length || 0;
-        const mastered = Math.min(stats.mastered || 0, total);
+        let total = stats.unique_total || state.sessionCards.length || 0;
+        let mastered = Math.min(stats.mastered || 0, total);
+
+        if (state.sessionMode === 'review') {
+            total = state.sessionCards.length || 0;
+            mastered = state.sessionIndex;
+        }
+
         const text = total > 0 ? `${mastered}/${total}` : '0/0';
         const width = total > 0 ? `${(mastered / total) * 100}%` : '0%';
 
@@ -402,7 +408,7 @@
         if (repeatChip) {
             const valEl = $('mcRepeatChipVal');
             if (valEl) valEl.textContent = pending;
-            repeatChip.style.display = pending > 0 ? 'inline-flex' : 'none';
+            repeatChip.style.display = (pending > 0 && state.sessionMode !== 'review') ? 'inline-flex' : 'none';
         }
 
         updateProgressVisuals();
@@ -667,6 +673,7 @@
         if (arena) arena.classList.remove('is-grading', 'lean-left', 'lean-right');
     }
     function showRails() {
+        if (state.sessionMode === 'review') return;
         const arena = $('mcArena');
         if (arena) arena.classList.add('is-grading');
     }
@@ -692,7 +699,18 @@
 
             const isFlipped = inner.classList.contains('flipped');
 
-            if (state.currentLevel === 1) {
+            if (state.sessionMode === 'review') {
+                if (e.key === ' ' || e.key === 'Spacebar') {
+                    e.preventDefault();
+                    onCardActivate(e);
+                } else if (e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    reviewPrev();
+                } else if (e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    reviewNext();
+                }
+            } else if (state.currentLevel === 1) {
                 if (e.key === ' ' || e.key === 'Spacebar') {
                     e.preventDefault();
                     onCardActivate(e);
@@ -2435,6 +2453,21 @@
             popNumber($('xpChipVal'), state.sessionSw);
             renderSessionLevelIndicator();
             renderCompositionChip();
+
+            // Toggle review navigation bar
+            const reviewNav = $('mcReviewNav');
+            if (reviewNav) {
+                reviewNav.classList.toggle('hidden', state.sessionMode !== 'review');
+            }
+            // Toggle rails
+            const rails = document.querySelectorAll('.mc-rail-wrapper');
+            rails.forEach(r => r.classList.toggle('hidden', state.sessionMode === 'review'));
+            // Toggle HUD chips
+            const xpChip = $('xpChip');
+            if (xpChip) xpChip.style.display = state.sessionMode === 'review' ? 'none' : 'inline-flex';
+            const lvlInd = $('sessionLevelIndicator');
+            if (lvlInd) lvlInd.style.display = state.sessionMode === 'review' ? 'none' : 'inline-flex';
+
             updateHeaderProgress();
 
             setupCurrentCard();
@@ -2586,15 +2619,16 @@
 
         // Runs fix one interaction level for the whole sitting; reviews use the
         // per-card form picked by the server (adaptive difficulty).
+        // Force Level 1 (click-to-flip) in review mode.
         const level = state.sessionMode === 'review'
-            ? (((state.session && state.session.card_forms) || {})[card.id] === 2 ? 2 : 1)
+            ? 1
             : (state.sessionLevelMode === 2 ? 2 : 1);
         state.currentForm = level;
         renderSessionLevelIndicator(level);
 
         // Repeat badge: this card came back through the mastery cycle.
         const retryBadge = $('mcRetryBadge');
-        if (retryBadge) retryBadge.classList.toggle('hidden', !isCardRetry(card.id));
+        if (retryBadge) retryBadge.classList.toggle('hidden', !isCardRetry(card.id) || state.sessionMode === 'review');
 
         // Reset UI actions
         state.currentLevel = level;
@@ -2602,7 +2636,11 @@
         if (level === 1) {
             $('frontActionsL1').classList.remove('hidden');
             $('frontActionsL2').classList.add('hidden');
-            $('backActionsL1').classList.remove('hidden');
+            if (state.sessionMode === 'review') {
+                $('backActionsL1').classList.add('hidden');
+            } else {
+                $('backActionsL1').classList.remove('hidden');
+            }
             $('backActionsL2').classList.add('hidden');
             // L1: whole card is the click target to reveal the answer.
             if (wrap) {
@@ -2628,6 +2666,13 @@
 
         $('l2ComparisonZone').classList.add('hidden');
         $('btnL2Override').classList.add('hidden');
+
+        if (state.sessionMode === 'review') {
+            const counter = $('reviewCounter');
+            if (counter) {
+                counter.textContent = `${state.sessionIndex + 1}/${state.sessionCards.length}`;
+            }
+        }
 
         updateHeaderProgress();
         // Fit the text to the card after layout settles (rAF for the common case,
@@ -2967,10 +3012,17 @@
         DopamineAudio.playSessionFinish();
 
         const stats = state.sessionStats || {};
-        const total = stats.unique_total || 0;
-        const firstTry = stats.first_try_correct || 0;
-        const accuracy = total > 0 ? Math.round((firstTry / total) * 100) : 0;
-        const reviewedIds = stats.error_card_ids || [];
+        let total = stats.unique_total || 0;
+        let firstTry = stats.first_try_correct || 0;
+        let accuracy = total > 0 ? Math.round((firstTry / total) * 100) : 0;
+        let reviewedIds = stats.error_card_ids || [];
+
+        if (state.sessionMode === 'review') {
+            total = state.sessionCards.length || 0;
+            firstTry = total;
+            accuracy = 100;
+            reviewedIds = [];
+        }
 
         $('sumStatTotal').textContent = total;
         $('sumStatCorrect').textContent = firstTry;
@@ -3031,6 +3083,11 @@
 
     function renderSummaryRewards(accuracy, finishResult) {
         const isRun = state.sessionMode === 'run';
+
+        const rewardRow = document.querySelector('.mc-reward-row');
+        if (rewardRow) {
+            rewardRow.classList.toggle('hidden', state.sessionMode === 'review');
+        }
 
         // Accuracy ring (r=56 → circumference ≈ 352)
         const circ = 352;
@@ -3189,6 +3246,23 @@
 
     function exitBrowse() {
         switchView('details');
+    }
+
+    function reviewPrev() {
+        if (state.sessionIndex > 0) {
+            state.sessionIndex--;
+            setupCurrentCard();
+        }
+    }
+
+    function reviewNext() {
+        if (state.sessionIndex < state.sessionCards.length - 1) {
+            state.sessionIndex++;
+            setupCurrentCard();
+        } else {
+            state.sessionIndex++;
+            setupCurrentCard();
+        }
     }
 
     // ── Study settings dialog (sound / volume / animations / pace / goal) ──
@@ -4329,6 +4403,8 @@ ${fill}`;
         browsePrev,
         browseNext,
         exitBrowse,
+        reviewPrev,
+        reviewNext,
         confirmResetRun,
         abortSession,
         toggleHint,

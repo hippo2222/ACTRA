@@ -2393,8 +2393,20 @@
                                 <span class="mc-rail__label" data-i18n="microcards.btn_know">Знаю</span>
                             </button>
                             <span class="mc-rail-hotkey">[2]</span>
-                        </div>
                     </div><!-- /mc-arena -->
+
+                    <!-- Review navigation bar (only visible in review mode) -->
+                    <div id="mcReviewNav" class="mc-browse-nav hidden">
+                        <button type="button" class="mc-btn mc-btn--ghost" onclick="mcApp.reviewPrev()">
+                            <span class="material-symbols-outlined">arrow_back</span>
+                            <span data-i18n="microcards.btn_prev">Назад</span>
+                        </button>
+                        <span id="reviewCounter" class="mc-browse-counter">0/0</span>
+                        <button type="button" class="mc-btn mc-btn--ghost" onclick="mcApp.reviewNext()">
+                            <span data-i18n="microcards.btn_next">Далее</span>
+                            <span class="material-symbols-outlined">arrow_forward</span>
+                        </button>
+                    </div>
                     
                     <!-- Всплывающие подсказки комбо/резонанса -->
                     <div id="mcFloatHint"></div>
