@@ -404,9 +404,9 @@ class WorkspaceImportService:
         normalized = str(value).strip()
         return normalized or None
 
-    def _build_node_ownership_payload(
+    def _build_item_ownership_payload(
         self,
-        item: Dict[str, Any],
+        item: Any,
         *,
         current_user_id: Optional[str] = None,
     ) -> Dict[str, Any]:
@@ -418,6 +418,15 @@ class WorkspaceImportService:
 
         created_via = self._normalize_optional_text(item.get("created_via")) or "legacy_unknown"
         content_scope = self._normalize_optional_text(item.get("content_scope")) or "shared_local"
+
+        import os
+        is_hosted = str(os.environ.get("ACTRA_RUNTIME_MODE") or "").strip().lower() == "hosted_web"
+        is_owned_by_current_user = True
+        if is_hosted:
+            is_owned_by_current_user = bool(
+                created_by_user_id and effective_user_id and created_by_user_id == effective_user_id
+            )
+
         return {
             "scope": "workspace",
             "content_scope": content_scope,
@@ -425,9 +434,7 @@ class WorkspaceImportService:
             "updated_by_user_id": updated_by_user_id,
             "created_via": created_via,
             "has_owner": bool(created_by_user_id),
-            "is_owned_by_current_user": bool(
-                created_by_user_id and effective_user_id and created_by_user_id == effective_user_id
-            ),
+            "is_owned_by_current_user": is_owned_by_current_user,
             "is_shared_library": content_scope == "shared_local",
         }
 

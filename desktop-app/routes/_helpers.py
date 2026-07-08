@@ -596,9 +596,13 @@ def _build_complex_ownership_payload(
 
     created_via = _normalize_optional_text(obj.get("created_via")) or "legacy_unknown"
     content_scope = _normalize_optional_text(obj.get("content_scope")) or "shared_local"
-    is_owned_by_current_user = bool(
-        created_by_user_id and effective_user_id and created_by_user_id == effective_user_id
-    )
+    is_owned_by_current_user = False
+    if not is_hosted_web_runtime():
+        is_owned_by_current_user = True
+    else:
+        is_owned_by_current_user = bool(
+            created_by_user_id and effective_user_id and created_by_user_id == effective_user_id
+        )
 
     user_service = getattr(get_ctx(), "user_service", None)
     created_by_user_name = None
