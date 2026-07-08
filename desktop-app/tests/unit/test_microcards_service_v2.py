@@ -345,23 +345,20 @@ def test_review_composition_and_adaptive_forms():
             svc.submit_answer(review2["id"], cid, "know")
     assert typed_result["form"] == 2 and typed_result["is_correct"] is True
 
-    # Review mode does not update records or cumulative SW/streaks, and logs no events.
+    # Reviews feed cumulative SW and the best-combo record — but never the
+    # run records, and there is no per-session "review score" record (it
+    # would only measure how much happened to be due).
     run_sw = svc.get_deck_record(deck["id"])["scoreL1"]
     fin = svc.finish_session(review2["id"])
     assert fin["mode"] == "review"
     assert fin["score"] == expected_sw
-    assert fin["record"]["comboSRS"] == 0  # not updated
+    assert fin["record"]["comboSRS"] == 3
     assert "scoreSRS" not in fin["record"]
     rec = svc.get_deck_record(deck["id"])
     assert rec["scoreL1"] == run_sw  # L1 run's record is untouched
-    assert rec["comboSRS"] == 0  # not updated
-    assert rec["cumulative_sw"] == run_sw  # not updated
-    assert rec["sw_today"] == run_sw  # not updated
-
-    events = _read_json(svc._events_path, [])
-    review_events = [e for e in events if e.get("session_id") == review2["id"]]
-    assert len(review_events) == 0
-
+    assert rec["comboSRS"] == 3
+    assert rec["cumulative_sw"] == run_sw + expected_sw
+    assert rec["sw_today"] == run_sw + expected_sw
 
 
 def test_run_and_review_slots_coexist():
@@ -1019,7 +1016,7 @@ def test_analytics_aggregation():
     assert len(empty["forecast"]) == 7
 
     # Generate some review events.
-    session = svc.start_session(deck["id"], mode="run", level_mode=1)
+    session = svc.start_session(deck["id"])
     for cid in session["card_queue"]:
         svc.submit_answer(session["id"], cid, "know")
 
@@ -1043,7 +1040,7 @@ def test_list_cards_with_state_buckets():
     assert all(c["is_new"] and c["progress"] == "new" for c in cards)
 
     # Study one card once → it becomes "learning" (has state, level 1).
-    session = svc.start_session(deck["id"], mode="run", level_mode=1, restart=True)
+    session = svc.start_session(deck["id"], restart=True)
     first = session["card_queue"][0]
     svc.submit_answer(session["id"], first, "know")
 
@@ -1062,7 +1059,7 @@ def test_analytics_ignores_orphaned_states():
         svc.create_card(deck["id"], front_text=f"Q{i}", back_text=f"A{i}")
 
     # Study both cards (creates states + events), then delete the deck.
-    session = svc.start_session(deck["id"], mode="run", level_mode=1, restart=True)
+    session = svc.start_session(deck["id"], restart=True)
     for cid in session["card_queue"]:
         svc.submit_answer(session["id"], cid, "know")
     svc.delete_deck(deck["id"])
@@ -1105,7 +1102,7 @@ def test_session_size_setting():
         svc.create_card(deck["id"], front_text=f"Q{i}", back_text=f"A{i}")
 
     _write_raw_settings(svc, {"session_size": 4})
-    session = svc.start_session(deck["id"], mode="review", restart=True)
+    session = svc.start_session(deck["id"], restart=True)
     assert len(session["card_queue"]) == 4
 
 

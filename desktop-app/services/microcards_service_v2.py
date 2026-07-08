@@ -1758,7 +1758,7 @@ class MicrocardsServiceV2:
         # 2. Card mastery metric (feeds deck progress buckets). Re-presentations
         # inside the mastery cycle don't move it — only the first attempt and an
         # explicit override do.
-        if (first_attempt or override) and session.get("mode") != "review":
+        if first_attempt or override:
             consecutive_correct = card_state.get("consecutive_correct", 0)
             mastery_level = card_state.get("level", 1)
             if is_correct:
@@ -1776,7 +1776,7 @@ class MicrocardsServiceV2:
 
         # A correct close (first try, retry inside the mastery cycle, or override)
         # marks the card as passed for the deck-wide L1 completion gate.
-        if is_correct and session.get("mode") != "review":
+        if is_correct:
             card_state["l1_mastered"] = True
 
         # 3. FSRS scheduling: exactly one review per card per session. The first
@@ -1785,7 +1785,7 @@ class MicrocardsServiceV2:
         # An override re-grades the same presentation as GOOD.
         now = _utc_now()
         review_event: Optional[Dict[str, Any]] = None
-        if (first_attempt or override) and session.get("mode") != "review":
+        if first_attempt or override:
             last_reviewed = _parse_iso(card_state.get("last_reviewed_at"))
             if last_reviewed:
                 elapsed_days = max(0.0, (now - last_reviewed).total_seconds() / 86400.0)
@@ -1820,9 +1820,8 @@ class MicrocardsServiceV2:
             review_event = event
 
         # Save card state (l1_mastered may change even on a retry)
-        if session.get("mode") != "review":
-            states[card_id] = card_state
-            self._write_states(states)
+        states[card_id] = card_state
+        self._write_states(states)
 
         # 4. Update session stats + mastery queue
         if first_attempt:
@@ -2051,25 +2050,15 @@ class MicrocardsServiceV2:
         mode = session.get("mode") or "review"
         level = 2 if session.get("level_mode") == 2 else 1
 
-        if mode == "review":
-            record = self.get_deck_record(session.get("deck_id"))
-            saved = {
-                "record": record,
-                "is_new_record": False,
-                "level_up": False,
-                "previous_level": record.get("level", 1),
-                "current_level": record.get("level", 1),
-            }
-        else:
-            saved = self._apply_session_result(
-                session.get("deck_id"),
-                mode=mode,
-                level=level,
-                score=score,
-                stars=stars,
-                deck_size=unique_total,
-                max_combo=max_combo,
-            )
+        saved = self._apply_session_result(
+            session.get("deck_id"),
+            mode=mode,
+            level=level,
+            score=score,
+            stars=stars,
+            deck_size=unique_total,
+            max_combo=max_combo,
+        )
 
         result.update({
             "level": level,
