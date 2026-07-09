@@ -1059,15 +1059,267 @@
             box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
         }
 
-        @media (max-width: 480px) {
-            .welcome-lang-switcher {
-                padding: 0.15rem;
+        /* ===== LANG DROPDOWN ===== */
+        .welcome-lang-dropdown {
+            position: relative;
+        }
+
+        .welcome-lang-trigger {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.32rem;
+            height: 2.15rem;
+            padding: 0 0.65rem 0 0.55rem;
+            border: 1px solid var(--welcome-stone);
+            border-radius: 32px;
+            background: #f6f4ef;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--welcome-graphite);
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s, border-color 0.15s;
+            white-space: nowrap;
+        }
+
+        .welcome-lang-trigger:hover {
+            background: rgba(0,0,0,0.04);
+            color: var(--welcome-charcoal);
+        }
+
+        .welcome-lang-trigger .material-symbols-outlined {
+            font-size: 0.95rem;
+            transition: transform 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .welcome-lang-dropdown.is-open .welcome-lang-trigger .material-symbols-outlined {
+            transform: rotate(180deg);
+        }
+
+        .welcome-lang-menu {
+            position: absolute;
+            top: calc(100% + 6px);
+            right: 0;
+            z-index: 200;
+            min-width: 7rem;
+            border: 1px solid var(--welcome-stone);
+            border-radius: 12px;
+            background: var(--color-surface-1, #fff);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.06);
+            padding: 0.3rem;
+            display: none;
+            flex-direction: column;
+            gap: 0.15rem;
+            backdrop-filter: blur(12px);
+        }
+
+        .welcome-lang-dropdown.is-open .welcome-lang-menu {
+            display: flex;
+            animation: langMenuIn 0.18s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+        }
+
+        @keyframes langMenuIn {
+            from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+            to   { opacity: 1; transform: translateY(0)   scale(1); }
+        }
+
+        .welcome-lang-option {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.42rem 0.65rem;
+            border-radius: 8px;
+            border: none;
+            background: transparent;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--welcome-graphite);
+            cursor: pointer;
+            text-align: left;
+            transition: background 0.13s ease, color 0.13s ease;
+        }
+
+        .welcome-lang-option:hover {
+            background: color-mix(in srgb, var(--welcome-primary-soft) 60%, transparent);
+            color: var(--welcome-primary);
+        }
+
+        .welcome-lang-option.is-active {
+            color: var(--welcome-primary);
+            background: color-mix(in srgb, var(--welcome-primary-soft) 50%, transparent);
+        }
+
+        .welcome-lang-option .material-symbols-outlined {
+            font-size: 0.9rem;
+        }
+
+        /* ===== BURGER BUTTON ===== */
+        .welcome-burger {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            width: 2.4rem;
+            height: 2.4rem;
+            border-radius: 10px;
+            border: 1px solid var(--welcome-stone);
+            background: #f6f4ef;
+            cursor: pointer;
+            padding: 0;
+            flex-shrink: 0;
+            transition: background 0.15s, border-color 0.15s;
+            color: var(--welcome-charcoal);
+        }
+
+        .welcome-burger:hover {
+            background: rgba(0,0,0,0.06);
+            border-color: color-mix(in srgb, var(--welcome-stone) 80%, var(--welcome-graphite));
+        }
+
+        .welcome-burger .material-symbols-outlined {
+            font-size: 1.3rem;
+        }
+
+        /* ===== MOBILE DRAWER ===== */
+        .welcome-drawer-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 49;
+            background: rgba(0,0,0,0.32);
+            backdrop-filter: blur(2px);
+            animation: fadeIn 0.22s ease both;
+        }
+
+        .welcome-drawer-overlay.is-open {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to   { opacity: 1; }
+        }
+
+        .welcome-drawer {
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 50;
+            width: min(80vw, 20rem);
+            background: var(--color-surface-1, #fff);
+            border-left: 1px solid var(--welcome-stone);
+            box-shadow: -8px 0 32px rgba(0,0,0,0.12);
+            display: flex;
+            flex-direction: column;
+            transform: translateX(100%);
+            transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .welcome-drawer.is-open {
+            transform: translateX(0);
+        }
+
+        .welcome-drawer-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.1rem;
+            border-bottom: 1px solid var(--welcome-stone);
+        }
+
+        .welcome-drawer-brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.55rem;
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--welcome-charcoal);
+            text-decoration: none;
+        }
+
+        .welcome-drawer-brand img {
+            width: 1.75rem;
+            height: 1.75rem;
+        }
+
+        .welcome-drawer-close {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 2.1rem;
+            height: 2.1rem;
+            border-radius: 8px;
+            border: 1px solid var(--welcome-stone);
+            background: transparent;
+            cursor: pointer;
+            padding: 0;
+            color: var(--welcome-graphite);
+            transition: background 0.13s ease;
+        }
+
+        .welcome-drawer-close:hover {
+            background: rgba(0,0,0,0.05);
+        }
+
+        .welcome-drawer-close .material-symbols-outlined {
+            font-size: 1.15rem;
+        }
+
+        .welcome-drawer-nav {
+            display: flex;
+            flex-direction: column;
+            padding: 1rem;
+            gap: 0.25rem;
+            flex: 1;
+        }
+
+        .welcome-drawer-nav a {
+            display: flex;
+            align-items: center;
+            padding: 0.7rem 0.85rem;
+            border-radius: 10px;
+            font-size: 0.92rem;
+            font-weight: 500;
+            color: var(--welcome-charcoal);
+            text-decoration: none;
+            transition: background 0.15s ease, color 0.15s ease;
+        }
+
+        .welcome-drawer-nav a:hover,
+        .welcome-drawer-nav a.is-active {
+            background: color-mix(in srgb, var(--welcome-primary-soft) 60%, transparent);
+            color: var(--welcome-primary);
+        }
+
+        .welcome-drawer-footer {
+            padding: 1rem;
+            border-top: 1px solid var(--welcome-stone);
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        .welcome-drawer-footer .welcome-pill,
+        .welcome-drawer-footer .welcome-pill-light {
+            width: 100%;
+            justify-content: center;
+        }
+
+        @media (max-width: 980px) {
+            .welcome-burger {
+                display: inline-flex;
             }
-            .welcome-lang-btn {
-                height: 1.85rem;
-                min-width: 1.85rem;
-                font-size: 0.72rem;
-                padding: 0 0.35rem;
+        }
+
+        @media (max-width: 480px) {
+            .welcome-lang-trigger {
+                height: 1.9rem;
+                font-size: 0.74rem;
+                padding: 0 0.5rem 0 0.45rem;
+            }
+            /* Hide the «Начать» pill in main nav on very small screens to prevent overflow */
+            .welcome-public-nav > div > .welcome-pill:not(.welcome-drawer-footer .welcome-pill) {
+                display: none;
             }
         }
 
@@ -6395,7 +6647,8 @@
             .welcome-spark--two {
                 display: none;
             }
-        }
+
+
     </style>
 
     <link href="/assets/fonts.css" rel="stylesheet" />
@@ -6419,13 +6672,30 @@
             <a href="#workflow" data-welcome-nav-link data-i18n="welcome.nav_workflow">Как это работает</a>
             <a href="#showcase" data-welcome-nav-link data-i18n="welcome.nav_showcase">Примеры</a>
             <a href="#benefits" data-welcome-nav-link data-i18n="welcome.nav_benefits">Преимущества</a>
-            <a href="#premium" data-welcome-nav-link data-i18n="wl.premium_pricing">Premium & Pricing</a>
+            <a href="#premium" data-welcome-nav-link data-i18n="wl.premium_pricing">Premium &amp; Pricing</a>
         </nav>
         <div class="flex items-center gap-2">
-            <div class="welcome-lang-switcher" role="group" aria-label="Language selection" data-i18n-aria="settings.lang_group_aria">
-                <button type="button" data-lang-btn="ru" class="welcome-lang-btn">RU</button>
-                <button type="button" data-lang-btn="en" class="welcome-lang-btn">EN</button>
-                <button type="button" data-lang-btn="uk" class="welcome-lang-btn">UK</button>
+            <!-- Language dropdown -->
+            <div class="welcome-lang-dropdown" id="welcomeLangDropdown" role="group" aria-label="Language selection" data-i18n-aria="settings.lang_group_aria">
+                <button type="button" class="welcome-lang-trigger" id="welcomeLangTrigger"
+                    aria-haspopup="listbox" aria-expanded="false" aria-controls="welcomeLangMenu">
+                    <span data-lang-display>RU</span>
+                    <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+                </button>
+                <div class="welcome-lang-menu" id="welcomeLangMenu" role="listbox" aria-label="Выбор языка">
+                    <button type="button" class="welcome-lang-option" data-lang-btn="ru" role="option" aria-selected="false">
+                        RU
+                        <span class="material-symbols-outlined" aria-hidden="true">check</span>
+                    </button>
+                    <button type="button" class="welcome-lang-option" data-lang-btn="en" role="option" aria-selected="false">
+                        EN
+                        <span class="material-symbols-outlined" aria-hidden="true">check</span>
+                    </button>
+                    <button type="button" class="welcome-lang-option" data-lang-btn="uk" role="option" aria-selected="false">
+                        UK
+                        <span class="material-symbols-outlined" aria-hidden="true">check</span>
+                    </button>
+                </div>
             </div>
             <button type="button" class="welcome-pill-light" onclick="window.welcomeShowAuthLogin && window.welcomeShowAuthLogin()" data-i18n="welcome.btn_login">
                 Войти
@@ -6433,11 +6703,44 @@
             <button type="button" class="welcome-pill" onclick="window.welcomeShowAuthRegister && window.welcomeShowAuthRegister()" data-i18n="welcome.nav_btn_start">
                 Начать
             </button>
+            <!-- Burger button (shown on mobile only via CSS) -->
+            <button type="button" class="welcome-burger" id="welcomeBurger"
+                aria-label="Открыть меню" aria-expanded="false" aria-controls="welcomeDrawer">
+                <span class="material-symbols-outlined" aria-hidden="true">menu</span>
+            </button>
         </div>
         <span class="welcome-public-progress" aria-hidden="true">
             <span class="welcome-public-progress__bar" data-welcome-scroll-progress></span>
         </span>
     </header>
+
+    <!-- ===== MOBILE DRAWER ===== -->
+    <div class="welcome-drawer-overlay" id="welcomeDrawerOverlay" aria-hidden="true"></div>
+    <div class="welcome-drawer" id="welcomeDrawer" role="dialog" aria-modal="true" aria-label="Навигация">
+        <div class="welcome-drawer-head">
+            <a class="welcome-drawer-brand" href="/">
+                <img src="/assets/logo.svg" alt="" aria-hidden="true">
+                <span>ACTRA</span>
+            </a>
+            <button type="button" class="welcome-drawer-close" id="welcomeDrawerClose" aria-label="Закрыть меню">
+                <span class="material-symbols-outlined" aria-hidden="true">close</span>
+            </button>
+        </div>
+        <nav class="welcome-drawer-nav" aria-label="Навигация по странице">
+            <a href="#workflow" data-welcome-drawer-link data-i18n="welcome.nav_workflow">Как это работает</a>
+            <a href="#showcase" data-welcome-drawer-link data-i18n="welcome.nav_showcase">Примеры</a>
+            <a href="#benefits" data-welcome-drawer-link data-i18n="welcome.nav_benefits">Преимущества</a>
+            <a href="#premium" data-welcome-drawer-link data-i18n="wl.premium_pricing">Premium &amp; Pricing</a>
+        </nav>
+        <div class="welcome-drawer-footer">
+            <button type="button" class="welcome-pill-light" onclick="window.welcomeCloseMobileDrawer(); window.welcomeShowAuthLogin && window.welcomeShowAuthLogin()" data-i18n="welcome.btn_login">
+                Войти
+            </button>
+            <button type="button" class="welcome-pill" onclick="window.welcomeCloseMobileDrawer(); window.welcomeShowAuthRegister && window.welcomeShowAuthRegister()" data-i18n="welcome.nav_btn_start">
+                Начать
+            </button>
+        </div>
+    </div>
 
     <!-- ===== LANDING + AUTH CONTAINER ===== -->
     <div class="welcome-shell flex w-full flex-col md:flex-row">
@@ -7877,6 +8180,103 @@
             updateWelcomeScrollProgress();
             window.addEventListener('scroll', updateWelcomeScrollProgress, { passive: true });
             window.addEventListener('resize', updateWelcomeScrollProgress);
+
+            // ===== MOBILE DRAWER =====
+            const burger = document.getElementById('welcomeBurger');
+            const drawer = document.getElementById('welcomeDrawer');
+            const drawerOverlay = document.getElementById('welcomeDrawerOverlay');
+            const drawerClose = document.getElementById('welcomeDrawerClose');
+            const drawerLinks = Array.from(document.querySelectorAll('[data-welcome-drawer-link]'));
+
+            function openDrawer() {
+                drawer.classList.add('is-open');
+                drawerOverlay.classList.add('is-open');
+                drawerOverlay.removeAttribute('aria-hidden');
+                burger.setAttribute('aria-expanded', 'true');
+                document.body.style.overflow = 'hidden';
+                drawerClose.focus();
+            }
+
+            function closeDrawer() {
+                drawer.classList.remove('is-open');
+                drawerOverlay.classList.remove('is-open');
+                drawerOverlay.setAttribute('aria-hidden', 'true');
+                burger.setAttribute('aria-expanded', 'false');
+                document.body.style.overflow = '';
+                burger.focus();
+            }
+
+            window.welcomeCloseMobileDrawer = closeDrawer;
+
+            burger?.addEventListener('click', openDrawer);
+            drawerClose?.addEventListener('click', closeDrawer);
+            drawerOverlay?.addEventListener('click', closeDrawer);
+
+            // Close drawer on Escape
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && drawer?.classList.contains('is-open')) closeDrawer();
+            });
+
+            // Close drawer when clicking a nav link
+            drawerLinks.forEach((link) => {
+                link.addEventListener('click', () => {
+                    closeDrawer();
+                });
+            });
+
+            // ===== LANG DROPDOWN =====
+            const langDropdown = document.getElementById('welcomeLangDropdown');
+            const langTrigger = document.getElementById('welcomeLangTrigger');
+            const langMenu = document.getElementById('welcomeLangMenu');
+
+            function openLangMenu() {
+                langDropdown.classList.add('is-open');
+                langTrigger.setAttribute('aria-expanded', 'true');
+                // Mark active option
+                syncLangOptions();
+            }
+
+            function closeLangMenu() {
+                langDropdown.classList.remove('is-open');
+                langTrigger.setAttribute('aria-expanded', 'false');
+            }
+
+            function syncLangOptions() {
+                const currentLang = window.i18n?.getLang?.() || localStorage.getItem('actra_lang') || 'ru';
+                langMenu?.querySelectorAll('[data-lang-btn]').forEach((btn) => {
+                    const isActive = btn.getAttribute('data-lang-btn') === currentLang;
+                    btn.classList.toggle('is-active', isActive);
+                    btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+                    // Show/hide checkmark
+                    const check = btn.querySelector('.material-symbols-outlined');
+                    if (check) check.style.visibility = isActive ? 'visible' : 'hidden';
+                });
+            }
+
+            langTrigger?.addEventListener('click', (e) => {
+                e.stopPropagation();
+                langDropdown.classList.contains('is-open') ? closeLangMenu() : openLangMenu();
+            });
+
+            // Close on outside click
+            document.addEventListener('click', (e) => {
+                if (!langDropdown?.contains(e.target)) closeLangMenu();
+            });
+
+            // Close on Escape
+            langTrigger?.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') { closeLangMenu(); langTrigger.focus(); }
+            });
+
+            // Re-sync display label when i18n changes lang
+            window.addEventListener('i18n:changed', () => {
+                closeLangMenu();
+                syncLangOptions();
+            });
+
+            // Initial sync (run after i18n.js has had time to set lang)
+            document.addEventListener('DOMContentLoaded', syncLangOptions);
+            setTimeout(syncLangOptions, 80);
         })();
     </script>
     <script src="/assets/i18n.js"></script>
