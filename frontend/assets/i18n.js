@@ -54,7 +54,8 @@
             if (val !== key) el.setAttribute('data-tooltip', val);
         });
         document.querySelectorAll('[data-lang-display]').forEach(function (el) {
-            el.textContent = _lang.toUpperCase();
+            var display = _lang === 'uk' ? 'ua' : _lang;
+            el.textContent = display.toUpperCase();
         });
         document.querySelectorAll('[data-lang-btn]').forEach(function (btn) {
             var btnLang = btn.getAttribute('data-lang-btn');
