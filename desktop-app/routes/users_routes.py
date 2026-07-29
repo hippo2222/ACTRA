@@ -1222,22 +1222,17 @@ def verify_user_password() -> Any:
         password = payload.get("password")
 
         if not user_id or not password:
-            logger.error(f"[DEBUG] verify_user_password missing params: user_id={user_id}, password_len={len(password) if password else 0}")
             return jsonify({"ok": False, "error": "params_missing"}), 400
 
         user_service = get_ctx().user_service
         user = user_service.get_user(user_id)
         if not user:
-            logger.error(f"[DEBUG] verify_user_password user not found: {user_id}")
             return jsonify({"ok": False, "error": "user_not_found"}), 404
 
-        logger.info(f"[DEBUG] verify_user_password checking: user_id={user_id}, has_hash={bool(user.password_hash)}")
         if not user.password_hash:
-            logger.info(f"[DEBUG] verify_user_password: no hash set for user {user_id}")
             return jsonify({"ok": True, "verified": True})
 
         is_valid = user_service.verify_password(user_id, password)
-        logger.info(f"[DEBUG] verify_user_password: is_valid={is_valid} for user {user_id}")
         return jsonify({"ok": True, "verified": is_valid})
     except Exception as exc:
         logger.exception("[HTTP] Failed to verify password: %s", exc)
