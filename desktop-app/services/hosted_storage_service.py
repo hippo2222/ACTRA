@@ -49,10 +49,11 @@ class HostedStorageService(HostedShadowFallbackMixin, StorageService):
             self.logger.warning("[HOSTED] Failed to bootstrap storage shadow: %s", exc)
 
     def _bootstrap_from_shadow_if_empty(self) -> None:
-        if self.repository.count_catalogs() > 0:
+        if hasattr(self.repository, "count_catalogs") and self.repository.count_catalogs() > 0:
             return
         shadow_catalog = self._load_catalog_from_shadow()
-        self.repository.import_catalog_if_absent(shadow_catalog)
+        if hasattr(self.repository, "import_catalog_if_absent"):
+            self.repository.import_catalog_if_absent(shadow_catalog)
 
     def _load_catalog_from_shadow(self) -> List[Dict[str, Any]]:
         self._modules_cache = None

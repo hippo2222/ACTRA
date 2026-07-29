@@ -177,7 +177,7 @@ describe("S2 review media", () => {
     const dom = await bootDom();
     const reviewInline = dom.window.document.getElementById("review-inline");
 
-    expect(dom.window.document.getElementById("review-btn").textContent).toContain("Показать");
+    expect(dom.window.document.getElementById("review-btn").textContent).toContain("Посмотреть");
     expect(reviewInline.classList.contains("hidden")).toBe(false);
     expect(reviewInline.classList.contains("is-open")).toBe(false);
     expect(reviewInline.getAttribute("aria-hidden")).toBe("true");

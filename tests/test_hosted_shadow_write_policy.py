@@ -40,17 +40,22 @@ def _build_settings(tmp_path: Path) -> PersistenceRuntimeSettings:
 
 
 class _InMemoryWorkspaceCatalogRepository:
-    def __init__(self):
+    def __init__(self, catalog_count: int = 1):
         self.modules = []
+        self._catalog_count = catalog_count
 
     def ensure_schema(self) -> None:
         return None
 
     def count_catalogs(self) -> int:
-        return 0
+        return self._catalog_count
 
     def load_catalog(self):
         return list(self.modules)
+
+    def import_catalog_if_absent(self, modules):
+        if not self.modules:
+            self.modules = list(modules)
 
 
 class _InMemoryTaskContentRepository:

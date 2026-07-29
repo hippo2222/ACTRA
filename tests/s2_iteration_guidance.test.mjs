@@ -233,16 +233,14 @@ describe("S2 iteration guidance", () => {
       }),
     });
 
-    expect(dom.window.document.querySelectorAll("#trigger-tasks-list li")).toHaveLength(3);
+    const reviewCards = dom.window.document.querySelectorAll("#review-inline .s2-inline-review-card");
+    expect(reviewCards).toHaveLength(4);
     expect(
-      dom.window.document.getElementById("open-problem-dialog-btn").classList.contains("hidden"),
+      dom.window.document.getElementById("review-btn").classList.contains("hidden"),
     ).toBe(false);
-    expect(dom.window.document.getElementById("problem-preview-note").textContent).toContain(
-      "Показаны 3 из 4",
-    );
   });
 
-  it("shows a positive empty state and hides the dialog trigger when there are no failures", async () => {
+  it("shows a positive empty state and hides the review trigger when there are no failures", async () => {
     const cleanTasks = [
       createIterationTask(1, { success: true, user_answer: "Correct 1" }),
       createIterationTask(2, { success: true, user_answer: "Correct 2" }),
@@ -261,15 +259,15 @@ describe("S2 iteration guidance", () => {
     });
 
     expect(
-      dom.window.document.getElementById("problem-empty-state").classList.contains("hidden"),
-    ).toBe(false);
+      dom.window.document.querySelector("#review-inline .s2-review-empty"),
+    ).not.toBeNull();
     expect(
-      dom.window.document.getElementById("open-problem-dialog-btn").classList.contains("hidden"),
+      dom.window.document.getElementById("review-btn").classList.contains("hidden"),
     ).toBe(true);
   });
 
 
-  it("opens the dialog with all problem tasks and preserves answer toggles after reopen", async () => {
+  it("expands the review section with all problem tasks when toggled", async () => {
     const tasks = [
       createIterationTask(1),
       createIterationTask(2),
@@ -288,28 +286,14 @@ describe("S2 iteration guidance", () => {
       }),
     });
 
-    dom.window.document.getElementById("open-problem-dialog-btn").click();
+    const reviewBtn = dom.window.document.getElementById("review-btn");
+    expect(reviewBtn.classList.contains("hidden")).toBe(false);
+    reviewBtn.click();
     await flushDom();
 
-    expect(dom.window.document.querySelectorAll("#problem-dialog-list li")).toHaveLength(2);
+    expect(dom.window.document.querySelectorAll("#review-inline .s2-inline-review-card")).toHaveLength(2);
     expect(
-      dom.window.document.getElementById("problem-dialog-backdrop").classList.contains("hidden"),
-    ).toBe(false);
-
-    dom.window.document.querySelector(".s2-answer-toggle").click();
-    await flushDom();
-
-    expect(dom.window.document.querySelector(".s2-answer-detail")).not.toBeNull();
-    expect(dom.window.document.getElementById("problem-dialog-list").textContent).toContain(
-      "Правильный ответ",
-    );
-
-    dom.window.document.getElementById("problem-dialog-close-btn").click();
-    await flushDom();
-    dom.window.document.getElementById("open-problem-dialog-btn").click();
-    await flushDom();
-
-    expect(dom.window.document.querySelector(".s2-answer-detail")).not.toBeNull();
-    expect(dom.window.document.querySelector(".s2-answer-toggle").textContent).toBe("Скрыть");
+      dom.window.document.getElementById("review-inline").classList.contains("is-open"),
+    ).toBe(true);
   });
 });
