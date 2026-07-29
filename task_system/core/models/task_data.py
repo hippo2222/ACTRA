@@ -15,6 +15,7 @@ try:
         OpenAnswerTaskContent,
         TestTaskContent,
         SequenceAssemblyTaskContent,
+        ImageLabelingTaskContent,
         TaskSettings,
     )
     VALIDATED_TASK_AVAILABLE = True
@@ -178,6 +179,7 @@ class TaskData:
                 'open_answer': OpenAnswerTaskContent,
                 'test': TestTaskContent,
                 'sequence_assembly': SequenceAssemblyTaskContent,
+                'image_labeling': ImageLabelingTaskContent,
             }
             
             content_model = content_model_map.get((task_type, subtype)) or content_model_map.get((task_type, None)) or content_model_map.get(task_type)

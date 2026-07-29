@@ -254,12 +254,17 @@
         const imageUrl = imageRaw ? resolveReviewImageUrl(imageRaw) : "";
         if (!textValue && !imageUrl) return null;
         return {
+          ...item,
           type: item.type || item.kind || (imageUrl ? "choice_option" : "text"),
           text: textValue,
           imageUrl,
           imagePath: imageRaw,
           optionIndex,
           fallbackLabel,
+          zones: Array.isArray(item.zones) ? item.zones : [],
+          zone_results: isObject(item.zone_results) ? item.zone_results : item.zoneResults || {},
+          user_answers: isObject(item.user_answers) ? item.user_answers : item.userAnswers || {},
+          is_user: Boolean(item.is_user || item.isUser)
         };
       })
       .filter(Boolean);
@@ -352,6 +357,107 @@
     return review;
   }
 
+  function mergeZoneGeometry(zones, source, details, taskData, content) {
+    if (!Array.isArray(zones) || zones.length === 0) return zones || [];
+
+    const geometrySources = [
+      content && content.zones,
+      taskData && taskData.content && taskData.content.zones,
+      taskData && taskData.zones,
+      source && source.content && source.content.zones,
+      source && source.zones,
+      source && source.task && source.task.zones,
+      source && source.task && source.task.content && source.task.content.zones,
+      details && details.content && details.content.zones,
+      details && details.zones,
+    ].filter(function (arr) { return Array.isArray(arr) && arr.length > 0; });
+
+    const geoMap = new Map();
+    geometrySources.forEach(function (arr) {
+      arr.forEach(function (def) {
+        if (!def || typeof def !== "object") return;
+        const zid = String(def.id || def.zone_id || "");
+        if (zid && !geoMap.has(zid)) {
+          geoMap.set(zid, def);
+        }
+      });
+    });
+
+    return zones.map(function (z) {
+      if (!z || typeof z !== "object") return z;
+      const zid = String(z.id || z.zone_id || "");
+      const def = geoMap.get(zid);
+      let rect = z.rect || (def ? def.rect : null);
+      if (!rect || typeof rect !== "object") {
+        const x = z.x ?? z.rect_x ?? (def ? (def.x ?? def.rect_x ?? (def.rect ? def.rect.x : null)) : null);
+        const y = z.y ?? z.rect_y ?? (def ? (def.y ?? def.rect_y ?? (def.rect ? def.rect.y : null)) : null);
+        const width = z.width ?? z.w ?? z.rect_width ?? (def ? (def.width ?? def.w ?? def.rect_width ?? (def.rect ? def.rect.width : null)) : null);
+        const height = z.height ?? z.h ?? z.rect_height ?? (def ? (def.height ?? def.h ?? def.rect_height ?? (def.rect ? def.rect.height : null)) : null);
+        if (x != null && y != null) {
+          rect = { x: Number(x), y: Number(y), width: Number(width ?? 16), height: Number(height ?? 8) };
+        }
+      }
+      return {
+        ...z,
+        rect: rect
+      };
+    });
+  }
+
+  function findTaskZones(source, details, taskData, content, review) {
+    let result = [];
+    const candidates = [
+      source && source.zones,
+      source && source.content && source.content.zones,
+      source && source.task_data && source.task_data.zones,
+      source && source.task_data && source.task_data.content && source.task_data.content.zones,
+      source && source.task && source.task.zones,
+      source && source.task && source.task.content && source.task.content.zones,
+      source && source.task && source.task.task_data && source.task.task_data.content && source.task.task_data.content.zones,
+      details && details.zones,
+      details && details.content && details.content.zones,
+      taskData && taskData.zones,
+      taskData && taskData.content && taskData.content.zones,
+      content && content.zones,
+      review && review.userItems && review.userItems[0] && review.userItems[0].zones,
+      review && review.referenceItems && review.referenceItems[0] && review.referenceItems[0].zones,
+    ];
+    for (let i = 0; i < candidates.length; i++) {
+      const cand = candidates[i];
+      if (Array.isArray(cand) && cand.length > 0) {
+        result = cand;
+        break;
+      }
+    }
+
+    if (result.length === 0) {
+      const zRes = (details && isObject(details.zone_results))
+        ? details.zone_results
+        : (source && isObject(source.zone_results))
+          ? source.zone_results
+          : (review && isObject(review.zone_results))
+            ? review.zone_results
+            : null;
+
+      if (zRes) {
+        const keys = Object.keys(zRes);
+        if (keys.length > 0) {
+          result = keys.map(function (zid) {
+            const itemVal = zRes[zid];
+            const isDict = isObject(itemVal);
+            return {
+              id: zid,
+              label: isDict ? (itemVal.expected || itemVal.label || zid) : zid,
+              rect: isDict && itemVal.rect ? itemVal.rect : null
+            };
+          });
+        }
+      }
+    }
+
+    return mergeZoneGeometry(result, source, details, taskData, content);
+  }
+
   function normalizeTask(task, index) {
     const source = isObject(task) ? task : {};
     const details = isObject(source.details) ? source.details : {};
@@ -361,8 +467,10 @@
       ? source.task_data
       : isObject(nestedTask.task_data)
         ? nestedTask.task_data
-        : {};
-    const content = isObject(taskData.content) ? taskData.content : {};
+        : isObject(source.task)
+          ? source.task
+          : {};
+    const content = isObject(taskData.content) ? taskData.content : isObject(source.content) ? source.content : {};
     const name = humanLabel(
       source.task_name ||
         source.taskName ||
@@ -393,7 +501,17 @@
         content.task_text,
       260
     );
-    const difficulty = clamp(toNumberOrNull(source.difficulty || details.difficulty) || 2, 1, 3);
+    const difficulty = clamp(
+      toNumberOrNull(
+        source.difficulty ||
+        details.difficulty ||
+        taskData.difficulty ||
+        taskData._difficulty_level ||
+        source.difficulty_level
+      ) || 2,
+      1,
+      3
+    );
     const explicitSuccess =
       source.success === true || details.success === true
         ? true
@@ -434,6 +552,44 @@
       correctAnswer,
       explanation
     );
+
+    const taskType = source.task_type || source.type || details.task_type || details.type || taskData.type || "";
+    const zonesFromItems = (review && Array.isArray(review.userItems) && review.userItems[0] && Array.isArray(review.userItems[0].zones)) ? review.userItems[0].zones : [];
+    const isImageLabeling = taskType === "image_labeling" || Boolean(details.zone_results) || Boolean(source.zone_results) || zonesFromItems.length > 0 || (Array.isArray(taskData.zones) && taskData.zones.length > 0) || (content && Array.isArray(content.zones) && content.zones.length > 0);
+
+    if (isImageLabeling) {
+      const itemImgUrl = (review && Array.isArray(review.userItems) && review.userItems[0] && review.userItems[0].imageUrl) ? review.userItems[0].imageUrl : "";
+      const imageUrlRaw = source.image_url || source.imageUrl || source.image_path || details.image_url || details.imageUrl || details.image_path || taskData.image_url || taskData.imageUrl || taskData.image_path || content.image_url || content.imageUrl || itemImgUrl || "";
+      const imageUrl = imageUrlRaw ? resolveReviewImageUrl(imageUrlRaw) : "";
+      const zones = findTaskZones(source, details, taskData, content, review);
+
+      const zoneResults = isObject(details.zone_results) ? details.zone_results : isObject(source.zone_results) ? source.zone_results : (review && isObject(review.zone_results)) ? review.zone_results : {};
+      const userAnswers = isObject(details.user_answers) ? details.user_answers : isObject(details.answers) ? details.answers : isObject(source.answers) ? source.answers : (review && isObject(review.user_answers)) ? review.user_answers : {};
+
+      if (imageUrl) {
+        review.userItems = [
+          {
+            type: "image_labeling_comparison",
+            imageUrl: imageUrl,
+            zones: zones,
+            zone_results: zoneResults,
+            user_answers: userAnswers,
+            is_user: true
+          }
+        ];
+        review.referenceItems = [
+          {
+            type: "image_labeling_comparison",
+            imageUrl: imageUrl,
+            zones: zones,
+            zone_results: zoneResults,
+            is_user: false
+          }
+        ];
+        review.userLines = [];
+        review.referenceLines = [];
+      }
+    }
 
     return {
       key: source.key || source.id || `task-${index}`,
@@ -502,8 +658,11 @@
       target.appendChild(note);
     }
 
+    const answersWrap = document.createElement("div");
+    answersWrap.className = "s2-review-answers";
+
     appendReviewAnswerContent(
-      target,
+      answersWrap,
       review.userLabel || wt('s2.user_label', 'Твоё решение'),
       Array.isArray(review.userLines) ? review.userLines : [],
       Array.isArray(review.userItems) ? review.userItems : [],
@@ -511,12 +670,14 @@
     );
 
     appendReviewAnswerContent(
-      target,
+      answersWrap,
       review.referenceLabel || wt('s2.reference_label', 'Референс'),
       Array.isArray(review.referenceLines) ? review.referenceLines : [],
       Array.isArray(review.referenceItems) ? review.referenceItems : [],
       "s2-review-answer--success"
     );
+
+    target.appendChild(answersWrap);
   }
 
   function extractLegacyFailedTaskNames(data) {
@@ -1090,7 +1251,132 @@
     return zoomBtn;
   }
 
+  function resolveZoneRect(zone, index) {
+    const idx = Number(index || 0);
+    if (!zone || typeof zone !== "object") {
+      return {
+        x: 10 + (idx % 3) * 28,
+        y: 15 + Math.floor(idx / 3) * 16,
+        width: 24,
+        height: 10
+      };
+    }
+    const r = zone.rect && typeof zone.rect === "object" ? zone.rect : zone;
+    const x = r.x ?? r.left ?? r.rect_x ?? zone.x ?? zone.left ?? zone.rect_x ?? (10 + (idx % 3) * 28);
+    const y = r.y ?? r.top ?? r.rect_y ?? zone.y ?? zone.top ?? zone.rect_y ?? (15 + Math.floor(idx / 3) * 16);
+    const width = r.width ?? r.w ?? r.rect_width ?? zone.width ?? zone.w ?? zone.rect_width ?? 24;
+    const height = r.height ?? r.h ?? r.rect_height ?? zone.height ?? zone.h ?? zone.rect_height ?? 10;
+    return {
+      x: Number(x),
+      y: Number(y),
+      width: Number(width),
+      height: Number(height)
+    };
+  }
+
   function createReviewMediaItem(item) {
+    if (item && item.type === "image_labeling_comparison" && item.imageUrl && Array.isArray(item.zones)) {
+      const card = document.createElement("article");
+      card.className = "s2-review-media-card s2-review-media-card--image s2-review-media-card--full w-full max-w-full";
+      card.style.gridColumn = "1 / -1";
+      card.style.width = "100%";
+
+      const imgContainer = document.createElement("div");
+      imgContainer.className = "relative w-full rounded-xl overflow-hidden bg-bg-main p-1 cursor-pointer select-none";
+      imgContainer.style.minHeight = "200px";
+
+      const image = document.createElement("img");
+      image.className = "w-full h-auto block rounded-lg pointer-events-none select-none";
+      image.src = item.imageUrl;
+      imgContainer.appendChild(image);
+
+      const overlayLayer = document.createElement("div");
+      overlayLayer.className = "absolute inset-0 pointer-events-none";
+
+      const isUser = Boolean(item.is_user);
+      const zoneResults = item.zone_results || {};
+      const userAnswers = item.user_answers || {};
+
+      item.zones.forEach(function (zone, index) {
+        if (!zone) return;
+        const rect = resolveZoneRect(zone, index);
+
+        const zid = String(zone.id || zone.zone_id || "");
+        const zEntry = zoneResults[zid] || zoneResults[zone.id];
+        const isCorrect = isUser ? (zEntry && (typeof zEntry === "object" ? zEntry.is_correct === true : zEntry === true)) : true;
+        const assignedText = isUser
+          ? (userAnswers[zid] || (zEntry && typeof zEntry === "object" && (zEntry.actual || zEntry.user_answer)) || "")
+          : (zone.label || zone.expected || (zEntry && typeof zEntry === "object" && (zEntry.expected || zEntry.correct_answer)) || "");
+
+        const isAnswerEmpty = !assignedText || String(assignedText).trim() === "" || String(assignedText).trim() === "?";
+        const isTypo = isUser && zEntry && typeof zEntry === "object" && (zEntry.is_typo === true || zEntry.status === "typo");
+
+        const zoneEl = document.createElement("div");
+        zoneEl.className = "absolute border rounded-full flex items-center justify-center p-0.5 box-border pointer-events-auto transition-all shadow-sm select-none";
+        zoneEl.style.left = `${rect.x}%`;
+        zoneEl.style.top = `${rect.y}%`;
+        zoneEl.style.width = `${rect.width || 16}%`;
+        zoneEl.style.height = `${rect.height || 8}%`;
+        zoneEl.style.minWidth = `${rect.width || 16}%`;
+        zoneEl.style.minHeight = `${rect.height || 8}%`;
+        zoneEl.style.WebkitFontSmoothing = "antialiased";
+        zoneEl.setAttribute("data-s2-zone-id", zid);
+
+        if (isCorrect) {
+          zoneEl.style.borderColor = "#047857";
+          zoneEl.style.backgroundColor = "#10b981";
+          zoneEl.style.boxShadow = "0 1px 3px rgba(4, 120, 87, 0.5)";
+        } else if (isTypo) {
+          zoneEl.style.borderColor = "#b45309";
+          zoneEl.style.backgroundColor = "#f59e0b";
+          zoneEl.style.boxShadow = "0 1px 3px rgba(180, 83, 9, 0.5)";
+        } else {
+          zoneEl.style.borderColor = "#b91c1c";
+          zoneEl.style.backgroundColor = "#ef4444";
+          zoneEl.style.boxShadow = "0 1px 3px rgba(185, 28, 28, 0.5)";
+        }
+
+        const labelSpan = document.createElement("span");
+        labelSpan.className = "text-center font-extrabold text-white text-[11px] leading-none max-w-full break-words select-none px-1 py-0.5 tracking-tight";
+        labelSpan.style.textShadow = "0 1px 2px rgba(0, 0, 0, 0.35)";
+        labelSpan.textContent = isAnswerEmpty ? "—" : assignedText;
+        zoneEl.appendChild(labelSpan);
+
+        if (isUser && !isCorrect) {
+          const expectedText = (zEntry && typeof zEntry === "object" && zEntry.expected) || zone.label || "";
+          if (expectedText) {
+            zoneEl.title = isTypo
+              ? `Опечатка! Правильно: ${expectedText}`
+              : `Неверно! Должно быть: ${expectedText}`;
+          }
+        }
+
+        zoneEl.addEventListener("mouseenter", function () {
+          const matching = document.querySelectorAll(`[data-s2-zone-id="${zid}"]`);
+          matching.forEach(function (el) {
+            el.style.transform = "scale(1.08)";
+            el.style.zIndex = "50";
+            el.style.boxShadow = "0 0 0 3px rgba(99, 102, 241, 0.6)";
+          });
+        });
+        zoneEl.addEventListener("mouseleave", function () {
+          const matching = document.querySelectorAll(`[data-s2-zone-id="${zid}"]`);
+          matching.forEach(function (el) {
+            el.style.transform = "";
+            el.style.zIndex = "";
+            el.style.boxShadow = "";
+          });
+        });
+
+        overlayLayer.appendChild(zoneEl);
+      });
+
+      imgContainer.appendChild(overlayLayer);
+      card.appendChild(imgContainer);
+
+      return card;
+    }
+
     const card = document.createElement("article");
     card.className = item && item.imageUrl
       ? "s2-review-media-card s2-review-media-card--image"
@@ -1238,21 +1524,29 @@
     answerCard.appendChild(answerLabel);
 
     const safeItems = Array.isArray(items) ? items.filter(Boolean) : [];
+    const hasFullWidthItem = safeItems.some(function (it) {
+      return it && (it.type === "image_labeling_comparison" || it.is_full_width);
+    });
+
     if (safeItems.length) {
       const mediaGrid = document.createElement("div");
-      mediaGrid.className = "s2-review-media-grid";
+      mediaGrid.className = hasFullWidthItem
+        ? "s2-review-media-grid s2-review-media-grid--full w-full"
+        : "s2-review-media-grid";
       safeItems.forEach(function (item) {
         mediaGrid.appendChild(createReviewMediaItem(item));
       });
       answerCard.appendChild(mediaGrid);
     }
 
-    filterReviewLinesForDisplay(lines, safeItems).forEach(function (line) {
-      const answerCopy = document.createElement("p");
-      answerCopy.className = "s2-review-answer-copy";
-      answerCopy.textContent = line;
-      answerCard.appendChild(answerCopy);
-    });
+    if (!hasFullWidthItem) {
+      filterReviewLinesForDisplay(lines, safeItems).forEach(function (line) {
+        const answerCopy = document.createElement("p");
+        answerCopy.className = "s2-review-answer-copy";
+        answerCopy.textContent = line;
+        answerCard.appendChild(answerCopy);
+      });
+    }
 
     card.appendChild(answerCard);
   }
@@ -1306,12 +1600,10 @@
 
     if (reviewBtn) {
       reviewBtn.textContent = state.reviewExpanded
-        ? wt('s2.review_btn_collapse', 'Свернуть разбор')
-        : reviewTasks.length > 1
-          ? wt('s2.review_btn_show_n', 'Показать {n} ошибки').replace('{n}', reviewTasks.length)
-          : reviewTasks.length === 1
-            ? wt('s2.review_btn_show_one', 'Показать 1 ошибку')
-            : wt('s2.review_btn_none', 'Разбор не нужен');
+        ? wt('s2.review_btn_collapse', 'Свернуть ошибки')
+        : summary.failed > 0
+          ? wt('s2.btn_view_errors', 'Посмотреть ошибки')
+          : wt('s2.review_btn_none', 'Разбор не нужен');
       reviewBtn.setAttribute("aria-expanded", state.reviewExpanded && summary.failed > 0 ? "true" : "false");
       setHidden(reviewBtn, summary.failed === 0);
     }
@@ -1336,9 +1628,19 @@
       const card = document.createElement("div");
       card.className = "s2-inline-review-card";
 
-      const title = document.createElement("p");
-      title.className = "s2-dialog-item-title";
-      title.textContent = task.review && task.review.title ? task.review.title : task.name;
+      const title = document.createElement("div");
+      title.className = "s2-dialog-item-title flex items-center justify-between gap-2 flex-wrap mb-2";
+
+      const titleText = document.createElement("span");
+      titleText.className = "font-bold text-xs uppercase tracking-wider text-text-tertiary";
+      titleText.textContent = task.review && task.review.title ? task.review.title : task.name;
+      title.appendChild(titleText);
+
+      const diffBadge = document.createElement("span");
+      diffBadge.className = "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/10 text-amber-600 border border-amber-500/20";
+      diffBadge.textContent = wt('s2.meta_difficulty_val', 'Сложность {d}').replace('{d}', task.difficulty || 2);
+      title.appendChild(diffBadge);
+
       card.appendChild(title);
 
       const fullTestEntries = task.review && task.review.kind === "full_test" && Array.isArray(task.review.entries)
@@ -1367,8 +1669,11 @@
         card.appendChild(note);
       }
 
+      const answersWrap = document.createElement("div");
+      answersWrap.className = "s2-review-answers";
+
       appendReviewAnswerContent(
-        card,
+        answersWrap,
         task.review && task.review.userLabel ? task.review.userLabel : wt('s2.user_label', 'Твоё решение'),
         task.review && Array.isArray(task.review.userLines) ? task.review.userLines : [],
         task.review && Array.isArray(task.review.userItems) ? task.review.userItems : [],
@@ -1376,12 +1681,14 @@
       );
 
       appendReviewAnswerContent(
-        card,
+        answersWrap,
         task.review && task.review.referenceLabel ? task.review.referenceLabel : wt('s2.reference_label', 'Референс'),
         task.review && Array.isArray(task.review.referenceLines) ? task.review.referenceLines : [],
         task.review && Array.isArray(task.review.referenceItems) ? task.review.referenceItems : [],
         "s2-review-answer--success"
       );
+
+      card.appendChild(answersWrap);
 
       container.appendChild(card);
     });
@@ -1595,10 +1902,24 @@
     if (btn) btn.setAttribute("aria-expanded", state.menuOpen ? "true" : "false");
   }
 
-  function handleContinue() {
-    if (!state.sessionId) return;
+  async function handleContinue() {
+    if (!state.sessionId || state.isNavigating) return;
+    state.isNavigating = true;
 
     if (state.hasNextIteration) {
+      try {
+        await fetch(`/api/session/${encodeURIComponent(state.sessionId)}/resume`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ source: "s2_continue" }),
+        });
+        await fetch(`/api/session/${encodeURIComponent(state.sessionId)}/task/next`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        });
+      } catch (err) {
+        console.error("[S2] Failed to advance to next task/iteration:", err);
+      }
       navigateTo(`/session/${encodeURIComponent(state.sessionId)}`);
       return;
     }

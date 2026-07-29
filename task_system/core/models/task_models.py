@@ -888,6 +888,17 @@ class SequenceAssemblyTaskContent(BaseModel):
         extra = "allow"
 
 
+class ImageLabelingTaskContent(BaseModel):
+    """Content model for image labeling tasks."""
+    image: str = Field(..., description="Background image path or base64 data-url")
+    zones: List[Dict[str, Any]] = Field(..., description="Rectangular zones to label")
+    prompt: Optional[str] = Field(None, description="Task instructions/prompt")
+    settings: Optional[Dict[str, Any]] = Field(None, description="Task settings")
+    
+    class Config:
+        extra = "allow"
+
+
 # Union type for all content models (defined here for forward reference)
 TaskContent = Union[
     ClickTaskContent,
@@ -896,6 +907,7 @@ TaskContent = Union[
     OpenAnswerTaskContent,
     TestTaskContent,
     SequenceAssemblyTaskContent,
+    ImageLabelingTaskContent,
 ]
 
 
@@ -911,6 +923,7 @@ def get_expected_content_model(task_type: Optional[str], subtype: Optional[str] 
         ('open_answer', None): OpenAnswerTaskContent,
         ('test', None): TestTaskContent,
         ('sequence_assembly', None): SequenceAssemblyTaskContent,
+        ('image_labeling', None): ImageLabelingTaskContent,
     }
     return type_to_content.get((task_type, subtype)) or type_to_content.get((task_type, None))
 
@@ -921,7 +934,7 @@ class ValidatedTask(BaseModel):
     id: str = Field(..., description="Task ID")
     type: str = Field(
         ...,
-        description="Task type: click, draw, open_answer, test, sequence_assembly"
+        description="Task type: click, draw, open_answer, test, sequence_assembly, image_labeling"
     )
     subtype: Optional[str] = Field(
         None,
@@ -935,6 +948,7 @@ class ValidatedTask(BaseModel):
         OpenAnswerTaskContent,
         TestTaskContent,
         SequenceAssemblyTaskContent,
+        ImageLabelingTaskContent,
     ] = Field(..., description="Task content (polymorphic)")
     settings: Optional[TaskSettings] = Field(None, description="Task settings")
     
@@ -985,7 +999,7 @@ class ValidatedTask(BaseModel):
     @validator('type')
     def validate_type(cls, v):
         """Validate task type."""
-        valid_types = ['click', 'draw', 'open_answer', 'test', 'sequence_assembly']
+        valid_types = ['click', 'draw', 'open_answer', 'test', 'sequence_assembly', 'image_labeling']
         if v not in valid_types:
             raise ValueError(f"Invalid task type: {v}. Must be one of {valid_types}")
         return v

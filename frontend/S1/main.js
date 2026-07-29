@@ -56,6 +56,7 @@
     const {
         handleCheckAnswerClick,
         handleSubmitAnswer,
+        handleUserJudgementChoice,
         handleNextTask,
         handleCancelSession,
         handlePauseConfirm,
@@ -383,6 +384,7 @@
     function init() {
         if (typeof window !== 'undefined') {
             window.handleSubmitAnswer = handleSubmitAnswer;
+            window.handleUserJudgementChoice = handleUserJudgementChoice;
         }
 
         document

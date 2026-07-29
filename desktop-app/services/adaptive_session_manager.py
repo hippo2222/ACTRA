@@ -1161,12 +1161,14 @@ class AdaptiveSessionManager:
                         continue
                     if idx >= 0 and idx not in retry_failed_indices:
                         retry_failed_indices.append(idx)
+            is_single_retry = bool(details.get("single_retry_copy", False)) if isinstance(details, dict) else False
             self._add_failed_task_to_current_queue(
                 session,
                 task_ref,
                 difficulty,
                 failed_question_indices=retry_failed_indices or None,
                 display_mode=retry_display_mode or None,
+                single_retry_copy=is_single_retry,
             )
 
         # Логика сохранения failed_subtests перенесена в _process_test_partial_retry
@@ -1492,6 +1494,7 @@ class AdaptiveSessionManager:
         difficulty: int,
         failed_question_indices: Optional[List[int]] = None,
         display_mode: Optional[str] = None,
+        single_retry_copy: bool = False,
     ) -> None:
         """
         Добавляет ошибочное задание в текущую очередь итерации для повторного выполнения (Smart Retry).
@@ -1585,7 +1588,8 @@ class AdaptiveSessionManager:
             for t in (getattr(session, "deferred_retry_tasks", None) or [])
             if t.task_ref == task_ref and t.is_retry
         )
-        if max_copies >= 0 and current_copies >= max_copies:
+        is_last_in_queue = bool(session.queue and session.current_task_index >= len(session.queue) - 1)
+        if max_copies >= 0 and current_copies >= max_copies and not is_last_in_queue:
             logger.info(
                 f"[_add_failed_task_to_current_queue] ⚠️ Пропуск Smart Retry для {task_ref}: "
                 f"достигнут лимит копий ({current_copies}/{max_copies})"
@@ -1594,7 +1598,7 @@ class AdaptiveSessionManager:
 
         remaining_copies = None
         if max_copies >= 0:
-            remaining_copies = max(0, max_copies - current_copies)
+            remaining_copies = max(1 if is_last_in_queue else 0, max_copies - current_copies)
 
         task_type = self._get_task_type(task_ref)
         scattered_retry_indices: List[int] = []
@@ -1617,7 +1621,10 @@ class AdaptiveSessionManager:
         control_position_type = "next_iteration" if task_type == "test" else "end_of_phase"
         tasks_to_add = []
 
-        if difficulty > 1 and training_control_enabled:
+        if single_retry_copy:
+            for t in _build_retry_tasks(difficulty):
+                tasks_to_add.append({'task': t, 'position_type': 'near'})
+        elif difficulty > 1 and training_control_enabled:
             training_level = max(1, difficulty - 1)
             for t in _build_retry_tasks(training_level):
                 tasks_to_add.append({'task': t, 'position_type': 'near'})
@@ -2475,11 +2482,15 @@ class AdaptiveSessionManager:
             f"adaptive_difficulty={adaptive_enabled}, escalation_on_success={escalation_enabled}"
         )
 
-        max_iterations = None
+        DEFAULT_MAX_ITERATIONS = 3
+        raw_max_iter = getattr(settings, "max_iterations", None) if settings else None
         try:
-            max_iterations = int(getattr(settings, "max_iterations", 0) or 0)
+            configured_max_iter = int(raw_max_iter) if raw_max_iter is not None else None
         except Exception:
-            max_iterations = 0
+            configured_max_iter = None
+
+        # Жесткое базовое ограничение системы: по умолчанию максимум 3 итерации для всех комплексов
+        effective_max_iterations = configured_max_iter if (configured_max_iter is not None and configured_max_iter > 0) else DEFAULT_MAX_ITERATIONS
 
         upcoming_iteration = int(getattr(session, "iteration", 0) or 0) + 1
         planned_final_iteration = self._get_planned_final_iteration(session, complex_obj)
@@ -2490,10 +2501,10 @@ class AdaptiveSessionManager:
             for queued_task in (session.queue or [])
             if getattr(queued_task, "task_ref", None)
         }
-        if max_iterations > 0 and upcoming_iteration > max_iterations:
+        if upcoming_iteration > effective_max_iterations:
             logger.info(
-                f"[_generate_next_iteration] Достигнут лимит итераций: current={session.iteration}, "
-                f"upcoming={upcoming_iteration}, max_iterations={max_iterations}. Очищаем очередь без генерации."
+                f"[_generate_next_iteration] 🚫 Достигнут лимит итераций ({upcoming_iteration} > {effective_max_iterations}): "
+                f"current={session.iteration}, max_iterations={effective_max_iterations}. Очищаем очередь без генерации."
             )
             session.queue = []
             session.current_task_index = 0
@@ -2749,20 +2760,8 @@ class AdaptiveSessionManager:
                     )
                     continue
 
-                # LOGIC-01 guard: if the user failed in the current iteration,
-                # cap the planned difficulty at their actual level so we don't
-                # jump them past a level they haven't mastered yet.
-                if current_result and not success_in_iteration:
-                    adjusted_difficulty = self._normalize_level_for_available(
-                        current_level, available_levels
-                    )
-                    if adjusted_difficulty < target_difficulty:
-                        logger.info(
-                            "[_generate_next_iteration] LOGIC-01 guard: %s провалился на lvl=%s, "
-                            "плановый уровень %s -> %s",
-                            task_ref, current_level, target_difficulty, adjusted_difficulty,
-                        )
-                        target_difficulty = adjusted_difficulty
+                # In full_replay_iteration, target_difficulty is determined by the iteration progression (e.g. Level 2 for Iteration 2)
+                # regardless of individual attempt errors, because Smart Retry in iteration 1 already forced task practice.
 
                 new_queue.extend(
                     self._build_queued_tasks_for_complex_task(

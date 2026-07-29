@@ -844,6 +844,7 @@
     function applyTaskCheckFeedback(taskType, result) {
         if (taskType === "test" && typeof TestUI !== "undefined") TestUI.applyCheckFeedback(result);
         else if (taskType === "sequence_assembly" && typeof SequenceUI !== "undefined") SequenceUI.applyCheckFeedback(result);
+        else if (taskType === "image_labeling" && typeof ImageLabelUI !== "undefined") ImageLabelUI.applyCheckFeedback(result);
         else if (taskType === "click") {
             const subtype = getTaskSubtype(SessionState.currentTask);
             if (subtype !== "error_detection" && typeof ClickUI !== "undefined") ClickUI.applyCheckFeedback(result);
@@ -895,17 +896,18 @@
         applyTaskCheckFeedback(currentTaskType, result);
     }
 
-    async function handleDrawLabelJudgementChoice(choice) {
-        if (!SessionState || !SessionState.sessionId || !SessionState.currentTask || !SessionState.pendingManualJudgement) {
+    async function handleUserJudgementChoice(choice) {
+        if (!SessionState || !SessionState.sessionId || !SessionState.currentTask) {
             return;
         }
 
         const normalizedChoice = choice === "accept" ? "accept" : "reject";
         const mode = normalizedChoice === "accept" ? "force_success" : "force_failure";
-        const message =
-            normalizedChoice === "accept"
-                ? wt('s1.verdict_accepted', 'Ответ принят по вашему выбору.')
-                : wt('s1.verdict_rejected', 'Ответ отмечен как неверный по вашему выбору.');
+        const isAccept = normalizedChoice === "accept";
+        const message = isAccept
+            ? wt('s1.verdict_accepted', 'Ответ принят по вашему выбору.')
+            : wt('s1.verdict_rejected', 'Ответ отмечен как неверный по вашему выбору.');
+
         const baseResult =
             SessionState.currentEvaluationResult && typeof SessionState.currentEvaluationResult === "object"
                 ? SessionState.currentEvaluationResult
@@ -914,17 +916,36 @@
             baseResult && baseResult.details && typeof baseResult.details === "object"
                 ? baseResult.details
                 : {};
-        const manualLabelJudgement =
-            baseDetails.manual_label_judgement && typeof baseDetails.manual_label_judgement === "object"
-                ? baseDetails.manual_label_judgement
-                : {};
+
+        const currentTaskType = getCurrentEffectiveTaskType();
+        let answer = {};
+
+        try {
+            if (currentTaskType === "image_labeling" && typeof ImageLabelUI !== "undefined") {
+                answer = ImageLabelUI.getUserAnswerPayload() || {};
+            } else if (typeof getCurrentAnswerPayload === "function") {
+                answer = getCurrentAnswerPayload() || {};
+            }
+        } catch (e) {
+            answer = {};
+        }
+
+        if (isAccept) {
+            answer.override_typo = true;
+            answer.single_retry_copy = false;
+        } else {
+            answer.override_typo = false;
+            answer.single_retry_copy = true;
+        }
+
         const auditDetails = {
             ...baseDetails,
             requires_user_judgement: false,
             pending_user_judgement: false,
             user_judgement_resolved: true,
+            override_typo: isAccept,
+            single_retry_copy: !isAccept,
             manual_label_judgement: {
-                ...manualLabelJudgement,
                 resolved: true,
                 user_choice: normalizedChoice,
             },
@@ -934,9 +955,6 @@
             setLoading(true);
             showStatus("");
 
-            const answer =
-                (typeof getCurrentAnswerPayload === "function" && getCurrentAnswerPayload()) ||
-                {};
             const { status, data } = await SessionAPI.submitAnswer(
                 SessionState.sessionId,
                 SessionState.currentTask.task_id,
@@ -963,7 +981,7 @@
             }
 
             showStatus("");
-            finalizeCheckedResult(response.result, getCurrentEffectiveTaskType());
+            finalizeCheckedResult(response.result, currentTaskType);
         } catch (err) {
             console.error(err);
             showStatus(wt('s1.err_save_verdict_retry', 'Не удалось сохранить ваш выбор. Попробуйте ещё раз'), "error");
@@ -971,6 +989,10 @@
             setLoading(false);
             refreshCheckButtonState();
         }
+    }
+
+    async function handleDrawLabelJudgementChoice(choice) {
+        return handleUserJudgementChoice(choice);
     }
 
     async function handleSubmitAnswer(options = {}) {
@@ -1006,6 +1028,8 @@
             answer = userInput;
         } else if (currentTaskType === "sequence_assembly" && typeof SequenceUI !== "undefined") {
             answer = SequenceUI.getUserAnswerPayload() || {};
+        } else if (currentTaskType === "image_labeling" && typeof ImageLabelUI !== "undefined") {
+            answer = ImageLabelUI.getUserAnswerPayload() || {};
         } else if (currentTaskType === "click" && getTaskSubtype(SessionState.currentTask) === "error_detection" && typeof MistakesUI !== "undefined") {
             answer = MistakesUI.getUserAnswerPayload() || {};
         } else if (currentTaskType === "click" && typeof ClickUI !== "undefined") {
@@ -1018,6 +1042,11 @@
             answer = OpenAnswerUI.getUserAnswerPayload() || {};
         }
 
+        if (options && typeof options === "object") {
+            if (options.override_typo !== undefined) answer.override_typo = !!options.override_typo;
+            if (options.single_retry_copy !== undefined) answer.single_retry_copy = !!options.single_retry_copy;
+        }
+
         // Validation
         try {
             if (currentTaskType === "sequence_assembly" && typeof SequenceUI !== "undefined" && typeof SequenceUI.validateBeforeSubmit === "function") {
@@ -1028,6 +1057,20 @@
                     return;
                 }
                 answer = SequenceUI.getUserAnswerPayload() || answer;
+            }
+            if (currentTaskType === "image_labeling" && typeof ImageLabelUI !== "undefined" && typeof ImageLabelUI.validateBeforeSubmit === "function") {
+                const validation = ImageLabelUI.validateBeforeSubmit();
+                if (validation && validation.valid === false) {
+                    showStatus(validation.message || 'Заполните все области перед отправкой на проверку', "error");
+                    showEvaluationResult(null);
+                    return;
+                }
+                const freshPayload = ImageLabelUI.getUserAnswerPayload() || answer;
+                if (options && typeof options === "object") {
+                    if (options.override_typo !== undefined) freshPayload.override_typo = !!options.override_typo;
+                    if (options.single_retry_copy !== undefined) freshPayload.single_retry_copy = !!options.single_retry_copy;
+                }
+                answer = freshPayload;
             }
             if (currentTaskType === "open_answer") {
                 const isValid = typeof OpenAnswerUI !== "undefined" && typeof OpenAnswerUI.isAnswerValid === "function"
@@ -1508,6 +1551,8 @@
                 return TestUI.getUserAnswerPayload() || null;
             } else if (taskType === "sequence_assembly" && typeof SequenceUI !== "undefined" && typeof SequenceUI.getUserAnswerPayload === "function") {
                 return SequenceUI.getUserAnswerPayload() || null;
+            } else if (taskType === "image_labeling" && typeof ImageLabelUI !== "undefined" && typeof ImageLabelUI.getUserAnswerPayload === "function") {
+                return ImageLabelUI.getUserAnswerPayload() || null;
             } else if (taskType === "click" && typeof ClickUI !== "undefined" && typeof ClickUI.getUserAnswerPayload === "function") {
                 return ClickUI.getUserAnswerPayload() || null;
             } else if (taskType === "open_answer" && typeof OpenAnswerUI !== "undefined" && typeof OpenAnswerUI.getUserAnswerPayload === "function") {
@@ -1529,6 +1574,8 @@
                 return TestUI.getViewState() || null;
             } else if (taskType === "sequence_assembly" && typeof SequenceUI !== "undefined" && typeof SequenceUI.getViewState === "function") {
                 return SequenceUI.getViewState() || null;
+            } else if (taskType === "image_labeling" && typeof ImageLabelUI !== "undefined" && typeof ImageLabelUI.getViewState === "function") {
+                return ImageLabelUI.getViewState() || null;
             } else if (taskType === "click" && typeof ClickUI !== "undefined" && typeof ClickUI.getViewState === "function") {
                 return ClickUI.getViewState() || null;
             } else if (taskType === "draw" && typeof DrawUI !== "undefined" && typeof DrawUI.getViewState === "function") {
@@ -1731,6 +1778,7 @@
     return {
         handleCheckAnswerClick,
         handleSubmitAnswer,
+        handleUserJudgementChoice,
         handleDrawLabelJudgementChoice,
         handleNextTask,
         handleCancelSession,

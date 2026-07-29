@@ -4659,6 +4659,7 @@ class EditorDashboard {
         if (type === 'draw' || type === 'draw_task') editorPage = 'Point_Annotation.html';
         if (type === 'test') editorPage = 'Test Task Editor Multiple Choice.html';
         if (type === 'sequence_assembly') editorPage = 'Sequence Assembly Editor Procedural Steps.html';
+        if (type === 'image_labeling') editorPage = 'Image Labeling Editor.html';
         if (type === 'open_answer') editorPage = 'Open Answer Editor Textual Reasoning.html';
 
         const normalizedOptions = typeof options === 'boolean' ? { isNew: options } : (options || {});
@@ -5185,6 +5186,14 @@ class EditorDashboard {
                     : 'bg-primary-lighter text-primary ring-1 ring-inset ring-primary'
             };
         }
+        if (task.type === 'image_labeling') {
+            return {
+                label: wt('db.task_type_image_labeling', 'Подписи на рисунке'),
+                className: isDark
+                    ? 'bg-secondary-dark text-secondary-text ring-1 ring-inset ring-secondary-light'
+                    : 'bg-secondary-light text-secondary ring-1 ring-inset ring-secondary'
+            };
+        }
         if (task.type === 'open_answer') {
             return {
                 label: wt('db.k296', 'Открытый ответ'),
@@ -5676,6 +5685,7 @@ class EditorDashboard {
         if (task.type === 'draw' || task.type === 'draw_task') icon = 'draw';
         if (task.type === 'test') icon = 'quiz';
         if (task.type === 'sequence_assembly') icon = 'reorder';
+        if (task.type === 'image_labeling') icon = 'image';
         if (task.type === 'open_answer') icon = 'edit_note';
 
         button.innerHTML = `
@@ -5833,6 +5843,7 @@ class EditorDashboard {
         if (type === 'draw' || type === 'draw_task') editorPage = 'Point_Annotation.html';
         if (type === 'test') editorPage = 'Test Task Editor Multiple Choice.html';
         if (type === 'sequence_assembly') editorPage = 'Sequence Assembly Editor Procedural Steps.html';
+        if (type === 'image_labeling') editorPage = 'Image Labeling Editor.html';
         if (type === 'open_answer') editorPage = 'Open Answer Editor Textual Reasoning.html';
 
         if (editorPage) {
@@ -6167,6 +6178,9 @@ class EditorDashboard {
         }
         if (Array.isArray(content.levels) || Array.isArray(payload.levels) || Array.isArray(content.elements)) {
             return 'sequence_assembly';
+        }
+        if (Array.isArray(content.zones) || Array.isArray(payload.zones)) {
+            return 'image_labeling';
         }
         if (typeof content.question === 'string' || Array.isArray(content.keywords)) {
             return 'open_answer';

@@ -20,6 +20,7 @@ from task_system.core.models.task_models import (
     OpenAnswerTaskContent,
     TestTaskContent,
     SequenceAssemblyTaskContent,
+    ImageLabelingTaskContent,
     is_direct_image_url,
     normalize_image_ref_to_string,
 )
@@ -29,6 +30,7 @@ from task_system.core.models.answer_key_models import (
     OpenAnswerTaskAnswerKey,
     SequenceAssemblyAnswerKey,
     TestTaskAnswerKey,
+    ImageLabelingTaskAnswerKey,
 )
 from task_system.core.models.path_resolver import PathResolver
 from task_system.core.exceptions import TaskLoadError, TaskValidationError
@@ -67,6 +69,7 @@ class TaskLoader:
             'open_answer': OpenAnswerTaskContent,
             'test': TestTaskContent,
             'sequence_assembly': SequenceAssemblyTaskContent,
+            'image_labeling': ImageLabelingTaskContent,
         }
         
         # Register answer key models by task type
@@ -76,6 +79,7 @@ class TaskLoader:
             'open_answer': OpenAnswerTaskAnswerKey,
             'test': TestTaskAnswerKey,
             'sequence_assembly': SequenceAssemblyAnswerKey,
+            'image_labeling': ImageLabelingTaskAnswerKey,
         }
     
     def load_task(self, task_path: Path) -> Dict[str, Any]:
@@ -129,8 +133,8 @@ class TaskLoader:
             logger.warning(f"Migration failed for {task_json_path}: {e}")
             # Continue with original data
         
-        # Validate metadata
-        meta_data = raw_data.get('meta', {})
+        # Validate metadata (merge top-level meta and metadata to preserve hosted ownership)
+        meta_data = {**raw_data.get('meta', {}), **raw_data.get('metadata', {})}
         try:
             metadata = TaskMetadata(**meta_data)
         except PydanticValidationError as e:

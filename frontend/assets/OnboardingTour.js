@@ -702,7 +702,11 @@
     function clearScrimPieces() {
         scrimPieces.forEach((node) => node.remove());
         scrimPieces = [];
-        scrim?.classList.remove('onboarding-tour-scrim--has-hole');
+        if (scrim) {
+            scrim.classList.remove('onboarding-tour-scrim--has-hole');
+            scrim.style.clipPath = '';
+            scrim.style.webkitClipPath = '';
+        }
     }
 
     function clearTargets({ preserveControl = false } = {}) {
@@ -989,40 +993,18 @@
             return;
         }
 
-        scrim.classList.add('onboarding-tour-scrim--has-hole');
-        if (scrimPieces.length !== 4) {
-            clearScrimPieces();
-            scrim.classList.add('onboarding-tour-scrim--has-hole');
-            scrimPieces = Array.from({ length: 4 }, () => {
-                const piece = document.createElement('div');
-                piece.className = 'onboarding-tour-scrim-piece';
-                piece.setAttribute('aria-hidden', 'true');
-                document.body.appendChild(piece);
-                return piece;
-            });
-        }
-
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
         const top = clamp(rect.top, 0, viewportHeight);
         const right = clamp(rect.right, 0, viewportWidth);
         const bottom = clamp(rect.bottom, 0, viewportHeight);
         const left = clamp(rect.left, 0, viewportWidth);
-        const middleHeight = Math.max(0, bottom - top);
-        const layouts = [
-            { left: 0, top: 0, width: viewportWidth, height: top },
-            { left: 0, top: bottom, width: viewportWidth, height: Math.max(0, viewportHeight - bottom) },
-            { left: 0, top, width: left, height: middleHeight },
-            { left: right, top, width: Math.max(0, viewportWidth - right), height: middleHeight },
-        ];
 
-        scrimPieces.forEach((piece, index) => {
-            const layout = layouts[index];
-            piece.style.left = `${layout.left}px`;
-            piece.style.top = `${layout.top}px`;
-            piece.style.width = `${layout.width}px`;
-            piece.style.height = `${layout.height}px`;
-        });
+        const polygonPath = `polygon(evenodd, 0px 0px, ${viewportWidth}px 0px, ${viewportWidth}px ${viewportHeight}px, 0px ${viewportHeight}px, 0px 0px, ${left}px ${top}px, ${left}px ${bottom}px, ${right}px ${bottom}px, ${right}px ${top}px, ${left}px ${top}px)`;
+
+        scrim.classList.add('onboarding-tour-scrim--has-hole');
+        scrim.style.clipPath = polygonPath;
+        scrim.style.webkitClipPath = polygonPath;
     }
 
     function positionTooltip(step, nodes) {

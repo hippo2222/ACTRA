@@ -11,7 +11,7 @@
   <link href="/assets/fonts.css" rel="stylesheet" />
   <link href="/assets/lightB-variables.css" rel="stylesheet" />
   <link href="/assets/lightB-components.css" rel="stylesheet" />
-  <link href="/assets/s2-results.css" rel="stylesheet" />
+  <link href="/assets/s2-results.css?v=20260722-sidebyside3" rel="stylesheet" />
 </head>
 <body class="font-display bg-bg-main text-text-main antialiased selection:bg-primary-light">
   <div class="s2-root">
@@ -136,24 +136,7 @@
               <h2 id="result-review-title" class="s2-review-panel-title">—</h2>
               <p id="result-review-copy" class="s2-action-copy">—</p>
             </div>
-            <button id="review-btn" class="s2-btn s2-secondary-btn hidden" type="button" data-i18n="s2.btn_show_review">Показать разбор</button>
-          </div>
-
-          <div id="problem-preview-section" class="mt-4 border-t border-border-subtle pt-4">
-            <div id="problem-empty-state" class="s2-review-empty hidden">
-              <div class="s2-review-empty-hero">
-                <span class="material-symbols-outlined s2-review-empty-icon">check_circle</span>
-                <span class="s2-review-empty-badge" data-i18n="s2.clean_badge">Чисто</span>
-                <h3 class="s2-review-empty-title" data-i18n="s2.clean_title">Все отлично!</h3>
-              </div>
-              <p class="s2-review-empty-copy" data-i18n="s2.clean_copy">Ни одной ошибки в этой итерации.</p>
-            </div>
-
-            <div id="problem-failed-state">
-              <ul id="trigger-tasks-list" class="s2-dialog-list my-2"></ul>
-              <p id="problem-preview-note" class="s2-review-note my-2 text-sm text-text-secondary"></p>
-              <button id="open-problem-dialog-btn" class="s2-btn s2-secondary-btn mt-2" type="button" data-i18n="s2.btn_view_all_errors">Посмотреть все ошибки</button>
-            </div>
+            <button id="review-btn" class="s2-btn s2-secondary-btn hidden" type="button" data-i18n="s2.btn_view_errors">Посмотреть ошибки</button>
           </div>
 
           <div id="review-inline" class="s2-inline-review hidden" aria-hidden="true"></div>
@@ -229,6 +212,6 @@
   <script src="/assets/ThemeSwitcherUI.js"></script>
   <script src="/assets/ConnectionMonitor.js"></script>
   <script src="/OpenAnswerUI/OpenAnswerUI.web.js?v=20260402-s2lightbox1"></script>
-  <script src="/assets/s2-results.js?v=20260511-copy1"></script>
+  <script src="/assets/s2-results.js?v=20260727-diffoverlay2"></script>
 </body>
 </html>

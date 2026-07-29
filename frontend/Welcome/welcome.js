@@ -1909,7 +1909,20 @@
             return;
         }
 
-        const user = profiles[0];
+        const identifier = document.getElementById('loginIdentifier')?.value || '';
+        let user = null;
+        if (identifier && String(identifier).trim()) {
+            const cleanId = String(identifier).trim().toLowerCase();
+            user = profiles.find(p =>
+                (p.login && String(p.login).toLowerCase() === cleanId) ||
+                (p.email && String(p.email).toLowerCase() === cleanId) ||
+                (p.name && String(p.name).toLowerCase() === cleanId)
+            );
+        }
+        if (!user) {
+            user = profiles[0];
+        }
+
         if (!user || !user.user_id) {
             showError('loginError', wt('welcome.error_profile_not_found', 'Профиль не найден'));
             return;

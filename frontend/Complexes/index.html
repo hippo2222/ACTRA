@@ -3158,7 +3158,7 @@
           }
 
           function buildComplexTaskRows(tasksList = []) {
-            const taskTypeLabels = { test: wt('complexes.task_type_test', 'Тест'), click: wt('complexes.task_type_click', 'Клик'), draw: wt('complexes.task_type_draw', 'Рисование'), sequence_assembly: wt('complexes.task_type_sequence', 'Последовательность'), open_answer: wt('complexes.task_type_open', 'Открытый ответ') };
+            const taskTypeLabels = { test: wt('complexes.task_type_test', 'Тест'), click: wt('complexes.task_type_click', 'Клик'), draw: wt('complexes.task_type_draw', 'Рисование'), sequence_assembly: wt('complexes.task_type_sequence', 'Последовательность'), image_labeling: wt('complexes.task_type_image_labeling', 'Подписи на рисунке'), open_answer: wt('complexes.task_type_open', 'Открытый ответ') };
             return tasksList.map((task, index) => {
               const { taskName } = resolveComplexTaskDisplayName(task);
               const typeBadge = task?.type ? (taskTypeLabels[task.type] || task.type) : "";

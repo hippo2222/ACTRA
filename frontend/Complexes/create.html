@@ -3228,7 +3228,8 @@
         'test': 'quiz',
         'open_answer': 'edit_note',
         'draw': 'draw',
-        'sequence_assembly': 'reorder'
+        'sequence_assembly': 'reorder',
+        'image_labeling': 'image'
       };
       return icons[type] || 'help_outline';
     }
@@ -5385,7 +5386,8 @@
 
         'draw': wt('create.task_type_draw', 'Рисование'),
 
-        'sequence_assembly': wt('create.task_type_sequence', 'Последовательность')
+        'sequence_assembly': wt('create.task_type_sequence', 'Последовательность'),
+        'image_labeling': wt('create.task_type_image_labeling', 'Подписи на рисунке')
 
       };
 
@@ -5423,7 +5425,7 @@
 
       if (catalogType) return catalogType;
 
-      const knownTypes = ['open_answer', 'click', 'test', 'draw', 'sequence_assembly'];
+      const knownTypes = ['open_answer', 'click', 'test', 'draw', 'sequence_assembly', 'image_labeling'];
 
       const parts = String(ref).split('/');
 

@@ -8,7 +8,7 @@ body {
   background: var(--color-bg-main);
   color: var(--color-text-main);
   font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
-  overflow: hidden;
+  overflow: auto;
 }
 
 body.review-open {
@@ -282,7 +282,7 @@ textarea {
 .s2-main-stage {
   min-height: 0;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
 }
 
@@ -497,19 +497,34 @@ textarea {
   border: 0;
   background: transparent;
   box-shadow: none;
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  align-items: stretch;
+  align-content: start;
+}
+
+.s2-action-hint,
+#next-step-hint {
+  grid-column: 1 / -1;
+  margin-top: 4px;
+  text-align: center;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
 }
 
 .s2-action-card {
-  flex: 1 1 auto;
   padding: 20px;
-  display: grid;
-  align-content: start;
-  gap: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 14px;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .s2-action-card--next {
-  grid-template-rows: auto auto auto minmax(0, 1fr) auto minmax(0, 1fr);
   position: relative;
   cursor: pointer;
   border-color: var(--color-page-s2-primary-border-soft);
@@ -613,21 +628,19 @@ textarea {
 }
 
 .s2-next-cta {
-  grid-row: 5;
-  justify-self: center;
-  align-self: center;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  margin-top: 0;
-  min-height: 46px;
-  min-width: clamp(220px, 62%, 320px);
-  padding: 0.8rem 1.3rem;
+  gap: 8px;
+  margin-top: auto;
+  min-height: 44px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.65rem 1rem;
   border-radius: 999px;
   background: var(--color-page-s2-next-cta-bg);
   border: 1px solid var(--color-page-s2-next-cta-border);
-  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.1);
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
   transition:
     transform 0.18s ease,
     box-shadow 0.18s ease,
@@ -637,12 +650,15 @@ textarea {
 
 .s2-next-cta-text {
   display: inline-block;
-  max-width: min(100%, 26ch);
-  font-size: 1.06rem;
+  max-width: 100%;
+  font-size: 0.94rem;
   font-weight: 800;
   letter-spacing: -0.01em;
   color: var(--color-primary);
   text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .s2-next-cta::after {
@@ -995,16 +1011,21 @@ textarea {
 
 .s2-review-answers {
   display: grid;
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+  width: 100%;
 }
 
 .s2-review-answer {
-  padding: 12px 14px;
+  padding: 14px 16px;
   border-radius: 14px;
   border: 1px solid var(--color-page-s2-border-12);
   background: var(--color-page-s2-surface-soft-answer);
-  display: grid;
-  gap: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .s2-review-answer--error {
@@ -1019,7 +1040,7 @@ textarea {
 
 .s2-review-answer-label {
   margin: 0;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -1047,6 +1068,13 @@ textarea {
   grid-template-columns: repeat(auto-fit, minmax(132px, 156px));
   gap: 10px;
   justify-content: start;
+  width: 100%;
+}
+
+.s2-review-media-grid--full,
+.s2-review-media-grid:has(.s2-review-media-card--full) {
+  display: block !important;
+  width: 100% !important;
 }
 
 .s2-review-media-card {
@@ -1062,6 +1090,13 @@ textarea {
 .s2-review-media-card--image {
   align-content: start;
   width: min(100%, 156px);
+}
+
+.s2-review-media-card--full {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  padding: 8px !important;
 }
 
 .s2-review-media-card--text {
@@ -1193,8 +1228,7 @@ textarea {
 @media (max-height: 880px) {
   .s2-page-shell {
     width: min(1220px, calc(100vw - 32px));
-    min-height: 100vh;
-    min-height: 100svh;
+    min-height: auto;
     padding-block: 14px;
     gap: 20px;
   }
@@ -1252,7 +1286,8 @@ textarea {
   }
 
   .s2-action-panel {
-    display: block;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   }
 }
 

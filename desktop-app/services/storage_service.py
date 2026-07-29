@@ -700,7 +700,7 @@ class StorageService:
                         continue
                 
                 # Извлекаем метаданные (id, name, type и т.д.)
-                meta = task_data.get('meta', {}) or {}
+                meta = {**task_data.get('meta', {}), **task_data.get('metadata', {})}
                 created_at = (
                     meta.get('created_at')
                     or meta.get('created')
@@ -786,7 +786,7 @@ class StorageService:
                 try:
                     with open(task_json_path, 'r', encoding='utf-8') as f:
                         task_data = json.load(f)
-                    meta = task_data.get('meta', {}) if isinstance(task_data, dict) else {}
+                    meta = {**task_data.get('meta', {}), **task_data.get('metadata', {})} if isinstance(task_data, dict) else {}
                     created_at = (
                         meta.get('created_at')
                         or meta.get('created')
@@ -1681,10 +1681,12 @@ class StorageService:
                 result = self.task_loader.load_task(task_json_path)
                 # Merge metadata from module.json with validated metadata
                 if metadata:
-                    result['metadata'].update({
-                        k: v for k, v in metadata.items()
-                        if k not in ['id'] or result['metadata'].get('id') != v
-                    })
+                    for k, v in metadata.items():
+                        if k == 'id' and result['metadata'].get('id') == v:
+                            continue
+                        if v is None and result['metadata'].get(k) is not None:
+                            continue
+                        result['metadata'][k] = v
                 # Добавляем task_dir, чтобы web-слой мог формировать пути к ресурсам (картинкам)
                 result['task_dir'] = str(task_dir)
 

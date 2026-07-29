@@ -524,7 +524,7 @@ class ImportExportService:
             # Validate task type and basic structure
             task_type = data.get('type', '')
             res["type"] = task_type
-            known_types = {'open_answer', 'sequence_assembly', 'click', 'test'}
+            known_types = {'open_answer', 'sequence_assembly', 'click', 'test', 'draw', 'image_labeling'}
             if task_type and task_type not in known_types:
                 res["status"] = "warning"
                 res.setdefault("warnings", []).append(

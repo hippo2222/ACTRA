@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <link rel="icon" href="../assets/actra_white.ico" type="image/x-icon" />
+    <script src="../../assets/ThemeManager.js"></script>
+    <script src="../../assets/NotificationUI.js"></script>
+    <script src="/assets/i18n.js" defer></script>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title data-i18n="image_labeling_editor.page_title">ACTRA — Редактор подписей на рисунке</title>
+    <!-- Зависимости BaseEditor -->
+    <script src="undo_manager.js"></script>
+    <script src="autosave_manager.js"></script>
+    <script src="ai_ux_messages.js"></script>
+    <script src="base_editor.js"></script>
+    <script src="image_labeling_editor.js?v=17" defer></script>
+
+    <link href="../../assets/tailwind.css" rel="stylesheet" />
+    <link href="../../assets/fonts.css" rel="stylesheet" />
+    <link href="../../assets/lightB-variables.css" rel="stylesheet" />
+    <link href="../../assets/lightB-components.css" rel="stylesheet" />
+    <link href="../../assets/animations.css" rel="stylesheet" />
+    <link href="../../assets/onboarding-tour.css?v=il-tour-v15" rel="stylesheet" />
+
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="click_editor.css"> <!-- Повторно используем стили зума/паннелей из клик-редактора -->
+    <link rel="stylesheet" href="image_labeling_editor.css?v=16">
+</head>
+
+<body class="bg-bg-main text-text-main h-screen overflow-hidden flex font-display antialiased">
+    <main class="flex-1 flex flex-col h-full overflow-hidden relative bg-bg-main">
+        <header class="h-16 flex items-center justify-between gap-4 px-6 bg-surface-1 border-b border-border-subtle shrink-0 z-10 sticky top-0" data-onboarding-target="image-labeling-header" data-onboarding-spotlight="frame">
+            <div class="flex min-w-0 flex-1 items-center gap-4 text-text-main">
+                <button id="back-to-dashboard-btn" data-i18n-title="image_labeling_editor.back_title" title="Библиотека заданий"
+                    class="p-2 rounded-full hover:bg-bg-hover text-text-secondary transition-colors">
+                    <span class="material-symbols-outlined">arrow_back</span>
+                </button>
+                <div class="flex min-w-0 flex-1 items-center gap-4">
+                    <h2 class="text-lg font-bold text-text-main tracking-tight flex items-center gap-2">
+                        <span data-i18n="image_labeling_editor.editing_label">Редактирование:</span>
+                        <span id="task-title-display" class="text-text-main" data-i18n="image_labeling_editor.loading" data-onboarding-target="image-labeling-title">Загрузка...</span>
+                    </h2>
+                    <div id="save-status-container" class="status-cluster" data-tone="success" data-onboarding-target="image-labeling-save-status">
+                        <div id="save-status-indicator" class="status-cluster__dot"></div>
+                        <div class="status-cluster__body">
+                            <span id="save-status-text" class="text-[10px] font-bold text-text-secondary uppercase tracking-tight leading-none" data-i18n="image_labeling_editor.status_saved">Изменения сохранены</span>
+                            <span id="save-status-detail" class="text-[9px] text-text-disabled leading-none mt-1 hidden"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="flex shrink-0 items-center gap-3 pl-2">
+                <!-- Кнопки истории Undo/Redo -->
+                <div class="flex items-center gap-1 border-r border-border-subtle pr-3">
+                    <button id="undo-btn" disabled title="Отменить (Ctrl+Z)"
+                        class="p-2 rounded-lg text-text-disabled hover:text-primary hover:bg-bg-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                        <span class="material-symbols-outlined text-[20px]">undo</span>
+                    </button>
+                    <button id="redo-btn" disabled title="Повторить (Ctrl+Y)"
+                        class="p-2 rounded-lg text-text-disabled hover:text-primary hover:bg-bg-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                        <span class="material-symbols-outlined text-[20px]">redo</span>
+                    </button>
+                </div>
+                <button id="save-task-btn" class="flex items-center justify-center gap-2 bg-primary hover:bg-primary-dark text-primary-contrast font-bold rounded-lg px-5 py-2 transition-colors shadow-md text-sm" data-onboarding-target="image-labeling-save-btn">
+                    <span class="material-symbols-outlined text-[18px]">save</span>
+                    <span data-i18n="image_labeling_editor.save_btn">Сохранить</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Рабочее пространство -->
+        <div class="flex-1 flex overflow-hidden relative bg-bg-main" id="workspace-container" data-onboarding-target="image-labeling-workspace">
+            <!-- 1. Зона загрузки картинки (Dropzone, видна когда картинка не загружена) -->
+            <div id="image-dropzone" class="absolute inset-0 flex flex-col items-center justify-center p-8 cursor-pointer select-none border-2 border-dashed border-border-subtle m-6 rounded-2xl" data-onboarding-target="image-labeling-dropzone">
+                <input type="file" id="image-file-input" class="hidden" accept="image/*" />
+                <div class="flex flex-col items-center text-center" data-onboarding-target="image-labeling-dropzone-content">
+                    <span class="material-symbols-outlined text-text-disabled text-6xl mb-4">image</span>
+                    <p class="text-base font-semibold text-text-main mb-2 text-center" data-i18n="image_labeling_editor.dropzone_title">Перетащите изображение сюда, вставьте из буфера (Ctrl+V) или кликните для выбора</p>
+                    <p class="text-sm text-text-secondary" data-i18n="image_labeling_editor.dropzone_subtitle">Поддерживаются PNG, JPG до 10 МБ</p>
+                </div>
+            </div>
+
+            <!-- 2. Интерактивный вьюпорт с картинкой (виден когда картинка загружена) -->
+            <div id="image-viewport" class="hidden absolute inset-0 overflow-hidden flex items-center justify-center select-none" data-onboarding-target="image-labeling-viewport">
+                <div id="canvas-container" class="relative origin-center">
+                    <img id="main-image" class="pointer-events-none select-none max-w-none max-h-none block" />
+                    <!-- SVG-оверлей для разметки и показа рамок -->
+                    <svg id="annotation-svg" class="absolute inset-0 w-full h-full pointer-events-auto cursor-crosshair">
+                        <!-- Прямоугольники разметки будут рендериться здесь динамически -->
+                    </svg>
+                </div>
+
+                <!-- Вертикальная панель зума и управления масштабом -->
+                <div id="zoom-panel" class="absolute left-6 top-1/2 -translate-y-1/2 flex flex-col items-center gap-2.5 bg-surface-1 border border-border-subtle px-2.5 py-4 rounded-full shadow-lg z-10 select-none text-text-secondary" data-onboarding-target="image-labeling-zoom-panel">
+                    <button id="zoom-in-btn" data-i18n-title="image_labeling_editor.zoom_in" title="Увеличить" class="p-1 hover:text-text-main transition-colors">
+                        <span class="material-symbols-outlined text-[20px]">zoom_in</span>
+                    </button>
+                    <span id="zoom-value" class="text-[10px] font-bold select-none min-w-[32px] text-center tracking-tighter">100%</span>
+                    <button id="zoom-out-btn" data-i18n-title="image_labeling_editor.zoom_out" title="Уменьшить" class="p-1 hover:text-text-main transition-colors">
+                        <span class="material-symbols-outlined text-[20px]">zoom_out</span>
+                    </button>
+                    <div class="w-3.5 h-px bg-border-subtle my-1"></div>
+                    <button id="zoom-reset-btn" data-i18n-title="image_labeling_editor.zoom_reset" title="Вписать в экран" class="p-1 hover:text-text-main transition-colors">
+                        <span class="material-symbols-outlined text-[20px]">fullscreen_exit</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Ресайзер (разделитель) для боковой панели -->
+    <div id="sidebar-resizer" class="w-[3px] hover:w-[5px] bg-border-subtle hover:bg-primary cursor-col-resize z-30 transition-all select-none shrink-0"></div>
+
+    <!-- Боковая панель настроек и списка областей -->
+    <aside id="editor-sidebar" class="w-[320px] bg-surface-1 flex flex-col shrink-0 z-20 h-full overflow-y-auto" data-onboarding-target="image-labeling-sidebar" data-onboarding-spotlight="frame">
+        <div class="h-16 flex items-center px-6 border-b border-border-subtle bg-surface-1 sticky top-0 z-10 justify-between shrink-0">
+            <h3 class="text-text-main font-bold text-base tracking-tight flex items-center gap-2">
+                <span class="material-symbols-outlined text-text-disabled">tune</span>
+                <span data-i18n="image_labeling_editor.settings_title">Настройки задания</span>
+            </h3>
+            <!-- Компактная кнопка смены картинки -->
+            <button id="replace-image-btn" class="hidden flex items-center gap-1 text-xs text-text-secondary hover:text-text-main bg-surface-2 hover:bg-bg-hover border border-border-subtle px-2.5 py-1.5 rounded-lg transition-all">
+                <span class="material-symbols-outlined text-[14px]">cached</span>
+                <span data-i18n="image_labeling_editor.replace_image_btn">Заменить фото</span>
+            </button>
+        </div>
+
+        <div class="p-6 space-y-6 flex-1">
+            <!-- Текст задания -->
+            <div class="space-y-2" data-onboarding-target="image-labeling-prompt" data-onboarding-spotlight="frame">
+                <label class="block text-xs font-bold text-text-secondary uppercase tracking-wider" data-i18n="image_labeling_editor.prompt_label">Формулировка задания</label>
+                <textarea id="prompt-textarea" rows="3"
+                    class="block w-full rounded-lg border-border-subtle bg-surface-2 text-sm text-text-main placeholder:text-text-disabled focus:ring-1 focus:ring-primary focus:border-primary leading-relaxed"
+                    data-i18n-placeholder="image_labeling_editor.prompt_placeholder"
+                    placeholder="Введите описание задания или инструкции для ученика..."></textarea>
+            </div>
+
+            <!-- Уровень сложности -->
+            <div id="editor-difficulty-authoring-mount" data-onboarding-target="image-labeling-difficulty" data-onboarding-spotlight="frame"></div>
+
+            <div class="border-t border-border-subtle my-6"></div>
+
+            <!-- Список размеченных прямоугольников -->
+            <div class="space-y-4" data-onboarding-target="image-labeling-zones-block" data-onboarding-spotlight="frame">
+                <div class="flex items-center justify-between" data-onboarding-target="image-labeling-zones-header">
+                    <label class="block text-xs font-bold text-text-secondary uppercase tracking-wider" data-i18n="image_labeling_editor.zones_label">Размеченные области</label>
+                    <span id="zone-count-badge" class="bg-surface-2 text-text-secondary text-xs px-2 py-0.5 rounded-full border border-border-subtle">0</span>
+                </div>
+
+                <div id="zones-list-container" class="space-y-3 overflow-y-auto custom-scrollbar pr-1" data-onboarding-target="image-labeling-zones-list">
+                    <!-- Будет заполняться динамически -->
+                </div>
+
+                <div id="no-zones-message" class="text-center py-8 border border-dashed border-border-subtle rounded-xl text-text-secondary text-xs" data-i18n="image_labeling_editor.no_zones_msg">
+                    Нет размеченных областей. Нажмите и потяните мышь на рисунке, чтобы нарисовать прямоугольник.
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <script src="../../assets/ConnectionMonitor.js"></script>
+    <script src="../../assets/onboarding_tours.js?v=il-tour-v15"></script>
+    <script src="../../assets/OnboardingTour.js?v=il-tour-v15"></script>
+</body>
+
+</html>

@@ -45,6 +45,7 @@
     test: wt('catalog.type_test', 'Тест'),
     open_answer: wt('catalog.type_open_answer', 'Открытый ответ'),
     sequence_assembly: wt('catalog.type_sequence_assembly', 'Последовательность'),
+    image_labeling: wt('catalog.type_image_labeling', 'Подписи на рисунке'),
     draw: wt('catalog.type_draw', 'Рисование'),
     video: wt('catalog.type_video', 'Видео'),
   };
@@ -3116,6 +3117,7 @@
           test: wt('catalog.type_test', 'Тест'),
           open_answer: wt('catalog.type_open_answer', 'Открытый ответ'),
           sequence_assembly: wt('catalog.type_sequence_assembly', 'Последовательность'),
+          image_labeling: wt('catalog.type_image_labeling', 'Подписи на рисунке'),
           draw: wt('catalog.type_draw', 'Рисование'),
           video: wt('catalog.type_video', 'Видео'),
         };

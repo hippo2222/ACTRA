@@ -152,7 +152,8 @@ class TaskImportParser(ABC):
         type_names = {
             'open_answer': 'Открытый ответ',
             'sequence_assembly': 'Последовательность',
-            'click': 'Клик'
+            'click': 'Клик',
+            'image_labeling': 'Подписи на рисунке'
         }
         
         base_name = type_names.get(task_type, 'Задание')

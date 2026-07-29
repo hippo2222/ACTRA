@@ -27,7 +27,8 @@
         "draw",
         "test",
         "sequence_assembly",
-        "open_answer"
+        "open_answer",
+        "image_labeling"
     ]);
 
     // Helper Functions regarding Task Type
@@ -289,6 +290,8 @@
                 TestUI.restoreInput(draft);
             } else if (taskType === "sequence_assembly" && typeof SequenceUI !== "undefined" && typeof SequenceUI.restoreInput === "function") {
                 SequenceUI.restoreInput(draft);
+            } else if (taskType === "image_labeling" && typeof ImageLabelUI !== "undefined" && typeof ImageLabelUI.restoreInput === "function") {
+                ImageLabelUI.restoreInput(draft);
             } else if (taskType === "click" && typeof ClickUI !== "undefined" && typeof ClickUI.restoreInput === "function") {
                 ClickUI.restoreInput(draft);
             } else if (taskType === "draw" && typeof DrawUI !== "undefined" && typeof DrawUI.restoreInput === "function") {
@@ -307,6 +310,8 @@
                 TestUI.restoreViewState(viewState);
             } else if (taskType === "sequence_assembly" && typeof SequenceUI !== "undefined" && typeof SequenceUI.restoreViewState === "function") {
                 SequenceUI.restoreViewState(viewState);
+            } else if (taskType === "image_labeling" && typeof ImageLabelUI !== "undefined" && typeof ImageLabelUI.restoreViewState === "function") {
+                ImageLabelUI.restoreViewState(viewState);
             } else if (taskType === "click" && typeof ClickUI !== "undefined" && typeof ClickUI.restoreViewState === "function") {
                 ClickUI.restoreViewState(viewState);
             } else if (taskType === "draw" && typeof DrawUI !== "undefined" && typeof DrawUI.restoreViewState === "function") {
@@ -338,6 +343,8 @@
                 return wt('s1.task_type_test', 'Тест');
             case "sequence_assembly":
                 return wt('s1.task_type_sequence', 'Последовательность');
+            case "image_labeling":
+                return wt('s1.task_type_image_labeling', 'Подписи на рисунке');
             case "click":
                 return wt('s1.task_type_click', 'Клик');
             case "draw":
@@ -968,6 +975,21 @@
                     messageText = "\u0421\u0442\u0440\u0443\u043a\u0442\u0443\u0440\u0430 \u0443\u0440\u043e\u0432\u043d\u0435\u0439 \u043f\u043e\u043a\u0430 \u043d\u0435 \u0441\u043e\u0432\u043f\u0430\u0434\u0430\u0435\u0442. \u041f\u0440\u043e\u0434\u043e\u043b\u0436\u0430\u0439\u0442\u0435 \u0433\u0440\u0443\u043f\u043f\u0438\u0440\u043e\u0432\u0430\u0442\u044c \u044d\u043b\u0435\u043c\u0435\u043d\u0442\u044b \u043f\u043e \u0443\u0440\u043e\u0432\u043d\u044f\u043c \u0438 \u043f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 \u0441\u043d\u043e\u0432\u0430.";
                 }
             }
+            if (currentTaskType === "image_labeling" && detailsObj) {
+                const zoneResults = detailsObj.zone_results || detailsObj || {};
+                const totalCount = Number(detailsObj.total_count) || Object.keys(zoneResults).length;
+                const correctCount = Number(detailsObj.correct_count) !== undefined 
+                    ? Number(detailsObj.correct_count) 
+                    : Object.values(zoneResults).filter(z => (typeof z === 'object' ? z.is_correct === true : z === true)).length;
+                const incorrectCount = Math.max(0, totalCount - correctCount);
+                if (totalCount > 0) {
+                    if (correctCount >= totalCount) {
+                        messageText = `✅ Все подписи расставлены верно (${correctCount}/${totalCount})`;
+                    } else {
+                        messageText = `Есть ошибки: ${incorrectCount} из ${totalCount} с ошибкой, верно ${correctCount}`;
+                    }
+                }
+            }
         } catch (e) {
             // ignore
         }
@@ -995,12 +1017,59 @@
         }
         if (msg) msg.textContent = messageText;
 
-        const extra =
+        let extra =
             (detailsObj && (detailsObj.explanation != null ? String(detailsObj.explanation) : "")) ||
             (detailsObj && (detailsObj.raw != null ? String(detailsObj.raw) : "")) ||
             extractToleranceExplanation(detailsObj) ||
             "";
+
         if (details) details.textContent = extra;
+
+        // Render visual error comparison chips for image_labeling
+        try {
+            if (getCurrentEffectiveTaskType() === "image_labeling" && userAnswerBox && detailsObj && detailsObj.zone_results) {
+                const incorrectEntries = Object.entries(detailsObj.zone_results).filter(([zId, zRes]) => typeof zRes === 'object' && zRes.is_correct === false);
+                
+                if (incorrectEntries.length > 0) {
+                    userAnswerBox.classList.remove('hidden');
+                    userAnswerBox.innerHTML = '';
+
+                    const errTitle = document.createElement('h4');
+                    errTitle.className = 'text-xs font-bold uppercase tracking-wider text-text-secondary mb-2.5 flex items-center gap-1.5';
+                    errTitle.innerHTML = `<span class="material-symbols-outlined text-[16px] text-rose-500">error</span><span>Разбор ошибок</span>`;
+                    userAnswerBox.appendChild(errTitle);
+
+                    const grid = document.createElement('div');
+                    grid.className = 'flex flex-col gap-2';
+
+                    incorrectEntries.forEach(([zId, zRes]) => {
+                        const zoneLabel = zRes.label || zRes.expected || zId;
+                        const userVal = zRes.actual || 'не указано';
+                        const expectedVal = zRes.expected || zoneLabel;
+
+                        const row = document.createElement('div');
+                        row.className = 'flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-surface-1 border border-border-subtle shadow-sm text-xs';
+                        row.innerHTML = `
+                            <span class="font-semibold text-text-main flex items-center gap-1.5">
+                                <span class="material-symbols-outlined text-[15px] text-primary">label</span>
+                                ${zoneLabel}
+                            </span>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-500/15 text-rose-600 border border-rose-500/30 font-bold">
+                                    <span class="text-[10px] opacity-80">Ваш ответ:</span> ${userVal}
+                                </span>
+                                <span class="material-symbols-outlined text-[14px] text-text-tertiary">arrow_forward</span>
+                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-600 border border-emerald-500/30 font-bold">
+                                    <span class="text-[10px] opacity-80">Должно быть:</span> ${expectedVal}
+                                </span>
+                            </div>
+                        `;
+                        grid.appendChild(row);
+                    });
+                    userAnswerBox.appendChild(grid);
+                }
+            }
+        } catch (e) { /* ignore */ }
 
         resetExtendedResultBlocks({
             keywordsBox,
@@ -1063,9 +1132,39 @@
                     decisionAcceptBtn,
                     decisionRejectBtn
                 }, detailsObj);
+            } else if (pendingUserJudgement && detailsObj) {
+                if (decisionActions) {
+                    decisionActions.classList.remove("hidden");
+                }
+                if (decisionAcceptBtn) {
+                    decisionAcceptBtn.textContent = wt('s1.result_accept_typo', wt('s1.result_accept', 'Засчитать как верное'));
+                    decisionAcceptBtn.setAttribute('data-i18n', 's1.result_accept_typo');
+                    decisionAcceptBtn.onclick = function () {
+                        if (typeof SessionControls !== 'undefined' && typeof SessionControls.handleUserJudgementChoice === 'function') {
+                            SessionControls.handleUserJudgementChoice('accept');
+                        } else if (typeof window.handleUserJudgementChoice === 'function') {
+                            window.handleUserJudgementChoice('accept');
+                        } else if (typeof window.handleSubmitAnswer === 'function') {
+                            window.handleSubmitAnswer({ override_typo: true, single_retry_copy: false });
+                        }
+                    };
+                }
+                if (decisionRejectBtn) {
+                    decisionRejectBtn.textContent = wt('s1.result_retry_typo', 'Повторить (1 копия)');
+                    decisionRejectBtn.setAttribute('data-i18n', 's1.result_retry_typo');
+                    decisionRejectBtn.onclick = function () {
+                        if (typeof SessionControls !== 'undefined' && typeof SessionControls.handleUserJudgementChoice === 'function') {
+                            SessionControls.handleUserJudgementChoice('reject');
+                        } else if (typeof window.handleUserJudgementChoice === 'function') {
+                            window.handleUserJudgementChoice('reject');
+                        } else if (typeof window.handleSubmitAnswer === 'function') {
+                            window.handleSubmitAnswer({ override_typo: false, single_retry_copy: true });
+                        }
+                    };
+                }
             }
         } catch (e) {
-            console.warn("[TaskRenderer] Draw judgement render error:", e);
+            console.warn("[TaskRenderer] Draw/Judgement render error:", e);
         }
     }
 
@@ -1090,6 +1189,10 @@
                 } else if (prevType === "sequence_assembly") {
                     if (typeof SequenceUI !== "undefined" && typeof SequenceUI.cleanup === "function") {
                         SequenceUI.cleanup();
+                    }
+                } else if (prevType === "image_labeling") {
+                    if (typeof ImageLabelUI !== "undefined" && typeof ImageLabelUI.cleanup === "function") {
+                        ImageLabelUI.cleanup();
                     }
                 } else if (prevType === "click") {
                     if (typeof ClickUI !== "undefined" && typeof ClickUI.cleanup === "function") {
@@ -1224,7 +1327,7 @@
         const normalizedDescription = String(descriptionFromData || "").trim();
         const isOpenAnswerTask = currentTaskType === "open_answer";
         const keepPromptInsideTaskSurface =
-            currentTaskType === "sequence_assembly" || currentTaskType === "open_answer";
+            currentTaskType === "sequence_assembly" || currentTaskType === "open_answer" || currentTaskType === "image_labeling";
         const preferredTitle =
             normalizedTitle ||
             (!keepPromptInsideTaskSurface ? normalizedQuestion : "") ||
@@ -1284,9 +1387,6 @@
         const total = task.queue?.total ?? 0;
         if (progressLabel) {
             const progressParts = [];
-            if (taskTypeLabel) {
-                progressParts.push(taskTypeLabel);
-            }
             progressParts.push(
                 total && index != null
                     ? wt('s1.task_n_of_total', 'Задание {n} из {total}').replace('{n}', index + 1).replace('{total}', total)
@@ -1425,6 +1525,9 @@
             } else if (!handled && taskType === "sequence_assembly" && typeof SequenceUI !== "undefined") {
                 handled = true;
                 SequenceUI.render(taskContent, task);
+            } else if (!handled && taskType === "image_labeling" && typeof ImageLabelUI !== "undefined") {
+                handled = true;
+                ImageLabelUI.render(taskContent, task);
             } else if (!handled && taskType === "click" && typeof ClickUI !== "undefined") {
                 handled = true;
                 ClickUI.render(taskContent, task, { runtimeMode: true });
@@ -1447,6 +1550,7 @@
                     availableUIs: {
                         TestUI: typeof TestUI !== "undefined",
                         SequenceUI: typeof SequenceUI !== "undefined",
+                        ImageLabelUI: typeof ImageLabelUI !== "undefined",
                         ClickUI: typeof ClickUI !== "undefined",
                         DrawUI: typeof DrawUI !== "undefined",
                         OpenAnswerUI: typeof OpenAnswerUI !== "undefined",
@@ -1550,6 +1654,8 @@
                 TestUI.applyCheckFeedback(result);
             } else if (taskType === "sequence_assembly" && typeof SequenceUI !== "undefined" && typeof SequenceUI.applyCheckFeedback === "function") {
                 SequenceUI.applyCheckFeedback(result);
+            } else if (taskType === "image_labeling" && typeof ImageLabelUI !== "undefined" && typeof ImageLabelUI.applyCheckFeedback === "function") {
+                ImageLabelUI.applyCheckFeedback(result);
             } else if (taskType === "click") {
                 if (subtype !== "error_detection" && typeof ClickUI !== "undefined" && typeof ClickUI.applyCheckFeedback === "function") {
                     ClickUI.applyCheckFeedback(result);

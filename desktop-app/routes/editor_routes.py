@@ -325,6 +325,12 @@ def _apply_hosted_editor_task_ownership(
         meta.update(workspace_meta)
         task_data["meta"] = meta
         normalized["task_data"] = task_data
+    else:
+        meta = normalized.get("meta") if isinstance(normalized.get("meta"), dict) else {}
+        meta = dict(meta)
+        meta.pop("ownership", None)
+        meta.update(workspace_meta)
+        normalized["meta"] = meta
 
     return normalized
 
@@ -746,16 +752,21 @@ def save_editor_task(module_id: str, topic_id: str, task_id: str) -> Any:
         existing_task_payload: Optional[Dict[str, Any]] = None
         if is_hosted_web_runtime():
             existing_task_payload = ctx.storage_service.load_task(module_id, topic_id, task_id)
+            logger.info("[SAVE_DEBUG_2] loaded task payload: %s", existing_task_payload)
             if existing_task_payload:
                 serialized = _serialize_workspace_task_payload(
                     existing_task_payload,
                     current_user_id=ctx.user_id,
                 )
+                logger.info("[SAVE_DEBUG_2] serialized: %s", serialized)
                 existing_metadata = serialized.get("metadata") if isinstance(serialized.get("metadata"), dict) else {}
-                if not _is_visible_workspace_graph_payload_for_current_user(
+                logger.info("[SAVE_DEBUG_2] existing_metadata: %s, ctx.user_id: %s", existing_metadata, ctx.user_id)
+                is_visible = _is_visible_workspace_graph_payload_for_current_user(
                     existing_metadata,
                     current_user_id=ctx.user_id,
-                ):
+                )
+                logger.info("[SAVE_DEBUG_2] is_visible: %s", is_visible)
+                if not is_visible:
                     return jsonify({"ok": False, "error": "task_not_found"}), 404
             else:
                 existing_metadata = None

@@ -3035,6 +3035,220 @@
             ]
         },
         {
+            tourId: 'image-labeling-authoring',
+            version: 1,
+            referenceCategory: 'create',
+            referenceTags: ["подписи","рисунок","изображение","области","прямоугольники","разметка"],
+            referenceOrder: 125,
+            route: ['/editor/Image%20Labeling%20Editor.html', '/editor/Image Labeling Editor.html', '/Editor/Image%20Labeling%20Editor.html', '/Editor/Image Labeling Editor.html'],
+            autoStart: false,
+            autoStartDelay: 900,
+            totalStates: 5,
+            persistControl: true,
+            title: wt('tours.image_labeling_authoring.title', 'Редактор «Подписи на рисунке»'),
+            summary: wt('tours.image_labeling_authoring.summary', 'Как загрузить изображение, разметить прямоугольные области, подписать их и настроить задание.'),
+            steps: [
+                {
+                    id: 'image-labeling-header-step',
+                    targets: [
+                        '[data-onboarding-target="image-labeling-header"]'
+                    ],
+                    placement: 'bottom',
+                    controlPlacement: 'bottom-right',
+                    controlPlacementLocked: true,
+                    readySelector: '[data-onboarding-target="image-labeling-save-btn"]',
+                    scrollY: 0,
+                    kicker: wt('tours.image_labeling_authoring.header_step.kicker', 'Шапка редактора'),
+                    callouts: [
+                        {
+                            target: '[data-onboarding-target="image-labeling-title"]',
+                            positionTarget: '[data-onboarding-target="image-labeling-header"]',
+                            rowGroup: 'il-header-row',
+                            placement: 'bottom',
+                            rowInset: 24,
+                            offsetX: 0,
+                            offsetY: 14,
+                            gap: 22,
+                            hideArrow: true,
+                            extraArrows: [
+                                {
+                                    target: '[data-onboarding-target="image-labeling-title"]',
+                                    placement: 'diagonal',
+                                    targetAnchorX: 'center',
+                                    targetAnchorY: 'bottom',
+                                    startY: 8
+                                }
+                            ],
+                            variant: 'click-header-row',
+                            title: wt('tours.image_labeling_authoring.header_step.c0_title', 'Название задания'),
+                            body: wt('tours.image_labeling_authoring.header_step.c0_body', 'Здесь видно, какое задание «Подписи на рисунке» открыто для редактирования.')
+                        },
+                        {
+                            target: '[data-onboarding-target="image-labeling-save-status"]',
+                            positionTarget: '[data-onboarding-target="image-labeling-header"]',
+                            rowGroup: 'il-header-row',
+                            placement: 'bottom',
+                            rowInset: 24,
+                            offsetX: 0,
+                            offsetY: 14,
+                            gap: 22,
+                            variant: 'click-header-row',
+                            title: wt('tours.image_labeling_authoring.header_step.c1_title', 'Статус сохранения'),
+                            body: wt('tours.image_labeling_authoring.header_step.c1_body', 'Индикатор показывает, сохранено задание или есть несохранённые изменения.')
+                        },
+                        {
+                            target: '[data-onboarding-target="image-labeling-save-btn"]',
+                            positionTarget: '[data-onboarding-target="image-labeling-header"]',
+                            rowGroup: 'il-header-row',
+                            placement: 'bottom',
+                            rowInset: 24,
+                            offsetX: 0,
+                            offsetY: 14,
+                            gap: 22,
+                            variant: 'click-header-row',
+                            title: wt('tours.image_labeling_authoring.header_step.c2_title', 'Сохранить'),
+                            body: wt('tours.image_labeling_authoring.header_step.c2_body', 'Перед сохранением редактор проверит наличие изображения, формулировку и хотя бы одну размеченную область с подписью.')
+                        }
+                    ]
+                },
+                {
+                    id: 'image-labeling-upload-step',
+                    targets: [
+                        '[data-onboarding-target="image-labeling-workspace"]'
+                    ],
+                    placement: 'bottom',
+                    controlPlacement: 'bottom-right',
+                    controlPlacementLocked: true,
+                    readySelector: '[data-onboarding-target="image-labeling-dropzone"]',
+                    skipAutoScroll: true,
+                    kicker: wt('tours.image_labeling_authoring.upload_step.kicker', 'Загрузка изображения'),
+                    callouts: [
+                        {
+                            target: '[data-onboarding-target="image-labeling-workspace"]',
+                            positionTarget: '[data-onboarding-target="image-labeling-dropzone-content"]',
+                            placement: 'bottom',
+                            offsetX: 0,
+                            offsetY: 16,
+                            gap: 16,
+                            keepPlacement: true,
+                            skipOverlapPush: true,
+                            variant: 'image-labeling-wide',
+                            title: wt('tours.image_labeling_authoring.upload_step.c0_title', 'Зона загрузки'),
+                            body: wt('tours.image_labeling_authoring.upload_step.c0_body', 'Перетащите изображение сюда, вставьте из буфера (Ctrl+V) или кликните, чтобы выбрать файл. Поддерживаются PNG и JPG до 10 МБ.')
+                        }
+                    ]
+                },
+                {
+                    id: 'image-labeling-canvas-step',
+                    targets: [
+                        '[data-onboarding-target="image-labeling-viewport"]',
+                        '[data-onboarding-target="image-labeling-sidebar"]'
+                    ],
+                    placement: 'bottom',
+                    controlPlacement: 'bottom-right',
+                    controlPlacementLocked: true,
+                    readySelector: '[data-onboarding-target="image-labeling-viewport"]',
+                    skipAutoScroll: true,
+                    kicker: wt('tours.image_labeling_authoring.canvas_step.kicker', 'Рабочая область'),
+                    callouts: [
+                        {
+                            target: '[data-onboarding-target="image-labeling-viewport"]',
+                            positionTarget: '[data-onboarding-target="image-labeling-viewport"]',
+                            placement: 'bottom',
+                            offsetX: 0,
+                            offsetY: 16,
+                            gap: 16,
+                            keepPlacement: true,
+                            skipOverlapPush: true,
+                            variant: 'image-labeling-wide',
+                            title: wt('tours.image_labeling_authoring.canvas_step.c0_title', 'Холст с изображением'),
+                            body: wt('tours.image_labeling_authoring.canvas_step.c0_body', 'После загрузки изображение появляется здесь. Зажмите левую кнопку мыши и потяните, чтобы нарисовать прямоугольную область — она сразу появится на схеме и попадёт в список.')
+                        },
+                        {
+                            target: '[data-onboarding-target="image-labeling-sidebar"]',
+                            placement: 'left',
+                            offsetX: 8,
+                            offsetY: -160,
+                            gap: 28,
+                            skipOverlapPush: true,
+                            variant: 'click-compact',
+                            title: wt('tours.image_labeling_authoring.canvas_step.c1_title', 'Панель настроек'),
+                            body: wt('tours.image_labeling_authoring.canvas_step.c1_body', 'Справа — все настройки задания: формулировка, список областей и уровни сложности.')
+                        }
+                    ]
+                },
+                {
+                    id: 'image-labeling-zones-step',
+                    targets: [
+                        '[data-onboarding-target="image-labeling-zones-block"]'
+                    ],
+                    placement: 'left',
+                    controlPlacement: 'bottom-left',
+                    controlPlacementLocked: true,
+                    readySelector: '[data-onboarding-target="image-labeling-zones-block"]',
+                    skipAutoScroll: true,
+                    kicker: wt('tours.image_labeling_authoring.zones_step.kicker', 'Список областей'),
+                    callouts: [
+                        {
+                            target: '[data-onboarding-target="image-labeling-zones-header"]',
+                            placement: 'left',
+                            offsetX: 8,
+                            offsetY: 4,
+                            gap: 30,
+                            variant: 'click-compact',
+                            title: wt('tours.image_labeling_authoring.zones_step.c0_title', 'Размеченные области'),
+                            body: wt('tours.image_labeling_authoring.zones_step.c0_body', 'Каждый нарисованный прямоугольник появляется здесь. Счётчик показывает общее количество областей.')
+                        },
+                        {
+                            target: '[data-onboarding-target="image-labeling-zones-list"]',
+                            placement: 'left',
+                            offsetX: 8,
+                            offsetY: 8,
+                            gap: 30,
+                            variant: 'click-wide',
+                            title: wt('tours.image_labeling_authoring.zones_step.c1_title', 'Подписи и управление'),
+                            body: wt('tours.image_labeling_authoring.zones_step.c1_body', 'Для каждой области введите подпись — именно её будет проверять система. Также можно выбрать цвет заливки для области, а ненужную — удалить кнопкой рядом.')
+                        }
+                    ]
+                },
+                {
+                    id: 'image-labeling-settings-step',
+                    targets: [
+                        '[data-onboarding-target="image-labeling-prompt"]',
+                        '[data-onboarding-target="image-labeling-difficulty"]'
+                    ],
+                    placement: 'left',
+                    controlPlacement: 'bottom-left',
+                    controlPlacementLocked: true,
+                    readySelector: '[data-onboarding-target="image-labeling-prompt"]',
+                    skipAutoScroll: true,
+                    kicker: wt('tours.image_labeling_authoring.settings_step.kicker', 'Настройки задания'),
+                    callouts: [
+                        {
+                            target: '[data-onboarding-target="image-labeling-prompt"]',
+                            placement: 'left',
+                            offsetX: 8,
+                            offsetY: 4,
+                            gap: 30,
+                            variant: 'click-wide',
+                            title: wt('tours.image_labeling_authoring.settings_step.c0_title', 'Формулировка'),
+                            body: wt('tours.image_labeling_authoring.settings_step.c0_body', 'Напишите, что пользователь должен сделать: например «Подпишите все органы на схеме» или «Найдите и обозначьте элементы конструкции».')
+                        },
+                        {
+                            target: '[data-onboarding-target="image-labeling-difficulty"]',
+                            placement: 'left',
+                            offsetX: 8,
+                            offsetY: 8,
+                            gap: 30,
+                            variant: 'click-compact',
+                            title: wt('tours.image_labeling_authoring.settings_step.c1_title', 'Уровни сложности'),
+                            body: wt('tours.image_labeling_authoring.settings_step.c1_body', 'Задание можно включить в один или несколько уровней комплекса. Выберите, при каком уровне оно будет появляться в тренажёре.')
+                        }
+                    ]
+                }
+            ]
+        },
+        {
             tourId: 'editor-dashboard-authoring',
             version: 1,
             referenceCategory: 'create',

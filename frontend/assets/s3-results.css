@@ -708,6 +708,53 @@
    ─────────────────────────────────────────────────────────────────────────── */
 
 
+/* ─── DIFFICULTY BADGE ───────────────────────────────────────────────────────
+   Семантический бейдж сложности с цветовыми уровнями.
+   easy (1–2): success / medium (3): warning / hard (4–5): error
+   ─────────────────────────────────────────────────────────────────────────── */
+
+.s3-difficulty-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px 3px 7px;
+  border-radius: 9999px;
+  border: 1px solid currentColor;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+
+.s3-difficulty-badge--easy {
+  color: var(--color-component-pill-success-fg);
+  background: var(--color-component-pill-success-bg);
+  border-color: var(--color-component-pill-success-border);
+}
+
+.s3-difficulty-badge--medium {
+  color: var(--color-component-pill-warning-fg);
+  background: var(--color-component-pill-warning-bg);
+  border-color: var(--color-component-pill-warning-border);
+}
+
+.s3-difficulty-badge--hard {
+  color: var(--color-component-pill-error-fg);
+  background: var(--color-component-pill-error-bg);
+  border-color: var(--color-component-pill-error-border);
+}
+
+.s3-difficulty-dot {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 9999px;
+  background: currentColor;
+  opacity: 0.75;
+  flex-shrink: 0;
+}
+
 /* ─── DIALOG ─────────────────────────────────────────────────────────────────
    Модальный разбор ошибок. Использует shadow-lg и surface-1.
    ─────────────────────────────────────────────────────────────────────────── */
@@ -730,13 +777,36 @@
 }
 
 .s3-dialog {
-  width: min(760px, 100%);
+  width: min(980px, 100%);
   max-height: min(84vh, 920px);
   overflow: auto;
   border-radius: 24px;
   border: 1px solid var(--color-component-card-elevated-border);
   background: var(--color-surface-1);
   box-shadow: var(--shadow-lg);
+  /* Custom scrollbar — Webkit */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-strong) transparent;
+}
+
+.s3-dialog::-webkit-scrollbar {
+  width: 5px;
+}
+
+.s3-dialog::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 9999px;
+  margin: 6px;
+}
+
+.s3-dialog::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  border-radius: 9999px;
+  transition: background var(--transition-fast);
+}
+
+.s3-dialog::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-secondary);
 }
 
 .s3-dialog-head {

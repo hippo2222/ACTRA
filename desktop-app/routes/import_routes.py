@@ -918,6 +918,16 @@ def export_tasks_to_text() -> Any:
                 lines.append(f"level_{level_idx}: {', '.join(ids)}")
                 level_idx += 1
             lines.append("")
+        elif ttype == "image_labeling":
+            lines.append("@IMAGE_LABELING")
+            lines.append(f"# {content.get('prompt', '')}")
+            img_val = content.get("image")
+            img_path = img_val.get("path") if isinstance(img_val, dict) else img_val
+            if img_path:
+                lines.append(f"image: {img_path}")
+            for idx, zone in enumerate(content.get("zones", [])):
+                lines.append(f"zone_{idx + 1}: {zone.get('label', '')} ({zone.get('rect', {})})")
+            lines.append("")
         elif ttype == "click":
             mode = content.get("mode", "")
             if mode == "text_choice":

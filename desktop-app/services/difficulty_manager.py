@@ -76,6 +76,7 @@ class DifficultyManager:
             "draw": [1, 2],
             "test": [1, 2],
             "sequence_assembly": [1, 2, 3],
+            "image_labeling": [1, 2],
             "open_answer": [1],
         }
 
@@ -385,6 +386,8 @@ class DifficultyManager:
                 enhanced = self._enhance_test_task(enhanced, normalized_level)
             elif task_type == "sequence_assembly":
                 enhanced = self._enhance_sequence_task(enhanced, normalized_level)
+            elif task_type == "image_labeling":
+                enhanced = self._enhance_image_labeling_task(enhanced, normalized_level)
             elif task_type == "open_answer":
                 pass
             elif self.hooks_available and difficulty_hooks:
@@ -491,6 +494,15 @@ class DifficultyManager:
             content["requires_level_names"] = True
             content["requires_block_names"] = True
 
+        task_data["content"] = content
+        return task_data
+
+    def _enhance_image_labeling_task(self, task_data: Dict[str, Any], level: int) -> Dict[str, Any]:
+        content = task_data.get("content", {})
+        if level == 1:
+            content["requires_typing"] = False
+        elif level >= 2:
+            content["requires_typing"] = True
         task_data["content"] = content
         return task_data
 

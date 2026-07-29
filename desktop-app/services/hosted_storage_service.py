@@ -42,6 +42,11 @@ class HostedStorageService(HostedShadowFallbackMixin, StorageService):
         self._storage_ready = True
         self._modules_cache = None
         self._modules_cache_timestamp = 0
+        try:
+            self._bootstrap_from_shadow_if_empty()
+            self._bootstrap_task_content_from_shadow()
+        except Exception as exc:
+            self.logger.warning("[HOSTED] Failed to bootstrap storage shadow: %s", exc)
 
     def _bootstrap_from_shadow_if_empty(self) -> None:
         if self.repository.count_catalogs() > 0:
@@ -293,6 +298,22 @@ class HostedStorageService(HostedShadowFallbackMixin, StorageService):
 
         metadata = self._resolve_task_metadata(module_id, topic_id, task_id)
         content_row = self.content_repository.get_task_content(module_id, topic_id, task_id)
+        
+        # Fallback: if metadata is missing or lacks owner, load/merge from shadow storage
+        if metadata is None or metadata.get("created_by_user_id") is None:
+            shadow_payload = StorageService.load_task(self, module_id, topic_id, task_id)
+            if shadow_payload:
+                raw_metadata = shadow_payload.get("metadata")
+                if isinstance(raw_metadata, dict):
+                    if metadata is None:
+                        metadata = dict(raw_metadata)
+                    else:
+                        metadata = dict(metadata)
+                        metadata.update({
+                            k: v for k, v in raw_metadata.items()
+                            if k in ["created_by_user_id", "updated_by_user_id", "created_via", "content_scope", "ownership"]
+                        })
+
         if content_row is None:
             shadow_payload = self._sync_task_content_from_shadow(
                 module_id,
@@ -300,10 +321,6 @@ class HostedStorageService(HostedShadowFallbackMixin, StorageService):
                 task_id,
                 import_only=True,
             )
-            if shadow_payload is not None and metadata is None:
-                raw_metadata = shadow_payload.get("metadata")
-                if isinstance(raw_metadata, dict):
-                    metadata = dict(raw_metadata)
             content_row = self.content_repository.get_task_content(module_id, topic_id, task_id)
 
         if content_row is not None:

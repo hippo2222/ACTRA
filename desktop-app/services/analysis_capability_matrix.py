@@ -18,6 +18,7 @@ _TASK_TYPE_TO_ENTRY_ID: Dict[str, str] = {
     "CLICK": "click_core",
     "SEQUENCE": "sequence_structuring",
     "SEQUENCE_ASSEMBLY": "sequence_structuring",
+    "IMAGE_LABELING": "image_labeling_core",
 }
 
 
@@ -48,6 +49,20 @@ def _matrix_entries() -> Dict[str, Dict[str, Any]]:
             "capability_ids": ["explanation", "causal_reasoning"],
             "level_role_map": [
                 {"level": 1, "role": "Развернутый ответ: объяснение и причинно-следственные связи"},
+            ],
+        },
+        "image_labeling_core": {
+            "id": "image_labeling_core",
+            "task_type": "IMAGE_LABELING",
+            "subtype": None,
+            "implementation_status": "implemented_complex_type",
+            "progression_is_fixed": True,
+            "supported_levels": [1, 2],
+            "complex_role": "core",
+            "capability_ids": ["image_labeling", "visual_matching"],
+            "level_role_map": [
+                {"level": 1, "role": "Подписи на рисунке: сопоставление из пула вариантов"},
+                {"level": 2, "role": "Подписи на рисунке: ввод ответов вручную"},
             ],
         },
         "sequence_structuring": {

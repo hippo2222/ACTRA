@@ -1,4 +1,4 @@
-﻿"""Session API routes.
+"""Session API routes.
 
 Endpoints:
 - GET    /api/session/<id>/task              - Get current task
@@ -779,7 +779,10 @@ def next_task(session_id: str) -> Any:
     if not session:
         return jsonify({"ok": False, "error": "session_not_found"}), 404
     if session.paused:
-        return jsonify({"ok": False, "error": "session_paused"}), 409
+        logger.info("[HTTP] next_task: session %s is paused, auto-resuming before advancing task", session_id)
+        session = session_api.resume_session(session_id, user_id=current_user_id, source="task_next_auto_resume")
+        if not session:
+            return jsonify({"ok": False, "error": "session_not_found"}), 404
 
     try:
         data = session_api.next_task(session_id, user_id=current_user_id)

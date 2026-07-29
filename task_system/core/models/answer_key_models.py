@@ -195,3 +195,14 @@ class TestTaskAnswerKey(BaseModel):
         extra = "allow"
 
 
+class ImageLabelingTaskAnswerKey(BaseModel):
+    """Answer key for image labeling tasks."""
+    version: int = Field(
+        default=1,
+        description="Answer key format version"
+    )
+    
+    class Config:
+        extra = "allow"
+
+

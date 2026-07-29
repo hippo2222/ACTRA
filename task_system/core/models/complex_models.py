@@ -25,8 +25,8 @@ class ComplexSettings(BaseModel):
         description="Использовать ли пул ошибок (повтор неправильных)"
     )
     max_iterations: Optional[int] = Field(
-        default=None,
-        description="Максимальное количество итераций (если None - до завершения всех)"
+        default=3,
+        description="Максимальное количество итераций комплекса (базовое системное ограничение = 3)"
     )
 
     smart_retry_near_offset: int = Field(

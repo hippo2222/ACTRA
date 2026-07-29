@@ -82,6 +82,7 @@ class EvaluationResult:
             "draw": "IoU",
             "open_answer": "percent",
             "sequence_assembly": "percent",
+            "image_labeling": "percent",
             "test": "percent"
         }
         return metric_map.get(task_type, "percent")
@@ -210,6 +211,8 @@ class TaskEvaluatorService:
                 result = self.evaluate_open_answer_task(user_input, answer_key, task_data)
             elif task_type == 'sequence_assembly':
                 result = self.evaluate_sequence_task(user_input, answer_key, task_data)
+            elif task_type == 'image_labeling':
+                result = self.evaluate_image_labeling_task(user_input, answer_key, task_data)
             elif task_type == 'test':
                 result = self.evaluate_test_task(user_input, answer_key, task_data)
             else:
@@ -6226,6 +6229,44 @@ class TaskEvaluatorService:
             return True
 
         return False
+
+    def evaluate_image_labeling_task(
+        self,
+        user_input: Dict[str, Any],
+        answer_key: Dict[str, Any],
+        task_data: Optional[Dict[str, Any]] = None,
+    ) -> EvaluationResult:
+        """Оценка Image Labeling задания (подписи на рисунке)."""
+        try:
+            from task_system.types.image_labeling_task import ImageLabelingTaskEvaluator
+            
+            # Извлекаем из content если есть
+            normalized = dict(answer_key or {})
+            if isinstance(normalized.get('content'), dict):
+                content = normalized['content']
+                for k in ('zones', 'image', 'settings'):
+                    if k in content and k not in normalized:
+                        normalized[k] = content[k]
+
+            evaluator = ImageLabelingTaskEvaluator()
+            result = evaluator.evaluate(user_input, normalized)
+            
+            return EvaluationResult(
+                success=result.get("success", False),
+                message=result.get("message", ""),
+                score=result.get("score", 0.0),
+                metric="percent",
+                details=result.get("details", {})
+            )
+        except Exception as e:
+            logger.exception(f"Failed to evaluate image labeling task: {e}")
+            return EvaluationResult(
+                success=False,
+                message=f"Ошибка оценки: {str(e)}",
+                score=0.0,
+                metric="percent",
+                details={}
+            )
 
     def evaluate_test_task(
         self,

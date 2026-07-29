@@ -25,6 +25,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         "draw": [1, 2],  # Убрали уровень 3 для заданий типа рисование
         "test": [1, 2],  # 2 уровня вместо 3
         "sequence_assembly": [1, 2, 3],
+        "image_labeling": [1, 2],
         "open_answer": [1]  # Только уровень 1
     },
     "task_overrides": {},
@@ -138,6 +139,13 @@ class DifficultyConfigLoader:
         if "default_levels" not in config:
             logger.warning("В конфигурации отсутствует поле 'default_levels', будут использованы значения по умолчанию")
             config["default_levels"] = DEFAULT_CONFIG["default_levels"].copy()
+        else:
+            # Слияние отсутствующих ключей по умолчанию
+            default_levels = config["default_levels"]
+            if isinstance(default_levels, dict):
+                for task_type, levels in DEFAULT_CONFIG["default_levels"].items():
+                    if task_type not in default_levels:
+                        default_levels[task_type] = levels.copy() if isinstance(levels, list) else levels
         
         if "task_overrides" not in config:
             logger.warning("В конфигурации отсутствует поле 'task_overrides', используется пустой словарь")

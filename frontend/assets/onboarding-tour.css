@@ -96,7 +96,7 @@ body[data-onboarding-step-id="click-difficulty-levels"] [data-onboarding-target=
 }
 
 .onboarding-tour-scrim--has-hole.is-visible {
-    background-color: transparent;
+    background-color: color-mix(in srgb, var(--color-text-main) 56%, transparent);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
 }
@@ -107,8 +107,8 @@ body[data-onboarding-step-id="click-difficulty-levels"] [data-onboarding-target=
     pointer-events: none;
     opacity: 0;
     background-color: color-mix(in srgb, var(--color-text-main) 56%, transparent);
-    backdrop-filter: blur(2px);
-    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
     transition: opacity var(--onboarding-motion-duration) var(--onboarding-motion-ease);
 }
 
@@ -405,6 +405,10 @@ body[data-onboarding-step-id="click-difficulty-levels"] [data-onboarding-target=
 
 .onboarding-tour-callout--click-wide {
     width: min(380px, calc(100vw - 2rem));
+}
+
+.onboarding-tour-callout--image-labeling-wide {
+    width: min(700px, calc(100vw - 2rem));
 }
 
 .onboarding-tour-callout--test-editor-options-list {

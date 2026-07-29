@@ -720,10 +720,15 @@ class ComplexSessionController:
 
         # Завершённая итерация (для логики показа/пропуска результатов)
         completed_iteration = session.iteration
+        ui_state = getattr(session, "ui_state", None) or {}
+        already_shown = (
+            self._last_shown_iteration == completed_iteration
+            or (isinstance(ui_state, dict) and ui_state.get("screen_type") == "iteration_results")
+        )
 
         if iteration_completed:
             # Если результаты этой итерации уже были показаны, пропускаем показ и генерируем следующую итерацию
-            if self._last_shown_iteration == completed_iteration:
+            if already_shown:
                 logger.info(f"[ComplexSessionController._load_next_task] Результаты итерации {completed_iteration} уже были показаны, генерируем следующую итерацию")
                 # Сбрасываем флаг, чтобы следующая итерация могла показать свои результаты
                 self._last_shown_iteration = None

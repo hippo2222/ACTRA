@@ -4230,14 +4230,43 @@ class SessionAPI:
             and ui_iteration_number is None
             and current_iteration > 1
         ):
-            prev_iter = current_iteration - 1
             logger.info(
-                "[SessionAPI.get_iteration_results] summary for iteration %s not found, "
-                "trying previous iteration %s", current_iteration, prev_iter
+                "[SessionAPI.get_iteration_results] summary for iteration %s not found, trying previous iteration %s",
+                current_iteration, prev_iter
             )
             summary = self._session_manager.get_iteration_summary(session_id, prev_iter)
         if summary is None:
             return None
+
+        # Автоматически фиксируем состояние ui_state="iteration_results",
+        # чтобы при перезагрузке страницы или сервера пользователь оставался на экранах S2.
+        # ВАЖНО: Не перезаписываем ui_state, если сессия уже перешла к выполнению заданий (screen_type == "task")
+        # или уже находится на более поздней итерации.
+        try:
+            iter_num = target_iteration or current_iteration
+            session_ui = getattr(session, "ui_state", None) or {}
+            curr_screen = session_ui.get("screen_type") if isinstance(session_ui, dict) else None
+            sess_iter = getattr(session, "iteration", 1) or 1
+
+            if session is not None and curr_screen != "task" and sess_iter <= iter_num:
+                session.ui_state = {
+                    "screen_type": "iteration_results",
+                    "iteration_number": iter_num,
+                }
+                resume_url = f"/session/{quote(session_id, safe='')}/iteration/{iter_num}"
+                session.paused_resume_target = {
+                    "screen_type": "iteration_results",
+                    "iteration_number": iter_num,
+                    "url": resume_url,
+                }
+                if hasattr(self._controller, "save_ui_state"):
+                    self._controller.save_ui_state(
+                        "iteration_results",
+                        iteration_number=iter_num,
+                        force=True
+                    )
+        except Exception:
+            logger.exception("[SessionAPI.get_iteration_results] Failed to persist iteration_results ui_state")
 
         # Pydantic-модели умеют dict(), иначе берём __dict__
         if hasattr(summary, "dict"):
@@ -5250,6 +5279,99 @@ class SessionAPI:
                     reference_review_items = _extract_option_review_items(question, option_reference_raw)
                     if not reference_review_items:
                         reference_review_items = _extract_correct_option_review_items(question)
+
+            if task_type in ("image_labeling", "image_labeling_task"):
+                evaluator_details = (
+                    details.get("evaluator_result", {}).get("details")
+                    if isinstance(details.get("evaluator_result"), dict)
+                    and isinstance(details.get("evaluator_result").get("details"), dict)
+                    else details
+                )
+                zone_results = evaluator_details.get("zone_results")
+                if not isinstance(zone_results, dict):
+                    zone_results = details.get("zone_results") if isinstance(details.get("zone_results"), dict) else {}
+
+                zones = content.get("zones") if isinstance(content.get("zones"), list) else []
+                zone_title_map: Dict[str, str] = {}
+                for idx, z in enumerate(zones):
+                    if isinstance(z, dict):
+                        zid = str(z.get("id") or f"zone_{idx + 1}")
+                        ztitle = _first_text(z.get("title"), z.get("label"), z.get("name")) or f"Область {idx + 1}"
+                        zone_title_map[zid] = ztitle
+
+                user_lines: List[str] = []
+                reference_lines: List[str] = []
+                error_count = 0
+
+                if zone_results:
+                    for zid, zres in zone_results.items():
+                        if not isinstance(zres, dict):
+                            continue
+                        is_corr = zres.get("is_correct", False)
+                        expected = _normalize_answer_value(zres.get("expected"))
+                        actual = _normalize_answer_value(zres.get("actual"))
+                        ztitle = zone_title_map.get(str(zid)) or f"Область {zid}"
+
+                        if not is_corr:
+                            error_count += 1
+                            user_lines.append(f"{ztitle}: {actual or 'не заполнено'}")
+                            reference_lines.append(f"{ztitle}: {expected or 'не указано'}")
+
+                if not user_lines and not reference_lines:
+                    for idx, z in enumerate(zones):
+                        if isinstance(z, dict):
+                            zid = str(z.get("id") or f"zone_{idx + 1}")
+                            ztitle = zone_title_map.get(zid) or f"Область {idx + 1}"
+                            expected = _normalize_answer_value(z.get("label"))
+                            reference_lines.append(f"{ztitle}: {expected or '—'}")
+
+                image_raw = content.get("image")
+                image_url = ""
+                if isinstance(image_raw, dict):
+                    image_url = image_raw.get("asset_url") or image_raw.get("path") or ""
+                    if image_raw.get("asset_id") and not image_url:
+                        image_url = f"/api/assets/{image_raw.get('asset_id')}/content"
+                elif isinstance(image_raw, str):
+                    image_url = image_raw
+
+                user_items: List[Dict[str, Any]] = []
+                reference_items: List[Dict[str, Any]] = []
+
+                if image_url:
+                    user_items.append({
+                        "type": "image_labeling_comparison",
+                        "image_url": image_url,
+                        "zones": zones,
+                        "zone_results": zone_results,
+                        "is_user": True
+                    })
+                    reference_items.append({
+                        "type": "image_labeling_comparison",
+                        "image_url": image_url,
+                        "zones": zones,
+                        "zone_results": zone_results,
+                        "is_user": False
+                    })
+
+                note = explanation
+                if not note:
+                    if error_count > 0:
+                        total_z = len(zone_results) if zone_results else len(zones)
+                        note = f"Ошибки в подписях на рисунке: неверно {error_count} из {total_z}."
+                    else:
+                        note = "Все подписи расставлены верно."
+
+                return _make_review_payload_for_review(
+                    task_title,
+                    _first_text(content.get("prompt"), content.get("question"), prompt),
+                    user_lines or ["Ответы не были зафиксированы."],
+                    reference_lines or ["Правильные подписи не найдены."],
+                    user_label="Твои подписи",
+                    reference_label="Правильные подписи",
+                    note=note,
+                    user_items=user_items,
+                    reference_items=reference_items,
+                )
 
             if task_type == "open_answer":
                 prompt_local = _first_text(content.get("question"), content.get("prompt"), prompt)

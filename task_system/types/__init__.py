@@ -6,6 +6,7 @@ from .draw_task import DrawTask
 from .test_task_type import TestTaskType
 from .open_answer_task_type import OpenAnswerTaskType
 from .sequence_assembly_task import SequenceAssemblyTaskType
+from .image_labeling_task import ImageLabelingTaskType
 
 __all__ = [
     "TaskTypeRegistry",
@@ -15,5 +16,6 @@ __all__ = [
     "TestTaskType",
     "OpenAnswerTaskType",
     "SequenceAssemblyTaskType",
+    "ImageLabelingTaskType",
 ]
 

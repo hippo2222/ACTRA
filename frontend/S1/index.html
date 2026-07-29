@@ -400,11 +400,11 @@
             </div>
             <div class="s1-toolbar-actions">
               <div class="s1-progress-cluster flex flex-col">
-                <div class="flex items-center justify-between gap-4">
-                  <p id="progress-label" class="text-xs font-medium leading-normal text-text-secondary" data-i18n="s1.progress_label_prefix">
+                <div class="flex items-center justify-between gap-3 min-w-0">
+                  <p id="progress-label" class="text-xs font-medium leading-normal text-text-secondary truncate min-w-0" data-i18n="s1.progress_label_prefix">
                     Задание –
                   </p>
-                  <p id="difficulty-label" class="hidden text-xs font-normal leading-normal text-text-secondary" data-i18n="s1.difficulty_label_prefix">
+                  <p id="difficulty-label" class="hidden text-xs font-normal leading-normal text-text-secondary shrink-0 whitespace-nowrap" data-i18n="s1.difficulty_label_prefix">
                     Сложность: –
                   </p>
                 </div>
@@ -595,6 +595,7 @@
     <script src="/TestUI/TestUI.question.js?v=20260402-reviewfix1"></script>
     <script src="/TestUI/TestUI.sidebar.js"></script>
     <script src="/SequenceUI/SequenceUI.web.js"></script>
+    <script src="/SequenceUI/ImageLabelUI.web.js?v=20260727-warningiconfix1"></script>
     <script src="/ClickUI/TaskMetadataPanel.js"></script>
     <script src="/ClickUI/ClickUI.web.js?v=20260523-2"></script>
     <script src="/DrawUI/DrawUI.web.js"></script>
@@ -608,11 +609,11 @@
     <script src="/S1/task_renderer_selector.js"></script>
     <script src="/S1/draft-storage.js"></script>
     <script src="/S1/config.js"></script>
-    <script src="/S1/task-renderer.js"></script>
+    <script src="/S1/task-renderer.js?v=20260727-judgementbtn5"></script>
     <script src="/S1/success-effects.js"></script>
     <script src="/S1/session_validation.js"></script>
-    <script src="/S1/session-controls.js"></script>
-    <script src="/S1/main.js"></script>
+    <script src="/S1/session-controls.js?v=20260727-judgementbtn5"></script>
+    <script src="/S1/main.js?v=20260727-judgementbtn5"></script>
     <script>
       function wt(key, fallback) {
         if (!window.i18n) return fallback;

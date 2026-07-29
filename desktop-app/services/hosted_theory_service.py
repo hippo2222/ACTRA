@@ -46,6 +46,33 @@ class HostedTheoryService(HostedShadowFallbackMixin, TheoryService):
         self.repository.ensure_schema()
         self.content_repository.ensure_schema()
         self._storage_ready = True
+        try:
+            self._bootstrap_from_shadow_if_empty()
+        except Exception as exc:
+            self.logger.warning("[HOSTED] Failed to bootstrap theory shadow: %s", exc)
+
+    def _bootstrap_from_shadow_if_empty(self) -> None:
+        try:
+            legacy_theories = TheoryService.list_theories(self)
+            if not legacy_theories:
+                return
+            self.logger.info("[HOSTED] Bootstrapping missing legacy theories into Postgres")
+            for meta in legacy_theories:
+                theory_id = meta.get("id")
+                if not theory_id:
+                    continue
+                full_theory = TheoryService.get_theory(self, theory_id, include_delta=True)
+                meta_payload = dict(full_theory)
+                meta_payload.pop("delta", None)
+                self.repository.import_theory_if_absent(meta_payload)
+                self.content_repository.import_theory_content_if_absent(
+                    theory_id,
+                    delta=full_theory.get("delta") or {},
+                    images=full_theory.get("images") or [],
+                    updated_at=full_theory.get("updated_at") or "",
+                )
+        except Exception as exc:
+            self.logger.warning("[HOSTED] Failed to bootstrap legacy theories: %s", exc)
 
     def _ensure_repository_theory_state(self, theory_id: str) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         meta = self.repository.get_theory_metadata(theory_id)

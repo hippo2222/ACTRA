@@ -94,14 +94,16 @@ class BaseEditor {
      */
     getTaskContext() {
         const params = new URLSearchParams(window.location.search);
+        const isOnboarding = params.has('onboarding_preview') || params.has('onboarding_tour') || params.has('reference_embed');
         return {
-            moduleId: params.get('module'),
-            topicId: params.get('topic'),
-            taskId: params.get('task'),
-            isNewTask: params.get('new') === '1' || params.get('is_new') === '1',
+            moduleId: params.get('module') || (isOnboarding ? 'onboarding-preview-module' : null),
+            topicId: params.get('topic') || (isOnboarding ? 'onboarding-preview-topic' : null),
+            taskId: params.get('task') || (isOnboarding ? 'onboarding-preview-task' : null),
+            isNewTask: params.get('new') === '1' || params.get('is_new') === '1' || isOnboarding,
             restoreDraft: params.get('restore_draft') === '1',
             taskType: params.get('task_type') || '',
             taskName: params.get('task_name') || '',
+            isOnboarding,
         };
     }
 
@@ -274,6 +276,7 @@ class BaseEditor {
         this.restoreDraftIntent = Boolean(context.restoreDraft);
         this.taskTypeParam = String(context.taskType || '').trim();
         this.taskNameParam = String(context.taskName || '').trim();
+        this.isOnboardingPreview = Boolean(context.isOnboarding);
 
         if (!this.moduleId || !this.topicId || !this.taskId) {
             console.error('Missing task parameters in URL');
@@ -317,6 +320,31 @@ class BaseEditor {
         );
 
         if (!bootstrap) {
+            if (this.isOnboardingPreview) {
+                const previewBootstrap = {
+                    task_data: {
+                        id: this.taskId || 'onboarding-preview-task',
+                        type: this.taskTypeParam || '',
+                        name: wt('editor_base.preview_task_title', 'Превью задания'),
+                        content: {},
+                        settings: {},
+                        meta: {
+                            id: this.taskId || 'onboarding-preview-task',
+                            module: this.moduleId || 'onboarding-preview-module',
+                            topic: this.topicId || 'onboarding-preview-topic',
+                            name: wt('editor_base.preview_task_title', 'Превью задания'),
+                        },
+                    },
+                    metadata: {
+                        id: this.taskId || 'onboarding-preview-task',
+                        module: this.moduleId || 'onboarding-preview-module',
+                        topic: this.topicId || 'onboarding-preview-topic',
+                        name: wt('editor_base.preview_task_title', 'Превью задания'),
+                    },
+                };
+                this.applyLoadedTask(previewBootstrap, { persisted: false });
+                return true;
+            }
             this.showFatalError(wt('editor_base.error_draft_not_found', 'Черновик не найден. Откройте создание задания заново.'));
             return false;
         }
@@ -800,7 +828,7 @@ class BaseEditor {
         container.setAttribute('data-onboarding-target', 'editor-difficulty-authoring');
         container.setAttribute('data-onboarding-spotlight', 'frame');
 
-        if (container.parentElement !== mountPoint) {
+        if (container.parentElement !== mountPoint && container !== mountPoint) {
             if (this.getDifficultyAuthoringInsertMode() === 'append') {
                 mountPoint.append(container);
             } else {

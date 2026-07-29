@@ -8,6 +8,7 @@ from .click_task import ClickTask
 from .draw_task import DrawTask
 from .open_answer_task_type import OpenAnswerTaskType
 from .sequence_assembly_task import SequenceAssemblyTaskType
+from .image_labeling_task import ImageLabelingTaskType
 
 # Безопасный импорт TestTaskType
 try:
@@ -35,6 +36,7 @@ class TaskTypeRegistry:
         self.register(DrawTask())
         self.register(OpenAnswerTaskType())
         self.register(SequenceAssemblyTaskType())
+        self.register(ImageLabelingTaskType())
         
         # Регистрируем TestTaskType только если он доступен
         if TEST_TASK_AVAILABLE and TestTaskType is not None:

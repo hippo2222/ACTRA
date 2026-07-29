@@ -34,6 +34,22 @@ class HostedComplexService(HostedShadowFallbackMixin, ComplexService):
         self.repository.ensure_schema()
         self._storage_ready = True
         self._initialized = False
+        try:
+            self._bootstrap_from_shadow_if_empty()
+        except Exception as exc:
+            self.logger.warning("[HOSTED] Failed to bootstrap complex shadow: %s", exc)
+
+    def _bootstrap_from_shadow_if_empty(self) -> None:
+        try:
+            legacy_complexes = ComplexService.load_complexes(self)
+            if not legacy_complexes:
+                return
+            self.logger.info("[HOSTED] Bootstrapping missing legacy complexes into Postgres")
+            payloads = self._complex_payloads_from_models(legacy_complexes)
+            for payload in payloads:
+                self.repository.import_complex_if_absent(payload)
+        except Exception as exc:
+            self.logger.warning("[HOSTED] Failed to bootstrap legacy complexes: %s", exc)
 
     def _payload_to_complex(self, payload: Dict[str, Any]) -> Complex:
         normalized = _normalize_complex_ownership_fields(dict(payload), fallback_source="legacy_unknown")
