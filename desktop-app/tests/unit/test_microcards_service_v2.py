@@ -1,5 +1,6 @@
 import sys
 import tempfile
+import pytest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -1732,3 +1733,22 @@ def test_linked_deck_revoked_midsession_heals_instead_of_crashing():
     res = svc.submit_answer(session["id"], q[1], "know")
     assert res.get("card_missing") is True
     assert q[1] not in res["session"]["card_queue"]
+
+
+def test_create_card_respects_1000_cards_limit():
+    """Verify that a deck can hold up to 1000 cards, and adding the 1001st card raises deck_card_limit_reached."""
+    svc = MicrocardsServiceV2(tempfile.mkdtemp(), user_id="limit_user")
+    deck = svc.create_deck(name="1000 Cards Test Deck")
+    did = deck["id"]
+
+    # Pre-populate deck with 999 dummy cards
+    deck["cards"] = [{"id": f"mc_dummy_{i}", "front": {"text": f"Q{i}"}, "back": {"text": f"A{i}"}} for i in range(999)]
+    svc.storage.put_deck_doc(did, deck)
+
+    # 1000th card creation must succeed
+    c1000 = svc.create_card(did, front_text="Q1000", back_text="A1000")
+    assert c1000["id"].startswith("mc_")
+
+    # 1001st card creation must fail with deck_card_limit_reached
+    with pytest.raises(ValueError, match="deck_card_limit_reached"):
+        svc.create_card(did, front_text="Q1001", back_text="A1001")

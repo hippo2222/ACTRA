@@ -184,6 +184,7 @@ class MicrocardsServiceV2:
     # typos should pass by default, and genuinely borderline answers are resolved by the
     # learner via the "count as correct" (override) action during review.
     FUZZY_THRESHOLD = 0.82
+    MAX_CARDS_PER_DECK = 1000
 
     def __init__(self, data_dir: str, user_id: Optional[str] = None) -> None:
         self.data_dir = Path(data_dir)
@@ -1222,7 +1223,7 @@ class MicrocardsServiceV2:
         self._assert_editable(deck)
 
         cards = deck.get("cards", [])
-        if len(cards) >= 500:
+        if len(cards) >= self.MAX_CARDS_PER_DECK:
             raise ValueError("deck_card_limit_reached")
 
         card_id = f"mc_{uuid.uuid4().hex[:12]}"
