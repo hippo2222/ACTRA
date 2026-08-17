@@ -374,6 +374,20 @@ body {
     animation: scaleOut 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
+/* Native <dialog> sizing — ensure proper display */
+#topic-theory-modal,
+#create-theory-modal,
+#theory-hub-modal {
+    width: calc(100% - 2rem);
+    max-width: 100%;
+    padding: 1rem;
+    box-sizing: border-box;
+    background: transparent;
+    border: none;
+    outline: none;
+    overflow: visible;
+}
+
 /* Expanding Search Bar */
 .search-container-expanding {
     width: 240px;

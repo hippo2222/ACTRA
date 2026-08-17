@@ -1913,7 +1913,10 @@ class EditorDashboard {
         modal.classList.remove('hidden');
         modal.classList.add('flex');
         const modalContent = modal.querySelector('.editor-dialog-surface');
-        if (modalContent) modalContent.classList.add('animate-scale-in');
+        if (modalContent) {
+            modalContent.classList.remove('animate-scale-in');
+            requestAnimationFrame(() => modalContent.classList.add('animate-scale-in'));
+        }
         // Backdrop-click to dismiss
         const onBackdropClick = (e) => {
             if (e.target === modal) {
@@ -2065,7 +2068,10 @@ class EditorDashboard {
         modal.classList.remove('hidden');
         modal.classList.add('flex');
         const content = modal.querySelector('.editor-dialog-surface');
-        if (content) content.classList.add('animate-scale-in');
+        if (content) {
+            content.classList.remove('animate-scale-in');
+            requestAnimationFrame(() => content.classList.add('animate-scale-in'));
+        }
         // Backdrop-click to dismiss
         const onBackdropClick = (e) => {
             if (e.target === modal) {
@@ -2170,7 +2176,10 @@ class EditorDashboard {
         modal.classList.remove('hidden');
         modal.classList.add('flex');
         const content = modal.querySelector('.editor-dialog-surface');
-        if (content) content.classList.add('animate-scale-in');
+        if (content) {
+            content.classList.remove('animate-scale-in');
+            requestAnimationFrame(() => content.classList.add('animate-scale-in'));
+        }
         // Backdrop-click to dismiss
         const onBackdropClick = (e) => {
             if (e.target === modal) {
