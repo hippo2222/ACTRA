@@ -2459,7 +2459,12 @@ class EditorDashboard {
             closeButtons.forEach(btn => btn.onclick = handleCancel);
 
             // Show modal
-            modal.showModal();
+            modal.classList.remove('hidden', 'closing');
+            if (typeof modal.showModal === 'function' && !modal.open) {
+                modal.showModal();
+            } else if (!modal.open) {
+                modal.classList.add('flex');
+            }
             setTimeout(() => input.focus(), 100);
 
             // Cleanup on close
@@ -2728,10 +2733,10 @@ class EditorDashboard {
         }
         this.setTopicTheorySummary(wt('db.k115', 'Загружаем текущее состояние темы...'), 'info');
 
+        modal.classList.remove('hidden', 'closing');
         if (typeof modal.showModal === 'function' && !modal.open) {
             modal.showModal();
-        } else {
-            modal.classList.remove('hidden');
+        } else if (!modal.open) {
             modal.classList.add('flex');
         }
 
@@ -3087,10 +3092,10 @@ class EditorDashboard {
             this.theoryHubState.focusTheoryId = requestedFocus;
         }
 
+        modal.classList.remove('hidden', 'closing');
         if (typeof modal.showModal === 'function' && !modal.open) {
             modal.showModal();
-        } else {
-            modal.classList.remove('hidden');
+        } else if (!modal.open) {
             modal.classList.add('flex');
         }
 
