@@ -1910,6 +1910,9 @@ class EditorDashboard {
             this.updateTopicSelect();
         }
 
+        this.setupTaskTypePicker();
+        this.syncTaskTypePicker();
+
         modal.classList.remove('hidden');
         modal.classList.add('flex');
         const modalContent = modal.querySelector('.editor-dialog-surface');
@@ -1934,6 +1937,35 @@ class EditorDashboard {
                 timeout: 4800,
             });
         }
+    }
+
+    setupTaskTypePicker() {
+        const picker = document.getElementById('editor-task-type-picker');
+        const select = document.getElementById('task-type-select');
+        if (!picker || !select || picker._bound) return;
+
+        picker.querySelectorAll('.editor-task-type-card').forEach((card) => {
+            card.addEventListener('click', () => {
+                const type = card.dataset.type;
+                if (!type) return;
+                select.value = type;
+                select.dispatchEvent(new Event('change'));
+                this.syncTaskTypePicker();
+            });
+        });
+
+        select.addEventListener('change', () => this.syncTaskTypePicker());
+        picker._bound = true;
+    }
+
+    syncTaskTypePicker() {
+        const picker = document.getElementById('editor-task-type-picker');
+        const select = document.getElementById('task-type-select');
+        if (!picker || !select) return;
+        const currentType = select.value || 'click';
+        picker.querySelectorAll('.editor-task-type-card').forEach((card) => {
+            card.classList.toggle('is-active', card.dataset.type === currentType);
+        });
     }
 
     updateTopicSelect() {
@@ -2287,14 +2319,36 @@ class EditorDashboard {
 
         const relationSelect = document.getElementById('topic-theory-relation');
         const relationHint = document.getElementById('topic-theory-relation-hint');
-        if (relationSelect && relationHint) {
-            const updateHint = () => {
-                relationHint.textContent = relationSelect.value === 'copy'
-                    ? wt('db.k096', 'Независимая копия — дальнейшие изменения в теории не попадут в комплекс.')
-                    : wt('db.k097', 'Связанные комплексы-наследники обновляются автоматически в безопасном режиме.');
+        const relationSegmented = document.getElementById('topic-theory-relation-segmented');
+        if (relationSelect) {
+            const updateRelationUI = () => {
+                const val = relationSelect.value || 'link';
+                if (relationHint) {
+                    relationHint.textContent = val === 'copy'
+                        ? wt('db.k096', 'Независимая копия — дальнейшие изменения в теории не попадут в комплекс.')
+                        : wt('db.k097', 'Связанные комплексы-наследники обновляются автоматически в безопасном режиме.');
+                }
+                if (relationSegmented) {
+                    relationSegmented.querySelectorAll('.editor-segmented-item').forEach((btn) => {
+                        btn.classList.toggle('is-active', btn.dataset.relation === val);
+                    });
+                }
             };
-            relationSelect.addEventListener('change', updateHint);
-            updateHint();
+
+            if (relationSegmented && !relationSegmented._bound) {
+                relationSegmented.querySelectorAll('.editor-segmented-item').forEach((btn) => {
+                    btn.addEventListener('click', () => {
+                        const rel = btn.dataset.relation;
+                        if (!rel) return;
+                        relationSelect.value = rel;
+                        relationSelect.dispatchEvent(new Event('change'));
+                    });
+                });
+                relationSegmented._bound = true;
+            }
+
+            relationSelect.addEventListener('change', updateRelationUI);
+            updateRelationUI();
         }
 
         const saveBtn = document.getElementById('topic-theory-save-btn');

@@ -8,7 +8,6 @@
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title data-i18n="page.editor">ACTRA — Редактор</title>
     <base href="/editor/">
-    <link rel="stylesheet" href="styles.css">
     <script>
         (function () {
             let state = {};
@@ -51,15 +50,16 @@
             }
         })();
     </script>
-    <script src="ai_ux_messages.js?v=1"></script>
-    <script src="import_manager.js?v=3" defer></script>
+    <script src="ai_ux_messages.js?v=25"></script>
+    <script src="import_manager.js?v=25" defer></script>
     <script src="../../assets/PremiumPromoModal.js" defer></script>
-    <script src="dashboard.js?v=14" defer></script>
+    <script src="dashboard.js?v=25" defer></script>
 
     <link href="../../assets/tailwind.css" rel="stylesheet" />
     <link href="../../assets/fonts.css" rel="stylesheet" />
     <link href="../../assets/lightB-variables.css" rel="stylesheet" />
     <link href="../../assets/lightB-components.css" rel="stylesheet" />
+    <link href="styles.css?v=25" rel="stylesheet" />
     <link href="../../assets/global-header.css" rel="stylesheet" />
     <link href="../../assets/animations.css" rel="stylesheet" />
     <link href="/assets/onboarding-tour.css?v=editor-dashboard-onboarding-31" rel="stylesheet" />
@@ -846,7 +846,7 @@
                 </div>
                 <div id="create-task-limit-note" class="hidden mb-4 rounded-lg border border-warning-light bg-warning-lighter px-4 py-3 text-sm text-warning-darker"></div>
                 <form id="create-task-form" class="space-y-4">
-                    <div data-onboarding-target="editor-create-task-context" class="space-y-3">
+                    <div data-onboarding-target="editor-create-task-context" class="editor-modal-group">
                         <div>
                             <label class="editor-modal-label" data-i18n="md.module_label">Модуль</label>
                             <div class="editor-dialog-inline-row">
@@ -878,25 +878,51 @@
                             </div>
                         </div>
                     </div>
-                    <div class="editor-modal-divider space-y-3">
+                    <div class="space-y-3 pt-1">
                         <div data-onboarding-target="editor-create-task-name">
                             <label class="editor-modal-label" data-i18n="md.task_name_label">Название задания</label>
                             <input type="text" id="task-name-input" maxlength="100"
                                 class="editor-modal-field"
-                                placeholder="Введите понятное название" data-i18n-placeholder="md.task_name_ph" required>
+                                placeholder="Введите понятное название задания" data-i18n-placeholder="md.task_name_ph" required>
                         </div>
                         <div data-onboarding-target="editor-create-task-type">
                             <label class="editor-modal-label" data-i18n="md.task_type_label">Тип задания</label>
-                            <div class="editor-select-wrap">
-                                <select id="task-type-select" class="editor-modal-field">
-                                    <option value="click" data-i18n="md.task_type_click">Клик (Аннотация)</option>
-                                    <option value="draw" data-i18n="md.task_type_draw">Рисование</option>
-                                    <option value="test" data-i18n="md.task_type_test">Тест (Выбор ответа)</option>
-                                    <option value="sequence_assembly" data-i18n="md.task_type_seq">Сборка последовательности</option>
-                                    <option value="image_labeling" data-i18n="md.task_type_image_labeling">Подписи на рисунке</option>
-                                    <option value="open_answer" data-i18n="md.task_type_open">Открытый ответ</option>
-                                </select>
+                            <!-- Apple-style visual task type grid -->
+                            <div class="editor-task-type-grid" id="editor-task-type-picker">
+                                <button type="button" class="editor-task-type-card is-active" data-type="click">
+                                    <span class="material-symbols-outlined">ads_click</span>
+                                    <span class="editor-task-type-name" data-i18n="md.task_type_click">Клик</span>
+                                </button>
+                                <button type="button" class="editor-task-type-card" data-type="draw">
+                                    <span class="material-symbols-outlined">draw</span>
+                                    <span class="editor-task-type-name" data-i18n="md.task_type_draw">Рисование</span>
+                                </button>
+                                <button type="button" class="editor-task-type-card" data-type="test">
+                                    <span class="material-symbols-outlined">quiz</span>
+                                    <span class="editor-task-type-name" data-i18n="md.task_type_test">Тест</span>
+                                </button>
+                                <button type="button" class="editor-task-type-card" data-type="sequence_assembly">
+                                    <span class="material-symbols-outlined">format_list_numbered</span>
+                                    <span class="editor-task-type-name" data-i18n="md.task_type_seq">Сборка</span>
+                                </button>
+                                <button type="button" class="editor-task-type-card" data-type="image_labeling">
+                                    <span class="material-symbols-outlined">label</span>
+                                    <span class="editor-task-type-name" data-i18n="md.task_type_image_labeling">Подписи</span>
+                                </button>
+                                <button type="button" class="editor-task-type-card" data-type="open_answer">
+                                    <span class="material-symbols-outlined">edit_note</span>
+                                    <span class="editor-task-type-name" data-i18n="md.task_type_open">Открытый</span>
+                                </button>
                             </div>
+                            <!-- Underlying select kept synced for form submission & tours -->
+                            <select id="task-type-select" class="hidden">
+                                <option value="click" selected data-i18n="md.task_type_click">Клик (Аннотация)</option>
+                                <option value="draw" data-i18n="md.task_type_draw">Рисование</option>
+                                <option value="test" data-i18n="md.task_type_test">Тест (Выбор ответа)</option>
+                                <option value="sequence_assembly" data-i18n="md.task_type_seq">Сборка последовательности</option>
+                                <option value="image_labeling" data-i18n="md.task_type_image_labeling">Подписи на рисунке</option>
+                                <option value="open_answer" data-i18n="md.task_type_open">Открытый ответ</option>
+                            </select>
                         </div>
                     </div>
                 </form>
@@ -1059,17 +1085,24 @@
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
-                                <label class="block text-[10px] uppercase font-bold text-text-muted mb-1 ml-1" for="topic-theory-relation" title="Выберите, как теория будет связана с темой" data-i18n-title="md.relation_label_title">
+                                <label class="editor-modal-label" for="topic-theory-relation" title="Выберите, как теория будет связана с темой" data-i18n-title="md.relation_label_title">
                                     <span data-i18n="md.relation_label">Способ привязки</span>
-                                    <span class="material-symbols-outlined text-[12px] align-middle ml-0.5 opacity-60">info</span>
                                 </label>
-                                <div class="editor-select-wrap">
-                                    <select id="topic-theory-relation" class="editor-modal-field">
-                                        <option value="link" data-i18n="md.relation_link">Динамическая ссылка</option>
-                                        <option value="copy" data-i18n="md.relation_copy">Статическая копия</option>
-                                    </select>
+                                <div class="editor-segmented-wrap" id="topic-theory-relation-segmented">
+                                    <button type="button" class="editor-segmented-item is-active" data-relation="link">
+                                        <span class="material-symbols-outlined" style="font-size: 16px;">link</span>
+                                        <span data-i18n="md.relation_link">Ссылка</span>
+                                    </button>
+                                    <button type="button" class="editor-segmented-item" data-relation="copy">
+                                        <span class="material-symbols-outlined" style="font-size: 16px;">content_copy</span>
+                                        <span data-i18n="md.relation_copy">Копия</span>
+                                    </button>
                                 </div>
-                                <p id="topic-theory-relation-hint" class="mt-1 ml-1 text-[10px] text-text-secondary leading-snug" data-i18n="md.topic_theory_relation_hint">Изменения в теории автоматически появится в комплексах после синхронизации.</p>
+                                <select id="topic-theory-relation" class="hidden">
+                                    <option value="link" selected data-i18n="md.relation_link">Динамическая ссылка</option>
+                                    <option value="copy" data-i18n="md.relation_copy">Статическая копия</option>
+                                </select>
+                                <p id="topic-theory-relation-hint" class="mt-1.5 ml-0.5 text-[11px] text-text-secondary leading-snug" data-i18n="md.topic_theory_relation_hint">Изменения в теории автоматически появятся в комплексах после синхронизации.</p>
                             </div>
                             <div class="rounded-xl border border-border-subtle bg-surface-2 px-4 py-3">
                                 <div class="flex items-center justify-between gap-3">
