@@ -1912,8 +1912,16 @@ class EditorDashboard {
 
         modal.classList.remove('hidden');
         modal.classList.add('flex');
-        const modalContent = modal.querySelector('.bg-surface-1');
+        const modalContent = modal.querySelector('.editor-dialog-surface');
         if (modalContent) modalContent.classList.add('animate-scale-in');
+        // Backdrop-click to dismiss
+        const onBackdropClick = (e) => {
+            if (e.target === modal) {
+                modal.removeEventListener('click', onBackdropClick);
+                this.closeModals();
+            }
+        };
+        modal.addEventListener('click', onBackdropClick);
         if (!this.onboardingDemoActive && this.isTaskCreationBlocked()) {
             this.showVoiceToast({
                 severity: 'warning',
@@ -1969,21 +1977,38 @@ class EditorDashboard {
             }
             const m = document.getElementById(id);
             if (!m) return;
-            const content = m.querySelector('.bg-surface-1, .bg-card-light');
-            if (content) {
-                content.classList.remove('animate-scale-in');
-            }
             if (m.close) {
                 try {
                     m.close();
                 } catch (e) {
                     console.warn('[Dashboard] Failed to close dialog natively:', e);
                 }
-            } else {
-                m.classList.add('hidden');
-                m.classList.remove('flex');
+            } else if (!m.classList.contains('hidden')) {
+                this._closeDivModal(m);
             }
         });
+    }
+
+    /**
+     * Closes a div-based modal with a smooth scale-out animation.
+     * @param {HTMLElement} modal - The backdrop layer element.
+     */
+    _closeDivModal(modal) {
+        if (!modal || modal.classList.contains('hidden')) return;
+        const surface = modal.querySelector('.editor-dialog-surface');
+        if (surface) {
+            surface.classList.remove('animate-scale-in');
+            surface.classList.add('animate-scale-out');
+        }
+        modal.classList.add('closing');
+        const ANIM_MS = 200;
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex', 'closing');
+            if (surface) {
+                surface.classList.remove('animate-scale-out');
+            }
+        }, ANIM_MS);
     }
 
     async submitTaskForm() {
@@ -2039,17 +2064,22 @@ class EditorDashboard {
         const modal = document.querySelector('#create-module-modal');
         modal.classList.remove('hidden');
         modal.classList.add('flex');
-        const content = modal.querySelector('.bg-surface-1');
+        const content = modal.querySelector('.editor-dialog-surface');
         if (content) content.classList.add('animate-scale-in');
+        // Backdrop-click to dismiss
+        const onBackdropClick = (e) => {
+            if (e.target === modal) {
+                modal.removeEventListener('click', onBackdropClick);
+                this.closeModuleModal();
+            }
+        };
+        modal.addEventListener('click', onBackdropClick);
     }
 
     closeModuleModal() {
         const modal = document.querySelector('#create-module-modal');
         if (!modal) return;
-        const content = modal.querySelector('.bg-surface-1');
-        if (content) content.classList.remove('animate-scale-in');
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
+        this._closeDivModal(modal);
     }
 
     async submitModuleForm() {
@@ -2139,17 +2169,22 @@ class EditorDashboard {
 
         modal.classList.remove('hidden');
         modal.classList.add('flex');
-        const content = modal.querySelector('.bg-surface-1');
+        const content = modal.querySelector('.editor-dialog-surface');
         if (content) content.classList.add('animate-scale-in');
+        // Backdrop-click to dismiss
+        const onBackdropClick = (e) => {
+            if (e.target === modal) {
+                modal.removeEventListener('click', onBackdropClick);
+                this.closeTopicModal();
+            }
+        };
+        modal.addEventListener('click', onBackdropClick);
     }
 
     closeTopicModal() {
         const modal = document.querySelector('#create-topic-modal');
         if (!modal) return;
-        const content = modal.querySelector('.bg-surface-1');
-        if (content) content.classList.remove('animate-scale-in');
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
+        this._closeDivModal(modal);
     }
 
     getTopicRow(moduleId, topicId) {
