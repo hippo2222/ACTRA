@@ -78,6 +78,11 @@ function setupDomSkeleton() {
             <option value="">Без теории</option>
           </select>
         </div>
+        <div id="topic-theory-note-container">
+          <div id="topic-theory-workspace-note">
+            <p id="topic-theory-workspace-note-text"></p>
+          </div>
+        </div>
         <select id="topic-theory-relation">
           <option value="link">link</option>
           <option value="copy">copy</option>
