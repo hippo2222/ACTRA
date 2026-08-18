@@ -2401,20 +2401,24 @@ class EditorDashboard {
         let note = document.getElementById('topic-theory-workspace-note');
         if (note) return note;
 
-        const picker = document.getElementById('topic-theory-picker');
-        const pickerBlock = picker?.closest('div');
-        if (!pickerBlock || !pickerBlock.parentElement) return null;
+        const container = document.getElementById('topic-theory-note-container');
+        if (!container) return null;
 
         note = document.createElement('div');
         note.id = 'topic-theory-workspace-note';
-        note.className = 'rounded-lg border border-border-subtle bg-bg-secondary px-3 py-2';
+        note.className = 'editor-modal-hint-box';
+
+        const icon = document.createElement('span');
+        icon.className = 'material-symbols-outlined editor-modal-hint-icon';
+        icon.textContent = 'info';
+        note.appendChild(icon);
 
         const text = document.createElement('p');
         text.id = 'topic-theory-workspace-note-text';
-        text.className = 'text-xs text-text-secondary';
+        text.className = 'editor-modal-hint-text';
         note.appendChild(text);
 
-        pickerBlock.insertAdjacentElement('afterend', note);
+        container.appendChild(note);
         return note;
     }
 

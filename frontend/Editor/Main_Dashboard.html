@@ -50,16 +50,16 @@
             }
         })();
     </script>
-    <script src="ai_ux_messages.js?v=25"></script>
-    <script src="import_manager.js?v=25" defer></script>
+    <script src="ai_ux_messages.js?v=35"></script>
+    <script src="import_manager.js?v=35" defer></script>
     <script src="../../assets/PremiumPromoModal.js" defer></script>
-    <script src="dashboard.js?v=25" defer></script>
+    <script src="dashboard.js?v=35" defer></script>
 
     <link href="../../assets/tailwind.css" rel="stylesheet" />
     <link href="../../assets/fonts.css" rel="stylesheet" />
     <link href="../../assets/lightB-variables.css" rel="stylesheet" />
     <link href="../../assets/lightB-components.css" rel="stylesheet" />
-    <link href="styles.css?v=25" rel="stylesheet" />
+    <link href="styles.css?v=35" rel="stylesheet" />
     <link href="../../assets/global-header.css" rel="stylesheet" />
     <link href="../../assets/animations.css" rel="stylesheet" />
     <link href="/assets/onboarding-tour.css?v=editor-dashboard-onboarding-31" rel="stylesheet" />
@@ -1023,12 +1023,15 @@
     </div>
     <dialog id="topic-theory-modal"
         class="bg-transparent p-0 overflow-visible border-none outline-none">
-        <div class="modal-content relative editor-dialog-surface" style="width: min(100%, 38rem); margin: auto;">
-            <div class="px-6 pt-6 pb-4">
-                <div class="flex items-start justify-between gap-3 mb-4">
-                    <div class="min-w-0">
+        <div class="modal-content relative editor-dialog-surface" style="width: min(100%, 36rem); margin: auto;">
+            <!-- Header -->
+            <div class="editor-modal-header" style="padding-bottom: 0.75rem;">
+                <div class="flex items-start justify-between gap-3 mb-2">
+                    <div class="flex items-center gap-2.5">
+                        <div class="flex items-center justify-center w-8 h-8 rounded-full" style="background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface-2)); color: var(--color-primary);">
+                            <span class="material-symbols-outlined" style="font-size: 1.15rem;">menu_book</span>
+                        </div>
                         <h3 class="editor-modal-title" data-i18n="md.topic_theory_title">Управление теорией темы</h3>
-                        <p id="topic-theory-meta" class="editor-flow-wrap editor-modal-subtitle" data-i18n="md.theory_meta_hint">Настройте обучающие материалы для этой темы (Менеджер теории).</p>
                     </div>
                     <button type="button" data-role="topic-theory-close"
                         class="editor-modal-close-btn"
@@ -1036,100 +1039,119 @@
                         <span class="material-symbols-outlined" style="font-size: 20px;">close</span>
                     </button>
                 </div>
-                <div class="space-y-5">
-                    <!-- Theory State Selection -->
-                    <div id="topic-theory-selection-state" class="space-y-4">
-                        <div id="topic-theory-current-info" class="hidden editor-theory-linked-card">
-                            <div class="flex items-center justify-between gap-3">
-                                <div class="min-w-0">
-                                    <span class="text-[10px] font-bold uppercase tracking-wider text-primary block mb-1" data-i18n="md.linked_theory">Привязанная теория</span>
-                                    <p id="topic-theory-current-title" class="text-sm font-bold text-text-main truncate" data-i18n="md.loading">Загрузка...</p>
+                <div class="editor-modal-meta-pill" id="topic-theory-meta-container">
+                    <span class="material-symbols-outlined">folder_open</span>
+                    <span id="topic-theory-meta" class="editor-flow-wrap" data-i18n="md.theory_meta_hint">Загрузка темы...</span>
+                </div>
+            </div>
+
+            <!-- Body -->
+            <div class="px-6 py-3 space-y-4">
+                <!-- Theory Source Block -->
+                <div id="topic-theory-selection-state">
+                    <!-- Linked State -->
+                    <div id="topic-theory-current-info" class="hidden editor-theory-linked-card">
+                        <div class="flex items-center justify-between gap-3">
+                            <div class="min-w-0 flex items-center gap-3">
+                                <div class="flex items-center justify-center w-9 h-9 rounded-xl flex-shrink-0" style="background: var(--color-surface-1); color: var(--color-primary); border: 1px solid color-mix(in srgb, var(--color-primary) 24%, var(--color-border-subtle));">
+                                    <span class="material-symbols-outlined" style="font-size: 1.25rem;">article</span>
                                 </div>
-                                <div class="flex gap-2">
-                                    <button id="topic-theory-edit-content-btn" type="button"
-                                        class="p-2.5 rounded-xl bg-surface-1 border border-primary-light text-primary shadow-sm transition-all hover:border-primary hover:bg-primary-lighter hover:text-primary-darker hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary active:scale-95" title="Редактировать материалы" data-i18n-title="md.edit_materials_title">
-                                        <span class="material-symbols-outlined text-[18px]">edit_note</span>
-                                    </button>
-                                    <button id="topic-theory-clear-btn" type="button"
-                                        class="p-2.5 rounded-xl bg-surface-1 border border-border-subtle text-error-text shadow-sm transition-all hover:border-error hover:bg-error-lighter hover:text-error-text hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error active:scale-95" title="Убрать привязку" data-i18n-title="md.remove_binding_title">
-                                        <span class="material-symbols-outlined text-[18px]">link_off</span>
-                                    </button>
+                                <div class="min-w-0">
+                                    <span class="text-[10px] font-bold uppercase tracking-wider block" style="color: var(--color-primary);" data-i18n="md.linked_theory">Привязанный материал</span>
+                                    <p id="topic-theory-current-title" class="text-sm font-bold text-text-main truncate mt-0.5" data-i18n="md.loading">Загрузка...</p>
                                 </div>
                             </div>
-                        </div>
-
-                        <div id="topic-theory-empty-state" class="space-y-3">
-                            <div class="flex flex-col sm:flex-row gap-3">
-                                <button id="topic-theory-create-new-btn" type="button"
-                                    class="editor-modal-primary-btn flex-1">
-                                    <span class="material-symbols-outlined" style="font-size: 20px;">add_circle</span>
-                                    <span data-i18n="md.create_theory_btn">Создать новую теорию</span>
+                            <div class="flex items-center gap-2 flex-shrink-0">
+                                <button id="topic-theory-edit-content-btn" type="button"
+                                    class="editor-theory-action-btn editor-theory-action-btn--edit" title="Редактировать материалы" data-i18n-title="md.edit_materials_title">
+                                    <span class="material-symbols-outlined" style="font-size: 16px;">edit_note</span>
+                                    <span>Редактировать</span>
                                 </button>
-                                <div class="editor-select-wrap flex-1">
-                                    <select id="topic-theory-picker" class="editor-modal-field h-full rounded-xl py-3 cursor-pointer">
-                                        <option value="" data-i18n="md.pick_from_lib">Выбрать из библиотеки...</option>
+                                <button id="topic-theory-clear-btn" type="button"
+                                    class="editor-theory-action-btn editor-theory-action-btn--clear" title="Убрать привязку" data-i18n-title="md.remove_binding_title">
+                                    <span class="material-symbols-outlined" style="font-size: 16px;">link_off</span>
+                                    <span>Отвязать</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Empty State -->
+                    <div id="topic-theory-empty-state" class="space-y-3">
+                        <div class="editor-theory-source-card">
+                            <div>
+                                <label class="editor-modal-label" data-i18n="md.theory_source_label">Обучающий материал из библиотеки</label>
+                                <div class="editor-select-wrap">
+                                    <select id="topic-theory-picker" class="editor-modal-field">
+                                        <option value="" data-i18n="md.pick_from_lib">Выбрать готовую теорию из библиотеки...</option>
                                     </select>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-
-                    <!-- Propagation Settings -->
-                    <div class="editor-modal-divider space-y-3">
-                        <div class="flex items-center justify-between">
-                            <span class="text-[10px] font-bold uppercase tracking-wider text-text-secondary" data-i18n="md.propagation_label">Распространение на комплексы</span>
-                            <div class="flex items-center gap-2">
-                                <span class="text-[10px] font-bold text-text-muted px-1.5 py-0.5 rounded border border-border-subtle uppercase" data-i18n="md.autosync">Автосинхронизация</span>
+                            <div class="editor-modal-or-divider">
+                                <span>или</span>
                             </div>
-                        </div>
-
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div>
-                                <label class="editor-modal-label" for="topic-theory-relation" title="Выберите, как теория будет связана с темой" data-i18n-title="md.relation_label_title">
-                                    <span data-i18n="md.relation_label">Способ привязки</span>
-                                </label>
-                                <div class="editor-segmented-wrap" id="topic-theory-relation-segmented">
-                                    <button type="button" class="editor-segmented-item is-active" data-relation="link">
-                                        <span class="material-symbols-outlined" style="font-size: 16px;">link</span>
-                                        <span data-i18n="md.relation_link">Ссылка</span>
-                                    </button>
-                                    <button type="button" class="editor-segmented-item" data-relation="copy">
-                                        <span class="material-symbols-outlined" style="font-size: 16px;">content_copy</span>
-                                        <span data-i18n="md.relation_copy">Копия</span>
-                                    </button>
-                                </div>
-                                <select id="topic-theory-relation" class="hidden">
-                                    <option value="link" selected data-i18n="md.relation_link">Динамическая ссылка</option>
-                                    <option value="copy" data-i18n="md.relation_copy">Статическая копия</option>
-                                </select>
-                                <p id="topic-theory-relation-hint" class="mt-1.5 ml-0.5 text-[11px] text-text-secondary leading-snug" data-i18n="md.topic_theory_relation_hint">Изменения в теории автоматически появятся в комплексах после синхронизации.</p>
-                            </div>
-                            <div class="rounded-xl border border-border-subtle bg-surface-2 px-4 py-3">
-                                <div class="flex items-center justify-between gap-3">
-                                    <span class="text-[10px] font-bold uppercase tracking-wider text-text-secondary" data-i18n="md.sync_complexes">Синхронизация комплексов</span>
-                                    <span class="text-[10px] font-bold text-text-muted px-1.5 py-0.5 rounded border border-border-subtle uppercase">Safe</span>
-                                </div>
-                                <p class="mt-2 text-[11px] text-text-secondary leading-snug" data-i18n="md.sync_complexes_desc">
-                                    При сохранении темы связанные комплексы-наследники обновляются автоматически. Комплексы с ручной переопределённой теорией не перезаписываются.
-                                </p>
-                            </div>
-                        </div>
-
-                        <div id="topic-theory-propagation-summary" class="text-[11px] font-medium text-primary bg-primary/10 rounded-lg px-3 py-2 hidden" data-i18n="md.sync_summary_loading">
-                            Сводка синхронизации появится после загрузки.
+                            <button id="topic-theory-create-new-btn" type="button" class="editor-theory-create-btn">
+                                <span class="material-symbols-outlined" style="font-size: 18px;">add_circle</span>
+                                <span data-i18n="md.create_theory_btn">Создать новую теорию</span>
+                            </button>
                         </div>
                     </div>
                 </div>
+
+                <!-- Helper Note Container -->
+                <div id="topic-theory-note-container">
+                    <div id="topic-theory-workspace-note" class="editor-modal-hint-box">
+                        <span class="material-symbols-outlined editor-modal-hint-icon">info</span>
+                        <p id="topic-theory-workspace-note-text" class="editor-modal-hint-text" data-i18n="md.theory_hint_default">Теории хранятся в общей библиотеке. Вы можете выбрать готовый материал или сначала создать новую теорию.</p>
+                    </div>
+                </div>
+
+                <!-- Sync Settings Card -->
+                <div class="editor-theory-sync-card">
+                    <div class="flex items-center justify-between">
+                        <label class="editor-modal-label mb-0" for="topic-theory-relation" data-i18n="md.relation_label">
+                            Синхронизация с комплексами
+                        </label>
+                        <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full" style="background: var(--color-surface-2); border: 1px solid var(--color-border-subtle); color: var(--color-text-secondary);" data-i18n="md.autosync">Safe Auto-Sync</span>
+                    </div>
+
+                    <div class="editor-segmented-wrap" id="topic-theory-relation-segmented">
+                        <button type="button" class="editor-segmented-item is-active" data-relation="link">
+                            <span class="material-symbols-outlined" style="font-size: 16px;">link</span>
+                            <span data-i18n="md.relation_link">Динамическая ссылка</span>
+                        </button>
+                        <button type="button" class="editor-segmented-item" data-relation="copy">
+                            <span class="material-symbols-outlined" style="font-size: 16px;">content_copy</span>
+                            <span data-i18n="md.relation_copy">Статическая копия</span>
+                        </button>
+                    </div>
+
+                    <select id="topic-theory-relation" class="hidden">
+                        <option value="link" selected data-i18n="md.relation_link">Динамическая ссылка</option>
+                        <option value="copy" data-i18n="md.relation_copy">Статическая копия</option>
+                    </select>
+
+                    <p id="topic-theory-relation-hint" class="editor-modal-hint-text" style="color: var(--color-text-secondary);" data-i18n="md.topic_theory_relation_hint">Изменения в теории автоматически появятся в комплексах после синхронизации.</p>
+
+                    <div id="topic-theory-propagation-summary" class="editor-theory-summary-pill hidden" data-i18n="md.sync_summary_loading">
+                        <span class="material-symbols-outlined">sync</span>
+                        <span>Сводка синхронизации...</span>
+                    </div>
+                </div>
             </div>
+
+            <!-- Footer -->
             <div class="editor-modal-footer justify-between">
                 <div class="flex items-center gap-2 flex-wrap">
                     <button id="topic-theory-open-center-btn" type="button"
                         class="editor-modal-ghost-btn border border-border-subtle bg-surface-2 rounded-lg" data-i18n="md.theory_center">
-                        Центр теории
+                        <span class="material-symbols-outlined" style="font-size: 16px;">hub</span>
+                        <span>Центр теории</span>
                     </button>
                     <button id="topic-theory-open-complexes-btn" type="button"
                         class="hidden editor-modal-ghost-btn border border-border-subtle bg-surface-2 rounded-lg" data-i18n="md.to_complexes">
-                        К комплексам
+                        <span class="material-symbols-outlined" style="font-size: 16px;">view_quilt</span>
+                        <span>К комплексам</span>
                     </button>
                 </div>
                 <div class="flex items-center gap-3">

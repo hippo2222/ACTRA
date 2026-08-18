@@ -474,13 +474,164 @@ body {
     line-height: 1.2;
 }
 
+/* Theory modal redesign components */
+.editor-modal-meta-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.625rem;
+    border-radius: 9999px;
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border-subtle);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.editor-modal-meta-pill .material-symbols-outlined {
+    font-size: 0.875rem;
+    color: var(--color-primary);
+    flex-shrink: 0;
+}
+
+.editor-theory-source-card {
+    background: color-mix(in srgb, var(--color-surface-2) 40%, var(--color-surface-1));
+    border: 1px solid var(--color-border-subtle);
+    border-radius: 0.875rem;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.editor-modal-or-divider {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: var(--color-text-disabled);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.editor-modal-or-divider::before,
+.editor-modal-or-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--color-border-subtle);
+}
+
+.editor-theory-create-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.625rem 1rem;
+    border-radius: 0.625rem;
+    border: 1.5px dashed color-mix(in srgb, var(--color-primary) 50%, var(--color-border-subtle));
+    background: color-mix(in srgb, var(--color-primary) 4%, transparent);
+    color: var(--color-primary);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+
+.editor-theory-create-btn:hover {
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+    border-color: var(--color-primary);
+    border-style: solid;
+}
+
+.editor-theory-create-btn:active {
+    transform: scale(0.98);
+}
+
+.editor-modal-hint-box {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.625rem 0.875rem;
+    border-radius: 0.625rem;
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border-subtle);
+}
+
+.editor-modal-hint-icon {
+    font-size: 1rem;
+    color: var(--color-text-secondary);
+    opacity: 0.8;
+    flex-shrink: 0;
+    margin-top: 0.0625rem;
+}
+
+.editor-modal-hint-text {
+    font-size: 0.75rem;
+    line-height: 1.4;
+    color: var(--color-text-secondary);
+    margin: 0;
+}
+
 /* Theory linked card — highlighted info block */
 .editor-theory-linked-card {
     border-radius: 0.875rem;
-    border: 1px solid color-mix(in srgb, var(--color-primary) 28%, var(--color-border-subtle));
-    background: color-mix(in srgb, var(--color-primary) 6%, var(--color-surface-1));
+    border: 1px solid color-mix(in srgb, var(--color-primary) 30%, var(--color-border-subtle));
+    background: linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 8%, var(--color-surface-1)), var(--color-surface-1));
     padding: 1rem 1.125rem;
-    box-shadow: 0 2px 8px -2px color-mix(in srgb, var(--color-primary) 12%, transparent);
+    box-shadow: 0 4px 12px -4px color-mix(in srgb, var(--color-primary) 15%, transparent);
+}
+
+.editor-theory-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.625rem;
+    border-radius: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.editor-theory-action-btn--edit {
+    background: var(--color-surface-1);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 30%, var(--color-border-subtle));
+    color: var(--color-primary);
+}
+
+.editor-theory-action-btn--edit:hover {
+    background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface-1));
+    border-color: var(--color-primary);
+}
+
+.editor-theory-action-btn--clear {
+    background: var(--color-surface-1);
+    border: 1px solid var(--color-border-subtle);
+    color: var(--color-text-secondary);
+}
+
+.editor-theory-action-btn--clear:hover {
+    border-color: color-mix(in srgb, var(--color-error, #ef4444) 40%, transparent);
+    color: var(--color-error, #ef4444);
+    background: color-mix(in srgb, var(--color-error, #ef4444) 6%, var(--color-surface-1));
+}
+
+/* Theory Sync Settings Card */
+.editor-theory-sync-card {
+    background: color-mix(in srgb, var(--color-surface-2) 50%, var(--color-surface-1));
+    border: 1px solid var(--color-border-subtle);
+    border-radius: 0.875rem;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
 }
 
 /* Theory Segmented Radio / Relation Selector */
@@ -514,6 +665,25 @@ body {
     background: var(--color-surface-1);
     color: var(--color-text-main);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.editor-theory-summary-pill {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.5rem;
+    background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface-2));
+    border: 1px solid color-mix(in srgb, var(--color-primary) 20%, var(--color-border-subtle));
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--color-text-main);
+}
+
+.editor-theory-summary-pill .material-symbols-outlined {
+    font-size: 0.875rem;
+    color: var(--color-primary);
+    flex-shrink: 0;
 }
 
 /* Reduced motion overrides */
