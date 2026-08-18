@@ -2401,7 +2401,9 @@ class EditorDashboard {
         let note = document.getElementById('topic-theory-workspace-note');
         if (note) return note;
 
-        const container = document.getElementById('topic-theory-note-container');
+        const container = document.getElementById('topic-theory-note-container')
+            || document.getElementById('topic-theory-empty-state')
+            || document.getElementById('topic-theory-modal');
         if (!container) return null;
 
         note = document.createElement('div');
