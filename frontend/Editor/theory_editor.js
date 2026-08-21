@@ -468,7 +468,7 @@ function normalizeTheoryWorkspaceUrl(rawUrl, fallbackTheoryId = "") {
 
 function parseTheoryEditorContext() {
     const params = new URLSearchParams(window.location.search || "");
-    const theoryId = String(params.get("theory_id") || "").trim();
+    const theoryId = String(params.get("theory_id") || params.get("theoryId") || params.get("theory") || "").trim();
     const context = String(params.get("context") || "").trim();
     const returnUrl = normalizeTheoryWorkspaceUrl(String(params.get("return_url") || "").trim(), theoryId)
         || "/editor";
@@ -749,6 +749,7 @@ function renderTheoryContextHeader() {
     const backLabel = document.getElementById("theory-back-btn-label");
     const centerBtn = document.getElementById("theory-open-center-btn");
     const openComplexesBtn = document.getElementById("theory-open-complexes-btn");
+    const usageNoteEl = document.getElementById("theory-usage-note");
     const context = theoryEditorState.context || {};
 
     if (centerBtn) {
@@ -773,6 +774,20 @@ function renderTheoryContextHeader() {
             copyEl.textContent = `${wt('te.k017', 'Вы редактируете материал, который связан с ')}${complexLabel}.`;
         } else {
             copyEl.textContent = wt('te.k018', 'Материалы: текст, структура и изображения теории.');
+        }
+    }
+
+    if (usageNoteEl) {
+        if (context.context === "topic") {
+            const topicLabel = [context.moduleName || context.moduleId, context.topicName || context.topicId]
+                .filter(Boolean)
+                .join(" / ");
+            usageNoteEl.textContent = topicLabel ? `• ${topicLabel}` : "";
+        } else if (context.context === "complex") {
+            const complexLabel = context.complexName || context.complexId || "";
+            usageNoteEl.textContent = complexLabel ? `• ${complexLabel}` : "";
+        } else {
+            usageNoteEl.textContent = "";
         }
     }
 
@@ -2124,6 +2139,8 @@ function setTheoryEditorContent(title, delta) {
     }
     setTheoryColorIndicator();
     renderTheoryDeltaToEditor(delta || EMPTY_THEORY_DELTA);
+    updateTheoryStatsCounter();
+    updateTheoryToolbarActiveStates();
 }
 
 function resetTheoryEditorState() {
@@ -3423,6 +3440,111 @@ function initImageControls() {
     });
 }
 
+function initTheorySidebarToggle() {
+    const grid = document.getElementById("theory-main-grid");
+    const panel = document.getElementById("theory-library-panel");
+    const toggleBtn = document.getElementById("theory-sidebar-toggle-btn");
+    const closeBtn = document.getElementById("theory-sidebar-close-btn");
+    if (!grid || !panel || !toggleBtn) return;
+
+    const applyState = (isCollapsed) => {
+        grid.classList.toggle("sidebar-collapsed", isCollapsed);
+        panel.classList.toggle("is-collapsed", isCollapsed);
+        toggleBtn.setAttribute("aria-expanded", String(!isCollapsed));
+        const icon = toggleBtn.querySelector(".material-symbols-outlined");
+        if (icon) {
+            icon.textContent = isCollapsed ? "dock_to_right" : "view_sidebar";
+        }
+        toggleBtn.title = isCollapsed
+            ? wt('te.k135', 'Развернуть библиотеку')
+            : wt('te.k136', 'Свернуть библиотеку');
+    };
+
+    let collapsed = false;
+    try {
+        collapsed = localStorage.getItem("theorySidebarCollapsed") === "true";
+    } catch (e) {}
+
+    applyState(collapsed);
+
+    toggleBtn.addEventListener("click", () => {
+        const next = !panel.classList.contains("is-collapsed");
+        applyState(next);
+        try {
+            localStorage.setItem("theorySidebarCollapsed", String(next));
+        } catch (e) {}
+    });
+
+    if (closeBtn) {
+        closeBtn.addEventListener("click", () => {
+            applyState(true);
+            try {
+                localStorage.setItem("theorySidebarCollapsed", "true");
+            } catch (e) {}
+        });
+    }
+}
+
+function updateTheoryStatsCounter() {
+    const counterEl = document.getElementById("theory-stats-counter");
+    const editor = document.getElementById("theory-editor");
+    if (!counterEl || !editor) return;
+
+    const text = String(editor.innerText || "").trim();
+    if (!text) {
+        counterEl.textContent = "";
+        return;
+    }
+
+    const words = text.split(/\s+/).filter(Boolean).length;
+    const chars = text.length;
+    counterEl.textContent = `${words} ${wt('te.k137', 'слов')}, ${chars} ${wt('te.k138', 'симв.')}`;
+}
+
+function updateTheoryToolbarActiveStates() {
+    const editor = document.getElementById("theory-editor");
+    if (!editor) return;
+
+    const checkCommand = (btnId, cmd) => {
+        const btn = document.getElementById(btnId);
+        if (!btn) return;
+        let active = false;
+        try {
+            active = Boolean(document.queryCommandState(cmd));
+        } catch (e) {}
+        btn.setAttribute("aria-pressed", String(active));
+        btn.classList.toggle("active", active);
+    };
+
+    checkCommand("theory-bold", "bold");
+    checkCommand("theory-italic", "italic");
+    checkCommand("theory-underline", "underline");
+    checkCommand("theory-align-left", "justifyLeft");
+    checkCommand("theory-align-center", "justifyCenter");
+    checkCommand("theory-align-right", "justifyRight");
+    checkCommand("theory-align-justify", "justifyFull");
+    checkCommand("theory-ul", "insertUnorderedList");
+    checkCommand("theory-ol", "insertOrderedList");
+
+    let blockFormat = "";
+    try {
+        blockFormat = String(document.queryCommandValue("formatBlock") || "").toLowerCase();
+    } catch (e) {}
+
+    const h1Btn = document.getElementById("theory-h1");
+    if (h1Btn) {
+        const isH1 = blockFormat === "h1";
+        h1Btn.setAttribute("aria-pressed", String(isH1));
+        h1Btn.classList.toggle("active", isH1);
+    }
+    const h2Btn = document.getElementById("theory-h2");
+    if (h2Btn) {
+        const isH2 = blockFormat === "h2";
+        h2Btn.setAttribute("aria-pressed", String(isH2));
+        h2Btn.classList.toggle("active", isH2);
+    }
+}
+
 function bindTheoryToolbar() {
     try {
         document.execCommand("styleWithCSS", false, true);
@@ -3431,46 +3553,57 @@ function bindTheoryToolbar() {
     document.getElementById("theory-bold")?.addEventListener("click", () => {
         document.execCommand("bold");
         markTheoryDirty();
+        updateTheoryToolbarActiveStates();
     });
     document.getElementById("theory-italic")?.addEventListener("click", () => {
         document.execCommand("italic");
         markTheoryDirty();
+        updateTheoryToolbarActiveStates();
     });
     document.getElementById("theory-underline")?.addEventListener("click", () => {
         document.execCommand("underline");
         markTheoryDirty();
+        updateTheoryToolbarActiveStates();
     });
     document.getElementById("theory-h1")?.addEventListener("click", () => {
         document.execCommand("formatBlock", false, "h1");
         markTheoryDirty();
+        updateTheoryToolbarActiveStates();
     });
     document.getElementById("theory-h2")?.addEventListener("click", () => {
         document.execCommand("formatBlock", false, "h2");
         markTheoryDirty();
+        updateTheoryToolbarActiveStates();
     });
     document.getElementById("theory-ul")?.addEventListener("click", () => {
         insertTheoryList("ul");
         markTheoryDirty();
+        updateTheoryToolbarActiveStates();
     });
     document.getElementById("theory-ol")?.addEventListener("click", () => {
         insertTheoryList("ol");
         markTheoryDirty();
+        updateTheoryToolbarActiveStates();
     });
     document.getElementById("theory-align-left")?.addEventListener("click", () => {
         document.execCommand("justifyLeft");
         markTheoryDirty();
+        updateTheoryToolbarActiveStates();
     });
     document.getElementById("theory-align-center")?.addEventListener("click", () => {
         document.execCommand("justifyCenter");
         markTheoryDirty();
+        updateTheoryToolbarActiveStates();
     });
     document.getElementById("theory-align-right")?.addEventListener("click", () => {
         document.execCommand("justifyRight");
         markTheoryDirty();
+        updateTheoryToolbarActiveStates();
     });
     document.getElementById("theory-align-justify")?.addEventListener("click", () => {
         document.execCommand("justifyFull");
         markTheoryDirty();
+        updateTheoryToolbarActiveStates();
     });
 
     document.getElementById("theory-toolbar")?.addEventListener("mousedown", (e) => {
@@ -3487,6 +3620,8 @@ function bindTheoryToolbar() {
 }
 
 function bindTheoryEditorEvents() {
+    initTheorySidebarToggle();
+
     document.getElementById("theory-title")?.addEventListener("input", () => {
         markTheoryDirty();
     });
@@ -3494,6 +3629,8 @@ function bindTheoryEditorEvents() {
     document.getElementById("theory-editor")?.addEventListener("input", () => {
         markTheoryDirty();
         saveTheorySelection();
+        updateTheoryStatsCounter();
+        updateTheoryToolbarActiveStates();
     });
 
     document.getElementById("theory-editor")?.addEventListener("keydown", (event) => {
@@ -3507,15 +3644,27 @@ function bindTheoryEditorEvents() {
             const cleanHtml = cleanTheoryWordHtml(html);
             document.execCommand("insertHTML", false, cleanHtml);
             markTheoryDirty();
+            updateTheoryStatsCounter();
+            updateTheoryToolbarActiveStates();
         }
     });
 
     const editor = document.getElementById("theory-editor");
     if (editor) {
         ["keyup", "mouseup", "touchend", "focus"].forEach(evt => {
-            editor.addEventListener(evt, saveTheorySelection);
+            editor.addEventListener(evt, () => {
+                saveTheorySelection();
+                updateTheoryToolbarActiveStates();
+            });
         });
     }
+
+    document.addEventListener("selectionchange", () => {
+        const active = document.activeElement;
+        if (active && (active.id === "theory-editor" || active.closest?.("#theory-editor"))) {
+            updateTheoryToolbarActiveStates();
+        }
+    });
 
     document.getElementById("theory-library-search")?.addEventListener("input", (event) => {
         theoryEditorState.search = String(event?.target?.value || "").trim();

@@ -568,6 +568,62 @@
             box-shadow: none;
         }
 
+        .theory-title-input {
+            width: 100%;
+            border: 0;
+            outline: none;
+            background: transparent;
+            font-size: 1.75rem;
+            font-weight: 800;
+            line-height: 1.25;
+            color: var(--color-text-main);
+            padding: 0.25rem 0;
+            border-bottom: 2px solid transparent;
+            transition: border-color 0.2s ease;
+        }
+
+        .theory-title-input:focus {
+            border-bottom-color: var(--color-primary);
+        }
+
+        .theory-title-input::placeholder {
+            color: var(--color-text-secondary);
+            opacity: 0.45;
+            font-weight: 700;
+        }
+
+        .theory-main-grid {
+            transition: grid-template-columns 0.22s ease;
+        }
+
+        .theory-main-grid.sidebar-collapsed {
+            grid-template-columns: minmax(0, 1fr) !important;
+        }
+
+        .theory-library-panel {
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+
+        .theory-library-panel.is-collapsed {
+            display: none !important;
+        }
+
+        .theory-toolbar-shell {
+            border: 1px solid color-mix(in srgb, var(--color-component-panel-row-border) 88%, var(--color-primary) 12%);
+            background: color-mix(in srgb, var(--color-surface-1) 85%, transparent);
+            border-radius: 1.25rem;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .theory-toolbar-btn.active,
+        .theory-toolbar-btn[aria-pressed="true"] {
+            background: var(--color-primary) !important;
+            color: var(--color-primary-fg) !important;
+            border-color: var(--color-primary) !important;
+        }
+
         .theory-header-layout {
             display: flex;
             flex-direction: column;
@@ -590,18 +646,18 @@
             flex-wrap: wrap;
             align-items: center;
             justify-content: flex-end;
-            gap: 0.75rem;
+            gap: 0.65rem;
         }
 
         .theory-header-action-group {
             display: flex;
             flex-wrap: wrap;
             align-items: center;
-            gap: 0.65rem;
+            gap: 0.5rem;
         }
 
         .theory-header-action-group > button {
-            min-height: 2.75rem;
+            min-height: 2.6rem;
             white-space: nowrap;
         }
 
@@ -620,7 +676,7 @@
             border: 1px solid color-mix(in srgb, var(--color-component-panel-row-border) 88%, var(--color-primary) 10%);
             background: color-mix(in srgb, var(--color-surface-1) 94%, white);
             color: var(--color-text-main);
-            padding: 0.95rem 1rem;
+            padding: 0.85rem 0.95rem;
             transition: border-color 0.16s ease, box-shadow 0.16s ease;
             will-change: border-color, box-shadow;
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76);
@@ -653,7 +709,7 @@
         }
 
         .theory-content-stack {
-            gap: 1rem;
+            gap: 0.75rem;
         }
 
         body.onboarding-tour-active[data-onboarding-tour-id="theory-editor-authoring"][data-onboarding-step-id="theory-editor-library-and-title"] .theory-workspace-panel {
@@ -674,7 +730,7 @@
 
         @media (max-width: 1024px) {
             .theory-title {
-                font-size: 1.5rem;
+                font-size: 1.4rem;
             }
 
             .theory-header-actions {
@@ -692,11 +748,11 @@
                 flex-direction: row;
                 align-items: center;
                 justify-content: space-between;
-                gap: 1.5rem;
+                gap: 1.25rem;
             }
 
             .theory-header-copy {
-                max-width: 38rem;
+                max-width: 34rem;
             }
 
             .theory-header-controls {
@@ -728,7 +784,7 @@
             }
 
             .theory-header-action-group > button {
-                flex: 1 1 12rem;
+                flex: 1 1 10rem;
             }
 
             .theory-header-action-group--secondary > button {
@@ -744,42 +800,54 @@
 <body class="text-text-main">
     <div class="theory-shell">
         <div class="theory-frame mx-auto flex min-h-screen flex-col px-4 py-4 sm:px-6 lg:px-8">
-            <header class="theory-card theory-panel card-elevated animate-slide-up px-5 py-4 sm:px-6 sm:py-5" data-onboarding-target="theory-editor-header">
+            <header class="theory-card theory-panel card-elevated animate-slide-up px-5 py-3.5 sm:px-6 sm:py-4" data-onboarding-target="theory-editor-header">
                 <div class="theory-header-layout">
-                    <div class="min-w-0">
-                        <h1 class="theory-title text-2xl font-bold tracking-tight text-text-main" data-i18n="the.k001">Редактор теории</h1>
-                        <p id="theory-context-copy" class="theory-header-copy mt-1.5 text-sm text-text-secondary" data-i18n="the.k002">
-                            Пишите теорию как отдельный материал, который можно переиспользовать в разных темах и комплексах.
-                        </p>
+                    <div class="flex items-center gap-3 min-w-0">
+                        <button id="theory-back-btn" type="button"
+                            class="btn-secondary inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-semibold transition-all hover:bg-surface-2"
+                            title="Вернуться назад">
+                            <span class="material-symbols-outlined text-[18px]">arrow_back</span>
+                            <span id="theory-back-btn-label" data-i18n="the.k004">Назад</span>
+                        </button>
+                        <div class="min-w-0">
+                            <h1 class="theory-title text-xl sm:text-2xl font-bold tracking-tight text-text-main" data-i18n="the.k001">Редактор теории</h1>
+                            <p id="theory-context-copy" class="theory-header-copy text-xs text-text-secondary line-clamp-1" data-i18n="the.k002">
+                                Пишите теорию как отдельный материал, который можно переиспользовать в разных темах и комплексах.
+                            </p>
+                        </div>
                     </div>
                     <div class="theory-header-controls">
                         <div class="theory-header-actions">
+                            <button id="theory-sidebar-toggle-btn" type="button"
+                                class="btn-secondary inline-flex items-center justify-center rounded-xl p-2.5 text-sm font-semibold transition-all hover:bg-surface-2"
+                                title="Свернуть / развернуть библиотеку"
+                                aria-label="Свернуть / развернуть библиотеку"
+                                aria-expanded="true">
+                                <span class="material-symbols-outlined text-[20px]">view_sidebar</span>
+                            </button>
                             <button id="theory-publish-btn" type="button" class="theory-status-pill hidden transition-colors hover:border-primary hover:text-primary disabled:opacity-60 disabled:cursor-not-allowed" data-tone="muted" data-onboarding-target="theory-editor-publish-action">
                                 <span class="material-symbols-outlined text-[16px]">public</span>
                                 <span data-i18n="the.k003">Не опубликована</span>
                             </button>
                             <div class="theory-header-action-group theory-header-action-group--secondary">
-                                <button id="theory-back-btn" type="button"
-                                    class="btn-secondary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold">
-                                    <span id="theory-back-btn-label" data-i18n="the.k004">Назад</span>
-                                </button>
                                 <button id="theory-open-center-btn" type="button"
-                                    class="btn-secondary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold">
+                                    class="btn-secondary inline-flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-semibold">
                                     <span class="material-symbols-outlined text-[18px]">hub</span>
                                     <span data-i18n="the.k005">Центр теории</span>
                                 </button>
                                 <button id="theory-open-complexes-btn" type="button"
-                                    class="btn-secondary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold">
+                                    class="btn-secondary inline-flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-semibold"
+                                    hidden>
                                     <span class="material-symbols-outlined text-[18px]">dashboard</span>
                                     <span data-i18n="the.k006">К комплексам</span>
                                 </button>
-                            </div>
-                            <div class="theory-header-action-group theory-header-action-group--primary" data-onboarding-target="theory-editor-primary-actions">
                                 <button id="theory-new-btn" type="button"
-                                    class="btn-primary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold">
+                                    class="btn-secondary inline-flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-semibold">
                                     <span class="material-symbols-outlined text-[18px]">add_circle</span>
                                     <span data-i18n="the.k007">Новая теория</span>
                                 </button>
+                            </div>
+                            <div class="theory-header-action-group theory-header-action-group--primary" data-onboarding-target="theory-editor-primary-actions">
                                 <button type="button"
                                     class="onboarding-help-button onboarding-help-button--icon"
                                     data-onboarding-help-button
@@ -794,7 +862,7 @@
                                 </button>
                                 <button id="theory-save-btn" type="button"
                                     data-onboarding-target="theory-editor-save-action"
-                                    class="theory-save-btn btn-primary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold shadow-sm hover:shadow-md">
+                                    class="theory-save-btn btn-primary inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold shadow-sm hover:shadow-md">
                                     <span class="material-symbols-outlined text-[18px]">save</span>
                                     <span data-i18n="the.k008">Сохранить</span>
                                 </button>
@@ -804,97 +872,97 @@
                 </div>
             </header>
 
-            <main class="theory-main-grid mt-4">
-                <aside class="theory-card theory-panel theory-library-panel card-elevated animate-slide-up px-4 py-4 sm:px-5 flex flex-col overflow-visible" data-onboarding-target="theory-editor-library-panel" data-onboarding-clone-variant="library-panel">
+            <main id="theory-main-grid" class="theory-main-grid mt-4">
+                <aside id="theory-library-panel" class="theory-card theory-panel theory-library-panel card-elevated animate-slide-up px-4 py-4 sm:px-5 flex flex-col overflow-visible" data-onboarding-target="theory-editor-library-panel" data-onboarding-clone-variant="library-panel">
                     <div class="flex items-center justify-between gap-3">
                         <div>
                             <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-text-muted" data-i18n="the.k009">Библиотека</p>
-                            <h2 class="mt-1 text-lg font-bold text-text-main" data-i18n="the.k010">Теории</h2>
+                            <h2 class="mt-0.5 text-lg font-bold text-text-main" data-i18n="the.k010">Теории</h2>
                         </div>
                     </div>
-                    <div class="mt-4">
+                    <div class="mt-3">
                         <label class="sr-only" for="theory-library-search" data-i18n="the.k011">Поиск теории</label>
                         <input id="theory-library-search" class="theory-form-field" type="search"
                             data-onboarding-target="theory-editor-library-search"
                             data-i18n-placeholder="the.k020"
                             placeholder="Поиск по названию или ID" />
                     </div>
-                    <div class="mt-3 flex items-center justify-between text-xs text-text-secondary">
+                    <div class="mt-2.5 flex items-center justify-between text-xs text-text-secondary">
                         <span id="theory-library-count">0 теорий</span>
                         <span data-i18n="the.k012">Личная библиотека</span>
                     </div>
-                    <div id="theory-library-list" class="theory-library-list theory-scroll mt-4 flex flex-col gap-2 overflow-y-auto pr-1 min-h-0" data-onboarding-target="theory-editor-library-list">
+                    <div id="theory-library-list" class="theory-library-list theory-scroll mt-3 flex flex-col gap-2 overflow-y-auto pr-1 min-h-0" data-onboarding-target="theory-editor-library-list">
                         <div class="rounded-2xl border border-dashed border-border-subtle px-4 py-5 text-sm text-text-secondary" data-i18n="the.k013">
                             Загружаем библиотеку теорий...
                         </div>
                     </div>
                 </aside>
 
-                <section class="theory-card theory-panel theory-workspace-panel card-elevated animate-slide-up px-4 py-4 sm:px-6 sm:py-5" data-onboarding-target="theory-editor-workspace">
-                    <div class="theory-content-stack flex flex-col">
+                <section class="theory-card theory-panel theory-workspace-panel card-elevated animate-slide-up px-4 py-4 sm:px-6 sm:py-5 flex flex-col min-h-0" data-onboarding-target="theory-editor-workspace">
+                    <div class="theory-content-stack flex flex-col flex-1 min-h-0">
                         <div id="theory-limit-banner" class="rounded-2xl border border-warning-light bg-warning-light/40 px-4 py-3 text-sm text-warning-darker" hidden></div>
-                        <div class="theory-workspace-meta-stack flex flex-col gap-4" data-onboarding-target="theory-editor-workspace-meta">
-                            <div class="theory-section-card flex flex-col gap-3 px-4 py-4 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
-                                <div class="min-w-0 max-w-full">
-                                    <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-text-muted" data-i18n="the.k014">Материал</p>
-                                    <div class="mt-2 flex flex-wrap items-center gap-2 min-w-0 max-w-full">
-                                        <span id="theory-status-pill" class="theory-status-pill" data-tone="muted">
-                                            <span class="material-symbols-outlined text-[16px] shrink-0">notes</span>
-                                            <span class="theory-status-pill__label" data-i18n="the.k015">Готово к редактированию</span>
-                                        </span>
-                                    </div>
+                        
+                        <!-- Document metadata row -->
+                        <div class="theory-workspace-meta-stack flex flex-col gap-2" data-onboarding-target="theory-editor-workspace-meta">
+                            <div class="flex flex-wrap items-center justify-between gap-3 px-1">
+                                <div class="flex items-center gap-2 flex-wrap min-w-0">
+                                    <span id="theory-status-pill" class="theory-status-pill" data-tone="muted">
+                                        <span class="material-symbols-outlined text-[16px] shrink-0">notes</span>
+                                        <span class="theory-status-pill__label" data-i18n="the.k015">Готово к редактированию</span>
+                                    </span>
+                                    <span id="theory-usage-note" class="text-xs text-text-secondary"></span>
                                 </div>
-                                <p class="max-w-xl text-sm text-text-secondary shrink-0" data-i18n="the.k016">
-                                    Здесь вы редактируете сам материал. Использование в темах и комплексах управляется отдельно через Центр теории.
-                                </p>
+                                <div id="theory-stats-counter" class="text-xs text-text-muted font-medium"></div>
                             </div>
 
-                            <div class="theory-section-card px-4 py-4" data-onboarding-target="theory-editor-title-block">
-                                <label class="mb-2 block text-sm font-semibold text-text-secondary" for="theory-title" data-i18n="the.k017">Название теории</label>
-                                <input id="theory-title" class="theory-form-field text-base" type="text"
+                            <!-- Document Frameless Title -->
+                            <div class="px-1 pt-1" data-onboarding-target="theory-editor-title-block">
+                                <label class="sr-only" for="theory-title" data-i18n="the.k017">Название теории</label>
+                                <input id="theory-title" class="theory-title-input" type="text"
                                     data-onboarding-target="theory-editor-title-input"
                                     data-i18n-placeholder="the.k021"
-                                    placeholder="Например: КТ органов грудной клетки" />
+                                    placeholder="Название теории..." />
                             </div>
                         </div>
 
-                        <div id="theory-toolbar" class="theory-toolbar-shell flex flex-wrap items-center gap-1.5 px-3 py-3" data-onboarding-target="theory-editor-toolbar">
+                        <!-- Sticky Toolbar -->
+                        <div id="theory-toolbar" class="theory-toolbar-shell sticky top-0 z-40 flex flex-wrap items-center gap-1.5 px-3 py-2.5 mt-1 backdrop-blur-md" data-onboarding-target="theory-editor-toolbar">
                             <div id="theory-text-controls" class="inline-flex flex-wrap items-center gap-1.5" data-onboarding-target="theory-editor-text-controls">
-                                <button id="theory-bold" type="button" class="theory-toolbar-btn" data-i18n-title="the.k023" title="Жирный (Ctrl+B)">
+                                <button id="theory-bold" type="button" class="theory-toolbar-btn" data-i18n-title="the.k023" title="Жирный (Ctrl+B)" aria-label="Жирный" aria-pressed="false">
                                     <span class="material-symbols-outlined text-[18px]">format_bold</span>
                                 </button>
-                                <button id="theory-italic" type="button" class="theory-toolbar-btn" data-i18n-title="the.k024" title="Курсив (Ctrl+I)">
+                                <button id="theory-italic" type="button" class="theory-toolbar-btn" data-i18n-title="the.k024" title="Курсив (Ctrl+I)" aria-label="Курсив" aria-pressed="false">
                                     <span class="material-symbols-outlined text-[18px]">format_italic</span>
                                 </button>
-                                <button id="theory-underline" type="button" class="theory-toolbar-btn" data-i18n-title="the.k025" title="Подчёркнутый (Ctrl+U)">
+                                <button id="theory-underline" type="button" class="theory-toolbar-btn" data-i18n-title="the.k025" title="Подчёркнутый (Ctrl+U)" aria-label="Подчёркнутый" aria-pressed="false">
                                     <span class="material-symbols-outlined text-[18px]">format_underlined</span>
                                 </button>
                                 <span class="theory-toolbar-sep"></span>
-                                <button id="theory-h1" type="button" class="theory-toolbar-btn theory-toolbar-btn--text" data-i18n-title="the.k026" title="Заголовок 1">H1</button>
-                                <button id="theory-h2" type="button" class="theory-toolbar-btn theory-toolbar-btn--text" data-i18n-title="the.k027" title="Заголовок 2">H2</button>
+                                <button id="theory-h1" type="button" class="theory-toolbar-btn theory-toolbar-btn--text" data-i18n-title="the.k026" title="Заголовок 1" aria-label="Заголовок 1" aria-pressed="false">H1</button>
+                                <button id="theory-h2" type="button" class="theory-toolbar-btn theory-toolbar-btn--text" data-i18n-title="the.k027" title="Заголовок 2" aria-label="Заголовок 2" aria-pressed="false">H2</button>
                                 <span class="theory-toolbar-sep"></span>
-                                <button id="theory-ul" type="button" class="theory-toolbar-btn" data-i18n-title="the.k028" title="Маркированный список">
+                                <button id="theory-ul" type="button" class="theory-toolbar-btn" data-i18n-title="the.k028" title="Маркированный список" aria-label="Маркированный список" aria-pressed="false">
                                     <span class="material-symbols-outlined text-[18px]">format_list_bulleted</span>
                                 </button>
-                                <button id="theory-ol" type="button" class="theory-toolbar-btn" data-i18n-title="the.k029" title="Нумерованный список">
+                                <button id="theory-ol" type="button" class="theory-toolbar-btn" data-i18n-title="the.k029" title="Нумерованный список" aria-label="Нумерованный список" aria-pressed="false">
                                     <span class="material-symbols-outlined text-[18px]">format_list_numbered</span>
                                 </button>
                                 <span class="theory-toolbar-sep"></span>
-                                <button id="theory-align-left" type="button" class="theory-toolbar-btn" data-i18n-title="the.k030" title="По левому краю">
+                                <button id="theory-align-left" type="button" class="theory-toolbar-btn" data-i18n-title="the.k030" title="По левому краю" aria-label="По левому краю" aria-pressed="false">
                                     <span class="material-symbols-outlined text-[18px]">format_align_left</span>
                                 </button>
-                                <button id="theory-align-center" type="button" class="theory-toolbar-btn" data-i18n-title="the.k031" title="По центру">
+                                <button id="theory-align-center" type="button" class="theory-toolbar-btn" data-i18n-title="the.k031" title="По центру" aria-label="По центру" aria-pressed="false">
                                     <span class="material-symbols-outlined text-[18px]">format_align_center</span>
                                 </button>
-                                <button id="theory-align-right" type="button" class="theory-toolbar-btn" data-i18n-title="the.k032" title="По правому краю">
+                                <button id="theory-align-right" type="button" class="theory-toolbar-btn" data-i18n-title="the.k032" title="По правому краю" aria-label="По правому краю" aria-pressed="false">
                                     <span class="material-symbols-outlined text-[18px]">format_align_right</span>
                                 </button>
-                                <button id="theory-align-justify" type="button" class="theory-toolbar-btn" data-i18n-title="the.k033" title="По ширине">
+                                <button id="theory-align-justify" type="button" class="theory-toolbar-btn" data-i18n-title="the.k033" title="По ширине" aria-label="По ширине" aria-pressed="false">
                                     <span class="material-symbols-outlined text-[18px]">format_align_justify</span>
                                 </button>
                                 <span class="theory-toolbar-sep"></span>
                                 <div class="relative" id="theory-color-picker-host">
-                                    <button id="theory-color-btn" type="button" class="theory-toolbar-btn relative" data-i18n-title="the.k034" title="Цвет текста">
+                                    <button id="theory-color-btn" type="button" class="theory-toolbar-btn relative" data-i18n-title="the.k034" title="Цвет текста" aria-label="Цвет текста">
                                         <span class="material-symbols-outlined text-[18px]">format_color_text</span>
                                         <span id="theory-color-indicator" style="position:absolute;bottom:3px;left:5px;right:5px;height:3px;border-radius:2px;background:var(--color-text-main)"></span>
                                     </button>
@@ -903,7 +971,7 @@
                                 </div>
                                 <span class="theory-toolbar-sep"></span>
                             </div>
-                            <button id="theory-image-btn" type="button" class="theory-toolbar-btn" data-i18n-title="the.k035" title="Добавить изображение" data-onboarding-target="theory-editor-image-action">
+                            <button id="theory-image-btn" type="button" class="theory-toolbar-btn" data-i18n-title="the.k035" title="Добавить изображение" aria-label="Добавить изображение" data-onboarding-target="theory-editor-image-action">
                                 <span class="material-symbols-outlined text-[18px]">add_photo_alternate</span>
                             </button>
                             <input id="theory-image-input" type="file" accept=".png,.jpg,.jpeg,.gif,.webp,.svg" class="hidden" />
@@ -916,58 +984,55 @@
                                     <span class="text-xs text-text-muted" data-i18n="the.k018">Размер:</span>
                                     <input id="theory-image-width-slider" type="range" min="10" max="100" value="100" 
                                         class="w-20 h-1.5 bg-border-subtle rounded-lg appearance-none cursor-pointer"
-                                        style="accent-color: var(--color-primary);" />
+                                        style="accent-color: var(--color-primary);" aria-label="Размер изображения" />
                                     <span id="theory-image-width-label" class="text-xs font-medium text-text-secondary w-8">100%</span>
                                 </div>
                                 
                                 <span class="theory-toolbar-sep"></span>
                                 
                                 <!-- Alignment buttons -->
-                                <button type="button" class="theory-toolbar-btn theory-image-align-btn" data-align="left" data-i18n-title="the.k030" title="По левому краю">
+                                <button type="button" class="theory-toolbar-btn theory-image-align-btn" data-align="left" data-i18n-title="the.k030" title="По левому краю" aria-label="Изображение по левому краю">
                                     <span class="material-symbols-outlined text-[18px]">format_align_left</span>
                                 </button>
-                                <button type="button" class="theory-toolbar-btn theory-image-align-btn" data-align="center" data-i18n-title="the.k031" title="По центру">
+                                <button type="button" class="theory-toolbar-btn theory-image-align-btn" data-align="center" data-i18n-title="the.k031" title="По центру" aria-label="Изображение по центру">
                                     <span class="material-symbols-outlined text-[18px]">format_align_center</span>
                                 </button>
-                                <button type="button" class="theory-toolbar-btn theory-image-align-btn" data-align="right" data-i18n-title="the.k032" title="По правому краю">
+                                <button type="button" class="theory-toolbar-btn theory-image-align-btn" data-align="right" data-i18n-title="the.k032" title="По правому краю" aria-label="Изображение по правому краю">
                                     <span class="material-symbols-outlined text-[18px]">format_align_right</span>
                                 </button>
                                 
                                 <span class="theory-toolbar-sep"></span>
                                 
                                 <!-- Float buttons -->
-                                <button type="button" class="theory-toolbar-btn theory-image-float-btn" data-float="none" data-i18n-title="the.k036" title="Сверху и снизу">
+                                <button type="button" class="theory-toolbar-btn theory-image-float-btn" data-float="none" data-i18n-title="the.k036" title="Сверху и снизу" aria-label="Без обтекания">
                                     <span class="material-symbols-outlined text-[18px]">view_agenda</span>
                                 </button>
-                                <button type="button" class="theory-toolbar-btn theory-image-float-btn" data-float="left" data-i18n-title="the.k037" title="Обтекание справа">
+                                <button type="button" class="theory-toolbar-btn theory-image-float-btn" data-float="left" data-i18n-title="the.k037" title="Обтекание справа" aria-label="Обтекание справа">
                                     <span class="material-symbols-outlined text-[18px]">view_sidebar</span>
                                 </button>
-                                <button type="button" class="theory-toolbar-btn theory-image-float-btn" data-float="right" data-i18n-title="the.k038" title="Обтекание слева">
+                                <button type="button" class="theory-toolbar-btn theory-image-float-btn" data-float="right" data-i18n-title="the.k038" title="Обтекание слева" aria-label="Обтекание слева">
                                     <span class="material-symbols-outlined text-[18px]" style="transform: scaleX(-1);">view_sidebar</span>
                                 </button>
                                 
                                 <span class="theory-toolbar-sep"></span>
                                 
                                 <!-- Rotation buttons -->
-                                <button type="button" id="theory-image-rotate-left" class="theory-toolbar-btn" data-i18n-title="the.k039" title="Повернуть влево">
+                                <button type="button" id="theory-image-rotate-left" class="theory-toolbar-btn" data-i18n-title="the.k039" title="Повернуть влево" aria-label="Повернуть влево">
                                     <span class="material-symbols-outlined text-[18px]">rotate_left</span>
                                 </button>
-                                <button type="button" id="theory-image-rotate-right" class="theory-toolbar-btn" data-i18n-title="the.k040" title="Повернуть вправо">
+                                <button type="button" id="theory-image-rotate-right" class="theory-toolbar-btn" data-i18n-title="the.k040" title="Повернуть вправо" aria-label="Повернуть вправо">
                                     <span class="material-symbols-outlined text-[18px]">rotate_right</span>
                                 </button>
                                 
                                 <!-- Flip button -->
-                                <button type="button" id="theory-image-flip" class="theory-toolbar-btn" data-i18n-title="the.k041" title="Отразить по горизонтали">
+                                <button type="button" id="theory-image-flip" class="theory-toolbar-btn" data-i18n-title="the.k041" title="Отразить по горизонтали" aria-label="Отразить по горизонтали">
                                     <span class="material-symbols-outlined text-[18px]">flip</span>
                                 </button>
                             </div>
                         </div>
 
-                        <div id="theory-editor" class="theory-editor-surface theory-scroll text-sm" contenteditable="true" data-onboarding-target="theory-editor-content"></div>
-
-                        <p class="theory-help-note px-1 pt-1 text-xs leading-relaxed" data-i18n="the.k019">
-                            Теория сохраняется как отдельный материал и может использоваться в нескольких местах без дублирования содержимого.
-                        </p>
+                        <!-- Editor canvas -->
+                        <div id="theory-editor" class="theory-editor-surface theory-scroll flex-1 mt-2 text-base leading-relaxed" contenteditable="true" data-onboarding-target="theory-editor-content"></div>
                     </div>
                 </section>
             </main>

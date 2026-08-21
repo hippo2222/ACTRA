@@ -39,19 +39,41 @@ function setupTheoryEditorDom(url = "http://localhost/editor/Theory_Editor.html"
             <div id="theory-context-copy"></div>
             <button id="theory-back-btn"></button>
             <span id="theory-back-btn-label"></span>
+            <button id="theory-sidebar-toggle-btn"><span class="material-symbols-outlined">view_sidebar</span></button>
             <button id="theory-open-center-btn"></button>
             <button id="theory-open-complexes-btn"></button>
-            <div id="theory-library-count"></div>
-            <div id="theory-library-list"></div>
-            <div id="theory-color-picker-host">
-                <button id="theory-color-btn" type="button"></button>
-                <div id="theory-color-palette"></div>
-            </div>
-            <span id="theory-color-indicator"></span>
-            <input id="theory-title" />
-            <div id="theory-editor" contenteditable="true"></div>
-            <span id="theory-status-pill"></span>
-            <button id="theory-save-btn"></button>
+            <main id="theory-main-grid">
+                <aside id="theory-library-panel">
+                    <div id="theory-library-count"></div>
+                    <div id="theory-library-list"></div>
+                </aside>
+                <section class="theory-workspace-panel">
+                    <div id="theory-color-picker-host">
+                        <button id="theory-color-btn" type="button"></button>
+                        <div id="theory-color-palette"></div>
+                    </div>
+                    <span id="theory-color-indicator"></span>
+                    <span id="theory-usage-note"></span>
+                    <div id="theory-stats-counter"></div>
+                    <input id="theory-title" />
+                    <div id="theory-toolbar">
+                        <button id="theory-bold" aria-pressed="false"></button>
+                        <button id="theory-italic" aria-pressed="false"></button>
+                        <button id="theory-underline" aria-pressed="false"></button>
+                        <button id="theory-h1" aria-pressed="false"></button>
+                        <button id="theory-h2" aria-pressed="false"></button>
+                        <button id="theory-ul" aria-pressed="false"></button>
+                        <button id="theory-ol" aria-pressed="false"></button>
+                        <button id="theory-align-left" aria-pressed="false"></button>
+                        <button id="theory-align-center" aria-pressed="false"></button>
+                        <button id="theory-align-right" aria-pressed="false"></button>
+                        <button id="theory-align-justify" aria-pressed="false"></button>
+                    </div>
+                    <div id="theory-editor" contenteditable="true"></div>
+                    <span id="theory-status-pill"></span>
+                    <button id="theory-save-btn"></button>
+                </section>
+            </main>
         </body></html>`,
         {
             url,
@@ -90,6 +112,9 @@ window.__theoryEditorTestExports = {
     initColorPicker,
     setTheoryStatus,
     persistTheory,
+    initTheorySidebarToggle,
+    updateTheoryStatsCounter,
+    updateTheoryToolbarActiveStates,
 };`);
 
     return dom;
@@ -394,5 +419,65 @@ describe("Theory editor regressions", () => {
             { insert: "красный", attributes: { color: expect.stringMatching(/(#e11d48|rgb\(225,\s*29,\s*72\))/) } },
             { insert: "\n" },
         ]));
+    });
+
+    it("toggles library sidebar and persists collapsed state in localStorage", () => {
+        const dom = setupTheoryEditorDom();
+        const { initTheorySidebarToggle } = dom.window.__theoryEditorTestExports;
+        initTheorySidebarToggle();
+
+        const grid = dom.window.document.getElementById("theory-main-grid");
+        const panel = dom.window.document.getElementById("theory-library-panel");
+        const toggleBtn = dom.window.document.getElementById("theory-sidebar-toggle-btn");
+
+        expect(grid.classList.contains("sidebar-collapsed")).toBe(false);
+        expect(panel.classList.contains("is-collapsed")).toBe(false);
+        expect(toggleBtn.getAttribute("aria-expanded")).toBe("true");
+
+        // Click toggle to collapse
+        toggleBtn.click();
+        expect(grid.classList.contains("sidebar-collapsed")).toBe(true);
+        expect(panel.classList.contains("is-collapsed")).toBe(true);
+        expect(toggleBtn.getAttribute("aria-expanded")).toBe("false");
+        expect(dom.window.localStorage.getItem("theorySidebarCollapsed")).toBe("true");
+
+        // Click toggle to expand again
+        toggleBtn.click();
+        expect(grid.classList.contains("sidebar-collapsed")).toBe(false);
+        expect(panel.classList.contains("is-collapsed")).toBe(false);
+        expect(toggleBtn.getAttribute("aria-expanded")).toBe("true");
+        expect(dom.window.localStorage.getItem("theorySidebarCollapsed")).toBe("false");
+    });
+
+    it("calculates live word and character statistics on content update", () => {
+        const dom = setupTheoryEditorDom();
+        const { updateTheoryStatsCounter } = dom.window.__theoryEditorTestExports;
+        const editor = dom.window.document.getElementById("theory-editor");
+        const counter = dom.window.document.getElementById("theory-stats-counter");
+
+        editor.innerText = "Это короткий тестовый фрагмент теории";
+        updateTheoryStatsCounter();
+        expect(counter.textContent).toContain("5 слов");
+        expect(counter.textContent).toContain("37 симв.");
+
+        editor.innerText = "";
+        updateTheoryStatsCounter();
+        expect(counter.textContent).toBe("");
+    });
+
+    it("reflects active toolbar state with aria-pressed on text commands", () => {
+        const dom = setupTheoryEditorDom();
+        const { updateTheoryToolbarActiveStates } = dom.window.__theoryEditorTestExports;
+        const boldBtn = dom.window.document.getElementById("theory-bold");
+        const italicBtn = dom.window.document.getElementById("theory-italic");
+
+        dom.window.document.queryCommandState = vi.fn((cmd) => cmd === "bold");
+        dom.window.document.queryCommandValue = vi.fn(() => "");
+
+        updateTheoryToolbarActiveStates();
+        expect(boldBtn.getAttribute("aria-pressed")).toBe("true");
+        expect(boldBtn.classList.contains("active")).toBe(true);
+        expect(italicBtn.getAttribute("aria-pressed")).toBe("false");
+        expect(italicBtn.classList.contains("active")).toBe(false);
     });
 });
