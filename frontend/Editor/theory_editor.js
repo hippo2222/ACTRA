@@ -531,10 +531,12 @@ function setTheoryStatus(message, tone = "muted", icon = "notes") {
     if (!pill) {
         return;
     }
+    const text = String(message || wt('te.k007', 'Готово')).trim();
     pill.dataset.tone = tone;
+    pill.title = text;
     pill.innerHTML = `
-        <span class="material-symbols-outlined text-[16px]">${icon}</span>
-        ${escapeTheoryHtml(message || wt('te.k007', 'Готово'))}
+        <span class="material-symbols-outlined text-[16px] shrink-0">${icon}</span>
+        <span class="theory-status-pill__label">${escapeTheoryHtml(text)}</span>
     `;
 }
 
@@ -705,7 +707,7 @@ async function restoreTheoryDraftIfPresent(theoryId = "") {
     setTheoryEditorContent(draft.title, draft.delta || EMPTY_THEORY_DELTA);
     theoryEditorState.dirty = true;
     updateTheoryEditorActions();
-    setTheoryStatus(wt('te.k012', 'Черновик восстановлен. Проверьте изменения и сохраните теорию.'), "warning", "history");
+    setTheoryStatus(wt('te.k012', 'Черновик восстановлен'), "warning", "history");
     theoryEditorToast(wt('te.k013', 'Черновик восстановлен'), "info", 2400);
     scheduleTheoryDraftSave();
     return true;
@@ -1493,6 +1495,105 @@ function renderTheoryDeltaToEditor(delta) {
     editor.innerHTML = blocks.length ? blocks.join("") : "<p><br></p>";
 }
 
+function extractTheoryInlineAttributes(node, currentAttrs) {
+    if (!node || node.nodeType !== Node.ELEMENT_NODE) {
+        return { ...(currentAttrs || {}) };
+    }
+
+    const nextAttrs = { ...(currentAttrs || {}) };
+    const tag = node.tagName ? node.tagName.toLowerCase() : "";
+    const style = node.style;
+    const styleAttr = node.getAttribute ? String(node.getAttribute("style") || "") : "";
+
+    // 1. Bold detection (tags and inline font-weight)
+    if (tag === "strong" || tag === "b") {
+        nextAttrs.bold = true;
+    }
+    if (style && style.fontWeight) {
+        const fw = String(style.fontWeight).toLowerCase().trim();
+        if (fw === "bold" || fw === "bolder") {
+            nextAttrs.bold = true;
+        } else if (fw === "normal" || fw === "400" || fw === "lighter") {
+            delete nextAttrs.bold;
+        } else {
+            const num = parseInt(fw, 10);
+            if (!isNaN(num)) {
+                if (num >= 600) nextAttrs.bold = true;
+                else if (num < 500) delete nextAttrs.bold;
+            }
+        }
+    } else if (styleAttr && /font-weight\s*:\s*(bold|bolder|[6-9]00)/i.test(styleAttr)) {
+        nextAttrs.bold = true;
+    } else if (styleAttr && /font-weight\s*:\s*(normal|lighter|[1-4]00)/i.test(styleAttr)) {
+        delete nextAttrs.bold;
+    }
+
+    // 2. Italic detection (tags and inline font-style)
+    if (tag === "em" || tag === "i") {
+        nextAttrs.italic = true;
+    }
+    if (style && style.fontStyle) {
+        const fs = String(style.fontStyle).toLowerCase().trim();
+        if (fs === "italic" || fs === "oblique") {
+            nextAttrs.italic = true;
+        } else if (fs === "normal") {
+            delete nextAttrs.italic;
+        }
+    } else if (styleAttr && /font-style\s*:\s*(italic|oblique)/i.test(styleAttr)) {
+        nextAttrs.italic = true;
+    } else if (styleAttr && /font-style\s*:\s*normal/i.test(styleAttr)) {
+        delete nextAttrs.italic;
+    }
+
+    // 3. Underline detection (tags and text-decoration)
+    if (tag === "u" || tag === "ins") {
+        nextAttrs.underline = true;
+    }
+    if (style && (style.textDecoration || style.textDecorationLine)) {
+        const td = String(style.textDecoration || style.textDecorationLine || "").toLowerCase();
+        if (td.includes("underline")) {
+            nextAttrs.underline = true;
+        } else if (td.includes("none")) {
+            delete nextAttrs.underline;
+        }
+    } else if (styleAttr && /text-decoration(-line)?\s*:\s*[^;]*underline/i.test(styleAttr)) {
+        nextAttrs.underline = true;
+    }
+
+    // 4. Strike-through detection (tags and text-decoration)
+    if (tag === "s" || tag === "strike" || tag === "del") {
+        nextAttrs.strike = true;
+    }
+    if (style && (style.textDecoration || style.textDecorationLine)) {
+        const td = String(style.textDecoration || style.textDecorationLine || "").toLowerCase();
+        if (td.includes("line-through")) {
+            nextAttrs.strike = true;
+        }
+    } else if (styleAttr && /text-decoration(-line)?\s*:\s*[^;]*line-through/i.test(styleAttr)) {
+        nextAttrs.strike = true;
+    }
+
+    // 5. Color detection
+    if (style && style.color) {
+        const colorVal = String(style.color).trim();
+        if (colorVal && !/^(inherit|initial|unset|transparent)$/i.test(colorVal)) {
+            nextAttrs.color = colorVal;
+        }
+    } else if (tag === "font" && node.getAttribute("color")) {
+        nextAttrs.color = String(node.getAttribute("color")).trim();
+    } else if (styleAttr) {
+        const colorMatch = styleAttr.match(/(?:^|;)\s*color\s*:\s*([^;]+)/i);
+        if (colorMatch && colorMatch[1]) {
+            const rawColor = colorMatch[1].trim();
+            if (!/^(inherit|initial|unset|transparent)$/i.test(rawColor)) {
+                nextAttrs.color = rawColor;
+            }
+        }
+    }
+
+    return nextAttrs;
+}
+
 function collectTheoryInlineOps(node, attrs, out) {
     if (!node) return;
     if (node.nodeType === Node.TEXT_NODE) {
@@ -1561,12 +1662,7 @@ function collectTheoryInlineOps(node, attrs, out) {
         return;
     }
 
-    const nextAttrs = { ...(attrs || {}) };
-    if (tag === "strong" || tag === "b") nextAttrs.bold = true;
-    if (tag === "em" || tag === "i") nextAttrs.italic = true;
-    if (tag === "u") nextAttrs.underline = true;
-    if (tag === "s" || tag === "strike") nextAttrs.strike = true;
-    if (tag === "span" && node.style && node.style.color) nextAttrs.color = node.style.color;
+    const nextAttrs = extractTheoryInlineAttributes(node, attrs);
 
     for (const child of Array.from(node.childNodes || [])) {
         collectTheoryInlineOps(child, nextAttrs, out);
@@ -2484,11 +2580,11 @@ async function persistTheory(options = {}) {
         }
 
         if (publicationSync.synced) {
-            statusMessage = `${statusMessage}${wt('te.k087', '. Публикация обновлена автоматически.')}`;
+            statusTone = "success";
+            statusIcon = "check_circle";
             toastMessage = `${toastMessage}${wt('te.k088', '. Публикация обновлена.')}`;
             toastDuration = Math.max(toastDuration, 2800);
         } else if (publicationSync.error) {
-            statusMessage = `${statusMessage}${wt('te.k089', '. Но публикацию не удалось обновить.')}`;
             statusTone = "warning";
             statusIcon = "warning";
             toastMessage = `${toastMessage}${wt('te.k090', '. Публикация не обновилась: ')}${String(publicationSync.error?.message || "catalog_publish_failed")}`;
@@ -2497,7 +2593,6 @@ async function persistTheory(options = {}) {
         }
 
         if (publicationNotice.kind === "stale" || publicationNotice.kind === "unpublished") {
-            statusMessage = publicationNotice.saveMessage;
             statusTone = "warning";
             statusIcon = "campaign";
             toastMessage = publicationNotice.saveMessage;
@@ -2508,43 +2603,6 @@ async function persistTheory(options = {}) {
         setTheoryStatus(statusMessage, statusTone, statusIcon);
         if (!options.silent) {
             theoryEditorToast(toastMessage, toastTone, toastDuration);
-        }
-
-        document.title = item.title ? `${item.title}${wt('te.k091', ' — Редактор теории')}` : wt('te.k002', 'Редактор теории');
-        return item;
-
-        const ctx = theoryEditorState.context || {};
-        if (wasNewTheory && ctx.context === "topic" && ctx.moduleId && ctx.topicId) {
-            try {
-                await fetch(
-                    `/api/editor/topic/${encodeURIComponent(ctx.moduleId)}/${encodeURIComponent(ctx.topicId)}/theory-link`,
-                    {
-                        method: "PUT",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            theory_link: { theory_id: theoryEditorState.activeTheoryId, relation: "link" },
-                            apply_to_complexes: true,
-                            dry_run: false,
-                            propagation_mode: "safe",
-                        }),
-                    }
-                );
-                setTheoryStatus(wt('te.k084', 'Теория сохранена и привязана к теме'), "success", "check_circle");
-                if (!options.silent) {
-                    theoryEditorToast(wt('te.k084', 'Теория сохранена и привязана к теме'), "success", 2800);
-                }
-            } catch (linkErr) {
-                console.warn("[Theory Editor] Auto-link to topic failed", linkErr);
-                setTheoryStatus(wt('te.k085', 'Теория сохранена (привязка к теме не удалась)'), "warning", "warning");
-                if (!options.silent) {
-                    theoryEditorToast(wt('te.k086', 'Теория сохранена. Привяжите её к теме вручную.'), "warning", 3500);
-                }
-            }
-        } else {
-            setTheoryStatus(wt('te.k083', 'Теория сохранена'), "success", "check_circle");
-            if (!options.silent) {
-                theoryEditorToast(wt('te.k083', 'Теория сохранена'), "success", 2200);
-            }
         }
 
         document.title = item.title ? `${item.title}${wt('te.k091', ' — Редактор теории')}` : wt('te.k002', 'Редактор теории');
@@ -2566,7 +2624,7 @@ async function startNewTheory() {
         return;
     }
     resetTheoryEditorState();
-    setTheoryStatus(wt('te.k093', 'Новая теория. Начните писать и сохраните материал.'), "muted", "edit_square");
+    setTheoryStatus(wt('te.k093', 'Новая теория'), "muted", "edit_square");
     document.title = wt('te.k094', 'Новая теория — Редактор теории');
 }
 
@@ -3111,7 +3169,7 @@ async function loadTheoryById(theoryId) {
     const normalizedTheoryId = String(theoryId || "").trim();
     if (!normalizedTheoryId) {
         resetTheoryEditorState();
-        setTheoryStatus(wt('te.k115', 'Новая теория. Сохраните материал, когда будете готовы.'), "muted", "edit_square");
+        setTheoryStatus(wt('te.k115', 'Новая теория'), "muted", "edit_square");
         document.title = wt('te.k002', 'Редактор теории');
         renderTheoryLibraryList();
         return;
@@ -3581,7 +3639,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     resetTheoryEditorState();
-    setTheoryStatus(wt('te.k093', 'Новая теория. Начните писать и сохраните материал.'), "muted", "edit_square");
+    setTheoryStatus(wt('te.k093', 'Новая теория'), "muted", "edit_square");
     document.title = wt('te.k094', 'Новая теория — Редактор теории');
 });
 

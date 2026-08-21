@@ -27,6 +27,13 @@
                 if (pending.topic && !params.get('topic')) {
                     params.set('topic', pending.topic);
                 }
+            } else if (state.lastView && typeof state.lastView === 'object') {
+                if (state.lastView.moduleId && !params.has('module') && !params.has('all')) {
+                    params.set('module', state.lastView.moduleId);
+                }
+                if (state.lastView.topicId && !params.has('topic') && !params.has('all')) {
+                    params.set('topic', state.lastView.topicId);
+                }
             }
             if (params.has('module') || params.has('topic') || params.has('sort')) {
                 const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`;

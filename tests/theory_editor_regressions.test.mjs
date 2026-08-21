@@ -88,6 +88,8 @@ window.__theoryEditorTestExports = {
     updateTheoryEditorActions,
     setTheoryColorIndicator,
     initColorPicker,
+    setTheoryStatus,
+    persistTheory,
 };`);
 
     return dom;
@@ -300,5 +302,97 @@ describe("Theory editor regressions", () => {
 
         const delta = editorHtmlToTheoryDelta();
         expect(delta.ops[0].insert.image).toBe("/api/assets/asset_theory_42/content");
+    });
+
+    it("renders concise status pill with tooltip title and resilient label element", () => {
+        const dom = setupTheoryEditorDom();
+        const { setTheoryStatus } = dom.window.__theoryEditorTestExports;
+        const pill = dom.window.document.getElementById("theory-status-pill");
+
+        setTheoryStatus("Теория сохранена", "success", "check_circle");
+        expect(pill.dataset.tone).toBe("success");
+        expect(pill.title).toBe("Теория сохранена");
+        expect(pill.innerHTML).toContain("theory-status-pill__label");
+        expect(pill.innerHTML).toContain("check_circle");
+        expect(pill.textContent).toContain("Теория сохранена");
+    });
+
+    it("includes overflow-safe CSS styles for theory-status-pill in Theory_Editor.html", () => {
+        const dom = new JSDOM(theoryEditorHtml);
+        expect(theoryEditorHtml).toContain(".theory-status-pill__label");
+        expect(theoryEditorHtml).toContain("text-overflow: ellipsis");
+        expect(theoryEditorHtml).toContain("max-width: 100%");
+        expect(theoryEditorHtml).toContain("min-width: 0");
+    });
+
+    it("preserves bold formatting from <b>, <strong>, and inline font-weight styles (bold, 700, etc.)", () => {
+        const dom = setupTheoryEditorDom();
+        const {
+            editorHtmlToTheoryDelta,
+            renderTheoryDeltaToEditor,
+        } = dom.window.__theoryEditorTestExports;
+        const editor = dom.window.document.getElementById("theory-editor");
+
+        // 1. Test <span style="font-weight: bold;"> produced by document.execCommand("bold")
+        editor.innerHTML = '<p>Обычный <span style="font-weight: bold;">жирный</span> текст</p>';
+        let delta = editorHtmlToTheoryDelta();
+        expect(delta.ops).toEqual(expect.arrayContaining([
+            { insert: "Обычный " },
+            { insert: "жирный", attributes: { bold: true } },
+            { insert: " текст" },
+            { insert: "\n" },
+        ]));
+
+        // 2. Test <span style="font-weight: 700;"> (e.g. from pasted Word/Google Docs)
+        editor.innerHTML = '<p>Начало <span style="font-weight: 700;">жирный 700</span> конец</p>';
+        delta = editorHtmlToTheoryDelta();
+        expect(delta.ops).toEqual(expect.arrayContaining([
+            { insert: "Начало " },
+            { insert: "жирный 700", attributes: { bold: true } },
+            { insert: " конец" },
+            { insert: "\n" },
+        ]));
+
+        // 3. Test <strong> and <b> tags
+        editor.innerHTML = '<p><strong>Стронг</strong> и <b>тег б</b></p>';
+        delta = editorHtmlToTheoryDelta();
+        expect(delta.ops).toEqual(expect.arrayContaining([
+            { insert: "Стронг", attributes: { bold: true } },
+            { insert: " и " },
+            { insert: "тег б", attributes: { bold: true } },
+            { insert: "\n" },
+        ]));
+
+        // 4. Test roundtrip: render back to editor produces <strong>, which serializes back to bold delta
+        renderTheoryDeltaToEditor(delta);
+        expect(editor.innerHTML).toContain("<strong>Стронг</strong>");
+        expect(editor.innerHTML).toContain("<strong>тег б</strong>");
+        const roundtripDelta = editorHtmlToTheoryDelta();
+        expect(roundtripDelta.ops).toEqual(delta.ops);
+    });
+
+    it("preserves italic, underline, strike, and color from inline styles through delta conversion", () => {
+        const dom = setupTheoryEditorDom();
+        const { editorHtmlToTheoryDelta } = dom.window.__theoryEditorTestExports;
+        const editor = dom.window.document.getElementById("theory-editor");
+
+        editor.innerHTML = '<p>' +
+            '<span style="font-style: italic;">курсив</span> ' +
+            '<span style="text-decoration: underline;">подчёркнутый</span> ' +
+            '<span style="text-decoration: line-through;">зачёркнутый</span> ' +
+            '<span style="color: #e11d48;">красный</span>' +
+            '</p>';
+
+        const delta = editorHtmlToTheoryDelta();
+        expect(delta.ops).toEqual(expect.arrayContaining([
+            { insert: "курсив", attributes: { italic: true } },
+            { insert: " " },
+            { insert: "подчёркнутый", attributes: { underline: true } },
+            { insert: " " },
+            { insert: "зачёркнутый", attributes: { strike: true } },
+            { insert: " " },
+            { insert: "красный", attributes: { color: expect.stringMatching(/(#e11d48|rgb\(225,\s*29,\s*72\))/) } },
+            { insert: "\n" },
+        ]));
     });
 });

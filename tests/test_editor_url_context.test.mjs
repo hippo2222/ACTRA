@@ -169,7 +169,7 @@ describe("TestEditor URL context", () => {
         expect(editor.autoSaveManager.clearDraft).toHaveBeenCalledTimes(1);
         expect(clearBootstrapSpy).toHaveBeenCalledTimes(1);
         expect(showToastSpy).toHaveBeenCalledWith("Черновик удалён", "success");
-        expect(dom.window.navigateWithTransition).toHaveBeenCalledWith("/editor");
+        expect(dom.window.navigateWithTransition).toHaveBeenCalledWith("/editor?module=test_module&topic=test_topic");
         expect(editor.hasUnsavedChanges).toBe(false);
     });
 

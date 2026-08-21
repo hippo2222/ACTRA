@@ -343,3 +343,126 @@ describe("EditorDashboard workspace limit placement", () => {
     expect(html).toContain("z-index: 130");
   });
 });
+
+describe("EditorDashboard lastView topic persistence upon task editor return", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    vi.spyOn(window, "alert").mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    window.navigateWithTransition = vi.fn();
+    global.fetch = vi.fn(() => Promise.resolve(createFetchResponse()));
+    window.__EDITOR_DASHBOARD_SUPPRESS_IMPORT_MANAGER_WARNING__ = true;
+    delete window.__EDITOR_ROUTE_STATE__;
+    localStorage.clear();
+    setupDomSkeleton();
+    window.dashboard = undefined;
+  });
+
+  afterEach(() => {
+    delete window.__EDITOR_ROUTE_STATE__;
+    delete window.__EDITOR_DASHBOARD_SUPPRESS_IMPORT_MANAGER_WARNING__;
+    delete window.navigateWithTransition;
+    localStorage.clear();
+    vi.restoreAllMocks();
+  });
+
+  it("persists active module and topic in localStorage when createNewTask is called", async () => {
+    document.dispatchEvent(new Event("DOMContentLoaded"));
+    await Promise.resolve();
+    await Promise.resolve();
+    const dashboard = window.dashboard;
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ ok: true, task_id: "new_task_1", task: { name: "Новое задание" } })
+    });
+
+    await dashboard.createNewTask("module_error", "topic_a", "Новое задание", "click");
+
+    const stored = JSON.parse(localStorage.getItem("editorDashboardState") || "{}");
+    expect(stored.lastView).toEqual({
+      moduleId: "module_error",
+      topicId: "topic_a"
+    });
+    expect(stored.expanded.modules).toContain("module_error");
+    expect(stored.expanded.topics).toContain("module_error:topic_a");
+  });
+
+  it("persists active module and topic in localStorage when switchEditor is called", async () => {
+    document.dispatchEvent(new Event("DOMContentLoaded"));
+    await Promise.resolve();
+    await Promise.resolve();
+    const dashboard = window.dashboard;
+
+    dashboard.switchEditor({
+      task_data: { type: "click", meta: { id: "t1", module: "module_error", topic: "topic_a" } },
+      metadata: { id: "t1", module: "module_error", topic: "topic_a" }
+    });
+
+    const stored = JSON.parse(localStorage.getItem("editorDashboardState") || "{}");
+    expect(stored.lastView).toEqual({
+      moduleId: "module_error",
+      topicId: "topic_a"
+    });
+    expect(stored.expanded.modules).toContain("module_error");
+    expect(stored.expanded.topics).toContain("module_error:topic_a");
+  });
+
+  it("renders only the topic tasks when returning to dashboard with saved lastView", async () => {
+    localStorage.setItem("editorDashboardState", JSON.stringify({
+      expanded: {
+        modules: ["module_error"],
+        topics: ["module_error:topic_a"],
+      },
+      lastView: {
+        moduleId: "module_error",
+        topicId: "topic_a",
+      },
+    }));
+
+    document.dispatchEvent(new Event("DOMContentLoaded"));
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const dashboard = window.dashboard;
+    expect(dashboard.activeModuleId).toBe("module_error");
+    expect(dashboard.activeTopicId).toBe("topic_a");
+
+    const cards = Array.from(document.querySelectorAll("main .grid article"));
+    expect(cards.length).toBe(2);
+  });
+
+  it("clears lastView when user explicitly clicks 'All Tasks'", async () => {
+    localStorage.setItem("editorDashboardState", JSON.stringify({
+      expanded: {
+        modules: ["module_error"],
+        topics: ["module_error:topic_a"],
+      },
+      lastView: {
+        moduleId: "module_error",
+        topicId: "topic_a",
+      },
+    }));
+
+    document.dispatchEvent(new Event("DOMContentLoaded"));
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const dashboard = window.dashboard;
+    expect(dashboard.activeTopicId).toBe("topic_a");
+
+    dashboard.renderAllTasks();
+
+    expect(dashboard.activeModuleId).toBeNull();
+    expect(dashboard.activeTopicId).toBeNull();
+
+    const stored = JSON.parse(localStorage.getItem("editorDashboardState") || "{}");
+    expect(stored.lastView).toEqual({
+      moduleId: null,
+      topicId: null
+    });
+  });
+});

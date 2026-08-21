@@ -42,6 +42,7 @@ class ClickEditor extends BaseEditor {
         this.taskType = "click";
         this.isDrawTask = false;
         this.annotations = [];
+        this.requiredCorrectManuallySet = false;
         this.selectedAnnotationIndex = -1;
         this.selectedVertex = null;
         this.draggingVertex = null;
@@ -435,8 +436,10 @@ class ClickEditor extends BaseEditor {
 
         if (Number.isFinite(rawThreshold) && rawThreshold >= 1) {
             snapshot.success_threshold = rawThreshold;
+            snapshot.manual_success_threshold = Boolean(this.requiredCorrectManuallySet);
         } else {
             delete snapshot.success_threshold;
+            delete snapshot.manual_success_threshold;
         }
 
         return snapshot;
@@ -1674,6 +1677,7 @@ class ClickEditor extends BaseEditor {
 
             // Editor specific state
             annotations: JSON.parse(JSON.stringify(this.annotations)),
+            requiredCorrectManuallySet: Boolean(this.requiredCorrectManuallySet),
             additionalInfo: JSON.parse(JSON.stringify(
                 this.buildLiveAdditionalInfoState()
             )),
@@ -1704,6 +1708,9 @@ class ClickEditor extends BaseEditor {
         // Restore annotations
         if (state.annotations) {
             this.annotations = state.annotations;
+        }
+        if (typeof state.requiredCorrectManuallySet === "boolean") {
+            this.requiredCorrectManuallySet = state.requiredCorrectManuallySet;
         }
 
         // Restore additional info
@@ -3434,8 +3441,21 @@ class ClickEditor extends BaseEditor {
             const resolvedThreshold =
                 Number.isFinite(rawThreshold) && rawThreshold >= 1
                     ? rawThreshold
-                    : (Number.isFinite(fallbackThreshold) && fallbackThreshold >= 1 ? fallbackThreshold : 1);
-            this.requiredCorrectInput.value = resolvedThreshold;
+                    : (Number.isFinite(fallbackThreshold) && fallbackThreshold >= 1 ? fallbackThreshold : null);
+
+            if (typeof settings.manual_success_threshold === "boolean") {
+                this.requiredCorrectManuallySet = settings.manual_success_threshold;
+            } else if (resolvedThreshold !== null && this.annotations.length > 0 && resolvedThreshold < this.annotations.length) {
+                this.requiredCorrectManuallySet = true;
+            } else {
+                this.requiredCorrectManuallySet = false;
+            }
+
+            if (!this.requiredCorrectManuallySet && this.annotations.length > 0) {
+                this.requiredCorrectInput.value = String(this.annotations.length);
+            } else {
+                this.requiredCorrectInput.value = String(resolvedThreshold || (this.annotations.length > 0 ? this.annotations.length : 1));
+            }
             this.enforceRequiredCorrectBounds({ clampToMax: true });
         }
         this.initAdditionalInfoToggle();
@@ -3616,10 +3636,12 @@ class ClickEditor extends BaseEditor {
         this.initChoicePromptToggle();
         if (this.requiredCorrectInput) {
             const handleRequiredCorrectInput = () => {
+                this.requiredCorrectManuallySet = true;
                 this.enforceRequiredCorrectBounds({ clampToMax: true });
                 this.markUnsaved();
             };
             this.requiredCorrectInput.addEventListener("input", handleRequiredCorrectInput);
+            this.requiredCorrectInput.addEventListener("change", handleRequiredCorrectInput);
             this.requiredCorrectInput.addEventListener("blur", () => this.enforceRequiredCorrectBounds({ clampToMax: true }));
         }
 
@@ -4134,7 +4156,7 @@ class ClickEditor extends BaseEditor {
         this.renderAnnotations();
         this.renderAnnotationList();
         this.updateAnnotationCount();
-        this.enforceRequiredCorrectBounds({ clampToMax: true });
+        this.syncRequiredCorrectThreshold({ clampToMax: true });
         this.updateDrawingControlsState();
         this.highlightAnnotation(restoreIndex);
         this.updateStatusBadge(wt("ce.k057", "Контур восстановлен."), { tone: "success" });
@@ -4173,7 +4195,7 @@ class ClickEditor extends BaseEditor {
         this.renderAnnotations();
         this.renderAnnotationList();
         this.updateAnnotationCount();
-        const requiredCorrectMeta = this.enforceRequiredCorrectBounds({ clampToMax: true });
+        const requiredCorrectMeta = this.syncRequiredCorrectThreshold({ clampToMax: true });
         this.updateDrawingControlsState();
         this.markUnsaved();
 
@@ -4266,7 +4288,7 @@ class ClickEditor extends BaseEditor {
         this.updateStatusBadge(wt("ce.k066", "Контур добавлен"), { tone: "success" });
         this.renderAnnotations();
         this.renderAnnotationList();
-        this.enforceRequiredCorrectBounds({ clampToMax: true });
+        this.syncRequiredCorrectThreshold({ clampToMax: true });
         this.markUnsaved();
     }
 
@@ -4328,7 +4350,7 @@ class ClickEditor extends BaseEditor {
         this.renderAnnotations();
         this.renderAnnotationList();
         this.updateStatusBadge(wt("ce.k065", "Линия добавлена"), { tone: "success" });
-        this.enforceRequiredCorrectBounds({ clampToMax: true });
+        this.syncRequiredCorrectThreshold({ clampToMax: true });
         this.markUnsaved();
     }
 
@@ -4375,7 +4397,7 @@ class ClickEditor extends BaseEditor {
         this.renderAnnotations();
         this.renderAnnotationList();
         this.updateAnnotationCount();
-        this.enforceRequiredCorrectBounds({ clampToMax: true });
+        this.syncRequiredCorrectThreshold({ clampToMax: true });
         this.updateDrawingControlsState();
         this.updateStatusBadge(wt("ce.k069", "Все контуры очищены."), { tone: "warning" });
         this.markUnsaved();
@@ -5250,6 +5272,19 @@ class ClickEditor extends BaseEditor {
         }
     }
 
+    syncRequiredCorrectThreshold(options = {}) {
+        if (!this.requiredCorrectInput) return null;
+        const annotationsCount = this.annotations.length;
+        if (!this.requiredCorrectManuallySet) {
+            if (annotationsCount > 0) {
+                this.requiredCorrectInput.value = String(annotationsCount);
+            } else {
+                this.requiredCorrectInput.value = "1";
+            }
+        }
+        return this.enforceRequiredCorrectBounds({ clampToMax: true, ...options });
+    }
+
     enforceRequiredCorrectBounds(options = {}) {
         const { clampToMax = false, markIfAdjusted = false } = options;
         if (!this.requiredCorrectInput) return null;
@@ -5883,17 +5918,6 @@ class ClickEditor extends BaseEditor {
             warnings.push(`${wt('ce.k088', 'У ')}${generatedLabels}${wt('ce.k088b', ' контуров осталось автосгенерированное имя. Лучше заменить его на содержательную подпись.')}`);
         }
 
-        const requiredCorrect = this.requiredCorrectInput
-            ? parseInt(this.requiredCorrectInput.value, 10)
-            : Number(
-                this.task?.task_data?.settings?.success_threshold ??
-                this.task?.task_data?.content?.required_correct ??
-                0
-            );
-        if (this.annotations.length > 1 && Number.isFinite(requiredCorrect) && requiredCorrect === this.annotations.length) {
-            warnings.push(wt('ce.k089', 'Сейчас пользователь должен отметить все контуры. Убедитесь, что такой порог действительно нужен.'));
-        }
-
         return warnings;
     }
 
@@ -5997,6 +6021,7 @@ class ClickEditor extends BaseEditor {
             this.task.task_data.content.choice_prompt = effectiveChoicePrompt;
             this.task.task_data.content.required_correct = requiredCorrect;
             this.task.task_data.settings.success_threshold = requiredCorrect;
+            this.task.task_data.settings.manual_success_threshold = Boolean(this.requiredCorrectManuallySet);
             this.task.task_data.content.annotations = this.annotations;
         }
         if (additionalPayload) {

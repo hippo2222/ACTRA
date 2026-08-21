@@ -3225,7 +3225,12 @@ class TestEditor extends BaseEditor {
                     throw new Error(data.error || wt('xt.k118', 'Не удалось удалить задание'));
                 }
                 this.showToast(wt('xt.k119', 'Задание удалено'), 'success');
-                window.navigateWithTransition('/editor');
+                const targetUrl = typeof this.getDashboardReturnUrl === 'function' ? this.getDashboardReturnUrl() : '/editor';
+                if (typeof window.navigateWithTransition === 'function') {
+                    window.navigateWithTransition(targetUrl);
+                } else {
+                    window.location.href = targetUrl;
+                }
             });
         } catch (err) {
             this.showToast(err.message || wt('xt.k120', 'Ошибка удаления задания'), 'error');

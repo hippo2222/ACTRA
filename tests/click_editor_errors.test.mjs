@@ -329,6 +329,29 @@ describe("ClickEditor semantic warnings", () => {
         expect(warnings).toHaveLength(1);
         expect(warnings[0]).toContain("пересеч");
     });
+
+    it("does not warn when required threshold equals the total number of contours", () => {
+        const editor = createEditorInstance();
+        editor.task = {
+            task_data: {
+                content: {
+                    image: "/img.png",
+                    required_correct: 3
+                },
+                settings: {
+                    success_threshold: 3
+                }
+            }
+        };
+        editor.annotations = [
+            { label: "Очаг 1", points: [[0, 0], [10, 0], [10, 10]], type: "polygon" },
+            { label: "Очаг 2", points: [[20, 20], [30, 20], [30, 30]], type: "polygon" },
+            { label: "Очаг 3", points: [[40, 40], [50, 40], [50, 50]], type: "polygon" }
+        ];
+
+        const warnings = editor.getSemanticWarnings();
+        expect(warnings).toEqual([]);
+    });
 });
 
 describe("ClickEditor confirmations", () => {
@@ -749,6 +772,97 @@ describe("ClickEditor required-correct UX", () => {
 
         expect(editor.requiredCorrectInput.value).toBe("3");
         expect(editor.requiredCorrectHint.textContent).toContain("3");
+    });
+
+    it("automatically updates required count to match contour count when not manually modified", () => {
+        const editor = createEditorInstance();
+        editor.cacheDom();
+        editor.setupEventListeners();
+        editor.annotations = [];
+
+        expect(editor.requiredCorrectManuallySet).toBe(false);
+
+        // Add 1st contour
+        editor.annotations.push({ points: [[0, 0], [10, 0], [10, 10]], type: "polygon" });
+        editor.syncRequiredCorrectThreshold();
+        expect(editor.requiredCorrectInput.value).toBe("1");
+        expect(editor.requiredCorrectContext.textContent).toContain("1");
+
+        // Add 2nd contour
+        editor.annotations.push({ points: [[20, 20], [30, 20], [30, 30]], type: "polygon" });
+        editor.syncRequiredCorrectThreshold();
+        expect(editor.requiredCorrectInput.value).toBe("2");
+        expect(editor.requiredCorrectContext.textContent).toContain("2");
+
+        // Add 3rd contour
+        editor.annotations.push({ points: [[40, 40], [50, 40], [50, 50]], type: "polygon" });
+        editor.syncRequiredCorrectThreshold();
+        expect(editor.requiredCorrectInput.value).toBe("3");
+        expect(editor.requiredCorrectContext.textContent).toContain("3");
+
+        // Delete 1 contour before any manual edit
+        editor.annotations.splice(2, 1);
+        editor.syncRequiredCorrectThreshold();
+        expect(editor.requiredCorrectInput.value).toBe("2");
+        expect(editor.requiredCorrectContext.textContent).toContain("2");
+    });
+
+    it("stops automatically updating required count as soon as the user manually modifies the field", () => {
+        const editor = createEditorInstance();
+        editor.cacheDom();
+        editor.setupEventListeners();
+        editor.annotations = [
+            { points: [[0, 0], [10, 0], [10, 10]], type: "polygon" },
+            { points: [[20, 20], [30, 20], [30, 30]], type: "polygon" },
+            { points: [[40, 40], [50, 40], [50, 50]], type: "polygon" },
+        ];
+        editor.syncRequiredCorrectThreshold();
+        expect(editor.requiredCorrectInput.value).toBe("3");
+
+        // User manually changes input to 2
+        editor.requiredCorrectInput.value = "2";
+        editor.requiredCorrectInput.dispatchEvent(new dom.window.Event("input", { bubbles: true }));
+
+        expect(editor.requiredCorrectManuallySet).toBe(true);
+        expect(editor.requiredCorrectInput.value).toBe("2");
+
+        // Add 4th contour - should NOT change value from 2
+        editor.annotations.push({ points: [[60, 60], [70, 60], [70, 70]], type: "polygon" });
+        editor.syncRequiredCorrectThreshold();
+
+        expect(editor.requiredCorrectInput.value).toBe("2");
+        expect(editor.requiredCorrectContext.textContent).toContain("4");
+
+        // Add 5th contour - should still remain 2
+        editor.annotations.push({ points: [[80, 80], [90, 80], [90, 90]], type: "polygon" });
+        editor.syncRequiredCorrectThreshold();
+
+        expect(editor.requiredCorrectInput.value).toBe("2");
+        expect(editor.requiredCorrectContext.textContent).toContain("5");
+    });
+
+    it("preserves and restores requiredCorrectManuallySet across captureState and restoreState", () => {
+        const editor = createEditorInstance();
+        editor.cacheDom();
+        editor.task = {
+            task_data: {
+                content: { prompt: "Test", required_correct: 2 },
+                settings: { success_threshold: 2 }
+            },
+            metadata: { id: "t1" }
+        };
+        editor.annotations = [{}, {}, {}];
+        editor.requiredCorrectManuallySet = true;
+
+        const captured = editor.captureState();
+        expect(captured.requiredCorrectManuallySet).toBe(true);
+
+        const newEditor = createEditorInstance();
+        newEditor.cacheDom();
+        newEditor.task = { task_data: { content: {}, settings: {} }, metadata: { id: "t1" } };
+        newEditor.restoreState(captured);
+
+        expect(newEditor.requiredCorrectManuallySet).toBe(true);
     });
 });
 

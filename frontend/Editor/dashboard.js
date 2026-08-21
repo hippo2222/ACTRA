@@ -1312,15 +1312,22 @@ class EditorDashboard {
         observer.observe(document.documentElement, { attributes: true });
     }
 
-    saveDashboardState() {
+    saveDashboardState(options = {}) {
         try {
             const state = JSON.parse(localStorage.getItem('editorDashboardState') || '{}');
             this.normalizeExpandedState();
             state.expanded = this.expandedState;
-            state.lastView = {
-                moduleId: this.activeModuleId,
-                topicId: this.activeTopicId
-            };
+            if (this.activeModuleId || options.clearLastView) {
+                state.lastView = {
+                    moduleId: this.activeModuleId || null,
+                    topicId: this.activeTopicId || null
+                };
+            } else if (!state.lastView) {
+                state.lastView = {
+                    moduleId: null,
+                    topicId: null
+                };
+            }
             localStorage.setItem('editorDashboardState', JSON.stringify(state));
         } catch (e) {
             console.warn('Failed to save dashboard state', e);
@@ -1415,7 +1422,7 @@ class EditorDashboard {
         return changed;
     }
 
-    updateUrlState() {
+    updateUrlState(options = {}) {
         if (this.onboardingDemoActive) return;
         const params = new URLSearchParams();
         if (this.activeModuleId) params.set('module', this.activeModuleId);
@@ -1425,7 +1432,7 @@ class EditorDashboard {
 
         const url = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
         history.replaceState(null, '', url);
-        this.saveDashboardState();
+        this.saveDashboardState(options);
     }
 
     async loadCatalog() {
@@ -4736,6 +4743,11 @@ class EditorDashboard {
                     });
                 }
                 this.storeTaskBootstrap(module_id, topic_id, data.task_id, data.task);
+                this.activeModuleId = module_id;
+                this.activeTopicId = topic_id;
+                this.ensureModuleExpandedState(module_id, { save: false });
+                this.ensureTopicExpandedState(module_id, topic_id, { save: false });
+                this.saveDashboardState();
                 window.navigateWithTransition(
                     this.getEditorUrl(task_type, module_id, topic_id, data.task_id, {
                         isNew: true,
@@ -4826,8 +4838,9 @@ class EditorDashboard {
         this.renderWorkspaceShortcuts();
         this.syncSidebarSelection();
         this.updateHeaderBreadcrumbs(); // Call breadcrumbs update
-        // After rendering sidebar, render the grid with all tasks
-        this.renderGrid();
+        if (!this.pendingInitialView && !this.activeModuleId) {
+            this.renderGrid();
+        }
     }
 
     collectAllTasks() {
@@ -5168,6 +5181,7 @@ class EditorDashboard {
         this.currentSearchQuery = ''; // Clear search query when viewing all tasks
         this.syncSidebarSelection();
         this.updateHeaderBreadcrumbs();
+        this.updateUrlState({ clearLastView: true });
         this.renderGrid();
     }
 
@@ -5973,6 +5987,11 @@ class EditorDashboard {
                 console.error('Cannot open editor: missing module/topic/task metadata', task);
                 return;
             }
+            this.activeModuleId = m;
+            this.activeTopicId = t;
+            this.ensureModuleExpandedState(m, { save: false });
+            this.ensureTopicExpandedState(m, t, { save: false });
+            this.saveDashboardState();
             window.navigateWithTransition(
                 this.getEditorUrl(type, m, t, id, {
                     restoreDraft: Boolean(options.restoreDraft),

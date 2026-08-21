@@ -1644,12 +1644,43 @@ class BaseEditor {
         const backBtn = overlay.querySelector('#fatal-error-back-btn');
         if (backBtn) {
             backBtn.addEventListener('click', () => {
+                const targetUrl = this.getDashboardReturnUrl();
                 if (typeof window.navigateWithTransition === 'function') {
-                    window.navigateWithTransition('/editor');
+                    window.navigateWithTransition(targetUrl);
                     return;
                 }
-                window.location.href = '/editor';
+                window.location.href = targetUrl;
             });
+        }
+    }
+
+    getDashboardReturnUrl() {
+        const params = new URLSearchParams();
+        const effectiveModuleId = this.moduleId || this.task?.metadata?.module || this.task?.task_data?.meta?.module;
+        const effectiveTopicId = this.topicId || this.task?.metadata?.topic || this.task?.task_data?.meta?.topic;
+
+        if (effectiveModuleId) params.set('module', effectiveModuleId);
+        if (effectiveTopicId) params.set('topic', effectiveTopicId);
+
+        this.persistDashboardReturnState(effectiveModuleId, effectiveTopicId);
+        const query = params.toString();
+        return query ? `/editor?${query}` : '/editor';
+    }
+
+    persistDashboardReturnState(moduleId = this.moduleId, topicId = this.topicId) {
+        const effectiveModuleId = moduleId || this.task?.metadata?.module || this.task?.task_data?.meta?.module;
+        const effectiveTopicId = topicId || this.task?.metadata?.topic || this.task?.task_data?.meta?.topic;
+        if (!effectiveModuleId && !effectiveTopicId) return;
+
+        try {
+            const state = JSON.parse(localStorage.getItem('editorDashboardState') || '{}');
+            state.lastView = {
+                moduleId: effectiveModuleId || null,
+                topicId: effectiveTopicId || null
+            };
+            localStorage.setItem('editorDashboardState', JSON.stringify(state));
+        } catch (e) {
+            console.warn('Failed to persist dashboard return state', e);
         }
     }
 
@@ -2322,12 +2353,13 @@ class BaseEditor {
             return;
         }
 
+        const targetUrl = this.getDashboardReturnUrl();
         if (typeof window.navigateWithTransition === 'function') {
-            window.navigateWithTransition('/editor');
+            window.navigateWithTransition(targetUrl);
             return;
         }
 
-        window.location.href = '/editor';
+        window.location.href = targetUrl;
     }
 
     _normalizeIntIdList(values) {
@@ -3006,12 +3038,22 @@ class BaseEditor {
                 onConfirm: () => {
                     this.hasUnsavedChanges = false;
                     window.removeEventListener('beforeunload', this._beforeUnloadHandler);
-                    window.navigateWithTransition('/editor');
+                    const targetUrl = this.getDashboardReturnUrl();
+                    if (typeof window.navigateWithTransition === 'function') {
+                        window.navigateWithTransition(targetUrl);
+                        return;
+                    }
+                    window.location.href = targetUrl;
                 }
             });
             return;
         }
-        window.navigateWithTransition('/editor');
+        const targetUrl = this.getDashboardReturnUrl();
+        if (typeof window.navigateWithTransition === 'function') {
+            window.navigateWithTransition(targetUrl);
+            return;
+        }
+        window.location.href = targetUrl;
     }
 
     /**
@@ -3191,13 +3233,23 @@ class BaseEditor {
                 onConfirm: () => {
                     this.hasUnsavedChanges = false;
                     this.teardownNavigationGuards();
-                    window.navigateWithTransition('/editor');
+                    const targetUrl = this.getDashboardReturnUrl();
+                    if (typeof window.navigateWithTransition === 'function') {
+                        window.navigateWithTransition(targetUrl);
+                        return;
+                    }
+                    window.location.href = targetUrl;
                 }
             });
             return;
         }
         this.teardownNavigationGuards();
-        window.navigateWithTransition('/editor');
+        const targetUrl = this.getDashboardReturnUrl();
+        if (typeof window.navigateWithTransition === 'function') {
+            window.navigateWithTransition(targetUrl);
+            return;
+        }
+        window.location.href = targetUrl;
     }
 
     setupBeforeUnloadWarning() {

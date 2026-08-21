@@ -16,6 +16,7 @@ export default defineConfig({
             // tests/complex_audit/ (or the theory-*/click_errors/debug_reload
             // names) so this stays a single, reliable signal.
             'tests/complex_audit/**',
+            'tests/audit_suite/**',
             'tests/theory-*.test.mjs',
             'tests/click_errors_editor_audit.test.mjs',
             'tests/debug_reload.test.mjs',

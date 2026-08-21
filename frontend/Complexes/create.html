@@ -7254,6 +7254,82 @@
       editor.innerHTML = renderTheoryDeltaToHtml(delta);
     }
 
+    function extractTheoryInlineAttributes(node, currentAttrs) {
+      if (!node || node.nodeType !== Node.ELEMENT_NODE) {
+        return { ...(currentAttrs || {}) };
+      }
+
+      const nextAttrs = { ...(currentAttrs || {}) };
+      const tag = node.tagName ? node.tagName.toLowerCase() : "";
+      const style = node.style;
+      const styleAttr = node.getAttribute ? String(node.getAttribute("style") || "") : "";
+
+      if (tag === "strong" || tag === "b") nextAttrs.bold = true;
+      if (style && style.fontWeight) {
+        const fw = String(style.fontWeight).toLowerCase().trim();
+        if (fw === "bold" || fw === "bolder") nextAttrs.bold = true;
+        else if (fw === "normal" || fw === "400" || fw === "lighter") delete nextAttrs.bold;
+        else {
+          const num = parseInt(fw, 10);
+          if (!isNaN(num)) {
+            if (num >= 600) nextAttrs.bold = true;
+            else if (num < 500) delete nextAttrs.bold;
+          }
+        }
+      } else if (styleAttr && /font-weight\s*:\s*(bold|bolder|[6-9]00)/i.test(styleAttr)) {
+        nextAttrs.bold = true;
+      } else if (styleAttr && /font-weight\s*:\s*(normal|lighter|[1-4]00)/i.test(styleAttr)) {
+        delete nextAttrs.bold;
+      }
+
+      if (tag === "em" || tag === "i") nextAttrs.italic = true;
+      if (style && style.fontStyle) {
+        const fs = String(style.fontStyle).toLowerCase().trim();
+        if (fs === "italic" || fs === "oblique") nextAttrs.italic = true;
+        else if (fs === "normal") delete nextAttrs.italic;
+      } else if (styleAttr && /font-style\s*:\s*(italic|oblique)/i.test(styleAttr)) {
+        nextAttrs.italic = true;
+      } else if (styleAttr && /font-style\s*:\s*normal/i.test(styleAttr)) {
+        delete nextAttrs.italic;
+      }
+
+      if (tag === "u" || tag === "ins") nextAttrs.underline = true;
+      if (style && (style.textDecoration || style.textDecorationLine)) {
+        const td = String(style.textDecoration || style.textDecorationLine || "").toLowerCase();
+        if (td.includes("underline")) nextAttrs.underline = true;
+        else if (td.includes("none")) delete nextAttrs.underline;
+      } else if (styleAttr && /text-decoration(-line)?\s*:\s*[^;]*underline/i.test(styleAttr)) {
+        nextAttrs.underline = true;
+      }
+
+      if (tag === "s" || tag === "strike" || tag === "del") nextAttrs.strike = true;
+      if (style && (style.textDecoration || style.textDecorationLine)) {
+        const td = String(style.textDecoration || style.textDecorationLine || "").toLowerCase();
+        if (td.includes("line-through")) nextAttrs.strike = true;
+      } else if (styleAttr && /text-decoration(-line)?\s*:\s*[^;]*line-through/i.test(styleAttr)) {
+        nextAttrs.strike = true;
+      }
+
+      if (style && style.color) {
+        const colorVal = String(style.color).trim();
+        if (colorVal && !/^(inherit|initial|unset|transparent)$/i.test(colorVal)) {
+          nextAttrs.color = colorVal;
+        }
+      } else if (tag === "font" && node.getAttribute("color")) {
+        nextAttrs.color = String(node.getAttribute("color")).trim();
+      } else if (styleAttr) {
+        const colorMatch = styleAttr.match(/(?:^|;)\s*color\s*:\s*([^;]+)/i);
+        if (colorMatch && colorMatch[1]) {
+          const rawColor = colorMatch[1].trim();
+          if (!/^(inherit|initial|unset|transparent)$/i.test(rawColor)) {
+            nextAttrs.color = rawColor;
+          }
+        }
+      }
+
+      return nextAttrs;
+    }
+
     function collectTheoryInlineOps(node, attrs, out) {
       if (!node) return;
       if (node.nodeType === Node.TEXT_NODE) {
@@ -7282,11 +7358,7 @@
         return;
       }
 
-      const nextAttrs = { ...(attrs || {}) };
-      if (tag === "strong" || tag === "b") nextAttrs.bold = true;
-      if (tag === "em" || tag === "i") nextAttrs.italic = true;
-      if (tag === "u") nextAttrs.underline = true;
-      if (tag === "s" || tag === "strike") nextAttrs.strike = true;
+      const nextAttrs = extractTheoryInlineAttributes(node, attrs);
 
       for (const child of Array.from(node.childNodes || [])) {
         collectTheoryInlineOps(child, nextAttrs, out);
@@ -7638,12 +7710,7 @@
         return;
       }
 
-      const nextAttrs = { ...(attrs || {}) };
-      if (tag === "strong" || tag === "b") nextAttrs.bold = true;
-      if (tag === "em" || tag === "i") nextAttrs.italic = true;
-      if (tag === "u") nextAttrs.underline = true;
-      if (tag === "s" || tag === "strike") nextAttrs.strike = true;
-      if (tag === "span" && node.style && node.style.color) nextAttrs.color = node.style.color;
+      const nextAttrs = extractTheoryInlineAttributes(node, attrs);
 
       for (const child of Array.from(node.childNodes || [])) {
         collectTheoryInlineOps(child, nextAttrs, out);

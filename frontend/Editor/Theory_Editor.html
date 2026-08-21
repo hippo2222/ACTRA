@@ -469,14 +469,23 @@
             align-items: center;
             justify-content: center;
             gap: 0.4rem;
-            flex: 0 0 auto;
+            flex: 0 1 auto;
+            max-width: 100%;
+            min-width: 0;
             border-radius: 999px;
             border: 1px solid var(--color-border-subtle);
             padding: 0.42rem 0.78rem;
             font-size: 0.75rem;
             font-weight: 700;
-            line-height: 1;
+            line-height: 1.2;
+            box-sizing: border-box;
+        }
+
+        .theory-status-pill__label {
+            overflow: hidden;
+            text-overflow: ellipsis;
             white-space: nowrap;
+            min-width: 0;
         }
 
         .theory-status-pill[data-tone="success"] {
@@ -825,17 +834,17 @@
                     <div class="theory-content-stack flex flex-col">
                         <div id="theory-limit-banner" class="rounded-2xl border border-warning-light bg-warning-light/40 px-4 py-3 text-sm text-warning-darker" hidden></div>
                         <div class="theory-workspace-meta-stack flex flex-col gap-4" data-onboarding-target="theory-editor-workspace-meta">
-                            <div class="theory-section-card flex flex-col gap-3 px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
-                                <div class="min-w-0">
+                            <div class="theory-section-card flex flex-col gap-3 px-4 py-4 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
+                                <div class="min-w-0 max-w-full">
                                     <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-text-muted" data-i18n="the.k014">Материал</p>
-                                    <div class="mt-2 flex flex-wrap items-center gap-2">
+                                    <div class="mt-2 flex flex-wrap items-center gap-2 min-w-0 max-w-full">
                                         <span id="theory-status-pill" class="theory-status-pill" data-tone="muted">
-                                            <span class="material-symbols-outlined text-[16px]">notes</span>
-                                            <span data-i18n="the.k015">Готово к редактированию</span>
+                                            <span class="material-symbols-outlined text-[16px] shrink-0">notes</span>
+                                            <span class="theory-status-pill__label" data-i18n="the.k015">Готово к редактированию</span>
                                         </span>
                                     </div>
                                 </div>
-                                <p class="max-w-xl text-sm text-text-secondary" data-i18n="the.k016">
+                                <p class="max-w-xl text-sm text-text-secondary shrink-0" data-i18n="the.k016">
                                     Здесь вы редактируете сам материал. Использование в темах и комплексах управляется отдельно через Центр теории.
                                 </p>
                             </div>
