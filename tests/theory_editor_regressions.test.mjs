@@ -480,4 +480,143 @@ describe("Theory editor regressions", () => {
         expect(italicBtn.getAttribute("aria-pressed")).toBe("false");
         expect(italicBtn.classList.contains("active")).toBe(false);
     });
+
+    it("preserves spaces between a period and the start of a new sentence across various inline structures", () => {
+        const dom = setupTheoryEditorDom();
+        const {
+            editorHtmlToTheoryDelta,
+            renderTheoryDeltaToEditor,
+        } = dom.window.__theoryEditorTestExports;
+        const editor = dom.window.document.getElementById("theory-editor");
+
+        // 1. Plain text with sentences
+        editor.innerHTML = "<p>Первое предложение. Второе предложение. Третье предложение.</p>";
+        let delta = editorHtmlToTheoryDelta();
+        expect(delta.ops).toEqual([
+            { insert: "Первое предложение. Второе предложение. Третье предложение." },
+            { insert: "\n" },
+        ]);
+        renderTheoryDeltaToEditor(delta);
+        expect(editor.textContent).toBe("Первое предложение. Второе предложение. Третье предложение.");
+
+        // 2. Sentences in separate spans (e.g. styled or pasted from Word)
+        editor.innerHTML = "<p><span>Первое предложение. </span><span>Второе предложение.</span></p>";
+        delta = editorHtmlToTheoryDelta();
+        expect(delta.ops).toEqual([
+            { insert: "Первое предложение. Второе предложение." },
+            { insert: "\n" },
+        ]);
+        renderTheoryDeltaToEditor(delta);
+        expect(editor.textContent).toBe("Первое предложение. Второе предложение.");
+
+        // 3. Space between spans
+        editor.innerHTML = "<p><span>Первое предложение.</span> <span>Второе предложение.</span></p>";
+        delta = editorHtmlToTheoryDelta();
+        expect(delta.ops).toEqual([
+            { insert: "Первое предложение. Второе предложение." },
+            { insert: "\n" },
+        ]);
+        renderTheoryDeltaToEditor(delta);
+        expect(editor.textContent).toBe("Первое предложение. Второе предложение.");
+
+        // 4. Formatted first sentence (bold) followed by normal second sentence
+        editor.innerHTML = "<p><strong>Первое предложение.</strong> Второе предложение.</p>";
+        delta = editorHtmlToTheoryDelta();
+        expect(delta.ops).toEqual([
+            { insert: "Первое предложение.", attributes: { bold: true } },
+            { insert: " Второе предложение." },
+            { insert: "\n" },
+        ]);
+        renderTheoryDeltaToEditor(delta);
+        expect(editor.textContent).toBe("Первое предложение. Второе предложение.");
+
+        // 5. Formatted first sentence with trailing space inside strong
+        editor.innerHTML = "<p><strong>Первое предложение. </strong>Второе предложение.</p>";
+        delta = editorHtmlToTheoryDelta();
+        expect(delta.ops).toEqual([
+            { insert: "Первое предложение. ", attributes: { bold: true } },
+            { insert: "Второе предложение." },
+            { insert: "\n" },
+        ]);
+        renderTheoryDeltaToEditor(delta);
+        expect(editor.textContent).toBe("Первое предложение. Второе предложение.");
+
+        // 6. Normal first sentence followed by formatted second sentence with leading space inside strong
+        editor.innerHTML = "<p>Первое предложение.<strong> Второе предложение.</strong></p>";
+        delta = editorHtmlToTheoryDelta();
+        expect(delta.ops).toEqual([
+            { insert: "Первое предложение." },
+            { insert: " Второе предложение.", attributes: { bold: true } },
+            { insert: "\n" },
+        ]);
+        renderTheoryDeltaToEditor(delta);
+        expect(editor.textContent).toBe("Первое предложение. Второе предложение.");
+
+        // 7. Multi-cycle roundtrip: save -> render -> save -> render
+        const initialHtml = "<p><strong>Глава 1.</strong> Основные понятия. <em>Раздел 2.</em> Подробности.</p>";
+        editor.innerHTML = initialHtml;
+        const delta1 = editorHtmlToTheoryDelta();
+        renderTheoryDeltaToEditor(delta1);
+        const textAfterFirstReload = editor.textContent;
+        expect(textAfterFirstReload).toBe("Глава 1. Основные понятия. Раздел 2. Подробности.");
+
+        const delta2 = editorHtmlToTheoryDelta();
+        renderTheoryDeltaToEditor(delta2);
+        const textAfterSecondReload = editor.textContent;
+        expect(textAfterSecondReload).toBe("Глава 1. Основные понятия. Раздел 2. Подробности.");
+        expect(delta2.ops).toEqual(delta1.ops);
+    });
+
+    it("does not insert extra empty lines or trailing br breaks under heading styles", () => {
+        const dom = setupTheoryEditorDom();
+        const {
+            editorHtmlToTheoryDelta,
+            renderTheoryDeltaToEditor,
+            cleanTheoryWordHtml,
+        } = dom.window.__theoryEditorTestExports;
+        const editor = dom.window.document.getElementById("theory-editor");
+
+        // 1. Heading with browser trailing <br> placeholder
+        editor.innerHTML = "<h1>Заголовок раздела<br></h1><p>Текст первого абзаца</p>";
+        let delta = editorHtmlToTheoryDelta();
+        expect(delta.ops).toEqual([
+            { insert: "Заголовок раздела" },
+            { insert: "\n", attributes: { header: 1 } },
+            { insert: "Текст первого абзаца" },
+            { insert: "\n" },
+        ]);
+        renderTheoryDeltaToEditor(delta);
+        expect(editor.innerHTML).toBe("<h1>Заголовок раздела</h1><p>Текст первого абзаца</p>");
+
+        // 2. Multi-cycle roundtrip stability for headings (no phantom empty paragraphs or breaks)
+        for (let i = 0; i < 3; i++) {
+            delta = editorHtmlToTheoryDelta();
+            renderTheoryDeltaToEditor(delta);
+        }
+        expect(editor.innerHTML).toBe("<h1>Заголовок раздела</h1><p>Текст первого абзаца</p>");
+        expect(delta.ops).toEqual([
+            { insert: "Заголовок раздела" },
+            { insert: "\n", attributes: { header: 1 } },
+            { insert: "Текст первого абзаца" },
+            { insert: "\n" },
+        ]);
+
+        // 3. Word heading and post-heading empty spacing paragraph cleanup
+        const wordHtml = `
+            <p class="MsoHeading1"><span>Основной заголовок</span></p>
+            <p class="MsoNormal"><span lang="RU">&nbsp;</span></p>
+            <p class="MsoNormal"><span>Содержимое раздела</span></p>
+        `;
+        const cleaned = cleanTheoryWordHtml(wordHtml);
+        editor.innerHTML = cleaned;
+        delta = editorHtmlToTheoryDelta();
+        expect(delta.ops).toEqual([
+            { insert: "Основной заголовок" },
+            { insert: "\n", attributes: { header: 1 } },
+            { insert: "Содержимое раздела" },
+            { insert: "\n" },
+        ]);
+        renderTheoryDeltaToEditor(delta);
+        expect(editor.innerHTML).toBe("<h1>Основной заголовок</h1><p>Содержимое раздела</p>");
+    });
 });

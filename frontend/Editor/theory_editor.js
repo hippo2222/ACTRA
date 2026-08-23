@@ -1609,37 +1609,27 @@ function extractTheoryInlineAttributes(node, currentAttrs) {
     return nextAttrs;
 }
 
+function areTheoryAttributesEqual(a, b) {
+    const aObj = a && typeof a === "object" ? a : {};
+    const bObj = b && typeof b === "object" ? b : {};
+    const aKeys = Object.keys(aObj);
+    const bKeys = Object.keys(bObj);
+    if (aKeys.length !== bKeys.length) return false;
+    for (const key of aKeys) {
+        if (aObj[key] !== bObj[key]) return false;
+    }
+    return true;
+}
+
 function collectTheoryInlineOps(node, attrs, out) {
     if (!node) return;
     if (node.nodeType === Node.TEXT_NODE) {
         let text = node.nodeValue || "";
         if (!text) return;
-        const siblingNodes = Array.from(node.parentNode?.childNodes || []);
-        const currentIndex = siblingNodes.indexOf(node);
-        const previousMeaningfulSibling = siblingNodes
-            .slice(0, currentIndex)
-            .reverse()
-            .find((sibling) => String(sibling?.textContent || "").trim());
-        const nextMeaningfulSibling = siblingNodes
-            .slice(currentIndex + 1)
-            .find((sibling) => String(sibling?.textContent || "").trim());
-        if (!text.trim()) {
-            if (!previousMeaningfulSibling || !nextMeaningfulSibling) {
-                return;
-            }
-            text = " ";
-        }
-        // Normalize: internal newlines in text nodes should not trigger block breaks
-        text = text.replace(/[\n\r]+/g, " ");
-        if (!previousMeaningfulSibling) {
-            text = text.replace(/^[\s\u00a0]+/, "");
-        }
-        if (!nextMeaningfulSibling) {
-            text = text.replace(/[\s\u00a0]+$/, "");
-        }
+        text = text.replace(/[\r\n]+/g, " ");
         if (!text) return;
         const op = { insert: text };
-        if (attrs && Object.keys(attrs).length) op.attributes = attrs;
+        if (attrs && Object.keys(attrs).length) op.attributes = { ...attrs };
         out.push(op);
         return;
     }
@@ -1670,6 +1660,9 @@ function collectTheoryInlineOps(node, attrs, out) {
         return;
     }
     if (tag === "br") {
+        if (!node.nextSibling) {
+            return;
+        }
         out.push({ insert: "\r" });
         return;
     }
@@ -1899,6 +1892,37 @@ function cleanTheoryWordHtml(html) {
         }
     });
 
+    // Convert Word heading classes (MsoHeading1..6, Heading1..6) to h1..h6
+    const headingCandidates = Array.from(doc.body.querySelectorAll("p, div"));
+    headingCandidates.forEach(el => {
+        const cls = String(el.getAttribute("class") || "");
+        const match = cls.match(/(?:MsoHeading|Heading)([1-6])/i);
+        if (match) {
+            const level = match[1];
+            const h = doc.createElement(`h${level}`);
+            while (el.firstChild) {
+                h.appendChild(el.firstChild);
+            }
+            el.parentNode.replaceChild(h, el);
+        }
+    });
+
+    // Remove Word's empty spacing paragraphs immediately following headings
+    const headings = doc.body.querySelectorAll("h1, h2, h3, h4, h5, h6");
+    headings.forEach(heading => {
+        let next = heading.nextElementSibling;
+        while (next && (next.tagName.toLowerCase() === "p" || next.tagName.toLowerCase() === "div")) {
+            const text = (next.textContent || "").replace(/[\s\u00a0\u200b]+/g, "");
+            if (!text && !next.querySelector("img")) {
+                const toRemove = next;
+                next = next.nextElementSibling;
+                toRemove.remove();
+            } else {
+                break;
+            }
+        }
+    });
+
     // 2. Clean attributes and promote nested blocks
     const promoteBlocks = ["p", "div", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "blockquote"];
     
@@ -1970,17 +1994,49 @@ function editorHtmlToTheoryDelta() {
     const editor = document.getElementById("theory-editor");
     if (!editor) return { ops: [{ insert: "\n" }] };
     const ops = [];
+    const blockTags = new Set(["p", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "li", "blockquote"]);
+
+    const emitBlock = (nodeOrArray, lineAttrs = {}) => {
+        const blockOps = [];
+        if (Array.isArray(nodeOrArray)) {
+            nodeOrArray.forEach(n => collectTheoryInlineOps(n, {}, blockOps));
+        } else {
+            collectTheoryInlineOps(nodeOrArray, {}, blockOps);
+        }
+
+        // Trim leading whitespace only from the very first text op of the block
+        for (let i = 0; i < blockOps.length; i++) {
+            if (typeof blockOps[i].insert === "string") {
+                blockOps[i].insert = blockOps[i].insert.replace(/^ +/, "");
+                if (blockOps[i].insert.length > 0) break;
+            }
+        }
+        // Trim trailing whitespace only from the very last text op of the block
+        for (let i = blockOps.length - 1; i >= 0; i--) {
+            if (typeof blockOps[i].insert === "string") {
+                blockOps[i].insert = blockOps[i].insert.replace(/ +$/, "");
+                if (blockOps[i].insert.length > 0) break;
+            }
+        }
+
+        for (const op of blockOps) {
+            if (typeof op.insert === "string" && op.insert.length === 0) continue;
+            ops.push(op);
+        }
+
+        if (Object.keys(lineAttrs).length > 0) {
+            ops.push({ insert: "\n", attributes: lineAttrs });
+        } else {
+            ops.push({ insert: "\n" });
+        }
+    };
 
     function processNodes(nodesToProcess) {
-        const blockTags = new Set(["p", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "li", "blockquote"]);
         let inlineBuffer = [];
 
         const flushInlineBuffer = () => {
             if (inlineBuffer.length > 0) {
-                inlineBuffer.forEach(node => {
-                    collectTheoryInlineOps(node, {}, ops);
-                });
-                ops.push({ insert: "\n" });
+                emitBlock(inlineBuffer);
                 inlineBuffer = [];
             }
         };
@@ -2011,10 +2067,9 @@ function editorHtmlToTheoryDelta() {
                             (child) => child.tagName && child.tagName.toLowerCase() === "li"
                         );
                         for (const li of items) {
-                            collectTheoryInlineOps(li, {}, ops);
                             const liAttrs = { list: listType };
                             if (li.style.textAlign) liAttrs.align = li.style.textAlign;
-                            ops.push({ insert: "\n", attributes: liAttrs });
+                            emitBlock(li, liAttrs);
                         }
                     } else {
                         const lineAttrs = {};
@@ -2023,8 +2078,7 @@ function editorHtmlToTheoryDelta() {
                         if (tag === "blockquote") lineAttrs.blockquote = true;
                         if (node.style.textAlign) lineAttrs.align = node.style.textAlign;
 
-                        collectTheoryInlineOps(node, {}, ops);
-                        ops.push(Object.keys(lineAttrs).length ? { insert: "\n", attributes: lineAttrs } : { insert: "\n" });
+                        emitBlock(node, lineAttrs);
                     }
                     continue;
                 }
@@ -2032,8 +2086,17 @@ function editorHtmlToTheoryDelta() {
                 // Any other element is treated as inline
                 inlineBuffer.push(node);
             } else if (node.nodeType === Node.TEXT_NODE) {
-                if (!String(node.nodeValue || "").trim()) {
-                    continue;
+                const text = node.nodeValue || "";
+                if (!text) continue;
+                const isWhitespace = !text.trim();
+                if (isWhitespace && inlineBuffer.length === 0) {
+                    const currentIndex = nodesToProcess.indexOf(node);
+                    const remainingNodes = nodesToProcess.slice(currentIndex + 1);
+                    const nextMeaningful = remainingNodes.find(n => n.nodeType === Node.ELEMENT_NODE || String(n.nodeValue || "").trim());
+                    const isNextBlock = nextMeaningful && nextMeaningful.nodeType === Node.ELEMENT_NODE && (blockTags.has(nextMeaningful.tagName.toLowerCase()) || nextMeaningful.tagName.toLowerCase() === "div");
+                    if (!nextMeaningful || isNextBlock) {
+                        continue;
+                    }
                 }
                 inlineBuffer.push(node);
             }
@@ -2065,7 +2128,23 @@ function editorHtmlToTheoryDelta() {
             continue;
         }
         if (typeof op.insert !== "string") continue;
-        normalized.push(op);
+        if (op.insert === "") continue;
+
+        const lastOp = normalized[normalized.length - 1];
+        const isOpNewline = op.insert === "\n";
+        const isLastOpNewline = lastOp && typeof lastOp.insert === "string" && lastOp.insert.endsWith("\n");
+
+        if (
+            lastOp &&
+            typeof lastOp.insert === "string" &&
+            !isOpNewline &&
+            !isLastOpNewline &&
+            areTheoryAttributesEqual(lastOp.attributes, op.attributes)
+        ) {
+            lastOp.insert += op.insert;
+        } else {
+            normalized.push(op);
+        }
     }
 
     return normalized.length ? { ops: normalized } : { ops: [{ insert: "\n" }] };
