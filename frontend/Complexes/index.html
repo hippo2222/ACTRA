@@ -2239,6 +2239,224 @@
             };
           }
 
+          function normalizeTheoryViewerImageRef(raw) {
+            let value = String(raw || "").trim();
+            if (!value) return "";
+            if (value.startsWith("/api/local-image?")) {
+              try {
+                const parsed = new URL(value, window.location.origin);
+                const assetId = String(parsed.searchParams.get("asset_id") || "").trim();
+                if (assetId) {
+                  return `/api/assets/${encodeURIComponent(assetId)}/content`;
+                }
+                value = String(parsed.searchParams.get("path") || "").trim();
+                if (!value) return "";
+              } catch {
+                return "";
+              }
+            }
+            if (/^(https?:|data:|blob:|\/api\/|\/assets\/)/i.test(value)) return value;
+            return `/api/local-image?path=${encodeURIComponent(value)}`;
+          }
+
+          function renderTheoryDeltaHtml(delta) {
+            const ops = Array.isArray(delta?.ops) ? delta.ops : [];
+            let html = "";
+            let paragraph = "";
+            const flushParagraph = () => {
+              const text = paragraph.trim();
+              if (text) {
+                html += `<p style="margin:0 0 1rem 0;line-height:1.7;color:var(--color-text-main);">${text}</p>`;
+              }
+              paragraph = "";
+            };
+            ops.forEach((op) => {
+              const insert = op?.insert;
+              const attrs = op?.attributes && typeof op.attributes === "object" ? op.attributes : {};
+              if (insert && typeof insert === "object" && insert.image) {
+                flushParagraph();
+                const src = normalizeTheoryViewerImageRef(insert.image);
+                if (src) {
+                  const align = ["left", "center", "right"].includes(String(attrs.align || "").trim()) ? String(attrs.align).trim() : "left";
+                  const width = String(attrs.width || "min(100%, 680px)").trim() || "min(100%, 680px)";
+                  const wrapperAlign = align === "center" ? "center" : align === "right" ? "flex-end" : "flex-start";
+                  html += `<div style="display:flex;justify-content:${wrapperAlign};margin:0 0 1rem 0;"><img src="${escapeHtml(src)}" alt="" style="display:block;max-width:${escapeHtml(width)};width:${escapeHtml(width)};border-radius:14px;box-shadow:var(--shadow-sm);"></div>`;
+                }
+                return;
+              }
+              if (typeof insert !== "string") return;
+              const fragments = insert.split("\n");
+              fragments.forEach((part, index) => {
+                if (part) {
+                  const hasFormatting = Boolean(attrs.bold || attrs.italic || attrs.underline);
+                  if (!hasFormatting) {
+                    paragraph += escapeHtml(part);
+                  } else {
+                    const match = part.match(/^(\s*)([\s\S]*?)(\s*)$/);
+                    const leading = match ? match[1] : "";
+                    const core = match ? match[2] : part;
+                    const trailing = match ? match[3] : "";
+                    if (!core) {
+                      paragraph += escapeHtml(part);
+                    } else {
+                      let text = escapeHtml(core);
+                      if (attrs.bold) text = `<strong>${text}</strong>`;
+                      if (attrs.italic) text = `<em>${text}</em>`;
+                      if (attrs.underline) text = `<u>${text}</u>`;
+                      paragraph += escapeHtml(leading) + text + escapeHtml(trailing);
+                    }
+                  }
+                }
+                if (index < fragments.length - 1) {
+                  flushParagraph();
+                }
+              });
+            });
+            flushParagraph();
+            return html || `<p style="margin:0;color:var(--color-text-secondary);">${wt('complexes.theory_empty_content', 'Контент теории пока недоступен.')}</p>`;
+          }
+
+          async function openComplexTheoryViewer(complexName, theoryIds, options = {}) {
+            const rawIds = Array.isArray(theoryIds) ? theoryIds : [theoryIds];
+            const ids = rawIds.map((id) => String(id || "").trim()).filter(Boolean);
+            const embeddedItems = Array.isArray(options?.embeddedTheoryItems) ? options.embeddedTheoryItems : [];
+            const singleEmbedded = options?.embeddedTheoryItem || null;
+
+            const existing = document.getElementById("complex-theory-viewer-dialog");
+            if (existing) existing.remove();
+
+            const loadedTheories = [];
+            if (singleEmbedded) {
+              loadedTheories.push(singleEmbedded);
+            } else {
+              for (const id of ids) {
+                const found = embeddedItems.find((item) => String(item.theoryId || item.id || "").trim() === id);
+                if (found) {
+                  loadedTheories.push(found);
+                  continue;
+                }
+                if (id.startsWith("linked:")) {
+                  const libraryEntryId = id.replace(/^linked:/, "");
+                  try {
+                    const linkedItem = await fetchLinkedTheoryEmbeddedItem(libraryEntryId);
+                    if (linkedItem) loadedTheories.push(linkedItem);
+                  } catch (e) {
+                    console.warn("Failed to load linked theory", id, e);
+                  }
+                  continue;
+                }
+                try {
+                  const resp = await fetch(`/api/theories/${encodeURIComponent(id)}`);
+                  const data = await resp.json();
+                  if (resp.ok && data?.ok && data?.item) {
+                    loadedTheories.push(data.item);
+                  }
+                } catch (e) {
+                  console.warn("Failed to fetch theory", id, e);
+                }
+              }
+            }
+
+            if (!loadedTheories.length) {
+              showComplexVoiceToast({
+                severity: "warning",
+                what: wt('complexes.theory_not_found_what', 'Теория не найдена.'),
+                impact: wt('complexes.theory_not_found_impact', 'Не удалось загрузить данные теоретического материала.'),
+                next: wt('complexes.theory_not_found_next', 'Проверьте наличие теории в редакторе.'),
+              });
+              return;
+            }
+
+            const isComposite = loadedTheories.length > 1;
+            let activeIndex = 0;
+
+            const dialog = document.createElement("dialog");
+            dialog.id = "complex-theory-viewer-dialog";
+            dialog.className = "fixed inset-0 z-[1300] m-auto flex h-full max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-[24px] border border-border-subtle bg-surface-1 shadow-2xl backdrop:bg-scrim backdrop:backdrop-blur-sm p-0";
+
+            const renderContent = () => {
+              const currentTheory = loadedTheories[activeIndex] || loadedTheories[0];
+              const deltaHtml = renderTheoryDeltaHtml(currentTheory.delta);
+              const theoryTitle = currentTheory.title || wt('complexes.theory_title_fallback', 'Теория');
+              const updatedAt = currentTheory.updated_at ? formatDateLabel(currentTheory.updated_at) : '—';
+
+              const tabsHtml = isComposite
+                ? `
+                  <div class="flex items-center gap-2 border-b border-border-subtle bg-bg-secondary px-6 py-2.5 overflow-x-auto">
+                    <span class="text-xs font-bold uppercase tracking-wider text-text-muted mr-1">${wt('complexes.theories_tabs_label', 'Разделы:')}</span>
+                    ${loadedTheories.map((th, idx) => `
+                      <button type="button" data-tab-idx="${idx}" class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${idx === activeIndex ? 'bg-primary text-white shadow-sm' : 'bg-surface-1 text-text-secondary hover:bg-bg-tertiary hover:text-text-main border border-border-subtle'}">
+                        <span class="material-symbols-outlined text-[14px]">menu_book</span>
+                        <span class="truncate max-w-[160px]">${escapeHtml(th.title || `${wt('complexes.tab_prefix', 'Теория')} ${idx + 1}`)}</span>
+                      </button>
+                    `).join('')}
+                  </div>
+                `
+                : '';
+
+              dialog.innerHTML = `
+                <div class="flex items-start justify-between gap-4 border-b border-border-subtle bg-bg-secondary px-6 py-4 flex-shrink-0">
+                  <div class="min-w-0 space-y-1">
+                    <div class="flex items-center gap-2">
+                      <span class="material-symbols-outlined text-[18px] text-primary">menu_book</span>
+                      <h3 class="text-lg font-bold text-text-main truncate">${escapeHtml(theoryTitle)}</h3>
+                    </div>
+                    <div class="flex items-center gap-2 text-xs text-text-secondary flex-wrap">
+                      ${complexName ? `<span class="inline-flex items-center gap-1 font-medium"><span class="material-symbols-outlined text-[14px]">folder</span>${escapeHtml(complexName)}</span><span>•</span>` : ''}
+                      <span class="inline-flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">schedule</span>${wt('complexes.updated_at_label', 'Обновлено:')} ${escapeHtml(updatedAt)}</span>
+                    </div>
+                  </div>
+                  <button type="button" data-action="close" class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-text-muted hover:bg-bg-tertiary hover:text-text-main transition-colors flex-shrink-0" aria-label="${wt('complexes.close_btn', 'Закрыть')}">
+                    <span class="material-symbols-outlined">close</span>
+                  </button>
+                </div>
+                ${tabsHtml}
+                <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4">
+                  <div class="mx-auto max-w-3xl leading-relaxed text-text-main text-[0.9375rem]">${deltaHtml}</div>
+                </div>
+                <div class="flex items-center justify-end border-t border-border-subtle bg-surface-1 px-6 py-3 flex-shrink-0">
+                  <button type="button" data-action="close" class="btn-secondary inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg">
+                    <span>${wt('complexes.close_btn', 'Закрыть')}</span>
+                  </button>
+                </div>
+              `;
+
+              dialog.querySelectorAll('[data-action="close"]').forEach((btn) => {
+                btn.addEventListener("click", () => close());
+              });
+
+              if (isComposite) {
+                dialog.querySelectorAll('[data-tab-idx]').forEach((btn) => {
+                  btn.addEventListener("click", () => {
+                    activeIndex = parseInt(btn.getAttribute("data-tab-idx"), 10) || 0;
+                    renderContent();
+                  });
+                });
+              }
+            };
+
+            document.body.appendChild(dialog);
+            renderContent();
+            dialog.showModal();
+
+            const close = () => {
+              dialog.close();
+              dialog.remove();
+            };
+
+            dialog.addEventListener("click", (e) => {
+              if (e.target === dialog) close();
+            });
+            dialog.addEventListener("cancel", (e) => {
+              e.preventDefault();
+              close();
+            });
+          }
+
+          async function openTheoryModal(complexName, theoryId, options = {}) {
+            return openComplexTheoryViewer(complexName, theoryId, options);
+          }
+
           function applyLinkedDetailButtonState(btn, expanded) {
             if (!btn) return;
             const linkedActionKey = btn.getAttribute("data-linked-action-key") || "";

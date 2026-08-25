@@ -2467,7 +2467,10 @@
     }
 
     .cx-publish-modal-panel {
-      max-width: min(1120px, calc(100vw - 2rem));
+      max-width: min(1080px, calc(100vw - 2rem));
+      border-radius: 1.25rem;
+      border: 1px solid var(--color-border-subtle);
+      box-shadow: 0 24px 60px -12px rgba(0, 0, 0, 0.4);
     }
 
     .cx-publish-modal-body {
@@ -2475,16 +2478,80 @@
     }
 
     .cx-publish-visibility-grid {
-      grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+      gap: 0.75rem;
     }
 
     .cx-publish-visibility-card {
-      min-height: 7.25rem;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 8.25rem;
+      border: 1.5px solid var(--color-border-subtle);
+      border-radius: 1rem;
+      padding: 1.125rem 1rem;
+      background: var(--color-surface-1);
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .cx-publish-visibility-card:hover {
+      border-color: var(--color-primary-light);
+      background: var(--color-bg-secondary);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+
+    .cx-publish-visibility-card:has(input[type="radio"]:checked) {
+      border-color: var(--color-primary);
+      background: var(--color-surface-1);
+      box-shadow: 0 0 0 1px var(--color-primary), 0 4px 14px rgba(99, 102, 241, 0.12);
+    }
+
+    .cx-publish-visibility-card input[type="radio"] {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .cx-publish-card-radio-indicator {
+      width: 1.25rem;
+      height: 1.25rem;
+      border-radius: 9999px;
+      border: 1.5px solid var(--color-border-strong);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+      flex-shrink: 0;
+    }
+
+    .cx-publish-visibility-card:has(input[type="radio"]:checked) .cx-publish-card-radio-indicator {
+      border-color: var(--color-primary);
+      background: var(--color-primary);
+    }
+
+    .cx-publish-card-radio-indicator::after {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 9999px;
+      background: #ffffff;
+      opacity: 0;
+      transform: scale(0.5);
+      transition: all 0.15s ease;
+    }
+
+    .cx-publish-visibility-card:has(input[type="radio"]:checked) .cx-publish-card-radio-indicator::after {
+      opacity: 1;
+      transform: scale(1);
     }
 
     @media (min-width: 1024px) {
       .cx-publish-modal-body {
-        grid-template-columns: minmax(0, 1.55fr) minmax(320px, 0.95fr);
+        grid-template-columns: minmax(0, 1.45fr) minmax(320px, 1.05fr);
       }
     }
 
@@ -4052,23 +4119,48 @@
           wt('create.pub_info_new_3', 'Если после публикации вы измените комплекс в редакторе, эти правки станут видны другим пользователям только после публикации новой версии.'),
         ];
 
+      const visibilityOptions = [
+        {
+          key: 'public',
+          icon: 'travel_explore',
+          iconBg: 'bg-primary/10 text-primary',
+          badgeTone: 'cx-mini-pill--success',
+        },
+        {
+          key: 'access_code',
+          icon: 'vpn_key',
+          iconBg: 'bg-indigo-500/10 text-indigo-500',
+          badgeTone: 'cx-mini-pill--info',
+        },
+        {
+          key: 'private',
+          icon: 'lock',
+          iconBg: 'bg-amber-500/10 text-amber-500',
+          badgeTone: 'cx-mini-pill--warning',
+        },
+      ];
+
       const modal = document.createElement('div');
 
       modal.className = 'cx-modal-scrim fixed inset-0 z-[9999] overflow-y-auto bg-scrim p-4 sm:p-6';
 
       modal.innerHTML = `
         <div class="min-h-full w-full flex items-start justify-center py-4 sm:py-8">
-        <div class="cx-dark-modal-panel cx-publish-modal-panel bg-surface-1 rounded-xl shadow-xl w-full border border-border-subtle overflow-hidden">
-          <div class="flex items-start justify-between gap-4 px-6 py-5 border-b border-border-subtle">
-            <div class="space-y-1 max-w-3xl">
-              <div class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-text-muted">
-                <span class="material-symbols-outlined text-[16px]">public</span>
-                ${wt('create.publication_complex_title', 'Публикация комплекса')}
+        <div class="cx-dark-modal-panel cx-publish-modal-panel bg-surface-1 rounded-2xl shadow-2xl w-full border border-border-subtle overflow-hidden">
+          <div class="flex items-start justify-between gap-4 px-6 py-5 border-b border-border-subtle bg-bg-secondary/40">
+            <div class="flex items-start gap-3.5 max-w-3xl">
+              <div class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20 shadow-sm mt-0.5">
+                <span class="material-symbols-outlined text-[22px]">rocket_launch</span>
               </div>
-              <h3 class="text-xl font-bold text-text-main">${escapeHtml(asCleanString(document.getElementById('name')?.value) || wt('create.no_title', 'Без названия'))}</h3>
-              <p class="text-sm text-text-secondary">${escapeHtml(publishIntroText)}</p>
+              <div class="space-y-1">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h3 class="text-lg font-bold text-text-main">${wt('create.publication_complex_title', 'Публикация комплекса')}</h3>
+                  <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-surface-1 border border-border-subtle text-text-secondary truncate max-w-xs">${escapeHtml(asCleanString(document.getElementById('name')?.value) || wt('create.no_title', 'Без названия'))}</span>
+                </div>
+                <p class="text-xs text-text-secondary leading-relaxed">${escapeHtml(publishIntroText)}</p>
+              </div>
             </div>
-            <button type="button" data-action="close" class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-text-muted hover:bg-bg-tertiary hover:text-text-main transition-colors">
+            <button type="button" data-action="close" class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-text-muted hover:bg-bg-tertiary hover:text-text-main transition-colors" aria-label="${wt('create.close_btn', 'Закрыть')}">
               <span class="material-symbols-outlined">close</span>
             </button>
           </div>
@@ -4077,28 +4169,35 @@
               <div class="rounded-xl border border-border-subtle bg-bg-secondary p-4">
                 <div class="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <div class="text-xs font-semibold uppercase tracking-[0.16em] text-text-muted">${wt('create.current_status', 'Текущий статус')}</div>
-                    <div id="complex-publish-current-status" class="mt-1 text-base font-semibold text-text-main">${publication ? escapeHtml(getCatalogVisibilityLabel(currentVisibility)) : wt('create.not_published', 'Не опубликован')}</div>
-                    <div id="complex-publish-current-meta" class="mt-1 text-sm text-text-secondary">${publication ? `${wt('create.last_pub_prefix', 'Последняя публикация')}: ${escapeHtml(formatPublicationTimestamp(publication.latest_published_at))}` : wt('create.first_pub_note', 'После первой публикации комплекс появится в каталожной системе.')}</div>
+                    <div class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-text-muted">
+                      <span class="material-symbols-outlined text-[15px]">info</span>
+                      ${wt('create.current_status', 'Текущий статус')}
+                    </div>
+                    <div id="complex-publish-current-status" class="mt-1 text-base font-bold text-text-main">${publication ? escapeHtml(getCatalogVisibilityLabel(currentVisibility)) : wt('create.not_published', 'Не опубликован')}</div>
+                    <div id="complex-publish-current-meta" class="mt-1 text-xs text-text-secondary">${publication ? `${wt('create.last_pub_prefix', 'Последняя публикация')}: ${escapeHtml(formatPublicationTimestamp(publication.latest_published_at))}` : wt('create.first_pub_note', 'После первой публикации комплекс появится в каталожной системе.')}</div>
                   </div>
-                  <span id="complex-publish-current-badge" class="cx-mini-pill ${publication ? getCatalogVisibilityToneClass(currentVisibility) : 'cx-mini-pill--muted'} px-2.5 py-1 text-xs font-semibold rounded-full">${publication ? escapeHtml(getCatalogVisibilityLabel(currentVisibility)) : wt('create.not_published', 'Не опубликован')}</span>
+                  <span id="complex-publish-current-badge" class="cx-mini-pill ${publication ? getCatalogVisibilityToneClass(currentVisibility) : 'cx-mini-pill--muted'} px-3 py-1 text-xs font-bold rounded-full">${publication ? escapeHtml(getCatalogVisibilityLabel(currentVisibility)) : wt('create.not_published', 'Не опубликован')}</span>
                 </div>
               </div>
 
               <div class="space-y-3">
                 <div>
-                  <div class="text-sm font-semibold text-text-main">${wt('create.who_has_access', 'Кому будет доступен комплекс')}</div>
-                  <p class="mt-1 text-sm text-text-secondary">${escapeHtml(visibilityHelpText)}</p>
+                  <div class="text-sm font-bold text-text-main">${wt('create.who_has_access', 'Кому будет доступен комплекс')}</div>
+                  <p class="mt-0.5 text-xs text-text-secondary leading-relaxed">${escapeHtml(visibilityHelpText)}</p>
                 </div>
                 <div class="cx-publish-visibility-grid grid gap-3">
-                  ${['public', 'access_code', 'private'].map((visibility) => `
-                    <label class="cx-publish-visibility-card rounded-xl border border-border-subtle bg-surface-1 p-4 hover:border-primary-light transition-colors ${archivedSource && isCatalogVisibilityExpansion(currentVisibility, visibility) ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}">
-                      <div class="flex items-start gap-3">
-                        <input type="radio" name="complex-publish-visibility" value="${visibility}" ${visibility === currentVisibility ? 'checked' : ''} ${archivedSource && isCatalogVisibilityExpansion(currentVisibility, visibility) ? 'disabled' : ''} class="mt-1 h-4 w-4 text-primary" />
-                        <div class="space-y-1 min-w-0">
-                          <div class="text-sm font-semibold text-text-main">${escapeHtml(getCatalogVisibilityLabel(visibility))}</div>
-                          <div class="text-sm text-text-secondary">${escapeHtml(getCatalogVisibilityDescription(visibility))}</div>
+                  ${visibilityOptions.map(({ key, icon, iconBg }) => `
+                    <label class="cx-publish-visibility-card ${archivedSource && isCatalogVisibilityExpansion(currentVisibility, key) ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}">
+                      <input type="radio" name="complex-publish-visibility" value="${key}" ${key === currentVisibility ? 'checked' : ''} ${archivedSource && isCatalogVisibilityExpansion(currentVisibility, key) ? 'disabled' : ''} />
+                      <div class="flex items-center justify-between gap-2 mb-2">
+                        <div class="inline-flex h-8 w-8 items-center justify-center rounded-lg ${iconBg}">
+                          <span class="material-symbols-outlined text-[18px]">${icon}</span>
                         </div>
+                        <div class="cx-publish-card-radio-indicator"></div>
+                      </div>
+                      <div class="space-y-1 min-w-0 flex-1">
+                        <div class="text-sm font-bold text-text-main">${escapeHtml(getCatalogVisibilityLabel(key))}</div>
+                        <div class="text-xs text-text-secondary leading-snug">${escapeHtml(getCatalogVisibilityDescription(key))}</div>
                       </div>
                     </label>
                   `).join('')}
@@ -4107,47 +4206,57 @@
             </div>
 
             <div class="space-y-4">
-              <div id="complex-publish-access-box" class="rounded-xl border border-border-subtle bg-bg-secondary p-4 ${accessCode ? '' : 'hidden'}">
+              <div id="complex-publish-access-box" class="rounded-xl border border-primary/30 bg-primary-lighter/20 p-4 ${accessCode ? '' : 'hidden'} transition-all">
                 <div class="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <div class="text-xs font-semibold uppercase tracking-[0.16em] text-text-muted">${wt('create.access_code_label', 'Код доступа')}</div>
-                    <div id="complex-publish-access-code" class="mt-1 text-base font-semibold tracking-[0.12em] text-text-main">${escapeHtml(accessCode ? formatAccessCodeDisplay(accessCode) : wt('create.code_will_be_created', 'Код будет создан после публикации'))}</div>
+                    <div class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-text-muted">
+                      <span class="material-symbols-outlined text-[15px] text-primary">key</span>
+                      ${wt('create.access_code_label', 'Код доступа')}
+                    </div>
+                    <div id="complex-publish-access-code" class="mt-1 font-mono text-base font-bold tracking-[0.14em] text-text-main">${escapeHtml(accessCode ? formatAccessCodeDisplay(accessCode) : wt('create.code_will_be_created', 'Код будет создан после публикации'))}</div>
                   </div>
-                  <button type="button" data-action="copy-access-code" class="btn-secondary inline-flex items-center gap-2 px-3 py-2 text-sm">
-                    <span class="material-symbols-outlined text-[18px]">content_copy</span>
+                  <button type="button" data-action="copy-access-code" class="btn-secondary inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg">
+                    <span class="material-symbols-outlined text-[16px]">content_copy</span>
                     <span>${wt('create.copy_btn', 'Копировать')}</span>
                   </button>
                 </div>
               </div>
 
               <div class="rounded-xl border border-border-subtle bg-bg-secondary p-4">
-                <div>
-                  <div class="text-xs font-semibold uppercase tracking-[0.16em] text-text-muted">${escapeHtml(publicationInfoTitle)}</div>
-                  <ul class="mt-2 space-y-2 text-sm text-text-secondary">
-                    ${publicationInfoItems.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}
-                  </ul>
+                <div class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-text-muted mb-2">
+                  <span class="material-symbols-outlined text-[15px]">help_outline</span>
+                  ${escapeHtml(publicationInfoTitle)}
                 </div>
+                <ul class="space-y-2 text-xs text-text-secondary leading-relaxed">
+                  ${publicationInfoItems.map((item) => `
+                    <li class="flex items-start gap-2">
+                      <span class="material-symbols-outlined text-[14px] text-primary shrink-0 mt-0.5">check_circle</span>
+                      <span>${escapeHtml(item)}</span>
+                    </li>
+                  `).join('')}
+                </ul>
               </div>
 
-              <div id="complex-publish-unsaved-note" class="${state.isDirty ? '' : 'hidden'} rounded-xl border border-warning-light bg-warning-light/40 px-4 py-3 text-sm text-warning-darker">
-                ${wt('create.unsaved_pub_note', 'Есть несохранённые изменения. В публикацию попадёт последняя сохранённая версия комплекса.')}
+              <div id="complex-publish-unsaved-note" class="${state.isDirty ? '' : 'hidden'} rounded-xl border border-warning-light bg-warning-light/40 px-4 py-3 text-xs text-warning-darker flex items-start gap-2">
+                <span class="material-symbols-outlined text-[16px] shrink-0 mt-0.5">warning</span>
+                <span>${wt('create.unsaved_pub_note', 'Есть несохранённые изменения. В публикацию попадёт последняя сохранённая версия комплекса.')}</span>
               </div>
 
-              <div id="complex-publish-feedback" class="hidden rounded-xl border px-4 py-3 text-sm"></div>
+              <div id="complex-publish-feedback" class="hidden rounded-xl border px-4 py-3 text-xs"></div>
             </div>
           </div>
           <div class="cx-publish-modal-footer flex flex-wrap items-center justify-between gap-3 border-t border-border-subtle bg-surface-1 px-6 py-4">
-            <button type="button" data-action="close" class="btn-secondary inline-flex items-center gap-2 px-4 py-2 text-sm">
-              <span class="material-symbols-outlined text-[18px]">close</span>
+            <button type="button" data-action="close" class="btn-secondary inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg">
+              <span class="material-symbols-outlined text-[16px]">close</span>
               <span>${wt('create.close_btn', 'Закрыть')}</span>
             </button>
             <div class="cx-publish-modal-actions flex flex-wrap items-center gap-2">
-              <button type="button" data-action="update-visibility" class="btn-secondary inline-flex items-center gap-2 px-4 py-2 text-sm ${hasPublication ? '' : 'hidden'}">
-                <span class="material-symbols-outlined text-[18px]">tune</span>
+              <button type="button" data-action="update-visibility" class="btn-secondary inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg ${hasPublication ? '' : 'hidden'}">
+                <span class="material-symbols-outlined text-[16px]">tune</span>
                 <span>${wt('create.save_access_btn', 'Сохранить доступ')}</span>
               </button>
-              <button type="button" data-action="publish-version" class="btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm">
-                <span class="material-symbols-outlined text-[18px]">publish</span>
+              <button type="button" data-action="publish-version" class="btn-primary inline-flex items-center gap-1.5 px-5 py-2 text-xs font-bold rounded-lg shadow-sm">
+                <span class="material-symbols-outlined text-[16px]">publish</span>
                 <span data-role="publish-version-label">${hasPublication ? wt('create.publish_version_btn', 'Опубликовать версию') : wt('create.publish_btn', 'Опубликовать')}</span>
               </button>
             </div>
@@ -4406,7 +4515,20 @@
 
           syncModalState(data.item);
 
-          setFeedback(`${wt('create.access_updated', 'Доступ обновлён')}: ${getCatalogVisibilityLabel(data.item.catalog_visibility)}.`, 'success');
+          const visibilityLabel = getCatalogVisibilityLabel(data.item.catalog_visibility);
+
+          updateComplexSaveStatus({
+            message: `${wt('create.access_updated', 'Доступ обновлён')}: ${visibilityLabel}`,
+            tone: 'success',
+          });
+          setTimeout(() => {
+            const currentNotice = getComplexPublicationNotice();
+            if (currentNotice.kind === 'current') {
+              updateComplexSaveStatus(null);
+            }
+          }, 4500);
+
+          setFeedback(`${wt('create.access_updated', 'Доступ обновлён')}: ${visibilityLabel}.`, 'success');
 
           notifyComplexToast(wt('create.pub_status_updated', 'Статус публикации обновлён.'), 'success', 2600);
 
@@ -4467,6 +4589,17 @@
           syncModalState(data.item);
 
           const visibilityLabel = getCatalogVisibilityLabel(data.item.catalog_visibility);
+
+          updateComplexSaveStatus({
+            message: `${wt('create.published_prefix', 'Опубликовано')}: ${visibilityLabel}`,
+            tone: 'success',
+          });
+          setTimeout(() => {
+            const currentNotice = getComplexPublicationNotice();
+            if (currentNotice.kind === 'current') {
+              updateComplexSaveStatus(null);
+            }
+          }, 4500);
 
           setFeedback(`${hasPublication ? wt('create.pub_updated', 'Публикация обновлена') : wt('create.complex_published', 'Комплекс опубликован')}. ${wt('create.access_mode_prefix', 'Режим доступа')}: ${visibilityLabel}.`, 'success');
 
