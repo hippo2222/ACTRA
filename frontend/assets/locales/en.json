@@ -1964,19 +1964,19 @@
     "btn_import_action": "Import",
     "level1_indicator": "Level 1: Know / Don't Know",
     "repeat_chip_title": "Missed cards keep coming back until you answer them correctly",
-            "deck_direction_label": "Card direction",
+    "deck_direction_label": "Card direction",
     "direction_front_back": "Straight: question → answer",
     "direction_back_front": "Reverse: answer → question",
     "direction_mixed": "Mixed (random per card)",
     "direction_hint": "Mixed direction only applies to know/don't-know checks; typed-input checks always run in the straight direction.",
-        "kpi_goal": "today",
+    "kpi_goal": "today",
     "settings_daily_load": "Daily review load",
     "load_light": "Light — up to 10 cards per session",
     "load_standard": "Standard — up to 20 cards per session",
     "load_intense": "Intense — up to 40 cards per session",
     "settings_daily_goal": "Daily goal (reviews per day)",
     "apkg_new_format_hint": "This .apkg uses the new Anki format. Re-export the deck with \"Support older Anki versions\" checked and try again.",
-        "bulk_selected": "Selected: {n}",
+    "bulk_selected": "Selected: {n}",
     "btn_delete_selected": "Delete selected",
     "btn_select_all": "Select all",
     "btn_clear_selection": "Clear selection",
@@ -2209,7 +2209,10 @@
     "linked_readonly": "From catalog · read-only",
     "readonly_card_title": "Read-only — card from the catalog",
     "readonly_card_note": "Catalog cards can't be edited — this is a link to the author's deck.",
-    "btn_remove_from_library": "Remove from library"
+    "btn_remove_from_library": "Remove from library",
+    "pair_select_placeholder": "Select...",
+    "answer_not_set": "Answer not set",
+    "pair_correct_prefix": "correct"
   },
   "nav": {
     "home": "Home",
@@ -2678,7 +2681,8 @@
     "difficulty_label": "Difficulty: {n}",
     "difficulty_unknown": "Difficulty: -",
     "question_n_of_total": "Question {n} of {total}",
-    "question_label": "Question"
+    "question_label": "Question",
+    "task_header_label": "Task"
   },
   "testui_q": {
     "reference_answer": "Reference answer",
@@ -2846,7 +2850,8 @@
     "image_answer_alt": "Answer option",
     "image_preview_title": "Image preview",
     "image_preview_close": "Close preview",
-    "image_alt_fallback": "Answer image"
+    "image_alt_fallback": "Answer image",
+    "errors_shown_of": "Showing 3 of {n} errors"
   },
   "s3": {
     "page_title": "Complex Final Results",
@@ -6996,7 +7001,6 @@
   "image_labeling_editor.upload_failed_error": "Upload error: {error}",
   "image_labeling_editor.upload_generic_error": "An error occurred while uploading the image",
   "s1.task_type_image_labeling": "Image Labeling",
-
   "s3.answer_option_alt": "Answer option",
   "s3.btn_return_main": "Back to Home",
   "s3.btn_to_other_complexes": "Other Complexes",
