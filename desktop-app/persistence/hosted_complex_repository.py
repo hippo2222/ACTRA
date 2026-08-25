@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
 from typing import Any, Dict, List, Optional
@@ -79,6 +79,49 @@ class HostedComplexRepository:
                 )
                 row = cur.fetchone()
         return self._json_object(row[0]) if row else None
+
+    def upsert_complex(self, payload: Dict[str, Any]) -> None:
+        normalized = payload if isinstance(payload, dict) else {}
+        complex_id = str(normalized.get("id") or "").strip()
+        if not complex_id:
+            return
+        updated_at = str(
+            normalized.get("updated_at")
+            or normalized.get("created_at")
+            or ""
+        ).strip() or complex_id
+        with postgres_connection(self._dsn) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO actra_hosted_workspace_complexes (complex_id, payload, updated_at)
+                    VALUES (%s, %s::jsonb, %s)
+                    ON CONFLICT (complex_id) DO UPDATE SET
+                        payload = EXCLUDED.payload,
+                        updated_at = EXCLUDED.updated_at
+                    """,
+                    (
+                        complex_id,
+                        json.dumps(normalized, ensure_ascii=False),
+                        updated_at,
+                    ),
+                )
+
+    def delete_complex(self, complex_id: str) -> bool:
+        clean_complex_id = str(complex_id or "").strip()
+        if not clean_complex_id:
+            return False
+        with postgres_connection(self._dsn) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    DELETE FROM actra_hosted_workspace_complexes
+                    WHERE complex_id = %s
+                    """,
+                    (clean_complex_id,),
+                )
+                deleted = bool(cur.rowcount > 0)
+        return deleted
 
     def replace_all_complexes(self, payloads: List[Dict[str, Any]]) -> None:
         normalized_payloads: List[Dict[str, Any]] = []

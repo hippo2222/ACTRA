@@ -7,8 +7,9 @@ from typing import Any, Dict, List
 from persistence.hosted_complex_repository import HostedComplexRepository
 from persistence.postgres import PostgresUnavailableError
 from persistence.runtime import PersistenceRuntimeSettings
-from services.complex_service import ComplexService, _normalize_complex_ownership_fields
+from services.complex_service import ComplexService, ConflictError, _normalize_complex_ownership_fields
 from services.hosted_shadow_fallback import HostedShadowFallbackMixin
+from task_system.core.exceptions import TaskValidationError
 from task_system.core.models.complex_models import Complex
 from task_system.core.schemas.complex_schema import ComplexSchema
 
@@ -94,14 +95,57 @@ class HostedComplexService(HostedShadowFallbackMixin, ComplexService):
             loaded_complexes.append(complex_obj)
         return loaded_complexes
 
+    def _save_complex(self, complex_obj: Complex) -> None:
+        try:
+            self.ensure_persistence_ready()
+        except PostgresUnavailableError as exc:
+            self._guard_shadow_write_fallback("complexes.write", exc)
+            super()._save_all_complexes(list(self._complexes_cache.values()))
+            return
+        payloads = self._complex_payloads_from_models([complex_obj])
+        if payloads:
+            self.repository.upsert_complex(payloads[0])
+
+    def create_complex(self, complex_data: Dict[str, Any]) -> Complex:
+        try:
+            self.ensure_persistence_ready()
+        except PostgresUnavailableError as exc:
+            self._guard_shadow_write_fallback("complexes.write", exc)
+            return super().create_complex(complex_data)
+
+        self._ensure_initialized()
+        normalized_data = _normalize_complex_ownership_fields(
+            dict(complex_data),
+            fallback_source="manual_editor",
+        )
+        ComplexSchema.validate_or_raise(normalized_data)
+
+        complex_id = normalized_data["id"]
+        if complex_id in self._complexes_cache:
+            raise ValueError(f"Complex with ID '{complex_id}' already exists")
+
+        now = datetime.utcnow()
+        if "created_at" not in normalized_data or not normalized_data["created_at"]:
+            normalized_data["created_at"] = now
+        if "updated_at" not in normalized_data or not normalized_data["updated_at"]:
+            normalized_data["updated_at"] = now
+
+        new_complex = Complex(**normalized_data)
+        self._complexes_cache[complex_id] = new_complex
+        self._save_complex(new_complex)
+        self.logger.info(f"[HOSTED] Created new complex: {complex_id}")
+        return new_complex
+
     def _save_all_complexes(self, complexes: List[Complex]):
         try:
             self.ensure_persistence_ready()
         except PostgresUnavailableError as exc:
             self._guard_shadow_write_fallback("complexes.write", exc)
             return super()._save_all_complexes(complexes)
-        payloads = self._complex_payloads_from_models(complexes)
-        self.repository.replace_all_complexes(payloads)
+        for c in complexes:
+            payloads = self._complex_payloads_from_models([c])
+            if payloads:
+                self.repository.upsert_complex(payloads[0])
 
     def _save_history_snapshot(
         self,
@@ -160,8 +204,66 @@ class HostedComplexService(HostedShadowFallbackMixin, ComplexService):
             self.ensure_persistence_ready()
         except PostgresUnavailableError as exc:
             self._guard_shadow_write_fallback("complexes.write", exc)
-            return ComplexService.update_complex(self, complex_id, updates, expected_version=expected_version)
-        return ComplexService.update_complex(self, complex_id, updates, expected_version=expected_version)
+            return super().update_complex(complex_id, updates, expected_version=expected_version)
+
+        self._ensure_initialized()
+        if complex_id not in self._complexes_cache:
+            db_payload = self.repository.get_complex(complex_id)
+            if db_payload:
+                try:
+                    c_obj = self._payload_to_complex(db_payload)
+                    self._complexes_cache[c_obj.id] = c_obj
+                except Exception:
+                    pass
+        if complex_id not in self._complexes_cache:
+            raise ValueError(f"Complex with ID '{complex_id}' not found")
+
+        current_complex = self._complexes_cache[complex_id]
+
+        if expected_version is not None:
+            current_version = (
+                current_complex.updated_at.isoformat() if current_complex.updated_at else None
+            )
+            if current_version != expected_version:
+                raise ConflictError(
+                    "Complex has been modified by another user",
+                    current_version=current_version,
+                    expected_version=expected_version,
+                )
+
+        current_data = current_complex.dict()
+        self._save_history_snapshot(complex_id, current_data, snapshot_kind="manual")
+
+        current_data.update(updates)
+        current_data["updated_at"] = datetime.utcnow()
+        current_data = _normalize_complex_ownership_fields(
+            current_data,
+            fallback_source="manual_editor",
+            existing=current_complex.dict(),
+        )
+
+        try:
+            updated_complex = Complex(**current_data)
+        except Exception as e:
+            raise TaskValidationError(f"Invalid update data: {e}")
+
+        self._complexes_cache[complex_id] = updated_complex
+        self._save_complex(updated_complex)
+        self.logger.info(f"[HOSTED] Updated complex: {complex_id}")
+        return updated_complex
+
+    def delete_complex(self, complex_id: str) -> bool:
+        try:
+            self.ensure_persistence_ready()
+        except PostgresUnavailableError as exc:
+            self._guard_shadow_write_fallback("complexes.write", exc)
+            return super().delete_complex(complex_id)
+
+        self._ensure_initialized()
+        self._complexes_cache.pop(complex_id, None)
+        deleted = self.repository.delete_complex(complex_id)
+        self.logger.info(f"[HOSTED] Deleted complex: {complex_id}, deleted_db={deleted}")
+        return deleted
 
     def save_autosave_snapshot(self, complex_id: str, snapshot_payload: Dict[str, Any]) -> Dict[str, Any]:
         try:
