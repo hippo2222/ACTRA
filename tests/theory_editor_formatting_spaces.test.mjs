@@ -128,7 +128,7 @@ describe("Theory inline formatting whitespace preservation", () => {
     expect(html).toBe("<strong>Жирный</strong> текст");
   });
 
-  it("splits whitespace from formatted text in collectTheoryInlineOps", () => {
+  it("preserves formatted text in collectTheoryInlineOps without artificial splitting", () => {
     const dom = new JSDOM("<!doctype html><html><body><strong id='target'>Жирный </strong></body></html>");
     const helpers = buildTheoryEditorHelpers(dom);
 
@@ -138,8 +138,7 @@ describe("Theory inline formatting whitespace preservation", () => {
     helpers.collectTheoryInlineOps(textNode, { bold: true }, ops);
 
     expect(ops).toEqual([
-      { insert: "Жирный", attributes: { bold: true } },
-      { insert: " " },
+      { insert: "Жирный ", attributes: { bold: true } },
     ]);
   });
 });

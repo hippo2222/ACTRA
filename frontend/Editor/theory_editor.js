@@ -1644,26 +1644,9 @@ function collectTheoryInlineOps(node, attrs, out) {
         if (!text) return;
         text = text.replace(/[\r\n]+/g, " ");
         if (!text) return;
-        const hasAttrs = attrs && Object.keys(attrs).length > 0;
-        if (!hasAttrs) {
-            out.push({ insert: text });
-            return;
-        }
-        const match = text.match(/^(\s*)([\s\S]*?)(\s*)$/);
-        const leading = match ? match[1] : "";
-        const core = match ? match[2] : text;
-        const trailing = match ? match[3] : "";
-        if (!core) {
-            out.push({ insert: text });
-            return;
-        }
-        if (leading) {
-            out.push({ insert: leading });
-        }
-        out.push({ insert: core, attributes: { ...attrs } });
-        if (trailing) {
-            out.push({ insert: trailing });
-        }
+        const op = { insert: text };
+        if (attrs && Object.keys(attrs).length) op.attributes = { ...attrs };
+        out.push(op);
         return;
     }
     if (node.nodeType !== Node.ELEMENT_NODE) return;
