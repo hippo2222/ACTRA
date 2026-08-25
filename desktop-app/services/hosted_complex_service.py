@@ -262,6 +262,8 @@ class HostedComplexService(HostedShadowFallbackMixin, ComplexService):
         self._ensure_initialized()
         self._complexes_cache.pop(complex_id, None)
         deleted = self.repository.delete_complex(complex_id)
+        if deleted:
+            self.repository.delete_history(complex_id)
         self.logger.info(f"[HOSTED] Deleted complex: {complex_id}, deleted_db={deleted}")
         return deleted
 
@@ -335,14 +337,3 @@ class HostedComplexService(HostedShadowFallbackMixin, ComplexService):
         self._complexes_cache[complex_id] = restored_complex
         self._save_all_complexes(list(self._complexes_cache.values()))
         return restored_complex
-
-    def delete_complex(self, complex_id: str) -> bool:
-        try:
-            self.ensure_persistence_ready()
-        except PostgresUnavailableError as exc:
-            self._guard_shadow_write_fallback("complexes.write", exc)
-            return ComplexService.delete_complex(self, complex_id)
-        deleted = ComplexService.delete_complex(self, complex_id)
-        if deleted:
-            self.repository.delete_history(complex_id)
-        return deleted

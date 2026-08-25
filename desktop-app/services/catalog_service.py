@@ -521,24 +521,6 @@ class CatalogService:
             snapshot,
             preferred_owner_user_id=owner_user_id,
         )
-        catalog_item_id = (publish_result.get("item") or {}).get("item_id")
-        if catalog_item_id and owner_user_id and owner_user_id != "guest":
-            try:
-                author_entry = self._get_complex_library_entry_by_user_item(owner_user_id, catalog_item_id)
-                if not isinstance(author_entry, dict):
-                    new_entry = {
-                        "library_entry_id": self._build_complex_library_entry_id(catalog_item_id),
-                        "user_id": owner_user_id,
-                        "catalog_item_id": catalog_item_id,
-                        "pinned_version_id": None,
-                        "granted_access_code": None,
-                        "created_at": self._utcnow_iso(),
-                        "updated_at": self._utcnow_iso(),
-                    }
-                    resolved = self._resolve_complex_library_entry_payload(new_entry, requested_by_user_id=owner_user_id)
-                    self._upsert_complex_library_entry_payload(resolved["entry_payload"])
-            except Exception as exc:
-                self.logger.warning("[CATALOG] Failed to auto-attach complex library entry on publish for %s: %s", owner_user_id, exc)
         return publish_result
 
     def publish_theory(
@@ -568,7 +550,7 @@ class CatalogService:
             "has_content": bool((snapshot.get("images") or []) or (ops or [])),
             "workspace_entity": snapshot.get("workspace_entity"),
         }
-        publish_result = self._publish_workspace_snapshot(
+        return self._publish_workspace_snapshot(
             content_type="theory",
             owner_user_id=owner_user_id,
             title=str(snapshot.get("title") or clean_theory_id),
@@ -578,27 +560,6 @@ class CatalogService:
             snapshot=snapshot,
             catalog_visibility=catalog_visibility,
         )
-        catalog_item_id = (publish_result.get("item") or {}).get("item_id")
-        if catalog_item_id and owner_user_id and owner_user_id != "guest":
-            try:
-                author_entry = self._get_theory_library_entry_by_user_item(owner_user_id, catalog_item_id)
-                if not isinstance(author_entry, dict):
-                    new_entry = {
-                        "library_entry_id": self._build_theory_library_entry_id(catalog_item_id),
-                        "user_id": owner_user_id,
-                        "catalog_item_id": catalog_item_id,
-                        "pinned_version_id": None,
-                        "granted_access_code": None,
-                        "created_at": self._utcnow_iso(),
-                        "updated_at": self._utcnow_iso(),
-                        "manually_added": True,
-                        "auto_added_by_complex_library_entry_ids": [],
-                    }
-                    resolved = self._resolve_theory_library_entry_payload(new_entry, requested_by_user_id=owner_user_id)
-                    self._upsert_theory_library_entry_payload(resolved["entry_payload"])
-            except Exception as exc:
-                self.logger.warning("[CATALOG] Failed to auto-attach theory library entry on publish for %s: %s", owner_user_id, exc)
-        return publish_result
 
     def publish_deck(
         self,
@@ -1085,11 +1046,7 @@ class CatalogService:
     ) -> Dict[str, Any]:
         requester = self._require_text(requested_by_user_id, "requested_by_user_id_required")
         entries: List[Dict[str, Any]] = []
-        seen_catalog_item_ids = set()
         for raw_entry in self._list_complex_library_entry_payloads_for_user(requester):
-            catalog_item_id = str(raw_entry.get("catalog_item_id") or "").strip()
-            if catalog_item_id:
-                seen_catalog_item_ids.add(catalog_item_id)
             resolved = self._resolve_complex_library_entry_payload(raw_entry, requested_by_user_id=requester)
             self._upsert_complex_library_entry_payload(resolved["entry_payload"])
             entries.append(
@@ -1100,37 +1057,6 @@ class CatalogService:
                     "snapshot": copy.deepcopy(resolved.get("snapshot")),
                 }
             )
-
-        # Ensure authored catalog complexes are always included in the author's library
-        for item_payload in self._list_item_payloads():
-            if str(item_payload.get("content_type") or "").strip().lower() != "complex":
-                continue
-            item_id = str(item_payload.get("item_id") or "").strip()
-            if not item_id or item_id in seen_catalog_item_ids:
-                continue
-            owner_user_id = str(item_payload.get("owner_user_id") or "").strip()
-            if owner_user_id == requester:
-                synthetic_entry = {
-                    "library_entry_id": self._build_complex_library_entry_id(item_id),
-                    "user_id": requester,
-                    "catalog_item_id": item_id,
-                    "pinned_version_id": None,
-                    "granted_access_code": None,
-                    "created_at": str(item_payload.get("created_at") or self._utcnow_iso()),
-                    "updated_at": self._utcnow_iso(),
-                }
-                resolved = self._resolve_complex_library_entry_payload(synthetic_entry, requested_by_user_id=requester)
-                self._upsert_complex_library_entry_payload(resolved["entry_payload"])
-                entries.append(
-                    {
-                        "library_entry": copy.deepcopy(resolved["library_entry"]),
-                        "item": copy.deepcopy(resolved.get("item")),
-                        "version": copy.deepcopy(resolved.get("version")),
-                        "snapshot": copy.deepcopy(resolved.get("snapshot")),
-                    }
-                )
-                seen_catalog_item_ids.add(item_id)
-
         entries.sort(
             key=lambda value: (
                 str(((value.get("library_entry") or {}).get("updated_at")) or ""),
@@ -1230,11 +1156,7 @@ class CatalogService:
     ) -> Dict[str, Any]:
         requester = self._require_text(requested_by_user_id, "requested_by_user_id_required")
         entries: List[Dict[str, Any]] = []
-        seen_catalog_item_ids = set()
         for raw_entry in self._list_theory_library_entry_payloads_for_user(requester):
-            catalog_item_id = str(raw_entry.get("catalog_item_id") or "").strip()
-            if catalog_item_id:
-                seen_catalog_item_ids.add(catalog_item_id)
             resolved = self._resolve_theory_library_entry_payload(raw_entry, requested_by_user_id=requester)
             self._upsert_theory_library_entry_payload(resolved["entry_payload"])
             entries.append(
@@ -1244,38 +1166,6 @@ class CatalogService:
                     "version": copy.deepcopy(resolved.get("version")),
                 }
             )
-
-        # Ensure authored catalog theories are always included in the author's library
-        for item_payload in self._list_item_payloads():
-            if str(item_payload.get("content_type") or "").strip().lower() != "theory":
-                continue
-            item_id = str(item_payload.get("item_id") or "").strip()
-            if not item_id or item_id in seen_catalog_item_ids:
-                continue
-            owner_user_id = str(item_payload.get("owner_user_id") or "").strip()
-            if owner_user_id == requester:
-                synthetic_entry = {
-                    "library_entry_id": self._build_theory_library_entry_id(item_id),
-                    "user_id": requester,
-                    "catalog_item_id": item_id,
-                    "pinned_version_id": None,
-                    "granted_access_code": None,
-                    "created_at": str(item_payload.get("created_at") or self._utcnow_iso()),
-                    "updated_at": self._utcnow_iso(),
-                    "manually_added": True,
-                    "auto_added_by_complex_library_entry_ids": [],
-                }
-                resolved = self._resolve_theory_library_entry_payload(synthetic_entry, requested_by_user_id=requester)
-                self._upsert_theory_library_entry_payload(resolved["entry_payload"])
-                entries.append(
-                    {
-                        "library_entry": copy.deepcopy(resolved["library_entry"]),
-                        "item": copy.deepcopy(resolved.get("item")),
-                        "version": copy.deepcopy(resolved.get("version")),
-                    }
-                )
-                seen_catalog_item_ids.add(item_id)
-
         entries.sort(
             key=lambda value: (
                 str(((value.get("library_entry") or {}).get("updated_at")) or ""),
