@@ -1,4 +1,4 @@
-﻿/**
+/**
  * ACTRA Sequence Assembly Editor
  */
 
@@ -712,6 +712,13 @@ class SequenceEditor extends BaseEditor {
     }
 
     setupEventListeners() {
+        const titleDisplay = document.querySelector('#task-title-display');
+        if (titleDisplay) {
+            this.setupHeaderRenameTrigger(titleDisplay, {
+                onSuccess: () => this.updateTaskTitleDisplay()
+            });
+        }
+
         const backBtn = document.querySelector('#back-to-dashboard');
         if (backBtn) {
             backBtn.title = wt('se.k025', 'Вернуться к редактору заданий');

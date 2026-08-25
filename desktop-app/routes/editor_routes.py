@@ -843,6 +843,59 @@ def delete_editor_task(module_id: str, topic_id: str, task_id: str) -> Any:
         return jsonify({"ok": False, "error": str(exc)}), 500
 
 
+@editor_bp.route("/api/editor/task/rename", methods=["POST"])
+def rename_editor_task() -> Any:
+    """Rename a task (update display name, preserve folder ID and task_ref)."""
+    ctx = get_ctx()
+    if ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_edit"}), 403
+    try:
+        payload = request.get_json(silent=True) or {}
+        module_id = str(payload.get("module_id") or "").strip()
+        topic_id = str(payload.get("topic_id") or "").strip()
+        task_id = str(payload.get("task_id") or "").strip()
+        new_name = str(payload.get("name") or "").strip()
+
+        if not module_id or not topic_id or not task_id or not new_name:
+            return jsonify({"ok": False, "error": "module_id_topic_id_task_id_and_name_required"}), 400
+
+        if len(new_name) > 150:
+            return jsonify({"ok": False, "error": "task_name_too_long"}), 400
+
+        if is_hosted_web_runtime():
+            metadata = _load_hosted_editor_task_metadata_if_visible(
+                module_id,
+                topic_id,
+                task_id,
+                current_user_id=ctx.user_id,
+            )
+            if metadata is None:
+                return jsonify({"ok": False, "error": "task_not_found"}), 404
+
+        _assert_task_not_archived(ctx, module_id, topic_id, task_id, action="edit")
+
+        success = ctx.storage_service.rename_task(module_id, topic_id, task_id, new_name)
+        if success:
+            return jsonify({"ok": True})
+        else:
+            return jsonify({"ok": False, "error": "rename_failed"}), 404
+
+    except PremiumArchivedContentError as exc:
+        return _premium_archive_response(exc)
+    except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
+        logger.exception(
+            "[HTTP] Failed to rename task %s/%s/%s: %s",
+            payload.get("module_id"),
+            payload.get("topic_id"),
+            payload.get("task_id"),
+            exc,
+        )
+        return jsonify({"ok": False, "error": "rename_failed"}), 500
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

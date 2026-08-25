@@ -2456,6 +2456,14 @@ class TestEditor extends BaseEditor {
     }
 
     setupEventListeners() {
+        // Task Name Rename Trigger in Header
+        const taskNameCaption = document.querySelector('#task-name-caption');
+        if (taskNameCaption) {
+            this.setupHeaderRenameTrigger(taskNameCaption, {
+                onSuccess: () => this.updateEditorChrome()
+            });
+        }
+
         // Back
         const backBtn = document.querySelector('header button');
         if (backBtn) backBtn.onclick = () => this.goBack();

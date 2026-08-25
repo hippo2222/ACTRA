@@ -5046,8 +5046,17 @@ class EditorDashboard {
                 </div>
             </div>
             <div class="flex-1 min-w-0">
-                <h3 class="editor-task-card-title text-text-main text-lg font-bold mb-2 group-hover:text-primary transition-colors cursor-pointer" title="${safeTaskName}">${safeTaskName}</h3>
-                <p class="text-text-secondary text-xs font-medium truncate">${wt('db.k285', 'Создано')} ${createdLabel}${updatedLabel && updatedLabel !== createdLabel ? ` ${wt('db.k390', 'В· Изм.')} ${updatedLabel}` : ''}</p>
+                <div class="flex items-center gap-1.5 mb-2 group/task-title">
+                    <h3 class="editor-task-card-title text-text-main text-lg font-bold truncate group-hover:text-primary transition-colors cursor-pointer flex-1" title="${safeTaskName}">${safeTaskName}</h3>
+                    ${!isPremiumArchived ? `
+                        <button type="button" data-action="rename-task"
+                            class="opacity-0 group-hover/task-title:opacity-100 group-hover:opacity-100 p-1 rounded-md text-text-disabled hover:text-primary hover:bg-primary-lighter transition-all shrink-0"
+                            title="${wt('db.k395', 'Переименовать задание')}">
+                            <span class="material-symbols-outlined text-[16px]">edit</span>
+                        </button>
+                    ` : ''}
+                </div>
+                <p class="text-text-secondary text-xs font-medium truncate">${wt('db.k285', 'Создано')} ${createdLabel}${updatedLabel && updatedLabel !== createdLabel ? ` ${wt('db.k390', '· Изм.')} ${updatedLabel}` : ''}</p>
             </div>
             <div class="flex gap-2 mt-4 flex-wrap items-center">
                 <span class="editor-task-card-chip inline-block rounded bg-surface-1 px-2 py-0.5 text-[11px] font-medium text-text-secondary border border-border-subtle whitespace-nowrap" title="${safeModuleLabel}">${safeModuleLabel}</span>
@@ -5076,6 +5085,15 @@ class EditorDashboard {
                     topicName: task.topicName || task.topicId,
                     type: task.type,
                 });
+            });
+        }
+
+        const renameBtn = article.querySelector('[data-action="rename-task"]');
+        if (renameBtn) {
+            renameBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const titleEl = article.querySelector('.editor-task-card-title');
+                this.startRenameTask(task, titleEl);
             });
         }
 
@@ -6893,6 +6911,140 @@ class EditorDashboard {
         });
     }
 
+    startRenameTask(task, titleElement) {
+        if (!task || !titleElement) return;
+        const currentName = (task.name || task.id || '').trim();
+        this._startInlineRename(titleElement, currentName, async (newName) => {
+            if (!newName || newName === currentName) return;
+            try {
+                const resp = await fetch('/api/editor/task/rename', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        module_id: task.moduleId,
+                        topic_id: task.topicId,
+                        task_id: task.id,
+                        name: newName
+                    })
+                });
+                const data = await resp.json();
+                if (data.ok) {
+                    task.name = newName;
+                    if (task.meta) task.meta.name = newName;
+                    this.updateTaskNameInCatalog(task.moduleId, task.topicId, task.id, newName);
+                    this.showTaskRenameUndoToast({
+                        moduleId: task.moduleId,
+                        topicId: task.topicId,
+                        taskId: task.id,
+                        oldName: currentName,
+                        newName: newName,
+                        titleEl: titleElement,
+                        taskObj: task
+                    });
+                } else {
+                    titleElement.textContent = currentName;
+                    titleElement.title = currentName;
+                    if (typeof NotificationUI !== 'undefined' && typeof NotificationUI.toast === 'function') {
+                        NotificationUI.toast(wt('db.k398', 'Не удалось переименовать задание'), false, 4000);
+                    }
+                }
+            } catch (err) {
+                console.error('Rename task failed:', err);
+                titleElement.textContent = currentName;
+                titleElement.title = currentName;
+                if (typeof NotificationUI !== 'undefined' && typeof NotificationUI.toast === 'function') {
+                    NotificationUI.toast(wt('db.k398', 'Не удалось переименовать задание'), false, 4000);
+                }
+            }
+        });
+    }
+
+    updateTaskNameInCatalog(moduleId, topicId, taskId, newName) {
+        if (!Array.isArray(this.catalog)) return;
+        for (const m of this.catalog) {
+            if (m.id === moduleId && Array.isArray(m.topics)) {
+                for (const t of m.topics) {
+                    if (t.id === topicId && Array.isArray(t.tasks)) {
+                        for (const task of t.tasks) {
+                            if (task.id === taskId) {
+                                task.name = newName;
+                                if (task.meta) task.meta.name = newName;
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    showTaskRenameUndoToast({ moduleId, topicId, taskId, oldName, newName, titleEl, taskObj }) {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+
+        const toastId = `toast-rename-${Date.now()}`;
+        const toast = document.createElement('div');
+        toast.id = toastId;
+        toast.className = 'bg-bg-ink text-text-on-dark px-4 py-3 rounded-lg shadow-xl flex items-center gap-4 animate-slide-up pointer-events-auto min-w-[320px] justify-between';
+        toast.innerHTML = `
+            <div class="flex items-center gap-3">
+                <span class="text-sm font-medium">${wt('db.k396', 'Задание переименовано')}</span>
+                <span class="text-xs text-text-on-dark opacity-60 function-timer">4c</span>
+            </div>
+            <button class="text-primary-light hover:text-primary text-sm font-bold uppercase tracking-wider transition-colors">
+                ${wt('db.k388', 'Отменить')}
+            </button>
+        `;
+
+        let left = 4;
+        const timerSpan = toast.querySelector('.function-timer');
+        const interval = setInterval(() => {
+            left--;
+            if (left > 0) {
+                if (timerSpan) timerSpan.textContent = `${left}c`;
+            } else {
+                clearInterval(interval);
+                if (toast && toast.parentNode) toast.remove();
+            }
+        }, 1000);
+
+        const undoBtn = toast.querySelector('button');
+        undoBtn.onclick = async () => {
+            clearInterval(interval);
+            if (toast && toast.parentNode) toast.remove();
+            try {
+                const resp = await fetch('/api/editor/task/rename', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ module_id: moduleId, topic_id: topicId, task_id: taskId, name: oldName })
+                });
+                const data = await resp.json();
+                if (data.ok) {
+                    if (titleEl) {
+                        titleEl.textContent = oldName;
+                        titleEl.title = oldName;
+                    }
+                    if (taskObj) {
+                        taskObj.name = oldName;
+                        if (taskObj.meta) taskObj.meta.name = oldName;
+                    }
+                    this.updateTaskNameInCatalog(moduleId, topicId, taskId, oldName);
+                    if (typeof NotificationUI !== 'undefined' && typeof NotificationUI.toast === 'function') {
+                        NotificationUI.toast(wt('db.k397', 'Переименование отменено'), true, 3000);
+                    }
+                } else {
+                    if (typeof NotificationUI !== 'undefined' && typeof NotificationUI.toast === 'function') {
+                        NotificationUI.toast(wt('db.k398', 'Не удалось переименовать задание'), false, 4000);
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to undo task rename:', err);
+            }
+        };
+
+        container.appendChild(toast);
+    }
+
     _startInlineRename(spanEl, currentName, onConfirm) {
         const input = document.createElement('input');
         input.type = 'text';
@@ -6924,6 +7076,10 @@ class EditorDashboard {
             input.remove();
             spanEl.style.display = originalDisplay || '';
         };
+
+        input.addEventListener('click', (e) => e.stopPropagation());
+        input.addEventListener('mousedown', (e) => e.stopPropagation());
+        input.addEventListener('dblclick', (e) => e.stopPropagation());
 
         input.addEventListener('keydown', (e) => {
             e.stopPropagation();

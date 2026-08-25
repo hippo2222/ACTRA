@@ -796,6 +796,93 @@ class HostedStorageService(HostedShadowFallbackMixin, StorageService):
                 )
         return True
 
+    def rename_task(self, module_id: str, topic_id: str, task_id: str, new_name: str) -> bool:
+        try:
+            self.ensure_persistence_ready()
+        except PostgresUnavailableError as exc:
+            self._guard_shadow_write_fallback("rename_task", exc)
+            return StorageService.rename_task(self, module_id, topic_id, task_id, new_name)
+        self._validate_id(module_id, "module_id")
+        self._validate_id(topic_id, "topic_id")
+        self._validate_id(task_id, "task_id")
+        clean_name = str(new_name or "").strip()
+        if not clean_name:
+            return False
+
+        # 1. Update in Postgres catalog directly
+        current_catalog = self.repository.load_catalog()
+        found = False
+        new_catalog = []
+        for module in current_catalog:
+            if not isinstance(module, dict) or module.get("id") != module_id:
+                new_catalog.append(module)
+                continue
+            module = dict(module)
+            new_topics = []
+            for topic in module.get("topics") or []:
+                if not isinstance(topic, dict) or topic.get("id") != topic_id:
+                    new_topics.append(topic)
+                    continue
+                topic = dict(topic)
+                new_tasks = []
+                for task in topic.get("tasks") or []:
+                    if isinstance(task, dict) and task.get("id") == task_id:
+                        task = dict(task)
+                        task["name"] = clean_name
+                        found = True
+                    new_tasks.append(task)
+                topic["tasks"] = new_tasks
+                new_topics.append(topic)
+            module["topics"] = new_topics
+            new_catalog.append(module)
+
+        if not found:
+            self.logger.warning("[HOSTED] Task rename: not found in catalog: %s/%s/%s", module_id, topic_id, task_id)
+        else:
+            try:
+                self.repository.replace_catalog(new_catalog)
+                self._modules_cache = None
+                self.logger.info("[HOSTED] Task renamed in catalog: %s/%s/%s -> '%s'", module_id, topic_id, task_id, clean_name)
+            except Exception as exc:
+                self.logger.exception("[HOSTED] Failed to rename task %s/%s/%s in catalog: %s", module_id, topic_id, task_id, exc)
+                return False
+
+        # 2. Update task_content in Postgres if exists
+        try:
+            content_row = self.content_repository.get_task_content(module_id, topic_id, task_id)
+            if content_row:
+                task_data = dict(content_row.get("task_data") or {})
+                task_data["name"] = clean_name
+                meta = task_data.get("meta")
+                if isinstance(meta, dict):
+                    meta = dict(meta)
+                    meta["name"] = clean_name
+                    meta["modified"] = datetime.now(timezone.utc).isoformat()
+                    task_data["meta"] = meta
+                metadata = task_data.get("metadata")
+                if isinstance(metadata, dict):
+                    metadata = dict(metadata)
+                    metadata["name"] = clean_name
+                    task_data["metadata"] = metadata
+                self.content_repository.upsert_task_content(
+                    module_id,
+                    topic_id,
+                    task_id,
+                    task_data=task_data,
+                    answer_key=content_row.get("answer_key") or {},
+                    updated_at=datetime.now(timezone.utc).isoformat(),
+                )
+        except Exception as exc:
+            self.logger.warning("[HOSTED] Failed to update task_content for rename %s/%s/%s: %s", module_id, topic_id, task_id, exc)
+
+        # 3. Best-effort: update shadow task.json & module.json
+        try:
+            StorageService.rename_task(self, module_id, topic_id, task_id, clean_name)
+        except Exception as exc:
+            self.logger.warning("[HOSTED] Failed to update shadow files for rename %s/%s/%s: %s", module_id, topic_id, task_id, exc)
+
+        return True
+
     def set_topic_theory_link(
         self,
         module_id: str,

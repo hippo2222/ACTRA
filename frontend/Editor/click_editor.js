@@ -1375,6 +1375,15 @@ class ClickEditor extends BaseEditor {
 
     cacheDom() {
         this.headerTitle = document.querySelector("header h2");
+        if (this.headerTitle) {
+            this.setupHeaderRenameTrigger(this.headerTitle, {
+                onSuccess: (name) => {
+                    if (this.headerTitle) {
+                        this.headerTitle.textContent = `${wt('ce.k040', 'Редактирование задания: ')}${name}`;
+                    }
+                }
+            });
+        }
         this.promptArea = document.querySelector("#prompt-textarea");
         this.promptToggleBtn = document.querySelector("[data-prompt-toggle]");
         this.promptAreaWrapper = document.querySelector("[data-prompt-area]");

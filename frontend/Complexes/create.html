@@ -7107,16 +7107,6 @@
         .replace(/'/g, "&#39;");
     }
 
-    function renderTheoryInline(text, attributes) {
-      let html = escapeTheoryHtml(text).replace(/\u00A0/g, "&nbsp;");
-      const attrs = attributes || {};
-      if (attrs.bold) html = `<strong>${html}</strong>`;
-      if (attrs.italic) html = `<em>${html}</em>`;
-      if (attrs.underline) html = `<u>${html}</u>`;
-      if (attrs.strike) html = `<s>${html}</s>`;
-      return html;
-    }
-
     function getTheoryLineAttributes(rawAttrs) {
       const lineAttrs = {};
       const attrs = rawAttrs && typeof rawAttrs === "object" ? rawAttrs : {};
@@ -7133,371 +7123,6 @@
       return lineAttrs;
     }
 
-    function deltaToTheoryLines(delta) {
-      const ops = delta && Array.isArray(delta.ops) ? delta.ops : [];
-      const lines = [];
-      let segments = [];
-
-      const pushLine = (attrs) => {
-        lines.push({
-          segments: segments.slice(),
-          attrs: getTheoryLineAttributes(attrs),
-        });
-        segments = [];
-      };
-
-      for (const op of ops) {
-        if (!op || typeof op !== "object" || !("insert" in op)) continue;
-        const attrs = op.attributes || {};
-        const insert = op.insert;
-        if (typeof insert === "string") {
-          const parts = insert.split("\n");
-          for (let i = 0; i < parts.length; i += 1) {
-            const chunk = parts[i];
-            if (chunk) {
-              segments.push({ kind: "text", value: chunk, attrs });
-            }
-            if (i < parts.length - 1) {
-              pushLine(attrs);
-            }
-          }
-          continue;
-        }
-
-        if (insert && typeof insert === "object" && typeof insert.image === "string") {
-          const normalizedImage = normalizeTheoryImageRef(insert.image);
-          if (normalizedImage) {
-            segments.push({ kind: "image", value: normalizedImage });
-          }
-        }
-      }
-
-      if (segments.length || !lines.length) {
-        lines.push({ segments: segments.slice(), attrs: {} });
-      }
-      return lines;
-    }
-
-    function renderTheoryLineContent(segments) {
-      if (!Array.isArray(segments) || !segments.length) return "<br>";
-      let html = "";
-      for (const segment of segments) {
-        if (!segment || typeof segment !== "object") continue;
-        if (segment.kind === "text") {
-          html += renderTheoryInline(segment.value || "", segment.attrs || {});
-          continue;
-        }
-        if (segment.kind === "image" && segment.value) {
-          const safeRef = escapeTheoryHtml(segment.value);
-          const imageSrc = isTheoryHostedAssetRef(segment.value) ? segment.value : theoryLocalImageSrc(segment.value);
-          const refAttr = isTheoryHostedAssetRef(segment.value)
-            ? ` data-asset-url="${safeRef}"`
-            : ` data-path="${safeRef}"`;
-          html += `<img${refAttr} src="${escapeTheoryHtml(imageSrc)}" alt="" style="max-width:100%;border-radius:8px;" />`;
-        }
-      }
-      return html || "<br>";
-    }
-
-    function renderTheoryDeltaToHtml(delta) {
-      const lines = deltaToTheoryLines(delta);
-      const blocks = [];
-      let activeListType = null;
-      let activeListItems = [];
-
-      const flushList = () => {
-        if (!activeListType || !activeListItems.length) {
-          activeListType = null;
-          activeListItems = [];
-          return;
-        }
-        const listTag = activeListType === "ordered" ? "ol" : "ul";
-        blocks.push(`<${listTag}>${activeListItems.join("")}</${listTag}>`);
-        activeListType = null;
-        activeListItems = [];
-      };
-
-      for (const line of lines) {
-        const attrs = line && typeof line === "object" ? line.attrs || {} : {};
-        const lineHtml = renderTheoryLineContent(line && line.segments);
-        const listType =
-          attrs.list === "ordered"
-            ? "ordered"
-            : attrs.list === "bullet" || attrs.list === "check"
-              ? "bullet"
-              : null;
-
-        if (listType) {
-          if (activeListType && activeListType !== listType) flushList();
-          activeListType = listType;
-          const align = attrs.align ? ` style="text-align: ${attrs.align}"` : "";
-          activeListItems.push(`<li${align}>${lineHtml}</li>`);
-          continue;
-        }
-
-        flushList();
-        const headerLevel = Number(attrs.header);
-        const align = attrs.align ? ` style="text-align: ${attrs.align}"` : "";
-
-        if (Number.isInteger(headerLevel) && headerLevel >= 1 && headerLevel <= 6) {
-          blocks.push(`<h${headerLevel}${align}>${lineHtml}</h${headerLevel}>`);
-        } else if (attrs.blockquote) {
-          blocks.push(`<blockquote${align}>${lineHtml}</blockquote>`);
-        } else {
-          blocks.push(`<p${align}>${lineHtml}</p>`);
-        }
-      }
-
-      flushList();
-      return blocks.length ? blocks.join("") : "<p><br></p>";
-    }
-
-    function renderTheoryDeltaToEditor(delta) {
-      const editor = document.getElementById("theory-editor");
-      if (!editor) return;
-      editor.innerHTML = renderTheoryDeltaToHtml(delta);
-    }
-
-    function extractTheoryInlineAttributes(node, currentAttrs) {
-      if (!node || node.nodeType !== Node.ELEMENT_NODE) {
-        return { ...(currentAttrs || {}) };
-      }
-
-      const nextAttrs = { ...(currentAttrs || {}) };
-      const tag = node.tagName ? node.tagName.toLowerCase() : "";
-      const style = node.style;
-      const styleAttr = node.getAttribute ? String(node.getAttribute("style") || "") : "";
-
-      if (tag === "strong" || tag === "b") nextAttrs.bold = true;
-      if (style && style.fontWeight) {
-        const fw = String(style.fontWeight).toLowerCase().trim();
-        if (fw === "bold" || fw === "bolder") nextAttrs.bold = true;
-        else if (fw === "normal" || fw === "400" || fw === "lighter") delete nextAttrs.bold;
-        else {
-          const num = parseInt(fw, 10);
-          if (!isNaN(num)) {
-            if (num >= 600) nextAttrs.bold = true;
-            else if (num < 500) delete nextAttrs.bold;
-          }
-        }
-      } else if (styleAttr && /font-weight\s*:\s*(bold|bolder|[6-9]00)/i.test(styleAttr)) {
-        nextAttrs.bold = true;
-      } else if (styleAttr && /font-weight\s*:\s*(normal|lighter|[1-4]00)/i.test(styleAttr)) {
-        delete nextAttrs.bold;
-      }
-
-      if (tag === "em" || tag === "i") nextAttrs.italic = true;
-      if (style && style.fontStyle) {
-        const fs = String(style.fontStyle).toLowerCase().trim();
-        if (fs === "italic" || fs === "oblique") nextAttrs.italic = true;
-        else if (fs === "normal") delete nextAttrs.italic;
-      } else if (styleAttr && /font-style\s*:\s*(italic|oblique)/i.test(styleAttr)) {
-        nextAttrs.italic = true;
-      } else if (styleAttr && /font-style\s*:\s*normal/i.test(styleAttr)) {
-        delete nextAttrs.italic;
-      }
-
-      if (tag === "u" || tag === "ins") nextAttrs.underline = true;
-      if (style && (style.textDecoration || style.textDecorationLine)) {
-        const td = String(style.textDecoration || style.textDecorationLine || "").toLowerCase();
-        if (td.includes("underline")) nextAttrs.underline = true;
-        else if (td.includes("none")) delete nextAttrs.underline;
-      } else if (styleAttr && /text-decoration(-line)?\s*:\s*[^;]*underline/i.test(styleAttr)) {
-        nextAttrs.underline = true;
-      }
-
-      if (tag === "s" || tag === "strike" || tag === "del") nextAttrs.strike = true;
-      if (style && (style.textDecoration || style.textDecorationLine)) {
-        const td = String(style.textDecoration || style.textDecorationLine || "").toLowerCase();
-        if (td.includes("line-through")) nextAttrs.strike = true;
-      } else if (styleAttr && /text-decoration(-line)?\s*:\s*[^;]*line-through/i.test(styleAttr)) {
-        nextAttrs.strike = true;
-      }
-
-      if (style && style.color) {
-        const colorVal = String(style.color).trim();
-        if (colorVal && !/^(inherit|initial|unset|transparent)$/i.test(colorVal)) {
-          nextAttrs.color = colorVal;
-        }
-      } else if (tag === "font" && node.getAttribute("color")) {
-        nextAttrs.color = String(node.getAttribute("color")).trim();
-      } else if (styleAttr) {
-        const colorMatch = styleAttr.match(/(?:^|;)\s*color\s*:\s*([^;]+)/i);
-        if (colorMatch && colorMatch[1]) {
-          const rawColor = colorMatch[1].trim();
-          if (!/^(inherit|initial|unset|transparent)$/i.test(rawColor)) {
-            nextAttrs.color = rawColor;
-          }
-        }
-      }
-
-      return nextAttrs;
-    }
-
-    function collectTheoryInlineOps(node, attrs, out) {
-      if (!node) return;
-      if (node.nodeType === Node.TEXT_NODE) {
-        const text = node.nodeValue || "";
-        if (!text) return;
-        const op = { insert: text };
-        if (attrs && Object.keys(attrs).length) op.attributes = attrs;
-        out.push(op);
-        return;
-      }
-      if (node.nodeType !== Node.ELEMENT_NODE) return;
-      const tag = node.tagName ? node.tagName.toLowerCase() : "";
-      if (tag === "img") {
-        const dataAssetUrl = node.getAttribute("data-asset-url");
-        const dataAssetId = node.getAttribute("data-asset-id");
-        const dataPath = node.getAttribute("data-path");
-        const src = dataAssetUrl || theoryAssetSrc(dataAssetId, "") || dataPath || node.getAttribute("src") || "";
-        if (src) out.push({ insert: { image: src } });
-        return;
-      }
-      if (tag === "br") {
-        out.push({ insert: "\n" });
-        return;
-      }
-      if (tag === "ul" || tag === "ol") {
-        return;
-      }
-
-      const nextAttrs = extractTheoryInlineAttributes(node, attrs);
-
-      for (const child of Array.from(node.childNodes || [])) {
-        collectTheoryInlineOps(child, nextAttrs, out);
-      }
-    }
-
-    function normalizeTheoryImageRef(raw) {
-      if (!raw || typeof raw !== "string") return null;
-      let value = raw.trim();
-      if (!value) return null;
-      if (value.startsWith("data:")) return value;
-      if (value.startsWith("/api/local-image?")) {
-        try {
-          const parsed = new URL(value, window.location.origin);
-          const assetId = String(parsed.searchParams.get("asset_id") || "").trim();
-          if (assetId) {
-            return theoryAssetSrc(assetId, "");
-          }
-          value = parsed.searchParams.get("path") || "";
-        } catch (e) {
-          return null;
-        }
-      }
-      if (value.startsWith("/") || value.startsWith("http://") || value.startsWith("https://")) {
-        return value;
-      }
-      value = value.replace(/\\/g, "/").replace(/^\/+/, "");
-      if (!value || value.includes("..")) return null;
-      return value;
-    }
-
-    function getTheoryHeaderLevel(tag) {
-      if (!tag || typeof tag !== "string") return null;
-      const match = /^h([1-6])$/.exec(tag.toLowerCase());
-      if (!match) return null;
-      return Number(match[1]);
-    }
-
-    function editorHtmlToTheoryDelta() {
-      const editor = document.getElementById('theory-editor');
-      if (!editor) return { ops: [{ insert: "\n" }] };
-      const ops = [];
-
-      const nodes = Array.from(editor.childNodes || []);
-      if (!nodes.length) return { ops: [{ insert: "\n" }] };
-
-      for (const node of nodes) {
-        if (node.nodeType === Node.ELEMENT_NODE) {
-          const tag = node.tagName.toLowerCase();
-          if (tag === "ol" || tag === "ul") {
-            const listType = tag === "ol" ? "ordered" : "bullet";
-            const items = Array.from(node.children || []).filter((child) => child.tagName && child.tagName.toLowerCase() === "li");
-            for (const li of items) {
-              collectTheoryInlineOps(li, {}, ops);
-              const liAttrs = { list: listType };
-              if (li.style.textAlign) liAttrs.align = li.style.textAlign;
-              ops.push({ insert: "\n", attributes: liAttrs });
-            }
-            continue;
-          }
-
-          const lineAttrs = {};
-          const headerLevel = getTheoryHeaderLevel(tag);
-          if (headerLevel) lineAttrs.header = headerLevel;
-          if (tag === "blockquote") lineAttrs.blockquote = true;
-          if (node.style.textAlign) lineAttrs.align = node.style.textAlign;
-
-          collectTheoryInlineOps(node, {}, ops);
-          ops.push(Object.keys(lineAttrs).length ? { insert: "\n", attributes: lineAttrs } : { insert: "\n" });
-        } else {
-          collectTheoryInlineOps(node, {}, ops);
-          ops.push({ insert: "\n" });
-        }
-      }
-
-      const normalized = [];
-      for (const op of ops) {
-        if (!op || !("insert" in op)) continue;
-        if (typeof op.insert === "object" && op.insert && typeof op.insert.image === "string") {
-          const normalizedImage = normalizeTheoryImageRef(op.insert.image);
-          if (!normalizedImage) continue;
-          normalized.push({ insert: { image: normalizedImage } });
-          continue;
-        }
-        if (typeof op.insert !== "string") continue;
-        normalized.push(op);
-      }
-
-      return normalized.length ? { ops: normalized } : { ops: [{ insert: "\n" }] };
-    }
-
-    const THEORY_COLORS = [
-      "#000000", "#374151", "#6b7280", "#d1d5db",
-      "#ef4444", "#f97316", "#eab308", "#22c55e",
-      "#06b6d4", "#3b82f6", "#8b5cf6", "#ec4899",
-      "#7c3aed", "#059669",
-    ];
-    let lastTheoryEditorRange = null;
-    let _selectedImage = null;
-
-    function getTheoryDefaultTextColor() {
-      try {
-        const editor = document.getElementById("theory-editor");
-        if (editor) {
-          const editorColor = window.getComputedStyle(editor).color;
-          if (String(editorColor || "").trim()) {
-            return editorColor;
-          }
-        }
-        const rootColor = window.getComputedStyle(document.documentElement).getPropertyValue("--color-text-main");
-        if (String(rootColor || "").trim()) {
-          return rootColor.trim();
-        }
-      } catch (error) {
-      }
-      return "#1A1A1A";
-    }
-
-    function setTheoryColorIndicator(color = "") {
-      const indicator = document.getElementById("theory-color-indicator");
-      if (!indicator) return;
-      indicator.style.background = String(color || "").trim() || getTheoryDefaultTextColor();
-    }
-
-    function renderTheoryInline(text, attributes) {
-      let html = escapeTheoryHtml(text).replace(/\u00A0/g, "&nbsp;");
-      const attrs = attributes || {};
-      if (attrs.bold) html = `<strong>${html}</strong>`;
-      if (attrs.italic) html = `<em>${html}</em>`;
-      if (attrs.underline) html = `<u>${html}</u>`;
-      if (attrs.strike) html = `<s>${html}</s>`;
-      if (attrs.color) html = `<span style="color:${escapeTheoryHtml(attrs.color)}">${html}</span>`;
-      return html;
-    }
-
     function getTheoryImageAttributes(attrs) {
       const source = attrs && typeof attrs === "object" ? attrs : {};
       const imageAttrs = {};
@@ -7507,6 +7132,35 @@
       if (source.float) imageAttrs.float = String(source.float);
       if (source.flip) imageAttrs.flip = String(source.flip);
       return imageAttrs;
+    }
+
+    function renderTheoryInline(text, attributes) {
+      if (!text) return "";
+      const attrs = attributes || {};
+      const hasFormatting = Boolean(attrs.bold || attrs.italic || attrs.underline || attrs.strike || attrs.color);
+      if (!hasFormatting) {
+        return escapeTheoryHtml(text).replace(/\u00A0/g, "&nbsp;").replace(/\r/g, "<br>");
+      }
+
+      const match = String(text).match(/^(\s*)([\s\S]*?)(\s*)$/);
+      const leading = match ? match[1] : "";
+      const core = match ? match[2] : text;
+      const trailing = match ? match[3] : "";
+
+      if (!core) {
+        return escapeTheoryHtml(text).replace(/\u00A0/g, "&nbsp;").replace(/\r/g, "<br>");
+      }
+
+      let html = escapeTheoryHtml(core).replace(/\u00A0/g, "&nbsp;").replace(/\r/g, "<br>");
+      if (attrs.bold) html = `<strong>${html}</strong>`;
+      if (attrs.italic) html = `<em>${html}</em>`;
+      if (attrs.underline) html = `<u>${html}</u>`;
+      if (attrs.strike) html = `<s>${html}</s>`;
+      if (attrs.color) html = `<span style="color:${escapeTheoryHtml(attrs.color)}">${html}</span>`;
+
+      const leadHtml = escapeTheoryHtml(leading).replace(/\u00A0/g, "&nbsp;").replace(/\r/g, "<br>");
+      const trailHtml = escapeTheoryHtml(trailing).replace(/\u00A0/g, "&nbsp;").replace(/\r/g, "<br>");
+      return leadHtml + html + trailHtml;
     }
 
     function deltaToTheoryLines(delta) {
@@ -7601,10 +7255,7 @@
       return html || "<br>";
     }
 
-    function renderTheoryDeltaToEditor(delta) {
-      const editor = document.getElementById("theory-editor");
-      if (!editor) return;
-
+    function renderTheoryDeltaToHtml(delta) {
       const lines = deltaToTheoryLines(delta);
       const blocks = [];
       let activeListType = null;
@@ -7654,8 +7305,92 @@
       }
 
       flushList();
-      editor.innerHTML = blocks.length ? blocks.join("") : "<p><br></p>";
+      return blocks.length ? blocks.join("") : "<p><br></p>";
+    }
+
+    function renderTheoryDeltaToEditor(delta) {
+      const editor = document.getElementById("theory-editor");
+      if (!editor) return;
+      editor.innerHTML = renderTheoryDeltaToHtml(delta);
       deselectTheoryImage();
+    }
+
+    function extractTheoryInlineAttributes(node, currentAttrs) {
+      if (!node || node.nodeType !== Node.ELEMENT_NODE) {
+        return { ...(currentAttrs || {}) };
+      }
+
+      const nextAttrs = { ...(currentAttrs || {}) };
+      const tag = node.tagName ? node.tagName.toLowerCase() : "";
+      const style = node.style;
+      const styleAttr = node.getAttribute ? String(node.getAttribute("style") || "") : "";
+
+      if (tag === "strong" || tag === "b") nextAttrs.bold = true;
+      if (style && style.fontWeight) {
+        const fw = String(style.fontWeight).toLowerCase().trim();
+        if (fw === "bold" || fw === "bolder") nextAttrs.bold = true;
+        else if (fw === "normal" || fw === "400" || fw === "lighter") delete nextAttrs.bold;
+        else {
+          const num = parseInt(fw, 10);
+          if (!isNaN(num)) {
+            if (num >= 600) nextAttrs.bold = true;
+            else if (num < 500) delete nextAttrs.bold;
+          }
+        }
+      } else if (styleAttr && /font-weight\s*:\s*(bold|bolder|[6-9]00)/i.test(styleAttr)) {
+        nextAttrs.bold = true;
+      } else if (styleAttr && /font-weight\s*:\s*(normal|lighter|[1-4]00)/i.test(styleAttr)) {
+        delete nextAttrs.bold;
+      }
+
+      if (tag === "em" || tag === "i") nextAttrs.italic = true;
+      if (style && style.fontStyle) {
+        const fs = String(style.fontStyle).toLowerCase().trim();
+        if (fs === "italic" || fs === "oblique") nextAttrs.italic = true;
+        else if (fs === "normal") delete nextAttrs.italic;
+      } else if (styleAttr && /font-style\s*:\s*(italic|oblique)/i.test(styleAttr)) {
+        nextAttrs.italic = true;
+      } else if (styleAttr && /font-style\s*:\s*normal/i.test(styleAttr)) {
+        delete nextAttrs.italic;
+      }
+
+      if (tag === "u" || tag === "ins") nextAttrs.underline = true;
+      if (style && (style.textDecoration || style.textDecorationLine)) {
+        const td = String(style.textDecoration || style.textDecorationLine || "").toLowerCase();
+        if (td.includes("underline")) nextAttrs.underline = true;
+        else if (td.includes("none")) delete nextAttrs.underline;
+      } else if (styleAttr && /text-decoration(-line)?\s*:\s*[^;]*underline/i.test(styleAttr)) {
+        nextAttrs.underline = true;
+      }
+
+      if (tag === "s" || tag === "strike" || tag === "del") nextAttrs.strike = true;
+      if (style && (style.textDecoration || style.textDecorationLine)) {
+        const td = String(style.textDecoration || style.textDecorationLine || "").toLowerCase();
+        if (td.includes("line-through")) nextAttrs.strike = true;
+      } else if (styleAttr && /text-decoration(-line)?\s*:\s*[^;]*line-through/i.test(styleAttr)) {
+        nextAttrs.strike = true;
+      }
+
+      if (style && style.color) {
+        const colorVal = String(style.color).trim();
+        if (colorVal && !/^(inherit|initial|unset|transparent)$/i.test(colorVal)) {
+          nextAttrs.color = colorVal;
+        }
+      } else if (tag === "font" && node.getAttribute("color")) {
+        nextAttrs.color = String(node.getAttribute("color")).trim();
+      } else if (styleAttr) {
+        const colorMatch = styleAttr.match(/(?:^|;)\s*color\s*:\s*([^;]+)/i);
+        if (colorMatch && colorMatch[1]) {
+          const rawColor = colorMatch[1].trim();
+          if (!/^(inherit|initial|unset|transparent)$/i.test(rawColor)) {
+            nextAttrs.color = rawColor;
+          }
+        }
+      }
+
+      return nextAttrs;
+    }
+
     function areTheoryAttributesEqual(a, b) {
       const aObj = a && typeof a === "object" ? a : {};
       const bObj = b && typeof b === "object" ? b : {};
@@ -7675,9 +7410,26 @@
         if (!text) return;
         text = text.replace(/[\r\n]+/g, " ");
         if (!text) return;
-        const op = { insert: text };
-        if (attrs && Object.keys(attrs).length) op.attributes = { ...attrs };
-        out.push(op);
+        const hasAttrs = attrs && Object.keys(attrs).length > 0;
+        if (!hasAttrs) {
+          out.push({ insert: text });
+          return;
+        }
+        const match = text.match(/^(\s*)([\s\S]*?)(\s*)$/);
+        const leading = match ? match[1] : "";
+        const core = match ? match[2] : text;
+        const trailing = match ? match[3] : "";
+        if (!core) {
+          out.push({ insert: text });
+          return;
+        }
+        if (leading) {
+          out.push({ insert: leading });
+        }
+        out.push({ insert: core, attributes: { ...attrs } });
+        if (trailing) {
+          out.push({ insert: trailing });
+        }
         return;
       }
       if (node.nodeType !== Node.ELEMENT_NODE) return;
@@ -7749,6 +7501,13 @@
       return value;
     }
 
+    function getTheoryHeaderLevel(tag) {
+      if (!tag || typeof tag !== "string") return null;
+      const match = /^h([1-6])$/.exec(tag.toLowerCase());
+      if (!match) return null;
+      return Number(match[1]);
+    }
+
     function cleanTheoryWordHtml(html) {
       if (!html) return "";
       const parser = new DOMParser();
@@ -7763,7 +7522,6 @@
       }
       comments.forEach((node) => node.remove());
 
-      // Convert Word heading classes (MsoHeading1..6, Heading1..6) to h1..h6
       const headingCandidates = Array.from(doc.body.querySelectorAll("p, div"));
       headingCandidates.forEach((el) => {
         const cls = String(el.getAttribute("class") || "");
@@ -7778,7 +7536,6 @@
         }
       });
 
-      // Remove Word's empty spacing paragraphs immediately following headings
       const headings = doc.body.querySelectorAll("h1, h2, h3, h4, h5, h6");
       headings.forEach((heading) => {
         let next = heading.nextElementSibling;
@@ -7851,14 +7608,12 @@
           collectTheoryInlineOps(nodeOrArray, {}, blockOps);
         }
 
-        // Trim leading whitespace only from the very first text op of the block
         for (let i = 0; i < blockOps.length; i++) {
           if (typeof blockOps[i].insert === "string") {
             blockOps[i].insert = blockOps[i].insert.replace(/^ +/, "");
             if (blockOps[i].insert.length > 0) break;
           }
         }
-        // Trim trailing whitespace only from the very last text op of the block
         for (let i = blockOps.length - 1; i >= 0; i--) {
           if (typeof blockOps[i].insert === "string") {
             blockOps[i].insert = blockOps[i].insert.replace(/ +$/, "");
@@ -7926,24 +7681,26 @@
               continue;
             }
 
-            inlineBuffer.push(node);
-          } else if (node.nodeType === Node.TEXT_NODE) {
-            const text = node.nodeValue || "";
-            if (!text) continue;
-            const isWhitespace = !text.trim();
-            if (isWhitespace && inlineBuffer.length === 0) {
-              const currentIndex = nodesToProcess.indexOf(node);
-              const remainingNodes = nodesToProcess.slice(currentIndex + 1);
-              const nextMeaningful = remainingNodes.find(n => n.nodeType === Node.ELEMENT_NODE || String(n.nodeValue || "").trim());
-              const isNextBlock = nextMeaningful && nextMeaningful.nodeType === Node.ELEMENT_NODE && (blockTags.has(nextMeaningful.tagName.toLowerCase()) || nextMeaningful.tagName.toLowerCase() === "div");
+            if (tag === "br") {
+              const isTrailingInBlock = !node.nextSibling;
+              const isOnlyChild = node.parentNode && node.parentNode.childNodes.length === 1;
+              if (isTrailingInBlock && !isOnlyChild) {
+                continue;
+              }
+              if (isOnlyChild && (node.parentNode.tagName.toLowerCase() === "p" || node.parentNode.tagName.toLowerCase() === "div")) {
+                continue;
+              }
+              const nextMeaningful = node.nextSibling;
+              const isNextBlock = nextMeaningful && nextMeaningful.nodeType === Node.ELEMENT_NODE && blockTags.has(nextMeaningful.tagName.toLowerCase());
               if (!nextMeaningful || isNextBlock) {
                 continue;
               }
             }
             inlineBuffer.push(node);
+          } else if (node.nodeType === Node.TEXT_NODE) {
+            inlineBuffer.push(node);
           }
         }
-
         flushInlineBuffer();
       }
 
@@ -7956,16 +7713,8 @@
           const normalizedImage = normalizeTheoryImageRef(op.insert.image);
           if (!normalizedImage) continue;
           const imageOp = { insert: { image: normalizedImage } };
-          if (op.attributes && typeof op.attributes === "object") {
-            const attrs = {};
-            if (op.attributes.width) attrs.width = op.attributes.width;
-            if (op.attributes.align) attrs.align = op.attributes.align;
-            if (op.attributes.rotate && op.attributes.rotate !== "0") attrs.rotate = op.attributes.rotate;
-            if (op.attributes.float && op.attributes.float !== "none") attrs.float = op.attributes.float;
-            if (op.attributes.flip && op.attributes.flip !== "none") attrs.flip = op.attributes.flip;
-            if (Object.keys(attrs).length) {
-              imageOp.attributes = attrs;
-            }
+          if (op.attributes && Object.keys(op.attributes).length) {
+            imageOp.attributes = { ...op.attributes };
           }
           normalized.push(imageOp);
           continue;
@@ -7991,6 +7740,39 @@
       }
 
       return normalized.length ? { ops: normalized } : { ops: [{ insert: "\n" }] };
+    }
+
+    const THEORY_COLORS = [
+      "#000000", "#374151", "#6b7280", "#d1d5db",
+      "#ef4444", "#f97316", "#eab308", "#22c55e",
+      "#06b6d4", "#3b82f6", "#8b5cf6", "#ec4899",
+      "#7c3aed", "#059669",
+    ];
+    let lastTheoryEditorRange = null;
+    let _selectedImage = null;
+
+    function getTheoryDefaultTextColor() {
+      try {
+        const editor = document.getElementById("theory-editor");
+        if (editor) {
+          const editorColor = window.getComputedStyle(editor).color;
+          if (String(editorColor || "").trim()) {
+            return editorColor;
+          }
+        }
+        const rootColor = window.getComputedStyle(document.documentElement).getPropertyValue("--color-text-main");
+        if (String(rootColor || "").trim()) {
+          return rootColor.trim();
+        }
+      } catch (error) {
+      }
+      return "#1A1A1A";
+    }
+
+    function setTheoryColorIndicator(color = "") {
+      const indicator = document.getElementById("theory-color-indicator");
+      if (!indicator) return;
+      indicator.style.background = String(color || "").trim() || getTheoryDefaultTextColor();
     }
 
     function saveTheorySelection() {

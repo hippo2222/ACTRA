@@ -707,6 +707,13 @@ class ImageLabelingEditor extends BaseEditor {
     }
 
     setupEventListeners() {
+        const titleDisplay = document.querySelector('#task-title-display');
+        if (titleDisplay) {
+            this.setupHeaderRenameTrigger(titleDisplay, {
+                onSuccess: () => this.updateTaskTitleDisplay()
+            });
+        }
+
         // Back to library button
         const backBtn = document.querySelector('#back-to-dashboard-btn');
         if (backBtn) {

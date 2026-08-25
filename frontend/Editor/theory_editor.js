@@ -1303,16 +1303,32 @@ function escapeTheoryHtml(value) {
 }
 
 function renderTheoryInline(text, attributes) {
-    let html = escapeTheoryHtml(text).replace(/\u00A0/g, "&nbsp;");
-    // Convert soft breaks (\r) back to <br>
-    html = html.replace(/\r/g, "<br>");
+    if (!text) return "";
     const attrs = attributes || {};
+    const hasFormatting = Boolean(attrs.bold || attrs.italic || attrs.underline || attrs.strike || attrs.color);
+    if (!hasFormatting) {
+        return escapeTheoryHtml(text).replace(/\u00A0/g, "&nbsp;").replace(/\r/g, "<br>");
+    }
+
+    const match = String(text).match(/^(\s*)([\s\S]*?)(\s*)$/);
+    const leading = match ? match[1] : "";
+    const core = match ? match[2] : text;
+    const trailing = match ? match[3] : "";
+
+    if (!core) {
+        return escapeTheoryHtml(text).replace(/\u00A0/g, "&nbsp;").replace(/\r/g, "<br>");
+    }
+
+    let html = escapeTheoryHtml(core).replace(/\u00A0/g, "&nbsp;").replace(/\r/g, "<br>");
     if (attrs.bold) html = `<strong>${html}</strong>`;
     if (attrs.italic) html = `<em>${html}</em>`;
     if (attrs.underline) html = `<u>${html}</u>`;
     if (attrs.strike) html = `<s>${html}</s>`;
     if (attrs.color) html = `<span style="color:${escapeTheoryHtml(attrs.color)}">${html}</span>`;
-    return html;
+
+    const leadHtml = escapeTheoryHtml(leading).replace(/\u00A0/g, "&nbsp;").replace(/\r/g, "<br>");
+    const trailHtml = escapeTheoryHtml(trailing).replace(/\u00A0/g, "&nbsp;").replace(/\r/g, "<br>");
+    return leadHtml + html + trailHtml;
 }
 
 function getTheoryLineAttributes(rawAttrs) {
@@ -1628,9 +1644,26 @@ function collectTheoryInlineOps(node, attrs, out) {
         if (!text) return;
         text = text.replace(/[\r\n]+/g, " ");
         if (!text) return;
-        const op = { insert: text };
-        if (attrs && Object.keys(attrs).length) op.attributes = { ...attrs };
-        out.push(op);
+        const hasAttrs = attrs && Object.keys(attrs).length > 0;
+        if (!hasAttrs) {
+            out.push({ insert: text });
+            return;
+        }
+        const match = text.match(/^(\s*)([\s\S]*?)(\s*)$/);
+        const leading = match ? match[1] : "";
+        const core = match ? match[2] : text;
+        const trailing = match ? match[3] : "";
+        if (!core) {
+            out.push({ insert: text });
+            return;
+        }
+        if (leading) {
+            out.push({ insert: leading });
+        }
+        out.push({ insert: core, attributes: { ...attrs } });
+        if (trailing) {
+            out.push({ insert: trailing });
+        }
         return;
     }
     if (node.nodeType !== Node.ELEMENT_NODE) return;

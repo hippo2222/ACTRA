@@ -121,19 +121,42 @@
   }
 
   function renderInlineDeltaText(text, attributes) {
-    const escaped = escapeHtml(text).replace(/\u00A0/g, '&nbsp;');
-    if (!attributes || typeof attributes !== 'object') return escaped;
-    const styles = [];
-    if (attributes.color) styles.push(`color:${escapeHtml(attributes.color)}`);
-    if (attributes.background) styles.push(`background:${escapeHtml(attributes.background)}`);
-    if (attributes.size) styles.push(`font-size:${escapeHtml(attributes.size)}`);
-    let content = escaped;
+    const rawText = String(text || '');
+    if (!attributes || typeof attributes !== 'object') {
+      return escapeHtml(rawText).replace(/\u00A0/g, '&nbsp;');
+    }
+    const hasStyles = Boolean(
+      attributes.color || attributes.background || attributes.size ||
+      attributes.bold || attributes.italic || attributes.underline || attributes.strike
+    );
+    if (!hasStyles) {
+      return escapeHtml(rawText).replace(/\u00A0/g, '&nbsp;');
+    }
+
+    const match = rawText.match(/^(\s*)([\s\S]*?)(\s*)$/);
+    const leading = match ? match[1] : '';
+    const core = match ? match[2] : rawText;
+    const trailing = match ? match[3] : '';
+
+    if (!core) {
+      return escapeHtml(rawText).replace(/\u00A0/g, '&nbsp;');
+    }
+
+    let content = escapeHtml(core).replace(/\u00A0/g, '&nbsp;');
     if (attributes.bold) content = `<strong>${content}</strong>`;
     if (attributes.italic) content = `<em>${content}</em>`;
     if (attributes.underline) content = `<u>${content}</u>`;
     if (attributes.strike) content = `<s>${content}</s>`;
+
+    const styles = [];
+    if (attributes.color) styles.push(`color:${escapeHtml(attributes.color)}`);
+    if (attributes.background) styles.push(`background:${escapeHtml(attributes.background)}`);
+    if (attributes.size) styles.push(`font-size:${escapeHtml(attributes.size)}`);
     if (styles.length) content = `<span style="${styles.join(';')}">${content}</span>`;
-    return content;
+
+    const leadHtml = escapeHtml(leading).replace(/\u00A0/g, '&nbsp;');
+    const trailHtml = escapeHtml(trailing).replace(/\u00A0/g, '&nbsp;');
+    return leadHtml + content + trailHtml;
   }
 
   function deltaToLines(delta) {

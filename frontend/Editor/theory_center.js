@@ -1,4 +1,4 @@
-﻿(function () {
+(function () {
   'use strict';
   function wt(key, fallback) {
     if (window.i18n && typeof window.i18n.t === 'function') {
@@ -580,11 +580,24 @@
       const fragments = insert.split('\n');
       fragments.forEach((part, index) => {
         if (part) {
-          let text = escapeHtml(part);
-          if (attrs.bold) text = `<strong>${text}</strong>`;
-          if (attrs.italic) text = `<em>${text}</em>`;
-          if (attrs.underline) text = `<u>${text}</u>`;
-          paragraph += text;
+          const hasFormatting = Boolean(attrs.bold || attrs.italic || attrs.underline);
+          if (!hasFormatting) {
+            paragraph += escapeHtml(part);
+          } else {
+            const match = part.match(/^(\s*)([\s\S]*?)(\s*)$/);
+            const leading = match ? match[1] : '';
+            const core = match ? match[2] : part;
+            const trailing = match ? match[3] : '';
+            if (!core) {
+              paragraph += escapeHtml(part);
+            } else {
+              let text = escapeHtml(core);
+              if (attrs.bold) text = `<strong>${text}</strong>`;
+              if (attrs.italic) text = `<em>${text}</em>`;
+              if (attrs.underline) text = `<u>${text}</u>`;
+              paragraph += escapeHtml(leading) + text + escapeHtml(trailing);
+            }
+          }
         }
         if (index < fragments.length - 1) {
           flushParagraph();

@@ -554,6 +554,13 @@ class OpenAnswerEditor extends BaseEditor {
     }
 
     setupEventListeners() {
+        const editorTitle = document.querySelector('#editor-title');
+        if (editorTitle) {
+            this.setupHeaderRenameTrigger(editorTitle, {
+                onSuccess: () => this.renderUI()
+            });
+        }
+
         // Back
         const backBtn = document.querySelector('#back-to-dashboard-btn');
         if (backBtn) {

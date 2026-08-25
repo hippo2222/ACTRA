@@ -1302,6 +1302,203 @@ class BaseEditor {
         }
     }
 
+    /**
+     * Get current task display name
+     */
+    getTaskDisplayName() {
+        return (
+            this.taskNameParam ||
+            this.task?.metadata?.name ||
+            this.task?.metadata?.title ||
+            this.task?.task_data?.name ||
+            this.task?.task_data?.title ||
+            this.task?.task_data?.meta?.name ||
+            this.task?.task_data?.meta?.title ||
+            this.taskId ||
+            ''
+        );
+    }
+
+    /**
+     * Rename current task
+     */
+    async renameCurrentTask(newName, options = {}) {
+        const cleanName = String(newName || '').trim();
+        const oldName = this.getTaskDisplayName();
+        if (!cleanName || cleanName === oldName) return false;
+
+        // If task is persisted on server, call API
+        if (this.hasPersistedTask && this.moduleId && this.topicId && this.taskId) {
+            try {
+                const response = await fetch('/api/editor/task/rename', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        module_id: this.moduleId,
+                        topic_id: this.topicId,
+                        task_id: this.taskId,
+                        name: cleanName
+                    })
+                });
+                const result = await response.json();
+                if (!result.ok) {
+                    this.showToast(result.error || wt('db.k398', 'Не удалось переименовать задание'), 'error');
+                    return false;
+                }
+            } catch (err) {
+                console.error('Rename request failed:', err);
+                this.showToast(wt('db.k398', 'Не удалось переименовать задание'), 'error');
+                return false;
+            }
+        }
+
+        // Update local state
+        this.taskNameParam = cleanName;
+        if (this.task) {
+            if (this.task.metadata) this.task.metadata.name = cleanName;
+            if (this.task.task_data) {
+                this.task.task_data.name = cleanName;
+                if (this.task.task_data.meta) this.task.task_data.meta.name = cleanName;
+            }
+        }
+
+        // Update draft if autosave manager is present
+        if (this.autoSaveManager && typeof this.autoSaveManager.saveDraft === 'function') {
+            this.autoSaveManager.saveDraft();
+        }
+
+        // Invoke custom callback / renderer
+        if (typeof options.onSuccess === 'function') {
+            options.onSuccess(cleanName, oldName);
+        } else if (typeof this.updateTaskTitleDisplay === 'function') {
+            this.updateTaskTitleDisplay();
+        }
+
+        // Show undo toast
+        if (!options.silent) {
+            this.showTaskRenameUndoToast(cleanName, oldName, options);
+        }
+
+        return true;
+    }
+
+    /**
+     * Show Undo Toast in Editor
+     */
+    showTaskRenameUndoToast(newName, oldName, options = {}) {
+        const container = document.getElementById('toast-container') || document.body;
+        const toastId = `editor-rename-toast-${Date.now()}`;
+        const toast = document.createElement('div');
+        toast.id = toastId;
+        toast.className = 'fixed bottom-5 right-5 z-50 bg-bg-ink text-text-on-dark px-4 py-3 rounded-lg shadow-xl flex items-center gap-4 animate-slide-up pointer-events-auto min-w-[320px] justify-between';
+        toast.innerHTML = `
+            <div class="flex items-center gap-3">
+                <span class="text-sm font-medium">${wt('db.k396', 'Задание переименовано')}</span>
+                <span class="text-xs text-text-on-dark opacity-60 function-timer">4c</span>
+            </div>
+            <button class="text-primary-light hover:text-primary text-sm font-bold uppercase tracking-wider transition-colors">
+                ${wt('db.k388', 'Отменить')}
+            </button>
+        `;
+
+        let left = 4;
+        const timerSpan = toast.querySelector('.function-timer');
+        const interval = setInterval(() => {
+            left--;
+            if (left > 0) {
+                if (timerSpan) timerSpan.textContent = `${left}c`;
+            } else {
+                clearInterval(interval);
+                if (toast && toast.parentNode) toast.remove();
+            }
+        }, 1000);
+
+        const undoBtn = toast.querySelector('button');
+        undoBtn.onclick = async () => {
+            clearInterval(interval);
+            if (toast && toast.parentNode) toast.remove();
+            await this.renameCurrentTask(oldName, { ...options, silent: true });
+            this.showToast(wt('db.k397', 'Переименование отменено'), 'info');
+        };
+
+        container.appendChild(toast);
+    }
+
+    /**
+     * Set up editable header title trigger
+     */
+    setupHeaderRenameTrigger(titleElement, options = {}) {
+        if (!titleElement) return;
+
+        let btn = titleElement.parentElement?.querySelector('[data-action="header-rename-task"]');
+        if (!btn && titleElement.parentElement) {
+            btn = document.createElement('button');
+            btn.type = 'button';
+            btn.dataset.action = 'header-rename-task';
+            btn.className = 'inline-flex items-center justify-center p-1 rounded-md text-text-disabled hover:text-primary hover:bg-bg-hover transition-colors shrink-0';
+            btn.title = wt('db.k395', 'Переименовать задание');
+            btn.innerHTML = '<span class="material-symbols-outlined text-[16px]">edit</span>';
+            titleElement.parentElement.appendChild(btn);
+        }
+
+        const triggerRename = () => {
+            const currentName = this.getTaskDisplayName();
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = currentName;
+            input.className = 'text-base font-bold bg-surface-2 border border-primary rounded px-2 py-0.5 outline-none focus:ring-1 focus:ring-primary text-text-main max-w-sm';
+
+            const originalDisplay = titleElement.style.display;
+            titleElement.style.display = 'none';
+            if (btn) btn.style.display = 'none';
+            titleElement.parentNode.insertBefore(input, titleElement.nextSibling);
+            input.focus();
+            input.select();
+
+            let committed = false;
+            const commit = async () => {
+                if (committed) return;
+                committed = true;
+                const newName = input.value.trim();
+                input.remove();
+                titleElement.style.display = originalDisplay || '';
+                if (btn) btn.style.display = '';
+                if (newName && newName !== currentName) {
+                    await this.renameCurrentTask(newName, options);
+                }
+            };
+            const cancel = () => {
+                if (committed) return;
+                committed = true;
+                input.remove();
+                titleElement.style.display = originalDisplay || '';
+                if (btn) btn.style.display = '';
+            };
+
+            input.addEventListener('click', (e) => e.stopPropagation());
+            input.addEventListener('mousedown', (e) => e.stopPropagation());
+            input.addEventListener('keydown', (e) => {
+                e.stopPropagation();
+                if (e.key === 'Enter') { e.preventDefault(); commit(); }
+                if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+            });
+            input.addEventListener('blur', () => {
+                setTimeout(commit, 100);
+            });
+        };
+
+        if (btn) {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                triggerRename();
+            });
+        }
+        titleElement.addEventListener('dblclick', (e) => {
+            e.stopPropagation();
+            triggerRename();
+        });
+    }
+
     // ===== UNSAVED CHANGES TRACKING =====
 
     /**

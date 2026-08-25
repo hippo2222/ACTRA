@@ -2533,6 +2533,64 @@ class StorageService:
             self.logger.exception(f"Failed to rename topic {topic_id}: {e}")
             return False
 
+    def rename_task(self, module_id: str, topic_id: str, task_id: str, new_name: str) -> bool:
+        """Rename a task (update name in task.json and module.json, keep folder ID)."""
+        self._validate_id(module_id, "module_id")
+        self._validate_id(topic_id, "topic_id")
+        self._validate_id(task_id, "task_id")
+        clean_name = str(new_name or "").strip()
+        if not clean_name:
+            return False
+
+        try:
+            import tempfile, shutil
+            # 1. Update task.json
+            task_dir = self.modules_dir / module_id / "topics" / topic_id / "tasks" / task_id
+            task_json_path = task_dir / "task.json"
+            if task_json_path.exists():
+                with open(task_json_path, "r", encoding="utf-8") as fh:
+                    task_data = json.load(fh)
+
+                task_data["name"] = clean_name
+                meta = task_data.get("meta")
+                if isinstance(meta, dict):
+                    meta["name"] = clean_name
+                    meta["modified"] = datetime.now(timezone.utc).isoformat()
+                metadata = task_data.get("metadata")
+                if isinstance(metadata, dict):
+                    metadata["name"] = clean_name
+
+                with tempfile.NamedTemporaryFile(mode="w", dir=task_json_path.parent, delete=False, encoding="utf-8", suffix=".tmp") as tf:
+                    json.dump(task_data, tf, ensure_ascii=False, indent=2)
+                    temp_name = tf.name
+                shutil.move(temp_name, str(task_json_path))
+
+            # 2. Update module.json entry
+            module_json_path = self.modules_dir / module_id / "module.json"
+            if module_json_path.exists():
+                with open(module_json_path, "r", encoding="utf-8") as fh:
+                    module = json.load(fh)
+
+                for t in module.get("topics", []):
+                    if t.get("id") == topic_id:
+                        for task in t.get("tasks", []):
+                            if task.get("id") == task_id:
+                                task["name"] = clean_name
+                                break
+                        break
+
+                with tempfile.NamedTemporaryFile(mode="w", dir=module_json_path.parent, delete=False, encoding="utf-8", suffix=".tmp") as tf:
+                    json.dump(module, tf, ensure_ascii=False, indent=2)
+                    temp_name = tf.name
+                shutil.move(temp_name, str(module_json_path))
+
+            self._modules_cache = None
+            self.logger.info(f"Task renamed: {module_id}/{topic_id}/{task_id} -> '{clean_name}'")
+            return True
+        except Exception as e:
+            self.logger.exception(f"Failed to rename task {task_id}: {e}")
+            return False
+
     def _ensure_task_registered_in_module(self, module_id: str, topic_id: str, task_id: str, payload: Dict) -> None:
         """
         Убедиться, что задание записано в module.json (если используется явная схема).
