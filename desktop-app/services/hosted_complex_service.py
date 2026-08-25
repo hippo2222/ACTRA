@@ -93,7 +93,14 @@ class HostedComplexService(HostedShadowFallbackMixin, ComplexService):
                 continue
             self._complexes_cache[complex_obj.id] = complex_obj
             loaded_complexes.append(complex_obj)
+        # Mark initialized so subsequent cache-reliant operations (create/update/delete)
+        # see the freshly-populated state without triggering a redundant reload.
+        self._initialized = True
         return loaded_complexes
+
+    def get_all_complexes(self) -> List[Complex]:
+        """Always reads from Postgres to prevent stale in-process cache across Flask workers."""
+        return self.load_complexes()
 
     def _save_complex(self, complex_obj: Complex) -> None:
         try:

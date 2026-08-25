@@ -216,3 +216,33 @@ def test_hosted_complex_service_blocks_shadow_writes_when_postgres_is_unavailabl
 
     assert exc_info.value.operation == "complexes.write"
     assert exc_info.value.reason == "postgres_unavailable_for_test"
+
+
+def test_get_all_complexes_always_reads_from_postgres_not_stale_cache(tmp_path, persistence_settings):
+    """
+    Regression test for the multi-worker stale cache bug.
+
+    When Flask serves requests across multiple workers, each worker has its own
+    in-process _complexes_cache. A complex created by worker A was invisible to
+    worker B because get_all_complexes() returned _complexes_cache instead of
+    reading Postgres directly.
+
+    After the fix, get_all_complexes() always calls load_complexes() which hits
+    Postgres, so even a worker whose cache is empty/stale returns fresh data.
+    """
+    # Worker A: create a complex (writes to repo + its own cache)
+    worker_a = HostedComplexService(data_dir=str(tmp_path), persistence_settings=persistence_settings)
+    worker_a.repository = _InMemoryHostedComplexRepository()
+    worker_a.create_complex(_valid_complex_payload("cx_worker_a", "Worker A Complex"))
+
+    # Worker B: simulated by a fresh service instance sharing the SAME repository
+    # but with a completely empty in-process cache (as would happen with a new thread)
+    worker_b = HostedComplexService(data_dir=str(tmp_path), persistence_settings=persistence_settings)
+    worker_b.repository = worker_a.repository  # same Postgres (in-memory repo here)
+    # worker_b cache starts empty — _initialized=False
+
+    complexes = worker_b.get_all_complexes()
+    ids = [c.id for c in complexes]
+    assert "cx_worker_a" in ids, (
+        "get_all_complexes() must always read from Postgres, not from stale in-process cache"
+    )
