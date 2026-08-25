@@ -5099,6 +5099,11 @@ class EditorDashboard {
 
         // Main card click
         article.addEventListener('click', (e) => {
+            if (article.dataset.isRenaming === 'true' || article.classList.contains('is-renaming')) {
+                e.stopPropagation();
+                e.preventDefault();
+                return;
+            }
             if (this.selectionMode) {
                 // If in selection mode, card click acts as checkbox toggle
                 checkbox.checked = !checkbox.checked;
@@ -7046,6 +7051,12 @@ class EditorDashboard {
     }
 
     _startInlineRename(spanEl, currentName, onConfirm) {
+        const parentCard = spanEl.closest('article, [data-task-id], button, [data-action]');
+        if (parentCard) {
+            parentCard.dataset.isRenaming = 'true';
+            parentCard.classList.add('is-renaming');
+        }
+
         const input = document.createElement('input');
         input.type = 'text';
         input.value = currentName;
@@ -7058,12 +7069,23 @@ class EditorDashboard {
         input.select();
 
         let committed = false;
+        const cleanupCard = () => {
+            if (parentCard) {
+                // Keep flag briefly so the click that caused blur does not trigger card navigation
+                setTimeout(() => {
+                    delete parentCard.dataset.isRenaming;
+                    parentCard.classList.remove('is-renaming');
+                }, 350);
+            }
+        };
+
         const commit = () => {
             if (committed) return;
             committed = true;
             const newName = input.value.trim();
             input.remove();
             spanEl.style.display = originalDisplay || '';
+            cleanupCard();
             if (newName && newName !== currentName) {
                 spanEl.textContent = newName;
                 spanEl.title = newName;
@@ -7075,11 +7097,23 @@ class EditorDashboard {
             committed = true;
             input.remove();
             spanEl.style.display = originalDisplay || '';
+            cleanupCard();
         };
 
-        input.addEventListener('click', (e) => e.stopPropagation());
-        input.addEventListener('mousedown', (e) => e.stopPropagation());
-        input.addEventListener('dblclick', (e) => e.stopPropagation());
+        input.addEventListener('click', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+        });
+        input.addEventListener('mousedown', (e) => {
+            e.stopPropagation();
+        });
+        input.addEventListener('mouseup', (e) => {
+            e.stopPropagation();
+        });
+        input.addEventListener('dblclick', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+        });
 
         input.addEventListener('keydown', (e) => {
             e.stopPropagation();
