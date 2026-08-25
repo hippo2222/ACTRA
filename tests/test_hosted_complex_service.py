@@ -30,6 +30,17 @@ class _InMemoryHostedComplexRepository:
     def list_complexes(self):
         return list(self.complexes.values())
 
+    def get_complex(self, complex_id: str):
+        return self.complexes.get(str(complex_id or "").strip())
+
+    def upsert_complex(self, payload):
+        cid = str(payload.get("id") or "").strip()
+        if cid:
+            self.complexes[cid] = dict(payload)
+
+    def delete_complex(self, complex_id: str):
+        return self.complexes.pop(str(complex_id or "").strip(), None) is not None
+
     def replace_all_complexes(self, payloads):
         self.complexes = {
             str(item.get("id") or "").strip(): dict(item)
