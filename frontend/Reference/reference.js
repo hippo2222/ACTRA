@@ -429,13 +429,13 @@
     }
 
     function renderPreview(root, tour) {
+        window.clearTimeout(state.previewCheckTimer);
         const frame = root.querySelector('[data-reference-preview-frame]');
         const stepIndex = normalizeStepIndex(tour, state.selectedStepIndex);
         const step = asArray(tour?.stepsMeta)[stepIndex];
         updatePreviewScale(root);
         syncPreviewChrome(root, tour);
         if (!tour) {
-            window.clearTimeout(state.previewCheckTimer);
             setPreviewNotice(root, '');
             setPreviewEmptyState(root, true);
             return;
