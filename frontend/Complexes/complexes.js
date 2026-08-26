@@ -3717,6 +3717,8 @@ function wt(key, fallback) {
                 btn.setAttribute("aria-expanded", String(!isExpanded));
                 const label = btn.querySelector(".truncate");
                 if (label) label.textContent = !isExpanded ? wt('complexes.btn_collapse', 'Свернуть') : wt('complexes.btn_details', 'Подробнее');
+                const chevron = btn.querySelector(".cx-toggle-chevron");
+                if (chevron) chevron.classList.toggle("is-expanded", !isExpanded);
               });
             });
 
