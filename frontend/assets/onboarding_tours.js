@@ -168,7 +168,7 @@
                             body: wt('tours.complexes_library_navigation.search_and_filters.c0_body', 'Поиск помогает быстро найти комплекс по названию, описанию или конкретному заданию внутри него.')
                         },
                         {
-                            target: '.cx-controls-section--combined',
+                            target: '[data-onboarding-target="complexes-filter-row"]',
                             placement: 'bottom',
                             offsetX: 0,
                             offsetY: 18,
