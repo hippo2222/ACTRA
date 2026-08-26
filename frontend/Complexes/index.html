@@ -1143,18 +1143,119 @@
       border-radius: 3px;
     }
 
-    /* Native dialog reset — remove browser defaults */
+    /* Native dialog reset & sizing — remove browser defaults */
     #theory-viewer-dialog,
     #complex-theory-viewer-dialog {
       /* Chrome needs explicit max-width/max-height to override user-agent dialog styles */
-      max-width: min(56rem, calc(100vw - 2rem));
-      max-height: calc(100dvh - 2rem);
+      max-width: min(72rem, calc(100vw - 2rem));
+      max-height: min(92vh, calc(100dvh - 2rem));
+      width: 100%;
     }
     /* Prevent browser-native Escape from firing close before our animation */
     #theory-viewer-dialog[open],
     #complex-theory-viewer-dialog[open] {
       display: flex;
       flex-direction: column;
+    }
+
+    /* Rich Theory Content Typography & Styling */
+    .theory-rendered-view {
+      line-height: 1.7;
+      color: var(--color-text-main);
+      font-size: 1rem;
+      word-break: break-word;
+    }
+    .theory-rendered-view h1,
+    .theory-rendered-view h2,
+    .theory-rendered-view h3,
+    .theory-rendered-view h4,
+    .theory-rendered-view h5,
+    .theory-rendered-view h6 {
+      font-weight: 700;
+      line-height: 1.3;
+      color: var(--color-text-main);
+      margin-top: 1.5rem;
+      margin-bottom: 0.6rem;
+    }
+    .theory-rendered-view h1:first-child,
+    .theory-rendered-view h2:first-child,
+    .theory-rendered-view h3:first-child {
+      margin-top: 0;
+    }
+    .theory-rendered-view h1 {
+      font-size: 1.75rem;
+      border-bottom: 1px solid var(--color-border-subtle, #e2e8f0);
+      padding-bottom: 0.4rem;
+    }
+    .theory-rendered-view h2 {
+      font-size: 1.4rem;
+    }
+    .theory-rendered-view h3 {
+      font-size: 1.18rem;
+    }
+    .theory-rendered-view h4 {
+      font-size: 1.05rem;
+    }
+    .theory-rendered-view p {
+      margin-bottom: 0.85rem;
+    }
+    .theory-rendered-view ul {
+      list-style-type: disc;
+      padding-left: 1.5rem;
+      margin-bottom: 0.85rem;
+    }
+    .theory-rendered-view ol {
+      list-style-type: decimal;
+      padding-left: 1.5rem;
+      margin-bottom: 0.85rem;
+    }
+    .theory-rendered-view li {
+      margin-bottom: 0.3rem;
+      line-height: 1.6;
+    }
+    .theory-rendered-view blockquote {
+      border-left: 4px solid var(--color-primary, #3b82f6);
+      padding: 0.6rem 1.1rem;
+      margin: 1rem 0;
+      background: color-mix(in srgb, var(--color-primary, #3b82f6) 8%, transparent);
+      border-radius: 0 10px 10px 0;
+      color: var(--color-text-main);
+    }
+    .theory-rendered-view strong {
+      font-weight: 700;
+    }
+    .theory-rendered-view em {
+      font-style: italic;
+    }
+    .theory-rendered-view u {
+      text-decoration: underline;
+    }
+    .theory-rendered-view s {
+      text-decoration: line-through;
+    }
+    .theory-rendered-view a {
+      color: var(--color-primary);
+      text-decoration: underline;
+    }
+    .theory-rendered-view a:hover {
+      opacity: 0.85;
+    }
+    .theory-rendered-view .theory-image-wrapper {
+      margin: 1rem 0;
+      display: block;
+    }
+    .theory-rendered-view .theory-image {
+      border-radius: 12px;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+      max-width: 100%;
+      height: auto;
+    }
+    .theory-rendered-view .theory-image.mx-auto {
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .theory-rendered-view .theory-image.ml-auto {
+      margin-left: auto;
     }
 
     @media (max-width: 767px) {
@@ -2274,61 +2375,225 @@
             return `/api/local-image?path=${encodeURIComponent(value)}`;
           }
 
-          function renderTheoryDeltaHtml(delta) {
-            const ops = Array.isArray(delta?.ops) ? delta.ops : [];
-            let html = "";
-            let paragraph = "";
-            const flushParagraph = () => {
-              const text = paragraph.trim();
-              if (text) {
-                html += `<p style="margin:0 0 1rem 0;line-height:1.7;color:var(--color-text-main);">${text}</p>`;
-              }
-              paragraph = "";
+          function getTheoryLineAttributes(rawAttrs) {
+            const lineAttrs = {};
+            const attrs = rawAttrs && typeof rawAttrs === "object" ? rawAttrs : {};
+            if (attrs.list === "ordered" || attrs.list === "bullet" || attrs.list === "check") {
+              lineAttrs.list = attrs.list;
+            }
+            if (attrs.blockquote) {
+              lineAttrs.blockquote = true;
+            }
+            const header = Number(attrs.header);
+            if (Number.isInteger(header) && header >= 1 && header <= 6) {
+              lineAttrs.header = header;
+            }
+            if (attrs.align && ["left", "center", "right", "justify"].includes(String(attrs.align).trim().toLowerCase())) {
+              lineAttrs.align = String(attrs.align).trim().toLowerCase();
+            }
+            return lineAttrs;
+          }
+
+          function getTheoryImageAttributes(attrs) {
+            const source = attrs && typeof attrs === "object" ? attrs : {};
+            const imageAttrs = {};
+            if (source.width) imageAttrs.width = String(source.width);
+            if (source.align) imageAttrs.align = String(source.align);
+            if (source.rotate) imageAttrs.rotate = String(source.rotate);
+            if (source.float) imageAttrs.float = String(source.float);
+            if (source.flip) imageAttrs.flip = String(source.flip);
+            return imageAttrs;
+          }
+
+          function renderTheoryInline(text, attributes) {
+            if (!text) return "";
+            const attrs = attributes || {};
+            const hasFormatting = Boolean(
+              attrs.bold || attrs.italic || attrs.underline || attrs.strike || attrs.color || attrs.background || attrs.size || attrs.link
+            );
+            if (!hasFormatting) {
+              return escapeHtml(text).replace(/\u00A0/g, "&nbsp;").replace(/\r/g, "<br>");
+            }
+
+            const match = String(text).match(/^(\s*)([\s\S]*?)(\s*)$/);
+            const leading = match ? match[1] : "";
+            const core = match ? match[2] : text;
+            const trailing = match ? match[3] : "";
+
+            if (!core) {
+              return escapeHtml(text).replace(/\u00A0/g, "&nbsp;").replace(/\r/g, "<br>");
+            }
+
+            let html = escapeHtml(core).replace(/\u00A0/g, "&nbsp;").replace(/\r/g, "<br>");
+            if (attrs.bold) html = `<strong>${html}</strong>`;
+            if (attrs.italic) html = `<em>${html}</em>`;
+            if (attrs.underline) html = `<u>${html}</u>`;
+            if (attrs.strike) html = `<s>${html}</s>`;
+
+            const inlineStyles = [];
+            if (attrs.color) inlineStyles.push(`color:${escapeHtml(attrs.color)}`);
+            if (attrs.background) inlineStyles.push(`background-color:${escapeHtml(attrs.background)}`);
+            if (attrs.size) {
+              const sizeVal = String(attrs.size).trim();
+              if (sizeVal === "small") inlineStyles.push("font-size:0.82em");
+              else if (sizeVal === "large") inlineStyles.push("font-size:1.25em");
+              else if (sizeVal === "huge") inlineStyles.push("font-size:1.6em");
+              else if (/^\d+(px|rem|em|%)$/i.test(sizeVal)) inlineStyles.push(`font-size:${escapeHtml(sizeVal)}`);
+            }
+
+            if (inlineStyles.length > 0) {
+              html = `<span style="${inlineStyles.join(';')}">${html}</span>`;
+            }
+
+            if (attrs.link) {
+              const href = escapeHtml(String(attrs.link).trim());
+              html = `<a href="${href}" target="_blank" rel="noopener noreferrer">${html}</a>`;
+            }
+
+            const leadHtml = escapeHtml(leading).replace(/\u00A0/g, "&nbsp;").replace(/\r/g, "<br>");
+            const trailHtml = escapeHtml(trailing).replace(/\u00A0/g, "&nbsp;").replace(/\r/g, "<br>");
+            return leadHtml + html + trailHtml;
+          }
+
+          function deltaToTheoryLines(delta) {
+            const ops = delta && Array.isArray(delta.ops) ? delta.ops : [];
+            const lines = [];
+            let segments = [];
+
+            const pushLine = (attrs) => {
+              lines.push({
+                segments: segments.slice(),
+                attrs: getTheoryLineAttributes(attrs),
+              });
+              segments = [];
             };
-            ops.forEach((op) => {
-              const insert = op?.insert;
-              const attrs = op?.attributes && typeof op.attributes === "object" ? op.attributes : {};
-              if (insert && typeof insert === "object" && insert.image) {
-                flushParagraph();
-                const src = normalizeTheoryViewerImageRef(insert.image);
-                if (src) {
-                  const align = ["left", "center", "right"].includes(String(attrs.align || "").trim()) ? String(attrs.align).trim() : "left";
-                  const width = String(attrs.width || "min(100%, 680px)").trim() || "min(100%, 680px)";
-                  const wrapperAlign = align === "center" ? "center" : align === "right" ? "flex-end" : "flex-start";
-                  html += `<div style="display:flex;justify-content:${wrapperAlign};margin:0 0 1rem 0;"><img src="${escapeHtml(src)}" alt="" style="display:block;max-width:${escapeHtml(width)};width:${escapeHtml(width)};border-radius:14px;box-shadow:var(--shadow-sm);"></div>`;
-                }
-                return;
-              }
-              if (typeof insert !== "string") return;
-              const fragments = insert.split("\n");
-              fragments.forEach((part, index) => {
-                if (part) {
-                  const hasFormatting = Boolean(attrs.bold || attrs.italic || attrs.underline);
-                  if (!hasFormatting) {
-                    paragraph += escapeHtml(part);
-                  } else {
-                    const match = part.match(/^(\s*)([\s\S]*?)(\s*)$/);
-                    const leading = match ? match[1] : "";
-                    const core = match ? match[2] : part;
-                    const trailing = match ? match[3] : "";
-                    if (!core) {
-                      paragraph += escapeHtml(part);
-                    } else {
-                      let text = escapeHtml(core);
-                      if (attrs.bold) text = `<strong>${text}</strong>`;
-                      if (attrs.italic) text = `<em>${text}</em>`;
-                      if (attrs.underline) text = `<u>${text}</u>`;
-                      paragraph += escapeHtml(leading) + text + escapeHtml(trailing);
-                    }
+
+            for (const op of ops) {
+              if (!op || typeof op !== "object" || !("insert" in op)) continue;
+              const attrs = op.attributes || {};
+              const insert = op.insert;
+              if (typeof insert === "string") {
+                const parts = insert.split("\n");
+                for (let index = 0; index < parts.length; index += 1) {
+                  const chunk = parts[index];
+                  if (chunk) {
+                    segments.push({ kind: "text", value: chunk, attrs });
+                  }
+                  if (index < parts.length - 1) {
+                    pushLine(attrs);
                   }
                 }
-                if (index < fragments.length - 1) {
-                  flushParagraph();
+                continue;
+              }
+
+              if (insert && typeof insert === "object" && typeof insert.image === "string") {
+                const normalizedImage = normalizeTheoryViewerImageRef(insert.image);
+                if (normalizedImage) {
+                  segments.push({
+                    kind: "image",
+                    value: normalizedImage,
+                    attrs: getTheoryImageAttributes(attrs),
+                  });
                 }
-              });
-            });
-            flushParagraph();
-            return html || `<p style="margin:0;color:var(--color-text-secondary);">${wt('complexes.theory_empty_content', 'Контент теории пока недоступен.')}</p>`;
+              }
+            }
+
+            if (segments.length || !lines.length) {
+              lines.push({ segments: segments.slice(), attrs: {} });
+            }
+            return lines;
+          }
+
+          function renderTheoryLineContent(segments) {
+            if (!Array.isArray(segments) || !segments.length) return "<br>";
+            let html = "";
+            for (const segment of segments) {
+              if (!segment || typeof segment !== "object") continue;
+              if (segment.kind === "text") {
+                html += renderTheoryInline(segment.value || "", segment.attrs || {});
+                continue;
+              }
+              if (segment.kind === "image" && segment.value) {
+                const safeRef = escapeHtml(segment.value);
+                const attrs = segment.attrs || {};
+                const width = attrs.width || "min(100%, 720px)";
+                const align = attrs.align || "left";
+                const float = attrs.float || "none";
+                const flip = attrs.flip || "none";
+                const rotate = attrs.rotate || "0";
+                const alignClass = align === "center" ? "mx-auto" : align === "right" ? "ml-auto" : "";
+                const flipScale = flip === "horizontal" ? " scaleX(-1)" : "";
+                const transformStyle = rotate !== "0" || flip === "horizontal"
+                  ? `transform:rotate(${rotate}deg)${flipScale};`
+                  : "";
+
+                let wrapperStyle = "";
+                if (float === "left") {
+                  wrapperStyle = "display:inline-block;float:left;margin:0 16px 12px 0;";
+                } else if (float === "right") {
+                  wrapperStyle = "display:inline-block;float:right;margin:0 0 12px 16px;";
+                } else {
+                  const textAlign = align === "center" ? "text-align:center;" : align === "right" ? "text-align:right;" : "";
+                  wrapperStyle = `display:block;${textAlign}`;
+                }
+
+                html += `<span class="theory-image-wrapper" style="${wrapperStyle}"><img src="${safeRef}" alt="" class="theory-image ${alignClass}" style="max-width:${escapeHtml(width)};width:${escapeHtml(width)};${transformStyle}" /></span>`;
+              }
+            }
+            return html || "<br>";
+          }
+
+          function renderTheoryDeltaHtml(delta) {
+            const lines = deltaToTheoryLines(delta);
+            const blocks = [];
+            let activeListType = null;
+            let activeListItems = [];
+
+            const flushList = () => {
+              if (!activeListType || !activeListItems.length) {
+                activeListType = null;
+                activeListItems = [];
+                return;
+              }
+              const listTag = activeListType === "ordered" ? "ol" : "ul";
+              blocks.push(`<${listTag}>${activeListItems.join("")}</${listTag}>`);
+              activeListType = null;
+              activeListItems = [];
+            };
+
+            for (const line of lines) {
+              const attrs = line && typeof line === "object" ? line.attrs || {} : {};
+              const lineHtml = renderTheoryLineContent(line && line.segments);
+              const listType =
+                attrs.list === "ordered"
+                  ? "ordered"
+                  : attrs.list === "bullet" || attrs.list === "check"
+                    ? "bullet"
+                    : null;
+
+              if (listType) {
+                if (activeListType && activeListType !== listType) flushList();
+                activeListType = listType;
+                const align = attrs.align ? ` style="text-align: ${attrs.align}"` : "";
+                activeListItems.push(`<li${align}>${lineHtml}</li>`);
+                continue;
+              }
+
+              flushList();
+              const headerLevel = Number(attrs.header);
+              const align = attrs.align ? ` style="text-align: ${attrs.align}"` : "";
+
+              if (Number.isInteger(headerLevel) && headerLevel >= 1 && headerLevel <= 6) {
+                blocks.push(`<h${headerLevel}${align}>${lineHtml}</h${headerLevel}>`);
+              } else if (attrs.blockquote) {
+                blocks.push(`<blockquote${align}>${lineHtml}</blockquote>`);
+              } else {
+                blocks.push(`<p${align}>${lineHtml}</p>`);
+              }
+            }
+
+            flushList();
+            return blocks.length ? blocks.join("") : `<p style="margin:0;color:var(--color-text-secondary);">${wt('complexes.theory_empty_content', 'Контент теории пока недоступен.')}</p>`;
           }
 
           async function openComplexTheoryViewer(complexName, theoryIds, options = {}) {
@@ -2387,7 +2652,7 @@
 
             const dialog = document.createElement("dialog");
             dialog.id = "complex-theory-viewer-dialog";
-            dialog.className = "fixed inset-0 z-[1300] m-auto flex h-full max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-[24px] border border-border-subtle bg-surface-1 shadow-2xl backdrop:bg-scrim backdrop:backdrop-blur-sm p-0";
+            dialog.className = "fixed inset-0 z-[1300] m-auto flex h-full max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-[24px] border border-border-subtle bg-surface-1 shadow-2xl backdrop:bg-scrim backdrop:backdrop-blur-sm p-0";
 
             const renderContent = () => {
               const currentTheory = loadedTheories[activeIndex] || loadedTheories[0];
@@ -2427,7 +2692,7 @@
                 </div>
                 ${tabsHtml}
                 <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4">
-                  <div class="mx-auto max-w-3xl leading-relaxed text-text-main text-[0.9375rem]">${deltaHtml}</div>
+                  <div class="theory-rendered-view mx-auto w-full max-w-5xl leading-relaxed text-text-main text-[0.95rem]">${deltaHtml}</div>
                 </div>
                 <div class="flex items-center justify-end border-t border-border-subtle bg-surface-1 px-6 py-3 flex-shrink-0">
                   <button type="button" data-action="close" class="btn-secondary inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg">
