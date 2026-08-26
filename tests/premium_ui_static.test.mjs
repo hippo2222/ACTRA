@@ -59,7 +59,7 @@ describe('premium UI wiring', () => {
   it('explains published archived content policy in publication dialogs', () => {
     const theoryCenter = read('frontend/Editor/theory_center.js');
     const complexBuilder = read('frontend/Complexes/create.html');
-    const complexes = read('frontend/Complexes/index.html');
+    const complexes = (read('frontend/Complexes/index.html') + '\n' + read('frontend/Complexes/complexes.js'));
 
     [theoryCenter, complexBuilder, complexes].forEach((source) => {
       expect(source).toContain('Источник находится в архиве Premium');
@@ -76,7 +76,7 @@ describe('premium UI wiring', () => {
     const promo = read('frontend/assets/PremiumPromoModal.js');
     const editor = read('frontend/Editor/dashboard.js');
     const complexBuilder = read('frontend/Complexes/create.html');
-    const complexes = read('frontend/Complexes/index.html');
+    const complexes = (read('frontend/Complexes/index.html') + '\n' + read('frontend/Complexes/complexes.js'));
     const settings = read('frontend/Settings/settings.html');
 
     expect(promo).toContain('window.PremiumPromo');

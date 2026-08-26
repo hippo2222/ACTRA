@@ -12,7 +12,7 @@ describe('publication modal content', () => {
       'frontend/Editor/theory_editor.js',
       'frontend/Editor/theory_center.js',
       'frontend/Complexes/create.html',
-      'frontend/Complexes/index.html',
+      'frontend/Complexes/complexes.js',
     ];
     const outdatedPhrases = [
       /Уже добавленные личные копии/i,
@@ -31,7 +31,7 @@ describe('publication modal content', () => {
   it('uses stronger semantic feedback tones in publication dialogs', () => {
     const theoryCenter = readFile('frontend/Editor/theory_center.js');
     const complexCreate = readFile('frontend/Complexes/create.html');
-    const complexIndex = readFile('frontend/Complexes/index.html');
+    const complexIndex = readFile('frontend/Complexes/complexes.js');
 
     expect(theoryCenter).toContain('border-success-light bg-success-lighter text-success-text');
     expect(complexCreate).toContain("box.classList.add('border-info-light', 'bg-info-lighter', 'text-info-text');");

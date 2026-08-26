@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 function loadAddByCodeHelpers() {
   const html = fs.readFileSync(
-    path.resolve(process.cwd(), 'frontend/Complexes/index.html'),
+    path.resolve(process.cwd(), 'frontend/Complexes/complexes.js'),
     'utf8'
   );
   const match = html.match(
@@ -12,7 +12,7 @@ function loadAddByCodeHelpers() {
   );
 
   if (!match) {
-    throw new Error('Could not extract add-by-code helpers from frontend/Complexes/index.html');
+    throw new Error('Could not extract add-by-code helpers from frontend/Complexes/complexes.js');
   }
 
   const source = match[0].replace(/\n\s*function getCatalogItemTaskCount\(item = \{\}\) \{$/, '');

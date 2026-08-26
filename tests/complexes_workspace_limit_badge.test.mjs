@@ -5,6 +5,9 @@ import { describe, expect, it } from "vitest";
 const complexesIndexHtml = fs.readFileSync(
   path.resolve(process.cwd(), "frontend/Complexes/index.html"),
   "utf8"
+) + "\n" + fs.readFileSync(
+  path.resolve(process.cwd(), "frontend/Complexes/complexes.js"),
+  "utf8"
 );
 
 describe("Complexes workspace limit badge", () => {

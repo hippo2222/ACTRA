@@ -13,7 +13,7 @@ describe('ui terminology cleanup', () => {
       'frontend/assets/WorkspaceImportClient.js',
       'frontend/Catalog/catalog.js',
       'frontend/Complexes/create.html',
-      'frontend/Complexes/index.html',
+      'frontend/Complexes/complexes.js',
       'frontend/Editor/dashboard.js',
       'frontend/Editor/import_manager.js',
       'frontend/Editor/theory_center.js',
@@ -39,7 +39,7 @@ describe('ui terminology cleanup', () => {
 
   it('marks legacy workspace-import provenance explicitly', () => {
     const createPage = readText('frontend/Complexes/create.html');
-    const complexIndex = readText('frontend/Complexes/index.html');
+    const complexIndex = readText('frontend/Complexes/complexes.js');
     const theoryCenter = readText('frontend/Editor/theory_center.js');
     const workspaceClient = readText('frontend/assets/WorkspaceImportClient.js');
 
