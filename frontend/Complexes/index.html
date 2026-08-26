@@ -1144,13 +1144,15 @@
     }
 
     /* Native dialog reset — remove browser defaults */
-    #theory-viewer-dialog {
+    #theory-viewer-dialog,
+    #complex-theory-viewer-dialog {
       /* Chrome needs explicit max-width/max-height to override user-agent dialog styles */
       max-width: min(56rem, calc(100vw - 2rem));
       max-height: calc(100dvh - 2rem);
     }
     /* Prevent browser-native Escape from firing close before our animation */
-    #theory-viewer-dialog[open] {
+    #theory-viewer-dialog[open],
+    #complex-theory-viewer-dialog[open] {
       display: flex;
       flex-direction: column;
     }
@@ -1505,6 +1507,19 @@
               hour: "2-digit",
               minute: "2-digit",
             });
+          }
+
+          function formatDateLabel(value) {
+            if (!value) return "—";
+            try {
+              const date = new Date(value);
+              if (Number.isNaN(date.getTime())) {
+                return value;
+              }
+              return date.toLocaleDateString("ru-RU", { day: "2-digit", month: "short", year: "numeric" });
+            } catch (error) {
+              return value;
+            }
           }
 
           function escapeHtml(value) {
@@ -2435,10 +2450,6 @@
               }
             };
 
-            document.body.appendChild(dialog);
-            renderContent();
-            dialog.showModal();
-
             const close = () => {
               dialog.close();
               dialog.remove();
@@ -2451,6 +2462,10 @@
               e.preventDefault();
               close();
             });
+
+            document.body.appendChild(dialog);
+            renderContent();
+            dialog.showModal();
           }
 
           async function openTheoryModal(complexName, theoryId, options = {}) {
