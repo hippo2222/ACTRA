@@ -273,9 +273,45 @@ async function runAudit() {
     }
 
     // -------------------------------------------------------------------------
-    // 9. Console and Network Errors Summary
+    // 9. Dynamic Language Switching (i18n RU -> EN -> UK)
     // -------------------------------------------------------------------------
-    console.log('\n--- 9. Console & Network Errors ---');
+    console.log('\n--- 9. Dynamic Language Switching Inspection ---');
+    // Switch to EN
+    await page.evaluate(async () => {
+      await window.i18n.setLang('en');
+    });
+    await page.waitForTimeout(500);
+
+    const enBadges = await page.locator('.cx-card-badge').allTextContents();
+    const hasEnBadge = enBadges.some((b) => b.includes('My complex') || b.includes('Imported') || b.includes('Active') || b.includes('Not started'));
+    const enSortLabel = await page.locator('#complex-sort-selected-label').textContent();
+    record('Dynamic switch to English updates card badges and sort label', hasEnBadge && (enSortLabel.includes('By name') || enSortLabel.includes('Most tasks')), `Sample badges: ${enBadges.slice(0, 3).map(s => s.trim()).join(', ')} | Sort: ${enSortLabel}`);
+
+    // Switch to UK
+    await page.evaluate(async () => {
+      await window.i18n.setLang('uk');
+    });
+    await page.waitForTimeout(500);
+
+    const ukBadges = await page.locator('.cx-card-badge').allTextContents();
+    const hasUkBadge = ukBadges.some((b) => b.includes('Мій комплекс') || b.includes('Імпортовано') || b.includes('Активний') || b.includes('Не розпочато'));
+    const ukSortLabel = await page.locator('#complex-sort-selected-label').textContent();
+    record('Dynamic switch to Ukrainian updates card badges and sort label', hasUkBadge && (ukSortLabel.includes('За назвою') || ukSortLabel.includes('Більше завдань')), `Sample badges: ${ukBadges.slice(0, 3).map(s => s.trim()).join(', ')} | Sort: ${ukSortLabel}`);
+
+    // Switch back to RU
+    await page.evaluate(async () => {
+      await window.i18n.setLang('ru');
+    });
+    await page.waitForTimeout(500);
+
+    const ruBadges = await page.locator('.cx-card-badge').allTextContents();
+    const hasRuBadge = ruBadges.some((b) => b.includes('Мой комплекс') || b.includes('Импортировано') || b.includes('Активен') || b.includes('Не начат'));
+    record('Dynamic switch back to Russian restores original localized strings', hasRuBadge);
+
+    // -------------------------------------------------------------------------
+    // 10. Console and Network Errors Summary
+    // -------------------------------------------------------------------------
+    console.log('\n--- 10. Console & Network Errors ---');
     record('Zero Uncaught Exceptions / Console Errors', consoleErrors.length === 0, consoleErrors.map((e) => e.text).join('; '));
     record('Zero HTTP / Network Request Errors (4xx/5xx)', networkErrors.length === 0, networkErrors.map((e) => `${e.url} [${e.status}]`).join('; '));
 

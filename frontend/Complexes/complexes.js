@@ -6,6 +6,8 @@ function wt(key, fallback) {
 
           function _applyComplexesI18n() {
             if (window.i18n) window.i18n.updateDOM();
+            if (typeof updateSortUi === "function") updateSortUi();
+            if (typeof updateComplexFilterUi === "function") updateComplexFilterUi();
             fetchComplexes();
           }
 
