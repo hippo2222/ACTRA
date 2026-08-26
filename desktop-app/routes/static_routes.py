@@ -1033,6 +1033,21 @@ def serve_complexes_create_ui_legacy() -> Any:
     return _legacy_redirect("/complexes/create")
 
 
+@static_bp.route("/complexes/<path:filename>", methods=["GET"])
+def serve_complexes_file(filename: str) -> Any:
+    """Serve Complexes static files (CSS, JS, assets)."""
+    dirs = _get_ui_dirs()
+    COMPLEXES_UI_DIR = dirs.get("COMPLEXES_UI_DIR")
+    if not COMPLEXES_UI_DIR or not COMPLEXES_UI_DIR.exists():
+        return jsonify({"ok": False, "error": "complexes_ui_not_found"}), 500
+    return send_from_directory(COMPLEXES_UI_DIR, filename)
+
+
+@static_bp.route("/ui/complexes/<path:filename>", methods=["GET"])
+def serve_complexes_file_legacy(filename: str) -> Any:
+    return _legacy_redirect(f"/complexes/{filename}")
+
+
 # ---------------------------------------------------------------------------
 # Catalog UI
 # ---------------------------------------------------------------------------
