@@ -169,20 +169,32 @@ async function runAudit() {
     // 4. Sort Dropdown Inspection
     // -------------------------------------------------------------------------
     console.log('\n--- 4. Sort Dropdown Inspection ---');
-    const sortSelect = page.locator('#complex-sort-select');
+    const sortTrigger = page.locator('#complex-sort-trigger');
+    const sortMenu = page.locator('#complex-sort-menu');
 
-    // Sort by name descending (Я → А)
-    await sortSelect.selectOption('name-desc');
+    // Click custom dropdown trigger to open menu
+    await sortTrigger.click();
+    const sortMenuOpen = await sortMenu.isVisible();
+    record('Custom sort dropdown trigger opens floating menu', sortMenuOpen);
+
+    // Select "tasks-desc" via custom dropdown item
+    const tasksDescItem = page.locator('.cx-sort-menu-item[data-sort-value="tasks-desc"]');
+    await tasksDescItem.click();
+    const sortMenuClosed = await sortMenu.isHidden();
     let titles = await page.locator('#complexes-list article.cx-card:not([hidden]) h2').allTextContents();
+    record('Custom sort menu item selects and sorts by task count', sortMenuClosed && titles[0].includes('Базовые алгоритмы'), `First: "${titles[0]}" (5 tasks)`);
+
+    // Sort by name descending (Я → А) via custom dropdown
+    await sortTrigger.click();
+    const nameDescItem = page.locator('.cx-sort-menu-item[data-sort-value="name-desc"]');
+    await nameDescItem.click();
+    titles = await page.locator('#complexes-list article.cx-card:not([hidden]) h2').allTextContents();
     record('Sort by name descending (Я → А)', titles[0].includes('Ядерный') && titles[titles.length - 1].includes('Анализ'), `First: "${titles[0]}", Last: "${titles[titles.length - 1]}"`);
 
-    // Sort by task count descending
-    await sortSelect.selectOption('tasks-desc');
-    titles = await page.locator('#complexes-list article.cx-card:not([hidden]) h2').allTextContents();
-    record('Sort by task count descending', titles[0].includes('Базовые алгоритмы'), `First: "${titles[0]}" (5 tasks)`);
-
     // Sort by name ascending (А → Я)
-    await sortSelect.selectOption('name-asc');
+    await sortTrigger.click();
+    const nameAscItem = page.locator('.cx-sort-menu-item[data-sort-value="name-asc"]');
+    await nameAscItem.click();
     titles = await page.locator('#complexes-list article.cx-card:not([hidden]) h2').allTextContents();
     record('Sort by name ascending (А → Я)', titles[0].includes('Анализ') && titles[titles.length - 1].includes('Ядерный'), `First: "${titles[0]}", Last: "${titles[titles.length - 1]}"`);
 

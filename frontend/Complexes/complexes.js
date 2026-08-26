@@ -1715,6 +1715,23 @@ function wt(key, fallback) {
             if (select && select.value !== activeComplexSort) {
               select.value = activeComplexSort;
             }
+            const label = document.getElementById('complex-sort-selected-label');
+            const menu = document.getElementById('complex-sort-menu');
+            if (menu) {
+              menu.querySelectorAll('.cx-sort-menu-item').forEach((item) => {
+                const isSel = item.getAttribute('data-sort-value') === activeComplexSort;
+                item.classList.toggle('is-selected', isSel);
+                item.setAttribute('aria-selected', isSel ? 'true' : 'false');
+                if (isSel && label) {
+                  const itemText = item.querySelector('.cx-sort-item-text');
+                  if (itemText) {
+                    label.textContent = itemText.textContent;
+                    const i18nKey = itemText.getAttribute('data-i18n');
+                    if (i18nKey) label.setAttribute('data-i18n', i18nKey);
+                  }
+                }
+              });
+            }
             const btns = document.querySelectorAll('.cx-sort-btn[data-sort]');
             btns.forEach((btn) => {
               const active = btn.getAttribute('data-sort') === activeComplexSort;
@@ -1732,7 +1749,81 @@ function wt(key, fallback) {
           }
 
           function bindComplexSort() {
+            const dropdown = document.getElementById('complex-sort-dropdown');
+            const trigger = document.getElementById('complex-sort-trigger');
+            const menu = document.getElementById('complex-sort-menu');
             const select = document.getElementById('complex-sort-select');
+
+            const closeMenu = () => {
+              if (!menu || menu.hidden) return;
+              menu.hidden = true;
+              trigger?.setAttribute('aria-expanded', 'false');
+              trigger?.classList.remove('is-open');
+            };
+
+            const openMenu = () => {
+              if (!menu) return;
+              menu.hidden = false;
+              trigger?.setAttribute('aria-expanded', 'true');
+              trigger?.classList.add('is-open');
+              const selectedItem = menu.querySelector('.cx-sort-menu-item.is-selected') || menu.querySelector('.cx-sort-menu-item');
+              selectedItem?.focus();
+            };
+
+            if (trigger && menu) {
+              trigger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (menu.hidden) {
+                  openMenu();
+                } else {
+                  closeMenu();
+                }
+              });
+
+              trigger.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  openMenu();
+                }
+              });
+
+              menu.addEventListener('keydown', (e) => {
+                const items = Array.from(menu.querySelectorAll('.cx-sort-menu-item'));
+                const currentIndex = items.indexOf(document.activeElement);
+                if (e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  const nextIndex = (currentIndex + 1) % items.length;
+                  items[nextIndex]?.focus();
+                } else if (e.key === 'ArrowUp') {
+                  e.preventDefault();
+                  const prevIndex = (currentIndex - 1 + items.length) % items.length;
+                  items[prevIndex]?.focus();
+                } else if (e.key === 'Escape') {
+                  e.preventDefault();
+                  closeMenu();
+                  trigger?.focus();
+                }
+              });
+
+              document.addEventListener('click', (e) => {
+                if (dropdown && !dropdown.contains(e.target)) {
+                  closeMenu();
+                }
+              });
+
+              menu.querySelectorAll('.cx-sort-menu-item').forEach((item) => {
+                item.addEventListener('click', (e) => {
+                  e.stopPropagation();
+                  const sortVal = item.getAttribute('data-sort-value');
+                  if (sortVal) {
+                    setComplexSort(sortVal);
+                  }
+                  closeMenu();
+                  trigger?.focus();
+                });
+              });
+            }
+
             if (select) {
               select.addEventListener('change', () => setComplexSort(select.value));
             }

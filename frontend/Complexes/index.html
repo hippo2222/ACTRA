@@ -90,16 +90,48 @@
                   </div>
 
                   <div class="cx-controls-top-bar__actions">
-                    <div class="cx-sort-select-wrapper" title="Сортировка комплексов">
-                      <span class="material-symbols-outlined cx-sort-icon" aria-hidden="true">swap_vert</span>
-                      <select id="complex-sort-select" class="cx-sort-select" aria-label="Сортировка комплексов">
+                    <div class="cx-sort-select-wrapper" id="complex-sort-dropdown" title="Сортировка комплексов">
+                      <button id="complex-sort-trigger" type="button" class="cx-sort-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="Сортировка комплексов">
+                        <span class="material-symbols-outlined cx-sort-icon" aria-hidden="true">swap_vert</span>
+                        <span id="complex-sort-selected-label" class="cx-sort-selected-label" data-i18n="complexes.sort_name_asc">По названию (А → Я)</span>
+                        <span class="material-symbols-outlined cx-sort-select-arrow" aria-hidden="true">expand_more</span>
+                      </button>
+
+                      <div id="complex-sort-menu" class="cx-sort-menu" role="listbox" aria-label="Параметры сортировки" hidden>
+                        <button type="button" class="cx-sort-menu-item is-selected" role="option" data-sort-value="name-asc" aria-selected="true">
+                          <span class="material-symbols-outlined cx-sort-item-icon" aria-hidden="true">sort_by_alpha</span>
+                          <span class="cx-sort-item-text" data-i18n="complexes.sort_name_asc">По названию (А → Я)</span>
+                          <span class="material-symbols-outlined cx-sort-item-check" aria-hidden="true">check</span>
+                        </button>
+                        <button type="button" class="cx-sort-menu-item" role="option" data-sort-value="name-desc" aria-selected="false">
+                          <span class="material-symbols-outlined cx-sort-item-icon" aria-hidden="true">sort_by_alpha</span>
+                          <span class="cx-sort-item-text" data-i18n="complexes.sort_name_desc">По названию (Я → А)</span>
+                          <span class="material-symbols-outlined cx-sort-item-check" aria-hidden="true">check</span>
+                        </button>
+                        <button type="button" class="cx-sort-menu-item" role="option" data-sort-value="date-desc" aria-selected="false">
+                          <span class="material-symbols-outlined cx-sort-item-icon" aria-hidden="true">schedule</span>
+                          <span class="cx-sort-item-text" data-i18n="complexes.sort_date_desc">Сначала новые</span>
+                          <span class="material-symbols-outlined cx-sort-item-check" aria-hidden="true">check</span>
+                        </button>
+                        <button type="button" class="cx-sort-menu-item" role="option" data-sort-value="date-asc" aria-selected="false">
+                          <span class="material-symbols-outlined cx-sort-item-icon" aria-hidden="true">history</span>
+                          <span class="cx-sort-item-text" data-i18n="complexes.sort_date_asc">Сначала старые</span>
+                          <span class="material-symbols-outlined cx-sort-item-check" aria-hidden="true">check</span>
+                        </button>
+                        <button type="button" class="cx-sort-menu-item" role="option" data-sort-value="tasks-desc" aria-selected="false">
+                          <span class="material-symbols-outlined cx-sort-item-icon" aria-hidden="true">format_list_numbered</span>
+                          <span class="cx-sort-item-text" data-i18n="complexes.sort_tasks_desc">Больше заданий</span>
+                          <span class="material-symbols-outlined cx-sort-item-check" aria-hidden="true">check</span>
+                        </button>
+                      </div>
+
+                      <select id="complex-sort-select" class="sr-only" aria-hidden="true" tabindex="-1">
                         <option value="name-asc" data-i18n="complexes.sort_name_asc">По названию (А → Я)</option>
                         <option value="name-desc" data-i18n="complexes.sort_name_desc">По названию (Я → А)</option>
                         <option value="date-desc" data-i18n="complexes.sort_date_desc">Сначала новые</option>
                         <option value="date-asc" data-i18n="complexes.sort_date_asc">Сначала старые</option>
                         <option value="tasks-desc" data-i18n="complexes.sort_tasks_desc">Больше заданий</option>
                       </select>
-                      <span class="material-symbols-outlined cx-sort-select-arrow" aria-hidden="true">expand_more</span>
                     </div>
 
                     <div class="cx-controls-summary-badge" data-onboarding-target="complexes-filter-summary">
