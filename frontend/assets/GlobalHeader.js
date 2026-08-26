@@ -123,6 +123,8 @@
                 '</button>';
         }).join('');
 
+        var langDisplayCode = (currentLang === 'uk' ? 'UA' : currentLang.toUpperCase());
+
         // Mobile drawer: reuses nav / create / lang markup (same data-* hooks),
         // so the existing click delegation handles navigation and language.
         var drawerHtml =
@@ -183,7 +185,7 @@
             '<button class="global-header__lang-btn" type="button" data-global-lang-toggle aria-haspopup="menu" aria-expanded="false"' +
             ' data-i18n-aria="header.lang_aria" aria-label="' + escapeHtml(_t('header.lang_aria')) + '">' +
             '<span class="material-symbols-outlined" aria-hidden="true">language</span>' +
-            '<span class="global-header__lang-code" data-lang-display>' + escapeHtml(currentLang.toUpperCase()) + '</span>' +
+            '<span class="global-header__lang-code" data-lang-display>' + escapeHtml(langDisplayCode) + '</span>' +
             '<span class="material-symbols-outlined global-header__lang-chevron" aria-hidden="true">expand_more</span>' +
             '</button>' +
             '<div class="global-header__lang-menu" data-global-lang-menu role="menu">' +

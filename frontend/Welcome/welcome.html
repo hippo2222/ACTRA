@@ -6741,6 +6741,11 @@
             <a href="#premium" data-welcome-drawer-link data-i18n="wl.premium_pricing">Premium &amp; Pricing</a>
         </nav>
         <div class="welcome-drawer-footer">
+            <div class="welcome-lang-switcher justify-center mx-auto mb-3" role="group" aria-label="Language selection" data-i18n-aria="settings.lang_group_aria">
+                <button type="button" class="welcome-lang-btn" data-lang-btn="ru" role="option" aria-selected="false">RU</button>
+                <button type="button" class="welcome-lang-btn" data-lang-btn="en" role="option" aria-selected="false">EN</button>
+                <button type="button" class="welcome-lang-btn" data-lang-btn="uk" role="option" aria-selected="false">UA</button>
+            </div>
             <button type="button" class="welcome-pill-light" onclick="window.welcomeCloseMobileDrawer(); window.welcomeShowAuthLogin && window.welcomeShowAuthLogin()" data-i18n="welcome.btn_login">
                 Войти
             </button>
@@ -7875,15 +7880,15 @@
                         </button>
                     </div>
                     <div class="welcome-premium-actions welcome-info-actions mt-3" aria-label="ACTRA Product Information">
-                        <a class="welcome-pill-light" href="/pricing?lang=ru">
+                        <a class="welcome-pill-light" href="/pricing">
                             <span data-i18n="wl.pricing">Pricing</span>
                             <span class="material-symbols-outlined text-[18px]" aria-hidden="true">arrow_forward</span>
                         </a>
-                        <a class="welcome-pill-light" href="/terms?lang=ru">
+                        <a class="welcome-pill-light" href="/terms">
                             <span data-i18n="wl.terms">Terms of Service</span>
                             <span class="material-symbols-outlined text-[18px]" aria-hidden="true">arrow_forward</span>
                         </a>
-                        <a class="welcome-pill-light" href="/refund?lang=ru">
+                        <a class="welcome-pill-light" href="/refund">
                             <span data-i18n="wl.refund">Refund policy</span>
                             <span class="material-symbols-outlined text-[18px]" aria-hidden="true">arrow_forward</span>
                         </a>
@@ -8249,16 +8254,29 @@
                 langTrigger.setAttribute('aria-expanded', 'false');
             }
 
+            function updateFooterLinks(lang) {
+                const currentLang = lang || window.i18n?.getLang?.() || localStorage.getItem('actra_lang') || 'ru';
+                document.querySelectorAll('a[href^="/pricing"], a[href^="/terms"], a[href^="/refund"]').forEach((a) => {
+                    try {
+                        const url = new URL(a.getAttribute('href'), window.location.origin);
+                        url.searchParams.set('lang', currentLang);
+                        a.setAttribute('href', url.pathname + url.search);
+                    } catch (_) {}
+                });
+            }
+
             function syncLangOptions() {
                 const currentLang = window.i18n?.getLang?.() || localStorage.getItem('actra_lang') || 'ru';
-                langMenu?.querySelectorAll('[data-lang-btn]').forEach((btn) => {
+                document.querySelectorAll('[data-lang-btn]').forEach((btn) => {
                     const isActive = btn.getAttribute('data-lang-btn') === currentLang;
                     btn.classList.toggle('is-active', isActive);
                     btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
-                    // Show/hide checkmark
+                    btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+                    // Show/hide checkmark if present
                     const check = btn.querySelector('.material-symbols-outlined');
                     if (check) check.style.visibility = isActive ? 'visible' : 'hidden';
                 });
+                updateFooterLinks(currentLang);
             }
 
             langTrigger?.addEventListener('click', (e) => {
@@ -8277,8 +8295,9 @@
             });
 
             // Re-sync display label when i18n changes lang
-            window.addEventListener('i18n:changed', () => {
+            window.addEventListener('i18n:changed', (e) => {
                 closeLangMenu();
+                closeDrawer();
                 syncLangOptions();
             });
 

@@ -9,7 +9,16 @@
     var _lang = DEFAULT_LANG;
 
     function getLang() {
-        var stored = localStorage.getItem(STORAGE_KEY);
+        try {
+            if (typeof window !== 'undefined' && window.location && window.location.search) {
+                var params = new URLSearchParams(window.location.search);
+                var urlLang = params.get('lang');
+                if (urlLang && SUPPORTED.indexOf(urlLang) !== -1) {
+                    return urlLang;
+                }
+            }
+        } catch (_) {}
+        var stored = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
         return SUPPORTED.indexOf(stored) !== -1 ? stored : DEFAULT_LANG;
     }
 
@@ -92,18 +101,30 @@
     async function setLang(lang) {
         if (SUPPORTED.indexOf(lang) === -1) return;
         await loadLocale(lang);
-        window.dispatchEvent(new CustomEvent('i18n:changed', { detail: { lang: lang } }));
+        try {
+            if (typeof window !== 'undefined' && window.location && window.history && typeof window.history.replaceState === 'function') {
+                var url = new URL(window.location.href);
+                url.searchParams.set('lang', lang);
+                window.history.replaceState({}, '', url.toString());
+            }
+        } catch (_) {}
+        if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+            window.dispatchEvent(new CustomEvent('i18n:changed', { detail: { lang: lang } }));
+        }
     }
 
     async function init() {
         var lang = getLang();
-        var cached = localStorage.getItem('actra_locale_' + lang);
+        var cached = typeof localStorage !== 'undefined' ? localStorage.getItem('actra_locale_' + lang) : null;
         if (cached) {
             try {
                 applyLocale(JSON.parse(cached), lang);
             } catch (_) {}
         }
         await loadLocale(lang);
+        if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+            window.dispatchEvent(new CustomEvent('i18n:changed', { detail: { lang: lang } }));
+        }
     }
 
     window.i18n = {
