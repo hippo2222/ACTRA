@@ -114,56 +114,29 @@
       row-gap: 0.5rem;
     }
 
-    .cx-controls-panel {
-      position: relative;
-      overflow: hidden;
-      border-radius: 1.5rem;
-      border: 1px solid color-mix(in srgb, var(--color-border-strong) 68%, transparent);
-      background:
-        radial-gradient(circle at top right, color-mix(in srgb, var(--color-primary-lighter) 60%, transparent) 0, transparent 42%),
-        linear-gradient(145deg,
-          color-mix(in srgb, var(--color-surface-1) 94%, white 6%) 0%,
-          color-mix(in srgb, var(--color-bg-main) 84%, var(--color-primary-lighter) 16%) 100%);
-      box-shadow: 0 16px 42px -22px rgba(15, 23, 42, 0.3);
-    }
-
-    .cx-controls-panel::before {
-      content: "";
-      position: absolute;
-      top: -5rem;
-      right: -4rem;
-      width: 18rem;
-      height: 18rem;
-      border-radius: 999px;
-      background: radial-gradient(circle, color-mix(in srgb, var(--color-primary-light) 32%, transparent) 0%, transparent 68%);
-      pointer-events: none;
-      opacity: 0.8;
-    }
-
-    .cx-controls-stack {
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-    }
-
     /* ============================================================
        Controls Toolbar (Phase 2 Redesign)
        ============================================================ */
     .cx-controls-panel {
+      position: relative;
+      overflow: visible;
       border-radius: 1.15rem;
       border: 1px solid color-mix(in srgb, var(--color-border-subtle) 80%, transparent);
       background: color-mix(in srgb, var(--color-surface-1) 92%, var(--color-bg-main) 8%);
       box-shadow: 0 4px 20px -8px rgba(0, 0, 0, 0.08);
+      z-index: 20;
     }
 
     .cx-controls-stack {
+      position: relative;
       display: flex;
       flex-direction: column;
       gap: 0.75rem;
     }
 
     .cx-controls-top-bar {
+      position: relative;
+      z-index: 30;
       display: flex;
       flex-wrap: wrap;
       align-items: center;
@@ -261,6 +234,7 @@
       display: inline-flex;
       align-items: center;
       user-select: none;
+      z-index: 40;
     }
 
     .cx-sort-trigger {
@@ -326,7 +300,7 @@
       position: absolute;
       top: calc(100% + 0.4rem);
       right: 0;
-      z-index: 60;
+      z-index: 100;
       min-width: 14.5rem;
       padding: 0.35rem;
       border-radius: 0.85rem;
