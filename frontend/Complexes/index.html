@@ -159,246 +159,268 @@
       gap: 0.75rem;
     }
 
-    .cx-controls-hero {
-      display: grid;
-      gap: 0.75rem;
-      align-items: stretch;
+    /* ============================================================
+       Controls Toolbar (Phase 2 Redesign)
+       ============================================================ */
+    .cx-controls-panel {
+      border-radius: 1.15rem;
+      border: 1px solid color-mix(in srgb, var(--color-border-subtle) 80%, transparent);
+      background: color-mix(in srgb, var(--color-surface-1) 92%, var(--color-bg-main) 8%);
+      box-shadow: 0 4px 20px -8px rgba(0, 0, 0, 0.08);
     }
 
-    .cx-controls-search {
-      position: relative;
-      display: flex;
-      align-items: center;
-      min-height: 3.5rem;
-      border-radius: 1rem;
-      border: 1px solid color-mix(in srgb, var(--color-border-strong) 60%, transparent);
-      background: color-mix(in srgb, var(--color-surface-1) 88%, var(--color-bg-main) 12%);
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
-    }
-
-    .cx-controls-search-icon {
-      position: absolute;
-      inset-block: 0;
-      left: 1rem;
-      display: flex;
-      align-items: center;
-      color: var(--color-text-secondary);
-      pointer-events: none;
-    }
-
-    .cx-controls-search-input {
-      width: 100%;
-      min-height: 3.5rem;
-      padding: 0.72rem 1rem 0.72rem 3.35rem;
-      border: 0;
-      background: transparent;
-      color: var(--color-text-main);
-      font-size: 0.9rem;
-      font-weight: 600;
-      outline: none;
-    }
-
-    .cx-controls-search-input::placeholder {
-      color: var(--color-text-secondary);
-      opacity: 1;
-    }
-
-    .cx-controls-search:focus-within {
-      border-color: color-mix(in srgb, var(--color-primary) 74%, white 26%);
-      box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.35),
-        0 0 0 3px color-mix(in srgb, var(--color-primary-light) 42%, transparent);
-    }
-
-    .cx-controls-summary-card {
+    .cx-controls-stack {
       display: flex;
       flex-direction: column;
-      justify-content: center;
-      gap: 0.2rem;
-      min-height: 3.5rem;
-      padding: 0.72rem 0.95rem;
-      border-radius: 1rem;
-      border: 1px solid color-mix(in srgb, var(--color-border-subtle) 76%, transparent);
-      background: linear-gradient(145deg,
-          color-mix(in srgb, var(--color-surface-1) 90%, white 10%) 0%,
-          color-mix(in srgb, var(--color-surface-2) 88%, var(--color-primary-lighter) 12%) 100%);
-    }
-
-    .cx-controls-summary-label {
-      margin: 0;
-      color: var(--color-text-secondary);
-      font-size: 0.68rem;
-      font-weight: 800;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-    }
-
-    #complex-filter-summary {
-      margin: 0;
-      color: var(--color-text-main);
-      font-size: 0.92rem;
-      font-weight: 800;
-      line-height: 1.3;
-    }
-
-    .cx-controls-grid {
-      display: grid;
       gap: 0.75rem;
     }
 
-    .cx-controls-section {
-      display: flex;
-      flex-direction: column;
-      gap: 0.7rem;
-      min-width: 0;
-      padding: 0.85rem 0.95rem;
-      border-radius: 1rem;
-      border: 1px solid color-mix(in srgb, var(--color-border-subtle) 78%, transparent);
-      background: color-mix(in srgb, var(--color-surface-1) 88%, var(--color-bg-main) 12%);
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24);
-    }
-
-    .cx-controls-section-head {
+    .cx-controls-top-bar {
       display: flex;
       flex-wrap: wrap;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 0.6rem;
-    }
-
-    .cx-controls-kicker {
-      margin: 0 0 0.2rem;
-      color: var(--color-primary);
-      font-size: 0.68rem;
-      font-weight: 800;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-    }
-
-    .cx-controls-heading {
-      margin: 0;
-      color: var(--color-text-main);
-      font-size: 0.94rem;
-      font-weight: 900;
-      line-height: 1.2;
-    }
-
-    .cx-controls-caption {
-      margin: 0;
-      max-width: 19rem;
-      color: var(--color-text-secondary);
-      font-size: 0.75rem;
-      font-weight: 600;
-      line-height: 1.38;
-    }
-
-    .cx-controls-section--combined {
+      align-items: center;
       gap: 0.65rem;
     }
 
-    .cx-controls-section-head--combined {
+    .cx-search-box-wrapper {
+      position: relative;
+      display: flex;
       align-items: center;
+      flex: 1 1 280px;
+      min-width: 220px;
+      min-height: 2.65rem;
+      border-radius: 0.75rem;
+      border: 1px solid color-mix(in srgb, var(--color-border-strong) 55%, transparent);
+      background: color-mix(in srgb, var(--color-surface-2) 70%, var(--color-bg-main) 30%);
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+      transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
     }
 
-    .cx-control-lane {
-      display: grid;
-      gap: 0.45rem;
-      min-width: 0;
+    .cx-search-box-wrapper:focus-within {
+      border-color: var(--color-primary);
+      background: var(--color-surface-1);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent);
     }
 
-    .cx-control-lane__label {
+    .cx-search-icon {
+      position: absolute;
+      left: 0.75rem;
       color: var(--color-text-secondary);
-      font-size: 0.7rem;
-      font-weight: 900;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
+      font-size: 1.25rem;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .cx-search-input {
+      width: 100%;
+      min-height: 2.65rem;
+      padding: 0.45rem 3.5rem 0.45rem 2.5rem;
+      border: none;
+      background: transparent;
+      color: var(--color-text-main);
+      font-size: 0.86rem;
+      font-weight: 500;
+      outline: none;
+    }
+
+    .cx-search-input::placeholder {
+      color: var(--color-text-secondary);
+      opacity: 0.85;
+      font-weight: 400;
+    }
+
+    .cx-search-input::-webkit-search-cancel-button,
+    .cx-search-input::-webkit-search-decoration {
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    .cx-search-clear-btn {
+      position: absolute;
+      right: 2.1rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.5rem;
+      height: 1.5rem;
+      padding: 0;
+      border-radius: 999px;
+      border: none;
+      background: color-mix(in srgb, var(--color-text-secondary) 18%, transparent);
+      color: var(--color-text-secondary);
+      cursor: pointer;
+      transition: background-color 140ms ease, color 140ms ease;
+    }
+
+    .cx-search-clear-btn:hover {
+      background: color-mix(in srgb, var(--color-text-secondary) 30%, transparent);
+      color: var(--color-text-main);
+    }
+
+    .cx-search-kbd-hint {
+      position: absolute;
+      right: 0.6rem;
+      display: flex;
+      align-items: center;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .cx-search-kbd {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.25rem;
+      height: 1.25rem;
+      padding: 0 0.35rem;
+      border-radius: 0.35rem;
+      border: 1px solid color-mix(in srgb, var(--color-border-strong) 40%, transparent);
+      background: color-mix(in srgb, var(--color-surface-1) 80%, var(--color-bg-secondary) 20%);
+      color: var(--color-text-secondary);
+      font-family: inherit;
+      font-size: 0.72rem;
+      font-weight: 700;
+      box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
+    }
+
+    .cx-controls-top-bar__actions {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+    }
+
+    .cx-sort-select-wrapper {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      min-height: 2.65rem;
+      border-radius: 0.75rem;
+      border: 1px solid color-mix(in srgb, var(--color-border-strong) 55%, transparent);
+      background: color-mix(in srgb, var(--color-surface-2) 70%, var(--color-bg-main) 30%);
+      transition: border-color 160ms ease, box-shadow 160ms ease;
+    }
+
+    .cx-sort-select-wrapper:hover {
+      border-color: color-mix(in srgb, var(--color-primary-light) 70%, var(--color-border-strong) 30%);
+    }
+
+    .cx-sort-select-wrapper:focus-within {
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent);
+    }
+
+    .cx-sort-icon {
+      position: absolute;
+      left: 0.65rem;
+      color: var(--color-text-secondary);
+      font-size: 1.15rem;
+      pointer-events: none;
+    }
+
+    .cx-sort-select {
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      padding: 0.45rem 2.1rem 0.45rem 2.2rem;
+      min-height: 2.65rem;
+      border: none;
+      background: transparent;
+      color: var(--color-text-main);
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      outline: none;
+    }
+
+    .cx-sort-select option {
+      background: var(--color-surface-1);
+      color: var(--color-text-main);
+      font-weight: 500;
+    }
+
+    .cx-sort-select-arrow {
+      position: absolute;
+      right: 0.5rem;
+      color: var(--color-text-secondary);
+      font-size: 1.15rem;
+      pointer-events: none;
+    }
+
+    .cx-controls-summary-badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 2.65rem;
+      padding: 0.45rem 0.85rem;
+      border-radius: 0.75rem;
+      border: 1px solid color-mix(in srgb, var(--color-border-subtle) 75%, transparent);
+      background: color-mix(in srgb, var(--color-surface-1) 85%, var(--color-bg-secondary) 15%);
+      color: var(--color-text-secondary);
+      font-size: 0.78rem;
+      font-weight: 700;
       white-space: nowrap;
+      user-select: none;
+    }
+
+    .cx-controls-summary-badge #complex-filter-summary {
+      margin: 0;
+      font-size: inherit;
+      font-weight: inherit;
+      color: var(--color-text-main);
+    }
+
+    .cx-controls-filter-bar {
+      display: flex;
+      align-items: center;
+      overflow-x: auto;
+      padding-bottom: 2px;
+      scrollbar-width: thin;
     }
 
     .cx-filter-row {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.5rem;
+      gap: 0.45rem;
+      align-items: center;
     }
 
     .cx-filter-row .complex-filter-chip {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      min-height: 2.2rem;
-      padding: 0.5rem 0.85rem;
+      min-height: 2.05rem;
+      padding: 0.35rem 0.75rem;
       border-radius: 999px;
-      border: 1px solid color-mix(in srgb, var(--color-border-strong) 54%, transparent);
-      background: color-mix(in srgb, var(--color-surface-2) 86%, var(--color-bg-main) 14%);
-      color: var(--color-text-main);
-      font-size: 0.77rem;
-      font-weight: 800;
+      border: 1px solid color-mix(in srgb, var(--color-border-strong) 48%, transparent);
+      background: color-mix(in srgb, var(--color-surface-2) 80%, var(--color-bg-main) 20%);
+      color: var(--color-text-secondary);
+      font-size: 0.76rem;
+      font-weight: 700;
       line-height: 1.1;
       white-space: nowrap;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
-      transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+      cursor: pointer;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15);
+      transition: all 160ms cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     .cx-filter-row .complex-filter-chip:hover,
     .cx-filter-row .complex-filter-chip:focus-visible {
-      border-color: color-mix(in srgb, var(--color-primary-light) 68%, var(--color-border-strong) 32%);
+      border-color: color-mix(in srgb, var(--color-primary-light) 75%, var(--color-border-strong) 25%);
       color: var(--color-text-main);
       transform: translateY(-1px);
     }
 
     .cx-filter-row .complex-filter-chip.pill-info {
-      border-color: color-mix(in srgb, var(--color-primary) 78%, white 22%);
-      background: linear-gradient(135deg,
-          color-mix(in srgb, var(--color-primary) 88%, black 12%) 0%,
-          color-mix(in srgb, var(--color-primary-dark) 90%, black 10%) 100%);
-      color: var(--color-text-on-dark);
-      box-shadow: 0 10px 24px -18px color-mix(in srgb, var(--color-primary-dark) 90%, transparent);
+      border-color: var(--color-primary);
+      background: var(--color-primary);
+      color: #ffffff;
+      box-shadow: 0 4px 12px -2px color-mix(in srgb, var(--color-primary) 45%, transparent);
     }
 
     .cx-filter-row .complex-filter-chip.pill-info:hover,
     .cx-filter-row .complex-filter-chip.pill-info:focus-visible {
-      color: var(--color-text-on-dark);
-      box-shadow: 0 14px 28px -18px color-mix(in srgb, var(--color-primary-dark) 92%, transparent);
-    }
-
-    .cx-sort-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(8.75rem, 1fr));
-      gap: 0.5rem;
-    }
-
-    .cx-sort-btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 2.3rem;
-      padding: 0.55rem 0.8rem;
-      border-radius: 0.85rem;
-      border: 1px solid color-mix(in srgb, var(--color-border-strong) 58%, transparent);
-      background: color-mix(in srgb, var(--color-surface-2) 84%, var(--color-bg-main) 16%);
-      color: var(--color-text-secondary);
-      font-size: 0.77rem;
-      font-weight: 800;
-      line-height: 1.2;
-      text-align: center;
-      transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
-    }
-
-    .cx-sort-btn:hover,
-    .cx-sort-btn:focus-visible {
-      border-color: color-mix(in srgb, var(--color-primary-light) 66%, var(--color-border-strong) 34%);
-      color: var(--color-text-main);
-      transform: translateY(-1px);
-    }
-
-    .cx-sort-btn.active,
-    .cx-sort-btn[aria-pressed="true"] {
-      border-color: color-mix(in srgb, var(--color-primary) 78%, white 22%);
-      background: linear-gradient(135deg,
-          color-mix(in srgb, var(--color-primary-lighter) 62%, white 38%) 0%,
-          color-mix(in srgb, var(--color-primary-light) 78%, white 22%) 100%);
-      color: var(--color-primary-darker);
-      box-shadow: 0 12px 26px -20px color-mix(in srgb, var(--color-primary-dark) 80%, transparent);
+      background: var(--color-primary-dark, var(--color-primary));
+      color: #ffffff;
     }
 
     .cx-filter-note {
@@ -566,46 +588,33 @@
       box-shadow: 0 20px 48px -28px rgba(0, 0, 0, 0.7);
     }
 
-    [data-theme^="dark"] .cx-controls-search,
-    [data-theme^="dark"] .cx-controls-summary-card,
-    [data-theme^="dark"] .cx-controls-section,
+    [data-theme^="dark"] .cx-search-box-wrapper,
+    [data-theme^="dark"] .cx-sort-select-wrapper,
+    [data-theme^="dark"] .cx-controls-summary-badge,
     [data-theme^="dark"] .cx-filter-note {
-      border-color: color-mix(in srgb, var(--color-border-strong) 76%, white 24%);
+      border-color: color-mix(in srgb, var(--color-border-strong) 74%, white 26%);
       box-shadow: none;
     }
 
-    [data-theme^="dark"] .cx-controls-search {
+    [data-theme^="dark"] .cx-search-box-wrapper,
+    [data-theme^="dark"] .cx-sort-select-wrapper {
       background: color-mix(in srgb, var(--color-surface-2) 90%, black 10%);
     }
 
-    [data-theme^="dark"] .cx-controls-summary-card,
-    [data-theme^="dark"] .cx-controls-section {
-      background: color-mix(in srgb, var(--color-surface-2) 88%, var(--color-surface-1) 12%);
+    [data-theme^="dark"] .cx-controls-summary-badge {
+      background: color-mix(in srgb, var(--color-surface-2) 86%, var(--color-surface-1) 14%);
     }
 
-    [data-theme^="dark"] .cx-controls-kicker {
-      color: color-mix(in srgb, var(--color-primary-light) 62%, white 38%);
-    }
-
-    [data-theme^="dark"] .cx-filter-row .complex-filter-chip,
-    [data-theme^="dark"] .cx-sort-btn {
+    [data-theme^="dark"] .cx-filter-row .complex-filter-chip {
       border-color: color-mix(in srgb, var(--color-border-strong) 74%, white 26%);
       background: color-mix(in srgb, var(--color-surface-2) 92%, white 8%);
       color: var(--color-text-main);
     }
 
-    [data-theme^="dark"] .cx-sort-btn.active,
-    [data-theme^="dark"] .cx-sort-btn[aria-pressed="true"] {
-      background: linear-gradient(135deg,
-          color-mix(in srgb, var(--color-primary-dark) 86%, black 14%) 0%,
-          color-mix(in srgb, var(--color-primary) 82%, black 18%) 100%);
-      color: var(--color-text-on-dark);
-      border-color: color-mix(in srgb, var(--color-primary-light) 76%, white 24%);
-    }
-
     [data-theme^="dark"] .cx-filter-row .complex-filter-chip.pill-info {
       border-color: color-mix(in srgb, var(--color-primary-light) 78%, white 22%);
-      color: var(--color-text-on-dark);
+      background: var(--color-primary);
+      color: #ffffff;
     }
 
     [data-theme^="dark"] #complex-theory-banner {
@@ -1503,60 +1512,54 @@
           <div class="px-4 mb-4">
             <div class="card-elevated cx-controls-panel p-3 md:p-4" data-onboarding-target="complexes-library-navigation">
               <div class="cx-controls-stack">
-                <div class="cx-controls-hero">
-                  <label class="cx-controls-search" data-onboarding-target="complexes-search">
-                    <span class="cx-controls-search-icon" aria-hidden="true">
-                      <span class="material-symbols-outlined text-[22px]">search</span>
-                    </span>
+                <div class="cx-controls-top-bar">
+                  <div class="cx-search-box-wrapper" data-onboarding-target="complexes-search">
+                    <span class="cx-search-icon material-symbols-outlined" aria-hidden="true">search</span>
                     <input id="complex-search-input" type="search" autocomplete="off" spellcheck="false"
-                      class="cx-controls-search-input"
-                      placeholder="Найти комплекс в библиотеке по названию, описанию или конкретному заданию"
+                      class="cx-search-input"
+                      placeholder="Поиск по названию, описанию или заданию..."
                       aria-label="Поиск по комплексам"
                       data-i18n-placeholder="complexes.search_placeholder"
                       data-i18n-aria="complexes.search_aria">
-                  </label>
-                  <div class="cx-controls-summary-card" data-onboarding-target="complexes-filter-summary">
-                    <p class="cx-controls-summary-label" data-i18n="complexes.library_state_label">Состояние библиотеки</p>
-                    <p id="complex-filter-summary" aria-live="polite" data-i18n="complexes.filter_summary_all">Показаны все комплексы библиотеки</p>
+                    <button id="complex-search-clear" type="button" class="cx-search-clear-btn" aria-label="Очистить поиск" title="Очистить поиск (Esc)" hidden>
+                      <span class="material-symbols-outlined text-[16px]">close</span>
+                    </button>
+                    <div class="cx-search-kbd-hint" aria-hidden="true" title="Быстрый поиск: / или Ctrl+K">
+                      <kbd class="cx-search-kbd">/</kbd>
+                    </div>
+                  </div>
+
+                  <div class="cx-controls-top-bar__actions">
+                    <div class="cx-sort-select-wrapper" title="Сортировка комплексов">
+                      <span class="material-symbols-outlined cx-sort-icon" aria-hidden="true">swap_vert</span>
+                      <select id="complex-sort-select" class="cx-sort-select" aria-label="Сортировка комплексов">
+                        <option value="name-asc" data-i18n="complexes.sort_name_asc">По названию (А → Я)</option>
+                        <option value="name-desc" data-i18n="complexes.sort_name_desc">По названию (Я → А)</option>
+                        <option value="date-desc" data-i18n="complexes.sort_date_desc">Сначала новые</option>
+                        <option value="date-asc" data-i18n="complexes.sort_date_asc">Сначала старые</option>
+                        <option value="tasks-desc" data-i18n="complexes.sort_tasks_desc">Больше заданий</option>
+                      </select>
+                      <span class="material-symbols-outlined cx-sort-select-arrow" aria-hidden="true">expand_more</span>
+                    </div>
+
+                    <div class="cx-controls-summary-badge" data-onboarding-target="complexes-filter-summary">
+                      <p id="complex-filter-summary" aria-live="polite" data-i18n="complexes.filter_summary_all">Все: 0</p>
+                    </div>
                   </div>
                 </div>
 
-                <div class="cx-controls-grid">
-                  <section class="cx-controls-section cx-controls-section--combined" aria-label="Навигация по библиотеке комплексов" data-i18n-aria="complexes.nav_section_aria">
-                    <div class="cx-controls-section-head cx-controls-section-head--combined">
-                      <div>
-                        <p class="cx-controls-kicker" data-i18n="complexes.nav_kicker">Навигация по библиотеке</p>
-                      </div>
-                      <span aria-hidden="true"></span>
-                    </div>
-
-                    <div class="cx-control-lane">
-                      <div class="cx-control-lane__label" data-i18n="complexes.filters_label">Фильтры</div>
-                      <div class="cx-filter-row" role="tablist" aria-label="Фильтры комплексов" data-i18n-aria="complexes.filters_aria">
-                        <button type="button" class="complex-filter-chip pill pill-sm pill-info shadow-sm" data-filter="all" aria-selected="true" data-i18n="complexes.filter_all">Все</button>
-                        <button type="button" class="complex-filter-chip pill pill-sm pill-neutral" data-filter="mine" aria-selected="false" data-i18n="complexes.filter_mine">Авторские</button>
-                        <button type="button" class="complex-filter-chip pill pill-sm pill-neutral" data-filter="imported" aria-selected="false" data-i18n="complexes.filter_imported">Из каталога</button>
-                        <button type="button" class="complex-filter-chip pill pill-sm pill-neutral" data-filter="active" aria-selected="false" data-i18n="complexes.filter_active">В работе</button>
-                        <button type="button" class="complex-filter-chip pill pill-sm pill-neutral" data-filter="paused" aria-selected="false" data-i18n="complexes.filter_paused">На паузе</button>
-                        <button type="button" class="complex-filter-chip pill pill-sm pill-neutral" data-filter="pinned" aria-selected="false" data-i18n="complexes.filter_pinned">Закреплённые</button>
-                        <button type="button" class="complex-filter-chip pill pill-sm pill-neutral" data-filter="frozen" aria-selected="false" data-i18n="complexes.filter_frozen">Замороженные</button>
-                        <button type="button" class="complex-filter-chip pill pill-sm pill-neutral" data-filter="review" aria-selected="false" data-i18n="complexes.filter_review">Нужно повторить</button>
-                        <button type="button" class="complex-filter-chip pill pill-sm pill-neutral" data-filter="archived" aria-selected="false" data-i18n="complexes.filter_archived">Архив Premium</button>
-                      </div>
-                    </div>
-
-                    <div class="cx-control-lane">
-                      <div class="cx-control-lane__label" data-i18n="complexes.sort_label">Сортировка</div>
-                      <div class="cx-sort-grid" data-onboarding-target="complexes-sort-grid">
-                        <button type="button" class="cx-sort-btn active" data-sort="name-asc" aria-pressed="true" data-i18n="complexes.sort_name_asc">По имени ↑</button>
-                        <button type="button" class="cx-sort-btn" data-sort="name-desc" aria-pressed="false" data-i18n="complexes.sort_name_desc">По имени ↓</button>
-                        <button type="button" class="cx-sort-btn" data-sort="date-desc" aria-pressed="false" data-i18n="complexes.sort_date_desc">Сначала новые</button>
-                        <button type="button" class="cx-sort-btn" data-sort="date-asc" aria-pressed="false" data-i18n="complexes.sort_date_asc">Сначала старые</button>
-                        <button type="button" class="cx-sort-btn" data-sort="tasks-desc" aria-pressed="false" data-i18n="complexes.sort_tasks_desc">Больше заданий</button>
-                      </div>
-                    </div>
-
-                  </section>
+                <div class="cx-controls-filter-bar">
+                  <div class="cx-filter-row" role="tablist" aria-label="Фильтры комплексов" data-i18n-aria="complexes.filters_aria">
+                    <button type="button" class="complex-filter-chip pill pill-sm pill-info shadow-sm" data-filter="all" aria-selected="true" data-i18n="complexes.filter_all">Все</button>
+                    <button type="button" class="complex-filter-chip pill pill-sm pill-neutral" data-filter="mine" aria-selected="false" data-i18n="complexes.filter_mine">Авторские</button>
+                    <button type="button" class="complex-filter-chip pill pill-sm pill-neutral" data-filter="imported" aria-selected="false" data-i18n="complexes.filter_imported">Из каталога</button>
+                    <button type="button" class="complex-filter-chip pill pill-sm pill-neutral" data-filter="active" aria-selected="false" data-i18n="complexes.filter_active">В работе</button>
+                    <button type="button" class="complex-filter-chip pill pill-sm pill-neutral" data-filter="paused" aria-selected="false" data-i18n="complexes.filter_paused">На паузе</button>
+                    <button type="button" class="complex-filter-chip pill pill-sm pill-neutral" data-filter="pinned" aria-selected="false" data-i18n="complexes.filter_pinned">Закреплённые</button>
+                    <button type="button" class="complex-filter-chip pill pill-sm pill-neutral" data-filter="frozen" aria-selected="false" data-i18n="complexes.filter_frozen">Замороженные</button>
+                    <button type="button" class="complex-filter-chip pill pill-sm pill-neutral" data-filter="review" aria-selected="false" data-i18n="complexes.filter_review">Нужно повторить</button>
+                    <button type="button" class="complex-filter-chip pill pill-sm pill-neutral" data-filter="archived" aria-selected="false" data-i18n="complexes.filter_archived">Архив Premium</button>
+                  </div>
                 </div>
 
                 <div id="complex-theory-banner" class="hidden px-3 py-3">
@@ -3406,6 +3409,10 @@
           }
 
           function updateSortUi() {
+            const select = document.getElementById('complex-sort-select');
+            if (select && select.value !== activeComplexSort) {
+              select.value = activeComplexSort;
+            }
             const btns = document.querySelectorAll('.cx-sort-btn[data-sort]');
             btns.forEach((btn) => {
               const active = btn.getAttribute('data-sort') === activeComplexSort;
@@ -3423,6 +3430,10 @@
           }
 
           function bindComplexSort() {
+            const select = document.getElementById('complex-sort-select');
+            if (select) {
+              select.addEventListener('change', () => setComplexSort(select.value));
+            }
             document.querySelectorAll('.cx-sort-btn[data-sort]').forEach((btn) => {
               btn.addEventListener('click', () => setComplexSort(btn.getAttribute('data-sort')));
             });
@@ -5472,19 +5483,25 @@
               activeFilterParts.push(`${wt('complexes.theory_filter_prefix', 'теория')} «${resolveTheoryFilterLabel(activeTheoryFilterId)}»`);
             }
             const activeLabel = activeFilterParts.length ? activeFilterParts.join(" + ") : wt('complexes.flabel_all', 'все комплексы библиотеки');
+            
+            const badgeContainer = summaryEl.closest(".cx-controls-summary-badge") || summaryEl.parentElement;
             if (!total) {
-              summaryEl.textContent = wt('complexes.summary_empty', 'Библиотека пока пуста');
+              summaryEl.textContent = wt('complexes.summary_empty', 'Пусто');
+              if (badgeContainer) badgeContainer.setAttribute("title", wt('complexes.summary_empty_title', 'В библиотеке пока нет комплексов'));
               return;
             }
             if (visible === total && !activeComplexSearch && activeComplexFilter === "all" && !activeTheoryFilterId) {
-              summaryEl.textContent = `${wt('complexes.summary_all', 'Показаны все комплексы библиотеки')}: ${total}`;
+              summaryEl.textContent = `${wt('complexes.filter_all', 'Все')}: ${total}`;
+              if (badgeContainer) badgeContainer.setAttribute("title", `${wt('complexes.summary_all', 'Показаны все комплексы библиотеки')}: ${total}`);
               return;
             }
             if (!visible) {
-              summaryEl.textContent = `${wt('complexes.summary_no_match', 'Нет совпадений')}: ${activeLabel}`;
+              summaryEl.textContent = `0 из ${total}`;
+              if (badgeContainer) badgeContainer.setAttribute("title", `${wt('complexes.summary_no_match', 'Нет совпадений')}: ${activeLabel}`);
               return;
             }
-            summaryEl.textContent = `${wt('complexes.summary_shown', 'Показано')} ${visible} ${wt('complexes.summary_of', 'из')} ${total}: ${activeLabel}`;
+            summaryEl.textContent = `${visible} из ${total}`;
+            if (badgeContainer) badgeContainer.setAttribute("title", `${wt('complexes.summary_shown', 'Показано')} ${visible} ${wt('complexes.summary_of', 'из')} ${total} (${activeLabel})`);
           }
 
           function updateComplexFilterUi() {
@@ -5576,11 +5593,59 @@
           function bindComplexFilters() {
             ensureComplexOwnershipControls();
             const searchInput = document.getElementById("complex-search-input");
+            const searchClearBtn = document.getElementById("complex-search-clear");
+
+            const syncSearchClearVisibility = () => {
+              if (searchClearBtn) {
+                searchClearBtn.hidden = !searchInput?.value;
+              }
+            };
+
             if (searchInput) {
               searchInput.addEventListener("input", () => {
                 activeComplexSearch = searchInput.value || "";
+                syncSearchClearVisibility();
                 applyComplexFilters();
               });
+
+              searchInput.addEventListener("keydown", (e) => {
+                if (e.key === "Escape") {
+                  if (searchInput.value) {
+                    searchInput.value = "";
+                    activeComplexSearch = "";
+                    syncSearchClearVisibility();
+                    applyComplexFilters();
+                  }
+                  searchInput.blur();
+                }
+              });
+            }
+
+            if (searchClearBtn && searchInput) {
+              searchClearBtn.addEventListener("click", () => {
+                searchInput.value = "";
+                activeComplexSearch = "";
+                syncSearchClearVisibility();
+                applyComplexFilters();
+                searchInput.focus();
+              });
+            }
+
+            if (!window._cxSearchGlobalShortcutAttached) {
+              document.addEventListener("keydown", (e) => {
+                if (e.defaultPrevented) return;
+                const activeTag = document.activeElement?.tagName?.toLowerCase();
+                const isEditable = activeTag === "input" || activeTag === "textarea" || document.activeElement?.isContentEditable;
+
+                if ((e.key === "/" && !isEditable) || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k")) {
+                  e.preventDefault();
+                  if (searchInput) {
+                    searchInput.focus();
+                    searchInput.select();
+                  }
+                }
+              });
+              window._cxSearchGlobalShortcutAttached = true;
             }
 
             const chips = document.querySelectorAll(".complex-filter-chip[data-filter]");
