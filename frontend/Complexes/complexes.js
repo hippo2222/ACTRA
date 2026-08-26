@@ -3935,6 +3935,8 @@ function wt(key, fallback) {
               });
             }
 
+            syncSearchClearVisibility();
+
             if (!window._cxSearchGlobalShortcutAttached) {
               document.addEventListener("keydown", (e) => {
                 if (e.defaultPrevented) return;
