@@ -20,9 +20,7 @@ describe("S1 Main loadInitialTask", () => {
     document.body.innerHTML = `
       <div id="status-banner"></div>
       <div id="session-id-label"></div>
-      <div id="theory-session-banner" class="hidden"></div>
-      <div id="theory-session-title"></div>
-      <div id="theory-session-meta"></div>
+      <button id="s1-theory-btn" class="hidden"></button>
     `;
     window.history.replaceState({}, "", "/session/sess-1");
 
@@ -128,6 +126,7 @@ describe("S1 Main loadInitialTask", () => {
         task: {
           task_id: "t1",
           complex_id: "cx-1",
+          iteration: 1,
         },
       },
     });
@@ -135,17 +134,14 @@ describe("S1 Main loadInitialTask", () => {
 
     await Main.loadInitialTask();
 
-    const banner = document.getElementById("theory-session-banner");
-    const title = document.getElementById("theory-session-title");
-    const meta = document.getElementById("theory-session-meta");
+    const theoryBtn = document.getElementById("s1-theory-btn");
 
     expect(global.fetch).toHaveBeenCalledWith("/api/complexes/cx-1");
-    expect(banner.classList.contains("hidden")).toBe(false);
-    expect(title.textContent).toContain("Theory A");
-    expect(meta.textContent).toContain("cx-1");
+    expect(theoryBtn.classList.contains("hidden")).toBe(false);
     expect(window.TaskRenderer.renderTask).toHaveBeenCalledWith({
       task_id: "t1",
       complex_id: "cx-1",
+      iteration: 1,
     });
   });
 

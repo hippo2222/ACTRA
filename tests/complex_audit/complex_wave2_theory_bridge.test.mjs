@@ -124,10 +124,8 @@ test.describe("complex audit wave 2 theory bridge", () => {
       await page.goto(new URL(`/session/${encodeURIComponent(sessionId)}`, runtime.baseUrl).toString());
       await waitForPageStable(page);
 
-      await test.step("S1 shows theory-hub bridge context", async () => {
-        await expect(page.locator("#theory-session-banner")).toBeVisible();
-        await expect(page.locator("#theory-session-title")).toContainText(fixture.theoryTitle);
-        await expect(page.locator("#theory-session-meta")).toContainText("Theory Hub");
+      await test.step("S1 shows theory button in toolbar", async () => {
+        await expect(page.locator("#s1-theory-btn")).toBeVisible();
       });
 
       await completeSingleTaskRun(page, sessionId, fixture);
@@ -176,10 +174,8 @@ test.describe("complex audit wave 2 theory bridge", () => {
       await page.goto(new URL(`/session/${encodeURIComponent(sessionId)}`, runtime.baseUrl).toString());
       await waitForPageStable(page);
 
-      await test.step("S1 falls back to complex theory_link when no storage bridge exists", async () => {
-        await expect(page.locator("#theory-session-banner")).toBeVisible();
-        await expect(page.locator("#theory-session-title")).toContainText(fixture.theoryTitle);
-        await expect(page.locator("#theory-session-meta")).toContainText("theory_link");
+      await test.step("S1 falls back to complex theory_link and shows theory button", async () => {
+        await expect(page.locator("#s1-theory-btn")).toBeVisible();
       });
 
       await completeSingleTaskRun(page, sessionId, fixture);
