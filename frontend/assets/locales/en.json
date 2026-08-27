@@ -2699,7 +2699,16 @@
     "difficulty_unknown": "Difficulty: -",
     "question_n_of_total": "Question {n} of {total}",
     "question_label": "Question",
-    "task_header_label": "Task"
+    "task_header_label": "Task",
+    "theory_btn": "Theory",
+    "theory_btn_title": "Open complex theory (1st iteration)",
+    "theory_modal_title": "Complex Theory",
+    "theory_locked_msg": "Theory is locked during iterations 2 and 3",
+    "theories_tabs_label": "Sections:",
+    "theory_empty_content": "Theory content is not available yet.",
+    "tab_prefix": "Theory",
+    "err_theory_not_found": "Failed to load theory data",
+    "close_btn": "Close"
   },
   "testui_q": {
     "reference_answer": "Reference answer",
@@ -7937,5 +7946,14 @@
   "complexes.btn_pin": "Pin",
   "complexes.btn_unpin": "Unpin",
   "complexes.btn_freeze": "Freeze",
-  "complexes.btn_unfreeze": "Unfreeze"
+  "complexes.btn_unfreeze": "Unfreeze",
+  "s1.theory_btn": "Theory",
+  "s1.theory_btn_title": "Open complex theory (1st iteration)",
+  "s1.theory_modal_title": "Complex Theory",
+  "s1.theory_locked_msg": "Theory is locked during iterations 2 and 3",
+  "s1.theories_tabs_label": "Sections:",
+  "s1.theory_empty_content": "Theory content is not available yet.",
+  "s1.tab_prefix": "Theory",
+  "s1.err_theory_not_found": "Failed to load theory data",
+  "s1.close_btn": "Close"
 }

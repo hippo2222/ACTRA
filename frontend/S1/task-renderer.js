@@ -1612,6 +1612,10 @@
         } catch (e) {
             console.error("Draft restore error", e);
         }
+
+        if (typeof window !== "undefined" && typeof window.syncTheoryButtonState === "function") {
+            window.syncTheoryButtonState(task);
+        }
     }
 
     function isHandledByClickUI(task) {

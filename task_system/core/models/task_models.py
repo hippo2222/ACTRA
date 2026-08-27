@@ -600,6 +600,23 @@ class OpenAnswerTaskContent(BaseModel):
     require_all_keywords: Optional[bool] = Field(None, description="Whether all keywords must be found")
     sequence_matters: Optional[bool] = Field(None, description="Whether keyword order matters")
     
+    @validator('keywords', pre=True)
+    def normalize_keywords(cls, v):
+        """Normalize keywords to list of strings (handling dict format with text property)."""
+        if v is None:
+            return v
+        if isinstance(v, list):
+            result = []
+            for item in v:
+                if isinstance(item, dict):
+                    text = item.get('text')
+                    if text:
+                        result.append(str(text))
+                elif item is not None:
+                    result.append(str(item))
+            return result
+        return v
+
     @validator('max_length')
     def validate_max_length(cls, v, values):
         """Ensure max_length is greater than min_length if both are set."""

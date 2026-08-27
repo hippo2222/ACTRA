@@ -349,6 +349,106 @@
       overflow-x: clip;
       overflow-y: visible;
     }
+
+    /* Native dialog reset & sizing for theory viewer */
+    #complex-theory-viewer-dialog {
+      max-width: min(72rem, calc(100vw - 2rem));
+      max-height: min(92vh, calc(100dvh - 2rem));
+      width: 100%;
+    }
+    #complex-theory-viewer-dialog[open] {
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Rich Theory Content Typography & Styling */
+    .theory-rendered-view {
+      line-height: 1.7;
+      color: var(--color-text-main);
+      font-size: 1rem;
+      word-break: break-word;
+    }
+    .theory-rendered-view h1,
+    .theory-rendered-view h2,
+    .theory-rendered-view h3,
+    .theory-rendered-view h4,
+    .theory-rendered-view h5,
+    .theory-rendered-view h6 {
+      font-weight: 700;
+      line-height: 1.3;
+      color: var(--color-text-main);
+      margin-top: 1.5rem;
+      margin-bottom: 0.6rem;
+    }
+    .theory-rendered-view h1:first-child,
+    .theory-rendered-view h2:first-child,
+    .theory-rendered-view h3:first-child {
+      margin-top: 0;
+    }
+    .theory-rendered-view h1 {
+      font-size: 1.75rem;
+      border-bottom: 1px solid var(--color-border-subtle, #e2e8f0);
+      padding-bottom: 0.4rem;
+    }
+    .theory-rendered-view h2 {
+      font-size: 1.4rem;
+    }
+    .theory-rendered-view h3 {
+      font-size: 1.18rem;
+    }
+    .theory-rendered-view h4 {
+      font-size: 1.05rem;
+    }
+    .theory-rendered-view p {
+      margin-bottom: 0.85rem;
+    }
+    .theory-rendered-view ul {
+      list-style-type: disc;
+      padding-left: 1.5rem;
+      margin-bottom: 0.85rem;
+    }
+    .theory-rendered-view ol {
+      list-style-type: decimal;
+      padding-left: 1.5rem;
+      margin-bottom: 0.85rem;
+    }
+    .theory-rendered-view li {
+      margin-bottom: 0.3rem;
+      line-height: 1.6;
+    }
+    .theory-rendered-view blockquote {
+      border-left: 4px solid var(--color-primary, #3b82f6);
+      padding: 0.6rem 1.1rem;
+      margin: 1rem 0;
+      background: color-mix(in srgb, var(--color-primary, #3b82f6) 8%, transparent);
+      border-radius: 0 10px 10px 0;
+      color: var(--color-text-main);
+    }
+    .theory-rendered-view strong {
+      font-weight: 700;
+    }
+    .theory-rendered-view em {
+      font-style: italic;
+    }
+    .theory-rendered-view u {
+      text-decoration: underline;
+    }
+    .theory-rendered-view s {
+      text-decoration: line-through;
+    }
+    .theory-rendered-view a {
+      color: var(--color-primary);
+      text-decoration: underline;
+    }
+    .theory-rendered-view a:hover {
+      opacity: 0.85;
+    }
+    .theory-rendered-view img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+      margin: 0.75rem 0;
+    }
   </style>
 
   <link href="/assets/tailwind.css" rel="stylesheet" />
@@ -414,6 +514,15 @@
                 </div>
               </div>
               <div class="s1-toolbar-primary flex items-center gap-2">
+                <button id="s1-theory-btn"
+                  class="hidden flex h-9 items-center gap-1.5 cursor-pointer overflow-hidden whitespace-nowrap rounded-lg border border-border-strong bg-surface-2 hover:bg-surface-3 active:scale-[0.98] px-3.5 text-sm font-semibold leading-normal tracking-[0.015em] text-text-main transition-all s1-btn"
+                  type="button"
+                  title="Теория к комплексу"
+                  data-i18n-title="s1.theory_btn_title"
+                  aria-label="Теория к комплексу">
+                  <span class="material-symbols-outlined text-[18px] text-primary" aria-hidden="true">menu_book</span>
+                  <span class="truncate" data-i18n="s1.theory_btn">Теория</span>
+                </button>
                 <button id="check-answer-btn"
                   class="flex h-9 min-w-[118px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden whitespace-nowrap rounded-lg border-2 border-border-strong bg-primary px-5 text-sm font-bold leading-normal tracking-[0.015em] text-primary-fg disabled:cursor-default disabled:border-border-strong disabled:opacity-50 disabled:cursor-not-allowed s1-btn"
                   type="button">
@@ -524,19 +633,6 @@
                 </p>
                 <p id="task-description" class="text-base font-normal leading-relaxed text-text-secondary">
                 </p>
-              </div>
-              <div id="theory-session-banner"
-                class="mb-4 hidden rounded-xl border border-primary-light bg-primary-lighter px-4 py-3 shadow-sm">
-                <div class="flex items-start gap-3">
-                  <div
-                    class="flex size-9 shrink-0 items-center justify-center rounded-full bg-bg-main text-primary shadow-sm dark:bg-surface-2">
-                    <span class="material-symbols-outlined text-xl">menu_book</span>
-                  </div>
-                  <div class="min-w-0">
-                                <p id="theory-session-title" class="text-sm font-semibold text-text-main dark:text-text-on-dark" data-i18n="s1.theory_label">Теория</p>
-                    <p id="theory-session-meta" class="mt-1 text-xs leading-relaxed text-primary-darker/80"></p>
-                  </div>
-                </div>
               </div>
               <!-- Evaluation result -->
               <div id="result-box" class="mb-4 hidden">
