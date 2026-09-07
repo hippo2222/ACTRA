@@ -3,7 +3,10 @@
 Используются на Backend (TaskEvaluatorService) и раздаются на Frontend через API.
 """
 
+import logging
 from typing import Dict, Any
+
+logger = logging.getLogger(__name__)
 
 MESSAGES = {
     # -------------------------------------------------------------------------
@@ -11,9 +14,12 @@ MESSAGES = {
     # -------------------------------------------------------------------------
     "click_success_all": "✅ Правильно! Вы правильно указали на все {found_count} аннотаций",
     "click_success_partial_threshold": "✅ Правильно! Вы правильно указали на {found_count} из {required_correct} требуемых аннотаций (всего {total_count})",
+    "click_success_threshold": "✅ Правильно! Вы правильно указали на {found_count} из {required_correct} требуемых аннотаций (всего {total_count})",
+    "click_success_partial": "✅ Правильно! Вы правильно указали на {found_count} из {required_correct} требуемых аннотаций (всего {total_count})",
     
     "click_fail_basic": "❌ Вы нашли {found_count} из {total_count} аннотаций. Попробуйте еще раз!",
     "click_fail_threshold": "❌ Вы нашли {found_count} из {required_correct} требуемых аннотаций (всего {total_count}). Попробуйте еще раз!",
+    "click_fail_partial": "❌ Вы нашли {found_count} из {required_correct} требуемых аннотаций (всего {total_count}). Попробуйте еще раз!",
     
     "click_labels_missing": "❌ Введите названия для найденных областей",
     "click_labels_missing_threshold": "❌ Введите названия для найденных областей ({found_count}/{required_correct} требуется из {total_count})",
@@ -67,10 +73,12 @@ def get_message(key: str, **kwargs: Any) -> str:
     """
     template = MESSAGES.get(key)
     if template is None:
+        logger.warning("Evaluation message template not found for key: '%s'", key)
         return key
         
     try:
         return template.format(**kwargs)
-    except Exception:
+    except Exception as e:
+        logger.warning("Failed to format evaluation message for key '%s': %s", key, e)
         # В случае ошибки форматирования возвращаем шаблон как есть (лучше чем крэш)
         return template

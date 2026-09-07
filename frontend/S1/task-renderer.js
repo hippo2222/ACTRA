@@ -943,6 +943,43 @@
 
         let messageText = result && result.message ? String(result.message) : "";
 
+        // Defensive normalization for raw evaluation keys (e.g. click_fail_partial / click_fail_threshold)
+        if (messageText && /^click_fail_(partial|threshold)\b/.test(messageText)) {
+            const remainder = messageText.replace(/^click_fail_(partial|threshold)[^\S\r\n]*/, "").trim();
+            const foundCount = detailsObj && Number.isFinite(Number(detailsObj.found_count)) ? Number(detailsObj.found_count) : 0;
+            const reqCount = detailsObj && Number.isFinite(Number(detailsObj.required_correct))
+                ? Number(detailsObj.required_correct)
+                : (detailsObj && Number.isFinite(Number(detailsObj.total_targets)) ? Number(detailsObj.total_targets) : null);
+            const totalCount = detailsObj && Number.isFinite(Number(detailsObj.total_targets)) ? Number(detailsObj.total_targets) : null;
+
+            let prefix = "";
+            if (reqCount != null && totalCount != null && reqCount !== totalCount) {
+                prefix = `❌ Вы нашли ${foundCount} из ${reqCount} требуемых аннотаций (всего ${totalCount}). Попробуйте еще раз!`;
+            } else if (totalCount != null) {
+                prefix = `❌ Вы нашли ${foundCount} из ${totalCount} аннотаций. Попробуйте еще раз!`;
+            } else {
+                prefix = "❌ Ответ неполный. Попробуйте еще раз!";
+            }
+            messageText = remainder ? `${prefix}\n${remainder}` : prefix;
+        } else if (messageText && /^click_fail_basic\b/.test(messageText)) {
+            const remainder = messageText.replace(/^click_fail_basic[^\S\r\n]*/, "").trim();
+            const foundCount = detailsObj && Number.isFinite(Number(detailsObj.found_count)) ? Number(detailsObj.found_count) : 0;
+            const totalCount = detailsObj && Number.isFinite(Number(detailsObj.total_targets)) ? Number(detailsObj.total_targets) : null;
+            const prefix = totalCount != null ? `❌ Вы нашли ${foundCount} из ${totalCount} аннотаций. Попробуйте еще раз!` : "❌ Ответ неверный. Попробуйте еще раз!";
+            messageText = remainder ? `${prefix}\n${remainder}` : prefix;
+        } else if (messageText && /^click_success_(all|partial_threshold|partial|threshold)\b/.test(messageText)) {
+            const foundCount = detailsObj && Number.isFinite(Number(detailsObj.found_count)) ? Number(detailsObj.found_count) : "";
+            const reqCount = detailsObj && Number.isFinite(Number(detailsObj.required_correct)) ? Number(detailsObj.required_correct) : "";
+            const totalCount = detailsObj && Number.isFinite(Number(detailsObj.total_targets)) ? Number(detailsObj.total_targets) : "";
+            if (reqCount && totalCount && reqCount !== totalCount) {
+                messageText = `✅ Правильно! Вы правильно указали на ${foundCount} из ${reqCount} требуемых аннотаций (всего ${totalCount})`;
+            } else if (foundCount) {
+                messageText = `✅ Правильно! Вы правильно указали на все ${foundCount} аннотаций`;
+            } else {
+                messageText = "✅ Правильно!";
+            }
+        }
+
         // Logic for Sequence Assembly Hints
         try {
             const currentTaskType = getCurrentEffectiveTaskType();

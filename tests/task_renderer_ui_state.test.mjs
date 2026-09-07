@@ -231,6 +231,31 @@ describe("TaskRenderer UI state", () => {
     );
   });
 
+  it("normalizes raw click_fail_partial evaluation message to user-friendly Russian message", () => {
+    const TaskRenderer = initTaskRenderer();
+    window.SessionState.currentTask = {
+      task_type: "click",
+      difficulty: 1,
+      task_id: "click_1",
+      task_data: {},
+    };
+
+    TaskRenderer.showEvaluationResult({
+      success: false,
+      message: "click_fail_partial\nНайдено: Правый желудочек, Верхняя полая вена, Легочная артерия, Левый желудочек, Восходящая аорта",
+      details: {
+        found_count: 5,
+        required_correct: 6,
+        total_targets: 7,
+      },
+    });
+
+    const msg = document.getElementById("result-message").textContent;
+    expect(msg).not.toContain("click_fail_partial");
+    expect(msg).toContain("❌ Вы нашли 5 из 6 требуемых аннотаций (всего 7). Попробуйте еще раз!");
+    expect(msg).toContain("Найдено: Правый желудочек, Верхняя полая вена, Легочная артерия, Левый желудочек, Восходящая аорта");
+  });
+
   it("renders unsupported task fallback without injecting task metadata", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});

@@ -484,6 +484,21 @@
       }
     }
 
+    if (interpretation.duplicate === true) {
+      if (targetIndex != null) {
+        parts.push(
+          wt("clickui.duplicate_click_detail", "Цель {ref} уже была отмечена другим кликом.")
+            .replace("{ref}", _getTargetDisplayReference(state.taskDto, targetIndex))
+        );
+      }
+      return {
+        tone: "error",
+        statusText: wt("clickui.duplicate_click_status", "Повторный клик"),
+        detailText: parts.join(". "),
+        color: targetIndex != null ? _getTargetColor(targetIndex) : null,
+      };
+    }
+
     const success =
       interpretation.success === true ||
       interpretation.click_success === true ||
@@ -544,48 +559,48 @@
       return !!map[_getActionKey(kind, matchedIndex)];
     }
 
+    const usedTargetIndexes = new Set();
+
     const clickResults = Array.isArray(details && details.click_results) ? details.click_results : [];
     clickResults.forEach((result) => {
       if (!result || typeof result !== "object") return;
+      const targetIndex = typeof result.target_index === "number" ? result.target_index : null;
+      if (targetIndex != null && result.click_success === true) {
+        usedTargetIndexes.add(targetIndex);
+      }
       const matchedIndex =
         typeof result.matched_click_idx === "number" ? result.matched_click_idx : null;
       if (matchedIndex == null) return;
       assign("click", matchedIndex, {
-        targetIndex: typeof result.target_index === "number" ? result.target_index : null,
+        targetIndex: targetIndex,
         success: result.click_success === true,
         coverage: result.coverage,
         threshold: result.threshold,
       });
     });
 
-    const foundTargets = _normalizeFoundTargetsSet(
-      (Array.isArray(details && details.found_targets) && details.found_targets) ||
-      (Array.isArray(details && details.foundTargets) && details.foundTargets) ||
-      null
-    );
-    if (foundTargets.size && Array.isArray(state.clicks) && state.clicks.length) {
-      const usedTargetIndexes = new Set();
-      clickResults.forEach((result) => {
-        if (!result || typeof result !== "object") return;
-        const targetIndex = typeof result.target_index === "number" ? result.target_index : null;
-        if (targetIndex != null) usedTargetIndexes.add(targetIndex);
+    // L1/L2: backend returns targets_info with matched_click_idx instead of click_results.
+    // Parse it so click markers get the correct target index (color + hover).
+    const targetsInfoItems = Array.isArray(details && details.targets_info) ? details.targets_info : [];
+    targetsInfoItems.forEach((info) => {
+      if (!info || typeof info !== "object") return;
+      const targetIdx = typeof info.index === "number" ? info.index : null;
+      const clickIdx = typeof info.matched_click_idx === "number" ? info.matched_click_idx : null;
+      if (targetIdx != null && info.found === true) {
+        usedTargetIndexes.add(targetIdx);
+      }
+      if (targetIdx == null || clickIdx == null) return;
+      // Skip only if existing assignment already has a valid targetIndex.
+      // If click_results assigned targetIndex:null first, targets_info should still override.
+      if (hasAssignment("click", clickIdx)) {
+        const existingKey = _getActionKey("click", clickIdx);
+        if (map[existingKey] && map[existingKey].targetIndex != null) return;
+      }
+      assign("click", clickIdx, {
+        targetIndex: targetIdx,
+        success: info.found === true,
       });
-
-      state.clicks.forEach((click, idx) => {
-        if (!click || hasAssignment("click", idx)) return;
-        const x = Number(click.x);
-        const y = Number(click.y);
-        if (!Number.isFinite(x) || !Number.isFinite(y)) return;
-        const hit = _checkClickHit(x, y);
-        if (!hit || hit.hit !== true || typeof hit.targetIndex !== "number") return;
-        if (!foundTargets.has(hit.targetIndex) || usedTargetIndexes.has(hit.targetIndex)) return;
-        assign("click", idx, {
-          targetIndex: hit.targetIndex,
-          success: true,
-        });
-        usedTargetIndexes.add(hit.targetIndex);
-      });
-    }
+    });
 
     const polygonResults = Array.isArray(details && details.polygon_results) ? details.polygon_results : [];
     polygonResults.forEach((result) => {
@@ -615,25 +630,35 @@
       });
     });
 
-    // L1/L2: backend returns targets_info with matched_click_idx instead of click_results.
-    // Parse it so click markers get the correct target index (color + hover).
-    const targetsInfoItems = Array.isArray(details && details.targets_info) ? details.targets_info : [];
-    targetsInfoItems.forEach((info) => {
-      if (!info || typeof info !== "object") return;
-      const targetIdx = typeof info.index === "number" ? info.index : null;
-      const clickIdx = typeof info.matched_click_idx === "number" ? info.matched_click_idx : null;
-      if (targetIdx == null || clickIdx == null) return;
-      // Skip only if existing assignment already has a valid targetIndex.
-      // If click_results assigned targetIndex:null first, targets_info should still override.
-      if (hasAssignment("click", clickIdx)) {
-        const existingKey = _getActionKey("click", clickIdx);
-        if (map[existingKey] && map[existingKey].targetIndex != null) return;
-      }
-      assign("click", clickIdx, {
-        targetIndex: targetIdx,
-        success: info.found === true,
+    const foundTargets = _normalizeFoundTargetsSet(
+      (Array.isArray(details && details.found_targets) && details.found_targets) ||
+      (Array.isArray(details && details.foundTargets) && details.foundTargets) ||
+      null
+    );
+    if (Array.isArray(state.clicks) && state.clicks.length) {
+      state.clicks.forEach((click, idx) => {
+        if (!click || hasAssignment("click", idx)) return;
+        const x = Number(click.x);
+        const y = Number(click.y);
+        if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+        const hit = _checkClickHit(x, y);
+        if (!hit || hit.hit !== true || typeof hit.targetIndex !== "number") return;
+        if (usedTargetIndexes.has(hit.targetIndex)) {
+          assign("click", idx, {
+            targetIndex: hit.targetIndex,
+            success: false,
+            duplicate: true,
+          });
+          return;
+        }
+        if (foundTargets.size && !foundTargets.has(hit.targetIndex)) return;
+        assign("click", idx, {
+          targetIndex: hit.targetIndex,
+          success: true,
+        });
+        usedTargetIndexes.add(hit.targetIndex);
       });
-    });
+    }
 
     return map;
   }
@@ -4808,7 +4833,7 @@
 
     hint.className += " w-full";
     checkStatus.className =
-      "text-[11px] font-semibold leading-5 text-text-secondary dark:text-text-on-dark text-right xl:text-left";
+      "text-[11px] font-semibold leading-5 text-text-secondary dark:text-text-on-dark text-right xl:text-left whitespace-pre-line";
     const statusCard = _createEl(
       "div",
       "flex flex-col gap-2.5 rounded-2xl border border-border-strong bg-surface-2 p-3.5 shadow-sm dark:border-border-strong dark:bg-surface-2",
@@ -5463,13 +5488,13 @@
         if (state.foundClickTargets && state.foundClickTargets.has(hit.targetIndex)) {
           _flashHint(wt("clickui.already_found_hint", "Эта цель уже была найдена."));
           _setLiveStatus("bad", wt("clickui.already_found_status", "Уже найдено ({ref})").replace("{ref}", _getTargetDisplayReference(state.taskDto, hit.targetIndex)));
-          return;
+        } else {
+          if (state.foundClickTargets) {
+            state.foundClickTargets.add(hit.targetIndex);
+            _syncFoundTargetsUI();
+          }
+          _setLiveStatus("ok", wt("clickui.hit_status", "Попадание ({ref})").replace("{ref}", _getTargetDisplayReference(state.taskDto, hit.targetIndex)));
         }
-        if (state.foundClickTargets) {
-          state.foundClickTargets.add(hit.targetIndex);
-          _syncFoundTargetsUI();
-        }
-        _setLiveStatus("ok", wt("clickui.hit_status", "Попадание ({ref})").replace("{ref}", _getTargetDisplayReference(state.taskDto, hit.targetIndex)));
       } else {
         _setLiveStatus("bad", wt("clickui.miss_status", "Мимо"));
       }
@@ -5936,8 +5961,8 @@
         state.checkStatusEl.textContent = result.message;
         state.checkStatusEl.className =
           result.success === true
-            ? "text-xs font-semibold text-success-text dark:text-success"
-            : "text-xs font-semibold text-error-text dark:text-error";
+            ? "text-xs font-semibold text-success-text dark:text-success whitespace-pre-line"
+            : "text-xs font-semibold text-error-text dark:text-error whitespace-pre-line";
       } else {
         state.checkStatusEl.textContent = "";
       }

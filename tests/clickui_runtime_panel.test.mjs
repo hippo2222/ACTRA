@@ -905,6 +905,62 @@ describe("ClickUI runtime targets panel", () => {
     expect(rows[0]?.textContent || "").not.toMatch(/Не сопоставлено/);
   });
 
+  it("allows duplicate clicks on the same target and marks repeat click as duplicate error after check", () => {
+    const task = createClickTaskFixture();
+    const container = document.getElementById("app");
+
+    dom.window.ClickUI.render(container, task, { runtimeMode: true });
+
+    const img = container.querySelector("img");
+    if (img) {
+      img.getBoundingClientRect = () => ({
+        left: 0,
+        top: 0,
+        right: 100,
+        bottom: 100,
+        width: 100,
+        height: 100,
+      });
+      Object.defineProperty(img, "naturalWidth", { configurable: true, value: 100 });
+      Object.defineProperty(img, "naturalHeight", { configurable: true, value: 100 });
+    }
+
+    const viewport = container.querySelector('[data-clickui="viewport"]');
+    // First click on target 0 (polygon: [[10, 10], [20, 10], [20, 20], [10, 20]])
+    viewport?.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true, clientX: 15, clientY: 15 }));
+    // Second click on target 0 (previously blocked by early return)
+    viewport?.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true, clientX: 16, clientY: 16 }));
+
+    const payload = dom.window.ClickUI.getUserAnswerPayload();
+    expect(payload.clicks).toHaveLength(2);
+    expect(payload.clicks[0].x).toBe(15);
+    expect(payload.clicks[1].x).toBe(16);
+
+    const markers = Array.from(container.querySelectorAll(".clickui-marker-entry"));
+    expect(markers).toHaveLength(2);
+
+    dom.window.ClickUI.applyCheckFeedback({
+      success: true,
+      details: {
+        found_targets: [0],
+        targets_info: [
+          { index: 0, found: true, matched_click_idx: 0 },
+        ],
+      },
+    });
+
+    const rows = Array.from(container.querySelectorAll('[data-clickui="user-action-row"]'));
+    expect(rows).toHaveLength(2);
+
+    // First click was matched and counted
+    expect(rows[0]?.textContent || "").toMatch(/Клик 1/);
+    expect(rows[0]?.textContent || "").toMatch(/Засчитано/);
+
+    // Second click was recognized as a duplicate click and not counted (error)
+    expect(rows[1]?.textContent || "").toMatch(/Клик 2/);
+    expect(rows[1]?.textContent || "").toMatch(/Повторный клик/);
+  });
+
   it("shows system interpretation for matched user actions after check", () => {
     const task = createDrawTaskFixture([
       {
