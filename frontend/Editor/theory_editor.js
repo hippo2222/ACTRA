@@ -52,21 +52,12 @@ function getTheoryEditorOnboardingPreviewTourId() {
     }
 }
 
-function getTheoryEditorDemoStateId() {
-    try {
-        const params = new URLSearchParams(window.location.search || "");
-        return params.get("demo_state") || getTheoryEditorOnboardingPreviewTourId();
-    } catch (error) {
-        return getTheoryEditorOnboardingPreviewTourId();
-    }
+function isTheoryEditorOnboardingTourActive() {
+    return document.body?.dataset?.onboardingTourId === THEORY_EDITOR_ONBOARDING_TOUR_ID;
 }
 
 function isTheoryEditorOnboardingDemoRequested() {
-    return getTheoryEditorDemoStateId() === THEORY_EDITOR_ONBOARDING_TOUR_ID;
-}
-
-function isTheoryEditorOnboardingTourActive() {
-    return document.body?.dataset?.onboardingTourId === THEORY_EDITOR_ONBOARDING_TOUR_ID;
+    return isTheoryEditorOnboardingTourActive();
 }
 
 function createTheoryEditorOnboardingImageSrc() {
@@ -192,11 +183,48 @@ function applyTheoryEditorOnboardingDemoState() {
     document.title = wt('te.k002', 'Редактор теории');
 }
 
-function restoreTheoryEditorOnboardingDemoState() {
-    if (!theoryEditorOnboardingSnapshot) return;
+function clearTheoryEditorOnboardingUrlParams() {
+    if (typeof window === "undefined" || !window.history || typeof window.history.replaceState !== "function") return;
+    try {
+        const url = new URL(window.location.href);
+        let changed = false;
+        ["onboarding_preview", "onboarding_tour", "onboarding_step", "demo_state"].forEach((key) => {
+            if (url.searchParams.has(key)) {
+                url.searchParams.delete(key);
+                changed = true;
+            }
+        });
+        if (changed) {
+            window.history.replaceState({}, document.title, url.pathname + (url.search ? url.search : "") + url.hash);
+        }
+    } catch (e) {
+        // ignore
+    }
+}
+
+async function restoreTheoryEditorOnboardingDemoState() {
+    clearTheoryEditorOnboardingUrlParams();
+    deselectImage();
+    removeTheoryEditorOnboardingImageMarker();
+
+    if (!theoryEditorOnboardingSnapshot) {
+        if (!theoryEditorState.catalog || theoryEditorState.catalog.length === 0) {
+            await Promise.all([
+                loadTheoryCatalog({ keepSelection: true }),
+                fetchTheoryWorkspaceLimits(),
+            ]);
+            if (theoryEditorState.context?.theoryId) {
+                await loadTheoryById(theoryEditorState.context.theoryId);
+            } else {
+                resetTheoryEditorState();
+                setTheoryStatus(wt('te.k093', 'Новая теория'), "muted", "edit_square");
+                document.title = wt('te.k094', 'Новая теория — Редактор теории');
+            }
+        }
+        return;
+    }
     const snapshot = theoryEditorOnboardingSnapshot;
     theoryEditorOnboardingSnapshot = null;
-    deselectImage();
     theoryEditorState.catalog = snapshot.catalog;
     theoryEditorState.activeTheoryId = snapshot.activeTheoryId;
     theoryEditorState.activeItem = snapshot.activeItem;
@@ -377,7 +405,7 @@ function bindTheoryEditorOnboardingStepReady() {
 }
 
 function syncTheoryEditorOnboardingDemoState() {
-    if (isTheoryEditorOnboardingDemoRequested() || isTheoryEditorOnboardingTourActive()) {
+    if (isTheoryEditorOnboardingTourActive()) {
         applyTheoryEditorOnboardingDemoState();
         syncTheoryEditorOnboardingStepState();
         return;
@@ -392,6 +420,7 @@ function bindTheoryEditorOnboardingDemoObserver() {
         attributes: true,
         attributeFilter: ["data-onboarding-tour-id", "data-onboarding-step-id"],
     });
+    window.addEventListener("onboarding:finish", () => restoreTheoryEditorOnboardingDemoState());
     bindTheoryEditorOnboardingStepReady();
 }
 

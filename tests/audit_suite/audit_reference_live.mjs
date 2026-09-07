@@ -7,8 +7,8 @@ const BASE_URL = `http://127.0.0.1:${PORT}`;
 
 async function isServerRunning() {
   return new Promise((resolve) => {
-    const req = http.get(`${BASE_URL}/reference`, (res) => {
-      resolve(res.statusCode === 200);
+    const req = http.get(BASE_URL, (res) => {
+      resolve(res.statusCode >= 200 && res.statusCode < 500);
     });
     req.on('error', () => resolve(false));
     req.setTimeout(1500, () => {

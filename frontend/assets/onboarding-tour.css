@@ -76,7 +76,7 @@ body[data-onboarding-step-id="click-difficulty-levels"] [data-onboarding-target=
 .onboarding-tour-scrim {
     position: fixed;
     inset: 0;
-    z-index: 80;
+    z-index: 1000;
     opacity: 0;
     background-color: transparent;
     backdrop-filter: blur(0);
@@ -103,7 +103,7 @@ body[data-onboarding-step-id="click-difficulty-levels"] [data-onboarding-target=
 
 .onboarding-tour-scrim-piece {
     position: fixed;
-    z-index: 80;
+    z-index: 1000;
     pointer-events: none;
     opacity: 0;
     background-color: color-mix(in srgb, var(--color-text-main) 56%, transparent);
@@ -131,7 +131,7 @@ body[data-onboarding-step-id="click-difficulty-levels"] [data-onboarding-target=
 
 .onboarding-tour-spotlight-clone {
     position: fixed;
-    z-index: 86;
+    z-index: 1010;
     pointer-events: none;
     overflow: visible;
     opacity: 0;
@@ -151,7 +151,7 @@ body[data-onboarding-step-id="click-difficulty-levels"] [data-onboarding-target=
 }
 
 .onboarding-tour-spotlight-clone--header {
-    z-index: 88;
+    z-index: 1012;
     border-radius: 0.9rem;
     background: var(--color-surface-1);
 }
@@ -295,7 +295,7 @@ body[data-onboarding-step-id="click-difficulty-levels"] [data-onboarding-target=
 }
 
 .onboarding-tour-target--live {
-    z-index: 87 !important;
+    z-index: 1015 !important;
 }
 
 .onboarding-tour-target--outline {
@@ -310,7 +310,7 @@ body[data-onboarding-step-id="click-difficulty-levels"] [data-onboarding-target=
 
 .onboarding-tour-callout {
     position: fixed;
-    z-index: 91;
+    z-index: 1020;
     width: min(380px, calc(100vw - 2rem));
     color: var(--color-text-main);
     background: var(--onboarding-card-bg);
@@ -421,7 +421,7 @@ body[data-onboarding-step-id="click-difficulty-levels"] [data-onboarding-target=
 
 .onboarding-tour-beacon {
     position: fixed;
-    z-index: 93;
+    z-index: 1040;
     width: 0.86rem;
     height: 0.86rem;
     padding: 0;
@@ -742,7 +742,7 @@ body[data-onboarding-step-id="click-difficulty-levels"] [data-onboarding-target=
 
 .onboarding-tour-control {
     position: fixed;
-    z-index: 92;
+    z-index: 1030;
     right: 1rem;
     bottom: 1rem;
     display: inline-flex;
@@ -784,7 +784,7 @@ body[data-onboarding-step-id="click-difficulty-levels"] [data-onboarding-target=
 
 .onboarding-tour-tooltip {
     position: fixed;
-    z-index: 91;
+    z-index: 1020;
     width: min(420px, calc(100vw - 2rem));
     color: var(--color-text-main);
     background: var(--onboarding-card-bg);
@@ -1012,7 +1012,7 @@ body[data-onboarding-step-id="click-difficulty-levels"] [data-onboarding-target=
 .onboarding-first-run-modal {
     position: fixed;
     inset: 0;
-    z-index: 120;
+    z-index: 1050;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1117,7 +1117,7 @@ body[data-onboarding-step-id="click-difficulty-levels"] [data-onboarding-target=
 
     .onboarding-tour-callout-stack {
         position: fixed;
-        z-index: 91;
+        z-index: 1020;
         left: 1rem;
         right: 1rem;
         bottom: 4.8rem;

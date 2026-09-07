@@ -144,4 +144,23 @@ describe('main onboarding tour config', () => {
             /target:\s*'\[data-onboarding-target="main-catalog-card"\]',\s*placement:\s*'bottom',\s*keepPlacement:\s*true,\s*offsetX:\s*-80/
         );
     });
+
+    it('configures editor-dashboard-create-task step callout placements and targets', () => {
+        expect(toursSource).toMatch(
+            /id:\s*'editor-dashboard-create-task'[\s\S]*?target:\s*'\[data-onboarding-target="editor-create-task-context"\]'[\s\S]*?placement:\s*'left'/
+        );
+        expect(toursSource).toMatch(
+            /target:\s*'\[data-onboarding-target="editor-create-task-type"\]'[\s\S]*?placement:\s*'left'/
+        );
+        expect(toursSource).toMatch(
+            /target:\s*'\[data-onboarding-target="editor-create-task-submit"\]'[\s\S]*?placement:\s*'right'/
+        );
+    });
+
+    it('ensures tour scrim and callout layers are above modal backdrops to prevent blurring', () => {
+        const cssSource = fs.readFileSync(path.resolve('frontend/assets/onboarding-tour.css'), 'utf8');
+        expect(cssSource).toMatch(/\.onboarding-tour-scrim\s*\{[^}]*z-index:\s*1000;/);
+        expect(cssSource).toMatch(/\.onboarding-tour-callout\s*\{[^}]*z-index:\s*1020;/);
+        expect(cssSource).toMatch(/\.onboarding-tour-control\s*\{[^}]*z-index:\s*1030;/);
+    });
 });

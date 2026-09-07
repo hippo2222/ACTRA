@@ -405,4 +405,9 @@ describe('Reference page helpers', () => {
         expect(frame.getAttribute('src')).toBe(initialSrc);
         expect(window.location.hash).toBe('#main-tour/state-2');
     });
+
+    it('ensures ClickEditor checks onboarding preview before draft / URL context lookup', () => {
+        const clickEditorSource = fs.readFileSync(path.resolve('frontend/Editor/click_editor.js'), 'utf8');
+        expect(clickEditorSource).toMatch(/async init\(\)\s*\{\s*if\s*\(this\.isClickOnboardingPreview\(\)\)/);
+    });
 });

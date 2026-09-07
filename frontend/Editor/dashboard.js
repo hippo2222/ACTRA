@@ -136,17 +136,19 @@ class EditorDashboard {
         return `<span class="shrink-0 rounded-full border border-border-subtle bg-bg-secondary px-2 py-0.5 text-[11px] font-semibold leading-none text-text-secondary" data-role="all-tasks-limit-badge" data-onboarding-target="editor-task-limit-badge" title="${this.escapeHtml(title)}"${promoAttrs}>${this.escapeHtml(label)}</span>`;
     }
 
+    isEditorDashboardOnboardingPreview() {
+        const params = new URLSearchParams(window.location.search || '');
+        const previewTourId = params.get('onboarding_preview') || params.get('onboarding_tour') || '';
+        return previewTourId === EDITOR_DASHBOARD_ONBOARDING_TOUR_ID;
+    }
+
     init() {
         this.log('[init] Dashboard initializing...');
         this.loadWorkspaceShortcuts();
         this.setupOnboardingTourBridge();
-        // this.log(`Location: ${window.location.href}`); // Removed as per instruction
-
-        // if (window.location.protocol === 'file:') { // Removed as per instruction
-        //     this.log("CRITICAL ERROR: Running via file:// protocol.");
-        //     this.log("You MUST access this page via http://localhost:8000/editor");
-        //     alert("Ошибка: Вы открыли файл напрямую. Используйте http://localhost:8000/editor");
-        // }
+        if (this.isEditorDashboardOnboardingPreview()) {
+            this.applyEditorDashboardOnboardingDemoState();
+        }
 
         const lastView = this.loadDashboardState();
 

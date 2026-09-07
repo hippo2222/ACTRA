@@ -1291,7 +1291,8 @@
             : (isLastVisualStep
             ? wt('onboarding.btn_done', 'Понятно')
             : (hasImplementedNextStep ? wt('onboarding.btn_next', 'Далее') : (activeTour?.pendingNextLabel || wt('onboarding.btn_later', 'Дальше позже'))));
-        if (activeReferencePreviewMode && isLastVisualStep && !isVariantBranch) {
+        const isPreviewOrReference = Boolean(activePreviewMode || activeReferencePreviewMode);
+        if (isPreviewOrReference && isLastVisualStep && !isVariantBranch) {
             nextAction = hasPreviousStep ? 'prev' : 'pending-next';
             nextLabel = wt('onboarding.btn_back', 'Вернуться');
         }
@@ -1301,10 +1302,10 @@
         const branchTourId = String(step.branchTourId || '').trim();
         const branchLabel = step.branchLabel || wt('onboarding.btn_open', 'Открыть');
         const returnToUrl = activePreviewMode ? resolveReturnToUrl() : '';
-        const showPreviousButton = hasPreviousStep && !(activeReferencePreviewMode && isLastVisualStep && !isVariantBranch);
+        const showPreviousButton = hasPreviousStep && !(isPreviewOrReference && isLastVisualStep && !isVariantBranch);
         const showReturnPageButton = Boolean(returnToUrl && !activeReferencePreviewMode);
         const showSkipButton = !activeReferencePreviewMode && !isLastVisualStep;
-        const showPrimaryButton = !(activeReferencePreviewMode && isLastVisualStep && !hasPreviousStep && !isVariantBranch);
+        const showPrimaryButton = !(isPreviewOrReference && isLastVisualStep && !hasPreviousStep && !isVariantBranch);
         if (!controlEl) {
             controlEl = document.createElement('div');
             controlEl.className = 'onboarding-tour-control';
@@ -2008,6 +2009,7 @@
 
     async function finishTour({ seen = true } = {}) {
         const tour = activeTour;
+        const wasPreview = Boolean(activePreviewMode || activeReferencePreviewMode);
         const shouldPersistSeen = seen && !activePreviewMode;
         activeTour = null;
         activePreviewMode = false;
@@ -2018,6 +2020,20 @@
         await removeShell();
         if (shouldPersistSeen && tour) {
             await markTourSeen(tour);
+        }
+        if (wasPreview && typeof window !== 'undefined' && window.history && typeof window.history.replaceState === 'function') {
+            try {
+                const url = new URL(window.location.href);
+                if (url.searchParams.has('onboarding_preview') || url.searchParams.has('onboarding_tour') || url.searchParams.has('onboarding_step') || url.searchParams.has('demo_state')) {
+                    url.searchParams.delete('onboarding_preview');
+                    url.searchParams.delete('onboarding_tour');
+                    url.searchParams.delete('onboarding_step');
+                    url.searchParams.delete('demo_state');
+                    window.history.replaceState({}, document.title, url.pathname + (url.search ? url.search : '') + url.hash);
+                }
+            } catch (e) {
+                // ignore
+            }
         }
         window.dispatchEvent(new CustomEvent('onboarding:finish', {
             detail: {
@@ -2198,6 +2214,8 @@
         activeTour = tour;
         activePreviewMode = Boolean(preview);
         activeReferencePreviewMode = Boolean(preview && isReferencePreviewRequest());
+        document.body.dataset.onboardingTourId = tour.tourId;
+        document.body.classList.add('onboarding-tour-active');
         const preparationPromises = [];
         window.dispatchEvent(new CustomEvent('onboarding:before-start', {
             detail: {

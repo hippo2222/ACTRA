@@ -879,11 +879,10 @@ class ClickEditor extends BaseEditor {
     }
 
     async applyClickEditorOnboardingDemoState(tourId) {
-        if (this.isClickOnboardingPreview() || !this.task?.task_data) return;
         const normalizedTourId = String(tourId || this.getAuthoringOnboardingTourId() || "").trim();
         if (normalizedTourId !== "click-editor-authoring" && normalizedTourId !== "draw-editor-authoring") return;
 
-        if (!this.clickEditorOnboardingDemoSnapshot) {
+        if (!this.clickEditorOnboardingDemoSnapshot && !this.isClickOnboardingPreview() && this.task?.task_data) {
             this.clickEditorOnboardingDemoSnapshot = {
                 task: this.cloneClickEditorOnboardingSnapshotValue(this.task),
                 state: this.captureState(),
@@ -906,6 +905,10 @@ class ClickEditor extends BaseEditor {
             persisted: false,
             skipAutosave: true
         });
+        await this.setModeToggleActive("text");
+        this.recalculateImageMetrics(true);
+        this.centerImageInContainer();
+        this.renderAnnotations();
     }
 
     restoreClickEditorOnboardingDemoState() {
@@ -1308,17 +1311,19 @@ class ClickEditor extends BaseEditor {
         window.addEventListener("onboarding:before-start", (event) => {
             const detail = event?.detail || {};
             if (detail.tourId === "click-editor-authoring" || detail.tourId === "draw-editor-authoring") {
+                this.resetClickEditorOnboardingErrorsBranchState();
                 this.restoreClickEditorOnboardingErrorsSnapshot({ restoreMode: false });
-                if (!detail.preview) {
-                    const preparation = this.applyClickEditorOnboardingDemoState(detail.tourId);
-                    if (typeof detail.waitUntil === "function") {
-                        detail.waitUntil(preparation);
-                    }
+                const preparation = this.applyClickEditorOnboardingDemoState(detail.tourId);
+                if (typeof detail.waitUntil === "function") {
+                    detail.waitUntil(preparation);
                 }
                 return;
             }
             if (detail.tourId !== "click-editor-errors-authoring" && detail.tourId !== "click-editor-errors-texts-authoring") return;
-            void this.prepareClickEditorOnboardingErrorsTour();
+            const preparation = this.prepareClickEditorOnboardingErrorsTour();
+            if (typeof detail.waitUntil === "function") {
+                detail.waitUntil(preparation);
+            }
         });
 
         window.addEventListener("onboarding:before-step", (event) => {
@@ -1454,6 +1459,19 @@ class ClickEditor extends BaseEditor {
     }
 
     async init() {
+        if (this.isClickOnboardingPreview()) {
+            const previewTourId = this.getOnboardingPreviewTourId();
+            const isDrawPreview = previewTourId === "draw-editor-authoring";
+            this.moduleId = "onboarding-preview";
+            this.topicId = isDrawPreview ? "draw" : "click";
+            this.taskId = isDrawPreview ? "draw-onboarding-preview" : "click-onboarding-preview";
+            await this.hydrateTask(isDrawPreview ? this.createDrawOnboardingPreviewTask() : this.createClickOnboardingPreviewTask(), {
+                persisted: false,
+                skipAutosave: true
+            });
+            return;
+        }
+
         const context = this.getTaskContext();
         this.moduleId = context.moduleId;
         this.topicId = context.topicId;
@@ -1464,18 +1482,6 @@ class ClickEditor extends BaseEditor {
         this.taskNameParam = String(context.taskName || "").trim();
 
         if (!this.moduleId || !this.topicId || !this.taskId) {
-            if (this.isClickOnboardingPreview()) {
-                const previewTourId = this.getOnboardingPreviewTourId();
-                const isDrawPreview = previewTourId === "draw-editor-authoring";
-                this.moduleId = "onboarding-preview";
-                this.topicId = isDrawPreview ? "draw" : "click";
-                this.taskId = isDrawPreview ? "draw-onboarding-preview" : "click-onboarding-preview";
-                await this.hydrateTask(isDrawPreview ? this.createDrawOnboardingPreviewTask() : this.createClickOnboardingPreviewTask(), {
-                    persisted: false,
-                    skipAutosave: true
-                });
-                return;
-            }
             console.error("Missing task parameters in URL");
             this.showFatalError(wt("ce.k014", "Неверная ссылка: отсутствуют параметры задания (module, topic, task)"));
             return;
@@ -3269,6 +3275,18 @@ class ClickEditor extends BaseEditor {
             this.errorsModePane.classList.toggle("hidden", !isErrors);
         }
         this.updateSubtaskToggleVisibility();
+        if (!isErrors) {
+            const syncMetrics = () => {
+                this.recalculateImageMetrics(true);
+                this.centerImageInContainer();
+                this.renderAnnotations();
+            };
+            if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+                window.requestAnimationFrame(syncMetrics);
+            } else {
+                syncMetrics();
+            }
+        }
     }
 
     updateSubtaskToggleVisibility() {
@@ -5652,7 +5670,7 @@ class ClickEditor extends BaseEditor {
         const containerRect = this.canvasContainer.getBoundingClientRect();
         const width = this.baseImageWidth || this.img?.offsetWidth || 0;
         const height = this.baseImageHeight || this.img?.offsetHeight || 0;
-        if (!width || !height) return;
+        if (!width || !height || !containerRect.width || !containerRect.height) return;
 
         this.initialPanX = (containerRect.width - width) / 2;
         this.initialPanY = (containerRect.height - height) / 2;

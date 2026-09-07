@@ -470,8 +470,8 @@
                             gap: 24,
                             keepPlacement: true,
                             width: 430,
-                            title: wt('tours.complex_editor_authoring.complex_editor_chains.c1_title', 'Порядок внутри сцепки'),
-                            body: wt('tours.complex_editor_authoring.complex_editor_chains.c1_body', 'Генератор очереди сначала группирует сцепку в chunk, а уже потом балансирует очередь. Поэтому порядок внутри блока сохраняется при прохождении.')
+                            title: wt('tours.complex_editor_authoring.complex_editor_chains.c1_title', 'Порядок и перемешивание в сцепке'),
+                            body: wt('tours.complex_editor_authoring.complex_editor_chains.c1_body', 'Кнопки ▲ и ▼ задают исходный порядок заданий. Селектор «Порядок заданий» определяет поведение при повторах: строго по порядку, вперемешку со 2-й итерации, только на 3-й или всегда.')
                         }
                     ]
                 },
@@ -3271,7 +3271,10 @@
                     placement: 'right',
                     controlPlacement: 'bottom-right',
                     controlPlacementLocked: true,
-                    readySelector: '[data-onboarding-target="editor-module-tree"]',
+                    readySelectors: [
+                        '[data-onboarding-target="editor-task-limit-badge"]',
+                        '[data-onboarding-target="editor-active-topic"]'
+                    ],
                     skipAutoScroll: true,
                     kicker: wt('tours.editor_dashboard_authoring.editor_dashboard_structure.kicker', 'Структура материалов'),
                     callouts: [
@@ -3457,7 +3460,7 @@
                         {
                             target: '[data-onboarding-target="editor-create-task-context"]',
                             positionTarget: '[data-onboarding-target="editor-create-task-dialog"]',
-                            placement: 'right',
+                            placement: 'left',
                             offsetX: 18,
                             offsetY: -150,
                             gap: 30,
@@ -3468,7 +3471,7 @@
                         {
                             target: '[data-onboarding-target="editor-create-task-type"]',
                             positionTarget: '[data-onboarding-target="editor-create-task-dialog"]',
-                            placement: 'right',
+                            placement: 'left',
                             offsetX: 18,
                             offsetY: 122,
                             gap: 30,
@@ -3479,7 +3482,7 @@
                         {
                             target: '[data-onboarding-target="editor-create-task-submit"]',
                             positionTarget: '[data-onboarding-target="editor-create-task-dialog"]',
-                            placement: 'left',
+                            placement: 'right',
                             offsetX: 18,
                             offsetY: 132,
                             gap: 30,

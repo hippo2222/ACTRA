@@ -2,6 +2,13 @@
  * Automatic Draft Saving Manager
  * Saves editor state to localStorage periodically
  */
+function getAutoSaveI18n(key, fallback) {
+    if (typeof window !== 'undefined' && typeof window.wt === 'function') return window.wt(key, fallback);
+    if (typeof window !== 'undefined' && typeof window.t === 'function') return window.t(key, fallback);
+    if (typeof wt === 'function') return wt(key, fallback);
+    return fallback || key;
+}
+
 class AutoSaveManager {
     constructor(editor, options = {}) {
         this.editor = editor;
@@ -222,7 +229,7 @@ class AutoSaveManager {
             if (blockingState) {
                 this.editor.updateSaveStatus({
                     type: 'blocking',
-                    message: blockingState.message || wt('editor_base.status.needs_editing', '! Требуется правка'),
+                    message: blockingState.message || getAutoSaveI18n('editor_base.status.needs_editing', '! Требуется правка'),
                     detail: blockingState.draftDetail || blockingState.detail || '',
                 });
                 if (typeof this.editor?.notifyBlockingDraftSaved === 'function') {
@@ -233,7 +240,7 @@ class AutoSaveManager {
             const time = new Date(this.lastSaveTime).toLocaleTimeString();
             this.editor.updateSaveStatus({
                 type: 'draft',
-                message: wt('editor_base.status.draft_saved', 'Черновик сохранён'),
+                message: getAutoSaveI18n('editor_base.status.draft_saved', 'Черновик сохранён'),
                 time: time
             });
         }

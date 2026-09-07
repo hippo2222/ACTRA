@@ -572,7 +572,7 @@
 
         setResultCount(root);
         if (state.selectedTourId) {
-            selectTour(root, state.selectedTourId, { updateHash: false });
+            selectTour(root, state.selectedTourId, { stepIndex: state.selectedStepIndex, updateHash: false });
         } else {
             renderToc(root);
             renderPreview(root, null);

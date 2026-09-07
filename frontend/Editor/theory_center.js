@@ -52,12 +52,12 @@
     }
   }
 
-  function isTheoryCenterOnboardingDemoRequested() {
-    return getOnboardingPreviewTourId() === THEORY_CENTER_ONBOARDING_TOUR_ID;
-  }
-
   function isTheoryCenterOnboardingTourActive() {
     return document.body?.dataset?.onboardingTourId === THEORY_CENTER_ONBOARDING_TOUR_ID;
+  }
+
+  function isTheoryCenterOnboardingDemoRequested() {
+    return isTheoryCenterOnboardingTourActive();
   }
 
   function createTheoryCenterOnboardingDemoOverview() {
@@ -235,8 +235,34 @@
     renderView();
   }
 
+  function clearTheoryCenterOnboardingUrlParams() {
+    if (typeof window === 'undefined' || !window.history || typeof window.history.replaceState !== 'function') return;
+    try {
+      const url = new URL(window.location.href);
+      let changed = false;
+      ['onboarding_preview', 'onboarding_tour', 'onboarding_step', 'demo_state'].forEach((key) => {
+        if (url.searchParams.has(key)) {
+          url.searchParams.delete(key);
+          changed = true;
+        }
+      });
+      if (changed) {
+        window.history.replaceState({}, document.title, url.pathname + (url.search ? url.search : '') + url.hash);
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+
   function restoreTheoryCenterOnboardingDemoState() {
-    if (!onboardingDemoSnapshot) return;
+    clearTheoryCenterOnboardingUrlParams();
+    if (!onboardingDemoSnapshot) {
+      onboardingPrimaryRowId = '';
+      if (!state.overview) {
+        loadOverview();
+      }
+      return;
+    }
     const snapshot = onboardingDemoSnapshot;
     onboardingDemoSnapshot = null;
     state.overview = snapshot.overview;
@@ -255,11 +281,15 @@
     currentTheoryCenterUserId = snapshot.currentTheoryCenterUserId;
     rebuildTheoryPublicationIndex(snapshot.publicationItems);
     onboardingPrimaryRowId = '';
+    if (!state.overview) {
+      loadOverview();
+      return;
+    }
     renderView();
   }
 
   function syncTheoryCenterOnboardingDemoState() {
-    if (isTheoryCenterOnboardingDemoRequested() || isTheoryCenterOnboardingTourActive()) {
+    if (isTheoryCenterOnboardingTourActive()) {
       applyTheoryCenterOnboardingDemoState();
       return;
     }
@@ -273,6 +303,7 @@
       attributes: true,
       attributeFilter: ['data-onboarding-tour-id'],
     });
+    window.addEventListener('onboarding:finish', () => restoreTheoryCenterOnboardingDemoState());
     syncTheoryCenterOnboardingDemoState();
   }
 
@@ -1380,7 +1411,7 @@
     try {
       const currentParams = new URLSearchParams(window.location.search || '');
       const params = new URLSearchParams();
-      ['onboarding_preview', 'onboarding_tour'].forEach((key) => {
+      ['onboarding_preview', 'onboarding_tour', 'onboarding_step', 'reference_embed', 'reference_preview'].forEach((key) => {
         const value = currentParams.get(key);
         if (value) params.set(key, value);
       });
