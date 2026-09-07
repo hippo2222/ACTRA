@@ -225,58 +225,89 @@ def validate_and_normalize_create_payload(
             shuffle_iterations: List[int] = []
             is_dict_format = False
         elif isinstance(ch, dict):
-            chain_tasks_raw = ch.get("tasks")
-            if not isinstance(chain_tasks_raw, list) or not chain_tasks_raw:
-                errors.append({"field": f"chains[{ci}].tasks", "reason": "chain_tasks_must_be_non_empty_array"})
+            raw_tasks = ch.get("tasks")
+            if not isinstance(raw_tasks, list) or not raw_tasks:
+                errors.append(
+                    {
+                        "field": f"chains[{ci}].tasks",
+                        "reason": "chain_tasks_must_be_non_empty_array",
+                    }
+                )
                 continue
+            chain_tasks_raw = raw_tasks
             raw_mode = ch.get("shuffle_mode", "never")
             if not isinstance(raw_mode, str):
-                errors.append({"field": f"chains[{ci}].shuffle_mode", "reason": "shuffle_mode_must_be_string"})
+                errors.append(
+                    {"field": f"chains[{ci}].shuffle_mode", "reason": "shuffle_mode_must_be_string"}
+                )
                 shuffle_mode = "never"
             else:
                 shuffle_mode = raw_mode.strip().lower()
                 if shuffle_mode not in allowed_chain_shuffle_modes:
-                    errors.append({
-                        "field": f"chains[{ci}].shuffle_mode",
-                        "reason": "invalid_chain_shuffle_mode",
-                        "value": raw_mode,
-                    })
+                    errors.append(
+                        {
+                            "field": f"chains[{ci}].shuffle_mode",
+                            "reason": "invalid_chain_shuffle_mode",
+                            "value": raw_mode,
+                        }
+                    )
 
             raw_iterations = ch.get("shuffle_iterations", [])
             shuffle_iterations = []
             if raw_iterations is not None:
                 if not isinstance(raw_iterations, list):
-                    errors.append({"field": f"chains[{ci}].shuffle_iterations", "reason": "shuffle_iterations_must_be_array"})
+                    errors.append(
+                        {
+                            "field": f"chains[{ci}].shuffle_iterations",
+                            "reason": "shuffle_iterations_must_be_array",
+                        }
+                    )
                 else:
                     for it_idx, it_val in enumerate(raw_iterations):
                         try:
                             it_num = int(it_val)
                             if it_num < 1:
-                                errors.append({"field": f"chains[{ci}].shuffle_iterations[{it_idx}]", "reason": "iteration_must_be_positive"})
+                                errors.append(
+                                    {
+                                        "field": f"chains[{ci}].shuffle_iterations[{it_idx}]",
+                                        "reason": "iteration_must_be_positive",
+                                    }
+                                )
                             elif it_num > max_iters:
-                                errors.append({
-                                    "field": f"chains[{ci}].shuffle_iterations[{it_idx}]",
-                                    "reason": "iteration_exceeds_max_iterations",
-                                    "value": it_num,
-                                })
+                                errors.append(
+                                    {
+                                        "field": f"chains[{ci}].shuffle_iterations[{it_idx}]",
+                                        "reason": "iteration_exceeds_max_iterations",
+                                        "value": it_num,
+                                    }
+                                )
                             else:
                                 if it_num not in shuffle_iterations:
                                     shuffle_iterations.append(it_num)
                         except (ValueError, TypeError):
-                            errors.append({"field": f"chains[{ci}].shuffle_iterations[{it_idx}]", "reason": "iteration_must_be_integer"})
+                            errors.append(
+                                {
+                                    "field": f"chains[{ci}].shuffle_iterations[{it_idx}]",
+                                    "reason": "iteration_must_be_integer",
+                                }
+                            )
 
             if shuffle_mode == "from_iteration_2" and max_iters < 2:
-                errors.append({
-                    "field": f"chains[{ci}].shuffle_mode",
-                    "reason": "shuffle_mode_exceeds_max_iterations",
-                    "value": shuffle_mode,
-                })
+                errors.append(
+                    {
+                        "field": f"chains[{ci}].shuffle_mode",
+                        "reason": "shuffle_mode_exceeds_max_iterations",
+                        "value": shuffle_mode,
+                    }
+                )
             elif shuffle_mode == "only_iteration_3" and max_iters < 3:
-                errors.append({
-                    "field": f"chains[{ci}].shuffle_mode",
-                    "reason": "shuffle_mode_exceeds_max_iterations",
-                    "value": shuffle_mode,
-                })
+                errors.append(
+                    {
+                        "field": f"chains[{ci}].shuffle_mode",
+                        "reason": "shuffle_mode_exceeds_max_iterations",
+                        "value": shuffle_mode,
+                    }
+                )
 
             is_dict_format = True
         else:
@@ -313,11 +344,13 @@ def validate_and_normalize_create_payload(
 
         if normalized_chain_tasks:
             if is_dict_format:
-                normalized_chains.append({
-                    "tasks": normalized_chain_tasks,
-                    "shuffle_mode": shuffle_mode,
-                    "shuffle_iterations": sorted(shuffle_iterations),
-                })
+                normalized_chains.append(
+                    {
+                        "tasks": normalized_chain_tasks,
+                        "shuffle_mode": shuffle_mode,
+                        "shuffle_iterations": sorted(shuffle_iterations),
+                    }
+                )
             else:
                 normalized_chains.append(normalized_chain_tasks)
 
@@ -370,7 +403,9 @@ def validate_and_normalize_create_payload(
                     errors.append({"field": "theory_blocks", "reason": "block_id_required"})
                     continue
                 if not isinstance(blk_data, dict):
-                    errors.append({"field": f"theory_blocks.{b_id}", "reason": "block_data_must_be_object"})
+                    errors.append(
+                        {"field": f"theory_blocks.{b_id}", "reason": "block_data_must_be_object"}
+                    )
                     continue
                 label = str(blk_data.get("label") or "").strip()
                 color = str(blk_data.get("color") or "").strip()
@@ -385,11 +420,15 @@ def validate_and_normalize_create_payload(
     normalized_theory_block_ranges: List[Dict[str, Any]] = []
     if raw_theory_block_ranges is not None:
         if not isinstance(raw_theory_block_ranges, list):
-            errors.append({"field": "theory_block_ranges", "reason": "theory_block_ranges_must_be_array"})
+            errors.append(
+                {"field": "theory_block_ranges", "reason": "theory_block_ranges_must_be_array"}
+            )
         else:
             for idx, item in enumerate(raw_theory_block_ranges):
                 if not isinstance(item, dict):
-                    errors.append({"field": f"theory_block_ranges[{idx}]", "reason": "range_must_be_object"})
+                    errors.append(
+                        {"field": f"theory_block_ranges[{idx}]", "reason": "range_must_be_object"}
+                    )
                     continue
                 blk_id = str(item.get("block_id") or "").strip()
                 th_id = str(item.get("theory_id") or "").strip()
@@ -397,31 +436,70 @@ def validate_and_normalize_create_payload(
                 line_end = item.get("line_end")
 
                 if not blk_id:
-                    errors.append({"field": f"theory_block_ranges[{idx}].block_id", "reason": "block_id_required"})
+                    errors.append(
+                        {
+                            "field": f"theory_block_ranges[{idx}].block_id",
+                            "reason": "block_id_required",
+                        }
+                    )
                 elif normalized_theory_blocks and blk_id not in normalized_theory_blocks:
-                    errors.append({"field": f"theory_block_ranges[{idx}].block_id", "reason": "range_block_not_found", "value": blk_id})
+                    errors.append(
+                        {
+                            "field": f"theory_block_ranges[{idx}].block_id",
+                            "reason": "range_block_not_found",
+                            "value": blk_id,
+                        }
+                    )
 
                 if not th_id:
-                    errors.append({"field": f"theory_block_ranges[{idx}].theory_id", "reason": "theory_id_required"})
+                    errors.append(
+                        {
+                            "field": f"theory_block_ranges[{idx}].theory_id",
+                            "reason": "theory_id_required",
+                        }
+                    )
 
                 if not isinstance(line_start, int) or line_start < 0:
-                    errors.append({"field": f"theory_block_ranges[{idx}].line_start", "reason": "invalid_line_start"})
-                if not isinstance(line_end, int) or (isinstance(line_start, int) and line_end < line_start):
-                    errors.append({"field": f"theory_block_ranges[{idx}].line_end", "reason": "invalid_line_end"})
+                    errors.append(
+                        {
+                            "field": f"theory_block_ranges[{idx}].line_start",
+                            "reason": "invalid_line_start",
+                        }
+                    )
+                if not isinstance(line_end, int) or (
+                    isinstance(line_start, int) and line_end < line_start
+                ):
+                    errors.append(
+                        {
+                            "field": f"theory_block_ranges[{idx}].line_end",
+                            "reason": "invalid_line_end",
+                        }
+                    )
 
-                if blk_id and th_id and isinstance(line_start, int) and isinstance(line_end, int) and line_start >= 0 and line_end >= line_start:
-                    normalized_theory_block_ranges.append({
-                        "block_id": blk_id,
-                        "theory_id": th_id,
-                        "line_start": line_start,
-                        "line_end": line_end,
-                    })
+                if (
+                    blk_id
+                    and th_id
+                    and isinstance(line_start, int)
+                    and isinstance(line_end, int)
+                    and line_start >= 0
+                    and line_end >= line_start
+                ):
+                    normalized_theory_block_ranges.append(
+                        {
+                            "block_id": blk_id,
+                            "theory_id": th_id,
+                            "line_start": line_start,
+                            "line_end": line_end,
+                        }
+                    )
 
     raw_theory_block_versions = payload.get("theory_block_versions")
     normalized_theory_block_versions: Dict[str, str] = {}
     if raw_theory_block_versions is not None:
         if not isinstance(raw_theory_block_versions, dict):
-            errors.append({"field": "theory_block_versions", "reason": "theory_block_versions_must_be_object"})
+            errors.append(
+                {"field": "theory_block_versions", "reason": "theory_block_versions_must_be_object"}
+            )
         else:
             for th_id, ver in raw_theory_block_versions.items():
                 t_id = str(th_id or "").strip()
@@ -432,15 +510,28 @@ def validate_and_normalize_create_payload(
     normalized_task_block_mappings: Dict[str, List[str]] = {}
     if raw_task_block_mappings is not None:
         if not isinstance(raw_task_block_mappings, dict):
-            errors.append({"field": "task_block_mappings", "reason": "task_block_mappings_must_be_object"})
+            errors.append(
+                {"field": "task_block_mappings", "reason": "task_block_mappings_must_be_object"}
+            )
         else:
             for raw_task_ref, raw_block_ids in raw_task_block_mappings.items():
                 t_ref = str(raw_task_ref or "").strip()
                 if t_ref not in seen:
-                    errors.append({"field": f"task_block_mappings.{t_ref or '<empty>'}", "reason": "mapping_task_not_in_tasks", "value": t_ref})
+                    errors.append(
+                        {
+                            "field": f"task_block_mappings.{t_ref or '<empty>'}",
+                            "reason": "mapping_task_not_in_tasks",
+                            "value": t_ref,
+                        }
+                    )
                     continue
                 if not isinstance(raw_block_ids, list):
-                    errors.append({"field": f"task_block_mappings.{t_ref}", "reason": "block_ids_must_be_array"})
+                    errors.append(
+                        {
+                            "field": f"task_block_mappings.{t_ref}",
+                            "reason": "block_ids_must_be_array",
+                        }
+                    )
                     continue
                 norm_blocks: List[str] = []
                 for b_idx, b_id_raw in enumerate(raw_block_ids):
@@ -448,7 +539,13 @@ def validate_and_normalize_create_payload(
                     if not b_id:
                         continue
                     if normalized_theory_blocks and b_id not in normalized_theory_blocks:
-                        errors.append({"field": f"task_block_mappings.{t_ref}[{b_idx}]", "reason": "mapping_block_not_found", "value": b_id})
+                        errors.append(
+                            {
+                                "field": f"task_block_mappings.{t_ref}[{b_idx}]",
+                                "reason": "mapping_block_not_found",
+                                "value": b_id,
+                            }
+                        )
                         continue
                     if b_id not in norm_blocks:
                         norm_blocks.append(b_id)
