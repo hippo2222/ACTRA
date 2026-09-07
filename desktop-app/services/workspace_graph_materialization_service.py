@@ -384,24 +384,50 @@ class WorkspaceGraphMaterializationService:
         self,
         raw_chains: Any,
         task_ref_map: Dict[str, str],
-    ) -> List[List[str]]:
+    ) -> List[Any]:
         if not isinstance(raw_chains, list):
             return []
 
-        remapped: List[List[str]] = []
+        remapped: List[Any] = []
         for raw_chain in raw_chains:
-            if not isinstance(raw_chain, list):
-                continue
-            remapped_chain: List[str] = []
-            for raw_ref in raw_chain:
-                source_ref = str(raw_ref or "").strip()
-                if not source_ref:
-                    continue
-                if source_ref not in task_ref_map:
-                    raise ValueError(f"complex_chain_ref_not_materialized:{source_ref}")
-                remapped_chain.append(task_ref_map[source_ref])
-            if remapped_chain:
-                remapped.append(remapped_chain)
+            if isinstance(raw_chain, dict):
+                raw_tasks = raw_chain.get("tasks") or []
+                remapped_tasks: List[str] = []
+                for raw_ref in raw_tasks:
+                    source_ref = str(raw_ref or "").strip()
+                    if not source_ref:
+                        continue
+                    if source_ref not in task_ref_map:
+                        raise ValueError(f"complex_chain_ref_not_materialized:{source_ref}")
+                    remapped_tasks.append(task_ref_map[source_ref])
+                if remapped_tasks:
+                    remapped.append({**raw_chain, "tasks": remapped_tasks})
+            elif hasattr(raw_chain, "tasks"):
+                raw_tasks = getattr(raw_chain, "tasks") or []
+                remapped_tasks = []
+                for raw_ref in raw_tasks:
+                    source_ref = str(raw_ref or "").strip()
+                    if not source_ref:
+                        continue
+                    if source_ref not in task_ref_map:
+                        raise ValueError(f"complex_chain_ref_not_materialized:{source_ref}")
+                    remapped_tasks.append(task_ref_map[source_ref])
+                if remapped_tasks:
+                    if hasattr(raw_chain, "copy"):
+                        remapped.append(raw_chain.copy(update={"tasks": remapped_tasks}))
+                    else:
+                        remapped.append(remapped_tasks)
+            elif isinstance(raw_chain, list):
+                remapped_chain: List[str] = []
+                for raw_ref in raw_chain:
+                    source_ref = str(raw_ref or "").strip()
+                    if not source_ref:
+                        continue
+                    if source_ref not in task_ref_map:
+                        raise ValueError(f"complex_chain_ref_not_materialized:{source_ref}")
+                    remapped_chain.append(task_ref_map[source_ref])
+                if remapped_chain:
+                    remapped.append(remapped_chain)
         return remapped
 
     def _remap_complex_settings(

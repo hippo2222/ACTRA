@@ -645,11 +645,15 @@
       grid-template-rows: 0fr;
     }
 
-    /* Theory section collapsible body */
     .theory-body {
       overflow: hidden;
       max-height: 0;
       transition: max-height 0.35s ease;
+    }
+
+    body.onboarding-tour-active .theory-body,
+    body[data-complex-editor-onboarding-demo="true"] .theory-body {
+      transition: none !important;
     }
 
     .theory-body-open {
@@ -825,6 +829,76 @@
       grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 0.35rem;
       width: max-content;
+    }
+
+    #theory-block-mode-toggle.is-active {
+      background-color: var(--color-primary, #6366f1);
+      color: #ffffff;
+      border-color: var(--color-primary, #6366f1);
+    }
+    #theory-block-mode-toggle {
+      transition: background-color 250ms ease-in-out, color 250ms ease-in-out, border-color 250ms ease-in-out;
+    }
+    .theory-block-floating-panel {
+      position: fixed;
+      z-index: 1000;
+      background: var(--color-surface-1, #ffffff);
+      border: 1px solid var(--color-border-subtle, #e2e8f0);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+      border-radius: 0.75rem;
+      padding: 0.35rem 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(4px) scale(0.98);
+      transition: opacity 150ms ease-out, transform 150ms ease-out;
+    }
+    .theory-block-floating-panel.is-visible {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0) scale(1);
+    }
+    .theory-block-tag-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.25rem 0.6rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: transform 120ms ease, box-shadow 120ms ease;
+    }
+    .theory-block-tag-btn:hover {
+      transform: scale(1.04);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+    }
+    .theory-editor-line-highlighted {
+      position: relative;
+      transition: background-color 200ms ease, border-color 200ms ease;
+    }
+    .theory-block-card {
+      border: 1px solid var(--color-border-subtle, #e2e8f0);
+      background: var(--color-surface-1, #ffffff);
+      border-radius: 0.875rem;
+      padding: 0.875rem 1rem;
+      transition: border-color 150ms ease, box-shadow 150ms ease;
+    }
+    .theory-block-card:hover {
+      border-color: var(--color-border-strong, #cbd5e1);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #theory-block-mode-toggle,
+      .theory-block-floating-panel,
+      .theory-block-tag-btn,
+      .theory-editor-line-highlighted,
+      .theory-block-card {
+        transition: none !important;
+      }
     }
 
     .topic-name {
@@ -2220,6 +2294,29 @@
       box-shadow: var(--color-page-builder-inset-highlight);
     }
 
+    .cx-chain-shuffle-select {
+      background: var(--color-page-builder-surface);
+      color: var(--color-text-main);
+      border: 1px solid var(--color-page-builder-border-strong);
+      box-shadow: var(--color-page-builder-shadow-soft);
+    }
+
+    .cx-chain-shuffle-select:hover {
+      border-color: var(--color-primary);
+    }
+
+    .cx-chain-btn-up,
+    .cx-chain-btn-down {
+      color: var(--color-text-muted);
+      transition: color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .cx-chain-btn-up:hover:not(:disabled),
+    .cx-chain-btn-down:hover:not(:disabled) {
+      color: var(--color-text-main);
+      background-color: var(--color-page-builder-surface-strong);
+    }
+
     [data-theme="light-b"] .card-section-premium {
       background: var(--color-surface-1);
       border-color: var(--color-page-builder-border-strong);
@@ -2929,6 +3026,11 @@
                           title="Отразить по горизонтали" data-i18n-title="create.fmt_flip_h">
                           <span class="material-symbols-outlined">flip</span>
                         </button>
+                        <span class="theory-toolbar-sep"></span>
+                        <button id="theory-block-mode-toggle" type="button" role="switch" aria-checked="false" class="theory-toolbar-btn inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg border border-border-subtle" title="Режим разметки блоков теории" data-i18n-title="create.fmt_theory_blocks_mode">
+                          <span class="material-symbols-outlined text-[16px]">palette</span>
+                          <span data-i18n="create.theory_blocks_label">Блоки</span>
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -2936,6 +3038,22 @@
                     class="w-full min-h-[240px] rounded-xl border border-border-subtle bg-surface-1 p-4 text-sm text-text-main focus:outline-none focus:ring-2 focus:ring-primary-light"
                     contenteditable="true"></div>
                   <p class="text-xs text-text-muted" data-i18n="create.theory_storage_info">Формат хранения: Delta JSON. Изображения сохраняются вместе с файлами комплексов.</p>
+                  <div id="theory-blocks-management-section" class="flex flex-col gap-3 pt-3 border-t border-border-subtle" hidden>
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[18px] text-primary">layers</span>
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-text-secondary" data-i18n="create.theory_blocks_section_title">Блоки теории и связь с заданиями</h4>
+                        <span id="theory-blocks-count-badge" class="cx-mini-pill inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold">0 блоков</span>
+                      </div>
+                      <button id="theory-add-block-btn" type="button" class="btn-secondary h-8 px-3 text-xs inline-flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[16px]">add</span>
+                        <span data-i18n="create.add_block_btn">Новый блок</span>
+                      </button>
+                    </div>
+                    <div id="theory-blocks-list" class="flex flex-col gap-2.5">
+                      <p class="text-xs text-text-muted" data-i18n="create.no_theory_blocks_yet">Блоки пока не созданы. Выделите текст в теории выше или нажмите «Новый блок».</p>
+                    </div>
+                  </div>
                 </div>
               </div>
           </div>
@@ -3168,6 +3286,14 @@
     </button>
   </div>
 
+  <div id="theory-block-floating-panel" class="theory-block-floating-panel" role="toolbar" aria-label="Добавить выделенный текст в блок теории">
+    <div id="theory-floating-block-chips" class="flex items-center gap-1 flex-wrap max-w-xs"></div>
+    <button id="theory-floating-add-block-btn" type="button" class="theory-block-tag-btn bg-surface-2 text-text-main hover:bg-surface-3 border-border-subtle">
+      <span class="material-symbols-outlined text-[14px]">add</span>
+      <span data-i18n="create.new_block_tag">Новый блок</span>
+    </button>
+  </div>
+
   <script>
 
     const state = {
@@ -3246,6 +3372,11 @@
       suppressUnloadWarning: false,
 
       theory: createEmptyTheoryState(),
+      theoryBlocks: {},
+      theoryBlockRanges: [],
+      theoryBlockVersions: {},
+      taskBlockMappings: {},
+      theoryBlockModeActive: false,
       complexOwnership: {
         scope: "workspace",
         contentScope: "shared_local",
@@ -5610,9 +5741,35 @@
       return task?.testQuestionDisplayMode === 'scattered' ? 'scattered' : 'together';
     }
 
+    function getChainTasks(chain) {
+      if (!chain) return [];
+      if (Array.isArray(chain)) return chain;
+      if (Array.isArray(chain.tasks)) return chain.tasks;
+      return [];
+    }
+
+    function getChainShuffleMode(chain) {
+      if (!chain || Array.isArray(chain)) return 'never';
+      return chain.shuffle_mode || 'never';
+    }
+
+    function getAllChainedRefs() {
+      const refs = [];
+      for (const ch of (state.chains || [])) {
+        refs.push(...getChainTasks(ch));
+      }
+      return refs;
+    }
+
+    function getMaxIterations() {
+      const settings = state.complexSettings || {};
+      const val = parseInt(settings.max_iterations, 10);
+      return Number.isFinite(val) && val > 0 ? val : 3;
+    }
+
     function buildTestQuestionDisplayModesPayload() {
       const modes = {};
-      const chainedRefs = new Set((state.chains || []).flat());
+      const chainedRefs = new Set(getAllChainedRefs());
       for (const task of state.selectedTasks || []) {
         if (isSelectedTestTask(task) && !chainedRefs.has(task.ref) && getTestQuestionDisplayMode(task) === 'scattered') {
           modes[task.ref] = 'scattered';
@@ -5853,15 +6010,10 @@
     });
 
     function chainIndexForTaskRef(ref) {
-
       for (let i = 0; i < state.chains.length; i++) {
-
-        if (state.chains[i].includes(ref)) return i;
-
+        if (getChainTasks(state.chains[i]).includes(ref)) return i;
       }
-
       return -1;
-
     }
 
     function chainColor(idx) {
@@ -5915,11 +6067,8 @@
     }
 
     function refsAlreadyInSomeChain(refs) {
-
-      const inChains = new Set(state.chains.flat());
-
+      const inChains = new Set(getAllChainedRefs());
       return refs.filter((r) => inChains.has(r));
-
     }
 
     function syncHiddenSelectedListSelectionFromCards() {
@@ -6088,144 +6237,107 @@
 
           left.appendChild(label);
 
+          const chTasks = getChainTasks(ch);
           const right = document.createElement('span');
-
           right.className = 'text-xs text-text-muted';
-
-          right.textContent = `${ch.length}`;
+          right.textContent = `${chTasks.length}`;
 
           btn.appendChild(left);
-
           btn.appendChild(right);
 
           btn.addEventListener('click', () => {
-
             hideContextMenu();
-
             if (alreadyRefs.length) {
-
               showGlobalError(`${wt('create.chain_add_conflict', 'Нельзя добавить: задание уже находится в другой сцепке')} (${alreadyRefs[0]}).`);
-
               return;
-
             }
-
-            const merged = orderedUnique(ch.concat(refsToAddOrdered));
-
-            state.chains[idx] = merged;
-
+            const merged = orderedUnique(chTasks.concat(refsToAddOrdered));
+            if (Array.isArray(ch)) {
+              state.chains[idx] = { tasks: merged, shuffle_mode: 'never' };
+            } else {
+              ch.tasks = merged;
+            }
+            markDirty();
             renderSelectedList();
-
             renderChains();
-
             applyCatalogFilter();
-
           });
 
           addToChainRoot.appendChild(btn);
-
         });
-
       }
 
       const chainIdx = chainIndexForTaskRef(clickedRef);
-
       const canUnlink = chainIdx >= 0;
-
       unlinkHint.textContent = canUnlink ? `(#${chainIdx + 1})` : `(${wt('create.no_chain', 'нет сцепки')})`;
-
       unlinkBtn.disabled = !canUnlink;
-
       unlinkBtn.classList.toggle('opacity-50', !canUnlink);
-
       unlinkBtn.classList.toggle('cursor-not-allowed', !canUnlink);
 
       // Position with viewport clamping
-
       const pad = 8;
-
       const vw = window.innerWidth;
-
       const vh = window.innerHeight;
-
       menu.style.left = '0px';
-
       menu.style.top = '0px';
-
       menu.classList.remove('hidden');
 
       const rect = menu.getBoundingClientRect();
-
       const left = Math.min(Math.max(pad, x), vw - rect.width - pad);
-
       const top = Math.min(Math.max(pad, y), vh - rect.height - pad);
-
       menu.style.left = `${left}px`;
-
       menu.style.top = `${top}px`;
 
       chainBtn.onclick = () => {
-
         hideContextMenu();
-
         const refs = orderedUnique(selectedRefs);
-
         const conflict = refsAlreadyInSomeChain(refs);
-
         if (conflict.length) {
-
           showGlobalError(`${wt('create.chain_create_conflict', 'Нельзя создать сцепку: задание уже находится в другой сцепке')} (${conflict[0]}).`);
-
           return;
-
         }
-
-        state.chains.push(refs);
-
+        state.chains.push({ tasks: refs, shuffle_mode: 'never' });
+        markDirty();
         renderSelectedList();
-
         renderChains();
-
         applyCatalogFilter();
-
       };
 
       unlinkBtn.onclick = () => {
-
         hideContextMenu();
-
         const idx = chainIndexForTaskRef(clickedRef);
-
         if (idx < 0) return;
-
-        const updated = state.chains[idx].filter((x) => x !== clickedRef);
-
+        const ch = state.chains[idx];
+        const chTasks = getChainTasks(ch);
+        const updated = chTasks.filter((x) => x !== clickedRef);
         state.chains.splice(idx, 1);
-
         if (updated.length >= 2) {
-
-          state.chains.splice(idx, 0, updated);
-
+          if (Array.isArray(ch)) {
+            state.chains.splice(idx, 0, { tasks: updated, shuffle_mode: 'never' });
+          } else {
+            ch.tasks = updated;
+            state.chains.splice(idx, 0, ch);
+          }
         }
-
+        markDirty();
         renderSelectedList();
-
         renderChains();
-
         applyCatalogFilter();
-
       };
 
     }
 
     function getTaskChains(taskRef) {
       return state.chains
-        .map((chain, idx) => ({
-          index: idx,
-          label: `${wt('create.chain_card_label', 'СЦЕПКА')} ${idx + 1}`,
-          tasksCount: chain.length,
-          isInChain: chain.includes(taskRef)
-        }))
+        .map((chain, idx) => {
+          const tasks = getChainTasks(chain);
+          return {
+            index: idx,
+            label: `${wt('create.chain_card_label', 'СЦЕПКА')} ${idx + 1}`,
+            tasksCount: tasks.length,
+            isInChain: tasks.includes(taskRef)
+          };
+        })
         .filter(c => c.isInChain);
     }
 
@@ -6387,6 +6499,10 @@
         card.querySelector('.delete-task-btn').addEventListener('click', (e) => {
           e.preventDefault(); e.stopPropagation();
           state.selectedTasks = state.selectedTasks.filter((x) => x.ref !== t.ref);
+          if (state.taskBlockMappings && state.taskBlockMappings[t.ref]) {
+            delete state.taskBlockMappings[t.ref];
+            renderTheoryBlocksManagementSection();
+          }
           removeTaskFromChains(t.ref);
           renderSelectedList();
           renderChains();
@@ -6467,21 +6583,20 @@
     }
 
     function removeTaskFromChains(taskRef) {
-
       // автоудаление из сцепок
-
       const newChains = [];
-
       for (const ch of state.chains) {
-
-        const filtered = ch.filter((x) => x !== taskRef);
-
-        if (filtered.length >= 2) newChains.push(filtered);
-
+        const tasks = getChainTasks(ch);
+        const filtered = tasks.filter((x) => x !== taskRef);
+        if (filtered.length >= 2) {
+          if (Array.isArray(ch)) {
+            newChains.push({ tasks: filtered, shuffle_mode: 'never' });
+          } else {
+            newChains.push({ ...ch, tasks: filtered });
+          }
+        }
       }
-
       state.chains = newChains;
-
     }
 
     // Legacy renderChains removed
@@ -7139,6 +7254,13 @@
 
       state.selectedTasks = state.selectedTasks.filter((t) => !refs.includes(t.ref));
 
+      if (state.taskBlockMappings && typeof state.taskBlockMappings === "object") {
+        refs.forEach((ref) => {
+          delete state.taskBlockMappings[ref];
+        });
+        renderTheoryBlocksManagementSection();
+      }
+
       refs.forEach(removeTaskFromChains);
 
       renderSelectedList();
@@ -7200,57 +7322,38 @@
     }
 
     function onCreateChain() {
-
       const refs = getSelectedTaskRefsFromLeftList();
-
       if (refs.length < 2) {
-
         showGlobalError(wt('create.chain_min2_error', 'Для сцепки выберите минимум 2 задания в списке слева.'));
-
         return;
-
       }
 
       // Ensure each ref is not already in a chain
-
-      const already = new Set(state.chains.flat());
-
+      const already = new Set(getAllChainedRefs());
       const conflict = refs.filter((r) => already.has(r));
-
       if (conflict.length) {
-
         showGlobalError(`${wt('create.chain_tasks_already_in', 'Некоторые задания уже в сцепках')}: ${conflict.join(', ')}`);
-
         return;
-
       }
 
-      state.chains.push(refs);
-
+      state.chains.push({ tasks: refs, shuffle_mode: 'never' });
       markDirty();
-
       renderChains();
-
     }
 
     function onBreakChainsForSelection() {
-
       const refs = getSelectedTaskRefsFromLeftList();
-
       if (!refs.length) return;
-
       const refSet = new Set(refs);
-
       state.chains = state.chains
-
-        .map((ch) => ch.filter((x) => !refSet.has(x)))
-
-        .filter((ch) => ch.length >= 2);
-
+        .map((ch) => {
+          const tasks = getChainTasks(ch).filter((x) => !refSet.has(x));
+          if (Array.isArray(ch)) return { tasks, shuffle_mode: 'never' };
+          return { ...ch, tasks };
+        })
+        .filter((ch) => getChainTasks(ch).length >= 2);
       renderChains();
-
       markDirty();
-
     }
 
     function theoryLocalImageSrc(path) {
@@ -7484,6 +7587,413 @@
       if (!editor) return;
       editor.innerHTML = renderTheoryDeltaToHtml(delta);
       deselectTheoryImage();
+      tagTheoryEditorLines();
+      renderTheoryBlockHighlightsInEditor();
+    }
+
+    // ==========================================
+    // Theory Blocks Core Engine
+    // ==========================================
+
+    function generateTheoryBlockColor(blockIndex) {
+      const goldenAngle = 137.508;
+      const hue = Math.round((blockIndex * goldenAngle) % 360);
+      return {
+        color: `hsla(${hue}, 65%, 70%, 0.35)`,
+        color_border: `hsla(${hue}, 75%, 45%, 1)`,
+        solid: `hsl(${hue}, 65%, 55%)`,
+        hue,
+      };
+    }
+
+    function toggleTheoryBlockMode(forceState) {
+      state.theoryBlockModeActive = forceState !== undefined ? !!forceState : !state.theoryBlockModeActive;
+      const btn = document.getElementById("theory-block-mode-toggle");
+      const section = document.getElementById("theory-blocks-management-section");
+      if (btn) {
+        btn.classList.toggle("is-active", state.theoryBlockModeActive);
+        btn.setAttribute("aria-checked", state.theoryBlockModeActive ? "true" : "false");
+      }
+      if (section) {
+        section.hidden = !state.theoryBlockModeActive;
+      }
+      if (!state.theoryBlockModeActive) {
+        hideTheoryBlockFloatingPanel();
+      }
+      renderTheoryBlocksManagementSection();
+      renderTheoryBlockHighlightsInEditor();
+    }
+
+    function tagTheoryEditorLines() {
+      const editor = document.getElementById("theory-editor");
+      if (!editor) return;
+      const blockTags = ["p", "h1", "h2", "h3", "h4", "h5", "h6", "li", "blockquote"];
+      let lineIdx = 0;
+      const walk = (parent) => {
+        for (const child of Array.from(parent.children || [])) {
+          const tag = child.tagName ? child.tagName.toLowerCase() : "";
+          if (blockTags.includes(tag)) {
+            child.setAttribute("data-line-idx", String(lineIdx));
+            lineIdx += 1;
+          } else if (child.children && child.children.length > 0) {
+            walk(child);
+          }
+        }
+      };
+      walk(editor);
+    }
+
+    function renderTheoryBlockHighlightsInEditor() {
+      const editor = document.getElementById("theory-editor");
+      if (!editor) return;
+      tagTheoryEditorLines();
+
+      const lines = editor.querySelectorAll("[data-line-idx]");
+      lines.forEach((el) => {
+        el.style.borderLeft = "";
+        el.style.paddingLeft = "";
+        el.style.backgroundColor = "";
+        el.classList.remove("theory-editor-line-highlighted");
+      });
+
+      if (!state.theoryBlocks || Object.keys(state.theoryBlocks).length === 0) return;
+      const currentTheoryId = String(state.theory?.theoryId || state.complexTheoryContext?.theoryLink?.theory_id || "default_theory").trim();
+      const ranges = Array.isArray(state.theoryBlockRanges) ? state.theoryBlockRanges : [];
+
+      lines.forEach((el) => {
+        const lIdx = parseInt(el.getAttribute("data-line-idx"), 10);
+        if (isNaN(lIdx)) return;
+
+        const matchingRanges = ranges.filter((r) => {
+          if (!r || typeof r !== "object") return false;
+          const rThId = String(r.theory_id || "").trim();
+          if (rThId && currentTheoryId && rThId !== currentTheoryId && currentTheoryId !== "default_theory") {
+            return false;
+          }
+          return lIdx >= (r.line_start || 0) && lIdx <= (r.line_end || 0);
+        });
+
+        if (matchingRanges.length > 0) {
+          const firstBlockId = matchingRanges[0].block_id;
+          const blockDef = state.theoryBlocks[firstBlockId];
+          if (blockDef) {
+            el.classList.add("theory-editor-line-highlighted");
+            el.style.borderLeft = `3px solid ${blockDef.color_border || blockDef.color || "var(--color-primary)"}`;
+            el.style.paddingLeft = "8px";
+            el.style.backgroundColor = blockDef.color || "hsla(210, 60%, 70%, 0.15)";
+          }
+        }
+      });
+    }
+
+    function showTheoryBlockFloatingPanel(rect) {
+      const panel = document.getElementById("theory-block-floating-panel");
+      const chipsContainer = document.getElementById("theory-floating-block-chips");
+      if (!panel || !chipsContainer) return;
+
+      chipsContainer.innerHTML = "";
+      const blockIds = Object.keys(state.theoryBlocks || {});
+
+      blockIds.forEach((bId) => {
+        const blk = state.theoryBlocks[bId];
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "theory-block-tag-btn text-text-main";
+        chip.style.backgroundColor = blk.color || "hsla(210, 60%, 70%, 0.25)";
+        chip.style.borderColor = blk.color_border || "hsla(210, 70%, 50%, 0.8)";
+        chip.innerHTML = `
+          <span class="w-2.5 h-2.5 rounded-full inline-block" style="background:${blk.color_border || blk.color}"></span>
+          <span class="truncate max-w-[120px]">${escapeTheoryHtml(blk.label || bId)}</span>
+        `;
+        chip.onclick = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          addSelectionToTheoryBlock(bId);
+        };
+        chipsContainer.appendChild(chip);
+      });
+
+      panel.style.left = `${Math.max(10, Math.min(window.innerWidth - 320, rect.left + window.scrollX))}px`;
+      panel.style.top = `${Math.max(10, rect.top + window.scrollY - 44)}px`;
+      panel.classList.add("is-visible");
+    }
+
+    function hideTheoryBlockFloatingPanel() {
+      const panel = document.getElementById("theory-block-floating-panel");
+      if (panel) panel.classList.remove("is-visible");
+    }
+
+    function handleTheoryEditorSelectionChange() {
+      if (!state.theoryBlockModeActive) return;
+      const selection = window.getSelection();
+      if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
+        hideTheoryBlockFloatingPanel();
+        return;
+      }
+      const range = selection.getRangeAt(0);
+      const editor = document.getElementById("theory-editor");
+      if (!editor || !editor.contains(range.commonAncestorContainer)) {
+        hideTheoryBlockFloatingPanel();
+        return;
+      }
+      const rect = range.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        showTheoryBlockFloatingPanel(rect);
+      }
+    }
+
+    function getSelectedTheoryLineRange() {
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0) return null;
+      const range = selection.getRangeAt(0);
+      const editor = document.getElementById("theory-editor");
+      if (!editor) return null;
+
+      tagTheoryEditorLines();
+      const allLines = Array.from(editor.querySelectorAll("[data-line-idx]"));
+      if (!allLines.length) return { start: 0, end: 0 };
+
+      let startIdx = 0;
+      let endIdx = allLines.length - 1;
+
+      let startNode = range.startContainer;
+      while (startNode && startNode !== editor && (!startNode.getAttribute || !startNode.hasAttribute("data-line-idx"))) {
+        startNode = startNode.parentNode;
+      }
+      if (startNode && startNode.hasAttribute && startNode.hasAttribute("data-line-idx")) {
+        startIdx = parseInt(startNode.getAttribute("data-line-idx"), 10);
+      }
+
+      let endNode = range.endContainer;
+      while (endNode && endNode !== editor && (!endNode.getAttribute || !endNode.hasAttribute("data-line-idx"))) {
+        endNode = endNode.parentNode;
+      }
+      if (endNode && endNode.hasAttribute && endNode.hasAttribute("data-line-idx")) {
+        endIdx = parseInt(endNode.getAttribute("data-line-idx"), 10);
+      }
+
+      if (startIdx > endIdx) {
+        const tmp = startIdx;
+        startIdx = endIdx;
+        endIdx = tmp;
+      }
+
+      return { start: startIdx, end: endIdx };
+    }
+
+    function addSelectionToTheoryBlock(blockId) {
+      const lineRange = getSelectedTheoryLineRange();
+      if (!lineRange) return;
+
+      const currentTheoryId = String(state.theory?.theoryId || state.complexTheoryContext?.theoryLink?.theory_id || "th_main").trim();
+
+      if (!state.theoryBlocks) state.theoryBlocks = {};
+      if (!state.theoryBlockRanges) state.theoryBlockRanges = [];
+
+      state.theoryBlockRanges.push({
+        block_id: blockId,
+        theory_id: currentTheoryId,
+        line_start: lineRange.start,
+        line_end: lineRange.end,
+      });
+
+      hideTheoryBlockFloatingPanel();
+      window.getSelection()?.removeAllRanges();
+      markDirty();
+      renderTheoryBlocksManagementSection();
+      renderTheoryBlockHighlightsInEditor();
+    }
+
+    function createNewTheoryBlockPrompt() {
+      const blockCount = Object.keys(state.theoryBlocks || {}).length;
+      const defaultName = `Блок ${blockCount + 1}`;
+      const name = prompt(wt("create.enter_block_name", "Введите название нового блока теории:"), defaultName);
+      if (!name || !name.trim()) return null;
+
+      const blockId = `blk_${Date.now().toString(36)}_${Math.random().toString(36).substr(2, 4)}`;
+      const colorScheme = generateTheoryBlockColor(blockCount);
+
+      if (!state.theoryBlocks) state.theoryBlocks = {};
+      state.theoryBlocks[blockId] = {
+        label: name.trim(),
+        color: colorScheme.color,
+        color_border: colorScheme.color_border,
+      };
+
+      const lineRange = getSelectedTheoryLineRange();
+      if (lineRange && state.theoryBlockModeActive) {
+        const currentTheoryId = String(state.theory?.theoryId || state.complexTheoryContext?.theoryLink?.theory_id || "th_main").trim();
+        if (!state.theoryBlockRanges) state.theoryBlockRanges = [];
+        state.theoryBlockRanges.push({
+          block_id: blockId,
+          theory_id: currentTheoryId,
+          line_start: lineRange.start,
+          line_end: lineRange.end,
+        });
+        window.getSelection()?.removeAllRanges();
+      }
+
+      hideTheoryBlockFloatingPanel();
+      markDirty();
+      renderTheoryBlocksManagementSection();
+      renderTheoryBlockHighlightsInEditor();
+      return blockId;
+    }
+
+    function deleteTheoryBlock(blockId) {
+      if (!state.theoryBlocks || !state.theoryBlocks[blockId]) return;
+      delete state.theoryBlocks[blockId];
+      if (Array.isArray(state.theoryBlockRanges)) {
+        state.theoryBlockRanges = state.theoryBlockRanges.filter((r) => r && r.block_id !== blockId);
+      }
+      if (state.taskBlockMappings && typeof state.taskBlockMappings === "object") {
+        for (const tRef of Object.keys(state.taskBlockMappings)) {
+          if (Array.isArray(state.taskBlockMappings[tRef])) {
+            state.taskBlockMappings[tRef] = state.taskBlockMappings[tRef].filter((b) => b !== blockId);
+            if (state.taskBlockMappings[tRef].length === 0) {
+              delete state.taskBlockMappings[tRef];
+            }
+          }
+        }
+      }
+      markDirty();
+      renderTheoryBlocksManagementSection();
+      renderTheoryBlockHighlightsInEditor();
+    }
+
+    function toggleTaskInTheoryBlock(blockId, taskRef) {
+      if (!state.taskBlockMappings) state.taskBlockMappings = {};
+      if (!Array.isArray(state.taskBlockMappings[taskRef])) {
+        state.taskBlockMappings[taskRef] = [];
+      }
+      const idx = state.taskBlockMappings[taskRef].indexOf(blockId);
+      if (idx >= 0) {
+        state.taskBlockMappings[taskRef].splice(idx, 1);
+        if (state.taskBlockMappings[taskRef].length === 0) {
+          delete state.taskBlockMappings[taskRef];
+        }
+      } else {
+        state.taskBlockMappings[taskRef].push(blockId);
+      }
+      markDirty();
+      renderTheoryBlocksManagementSection();
+    }
+
+    function renderTheoryBlocksManagementSection() {
+      const container = document.getElementById("theory-blocks-list");
+      const badge = document.getElementById("theory-blocks-count-badge");
+      if (!container) return;
+
+      const blocks = state.theoryBlocks || {};
+      const blockIds = Object.keys(blocks);
+
+      if (badge) {
+        badge.textContent = `${blockIds.length} ${blockIds.length === 1 ? "блок" : blockIds.length >= 2 && blockIds.length <= 4 ? "блока" : "блоков"}`;
+      }
+
+      if (blockIds.length === 0) {
+        container.innerHTML = `<p class="text-xs text-text-muted">${wt("create.no_theory_blocks_yet", "Блоки пока не созданы. Выделите текст в теории выше или нажмите «Новый блок».")}</p>`;
+        return;
+      }
+
+      container.innerHTML = "";
+      blockIds.forEach((bId) => {
+        const blk = blocks[bId];
+        const ranges = (state.theoryBlockRanges || []).filter((r) => r && r.block_id === bId);
+        const boundTasks = (state.selectedTasks || []).filter((t) => {
+          const mapped = state.taskBlockMappings?.[t.ref];
+          return Array.isArray(mapped) && mapped.includes(bId);
+        });
+
+        const card = document.createElement("div");
+        card.className = "theory-block-card flex flex-col gap-2.5";
+        card.innerHTML = `
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="w-3.5 h-3.5 rounded-full flex-shrink-0" style="background:${blk.color_border || blk.color}"></span>
+              <span class="text-xs font-bold text-text-main truncate">${escapeTheoryHtml(blk.label || bId)}</span>
+              <span class="text-[11px] text-text-muted">(${ranges.length} ${ranges.length === 1 ? "фрагмент" : "фрагментов"})</span>
+            </div>
+            <div class="flex items-center gap-1 flex-shrink-0">
+              <button type="button" class="btn-secondary h-7 px-2 text-xs edit-block-btn" title="Переименовать блок">
+                <span class="material-symbols-outlined text-[14px]">edit</span>
+              </button>
+              <button type="button" class="btn-secondary btn-danger h-7 px-2 text-xs delete-block-btn" title="Удалить блок">
+                <span class="material-symbols-outlined text-[14px]">delete</span>
+              </button>
+            </div>
+          </div>
+          <div class="flex flex-wrap items-center gap-1.5 pt-1 border-t border-border-subtle">
+            <span class="text-[11px] font-semibold text-text-secondary mr-1">Привязанные задания:</span>
+            ${boundTasks.map((t) => `
+              <span class="cx-mini-pill inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium bg-surface-2 rounded-full border border-border-subtle">
+                <span class="truncate max-w-[140px]">${escapeTheoryHtml(t.label || t.ref)}</span>
+                <button type="button" data-unbind-task="${escapeTheoryHtml(t.ref)}" class="text-text-muted hover:text-danger ml-0.5">✕</button>
+              </span>
+            `).join("")}
+            <div class="relative inline-block">
+              <button type="button" class="btn-secondary h-6 px-2 text-[11px] font-semibold inline-flex items-center gap-1 rounded-full add-task-link-btn">
+                <span class="material-symbols-outlined text-[12px]">add</span>
+                <span>Привязать</span>
+              </button>
+              <div class="task-dropdown-menu hidden absolute left-0 top-full mt-1 z-50 min-w-[220px] max-h-48 overflow-y-auto rounded-xl border border-border-subtle bg-surface-1 shadow-xl p-1.5 space-y-1">
+                ${(state.selectedTasks || []).map((t) => {
+                  const isChecked = boundTasks.some((bt) => bt.ref === t.ref);
+                  return `
+                    <label class="flex items-center gap-2 p-1.5 rounded-lg hover:bg-surface-2 cursor-pointer text-xs">
+                      <input type="checkbox" data-task-ref="${escapeTheoryHtml(t.ref)}" ${isChecked ? "checked" : ""} class="rounded text-primary focus:ring-primary-light" />
+                      <span class="truncate flex-1">${escapeTheoryHtml(t.label || t.ref)}</span>
+                    </label>
+                  `;
+                }).join("")}
+              </div>
+            </div>
+          </div>
+        `;
+
+        card.querySelector(".edit-block-btn")?.addEventListener("click", () => {
+          const newName = prompt(wt("create.rename_block", "Новое название блока:"), blk.label);
+          if (newName && newName.trim()) {
+            blk.label = newName.trim();
+            markDirty();
+            renderTheoryBlocksManagementSection();
+          }
+        });
+
+        card.querySelector(".delete-block-btn")?.addEventListener("click", () => {
+          if (confirm(wt("create.delete_block_confirm", `Удалить блок «${blk.label}»?`))) {
+            deleteTheoryBlock(bId);
+          }
+        });
+
+        card.querySelectorAll("[data-unbind-task]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const taskRef = btn.getAttribute("data-unbind-task");
+            if (taskRef) toggleTaskInTheoryBlock(bId, taskRef);
+          });
+        });
+
+        const addBtn = card.querySelector(".add-task-link-btn");
+        const dropdown = card.querySelector(".task-dropdown-menu");
+        if (addBtn && dropdown) {
+          addBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            document.querySelectorAll(".task-dropdown-menu").forEach((d) => {
+              if (d !== dropdown) d.classList.add("hidden");
+            });
+            dropdown.classList.toggle("hidden");
+          });
+
+          dropdown.querySelectorAll("input[data-task-ref]").forEach((chk) => {
+            chk.addEventListener("change", () => {
+              const taskRef = chk.getAttribute("data-task-ref");
+              if (taskRef) toggleTaskInTheoryBlock(bId, taskRef);
+            });
+          });
+        }
+
+        container.appendChild(card);
+      });
     }
 
     function extractTheoryInlineAttributes(node, currentAttrs) {
@@ -8939,6 +9449,21 @@
         delta: state.theory.mode === "none" ? { ops: [{ insert: "\n" }] } : editorHtmlToTheoryDelta(),
       };
 
+      const activeTaskRefs = new Set(state.selectedTasks.map((t) => t.ref));
+      const cleanedMappings = {};
+      if (state.taskBlockMappings && typeof state.taskBlockMappings === "object") {
+        for (const [tRef, bIds] of Object.entries(state.taskBlockMappings)) {
+          if (activeTaskRefs.has(tRef) && Array.isArray(bIds) && bIds.length > 0) {
+            cleanedMappings[tRef] = bIds;
+          }
+        }
+      }
+
+      payload.theory_blocks = (state.theoryBlocks && typeof state.theoryBlocks === "object") ? state.theoryBlocks : {};
+      payload.theory_block_ranges = Array.isArray(state.theoryBlockRanges) ? state.theoryBlockRanges : [];
+      payload.theory_block_versions = (state.theoryBlockVersions && typeof state.theoryBlockVersions === "object") ? state.theoryBlockVersions : {};
+      payload.task_block_mappings = cleanedMappings;
+
       return payload;
     }
 
@@ -9993,6 +10518,22 @@
 
       });
 
+      document.getElementById("theory-block-mode-toggle")?.addEventListener("click", () => {
+        toggleTheoryBlockMode();
+      });
+      document.getElementById("theory-add-block-btn")?.addEventListener("click", () => {
+        createNewTheoryBlockPrompt();
+      });
+      document.getElementById("theory-floating-add-block-btn")?.addEventListener("click", () => {
+        createNewTheoryBlockPrompt();
+      });
+      document.addEventListener("selectionchange", handleTheoryEditorSelectionChange);
+      document.addEventListener("click", (e) => {
+        if (!e.target.closest(".add-task-link-btn") && !e.target.closest(".task-dropdown-menu")) {
+          document.querySelectorAll(".task-dropdown-menu").forEach((d) => d.classList.add("hidden"));
+        }
+      });
+
       document.getElementById('reload-catalog')?.addEventListener('click', loadCatalog);
 
       document.getElementById('catalog-search')?.addEventListener('input', applyCatalogFilter);
@@ -10214,6 +10755,13 @@
       }
       updateTheoryCopyButtonState();
       renderTheoryInheritSyncPanel();
+
+      state.theoryBlocks = (complex && typeof complex.theory_blocks === "object" && complex.theory_blocks) ? { ...complex.theory_blocks } : {};
+      state.theoryBlockRanges = Array.isArray(complex?.theory_block_ranges) ? [ ...complex.theory_block_ranges ] : [];
+      state.theoryBlockVersions = (complex && typeof complex.theory_block_versions === "object" && complex.theory_block_versions) ? { ...complex.theory_block_versions } : {};
+      state.taskBlockMappings = (complex && typeof complex.task_block_mappings === "object" && complex.task_block_mappings) ? { ...complex.task_block_mappings } : {};
+      renderTheoryBlocksManagementSection();
+      renderTheoryBlockHighlightsInEditor();
 
       renderSelectedList();
 
@@ -11381,20 +11929,24 @@
         'demo-anatomy/lung-zones/02-click-apex',
       ];
       const shouldShow = Boolean(visible);
-      const hasDemoChain = state.chains.some((chain) => (
-        Array.isArray(chain)
-        && chain.length === demoChain.length
-        && chain.every((ref, index) => ref === demoChain[index])
-      ));
+      const hasDemoChain = state.chains.some((chain) => {
+        const tasks = getChainTasks(chain);
+        return (
+          tasks.length === demoChain.length
+          && tasks.every((ref, index) => ref === demoChain[index])
+        );
+      });
 
       if (shouldShow && !hasDemoChain) {
-        state.chains = [demoChain];
+        state.chains = [{ tasks: demoChain, shuffle_mode: 'never' }];
       } else if (!shouldShow && hasDemoChain) {
-        state.chains = state.chains.filter((chain) => !(
-          Array.isArray(chain)
-          && chain.length === demoChain.length
-          && chain.every((ref, index) => ref === demoChain[index])
-        ));
+        state.chains = state.chains.filter((chain) => {
+          const tasks = getChainTasks(chain);
+          return !(
+            tasks.length === demoChain.length
+            && tasks.every((ref, index) => ref === demoChain[index])
+          );
+        });
       }
 
       renderSelectedList();
@@ -11496,8 +12048,12 @@
       }
 
       // If chains exist: Render them using Compact Flow Design
+      const maxIter = getMaxIterations();
 
       state.chains.forEach((ch, idx) => {
+        const tasks = getChainTasks(ch);
+        const currentMode = getChainShuffleMode(ch);
+
         // Helper to get human-readable name from ref
         const getTaskLabel = (ref) => {
           const task = state.selectedTasks.find(t => t.ref === ref);
@@ -11510,9 +12066,7 @@
 
         // Card container - Flat relative to section, but Distinct
         const card = document.createElement('div');
-        // No hover mechanics on the card itself (the section handles the lift now)
         card.className = 'flex rounded-xl border border-border-subtle bg-surface-1 overflow-hidden mb-3';
-        // Very subtle shadow just to separate it from the section bg
         card.style.cssText = 'box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);';
 
         // Left Content Wrapper (Header + Body)
@@ -11520,9 +12074,8 @@
         leftContent.className = 'flex-1 flex flex-col min-w-0';
 
         // Header - NO BORDER BOTTOM to avoid "white line" look
-        // The gradient changes slightly to imply separation
         const header = document.createElement('div');
-        header.className = 'cx-chain-header flex items-center justify-between px-5 py-3.5';
+        header.className = 'cx-chain-header flex items-center justify-between px-5 py-3.5 gap-4 flex-wrap';
 
         const headerLeft = document.createElement('div');
         headerLeft.className = 'flex items-center gap-3';
@@ -11534,13 +12087,67 @@
 
         const count = document.createElement('span');
         count.className = 'cx-chain-count text-xs font-medium px-2 py-0.5 rounded-md';
-        count.textContent = `${wt('create.history_tasks_prefix', 'Заданий')}: ${ch.length}`;
+        count.textContent = `${wt('create.history_tasks_prefix', 'Заданий')}: ${tasks.length}`;
 
         headerLeft.appendChild(badge);
         headerLeft.appendChild(count);
         header.appendChild(headerLeft);
 
+        // Header Right: Shuffle mode selector
+        const headerRight = document.createElement('div');
+        headerRight.className = 'flex items-center gap-2';
 
+        const shuffleLabel = document.createElement('label');
+        shuffleLabel.className = 'text-xs font-medium text-text-muted select-none whitespace-nowrap';
+        shuffleLabel.textContent = wt('create.chain_shuffle_label', 'Порядок заданий:');
+        shuffleLabel.htmlFor = `cx-chain-shuffle-${idx}`;
+
+        const shuffleSelect = document.createElement('select');
+        shuffleSelect.id = `cx-chain-shuffle-${idx}`;
+        shuffleSelect.className = 'cx-chain-shuffle-select text-xs font-medium px-2.5 py-1 rounded-lg border border-border-subtle bg-surface-2 text-text-main hover:border-primary focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer transition-colors';
+        shuffleSelect.title = wt('create.chain_shuffle_tooltip', 'Задает, на каких итерациях комплекса задания внутри этой сцепки будут перемешиваться между собой');
+        shuffleSelect.setAttribute('aria-label', wt('create.chain_shuffle_label', 'Порядок заданий:'));
+
+        const options = [
+          { value: 'never', label: wt('create.chain_mode_never', 'Строго по порядку (без перемешивания)'), minIter: 1 },
+          { value: 'from_iteration_2', label: wt('create.chain_mode_from_iter_2', 'Перемешивать со 2-й итерации'), minIter: 2 },
+          { value: 'only_iteration_3', label: wt('create.chain_mode_only_iter_3', 'Перемешивать только на 3-й итерации'), minIter: 3 },
+          { value: 'always', label: wt('create.chain_mode_always', 'Перемешивать на всех итерациях'), minIter: 1 },
+        ];
+
+        const validOptions = options.filter(opt => maxIter >= opt.minIter);
+        validOptions.forEach(opt => {
+          const optEl = document.createElement('option');
+          optEl.value = opt.value;
+          optEl.textContent = opt.label;
+          if (opt.value === currentMode) {
+            optEl.selected = true;
+          }
+          shuffleSelect.appendChild(optEl);
+        });
+
+        if (!validOptions.some(o => o.value === currentMode)) {
+          if (Array.isArray(state.chains[idx])) {
+            state.chains[idx] = { tasks: [...tasks], shuffle_mode: 'never' };
+          } else {
+            state.chains[idx].shuffle_mode = 'never';
+          }
+          shuffleSelect.value = 'never';
+        }
+
+        shuffleSelect.addEventListener('change', (e) => {
+          const nextMode = e.target.value;
+          if (Array.isArray(state.chains[idx])) {
+            state.chains[idx] = { tasks: [...tasks], shuffle_mode: nextMode, shuffle_iterations: [] };
+          } else {
+            state.chains[idx].shuffle_mode = nextMode;
+          }
+          markDirty();
+        });
+
+        headerRight.appendChild(shuffleLabel);
+        headerRight.appendChild(shuffleSelect);
+        header.appendChild(headerRight);
 
         // Body with horizontal flow
         const body = document.createElement('div');
@@ -11549,32 +12156,95 @@
         const flow = document.createElement('div');
         flow.className = 'flex flex-wrap items-center gap-3';
 
-        ch.forEach((ref, i) => {
+        tasks.forEach((ref, i) => {
           // Task Pill - "Card within Card"
           const pill = document.createElement('div');
-          // Keep the pills interactive as per original design, they are children
-          pill.className = 'cx-chain-pill group/task flex items-center gap-3 p-2 rounded-xl max-w-[240px] hover:border-primary hover:shadow-md transition-all cursor-default relative';
+          pill.className = 'cx-chain-pill group/task flex items-center gap-2.5 p-2 rounded-xl max-w-[280px] hover:border-primary hover:shadow-md transition-all cursor-default relative';
 
           // Number bubble
           const num = document.createElement('span');
-          num.className = 'cx-chain-order w-5 h-5 rounded-full text-[11px] font-bold flex items-center justify-center';
+          num.className = 'cx-chain-order w-5 h-5 rounded-full text-[11px] font-bold flex items-center justify-center shrink-0';
           num.textContent = i + 1;
 
           // Label
           const label = document.createElement('span');
-          label.className = 'text-xs font-semibold text-text-main truncate leading-tight';
+          label.className = 'text-xs font-semibold text-text-main truncate leading-tight flex-1';
           label.textContent = getTaskLabel(ref);
           label.title = ref;
 
           pill.appendChild(num);
           pill.appendChild(label);
 
+          // Reorder Buttons (▲ / ▼)
+          const reorderGroup = document.createElement('div');
+          reorderGroup.className = 'flex items-center gap-0.5 shrink-0 ml-1';
+
+          // Move Up Button (▲)
+          const upBtn = document.createElement('button');
+          upBtn.type = 'button';
+          upBtn.className = 'cx-chain-btn-up w-5 h-5 flex items-center justify-center rounded hover:bg-bg-tertiary text-text-muted hover:text-text-main disabled:opacity-20 disabled:pointer-events-none transition-colors cursor-pointer';
+          upBtn.title = wt('create.chain_move_up', 'Переместить выше');
+          upBtn.setAttribute('aria-label', `${wt('create.chain_move_up', 'Переместить выше')}: ${getTaskLabel(ref)}`);
+          upBtn.innerHTML = '<span class="material-symbols-outlined text-[15px] select-none">arrow_drop_up</span>';
+          if (i === 0) {
+            upBtn.disabled = true;
+          } else {
+            upBtn.addEventListener('click', (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const chainTasks = getChainTasks(state.chains[idx]);
+              if (i <= 0) return;
+              const tmp = chainTasks[i - 1];
+              chainTasks[i - 1] = chainTasks[i];
+              chainTasks[i] = tmp;
+              if (Array.isArray(state.chains[idx])) {
+                state.chains[idx] = { tasks: chainTasks, shuffle_mode: currentMode };
+              } else {
+                state.chains[idx].tasks = chainTasks;
+              }
+              markDirty();
+              renderChains();
+            });
+          }
+
+          // Move Down Button (▼)
+          const downBtn = document.createElement('button');
+          downBtn.type = 'button';
+          downBtn.className = 'cx-chain-btn-down w-5 h-5 flex items-center justify-center rounded hover:bg-bg-tertiary text-text-muted hover:text-text-main disabled:opacity-20 disabled:pointer-events-none transition-colors cursor-pointer';
+          downBtn.title = wt('create.chain_move_down', 'Переместить ниже');
+          downBtn.setAttribute('aria-label', `${wt('create.chain_move_down', 'Переместить ниже')}: ${getTaskLabel(ref)}`);
+          downBtn.innerHTML = '<span class="material-symbols-outlined text-[15px] select-none">arrow_drop_down</span>';
+          if (i === tasks.length - 1) {
+            downBtn.disabled = true;
+          } else {
+            downBtn.addEventListener('click', (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const chainTasks = getChainTasks(state.chains[idx]);
+              if (i >= chainTasks.length - 1) return;
+              const tmp = chainTasks[i + 1];
+              chainTasks[i + 1] = chainTasks[i];
+              chainTasks[i] = tmp;
+              if (Array.isArray(state.chains[idx])) {
+                state.chains[idx] = { tasks: chainTasks, shuffle_mode: currentMode };
+              } else {
+                state.chains[idx].tasks = chainTasks;
+              }
+              markDirty();
+              renderChains();
+            });
+          }
+
+          reorderGroup.appendChild(upBtn);
+          reorderGroup.appendChild(downBtn);
+          pill.appendChild(reorderGroup);
+
           flow.appendChild(pill);
 
           // Arrow
-          if (i < ch.length - 1) {
+          if (i < tasks.length - 1) {
             const arrow = document.createElement('div');
-            arrow.className = 'w-6 h-6 flex items-center justify-center rounded-full bg-bg-tertiary text-text-disabled';
+            arrow.className = 'w-6 h-6 flex items-center justify-center rounded-full bg-bg-tertiary text-text-disabled shrink-0';
             arrow.innerHTML = '<span class="material-symbols-outlined text-[16px]">arrow_forward</span>';
             flow.appendChild(arrow);
           }
@@ -11584,7 +12254,6 @@
 
         // Right Side Action: Vertical Delete Strip
         const deleteAction = document.createElement('button');
-        // w-12 width, subtle red bg, hover full red, no border
         deleteAction.className = 'cx-chain-delete w-12 flex items-center justify-center transition-all cursor-pointer';
         deleteAction.title = wt('create.chain_delete_title', 'Удалить сцепку');
         deleteAction.innerHTML = `
@@ -11592,9 +12261,16 @@
         `;
 
         deleteAction.addEventListener('click', async (e) => {
-          const ok = await NotificationUI.confirm({ title: wt('create.chain_delete_confirm_title', 'Удалить сцепку?'), message: wt('create.chain_delete_confirm_msg', 'Это действие нельзя отменить.'), confirmText: wt('create.delete_btn', 'Удалить'), cancelText: wt('create.cancel_btn', 'Отмена'), variant: 'error' });
+          const ok = await NotificationUI.confirm({
+            title: wt('create.chain_delete_confirm_title', 'Удалить сцепку?'),
+            message: wt('create.chain_delete_confirm_msg', 'Это действие нельзя отменить.'),
+            confirmText: wt('create.delete_btn', 'Удалить'),
+            cancelText: wt('create.cancel_btn', 'Отмена'),
+            variant: 'error'
+          });
           if (ok) {
             state.chains.splice(idx, 1);
+            markDirty();
             renderSelectedList();
             renderChains();
             applyCatalogFilter();

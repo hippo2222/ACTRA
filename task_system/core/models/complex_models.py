@@ -4,7 +4,7 @@ Pydantic модели для комплексов и сессий.
 """
 
 from datetime import datetime
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Union
 from pydantic import BaseModel, Field, validator
 
 COMPLEX_SESSION_VERSION = 1
@@ -92,6 +92,66 @@ class QueuedTask(BaseModel):
     test_question_index: Optional[int] = None
 
 
+class ChainDefinition(BaseModel):
+    """Определение сцепки заданий внутри комплекса."""
+
+    tasks: List[str] = Field(
+        default_factory=list,
+        description="Список ссылок на задания в сцепке"
+    )
+    shuffle_mode: str = Field(
+        default="never",
+        description="Режим перемешивания: never, from_iteration_2, only_iteration_3, always, custom"
+    )
+    shuffle_iterations: List[int] = Field(
+        default_factory=list,
+        description="Номера итераций (1-based), на которых сцепка перемешивается (для custom)"
+    )
+
+    @validator("shuffle_mode")
+    def validate_shuffle_mode(cls, v):
+        allowed = {"never", "from_iteration_2", "only_iteration_3", "always", "custom"}
+        v_str = str(v or "never").strip().lower()
+        if v_str not in allowed:
+            raise ValueError(f"Invalid shuffle_mode '{v}'. Allowed modes: {sorted(allowed)}")
+        return v_str
+
+    @validator("shuffle_iterations", pre=True, always=True)
+    def validate_shuffle_iterations(cls, v):
+        if not v:
+            return []
+        if isinstance(v, (list, tuple, set)):
+            res = []
+            for it in v:
+                try:
+                    it_int = int(it)
+                    if it_int >= 1 and it_int not in res:
+                        res.append(it_int)
+                except (ValueError, TypeError):
+                    pass
+            return sorted(res)
+        return []
+
+    # Sequence / duck-typing protocol for backwards compatibility
+    def __iter__(self):
+        return iter(self.tasks)
+
+    def __len__(self):
+        return len(self.tasks)
+
+    def __getitem__(self, index):
+        return self.tasks[index]
+
+    def __contains__(self, item):
+        return item in self.tasks
+
+    def index(self, item, *args):
+        return self.tasks.index(item, *args)
+
+    class Config:
+        extra = "allow"
+
+
 class Complex(BaseModel):
     """Модель комплекса заданий."""
     
@@ -99,9 +159,9 @@ class Complex(BaseModel):
     name: str = Field(..., description="Название комплекса")
     description: Optional[str] = Field("", description="Описание комплекса")
     tasks: List[str] = Field(..., description="Список ссылок на задания (module/topic/task_id)")
-    chains: List[List[str]] = Field(
+    chains: List[Union[ChainDefinition, List[str]]] = Field(
         default_factory=list,
-        description="Группы сцепленных заданий (Task Chaining). Задания в группе всегда идут последовательно."
+        description="Группы сцепленных заданий (Task Chaining). Задания в группе всегда идут последовательно или по правилам shuffle_mode."
     )
     settings: ComplexSettings = Field(
         default_factory=ComplexSettings,
@@ -121,11 +181,37 @@ class Complex(BaseModel):
         """Проверяет, что задания не дублируются в разных цепочках."""
         seen_tasks = set()
         for chain in v:
-            for task_ref in chain:
+            tasks = chain.tasks if isinstance(chain, ChainDefinition) else (chain.get("tasks") if isinstance(chain, dict) else (chain if isinstance(chain, list) else []))
+            for task_ref in tasks:
                 if task_ref in seen_tasks:
                     raise ValueError(f"Task {task_ref} appears in multiple chains")
                 seen_tasks.add(task_ref)
         return v
+
+    def get_raw_task_chains(self) -> List[List[str]]:
+        """Возвращает сцепки в виде простых списков ссылок на задания."""
+        result = []
+        for ch in self.chains:
+            if isinstance(ch, ChainDefinition):
+                result.append(list(ch.tasks))
+            elif isinstance(ch, dict):
+                result.append(list(ch.get("tasks", [])))
+            elif isinstance(ch, list):
+                result.append(list(ch))
+        return result
+
+    @property
+    def chain_definitions(self) -> List[ChainDefinition]:
+        """Возвращает все сцепки в виде объектов ChainDefinition."""
+        defs = []
+        for ch in self.chains:
+            if isinstance(ch, ChainDefinition):
+                defs.append(ch)
+            elif isinstance(ch, dict):
+                defs.append(ChainDefinition(**ch))
+            elif isinstance(ch, list):
+                defs.append(ChainDefinition(tasks=ch, shuffle_mode="never"))
+        return defs
     
     class Config:
         extra = "allow"

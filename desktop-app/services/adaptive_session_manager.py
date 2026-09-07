@@ -23,7 +23,8 @@ from task_system.core.models.complex_models import (
     SessionTaskResult,
     QueuedTask,
     ExtendedSessionResultSummary,
-    IterationSummary
+    IterationSummary,
+    ChainDefinition,
 )
 from services.complex_service import ComplexService
 from services.user_progress_manager import UserProgressManager
@@ -1424,7 +1425,12 @@ class AdaptiveSessionManager:
             return
 
         max_run = int(getattr(getattr(complex_obj, "settings", None), "max_same_type_run", 3) or 3)
-        tail_chunks = self._group_tasks_into_chunks(tail, complex_obj.chains)
+        tail_chunks = self._group_tasks_into_chunks(
+            tail,
+            getattr(complex_obj, "chains", None) or [],
+            iteration=getattr(session, "iteration", 1),
+            allow_shuffle=False,
+        )
         rebalanced_tail = self._sort_chunks_by_phase(
             tail_chunks,
             seed_base=f"{session.id}:{session.iteration}:tail:{start_idx}:{end_idx}",
@@ -2062,67 +2068,131 @@ class AdaptiveSessionManager:
             )
         ]
 
-    def _group_tasks_into_chunks(self, tasks: List[QueuedTask], chains: List[List[str]]) -> List[List[QueuedTask]]:
+    @staticmethod
+    def _is_chain_shuffle_active(
+        shuffle_mode: str,
+        shuffle_iterations: List[int],
+        iteration: int,
+    ) -> bool:
+        """Определяет, активно ли перемешивание внутри сцепки для указанной итерации."""
+        mode = str(shuffle_mode or "never").strip().lower()
+        if mode == "always":
+            return True
+        elif mode == "from_iteration_2":
+            return iteration >= 2
+        elif mode == "only_iteration_3":
+            return iteration == 3
+        elif mode == "custom":
+            return iteration in (shuffle_iterations or [])
+        return False
+
+    def _group_tasks_into_chunks(
+        self,
+        tasks: List[QueuedTask],
+        chains: Optional[List[Any]],
+        iteration: int = 1,
+        seed_base: Optional[str] = None,
+        allow_shuffle: bool = True,
+    ) -> List[List[QueuedTask]]:
         """
         Группирует задания в блоки (chunks).
         Одиночные задания становятся блоком из 1 элемента.
         Сцепленные задания объединяются в один блок.
-        
+
+        Если для сцепки на текущей итерации включен shuffle_mode (и allow_shuffle=True),
+        задания внутри сцепки перемешиваются детерминированно с использованием seed_base.
+        При этом задания с `is_retry=True` исключаются из сцепок и остаются отдельными
+        автономными блоками (защита Smart Retry).
+
         Args:
             tasks: Список заданий для группировки
-            chains: Список цепочек (списки task_ref)
-            
+            chains: Список цепочек (ChainDefinition, dict или list)
+            iteration: Номер текущей/генерируемой итерации
+            seed_base: Базовая строка для детерминированного сида
+            allow_shuffle: Разрешено ли перемешивание внутри сцепки (False при ребалансе хвоста)
+
         Returns:
             List[List[QueuedTask]]: Список блоков заданий
         """
         if not chains:
             return [[t] for t in tasks]
-            
-        # Map tasks by reference for quick access
+
+        # 1. Map tasks by reference for quick access.
+        # Smart Retry Guard: ONLY regular (non-retry) tasks are grouped into chains.
+        # Any retry copy (is_retry=True) must remain an independent single-task chunk.
         task_map_by_ref: Dict[str, List[QueuedTask]] = {}
         for t in tasks:
-            if t.task_ref not in task_map_by_ref:
-                task_map_by_ref[t.task_ref] = []
-            task_map_by_ref[t.task_ref].append(t)
-            
+            if not getattr(t, "is_retry", False):
+                task_map_by_ref.setdefault(t.task_ref, []).append(t)
+
         # Track used task instances by object id to avoid hashing Pydantic models
         used_task_ids = set()
-        chunks = []
-        
-        # Process chains first
-        for chain in chains:
-            chain_chunk = []
-            # Для каждого ref в цепочке берем ВСЕ экземпляры этого задания из списка (если их несколько)
-            # В обычной ситуации в генерации очереди дублей нет, но на всякий случай
-            for ref in chain:
-                if ref in task_map_by_ref:
-                    # Проверяем, не использовали ли мы уже эти экземпляры (хотя это странно)
-                    # Просто берем первый доступный экземпляр, если предполагается 1 к 1
-                    # Но так как у нас список задач плоский, а chains - это абстракция...
-                    # Допустим, мы берем первый попавшийся экземпляр этого таска
-                    
-                    # Нюанс: если задание повторяется в очереди (например из-за ретраев), 
-                    # то сцепка должна работать для каждого вхождения? 
-                    # ТЗ: "При перемешивании... порядок заданий внутри блока должен оставаться неизменным".
-                    # Обычно генерация очереди (initial/next iteration) создает уникальные задания (по 1 шт).
-                    # Поэтому берем available instances.
-                    
-                    available_instances = [t for t in task_map_by_ref[ref] if id(t) not in used_task_ids]
-                    for instance in available_instances:
-                        # Take ALL instances: a scattered test produces multiple QueuedTask
-                        # objects for the same task_ref (one per question slot) and all of
-                        # them must stay together inside the chain chunk.
-                        chain_chunk.append(instance)
-                        used_task_ids.add(id(instance))
-            
+        chunks: List[List[QueuedTask]] = []
+
+        # 2. Process chains
+        for chain_idx, chain in enumerate(chains):
+            if isinstance(chain, ChainDefinition):
+                chain_task_refs = list(chain.tasks)
+                shuffle_mode = chain.shuffle_mode
+                shuffle_iterations = list(chain.shuffle_iterations)
+            elif isinstance(chain, dict):
+                chain_task_refs = list(chain.get("tasks") or [])
+                shuffle_mode = str(chain.get("shuffle_mode") or "never").strip().lower()
+                shuffle_iterations = list(chain.get("shuffle_iterations") or [])
+            elif isinstance(chain, list):
+                chain_task_refs = list(chain)
+                shuffle_mode = "never"
+                shuffle_iterations = []
+            else:
+                continue
+
+            # Group available instances by task_ref (preserving question groups for tests)
+            task_groups: List[List[QueuedTask]] = []
+            for ref in chain_task_refs:
+                ref_instances = [
+                    t for t in task_map_by_ref.get(ref, [])
+                    if id(t) not in used_task_ids
+                ]
+                if ref_instances:
+                    task_groups.append(ref_instances)
+
+            if not task_groups:
+                continue
+
+            # Check if shuffle is active for this chain on this iteration
+            should_shuffle = (
+                allow_shuffle
+                and len(task_groups) > 1
+                and self._is_chain_shuffle_active(shuffle_mode, shuffle_iterations, iteration)
+            )
+
+            if should_shuffle:
+                # Deterministic shuffle using local RNG
+                chain_seed_material = (
+                    f"{seed_base or 'default'}:chain:{chain_idx}:{iteration}".encode("utf-8", errors="ignore")
+                )
+                chain_seed_int = int.from_bytes(
+                    hashlib.sha256(chain_seed_material).digest()[:8],
+                    "big",
+                    signed=False,
+                )
+                random.Random(chain_seed_int).shuffle(task_groups)
+
+            # Assemble chain chunk and register used instances
+            chain_chunk: List[QueuedTask] = []
+            for group in task_groups:
+                for instance in group:
+                    chain_chunk.append(instance)
+                    used_task_ids.add(id(instance))
+
             if chain_chunk:
                 chunks.append(chain_chunk)
-        
-        # Process remaining tasks
+
+        # 3. Process remaining tasks (includes non-chain tasks AND all retry tasks)
         for t in tasks:
             if id(t) not in used_task_ids:
                 chunks.append([t])
-                
+
         return chunks
 
     def _balance_chunks_by_type(
@@ -2433,7 +2503,13 @@ class AdaptiveSessionManager:
 
         # Перемешиваем очередь с учетом фаз и цепочек (вместо random.shuffle)
         max_run = int(getattr(getattr(complex_obj, "settings", None), "max_same_type_run", 3) or 3)
-        chunks = self._group_tasks_into_chunks(queue, complex_obj.chains)
+        chunks = self._group_tasks_into_chunks(
+            queue,
+            getattr(complex_obj, "chains", None) or [],
+            iteration=target_iteration,
+            seed_base=f"{session.id}:{target_iteration}",
+            allow_shuffle=True,
+        )
         session.queue = self._sort_chunks_by_phase(
             chunks,
             seed_base=f"{session.id}:{target_iteration}",
@@ -2872,7 +2948,13 @@ class AdaptiveSessionManager:
             }
         else:
             # Перемешиваем очередь с учетом фаз и цепочек (вместо random.shuffle)
-            chunks = self._group_tasks_into_chunks(new_queue, complex_obj.chains)
+            chunks = self._group_tasks_into_chunks(
+                new_queue,
+                getattr(complex_obj, "chains", None) or [],
+                iteration=upcoming_iteration,
+                seed_base=f"{session.id}:{upcoming_iteration}",
+                allow_shuffle=True,
+            )
             max_run = int(
                 getattr(getattr(complex_obj, "settings", None), "max_same_type_run", 3) or 3
             )

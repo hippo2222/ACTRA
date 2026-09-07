@@ -28,6 +28,7 @@ from task_system.core.models.complex_models import (
     ComplexSettings,
     SessionTaskResult,
     QueuedTask,
+    ChainDefinition,
 )
 
 
@@ -499,3 +500,133 @@ class TestSubmitResult:
             "expected_iteration": 2,
         })
         assert result.iteration_index == 3
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Chain Grouping, Shuffle Modes & Smart Retry Guard
+# ═══════════════════════════════════════════════════════════════════
+
+
+class TestChainGroupingAndShuffling:
+    def setup_method(self):
+        self.mgr = _make_mgr()
+        self.mgr._group_tasks_into_chunks = AdaptiveSessionManager._group_tasks_into_chunks.__get__(self.mgr)
+
+    def test_smart_retry_guard_excludes_retry_tasks_from_chains(self):
+        tasks = [
+            QueuedTask(task_ref="a", difficulty=1, is_retry=False),
+            QueuedTask(task_ref="b", difficulty=1, is_retry=False),
+            QueuedTask(task_ref="a", difficulty=1, is_retry=True),
+        ]
+        chains = [ChainDefinition(tasks=["a", "b"], shuffle_mode="never")]
+        chunks = self.mgr._group_tasks_into_chunks(tasks, chains)
+
+        assert len(chunks) == 2
+        chain_chunk = [c for c in chunks if len(c) == 2][0]
+        retry_chunk = [c for c in chunks if len(c) == 1][0]
+
+        assert [t.task_ref for t in chain_chunk] == ["a", "b"]
+        assert all(not t.is_retry for t in chain_chunk)
+
+        assert retry_chunk[0].task_ref == "a"
+        assert retry_chunk[0].is_retry is True
+
+    def test_shuffle_mode_never_preserves_order_across_iterations(self):
+        tasks = [
+            QueuedTask(task_ref="a", difficulty=1),
+            QueuedTask(task_ref="b", difficulty=1),
+            QueuedTask(task_ref="c", difficulty=1),
+            QueuedTask(task_ref="d", difficulty=1),
+        ]
+        chain = ChainDefinition(tasks=["a", "b", "c", "d"], shuffle_mode="never")
+        for iteration in [1, 2, 3, 4]:
+            chunks = self.mgr._group_tasks_into_chunks(
+                tasks, [chain], iteration=iteration, seed_base="session123", allow_shuffle=True
+            )
+            assert len(chunks) == 1
+            assert [t.task_ref for t in chunks[0]] == ["a", "b", "c", "d"]
+
+    def test_shuffle_mode_from_iteration_2(self):
+        tasks = [
+            QueuedTask(task_ref="a", difficulty=1),
+            QueuedTask(task_ref="b", difficulty=1),
+            QueuedTask(task_ref="c", difficulty=1),
+            QueuedTask(task_ref="d", difficulty=1),
+            QueuedTask(task_ref="e", difficulty=1),
+        ]
+        chain = ChainDefinition(tasks=["a", "b", "c", "d", "e"], shuffle_mode="from_iteration_2")
+
+        chunks_it1 = self.mgr._group_tasks_into_chunks(
+            tasks, [chain], iteration=1, seed_base="session_seed", allow_shuffle=True
+        )
+        assert [t.task_ref for t in chunks_it1[0]] == ["a", "b", "c", "d", "e"]
+
+        chunks_it2 = self.mgr._group_tasks_into_chunks(
+            tasks, [chain], iteration=2, seed_base="session_seed", allow_shuffle=True
+        )
+        assert sorted([t.task_ref for t in chunks_it2[0]]) == ["a", "b", "c", "d", "e"]
+        assert [t.task_ref for t in chunks_it2[0]] != ["a", "b", "c", "d", "e"]
+
+    def test_shuffle_mode_only_iteration_3(self):
+        tasks = [
+            QueuedTask(task_ref="a", difficulty=1),
+            QueuedTask(task_ref="b", difficulty=1),
+            QueuedTask(task_ref="c", difficulty=1),
+            QueuedTask(task_ref="d", difficulty=1),
+            QueuedTask(task_ref="e", difficulty=1),
+        ]
+        chain = ChainDefinition(tasks=["a", "b", "c", "d", "e"], shuffle_mode="only_iteration_3")
+
+        chunks_it1 = self.mgr._group_tasks_into_chunks(tasks, [chain], iteration=1, seed_base="seed_1")
+        assert [t.task_ref for t in chunks_it1[0]] == ["a", "b", "c", "d", "e"]
+
+        chunks_it2 = self.mgr._group_tasks_into_chunks(tasks, [chain], iteration=2, seed_base="seed_1")
+        assert [t.task_ref for t in chunks_it2[0]] == ["a", "b", "c", "d", "e"]
+
+        chunks_it3 = self.mgr._group_tasks_into_chunks(tasks, [chain], iteration=3, seed_base="seed_1")
+        assert sorted([t.task_ref for t in chunks_it3[0]]) == ["a", "b", "c", "d", "e"]
+        assert [t.task_ref for t in chunks_it3[0]] != ["a", "b", "c", "d", "e"]
+
+    def test_deterministic_repeatability(self):
+        tasks = [QueuedTask(task_ref=f"t{i}", difficulty=1) for i in range(6)]
+        chain = ChainDefinition(tasks=[f"t{i}" for i in range(6)], shuffle_mode="always")
+
+        first_run = [t.task_ref for t in self.mgr._group_tasks_into_chunks(tasks, [chain], iteration=1, seed_base="fixed_seed")[0]]
+        for _ in range(50):
+            run = [t.task_ref for t in self.mgr._group_tasks_into_chunks(tasks, [chain], iteration=1, seed_base="fixed_seed")[0]]
+            assert run == first_run
+
+        diff_seed_run = [t.task_ref for t in self.mgr._group_tasks_into_chunks(tasks, [chain], iteration=1, seed_base="different_seed")[0]]
+        assert diff_seed_run != first_run
+
+    def test_scattered_test_questions_stay_grouped_during_shuffle(self):
+        tasks = [
+            QueuedTask(task_ref="open_ans", difficulty=1),
+            QueuedTask(task_ref="test1", difficulty=1, test_question_index=0),
+            QueuedTask(task_ref="test1", difficulty=1, test_question_index=1),
+            QueuedTask(task_ref="test1", difficulty=1, test_question_index=2),
+            QueuedTask(task_ref="click1", difficulty=1),
+        ]
+        chain = ChainDefinition(tasks=["open_ans", "test1", "click1"], shuffle_mode="always")
+
+        chunks = self.mgr._group_tasks_into_chunks(tasks, [chain], iteration=1, seed_base="scatter_seed")
+        assert len(chunks) == 1
+        chunk = chunks[0]
+
+        test1_indices = [idx for idx, t in enumerate(chunk) if t.task_ref == "test1"]
+        assert len(test1_indices) == 3
+        assert test1_indices[1] == test1_indices[0] + 1
+        assert test1_indices[2] == test1_indices[1] + 1
+
+    def test_rebalance_tail_allow_shuffle_false(self):
+        tasks = [
+            QueuedTask(task_ref="b", difficulty=1),
+            QueuedTask(task_ref="c", difficulty=1),
+            QueuedTask(task_ref="d", difficulty=1),
+        ]
+        chain = ChainDefinition(tasks=["a", "b", "c", "d"], shuffle_mode="always")
+        chunks = self.mgr._group_tasks_into_chunks(
+            tasks, [chain], iteration=2, seed_base="mid_session", allow_shuffle=False
+        )
+        assert len(chunks) == 1
+        assert [t.task_ref for t in chunks[0]] == ["b", "c", "d"]
