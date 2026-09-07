@@ -260,7 +260,7 @@
         return html || "<br>";
     }
 
-    function renderTheoryDeltaHtml(delta) {
+    function renderTheoryDeltaHtml(delta, theoryId = "") {
         if (!delta) return `<p style="margin:0;color:var(--color-text-secondary);">${wt('s1.theory_empty_content', 'Контент теории пока недоступен.')}</p>`;
         const lines = deltaToTheoryLines(delta);
         const blocks = [];
@@ -279,7 +279,10 @@
             activeListItems = [];
         };
 
-        for (const line of lines) {
+        const thAttr = theoryId ? ` data-theory-id="${escapeHtml(theoryId)}"` : "";
+
+        for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
+            const line = lines[lineIdx];
             const attrs = line && typeof line === "object" ? line.attrs || {} : {};
             const lineHtml = renderTheoryLineContent(line && line.segments);
             const listType =
@@ -289,11 +292,13 @@
                         ? "bullet"
                         : null;
 
+            const lineMeta = `${thAttr} data-line-idx="${lineIdx}" class="theory-view-line"`;
+
             if (listType) {
                 if (activeListType && activeListType !== listType) flushList();
                 activeListType = listType;
                 const align = attrs.align ? ` style="text-align: ${attrs.align}"` : "";
-                activeListItems.push(`<li${align}>${lineHtml}</li>`);
+                activeListItems.push(`<li${align}${lineMeta}>${lineHtml}</li>`);
                 continue;
             }
 
@@ -302,11 +307,11 @@
             const align = attrs.align ? ` style="text-align: ${attrs.align}"` : "";
 
             if (Number.isInteger(headerLevel) && headerLevel >= 1 && headerLevel <= 6) {
-                blocks.push(`<h${headerLevel}${align}>${lineHtml}</h${headerLevel}>`);
+                blocks.push(`<h${headerLevel}${align}${lineMeta}>${lineHtml}</h${headerLevel}>`);
             } else if (attrs.blockquote) {
-                blocks.push(`<blockquote${align}>${lineHtml}</blockquote>`);
+                blocks.push(`<blockquote${align}${lineMeta}>${lineHtml}</blockquote>`);
             } else {
-                blocks.push(`<p${align}>${lineHtml}</p>`);
+                blocks.push(`<p${align}${lineMeta}>${lineHtml}</p>`);
             }
         }
 
@@ -319,6 +324,17 @@
         const ids = rawIds.map((id) => String(id || "").trim()).filter(Boolean);
         const embeddedItems = Array.isArray(options?.embeddedTheoryItems) ? options.embeddedTheoryItems : [];
         const singleEmbedded = options?.embeddedTheoryItem || null;
+
+        const theoryCtx = state.theoryContext || (typeof window !== 'undefined' && window.SessionState && window.SessionState.theoryContext) || {};
+        const theoryBlocks = options.theoryBlocks || theoryCtx.theoryBlocks || {};
+        const theoryBlockRanges = options.theoryBlockRanges || theoryCtx.theoryBlockRanges || [];
+        const taskBlockMappings = options.taskBlockMappings || theoryCtx.taskBlockMappings || {};
+        const currentTaskRef = String(options.currentTaskRef || state.currentTask?.task_ref || state.currentTask?.ref || '').trim();
+
+        const boundBlockIds = (taskBlockMappings && currentTaskRef && Array.isArray(taskBlockMappings[currentTaskRef]))
+            ? taskBlockMappings[currentTaskRef]
+            : [];
+        const hasBlocksForTask = boundBlockIds.length > 0;
 
         const existing = document.getElementById("complex-theory-viewer-dialog");
         if (existing) existing.remove();
@@ -351,71 +367,145 @@
         }
 
         const isComposite = loadedTheories.length > 1;
-        let activeIndex = 0;
+        let activeFocusMode = hasBlocksForTask ? "dim" : "all";
 
         const dialog = document.createElement("dialog");
         dialog.id = "complex-theory-viewer-dialog";
         dialog.className = "fixed inset-0 z-[1300] m-auto flex h-full max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-border-strong bg-surface-1 shadow-2xl backdrop:bg-scrim-weak dark:backdrop:bg-scrim backdrop:backdrop-blur-sm p-0";
 
-        const renderContent = () => {
-            const currentTheory = loadedTheories[activeIndex] || loadedTheories[0];
-            const deltaHtml = renderTheoryDeltaHtml(currentTheory.delta);
-            const theoryTitle = currentTheory.title || wt('s1.theory_label', 'Теория');
+        const headerTitle = isComposite ? (complexName || wt('s1.theory_label', 'Теория')) : (loadedTheories[0]?.title || wt('s1.theory_label', 'Теория'));
 
-            const tabsHtml = isComposite
-                ? `
-                    <div class="flex items-center gap-2 border-b border-border-strong bg-surface-2 px-6 py-2.5 overflow-x-auto">
-                        <span class="text-xs font-bold uppercase tracking-wider text-text-secondary mr-1">${wt('s1.theories_tabs_label', 'Разделы:')}</span>
-                        ${loadedTheories.map((th, idx) => `
-                            <button type="button" data-tab-idx="${idx}" class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${idx === activeIndex ? 'bg-primary text-primary-fg shadow-sm' : 'bg-surface-1 text-text-secondary hover:bg-surface-3 hover:text-text-main border border-border-strong'}">
-                                <span class="material-symbols-outlined text-[14px]">menu_book</span>
-                                <span class="truncate max-w-[160px]">${escapeHtml(th.title || `${wt('s1.tab_prefix', 'Теория')} ${idx + 1}`)}</span>
-                            </button>
-                        `).join('')}
-                    </div>
-                `
-                : '';
-
-            dialog.innerHTML = `
-                <div class="flex items-start justify-between gap-4 border-b border-border-strong bg-surface-2 px-6 py-4 flex-shrink-0">
-                    <div class="min-w-0 space-y-1">
-                        <div class="flex items-center gap-2">
-                            <span class="material-symbols-outlined text-[20px] text-primary">menu_book</span>
-                            <h3 class="text-lg font-bold text-text-main truncate">${escapeHtml(theoryTitle)}</h3>
+        const compositeContentHtml = loadedTheories.map((th, idx) => {
+            const thId = String(th.id || th.theoryId || ids[idx] || '').trim();
+            const deltaHtml = renderTheoryDeltaHtml(th.delta, thId);
+            return `
+                <div class="theory-section-wrapper" data-theory-id="${escapeHtml(thId)}">
+                    ${isComposite ? `
+                        <div class="flex items-center gap-2 border-b border-border-strong pb-2 mb-4">
+                            <span class="material-symbols-outlined text-[18px] text-primary">menu_book</span>
+                            <h4 class="text-sm font-bold text-text-main">${escapeHtml(th.title || `${wt('s1.tab_prefix', 'Теория')} ${idx + 1}`)}</h4>
                         </div>
-                        ${complexName ? `<p class="text-xs font-medium text-text-secondary truncate">${escapeHtml(complexName)}</p>` : ''}
+                    ` : ''}
+                    <div class="theory-rendered-view mx-auto w-full max-w-4xl leading-relaxed text-text-main text-[0.95rem] space-y-3">
+                        ${deltaHtml}
+                    </div>
+                </div>
+            `;
+        }).join('<div class="my-6 border-t-2 border-border-strong"></div>');
+
+        dialog.innerHTML = `
+            <style>
+                .theory-view-line {
+                    transition: opacity 300ms ease-in-out, filter 300ms ease-in-out, border-color 300ms ease-in-out;
+                }
+                @media (prefers-reduced-motion: reduce) {
+                    .theory-view-line {
+                        transition: none !important;
+                    }
+                }
+            </style>
+            <div class="flex items-center justify-between gap-4 border-b border-border-strong bg-surface-2 px-6 py-4 flex-shrink-0">
+                <div class="min-w-0 space-y-1">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[20px] text-primary">menu_book</span>
+                        <h3 class="text-lg font-bold text-text-main truncate">${escapeHtml(headerTitle)}</h3>
+                    </div>
+                    ${complexName && isComposite ? `<p class="text-xs font-medium text-text-secondary truncate">${escapeHtml(complexName)}</p>` : ''}
+                </div>
+                <div class="flex items-center gap-3 flex-shrink-0">
+                    <div class="inline-flex items-center rounded-xl bg-surface-1 p-1 border border-border-strong text-xs font-semibold" role="group" aria-label="${wt('s1.focus_mode_label', 'Режим просмотра')}">
+                        <button type="button" data-focus-mode="all" class="px-2.5 py-1 rounded-lg transition-all ${activeFocusMode === 'all' ? 'bg-primary text-primary-fg shadow-sm' : 'text-text-secondary hover:text-text-main'}">
+                            ${wt('s1.mode_all', 'Вся теория')}
+                        </button>
+                        <button type="button" data-focus-mode="dim" ${!hasBlocksForTask ? 'disabled title="Для этого задания нет связанных блоков"' : ''} class="px-2.5 py-1 rounded-lg transition-all ${activeFocusMode === 'dim' ? 'bg-primary text-primary-fg shadow-sm' : 'text-text-secondary hover:text-text-main'} ${!hasBlocksForTask ? 'opacity-40 cursor-not-allowed' : ''}">
+                            ${wt('s1.mode_dim', 'Подсветка')}
+                        </button>
+                        <button type="button" data-focus-mode="isolate" ${!hasBlocksForTask ? 'disabled title="Для этого задания нет связанных блоков"' : ''} class="px-2.5 py-1 rounded-lg transition-all ${activeFocusMode === 'isolate' ? 'bg-primary text-primary-fg shadow-sm' : 'text-text-secondary hover:text-text-main'} ${!hasBlocksForTask ? 'opacity-40 cursor-not-allowed' : ''}">
+                            ${wt('s1.mode_isolate', 'Только выжимка')}
+                        </button>
                     </div>
                     <button type="button" data-action="close" class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-text-secondary hover:bg-surface-3 hover:text-text-main transition-colors flex-shrink-0" aria-label="${wt('s1.close_btn', 'Закрыть')}">
                         <span class="material-symbols-outlined">close</span>
                     </button>
                 </div>
-                ${tabsHtml}
-                <div class="flex-1 overflow-y-auto p-6 space-y-4">
-                    <div class="theory-rendered-view mx-auto w-full max-w-4xl leading-relaxed text-text-main text-[0.95rem]">${deltaHtml}</div>
-                </div>
-                <div class="flex items-center justify-end border-t border-border-strong bg-surface-1 px-6 py-3 flex-shrink-0">
-                    <button type="button" data-action="close" class="inline-flex items-center justify-center rounded-lg border-2 border-border-strong bg-surface-2 hover:bg-surface-3 px-4 py-2 text-xs font-semibold text-text-main transition-all s1-btn">
-                        <span>${wt('s1.close_btn', 'Закрыть')}</span>
-                    </button>
-                </div>
-            `;
+            </div>
+            <div class="flex-1 overflow-y-auto p-6 space-y-6">
+                ${compositeContentHtml}
+            </div>
+            <div class="flex items-center justify-end border-t border-border-strong bg-surface-1 px-6 py-3 flex-shrink-0">
+                <button type="button" data-action="close" class="inline-flex items-center justify-center rounded-lg border-2 border-border-strong bg-surface-2 hover:bg-surface-3 px-4 py-2 text-xs font-semibold text-text-main transition-all s1-btn">
+                    <span>${wt('s1.close_btn', 'Закрыть')}</span>
+                </button>
+            </div>
+        `;
 
-            dialog.querySelectorAll('[data-action="close"]').forEach((btn) => {
-                btn.addEventListener("click", () => close());
+        const applyFocusMode = (mode) => {
+            activeFocusMode = mode;
+            dialog.querySelectorAll('[data-focus-mode]').forEach((btn) => {
+                const btnMode = btn.getAttribute('data-focus-mode');
+                if (btnMode === mode) {
+                    btn.className = 'px-2.5 py-1 rounded-lg transition-all bg-primary text-primary-fg shadow-sm';
+                } else {
+                    btn.className = `px-2.5 py-1 rounded-lg transition-all text-text-secondary hover:text-text-main ${btn.disabled ? 'opacity-40 cursor-not-allowed' : ''}`;
+                }
             });
 
-            if (isComposite) {
-                dialog.querySelectorAll('[data-tab-idx]').forEach((btn) => {
-                    btn.addEventListener("click", () => {
-                        const idx = Number(btn.getAttribute("data-tab-idx"));
-                        if (!Number.isNaN(idx) && idx !== activeIndex) {
-                            activeIndex = idx;
-                            renderContent();
-                        }
-                    });
+            const allLines = dialog.querySelectorAll('.theory-view-line');
+            allLines.forEach((lineEl) => {
+                const thId = lineEl.getAttribute('data-theory-id') || '';
+                const lineIdx = parseInt(lineEl.getAttribute('data-line-idx'), 10);
+
+                const isMatch = boundBlockIds.length > 0 && theoryBlockRanges.some((r) => {
+                    if (!r || typeof r !== 'object') return false;
+                    if (!boundBlockIds.includes(r.block_id)) return false;
+                    if (r.theory_id && thId && r.theory_id !== thId) return false;
+                    return lineIdx >= (r.line_start || 0) && lineIdx <= (r.line_end || 0);
                 });
-            }
+
+                if (isMatch) {
+                    const firstMatchingRange = theoryBlockRanges.find((r) =>
+                        boundBlockIds.includes(r.block_id) &&
+                        (!r.theory_id || !thId || r.theory_id === thId) &&
+                        lineIdx >= (r.line_start || 0) && lineIdx <= (r.line_end || 0)
+                    );
+                    const blockDef = theoryBlocks[firstMatchingRange?.block_id] || {};
+                    const borderColor = blockDef.color_border || blockDef.color || 'var(--color-primary)';
+                    lineEl.style.borderLeft = `3px solid ${borderColor}`;
+                    lineEl.style.paddingLeft = '10px';
+                    lineEl.style.opacity = '1';
+                    lineEl.style.filter = 'none';
+                    lineEl.style.display = '';
+                    lineEl.setAttribute('data-highlighted', 'true');
+                } else {
+                    lineEl.style.borderLeft = '';
+                    lineEl.style.paddingLeft = '';
+                    lineEl.removeAttribute('data-highlighted');
+                    if (mode === 'all') {
+                        lineEl.style.opacity = '1';
+                        lineEl.style.filter = 'none';
+                        lineEl.style.display = '';
+                    } else if (mode === 'dim') {
+                        lineEl.style.opacity = '0.25';
+                        lineEl.style.filter = 'grayscale(0.6)';
+                        lineEl.style.display = '';
+                    } else if (mode === 'isolate') {
+                        lineEl.style.display = 'none';
+                    }
+                }
+            });
         };
+
+        dialog.querySelectorAll('[data-focus-mode]').forEach((btn) => {
+            btn.addEventListener("click", () => {
+                if (btn.disabled) return;
+                const mode = btn.getAttribute("data-focus-mode");
+                if (mode) applyFocusMode(mode);
+            });
+        });
+
+        dialog.querySelectorAll('[data-action="close"]').forEach((btn) => {
+            btn.addEventListener("click", () => close());
+        });
 
         const close = () => {
             dialog.close();
@@ -432,7 +522,7 @@
         });
 
         document.body.appendChild(dialog);
-        renderContent();
+        applyFocusMode(activeFocusMode);
         dialog.showModal();
     }
 
@@ -456,7 +546,12 @@
             theoryBtn.classList.remove('hidden');
             theoryBtn.onclick = () => {
                 const ids = theoryCtx.theoryIds || [theoryCtx.theoryId];
-                openS1TheoryViewer(theoryCtx.complexTitle, ids);
+                openS1TheoryViewer(theoryCtx.complexTitle, ids, {
+                    theoryBlocks: theoryCtx.theoryBlocks,
+                    theoryBlockRanges: theoryCtx.theoryBlockRanges,
+                    taskBlockMappings: theoryCtx.taskBlockMappings,
+                    currentTaskRef: effectiveTask?.task_ref || effectiveTask?.ref,
+                });
             };
         } else {
             theoryBtn.classList.add('hidden');
@@ -513,6 +608,9 @@
                 theoryTitle: String(theoryLink?.title_cache || item.theory_title || '').trim() || singleTheoryId,
                 complexId,
                 complexTitle: String(item?.name || item?.title || '').trim() || complexId,
+                theoryBlocks: item.theory_blocks || {},
+                theoryBlockRanges: item.theory_block_ranges || [],
+                taskBlockMappings: item.task_block_mappings || {},
                 origin: 'complex_theory_link',
             };
         } catch (error) {
