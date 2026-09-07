@@ -591,6 +591,100 @@
       }
     }
 
+    const existingClickItem = (review && Array.isArray(review.userItems) && review.userItems.find(function (it) { return it && it.type === "click_comparison"; })) || null;
+    const existingClickRefItem = (review && Array.isArray(review.referenceItems) && review.referenceItems.find(function (it) { return it && it.type === "click_comparison"; })) || null;
+
+    const rawTargets =
+      (existingClickItem && Array.isArray(existingClickItem.targets) && existingClickItem.targets) ||
+      (existingClickRefItem && Array.isArray(existingClickRefItem.targets) && existingClickRefItem.targets) ||
+      (taskData.answer_key && Array.isArray(taskData.answer_key.targets) && taskData.answer_key.targets) ||
+      (Array.isArray(taskData.targets) && taskData.targets) ||
+      (content && Array.isArray(content.targets) && content.targets) ||
+      (details && Array.isArray(details.targets) && details.targets) ||
+      (source && Array.isArray(source.targets) && source.targets) ||
+      [];
+
+    const isClickTask = !isImageLabeling && (
+      taskType === "click" ||
+      Boolean(existingClickItem) ||
+      (rawTargets.length > 0 && (Boolean(details.clicks) || Boolean(source.clicks) || Boolean(taskData.image_url) || Boolean(content.image_url)))
+    );
+
+    if (isClickTask) {
+      const itemImgUrl = (existingClickItem && (existingClickItem.imageUrl || existingClickItem.image_url)) || (existingClickRefItem && (existingClickRefItem.imageUrl || existingClickRefItem.image_url)) || "";
+      const imageUrlRaw =
+        source.image_url || source.imageUrl || source.image_path ||
+        details.image_url || details.imageUrl || details.image_path ||
+        taskData.image_url || taskData.imageUrl || taskData.image_path ||
+        (content && (content.image_url || content.imageUrl || content.image_path || content.image_asset_url)) ||
+        (taskData && (taskData.image_asset_url || taskData.asset_id)) ||
+        itemImgUrl ||
+        "";
+      const imageUrl = imageUrlRaw ? resolveReviewImageUrl(imageUrlRaw) : "";
+
+      const userInput = (details && isObject(details.user_input)) ? details.user_input : (source && isObject(source.user_input)) ? source.user_input : {};
+      const clicks =
+        (existingClickItem && Array.isArray(existingClickItem.clicks) && existingClickItem.clicks) ||
+        (details && Array.isArray(details.clicks) && details.clicks) ||
+        (userInput && Array.isArray(userInput.clicks) && userInput.clicks) ||
+        (source && Array.isArray(source.clicks) && source.clicks) ||
+        [];
+      const polygons =
+        (existingClickItem && Array.isArray(existingClickItem.polygons) && existingClickItem.polygons) ||
+        (details && Array.isArray(details.polygons) && details.polygons) ||
+        (userInput && Array.isArray(userInput.polygons) && userInput.polygons) ||
+        (source && Array.isArray(source.polygons) && source.polygons) ||
+        [];
+      const lines =
+        (existingClickItem && Array.isArray(existingClickItem.lines) && existingClickItem.lines) ||
+        (details && Array.isArray(details.lines) && details.lines) ||
+        (userInput && Array.isArray(userInput.lines) && userInput.lines) ||
+        (source && Array.isArray(source.lines) && source.lines) ||
+        [];
+      const targetsInfo =
+        (existingClickItem && Array.isArray(existingClickItem.targets_info) && existingClickItem.targets_info) ||
+        (existingClickRefItem && Array.isArray(existingClickRefItem.targets_info) && existingClickRefItem.targets_info) ||
+        (details && Array.isArray(details.targets_info) && details.targets_info) ||
+        (source && Array.isArray(source.targets_info) && source.targets_info) ||
+        [];
+      const labelsClicks =
+        (existingClickItem && Array.isArray(existingClickItem.labels_clicks) && existingClickItem.labels_clicks) ||
+        (details && Array.isArray(details.labels_clicks) && details.labels_clicks) ||
+        (userInput && Array.isArray(userInput.labels_clicks) && userInput.labels_clicks) ||
+        [];
+
+      if (imageUrl && rawTargets.length > 0) {
+        review.userItems = [
+          {
+            type: "click_comparison",
+            imageUrl: imageUrl,
+            targets: rawTargets,
+            clicks: clicks,
+            polygons: polygons,
+            lines: lines,
+            targets_info: targetsInfo,
+            labels_clicks: labelsClicks,
+            is_user: true,
+            is_full_width: true,
+          }
+        ];
+        review.referenceItems = [
+          {
+            type: "click_comparison",
+            imageUrl: imageUrl,
+            targets: rawTargets,
+            clicks: clicks,
+            polygons: polygons,
+            lines: lines,
+            targets_info: targetsInfo,
+            labels_clicks: labelsClicks,
+            is_user: false,
+            is_full_width: true,
+          }
+        ];
+      }
+    }
+
     return {
       key: source.key || source.id || `task-${index}`,
       name,
@@ -1198,7 +1292,8 @@
     zoomBtn.style.position = "absolute";
     zoomBtn.style.right = "10px";
     zoomBtn.style.bottom = "10px";
-    zoomBtn.style.zIndex = "1";
+    zoomBtn.style.zIndex = "20";
+    zoomBtn.style.pointerEvents = "auto";
     zoomBtn.style.display = "inline-flex";
     zoomBtn.style.height = "42px";
     zoomBtn.style.width = "42px";
@@ -1274,7 +1369,475 @@
     };
   }
 
+  function withAlphaColor(color, alpha) {
+    if (!color) return `rgba(37, 99, 235, ${alpha})`;
+    if (color.startsWith("#")) {
+      const hex = color.slice(1);
+      const r = parseInt(hex.length === 3 ? hex[0] + hex[0] : hex.slice(0, 2), 16) || 0;
+      const g = parseInt(hex.length === 3 ? hex[1] + hex[1] : hex.slice(2, 4), 16) || 0;
+      const b = parseInt(hex.length === 3 ? hex[2] + hex[2] : hex.slice(4, 6), 16) || 0;
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+    return color;
+  }
+
+  function applyTargetHighlight(scopeEl, targetIndex) {
+    const parentContainer = (scopeEl && typeof scopeEl.closest === "function")
+      ? (scopeEl.closest(".s2-review-answers") || scopeEl.closest(".s2-inline-review-card") || document)
+      : document;
+    const allTargetElements = parentContainer.querySelectorAll("[data-target-index]");
+    allTargetElements.forEach(function (el) {
+      const elTid = el.getAttribute("data-target-index");
+      if (elTid === String(targetIndex)) {
+        el.style.opacity = "1";
+        el.style.transform = "scale(1.08)";
+        el.style.zIndex = "30";
+        if (!el.matches("g, polygon, polyline, circle, path, text")) {
+          el.style.boxShadow = "0 0 0 2px rgba(59, 130, 246, 0.6)";
+        }
+      } else {
+        el.style.opacity = "0.2";
+        el.style.transform = "";
+        el.style.boxShadow = "";
+        el.style.zIndex = "";
+      }
+    });
+  }
+
+  function clearTargetHighlight(scopeEl) {
+    const parentContainer = (scopeEl && typeof scopeEl.closest === "function")
+      ? (scopeEl.closest(".s2-review-answers") || scopeEl.closest(".s2-inline-review-card") || document)
+      : document;
+    const allTargetElements = parentContainer.querySelectorAll("[data-target-index]");
+    allTargetElements.forEach(function (el) {
+      el.style.opacity = "";
+      el.style.transform = "";
+      el.style.boxShadow = "";
+      el.style.zIndex = "";
+    });
+  }
+
+  function createClickComparisonReviewMediaItem(item) {
+    const card = document.createElement("article");
+    card.className = "s2-review-media-card s2-review-media-card--image s2-review-media-card--full w-full max-w-full";
+    card.style.gridColumn = "1 / -1";
+    card.style.width = "100%";
+
+    const isUser = Boolean(item.is_user);
+    card.setAttribute("data-s2-review", isUser ? "user-clicks" : "ref-targets");
+
+    const TARGET_PALETTE = [
+      "#2563eb",
+      "#10b981",
+      "#8b5cf6",
+      "#f59e0b",
+      "#06b6d4",
+      "#ec4899",
+      "#14b8a6",
+      "#f97316",
+    ];
+    function getTargetColor(idx) {
+      return TARGET_PALETTE[Math.abs(Number(idx) || 0) % TARGET_PALETTE.length];
+    }
+
+    const targets = Array.isArray(item.targets) ? item.targets : [];
+    const clicks = Array.isArray(item.clicks) ? item.clicks : [];
+    const polygons = Array.isArray(item.polygons) ? item.polygons : [];
+    const lines = Array.isArray(item.lines) ? item.lines : [];
+    const targetsInfo = Array.isArray(item.targets_info) ? item.targets_info : [];
+
+    const targetInfoMap = {};
+    const clickToTargetMap = {};
+    targetsInfo.forEach(function (info, i) {
+      const idx = (info && typeof info.index === "number") ? info.index : i;
+      targetInfoMap[idx] = info;
+      if (info && typeof info.matched_click_idx === "number" && info.matched_click_idx >= 0) {
+        clickToTargetMap[info.matched_click_idx] = idx;
+      }
+    });
+
+    const header = document.createElement("div");
+    header.className = "flex items-center justify-between gap-2 mb-2 px-1";
+
+    const title = document.createElement("span");
+    title.className = "text-xs font-bold uppercase tracking-wider text-text-secondary";
+    title.textContent = isUser ? wt("s2.click_your_answer", "Твоё решение") : wt("s2.click_reference", "Референс");
+
+    const badge = document.createElement("span");
+    if (isUser) {
+      const hitCount = Object.keys(clickToTargetMap).length;
+      const totalClicks = clicks.length;
+      badge.className = "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold " +
+        (hitCount === targets.length && totalClicks === hitCount
+          ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
+          : "bg-amber-500/10 text-amber-600 border border-amber-500/20");
+      badge.textContent = `${totalClicks} ${formatPlural(totalClicks, wt("s2.click_one", "клик"), wt("s2.click_few", "клика"), wt("s2.click_many", "кликов"))}`;
+    } else {
+      const totalTargets = targets.length;
+      badge.className = "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-500/10 text-blue-600 border border-blue-500/20";
+      badge.textContent = `${totalTargets} ${formatPlural(totalTargets, wt("s2.target_one", "мишень"), wt("s2.target_few", "мишени"), wt("s2.target_many", "мишеней"))}`;
+    }
+
+    header.appendChild(title);
+    header.appendChild(badge);
+    card.appendChild(header);
+
+    const imageUrl = item.imageUrl || item.image_url || "";
+    const frame = document.createElement("div");
+    frame.className = "relative w-full rounded-2xl overflow-hidden bg-surface-1 border border-border-strong select-none shadow-sm";
+    frame.style.minHeight = "220px";
+    frame.style.aspectRatio = "4 / 3";
+
+    const img = document.createElement("img");
+    img.className = "absolute inset-0 w-full h-full object-contain pointer-events-none select-none";
+    img.src = imageUrl;
+    img.alt = isUser ? wt("s2.click_your_answer", "Твоё решение") : wt("s2.click_reference", "Референс");
+    frame.appendChild(img);
+
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("class", "absolute inset-0 w-full h-full");
+    svg.style.pointerEvents = "none";
+    svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    frame.appendChild(svg);
+
+    function renderSvgOverlay() {
+      const nw = img.naturalWidth || 800;
+      const nh = img.naturalHeight || 600;
+      frame.style.aspectRatio = `${nw} / ${nh}`;
+      svg.setAttribute("viewBox", `0 0 ${nw} ${nh}`);
+      svg.innerHTML = "";
+
+      function normPt(rawPt) {
+        if (!rawPt) return null;
+        const rx = rawPt.x ?? rawPt[0];
+        const ry = rawPt.y ?? rawPt[1];
+        if (rx == null || ry == null) return null;
+        return {
+          x: (rx <= 1 && nw > 1) ? rx * nw : Number(rx),
+          y: (ry <= 1 && nh > 1) ? ry * nh : Number(ry)
+        };
+      }
+
+      if (isUser) {
+        // Draw user polygons if any
+        polygons.forEach(function (poly) {
+          const rawPts = poly && (poly.points || poly);
+          if (!Array.isArray(rawPts) || rawPts.length < 3) return;
+          const pts = rawPts.map(normPt).filter(Boolean);
+          if (pts.length < 3) return;
+          const polygonEl = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+          polygonEl.setAttribute("points", pts.map(p => `${p.x},${p.y}`).join(" "));
+          polygonEl.setAttribute("fill", "rgba(37, 99, 235, 0.16)");
+          polygonEl.setAttribute("stroke", "#2563eb");
+          polygonEl.setAttribute("stroke-width", "3");
+          polygonEl.style.pointerEvents = "auto";
+          svg.appendChild(polygonEl);
+        });
+
+        // Draw user lines if any
+        lines.forEach(function (line) {
+          const rawPts = line && (line.points || line);
+          if (!Array.isArray(rawPts) || rawPts.length < 2) return;
+          const pts = rawPts.map(normPt).filter(Boolean);
+          if (pts.length < 2) return;
+          const polylineEl = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+          polylineEl.setAttribute("points", pts.map(p => `${p.x},${p.y}`).join(" "));
+          polylineEl.setAttribute("fill", "none");
+          polylineEl.setAttribute("stroke", "#2563eb");
+          polylineEl.setAttribute("stroke-width", "3");
+          polylineEl.setAttribute("stroke-dasharray", "8 4");
+          polylineEl.style.pointerEvents = "auto";
+          svg.appendChild(polylineEl);
+        });
+
+        // Draw user clicks
+        clicks.forEach(function (click, clickIdx) {
+          const pt = normPt(click);
+          if (!pt) return;
+
+          const matchedTargetIdx = clickToTargetMap[clickIdx];
+          const isHit = matchedTargetIdx !== undefined && matchedTargetIdx !== null;
+          const color = isHit ? getTargetColor(matchedTargetIdx) : "#ef4444";
+
+          const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+          g.setAttribute("class", "s2-click-marker cursor-pointer transition-transform");
+          g.style.pointerEvents = "auto";
+          if (isHit) {
+            g.setAttribute("data-target-index", String(matchedTargetIdx));
+          }
+          g.setAttribute("data-click-index", String(clickIdx));
+
+          const shadowCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+          shadowCircle.setAttribute("cx", String(pt.x));
+          shadowCircle.setAttribute("cy", String(pt.y));
+          shadowCircle.setAttribute("r", "16");
+          shadowCircle.setAttribute("fill", "rgba(0, 0, 0, 0.25)");
+
+          const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+          circle.setAttribute("cx", String(pt.x));
+          circle.setAttribute("cy", String(pt.y));
+          circle.setAttribute("r", "14");
+          circle.setAttribute("fill", color);
+          circle.setAttribute("stroke", "#ffffff");
+          circle.setAttribute("stroke-width", "2.5");
+
+          const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+          text.setAttribute("x", String(pt.x));
+          text.setAttribute("y", String(pt.y + 1));
+          text.setAttribute("fill", "#ffffff");
+          text.setAttribute("font-size", "11");
+          text.setAttribute("font-weight", "700");
+          text.setAttribute("font-family", "Inter, system-ui, sans-serif");
+          text.setAttribute("text-anchor", "middle");
+          text.setAttribute("dominant-baseline", "central");
+          text.textContent = String(clickIdx + 1);
+
+          const titleEl = document.createElementNS("http://www.w3.org/2000/svg", "title");
+          const targetName = isHit && targets[matchedTargetIdx] && targets[matchedTargetIdx].label
+            ? targets[matchedTargetIdx].label
+            : "";
+          titleEl.textContent = isHit
+            ? `${wt("s2.click_n", "Клик")} ${clickIdx + 1}: ${wt("s2.hit", "Попадание")} (${targetName || wt("s2.target_default", "Цель")})`
+            : `${wt("s2.click_n", "Клик")} ${clickIdx + 1}: ${wt("s2.miss", "Промах")}`;
+
+          g.appendChild(shadowCircle);
+          g.appendChild(circle);
+          g.appendChild(text);
+          g.appendChild(titleEl);
+          svg.appendChild(g);
+        });
+      } else {
+        // Reference targets
+        targets.forEach(function (target, targetIdx) {
+          if (!target) return;
+          const info = targetInfoMap[targetIdx];
+          const isMissed = info ? (info.found === false) : false;
+          const baseColor = isMissed ? "#ef4444" : getTargetColor(targetIdx);
+
+          const shape = target.shape || target.type || (Array.isArray(target.points) && target.points.length >= 3 ? "polygon" : "point");
+
+          if (shape === "polygon" || (Array.isArray(target.points) && target.points.length >= 3)) {
+            const rawPts = target.points || [];
+            const pts = rawPts.map(normPt).filter(Boolean);
+            if (pts.length >= 3) {
+              const polyEl = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+              polyEl.setAttribute("points", pts.map(p => `${p.x},${p.y}`).join(" "));
+              polyEl.setAttribute("fill", isMissed ? "rgba(239, 68, 68, 0.18)" : withAlphaColor(baseColor, 0.20));
+              polyEl.setAttribute("stroke", baseColor);
+              polyEl.setAttribute("stroke-width", isMissed ? "4" : "3");
+              polyEl.setAttribute("stroke-linejoin", "round");
+              polyEl.setAttribute("data-target-index", String(targetIdx));
+              polyEl.setAttribute("class", "s2-target-shape cursor-pointer transition-all");
+              polyEl.style.pointerEvents = "auto";
+
+              const titleEl = document.createElementNS("http://www.w3.org/2000/svg", "title");
+              titleEl.textContent = `${target.label || wt("s2.target_default", "Мишень")} (${isMissed ? wt("s2.target_missed", "Не найдено") : wt("s2.target_found", "Найдено")})`;
+              polyEl.appendChild(titleEl);
+              svg.appendChild(polyEl);
+
+              // Center label marker
+              let sumX = 0, sumY = 0;
+              pts.forEach(p => { sumX += p.x; sumY += p.y; });
+              const cx = sumX / pts.length;
+              const cy = sumY / pts.length;
+
+              const badgeG = document.createElementNS("http://www.w3.org/2000/svg", "g");
+              badgeG.setAttribute("data-target-index", String(targetIdx));
+              badgeG.setAttribute("class", "cursor-pointer");
+              badgeG.style.pointerEvents = "auto";
+
+              const badgeCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+              badgeCircle.setAttribute("cx", String(cx));
+              badgeCircle.setAttribute("cy", String(cy));
+              badgeCircle.setAttribute("r", "12");
+              badgeCircle.setAttribute("fill", baseColor);
+              badgeCircle.setAttribute("stroke", "#ffffff");
+              badgeCircle.setAttribute("stroke-width", "2");
+
+              const badgeText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+              badgeText.setAttribute("x", String(cx));
+              badgeText.setAttribute("y", String(cy + 1));
+              badgeText.setAttribute("fill", "#ffffff");
+              badgeText.setAttribute("font-size", "10");
+              badgeText.setAttribute("font-weight", "700");
+              badgeText.setAttribute("font-family", "Inter, system-ui, sans-serif");
+              badgeText.setAttribute("text-anchor", "middle");
+              badgeText.setAttribute("dominant-baseline", "central");
+              badgeText.textContent = String(targetIdx + 1);
+
+              badgeG.appendChild(badgeCircle);
+              badgeG.appendChild(badgeText);
+              svg.appendChild(badgeG);
+            }
+          } else if (shape === "freehand" || (Array.isArray(target.points) && target.points.length >= 2)) {
+            const rawPts = target.points || [];
+            const pts = rawPts.map(normPt).filter(Boolean);
+            if (pts.length >= 2) {
+              const polylineEl = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+              polylineEl.setAttribute("points", pts.map(p => `${p.x},${p.y}`).join(" "));
+              polylineEl.setAttribute("fill", "none");
+              polylineEl.setAttribute("stroke", baseColor);
+              polylineEl.setAttribute("stroke-width", isMissed ? "4" : "3");
+              polylineEl.setAttribute("stroke-dasharray", "10 6");
+              polylineEl.setAttribute("stroke-linecap", "round");
+              polylineEl.setAttribute("data-target-index", String(targetIdx));
+              polylineEl.setAttribute("class", "s2-target-shape cursor-pointer transition-all");
+              polylineEl.style.pointerEvents = "auto";
+
+              const titleEl = document.createElementNS("http://www.w3.org/2000/svg", "title");
+              titleEl.textContent = `${target.label || wt("s2.target_default", "Мишень")} (${isMissed ? wt("s2.target_missed", "Не найдено") : wt("s2.target_found", "Найдено")})`;
+              polylineEl.appendChild(titleEl);
+              svg.appendChild(polylineEl);
+            }
+          } else {
+            // Point target
+            const pt = normPt(target.point || target.coordinates || (target.x != null ? [target.x, target.y] : null));
+            if (pt) {
+              const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+              g.setAttribute("class", "s2-target-marker cursor-pointer transition-transform");
+              g.setAttribute("data-target-index", String(targetIdx));
+              g.style.pointerEvents = "auto";
+
+              const shadowCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+              shadowCircle.setAttribute("cx", String(pt.x));
+              shadowCircle.setAttribute("cy", String(pt.y));
+              shadowCircle.setAttribute("r", "17");
+              shadowCircle.setAttribute("fill", "rgba(0, 0, 0, 0.25)");
+
+              const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+              circle.setAttribute("cx", String(pt.x));
+              circle.setAttribute("cy", String(pt.y));
+              circle.setAttribute("r", "15");
+              circle.setAttribute("fill", baseColor);
+              circle.setAttribute("stroke", "#ffffff");
+              circle.setAttribute("stroke-width", "2.5");
+
+              const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+              text.setAttribute("x", String(pt.x));
+              text.setAttribute("y", String(pt.y + 1));
+              text.setAttribute("fill", "#ffffff");
+              text.setAttribute("font-size", "11");
+              text.setAttribute("font-weight", "700");
+              text.setAttribute("font-family", "Inter, system-ui, sans-serif");
+              text.setAttribute("text-anchor", "middle");
+              text.setAttribute("dominant-baseline", "central");
+              text.textContent = String(targetIdx + 1);
+
+              const titleEl = document.createElementNS("http://www.w3.org/2000/svg", "title");
+              titleEl.textContent = `${target.label || wt("s2.target_default", "Мишень")} (${isMissed ? wt("s2.target_missed", "Не найдено") : wt("s2.target_found", "Найдено")})`;
+
+              g.appendChild(shadowCircle);
+              g.appendChild(circle);
+              g.appendChild(text);
+              g.appendChild(titleEl);
+              svg.appendChild(g);
+            }
+          }
+        });
+      }
+    }
+
+    renderSvgOverlay();
+    if (!img.complete) {
+      img.addEventListener("load", renderSvgOverlay);
+    }
+
+    const zoomTitle = isUser ? wt("s2.click_your_answer", "Твоё решение") : wt("s2.click_reference", "Референс");
+    const zoomBtn = createReviewImageZoomButton(function () {
+      openSharedReviewImageLightbox(imageUrl, zoomTitle);
+    });
+    frame.appendChild(zoomBtn);
+    card.appendChild(frame);
+
+    if (!isUser && targets.length > 0) {
+      const legend = document.createElement("div");
+      legend.className = "mt-3 flex flex-col gap-1.5 w-full";
+
+      targets.forEach(function (target, targetIdx) {
+        const info = targetInfoMap[targetIdx];
+        const isMissed = info ? (info.found === false) : false;
+        const color = isMissed ? "#ef4444" : getTargetColor(targetIdx);
+
+        const row = document.createElement("div");
+        row.className = "flex items-center justify-between gap-2 p-2 rounded-xl text-xs font-medium border transition-all cursor-pointer select-none " +
+          (isMissed ? "bg-red-500/5 border-red-500/20 text-text-main dark:text-white" : "bg-surface-2 border-border-subtle text-text-main dark:text-white");
+        row.setAttribute("data-target-index", String(targetIdx));
+
+        const left = document.createElement("div");
+        left.className = "flex items-center gap-2 min-w-0";
+
+        const numBadge = document.createElement("span");
+        numBadge.className = "inline-flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-bold text-white shrink-0";
+        numBadge.style.backgroundColor = color;
+        numBadge.textContent = String(targetIdx + 1);
+
+        const nameSpan = document.createElement("span");
+        nameSpan.className = "truncate font-semibold";
+        nameSpan.textContent = target.label || `${wt("s2.target_default", "Мишень")} ${targetIdx + 1}`;
+
+        left.appendChild(numBadge);
+        left.appendChild(nameSpan);
+
+        const statusBadge = document.createElement("span");
+        statusBadge.className = "shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold " +
+          (isMissed ? "bg-red-500/10 text-red-600" : "bg-emerald-500/10 text-emerald-600");
+        statusBadge.textContent = isMissed ? wt("s2.target_missed", "Не найдено") : wt("s2.target_found", "Найдено");
+
+        row.appendChild(left);
+        row.appendChild(statusBadge);
+        legend.appendChild(row);
+      });
+
+      card.appendChild(legend);
+    }
+
+    if (isUser && Array.isArray(item.labels_clicks) && item.labels_clicks.some(Boolean)) {
+      const userLabelsBlock = document.createElement("div");
+      userLabelsBlock.className = "mt-3 flex flex-col gap-1.5 w-full";
+      item.labels_clicks.forEach(function (userLabel, labelIdx) {
+        if (!userLabel) return;
+        const matchedTgt = clickToTargetMap[labelIdx];
+        const row = document.createElement("div");
+        row.className = "flex items-center gap-2 p-2 rounded-xl text-xs font-medium border border-border-subtle bg-surface-2 text-text-main dark:text-white";
+        if (matchedTgt !== undefined && matchedTgt !== null) {
+          row.setAttribute("data-target-index", String(matchedTgt));
+        }
+
+        const numBadge = document.createElement("span");
+        numBadge.className = "inline-flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-bold text-white shrink-0 bg-primary";
+        numBadge.textContent = String(labelIdx + 1);
+
+        const textSpan = document.createElement("span");
+        textSpan.className = "truncate";
+        textSpan.textContent = userLabel;
+
+        row.appendChild(numBadge);
+        row.appendChild(textSpan);
+        userLabelsBlock.appendChild(row);
+      });
+      card.appendChild(userLabelsBlock);
+    }
+
+    // Hover synchronization inside task card
+    card.addEventListener("mouseenter", function (e) {
+      const targetEl = (e.target && typeof e.target.closest === "function") ? e.target.closest("[data-target-index]") : null;
+      if (!targetEl) return;
+      const tid = targetEl.getAttribute("data-target-index");
+      if (tid === null || tid === "") return;
+      applyTargetHighlight(card, tid);
+    }, true);
+
+    card.addEventListener("mouseleave", function () {
+      clearTargetHighlight(card);
+    }, true);
+
+    return card;
+  }
+
   function createReviewMediaItem(item) {
+    if (item && item.type === "click_comparison" && (item.imageUrl || item.image_url) && Array.isArray(item.targets)) {
+      return createClickComparisonReviewMediaItem(item);
+    }
     if (item && item.type === "image_labeling_comparison" && item.imageUrl && Array.isArray(item.zones)) {
       const card = document.createElement("article");
       card.className = "s2-review-media-card s2-review-media-card--image s2-review-media-card--full w-full max-w-full";
@@ -1525,7 +2088,7 @@
 
     const safeItems = Array.isArray(items) ? items.filter(Boolean) : [];
     const hasFullWidthItem = safeItems.some(function (it) {
-      return it && (it.type === "image_labeling_comparison" || it.is_full_width);
+      return it && (it.type === "image_labeling_comparison" || it.type === "click_comparison" || it.is_full_width);
     });
 
     if (safeItems.length) {

@@ -1144,6 +1144,11 @@ textarea {
   pointer-events: none;
 }
 
+button.s2-review-media-zoom,
+.s2-review-media-zoom[role="button"] {
+  pointer-events: auto;
+}
+
 .s2-review-media-caption {
   margin: 0;
   color: var(--color-text-main);

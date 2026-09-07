@@ -455,4 +455,262 @@ describe("S2 review media", () => {
       "Разбор ошибок не нужен",
     );
   });
+
+  it("renders side-by-side click comparison cards with SVG overlays and legend for failed click tasks", async () => {
+    const dom = await bootDom({
+      payload: createIterationPayload({
+        results: {
+          iteration: 1,
+          complex_name: "Click Review Test",
+          total_tasks: 1,
+          successful_tasks: 0,
+          failed_tasks: 1,
+          duration_seconds: 45,
+          success_rate: 0,
+          has_next_iteration: true,
+          iteration_results: [
+            createIterationTask(1, {
+              task_type: "click",
+              review: {
+                title: "Анатомия сердца",
+                prompt: "Укажите верхушку сердца и дугу аорты",
+                user_items: [
+                  {
+                    type: "click_comparison",
+                    is_user: true,
+                    image_url: "modules/heart/images/xray.jpg",
+                    targets: [
+                      { label: "Верхушка сердца", points: [[100, 150], [150, 150], [125, 200]], shape: "polygon" },
+                      { label: "Дуга аорты", point: [250, 300], shape: "point" },
+                    ],
+                    clicks: [
+                      [125, 175], // hit target 0
+                      [400, 450], // miss
+                    ],
+                    targets_info: [
+                      { index: 0, label: "Верхушка сердца", found: true, matched_click_idx: 0 },
+                      { index: 1, label: "Дуга аорты", found: false },
+                    ],
+                    labels_clicks: ["Верхушка сердца", "Мимо"],
+                    is_full_width: true,
+                  },
+                ],
+                reference_items: [
+                  {
+                    type: "click_comparison",
+                    is_user: false,
+                    image_url: "modules/heart/images/xray.jpg",
+                    targets: [
+                      { label: "Верхушка сердца", points: [[100, 150], [150, 150], [125, 200]], shape: "polygon" },
+                      { label: "Дуга аорты", point: [250, 300], shape: "point" },
+                    ],
+                    clicks: [
+                      [125, 175],
+                      [400, 450],
+                    ],
+                    targets_info: [
+                      { index: 0, label: "Верхушка сердца", found: true, matched_click_idx: 0 },
+                      { index: 1, label: "Дуга аорты", found: false },
+                    ],
+                    is_full_width: true,
+                  },
+                ],
+              },
+            }),
+          ],
+        },
+      }),
+    });
+
+    dom.window.document.getElementById("review-btn").click();
+    await flushDom();
+
+    const userCard = dom.window.document.querySelector('[data-s2-review="user-clicks"]');
+    const refCard = dom.window.document.querySelector('[data-s2-review="ref-targets"]');
+
+    expect(userCard).not.toBeNull();
+    expect(refCard).not.toBeNull();
+
+    // User card: check user clicks
+    const clickMarkers = userCard.querySelectorAll(".s2-click-marker");
+    expect(clickMarkers).toHaveLength(2);
+    expect(clickMarkers[0].getAttribute("data-target-index")).toBe("0");
+    expect(clickMarkers[1].getAttribute("data-target-index")).toBeNull();
+
+    // User card: check labels
+    expect(userCard.textContent).toContain("Верхушка сердца");
+    expect(userCard.textContent).toContain("Мимо");
+
+    // Reference card: check shapes
+    const polyShape = refCard.querySelector(".s2-target-shape");
+    expect(polyShape).not.toBeNull();
+    expect(polyShape.tagName.toLowerCase()).toBe("polygon");
+    expect(polyShape.getAttribute("data-target-index")).toBe("0");
+
+    const markerTarget = refCard.querySelector(".s2-target-marker");
+    expect(markerTarget).not.toBeNull();
+    expect(markerTarget.getAttribute("data-target-index")).toBe("1");
+
+    // Reference card: check legend
+    const legendRows = refCard.querySelectorAll("[data-target-index]");
+    expect(legendRows.length).toBeGreaterThanOrEqual(2);
+    expect(refCard.textContent).toContain("Верхушка сердца");
+    expect(refCard.textContent).toContain("Дуга аорты");
+    expect(refCard.textContent).toContain("Найдено");
+    expect(refCard.textContent).toContain("Не найдено");
+  });
+
+  it("synchronizes target highlighting between user and reference cards on hover", async () => {
+    const dom = await bootDom({
+      payload: createIterationPayload({
+        results: {
+          iteration: 1,
+          complex_name: "Click Hover Test",
+          total_tasks: 1,
+          successful_tasks: 0,
+          failed_tasks: 1,
+          duration_seconds: 30,
+          success_rate: 0,
+          has_next_iteration: true,
+          iteration_results: [
+            createIterationTask(1, {
+              task_type: "click",
+              review: {
+                title: "Click Hover Test",
+                prompt: "Hover test prompt",
+                user_items: [
+                  {
+                    type: "click_comparison",
+                    is_user: true,
+                    imageUrl: "modules/heart/images/xray.jpg",
+                    targets: [
+                      { label: "Цель 1", point: [100, 100], shape: "point" },
+                      { label: "Цель 2", point: [200, 200], shape: "point" },
+                    ],
+                    clicks: [[100, 100]],
+                    targets_info: [
+                      { index: 0, label: "Цель 1", found: true, matched_click_idx: 0 },
+                      { index: 1, label: "Цель 2", found: false },
+                    ],
+                  },
+                ],
+                reference_items: [
+                  {
+                    type: "click_comparison",
+                    is_user: false,
+                    imageUrl: "modules/heart/images/xray.jpg",
+                    targets: [
+                      { label: "Цель 1", point: [100, 100], shape: "point" },
+                      { label: "Цель 2", point: [200, 200], shape: "point" },
+                    ],
+                    clicks: [[100, 100]],
+                    targets_info: [
+                      { index: 0, label: "Цель 1", found: true, matched_click_idx: 0 },
+                      { index: 1, label: "Цель 2", found: false },
+                    ],
+                  },
+                ],
+              },
+            }),
+          ],
+        },
+      }),
+    });
+
+    dom.window.document.getElementById("review-btn").click();
+    await flushDom();
+
+    const refCard = dom.window.document.querySelector('[data-s2-review="ref-targets"]');
+    const userCard = dom.window.document.querySelector('[data-s2-review="user-clicks"]');
+
+    const target0El = refCard.querySelector('[data-target-index="0"]');
+    const target1El = refCard.querySelector('[data-target-index="1"]');
+    const userClick0 = userCard.querySelector('[data-target-index="0"]');
+
+    // Simulate mouseenter on target 0
+    target0El.dispatchEvent(new dom.window.MouseEvent("mouseenter", { bubbles: true }));
+
+    expect(target0El.style.opacity).toBe("1");
+    expect(userClick0.style.opacity).toBe("1");
+    expect(target1El.style.opacity).toBe("0.2");
+
+    // Simulate mouseleave
+    refCard.dispatchEvent(new dom.window.MouseEvent("mouseleave", { bubbles: true }));
+
+    expect(target0El.style.opacity).toBe("");
+    expect(userClick0.style.opacity).toBe("");
+    expect(target1El.style.opacity).toBe("");
+  });
+
+  it("opens shared review lightbox when zoom button is clicked in click comparison cards", async () => {
+    const opened = [];
+    const dom = await bootDom({
+      sharedLightbox: {
+        open(src, caption) {
+          opened.push({ src, caption });
+        },
+      },
+      payload: createIterationPayload({
+        results: {
+          iteration: 1,
+          complex_name: "Click Zoom Test",
+          total_tasks: 1,
+          successful_tasks: 0,
+          failed_tasks: 1,
+          duration_seconds: 20,
+          success_rate: 0,
+          has_next_iteration: true,
+          iteration_results: [
+            createIterationTask(1, {
+              task_type: "click",
+              review: {
+                title: "Click Zoom Test",
+                prompt: "Click zoom test prompt",
+                user_items: [
+                  {
+                    type: "click_comparison",
+                    is_user: true,
+                    imageUrl: "modules/heart/images/xray.jpg",
+                    targets: [{ label: "Цель 1", point: [100, 100] }],
+                    clicks: [[100, 100]],
+                  },
+                ],
+                reference_items: [
+                  {
+                    type: "click_comparison",
+                    is_user: false,
+                    imageUrl: "modules/heart/images/xray.jpg",
+                    targets: [{ label: "Цель 1", point: [100, 100] }],
+                    clicks: [[100, 100]],
+                  },
+                ],
+              },
+            }),
+          ],
+        },
+      }),
+    });
+
+    dom.window.document.getElementById("review-btn").click();
+    await flushDom();
+
+    const userCard = dom.window.document.querySelector('[data-s2-review="user-clicks"]');
+    const refCard = dom.window.document.querySelector('[data-s2-review="ref-targets"]');
+
+    const userZoomBtn = userCard.querySelector(".s2-review-media-zoom");
+    expect(userZoomBtn).not.toBeNull();
+    userZoomBtn.click();
+
+    expect(opened).toHaveLength(1);
+    expect(opened[0].src).toContain("xray.jpg");
+    expect(opened[0].caption).toContain("Твоё решение");
+
+    const refZoomBtn = refCard.querySelector(".s2-review-media-zoom");
+    expect(refZoomBtn).not.toBeNull();
+    refZoomBtn.click();
+
+    expect(opened).toHaveLength(2);
+    expect(opened[1].src).toContain("xray.jpg");
+    expect(opened[1].caption).toContain("Референс");
+  });
 });

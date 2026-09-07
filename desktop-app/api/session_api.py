@@ -2991,12 +2991,18 @@ class SessionAPI:
             if complex_obj is not None:
                 chains = getattr(complex_obj, "chains", None) or []
                 for i, chain in enumerate(chains):
-                    if not isinstance(chain, list):
+                    chain_tasks = getattr(chain, "tasks", None)
+                    if chain_tasks is None:
+                        if isinstance(chain, list):
+                            chain_tasks = chain
+                        elif isinstance(chain, dict):
+                            chain_tasks = chain.get("tasks")
+                    if not isinstance(chain_tasks, list):
                         continue
-                    if current_task_ref in chain:
+                    if current_task_ref in chain_tasks:
                         chain_id = f"chain_{i}"
-                        chain_pos = chain.index(current_task_ref)
-                        chain_len = len(chain)
+                        chain_pos = chain_tasks.index(current_task_ref)
+                        chain_len = len(chain_tasks)
                         break
 
             # Retry details
@@ -5489,6 +5495,79 @@ class SessionAPI:
                         continue
                     label = _first_text(annotation.get("label"), annotation.get("title")) or f"Область {idx + 1}"
                     annotation_labels.append(label)
+
+                image_raw = (
+                    content.get("image")
+                    or content.get("image_url")
+                    or content.get("image_path")
+                    or content.get("image_asset_url")
+                    or task_data.get("image_url")
+                    or task_data.get("image_path")
+                    or task_data.get("image")
+                    or task_data.get("image_asset_url")
+                )
+                image_url = ""
+                if isinstance(image_raw, dict):
+                    image_url = image_raw.get("asset_url") or image_raw.get("path") or image_raw.get("url") or ""
+                    if (image_raw.get("asset_id") or image_raw.get("image_asset_id")) and not image_url:
+                        aid = image_raw.get("asset_id") or image_raw.get("image_asset_id")
+                        image_url = f"/api/assets/{aid}/content"
+                elif isinstance(image_raw, str):
+                    image_url = image_raw
+                if not image_url and (content.get("asset_id") or task_data.get("asset_id") or content.get("image_asset_id") or task_data.get("image_asset_id")):
+                    aid = content.get("asset_id") or task_data.get("asset_id") or content.get("image_asset_id") or task_data.get("image_asset_id")
+                    image_url = f"/api/assets/{aid}/content"
+
+                targets = (
+                    (task_data.get("answer_key") if isinstance(task_data.get("answer_key"), dict) else {}).get("targets")
+                    or task_data.get("targets")
+                    or content.get("targets")
+                    or []
+                )
+                if not isinstance(targets, list):
+                    targets = []
+
+                user_input_dict = details.get("user_input") if isinstance(details.get("user_input"), dict) else {}
+                clicks = details.get("clicks") or user_input_dict.get("clicks") or []
+                if not isinstance(clicks, list):
+                    clicks = []
+                polygons = details.get("polygons") or user_input_dict.get("polygons") or []
+                if not isinstance(polygons, list):
+                    polygons = []
+                lines = details.get("lines") or user_input_dict.get("lines") or []
+                if not isinstance(lines, list):
+                    lines = []
+                labels_clicks = details.get("labels_clicks") or user_input_dict.get("labels_clicks") or []
+                if not isinstance(labels_clicks, list):
+                    labels_clicks = []
+
+                user_items: List[Dict[str, Any]] = []
+                reference_items: List[Dict[str, Any]] = []
+                if image_url and targets:
+                    user_items.append({
+                        "type": "click_comparison",
+                        "image_url": image_url,
+                        "targets": targets,
+                        "clicks": clicks,
+                        "polygons": polygons,
+                        "lines": lines,
+                        "targets_info": targets_info,
+                        "labels_clicks": labels_clicks,
+                        "is_user": True,
+                        "is_full_width": True,
+                    })
+                    reference_items.append({
+                        "type": "click_comparison",
+                        "image_url": image_url,
+                        "targets": targets,
+                        "clicks": clicks,
+                        "polygons": polygons,
+                        "lines": lines,
+                        "targets_info": targets_info,
+                        "is_user": False,
+                        "is_full_width": True,
+                    })
+
                 labels_details = details.get("labels") if isinstance(details.get("labels"), dict) else {}
                 unmatched_labels = labels_details.get("unmatched_labels") if isinstance(labels_details.get("unmatched_labels"), list) else []
                 if unmatched_labels:
@@ -5513,6 +5592,8 @@ class SessionAPI:
                         user_lines or ["Подписи пользователя не были сохранены."],
                         reference_lines or annotation_labels or ["Правильные подписи не найдены."],
                         note=explanation or "Подписи к отмеченным областям не совпали.",
+                        user_items=user_items or None,
+                        reference_items=reference_items or None,
                     )
 
                 found_labels = [
@@ -5538,9 +5619,11 @@ class SessionAPI:
                     prompt_local,
                     user_lines or ["Нужная область не была отмечена."],
                     reference_lines or ["Правильная область не найдена."],
-                    user_label="Твоё действие",
-                    reference_label="Нужно было отметить",
+                    user_label="Твоё решение",
+                    reference_label="Референс",
                     note=explanation,
+                    user_items=user_items or None,
+                    reference_items=reference_items or None,
                 )
 
             if task_type == "draw":

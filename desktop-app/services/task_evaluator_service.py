@@ -756,7 +756,9 @@ class TaskEvaluatorService:
                 details={
                     'found_targets': found_targets,
                     'labels': labels_result,
-                    'level': 2
+                    'level': 2,
+                    'clicks': [{'x': click_x, 'y': click_y}],
+                    'user_input': user_input,
                 }
             )
         
@@ -851,7 +853,12 @@ class TaskEvaluatorService:
             message="❌ Неправильно! Посмотрите на правильные области (зеленые)",
             score=0.0,
             metric="distance",
-            details={'targets_count': len(targets), 'level': 1}
+            details={
+                'targets_count': len(targets),
+                'level': 1,
+                'clicks': [{'x': click_x, 'y': click_y}],
+                'user_input': user_input,
+            }
         )
     
     def _evaluate_multiple_clicks(self, user_input: Dict[str, Any],
@@ -910,6 +917,7 @@ class TaskEvaluatorService:
         # Проверяем каждый target на наличие попадания
         found_targets = set()
         targets_info = []
+        used_click_indices = set()
         
         for idx, target in enumerate(targets):
             target_shape = target.get('shape') or target.get('type')
@@ -946,6 +954,8 @@ class TaskEvaluatorService:
             
             # Проверяем все клики на попадание в этот target
             for click_idx, click in enumerate(clicks):
+                if click_idx in used_click_indices:
+                    continue
                 click_x = click['x']
                 click_y = click['y']
                 
@@ -956,6 +966,7 @@ class TaskEvaluatorService:
                                                 click.get('offset_y', 0.0)):
                         found = True
                         matched_click_idx = click_idx
+                        used_click_indices.add(click_idx)
                         break
                 elif target_shape == 'point':
                     target_tolerance = target.get('tolerance_px') or target.get('tolerancePx')
@@ -969,6 +980,7 @@ class TaskEvaluatorService:
                                               tolerance_px=target_tolerance):
                         found = True
                         matched_click_idx = click_idx
+                        used_click_indices.add(click_idx)
                         break
                 elif target_shape == 'freehand':
                     # НОВОЕ: проверка попадания клика на freehand-линию
@@ -985,6 +997,7 @@ class TaskEvaluatorService:
                                                   tolerance_px=target_tolerance):
                         found = True
                         matched_click_idx = click_idx
+                        used_click_indices.add(click_idx)
                         break
             
             if found:
@@ -1044,9 +1057,18 @@ class TaskEvaluatorService:
             
             if not user_labels and not labels_clicks:
                 if threshold_mode:
-                    msg = f"❌ Введите названия для найденных областей ({found_count}/{required_correct} требуется из {total_count})"
+                    msg = get_message(
+                        "click_labels_missing_threshold",
+                        found_count=found_count,
+                        required_correct=required_correct,
+                        total_count=total_count,
+                    )
                 else:
-                    msg = f"❌ Введите названия для найденных областей ({found_count}/{total_count})"
+                    msg = get_message(
+                        "click_labels_missing_all",
+                        found_count=found_count,
+                        total_count=total_count,
+                    )
                 return EvaluationResult(
                     success=False,
                     message=msg,
@@ -1138,6 +1160,9 @@ class TaskEvaluatorService:
                     'labels': labels_result,
                     'level': 2,
                     'failed_subtests': failed_subtests,
+                    'clicks': clicks,
+                    'labels_clicks': user_input.get('labels_clicks', []),
+                    'user_input': user_input,
                 }
             )
         
@@ -1152,7 +1177,7 @@ class TaskEvaluatorService:
         else:
             found_labels = [info['label'] for info in targets_info if info['found']]
             if threshold_mode:
-                message = get_message("click_fail_partial", 
+                message = get_message("click_fail_threshold", 
                                    found_count=found_count, required_correct=required_correct, 
                                    total_count=total_count)
             else:
@@ -1175,6 +1200,8 @@ class TaskEvaluatorService:
                 'threshold_mode': threshold_mode,
                 'level': 1,
                 'failed_subtests': failed_subtests,
+                'clicks': clicks,
+                'user_input': user_input,
             }
         )
     
@@ -1293,6 +1320,7 @@ class TaskEvaluatorService:
         clicks = user_input.get('clicks', [])
         found_targets = set()
         click_results = []
+        used_click_indices = set()
         
         for idx, target in enumerate(targets):
             target_shape = target.get('shape') or target.get('type')
@@ -1315,6 +1343,8 @@ class TaskEvaluatorService:
             
             # Проверяем все клики на попадание в этот target
             for click_idx, click in enumerate(clicks):
+                if click_idx in used_click_indices:
+                    continue
                 click_x = click['x']
                 click_y = click['y']
                 
@@ -1325,6 +1355,7 @@ class TaskEvaluatorService:
                                                 click.get('offset_y', 0.0)):
                         found = True
                         matched_click_idx = click_idx
+                        used_click_indices.add(click_idx)
                         break
                 elif target_shape == 'point':
                     target_tolerance = target.get('tolerance_px')
@@ -1341,6 +1372,7 @@ class TaskEvaluatorService:
                                               tolerance_px=target_tolerance):
                         found = True
                         matched_click_idx = click_idx
+                        used_click_indices.add(click_idx)
                         break
                 elif target_shape == 'freehand':
                     target_tolerance = target.get('tolerance_px')
@@ -1357,6 +1389,7 @@ class TaskEvaluatorService:
                                                   tolerance_px=target_tolerance):
                         found = True
                         matched_click_idx = click_idx
+                        used_click_indices.add(click_idx)
                         break
             
             if found:
@@ -1658,7 +1691,10 @@ class TaskEvaluatorService:
                 'lines_count': lines_count,
                 'total_lines': total_lines,
                 'labels': labels_result if requires_labels else None,
-                'level': 2 if requires_labels else 1
+                'level': 2 if requires_labels else 1,
+                'clicks': clicks,
+                'lines': user_lines,
+                'user_input': user_input,
             }
         )
     
@@ -2363,7 +2399,11 @@ class TaskEvaluatorService:
                         'total_targets': len(targets),
                         'stage': 'labels',
                         'error': 'labels_missing',
-                        'level': 3
+                        'level': 3,
+                        'polygons': user_input.get('polygons', []),
+                        'lines': user_input.get('lines', []),
+                        'clicks': user_input.get('clicks', []),
+                        'user_input': user_input,
                     }
                 )
 
@@ -2474,6 +2514,10 @@ class TaskEvaluatorService:
                 'total_lines_count': total_lines,
                 'level': 3,
                 'labels': labels_result if requires_labels else None,
+                'polygons': user_input.get('polygons', []),
+                'lines': user_input.get('lines', []),
+                'clicks': user_input.get('clicks', []),
+                'user_input': user_input,
                 'drawing': fallback_draw_details or {
                     'success': all_polygons_success and all_lines_success,
                     'message': "Контуры и линии проверены",

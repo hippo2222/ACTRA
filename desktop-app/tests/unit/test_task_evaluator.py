@@ -1932,6 +1932,64 @@ class TestDrawResolutionScaling(unittest.TestCase):
         self.assertAlmostEqual(small_score, large_score, delta=1.0)
         self.assertGreater(large_score, 90.0)
 
+    def test_evaluate_click_task_duplicate_clicks_do_not_satisfy_second_target(self):
+        """Проверка: два клика в одну мишень не могут закрыть вторую мишень (трактуются как ошибка/частичный ответ)."""
+        answer_key = {
+            'targets': [
+                {
+                    'shape': 'polygon',
+                    'points': [[10, 10], [30, 10], [30, 30], [10, 30]],
+                    'label': 'Печень'
+                },
+                {
+                    'shape': 'polygon',
+                    'points': [[70, 70], [90, 70], [90, 90], [70, 90]],
+                    'label': 'Селезенка'
+                }
+            ]
+        }
+        user_input = {
+            'clicks': [
+                {'x': 20, 'y': 20},  # Попадает в цель 0
+                {'x': 25, 'y': 25},  # Повторный клик в цель 0
+            ]
+        }
+        result = self.service.evaluate_click_task(user_input, answer_key)
+        self.assertFalse(result.success)
+        self.assertEqual(result.details.get('found_targets'), [0])
+        self.assertEqual(result.details.get('found_count'), 1)
+        self.assertEqual(result.details.get('total_targets'), 2)
+        self.assertAlmostEqual(result.score, 50.0)
+
+    def test_evaluate_click_task_threshold_failure_message(self):
+        """Проверка красивого сообщения при неудачном прохождении по порогу с частично найденными целями"""
+        targets = [
+            {'shape': 'point', 'coordinates': [10, 10], 'label': 'Правый желудочек'},
+            {'shape': 'point', 'coordinates': [20, 20], 'label': 'Верхняя полая вена'},
+            {'shape': 'point', 'coordinates': [30, 30], 'label': 'Легочная артерия'},
+            {'shape': 'point', 'coordinates': [40, 40], 'label': 'Левый желудочек'},
+            {'shape': 'point', 'coordinates': [50, 50], 'label': 'Восходящая аорта'},
+            {'shape': 'point', 'coordinates': [60, 60], 'label': 'Нисходящая аорта'},
+            {'shape': 'point', 'coordinates': [70, 70], 'label': 'Левое предсердие'},
+        ]
+        answer_key = {'targets': targets}
+        task_data = {'settings': {'success_threshold': 6, 'tolerancePx': 5}}
+        user_input = {
+            'clicks': [
+                {'x': 10, 'y': 10},
+                {'x': 20, 'y': 20},
+                {'x': 30, 'y': 30},
+                {'x': 40, 'y': 40},
+                {'x': 50, 'y': 50},
+            ]
+        }
+
+        result = self.service.evaluate_click_task(user_input, answer_key, task_data=task_data)
+        self.assertFalse(result.success)
+        self.assertNotIn("click_fail_partial", result.message)
+        self.assertIn("❌ Вы нашли 5 из 6 требуемых аннотаций (всего 7). Попробуйте еще раз!", result.message)
+        self.assertIn("Найдено: Правый желудочек, Верхняя полая вена, Легочная артерия, Левый желудочек, Восходящая аорта", result.message)
+
 if __name__ == '__main__':
     # Запуск всех тестов
     unittest.main(verbosity=2)
