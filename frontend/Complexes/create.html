@@ -3059,11 +3059,7 @@
                       </button>
                       <input id="theory-image-input" type="file" accept=".png,.jpg,.jpeg,.gif,.webp,.svg"
                         class="hidden" />
-                      <span class="theory-toolbar-sep"></span>
-                      <button id="theory-block-mode-toggle" type="button" role="switch" aria-checked="false" class="theory-toolbar-btn inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg border border-border-subtle" title="Режим разметки блоков теории" data-i18n-title="create.fmt_theory_blocks_mode">
-                        <span class="material-symbols-outlined text-[16px]">palette</span>
-                        <span data-i18n="create.theory_blocks_label">Блоки</span>
-                      </button>
+
                       <div id="theory-image-controls">
                         <span class="theory-toolbar-sep"></span>
                         <input id="theory-image-width-slider" type="range" min="10" max="100" value="100"
@@ -3111,8 +3107,7 @@
                         </button>
                       </div>
                     </div>
-                  </div>
-                  <!-- Блоки теории: ВЫШЕ редактора, появляется при активном режиме -->
+                  <!-- Блоки теории: ВЫШЕ редактора, видна всегда при наличии теории -->
                   <div id="theory-blocks-management-section" class="flex flex-col gap-2.5" hidden>
                     <div class="flex items-center justify-between gap-2">
                       <div class="flex items-center gap-1.5 min-w-0">
@@ -3120,10 +3115,16 @@
                         <h4 class="text-[11px] font-bold uppercase tracking-wider text-text-secondary whitespace-nowrap" data-i18n="create.theory_blocks_section_title">Блоки теории</h4>
                         <span id="theory-blocks-count-badge" class="cx-mini-pill inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold flex-shrink-0">0 блоков</span>
                       </div>
-                      <button id="theory-add-block-btn" type="button" class="btn-secondary h-7 px-2.5 text-xs inline-flex items-center gap-1 flex-shrink-0">
-                        <span class="material-symbols-outlined text-[14px]">add</span>
-                        <span data-i18n="create.add_block_btn">Новый блок</span>
-                      </button>
+                      <div class="flex items-center gap-1.5 flex-shrink-0">
+                        <button id="theory-block-mode-toggle" type="button" role="switch" aria-checked="false" class="btn-secondary h-7 px-2.5 text-xs inline-flex items-center gap-1 flex-shrink-0" title="Режим разметки блоков теории" data-i18n-title="create.fmt_theory_blocks_mode">
+                          <span class="material-symbols-outlined text-[15px]">palette</span>
+                          <span data-i18n="create.theory_blocks_label">Разметка</span>
+                        </button>
+                        <button id="theory-add-block-btn" type="button" class="btn-secondary h-7 px-2.5 text-xs inline-flex items-center gap-1 flex-shrink-0">
+                          <span class="material-symbols-outlined text-[14px]">add</span>
+                          <span data-i18n="create.add_block_btn">Новый блок</span>
+                        </button>
+                      </div>
                     </div>
                     <!-- Inline-форма создания блока (скрыта по умолчанию) -->
                     <div id="theory-block-create-form-row" class="hidden">
@@ -3153,6 +3154,7 @@
                     class="w-full min-h-[240px] rounded-xl border border-border-subtle bg-surface-1 p-4 text-sm text-text-main focus:outline-none focus:ring-2 focus:ring-primary-light"
                     contenteditable="true"></div>
                   <p class="text-xs text-text-muted" data-i18n="create.theory_storage_info">Формат хранения: Delta JSON. Изображения сохраняются вместе с файлами комплексов.</p>
+                  </div>
                 </div>
               </div>
           </div>
@@ -5420,51 +5422,7 @@
       const titleWrap = document.getElementById('theory-title-wrap');
       const titleEl = document.getElementById('theory-title');
       const toolbarRow = document.getElementById('theory-toolbar-row');
-      const editorEl = document.getElementById('theory-editor');
-      const storageNoteEl = document.querySelector('#theory-editor + p.text-xs.text-text-muted');
-      const imageBtn = document.getElementById('theory-image-btn');
-      const editable = isTheoryEditingEnabled();
-      const mode = String(state.theory?.mode || 'none');
-      const showEditorSurface = mode === 'new' || mode === 'link';
-
-      if (wrap) {
-        const hideWrap = !showEditorSurface;
-        wrap.hidden = hideWrap;
-        wrap.style.display = hideWrap ? 'none' : 'flex';
-      }
-      if (titleWrap) {
-        titleWrap.hidden = !editable;
-        titleWrap.style.display = editable ? 'flex' : 'none';
-      }
-      if (toolbarRow) {
-        toolbarRow.hidden = !editable;
-        toolbarRow.style.display = editable ? 'flex' : 'none';
-      }
-      if (titleEl) {
-        titleEl.readOnly = !editable;
-        titleEl.classList.toggle('opacity-80', !editable);
-      }
-      if (editorEl) {
-        editorEl.setAttribute('contenteditable', editable ? 'true' : 'false');
-        editorEl.classList.toggle('theory-editor--readonly', !editable);
-        editorEl.hidden = !showEditorSurface;
-        editorEl.style.display = showEditorSurface ? 'block' : 'none';
-      }
-      if (storageNoteEl) {
-        storageNoteEl.hidden = !showEditorSurface;
-        storageNoteEl.style.display = showEditorSurface ? '' : 'none';
-      }
-      if (imageBtn) {
-        imageBtn.disabled = !editable;
-        imageBtn.classList.toggle('opacity-60', !editable);
-      }
-    }
-
-    function updateTheoryEditorInteractivity() {
-      const wrap = document.getElementById('theory-editor-wrap');
-      const titleWrap = document.getElementById('theory-title-wrap');
-      const titleEl = document.getElementById('theory-title');
-      const toolbarRow = document.getElementById('theory-toolbar-row');
+      const blocksSection = document.getElementById('theory-blocks-management-section');
       const editorEl = document.getElementById('theory-editor');
       const storageNoteEl = document.querySelector('#theory-editor + p.text-xs.text-text-muted');
       const imageBtn = document.getElementById('theory-image-btn');
@@ -5484,6 +5442,10 @@
       if (toolbarRow) {
         toolbarRow.hidden = !editable;
         toolbarRow.style.display = editable ? 'flex' : 'none';
+      }
+      if (blocksSection) {
+        blocksSection.hidden = !showEditorSurface;
+        blocksSection.style.display = showEditorSurface ? 'flex' : 'none';
       }
       if (titleEl) {
         titleEl.readOnly = !editable;
@@ -7708,13 +7670,9 @@
     function toggleTheoryBlockMode(forceState) {
       state.theoryBlockModeActive = forceState !== undefined ? !!forceState : !state.theoryBlockModeActive;
       const btn = document.getElementById("theory-block-mode-toggle");
-      const section = document.getElementById("theory-blocks-management-section");
       if (btn) {
         btn.classList.toggle("is-active", state.theoryBlockModeActive);
         btn.setAttribute("aria-checked", state.theoryBlockModeActive ? "true" : "false");
-      }
-      if (section) {
-        section.hidden = !state.theoryBlockModeActive;
       }
       if (!state.theoryBlockModeActive) {
         hideTheoryBlockFloatingPanel();
@@ -7756,6 +7714,7 @@
       });
 
       if (!state.theoryBlocks || Object.keys(state.theoryBlocks).length === 0) return;
+      if (!state.theoryBlockModeActive) return;
       const currentTheoryId = String(state.theory?.theoryId || state.complexTheoryContext?.theoryLink?.theory_id || "default_theory").trim();
       const ranges = Array.isArray(state.theoryBlockRanges) ? state.theoryBlockRanges : [];
 
@@ -7961,6 +7920,15 @@
           line_end: lineRange.end,
         });
         window.getSelection()?.removeAllRanges();
+      }
+
+      if (!state.theoryBlockModeActive) {
+        state.theoryBlockModeActive = true;
+        const btn = document.getElementById("theory-block-mode-toggle");
+        if (btn) {
+          btn.classList.add("is-active");
+          btn.setAttribute("aria-checked", "true");
+        }
       }
 
       markDirty();
@@ -8971,6 +8939,8 @@
       renderTheoryContextActions();
       updateTheoryPreviewPresentation();
       refreshInheritedTheoryPreviewData();
+      renderTheoryBlocksManagementSection();
+      renderTheoryBlockHighlightsInEditor();
       renderBuilderQualityPreview();
     }
 
@@ -11000,6 +10970,13 @@
       state.theoryBlockRanges = Array.isArray(complex?.theory_block_ranges) ? [ ...complex.theory_block_ranges ] : [];
       state.theoryBlockVersions = (complex && typeof complex.theory_block_versions === "object" && complex.theory_block_versions) ? { ...complex.theory_block_versions } : {};
       state.taskBlockMappings = (complex && typeof complex.task_block_mappings === "object" && complex.task_block_mappings) ? { ...complex.task_block_mappings } : {};
+      const hasBlocks = Object.keys(state.theoryBlocks).length > 0;
+      state.theoryBlockModeActive = hasBlocks;
+      const toggleBtn = document.getElementById("theory-block-mode-toggle");
+      if (toggleBtn) {
+        toggleBtn.classList.toggle("is-active", state.theoryBlockModeActive);
+        toggleBtn.setAttribute("aria-checked", state.theoryBlockModeActive ? "true" : "false");
+      }
       renderTheoryBlocksManagementSection();
       renderTheoryBlockHighlightsInEditor();
 
