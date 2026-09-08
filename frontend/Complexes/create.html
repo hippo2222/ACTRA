@@ -831,25 +831,45 @@
       width: max-content;
     }
 
+    /* Header action buttons in Theory Blocks */
+    .theory-block-action-btn {
+      height: 1.875rem !important;
+      min-height: 1.875rem !important;
+      max-height: 1.875rem !important;
+      padding: 0 0.65rem !important;
+      font-size: 0.75rem !important;
+      font-weight: 600 !important;
+      border-radius: 0.5rem !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 0.35rem !important;
+      line-height: 1 !important;
+      white-space: nowrap !important;
+      border: 1px solid var(--color-border-subtle, #cbd5e1) !important;
+      background: var(--color-surface-1, #ffffff) !important;
+      color: var(--color-text-main, #0f172a) !important;
+      cursor: pointer;
+      box-sizing: border-box !important;
+      transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+    }
+    .theory-block-action-btn:hover {
+      background: var(--color-bg-secondary, #f8fafc) !important;
+      border-color: var(--color-border-strong, #94a3b8) !important;
+    }
     #theory-block-mode-toggle.is-active {
-      background-color: var(--color-primary, #6366f1);
-      color: #ffffff;
-      border-color: var(--color-primary, #6366f1);
+      background-color: var(--color-primary, #6366f1) !important;
+      color: #ffffff !important;
+      border-color: var(--color-primary, #6366f1) !important;
     }
-    #theory-block-mode-toggle {
-      width: auto !important;
-      min-width: 2rem;
-      height: 2rem;
-      padding: 0 0.625rem;
-      font-size: 0.75rem;
-      font-weight: 600;
-      gap: 0.35rem;
-      white-space: nowrap;
-      transition: background-color 200ms ease, color 200ms ease, border-color 200ms ease;
-    }
-    #theory-block-mode-toggle .material-symbols-outlined {
-      font-size: 1rem;
-      line-height: 1;
+    .theory-block-action-btn .material-symbols-outlined {
+      font-size: 1rem !important;
+      line-height: 1 !important;
+      width: 1rem !important;
+      height: 1rem !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
       flex-shrink: 0;
     }
     #theory-blocks-list {
@@ -915,11 +935,12 @@
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      padding: 0.55rem 0.75rem;
+      padding: 0.375rem 0.5rem 0.375rem 0.75rem;
       border: 1.5px solid var(--color-primary, #6366f1);
       border-radius: 0.75rem;
       background: color-mix(in srgb, var(--color-primary, #6366f1) 6%, var(--color-surface-1, #fff));
       animation: theory-block-form-in 150ms ease-out;
+      box-sizing: border-box;
     }
     @keyframes theory-block-form-in {
       from { opacity: 0; transform: translateY(-4px); }
@@ -928,16 +949,95 @@
     .theory-block-create-form__input {
       flex: 1 1 0;
       min-width: 0;
-      border: none;
-      outline: none;
-      background: transparent;
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--color-text-main);
+      height: 1.875rem !important;
+      border: none !important;
+      outline: none !important;
+      box-shadow: none !important;
+      background: transparent !important;
+      padding: 0 0.25rem !important;
+      font-size: 0.8125rem !important;
+      font-weight: 600 !important;
+      color: var(--color-text-main) !important;
+      line-height: 1.875rem !important;
+      margin: 0 !important;
+    }
+    .theory-block-create-form__input:focus {
+      outline: none !important;
+      border: none !important;
+      box-shadow: none !important;
     }
     .theory-block-create-form__input::placeholder {
       color: var(--color-text-secondary);
       font-weight: 400;
+    }
+    .theory-block-create-form__confirm-btn {
+      height: 1.875rem !important;
+      min-height: 1.875rem !important;
+      max-height: 1.875rem !important;
+      padding: 0 0.75rem !important;
+      font-size: 0.75rem !important;
+      font-weight: 600 !important;
+      border-radius: 0.5rem !important;
+      background: var(--color-primary, #6366f1) !important;
+      color: #ffffff !important;
+      border: 1px solid var(--color-primary, #6366f1) !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 0.35rem !important;
+      flex-shrink: 0;
+      cursor: pointer;
+      line-height: 1 !important;
+      box-sizing: border-box !important;
+      transition: filter 150ms ease;
+    }
+    .theory-block-create-form__confirm-btn:hover {
+      filter: brightness(1.08);
+    }
+    .theory-block-create-form__confirm-btn .material-symbols-outlined {
+      font-size: 0.9375rem !important;
+      line-height: 1 !important;
+      width: 0.9375rem !important;
+      height: 0.9375rem !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+    }
+    .theory-block-create-form__cancel-btn {
+      width: 1.875rem !important;
+      height: 1.875rem !important;
+      min-width: 1.875rem !important;
+      max-width: 1.875rem !important;
+      min-height: 1.875rem !important;
+      max-height: 1.875rem !important;
+      padding: 0 !important;
+      border-radius: 0.5rem !important;
+      background: transparent !important;
+      color: var(--color-text-secondary, #64748b) !important;
+      border: 1px solid var(--color-border-normal, #cbd5e1) !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      flex-shrink: 0;
+      cursor: pointer;
+      line-height: 1 !important;
+      box-sizing: border-box !important;
+      transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
+    }
+    .theory-block-create-form__cancel-btn:hover {
+      background: var(--color-bg-secondary, #f1f5f9) !important;
+      border-color: var(--color-border-strong, #94a3b8) !important;
+      color: var(--color-text-main, #0f172a) !important;
+    }
+    .theory-block-create-form__cancel-btn .material-symbols-outlined {
+      font-size: 1rem !important;
+      line-height: 1 !important;
+      width: 1rem !important;
+      height: 1rem !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      margin: 0 !important;
     }
     /* Inline rename input inside card */
     .theory-block-label-input {
@@ -3116,12 +3216,12 @@
                         <span id="theory-blocks-count-badge" class="cx-mini-pill inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold flex-shrink-0">0 блоков</span>
                       </div>
                       <div class="flex items-center gap-1.5 flex-shrink-0">
-                        <button id="theory-block-mode-toggle" type="button" role="switch" aria-checked="false" class="btn-secondary h-7 px-2.5 text-xs inline-flex items-center gap-1 flex-shrink-0" title="Режим разметки блоков теории" data-i18n-title="create.fmt_theory_blocks_mode">
+                        <button id="theory-block-mode-toggle" type="button" role="switch" aria-checked="false" class="theory-block-action-btn" title="Режим разметки блоков теории" data-i18n-title="create.fmt_theory_blocks_mode">
                           <span class="material-symbols-outlined text-[15px]">palette</span>
                           <span data-i18n="create.theory_blocks_label">Разметка</span>
                         </button>
-                        <button id="theory-add-block-btn" type="button" class="btn-secondary h-7 px-2.5 text-xs inline-flex items-center gap-1 flex-shrink-0">
-                          <span class="material-symbols-outlined text-[14px]">add</span>
+                        <button id="theory-add-block-btn" type="button" class="theory-block-action-btn" title="Создать новый блок" data-i18n-title="create.add_block_btn">
+                          <span class="material-symbols-outlined text-[15px]">add</span>
                           <span data-i18n="create.add_block_btn">Новый блок</span>
                         </button>
                       </div>
@@ -3129,20 +3229,20 @@
                     <!-- Inline-форма создания блока (скрыта по умолчанию) -->
                     <div id="theory-block-create-form-row" class="hidden">
                       <div class="theory-block-create-form">
-                        <span class="material-symbols-outlined text-[15px] text-primary flex-shrink-0">label</span>
+                        <span class="material-symbols-outlined text-[16px] text-primary flex-shrink-0 select-none">label</span>
                         <input id="theory-block-name-input" type="text"
                           class="theory-block-create-form__input"
                           placeholder="Название блока..."
                           data-i18n-placeholder="create.block_name_placeholder"
                           maxlength="60" autocomplete="off" />
                         <button id="theory-block-create-confirm-btn" type="button"
-                          class="btn-primary h-7 px-3 text-xs inline-flex items-center gap-1 flex-shrink-0">
-                          <span class="material-symbols-outlined text-[13px]">check</span>
+                          class="theory-block-create-form__confirm-btn" title="Создать блок">
+                          <span class="material-symbols-outlined text-[15px]">check</span>
                           <span data-i18n="create.block_create_confirm">Создать</span>
                         </button>
                         <button id="theory-block-create-cancel-btn" type="button"
-                          class="btn-secondary h-7 px-2 text-xs flex-shrink-0" aria-label="Отмена">
-                          <span class="material-symbols-outlined text-[14px]">close</span>
+                          class="theory-block-create-form__cancel-btn" title="Отмена" aria-label="Отмена">
+                          <span class="material-symbols-outlined text-[16px]">close</span>
                         </button>
                       </div>
                     </div>
