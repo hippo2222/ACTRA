@@ -8332,16 +8332,16 @@
           </div>
           <div class="flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-border-subtle">
             <span class="text-[11px] font-semibold text-text-secondary mr-1">${wt("create.bind_tasks_label", "Привязать задания:")}</span>
+            <button type="button" class="btn-secondary h-6 px-2 text-[11px] font-semibold inline-flex items-center gap-1 rounded-full add-task-link-btn transition-colors" data-block-id="${bId}" title="${wt("create.bind_task_btn", "Привязать задания")}">
+              <span class="material-symbols-outlined text-[12px]">add</span>
+              <span>${wt("create.bind_task_btn", "Привязать")}</span>
+            </button>
             ${boundTasks.map((t) => `
               <span class="cx-mini-pill inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium bg-surface-2 rounded-full border border-border-subtle">
                 <span class="truncate max-w-[140px]">${escapeTheoryHtml(t.label || t.ref)}</span>
                 <button type="button" data-unbind-task="${escapeTheoryHtml(t.ref)}" class="text-text-muted hover:text-danger ml-0.5 flex-shrink-0" aria-label="Отвязать">✕</button>
               </span>
             `).join("")}
-            <button type="button" class="btn-secondary h-6 px-2 text-[11px] font-semibold inline-flex items-center gap-1 rounded-full add-task-link-btn transition-colors" data-block-id="${bId}" title="${wt("create.bind_task_btn", "Привязать задания")}">
-              <span class="material-symbols-outlined text-[12px]">add</span>
-              <span>${wt("create.bind_task_btn", "Привязать")}</span>
-            </button>
           </div>
         `;
 
