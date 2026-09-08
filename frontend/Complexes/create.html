@@ -837,7 +837,26 @@
       border-color: var(--color-primary, #6366f1);
     }
     #theory-block-mode-toggle {
-      transition: background-color 250ms ease-in-out, color 250ms ease-in-out, border-color 250ms ease-in-out;
+      width: auto !important;
+      min-width: 2rem;
+      height: 2rem;
+      padding: 0 0.625rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      gap: 0.35rem;
+      white-space: nowrap;
+      transition: background-color 200ms ease, color 200ms ease, border-color 200ms ease;
+    }
+    #theory-block-mode-toggle .material-symbols-outlined {
+      font-size: 1rem;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    #theory-blocks-list {
+      max-height: 220px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      padding-right: 0.25rem;
     }
     .theory-block-floating-panel {
       position: fixed;
@@ -884,20 +903,79 @@
       border: 1px solid var(--color-border-subtle, #e2e8f0);
       background: var(--color-surface-1, #ffffff);
       border-radius: 0.875rem;
-      padding: 0.875rem 1rem;
+      padding: 0.75rem 0.875rem;
       transition: border-color 150ms ease, box-shadow 150ms ease;
     }
     .theory-block-card:hover {
       border-color: var(--color-border-strong, #cbd5e1);
       box-shadow: 0 2px 8px rgba(0,0,0,0.04);
     }
+    /* Inline block creation form */
+    .theory-block-create-form {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.55rem 0.75rem;
+      border: 1.5px solid var(--color-primary, #6366f1);
+      border-radius: 0.75rem;
+      background: color-mix(in srgb, var(--color-primary, #6366f1) 6%, var(--color-surface-1, #fff));
+      animation: theory-block-form-in 150ms ease-out;
+    }
+    @keyframes theory-block-form-in {
+      from { opacity: 0; transform: translateY(-4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .theory-block-create-form__input {
+      flex: 1 1 0;
+      min-width: 0;
+      border: none;
+      outline: none;
+      background: transparent;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--color-text-main);
+    }
+    .theory-block-create-form__input::placeholder {
+      color: var(--color-text-secondary);
+      font-weight: 400;
+    }
+    /* Inline rename input inside card */
+    .theory-block-label-input {
+      border: none;
+      outline: none;
+      background: color-mix(in srgb, var(--color-primary, #6366f1) 8%, transparent);
+      border-radius: 0.3rem;
+      padding: 0.1rem 0.3rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--color-text-main);
+      max-width: 200px;
+    }
+    /* Blocks management panel (above editor) */
+    #theory-blocks-management-section {
+      border-radius: 0.875rem;
+      border: 1px solid color-mix(in srgb, var(--color-primary, #6366f1) 30%, var(--color-border-subtle, #e2e8f0));
+      background: color-mix(in srgb, var(--color-primary, #6366f1) 5%, var(--color-surface-1, #fff));
+      padding: 0.65rem 0.875rem 0.75rem;
+      animation: theory-blocks-section-in 180ms ease-out;
+    }
+    #theory-blocks-management-section[hidden] {
+      display: none !important;
+    }
+    @keyframes theory-blocks-section-in {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
     @media (prefers-reduced-motion: reduce) {
       #theory-block-mode-toggle,
       .theory-block-floating-panel,
       .theory-block-tag-btn,
       .theory-editor-line-highlighted,
-      .theory-block-card {
+      .theory-block-card,
+      .theory-block-create-form,
+      #theory-blocks-management-section {
         transition: none !important;
+        animation: none !important;
       }
     }
 
@@ -2981,6 +3059,11 @@
                       </button>
                       <input id="theory-image-input" type="file" accept=".png,.jpg,.jpeg,.gif,.webp,.svg"
                         class="hidden" />
+                      <span class="theory-toolbar-sep"></span>
+                      <button id="theory-block-mode-toggle" type="button" role="switch" aria-checked="false" class="theory-toolbar-btn inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg border border-border-subtle" title="Режим разметки блоков теории" data-i18n-title="create.fmt_theory_blocks_mode">
+                        <span class="material-symbols-outlined text-[16px]">palette</span>
+                        <span data-i18n="create.theory_blocks_label">Блоки</span>
+                      </button>
                       <div id="theory-image-controls">
                         <span class="theory-toolbar-sep"></span>
                         <input id="theory-image-width-slider" type="range" min="10" max="100" value="100"
@@ -3026,34 +3109,50 @@
                           title="Отразить по горизонтали" data-i18n-title="create.fmt_flip_h">
                           <span class="material-symbols-outlined">flip</span>
                         </button>
-                        <span class="theory-toolbar-sep"></span>
-                        <button id="theory-block-mode-toggle" type="button" role="switch" aria-checked="false" class="theory-toolbar-btn inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg border border-border-subtle" title="Режим разметки блоков теории" data-i18n-title="create.fmt_theory_blocks_mode">
-                          <span class="material-symbols-outlined text-[16px]">palette</span>
-                          <span data-i18n="create.theory_blocks_label">Блоки</span>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- Блоки теории: ВЫШЕ редактора, появляется при активном режиме -->
+                  <div id="theory-blocks-management-section" class="flex flex-col gap-2.5" hidden>
+                    <div class="flex items-center justify-between gap-2">
+                      <div class="flex items-center gap-1.5 min-w-0">
+                        <span class="material-symbols-outlined text-[16px] text-primary flex-shrink-0">layers</span>
+                        <h4 class="text-[11px] font-bold uppercase tracking-wider text-text-secondary whitespace-nowrap" data-i18n="create.theory_blocks_section_title">Блоки теории</h4>
+                        <span id="theory-blocks-count-badge" class="cx-mini-pill inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold flex-shrink-0">0 блоков</span>
+                      </div>
+                      <button id="theory-add-block-btn" type="button" class="btn-secondary h-7 px-2.5 text-xs inline-flex items-center gap-1 flex-shrink-0">
+                        <span class="material-symbols-outlined text-[14px]">add</span>
+                        <span data-i18n="create.add_block_btn">Новый блок</span>
+                      </button>
+                    </div>
+                    <!-- Inline-форма создания блока (скрыта по умолчанию) -->
+                    <div id="theory-block-create-form-row" class="hidden">
+                      <div class="theory-block-create-form">
+                        <span class="material-symbols-outlined text-[15px] text-primary flex-shrink-0">label</span>
+                        <input id="theory-block-name-input" type="text"
+                          class="theory-block-create-form__input"
+                          placeholder="Название блока..."
+                          data-i18n-placeholder="create.block_name_placeholder"
+                          maxlength="60" autocomplete="off" />
+                        <button id="theory-block-create-confirm-btn" type="button"
+                          class="btn-primary h-7 px-3 text-xs inline-flex items-center gap-1 flex-shrink-0">
+                          <span class="material-symbols-outlined text-[13px]">check</span>
+                          <span data-i18n="create.block_create_confirm">Создать</span>
+                        </button>
+                        <button id="theory-block-create-cancel-btn" type="button"
+                          class="btn-secondary h-7 px-2 text-xs flex-shrink-0" aria-label="Отмена">
+                          <span class="material-symbols-outlined text-[14px]">close</span>
                         </button>
                       </div>
+                    </div>
+                    <div id="theory-blocks-list" class="flex flex-col gap-2">
+                      <p class="text-xs text-text-muted" data-i18n="create.no_theory_blocks_yet">Блоки пока не созданы. Выделите текст в теории или нажмите «Новый блок».</p>
                     </div>
                   </div>
                   <div id="theory-editor"
                     class="w-full min-h-[240px] rounded-xl border border-border-subtle bg-surface-1 p-4 text-sm text-text-main focus:outline-none focus:ring-2 focus:ring-primary-light"
                     contenteditable="true"></div>
                   <p class="text-xs text-text-muted" data-i18n="create.theory_storage_info">Формат хранения: Delta JSON. Изображения сохраняются вместе с файлами комплексов.</p>
-                  <div id="theory-blocks-management-section" class="flex flex-col gap-3 pt-3 border-t border-border-subtle" hidden>
-                    <div class="flex items-center justify-between">
-                      <div class="flex items-center gap-2">
-                        <span class="material-symbols-outlined text-[18px] text-primary">layers</span>
-                        <h4 class="text-xs font-bold uppercase tracking-wider text-text-secondary" data-i18n="create.theory_blocks_section_title">Блоки теории и связь с заданиями</h4>
-                        <span id="theory-blocks-count-badge" class="cx-mini-pill inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold">0 блоков</span>
-                      </div>
-                      <button id="theory-add-block-btn" type="button" class="btn-secondary h-8 px-3 text-xs inline-flex items-center gap-1">
-                        <span class="material-symbols-outlined text-[16px]">add</span>
-                        <span data-i18n="create.add_block_btn">Новый блок</span>
-                      </button>
-                    </div>
-                    <div id="theory-blocks-list" class="flex flex-col gap-2.5">
-                      <p class="text-xs text-text-muted" data-i18n="create.no_theory_blocks_yet">Блоки пока не созданы. Выделите текст в теории выше или нажмите «Новый блок».</p>
-                    </div>
-                  </div>
                 </div>
               </div>
           </div>
@@ -7702,7 +7801,7 @@
         chip.style.backgroundColor = blk.color || "hsla(210, 60%, 70%, 0.25)";
         chip.style.borderColor = blk.color_border || "hsla(210, 70%, 50%, 0.8)";
         chip.innerHTML = `
-          <span class="w-2.5 h-2.5 rounded-full inline-block" style="background:${blk.color_border || blk.color}"></span>
+          <span class="w-2.5 h-2.5 rounded-full inline-block flex-shrink-0" style="background:${blk.color_border || blk.color}"></span>
           <span class="truncate max-w-[120px]">${escapeTheoryHtml(blk.label || bId)}</span>
         `;
         chip.onclick = (e) => {
@@ -7713,8 +7812,17 @@
         chipsContainer.appendChild(chip);
       });
 
-      panel.style.left = `${Math.max(10, Math.min(window.innerWidth - 320, rect.left + window.scrollX))}px`;
-      panel.style.top = `${Math.max(10, rect.top + window.scrollY - 44)}px`;
+      // position:fixed → координаты viewport напрямую, без window.scroll*
+      const panelW = Math.min(460, window.innerWidth - 16);
+      const left = Math.max(8, Math.min(window.innerWidth - panelW - 8, rect.left));
+      let top = rect.top - 48;
+      if (top < 10) {
+        top = Math.min(window.innerHeight - 56, rect.bottom + 8);
+      } else if (top > window.innerHeight - 56) {
+        top = Math.max(10, window.innerHeight - 56);
+      }
+      panel.style.left = `${left}px`;
+      panel.style.top = `${top}px`;
       panel.classList.add("is-visible");
     }
 
@@ -7723,23 +7831,28 @@
       if (panel) panel.classList.remove("is-visible");
     }
 
+    let _theorySelectionChangeTimer = 0;
     function handleTheoryEditorSelectionChange() {
-      if (!state.theoryBlockModeActive) return;
-      const selection = window.getSelection();
-      if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
-        hideTheoryBlockFloatingPanel();
-        return;
-      }
-      const range = selection.getRangeAt(0);
-      const editor = document.getElementById("theory-editor");
-      if (!editor || !editor.contains(range.commonAncestorContainer)) {
-        hideTheoryBlockFloatingPanel();
-        return;
-      }
-      const rect = range.getBoundingClientRect();
-      if (rect.width > 0 && rect.height > 0) {
-        showTheoryBlockFloatingPanel(rect);
-      }
+      // debounce 80ms — избегаем race condition когда selection ещё не финализирован
+      clearTimeout(_theorySelectionChangeTimer);
+      _theorySelectionChangeTimer = setTimeout(() => {
+        if (!state.theoryBlockModeActive) return;
+        const selection = window.getSelection();
+        if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
+          hideTheoryBlockFloatingPanel();
+          return;
+        }
+        const range = selection.getRangeAt(0);
+        const editor = document.getElementById("theory-editor");
+        if (!editor || !editor.contains(range.commonAncestorContainer)) {
+          hideTheoryBlockFloatingPanel();
+          return;
+        }
+        const rect = range.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+          showTheoryBlockFloatingPanel(rect);
+        }
+      }, 80);
     }
 
     function getSelectedTheoryLineRange() {
@@ -7804,12 +7917,29 @@
       renderTheoryBlockHighlightsInEditor();
     }
 
+    // Открывает inline-форму создания блока (без prompt)
     function createNewTheoryBlockPrompt() {
+      const formRow = document.getElementById("theory-block-create-form-row");
+      const nameInput = document.getElementById("theory-block-name-input");
+      if (!formRow || !nameInput) return null;
+
+      // Вычисляем дефолтное имя
       const blockCount = Object.keys(state.theoryBlocks || {}).length;
-      const defaultName = `Блок ${blockCount + 1}`;
-      const name = prompt(wt("create.enter_block_name", "Введите название нового блока теории:"), defaultName);
+      nameInput.value = wt("create.block_default_name", `Блок ${blockCount + 1}`);
+      formRow.classList.remove("hidden");
+      nameInput.focus();
+      nameInput.select();
+
+      // Скрываем floating panel если была видна
+      hideTheoryBlockFloatingPanel();
+      return null; // фактическое создание — в _commitNewTheoryBlock
+    }
+
+    // Фактически создаёт блок по имени (вызывается из inline-формы)
+    function _commitNewTheoryBlock(name, pendingLineRange) {
       if (!name || !name.trim()) return null;
 
+      const blockCount = Object.keys(state.theoryBlocks || {}).length;
       const blockId = `blk_${Date.now().toString(36)}_${Math.random().toString(36).substr(2, 4)}`;
       const colorScheme = generateTheoryBlockColor(blockCount);
 
@@ -7820,8 +7950,8 @@
         color_border: colorScheme.color_border,
       };
 
-      const lineRange = getSelectedTheoryLineRange();
-      if (lineRange && state.theoryBlockModeActive) {
+      const lineRange = pendingLineRange || (state.theoryBlockModeActive ? getSelectedTheoryLineRange() : null);
+      if (lineRange) {
         const currentTheoryId = String(state.theory?.theoryId || state.complexTheoryContext?.theoryLink?.theory_id || "th_main").trim();
         if (!state.theoryBlockRanges) state.theoryBlockRanges = [];
         state.theoryBlockRanges.push({
@@ -7833,7 +7963,6 @@
         window.getSelection()?.removeAllRanges();
       }
 
-      hideTheoryBlockFloatingPanel();
       markDirty();
       renderTheoryBlocksManagementSection();
       renderTheoryBlockHighlightsInEditor();
@@ -7859,6 +7988,23 @@
       markDirty();
       renderTheoryBlocksManagementSection();
       renderTheoryBlockHighlightsInEditor();
+    }
+
+    async function deleteTheoryBlockWithConfirm(blockId, label) {
+      const blkLabel = label || (state.theoryBlocks?.[blockId]?.label) || blockId;
+      if (window.NotificationUI && typeof window.NotificationUI.confirm === "function") {
+        const ok = await window.NotificationUI.confirm({
+          title: wt("create.delete_block_title", "Удалить блок?"),
+          message: wt("create.delete_block_confirm_msg", `Блок «${blkLabel}» и все его диапазоны будут удалены. Это действие нельзя отменить.`),
+          confirmText: wt("create.delete_block_yes", "Удалить"),
+          cancelText: wt("create.delete_block_no", "Отмена"),
+          variant: "warning",
+        });
+        if (ok) deleteTheoryBlock(blockId);
+      } else {
+        // Fallback: inline mini-confirm внутри карточки — реализовано в renderTheoryBlocksManagementSection
+        deleteTheoryBlock(blockId);
+      }
     }
 
     function toggleTaskInTheoryBlock(blockId, taskRef) {
@@ -7906,35 +8052,38 @@
         });
 
         const card = document.createElement("div");
-        card.className = "theory-block-card flex flex-col gap-2.5";
+        card.className = "theory-block-card flex flex-col gap-2";
         card.innerHTML = `
           <div class="flex items-center justify-between gap-2">
-            <div class="flex items-center gap-2 min-w-0">
-              <span class="w-3.5 h-3.5 rounded-full flex-shrink-0" style="background:${blk.color_border || blk.color}"></span>
-              <span class="text-xs font-bold text-text-main truncate">${escapeTheoryHtml(blk.label || bId)}</span>
-              <span class="text-[11px] text-text-muted">(${ranges.length} ${ranges.length === 1 ? "фрагмент" : "фрагментов"})</span>
+            <div class="flex items-center gap-2 min-w-0 flex-1">
+              <span class="w-3 h-3 rounded-full flex-shrink-0" style="background:${blk.color_border || blk.color}"></span>
+              <span class="block-label-display text-xs font-bold text-text-main truncate">${escapeTheoryHtml(blk.label || bId)}</span>
+              <input type="text" class="block-label-edit theory-block-label-input hidden" value="${escapeTheoryHtml(blk.label || bId)}" maxlength="60" autocomplete="off" />
+              <span class="text-[11px] text-text-muted flex-shrink-0">(${ranges.length} ${ranges.length === 1 ? "фрагмент" : "фрагментов"})</span>
             </div>
             <div class="flex items-center gap-1 flex-shrink-0">
-              <button type="button" class="btn-secondary h-7 px-2 text-xs edit-block-btn" title="Переименовать блок">
+              <button type="button" class="btn-secondary h-7 w-7 p-0 flex items-center justify-center edit-block-btn"
+                title="${wt("create.rename_block_title", "Переименовать")}">
                 <span class="material-symbols-outlined text-[14px]">edit</span>
               </button>
-              <button type="button" class="btn-secondary btn-danger h-7 px-2 text-xs delete-block-btn" title="Удалить блок">
+              <button type="button" class="btn-secondary btn-danger h-7 w-7 p-0 flex items-center justify-center delete-block-btn"
+                title="${wt("create.delete_block_title", "Удалить блок")}">
                 <span class="material-symbols-outlined text-[14px]">delete</span>
               </button>
             </div>
           </div>
-          <div class="flex flex-wrap items-center gap-1.5 pt-1 border-t border-border-subtle">
-            <span class="text-[11px] font-semibold text-text-secondary mr-1">Привязанные задания:</span>
+          <div class="flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-border-subtle">
+            <span class="text-[11px] font-semibold text-text-secondary mr-1">${wt("create.bind_tasks_label", "Привязать задания:")}</span>
             ${boundTasks.map((t) => `
               <span class="cx-mini-pill inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium bg-surface-2 rounded-full border border-border-subtle">
                 <span class="truncate max-w-[140px]">${escapeTheoryHtml(t.label || t.ref)}</span>
-                <button type="button" data-unbind-task="${escapeTheoryHtml(t.ref)}" class="text-text-muted hover:text-danger ml-0.5">✕</button>
+                <button type="button" data-unbind-task="${escapeTheoryHtml(t.ref)}" class="text-text-muted hover:text-danger ml-0.5 flex-shrink-0" aria-label="Отвязать">✕</button>
               </span>
             `).join("")}
             <div class="relative inline-block">
               <button type="button" class="btn-secondary h-6 px-2 text-[11px] font-semibold inline-flex items-center gap-1 rounded-full add-task-link-btn">
                 <span class="material-symbols-outlined text-[12px]">add</span>
-                <span>Привязать</span>
+                <span>${wt("create.bind_task_btn", "Привязать")}</span>
               </button>
               <div class="task-dropdown-menu hidden absolute left-0 top-full mt-1 z-50 min-w-[220px] max-h-48 overflow-y-auto rounded-xl border border-border-subtle bg-surface-1 shadow-xl p-1.5 space-y-1">
                 ${(state.selectedTasks || []).map((t) => {
@@ -7951,19 +8100,44 @@
           </div>
         `;
 
-        card.querySelector(".edit-block-btn")?.addEventListener("click", () => {
-          const newName = prompt(wt("create.rename_block", "Новое название блока:"), blk.label);
-          if (newName && newName.trim()) {
-            blk.label = newName.trim();
+        // — Inline rename logic —
+        const labelDisplay = card.querySelector(".block-label-display");
+        const labelEdit = card.querySelector(".block-label-edit");
+
+        function _startInlineRename() {
+          labelDisplay.classList.add("hidden");
+          labelEdit.classList.remove("hidden");
+          labelEdit.focus();
+          labelEdit.select();
+        }
+        function _commitInlineRename() {
+          const newName = labelEdit.value.trim();
+          if (newName && newName !== blk.label) {
+            blk.label = newName;
             markDirty();
             renderTheoryBlocksManagementSection();
+            return; // карточка пересоздана, дальше не идём
+          }
+          labelEdit.classList.add("hidden");
+          labelDisplay.classList.remove("hidden");
+        }
+
+        card.querySelector(".edit-block-btn")?.addEventListener("click", _startInlineRename);
+        labelDisplay?.addEventListener("dblclick", _startInlineRename);
+
+        labelEdit?.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") { e.preventDefault(); _commitInlineRename(); }
+          if (e.key === "Escape") {
+            labelEdit.value = blk.label;
+            labelEdit.classList.add("hidden");
+            labelDisplay.classList.remove("hidden");
           }
         });
+        labelEdit?.addEventListener("blur", _commitInlineRename);
 
+        // — Delete with NotificationUI confirm —
         card.querySelector(".delete-block-btn")?.addEventListener("click", () => {
-          if (confirm(wt("create.delete_block_confirm", `Удалить блок «${blk.label}»?`))) {
-            deleteTheoryBlock(bId);
-          }
+          deleteTheoryBlockWithConfirm(bId, blk.label);
         });
 
         card.querySelectorAll("[data-unbind-task]").forEach((btn) => {
@@ -10521,16 +10695,82 @@
       document.getElementById("theory-block-mode-toggle")?.addEventListener("click", () => {
         toggleTheoryBlockMode();
       });
+
+      // «Новый блок» — показать inline-форму
       document.getElementById("theory-add-block-btn")?.addEventListener("click", () => {
         createNewTheoryBlockPrompt();
       });
+
+      // Floating panel «+ Новый блок» — сохраняем диапазон до показа формы
       document.getElementById("theory-floating-add-block-btn")?.addEventListener("click", () => {
-        createNewTheoryBlockPrompt();
+        const _pendingRange = getSelectedTheoryLineRange();
+        hideTheoryBlockFloatingPanel();
+        // Убеждаемся что секция блоков видна и прокручиваем к ней
+        const section = document.getElementById("theory-blocks-management-section");
+        section?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        // Открываем форму и запоминаем диапазон для применения при создании
+        const formRow = document.getElementById("theory-block-create-form-row");
+        const nameInput = document.getElementById("theory-block-name-input");
+        if (formRow && nameInput) {
+          const blockCount = Object.keys(state.theoryBlocks || {}).length;
+          nameInput.value = wt("create.block_default_name", `Блок ${blockCount + 1}`);
+          nameInput._pendingLineRange = _pendingRange;
+          formRow.classList.remove("hidden");
+          nameInput.focus();
+          nameInput.select();
+        }
       });
+
+      // Inline-форма: кнопка «Создать»
+      document.getElementById("theory-block-create-confirm-btn")?.addEventListener("click", () => {
+        const nameInput = document.getElementById("theory-block-name-input");
+        const formRow = document.getElementById("theory-block-create-form-row");
+        if (!nameInput) return;
+        const name = nameInput.value.trim();
+        if (!name) { nameInput.focus(); return; }
+        const pendingRange = nameInput._pendingLineRange || null;
+        nameInput._pendingLineRange = null;
+        _commitNewTheoryBlock(name, pendingRange);
+        if (formRow) formRow.classList.add("hidden");
+        nameInput.value = "";
+      });
+
+      // Inline-форма: кнопка «Отмена»
+      document.getElementById("theory-block-create-cancel-btn")?.addEventListener("click", () => {
+        const formRow = document.getElementById("theory-block-create-form-row");
+        const nameInput = document.getElementById("theory-block-name-input");
+        if (formRow) formRow.classList.add("hidden");
+        if (nameInput) { nameInput.value = ""; nameInput._pendingLineRange = null; }
+      });
+
+      // Inline-форма: Enter / Escape
+      document.getElementById("theory-block-name-input")?.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          document.getElementById("theory-block-create-confirm-btn")?.click();
+        }
+        if (e.key === "Escape") {
+          document.getElementById("theory-block-create-cancel-btn")?.click();
+        }
+      });
+
+      // Floating panel через mouseup на редакторе — быстрее чем selectionchange
+      document.getElementById("theory-editor")?.addEventListener("mouseup", () => {
+        handleTheoryEditorSelectionChange();
+      });
+
       document.addEventListener("selectionchange", handleTheoryEditorSelectionChange);
       document.addEventListener("click", (e) => {
         if (!e.target.closest(".add-task-link-btn") && !e.target.closest(".task-dropdown-menu")) {
           document.querySelectorAll(".task-dropdown-menu").forEach((d) => d.classList.add("hidden"));
+        }
+        // Закрываем floating panel при клике вне редактора и вне самой панели
+        if (
+          state.theoryBlockModeActive &&
+          !e.target.closest("#theory-editor") &&
+          !e.target.closest("#theory-block-floating-panel")
+        ) {
+          hideTheoryBlockFloatingPanel();
         }
       });
 
