@@ -878,6 +878,30 @@
       scrollbar-width: thin;
       padding-right: 0.25rem;
     }
+    .theory-block-task-picker {
+      position: fixed;
+      z-index: 1001;
+      min-width: 260px;
+      max-width: 340px;
+      background: var(--color-surface-1, #ffffff);
+      border: 1px solid var(--color-border-subtle, #e2e8f0);
+      border-radius: 0.875rem;
+      box-shadow: 0 16px 36px -4px rgba(15, 23, 42, 0.18), 0 6px 14px -3px rgba(15, 23, 42, 0.08);
+      padding: 0.625rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      animation: theory-picker-fade-in 140ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes theory-picker-fade-in {
+      from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .add-task-link-btn.is-active {
+      border-color: var(--color-primary, #6366f1) !important;
+      color: var(--color-primary, #6366f1) !important;
+      background-color: color-mix(in srgb, var(--color-primary, #6366f1) 10%, var(--color-surface-1, #fff)) !important;
+    }
     .theory-block-floating-panel {
       position: fixed;
       z-index: 1000;
@@ -3495,6 +3519,22 @@
     </button>
   </div>
 
+  <!-- Floating Popover for Theory Block Task Binding -->
+  <div id="theory-block-task-picker" class="theory-block-task-picker hidden" role="dialog" aria-label="Привязка заданий к блоку теории">
+    <div class="flex items-center justify-between pb-1.5 border-b border-border-subtle px-0.5">
+      <div class="flex items-center gap-2 min-w-0">
+        <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" id="theory-task-picker-dot"></span>
+        <span class="text-xs font-bold text-text-main truncate" id="theory-task-picker-title">Привязать задания</span>
+      </div>
+      <button type="button" id="theory-task-picker-close-btn" class="text-text-muted hover:text-text-main p-0.5 rounded-md hover:bg-surface-2 flex items-center justify-center transition-colors" aria-label="Закрыть">
+        <span class="material-symbols-outlined text-[16px]">close</span>
+      </button>
+    </div>
+    <div id="theory-task-picker-content" class="max-h-56 overflow-y-auto space-y-1 pr-0.5" style="scrollbar-width: thin;">
+      <!-- Dynamic list of tasks or empty state -->
+    </div>
+  </div>
+
   <script>
 
     const state = {
@@ -3505,6 +3545,7 @@
       chains: [],        // [[ref1, ref2], [ref3, ref4]]
       complexSettings: {}
     };
+    window.state = state;
 
           function wt(key, fallback) {
             if (!window.i18n) return fallback;
@@ -8038,6 +8079,10 @@
     }
 
     function deleteTheoryBlock(blockId) {
+      const picker = document.getElementById("theory-block-task-picker");
+      if (picker && picker._currentBlockId === blockId) {
+        closeTheoryBlockTaskPicker();
+      }
       if (!state.theoryBlocks || !state.theoryBlocks[blockId]) return;
       delete state.theoryBlocks[blockId];
       if (Array.isArray(state.theoryBlockRanges)) {
@@ -8075,7 +8120,7 @@
       }
     }
 
-    function toggleTaskInTheoryBlock(blockId, taskRef) {
+    function toggleTaskInTheoryBlock(blockId, taskRef, updatePicker = true) {
       if (!state.taskBlockMappings) state.taskBlockMappings = {};
       if (!Array.isArray(state.taskBlockMappings[taskRef])) {
         state.taskBlockMappings[taskRef] = [];
@@ -8091,6 +8136,151 @@
       }
       markDirty();
       renderTheoryBlocksManagementSection();
+
+      const picker = document.getElementById("theory-block-task-picker");
+      if (updatePicker && picker && !picker.classList.contains("hidden") && picker._currentBlockId === blockId) {
+        renderTheoryBlockTaskPickerContent(blockId);
+      }
+    }
+
+    function closeTheoryBlockTaskPicker() {
+      const picker = document.getElementById("theory-block-task-picker");
+      if (!picker) return;
+      picker.classList.add("hidden");
+      picker._currentBlockId = null;
+      picker._currentAnchor = null;
+      document.querySelectorAll(".add-task-link-btn.is-active").forEach((b) => {
+        b.classList.remove("is-active");
+      });
+    }
+
+    function positionTheoryBlockTaskPicker(anchorBtn) {
+      const picker = document.getElementById("theory-block-task-picker");
+      if (!picker || picker.classList.contains("hidden") || !anchorBtn) return;
+
+      const rect = anchorBtn.getBoundingClientRect();
+      if (rect.bottom < 0 || rect.top > window.innerHeight) {
+        closeTheoryBlockTaskPicker();
+        return;
+      }
+
+      const pickerRect = picker.getBoundingClientRect();
+      const pad = 10;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+
+      // Выравнивание по левому краю кнопки с проверкой выхода за правый край
+      let left = rect.left;
+      if (left + pickerRect.width > vw - pad) {
+        left = vw - pickerRect.width - pad;
+      }
+      left = Math.max(pad, left);
+
+      // По умолчанию снизу кнопки; если упирается в низ экрана — открываем сверху
+      let top = rect.bottom + 6;
+      if (top + pickerRect.height > vh - pad) {
+        const topAbove = rect.top - pickerRect.height - 6;
+        if (topAbove >= pad) {
+          top = topAbove;
+        } else {
+          top = Math.max(pad, vh - pickerRect.height - pad);
+        }
+      }
+
+      picker.style.left = `${left}px`;
+      picker.style.top = `${top}px`;
+    }
+
+    function toggleTheoryBlockTaskPicker(blockId, anchorBtn) {
+      const picker = document.getElementById("theory-block-task-picker");
+      if (!picker) return;
+
+      if (!picker.classList.contains("hidden") && picker._currentBlockId === blockId) {
+        closeTheoryBlockTaskPicker();
+        return;
+      }
+
+      openTheoryBlockTaskPicker(blockId, anchorBtn);
+    }
+
+    function openTheoryBlockTaskPicker(blockId, anchorBtn) {
+      const picker = document.getElementById("theory-block-task-picker");
+      if (!picker) return;
+
+      const blk = state.theoryBlocks?.[blockId];
+      if (!blk) return;
+
+      picker._currentBlockId = blockId;
+      picker._currentAnchor = anchorBtn;
+
+      document.querySelectorAll(".add-task-link-btn.is-active").forEach((b) => {
+        b.classList.remove("is-active");
+      });
+      anchorBtn.classList.add("is-active");
+
+      const dot = document.getElementById("theory-task-picker-dot");
+      const title = document.getElementById("theory-task-picker-title");
+      if (dot) dot.style.background = blk.color_border || blk.color || "var(--color-primary)";
+      if (title) title.textContent = blk.label || blockId;
+
+      renderTheoryBlockTaskPickerContent(blockId);
+
+      picker.classList.remove("hidden");
+      positionTheoryBlockTaskPicker(anchorBtn);
+    }
+
+    function renderTheoryBlockTaskPickerContent(blockId) {
+      const content = document.getElementById("theory-task-picker-content");
+      if (!content) return;
+
+      const tasks = Array.isArray(state.selectedTasks) ? state.selectedTasks : [];
+      if (tasks.length === 0) {
+        content.innerHTML = `
+          <div class="py-3 px-2 text-center flex flex-col items-center gap-1.5">
+            <span class="material-symbols-outlined text-[24px] text-text-muted select-none">playlist_add</span>
+            <span class="text-xs font-semibold text-text-main">${wt("create.no_tasks_in_complex_title", "В комплексе нет заданий")}</span>
+            <span class="text-[11px] text-text-muted leading-relaxed">${wt("create.no_tasks_in_complex_desc", "Добавьте задания из каталога справа, чтобы привязать их к этому блоку теории.")}</span>
+          </div>
+        `;
+        return;
+      }
+
+      const boundTaskRefs = new Set(
+        Object.entries(state.taskBlockMappings || {})
+          .filter(([_, blocks]) => Array.isArray(blocks) && blocks.includes(blockId))
+          .map(([ref]) => ref)
+      );
+
+      content.innerHTML = `
+        <div class="space-y-1">
+          ${tasks.map((t) => {
+            const isChecked = boundTaskRefs.has(t.ref);
+            return `
+              <label class="flex items-center gap-2 p-1.5 rounded-lg hover:bg-surface-2 cursor-pointer text-xs transition-colors select-none group">
+                <input type="checkbox" data-picker-task-ref="${escapeTheoryHtml(t.ref)}" ${isChecked ? "checked" : ""}
+                  class="rounded text-primary focus:ring-primary-light h-3.5 w-3.5 cursor-pointer flex-shrink-0" />
+                <span class="truncate flex-1 text-text-main font-medium group-hover:text-primary transition-colors">${escapeTheoryHtml(t.label || t.ref)}</span>
+              </label>
+            `;
+          }).join("")}
+        </div>
+      `;
+
+      content.querySelectorAll("input[data-picker-task-ref]").forEach((chk) => {
+        chk.addEventListener("change", () => {
+          const taskRef = chk.getAttribute("data-picker-task-ref");
+          if (taskRef) {
+            toggleTaskInTheoryBlock(blockId, taskRef, false);
+            const updatedAnchor = document.querySelector(`.add-task-link-btn[data-block-id="${blockId}"]`);
+            const p = document.getElementById("theory-block-task-picker");
+            if (updatedAnchor && p) {
+              p._currentAnchor = updatedAnchor;
+              updatedAnchor.classList.add("is-active");
+              positionTheoryBlockTaskPicker(updatedAnchor);
+            }
+          }
+        });
+      });
     }
 
     function renderTheoryBlocksManagementSection() {
@@ -8148,23 +8338,10 @@
                 <button type="button" data-unbind-task="${escapeTheoryHtml(t.ref)}" class="text-text-muted hover:text-danger ml-0.5 flex-shrink-0" aria-label="Отвязать">✕</button>
               </span>
             `).join("")}
-            <div class="relative inline-block">
-              <button type="button" class="btn-secondary h-6 px-2 text-[11px] font-semibold inline-flex items-center gap-1 rounded-full add-task-link-btn">
-                <span class="material-symbols-outlined text-[12px]">add</span>
-                <span>${wt("create.bind_task_btn", "Привязать")}</span>
-              </button>
-              <div class="task-dropdown-menu hidden absolute left-0 top-full mt-1 z-50 min-w-[220px] max-h-48 overflow-y-auto rounded-xl border border-border-subtle bg-surface-1 shadow-xl p-1.5 space-y-1">
-                ${(state.selectedTasks || []).map((t) => {
-                  const isChecked = boundTasks.some((bt) => bt.ref === t.ref);
-                  return `
-                    <label class="flex items-center gap-2 p-1.5 rounded-lg hover:bg-surface-2 cursor-pointer text-xs">
-                      <input type="checkbox" data-task-ref="${escapeTheoryHtml(t.ref)}" ${isChecked ? "checked" : ""} class="rounded text-primary focus:ring-primary-light" />
-                      <span class="truncate flex-1">${escapeTheoryHtml(t.label || t.ref)}</span>
-                    </label>
-                  `;
-                }).join("")}
-              </div>
-            </div>
+            <button type="button" class="btn-secondary h-6 px-2 text-[11px] font-semibold inline-flex items-center gap-1 rounded-full add-task-link-btn transition-colors" data-block-id="${bId}" title="${wt("create.bind_task_btn", "Привязать задания")}">
+              <span class="material-symbols-outlined text-[12px]">add</span>
+              <span>${wt("create.bind_task_btn", "Привязать")}</span>
+            </button>
           </div>
         `;
 
@@ -8216,21 +8393,15 @@
         });
 
         const addBtn = card.querySelector(".add-task-link-btn");
-        const dropdown = card.querySelector(".task-dropdown-menu");
-        if (addBtn && dropdown) {
+        if (addBtn) {
+          const picker = document.getElementById("theory-block-task-picker");
+          if (picker && !picker.classList.contains("hidden") && picker._currentBlockId === bId) {
+            addBtn.classList.add("is-active");
+            picker._currentAnchor = addBtn;
+          }
           addBtn.addEventListener("click", (e) => {
             e.stopPropagation();
-            document.querySelectorAll(".task-dropdown-menu").forEach((d) => {
-              if (d !== dropdown) d.classList.add("hidden");
-            });
-            dropdown.classList.toggle("hidden");
-          });
-
-          dropdown.querySelectorAll("input[data-task-ref]").forEach((chk) => {
-            chk.addEventListener("change", () => {
-              const taskRef = chk.getAttribute("data-task-ref");
-              if (taskRef) toggleTaskInTheoryBlock(bId, taskRef);
-            });
+            toggleTheoryBlockTaskPicker(bId, addBtn);
           });
         }
 
@@ -10821,6 +10992,7 @@
         }
         if (e.key === "Escape") {
           document.getElementById("theory-block-create-cancel-btn")?.click();
+          closeTheoryBlockTaskPicker();
         }
       });
 
@@ -10830,9 +11002,16 @@
       });
 
       document.addEventListener("selectionchange", handleTheoryEditorSelectionChange);
+
+      // Закрытие popover привязки заданий по кнопке «Закрыть»
+      document.getElementById("theory-task-picker-close-btn")?.addEventListener("click", closeTheoryBlockTaskPicker);
+
       document.addEventListener("click", (e) => {
-        if (!e.target.closest(".add-task-link-btn") && !e.target.closest(".task-dropdown-menu")) {
-          document.querySelectorAll(".task-dropdown-menu").forEach((d) => d.classList.add("hidden"));
+        const picker = document.getElementById("theory-block-task-picker");
+        if (picker && !picker.classList.contains("hidden")) {
+          if (!e.target.closest("#theory-block-task-picker") && !e.target.closest(".add-task-link-btn")) {
+            closeTheoryBlockTaskPicker();
+          }
         }
         // Закрываем floating panel при клике вне редактора и вне самой панели
         if (
@@ -10841,6 +11020,20 @@
           !e.target.closest("#theory-block-floating-panel")
         ) {
           hideTheoryBlockFloatingPanel();
+        }
+      });
+
+      window.addEventListener("resize", () => {
+        const picker = document.getElementById("theory-block-task-picker");
+        if (picker && !picker.classList.contains("hidden") && picker._currentAnchor) {
+          positionTheoryBlockTaskPicker(picker._currentAnchor);
+        }
+      });
+
+      document.getElementById("theory-blocks-list")?.addEventListener("scroll", () => {
+        const picker = document.getElementById("theory-block-task-picker");
+        if (picker && !picker.classList.contains("hidden") && picker._currentAnchor) {
+          positionTheoryBlockTaskPicker(picker._currentAnchor);
         }
       });
 

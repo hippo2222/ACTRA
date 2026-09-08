@@ -71,10 +71,14 @@ async function run() {
 
   const results = [];
 
+  const BRAIN_DIR = 'C:/Users/ASUS/.gemini/antigravity/brain/7a4be3d0-864a-469a-960e-8f656d4d0cf0';
   async function snap(name, description) {
     const filename = `${name}.png`;
     const filepath = path.join(SCREENSHOT_DIR, filename);
     await page.screenshot({ path: filepath, fullPage: false });
+    try {
+      fs.copyFileSync(filepath, path.join(BRAIN_DIR, filename));
+    } catch (e) {}
     console.log(`📸 [Screenshot] ${filename} - ${description}`);
     results.push({ name, description, filepath });
   }
@@ -302,14 +306,37 @@ async function run() {
     // 8. TASK BINDING INTERACTION
     // ==========================================
     console.log('\n--- Test 8: Task Binding Dropdown & Unbind ---');
-    // Open dropdown in first card
+    // Open floating popover in first card (empty tasks state)
     await page.evaluate(() => {
       const card = document.querySelector('.theory-block-card');
       const addBtn = card?.querySelector('.add-task-link-btn');
       if (addBtn) addBtn.click();
     });
-    await page.waitForTimeout(200);
-    await snap('11_task_dropdown_opened', 'Меню привязки заданий открыто в карточке блока');
+    await page.waitForTimeout(300);
+    await snap('11_task_dropdown_opened', 'Floating popover привязки заданий открыт над интерфейсом (empty state)');
+
+    // Add sample tasks to state to test checklist selection
+    await page.evaluate(() => {
+      window.state.selectedTasks = [
+        { ref: 'task-ohm-1', label: 'Задание 1: Закон Ома для участка цепи' },
+        { ref: 'task-kirch-2', label: 'Задание 2: Правила Кирхгофа' },
+      ];
+      if (typeof closeTheoryBlockTaskPicker === 'function') closeTheoryBlockTaskPicker();
+      const card = document.querySelector('.theory-block-card');
+      const addBtn = card?.querySelector('.add-task-link-btn');
+      if (addBtn) addBtn.click();
+    });
+    await page.waitForTimeout(300);
+    await snap('11b_task_dropdown_with_tasks', 'Floating popover со списком заданий и чекбоксами');
+
+    // Click first task checkbox
+    const firstCheckbox = page.locator('#theory-task-picker-content input[type="checkbox"]').first();
+    if (await firstCheckbox.isVisible()) {
+      await firstCheckbox.check();
+      console.log('✓ Task checkbox checked in floating popover');
+    }
+    await page.waitForTimeout(300);
+    await snap('11c_task_bound_chip_rendered', 'Чип привязанного задания отображен в карточке блока');
 
     // Click inside the section to close dropdown safely (avoid header back button)
     await page.click('#theory-title');
