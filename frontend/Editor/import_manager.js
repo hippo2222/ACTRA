@@ -3035,6 +3035,11 @@ ${remaining}
         if (textArea) textArea.value = '';
         this.updateAIAgentPromptTextarea();
         this._updateLiveCounter('');
+        // Переходим в режим генерации задач — открываем Step 2 с обогащённым промптом
+        if (this.modalPurpose === 'theory_analysis') {
+            this.theorySubMode = 'task_generation';
+            this.currentStep = 2;
+        }
         this.showToast(`${wt('im.k657', 'Шаблон переключён на')} ${this.getEditorFacingTaskTypeLabel(normalizedTaskType)}. ${wt('im.k658', 'Контекст анализа уже встроен в prompt.')}`, 'success');
         this.renderCurrentStep();
     }
@@ -6350,7 +6355,7 @@ text: Сердце человека состоит из [трёх] камер. �
     }
 
     enterTheorySubMode(mode) {
-        const validModes = ['microcards', 'manual_editor', 'text_import', 'analysis', 'home', 'archive'];
+        const validModes = ['microcards', 'manual_editor', 'text_import', 'analysis', 'home', 'archive', 'task_generation', 'task_preview'];
         const nextMode = validModes.includes(mode) ? mode : 'analysis';
         if (!this.isTheoryFeatureEnabled('ai_mode', false)) {
             this.openTheoryAiInProgressPlaceholder();
