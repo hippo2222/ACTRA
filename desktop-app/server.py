@@ -1385,6 +1385,21 @@ class AppContextHeadless:
                 logger.error("[HTTP] Failed to initialize CalendarService: %s", e)
                 self.calendar_service = None
 
+        # Studio Session Repository (Task Import Studio history, max 3 FIFO)
+        from persistence.hosted_studio_session_repository import HostedStudioSessionRepository
+        _dsn = getattr(self.persistence_runtime, "postgres_dsn", "")
+        _fallback_dir = None
+        try:
+            _fallback_dir = self.persistence_runtime.users_runtime_root()
+        except Exception:
+            _fallback_dir = Path(str(self.data_dir)) / "studio_sessions"
+        self.studio_session_repository = HostedStudioSessionRepository(dsn=_dsn, fallback_dir=_fallback_dir)
+        try:
+            self.studio_session_repository.ensure_schema()
+        except Exception as exc:
+            logger.warning("[HTTP] StudioSessionRepository schema initialization skipped: %s", exc)
+        logger.info("[HTTP] StudioSessionRepository initialized")
+
     def _init_logic(self) -> None:
         # SessionManager for non-complex sessions (required by TaskController)
         self.session_manager = SessionManager()
@@ -1584,11 +1599,13 @@ from routes.workspace_import_routes import workspace_import_bp
 from routes.catalog_routes import catalog_bp
 from routes.billing_routes import billing_bp
 from routes.paddle_routes import paddle_bp
+from routes.studio_routes import studio_bp
 
 init_context(
     _headless_app_ctx,
     ai_service=_ai_service,
     file_processor=_file_processor,
+    studio_session_repository=getattr(_headless_app_ctx, "studio_session_repository", None),
     editor_logger=editor_logger,
     EDITOR_SCALE_LOG_DIR=EDITOR_SCALE_LOG_DIR,
     PROJECT_ROOT=PROJECT_ROOT,
@@ -1639,6 +1656,7 @@ app.register_blueprint(workspace_import_bp)
 app.register_blueprint(catalog_bp)
 app.register_blueprint(billing_bp)
 app.register_blueprint(paddle_bp)
+app.register_blueprint(studio_bp)
 
 # Register Calendar routes if available
 if calendar_service:

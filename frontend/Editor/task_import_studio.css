@@ -1,0 +1,788 @@
+/* ============================================================================
+   Task Import Studio — Stylesheet
+   ACTRA Task Import Studio Design System
+   ========================================================================== */
+
+:root {
+    --studio-header-height: 64px;
+    --studio-subnav-height: 56px;
+    --studio-stepper-height: 52px;
+    --studio-pane-gap: 1.25rem;
+    --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ---------------------------------------------------------------------------
+   Base Layout & Reset
+   --------------------------------------------------------------------------- */
+
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: var(--color-bg-main);
+    color: var(--color-text-main);
+    font-family: var(--font-sans, "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+    -webkit-font-smoothing: antialiased;
+}
+
+.studio-shell {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at top left, color-mix(in srgb, var(--color-primary) 8%, transparent), transparent 38%),
+        radial-gradient(circle at bottom right, color-mix(in srgb, var(--color-info) 7%, transparent), transparent 32%),
+        var(--color-bg-main);
+}
+
+/* ---------------------------------------------------------------------------
+   Sub-Header (Context Toolbar)
+   --------------------------------------------------------------------------- */
+
+.studio-toolbar {
+    height: var(--studio-subnav-height);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0 1.5rem;
+    background: var(--color-surface-1);
+    border-bottom: 1px solid var(--color-border-subtle);
+    z-index: 20;
+}
+
+.studio-toolbar__left {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    min-width: 0;
+}
+
+.studio-toolbar__right {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-shrink: 0;
+}
+
+.studio-btn-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.45rem 0.75rem;
+    border-radius: 0.625rem;
+    border: 1px solid var(--color-border-subtle);
+    background: var(--color-surface-2);
+    color: var(--color-text-secondary);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s var(--ease-spring);
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.studio-btn-back:hover {
+    background: var(--color-bg-hover, var(--color-surface-1));
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    transform: translateX(-1px);
+}
+
+.studio-btn-back:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+.studio-breadcrumbs {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.8125rem;
+    color: var(--color-text-secondary);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.studio-breadcrumbs__item {
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    transition: color 0.15s ease;
+}
+
+.studio-breadcrumbs__item:hover {
+    color: var(--color-primary);
+}
+
+.studio-breadcrumbs__current {
+    font-weight: 600;
+    color: var(--color-text-main);
+}
+
+/* Topic Selector inside Toolbar */
+.studio-topic-selector {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.studio-topic-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 9999px;
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 30%, transparent);
+    color: var(--color-primary);
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s var(--ease-spring);
+}
+
+.studio-topic-badge:hover {
+    background: color-mix(in srgb, var(--color-primary) 18%, transparent);
+    border-color: var(--color-primary);
+}
+
+.studio-topic-badge--empty {
+    background: color-mix(in srgb, var(--color-warning) 12%, transparent);
+    border-color: color-mix(in srgb, var(--color-warning) 36%, transparent);
+    color: var(--color-warning);
+}
+
+/* Autosave Indicator */
+.studio-status-cluster {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+    padding: 0.3rem 0.6rem;
+    border-radius: 0.5rem;
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border-subtle);
+}
+
+.studio-status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--color-success);
+    transition: background-color 0.2s ease;
+}
+
+.studio-status-dot--unsaved {
+    background: var(--color-warning);
+    animation: studio-pulse 1.8s infinite;
+}
+
+@keyframes studio-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.25); }
+}
+
+/* ---------------------------------------------------------------------------
+   Step Indicator (Stepper Header)
+   --------------------------------------------------------------------------- */
+
+.studio-stepper {
+    height: var(--studio-stepper-height);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 1rem;
+    background: color-mix(in srgb, var(--color-surface-1) 80%, var(--color-bg-main));
+    border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.studio-stepper__track {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    max-width: 680px;
+    width: 100%;
+}
+
+.studio-step-node {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.85rem;
+    border-radius: 9999px;
+    border: 1px solid var(--color-border-subtle);
+    background: var(--color-surface-1);
+    color: var(--color-text-secondary);
+    font-size: 0.78125rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.18s var(--ease-spring);
+    flex: 1;
+    justify-content: center;
+    white-space: nowrap;
+}
+
+.studio-step-node:hover {
+    border-color: var(--color-primary);
+    color: var(--color-text-main);
+}
+
+.studio-step-node[data-active="true"] {
+    background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface-1));
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    box-shadow: 0 0 0 1px var(--color-primary);
+}
+
+.studio-step-node[data-completed="true"] {
+    background: var(--color-surface-1);
+    border-color: var(--color-success);
+    color: var(--color-success);
+}
+
+.studio-step-node__num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--color-surface-2);
+    font-size: 0.6875rem;
+    font-weight: 700;
+}
+
+.studio-step-node[data-active="true"] .studio-step-node__num {
+    background: var(--color-primary);
+    color: #fff;
+}
+
+.studio-step-node[data-completed="true"] .studio-step-node__num {
+    background: var(--color-success);
+    color: #fff;
+}
+
+.studio-step-divider {
+    width: 24px;
+    height: 1px;
+    background: var(--color-border-subtle);
+    flex-shrink: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Main Workspace Stages
+   --------------------------------------------------------------------------- */
+
+.studio-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+}
+
+.studio-stage {
+    display: none;
+    height: 100%;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.studio-stage[data-active="true"] {
+    display: flex;
+    flex-direction: column;
+}
+
+/* ---------------------------------------------------------------------------
+   Stage 1: Material Upload & Analysis (Scrollable Layout)
+   --------------------------------------------------------------------------- */
+
+.stage-1-container {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--studio-pane-gap);
+    padding: 1.25rem 1.5rem;
+    height: 100%;
+    box-sizing: border-box;
+    overflow-y: auto;
+}
+
+.studio-card {
+    background: var(--color-component-card-elevated-bg, var(--color-surface-1));
+    border: 1px solid var(--color-component-card-elevated-border, var(--color-border-subtle));
+    border-radius: 1.25rem;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.studio-card__header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--color-border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    background: var(--color-surface-1);
+}
+
+.studio-card__title {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--color-text-main);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.studio-card__body {
+    padding: 1.25rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    overflow-y: auto;
+}
+
+/* Dropzone */
+.studio-dropzone {
+    border: 2px dashed var(--color-border-strong);
+    border-radius: 1rem;
+    padding: 1.75rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    background: color-mix(in srgb, var(--color-surface-2) 60%, transparent);
+    cursor: pointer;
+    transition: all 0.2s var(--ease-spring);
+    position: relative;
+}
+
+.studio-dropzone:hover,
+.studio-dropzone[data-dragover="true"] {
+    border-color: var(--color-primary);
+    background: color-mix(in srgb, var(--color-primary) 6%, var(--color-surface-1));
+    transform: scale(1.005);
+}
+
+.studio-dropzone__icon {
+    font-size: 2.75rem;
+    color: var(--color-primary);
+    margin-bottom: 0.5rem;
+    transition: transform 0.2s var(--ease-spring);
+}
+
+.studio-dropzone:hover .studio-dropzone__icon {
+    transform: translateY(-2px);
+}
+
+.studio-dropzone__title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-text-main);
+    margin-bottom: 0.25rem;
+}
+
+.studio-dropzone__subtitle {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+}
+
+/* File Loaded State */
+.studio-file-chip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    border-radius: 0.75rem;
+    background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface-1));
+    border: 1px solid color-mix(in srgb, var(--color-primary) 25%, transparent);
+}
+
+.studio-file-chip__info {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+}
+
+/* Text Input Area */
+.studio-textarea {
+    width: 100%;
+    border-radius: 0.875rem;
+    border: 1px solid var(--color-border-strong);
+    background: var(--color-surface-1);
+    color: var(--color-text-main);
+    padding: 0.875rem 1rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    font-family: inherit;
+    resize: none;
+    box-sizing: border-box;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.studio-textarea:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 15%, transparent);
+}
+
+/* Buttons */
+.studio-btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    border-radius: 0.75rem;
+    background: var(--color-primary);
+    color: #fff;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: all 0.16s var(--ease-spring);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-primary) 35%, transparent);
+}
+
+.studio-btn-primary:hover {
+    background: var(--color-primary-hover, color-mix(in srgb, var(--color-primary) 90%, black));
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-primary) 45%, transparent);
+}
+
+.studio-btn-primary:active {
+    transform: scale(0.98);
+}
+
+.studio-btn-primary:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+.studio-btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.55rem 1rem;
+    border-radius: 0.75rem;
+    background: var(--color-surface-2);
+    color: var(--color-text-main);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    border: 1px solid var(--color-border-subtle);
+    cursor: pointer;
+    transition: all 0.15s var(--ease-spring);
+}
+
+.studio-btn-secondary:hover {
+    background: var(--color-surface-1);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+/* Lesson Map Cards */
+.studio-unit-card {
+    border-radius: 0.875rem;
+    border: 1px solid var(--color-border-subtle);
+    background: var(--color-surface-1);
+    padding: 0.875rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    transition: all 0.15s ease;
+}
+
+.studio-unit-card:hover {
+    border-color: var(--color-border-strong);
+    transform: translateY(-1px);
+}
+
+.studio-unit-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 0.375rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+/* ---------------------------------------------------------------------------
+   Stage 2: Zero-Scroll Split-View Layout
+   --------------------------------------------------------------------------- */
+
+.stage-2-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+/* Type Navigation Bar */
+.studio-types-bar {
+    height: 48px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1.5rem;
+    background: var(--color-surface-1);
+    border-bottom: 1px solid var(--color-border-subtle);
+    gap: 0.75rem;
+    overflow-x: auto;
+}
+
+.studio-types-tabs {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    overflow-x: auto;
+}
+
+.studio-type-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.8rem;
+    border-radius: 0.625rem;
+    border: 1px solid var(--color-border-subtle);
+    background: var(--color-surface-2);
+    color: var(--color-text-secondary);
+    font-size: 0.78125rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s var(--ease-spring);
+    white-space: nowrap;
+}
+
+.studio-type-tab:hover {
+    border-color: var(--color-primary);
+    color: var(--color-text-main);
+}
+
+.studio-type-tab[data-active="true"] {
+    background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface-1));
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.studio-type-tab[data-ready="true"] {
+    border-color: var(--color-success);
+    color: var(--color-success);
+}
+
+/* Split Panes */
+.studio-split-panes {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--color-border-subtle);
+    height: calc(100% - 48px);
+    overflow: hidden;
+}
+
+.studio-pane {
+    background: var(--color-bg-main);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+.studio-pane__header {
+    height: 48px;
+    flex-shrink: 0;
+    padding: 0 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--color-surface-1);
+    border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.studio-pane__body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 1.25rem;
+    gap: 1rem;
+    overflow-y: auto;
+}
+
+.studio-pane__footer {
+    height: 56px;
+    flex-shrink: 0;
+    padding: 0 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--color-surface-1);
+    border-top: 1px solid var(--color-border-subtle);
+}
+
+/* Live Counter */
+.studio-counter-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.625rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    background: color-mix(in srgb, var(--color-success) 12%, transparent);
+    color: var(--color-success);
+    border: 1px solid color-mix(in srgb, var(--color-success) 30%, transparent);
+}
+
+/* ---------------------------------------------------------------------------
+   Stage 3: Task Showcase & Selection (Card Grid + Sticky Bottom)
+   --------------------------------------------------------------------------- */
+
+.stage-3-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.studio-showcase-header {
+    height: 52px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1.5rem;
+    background: var(--color-surface-1);
+    border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.studio-showcase-grid {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 1.25rem;
+    align-content: start;
+    padding-bottom: 5rem;
+}
+
+.studio-task-card {
+    background: var(--color-surface-1);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: 1rem;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    transition: all 0.16s var(--ease-spring);
+    position: relative;
+}
+
+.studio-task-card:hover {
+    border-color: var(--color-primary);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
+
+.studio-task-card[data-selected="true"] {
+    border-color: var(--color-primary);
+    background: color-mix(in srgb, var(--color-primary) 3%, var(--color-surface-1));
+}
+
+.studio-task-card__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* Sticky Import Footer */
+.studio-sticky-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 2rem;
+    background: color-mix(in srgb, var(--color-surface-1) 85%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid var(--color-border-strong);
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+    z-index: 50;
+}
+
+/* ---------------------------------------------------------------------------
+   Modals & Overlays
+   --------------------------------------------------------------------------- */
+
+.studio-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: var(--color-scrim, rgba(0, 0, 0, 0.45));
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 1rem;
+}
+
+.studio-modal-backdrop.hidden {
+    display: none !important;
+}
+
+.studio-modal-card {
+    background: var(--color-surface-1);
+    border: 1px solid var(--color-border-strong);
+    border-radius: 1.25rem;
+    box-shadow: var(--shadow-xl, 0 20px 25px -5px rgba(0, 0, 0, 0.2));
+    width: 100%;
+    max-width: 580px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: studio-modal-in 0.2s var(--ease-spring);
+}
+
+@keyframes studio-modal-in {
+    from { opacity: 0; transform: scale(0.96) translateY(8px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ---------------------------------------------------------------------------
+   Accessibility & Reduced Motion
+   --------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+    *, ::before, ::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}

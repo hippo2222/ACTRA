@@ -471,7 +471,7 @@ CLICK_TEXT — выбор верных и неверных утверждени�
   Подходит для: типичных заблуждений, тонких различий, сопоставления похожих утверждений, проверки понимания нюансов.
   Не подходит для: тем, где невозможно составить правдоподобные контрастные утверждения без натяжки.
 
-CLICK_WORDS — поиск фактических ошибок в тексте.
+CLICK_WORDS — синтез текста с намеренными фактическими ошибками для их обнаружения студентом.
   Подходит для: материалов, где можно создать локальные и однозначно проверяемые искажения — в терминах, числах, параметрах, признаках, сравнениях, отношениях, квалификаторах, отрицаниях, laterality/направлениях и коротких фактических формулировках.
   Не подходит для: слишком общих, интерпретативных или бедных на конкретные проверяемые опоры материалов, где ошибку нельзя оформить как короткий локальный фрагмент без двусмысленности.
 
@@ -3423,3 +3423,28 @@ class AIGenerationService:
     def is_configured(self) -> bool:
         """Есть ли хотя бы один настроенный провайдер."""
         return len(self._providers) > 0
+
+
+def build_studio_analysis_prompt(target_language: str = "ru") -> str:
+    """Build canonical material analysis prompt for external AI (without internal pipeline v2 addenda)."""
+    lang = str(target_language or "ru").strip().lower()
+    return (
+        STRUCTURED_ANALYSIS_PROMPT
+        + ANALYSIS_PROMPT_ADDENDUM
+        + f"\n\n<target_language>{lang}</target_language>"
+    )
+
+
+def get_studio_generation_prompt(task_type: str) -> Optional[str]:
+    """Return prompt template for specific task type (TEST, OPEN_ANSWER, SEQUENCE, CLICK_TEXT, CLICK_WORDS)."""
+    clean_type = str(task_type or "").strip().upper()
+    return _GENERATION_PROMPTS.get(clean_type)
+
+
+def get_all_studio_prompts(target_language: str = "ru") -> Dict[str, Any]:
+    """Return dictionary of canonical studio prompts for all supported types."""
+    return {
+        "analysis": build_studio_analysis_prompt(target_language),
+        "generation": dict(_GENERATION_PROMPTS),
+    }
+
