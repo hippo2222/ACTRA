@@ -119,15 +119,15 @@
                         </div>
 
                         <!-- Active File Chip (Hidden initially) -->
-                        <div id="file-loaded-chip" class="studio-file-chip hidden">
+                        <div id="file-loaded-chip" class="studio-file-chip hidden" hidden style="display: none;">
                             <div class="studio-file-chip__info">
                                 <span class="material-symbols-outlined text-primary text-[22px]">draft</span>
                                 <div>
-                                    <p id="file-loaded-name" class="text-xs font-bold text-text-main">document.pdf</p>
-                                    <p id="file-loaded-meta" class="text-[11px] text-text-secondary">1.2 МБ · 2 400 слов</p>
+                                    <p id="file-loaded-name" class="text-xs font-bold text-text-main"></p>
+                                    <p id="file-loaded-meta" class="text-[11px] text-text-secondary"></p>
                                 </div>
                             </div>
-                            <button id="btn-remove-file" type="button" class="text-text-muted hover:text-error transition-colors p-1" title="Удалить файл">
+                            <button id="btn-remove-file" type="button" class="text-text-muted hover:text-error transition-colors p-1" title="Удалить файл" data-i18n-title="studio.stage1.remove_file">
                                 <span class="material-symbols-outlined text-[18px]">close</span>
                             </button>
                         </div>
@@ -182,7 +182,7 @@
                             <!-- Human Summary Box -->
                             <div class="p-3 rounded-xl bg-surface-2 border border-border-subtle">
                                 <p class="text-[11px] font-bold uppercase tracking-wider text-text-secondary mb-1" data-i18n="studio.stage1.summary_title">Методическая выжимка</p>
-                                <p id="lesson-map-summary" class="text-xs leading-relaxed text-text-main">Резюме материала...</p>
+                                <p id="lesson-map-summary" class="text-xs leading-relaxed text-text-main"></p>
                             </div>
 
                             <!-- Recommendations Grid -->
@@ -216,9 +216,9 @@
                     <div class="studio-types-tabs" id="types-tabs-container">
                         <!-- Dynamic Type Pills inserted by JS (TEST, OPEN_ANSWER, SEQUENCE, etc.) -->
                     </div>
-                    <button id="btn-add-extra-type" type="button" class="studio-btn-secondary text-xs flex-shrink-0" title="Добавить другой тип задания">
+                    <button id="btn-add-extra-type" type="button" class="studio-btn-secondary text-xs flex-shrink-0" title="Добавить другой тип задания" data-i18n-title="studio.stage2.add_type_title">
                         <span class="material-symbols-outlined text-[16px]">add</span>
-                        <span>+ Другой тип</span>
+                        <span data-i18n="studio.stage2.btn_add_type">+ Другой тип</span>
                     </button>
                 </div>
 
@@ -231,14 +231,14 @@
                                 <span class="material-symbols-outlined text-[18px] text-primary">target</span>
                                 <span class="text-xs font-bold text-text-main" id="focus-pane-type-label" data-i18n="studio.stage2.prompt_title">Промпт для типа</span>
                             </div>
-                            <span id="focus-pane-coverage-badge" class="studio-unit-badge bg-surface-2 text-text-secondary border border-border-subtle">Фокус</span>
+                            <span id="focus-pane-coverage-badge" class="studio-unit-badge bg-surface-2 text-text-secondary border border-border-subtle" data-i18n="studio.stage2.focus_badge">Фокус</span>
                         </div>
 
                         <div class="studio-pane__body">
                             <!-- Focus Context Card -->
                             <div class="p-3.5 rounded-xl bg-surface-1 border border-border-subtle flex flex-col gap-2">
                                 <p class="text-[11px] font-bold uppercase tracking-wider text-text-secondary" data-i18n="studio.stage2.type_guidance_title">Образовательные единицы темы</p>
-                                <p id="focus-units-description" class="text-xs leading-relaxed text-text-main">
+                                <p id="focus-units-description" class="text-xs leading-relaxed text-text-main" data-i18n="studio.stage2.select_direction_hint">
                                     Выберите направление сверху для формирования точечного промпта.
                                 </p>
                             </div>
@@ -251,7 +251,7 @@
 
                             <!-- Collapsible Full Prompt Preview -->
                             <details class="rounded-xl border border-border-subtle bg-surface-2 p-3 text-xs">
-                                <summary class="font-semibold text-text-secondary cursor-pointer hover:text-primary transition-colors">
+                                <summary class="font-semibold text-text-secondary cursor-pointer hover:text-primary transition-colors" data-i18n="studio.stage2.view_full_prompt">
                                     Посмотреть полный текст промпта
                                 </summary>
                                 <pre id="type-prompt-preview-text" class="mt-2.5 p-2 rounded-lg bg-surface-1 border border-border-subtle text-[11px] font-mono text-text-main whitespace-pre-wrap overflow-x-auto max-h-[160px]"></pre>
@@ -259,7 +259,7 @@
                         </div>
 
                         <div class="studio-pane__footer">
-                            <span class="text-[11px] text-text-muted">Отправьте промпт в тот же чат нейросети</span>
+                            <span class="text-[11px] text-text-muted" data-i18n="studio.stage2.send_prompt_hint">Отправьте промпт в тот же чат нейросети</span>
                         </div>
                     </div>
 
@@ -272,7 +272,7 @@
                             </div>
                             <span id="live-parse-counter" class="studio-counter-pill hidden">
                                 <span class="material-symbols-outlined text-[14px]">check_circle</span>
-                                <span id="live-parse-count-text">0 вопросов</span>
+                                <span id="live-parse-count-text"></span>
                             </span>
                         </div>
 
@@ -317,7 +317,7 @@
 
                     <button id="btn-back-to-step-2" type="button" class="studio-btn-secondary text-xs">
                         <span class="material-symbols-outlined text-[16px]">arrow_back</span>
-                        <span>Добавить ещё типы</span>
+                        <span data-i18n="studio.stage3.btn_add_more_types">Добавить ещё типы</span>
                     </button>
                 </div>
 
@@ -331,8 +331,8 @@
                     <div class="flex items-center gap-3">
                         <span class="material-symbols-outlined text-primary text-[24px]">task_alt</span>
                         <div>
-                            <p class="text-xs font-bold text-text-main" id="sticky-bar-summary">Выбрано: 0 заданий</p>
-                            <p class="text-[11px] text-text-secondary" id="sticky-bar-topic-target">Целевая тема курса: не выбрана</p>
+                            <p class="text-xs font-bold text-text-main" id="sticky-bar-summary" data-i18n="studio.stage3.selected_zero">Выбрано: 0 заданий</p>
+                            <p class="text-[11px] text-text-secondary" id="sticky-bar-topic-target" data-i18n="studio.stage3.topic_not_selected">Целевая тема курса: не выбрана</p>
                         </div>
                     </div>
 
@@ -361,7 +361,7 @@
                 </button>
             </div>
             <div class="p-4 flex flex-col gap-3 max-h-[360px] overflow-y-auto" id="topic-tree-container">
-                <p class="text-xs text-text-secondary">Загрузка каталога тем...</p>
+                <p class="text-xs text-text-secondary" data-i18n="studio.modal.topic_loading">Загрузка каталога тем...</p>
             </div>
         </div>
     </div>
@@ -379,7 +379,7 @@
                 </button>
             </div>
             <div class="p-4 flex flex-col gap-3 max-h-[420px] overflow-y-auto" id="history-items-container">
-                <p class="text-xs text-text-secondary" data-i18n="studio.modal.history_empty">Загрузка сохранённых сессий...</p>
+                <p class="text-xs text-text-secondary" data-i18n="studio.modal.history_loading">Загрузка сохранённых сессий...</p>
             </div>
         </div>
     </div>

@@ -254,6 +254,10 @@ def test_studio_html_scaffolding():
     assert 'id="modal-session-history"' in content
     assert 'id="modal-nav-guard"' in content
 
+    # Ensure no mock filename or dummy text is hardcoded in HTML
+    assert 'document.pdf' not in content, "document.pdf must not be hardcoded in HTML scaffolding"
+    assert 'Резюме материала...' not in content, "Mockup placeholder text 'Резюме материала...' must not linger in HTML"
+
 
 def test_studio_css_design_system():
     css_path = PROJECT_ROOT / "frontend" / "Editor" / "task_import_studio.css"
@@ -270,6 +274,10 @@ def test_studio_css_design_system():
     assert '.studio-shell' in content
     assert '.studio-split-panes' in content
     assert '.stage-2-container' in content
+
+    # Utility hidden rules
+    assert '.studio-file-chip.hidden' in content
+    assert 'display: none !important;' in content
 
     # Micro-interactions & animations
     assert 'studio-pulse' in content
@@ -339,6 +347,7 @@ def test_stage4_entry_points_integrity():
     dash_html = dashboard_html_path.read_text(encoding="utf-8")
     assert 'onclick="dashboard.openTaskImportStudio()"' in dash_html
     assert 'data-onboarding-target="editor-analysis-action"' in dash_html
+    assert 'Анализ теории · Студия' in dash_html
     # Import modal button is preserved
     assert 'onclick="dashboard.showImportModal()"' in dash_html
     assert 'data-role="open-import-modal"' in dash_html
@@ -347,7 +356,6 @@ def test_stage4_entry_points_integrity():
     dash_js = dashboard_js_path.read_text(encoding="utf-8")
     assert 'openTaskImportStudio()' in dash_js
     assert 'formatTopicTaskCount(count)' in dash_js
-    assert 'editor-breadcrumb-studio-btn' in dash_js
     assert 'editor-breadcrumb-count' in dash_js
 
     # Test Task Editor Multiple Choice.html
@@ -571,7 +579,7 @@ def test_studio_localization_keys_parity():
     en_keys = get_nested_keys(en["studio"])
     uk_keys = get_nested_keys(uk["studio"])
 
-    assert len(ru_keys) >= 80
+    assert len(ru_keys) >= 110
     assert ru_keys == en_keys, f"Diff RU vs EN: {ru_keys ^ en_keys}"
     assert ru_keys == uk_keys, f"Diff RU vs UK: {ru_keys ^ uk_keys}"
 

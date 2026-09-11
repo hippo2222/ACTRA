@@ -6736,7 +6736,7 @@
     "new_module": "Новий модуль",
     "import_tasks": "Імпорт завдань",
     "ai_analysis_title": "Студія створення завдань з теорії через ШІ",
-    "ai_analysis_label": "Аналіз теорії · ІІ",
+    "ai_analysis_label": "Аналіз теорії · Студія",
     "archive_filter_title": "Показати завдання, які стали доступні лише для перегляду/видалення після закінчення Premium",
     "archive_premium": "Архів Premium",
     "drafts": "Чернетки",
@@ -8028,7 +8028,11 @@
       "summary_title": "Коротке резюме матеріалу",
       "detected_units": "Виявлено навчальних одиниць: {count}",
       "recommended_types": "Рекомендовані типи завдань:",
-      "not_recommended_types": "Не рекомендуються для цього матеріалу:"
+      "not_recommended_types": "Не рекомендуються для цього матеріалу:",
+      "file_removed": "Файл видалено",
+      "remove_file": "Видалити файл",
+      "no_summary": "Резюме не надано.",
+      "no_recommendations": "Рекомендації не сформовані."
     },
     "stage2": {
       "aria": "Етап 2: Генерація за типами",
@@ -8043,7 +8047,13 @@
       "tasks_found": "{count} {plural} знайдено",
       "committed_toast": "Прийнято {count} завдань типу {label}!",
       "no_tasks_text": "Немає тексту завдань для збереження",
-      "validation_error": "Помилка перевірки схеми завдань"
+      "validation_error": "Помилка перевірки схеми завдань",
+      "btn_add_type": "+ Інший тип",
+      "add_type_title": "Додати інший тип завдання",
+      "focus_badge": "Фокус",
+      "select_direction_hint": "Оберіть напрямок зверху для формування точкового промпту.",
+      "view_full_prompt": "Переглянути повний текст промпту",
+      "send_prompt_hint": "Надішліть промпт у той самий чат нейромережі"
     },
     "stage3": {
       "aria": "Етап 3: Вітрина та імпорт",
@@ -8058,7 +8068,12 @@
       "import_selected_summary": "Обрано для імпорту: {selected} з {total} завдань",
       "standard_answer": "Еталон:",
       "correct_label": "Правильна відповідь:",
-      "find_errors": "Знайдіть помилки:"
+      "find_errors": "Знайдіть помилки:",
+      "btn_add_more_types": "Додати ще типи",
+      "delete_task": "Видалити завдання",
+      "selected_zero": "Обрано: 0 завдань",
+      "topic_not_selected": "Цільова тема курсу: не обрана",
+      "topic_target_selected": "Цільова тема курсу: {module} / {topic}"
     },
     "modal": {
       "topic_title": "Вибір цільової теми",
@@ -8066,12 +8081,17 @@
       "topic_cancel": "Скасувати",
       "topic_select_confirm": "Обрати тему",
       "topic_empty": "Теми не знайдені",
+      "topic_loading": "Завантаження каталогу тем...",
       "history_title": "Історія аналізів",
       "history_subtitle": "До 3 останніх збережених сесій",
       "history_empty": "В історії поки немає збережених сесій",
+      "history_loading": "Завантаження збережених сесій...",
       "history_restore": "Відкрити",
       "history_delete": "Видалити",
       "history_session": "Сесія",
+      "module_empty": "Немає тем у модулі",
+      "status_imported": "Імпортовано",
+      "status_draft": "Чернетка",
       "guard_title": "Незбережені завдання",
       "guard_message": "У вас є згенеровані завдання, які не були імпортовані. Якщо ви залишите сторінку, чернетка збережеться в браузері, але не буде додана до курсу.",
       "guard_stay": "Залишитися",
@@ -8079,6 +8099,7 @@
     },
     "labels": {
       "manual_only": "Створюється вручну в редакторі",
+      "recommended": "Рекомендовано",
       "tasks_one": "завдання",
       "tasks_few": "завдання",
       "tasks_many": "завдань"

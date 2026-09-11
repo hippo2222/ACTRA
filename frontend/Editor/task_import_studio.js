@@ -240,8 +240,17 @@
                 if (DOM.analysisResponseInput) DOM.analysisResponseInput.value = StudioState.analysisRawResponse;
                 updateWordCount();
 
-                if (StudioState.fileInfo && DOM.fileLoadedChip) {
+                if (StudioState.fileInfo && StudioState.fileInfo.original_name && DOM.fileLoadedChip) {
                     renderFileChip(StudioState.fileInfo);
+                } else if (DOM.fileLoadedChip) {
+                    DOM.fileLoadedChip.classList.add('hidden');
+                    DOM.fileLoadedChip.setAttribute('hidden', '');
+                    DOM.fileLoadedChip.style.display = 'none';
+                    if (DOM.materialDropzone) {
+                        DOM.materialDropzone.classList.remove('hidden');
+                        DOM.materialDropzone.removeAttribute('hidden');
+                        DOM.materialDropzone.style.display = '';
+                    }
                 }
 
                 if (StudioState.analysisResult) {
@@ -410,7 +419,7 @@
                     DOM.btnSelectTopic.classList.remove('studio-topic-badge--empty');
                 }
             } else {
-                DOM.labelSelectedTopic.textContent = 'Выберите тему курса';
+                DOM.labelSelectedTopic.textContent = t('studio.topic_selector.placeholder', 'Выберите тему курса');
                 if (DOM.btnSelectTopic) {
                     DOM.btnSelectTopic.classList.add('studio-topic-badge--empty');
                 }
@@ -418,16 +427,18 @@
         }
 
         if (DOM.breadcrumbModule) {
-            DOM.breadcrumbModule.textContent = StudioState.selectedModuleName || 'Модуль';
+            DOM.breadcrumbModule.textContent = StudioState.selectedModuleName || t('studio.breadcrumbs.module', 'Модуль');
         }
         if (DOM.breadcrumbTopic) {
-            DOM.breadcrumbTopic.textContent = StudioState.selectedTopicName || 'Тема';
+            DOM.breadcrumbTopic.textContent = StudioState.selectedTopicName || t('studio.breadcrumbs.topic', 'Тема');
         }
 
         if (DOM.stickyBarTopicTarget) {
             DOM.stickyBarTopicTarget.textContent = StudioState.selectedTopicId
-                ? `Целевая тема курса: ${StudioState.selectedModuleName} / ${StudioState.selectedTopicName}`
-                : 'Целевая тема курса: не выбрана';
+                ? t('studio.stage3.topic_target_selected', 'Целевая тема курса: {module} / {topic}')
+                    .replace('{module}', StudioState.selectedModuleName)
+                    .replace('{topic}', StudioState.selectedTopicName)
+                : t('studio.stage3.topic_not_selected', 'Целевая тема курса: не выбрана');
         }
 
         if (DOM.btnBackDashboard && StudioState.selectedModuleId && StudioState.selectedTopicId) {
@@ -440,7 +451,7 @@
         DOM.topicTreeContainer.innerHTML = '';
 
         if (!StudioState.catalogModules || StudioState.catalogModules.length === 0) {
-            DOM.topicTreeContainer.innerHTML = '<p class="text-xs text-text-secondary">Нет доступных модулей и тем.</p>';
+            DOM.topicTreeContainer.innerHTML = `<p class="text-xs text-text-secondary">${t('studio.modal.topic_empty', 'Нет доступных модулей и тем.')}</p>`;
             return;
         }
 
@@ -542,12 +553,29 @@
         }
 
         if (DOM.btnRemoveFile) {
-            DOM.btnRemoveFile.addEventListener('click', () => {
+            DOM.btnRemoveFile.addEventListener('click', (e) => {
+                if (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
                 StudioState.fileInfo = null;
-                if (DOM.fileLoadedChip) DOM.fileLoadedChip.classList.add('hidden');
-                if (DOM.materialDropzone) DOM.materialDropzone.classList.remove('hidden');
+                StudioState.materialText = '';
+                if (DOM.materialTextInput) DOM.materialTextInput.value = '';
+                if (DOM.fileLoadedChip) {
+                    DOM.fileLoadedChip.classList.add('hidden');
+                    DOM.fileLoadedChip.setAttribute('hidden', '');
+                    DOM.fileLoadedChip.style.display = 'none';
+                    if (DOM.fileLoadedName) DOM.fileLoadedName.textContent = '';
+                    if (DOM.fileLoadedMeta) DOM.fileLoadedMeta.textContent = '';
+                }
+                if (DOM.materialDropzone) {
+                    DOM.materialDropzone.classList.remove('hidden');
+                    DOM.materialDropzone.removeAttribute('hidden');
+                    DOM.materialDropzone.style.display = '';
+                }
                 if (DOM.fileInput) DOM.fileInput.value = '';
-                showToast('Файл удалён', 'info');
+                updateWordCount();
+                showToast(t('studio.stage1.file_removed', 'Файл удалён'), 'info');
                 markDirty();
             });
         }
@@ -625,10 +653,20 @@
         if (!info || !DOM.fileLoadedChip) return;
         if (DOM.fileLoadedName) DOM.fileLoadedName.textContent = info.original_name || 'document';
         if (DOM.fileLoadedMeta) {
-            DOM.fileLoadedMeta.textContent = `${info.size_mb || 0} МБ · ${info.word_count || 0} слов (${info.format || 'файл'})`;
+            const sizeMb = info.size_mb !== undefined ? info.size_mb : (info.file_size ? (info.file_size / (1024 * 1024)).toFixed(1) : '0');
+            const words = info.word_count || 0;
+            const wordsLabel = t('studio.stage1.words', 'слов');
+            const fmt = info.format ? `(${info.format})` : '';
+            DOM.fileLoadedMeta.textContent = `${sizeMb} МБ · ${words} ${wordsLabel} ${fmt}`.trim();
         }
         DOM.fileLoadedChip.classList.remove('hidden');
-        if (DOM.materialDropzone) DOM.materialDropzone.classList.add('hidden');
+        DOM.fileLoadedChip.removeAttribute('hidden');
+        DOM.fileLoadedChip.style.display = 'flex';
+        if (DOM.materialDropzone) {
+            DOM.materialDropzone.classList.add('hidden');
+            DOM.materialDropzone.setAttribute('hidden', '');
+            DOM.materialDropzone.style.display = 'none';
+        }
     }
 
     function updateWordCount() {
@@ -706,7 +744,7 @@
         DOM.lessonMapContainer.classList.remove('hidden');
 
         if (DOM.lessonMapSummary) {
-            DOM.lessonMapSummary.textContent = analysis.human_summary || 'Резюме не предоставлено.';
+            DOM.lessonMapSummary.textContent = analysis.human_summary || t('studio.stage1.no_summary', 'Резюме не предоставлено.');
         }
 
         if (DOM.lessonMapRecommendations) {
@@ -714,7 +752,7 @@
             const recs = analysis.recommendations || [];
 
             if (recs.length === 0) {
-                DOM.lessonMapRecommendations.innerHTML = '<p class="text-xs text-text-muted">Рекомендации не сформированы.</p>';
+                DOM.lessonMapRecommendations.innerHTML = `<p class="text-xs text-text-muted">${t('studio.stage1.no_recommendations', 'Рекомендации не сформированы.')}</p>`;
             } else {
                 recs.forEach((rec) => {
                     const card = document.createElement('div');
@@ -730,7 +768,7 @@
                             <div class="flex items-center gap-1">
                                 ${strategy ? `<span class="studio-unit-badge bg-surface-2 text-text-secondary border border-border-subtle">${strategy}</span>` : ''}
                                 <span class="studio-unit-badge ${isManual ? 'bg-warning-light text-warning-dark' : 'bg-primary-light text-primary'}">
-                                    ${isManual ? 'Ручное создание' : `Рекомендовано (~${rec.count || 2})`}
+                                    ${isManual ? t('studio.labels.manual_only', 'Ручное создание') : `${t('studio.labels.recommended', 'Рекомендовано')} (~${rec.count || 2})`}
                                 </span>
                             </div>
                         </div>
@@ -804,15 +842,15 @@
 
         // Update Labels
         if (DOM.focusPaneTypeLabel) {
-            DOM.focusPaneTypeLabel.textContent = `Промпт для типа: ${TASK_TYPE_LABELS[taskType] || taskType}`;
+            DOM.focusPaneTypeLabel.textContent = `${t('studio.stage2.prompt_title', 'Промпт для типа')}: ${TASK_TYPE_LABELS[taskType] || taskType}`;
         }
         if (DOM.labelCopyTypePrompt) {
-            DOM.labelCopyTypePrompt.textContent = `Скопировать промпт для ${TASK_TYPE_LABELS[taskType] || taskType}`;
+            DOM.labelCopyTypePrompt.textContent = `${t('studio.stage2.btn_copy_type_prompt', 'Скопировать промпт для заданий')} (${TASK_TYPE_LABELS[taskType] || taskType})`;
         }
 
         // Pedagogical focus from analysis
-        let focusText = 'Сгенерируйте задания данного типа по содержанию лекции.';
-        let strategyBadge = 'Фокус';
+        let focusText = t('studio.stage2.select_direction_hint', 'Выберите направление сверху для формирования точечного промпта.');
+        let strategyBadge = t('studio.stage2.focus_badge', 'Фокус');
         if (StudioState.analysisResult && Array.isArray(StudioState.analysisResult.recommendations)) {
             const rec = StudioState.analysisResult.recommendations.find((r) => r.task_type === taskType);
             if (rec) {
@@ -1040,8 +1078,7 @@
             DOM.showcaseCardsGrid.innerHTML = `
                 <div class="col-span-full py-12 flex flex-col items-center justify-center text-center">
                     <span class="material-symbols-outlined text-[48px] text-text-muted mb-2">inbox</span>
-                    <p class="text-sm font-semibold text-text-secondary">Нет сформированных заданий</p>
-                    <p class="text-xs text-text-muted mt-1">Вернитесь на Шаг 2 и примите хотя бы один тип заданий.</p>
+                    <p class="text-sm font-semibold text-text-secondary">${t('studio.stage3.empty_showcase', 'Нет принятых заданий. Вернитесь на Шаг 2 для генерации.')}</p>
                 </div>
             `;
             return;
@@ -1068,7 +1105,7 @@
                             ${task._selected_for_import ? 'checked' : ''} />
                         <span class="studio-unit-badge bg-primary-light text-primary font-bold">${TASK_TYPE_LABELS[taskType] || taskType}</span>
                     </label>
-                    <button type="button" class="btn-delete-task text-text-muted hover:text-error transition-colors p-1" title="Удалить задание">
+                    <button type="button" class="btn-delete-task text-text-muted hover:text-error transition-colors p-1" title="${t('studio.stage3.delete_task', 'Удалить задание')}">
                         <span class="material-symbols-outlined text-[18px]">delete</span>
                     </button>
                 </div>
@@ -1097,7 +1134,7 @@
                     StudioState.allTasks = StudioState.allTasks.filter((t) => t._studio_id !== task._studio_id);
                     renderShowcase();
                     updateStickyBar();
-                    showToast('Задание удалено', 'info');
+                    showToast(t('studio.modal.history_delete', 'Удалено'), 'info');
                     markDirty();
                 });
             }
@@ -1120,7 +1157,8 @@
             const pill = document.createElement('button');
             pill.type = 'button';
             pill.className = `px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors ${showcaseFilterType === key ? 'bg-primary text-white' : 'bg-surface-2 text-text-secondary hover:bg-surface-1'}`;
-            pill.textContent = key === 'ALL' ? `Все (${typeCounts[key]})` : `${TASK_TYPE_LABELS[key] || key} (${typeCounts[key]})`;
+            const labelText = key === 'ALL' ? t('studio.stage3.filter_all', 'Все') : (TASK_TYPE_LABELS[key] || key);
+            pill.textContent = `${labelText} (${typeCounts[key]})`;
 
             pill.addEventListener('click', () => {
                 showcaseFilterType = key;
@@ -1148,7 +1186,7 @@
         if (task.standard_answer || task.correct_answer) {
             return `
                 <p class="mt-1 text-[11px] text-text-secondary line-clamp-2 bg-surface-2 p-1.5 rounded-md border border-border-subtle">
-                    <span class="font-bold text-text-main">Эталон:</span> ${escapeHtml(task.standard_answer || task.correct_answer || '')}
+                    <span class="font-bold text-text-main">${t('studio.stage3.standard_answer', 'Эталон:')}</span> ${escapeHtml(task.standard_answer || task.correct_answer || '')}
                 </p>
             `;
         }
@@ -1158,7 +1196,13 @@
     function updateStickyBar() {
         const selected = StudioState.allTasks.filter((t) => t._selected_for_import);
         if (DOM.stickyBarSummary) {
-            DOM.stickyBarSummary.textContent = `Выбрано для импорта: ${selected.length} из ${StudioState.allTasks.length} заданий`;
+            if (StudioState.allTasks.length === 0) {
+                DOM.stickyBarSummary.textContent = t('studio.stage3.selected_zero', 'Выбрано: 0 заданий');
+            } else {
+                DOM.stickyBarSummary.textContent = t('studio.stage3.import_selected_summary', 'Выбрано для импорта: {selected} из {total} заданий')
+                    .replace('{selected}', selected.length)
+                    .replace('{total}', StudioState.allTasks.length);
+            }
         }
         if (DOM.btnExecuteImport) {
             DOM.btnExecuteImport.disabled = selected.length === 0 || !StudioState.selectedTopicId;
@@ -1261,7 +1305,7 @@
         DOM.historyItemsContainer.innerHTML = '';
 
         if (!sessions || sessions.length === 0) {
-            DOM.historyItemsContainer.innerHTML = '<p class="text-xs text-text-muted py-4 text-center">История сессий пуста.</p>';
+            DOM.historyItemsContainer.innerHTML = `<p class="text-xs text-text-muted py-4 text-center">${t('studio.modal.history_empty', 'В истории пока нет сохранённых сессий.')}</p>`;
             return;
         }
 
@@ -1269,26 +1313,26 @@
             const item = document.createElement('div');
             item.className = 'flex flex-col gap-2 p-3 rounded-xl bg-surface-2 border border-border-subtle';
 
-            const dateStr = s.created_at ? new Date(s.created_at).toLocaleString() : 'Сессия';
+            const dateStr = s.created_at ? new Date(s.created_at).toLocaleString() : t('studio.modal.history_session', 'Сессия');
             const taskCount = (s.tasks && s.tasks.length) || 0;
 
             item.innerHTML = `
                 <div class="flex items-center justify-between">
                     <span class="text-xs font-bold text-text-main">${dateStr}</span>
                     <span class="studio-unit-badge ${s.status === 'imported' ? 'bg-success-light text-success-dark' : 'bg-primary-light text-primary'}">
-                        ${s.status === 'imported' ? 'Импортировано' : 'Черновик'}
+                        ${s.status === 'imported' ? t('studio.modal.status_imported', 'Импортировано') : t('studio.modal.status_draft', 'Черновик')}
                     </span>
                 </div>
-                <p class="text-xs text-text-secondary line-clamp-2">${escapeHtml(s.human_summary || 'Без описания')}</p>
+                <p class="text-xs text-text-secondary line-clamp-2">${escapeHtml(s.human_summary || '')}</p>
                 <div class="flex items-center justify-between pt-1 border-t border-border-subtle">
-                    <span class="text-[11px] text-text-muted">${taskCount} заданий</span>
+                    <span class="text-[11px] text-text-muted">${taskCount} ${pluralizeTasks(taskCount)}</span>
                     <div class="flex items-center gap-1.5">
                         <button type="button" class="btn-restore-session text-xs font-semibold text-primary hover:underline">
-                            Восстановить
+                            ${t('studio.modal.history_restore', 'Открыть')}
                         </button>
                         <span class="text-border-subtle">·</span>
                         <button type="button" class="btn-delete-session text-xs font-semibold text-error hover:underline">
-                            Удалить
+                            ${t('studio.modal.history_delete', 'Удалить')}
                         </button>
                     </div>
                 </div>
@@ -1407,6 +1451,9 @@
         initNavigationGuard();
         initHistoryModal();
 
+        updateTopicDisplay();
+        updateStickyBar();
+
         loadCatalog();
         loadSessionsList();
         restoreDraftFromLocalStorage();
@@ -1415,6 +1462,8 @@
             if (typeof window.i18n.updateDOM === 'function') {
                 window.i18n.updateDOM();
             }
+            updateTopicDisplay();
+            updateStickyBar();
             if (StudioState.currentStep === 1 && StudioState.analysisResult) {
                 renderLessonMap(StudioState.analysisResult);
             } else if (StudioState.currentStep === 2) {
@@ -1422,7 +1471,6 @@
                 loadGenerationPromptForType(StudioState.activeGenerationType);
             } else if (StudioState.currentStep === 3) {
                 renderShowcase();
-                updateStickyBar();
             }
             if (StudioState.isDirty) {
                 markDirty();

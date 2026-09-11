@@ -412,6 +412,11 @@ html, body {
     border: 1px solid color-mix(in srgb, var(--color-primary) 25%, transparent);
 }
 
+.studio-file-chip.hidden,
+.studio-file-chip[hidden] {
+    display: none !important;
+}
+
 .studio-file-chip__info {
     display: flex;
     align-items: center;
@@ -772,6 +777,20 @@ html, body {
 @keyframes studio-modal-in {
     from { opacity: 0; transform: scale(0.96) translateY(8px); }
     to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ---------------------------------------------------------------------------
+   Global Hidden Utility Override
+   --------------------------------------------------------------------------- */
+
+.hidden,
+[hidden],
+.studio-shell .hidden,
+.studio-file-chip.hidden,
+.studio-dropzone.hidden,
+.studio-counter-pill.hidden,
+.studio-modal-backdrop.hidden {
+    display: none !important;
 }
 
 /* ---------------------------------------------------------------------------

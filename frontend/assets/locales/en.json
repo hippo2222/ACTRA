@@ -6736,7 +6736,7 @@
     "new_module": "New module",
     "import_tasks": "Import tasks",
     "ai_analysis_title": "Task Creation Studio from theory via AI",
-    "ai_analysis_label": "Theory analysis · AI",
+    "ai_analysis_label": "Theory Analysis · Studio",
     "archive_filter_title": "Show tasks that became read-only/removable after Premium expired",
     "archive_premium": "Premium Archive",
     "drafts": "Drafts",
@@ -8028,7 +8028,11 @@
       "summary_title": "Material summary",
       "detected_units": "Educational units identified: {count}",
       "recommended_types": "Recommended task types:",
-      "not_recommended_types": "Not recommended for this material:"
+      "not_recommended_types": "Not recommended for this material:",
+      "file_removed": "File removed",
+      "remove_file": "Remove file",
+      "no_summary": "Summary not provided.",
+      "no_recommendations": "No recommendations formed."
     },
     "stage2": {
       "aria": "Stage 2: Generation by types",
@@ -8043,7 +8047,13 @@
       "tasks_found": "{count} {plural} found",
       "committed_toast": "Accepted {count} tasks of type {label}!",
       "no_tasks_text": "No task text to save",
-      "validation_error": "Task schema validation error"
+      "validation_error": "Task schema validation error",
+      "btn_add_type": "+ Another type",
+      "add_type_title": "Add another task type",
+      "focus_badge": "Focus",
+      "select_direction_hint": "Select a focus area above to generate a targeted prompt.",
+      "view_full_prompt": "View full prompt text",
+      "send_prompt_hint": "Send prompt to the same AI chat"
     },
     "stage3": {
       "aria": "Stage 3: Showcase and import",
@@ -8058,7 +8068,12 @@
       "import_selected_summary": "Selected for import: {selected} of {total} tasks",
       "standard_answer": "Standard answer:",
       "correct_label": "Correct answer:",
-      "find_errors": "Find errors:"
+      "find_errors": "Find errors:",
+      "btn_add_more_types": "Add more types",
+      "delete_task": "Delete task",
+      "selected_zero": "Selected: 0 tasks",
+      "topic_not_selected": "Target course topic: not selected",
+      "topic_target_selected": "Target course topic: {module} / {topic}"
     },
     "modal": {
       "topic_title": "Select Target Topic",
@@ -8066,12 +8081,17 @@
       "topic_cancel": "Cancel",
       "topic_select_confirm": "Select topic",
       "topic_empty": "No topics found",
+      "topic_loading": "Loading topic catalog...",
       "history_title": "Analysis History",
       "history_subtitle": "Up to 3 latest saved sessions",
       "history_empty": "No saved sessions in history yet",
+      "history_loading": "Loading saved sessions...",
       "history_restore": "Open",
       "history_delete": "Delete",
       "history_session": "Session",
+      "module_empty": "No topics in module",
+      "status_imported": "Imported",
+      "status_draft": "Draft",
       "guard_title": "Unsaved Tasks",
       "guard_message": "You have generated tasks that have not been imported. If you leave the page, the draft will stay in your browser but will not be added to the course.",
       "guard_stay": "Stay",
@@ -8079,6 +8099,7 @@
     },
     "labels": {
       "manual_only": "Created manually in editor",
+      "recommended": "Recommended",
       "tasks_one": "task",
       "tasks_few": "tasks",
       "tasks_many": "tasks"

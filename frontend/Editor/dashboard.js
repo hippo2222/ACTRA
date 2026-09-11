@@ -1885,23 +1885,6 @@ class EditorDashboard {
                 countBadge.textContent = this.formatTopicTaskCount(taskCount);
                 countBadge.title = `Заданий в теме: ${taskCount}`;
                 nav.appendChild(countBadge);
-
-                const studioBtn = document.createElement('button');
-                studioBtn.type = 'button';
-                studioBtn.className = 'editor-breadcrumb-studio-btn shrink-0 inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-surface-2 hover:bg-primary hover:text-white border border-border-subtle text-text-secondary transition-all shadow-xs ml-2 group anim-scale-in';
-                const studioTitle = (typeof window !== 'undefined' && window.i18n && typeof window.i18n.t === 'function' && window.i18n.t('md.ai_analysis_title') !== 'md.ai_analysis_title')
-                    ? window.i18n.t('md.ai_analysis_title')
-                    : 'Открыть Студию создания заданий для этой темы';
-                const studioLabel = (typeof window !== 'undefined' && window.i18n && typeof window.i18n.t === 'function' && window.i18n.t('md.studio_btn') !== 'md.studio_btn')
-                    ? window.i18n.t('md.studio_btn')
-                    : 'Студия заданий';
-                studioBtn.title = studioTitle;
-                studioBtn.innerHTML = `<span class="material-symbols-outlined text-[15px] group-hover:scale-110 transition-transform">auto_awesome</span><span>${studioLabel}</span>`;
-                studioBtn.onclick = (e) => {
-                    e.stopPropagation();
-                    this.openTaskImportStudio();
-                };
-                nav.appendChild(studioBtn);
             }
         }
     }

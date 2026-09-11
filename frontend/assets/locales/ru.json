@@ -6736,7 +6736,7 @@
     "new_module": "Новый модуль",
     "import_tasks": "Импорт заданий",
     "ai_analysis_title": "Студия создания заданий из теории через ИИ",
-    "ai_analysis_label": "Анализ теории · ИИ",
+    "ai_analysis_label": "Анализ теории · Студия",
     "archive_filter_title": "Показать задания, которые стали доступны только для просмотра/удаления после окончания Premium",
     "archive_premium": "Архив Premium",
     "drafts": "Черновики",
@@ -8028,7 +8028,11 @@
       "summary_title": "Краткое резюме материала",
       "detected_units": "Выявлено учебных единиц: {count}",
       "recommended_types": "Рекомендованные типы заданий:",
-      "not_recommended_types": "Не рекомендуются для этого материала:"
+      "not_recommended_types": "Не рекомендуются для этого материала:",
+      "file_removed": "Файл удалён",
+      "remove_file": "Удалить файл",
+      "no_summary": "Резюме не предоставлено.",
+      "no_recommendations": "Рекомендации не сформированы."
     },
     "stage2": {
       "aria": "Этап 2: Потиповая генерация",
@@ -8043,7 +8047,13 @@
       "tasks_found": "{count} {plural} найдено",
       "committed_toast": "Принято {count} заданий типа {label}!",
       "no_tasks_text": "Нет текста заданий для сохранения",
-      "validation_error": "Ошибка проверки схемы заданий"
+      "validation_error": "Ошибка проверки схемы заданий",
+      "btn_add_type": "+ Другой тип",
+      "add_type_title": "Добавить другой тип задания",
+      "focus_badge": "Фокус",
+      "select_direction_hint": "Выберите направление сверху для формирования точечного промпта.",
+      "view_full_prompt": "Посмотреть полный текст промпта",
+      "send_prompt_hint": "Отправьте промпт в тот же чат нейросети"
     },
     "stage3": {
       "aria": "Этап 3: Витрина и импорт",
@@ -8058,7 +8068,12 @@
       "import_selected_summary": "Выбрано для импорта: {selected} из {total} заданий",
       "standard_answer": "Эталон:",
       "correct_label": "Правильный ответ:",
-      "find_errors": "Найдите ошибки:"
+      "find_errors": "Найдите ошибки:",
+      "btn_add_more_types": "Добавить ещё типы",
+      "delete_task": "Удалить задание",
+      "selected_zero": "Выбрано: 0 заданий",
+      "topic_not_selected": "Целевая тема курса: не выбрана",
+      "topic_target_selected": "Целевая тема курса: {module} / {topic}"
     },
     "modal": {
       "topic_title": "Выбор целевой темы",
@@ -8066,12 +8081,17 @@
       "topic_cancel": "Отмена",
       "topic_select_confirm": "Выбрать тему",
       "topic_empty": "Темы не найдены",
+      "topic_loading": "Загрузка каталога тем...",
       "history_title": "История анализов",
       "history_subtitle": "До 3 последних сохранённых сессий",
       "history_empty": "В истории пока нет сохранённых сессий",
+      "history_loading": "Загрузка сохранённых сессий...",
       "history_restore": "Открыть",
       "history_delete": "Удалить",
       "history_session": "Сессия",
+      "module_empty": "Нет тем в модуле",
+      "status_imported": "Импортировано",
+      "status_draft": "Черновик",
       "guard_title": "Несохранённые задания",
       "guard_message": "У вас есть сгенерированные задания, которые не были импортированы. Если вы уйдёте со страницы, черновик сохранится в браузере, но не будет добавлен в курс.",
       "guard_stay": "Остаться",
@@ -8079,6 +8099,7 @@
     },
     "labels": {
       "manual_only": "Создаётся вручную в редакторе",
+      "recommended": "Рекомендовано",
       "tasks_one": "задание",
       "tasks_few": "задания",
       "tasks_many": "заданий"
