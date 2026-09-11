@@ -965,3 +965,22 @@ def test_editor_upload_image_reuses_identical_file_instead_of_creating_suffix(cl
 
     stored_files = sorted(path.name for path in images_dir.glob("diagram*.png"))
     assert stored_files == ["diagram.png"]
+
+
+def test_catalog_serializes_task_updated_at_timestamp(client, temp_test_task):
+    module_id, topic_id, task_id, task_dir = temp_test_task
+
+    catalog_resp = client.get("/api/editor/catalog")
+    assert catalog_resp.status_code == 200
+    catalog_data = catalog_resp.get_json()
+    assert catalog_data["ok"] is True
+
+    module = next(item for item in catalog_data["modules"] if item["id"] == module_id)
+    topic = next(item for item in module["topics"] if item["id"] == topic_id)
+    assert len(topic["tasks"]) > 0
+    matched_task = topic["tasks"][0]
+
+    assert "created_at" in matched_task
+    assert matched_task["created_at"]
+    assert "updated_at" in matched_task
+    assert matched_task["updated_at"]

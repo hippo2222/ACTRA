@@ -829,6 +829,7 @@ class HostedStorageService(HostedShadowFallbackMixin, StorageService):
                     if isinstance(task, dict) and task.get("id") == task_id:
                         task = dict(task)
                         task["name"] = clean_name
+                        task["updated_at"] = datetime.now(timezone.utc).isoformat()
                         found = True
                     new_tasks.append(task)
                 topic["tasks"] = new_tasks

@@ -39,6 +39,7 @@ htmlcov/
 .pytest_cache/
 .pytest_tmp/
 .pytest_tmp_*/
+.pytest_temp/
 .mypy_cache/
 tmp_audit_fixtures/
 test_output.txt

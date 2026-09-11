@@ -709,11 +709,15 @@ class EditorDashboard {
     normalizeCatalogTask(task, context = {}) {
         const canonicalId = this.getCanonicalTaskId(task);
         const legacyId = String(task?.legacy_id || task?.id || '').trim();
+        const createdAt = context.created_at || task?.created_at || task?.createdAt || task?.meta?.created_at || '';
+        const updatedAt = context.updated_at || task?.updated_at || task?.updatedAt || task?.modified || task?.meta?.modified || createdAt;
         return {
             ...task,
             ...context,
             id: canonicalId || task?.id,
             legacy_id: legacyId && legacyId !== canonicalId ? legacyId : (task?.legacy_id || ''),
+            created_at: createdAt,
+            updated_at: updatedAt,
         };
     }
 
@@ -1867,13 +1871,55 @@ class EditorDashboard {
 
                 const topic = (module?.topics || []).find(t => t.id === this.activeTopicId);
                 const topicName = topic ? (topic.name || topic.id) : this.activeTopicId;
+                const topicTasks = (topic?.tasks || []);
+                const taskCount = topicTasks.length;
+
                 const topicSpan = document.createElement('span');
                 topicSpan.className = 'editor-breadcrumb-current truncate anim-scale-in';
                 topicSpan.textContent = topicName;
                 topicSpan.title = topicName;
                 nav.appendChild(topicSpan);
+
+                const countBadge = document.createElement('span');
+                countBadge.className = 'editor-breadcrumb-count shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-surface-2 text-text-secondary border border-border-subtle anim-scale-in ml-1';
+                countBadge.textContent = this.formatTopicTaskCount(taskCount);
+                countBadge.title = `Заданий в теме: ${taskCount}`;
+                nav.appendChild(countBadge);
+
+                const studioBtn = document.createElement('button');
+                studioBtn.type = 'button';
+                studioBtn.className = 'editor-breadcrumb-studio-btn shrink-0 inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-surface-2 hover:bg-primary hover:text-white border border-border-subtle text-text-secondary transition-all shadow-xs ml-2 group anim-scale-in';
+                const studioTitle = (typeof window !== 'undefined' && window.i18n && typeof window.i18n.t === 'function' && window.i18n.t('md.ai_analysis_title') !== 'md.ai_analysis_title')
+                    ? window.i18n.t('md.ai_analysis_title')
+                    : 'Открыть Студию создания заданий для этой темы';
+                const studioLabel = (typeof window !== 'undefined' && window.i18n && typeof window.i18n.t === 'function' && window.i18n.t('md.studio_btn') !== 'md.studio_btn')
+                    ? window.i18n.t('md.studio_btn')
+                    : 'Студия заданий';
+                studioBtn.title = studioTitle;
+                studioBtn.innerHTML = `<span class="material-symbols-outlined text-[15px] group-hover:scale-110 transition-transform">auto_awesome</span><span>${studioLabel}</span>`;
+                studioBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    this.openTaskImportStudio();
+                };
+                nav.appendChild(studioBtn);
             }
         }
+    }
+
+    formatTopicTaskCount(count) {
+        const lang = (typeof window !== 'undefined' && window.i18n && typeof window.i18n.getLang === 'function') ? window.i18n.getLang() : 'ru';
+        const t = (k, f) => (typeof window !== 'undefined' && window.i18n && typeof window.i18n.t === 'function') ? (window.i18n.t(k) !== k ? window.i18n.t(k) : f) : f;
+        if (lang === 'en') {
+            const word = count === 1 ? t('studio.labels.tasks_one', 'task') : t('studio.labels.tasks_many', 'tasks');
+            return `${count} ${word}`;
+        }
+        const abs = Math.abs(count) % 100;
+        const rem = abs % 10;
+        let word = t('studio.labels.tasks_many', 'заданий');
+        if (abs > 10 && abs < 20) word = t('studio.labels.tasks_many', 'заданий');
+        else if (rem > 1 && rem < 5) word = t('studio.labels.tasks_few', 'задания');
+        else if (rem === 1) word = t('studio.labels.tasks_one', 'задание');
+        return `${count} ${word}`;
     }
 
     updateSortMenuChecks() {
@@ -4857,7 +4903,8 @@ class EditorDashboard {
                                 moduleName: module.name || module.id,
                                 topicId: topic.id,
                                 topicName: topic.name || topic.id,
-                                created_at: task.created_at || task.createdAt || task.meta?.created_at
+                                created_at: task.created_at || task.createdAt || task.meta?.created_at,
+                                updated_at: task.updated_at || task.updatedAt || task.modified || task.meta?.modified || task.created_at || task.createdAt || task.meta?.created_at
                             }));
                         });
                     }
@@ -5268,11 +5315,20 @@ class EditorDashboard {
             return items;
         }
 
-        // Default: date (descending)
+        // Default: date (descending by latest modification / creation time)
+        const getTaskTimestamp = (task) => {
+            const raw = task?.updated_at || task?.updatedAt || task?.modified || task?.created_at || task?.createdAt;
+            if (!raw) return 0;
+            const ms = new Date(raw).getTime();
+            return Number.isFinite(ms) ? ms : 0;
+        };
+
         items.sort((a, b) => {
-            const dateA = new Date(a.created_at || a.createdAt || 0).getTime();
-            const dateB = new Date(b.created_at || b.createdAt || 0).getTime();
-            return dateB - dateA;
+            const timeDiff = getTaskTimestamp(b) - getTaskTimestamp(a);
+            if (timeDiff !== 0) return timeDiff;
+            const nameA = (a.name || a.id || '').toString();
+            const nameB = (b.name || b.id || '').toString();
+            return this.collator.compare(nameA, nameB);
         });
         return items;
     }
@@ -6108,40 +6164,49 @@ class EditorDashboard {
         }
     }
 
+    openTaskImportStudio() {
+        const query = new URLSearchParams();
+        const moduleId = this.activeModuleId || this.currentModuleId;
+        const topicId = this.activeTopicId || this.currentTopicId;
+        if (moduleId) query.set('module', moduleId);
+        if (topicId) query.set('topic', topicId);
+        const qs = query.toString();
+        window.location.href = '/editor/Task_Import_Studio.html' + (qs ? '?' + qs : '');
+    }
+
     showTheoryAnalysisModal(intent = 'analysis') {
-        const modal = document.getElementById('import-modal');
-        if (!modal) {
-            console.error('[Dashboard] Theory analysis modal not found');
-            return;
-        }
+        if (intent === 'microcards_manual') {
+            const modal = document.getElementById('import-modal');
+            if (!modal) {
+                console.error('[Dashboard] Theory analysis modal not found');
+                return;
+            }
 
-        if (!modal._cancelListenerAdded) {
-            modal.addEventListener('cancel', (e) => {
-                e.preventDefault();
-                this.closeImportModal();
-            });
-            modal._cancelListenerAdded = true;
-        }
+            if (!modal._cancelListenerAdded) {
+                modal.addEventListener('cancel', (e) => {
+                    e.preventDefault();
+                    this.closeImportModal();
+                });
+                modal._cancelListenerAdded = true;
+            }
 
-        if (typeof modal.showModal === 'function' && !modal.open) {
-            modal.showModal();
-        } else {
-            modal.classList.remove('hidden');
-        }
+            if (typeof modal.showModal === 'function' && !modal.open) {
+                modal.showModal();
+            } else {
+                modal.classList.remove('hidden');
+            }
 
-        if (this.importManager) {
-            if (intent === 'microcards_manual') {
+            if (this.importManager) {
                 this.importManager.openManualMicrocardsEditor().catch((e) => {
                     console.error('[Dashboard] Failed to open manual microcards editor:', e);
                 });
             } else {
-                this.openTheoryWorkspace().catch((e) => {
-                    console.error('[Dashboard] Failed to open theory analysis mode:', e);
-                });
+                console.error('[Dashboard] ImportManager not initialized');
             }
-        } else {
-            console.error('[Dashboard] ImportManager not initialized');
+            return;
         }
+
+        this.openTaskImportStudio();
     }
 
     async openTheoryWorkspace() {

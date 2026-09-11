@@ -81,6 +81,52 @@ class TestStorageServiceRenameTask:
             updated_mod = json.load(fh)
         assert updated_mod["topics"][0]["tasks"][0]["name"] == new_name
 
+    def test_ensure_task_registered_in_module_updates_name_and_cache(self, tmp_path):
+        """Test that _ensure_task_registered_in_module updates existing task's name in module.json and clears cache."""
+        modules_dir = tmp_path / "modules"
+        module_id = "test_mod"
+        (modules_dir / module_id).mkdir(parents=True)
+        topic_id = "test_top"
+        task_id = "task_001"
+
+        module_json = {
+            "id": module_id,
+            "name": "Test Module",
+            "topics": [
+                {
+                    "id": topic_id,
+                    "name": "Test Topic",
+                    "tasks": [
+                        {"id": task_id, "name": "Old Task Name", "type": "open_answer"}
+                    ],
+                }
+            ],
+        }
+        with open(modules_dir / module_id / "module.json", "w", encoding="utf-8") as fh:
+            json.dump(module_json, fh)
+
+        storage = StorageService(data_dir=str(tmp_path))
+        storage._modules_cache = [{"some": "cached_data"}]
+
+        # Call with updated task payload
+        storage._ensure_task_registered_in_module(
+            module_id,
+            topic_id,
+            task_id,
+            {
+                "id": task_id,
+                "name": "Updated Task Name",
+                "meta": {"name": "Updated Task Name"},
+            },
+        )
+
+        # Verify module.json updated
+        with open(modules_dir / module_id / "module.json", "r", encoding="utf-8") as fh:
+            updated_mod = json.load(fh)
+        assert updated_mod["topics"][0]["tasks"][0]["name"] == "Updated Task Name"
+        # Verify cache invalidated
+        assert storage._modules_cache is None
+
     def test_rename_task_validation_rejections(self, tmp_path):
         storage = StorageService(data_dir=str(tmp_path))
         # Empty names rejected
@@ -144,6 +190,9 @@ class _MockStorageForApi:
             }
         }
         self.renamed_calls = []
+
+    def load_modules(self):
+        return []
 
     def load_task(self, module_id, topic_id, task_id):
         key = (module_id, topic_id, task_id)
@@ -254,3 +303,12 @@ class TestTaskRenameApiEndpoint:
         )
         assert resp.status_code == 403
         assert resp.get_json()["error"] == "guest_cannot_edit"
+
+    def test_catalog_api_has_no_cache_headers(self, client_and_storage):
+        c, _ = client_and_storage
+        _login(c, "user_123")
+        resp = c.get("/api/editor/catalog")
+        assert resp.status_code == 200
+        assert "no-cache" in resp.headers.get("Cache-Control", "")
+        assert "no-store" in resp.headers.get("Cache-Control", "")
+        assert "must-revalidate" in resp.headers.get("Cache-Control", "")

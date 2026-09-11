@@ -706,6 +706,13 @@ class StorageService:
                     or meta.get('created')
                     or datetime.fromtimestamp(task_json.stat().st_ctime).isoformat()
                 )
+                updated_at = (
+                    meta.get('updated_at')
+                    or meta.get('modified')
+                    or meta.get('updated')
+                    or (datetime.fromtimestamp(task_json.stat().st_mtime).isoformat() if task_json.exists() else created_at)
+                    or created_at
+                )
 
                 # Calculate relative path for reliable loading
                 try:
@@ -727,6 +734,7 @@ class StorageService:
                     'subtype': task_data.get('subtype'),
                     'description': task_data.get('description', ''),
                     'created_at': created_at,
+                    'updated_at': updated_at,
                     'path': path_str,
                 }
                 for field_name in (
@@ -792,6 +800,13 @@ class StorageService:
                         or meta.get('created')
                         or datetime.fromtimestamp(task_json_path.stat().st_ctime).isoformat()
                     )
+                    updated_at = (
+                        meta.get('updated_at')
+                        or meta.get('modified')
+                        or meta.get('updated')
+                        or (datetime.fromtimestamp(task_json_path.stat().st_mtime).isoformat() if task_json_path.exists() else created_at)
+                        or created_at
+                    )
                     metadata.update({
                         'id': meta.get('id') or task_json_path.parent.name or metadata.get('id'),
                         'name': meta.get('name') or task_data.get('name') or metadata.get('name'),
@@ -799,6 +814,7 @@ class StorageService:
                         'subtype': task_data.get('subtype', metadata.get('subtype')),
                         'description': task_data.get('description', metadata.get('description', '')),
                         'created_at': created_at,
+                        'updated_at': updated_at,
                         'author': task_data.get('author', metadata.get('author')),
                     })
                     for field_name in (
@@ -1977,6 +1993,7 @@ class StorageService:
         meta["created_at"] = created_at
         meta["created"] = created
         meta["modified"] = now_iso
+        meta["updated_at"] = now_iso
         meta.setdefault("version", "1.0")
         meta.setdefault("task_schema_version", "1.2")
 
@@ -2133,6 +2150,7 @@ class StorageService:
             "created": now_iso,
             "created_at": now_iso,
             "modified": now_iso,
+            "updated_at": now_iso,
         }
         task_meta_payload = self._apply_workspace_meta_fields(task_meta_payload, workspace_meta)
         task_meta_payload = self._normalize_graph_ownership_fields(
@@ -2148,6 +2166,7 @@ class StorageService:
             created=now_iso,
             created_at=now_iso,
             modified=now_iso,
+            updated_at=now_iso,
         )
         task_data_obj.set_meta(
             **{
@@ -2256,6 +2275,7 @@ class StorageService:
                 "created": now_iso,
                 "created_at": now_iso,
                 "modified": now_iso,
+                "updated_at": now_iso,
             }
             task_meta_payload = self._apply_workspace_meta_fields(task_meta_payload, workspace_meta)
             task_meta_payload = self._normalize_graph_ownership_fields(
@@ -2271,6 +2291,7 @@ class StorageService:
                 created=now_iso,
                 created_at=now_iso,
                 modified=now_iso,
+                updated_at=now_iso,
             )
             task_data_obj.set_meta(
                 **{
@@ -2554,11 +2575,14 @@ class StorageService:
                 task_data["name"] = clean_name
                 meta = task_data.get("meta")
                 if isinstance(meta, dict):
+                    now_iso = datetime.now(timezone.utc).isoformat()
                     meta["name"] = clean_name
-                    meta["modified"] = datetime.now(timezone.utc).isoformat()
+                    meta["modified"] = now_iso
+                    meta["updated_at"] = now_iso
                 metadata = task_data.get("metadata")
                 if isinstance(metadata, dict):
                     metadata["name"] = clean_name
+                    metadata["updated_at"] = meta.get("updated_at") if isinstance(meta, dict) else datetime.now(timezone.utc).isoformat()
 
                 with tempfile.NamedTemporaryFile(mode="w", dir=task_json_path.parent, delete=False, encoding="utf-8", suffix=".tmp") as tf:
                     json.dump(task_data, tf, ensure_ascii=False, indent=2)
@@ -2614,10 +2638,17 @@ class StorageService:
                 return # Topic not in json?
                 
             tasks = topic.get("tasks", [])
-            if not any(t.get("id") == task_id for t in tasks):
+            payload_meta = payload.get("meta") if isinstance(payload.get("meta"), dict) else {}
+            task_name = (
+                str(payload.get("name") or "").strip()
+                or str(payload_meta.get("name") or "").strip()
+                or (str(payload.get("metadata", {}).get("name") or "").strip() if isinstance(payload.get("metadata"), dict) else "")
+                or str(payload.get("id") or task_id).strip()
+            )
+            existing_entry = next((t for t in tasks if t.get("id") == task_id), None)
+
+            if existing_entry is None:
                 # Add it
-                payload_meta = payload.get("meta") if isinstance(payload.get("meta"), dict) else {}
-                task_name = payload_meta.get("name") or payload.get("id", task_id)
                 new_entry = {"id": task_id, "name": task_name}
                 
                 # Add type if known
@@ -2655,8 +2686,29 @@ class StorageService:
                     json.dump(module, tf, ensure_ascii=False, indent=2)
                     temp_name = tf.name
                 
-                shutil.move(temp_name, module_json_path)
+                shutil.move(temp_name, str(module_json_path))
+                self._modules_cache = None
                 self.logger.debug(f"Added task {task_id} to module.json atomically")
+            else:
+                changed = False
+                if task_name and existing_entry.get("name") != task_name:
+                    existing_entry["name"] = task_name
+                    changed = True
+                task_type = payload.get("type") or payload.get("task_type")
+                if task_type and not existing_entry.get("type"):
+                    existing_entry["type"] = task_type
+                    changed = True
+                if changed:
+                    import tempfile
+                    import shutil
+
+                    with tempfile.NamedTemporaryFile(mode="w", dir=module_json_path.parent, delete=False, encoding="utf-8", suffix=".tmp") as tf:
+                        json.dump(module, tf, ensure_ascii=False, indent=2)
+                        temp_name = tf.name
+
+                    shutil.move(temp_name, str(module_json_path))
+                    self._modules_cache = None
+                    self.logger.debug(f"Updated task {task_id} name in module.json atomically: '{task_name}'")
 
         except Exception as e:
             self.logger.error(f"Failed to update module.json for task {task_id}: {e}")

@@ -677,7 +677,11 @@ def get_editor_catalog() -> Any:
                 modules,
                 current_user_id=ctx.user_id,
             )
-        return jsonify({"ok": True, "modules": modules})
+        resp = jsonify({"ok": True, "modules": modules})
+        resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        resp.headers["Pragma"] = "no-cache"
+        resp.headers["Expires"] = "0"
+        return resp
     except Exception as exc:
         degraded_response = _maybe_hosted_shadow_write_error_response(exc)
         if degraded_response is not None:
