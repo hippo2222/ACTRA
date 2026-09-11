@@ -586,9 +586,33 @@ const ImageLabelUI = (function () {
                 }
                 .player-zone-overlay {
                     box-sizing: border-box;
-                    white-space: normal;
-                    word-break: break-word;
                     overflow: visible;
+                }
+                .player-zone-overlay .zone-plate-text {
+                    width: 100%;
+                    height: 100%;
+                    max-width: 100%;
+                    max-height: 100%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    text-align: center;
+                    box-sizing: border-box;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    word-break: break-word;
+                    white-space: normal;
+                    line-height: 1.15;
+                    padding: 1px 3px;
+                }
+                .player-zone-overlay .player-zone-input {
+                    width: 100%;
+                    height: 100%;
+                    max-width: 100%;
+                    max-height: 100%;
+                    box-sizing: border-box;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
                 }
             `;
             document.head.appendChild(style);
@@ -665,11 +689,15 @@ const ImageLabelUI = (function () {
                 overlay.style.left = `${zone.rect.x}%`;
                 overlay.style.top = `${zone.rect.y}%`;
                 
-                // Allow dynamic scaling
-                overlay.style.minWidth = `${zone.rect.width}%`;
-                overlay.style.minHeight = `${zone.rect.height}%`;
-                overlay.style.width = 'auto';
-                overlay.style.height = 'auto';
+                // Fixed geometry strictly matching author-defined slot
+                const rectW = (zone.rect && zone.rect.width) ? zone.rect.width : 16;
+                const rectH = (zone.rect && zone.rect.height) ? zone.rect.height : 6;
+                overlay.style.width = `${rectW}%`;
+                overlay.style.height = `${rectH}%`;
+                overlay.style.minWidth = `${rectW}%`;
+                overlay.style.minHeight = `${rectH}%`;
+                overlay.style.maxWidth = `${rectW}%`;
+                overlay.style.maxHeight = `${rectH}%`;
                 
                 const baseColor = zone.color || '#ffffff';
                 overlay.style.borderColor = baseColor === '#ffffff' ? '#cbd5e1' : baseColor;
@@ -683,43 +711,55 @@ const ImageLabelUI = (function () {
                     overlay.classList.add('cursor-pointer');
                     
                     const labelSpan = document.createElement('span');
-                    labelSpan.className = 'text-center font-bold px-2 py-1 max-w-full';
+                    labelSpan.className = 'zone-plate-text text-center font-bold max-w-full';
                     
-                    const baseHeightPx = (zone.rect.height / 100) * imgH;
+                    const baseHeightPx = (rectH / 100) * (imgH || 600);
+                    const baseWidthPx = (rectW / 100) * (imgW || 800);
+                    const maxH = Math.max(8, baseHeightPx - 4);
+                    const maxW = Math.max(8, baseWidthPx - 6);
 
                     updateOverlayTextPlate();
                     overlay.updatePlate = updateOverlayTextPlate;
 
                     function updateOverlayTextPlate() {
                         const assigned = assignments[zone.id];
-                        const textLength = (assigned || '?').length;
-                        
-                        let scaleFactor = 0.75;
-                        if (textLength > 15) scaleFactor = 0.55;
-                        if (textLength > 30) scaleFactor = 0.45;
-
-                        const fs = Math.max(12, Math.min(32, baseHeightPx * scaleFactor));
-                        labelSpan.style.fontSize = `${fs}px`;
-                        labelSpan.style.lineHeight = '1.1';
-                        labelSpan.style.whiteSpace = 'normal';
-                        labelSpan.style.wordBreak = 'break-word';
 
                         if (assigned) {
                             overlay.style.backgroundColor = 'var(--color-primary, #6366f1)';
                             overlay.style.borderColor = 'var(--color-primary-dark, #4f46e5)';
                             overlay.style.boxShadow = '0 2px 8px rgba(99, 102, 241, 0.35)';
+                            overlay.title = assigned;
+
                             labelSpan.textContent = assigned;
                             labelSpan.style.color = '#ffffff';
                             labelSpan.style.backgroundColor = 'transparent';
-                            labelSpan.style.padding = '0.25em 0.6em';
+
+                            // Dynamic auto-fitting font size loop
+                            const textLen = assigned.length;
+                            let fs = Math.max(10, Math.min(22, maxH * 0.72));
+                            if (textLen > 35) fs = Math.min(fs, 11);
+                            else if (textLen > 22) fs = Math.min(fs, 13);
+                            else if (textLen > 14) fs = Math.min(fs, 15);
+
+                            labelSpan.style.fontSize = `${fs}px`;
+                            labelSpan.style.height = 'auto';
+
+                            while (fs > 8 && (labelSpan.scrollHeight > maxH || labelSpan.scrollWidth > maxW)) {
+                                fs -= 0.5;
+                                labelSpan.style.fontSize = `${fs}px`;
+                            }
+                            labelSpan.style.height = '100%';
                         } else {
                             overlay.style.backgroundColor = '#ffffff';
                             overlay.style.borderColor = '#cbd5e1';
                             overlay.style.boxShadow = '0 1px 4px rgba(0, 0, 0, 0.08)';
+                            overlay.removeAttribute('title');
+
                             labelSpan.textContent = '?';
                             labelSpan.style.color = 'var(--color-text-secondary, #64748b)';
                             labelSpan.style.backgroundColor = 'transparent';
-                            labelSpan.style.padding = '0.25em 0.6em';
+                            labelSpan.style.fontSize = `${Math.max(12, Math.min(24, maxH * 0.65))}px`;
+                            labelSpan.style.height = '100%';
                         }
                     }
 
@@ -973,32 +1013,20 @@ const ImageLabelUI = (function () {
                         if (document.activeElement !== input) updateOverlayStyle(false);
                     });
 
-                    function adjustInputWidth() {
+                    function adjustInputTypography() {
                         const textVal = (input.value || '').trim();
                         const len = textVal.length;
 
                         // Dynamic font size scaling based on text length
                         let currentFs = fs;
                         if (len > 35) {
-                            currentFs = Math.max(11, fs * 0.60);
+                            currentFs = Math.max(9, fs * 0.55);
                         } else if (len > 22) {
-                            currentFs = Math.max(11, fs * 0.72);
+                            currentFs = Math.max(10, fs * 0.70);
                         } else if (len > 12) {
-                            currentFs = Math.max(12, fs * 0.85);
+                            currentFs = Math.max(11, fs * 0.82);
                         }
                         input.style.fontSize = `${currentFs}px`;
-
-                        // Calculate max allowed width (prevent breaking canvas layout)
-                        const baseWidthPx = imgW ? (zone.rect.width / 100) * imgW : 60;
-                        const maxAllowedWidthPx = imgW ? Math.min(imgW * 0.75, 360) : 320;
-                        const charCount = Math.max(len, 2);
-                        
-                        // Generous width calculation to guarantee text never gets cut off when blurred
-                        const minCalculatedWidth = charCount * (currentFs * 0.74) + 26;
-                        const finalWidthPx = Math.min(Math.max(minCalculatedWidth, baseWidthPx || 60), maxAllowedWidthPx);
-
-                        input.style.maxWidth = `${maxAllowedWidthPx}px`;
-                        input.style.width = `${finalWidthPx}px`;
 
                         // Browser native hover tooltip for long text
                         if (len > 0) {
@@ -1011,7 +1039,7 @@ const ImageLabelUI = (function () {
                     }
 
                     input.value = assignments[zone.id] || '';
-                    adjustInputWidth();
+                    adjustInputTypography();
                     updateOverlayStyle(false);
 
                     input.addEventListener('focus', () => {
@@ -1032,7 +1060,7 @@ const ImageLabelUI = (function () {
                     input.addEventListener('input', (e) => {
                         unfilledWarningShown = false;
                         assignments[zone.id] = e.target.value;
-                        adjustInputWidth();
+                        adjustInputTypography();
                         updateOverlayStyle(true);
                         updateLvl2Progress();
                     });
@@ -1293,12 +1321,21 @@ const ImageLabelUI = (function () {
                 const isCorrect = isUser ? (zEntry && (typeof zEntry === 'object' ? zEntry.is_correct === true : zEntry === true)) : true;
                 const assignedText = isUser ? (assignments[zone.id] || (zEntry && typeof zEntry === 'object' && zEntry.actual) || '') : zone.label;
 
+                const rectW = (zone.rect && zone.rect.width) ? zone.rect.width : 16;
+                const rectH = (zone.rect && zone.rect.height) ? zone.rect.height : 6;
+
                 const zoneEl = document.createElement('div');
-                zoneEl.className = 'absolute border rounded flex items-center justify-center p-1 box-border transition-all pointer-events-auto cursor-pointer';
+                zoneEl.className = 'absolute border rounded flex items-center justify-center p-0.5 box-border transition-all pointer-events-auto cursor-pointer';
                 zoneEl.style.left = `${zone.rect.x}%`;
                 zoneEl.style.top = `${zone.rect.y}%`;
-                zoneEl.style.minWidth = `${zone.rect.width}%`;
-                zoneEl.style.minHeight = `${zone.rect.height}%`;
+                zoneEl.style.width = `${rectW}%`;
+                zoneEl.style.height = `${rectH}%`;
+                zoneEl.style.minWidth = `${rectW}%`;
+                zoneEl.style.minHeight = `${rectH}%`;
+                zoneEl.style.maxWidth = `${rectW}%`;
+                zoneEl.style.maxHeight = `${rectH}%`;
+                zoneEl.style.overflow = 'visible';
+                zoneEl.title = assignedText || (isUser ? '?' : zone.label);
                 zoneEl.setAttribute('data-review-zone-id', zone.id);
 
                 if (isUser) {
@@ -1315,7 +1352,7 @@ const ImageLabelUI = (function () {
                 }
 
                 const labelSpan = document.createElement('span');
-                labelSpan.className = 'text-center font-bold px-2 py-0.5 rounded text-[11px] leading-tight max-w-full break-words shadow-sm';
+                labelSpan.className = 'zone-plate-text text-center font-bold px-1 py-0.5 rounded text-[11px] leading-tight max-w-full break-words shadow-sm';
                 labelSpan.textContent = assignedText || (isUser ? '?' : zone.label);
 
                 if (isUser) {

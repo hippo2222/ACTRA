@@ -147,5 +147,90 @@ describe("ImageLabelUI render stability", () => {
     expect(zones.length).toBe(2);
     expect(zones[0].style.left).toBe("10%");
     expect(zones[1].style.left).toBe("30%");
+    expect(zones[0].style.width).toBe("20%");
+    expect(zones[0].style.height).toBe("10%");
+  });
+
+  it("keeps slot geometry strictly fixed and prevents stretching when long labels are assigned", () => {
+    const container = renderImageLabeling({
+      content: {
+        zones: [
+          {
+            color: "#6366f1",
+            id: "zone_lad",
+            label: "Диагональная ветвь левой передней артерии",
+            rect: { x: 15, y: 25, width: 22, height: 8 }
+          }
+        ]
+      }
+    });
+    const img = container.querySelector('#player-main-image');
+    Object.defineProperty(img, 'naturalWidth', { value: 1200, configurable: true });
+    Object.defineProperty(img, 'naturalHeight', { value: 900, configurable: true });
+    img.dispatchEvent(new window.Event('load'));
+
+    const overlay = container.querySelector('[data-zone-id="zone_lad"]');
+    expect(overlay).not.toBeNull();
+    // Empty state dimensions
+    expect(overlay.style.width).toBe("22%");
+    expect(overlay.style.height).toBe("8%");
+    expect(overlay.style.maxWidth).toBe("22%");
+    expect(overlay.style.maxHeight).toBe("8%");
+
+    // Assign long label
+    ImageLabelUI.restoreInput({
+      answers: {
+        zone_lad: "Диагональная ветвь левой передней артерии"
+      }
+    });
+
+    const updatedOverlay = container.querySelector('[data-zone-id="zone_lad"]');
+    // Verify it NEVER stretched
+    expect(updatedOverlay.style.width).toBe("22%");
+    expect(updatedOverlay.style.height).toBe("8%");
+    expect(updatedOverlay.style.maxWidth).toBe("22%");
+    expect(updatedOverlay.style.maxHeight).toBe("8%");
+
+    const labelSpan = updatedOverlay.querySelector('.zone-plate-text');
+    expect(labelSpan).not.toBeNull();
+    expect(labelSpan.textContent).toBe("Диагональная ветвь левой передней артерии");
+    expect(updatedOverlay.title).toBe("Диагональная ветвь левой передней артерии");
+  });
+
+  it("prevents input from stretching slot geometry in difficulty 2", () => {
+    const container = renderImageLabeling({
+      settings: { difficulty: 2 },
+      content: {
+        zones: [
+          {
+            color: "#6366f1",
+            id: "zone_rca",
+            label: "Правая коронарная артерия",
+            rect: { x: 50, y: 30, width: 18, height: 7 }
+          }
+        ]
+      }
+    });
+    const img = container.querySelector('#player-main-image');
+    Object.defineProperty(img, 'naturalWidth', { value: 1200, configurable: true });
+    Object.defineProperty(img, 'naturalHeight', { value: 900, configurable: true });
+    img.dispatchEvent(new window.Event('load'));
+
+    const overlay = container.querySelector('[data-zone-id="zone_rca"]');
+    expect(overlay.style.width).toBe("18%");
+    expect(overlay.style.height).toBe("7%");
+
+    const input = overlay.querySelector('.player-zone-input');
+    expect(input).not.toBeNull();
+
+    // Type long text
+    input.value = "Очень длинное медицинское название коронарной артерии";
+    input.dispatchEvent(new window.Event('input'));
+
+    // Verify slot did NOT stretch
+    expect(overlay.style.width).toBe("18%");
+    expect(overlay.style.height).toBe("7%");
+    expect(overlay.style.maxWidth).toBe("18%");
+    expect(overlay.style.maxHeight).toBe("7%");
   });
 });
