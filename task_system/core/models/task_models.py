@@ -740,7 +740,7 @@ class TestQuestion(BaseModel):
         return [validate_test_question_image_ref(item) for item in v]
     
     text: str = Field(..., description="Question text")
-    options: List[TestOption] = Field(..., min_items=2, description="Answer options (minimum 2)")
+    options: List[TestOption] = Field(..., min_items=1, description="Answer options (minimum 1)")
     image: Optional[str] = Field(None, description="Optional image for this question")
     images: Optional[List[Union[str, TestQuestionImageRef]]] = Field(None, description="Optional multiple images for this question")
     

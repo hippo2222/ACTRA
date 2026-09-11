@@ -867,6 +867,9 @@ class BaseEditor {
         this.applyDifficultyAuthoringStateToTaskData();
         this.renderDifficultyAuthoringControls();
         this.markUnsaved();
+        if (typeof this.onDifficultyAuthoringChanged === 'function') {
+            this.onDifficultyAuthoringChanged();
+        }
     }
 
     toggleDifficultyAuthoringLevel(level, checked) {
@@ -888,6 +891,9 @@ class BaseEditor {
         this.applyDifficultyAuthoringStateToTaskData();
         this.renderDifficultyAuthoringControls();
         this.markUnsaved();
+        if (typeof this.onDifficultyAuthoringChanged === 'function') {
+            this.onDifficultyAuthoringChanged();
+        }
     }
 
     getDifficultyAuthoringUiCopy() {
@@ -1204,6 +1210,15 @@ class BaseEditor {
      * Child classes should implement validateTask() and buildTaskData()
      */
     async saveTask() {
+        if (this._activeRename && typeof this._activeRename.commit === 'function') {
+            await this._activeRename.commit();
+        }
+        if (this._pendingRenamePromise) {
+            try {
+                await this._pendingRenamePromise;
+            } catch (_) {}
+        }
+
         this.updateSaveStatus({ type: 'saving' });
 
         if (!this.task) {
@@ -1227,8 +1242,11 @@ class BaseEditor {
             meta.id = this.taskId;
             meta.module = this.moduleId;
             meta.topic = this.topicId;
-            meta.name = this.taskNameParam || this.task?.metadata?.name || this.task?.task_data?.meta?.name || this.taskId;
-            taskData.name = meta.name;
+            const resolvedName = this.taskNameParam || this.getTaskDisplayName() || this.task?.metadata?.name || this.task?.task_data?.meta?.name || this.taskId;
+            meta.name = resolvedName;
+            taskData.name = resolvedName;
+            if (meta.title) meta.title = resolvedName;
+            if (taskData.title) taskData.title = resolvedName;
             if (!taskData.type) {
                 taskData.type = this.taskTypeParam || this.task?.task_data?.type || '';
             }
@@ -1327,40 +1345,25 @@ class BaseEditor {
         const oldName = this.getTaskDisplayName();
         if (!cleanName || cleanName === oldName) return false;
 
-        // If task is persisted on server, call API
-        if (this.hasPersistedTask && this.moduleId && this.topicId && this.taskId) {
-            try {
-                const response = await fetch('/api/editor/task/rename', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        module_id: this.moduleId,
-                        topic_id: this.topicId,
-                        task_id: this.taskId,
-                        name: cleanName
-                    })
-                });
-                const result = await response.json();
-                if (!result.ok) {
-                    this.showToast(result.error || wt('db.k398', 'Не удалось переименовать задание'), 'error');
-                    return false;
+        // Synchronously update all local model fields immediately
+        this.taskNameParam = cleanName;
+        if (this.task) {
+            if (this.task.metadata) {
+                this.task.metadata.name = cleanName;
+                if ('title' in this.task.metadata) this.task.metadata.title = cleanName;
+            }
+            if (this.task.task_data) {
+                this.task.task_data.name = cleanName;
+                if ('title' in this.task.task_data) this.task.task_data.title = cleanName;
+                if (this.task.task_data.meta) {
+                    this.task.task_data.meta.name = cleanName;
+                    if ('title' in this.task.task_data.meta) this.task.task_data.meta.title = cleanName;
                 }
-            } catch (err) {
-                console.error('Rename request failed:', err);
-                this.showToast(wt('db.k398', 'Не удалось переименовать задание'), 'error');
-                return false;
             }
         }
 
-        // Update local state
-        this.taskNameParam = cleanName;
-        if (this.task) {
-            if (this.task.metadata) this.task.metadata.name = cleanName;
-            if (this.task.task_data) {
-                this.task.task_data.name = cleanName;
-                if (this.task.task_data.meta) this.task.task_data.meta.name = cleanName;
-            }
-        }
+        // Mark as having unsaved changes
+        this.markUnsaved();
 
         // Update draft if autosave manager is present
         if (this.autoSaveManager && typeof this.autoSaveManager.saveDraft === 'function') {
@@ -1374,16 +1377,52 @@ class BaseEditor {
             this.updateTaskTitleDisplay();
         }
 
-        // Show undo toast
+        // If task is persisted on server, call API
+        if (this.hasPersistedTask && this.moduleId && this.topicId && this.taskId) {
+            const renamePromise = (async () => {
+                try {
+                    const response = await fetch('/api/editor/task/rename', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            module_id: this.moduleId,
+                            topic_id: this.topicId,
+                            task_id: this.taskId,
+                            name: cleanName
+                        })
+                    });
+                    const result = await response.json();
+                    if (!result.ok) {
+                        this.showToast(result.error || wt('db.k398', 'Не удалось переименовать задание'), 'error');
+                        return false;
+                    }
+                    return true;
+                } catch (err) {
+                    console.error('Rename request failed:', err);
+                    this.showToast(wt('db.k398', 'Не удалось переименовать задание'), 'error');
+                    return false;
+                }
+            })();
+
+            this._pendingRenamePromise = renamePromise;
+            try {
+                await renamePromise;
+            } finally {
+                if (this._pendingRenamePromise === renamePromise) {
+                    this._pendingRenamePromise = null;
+                }
+            }
+        }
+
         if (!options.silent) {
-            this.showTaskRenameUndoToast(cleanName, oldName, options);
+            this.showToast(wt('editor_base.toast_task_renamed', 'Название задания обновлено'), 'success', 2500);
         }
 
         return true;
     }
 
     /**
-     * Show Undo Toast in Editor
+     * Show Undo Toast in Editor (legacy/compatibility helper)
      */
     showTaskRenameUndoToast(newName, oldName, options = {}) {
         const container = document.getElementById('toast-container') || document.body;
@@ -1446,6 +1485,7 @@ class BaseEditor {
             const input = document.createElement('input');
             input.type = 'text';
             input.value = currentName;
+            input.dataset.role = 'header-rename-input';
             input.className = 'text-base font-bold bg-surface-2 border border-primary rounded px-2 py-0.5 outline-none focus:ring-1 focus:ring-primary text-text-main max-w-sm';
 
             const originalDisplay = titleElement.style.display;
@@ -1459,6 +1499,7 @@ class BaseEditor {
             const commit = async () => {
                 if (committed) return;
                 committed = true;
+                this._activeRename = null;
                 const newName = input.value.trim();
                 input.remove();
                 titleElement.style.display = originalDisplay || '';
@@ -1470,10 +1511,13 @@ class BaseEditor {
             const cancel = () => {
                 if (committed) return;
                 committed = true;
+                this._activeRename = null;
                 input.remove();
                 titleElement.style.display = originalDisplay || '';
                 if (btn) btn.style.display = '';
             };
+
+            this._activeRename = { commit, cancel, input };
 
             input.addEventListener('click', (e) => e.stopPropagation());
             input.addEventListener('mousedown', (e) => e.stopPropagation());
@@ -1483,7 +1527,7 @@ class BaseEditor {
                 if (e.key === 'Escape') { e.preventDefault(); cancel(); }
             });
             input.addEventListener('blur', () => {
-                setTimeout(commit, 100);
+                commit();
             });
         };
 
@@ -3222,10 +3266,19 @@ class BaseEditor {
 
     // ===== NAVIGATION =====
 
-    /**
-     * Navigate back to dashboard
-     */
-    goBack() {
+    async goBack() {
+        if (this._activeRename && typeof this._activeRename.commit === 'function') {
+            try {
+                await this._activeRename.commit();
+            } catch (err) {
+                console.warn('[BaseEditor] Error committing active rename on goBack:', err);
+            }
+        }
+        if (this._pendingRenamePromise) {
+            try {
+                await this._pendingRenamePromise;
+            } catch (_) {}
+        }
         if (this.hasUnsavedChanges) {
             this.showConfirmModal({
                 title: wt('editor_base.modal.unsaved_changes_title', 'Несохранённые изменения'),
@@ -3274,15 +3327,28 @@ class BaseEditor {
      */
     setupUndoRedoHandlers() {
         document.addEventListener('keydown', (e) => {
+            const target = e.target;
+            const isEditable = target && (
+                target.tagName === 'INPUT' ||
+                target.tagName === 'TEXTAREA' ||
+                target.isContentEditable
+            );
+            if (isEditable) {
+                return;
+            }
+
+            const isCtrl = e.ctrlKey || e.metaKey;
+            const isZ = e.key === 'z' || e.key === 'Z' || e.key === 'я' || e.key === 'Я' || e.code === 'KeyZ';
+            const isY = e.key === 'y' || e.key === 'Y' || e.key === 'н' || e.key === 'Н' || e.code === 'KeyY';
+
             // Ctrl+Z - Undo
-            if (e.ctrlKey && e.key === 'z' && !e.shiftKey) {
+            if (isCtrl && isZ && !e.shiftKey) {
                 e.preventDefault();
                 this.performUndo();
             }
 
             // Ctrl+Y or Ctrl+Shift+Z - Redo
-            if ((e.ctrlKey && e.key === 'y') ||
-                (e.ctrlKey && e.shiftKey && e.key === 'z')) {
+            if ((isCtrl && isY) || (isCtrl && e.shiftKey && isZ)) {
                 e.preventDefault();
                 this.performRedo();
             }
@@ -3420,7 +3486,19 @@ class BaseEditor {
 
     // ===== LATE NAVIGATION GUARDS OVERRIDES =====
 
-    goBack() {
+    async goBack() {
+        if (this._activeRename && typeof this._activeRename.commit === 'function') {
+            try {
+                await this._activeRename.commit();
+            } catch (err) {
+                console.warn('[BaseEditor] Error committing active rename on goBack:', err);
+            }
+        }
+        if (this._pendingRenamePromise) {
+            try {
+                await this._pendingRenamePromise;
+            } catch (_) {}
+        }
         if (this.hasUnsavedChanges) {
             this.showConfirmModal({
                 title: wt('editor_base.modal.unsaved_changes_title', 'Несохранённые изменения'),

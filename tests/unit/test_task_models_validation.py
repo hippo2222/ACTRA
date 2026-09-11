@@ -102,16 +102,25 @@ class TestTestQuestionValidation:
             )
         assert "At least one option must be marked as correct" in str(exc_info.value)
     
-    def test_question_with_less_than_two_options_fails(self):
-        """Test that question with less than 2 options fails."""
+    def test_question_with_empty_options_fails(self):
+        """Test that question with 0 options fails."""
         with pytest.raises(ValidationError) as exc_info:
             TestQuestion(
                 text="Invalid question",
-                options=[
-                    TestOption(text="Only option", is_correct=True),
-                ]
+                options=[]
             )
-        assert "min_items" in str(exc_info.value).lower() or "at least 2" in str(exc_info.value).lower()
+        assert "min_items" in str(exc_info.value).lower() or "at least 1" in str(exc_info.value).lower()
+
+    def test_question_with_single_option_valid(self):
+        """Test that question with 1 option is valid at model level (used for Level 2 tasks)."""
+        question = TestQuestion(
+            text="Single option question",
+            options=[
+                TestOption(text="Only option", is_correct=True),
+            ]
+        )
+        assert len(question.options) == 1
+        assert question.options[0].text == "Only option"
 
 
 class TestTestTaskContentValidation:

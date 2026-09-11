@@ -1738,6 +1738,55 @@ class TestEditor extends BaseEditor {
         return 'append';
     }
 
+    isOnlyLevel2Selected() {
+        const meta = this.difficultyAuthoring?.activeMeta;
+        if (meta && typeof this._resolveDifficultyAuthoringSelection === 'function') {
+            const { mode, selectedLevels } = this._resolveDifficultyAuthoringSelection(meta);
+            if (mode === 'custom') {
+                const normalized = (selectedLevels || []).map(Number).filter(Number.isFinite);
+                if (normalized.length === 1 && normalized[0] === 2) {
+                    return true;
+                }
+            }
+        }
+
+        const state = this.difficultyAuthoring?.state;
+        if (state && state.mode === 'custom') {
+            const levels = Array.isArray(state.selectedLevels)
+                ? state.selectedLevels.map(Number).filter(Number.isFinite)
+                : [];
+            if (levels.length === 1 && levels[0] === 2) {
+                return true;
+            }
+        }
+
+        const settings = this.task?.task_data?.settings;
+        if (settings && typeof settings === 'object') {
+            if (settings.__difficulty_authoring_mode === 'custom') {
+                const customLevels = Array.isArray(settings.__difficulty_authoring_selected_levels)
+                    ? settings.__difficulty_authoring_selected_levels.map(Number).filter(Number.isFinite)
+                    : [];
+                if (customLevels.length === 1 && customLevels[0] === 2) {
+                    return true;
+                }
+            }
+            const allowed = settings.allowed_difficulties || settings.available_difficulties;
+            if (Array.isArray(allowed)) {
+                const normalized = allowed.map(Number).filter(Number.isFinite);
+                if (normalized.length === 1 && normalized[0] === 2) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    onDifficultyAuthoringChanged() {
+        this.renderQuestionList();
+        this.updateEditorChrome();
+    }
+
     // ===== BASEEDITOR ABSTRACT METHODS IMPLEMENTATION =====
 
     /**
@@ -1799,7 +1848,9 @@ class TestEditor extends BaseEditor {
         ).length;
         const correctCount = options.filter((opt) => opt?.is_correct).length;
         const hasQuestionText = Boolean(String(question?.text || '').trim());
-        const isReady = hasQuestionText && options.length >= 2 && filledOptions >= 2 && correctCount >= 1;
+        const isOnlyLevel2 = this.isOnlyLevel2Selected();
+        const minOptions = isOnlyLevel2 ? 1 : 2;
+        const isReady = hasQuestionText && options.length >= minOptions && filledOptions >= minOptions && correctCount >= 1;
         const isEmpty = !hasQuestionText && filledOptions === 0 && correctCount === 0;
 
         let state = 'partial';
@@ -1812,7 +1863,9 @@ class TestEditor extends BaseEditor {
                 : wt('xt.k039', '1 правильный ответ');
         } else if (isEmpty) {
             state = 'empty';
-            meta = wt('xt.k040', 'Заполните вопрос и минимум два варианта');
+            meta = isOnlyLevel2
+                ? wt('xt.k040_l2', 'Заполните вопрос и правильный ответ')
+                : wt('xt.k040', 'Заполните вопрос и минимум два варианта');
         } else if (correctCount === 0) {
             meta = wt('xt.k041', 'Отметьте правильный вариант');
         }
@@ -2318,9 +2371,9 @@ class TestEditor extends BaseEditor {
                                 <span class="option-row__toolbar-label">${wt('xt.k064', 'Ответ')}</span>
                             </div>
                             <div class="option-row__toolbar-actions">
-                                <button class="delete-option option-row__delete-btn icon-button-muted border-error-light bg-error-lighter text-error-text hover:border-error hover:bg-error-lighter hover:text-error transition-all active:scale-95" title="${wt('xt.k065', 'Удалить ')}${optionLabel}" aria-label="${wt('xt.k065', 'Удалить ')}${optionLabel}">
-                                    <span class="material-symbols-outlined text-[18px]">delete</span>
-                                    ${wt('xt.k052', 'Удалить')}
+                                <button type="button" class="delete-option option-row__delete-btn icon-button-muted icon-button-muted--xs border-error-light bg-error-lighter text-error-text hover:border-error hover:bg-error-lighter hover:text-error transition-all active:scale-95" title="${wt('xt.k065', 'Удалить ')}${optionLabel}" aria-label="${wt('xt.k065', 'Удалить ')}${optionLabel}">
+                                    <span class="material-symbols-outlined option-row__delete-icon">delete</span>
+                                    <span class="sr-only">${wt('xt.k052', 'Удалить')}</span>
                                 </button>
                             </div>
                         </div>
@@ -2467,6 +2520,22 @@ class TestEditor extends BaseEditor {
         // Back
         const backBtn = document.querySelector('header button');
         if (backBtn) backBtn.onclick = () => this.goBack();
+
+        // Open Task Import Studio
+        const studioLink = document.querySelector('#open-studio-sidebar-link');
+        if (studioLink) {
+            studioLink.onclick = (e) => {
+                e.preventDefault();
+                const query = new URLSearchParams();
+                const currentUrlParams = new URLSearchParams(window.location.search);
+                const moduleId = this.moduleId || currentUrlParams.get('module') || currentUrlParams.get('m');
+                const topicId = this.topicId || currentUrlParams.get('topic') || currentUrlParams.get('t');
+                if (moduleId) query.set('module', moduleId);
+                if (topicId) query.set('topic', topicId);
+                const qs = query.toString();
+                window.location.href = '/editor/Task_Import_Studio.html' + (qs ? '?' + qs : '');
+            };
+        }
 
         // Add Question
         const addQBtn = document.querySelector('#add-question-btn');
@@ -3100,11 +3169,16 @@ class TestEditor extends BaseEditor {
             }
 
             // Check minimum options
-            if (!q.options || q.options.length < 2) {
-                this.showToast(`${wt('xt.k010', 'Вопрос ')}${i + 1}${wt('xt.k104', ': минимум два варианта ответа')}`, 'warning');
+            const isOnlyLevel2 = this.isOnlyLevel2Selected();
+            const minOptions = isOnlyLevel2 ? 1 : 2;
+            if (!q.options || q.options.length < minOptions) {
+                const message = isOnlyLevel2
+                    ? `${wt('xt.k010', 'Вопрос ')}${i + 1}${wt('xt.k104_l2', ': добавьте хотя бы один вариант ответа')}`
+                    : `${wt('xt.k010', 'Вопрос ')}${i + 1}${wt('xt.k104', ': минимум два варианта ответа')}`;
+                this.showToast(message, 'warning');
                 this.currentQuestionIndex = i;
                 this.renderUI();
-                return `${wt('xt.k010', 'Вопрос ')}${i + 1}${wt('xt.k104', ': минимум два варианта ответа')}`;
+                return message;
             }
 
             // Check option texts and correct answers

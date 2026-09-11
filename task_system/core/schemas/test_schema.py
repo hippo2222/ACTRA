@@ -3,15 +3,66 @@
 Схема валидации для заданий типа "test".
 """
 
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 from .base_schema import BaseTaskSchema
 
 
 class TestTaskSchema(BaseTaskSchema):
     """Схема для валидации тестовых заданий."""
-    
+
     @classmethod
-    def _validate_content(cls, content: Dict[str, Any]) -> List[str]:
+    def _is_only_level2(
+        cls, content: Dict[str, Any], task_data: Optional[Dict[str, Any]] = None
+    ) -> bool:
+        """Определяет, настроено ли тестовое задание только на 2-й уровень сложности."""
+        settings = {}
+        if isinstance(task_data, dict):
+            settings = task_data.get("settings") or {}
+        if not settings and isinstance(content, dict):
+            settings = content.get("settings") or {}
+
+        allowed = None
+        if isinstance(settings, dict):
+            allowed = settings.get("allowed_difficulties") or settings.get("available_difficulties")
+
+        if isinstance(allowed, (list, tuple, set)):
+            try:
+                normalized = [int(x) for x in allowed if isinstance(x, (int, str)) and str(x).isdigit()]
+                if normalized == [2]:
+                    return True
+            except Exception:
+                pass
+
+        if isinstance(content, dict):
+            if content.get("mode") == "open_question":
+                return True
+
+        return False
+
+    @classmethod
+    def validate(cls, data: Dict[str, Any]) -> List[str]:
+        """Валидирует данные задания с передачей контекста задания в _validate_content."""
+        errors = []
+
+        required_fields = ['type', 'meta', 'content']
+        for field in required_fields:
+            if field not in data:
+                errors.append(f"Отсутствует обязательное поле: {field}")
+
+        if 'meta' in data:
+            meta_errors = cls._validate_meta(data['meta'])
+            errors.extend(meta_errors)
+
+        if 'content' in data:
+            content_errors = cls._validate_content(data['content'], task_data=data)
+            errors.extend(content_errors)
+
+        return errors
+
+    @classmethod
+    def _validate_content(
+        cls, content: Dict[str, Any], task_data: Optional[Dict[str, Any]] = None
+    ) -> List[str]:
         """
         Валидирует содержимое тестового задания.
         
@@ -20,8 +71,11 @@ class TestTaskSchema(BaseTaskSchema):
         - Каждый вопрос должен иметь text и answers
         - Каждый ответ должен иметь text и correct
         - Хотя бы один ответ должен быть правильным
+        - Для обычных тестов: минимум 2 ответа и хотя бы один неправильный.
+        - Для тестов «Только уровень 2»: минимум 1 ответ, наличие неправильного не требуется.
         """
         errors = []
+        is_only_level2 = cls._is_only_level2(content, task_data)
         
         # Проверяем наличие вопросов
         if 'questions' not in content:
@@ -78,8 +132,12 @@ class TestTaskSchema(BaseTaskSchema):
                 errors.append(f"content.questions[{i}].answers: должен быть списком")
                 continue
             
-            if len(answers) < 2:
-                errors.append(f"content.questions[{i}].answers: должен содержать минимум 2 ответа")
+            min_answers = 1 if is_only_level2 else 2
+            if len(answers) < min_answers:
+                if is_only_level2:
+                    errors.append(f"content.questions[{i}].answers: должен содержать минимум 1 ответ")
+                else:
+                    errors.append(f"content.questions[{i}].answers: должен содержать минимум 2 ответа")
                 continue
             
             # Проверяем каждый ответ
@@ -111,7 +169,7 @@ class TestTaskSchema(BaseTaskSchema):
             if not has_correct:
                 errors.append(f"content.questions[{i}]: должен содержать хотя бы один правильный ответ")
             
-            if not has_incorrect:
+            if not is_only_level2 and not has_incorrect:
                 errors.append(f"content.questions[{i}]: должен содержать хотя бы один неправильный ответ")
         
         return errors

@@ -181,6 +181,81 @@ def test_test_schema_no_incorrect_answer():
     print("✅ test_test_schema_no_incorrect_answer passed")
 
 
+def test_test_schema_only_level_2_single_answer():
+    """Тест валидации теста 'Только уровень 2' с одним правильным ответом."""
+    data = {
+        'type': 'test',
+        'meta': {'name': 'Тестовое задание уровня 2'},
+        'settings': {
+            'allowed_difficulties': [2]
+        },
+        'content': {
+            'questions': [
+                {
+                    'text': 'Какой орган вырабатывает желчь?',
+                    'answers': [
+                        {'text': 'Печень', 'correct': True}
+                    ]
+                }
+            ]
+        }
+    }
+    
+    errors = TestTaskSchema.validate(data)
+    assert len(errors) == 0, f"Ожидалось 0 ошибок, получено {len(errors)}: {errors}"
+    print("✅ test_test_schema_only_level_2_single_answer passed")
+
+
+def test_test_schema_multi_level_single_answer_rejected():
+    """Тест: если разрешены уровни [1, 2], один ответ должен отклоняться."""
+    data = {
+        'type': 'test',
+        'meta': {'name': 'Тестовое задание уровней 1 и 2'},
+        'settings': {
+            'allowed_difficulties': [1, 2]
+        },
+        'content': {
+            'questions': [
+                {
+                    'text': 'Какой орган вырабатывает желчь?',
+                    'answers': [
+                        {'text': 'Печень', 'correct': True}
+                    ]
+                }
+            ]
+        }
+    }
+    
+    errors = TestTaskSchema.validate(data)
+    assert len(errors) > 0
+    assert any('минимум 2 ответа' in err for err in errors)
+    print("✅ test_test_schema_multi_level_single_answer_rejected passed")
+
+
+def test_test_schema_only_level_2_zero_answers_rejected():
+    """Тест: для 'Только уровень 2' 0 ответов должно отклоняться."""
+    data = {
+        'type': 'test',
+        'meta': {'name': 'Тестовое задание уровня 2 без ответов'},
+        'settings': {
+            'allowed_difficulties': [2]
+        },
+        'content': {
+            'questions': [
+                {
+                    'text': 'Какой орган вырабатывает желчь?',
+                    'answers': []
+                }
+            ]
+        }
+    }
+    
+    errors = TestTaskSchema.validate(data)
+    assert len(errors) > 0
+    assert any('минимум 1 ответ' in err for err in errors)
+    print("✅ test_test_schema_only_level_2_zero_answers_rejected passed")
+
+
 def run_all_tests():
     """Запускает все тесты."""
     print("\n" + "="*60)
@@ -196,6 +271,9 @@ def run_all_tests():
         test_test_schema_valid,
         test_test_schema_no_correct_answer,
         test_test_schema_no_incorrect_answer,
+        test_test_schema_only_level_2_single_answer,
+        test_test_schema_multi_level_single_answer_rejected,
+        test_test_schema_only_level_2_zero_answers_rejected,
     ]
     
     passed = 0
