@@ -395,4 +395,139 @@ describe('OpenAnswerEditor image handling and saving', () => {
             '/api/editor/image?asset_id=asset_open_editor_1'
         );
     });
+
+    it('synchronously updates task name on renameCurrentTask without 4-second undo toast', async () => {
+        editor.moduleId = 'module_01';
+        editor.topicId = 'topic_01';
+        editor.taskId = 'task_001';
+        editor.hasPersistedTask = true;
+        editor.task = {
+            task_data: {
+                name: 'Old Task Name',
+                meta: { module: 'module_01', topic: 'topic_01', name: 'Old Task Name' },
+                content: {}
+            },
+            metadata: { id: 'task_001', name: 'Old Task Name' }
+        };
+
+        dom.window.fetch.mockResolvedValue({
+            json: () => Promise.resolve({ ok: true })
+        });
+
+        const promise = editor.renameCurrentTask('New Renamed Task');
+
+        // Verify synchronous update immediately
+        expect(editor.getTaskDisplayName()).toBe('New Renamed Task');
+        expect(editor.task.metadata.name).toBe('New Renamed Task');
+        expect(editor.task.task_data.name).toBe('New Renamed Task');
+        expect(editor.task.task_data.meta.name).toBe('New Renamed Task');
+        expect(editor.hasUnsavedChanges).toBe(true);
+
+        // Verify no 4s countdown toast was added
+        expect(document.querySelector('.function-timer')).toBeNull();
+
+        await promise;
+        expect(dom.window.fetch).toHaveBeenCalledWith('/api/editor/task/rename', expect.objectContaining({
+            method: 'POST',
+            body: JSON.stringify({
+                module_id: 'module_01',
+                topic_id: 'topic_01',
+                task_id: 'task_001',
+                name: 'New Renamed Task'
+            })
+        }));
+    });
+
+    it('flushes active header rename synchronously when saveTask is triggered', async () => {
+        editor.moduleId = 'module_01';
+        editor.topicId = 'topic_01';
+        editor.taskId = 'task_001';
+        editor.hasPersistedTask = false;
+        editor.task = {
+            task_data: {
+                name: 'Initial Name',
+                meta: { module: 'module_01', topic: 'topic_01', name: 'Initial Name' },
+                content: {
+                    question: 'Question',
+                    reference_answer: 'Reference',
+                    hint: '',
+                    keywords: ['k1'],
+                    images: []
+                }
+            },
+            metadata: { id: 'task_001', name: 'Initial Name' }
+        };
+        document.querySelector('#question-textarea').value = 'Question';
+        document.querySelector('#reference-textarea').value = 'Reference';
+        editor.keywords = [{ text: 'k1', required: true }];
+
+        const titleEl = document.querySelector('#editor-title');
+        titleEl.textContent = 'Initial Name';
+        editor.setupHeaderRenameTrigger(titleEl);
+
+        // Simulate click edit button
+        const editBtn = titleEl.parentElement.querySelector('[data-action="header-rename-task"]');
+        expect(editBtn).not.toBeNull();
+        editBtn.click();
+
+        // An input element should have been created
+        const input = titleEl.parentElement.querySelector('input[data-role="header-rename-input"]');
+        expect(input).not.toBeNull();
+        input.value = 'Brand New Saved Name';
+
+        // Now immediately click saveTask WITHOUT pressing enter or blurring
+        dom.window.fetch.mockResolvedValue({
+            json: () => Promise.resolve({ ok: true })
+        });
+
+        await editor.saveTask();
+
+        // The active rename should have been flushed
+        expect(editor.getTaskDisplayName()).toBe('Brand New Saved Name');
+        expect(editor.task.task_data.name).toBe('Brand New Saved Name');
+        expect(editor.task.task_data.meta.name).toBe('Brand New Saved Name');
+
+        // And the saved payload sent to backend should have the new name
+        expect(dom.window.fetch).toHaveBeenCalledTimes(1);
+        const [, options] = dom.window.fetch.mock.calls[0];
+        const payload = JSON.parse(options.body);
+        expect(payload.name).toBe('Brand New Saved Name');
+        expect(payload.meta.name).toBe('Brand New Saved Name');
+    });
+
+    it('flushes active header rename and prompts for confirmation on goBack when unsaved', async () => {
+        editor.moduleId = 'module_01';
+        editor.topicId = 'topic_01';
+        editor.taskId = 'task_001';
+        editor.hasPersistedTask = true;
+        editor.task = {
+            task_data: {
+                name: 'Initial Name',
+                meta: { module: 'module_01', topic: 'topic_01', name: 'Initial Name' },
+                content: {}
+            },
+            metadata: { id: 'task_001', name: 'Initial Name' }
+        };
+
+        const titleEl = document.querySelector('#editor-title');
+        titleEl.textContent = 'Initial Name';
+        editor.setupHeaderRenameTrigger(titleEl);
+
+        const editBtn = titleEl.parentElement.querySelector('[data-action="header-rename-task"]');
+        editBtn.click();
+
+        const input = titleEl.parentElement.querySelector('input[data-role="header-rename-input"]');
+        input.value = 'Renamed Before Back';
+
+        dom.window.fetch.mockResolvedValue({
+            json: () => Promise.resolve({ ok: true })
+        });
+
+        const showConfirmSpy = vi.spyOn(editor, 'showConfirmModal').mockImplementation(() => {});
+
+        await editor.goBack();
+
+        expect(editor.getTaskDisplayName()).toBe('Renamed Before Back');
+        expect(showConfirmSpy).toHaveBeenCalledTimes(1);
+    });
 });

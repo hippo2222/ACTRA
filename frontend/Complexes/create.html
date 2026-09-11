@@ -873,7 +873,8 @@
       flex-shrink: 0;
     }
     #theory-blocks-list {
-      max-height: 220px;
+      min-height: 80px;
+      max-height: 420px;
       overflow-y: auto;
       scrollbar-width: thin;
       padding-right: 0.25rem;
@@ -1090,8 +1091,23 @@
       from { opacity: 0; transform: translateY(-6px); }
       to   { opacity: 1; transform: translateY(0); }
     }
+    #theory-blocks-collapsible-body {
+      transition: opacity 200ms cubic-bezier(0.16, 1, 0.3, 1), transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    #theory-blocks-collapsible-body.is-collapsed {
+      display: none !important;
+    }
+    #theory-blocks-toggle-icon {
+      transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    #theory-blocks-toggle-btn[aria-expanded="false"] #theory-blocks-toggle-icon {
+      transform: rotate(180deg);
+    }
     @media (prefers-reduced-motion: reduce) {
       #theory-block-mode-toggle,
+      #theory-blocks-toggle-btn,
+      #theory-blocks-toggle-icon,
+      #theory-blocks-collapsible-body,
       .theory-block-floating-panel,
       .theory-block-tag-btn,
       .theory-editor-line-highlighted,
@@ -2489,6 +2505,27 @@
       box-shadow: var(--color-page-builder-shadow-soft);
     }
 
+    .cx-chain-task-row {
+      background: var(--color-page-builder-surface);
+      border: 1px solid var(--color-page-builder-border-strong);
+      box-shadow: var(--color-page-builder-shadow-soft);
+      transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+    }
+
+    .cx-chain-task-row:hover {
+      border-color: var(--color-primary);
+      box-shadow: var(--color-page-builder-shadow-strong, 0 4px 12px rgba(0, 0, 0, 0.06));
+    }
+
+    .cx-chain-connector {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 14px;
+      color: var(--color-text-muted);
+      opacity: 0.55;
+    }
+
     .cx-chain-order {
       background: var(--color-page-builder-surface-strong);
       border: 1px solid var(--color-page-builder-border-strong);
@@ -2510,13 +2547,26 @@
     .cx-chain-btn-up,
     .cx-chain-btn-down {
       color: var(--color-text-muted);
-      transition: color 0.15s ease, background-color 0.15s ease;
+      border: 1px solid transparent;
+      transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
     }
 
     .cx-chain-btn-up:hover:not(:disabled),
     .cx-chain-btn-down:hover:not(:disabled) {
       color: var(--color-text-main);
       background-color: var(--color-page-builder-surface-strong);
+      border-color: var(--color-page-builder-border);
+    }
+
+    .cx-chain-btn-up:active:not(:disabled),
+    .cx-chain-btn-down:active:not(:disabled) {
+      transform: scale(0.92);
+    }
+
+    .cx-chain-btn-up:focus-visible,
+    .cx-chain-btn-down:focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 1px;
     }
 
     [data-theme="light-b"] .card-section-premium {
@@ -3248,30 +3298,39 @@
                           <span class="material-symbols-outlined text-[15px]">add</span>
                           <span data-i18n="create.add_block_btn">Новый блок</span>
                         </button>
-                      </div>
-                    </div>
-                    <!-- Inline-форма создания блока (скрыта по умолчанию) -->
-                    <div id="theory-block-create-form-row" class="hidden">
-                      <div class="theory-block-create-form">
-                        <span class="material-symbols-outlined text-[16px] text-primary flex-shrink-0 select-none">label</span>
-                        <input id="theory-block-name-input" type="text"
-                          class="theory-block-create-form__input"
-                          placeholder="Название блока..."
-                          data-i18n-placeholder="create.block_name_placeholder"
-                          maxlength="60" autocomplete="off" />
-                        <button id="theory-block-create-confirm-btn" type="button"
-                          class="theory-block-create-form__confirm-btn" title="Создать блок">
-                          <span class="material-symbols-outlined text-[15px]">check</span>
-                          <span data-i18n="create.block_create_confirm">Создать</span>
-                        </button>
-                        <button id="theory-block-create-cancel-btn" type="button"
-                          class="theory-block-create-form__cancel-btn" title="Отмена" aria-label="Отмена">
-                          <span class="material-symbols-outlined text-[16px]">close</span>
+                        <button id="theory-blocks-toggle-btn" type="button" class="theory-block-action-btn"
+                          aria-expanded="true" aria-controls="theory-blocks-collapsible-body"
+                          title="Свернуть блок теории" data-i18n-title="create.collapse_blocks">
+                          <span id="theory-blocks-toggle-icon" class="material-symbols-outlined text-[15px]">expand_less</span>
+                          <span id="theory-blocks-toggle-text" class="hidden sm:inline" data-i18n="create.collapse_blocks">Свернуть</span>
                         </button>
                       </div>
                     </div>
-                    <div id="theory-blocks-list" class="flex flex-col gap-2">
-                      <p class="text-xs text-text-muted" data-i18n="create.no_theory_blocks_yet">Блоки пока не созданы. Выделите текст в теории или нажмите «Новый блок».</p>
+                    <!-- Collapsible body container -->
+                    <div id="theory-blocks-collapsible-body" class="flex flex-col gap-2.5">
+                      <!-- Inline-форма создания блока (скрыта по умолчанию) -->
+                      <div id="theory-block-create-form-row" class="hidden">
+                        <div class="theory-block-create-form">
+                          <span class="material-symbols-outlined text-[16px] text-primary flex-shrink-0 select-none">label</span>
+                          <input id="theory-block-name-input" type="text"
+                            class="theory-block-create-form__input"
+                            placeholder="Название блока..."
+                            data-i18n-placeholder="create.block_name_placeholder"
+                            maxlength="60" autocomplete="off" />
+                          <button id="theory-block-create-confirm-btn" type="button"
+                            class="theory-block-create-form__confirm-btn" title="Создать блок">
+                            <span class="material-symbols-outlined text-[15px]">check</span>
+                            <span data-i18n="create.block_create_confirm">Создать</span>
+                          </button>
+                          <button id="theory-block-create-cancel-btn" type="button"
+                            class="theory-block-create-form__cancel-btn" title="Отмена" aria-label="Отмена">
+                            <span class="material-symbols-outlined text-[16px]">close</span>
+                          </button>
+                        </div>
+                      </div>
+                      <div id="theory-blocks-list" class="flex flex-col gap-2">
+                        <p class="text-xs text-text-muted" data-i18n="create.no_theory_blocks_yet">Блоки пока не созданы. Выделите текст в теории или нажмите «Новый блок».</p>
+                      </div>
                     </div>
                   </div>
                   <div id="theory-editor"
@@ -6009,7 +6068,7 @@
 
       const chainCount = chains.length;
 
-      const shortChainCount = chains.filter((chain) => !Array.isArray(chain) || chain.length < 2).length;
+      const shortChainCount = chains.filter((chain) => getChainTasks(chain).length < 2).length;
 
       const theoryMode = state.theory?.mode || 'none';
 
@@ -7817,6 +7876,8 @@
       }
       if (!state.theoryBlockModeActive) {
         hideTheoryBlockFloatingPanel();
+      } else {
+        setTheoryBlocksCollapsed(false);
       }
       renderTheoryBlocksManagementSection();
       renderTheoryBlockHighlightsInEditor();
@@ -8017,8 +8078,62 @@
       renderTheoryBlockHighlightsInEditor();
     }
 
+    function setTheoryBlocksCollapsed(collapsed) {
+      const body = document.getElementById("theory-blocks-collapsible-body");
+      const btn = document.getElementById("theory-blocks-toggle-btn");
+      const textEl = document.getElementById("theory-blocks-toggle-text");
+      const iconEl = document.getElementById("theory-blocks-toggle-icon");
+      if (!body) return;
+
+      if (collapsed) {
+        body.classList.add("is-collapsed");
+        if (btn) {
+          btn.setAttribute("aria-expanded", "false");
+          btn.title = wt("create.expand_blocks", "Развернуть");
+        }
+        if (textEl) textEl.textContent = wt("create.expand_blocks", "Развернуть");
+        if (iconEl) iconEl.textContent = "expand_more";
+        try {
+          localStorage.setItem("actra_theory_blocks_collapsed", "true");
+        } catch (_) {}
+      } else {
+        body.classList.remove("is-collapsed");
+        if (btn) {
+          btn.setAttribute("aria-expanded", "true");
+          btn.title = wt("create.collapse_blocks", "Свернуть");
+        }
+        if (textEl) textEl.textContent = wt("create.collapse_blocks", "Свернуть");
+        if (iconEl) iconEl.textContent = "expand_less";
+        try {
+          localStorage.removeItem("actra_theory_blocks_collapsed");
+        } catch (_) {}
+      }
+    }
+
+    function toggleTheoryBlocksCollapse() {
+      const body = document.getElementById("theory-blocks-collapsible-body");
+      if (!body) return;
+      const isCollapsed = body.classList.contains("is-collapsed");
+      setTheoryBlocksCollapsed(!isCollapsed);
+    }
+
+    function initTheoryBlocksCollapse() {
+      const btn = document.getElementById("theory-blocks-toggle-btn");
+      if (btn) {
+        btn.addEventListener("click", () => {
+          toggleTheoryBlocksCollapse();
+        });
+      }
+      try {
+        if (localStorage.getItem("actra_theory_blocks_collapsed") === "true") {
+          setTheoryBlocksCollapsed(true);
+        }
+      } catch (_) {}
+    }
+
     // Открывает inline-форму создания блока (без prompt)
     function createNewTheoryBlockPrompt() {
+      setTheoryBlocksCollapsed(false);
       const formRow = document.getElementById("theory-block-create-form-row");
       const nameInput = document.getElementById("theory-block-name-input");
       if (!formRow || !nameInput) return null;
@@ -9543,62 +9658,6 @@
       }
     }
 
-    function buildPayload() {
-
-      const name = document.getElementById('name')?.value || '';
-
-      const description = document.getElementById('description')?.value || '';
-
-      const payload = {
-
-        name,
-
-        description,
-
-        tasks: state.selectedTasks.map((t) => t.ref),
-
-        chains: state.chains,
-
-        settings: buildComplexSettingsPayload(),
-
-      };
-
-      if (!state.editingId) {
-        payload.created_via = 'complex_builder';
-      }
-
-      const explicitOverride = state.theory.mode !== "none" && state.theory.theoryId;
-
-      if (explicitOverride) {
-        payload.theory_link = {
-          theory_id: state.theory.theoryId,
-          relation: normalizeTheoryRelation(
-            state.theory.relation || (state.theory.mode === "new" ? "copy" : "link")
-          ),
-          title_cache: (state.theory.title || "").trim(),
-          updated_at: state.theory.version || null,
-        };
-        payload.theory_mode = "override";
-      } else {
-        payload.theory_link = resolveInheritedTheoryLinkForBuilder();
-        payload.theory_mode = "inherit";
-      }
-
-      payload.theory_draft = {
-        mode: state.theory.mode || "none",
-        theory_id: state.theory.theoryId || null,
-        relation: normalizeTheoryRelation(
-          state.theory.relation || (state.theory.mode === "new" ? "copy" : "link")
-        ),
-        title: (document.getElementById("theory-title")?.value || state.theory.title || "").trim(),
-        version: state.theory.version || null,
-        delta: state.theory.mode === "none" ? { ops: [{ insert: "\n" }] } : editorHtmlToTheoryDelta(),
-      };
-
-      return payload;
-
-    }
-
     function buildTheoryPickerOptionLabel(item) {
       if (!item || typeof item !== 'object') return wt('create.theory_fallback', 'Теория');
       const sourceKind = normalizeTheorySourceKind(item.source_kind || item.sourceKind);
@@ -9947,7 +10006,9 @@
 
       for (const ch of payload.chains || []) {
 
-        if (!Array.isArray(ch) || ch.length < 2) {
+        const chTasks = getChainTasks(ch);
+
+        if (chTasks.length < 2) {
 
           setFieldError('chains-error', wt('create.validate_chain_min2', 'Сцепка должна содержать минимум 2 задания'));
 
@@ -9957,7 +10018,7 @@
 
         }
 
-        for (const ref of ch) {
+        for (const ref of chTasks) {
 
           if (!seen.has(ref)) {
 
@@ -10193,10 +10254,11 @@
 
       const inChains = new Set();
       for (const ch of payload.chains || []) {
-        if (!Array.isArray(ch) || ch.length < 2) {
+        const chTasks = getChainTasks(ch);
+        if (chTasks.length < 2) {
           return { ok: false, reason: 'invalid_chain' };
         }
-        for (const ref of ch) {
+        for (const ref of chTasks) {
           if (!seen.has(ref)) {
             return { ok: false, reason: 'chain_task_missing' };
           }
@@ -10904,6 +10966,7 @@
       theoryImageInput?.addEventListener("change", onTheoryImageUpload);
       initTheoryColorPicker();
       initTheoryImageControls();
+      initTheoryBlocksCollapse();
 
       document.getElementById('global-alert-close')?.addEventListener('click', hideGlobalError);
 
@@ -10946,6 +11009,7 @@
       document.getElementById("theory-floating-add-block-btn")?.addEventListener("click", () => {
         const _pendingRange = getSelectedTheoryLineRange();
         hideTheoryBlockFloatingPanel();
+        setTheoryBlocksCollapsed(false);
         // Убеждаемся что секция блоков видна и прокручиваем к ней
         const section = document.getElementById("theory-blocks-management-section");
         section?.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -12659,45 +12723,50 @@
         headerRight.appendChild(shuffleSelect);
         header.appendChild(headerRight);
 
-        // Body with horizontal flow
+        // Body with vertical flow
         const body = document.createElement('div');
-        body.className = 'p-5 bg-surface-1 pt-2'; // Reduced top padding
+        body.className = 'p-4 bg-surface-1 pt-2';
 
         const flow = document.createElement('div');
-        flow.className = 'flex flex-wrap items-center gap-3';
+        flow.className = 'flex flex-col gap-1.5 w-full';
 
         tasks.forEach((ref, i) => {
-          // Task Pill - "Card within Card"
-          const pill = document.createElement('div');
-          pill.className = 'cx-chain-pill group/task flex items-center gap-2.5 p-2 rounded-xl max-w-[280px] hover:border-primary hover:shadow-md transition-all cursor-default relative';
+          const taskRow = document.createElement('div');
+          taskRow.className = 'cx-chain-task-row group/task flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl w-full relative';
+
+          const left = document.createElement('div');
+          left.className = 'flex items-center gap-3 min-w-0 flex-1';
 
           // Number bubble
           const num = document.createElement('span');
-          num.className = 'cx-chain-order w-5 h-5 rounded-full text-[11px] font-bold flex items-center justify-center shrink-0';
+          num.className = 'cx-chain-order w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center shrink-0';
           num.textContent = i + 1;
+          num.setAttribute('aria-hidden', 'true');
 
           // Label
           const label = document.createElement('span');
-          label.className = 'text-xs font-semibold text-text-main truncate leading-tight flex-1';
+          label.className = 'text-xs font-semibold text-text-main truncate leading-snug flex-1';
           label.textContent = getTaskLabel(ref);
           label.title = ref;
 
-          pill.appendChild(num);
-          pill.appendChild(label);
+          left.appendChild(num);
+          left.appendChild(label);
+          taskRow.appendChild(left);
 
           // Reorder Buttons (▲ / ▼)
           const reorderGroup = document.createElement('div');
-          reorderGroup.className = 'flex items-center gap-0.5 shrink-0 ml-1';
+          reorderGroup.className = 'flex items-center gap-1 shrink-0';
 
           // Move Up Button (▲)
           const upBtn = document.createElement('button');
           upBtn.type = 'button';
-          upBtn.className = 'cx-chain-btn-up w-5 h-5 flex items-center justify-center rounded hover:bg-bg-tertiary text-text-muted hover:text-text-main disabled:opacity-20 disabled:pointer-events-none transition-colors cursor-pointer';
+          upBtn.className = 'cx-chain-btn-up w-7 h-7 flex items-center justify-center rounded-lg hover:bg-bg-tertiary text-text-muted hover:text-text-main disabled:opacity-30 disabled:cursor-not-allowed disabled:pointer-events-none transition-colors cursor-pointer';
           upBtn.title = wt('create.chain_move_up', 'Переместить выше');
           upBtn.setAttribute('aria-label', `${wt('create.chain_move_up', 'Переместить выше')}: ${getTaskLabel(ref)}`);
-          upBtn.innerHTML = '<span class="material-symbols-outlined text-[15px] select-none">arrow_drop_up</span>';
+          upBtn.innerHTML = '<span class="material-symbols-outlined text-[18px] select-none" aria-hidden="true">arrow_drop_up</span>';
           if (i === 0) {
             upBtn.disabled = true;
+            upBtn.setAttribute('aria-disabled', 'true');
           } else {
             upBtn.addEventListener('click', (e) => {
               e.preventDefault();
@@ -12720,12 +12789,13 @@
           // Move Down Button (▼)
           const downBtn = document.createElement('button');
           downBtn.type = 'button';
-          downBtn.className = 'cx-chain-btn-down w-5 h-5 flex items-center justify-center rounded hover:bg-bg-tertiary text-text-muted hover:text-text-main disabled:opacity-20 disabled:pointer-events-none transition-colors cursor-pointer';
+          downBtn.className = 'cx-chain-btn-down w-7 h-7 flex items-center justify-center rounded-lg hover:bg-bg-tertiary text-text-muted hover:text-text-main disabled:opacity-30 disabled:cursor-not-allowed disabled:pointer-events-none transition-colors cursor-pointer';
           downBtn.title = wt('create.chain_move_down', 'Переместить ниже');
           downBtn.setAttribute('aria-label', `${wt('create.chain_move_down', 'Переместить ниже')}: ${getTaskLabel(ref)}`);
-          downBtn.innerHTML = '<span class="material-symbols-outlined text-[15px] select-none">arrow_drop_down</span>';
+          downBtn.innerHTML = '<span class="material-symbols-outlined text-[18px] select-none" aria-hidden="true">arrow_drop_down</span>';
           if (i === tasks.length - 1) {
             downBtn.disabled = true;
+            downBtn.setAttribute('aria-disabled', 'true');
           } else {
             downBtn.addEventListener('click', (e) => {
               e.preventDefault();
@@ -12747,16 +12817,17 @@
 
           reorderGroup.appendChild(upBtn);
           reorderGroup.appendChild(downBtn);
-          pill.appendChild(reorderGroup);
+          taskRow.appendChild(reorderGroup);
 
-          flow.appendChild(pill);
+          flow.appendChild(taskRow);
 
-          // Arrow
+          // Vertical connector between tasks
           if (i < tasks.length - 1) {
-            const arrow = document.createElement('div');
-            arrow.className = 'w-6 h-6 flex items-center justify-center rounded-full bg-bg-tertiary text-text-disabled shrink-0';
-            arrow.innerHTML = '<span class="material-symbols-outlined text-[16px]">arrow_forward</span>';
-            flow.appendChild(arrow);
+            const connector = document.createElement('div');
+            connector.className = 'cx-chain-connector select-none';
+            connector.setAttribute('aria-hidden', 'true');
+            connector.innerHTML = '<span class="material-symbols-outlined text-[14px]">arrow_downward</span>';
+            flow.appendChild(connector);
           }
         });
 

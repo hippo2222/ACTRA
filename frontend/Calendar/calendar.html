@@ -1355,12 +1355,12 @@
                 // Fetch microcards summary for today section CTA
                 state.microcardsSummary = null;
                 try {
-                    const mcSummaryRes = await fetch(`${API_BASE}/microcards/summary`);
+                    const mcSummaryRes = await fetch('/api/v2/microcards/summary');
                     if (mcSummaryRes.ok) {
                         const mcSummaryData = await mcSummaryRes.json();
                         if (mcSummaryData.ok) {
                             state.microcardsSummary = mcSummaryData;
-                            state.hasData = state.hasData || (mcSummaryData.totals && mcSummaryData.totals.reviews > 0);
+                            state.hasData = state.hasData || ((mcSummaryData.due_cards || 0) > 0 || (mcSummaryData.total_cards || 0) > 0 || (mcSummaryData.totals && mcSummaryData.totals.reviews > 0));
                         }
                     }
                 } catch (mcErr) {
@@ -1889,6 +1889,67 @@
 
         }
 
+        function restoreDailyMixBaseMarkup() {
+            const dailyMixCard = document.getElementById('daily-mix-card');
+            if (!dailyMixCard) return;
+            dailyMixCard.classList.remove('cursor-default', 'calendar-summary-card--empty');
+            dailyMixCard.classList.add('cursor-pointer', 'calendar-summary-card--primary');
+            dailyMixCard.onclick = () => startSession('daily_mix');
+            dailyMixCard.innerHTML = `
+                <div class="calendar-card-body flex-1 flex flex-col justify-between gap-3">
+                    <div>
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="material-symbols-outlined text-primary text-[20px]">cached</span>
+                            <span id="daily-mix-badge" class="pill-kicker pill-sm pill-neutral">${wt('calendar.badge_review', 'Повторение')}</span>
+                        </div>
+                        <h3 class="text-lg font-bold text-text-main mb-1">Daily Mix</h3>
+                        <p id="daily-mix-desc" class="text-text-secondary text-sm">${wt('calendar.daily_mix_desc', 'Персонализированная подборка для закрепления материала.')}</p>
+                        <p id="daily-mix-reason" class="mt-2 text-xs font-medium text-text-muted">${wt('calendar.daily_mix_reason_multi', 'Сначала закрываем повторы, чтобы не копить отложенные повторы.')}</p>
+                    </div>
+                    <div class="flex items-end justify-between">
+                        <div class="flex flex-col">
+                            <span id="daily-mix-count" class="text-xl font-bold text-text-main">0</span>
+                            <span id="daily-mix-time" class="text-xs text-text-secondary">${wt('calendar.tasks_time', 'задач (~{minutes} мин)').replace('{minutes}', 0)}</span>
+                        </div>
+                        <button class="btn-secondary flex items-center gap-2 text-sm" type="button">
+                            <span class="material-symbols-outlined text-[18px]">play_circle</span>
+                            <span id="daily-mix-btn-text">${wt('calendar.btn_start', 'Начать')}</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function restoreMainFocusBaseMarkup() {
+            const mainFocusCard = document.getElementById('main-focus-card');
+            if (!mainFocusCard) return;
+            mainFocusCard.classList.remove('cursor-default', 'calendar-summary-card--empty');
+            mainFocusCard.classList.add('cursor-pointer', 'calendar-summary-card--accent');
+            mainFocusCard.onclick = () => startSession('new_material');
+            mainFocusCard.innerHTML = `
+                <div class="calendar-card-body flex-1 flex flex-col justify-between gap-3">
+                    <div>
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="material-symbols-outlined text-accent text-[20px]">school</span>
+                            <span id="main-focus-badge" class="pill-kicker pill-sm pill-neutral">${wt('calendar.badge_study', 'Изучение')}</span>
+                        </div>
+                        <h3 id="main-focus-title" class="text-lg font-bold text-text-main mb-1">${wt('calendar.new_complex', 'Новый комплекс')}</h3>
+                        <p id="main-focus-desc" class="text-text-secondary text-sm">${wt('calendar.main_focus_default_desc', 'Сегодняшние задачи вашего комплекса.')}</p>
+                    </div>
+                    <div class="flex items-end justify-between">
+                        <div class="flex flex-col">
+                            <span id="main-focus-count" class="text-xl font-bold text-text-main">0</span>
+                            <span id="main-focus-time" class="text-xs text-text-secondary">${wt('calendar.tasks_time', 'задач (~{minutes} мин)').replace('{minutes}', 0)}</span>
+                        </div>
+                        <button class="btn-secondary flex items-center gap-2 text-sm" type="button">
+                            <span class="material-symbols-outlined text-[18px]">play_circle</span>
+                            <span>${wt('calendar.btn_start', 'Начать')}</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
         function renderRecipeCards() {
 
             const plan = state.daily_plan;
@@ -1951,6 +2012,11 @@
 
             const mainFocusCard = document.getElementById('main-focus-card');
 
+            if (!dailyMixCard || !mainFocusCard) {
+                console.warn('[calendar] dailyMixCard or mainFocusCard not found in DOM');
+                return;
+            }
+
             // Daily Mix Card
 
             if (!hasActiveComplexes || (!hasDailyMix && !state.hasData)) {
@@ -1980,22 +2046,31 @@
             } else {
 
                 // Normal Daily Mix
+                if (!document.getElementById('daily-mix-badge')) {
+                    restoreDailyMixBaseMarkup();
+                }
 
                 const todayDateKey = new Date().toISOString().slice(0, 10);
 
                 const isTodayRestDay = !!state.restDays[todayDateKey];
 
+                const dailyMixBadgeEl = document.getElementById('daily-mix-badge');
+                const dailyMixDescEl = document.getElementById('daily-mix-desc');
+                const dailyMixBtnTextEl = document.getElementById('daily-mix-btn-text');
+                const dailyMixCountEl = document.getElementById('daily-mix-count');
+                const dailyMixTimeEl = document.getElementById('daily-mix-time');
                 const dailyMixReasonEl = document.getElementById('daily-mix-reason');
+                const subtitleEl = document.getElementById('subtitle');
 
-                document.getElementById('daily-mix-badge').textContent = wt('calendar.badge_review', 'Повторение');
+                if (dailyMixBadgeEl) dailyMixBadgeEl.textContent = wt('calendar.badge_review', 'Повторение');
 
-                document.getElementById('daily-mix-desc').textContent = wt('calendar.daily_mix_desc', 'Персонализированная подборка для закрепления материала.');
+                if (dailyMixDescEl) dailyMixDescEl.textContent = wt('calendar.daily_mix_desc', 'Персонализированная подборка для закрепления материала.');
 
-                document.getElementById('daily-mix-btn-text').textContent = wt('calendar.btn_start', 'Начать');
+                if (dailyMixBtnTextEl) dailyMixBtnTextEl.textContent = wt('calendar.btn_start', 'Начать');
 
-                document.getElementById('daily-mix-count').textContent = plan.daily_mix_count || 0;
+                if (dailyMixCountEl) dailyMixCountEl.textContent = plan.daily_mix_count || 0;
 
-                document.getElementById('daily-mix-time').textContent = wt('calendar.tasks_time', 'задач (~{minutes} мин)').replace('{minutes}', plan.daily_mix_minutes || 0);
+                if (dailyMixTimeEl) dailyMixTimeEl.textContent = wt('calendar.tasks_time', 'задач (~{minutes} мин)').replace('{minutes}', plan.daily_mix_minutes || 0);
 
                 if (dailyMixReasonEl) {
 
@@ -2013,13 +2088,13 @@
 
                 if (plan.is_adapted) {
 
-                    document.getElementById('daily-mix-badge').textContent = wt('calendar.badge_adapted', 'Адаптация очереди');
+                    if (dailyMixBadgeEl) dailyMixBadgeEl.textContent = wt('calendar.badge_adapted', 'Адаптация очереди');
 
-                    document.getElementById('daily-mix-desc').textContent = wt('calendar.daily_mix_adapted_desc', 'Очередь адаптирована, но эта подборка остается обязательной для прогресса.');
+                    if (dailyMixDescEl) dailyMixDescEl.textContent = wt('calendar.daily_mix_adapted_desc', 'Очередь адаптирована, но эта подборка остается обязательной для прогресса.');
 
-                    document.getElementById('daily-mix-btn-text').textContent = wt('calendar.btn_resume', 'Возобновить');
+                    if (dailyMixBtnTextEl) dailyMixBtnTextEl.textContent = wt('calendar.btn_resume', 'Возобновить');
 
-                    document.getElementById('subtitle').textContent = wt('calendar.subtitle_adapted', 'План обучения обновлен с учетом пропуска');
+                    if (subtitleEl) subtitleEl.textContent = wt('calendar.subtitle_adapted', 'План обучения обновлен с учетом пропуска');
 
                     if (dailyMixReasonEl) {
 
@@ -2031,7 +2106,7 @@
 
                 if (!hasDailyMix) {
 
-                    document.getElementById('daily-mix-desc').textContent = wt('calendar.daily_mix_no_tasks', 'Пока нет задач на повторение. Начните проходить комплексы!');
+                    if (dailyMixDescEl) dailyMixDescEl.textContent = wt('calendar.daily_mix_no_tasks', 'Пока нет задач на повторение. Начните проходить комплексы!');
 
                     if (dailyMixReasonEl) {
 
@@ -2076,6 +2151,9 @@
             } else {
 
                 // Normal Main Focus
+                if (!document.getElementById('main-focus-title')) {
+                    restoreMainFocusBaseMarkup();
+                }
 
                 const focusName = mainFocusName || (state.complexes[0]?.name || wt('calendar.new_complex', 'Новый комплекс'));
 
@@ -2083,13 +2161,19 @@
 
                 const focusMinutes = mainFocusMinutes || Math.round(focusCount * 3);
 
-                document.getElementById('main-focus-title').textContent = focusName;
+                const mainFocusTitleEl = document.getElementById('main-focus-title');
+                const mainFocusCountEl = document.getElementById('main-focus-count');
+                const mainFocusTimeEl = document.getElementById('main-focus-time');
 
-                document.getElementById('main-focus-count').textContent = focusCount;
+                if (mainFocusTitleEl) mainFocusTitleEl.textContent = focusName;
 
-                document.getElementById('main-focus-time').textContent = (focusCount > 0
-                    ? wt('calendar.tasks_time', 'задач (~{minutes} мин)')
-                    : wt('calendar.cases_time', 'новых кейса (~{minutes} мин)')).replace('{minutes}', focusMinutes);
+                if (mainFocusCountEl) mainFocusCountEl.textContent = focusCount;
+
+                if (mainFocusTimeEl) {
+                    mainFocusTimeEl.textContent = (focusCount > 0
+                        ? wt('calendar.tasks_time', 'задач (~{minutes} мин)')
+                        : wt('calendar.cases_time', 'новых кейса (~{minutes} мин)')).replace('{minutes}', focusMinutes);
+                }
 
             }
 
@@ -3750,65 +3834,8 @@
         }
 
         function restoreCalendarRecipeCardBaseMarkup() {
-            const dailyMixCard = document.getElementById('daily-mix-card');
-            const mainFocusCard = document.getElementById('main-focus-card');
-
-            if (dailyMixCard) {
-                dailyMixCard.classList.remove('cursor-default', 'calendar-summary-card--empty');
-                dailyMixCard.classList.add('cursor-pointer', 'calendar-summary-card--primary');
-                dailyMixCard.onclick = () => startSession('daily_mix');
-                dailyMixCard.innerHTML = `
-                    <div class="calendar-card-body flex-1 flex flex-col justify-between gap-3">
-                        <div>
-                            <div class="flex items-center gap-2 mb-2">
-                                <span class="material-symbols-outlined text-primary text-[20px]">cached</span>
-                                <span id="daily-mix-badge" class="pill-kicker pill-sm pill-neutral">${wt('calendar.badge_review', 'Повторение')}</span>
-                            </div>
-                            <h3 class="text-lg font-bold text-text-main mb-1">Daily Mix</h3>
-                            <p id="daily-mix-desc" class="text-text-secondary text-sm">${wt('calendar.daily_mix_desc', 'Персонализированная подборка для закрепления материала.')}</p>
-                            <p id="daily-mix-reason" class="mt-2 text-xs font-medium text-text-muted">${wt('calendar.daily_mix_reason_demo', 'Сначала закрываем повторы, пока память не начала проседать.')}</p>
-                        </div>
-                        <div class="flex items-end justify-between">
-                            <div class="flex flex-col">
-                                <span id="daily-mix-count" class="text-xl font-bold text-text-main">0</span>
-                                <span id="daily-mix-time" class="text-xs text-text-secondary">${wt('calendar.tasks_time', 'задач (~{minutes} мин)').replace('{minutes}', 0)}</span>
-                            </div>
-                            <button class="btn-secondary flex items-center gap-2 text-sm">
-                                <span class="material-symbols-outlined text-[18px]">play_circle</span>
-                                <span id="daily-mix-btn-text">${wt('calendar.btn_start', 'Начать')}</span>
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }
-
-            if (mainFocusCard) {
-                mainFocusCard.classList.remove('cursor-default', 'calendar-summary-card--empty');
-                mainFocusCard.classList.add('cursor-pointer', 'calendar-summary-card--accent');
-                mainFocusCard.onclick = () => startSession('new_material');
-                mainFocusCard.innerHTML = `
-                    <div class="calendar-card-body flex-1 flex flex-col justify-between gap-3">
-                        <div>
-                            <div class="flex items-center gap-2 mb-2">
-                                <span class="material-symbols-outlined text-accent text-[20px]">school</span>
-                                <span id="main-focus-badge" class="pill-kicker pill-sm pill-neutral">${wt('calendar.badge_study', 'Изучение')}</span>
-                            </div>
-                            <h3 id="main-focus-title" class="text-lg font-bold text-text-main mb-1">${wt('calendar.new_complex', 'Новый комплекс')}</h3>
-                            <p id="main-focus-desc" class="text-text-secondary text-sm">${wt('calendar.main_focus_default_desc', 'Сегодняшние задачи вашего комплекса.')}</p>
-                        </div>
-                        <div class="flex items-end justify-between">
-                            <div class="flex flex-col">
-                                <span id="main-focus-count" class="text-xl font-bold text-text-main">0</span>
-                                <span id="main-focus-time" class="text-xs text-text-secondary">${wt('calendar.tasks_time', 'задач (~{minutes} мин)').replace('{minutes}', 0)}</span>
-                            </div>
-                            <button class="btn-secondary flex items-center gap-2 text-sm">
-                                <span class="material-symbols-outlined text-[18px]">play_circle</span>
-                                ${wt('calendar.btn_start', 'Начать')}
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }
+            restoreDailyMixBaseMarkup();
+            restoreMainFocusBaseMarkup();
         }
 
         function applyCalendarOnboardingDemo(active) {
