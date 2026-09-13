@@ -26,7 +26,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         "test": [1, 2],  # 2 уровня вместо 3
         "sequence_assembly": [1, 2, 3],
         "image_labeling": [1, 2],
-        "open_answer": [1]  # Только уровень 1
+        "open_answer": [1, 2, 3]
     },
     "task_overrides": {},
     "type_overrides": {},

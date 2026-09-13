@@ -250,7 +250,7 @@ class TestDifficultyConfigLoader(unittest.TestCase):
         
         # Проверяем специфичные значения
         self.assertEqual(default_levels["test"], [1, 2])  # Test имеет только 2 уровня
-        self.assertEqual(default_levels["open_answer"], [1])  # Open answer только уровень 1
+        self.assertEqual(default_levels["open_answer"], [1, 2, 3])  # Open answer уровни 1, 2, 3
     
     def test_task_overrides_loading(self):
         """Проверка загрузки task_overrides"""

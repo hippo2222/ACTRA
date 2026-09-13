@@ -74,7 +74,7 @@ class TestInit:
         assert dm.default_levels["draw"] == [1, 2]
         assert dm.default_levels["test"] == [1, 2]
         assert dm.default_levels["sequence_assembly"] == [1, 2, 3]
-        assert dm.default_levels["open_answer"] == [1]
+        assert dm.default_levels["open_answer"] == [1, 2, 3]
 
     def test_config_from_loader(self, dm_with_config):
         assert dm_with_config.default_levels["click"] == [1, 2, 3]
@@ -89,7 +89,7 @@ class TestGetAvailableLevels:
     def test_defaults(self, dm):
         assert dm.get_available_levels("click") == [1, 2, 3]
         assert dm.get_available_levels("draw") == [1, 2]
-        assert dm.get_available_levels("open_answer") == [1]
+        assert dm.get_available_levels("open_answer") == [1, 2, 3]
 
     def test_unknown_type(self, dm):
         assert dm.get_available_levels("unknown_type") == [1]

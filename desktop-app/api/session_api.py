@@ -4241,6 +4241,7 @@ class SessionAPI:
             and ui_iteration_number is None
             and current_iteration > 1
         ):
+            prev_iter = current_iteration - 1
             logger.info(
                 "[SessionAPI.get_iteration_results] summary for iteration %s not found, trying previous iteration %s",
                 current_iteration, prev_iter
