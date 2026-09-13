@@ -6,6 +6,7 @@ Unit-тесты для DifficultyManager.
 
 import unittest
 import sys
+import copy
 import tempfile
 import shutil
 from pathlib import Path
@@ -49,9 +50,9 @@ class TestDifficultyManagerBasic(unittest.TestCase):
         self.assertEqual(levels, [1, 2])
     
     def test_get_available_levels_open_answer(self):
-        """Проверка получения доступных уровней для open_answer (только 1 уровень)"""
+        """Проверка получения доступных уровней для open_answer (уровни 1, 2, 3)"""
         levels = self.manager.get_available_levels("open_answer")
-        self.assertEqual(levels, [1])
+        self.assertEqual(levels, [1, 2, 3])
     
     def test_get_available_levels_unknown(self):
         """Проверка получения доступных уровней для неизвестного типа (fallback на [1])"""
@@ -316,6 +317,36 @@ class TestEnhanceTaskForLevel(unittest.TestCase):
         content = enhanced.get('content', {})
         # Не должно быть полей mode, requires_labels и т.д. для open_answer
         self.assertNotIn('mode', content)
+
+    def test_enhance_open_answer_task_multi_question_levels(self):
+        """Тест: Многовопросное Open Answer задание фильтрует вопросы по уровням"""
+        task_data = {
+            "type": "open_answer",
+            "content": {
+                "type": "open_answer",
+                "questions": [
+                    {"id": "q1", "question": "Вопрос 1", "levels": [1, 2]},
+                    {"id": "q2", "question": "Вопрос 2", "levels": [2, 3]},
+                    {"id": "q3", "question": "Вопрос 3", "levels": [3]},
+                ],
+            }
+        }
+
+        # Уровень 1 -> только q1
+        enhanced_1 = self.manager.enhance_task_for_level(copy.deepcopy(task_data), level=1)
+        q_ids_1 = [q["id"] for q in enhanced_1["content"]["questions"]]
+        self.assertEqual(q_ids_1, ["q1"])
+        self.assertEqual(enhanced_1["content"]["question"], "Вопрос 1")
+
+        # Уровень 2 -> q1 и q2
+        enhanced_2 = self.manager.enhance_task_for_level(copy.deepcopy(task_data), level=2)
+        q_ids_2 = [q["id"] for q in enhanced_2["content"]["questions"]]
+        self.assertEqual(q_ids_2, ["q1", "q2"])
+
+        # Уровень 3 -> q2 и q3
+        enhanced_3 = self.manager.enhance_task_for_level(copy.deepcopy(task_data), level=3)
+        q_ids_3 = [q["id"] for q in enhanced_3["content"]["questions"]]
+        self.assertEqual(q_ids_3, ["q2", "q3"])
     
     def test_enhance_unknown_task_type(self):
         """Тест: Неизвестный тип задания возвращается как есть (fallback)"""

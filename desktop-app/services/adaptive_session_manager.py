@@ -1109,8 +1109,12 @@ class AdaptiveSessionManager:
             len(failed_subtests) if isinstance(failed_subtests, list) else "?",
         )
 
-        # Обработка Partial Retry для тестов
-        if task_type == "test":
+        # Обработка Partial Retry для тестов и открытых ответов с подвопросами
+        if task_type in ("test", "open_answer") and (
+            task_type == "test"
+            or bool(failed_subtests)
+            or (session.test_failed_subtests and task_ref in session.test_failed_subtests)
+        ):
              # Вызываем helper, который нормализует ошибки и обновляет статус успеха
              success = self._process_test_partial_retry(session, task_ref, result, failed_subtests)
              # Обновляем локальные переменные после обработки
@@ -1119,12 +1123,12 @@ class AdaptiveSessionManager:
         
         # Решаем, нужно ли добавлять задание в smart-retry очередь.
         # Для обычных заданий: только при success == False.
-        # Для тестов: даже если общий success == True (процентный порог пройден),
+        # Для тестов и многовопросных заданий: даже если общий success == True (процентный порог пройден),
         # но есть failed_subtests, мы всё равно добавляем ретраи, чтобы переиграть
         # заваленные под-вопросы.
         # После нормализации failed_subtests для partial-retry этот флаг учитывает
         # только действительно незакрытые под-вопросы.
-        should_add_retry = (not success) or (task_type == "test" and bool(failed_subtests))
+        should_add_retry = (not success) or (task_type in ("test", "open_answer") and bool(failed_subtests))
 
         # Спец-логика: для error_detection (mode text_errors) не плодим ретраи вообще,
         # т.к. в этом режиме фронт уже показывает факт попадания по слову, а дубли в очереди ломают UX.

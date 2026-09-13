@@ -3197,7 +3197,7 @@ class SessionAPI:
                 if failed_positions and isinstance(task_data, dict):
                     td = task_data
                     task_type = td.get("type") or td.get("task_type")
-                    if task_type == "test":
+                    if task_type in ("test", "open_answer"):
                         content = td.get("content") or {}
                         questions = content.get("questions") or []
                         if isinstance(questions, list) and questions:
@@ -3207,6 +3207,11 @@ class SessionAPI:
                             ]
                             if filtered:
                                 content["questions"] = filtered
+                                if task_type == "open_answer" and filtered and isinstance(filtered[0], dict):
+                                    content["question"] = filtered[0].get("question") or content.get("question")
+                                    content["prompt"] = content["question"]
+                                    content["reference_answer"] = filtered[0].get("reference_answer") or content.get("reference_answer")
+                                    content["keywords"] = filtered[0].get("keywords") or content.get("keywords")
                                 td["content"] = content
                                 task_data_full["task_data"] = td
                                 task_data = td
@@ -5380,7 +5385,88 @@ class SessionAPI:
                 )
 
             if task_type == "open_answer":
+                questions = content.get("questions") if isinstance(content.get("questions"), list) else []
+                if questions and len(questions) > 1:
+                    evaluator_details = (
+                        details.get("evaluator_result", {}).get("details", {})
+                        if isinstance(details.get("evaluator_result"), dict)
+                        and isinstance(details.get("evaluator_result").get("details"), dict)
+                        else (details if isinstance(details, dict) else {})
+                    )
+                    evaluator_questions = (
+                        evaluator_details.get("questions")
+                        if isinstance(evaluator_details.get("questions"), dict)
+                        else {}
+                    )
+                    user_answers_dict = (
+                        details.get("user_input", {}).get("answers")
+                        or details.get("answers")
+                        or {}
+                    )
+                    user_lines = []
+                    reference_lines = []
+                    failed_count = 0
+                    for idx, q in enumerate(questions):
+                        if not isinstance(q, dict):
+                            continue
+                        qid = str(q.get("id") or f"q_{idx + 1}")
+                        q_prompt = q.get("question") or f"Вопрос {idx + 1}"
+                        q_eval = (
+                            evaluator_questions.get(qid)
+                            or evaluator_questions.get(str(idx))
+                            or evaluator_questions.get(str(idx + 1))
+                            or {}
+                        )
+                        u_ans = (
+                            q_eval.get("user_answer")
+                            or user_answers_dict.get(qid)
+                            or user_answers_dict.get(str(idx))
+                            or user_answers_dict.get(str(idx + 1))
+                            or (user_answer if len(questions) == 1 else "")
+                            or ""
+                        )
+                        r_ans = (
+                            q_eval.get("reference_answer")
+                            or q.get("reference_answer")
+                            or ", ".join(q.get("keywords") or [])
+                        )
+                        is_correct = q_eval.get("success")
+                        if is_correct is False:
+                            failed_count += 1
+                            prefix = "[✗] "
+                        elif is_correct is True:
+                            prefix = "[✓] "
+                        else:
+                            prefix = ""
+
+                        user_lines.append(f"{prefix}В{idx + 1}. {q_prompt}: {u_ans or 'Ответ не зафиксирован'}")
+                        reference_lines.append(f"В{idx + 1}: {r_ans or '—'}")
+
+                    case_header = content.get("case_text") or _first_text(content.get("question"), content.get("prompt"), prompt) or "Вопросы к кейсу"
+                    note = explanation
+                    if not note:
+                        if failed_count > 0:
+                            note = f"Ошибки в вопросах: неверно {failed_count} из {len(questions)}."
+                        elif evaluator_questions:
+                            note = "Все вопросы решены верно."
+
+                    return _make_review_payload_for_review(
+                        task_title,
+                        case_header,
+                        user_lines,
+                        reference_lines,
+                        user_label="Твои ответы",
+                        reference_label="Правильные ответы",
+                        note=note or "",
+                    )
+
                 prompt_local = _first_text(content.get("question"), content.get("prompt"), prompt)
+                case_text = content.get("case_text")
+                if case_text and prompt_local and case_text not in prompt_local:
+                    prompt_local = f"{case_text}\n\n{prompt_local}"
+                elif case_text and not prompt_local:
+                    prompt_local = case_text
+
                 reference_answer = _first_text(content.get("reference_answer"), correct_answer)
                 if not reference_answer:
                     keywords = content.get("keywords") if isinstance(content.get("keywords"), list) else []

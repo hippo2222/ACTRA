@@ -77,80 +77,161 @@
         <div class="flex-1 flex overflow-hidden">
             <div class="flex-1 overflow-y-auto custom-scrollbar bg-bg-main p-8">
                 <div class="max-w-3xl mx-auto flex flex-col gap-6 pb-20">
-                    <div class="flex flex-col gap-2" data-onboarding-spotlight="frame"
-                        data-onboarding-target="open-answer-question-block">
-                        <label class="text-sm font-semibold text-text-main flex items-center gap-2">
-                            <span class="material-symbols-outlined text-[18px] text-text-disabled">help</span>
-                            <span data-i18n="open_answer_editor.question_label">Вопрос</span>
+                    <!-- Case description / preamble -->
+                    <div id="case-text-block" class="flex flex-col gap-2">
+                        <label for="case-textarea" class="text-sm font-semibold text-text-main flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[18px] text-text-disabled">description</span>
+                            <span data-i18n="open_answer_editor.case_description_label">Описание кейса / преамбула (общая для всех вопросов)</span>
                         </label>
-                        <div
-                            class="bg-surface-2 rounded-xl shadow-sm border border-border-subtle overflow-hidden focus-within:border-primary transition-all">
-                            <textarea id="question-textarea" data-auto-resize="true"
-                                data-onboarding-target="open-answer-question-text"
-                                class="w-full border-0 p-4 text-sm text-text-main placeholder:text-text-disabled focus:ring-0 resize-none min-h-[60px] leading-relaxed bg-transparent"
-                                data-i18n-placeholder="open_answer_editor.question_placeholder"
-                                placeholder="Введите формулировку вопроса или описание кейса..."></textarea>
-                        </div>
-                    </div>
-                    <div class="flex flex-col gap-2" data-onboarding-spotlight="frame"
-                        data-onboarding-target="open-answer-reference-block">
-                        <div class="flex items-center justify-between">
-                            <label class="text-sm font-semibold text-text-main flex items-center gap-2">
-                                <span
-                                    class="material-symbols-outlined text-[18px] text-text-disabled">check_circle</span>
-                                <span data-i18n="open_answer_editor.reference_label">Эталонный ответ</span>
-                            </label>
-                        </div>
-                        <div
-                            class="bg-surface-2 rounded-xl shadow-sm border border-border-subtle overflow-hidden focus-within:border-primary transition-all">
-                            <textarea id="reference-textarea" data-auto-resize="true"
-                                data-onboarding-target="open-answer-reference-text"
+                        <div class="bg-surface-2 rounded-xl shadow-sm border border-border-subtle overflow-hidden focus-within:border-primary transition-all">
+                            <textarea id="case-textarea" data-auto-resize="true"
                                 class="w-full border-0 p-4 text-sm text-text-main placeholder:text-text-disabled focus:ring-0 resize-none min-h-[72px] leading-relaxed bg-transparent"
-                                data-i18n-placeholder="open_answer_editor.reference_placeholder"
-                                placeholder="Введите текст правильного ответа..."></textarea>
-                            <div
-                                class="border-t border-border-subtle bg-surface-2 p-3 flex items-center justify-between">
-                                <span class="text-xs text-text-muted italic" data-i18n="open_answer_editor.reference_hint">Выберите слова или фразы, обязательные
-                                    для
-                                    правильного ответа</span>
-                                <button id="split-keywords-btn"
-                                    data-onboarding-target="open-answer-split-keywords"
-                                    class="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-primary bg-primary-lighter hover:bg-primary-light rounded-md border border-primary-light transition-colors">
-                                    <span class="material-symbols-outlined text-[16px]">cut</span>
-                                    <span data-i18n="open_answer_editor.split_keywords_btn">Разбить на ключевые слова</span>
-                                </button>
-                            </div>
+                                data-i18n-placeholder="open_answer_editor.case_description_placeholder"
+                                placeholder="Введите общее описание клинического случая, условия задачи или вводные данные..."></textarea>
                         </div>
                     </div>
-                    <div class="flex flex-col gap-3" data-onboarding-spotlight="frame"
-                        data-onboarding-target="open-answer-keywords-hint-block">
-                        <div class="flex items-center justify-between">
-                            <h3 class="text-xs font-bold text-text-secondary uppercase tracking-wider" data-i18n="open_answer_editor.keywords_title">Ключевые слова
-                            </h3>
-                            <span id="selected-count-badge"
-                                data-onboarding-target="open-answer-selected-count"
-                                class="text-xs font-medium text-text-secondary bg-surface-2 px-2 py-0.5 rounded-full">Выбрано:
-                                0</span>
-                        </div>
-                        <div id="keywords-container"
-                            data-onboarding-target="open-answer-keywords-container"
-                            class="flex flex-wrap gap-2 p-4 bg-surface-1 rounded-xl border border-dashed border-border-subtle min-h-[80px]">
-                            <!-- Keywords will be rendered here -->
-                        </div>
-                        <div class="flex flex-col gap-2" data-onboarding-target="open-answer-hint-block">
-                            <label class="text-sm font-semibold text-text-main flex items-center gap-2">
-                                <span
-                                    class="material-symbols-outlined text-[18px] text-text-disabled">chat_bubble</span>
-                                <span data-i18n="open_answer_editor.hint_label">Подсказка (необязательно)</span>
-                            </label>
-                            <div
-                                class="bg-surface-2 rounded-xl shadow-sm border border-border-subtle overflow-hidden focus-within:border-primary transition-all">
-                                <textarea id="hint-textarea" data-auto-resize="true"
-                                    data-onboarding-target="open-answer-hint-text"
-                                    class="w-full border-0 p-4 text-sm text-text-main placeholder:text-text-disabled focus:ring-0 resize-none min-h-[48px] leading-relaxed bg-transparent"
-                                    data-i18n-placeholder="open_answer_editor.hint_placeholder"
-                                    placeholder="Добавьте подсказку, которую увидит пользователь при необходимости..."></textarea>
+
+                    <!-- Questions List Container -->
+                    <div id="questions-list-wrapper" class="flex flex-col gap-6">
+                        <div id="questions-container" class="flex flex-col gap-6">
+                            <!-- Question Card 1 (Initial / Onboarding Anchor) -->
+                            <div class="open-answer-question-card animate-scale-in" data-question-index="0">
+                                <div class="question-card-header">
+                                    <div class="question-card-header-main">
+                                        <span class="question-badge" data-i18n="open_answer_editor.tab_question_n">Вопрос 1</span>
+                                        <div class="question-levels-badges">
+                                            <span class="question-level-pill is-active" title="Уровень 1">L1</span>
+                                            <span class="question-level-pill is-active" title="Уровень 2">L2</span>
+                                            <span class="question-level-pill is-active" title="Уровень 3">L3</span>
+                                        </div>
+                                        <span class="question-snippet"></span>
+                                    </div>
+                                    <div class="question-card-actions">
+                                        <button type="button" class="question-card-btn move-up-btn" data-i18n-title="open_answer_editor.move_up" title="Переместить вопрос выше" disabled aria-label="Переместить вопрос выше">
+                                            <span class="material-symbols-outlined text-[18px]">arrow_upward</span>
+                                        </button>
+                                        <button type="button" class="question-card-btn move-down-btn" data-i18n-title="open_answer_editor.move_down" title="Переместить вопрос ниже" disabled aria-label="Переместить вопрос ниже">
+                                            <span class="material-symbols-outlined text-[18px]">arrow_downward</span>
+                                        </button>
+                                        <button type="button" class="question-card-btn collapse-btn" data-i18n-title="open_answer_editor.collapse" title="Свернуть вопрос" aria-label="Свернуть вопрос" aria-expanded="true">
+                                            <span class="material-symbols-outlined text-[18px]">expand_less</span>
+                                        </button>
+                                        <button type="button" class="question-card-btn delete-btn" data-i18n-title="open_answer_editor.delete_question_title" title="Удалить вопрос" aria-label="Удалить вопрос" disabled>
+                                            <span class="material-symbols-outlined text-[18px]">delete</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="question-card-body">
+                                    <!-- Sequential Notice (hidden by default) -->
+                                    <div class="sequential-step-notice hidden">
+                                        <span class="material-symbols-outlined notice-icon">info</span>
+                                        <span data-i18n="open_answer_editor.sequential_step_notice">В последовательном режиме эталонный ответ и ключевые слова показываются студенту сразу после ответа на этот шаг. Убедитесь, что эталон не содержит прямых ответов на следующие шаги.</span>
+                                    </div>
+
+                                    <!-- Question Text -->
+                                    <div class="flex flex-col gap-2" data-onboarding-spotlight="frame"
+                                        data-onboarding-target="open-answer-question-block">
+                                        <label class="text-sm font-semibold text-text-main flex items-center gap-2">
+                                            <span class="material-symbols-outlined text-[18px] text-text-disabled">help</span>
+                                            <span data-i18n="open_answer_editor.question_label">Вопрос</span>
+                                        </label>
+                                        <div class="bg-surface-2 rounded-xl shadow-sm border border-border-subtle overflow-hidden focus-within:border-primary transition-all">
+                                            <textarea id="question-textarea" data-auto-resize="true"
+                                                data-onboarding-target="open-answer-question-text"
+                                                class="w-full border-0 p-4 text-sm text-text-main placeholder:text-text-disabled focus:ring-0 resize-none min-h-[60px] leading-relaxed bg-transparent"
+                                                data-i18n-placeholder="open_answer_editor.question_placeholder"
+                                                placeholder="Введите формулировку вопроса или описание кейса..."></textarea>
+                                        </div>
+                                    </div>
+
+                                    <!-- Reference Answer -->
+                                    <div class="flex flex-col gap-2" data-onboarding-spotlight="frame"
+                                        data-onboarding-target="open-answer-reference-block">
+                                        <div class="flex items-center justify-between">
+                                            <label class="text-sm font-semibold text-text-main flex items-center gap-2">
+                                                <span class="material-symbols-outlined text-[18px] text-text-disabled">check_circle</span>
+                                                <span data-i18n="open_answer_editor.reference_label">Эталонный ответ</span>
+                                            </label>
+                                        </div>
+                                        <div class="bg-surface-2 rounded-xl shadow-sm border border-border-subtle overflow-hidden focus-within:border-primary transition-all">
+                                            <textarea id="reference-textarea" data-auto-resize="true"
+                                                data-onboarding-target="open-answer-reference-text"
+                                                class="w-full border-0 p-4 text-sm text-text-main placeholder:text-text-disabled focus:ring-0 resize-none min-h-[72px] leading-relaxed bg-transparent"
+                                                data-i18n-placeholder="open_answer_editor.reference_placeholder"
+                                                placeholder="Введите текст правильного ответа..."></textarea>
+                                            <div class="border-t border-border-subtle bg-surface-2 p-3 flex items-center justify-between">
+                                                <span class="text-xs text-text-muted italic" data-i18n="open_answer_editor.reference_hint">Выберите слова или фразы, обязательные для правильного ответа</span>
+                                                <button id="split-keywords-btn" type="button"
+                                                    data-onboarding-target="open-answer-split-keywords"
+                                                    class="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-primary bg-primary-lighter hover:bg-primary-light rounded-md border border-primary-light transition-colors">
+                                                    <span class="material-symbols-outlined text-[16px]">cut</span>
+                                                    <span data-i18n="open_answer_editor.split_keywords_btn">Разбить на ключевые слова</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Keywords & Hint -->
+                                    <div class="flex flex-col gap-3" data-onboarding-spotlight="frame"
+                                        data-onboarding-target="open-answer-keywords-hint-block">
+                                        <div class="flex items-center justify-between">
+                                            <h3 class="text-xs font-bold text-text-secondary uppercase tracking-wider" data-i18n="open_answer_editor.keywords_title">Ключевые слова</h3>
+                                            <span id="selected-count-badge"
+                                                data-onboarding-target="open-answer-selected-count"
+                                                class="text-xs font-medium text-text-secondary bg-surface-2 px-2 py-0.5 rounded-full">Выбрано: 0</span>
+                                        </div>
+                                        <div id="keywords-container"
+                                            data-onboarding-target="open-answer-keywords-container"
+                                            class="flex flex-wrap gap-2 p-4 bg-surface-1 rounded-xl border border-dashed border-border-subtle min-h-[80px]">
+                                            <!-- Keywords chips rendered here -->
+                                        </div>
+                                        <div class="flex flex-col gap-2" data-onboarding-target="open-answer-hint-block">
+                                            <label class="text-sm font-semibold text-text-main flex items-center gap-2">
+                                                <span class="material-symbols-outlined text-[18px] text-text-disabled">chat_bubble</span>
+                                                <span data-i18n="open_answer_editor.hint_label">Подсказка (необязательно)</span>
+                                            </label>
+                                            <div class="bg-surface-2 rounded-xl shadow-sm border border-border-subtle overflow-hidden focus-within:border-primary transition-all">
+                                                <textarea id="hint-textarea" data-auto-resize="true"
+                                                    data-onboarding-target="open-answer-hint-text"
+                                                    class="w-full border-0 p-4 text-sm text-text-main placeholder:text-text-disabled focus:ring-0 resize-none min-h-[48px] leading-relaxed bg-transparent"
+                                                    data-i18n-placeholder="open_answer_editor.hint_placeholder"
+                                                    placeholder="Добавьте подсказку, которую увидит пользователь при необходимости..."></textarea>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Difficulty Levels Selection -->
+                                    <div class="question-levels-config">
+                                        <div class="question-levels-header">
+                                            <span class="question-levels-title" data-i18n="open_answer_editor.difficulty_levels_title">Появление по уровням сложности</span>
+                                        </div>
+                                        <p class="text-[11px] text-text-muted leading-tight" data-i18n="open_answer_editor.difficulty_levels_hint">Отметьте итерации / уровни сложности комплекса, на которых этот вопрос должен появляться. По умолчанию новые вопросы добавляются кумулятивно.</p>
+                                        <div class="question-levels-options">
+                                            <label class="level-checkbox-pill">
+                                                <input type="checkbox" class="level-check" value="1" checked />
+                                                <span data-i18n="open_answer_editor.level_label" data-i18n-params='{"n": 1}'>Уровень 1</span>
+                                            </label>
+                                            <label class="level-checkbox-pill">
+                                                <input type="checkbox" class="level-check" value="2" checked />
+                                                <span data-i18n="open_answer_editor.level_label" data-i18n-params='{"n": 2}'>Уровень 2</span>
+                                            </label>
+                                            <label class="level-checkbox-pill">
+                                                <input type="checkbox" class="level-check" value="3" checked />
+                                                <span data-i18n="open_answer_editor.level_label" data-i18n-params='{"n": 3}'>Уровень 3</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
+                        </div>
+
+                        <!-- Add Question Button -->
+                        <div class="flex justify-start">
+                            <button id="add-question-btn" type="button"
+                                class="w-full py-3.5 px-4 rounded-xl border-2 border-dashed border-border-strong hover:border-primary hover:bg-primary-lighter/30 text-text-secondary hover:text-primary flex items-center justify-center gap-2 font-semibold text-sm transition-all shadow-sm group cursor-pointer">
+                                <span class="material-symbols-outlined text-[20px] text-text-disabled group-hover:text-primary transition-colors">add_circle</span>
+                                <span data-i18n="open_answer_editor.add_question_btn">+ Добавить вопрос</span>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -159,6 +240,33 @@
                 class="w-[320px] bg-surface-1 border-l border-border-subtle flex flex-col shrink-0 z-10 overflow-y-auto custom-scrollbar"
                 style="width: 320px;" data-onboarding-spotlight="frame" data-onboarding-target="open-answer-sidebar">
                 <div class="p-6 flex flex-col gap-8">
+                    <!-- Display mode selector -->
+                    <div class="flex flex-col gap-3 pb-4 border-b border-border-subtle" data-onboarding-target="open-answer-display-mode">
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined text-text-disabled">view_carousel</span>
+                            <h3 class="text-sm font-bold text-text-main" data-i18n="open_answer_editor.display_mode_title">Режим показа вопросов</h3>
+                        </div>
+                        <p class="text-xs text-text-muted" data-i18n="open_answer_editor.display_mode_hint">
+                            Определяет, как вопросы отображаются для студента при прохождении задания.
+                        </p>
+                        <div class="flex flex-col gap-2">
+                            <label class="display-mode-card flex items-start gap-3 p-3 rounded-xl border border-border-subtle hover:border-primary/40 cursor-pointer transition-all bg-surface-2">
+                                <input type="radio" name="display-mode" value="simultaneous" class="mt-1 text-primary focus:ring-primary" checked />
+                                <div class="flex flex-col">
+                                    <span class="text-xs font-semibold text-text-main" data-i18n="open_answer_editor.mode_simultaneous_label">Одновременно</span>
+                                    <span class="text-[11px] text-text-muted leading-tight mt-0.5" data-i18n="open_answer_editor.mode_simultaneous_desc">Все доступные вопросы отображаются на одном экране.</span>
+                                </div>
+                            </label>
+                            <label class="display-mode-card flex items-start gap-3 p-3 rounded-xl border border-border-subtle hover:border-primary/40 cursor-pointer transition-all bg-surface-2">
+                                <input type="radio" name="display-mode" value="sequential" class="mt-1 text-primary focus:ring-primary" />
+                                <div class="flex flex-col">
+                                    <span class="text-xs font-semibold text-text-main" data-i18n="open_answer_editor.mode_sequential_label">Последовательно</span>
+                                    <span class="text-[11px] text-text-muted leading-tight mt-0.5" data-i18n="open_answer_editor.mode_sequential_desc">Вопросы открываются по одному с проверкой и показом эталона на каждом шаге.</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
                     <div class="flex flex-col gap-5" data-onboarding-target="open-answer-requirements">
                         <div class="flex items-center gap-2 pb-2 border-b border-border-subtle">
                             <span class="material-symbols-outlined text-text-disabled">fact_check</span>

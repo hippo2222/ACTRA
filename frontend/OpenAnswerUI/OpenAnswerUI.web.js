@@ -15,6 +15,15 @@
     counter: null,
     maxLength: null,
     isLocked: false,
+    isMultiQuestion: false,
+    displayMode: "simultaneous",
+    questions: [],
+    currentStepIndex: 0,
+    textareas: {},
+    counters: {},
+    feedbackContainers: {},
+    stepCards: {},
+    stepAnswers: {},
   };
 
   function _safeText(v) {
@@ -152,22 +161,48 @@
     return el;
   }
 
-  function _getTextareaValue() {
+  function _getTextareaValue(qid) {
+    if (qid != null && state.textareas && state.textareas[qid]) {
+      return String(state.textareas[qid].value || "");
+    }
     const v = state.textarea ? state.textarea.value : "";
     return String(v || "");
   }
 
-  function _isNonEmptyAnswer() {
-    return _getTextareaValue().trim().length > 0;
+  function _isNonEmptyAnswer(qid) {
+    return _getTextareaValue(qid).trim().length > 0;
   }
 
   function _syncCheckButtonState() {
     try {
       const btn = document.getElementById("check-answer-btn");
       if (btn) {
-        btn.disabled = state.isLocked || !_isNonEmptyAnswer();
+        if (state.isMultiQuestion && state.questions.length > 0) {
+          if (state.displayMode === "sequential") {
+            const allAnswered = state.questions.every((q) => _getTextareaValue(q.id).trim().length > 0);
+            btn.disabled = state.isLocked || !allAnswered;
+          } else {
+            const allValid = state.questions.every((q) => _isNonEmptyAnswer(q.id));
+            btn.disabled = state.isLocked || !allValid;
+          }
+        } else {
+          btn.disabled = state.isLocked || !_isNonEmptyAnswer();
+        }
       }
-      if (state.counter) {
+
+      if (state.isMultiQuestion && state.questions.length > 0) {
+        state.questions.forEach((q) => {
+          const counter = state.counters && state.counters[q.id];
+          const maxLen = Number(q.max_length || state.maxLength || 0);
+          if (counter) {
+            if (!maxLen) {
+              counter.textContent = "";
+            } else {
+              counter.textContent = `${_getTextareaValue(q.id).length}/${maxLen}`;
+            }
+          }
+        });
+      } else if (state.counter) {
         if (!state.maxLength) {
           state.counter.textContent = "";
         } else {
@@ -179,14 +214,35 @@
     }
   }
 
-  function _setInputLocked(isLocked) {
+  function _setInputLocked(isLocked, qid) {
+    if (qid != null && state.textareas && state.textareas[qid]) {
+      const ta = state.textareas[qid];
+      ta.readOnly = !!isLocked;
+      ta.disabled = !!isLocked;
+      ta.classList.toggle("opacity-80", !!isLocked);
+      ta.classList.toggle("cursor-not-allowed", !!isLocked);
+      ta.classList.toggle("bg-bg-secondary", !!isLocked);
+      return;
+    }
+
     state.isLocked = !!isLocked;
-    if (!state.textarea) return;
-    state.textarea.readOnly = state.isLocked;
-    state.textarea.disabled = state.isLocked;
-    state.textarea.classList.toggle("opacity-80", state.isLocked);
-    state.textarea.classList.toggle("cursor-not-allowed", state.isLocked);
-    state.textarea.classList.toggle("bg-bg-secondary", state.isLocked);
+    if (state.textarea) {
+      state.textarea.readOnly = state.isLocked;
+      state.textarea.disabled = state.isLocked;
+      state.textarea.classList.toggle("opacity-80", state.isLocked);
+      state.textarea.classList.toggle("cursor-not-allowed", state.isLocked);
+      state.textarea.classList.toggle("bg-bg-secondary", state.isLocked);
+    }
+    if (state.textareas) {
+      Object.values(state.textareas).forEach((ta) => {
+        if (!ta) return;
+        ta.readOnly = state.isLocked;
+        ta.disabled = state.isLocked;
+        ta.classList.toggle("opacity-80", state.isLocked);
+        ta.classList.toggle("cursor-not-allowed", state.isLocked);
+        ta.classList.toggle("bg-bg-secondary", state.isLocked);
+      });
+    }
   }
 
   function _openImageLightboxLegacy(imgSrc, caption) {
@@ -666,6 +722,18 @@
     state.container = container;
     state.root = null;
     state.textarea = null;
+    state.counter = null;
+    state.maxLength = null;
+    state.isLocked = false;
+    state.isMultiQuestion = false;
+    state.displayMode = "simultaneous";
+    state.questions = [];
+    state.currentStepIndex = 0;
+    state.textareas = {};
+    state.counters = {};
+    state.feedbackContainers = {};
+    state.stepCards = {};
+    state.stepAnswers = {};
 
     if (!container) return;
 
@@ -677,6 +745,9 @@
       style.textContent = `
         @keyframes oaSlideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .oa-card-entry { animation: oaSlideUp 250ms ease-out forwards; }
+        @media (prefers-reduced-motion: reduce) {
+          .oa-card-entry { animation: none !important; transition: none !important; }
+        }
         .oa-task-prompt {
           border-color: color-mix(in srgb, var(--color-primary) 34%, var(--color-border-strong) 66%);
           background:
@@ -689,6 +760,16 @@
             inset 0 1px 0 color-mix(in srgb, var(--color-surface-1) 78%, transparent),
             0 8px 18px color-mix(in srgb, var(--color-primary) 8%, transparent);
         }
+        .oa-case-prompt {
+          border-color: color-mix(in srgb, var(--color-primary, #2563eb) 28%, var(--color-border-strong) 72%);
+          background:
+            linear-gradient(
+              180deg,
+              color-mix(in srgb, var(--color-primary-light, #dbeafe) 15%, var(--color-surface-1) 85%),
+              color-mix(in srgb, var(--color-surface-2) 30%, var(--color-surface-1) 70%)
+            );
+          box-shadow: 0 4px 12px color-mix(in srgb, var(--color-primary) 5%, transparent);
+        }
         .oa-task-prompt-icon {
           border-color: color-mix(in srgb, var(--color-primary) 28%, var(--color-border-strong) 72%);
           background: color-mix(in srgb, var(--color-surface-1) 88%, var(--color-primary-light) 12%);
@@ -700,11 +781,29 @@
         .oa-answer-input::placeholder { color: var(--color-text-secondary); opacity: 1; }
         .oa-answer-input { line-height: 1.6; }
         .oa-answer-input:focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary-light) 50%, transparent); }
+        .oa-step-pill {
+          transition: all 180ms ease;
+        }
+        .oa-step-pill.active {
+          background-color: var(--color-primary);
+          color: #fff;
+          box-shadow: 0 2px 8px color-mix(in srgb, var(--color-primary) 35%, transparent);
+        }
+        .oa-step-pill.passed {
+          background-color: var(--color-success, #10b981);
+          color: #fff;
+        }
+        .oa-step-pill.pending {
+          background-color: var(--color-surface-2);
+          color: var(--color-text-secondary);
+          border: 1px solid var(--color-border-subtle);
+        }
       `;
       document.head.appendChild(style);
     }
 
     const title = _getTitle(taskDto);
+    const { td, content } = _getTaskData(taskDto);
     const question = _getQuestion(taskDto);
     const isRuntimeSession = !!document.getElementById("check-answer-btn");
 
@@ -717,52 +816,15 @@
       root.appendChild(titleEl);
     }
 
+    const rawQuestions = Array.isArray(content.questions) && content.questions.length > 0
+      ? content.questions
+      : [];
+    const hasMultipleQuestions = rawQuestions.length > 1 || (rawQuestions.length === 1 && !!content.case_text);
+
     const imgRaw = _getImagePath(taskDto);
     const imgUrl = _resolveImageUrl(imgRaw);
 
-    const card = _createEl(
-      "div",
-      "w-full rounded-2xl border-2 border-border-strong bg-surface-2 p-5 shadow-sm dark:border-border-strong dark:bg-surface-2 oa-card-entry",
-      ""
-    );
-
-    if (question) {
-      const promptBlock = _createEl(
-        "div",
-        "oa-task-prompt mb-4 rounded-2xl border-2 px-4 py-3 shadow-sm",
-        ""
-      );
-      promptBlock.setAttribute("data-openanswerui", "task-prompt");
-
-      const promptInner = _createEl("div", "flex items-start gap-3", "");
-      const promptIconWrap = _createEl(
-        "div",
-        "oa-task-prompt-icon mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-xl border shadow-sm",
-        ""
-      );
-      promptIconWrap.appendChild(
-        _createEl("span", "material-symbols-outlined text-[19px]", "assignment")
-      );
-      const promptBody = _createEl("div", "min-w-0 flex-1", "");
-      const promptLabel = _createEl(
-        "div",
-        "oa-task-prompt-label mb-1 text-[11px] font-bold uppercase tracking-[0.09em]",
-        wt("openanswerui.task_text_label", "Текст задания")
-      );
-      const q = _createEl(
-        "div",
-        "text-[15px] leading-7 text-text-main dark:text-text-on-dark",
-        question
-      );
-      promptBody.appendChild(promptLabel);
-      promptBody.appendChild(q);
-      promptInner.appendChild(promptIconWrap);
-      promptInner.appendChild(promptBody);
-      promptBlock.appendChild(promptInner);
-      card.appendChild(promptBlock);
-    }
-
-    if (imgUrl) {
+    function createThumbnailPreview(url, caption) {
       const wrapper = _createEl(
         "div",
         "group relative mx-auto w-full max-w-3xl overflow-hidden rounded-xl border border-border-strong bg-surface-2 shadow-inner cursor-zoom-in",
@@ -771,8 +833,8 @@
       wrapper.style.height = "clamp(220px, 34vh, 360px)";
 
       const img = document.createElement("img");
-      img.src = imgUrl;
-      img.alt = title || "Task image";
+      img.src = url;
+      img.alt = caption || title || "Task image";
       img.className = "h-full w-full object-contain p-2 transition-transform duration-300 group-hover:scale-[1.02]";
       img.draggable = false;
 
@@ -785,13 +847,12 @@
       const zoomIcon = _createEl("span", "material-symbols-outlined text-[22px]", "zoom_in");
       zoomBtn.appendChild(zoomIcon);
 
-      const caption = question || title || "Image";
       const open = (ev) => {
         if (ev) {
           ev.preventDefault();
           ev.stopPropagation();
         }
-        _openImageLightboxSmart(imgUrl, caption);
+        _openImageLightboxSmart(url, caption || question || title || "Image");
       };
 
       img.addEventListener("click", open);
@@ -800,54 +861,527 @@
 
       wrapper.appendChild(img);
       wrapper.appendChild(zoomBtn);
-      card.appendChild(wrapper);
+      return wrapper;
     }
 
-    const textarea = document.createElement("textarea");
-    textarea.className =
-      "oa-answer-input mt-4 w-full min-h-[176px] resize-y rounded-xl border-2 border-border-strong bg-surface-1 px-4 py-3 text-sm text-text-main placeholder:text-text-secondary dark:placeholder:text-text-secondary shadow-sm focus:border-primary focus:ring-primary";
-    textarea.placeholder = "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u043e\u0442\u0432\u0435\u0442...";
+    // =========================================================================
+    // LEGACY / SINGLE QUESTION BRANCH
+    // =========================================================================
+    if (!hasMultipleQuestions) {
+      const card = _createEl(
+        "div",
+        "w-full rounded-2xl border-2 border-border-strong bg-surface-2 p-5 shadow-sm dark:border-border-strong dark:bg-surface-2 oa-card-entry",
+        ""
+      );
 
-    // D-6 fix: max_length lives in content, not settings
-    const { content: _cnt } = _getTaskData(taskDto);
-    const settings = _getSettings(taskDto);
-    const maxLen = Number(_cnt.max_length || _cnt.maxLength || settings.max_length || settings.maxLength || 0);
-    if (Number.isFinite(maxLen) && maxLen > 0) {
-      textarea.maxLength = maxLen;
-      state.maxLength = maxLen;
-    } else {
-      state.maxLength = null;
-    }
+      if (question) {
+        const promptBlock = _createEl(
+          "div",
+          "oa-task-prompt mb-4 rounded-2xl border-2 px-4 py-3 shadow-sm",
+          ""
+        );
+        promptBlock.setAttribute("data-openanswerui", "task-prompt");
 
-    textarea.addEventListener("input", () => {
+        const promptInner = _createEl("div", "flex items-start gap-3", "");
+        const promptIconWrap = _createEl(
+          "div",
+          "oa-task-prompt-icon mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-xl border shadow-sm",
+          ""
+        );
+        promptIconWrap.appendChild(
+          _createEl("span", "material-symbols-outlined text-[19px]", "assignment")
+        );
+        const promptBody = _createEl("div", "min-w-0 flex-1", "");
+        const promptLabel = _createEl(
+          "div",
+          "oa-task-prompt-label mb-1 text-[11px] font-bold uppercase tracking-[0.09em]",
+          wt("openanswerui.task_text_label", "Текст задания")
+        );
+        const q = _createEl(
+          "div",
+          "text-[15px] leading-7 text-text-main dark:text-text-on-dark",
+          question
+        );
+        promptBody.appendChild(promptLabel);
+        promptBody.appendChild(q);
+        promptInner.appendChild(promptIconWrap);
+        promptInner.appendChild(promptBody);
+        promptBlock.appendChild(promptInner);
+        card.appendChild(promptBlock);
+      }
+
+      if (imgUrl) {
+        card.appendChild(createThumbnailPreview(imgUrl, question || title || "Task image"));
+      }
+
+      const textarea = document.createElement("textarea");
+      textarea.className =
+        "oa-answer-input mt-4 w-full min-h-[176px] resize-y rounded-xl border-2 border-border-strong bg-surface-1 px-4 py-3 text-sm text-text-main placeholder:text-text-secondary dark:placeholder:text-text-secondary shadow-sm focus:border-primary focus:ring-primary";
+      textarea.placeholder = wt("openanswerui.enter_answer_placeholder", "Введите ответ...");
+
+      const settings = _getSettings(taskDto);
+      const maxLen = Number(content.max_length || content.maxLength || settings.max_length || settings.maxLength || 0);
+      if (Number.isFinite(maxLen) && maxLen > 0) {
+        textarea.maxLength = maxLen;
+        state.maxLength = maxLen;
+      } else {
+        state.maxLength = null;
+      }
+
+      textarea.addEventListener("input", () => {
+        _syncCheckButtonState();
+      });
+
+      card.appendChild(textarea);
+
+      let counter = null;
+      if (state.maxLength) {
+        const footerRow = _createEl("div", "mt-3 flex items-center justify-end gap-3 rounded-xl border border-border-subtle bg-surface-1 px-3 py-2", "");
+        counter = _createEl("div", "shrink-0 rounded-full border border-border-subtle bg-surface-2 px-2.5 py-1 text-xs font-semibold text-text-secondary dark:text-text-secondary", "");
+        footerRow.appendChild(counter);
+        card.appendChild(footerRow);
+      }
+
+      root.appendChild(card);
+      container.appendChild(root);
+
+      state.root = root;
+      state.textarea = textarea;
+      state.counter = counter;
+      state.isLocked = false;
+      if (rawQuestions.length === 1) {
+        state.textareas[rawQuestions[0].id] = textarea;
+        state.questions = rawQuestions;
+      }
+      _setInputLocked(false);
+
+      try {
+        textarea.focus();
+      } catch (e) {
+        // ignore
+      }
+
       _syncCheckButtonState();
-    });
-
-    card.appendChild(textarea);
-
-    textarea.addEventListener("input", _syncCheckButtonState);
-    _syncCheckButtonState();
-
-    let counter = null;
-    if (state.maxLength) {
-      const footerRow = _createEl("div", "mt-3 flex items-center justify-end gap-3 rounded-xl border border-border-subtle bg-surface-1 px-3 py-2", "");
-      counter = _createEl("div", "shrink-0 rounded-full border border-border-subtle bg-surface-2 px-2.5 py-1 text-xs font-semibold text-text-secondary dark:text-text-secondary", "");
-      footerRow.appendChild(counter);
-      card.appendChild(footerRow);
+      return;
     }
 
-    root.appendChild(card);
+    // =========================================================================
+    // MULTI-QUESTION BRANCH (simultaneous or sequential)
+    // =========================================================================
+    state.isMultiQuestion = true;
+    state.questions = rawQuestions;
+    state.displayMode = String(content.display_mode || "simultaneous").toLowerCase();
+
+    // 1. Case Text Context Block (if present)
+    if (content.case_text) {
+      const caseCard = _createEl(
+        "div",
+        "oa-case-prompt mb-1 rounded-2xl border-2 px-4 py-3.5 shadow-sm oa-card-entry",
+        ""
+      );
+      caseCard.setAttribute("data-openanswerui", "case-context");
+
+      const caseInner = _createEl("div", "flex items-start gap-3", "");
+      const caseIconWrap = _createEl(
+        "div",
+        "oa-task-prompt-icon mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-xl border shadow-sm",
+        ""
+      );
+      caseIconWrap.appendChild(
+        _createEl("span", "material-symbols-outlined text-[19px]", "medical_information")
+      );
+      const caseBody = _createEl("div", "min-w-0 flex-1", "");
+      const caseLabel = _createEl(
+        "div",
+        "oa-task-prompt-label mb-1 text-[11px] font-bold uppercase tracking-[0.09em]",
+        wt("openanswerui.case_text_label", "Описание случая")
+      );
+      const caseP = _createEl(
+        "div",
+        "text-[14px] leading-relaxed text-text-main dark:text-text-on-dark whitespace-pre-line",
+        content.case_text
+      );
+      caseBody.appendChild(caseLabel);
+      caseBody.appendChild(caseP);
+      caseInner.appendChild(caseIconWrap);
+      caseInner.appendChild(caseBody);
+      caseCard.appendChild(caseInner);
+      root.appendChild(caseCard);
+    }
+
+    // 2. Global task images preview
+    if (imgUrl) {
+      root.appendChild(createThumbnailPreview(imgUrl, content.case_text || title || "Case image"));
+    }
+
+    // 3. Questions display depending on mode
+    if (state.displayMode === "sequential") {
+      // -----------------------------------------------------------------------
+      // SEQUENTIAL MODE (step-by-step reasoning)
+      // -----------------------------------------------------------------------
+      const seqMount = _createEl("div", "flex flex-col gap-4 w-full", "");
+      root.appendChild(seqMount);
+
+      function renderSequentialStep() {
+        seqMount.innerHTML = "";
+        const total = state.questions.length;
+        const currentIdx = Math.min(state.currentStepIndex, total - 1);
+        const currentQ = state.questions[currentIdx];
+
+        // Step Indicator Header
+        const indicatorCard = _createEl(
+          "div",
+          "flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border-subtle bg-surface-1 px-4 py-2.5 text-xs font-semibold text-text-secondary shadow-sm",
+          ""
+        );
+        const pillsWrap = _createEl("div", "flex items-center gap-1.5", "");
+        for (let i = 0; i < total; i++) {
+          const pill = _createEl(
+            "span",
+            `oa-step-pill inline-flex size-6 items-center justify-center rounded-full text-[11px] font-bold ${
+              i < currentIdx
+                ? "passed"
+                : i === currentIdx
+                ? "active"
+                : "pending"
+            }`,
+            i < currentIdx ? "✓" : String(i + 1)
+          );
+          pillsWrap.appendChild(pill);
+        }
+
+        const stepText = _createEl(
+          "div",
+          "text-xs font-medium text-text-secondary",
+          wt("openanswerui.step_counter", "Вопрос {current} из {total}")
+            .replace("{current}", currentIdx + 1)
+            .replace("{total}", total)
+        );
+        indicatorCard.appendChild(pillsWrap);
+        indicatorCard.appendChild(stepText);
+        seqMount.appendChild(indicatorCard);
+
+        // Previous Completed Steps (read-only context with revealed reference)
+        for (let i = 0; i < currentIdx; i++) {
+          const pastQ = state.questions[i];
+          const pastQid = String(pastQ.id);
+          const pastAnswer = state.stepAnswers[pastQid] || _getTextareaValue(pastQid);
+
+          const pastCard = _createEl(
+            "div",
+            "w-full rounded-2xl border border-border-subtle bg-surface-1/70 p-4 shadow-sm text-xs oa-card-entry opacity-90",
+            ""
+          );
+          const pastHeader = _createEl("div", "flex items-center justify-between gap-2 mb-2");
+          const pastBadge = _createEl(
+            "span",
+            "inline-flex items-center gap-1 rounded-md bg-surface-2 px-2 py-0.5 text-[11px] font-bold text-text-secondary",
+            `${wt("openanswerui.question_num", "Вопрос {n}").replace("{n}", i + 1)}`
+          );
+          const lockedBadge = _createEl(
+            "span",
+            "inline-flex items-center gap-1 text-[11px] font-medium text-color-success",
+            `✓ ${wt("openanswerui.step_locked_notice", "Ответ зафиксирован")}`
+          );
+          pastHeader.appendChild(pastBadge);
+          pastHeader.appendChild(lockedBadge);
+          pastCard.appendChild(pastHeader);
+
+          const pastPrompt = _createEl("div", "font-medium text-text-main mb-2", _safeText(pastQ.question));
+          pastCard.appendChild(pastPrompt);
+
+          const pastAnsBox = _createEl(
+            "div",
+            "rounded-lg border border-border-subtle bg-surface-2 px-3 py-2 text-text-secondary leading-relaxed",
+            ""
+          );
+          pastAnsBox.innerHTML = `<strong>${wt("openanswerui.your_answer", "Ваш ответ:")}</strong> ${_safeText(pastAnswer)}`;
+          pastCard.appendChild(pastAnsBox);
+
+          if (pastQ.reference_answer) {
+            const pastRef = _createEl(
+              "div",
+              "mt-2 text-[11px] text-text-secondary/90 italic",
+              ""
+            );
+            pastRef.innerHTML = `<strong>${wt("openanswerui.reference_revealed", "Эталонный ответ:")}</strong> ${_safeText(pastQ.reference_answer)}`;
+            pastCard.appendChild(pastRef);
+          }
+
+          seqMount.appendChild(pastCard);
+        }
+
+        // Active Step Card
+        const activeCard = _createEl(
+          "div",
+          "w-full rounded-2xl border-2 border-border-strong bg-surface-2 p-5 shadow-sm oa-card-entry",
+          ""
+        );
+        const activePromptBlock = _createEl(
+          "div",
+          "oa-task-prompt mb-4 rounded-2xl border-2 px-4 py-3 shadow-sm",
+          ""
+        );
+        const promptInner = _createEl("div", "flex items-start gap-3", "");
+        const promptIconWrap = _createEl(
+          "div",
+          "oa-task-prompt-icon mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-xl border shadow-sm",
+          ""
+        );
+        promptIconWrap.appendChild(
+          _createEl("span", "material-symbols-outlined text-[19px]", "quiz")
+        );
+        const promptBody = _createEl("div", "min-w-0 flex-1", "");
+        const promptLabel = _createEl(
+          "div",
+          "oa-task-prompt-label mb-1 text-[11px] font-bold uppercase tracking-[0.09em]",
+          wt("openanswerui.question_num", "Вопрос {n}").replace("{n}", currentIdx + 1)
+        );
+        const qText = _createEl(
+          "div",
+          "text-[15px] leading-7 text-text-main dark:text-text-on-dark font-medium",
+          _safeText(currentQ.question)
+        );
+        promptBody.appendChild(promptLabel);
+        promptBody.appendChild(qText);
+        promptInner.appendChild(promptIconWrap);
+        promptInner.appendChild(promptBody);
+        activePromptBlock.appendChild(promptInner);
+        activeCard.appendChild(activePromptBlock);
+
+        // Optional question image
+        const qImgUrl = _resolveImageUrl(currentQ.image_url || currentQ.image_path);
+        if (qImgUrl) {
+          activeCard.appendChild(createThumbnailPreview(qImgUrl, currentQ.question));
+        }
+
+        // Active textarea
+        const currentQid = String(currentQ.id);
+        const textarea = document.createElement("textarea");
+        textarea.name = `open_answer_q_${currentQid}`;
+        textarea.setAttribute("data-qid", currentQid);
+        textarea.className =
+          "oa-answer-input mt-3 w-full min-h-[140px] resize-y rounded-xl border-2 border-border-strong bg-surface-1 px-4 py-3 text-sm text-text-main placeholder:text-text-secondary dark:placeholder:text-text-secondary shadow-sm focus:border-primary focus:ring-primary";
+        textarea.placeholder = wt("openanswerui.enter_answer_placeholder", "Введите ответ...");
+        textarea.setAttribute(
+          "aria-label",
+          `${wt("openanswerui.answer_for_question", "Ответ на вопрос")} ${currentIdx + 1}: ${_safeText(currentQ.question)}`
+        );
+
+        if (state.stepAnswers[currentQid]) {
+          textarea.value = state.stepAnswers[currentQid];
+        }
+
+        const maxLen = Number(currentQ.max_length || content.max_length || 0);
+        if (Number.isFinite(maxLen) && maxLen > 0) {
+          textarea.maxLength = maxLen;
+        }
+
+        state.textareas[currentQid] = textarea;
+        state.textarea = textarea;
+
+        activeCard.appendChild(textarea);
+
+        // Counter
+        let counter = null;
+        if (maxLen > 0) {
+          const footerRow = _createEl(
+            "div",
+            "mt-2 flex items-center justify-end gap-3 rounded-xl border border-border-subtle bg-surface-1 px-3 py-1.5",
+            ""
+          );
+          counter = _createEl(
+            "div",
+            "shrink-0 rounded-full border border-border-subtle bg-surface-2 px-2 py-0.5 text-[11px] font-semibold text-text-secondary",
+            `${textarea.value.length}/${maxLen}`
+          );
+          footerRow.appendChild(counter);
+          activeCard.appendChild(footerRow);
+        }
+        state.counters[currentQid] = counter;
+
+        // Feedback box for this question
+        const fbBox = _createEl("div", "oa-feedback-container hidden mt-2", "");
+        fbBox.setAttribute("data-feedback-qid", currentQid);
+        state.feedbackContainers[currentQid] = fbBox;
+        activeCard.appendChild(fbBox);
+
+        // Step action button row
+        const actionsRow = _createEl("div", "mt-4 flex items-center justify-end gap-3", "");
+        const isLastStep = currentIdx >= total - 1;
+
+        if (!isLastStep) {
+          const nextBtn = _createEl(
+            "button",
+            "oa-next-step-btn inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:opacity-95 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed",
+            ""
+          );
+          nextBtn.type = "button";
+          nextBtn.setAttribute(
+            "aria-label",
+            wt("openanswerui.next_step_btn", "Ответить и перейти далее")
+          );
+          const nextText = _createEl(
+            "span",
+            "",
+            wt("openanswerui.next_step_btn", "Ответить и перейти далее")
+          );
+          const nextIcon = _createEl("span", "material-symbols-outlined text-[18px]", "arrow_forward");
+          nextBtn.appendChild(nextText);
+          nextBtn.appendChild(nextIcon);
+
+          nextBtn.disabled = textarea.value.trim().length === 0;
+
+          textarea.addEventListener("input", () => {
+            nextBtn.disabled = textarea.value.trim().length === 0;
+            _syncCheckButtonState();
+          });
+
+          nextBtn.addEventListener("click", () => {
+            const val = textarea.value.trim();
+            if (!val) {
+              textarea.focus();
+              return;
+            }
+            state.stepAnswers[currentQid] = textarea.value;
+            state.currentStepIndex = currentIdx + 1;
+            renderSequentialStep();
+            _syncCheckButtonState();
+          });
+
+          actionsRow.appendChild(nextBtn);
+        } else {
+          textarea.addEventListener("input", () => {
+            _syncCheckButtonState();
+          });
+        }
+
+        activeCard.appendChild(actionsRow);
+        seqMount.appendChild(activeCard);
+
+        try {
+          textarea.focus();
+        } catch (e) {
+          // ignore
+        }
+      }
+
+      renderSequentialStep();
+    } else {
+      // -----------------------------------------------------------------------
+      // SIMULTANEOUS MODE (all questions displayed on one screen)
+      // -----------------------------------------------------------------------
+      const listContainer = _createEl("div", "flex flex-col gap-4 w-full", "");
+
+      state.questions.forEach((q, idx) => {
+        const qid = String(q.id);
+        const card = _createEl(
+          "div",
+          "w-full rounded-2xl border-2 border-border-strong bg-surface-2 p-5 shadow-sm oa-card-entry",
+          ""
+        );
+
+        const promptBlock = _createEl(
+          "div",
+          "oa-task-prompt mb-3 rounded-2xl border-2 px-4 py-3 shadow-sm",
+          ""
+        );
+        const promptInner = _createEl("div", "flex items-start gap-3", "");
+        const promptIconWrap = _createEl(
+          "div",
+          "oa-task-prompt-icon mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-xl border shadow-sm",
+          ""
+        );
+        promptIconWrap.appendChild(
+          _createEl("span", "material-symbols-outlined text-[19px]", "quiz")
+        );
+        const promptBody = _createEl("div", "min-w-0 flex-1", "");
+        const promptLabel = _createEl(
+          "div",
+          "oa-task-prompt-label mb-1 text-[11px] font-bold uppercase tracking-[0.09em]",
+          wt("openanswerui.question_num", "Вопрос {n}").replace("{n}", idx + 1)
+        );
+        const qText = _createEl(
+          "div",
+          "text-[15px] leading-7 text-text-main dark:text-text-on-dark font-medium",
+          _safeText(q.question)
+        );
+        promptBody.appendChild(promptLabel);
+        promptBody.appendChild(qText);
+        promptInner.appendChild(promptIconWrap);
+        promptInner.appendChild(promptBody);
+        promptBlock.appendChild(promptInner);
+        card.appendChild(promptBlock);
+
+        // Optional question image
+        const qImgUrl = _resolveImageUrl(q.image_url || q.image_path);
+        if (qImgUrl) {
+          card.appendChild(createThumbnailPreview(qImgUrl, q.question));
+        }
+
+        // Textarea
+        const textarea = document.createElement("textarea");
+        textarea.name = `open_answer_q_${qid}`;
+        textarea.setAttribute("data-qid", qid);
+        textarea.className =
+          "oa-answer-input mt-3 w-full min-h-[140px] resize-y rounded-xl border-2 border-border-strong bg-surface-1 px-4 py-3 text-sm text-text-main placeholder:text-text-secondary dark:placeholder:text-text-secondary shadow-sm focus:border-primary focus:ring-primary";
+        textarea.placeholder = wt("openanswerui.enter_answer_placeholder", "Введите ответ...");
+        textarea.setAttribute(
+          "aria-label",
+          `${wt("openanswerui.answer_for_question", "Ответ на вопрос")} ${idx + 1}: ${_safeText(q.question)}`
+        );
+
+        const maxLen = Number(q.max_length || content.max_length || 0);
+        if (Number.isFinite(maxLen) && maxLen > 0) {
+          textarea.maxLength = maxLen;
+        }
+
+        textarea.addEventListener("input", () => {
+          _syncCheckButtonState();
+        });
+
+        card.appendChild(textarea);
+        state.textareas[qid] = textarea;
+        if (idx === 0) state.textarea = textarea;
+
+        // Counter
+        let counter = null;
+        if (maxLen > 0) {
+          const footerRow = _createEl(
+            "div",
+            "mt-2 flex items-center justify-end gap-3 rounded-xl border border-border-subtle bg-surface-1 px-3 py-1.5",
+            ""
+          );
+          counter = _createEl(
+            "div",
+            "shrink-0 rounded-full border border-border-subtle bg-surface-2 px-2 py-0.5 text-[11px] font-semibold text-text-secondary",
+            `0/${maxLen}`
+          );
+          footerRow.appendChild(counter);
+          card.appendChild(footerRow);
+        }
+        state.counters[qid] = counter;
+
+        // Feedback box
+        const fbBox = _createEl("div", "oa-feedback-container hidden mt-2", "");
+        fbBox.setAttribute("data-feedback-qid", qid);
+        state.feedbackContainers[qid] = fbBox;
+        card.appendChild(fbBox);
+
+        listContainer.appendChild(card);
+      });
+
+      root.appendChild(listContainer);
+    }
 
     container.appendChild(root);
-
     state.root = root;
-    state.textarea = textarea;
-    state.counter = counter;
     state.isLocked = false;
     _setInputLocked(false);
 
     try {
-      textarea.focus();
+      const firstTa = state.questions.length > 0 ? state.textareas[state.questions[0].id] : null;
+      if (firstTa) firstTa.focus();
     } catch (e) {
       // ignore
     }
@@ -856,23 +1390,176 @@
   };
 
   OpenAnswerUI.getUserAnswerPayload = function getUserAnswerPayload() {
+    if (state.isMultiQuestion && state.questions.length > 0) {
+      const answers = {};
+      state.questions.forEach((q) => {
+        const qid = String(q.id);
+        answers[qid] = _getTextareaValue(qid) || state.stepAnswers[qid] || "";
+      });
+      const firstQid = String(state.questions[0].id);
+      return {
+        answers,
+        answer: answers[firstQid] || "",
+      };
+    }
     return { answer: _getTextareaValue() };
   };
 
-  OpenAnswerUI.applyCheckFeedback = function applyCheckFeedback(_result) {
-    _setInputLocked(true);
+  OpenAnswerUI.applyCheckFeedback = function applyCheckFeedback(result) {
+    if (!result || typeof result !== "object") {
+      _setInputLocked(true);
+      _syncCheckButtonState();
+      return;
+    }
+
+    const details = result.details || {};
+    const questionsFeedback = details.questions || {};
+
+    if (state.isMultiQuestion && state.questions.length > 0) {
+      let anyFailed = false;
+
+      state.questions.forEach((q) => {
+        const qid = String(q.id);
+        const fb = questionsFeedback[qid];
+        const container = state.feedbackContainers[qid];
+
+        if (!container) return;
+        container.innerHTML = "";
+        container.classList.remove("hidden");
+
+        const isSuccess = fb ? !!fb.success : !!result.success;
+        if (!isSuccess) anyFailed = true;
+
+        const box = _createEl(
+          "div",
+          `mt-3 rounded-xl border p-3 text-xs leading-relaxed oa-card-entry ${
+            isSuccess
+              ? "border-color-success/40 bg-color-success-light/10 text-text-main"
+              : "border-color-error-text/40 bg-color-error-light/10 text-text-main"
+          }`
+        );
+
+        const statusRow = _createEl("div", "flex items-center gap-2 font-semibold mb-1.5");
+        const icon = _createEl(
+          "span",
+          `material-symbols-outlined text-[18px] ${
+            isSuccess ? "text-color-success" : "text-color-error-text"
+          }`,
+          isSuccess ? "check_circle" : "cancel"
+        );
+        const label = _createEl(
+          "span",
+          "",
+          isSuccess
+            ? wt("openanswerui.step_passed", "Ответ принят")
+            : wt("openanswerui.step_retry_hint", "В ответе отсутствуют необходимые ключевые слова")
+        );
+        statusRow.appendChild(icon);
+        statusRow.appendChild(label);
+        box.appendChild(statusRow);
+
+        // Keywords display
+        if (fb) {
+          const found = Array.isArray(fb.found_keywords) ? fb.found_keywords : [];
+          const missing = Array.isArray(fb.missing_keywords) ? fb.missing_keywords : [];
+
+          if (found.length > 0 || missing.length > 0) {
+            const chipsRow = _createEl("div", "flex flex-wrap items-center gap-1.5 mt-2");
+            found.forEach((kw) => {
+              const chip = _createEl(
+                "span",
+                "inline-flex items-center gap-1 rounded-md bg-color-success-light/20 border border-color-success/30 px-2 py-0.5 text-[11px] font-medium text-color-success",
+                `✓ ${kw}`
+              );
+              chipsRow.appendChild(chip);
+            });
+            missing.forEach((kw) => {
+              const chip = _createEl(
+                "span",
+                "inline-flex items-center gap-1 rounded-md bg-color-error-light/20 border border-color-error-text/30 px-2 py-0.5 text-[11px] font-medium text-color-error-text",
+                `✗ ${kw}`
+              );
+              chipsRow.appendChild(chip);
+            });
+            box.appendChild(chipsRow);
+          }
+
+          if (fb.reference_answer) {
+            const refEl = _createEl(
+              "div",
+              "mt-2 pt-2 border-t border-border-subtle/50 text-[11px] text-text-secondary"
+            );
+            refEl.innerHTML = `<strong>${wt("openanswerui.reference_revealed", "Эталонный ответ:")}</strong> ${_safeText(fb.reference_answer)}`;
+            box.appendChild(refEl);
+          }
+        }
+
+        container.appendChild(box);
+
+        // Smart Partial Retry: lock passed questions, keep failed editable
+        if (isSuccess) {
+          _setInputLocked(true, qid);
+        } else {
+          _setInputLocked(false, qid);
+        }
+      });
+
+      if (!anyFailed || result.success) {
+        _setInputLocked(true);
+      }
+    } else {
+      _setInputLocked(true);
+    }
     _syncCheckButtonState();
   };
 
   OpenAnswerUI.isAnswerValid = function isAnswerValid() {
+    if (state.isMultiQuestion && state.questions.length > 0) {
+      if (state.displayMode === "sequential") {
+        const currentQ = state.questions[state.currentStepIndex];
+        if (!currentQ) return true;
+        const ans = _getTextareaValue(currentQ.id) || state.stepAnswers[currentQ.id] || "";
+        return ans.trim().length > 0;
+      }
+      return state.questions.every((q) => _isNonEmptyAnswer(q.id));
+    }
     return _isNonEmptyAnswer();
   };
 
-  // Phase 2: Cleanup method to prevent memory leaks
-  // D-3 fix: restore draft answer into textarea
   OpenAnswerUI.restoreInput = function restoreInput(draft) {
     try {
       if (!draft || typeof draft !== "object") return;
+
+      if (state.isMultiQuestion && state.questions.length > 0) {
+        _setInputLocked(false);
+        const answers = (draft.answers && typeof draft.answers === "object") ? draft.answers : null;
+        const singleAnswer = draft.answer != null ? String(draft.answer) : "";
+
+        state.questions.forEach((q, idx) => {
+          const qid = String(q.id);
+          let val = "";
+          if (answers && answers[qid] != null) {
+            val = String(answers[qid]);
+          } else if (idx === 0 && singleAnswer) {
+            val = singleAnswer;
+          }
+          if (val) {
+            state.stepAnswers[qid] = val;
+            if (state.textareas[qid]) {
+              state.textareas[qid].value = val;
+            }
+          }
+        });
+
+        if (state.textarea) {
+          const firstQid = String(state.questions[0].id);
+          state.textarea.value = _getTextareaValue(firstQid) || singleAnswer;
+        }
+
+        _syncCheckButtonState();
+        return;
+      }
+
       const answer = draft.answer != null ? String(draft.answer) : "";
       if (state.textarea) {
         _setInputLocked(false);
@@ -885,7 +1572,6 @@
   };
 
   OpenAnswerUI.cleanup = function cleanup() {
-    // Reset state
     state.taskDto = null;
     state.container = null;
     state.root = null;
@@ -893,9 +1579,15 @@
     state.counter = null;
     state.maxLength = null;
     state.isLocked = false;
-    // Note: Event listeners are attached to DOM elements that will be removed,
-    // so they will be garbage collected automatically.
-    // The lightbox cleanup is handled by handleClose() when the lightbox is closed.
+    state.isMultiQuestion = false;
+    state.displayMode = "simultaneous";
+    state.questions = [];
+    state.currentStepIndex = 0;
+    state.textareas = {};
+    state.counters = {};
+    state.feedbackContainers = {};
+    state.stepCards = {};
+    state.stepAnswers = {};
   };
 
   global.OpenAnswerUI = OpenAnswerUI;

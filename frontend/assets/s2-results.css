@@ -999,6 +999,7 @@ textarea {
   font-size: 0.95rem;
   font-weight: 700;
   line-height: 1.45;
+  white-space: pre-line;
 }
 
 .s2-review-note {

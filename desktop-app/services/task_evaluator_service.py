@@ -4767,383 +4767,474 @@ class TaskEvaluatorService:
     # Извлечено из trainer.py::check_open_answer (строки 1652-1699)
     # =========================================================================
     
-    def evaluate_open_answer_task(self, user_input: Dict[str, Any],
-                                  answer_key: Dict[str, Any],
-                                  task_data: Optional[Dict[str, Any]] = None) -> EvaluationResult:
+    def _evaluate_single_open_answer_text(
+        self,
+        user_answer: str,
+        answer_spec: Dict[str, Any],
+        tolerance_config: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
         """
-        Оценка Open Answer задания (проверка по ключевым словам).
-        
-        Args:
-            user_input: {
-                'answer': str  # текстовый ответ пользователя
-            }
-            answer_key: {
-                'keywords': [str, ...],  # ключевые слова
-                'sequence_matters': bool  # важна ли последовательность
-            }
-        
-        Returns:
-            EvaluationResult с найденными и пропущенными ключевыми словами
-        
-        Логика извлечена из trainer.py строки 1652-1699
+        Оценка одиночного текстового ответа на вопрос.
+        Поддерживает толерантность к опечаткам, окончаниям, раскладке клавиатуры,
+        а также проверку порядка слов при sequence_matters=True.
         """
-        user_answer = user_input.get('answer', '').strip()
-        
+        user_answer = (user_answer or "").strip()
         if not user_answer:
-            return EvaluationResult(
-                success=False,
-                message="Введите ответ перед проверкой",
-                score=0.0,
-                metric="percent",
-                details={'error': 'empty_answer'}
-            )
-        
-        max_length = None
-        max_length_candidates = []
-        if isinstance(task_data, dict):
-            content = task_data.get('content', {}) if isinstance(task_data.get('content'), dict) else {}
-            settings = task_data.get('settings', {}) if isinstance(task_data.get('settings'), dict) else {}
-            max_length_candidates.extend([
-                content.get('max_length'),
-                content.get('maxLength'),
-                settings.get('max_length'),
-                settings.get('maxLength'),
-            ])
-        if isinstance(answer_key, dict):
-            nested_content = answer_key.get('content', {}) if isinstance(answer_key.get('content'), dict) else {}
-            max_length_candidates.extend([
-                answer_key.get('max_length'),
-                answer_key.get('maxLength'),
-                nested_content.get('max_length'),
-                nested_content.get('maxLength'),
-            ])
+            return {
+                "success": False,
+                "score": 0.0,
+                "message": "Введите ответ перед проверкой",
+                "error": "empty_answer",
+                "found_keywords": [],
+                "missing_keywords": [],
+                "user_answer": "",
+            }
 
-        for candidate in max_length_candidates:
-            try:
-                parsed = int(candidate)
-            except (TypeError, ValueError):
-                continue
-            if parsed > 0:
-                max_length = parsed
-                break
+        # Проверка max_length
+        max_length = None
+        for key in ("max_length", "maxLength"):
+            val = answer_spec.get(key)
+            if val is not None:
+                try:
+                    parsed = int(val)
+                    if parsed > 0:
+                        max_length = parsed
+                        break
+                except (TypeError, ValueError):
+                    pass
 
         if max_length is not None and len(user_answer) > max_length:
-            return EvaluationResult(
-                success=False,
-                message=f"Ответ слишком длинный (максимум {max_length} символов)",
-                score=0.0,
-                metric="percent",
-                details={
-                    'error': 'answer_too_long',
-                    'max_length': max_length,
-                    'answer_length': len(user_answer),
-                }
-            )
+            return {
+                "success": False,
+                "score": 0.0,
+                "message": f"Ответ слишком длинный (максимум {max_length} символов)",
+                "error": "answer_too_long",
+                "max_length": max_length,
+                "answer_length": len(user_answer),
+                "found_keywords": [],
+                "missing_keywords": [],
+                "user_answer": user_answer,
+            }
 
-        keywords = answer_key.get('keywords', [])
-        # Fallback: поддержка формата task.json, где ключевые слова лежат в content
-        if not keywords:
-            keywords = answer_key.get('content', {}).get('keywords', [])
-        
-        # Normalize dict elements like [{'text': 'амплитуда'}] to plain strings
+        keywords = answer_spec.get("keywords", [])
+        if not keywords and isinstance(answer_spec.get("content"), dict):
+            keywords = answer_spec["content"].get("keywords", [])
+
+        # Нормализуем формат ключевых слов [{'text': 'слово'}] -> ['слово']
+        clean_keywords = []
         if isinstance(keywords, list):
-            clean_keywords = []
             for kw in keywords:
                 if isinstance(kw, dict):
-                    txt = kw.get('text') or kw.get('word') or kw.get('name') or ''
+                    txt = kw.get("text") or kw.get("word") or kw.get("name") or ""
                     if txt:
                         clean_keywords.append(str(txt))
-                elif isinstance(kw, str):
-                    clean_keywords.append(kw)
-            keywords = clean_keywords
-        
+                elif isinstance(kw, str) and kw.strip():
+                    clean_keywords.append(kw.strip())
+        keywords = clean_keywords
+
         if not keywords:
-            return EvaluationResult(
-                success=False,
-                message="Ключевые слова не найдены в задании",
-                score=0.0,
-                metric="percent",
-                details={'error': 'no_keywords'}
-            )
-        
-        # Получаем sequence_matters - сначала из answer_key, потом из task_data.content, потом из answer_key.content
-        sequence_matters = answer_key.get('sequence_matters', False)
-        if task_data and isinstance(task_data, dict):
-            # Если в task_data есть content.sequence_matters, используем его (приоритет выше)
-            content_seq = task_data.get('content', {}).get('sequence_matters')
-            if content_seq is not None:
-                sequence_matters = bool(content_seq)
-        elif 'sequence_matters' not in answer_key:
-            # Fallback: проверяем answer_key.content
-            sequence_matters = answer_key.get('content', {}).get('sequence_matters', False)
-        
-        # Загружаем конфигурацию толерантности
-        tolerance_config = None
-        try:
-            difficulty_config = load_difficulty_config()
-            tolerance_config = difficulty_config.get('test_level_2_settings')
-            # Добавить normalize_layout и normalize_y_i в config (если их нет)
-            if tolerance_config:
-                tolerance_config['normalize_layout'] = True
-                tolerance_config['normalize_y_i'] = True
-        except Exception as e:
-            logger.debug(f"Не удалось загрузить настройки толерантности: {e}")
-            # Используем настройки по умолчанию
-            tolerance_config = {
-                'typo_tolerance': {'max_typos_per_word': 2, 'use_levenshtein': True},
-                'ending_tolerance': {'use_morphology': True, 'stemming_chars': 3},
-                'normalize_yo': True,
-                'normalize_layout': True,
-                'normalize_y_i': True
+            return {
+                "success": False,
+                "score": 0.0,
+                "message": "Ключевые слова не найдены в задании",
+                "error": "no_keywords",
+                "found_keywords": [],
+                "missing_keywords": [],
+                "user_answer": user_answer,
             }
-        
-        # Проверка в зависимости от настроек
+
+        sequence_matters = bool(answer_spec.get("sequence_matters", False))
+
+        if tolerance_config is None:
+            try:
+                difficulty_config = load_difficulty_config()
+                tolerance_config = difficulty_config.get("test_level_2_settings")
+                if tolerance_config:
+                    tolerance_config["normalize_layout"] = True
+                    tolerance_config["normalize_y_i"] = True
+            except Exception as e:
+                logger.debug(f"Не удалось загрузить настройки толерантности: {e}")
+                tolerance_config = {
+                    "typo_tolerance": {"max_typos_per_word": 2, "use_levenshtein": True},
+                    "ending_tolerance": {"use_morphology": True, "stemming_chars": 3},
+                    "normalize_yo": True,
+                    "normalize_layout": True,
+                    "normalize_y_i": True,
+                }
+
         user_answer_lower = user_answer.lower()
 
         def _iter_words_with_spans(text: str):
-            # Word extraction with spans in the ORIGINAL text (for UI highlighting)
             try:
                 for m in re.finditer(r"\b\w+\b", text, flags=re.UNICODE):
                     yield {
-                        'text': m.group(0),
-                        'start': int(m.start()),
-                        'end': int(m.end()),
+                        "text": m.group(0),
+                        "start": int(m.start()),
+                        "end": int(m.end()),
                     }
             except Exception:
                 return
 
         user_words_with_spans = list(_iter_words_with_spans(user_answer))
-        
-        # Детальная информация о толерантности + позиции для UI
         keyword_tolerance_info = {}
         tolerance_matches = []
 
         def _match_keyword_with_spans(keyword: str):
-            # Return first matched word span info for keyword, using the same tolerance function.
             try:
                 for w in user_words_with_spans:
-                    td = compare_words_with_tolerance_info(w['text'], keyword, tolerance_config)
+                    td = compare_words_with_tolerance_info(w["text"], keyword, tolerance_config)
                     if td:
-                        # td: {'type': 'exact'|'typo'|'ending'|'both', 'correct_answer', 'user_answer', 'normalized_kinds'?}
                         return {
-                            'keyword': keyword,
-                            'type': td.get('type', 'unknown'),
-                            'user_word': w['text'],
-                            'correct_word': keyword,
-                            'start': w['start'],
-                            'end': w['end'],
-                            'normalized_kinds': td.get('normalized_kinds', []),
+                            "keyword": keyword,
+                            "type": td.get("type", "unknown"),
+                            "user_word": w["text"],
+                            "correct_word": keyword,
+                            "start": w["start"],
+                            "end": w["end"],
+                            "normalized_kinds": td.get("normalized_kinds", []),
                         }
             except Exception:
                 return None
             return None
-        
+
         if sequence_matters and len(keywords) > 1:
-            # Проверка последовательности: слова должны идти подряд в том же порядке
-            # Сначала нормализуем текст для поиска
             normalized_user_answer = normalize_text(
                 user_answer_lower,
-                normalize_yo=tolerance_config.get('normalize_yo', True),
-                normalize_layout=tolerance_config.get('normalize_layout', True),
-                normalize_y_i=tolerance_config.get('normalize_y_i', True)
+                normalize_yo=tolerance_config.get("normalize_yo", True),
+                normalize_layout=tolerance_config.get("normalize_layout", True),
+                normalize_y_i=tolerance_config.get("normalize_y_i", True),
             )
-            
-            # Нормализуем ключевые слова для построения паттерна последовательности
             normalized_keywords = []
             for keyword in keywords:
                 normalized_keyword = normalize_text(
                     keyword.lower(),
-                    normalize_yo=tolerance_config.get('normalize_yo', True),
-                    normalize_layout=tolerance_config.get('normalize_layout', True),
-                    normalize_y_i=tolerance_config.get('normalize_y_i', True)
+                    normalize_yo=tolerance_config.get("normalize_yo", True),
+                    normalize_layout=tolerance_config.get("normalize_layout", True),
+                    normalize_y_i=tolerance_config.get("normalize_y_i", True),
                 )
                 normalized_keywords.append(normalized_keyword)
-            
-            # Проверяем, что все ключевые слова найдены с толерантностью
+
             keywords_set = set(kw.lower() for kw in keywords)
             found_keywords = set()
-            
-            # Извлекаем слова из нормализованного текста пользователя
-            user_words = extract_words_from_text(normalized_user_answer)
-            
+
             for keyword in keywords:
                 keyword_lower = keyword.lower()
-                # Используем find_keyword_with_tolerance для поиска
                 found = find_keyword_with_tolerance(user_answer, keyword, tolerance_config)
                 if found:
                     found_keywords.add(keyword_lower)
-                    
-                    # Получаем детальную информацию о толерантности
-                    keyword_normalized = normalize_text(
-                        keyword_lower,
-                        normalize_yo=tolerance_config.get('normalize_yo', True),
-                        normalize_layout=tolerance_config.get('normalize_layout', True),
-                        normalize_y_i=tolerance_config.get('normalize_y_i', True)
-                    )
-                    
-                    # Позиции/детали для UI
                     m = _match_keyword_with_spans(keyword)
                     if m:
                         tolerance_matches.append(m)
                         td = {
-                            'type': m.get('type'),
-                            'correct_answer': m.get('correct_word'),
-                            'user_answer': m.get('user_word'),
+                            "type": m.get("type"),
+                            "correct_answer": m.get("correct_word"),
+                            "user_answer": m.get("user_word"),
                         }
-                        if m.get('normalized_kinds'):
-                            td['normalized_kinds'] = m.get('normalized_kinds')
+                        if m.get("normalized_kinds"):
+                            td["normalized_kinds"] = m.get("normalized_kinds")
                         keyword_tolerance_info[keyword] = td
-            
+
             missing_keywords = keywords_set - found_keywords
-            
-            # Проверяем последовательность: если все слова найдены, проверяем порядок
             if len(found_keywords) == len(keywords):
-                # D-7 fix: allow other words between keywords (use \b...\b with .*? between)
-                pattern = r'\b' + r'\b.*?\b'.join(re.escape(kw) for kw in normalized_keywords) + r'\b'
+                pattern = r"\b" + r"\b.*?\b".join(re.escape(kw) for kw in normalized_keywords) + r"\b"
                 is_correct = bool(re.search(pattern, normalized_user_answer, re.UNICODE))
             else:
                 is_correct = False
         else:
-            # Обычная проверка: наличие всех ключевых слов с толерантностью
             keywords_set = set(kw.lower() for kw in keywords)
             found_keywords = set()
-            
-            # Нормализуем текст пользователя для извлечения слов
-            normalized_user_text = normalize_text(
-                user_answer_lower,
-                normalize_yo=tolerance_config.get('normalize_yo', True),
-                normalize_layout=tolerance_config.get('normalize_layout', True),
-                normalize_y_i=tolerance_config.get('normalize_y_i', True)
-            )
-            user_words = extract_words_from_text(normalized_user_text)
-            
             for keyword in keywords:
                 keyword_lower = keyword.lower()
-                
-                # Используем find_keyword_with_tolerance для поиска с толерантностью
                 found = find_keyword_with_tolerance(user_answer, keyword, tolerance_config)
                 if found:
                     found_keywords.add(keyword_lower)
-                    
-                    # Получаем детальную информацию о толерантности
-                    # Ищем соответствующее слово в тексте пользователя
-                    keyword_normalized = normalize_text(
-                        keyword_lower,
-                        normalize_yo=tolerance_config.get('normalize_yo', True),
-                        normalize_layout=tolerance_config.get('normalize_layout', True),
-                        normalize_y_i=tolerance_config.get('normalize_y_i', True)
-                    )
-                    
                     m = _match_keyword_with_spans(keyword)
                     if m:
                         tolerance_matches.append(m)
                         td = {
-                            'type': m.get('type'),
-                            'correct_answer': m.get('correct_word'),
-                            'user_answer': m.get('user_word'),
+                            "type": m.get("type"),
+                            "correct_answer": m.get("correct_word"),
+                            "user_answer": m.get("user_word"),
                         }
-                        if m.get('normalized_kinds'):
-                            td['normalized_kinds'] = m.get('normalized_kinds')
+                        if m.get("normalized_kinds"):
+                            td["normalized_kinds"] = m.get("normalized_kinds")
                         keyword_tolerance_info[keyword] = td
-            
+
             missing_keywords = keywords_set - found_keywords
-            
-            # D-1 fix: support min_keywords / require_all_keywords
-            require_all = answer_key.get('require_all_keywords', True)
-            min_kw = answer_key.get('min_keywords')
+            require_all = answer_spec.get("require_all_keywords", True)
+            min_kw = answer_spec.get("min_keywords")
             if not require_all and isinstance(min_kw, (int, float)) and int(min_kw) >= 1:
                 is_correct = len(found_keywords) >= int(min_kw)
             else:
                 is_correct = len(found_keywords) == len(keywords_set)
-        
-        # Определяем успешность на основе найденных слов
+
         total_keywords = len(keywords)
         found_count = len(found_keywords)
-        
-        # Если важна последовательность и порядок нарушен:
+
         if sequence_matters and len(keywords) > 1 and not is_correct:
             if found_count == total_keywords:
-                # Все слова есть, но порядок неверный
-                # Пытаемся вывести эталонный ответ или корректную последовательность
-                ref_answer = (
-                    answer_key.get('reference_answer') or
-                    answer_key.get('content', {}).get('reference_answer', '')
-                )
-                correct_sequence_text = ' '.join(keywords)
-                # Сообщение без вставки полного ответа — сам ответ покажем в UI отдельно
-                message = (
-                    "Ключевые слова найдены, но нарушена требуемая последовательность"
-                )
+                message = "Ключевые слова найдены, но нарушена требуемая последовательность"
             else:
-                # Частичное совпадение: поясняем про порядок
                 message = f"Не все ключевые слова найдены ({found_count}/{total_keywords}). Требуется порядок"
         else:
             message = None
-        
+
         if is_correct:
             message = message or f"✅ Правильно! Найдены все ключевые слова ({found_count}/{total_keywords})"
         else:
             message = message or f"❌ Не все ключевые слова найдены ({found_count}/{total_keywords})"
-        
-        # Проверяем наличие опечаток в найденных словах
+
         has_typos = False
         if keyword_tolerance_info:
             for keyword, tolerance_detail in keyword_tolerance_info.items():
-                if tolerance_detail and tolerance_detail.get('type') in ['typo', 'ending', 'both']:
+                if tolerance_detail and tolerance_detail.get("type") in ["typo", "ending", "both"]:
                     has_typos = True
                     break
-                if tolerance_detail and tolerance_detail.get('type') == 'exact':
-                    kinds = tolerance_detail.get('normalized_kinds') if isinstance(tolerance_detail, dict) else None
+                if tolerance_detail and tolerance_detail.get("type") == "exact":
+                    kinds = tolerance_detail.get("normalized_kinds") if isinstance(tolerance_detail, dict) else None
                     if kinds:
                         has_typos = True
                         break
-        
-        # Добавляем предупреждение об опечатках, если они были обнаружены
+
         if has_typos:
             typo_warning = " ⚠️ Обратите внимание на опечатки!"
-            if message:
-                message = message + typo_warning
-            else:
-                message = typo_warning
-        
-        # Формируем детали ответа (с полезными подсказками для UI)
+            message = (message + typo_warning) if message else typo_warning
+
         tolerance_summary = self._summarize_tolerance_matches(tolerance_matches)
-        tolerance_type = tolerance_summary.get('tolerance_type')
+        tolerance_type = tolerance_summary.get("tolerance_type")
         tolerance_explanation = self._build_tolerance_explanation("Ответ", tolerance_summary)
 
         ref_answer = (
-            answer_key.get('reference_answer') or
-            answer_key.get('content', {}).get('reference_answer', '')
+            answer_spec.get("reference_answer")
+            or (answer_spec.get("content", {}).get("reference_answer", "") if isinstance(answer_spec.get("content"), dict) else "")
         )
-        details_payload = {
-            'found_keywords': list(found_keywords),
-            'missing_keywords': list(missing_keywords),
-            'total_keywords': total_keywords,
-            'sequence_matters': sequence_matters,
-            'keywords': keywords,
-            'tolerance_matches': tolerance_matches,
-            'tolerance_type': tolerance_type,
-            'normalization_kinds': tolerance_summary.get('normalization_kinds', []),
-            'tolerance_explanation': tolerance_explanation,
-            'user_answer': user_answer
-        }
-        if sequence_matters and len(keywords) > 1:
-            details_payload['correct_sequence'] = keywords
-        if ref_answer:
-            details_payload['reference_answer'] = ref_answer
-        
-        # D-8 fix: wrong sequence = fail = 0%
+
         if sequence_matters and len(keywords) > 1 and found_count == total_keywords and not is_correct:
             score = 0.0
         else:
             score = (found_count / total_keywords * 100.0) if total_keywords > 0 else 0.0
 
+        details = {
+            "success": is_correct,
+            "score": score,
+            "message": message,
+            "found_keywords": list(found_keywords),
+            "missing_keywords": list(missing_keywords),
+            "total_keywords": total_keywords,
+            "sequence_matters": sequence_matters,
+            "keywords": keywords,
+            "tolerance_matches": tolerance_matches,
+            "tolerance_type": tolerance_type,
+            "normalization_kinds": tolerance_summary.get("normalization_kinds", []),
+            "tolerance_explanation": tolerance_explanation,
+            "user_answer": user_answer,
+        }
+        if sequence_matters and len(keywords) > 1:
+            details["correct_sequence"] = keywords
+        if ref_answer:
+            details["reference_answer"] = ref_answer
+
+        return details
+
+    def evaluate_open_answer_task(self, user_input: Dict[str, Any],
+                                  answer_key: Dict[str, Any],
+                                  task_data: Optional[Dict[str, Any]] = None) -> EvaluationResult:
+        """
+        Оценка Open Answer задания (проверка по ключевым словам).
+        Поддерживает:
+        1. Одиночный классический вопрос (legacy flow).
+        2. Пошаговую проверку в sequential mode (через question_id или question_index).
+        3. Мульти-вопросные задания (одновременная проверка нескольких вопросов).
+        """
+        # Извлекаем список вопросов задания, если он есть
+        questions = []
+        if isinstance(answer_key, dict) and isinstance(answer_key.get("questions"), list) and answer_key["questions"]:
+            questions = answer_key["questions"]
+        elif isinstance(task_data, dict):
+            content = task_data.get("content")
+            if isinstance(content, dict) and isinstance(content.get("questions"), list) and content["questions"]:
+                questions = content["questions"]
+
+        # Вариант 1: Пошаговая проверка одного вопроса в sequential mode
+        is_step = ("question_id" in user_input or "question_index" in user_input) and "answer" in user_input
+        if is_step and questions:
+            target_q = None
+            target_idx = 0
+            target_id = user_input.get("question_id")
+            raw_idx = user_input.get("question_index")
+            if target_id is not None:
+                for idx, q in enumerate(questions):
+                    if str(q.get("id")) == str(target_id):
+                        target_q = q
+                        target_idx = idx
+                        break
+            if target_q is None and raw_idx is not None:
+                try:
+                    target_idx = int(raw_idx)
+                    if 0 <= target_idx < len(questions):
+                        target_q = questions[target_idx]
+                except (ValueError, TypeError):
+                    pass
+
+            if target_q is not None:
+                res = self._evaluate_single_open_answer_text(user_input.get("answer", ""), target_q)
+                step_details = {
+                    **res,
+                    "question_id": target_q.get("id") or f"q_{target_idx + 1}",
+                    "question_index": target_idx,
+                    "is_sequential_step": True,
+                }
+                return EvaluationResult(
+                    success=res["success"],
+                    message=res["message"],
+                    score=res["score"],
+                    metric="percent",
+                    details=step_details,
+                )
+
+        # Вариант 2: Мульти-вопросная проверка (батч ответов или задание из нескольких вопросов)
+        has_multiple_questions = len(questions) > 1 or (
+            len(questions) == 1 and isinstance(user_input.get("answers"), (dict, list))
+        )
+        if has_multiple_questions:
+            # Фильтрация по уровням сложности (если задана)
+            active_difficulty = None
+            if isinstance(task_data, dict):
+                active_difficulty = task_data.get("settings", {}).get("difficulty")
+                if active_difficulty is None and isinstance(task_data.get("content"), dict):
+                    active_difficulty = task_data["content"].get("difficulty")
+
+            active_questions = []
+            for q in questions:
+                if not isinstance(q, dict):
+                    continue
+                q_levels = q.get("levels")
+                if active_difficulty is not None and isinstance(q_levels, list) and q_levels:
+                    try:
+                        if int(active_difficulty) not in [int(lvl) for lvl in q_levels]:
+                            continue
+                    except (ValueError, TypeError):
+                        pass
+                active_questions.append(q)
+
+            if not active_questions:
+                active_questions = questions
+
+            answers_in = user_input.get("answers")
+            answers_dict = {}
+            if isinstance(answers_in, dict):
+                answers_dict = answers_in
+            elif isinstance(answers_in, list):
+                answers_dict = {str(i): v for i, v in enumerate(answers_in)}
+            elif "answer" in user_input and len(active_questions) == 1:
+                answers_dict = {
+                    "0": user_input["answer"],
+                    str(active_questions[0].get("id") or "q_1"): user_input["answer"],
+                }
+
+            preserved = user_input.get("preserved_results") or {}
+            per_question_results = {}
+
+            for idx, q in enumerate(active_questions):
+                qid = str(q.get("id") or f"q_{idx + 1}")
+                user_ans = answers_dict.get(qid)
+                if user_ans is None:
+                    user_ans = answers_dict.get(str(idx))
+                if user_ans is None:
+                    user_ans = answers_dict.get(idx)
+
+                # Smart Partial Retry: если вопрос был успешно пройден ранее и ответа нет
+                if (user_ans is None or user_ans == "") and qid in preserved and preserved[qid].get("success"):
+                    per_question_results[qid] = preserved[qid]
+                else:
+                    per_question_results[qid] = self._evaluate_single_open_answer_text(user_ans or "", q)
+
+            total_q = len(active_questions)
+            passed_q = sum(1 for r in per_question_results.values() if r.get("success"))
+            all_correct = (passed_q == total_q) and total_q > 0
+            scores = [r.get("score", 0.0) for r in per_question_results.values()]
+            mean_score = (sum(scores) / total_q) if total_q > 0 else 0.0
+
+            failed_indices = [
+                idx for idx, q in enumerate(active_questions)
+                if not per_question_results.get(str(q.get("id") or f"q_{idx + 1}"), {}).get("success")
+            ]
+            failed_ids = [
+                str(q.get("id") or f"q_{idx + 1}")
+                for idx, q in enumerate(active_questions)
+                if not per_question_results.get(str(q.get("id") or f"q_{idx + 1}"), {}).get("success")
+            ]
+
+            if all_correct:
+                message = f"✅ Правильно! Все вопросы решены верно ({passed_q}/{total_q})"
+            else:
+                message = f"❌ Не все вопросы решены верно ({passed_q}/{total_q})"
+
+            display_mode = answer_key.get("display_mode")
+            if not display_mode and isinstance(task_data, dict):
+                display_mode = task_data.get("content", {}).get("display_mode")
+
+            first_qid = str(active_questions[0].get("id") or "q_1")
+            first_res = per_question_results.get(first_qid, {})
+
+            failed_subtests = [
+                {
+                    "index": idx,
+                    "question_id": str(q.get("id") or f"q_{idx + 1}"),
+                    "label": q.get("question", f"Вопрос {idx + 1}"),
+                }
+                for idx, q in enumerate(active_questions)
+                if not per_question_results.get(str(q.get("id") or f"q_{idx + 1}"), {}).get("success")
+            ]
+
+            details_payload = {
+                "questions": per_question_results,
+                "total_questions": total_q,
+                "passed_questions": passed_q,
+                "failed_question_indices": failed_indices,
+                "failed_question_ids": failed_ids,
+                "failed_subtests": failed_subtests,
+                "display_mode": display_mode or "simultaneous",
+                # Зеркалирование для совместимости с легаси кодом
+                "found_keywords": first_res.get("found_keywords", []),
+                "missing_keywords": first_res.get("missing_keywords", []),
+                "total_keywords": first_res.get("total_keywords", 0),
+                "keywords": first_res.get("keywords", []),
+                "user_answer": first_res.get("user_answer", ""),
+                "tolerance_matches": first_res.get("tolerance_matches", []),
+                "tolerance_type": first_res.get("tolerance_type"),
+                "normalization_kinds": first_res.get("normalization_kinds", []),
+                "tolerance_explanation": first_res.get("tolerance_explanation"),
+            }
+            if first_res.get("reference_answer"):
+                details_payload["reference_answer"] = first_res["reference_answer"]
+
+            return EvaluationResult(
+                success=all_correct,
+                message=message,
+                score=mean_score,
+                metric="percent",
+                details=details_payload,
+            )
+
+        # Вариант 3: Одиночный классический вопрос (legacy flow)
+        spec = dict(answer_key)
+        if isinstance(task_data, dict) and isinstance(task_data.get("content"), dict):
+            for k in ("max_length", "sequence_matters", "reference_answer", "require_all_keywords", "min_keywords", "keywords"):
+                if k not in spec and k in task_data["content"]:
+                    spec[k] = task_data["content"][k]
+        if isinstance(task_data, dict) and isinstance(task_data.get("settings"), dict):
+            for k in ("max_length", "sequence_matters"):
+                if k not in spec and k in task_data["settings"]:
+                    spec[k] = task_data["settings"][k]
+
+        eval_res = self._evaluate_single_open_answer_text(user_input.get("answer", ""), spec)
         return EvaluationResult(
-            success=is_correct,
-            message=message,
-            score=score,
+            success=eval_res["success"],
+            message=eval_res["message"],
+            score=eval_res["score"],
             metric="percent",
-            details=details_payload
+            details=eval_res,
         )
     
     # =========================================================================

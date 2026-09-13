@@ -51,6 +51,16 @@ class OpenAnswerParser(TaskImportParser):
             = Эталонный ответ (опционально)
             * ключевое_слово (опционально, можно несколько)
         
+        Мульти-вопросный формат:
+            @case_text: Описание случая
+            @display_mode: simultaneous | sequential
+            ? Вопрос 1 [levels: 1, 2, 3]
+            = Эталон 1
+            * ключ1
+            ? Вопрос 2 [levels: 2, 3]
+            = Эталон 2
+            * ключ2
+
         Args:
             content: Содержимое блока задания
             index: Индекс задания
@@ -60,9 +70,103 @@ class OpenAnswerParser(TaskImportParser):
         """
         lines = content.strip().split('\n')
         
-        # Извлекаем метаданные (@ key: value)
-        metadata = self.parse_metadata(lines)
-        
+        # Извлекаем метаданные (@ key: value или @key: value)
+        extra_meta = {}
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith('@') and ':' in stripped and not stripped.startswith('@OPEN_ANSWER'):
+                after_at = stripped[1:].strip()
+                parts = after_at.split(':', 1)
+                extra_meta[parts[0].strip().lower()] = parts[1].strip()
+        metadata = {**self.parse_metadata(lines), **extra_meta}
+
+        # Check if multi-question format is used (contains lines starting with '?')
+        has_multi_questions = any(line.strip().startswith('?') for line in lines)
+        if has_multi_questions:
+            display_mode = metadata.get('display_mode') or 'simultaneous'
+            if display_mode not in ('simultaneous', 'sequential'):
+                display_mode = 'simultaneous'
+            case_text = metadata.get('case_text') or metadata.get('case') or ''
+
+            questions = []
+            current_q = None
+            header_prompt = None
+            q_regex = re.compile(r'^\?\s*(.*?)(?:\s*\[levels?:\s*([0-9,\s]+)\])?$', re.IGNORECASE)
+
+            for line in lines:
+                line_stripped = line.strip()
+                if not line_stripped or line_stripped.startswith('//') or line_stripped.startswith('@'):
+                    continue
+
+                if line_stripped.startswith('#') and not current_q and not header_prompt:
+                    header_prompt = line_stripped[1:].strip()
+                    if not case_text:
+                        case_text = header_prompt
+                    continue
+
+                m = q_regex.match(line_stripped)
+                if m:
+                    if current_q:
+                        questions.append(current_q)
+                    q_text = m.group(1).strip()
+                    levels_raw = m.group(2)
+                    levels = [1, 2, 3]
+                    if levels_raw:
+                        parsed_levels = []
+                        for part in levels_raw.split(','):
+                            try:
+                                ilvl = int(part.strip())
+                                if 1 <= ilvl <= 3:
+                                    parsed_levels.append(ilvl)
+                            except (ValueError, TypeError):
+                                pass
+                        if parsed_levels:
+                            levels = sorted(list(set(parsed_levels)))
+                    current_q = {
+                        'id': f"q_{len(questions) + 1}",
+                        'question': self.sanitize_text(q_text),
+                        'reference_answer': '',
+                        'keywords': [],
+                        'levels': levels,
+                    }
+                    continue
+
+                if current_q:
+                    if line_stripped.startswith('='):
+                        current_q['reference_answer'] = self.sanitize_text(line_stripped[1:].strip())
+                    elif line_stripped.startswith('*'):
+                        kw = self.sanitize_text(line_stripped[1:].strip())
+                        if kw:
+                            current_q['keywords'].append(kw)
+
+            if current_q:
+                questions.append(current_q)
+
+            if not questions:
+                self.errors.append(f"Задание #{index + 1}: не найдены вопросы (должны начинаться с ?)")
+                return None
+
+            first_q = questions[0]
+            prompt = header_prompt or first_q['question']
+            data = {
+                'case_text': self.sanitize_text(case_text) if case_text else '',
+                'display_mode': display_mode,
+                'questions': questions,
+                'question': first_q['question'],
+                'reference_answer': first_q['reference_answer'],
+                'keywords': list(first_q['keywords']),
+            }
+            if metadata:
+                data['metadata'] = metadata
+
+            task = {
+                'type': 'open_answer',
+                'name': self.generate_task_name('open_answer', index, prompt),
+                'prompt': prompt,
+                'data': data,
+            }
+            return task
+
         prompt = None
         reference_answer = None
         keywords = []

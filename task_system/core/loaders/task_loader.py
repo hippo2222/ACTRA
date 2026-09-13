@@ -257,9 +257,14 @@ class TaskLoader:
             if legacy_content:
                 content_data = {**content_data, **legacy_content}
         
-        # For open_answer, handle both 'prompt' and 'question'
-        if task_type == 'open_answer' and 'prompt' in content_data and 'question' not in content_data:
-            content_data['question'] = content_data['prompt']
+        # For open_answer, handle both 'prompt' and 'question', as well as multi-question questions list
+        if task_type == 'open_answer':
+            if 'prompt' in content_data and 'question' not in content_data:
+                content_data['question'] = content_data['prompt']
+            elif 'questions' in content_data and isinstance(content_data['questions'], list) and content_data['questions']:
+                first_q = content_data['questions'][0]
+                if isinstance(first_q, dict) and 'question' not in content_data:
+                    content_data['question'] = first_q.get('question') or first_q.get('prompt') or ''
         
         validated_content = content_model(**content_data)
         

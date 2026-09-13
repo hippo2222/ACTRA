@@ -11,9 +11,12 @@ class OpenAnswerEditor extends BaseEditor {
         // Note: this.task and this.hasUnsavedChanges are now inherited from BaseEditor
 
         // Open Answer Editor specific fields
-        this.keywords = []; // Array of { text, normalized, required }
+        this._legacyKeywords = [];
+        this._legacySequenceMatters = false;
+        this.questions = [];
+        this.caseText = '';
+        this.displayMode = 'simultaneous';
         this.savedKeywords = [];
-        this.sequenceMatters = false;
         this.maxImages = 3;
         this.isRendering = false;
         this.imagePreviewOverlay = null;
@@ -35,6 +38,34 @@ class OpenAnswerEditor extends BaseEditor {
         };
 
         this.init();
+    }
+
+    get keywords() {
+        if (this.questions && this.questions[0]) {
+            return this.questions[0].keywords || [];
+        }
+        return this._legacyKeywords || [];
+    }
+
+    set keywords(val) {
+        this._legacyKeywords = val;
+        if (this.questions && this.questions[0]) {
+            this.questions[0].keywords = val;
+        }
+    }
+
+    get sequenceMatters() {
+        if (this.questions && this.questions[0]) {
+            return Boolean(this.questions[0].sequence_matters);
+        }
+        return Boolean(this._legacySequenceMatters);
+    }
+
+    set sequenceMatters(val) {
+        this._legacySequenceMatters = Boolean(val);
+        if (this.questions && this.questions[0]) {
+            this.questions[0].sequence_matters = Boolean(val);
+        }
     }
 
     async init() {
@@ -84,14 +115,27 @@ class OpenAnswerEditor extends BaseEditor {
 
     createOpenAnswerOnboardingContent() {
         const onboardingAlveoliImageUrl = 'data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20160%20120%22%3E%3Crect%20width%3D%22160%22%20height%3D%22120%22%20rx%3D%2216%22%20fill%3D%22%23eef7ff%22%2F%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%232f63d8%22%20stroke-width%3D%225%22%20stroke-linecap%3D%22round%22%3E%3Cpath%20d%3D%22M80%2062%20V24%22%2F%3E%3Cpath%20d%3D%22M80%2062%20C62%2052%2050%2043%2038%2031%22%2F%3E%3Cpath%20d%3D%22M80%2062%20C98%2052%20110%2043%20122%2031%22%2F%3E%3C%2Fg%3E%3Cg%20fill%3D%22%23dbeafe%22%20stroke%3D%22%230f766e%22%20stroke-width%3D%223%22%3E%3Ccircle%20cx%3D%2240%22%20cy%3D%2282%22%20r%3D%2216%22%2F%3E%3Ccircle%20cx%3D%2280%22%20cy%3D%2291%22%20r%3D%2219%22%2F%3E%3Ccircle%20cx%3D%22120%22%20cy%3D%2282%22%20r%3D%2216%22%2F%3E%3C%2Fg%3E%3Cpath%20d%3D%22M29%2098%20C62%20110%2099%20110%20131%2098%22%20fill%3D%22none%22%20stroke%3D%22%23ef4444%22%20stroke-width%3D%224%22%20stroke-linecap%3D%22round%22%20stroke-dasharray%3D%226%207%22%2F%3E%3C%2Fsvg%3E';
-        return {
+        const q1 = {
+            id: 'q_1',
             question: 'Как называется процесс обмена кислородом и углекислым газом в альвеолах?',
             prompt: 'Как называется процесс обмена кислородом и углекислым газом в альвеолах?',
             reference_answer: 'Этот процесс называется газообмен.',
             hint: 'Вспомните термин для обмена газами в альвеолах.',
             keywords: ['газообмен'],
             sequence_matters: false,
+            levels: [1, 2, 3],
+        };
+        return {
+            case_text: '',
+            display_mode: 'simultaneous',
+            question: q1.question,
+            prompt: q1.prompt,
+            reference_answer: q1.reference_answer,
+            hint: q1.hint,
+            keywords: q1.keywords,
+            sequence_matters: false,
             maxLength: 420,
+            questions: [q1],
             images: [{ asset_url: onboardingAlveoliImageUrl }],
         };
     }
@@ -108,8 +152,7 @@ class OpenAnswerEditor extends BaseEditor {
         this.task.metadata.name = 'Открытый ответ: газообмен';
         this.task.metadata.type = 'open_answer';
         this.task.task_data.content = this.createOpenAnswerOnboardingContent();
-        this.keywords = this.task.task_data.content.keywords || [];
-        this.sequenceMatters = Boolean(this.task.task_data.content.sequence_matters);
+        this.initQuestionsFromContent();
         this.renderUI();
         this.hasUnsavedChanges = false;
         this.updateSaveStatus();
@@ -117,12 +160,24 @@ class OpenAnswerEditor extends BaseEditor {
 
     createEmptyOpenAnswerOnboardingContent() {
         return {
+            case_text: '',
+            display_mode: 'simultaneous',
             question: '',
             prompt: '',
             reference_answer: '',
             hint: '',
             keywords: [],
             sequence_matters: false,
+            questions: [{
+                id: 'q_1',
+                question: '',
+                prompt: '',
+                reference_answer: '',
+                hint: '',
+                keywords: [],
+                sequence_matters: false,
+                levels: [1, 2, 3],
+            }],
             images: [],
         };
     }
@@ -131,8 +186,7 @@ class OpenAnswerEditor extends BaseEditor {
         if (!this.openAnswerOnboardingPreview || !this.task || this.openAnswerOnboardingFinished) return;
         this.openAnswerOnboardingFinished = true;
         this.task.task_data.content = this.createEmptyOpenAnswerOnboardingContent();
-        this.keywords = [];
-        this.sequenceMatters = false;
+        this.initQuestionsFromContent();
         this.renderUI();
         this.hasUnsavedChanges = false;
         this.updateSaveStatus();
@@ -152,6 +206,9 @@ class OpenAnswerEditor extends BaseEditor {
         if (!this.openAnswerOnboardingDemoSnapshot) {
             this.openAnswerOnboardingDemoSnapshot = {
                 task: this.cloneOpenAnswerOnboardingValue(this.task),
+                questions: this.cloneOpenAnswerOnboardingValue(this.questions),
+                caseText: this.caseText,
+                displayMode: this.displayMode,
                 keywords: this.cloneOpenAnswerOnboardingValue(this.keywords),
                 sequenceMatters: this.sequenceMatters,
                 hasUnsavedChanges: this.hasUnsavedChanges,
@@ -167,7 +224,13 @@ class OpenAnswerEditor extends BaseEditor {
         this.openAnswerOnboardingDemoActive = false;
         if (!snapshot) return;
         this.task = this.cloneOpenAnswerOnboardingValue(snapshot.task);
-        this.keywords = this.cloneOpenAnswerOnboardingValue(snapshot.keywords) || [];
+        this.caseText = snapshot.caseText || '';
+        this.displayMode = snapshot.displayMode || 'simultaneous';
+        if (Array.isArray(snapshot.questions)) {
+            this.questions = this.cloneOpenAnswerOnboardingValue(snapshot.questions);
+        } else {
+            this.initQuestionsFromContent();
+        }
         this.sequenceMatters = Boolean(snapshot.sequenceMatters);
         this.renderUI();
         this.hasUnsavedChanges = Boolean(snapshot.hasUnsavedChanges);
@@ -202,16 +265,68 @@ class OpenAnswerEditor extends BaseEditor {
         // Ensure images array exists
         content.images = this.normalizeContentImages(content.images);
 
-        // Load keywords
-        this.keywords = content.keywords || [];
+        // Initialize multi-question state
+        this.initQuestionsFromContent();
 
         // Render UI
         this.renderUI();
         this.updateSaveStatus();
     }
 
+    initQuestionsFromContent() {
+        const content = this.task?.task_data?.content || {};
+        this.caseText = content.case_text || '';
+        this.displayMode = content.display_mode === 'sequential' ? 'sequential' : 'simultaneous';
+
+        if (Array.isArray(content.questions) && content.questions.length > 0) {
+            this.questions = content.questions.map((q, idx) => {
+                const storedKw = this.extractStoredKeywords(q.keywords);
+                const refText = q.reference_answer || '';
+                const candidateKeywords = this.extractKeywordCandidatesFromText(refText, storedKw, q.keywords || []);
+                return {
+                    id: q.id || `q_${idx + 1}`,
+                    question: q.question || q.prompt || '',
+                    reference_answer: refText,
+                    hint: q.hint || '',
+                    keywords: candidateKeywords,
+                    sequence_matters: Boolean(q.sequence_matters ?? content.sequence_matters),
+                    levels: Array.isArray(q.levels) && q.levels.length > 0 ? [...q.levels] : [1, 2, 3],
+                    collapsed: false,
+                };
+            });
+        } else {
+            const storedKw = this.extractStoredKeywords(content.keywords);
+            const refText = content.reference_answer || '';
+            const initialKw = (this._legacyKeywords && this._legacyKeywords.length > 0)
+                ? this._legacyKeywords
+                : (content.keywords || []);
+            const candidateKeywords = this.extractKeywordCandidatesFromText(refText, storedKw, initialKw);
+            this.questions = [{
+                id: 'q_1',
+                question: content.question || content.prompt || '',
+                reference_answer: refText,
+                hint: content.hint || '',
+                keywords: candidateKeywords,
+                sequence_matters: Boolean(content.sequence_matters ?? content.check_sequence ?? this._legacySequenceMatters),
+                levels: [1, 2, 3],
+                collapsed: false,
+            }];
+        }
+
+        if (this._legacyKeywords && this._legacyKeywords.length > 0 && this.questions[0]) {
+            this.questions[0].keywords = this._legacyKeywords;
+        }
+    }
+
     renderUI() {
         if (!this.task) return;
+
+        const content = this.task.task_data.content || {};
+
+        // If questions are not initialized or content was replaced externally
+        if (!this.questions || this.questions.length === 0 || (content.question && this.questions.length === 1 && this.questions[0].question !== content.question)) {
+            this.initQuestionsFromContent();
+        }
 
         // Header
         const headerTitle = document.querySelector('#editor-title');
@@ -227,38 +342,103 @@ class OpenAnswerEditor extends BaseEditor {
             headerTitle.textContent = wt('open_answer_editor.edit_task_title', 'Редактирование задания: {name}').replace('{name}', humanName);
         }
 
-        const content = this.task.task_data.content || {};
+        // Case text
+        const caseArea = document.querySelector('#case-textarea');
+        if (caseArea) {
+            caseArea.value = this.caseText || content.case_text || '';
+        }
 
-        // Text areas
-        const questionArea = document.querySelector('#question-textarea');
-        if (questionArea) questionArea.value = content.question || content.prompt || "";
+        // Display mode
+        const activeRadio = document.querySelector(`input[name="display-mode"][value="${this.displayMode}"]`);
+        if (activeRadio) {
+            activeRadio.checked = true;
+        }
 
-        const referenceArea = document.querySelector('#reference-textarea');
-        if (referenceArea) referenceArea.value = content.reference_answer || "";
+        // Questions container
+        const questionsContainer = document.querySelector('#questions-container');
+        if (questionsContainer) {
+            this.renderQuestions();
+        } else {
+            // Fallback for mock test DOM environments without #questions-container
+            const firstQ = (this.questions && this.questions[0]) ? this.questions[0] : {
+                question: content.question || content.prompt || '',
+                reference_answer: content.reference_answer || '',
+                hint: content.hint || '',
+                keywords: content.keywords || [],
+                sequence_matters: Boolean(content.sequence_matters)
+            };
 
-        const hintArea = document.querySelector('#hint-textarea');
-        if (hintArea) hintArea.value = content.hint || "";
+            const questionArea = document.querySelector('#question-textarea');
+            if (questionArea) questionArea.value = firstQ.question || '';
+
+            const referenceArea = document.querySelector('#reference-textarea');
+            if (referenceArea) referenceArea.value = firstQ.reference_answer || '';
+
+            const hintArea = document.querySelector('#hint-textarea');
+            if (hintArea) hintArea.value = firstQ.hint || '';
+
+            const sequenceToggle = document.querySelector('#sequence-order-check');
+            if (sequenceToggle) sequenceToggle.checked = Boolean(firstQ.sequence_matters);
+
+            this.savedKeywords = this.extractStoredKeywords(firstQ.keywords || content.keywords);
+            const referenceText = referenceArea ? referenceArea.value : '';
+            this.keywords = this.extractKeywordCandidatesFromText(referenceText, this.savedKeywords, firstQ.keywords || this.keywords);
+
+            this.isRendering = true;
+            this.renderKeywords();
+            this.isRendering = false;
+        }
 
         // Settings
         const maxLengthInput = document.querySelector('#max-length-input');
         if (maxLengthInput) {
             const resolvedMaxLength = this.resolveStoredMaxLength();
-            maxLengthInput.value = resolvedMaxLength ? resolvedMaxLength.toString() : "";
+            maxLengthInput.value = resolvedMaxLength ? resolvedMaxLength.toString() : '';
         }
 
         const sequenceToggle = document.querySelector('#sequence-order-check');
-        this.sequenceMatters = Boolean(content.sequence_matters ?? content.check_sequence);
-        if (sequenceToggle) sequenceToggle.checked = this.sequenceMatters;
-
-        this.savedKeywords = this.extractStoredKeywords(content.keywords);
-        const referenceText = referenceArea ? referenceArea.value : "";
-        this.keywords = this.extractKeywordCandidatesFromText(referenceText, this.savedKeywords, this.keywords);
+        if (sequenceToggle && this.questions && this.questions[0]) {
+            sequenceToggle.checked = Boolean(this.questions[0].sequence_matters);
+        }
 
         this.isRendering = true;
-        this.renderKeywords();
         this.renderImages();
+        this.updateDisplayModeUI();
         this.applyAutoResize();
         this.isRendering = false;
+    }
+
+    updateDisplayModeUI() {
+        const mode = this.displayMode || 'simultaneous';
+        const radio = document.querySelector(`input[name="display-mode"][value="${mode}"]`);
+        if (radio) radio.checked = true;
+
+        document.querySelectorAll('.display-mode-card').forEach((card) => {
+            const input = card.querySelector('input[name="display-mode"]');
+            const isSelected = input && input.value === mode;
+            card.classList.toggle('border-primary', Boolean(isSelected));
+            card.classList.toggle('ring-1', Boolean(isSelected));
+            card.classList.toggle('ring-primary/30', Boolean(isSelected));
+        });
+
+        const notices = document.querySelectorAll('.sequential-step-notice');
+        notices.forEach((notice) => {
+            if (mode === 'sequential') {
+                notice.classList.remove('hidden');
+            } else {
+                notice.classList.add('hidden');
+            }
+        });
+    }
+
+    escapeHtml(text) {
+        if (!text) return '';
+        return String(text)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
     }
 
     resolveStoredMaxLength() {
@@ -417,48 +597,299 @@ class OpenAnswerEditor extends BaseEditor {
         return `/api/editor/image?path=${encodeURIComponent(path)}`;
     }
 
-    renderKeywords() {
-        const container = document.querySelector('#keywords-container');
-        const badge = document.querySelector('#selected-count-badge');
+    renderQuestions() {
+        const container = document.querySelector('#questions-container');
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        const totalCount = this.questions.length;
+        this.questions.forEach((q, idx) => {
+            const card = document.createElement('div');
+            card.className = `open-answer-question-card animate-scale-in ${q.collapsed ? 'is-collapsed' : ''}`;
+            card.dataset.questionIndex = String(idx);
+
+            const isSingle = totalCount <= 1;
+            const isFirst = idx === 0;
+            const isLast = idx === totalCount - 1;
+
+            const qId = isFirst ? 'question-textarea' : `question-textarea-${idx}`;
+            const rId = isFirst ? 'reference-textarea' : `reference-textarea-${idx}`;
+            const sId = isFirst ? 'split-keywords-btn' : `split-keywords-btn-${idx}`;
+            const kId = isFirst ? 'keywords-container' : `keywords-container-${idx}`;
+            const bId = isFirst ? 'selected-count-badge' : `selected-count-badge-${idx}`;
+            const hId = isFirst ? 'hint-textarea' : `hint-textarea-${idx}`;
+
+            const obTargetQBlock = isFirst ? 'data-onboarding-spotlight="frame" data-onboarding-target="open-answer-question-block"' : '';
+            const obTargetQText = isFirst ? 'data-onboarding-target="open-answer-question-text"' : '';
+            const obTargetRBlock = isFirst ? 'data-onboarding-spotlight="frame" data-onboarding-target="open-answer-reference-block"' : '';
+            const obTargetRText = isFirst ? 'data-onboarding-target="open-answer-reference-text"' : '';
+            const obTargetSplit = isFirst ? 'data-onboarding-target="open-answer-split-keywords"' : '';
+            const obTargetKwHintBlock = isFirst ? 'data-onboarding-spotlight="frame" data-onboarding-target="open-answer-keywords-hint-block"' : '';
+            const obTargetCount = isFirst ? 'data-onboarding-target="open-answer-selected-count"' : '';
+            const obTargetKwCont = isFirst ? 'data-onboarding-target="open-answer-keywords-container"' : '';
+            const obTargetHintBlock = isFirst ? 'data-onboarding-target="open-answer-hint-block"' : '';
+            const obTargetHintText = isFirst ? 'data-onboarding-target="open-answer-hint-text"' : '';
+
+            const isL1 = (q.levels || [1, 2, 3]).includes(1);
+            const isL2 = (q.levels || [1, 2, 3]).includes(2);
+            const isL3 = (q.levels || [1, 2, 3]).includes(3);
+
+            const cardTitle = wt('open_answer_editor.tab_question_n', 'Вопрос {n}').replace('{n}', idx + 1);
+            const snippetText = q.collapsed ? (q.question || '').slice(0, 50) : '';
+
+            card.innerHTML = `
+                <div class="question-card-header">
+                    <div class="question-card-header-main">
+                        <span class="question-badge">${cardTitle}</span>
+                        <div class="question-levels-badges">
+                            <span class="question-level-pill ${isL1 ? 'is-active' : ''}" title="${wt('open_answer_editor.level_label', 'Уровень {n}').replace('{n}', 1)}">L1</span>
+                            <span class="question-level-pill ${isL2 ? 'is-active' : ''}" title="${wt('open_answer_editor.level_label', 'Уровень {n}').replace('{n}', 2)}">L2</span>
+                            <span class="question-level-pill ${isL3 ? 'is-active' : ''}" title="${wt('open_answer_editor.level_label', 'Уровень {n}').replace('{n}', 3)}">L3</span>
+                        </div>
+                        <span class="question-snippet">${this.escapeHtml(snippetText)}</span>
+                    </div>
+                    <div class="question-card-actions">
+                        <button type="button" class="question-card-btn move-up-btn" title="${wt('open_answer_editor.move_up', 'Переместить вопрос выше')}" aria-label="${wt('open_answer_editor.move_up', 'Переместить вопрос выше')}" ${isFirst ? 'disabled' : ''}>
+                            <span class="material-symbols-outlined text-[18px]">arrow_upward</span>
+                        </button>
+                        <button type="button" class="question-card-btn move-down-btn" title="${wt('open_answer_editor.move_down', 'Переместить вопрос ниже')}" aria-label="${wt('open_answer_editor.move_down', 'Переместить вопрос ниже')}" ${isLast ? 'disabled' : ''}>
+                            <span class="material-symbols-outlined text-[18px]">arrow_downward</span>
+                        </button>
+                        <button type="button" class="question-card-btn collapse-btn" title="${q.collapsed ? wt('open_answer_editor.expand', 'Развернуть вопрос') : wt('open_answer_editor.collapse', 'Свернуть вопрос')}" aria-label="${q.collapsed ? wt('open_answer_editor.expand', 'Развернуть вопрос') : wt('open_answer_editor.collapse', 'Свернуть вопрос')}" aria-expanded="${!q.collapsed}">
+                            <span class="material-symbols-outlined text-[18px]">${q.collapsed ? 'expand_more' : 'expand_less'}</span>
+                        </button>
+                        <button type="button" class="question-card-btn delete-btn" title="${wt('open_answer_editor.delete_question_title', 'Удалить вопрос')}" aria-label="${wt('open_answer_editor.delete_question_title', 'Удалить вопрос')}" ${isSingle ? 'disabled' : ''}>
+                            <span class="material-symbols-outlined text-[18px]">delete</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="question-card-body">
+                    <div class="sequential-step-notice ${this.displayMode === 'sequential' ? '' : 'hidden'}">
+                        <span class="material-symbols-outlined notice-icon">info</span>
+                        <span>${wt('open_answer_editor.sequential_step_notice', 'В последовательном режиме эталонный ответ и ключевые слова показываются студенту сразу после ответа на этот шаг. Убедитесь, что эталон не содержит прямых ответов на следующие шаги.')}</span>
+                    </div>
+
+                    <!-- Question Text -->
+                    <div class="flex flex-col gap-2" ${obTargetQBlock}>
+                        <label for="${qId}" class="text-sm font-semibold text-text-main flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[18px] text-text-disabled">help</span>
+                            <span>${wt('open_answer_editor.question_label', 'Вопрос')}</span>
+                        </label>
+                        <div class="bg-surface-2 rounded-xl shadow-sm border border-border-subtle overflow-hidden focus-within:border-primary transition-all">
+                            <textarea id="${qId}" data-auto-resize="true" ${obTargetQText}
+                                class="w-full border-0 p-4 text-sm text-text-main placeholder:text-text-disabled focus:ring-0 resize-none min-h-[60px] leading-relaxed bg-transparent"
+                                placeholder="${wt('open_answer_editor.question_placeholder', 'Введите формулировку вопроса или описание кейса...')}"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Reference Answer -->
+                    <div class="flex flex-col gap-2" ${obTargetRBlock}>
+                        <div class="flex items-center justify-between">
+                            <label for="${rId}" class="text-sm font-semibold text-text-main flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[18px] text-text-disabled">check_circle</span>
+                                <span>${wt('open_answer_editor.reference_label', 'Эталонный ответ')}</span>
+                            </label>
+                        </div>
+                        <div class="bg-surface-2 rounded-xl shadow-sm border border-border-subtle overflow-hidden focus-within:border-primary transition-all">
+                            <textarea id="${rId}" data-auto-resize="true" ${obTargetRText}
+                                class="w-full border-0 p-4 text-sm text-text-main placeholder:text-text-disabled focus:ring-0 resize-none min-h-[72px] leading-relaxed bg-transparent"
+                                placeholder="${wt('open_answer_editor.reference_placeholder', 'Введите текст правильного ответа...')}"></textarea>
+                            <div class="border-t border-border-subtle bg-surface-2 p-3 flex items-center justify-between">
+                                <span class="text-xs text-text-muted italic">${wt('open_answer_editor.reference_hint', 'Выберите слова или фразы, обязательные для правильного ответа')}</span>
+                                <button id="${sId}" type="button" ${obTargetSplit}
+                                    class="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-primary bg-primary-lighter hover:bg-primary-light rounded-md border border-primary-light transition-colors">
+                                    <span class="material-symbols-outlined text-[16px]">cut</span>
+                                    <span>${wt('open_answer_editor.split_keywords_btn', 'Разбить на ключевые слова')}</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Keywords & Hint -->
+                    <div class="flex flex-col gap-3" ${obTargetKwHintBlock}>
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-xs font-bold text-text-secondary uppercase tracking-wider">${wt('open_answer_editor.keywords_title', 'Ключевые слова')}</h3>
+                            <span id="${bId}" ${obTargetCount}
+                                class="text-xs font-medium text-text-secondary bg-surface-2 px-2 py-0.5 rounded-full">${wt('open_answer_editor.selected_count', 'Выбрано: 0')}</span>
+                        </div>
+                        <div id="${kId}" ${obTargetKwCont}
+                            class="flex flex-wrap gap-2 p-4 bg-surface-1 rounded-xl border border-dashed border-border-subtle min-h-[80px]">
+                        </div>
+                        <div class="flex flex-col gap-2" ${obTargetHintBlock}>
+                            <label for="${hId}" class="text-sm font-semibold text-text-main flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[18px] text-text-disabled">chat_bubble</span>
+                                <span>${wt('open_answer_editor.hint_label', 'Подсказка (необязательно)')}</span>
+                            </label>
+                            <div class="bg-surface-2 rounded-xl shadow-sm border border-border-subtle overflow-hidden focus-within:border-primary transition-all">
+                                <textarea id="${hId}" data-auto-resize="true" ${obTargetHintText}
+                                    class="w-full border-0 p-4 text-sm text-text-main placeholder:text-text-disabled focus:ring-0 resize-none min-h-[48px] leading-relaxed bg-transparent"
+                                    placeholder="${wt('open_answer_editor.hint_placeholder', 'Добавьте подсказку, которую увидит пользователь при необходимости...')}"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Difficulty Levels Selection -->
+                    <div class="question-levels-config">
+                        <div class="question-levels-header">
+                            <span class="question-levels-title">${wt('open_answer_editor.difficulty_levels_title', 'Появление по уровням сложности')}</span>
+                        </div>
+                        <p class="text-[11px] text-text-muted leading-tight">${wt('open_answer_editor.difficulty_levels_hint', 'Отметьте итерации / уровни сложности комплекса, на которых этот вопрос должен появляться. По умолчанию новые вопросы добавляются кумулятивно.')}</p>
+                        <div class="question-levels-options">
+                            <label class="level-checkbox-pill">
+                                <input type="checkbox" class="level-check" value="1" ${isL1 ? 'checked' : ''} />
+                                <span>${wt('open_answer_editor.level_label', 'Уровень {n}').replace('{n}', 1)}</span>
+                            </label>
+                            <label class="level-checkbox-pill">
+                                <input type="checkbox" class="level-check" value="2" ${isL2 ? 'checked' : ''} />
+                                <span>${wt('open_answer_editor.level_label', 'Уровень {n}').replace('{n}', 2)}</span>
+                            </label>
+                            <label class="level-checkbox-pill">
+                                <input type="checkbox" class="level-check" value="3" ${isL3 ? 'checked' : ''} />
+                                <span>${wt('open_answer_editor.level_label', 'Уровень {n}').replace('{n}', 3)}</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            container.appendChild(card);
+
+            // Populate values and bind listeners
+            const qArea = card.querySelector(`#${qId}`);
+            if (qArea) {
+                qArea.value = q.question || '';
+                qArea.addEventListener('input', (e) => {
+                    q.question = e.target.value;
+                    if (card.classList.contains('is-collapsed')) {
+                        const snippet = card.querySelector('.question-snippet');
+                        if (snippet) snippet.textContent = q.question.slice(0, 50);
+                    }
+                    this.markUnsaved();
+                });
+            }
+
+            const rArea = card.querySelector(`#${rId}`);
+            if (rArea) {
+                rArea.value = q.reference_answer || '';
+                rArea.addEventListener('input', (e) => {
+                    q.reference_answer = e.target.value;
+                    this.markUnsaved();
+                });
+            }
+
+            const hArea = card.querySelector(`#${hId}`);
+            if (hArea) {
+                hArea.value = q.hint || '';
+                hArea.addEventListener('input', (e) => {
+                    q.hint = e.target.value;
+                    this.markUnsaved();
+                });
+            }
+
+            const splitBtn = card.querySelector(`#${sId}`);
+            if (splitBtn) {
+                splitBtn.onclick = () => this.splitKeywords(idx);
+            }
+
+            const upBtn = card.querySelector('.move-up-btn');
+            if (upBtn) upBtn.onclick = () => this.moveQuestion(idx, idx - 1);
+
+            const downBtn = card.querySelector('.move-down-btn');
+            if (downBtn) downBtn.onclick = () => this.moveQuestion(idx, idx + 1);
+
+            const collapseBtn = card.querySelector('.collapse-btn');
+            if (collapseBtn) collapseBtn.onclick = () => this.toggleCollapse(idx);
+
+            const deleteBtn = card.querySelector('.delete-btn');
+            if (deleteBtn) deleteBtn.onclick = () => this.deleteQuestion(idx);
+
+            card.querySelectorAll('.level-check').forEach((cb) => {
+                cb.addEventListener('change', () => {
+                    const checks = Array.from(card.querySelectorAll('.level-check:checked')).map(c => Number(c.value));
+                    q.levels = checks.length > 0 ? checks : [];
+                    const badges = card.querySelectorAll('.question-levels-badges .question-level-pill');
+                    if (badges[0]) badges[0].classList.toggle('is-active', q.levels.includes(1));
+                    if (badges[1]) badges[1].classList.toggle('is-active', q.levels.includes(2));
+                    if (badges[2]) badges[2].classList.toggle('is-active', q.levels.includes(3));
+                    this.markUnsaved();
+                });
+            });
+
+            this.renderKeywordsForQuestion(idx);
+        });
+
+        this.applyAutoResize();
+    }
+
+    renderKeywordsForQuestion(idx = 0) {
+        const isFirst = idx === 0;
+        const container = isFirst
+            ? document.querySelector('#keywords-container')
+            : document.querySelector(`#keywords-container-${idx}`);
+        const badge = isFirst
+            ? document.querySelector('#selected-count-badge')
+            : document.querySelector(`#selected-count-badge-${idx}`);
         if (!container) return;
 
         container.innerHTML = '';
         let selectedCount = 0;
 
-        this.keywords = this.keywords
+        const q = (this.questions && this.questions[idx]) ? this.questions[idx] : null;
+        let kwList = q ? (q.keywords || []) : (this._legacyKeywords || []);
+
+        kwList = kwList
             .map((kw) => this.normalizeKeywordItem(kw))
             .filter(Boolean);
 
-        this.keywords.forEach((kw, index) => {
+        if (q) {
+            q.keywords = kwList;
+        }
+        if (isFirst) {
+            this._legacyKeywords = kwList;
+        }
+
+        kwList.forEach((kw, index) => {
             const text = kw.text;
             const isRequired = Boolean(kw.required);
             if (isRequired) selectedCount++;
 
             const btn = document.createElement('button');
+            btn.type = 'button';
             btn.className = `keyword-tag pill pill-sm animate-pop-in hover:scale-105 ${isRequired ? 'active pill-info shadow-sm' : 'pill-neutral'}`;
             btn.textContent = text;
 
             btn.onclick = () => {
-                this.keywords[index].required = !this.keywords[index].required;
-                this.renderKeywords();
+                kwList[index].required = !kwList[index].required;
+                this.renderKeywordsForQuestion(idx);
                 this.markUnsaved();
             };
 
             container.appendChild(btn);
         });
 
-        if (!this.keywords.length) {
+        if (!kwList.length) {
             const placeholder = document.createElement('p');
             placeholder.className = 'open-answer-keywords-placeholder text-sm text-text-muted italic';
             placeholder.textContent = wt('open_answer_editor.keywords_placeholder', 'Добавьте ключевые слова или используйте кнопку «Разбить на ключевые слова».');
             container.appendChild(placeholder);
         }
 
-        if (badge) badge.textContent = wt('open_answer_editor.selected_count', 'Выбрано: {n}').replace('{n}', selectedCount);
+        if (badge) {
+            badge.textContent = wt('open_answer_editor.selected_count', 'Выбрано: {n}').replace('{n}', selectedCount);
+        }
     }
 
-    splitKeywords() {
-        const referenceArea = document.querySelector('#reference-textarea');
+    renderKeywords() {
+        this.renderKeywordsForQuestion(0);
+    }
+
+    splitKeywords(idx = 0) {
+        if (typeof idx !== 'number') idx = 0;
+        const isFirst = idx === 0;
+        const referenceArea = isFirst
+            ? document.querySelector('#reference-textarea')
+            : document.querySelector(`#reference-textarea-${idx}`);
         if (!referenceArea) return;
 
         const text = referenceArea.value || '';
@@ -468,8 +899,11 @@ class OpenAnswerEditor extends BaseEditor {
             return;
         }
 
+        const q = (this.questions && this.questions[idx]) ? this.questions[idx] : null;
+        const currentKw = q ? (q.keywords || []) : (this._legacyKeywords || []);
+
         const requiredLookup = new Set(
-            this.keywords.filter((kw) => kw?.required).map((kw) => kw.normalized)
+            currentKw.filter((kw) => kw?.required).map((kw) => kw.normalized)
         );
         const generated = this.buildKeywordsFromText(text).map((kw) => ({
             ...kw,
@@ -481,9 +915,133 @@ class OpenAnswerEditor extends BaseEditor {
             return;
         }
 
-        this.keywords = generated;
-        this.renderKeywords();
+        if (q) {
+            q.keywords = generated;
+        }
+        if (isFirst) {
+            this._legacyKeywords = generated;
+        }
+
+        this.renderKeywordsForQuestion(idx);
         this.markUnsaved();
+    }
+
+    addQuestion() {
+        this.syncFromDOM();
+        const nextIdx = this.questions.length + 1;
+        this.questions.push({
+            id: `q_${nextIdx}`,
+            question: '',
+            reference_answer: '',
+            hint: '',
+            keywords: [],
+            sequence_matters: this.questions[0] ? Boolean(this.questions[0].sequence_matters) : false,
+            levels: [1, 2, 3],
+            collapsed: false,
+        });
+        this.renderQuestions();
+        this.markUnsaved();
+        this.showToast(wt('open_answer_editor.question_added', 'Вопрос добавлен.'), 'info');
+
+        const targetIdx = this.questions.length - 1;
+        setTimeout(() => {
+            const area = document.querySelector(`#question-textarea-${targetIdx}`);
+            if (area) {
+                area.focus();
+                if (typeof area.scrollIntoView === 'function') {
+                    area.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+        }, 50);
+    }
+
+    deleteQuestion(idx) {
+        if (this.questions.length <= 1) {
+            this.showToast(wt('open_answer_editor.err_min_one_question', 'Задание должно содержать хотя бы один вопрос.'), 'warning');
+            return;
+        }
+        this.syncFromDOM();
+        const [removed] = this.questions.splice(idx, 1);
+        this.pendingDeletedQuestionUndo = { index: idx, question: removed };
+        this.renderQuestions();
+        this.markUnsaved();
+        this.showToast(wt('open_answer_editor.question_deleted', 'Вопрос удален.'), 'info', 5000, {
+            actionLabel: wt('open_answer_editor.undo', 'Отменить'),
+            closeable: true,
+            onAction: () => this.restoreDeletedQuestion(),
+        });
+    }
+
+    restoreDeletedQuestion() {
+        const pending = this.pendingDeletedQuestionUndo;
+        if (!pending) return;
+        this.syncFromDOM();
+        const nextIndex = Math.max(0, Math.min(pending.index, this.questions.length));
+        this.questions.splice(nextIndex, 0, pending.question);
+        this.pendingDeletedQuestionUndo = null;
+        this.renderQuestions();
+        this.markUnsaved();
+        this.showToast(wt('open_answer_editor.question_restored', 'Вопрос восстановлен.'), 'success');
+    }
+
+    moveQuestion(fromIdx, toIdx) {
+        if (toIdx < 0 || toIdx >= this.questions.length || fromIdx === toIdx) return;
+        this.syncFromDOM();
+        const [moved] = this.questions.splice(fromIdx, 1);
+        this.questions.splice(toIdx, 0, moved);
+        this.renderQuestions();
+        this.markUnsaved();
+        this.expandAndFocusQuestion(toIdx, 'question');
+    }
+
+    toggleCollapse(idx) {
+        if (!this.questions[idx]) return;
+        this.syncFromDOM();
+        this.questions[idx].collapsed = !this.questions[idx].collapsed;
+        const card = document.querySelector(`.open-answer-question-card[data-question-index="${idx}"]`);
+        if (card) {
+            const isCollapsed = this.questions[idx].collapsed;
+            card.classList.toggle('is-collapsed', isCollapsed);
+            const collapseBtn = card.querySelector('.collapse-btn');
+            if (collapseBtn) {
+                collapseBtn.setAttribute('aria-expanded', String(!isCollapsed));
+                collapseBtn.title = isCollapsed
+                    ? wt('open_answer_editor.expand', 'Развернуть вопрос')
+                    : wt('open_answer_editor.collapse', 'Свернуть вопрос');
+                const icon = collapseBtn.querySelector('.material-symbols-outlined');
+                if (icon) icon.textContent = isCollapsed ? 'expand_more' : 'expand_less';
+            }
+            const snippet = card.querySelector('.question-snippet');
+            if (snippet) {
+                snippet.textContent = isCollapsed ? (this.questions[idx].question || '').slice(0, 50) : '';
+            }
+        }
+    }
+
+    expandAndFocusQuestion(idx, field = 'question') {
+        if (!this.questions[idx]) return;
+        if (this.questions[idx].collapsed) {
+            this.questions[idx].collapsed = false;
+            const card = document.querySelector(`.open-answer-question-card[data-question-index="${idx}"]`);
+            if (card) {
+                card.classList.remove('is-collapsed');
+                const collapseBtn = card.querySelector('.collapse-btn');
+                if (collapseBtn) {
+                    collapseBtn.setAttribute('aria-expanded', 'true');
+                    collapseBtn.title = wt('open_answer_editor.collapse', 'Свернуть вопрос');
+                    const icon = collapseBtn.querySelector('.material-symbols-outlined');
+                    if (icon) icon.textContent = 'expand_less';
+                }
+            }
+        }
+        const targetId = idx === 0 ? `#${field}-textarea` : `#${field}-textarea-${idx}`;
+        const targetEl = document.querySelector(targetId);
+        if (targetEl) {
+            targetEl.focus();
+            if (typeof targetEl.scrollIntoView === 'function') {
+                targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
     }
 
     renderImages() {
@@ -567,9 +1125,35 @@ class OpenAnswerEditor extends BaseEditor {
             backBtn.onclick = () => this.goBack();
         }
 
-        // Split button
+        // Case text
+        const caseArea = document.querySelector('#case-textarea');
+        if (caseArea) {
+            caseArea.oninput = () => {
+                this.caseText = caseArea.value;
+                this.markUnsaved();
+            };
+        }
+
+        // Add question button
+        const addQBtn = document.querySelector('#add-question-btn');
+        if (addQBtn) {
+            addQBtn.onclick = () => this.addQuestion();
+        }
+
+        // Display mode radios
+        document.querySelectorAll('input[name="display-mode"]').forEach((radio) => {
+            radio.onchange = (e) => {
+                if (e.target.checked) {
+                    this.displayMode = e.target.value;
+                    this.updateDisplayModeUI();
+                    this.markUnsaved();
+                }
+            };
+        });
+
+        // Split button (fallback)
         const splitBtn = document.querySelector('#split-keywords-btn');
-        if (splitBtn) splitBtn.onclick = () => this.splitKeywords();
+        if (splitBtn) splitBtn.onclick = () => this.splitKeywords(0);
 
         // Save button
         const saveBtn = document.querySelector('#save-task-btn');
@@ -587,6 +1171,9 @@ class OpenAnswerEditor extends BaseEditor {
         if (sequenceToggle) {
             sequenceToggle.onchange = (event) => {
                 this.sequenceMatters = event.target.checked;
+                if (this.questions && this.questions[0]) {
+                    this.questions[0].sequence_matters = event.target.checked;
+                }
                 this.markUnsaved();
             };
         }
@@ -705,52 +1292,119 @@ class OpenAnswerEditor extends BaseEditor {
         return true;
     }
 
+    syncFromDOM() {
+        const caseArea = document.querySelector('#case-textarea');
+        if (caseArea) {
+            this.caseText = caseArea.value;
+        }
+
+        const checkedRadio = document.querySelector('input[name="display-mode"]:checked');
+        if (checkedRadio) {
+            this.displayMode = checkedRadio.value;
+        }
+
+        if (!Array.isArray(this.questions) || this.questions.length === 0) {
+            this.initQuestionsFromContent();
+        }
+
+        const container = document.querySelector('#questions-container');
+        if (container) {
+            this.questions.forEach((q, idx) => {
+                const qArea = idx === 0 ? document.querySelector('#question-textarea') : document.querySelector(`#question-textarea-${idx}`);
+                if (qArea) q.question = qArea.value;
+
+                const rArea = idx === 0 ? document.querySelector('#reference-textarea') : document.querySelector(`#reference-textarea-${idx}`);
+                if (rArea) q.reference_answer = rArea.value;
+
+                const hArea = idx === 0 ? document.querySelector('#hint-textarea') : document.querySelector(`#hint-textarea-${idx}`);
+                if (hArea) q.hint = hArea.value;
+
+                const card = document.querySelector(`.open-answer-question-card[data-question-index="${idx}"]`);
+                if (card) {
+                    const checks = Array.from(card.querySelectorAll('.level-check:checked')).map((c) => Number(c.value));
+                    q.levels = checks.length > 0 ? checks : [];
+                }
+            });
+        } else {
+            // Fallback for test DOM without #questions-container
+            const qArea = document.querySelector('#question-textarea');
+            const rArea = document.querySelector('#reference-textarea');
+            const hArea = document.querySelector('#hint-textarea');
+            if (this.questions && this.questions[0]) {
+                if (qArea) this.questions[0].question = qArea.value;
+                if (rArea) this.questions[0].reference_answer = rArea.value;
+                if (hArea) this.questions[0].hint = hArea.value;
+            }
+        }
+
+        const sequenceToggle = document.querySelector('#sequence-order-check');
+        if (sequenceToggle) {
+            this.sequenceMatters = sequenceToggle.checked;
+            if (this.questions && this.questions[0]) {
+                this.questions[0].sequence_matters = sequenceToggle.checked;
+            }
+        }
+    }
+
     /**
      * Validate task before saving (BaseEditor abstract method)
      * @returns {string|null} Error message if validation fails, null if valid
      */
     validateTask() {
-        const questionArea = document.querySelector('#question-textarea');
-        const prompt = questionArea ? questionArea.value.trim() : "";
+        this.syncFromDOM();
 
-        const referenceArea = document.querySelector('#reference-textarea');
-        const referenceAnswer = referenceArea ? referenceArea.value.trim() : "";
         const maxLengthInput = document.querySelector('#max-length-input');
         const maxLengthPreference = this.readMaxLengthPreference();
-
-        // Validate prompt
-        if (!prompt) {
-            if (questionArea) questionArea.focus();
-            return wt('open_answer_editor.err_empty_question', 'Ошибка: поле вопроса не должно быть пустым.');
-        }
-
-        // Validate reference answer
-        if (!referenceAnswer) {
-            if (referenceArea) referenceArea.focus();
-            return wt('open_answer_editor.err_empty_reference', 'Ошибка: эталонный ответ не должен быть пустым.');
-        }
-
         if (maxLengthPreference.invalid) {
             if (maxLengthInput) maxLengthInput.focus();
             return wt('open_answer_editor.err_max_length', 'Ошибка: максимальная длина ответа должна быть целым числом не меньше 1 или пустым полем.');
         }
 
-        // Validate keywords
-        const normalizedKeywords = this.keywords
-            .map((kw) => this.normalizeKeywordItem(kw))
-            .filter((kw) => kw && kw.required);
-
-        if (!normalizedKeywords.length) {
-            return wt('open_answer_editor.err_no_keywords', 'Ошибка: добавьте хотя бы одно ключевое слово для проверки.');
+        if (!this.questions || this.questions.length === 0) {
+            return wt('open_answer_editor.err_min_one_question', 'Задание должно содержать хотя бы один вопрос.');
         }
 
-        const keywordsTexts = normalizedKeywords.map((kw) => kw.text).filter(Boolean);
+        for (let idx = 0; idx < this.questions.length; idx++) {
+            const q = this.questions[idx];
+            const isSingle = this.questions.length === 1;
+            const prefix = isSingle
+                ? ''
+                : wt('open_answer_editor.question_n_prefix', 'Вопрос #{n}: ').replace('{n}', idx + 1);
 
-        if (!keywordsTexts.length) {
-            return wt('open_answer_editor.err_select_keyword', 'Ошибка: выберите хотя бы одно ключевое слово.');
+            const prompt = (q.question || '').trim();
+            if (!prompt) {
+                this.expandAndFocusQuestion(idx, 'question');
+                return prefix + wt('open_answer_editor.err_empty_question', 'Ошибка: поле вопроса не должно быть пустым.');
+            }
+
+            const refAnswer = (q.reference_answer || '').trim();
+            if (!refAnswer) {
+                this.expandAndFocusQuestion(idx, 'reference');
+                return prefix + wt('open_answer_editor.err_empty_reference', 'Ошибка: эталонный ответ не должен быть пустым.');
+            }
+
+            const normalizedKeywords = (q.keywords || [])
+                .map((kw) => this.normalizeKeywordItem(kw))
+                .filter((kw) => kw && kw.required);
+
+            if (!normalizedKeywords.length) {
+                this.expandAndFocusQuestion(idx, 'reference');
+                return prefix + wt('open_answer_editor.err_no_keywords', 'Ошибка: добавьте хотя бы одно ключевое слово для проверки.');
+            }
+
+            const keywordsTexts = normalizedKeywords.map((kw) => kw.text).filter(Boolean);
+            if (!keywordsTexts.length) {
+                this.expandAndFocusQuestion(idx, 'reference');
+                return prefix + wt('open_answer_editor.err_select_keyword', 'Ошибка: выберите хотя бы одно ключевое слово.');
+            }
+
+            if (!Array.isArray(q.levels) || q.levels.length === 0) {
+                this.expandAndFocusQuestion(idx, 'question');
+                return wt('open_answer_editor.err_no_level_selected', 'Вопрос #{n}: выберите хотя бы один уровень сложности для появления.').replace('{n}', idx + 1);
+            }
         }
 
-        return null; // Validation passed
+        return null;
     }
 
     /**
@@ -758,37 +1412,67 @@ class OpenAnswerEditor extends BaseEditor {
      * @returns {Object} Task data object
      */
     buildTaskData() {
-        const questionArea = document.querySelector('#question-textarea');
-        const prompt = questionArea ? questionArea.value.trim() : "";
+        this.syncFromDOM();
 
-        const referenceArea = document.querySelector('#reference-textarea');
-        const referenceAnswer = referenceArea ? referenceArea.value.trim() : "";
-
-        const hintField = document.querySelector('#hint-textarea');
-        const hint = hintField ? hintField.value.trim() : "";
-
-        const content = this.task.task_data.content;
         const maxLengthPreference = this.readMaxLengthPreference();
         const maxLength = maxLengthPreference.isSet && !maxLengthPreference.invalid
             ? maxLengthPreference.value
             : null;
 
-        const normalizedKeywords = this.keywords
-            .map((kw) => this.normalizeKeywordItem(kw))
-            .filter((kw) => kw && kw.required);
+        const content = this.task.task_data.content || (this.task.task_data.content = {});
 
-        const keywordsTexts = normalizedKeywords.map((kw) => kw.text).filter(Boolean);
+        const questionsPayload = (this.questions && this.questions.length > 0 ? this.questions : [
+            {
+                id: 'q_1',
+                question: '',
+                reference_answer: '',
+                hint: '',
+                keywords: [],
+                sequence_matters: this.sequenceMatters,
+                levels: [1, 2, 3],
+            }
+        ]).map((q, idx) => {
+            const normalizedKeywords = (q.keywords || [])
+                .map((kw) => this.normalizeKeywordItem(kw))
+                .filter((kw) => kw && kw.required)
+                .map((kw) => kw.text)
+                .filter(Boolean);
 
-        // Build content
-        content.question = prompt;
-        content.prompt = prompt;
-        content.reference_answer = referenceAnswer;
+            const item = {
+                id: q.id || `q_${idx + 1}`,
+                question: (q.question || '').trim(),
+                prompt: (q.question || '').trim(),
+                reference_answer: (q.reference_answer || '').trim(),
+                keywords: normalizedKeywords,
+                sequence_matters: Boolean(q.sequence_matters ?? this.sequenceMatters),
+                levels: Array.isArray(q.levels) && q.levels.length > 0 ? [...q.levels] : [1, 2, 3],
+            };
 
-        if (hint) {
-            content.hint = hint;
+            if (q.hint && q.hint.trim()) {
+                item.hint = q.hint.trim();
+            }
+
+            return item;
+        });
+
+        const firstQ = questionsPayload[0];
+
+        // Canonical fields on root content for backward compatibility
+        content.question = firstQ.question;
+        content.prompt = firstQ.prompt;
+        content.reference_answer = firstQ.reference_answer;
+        if (firstQ.hint) {
+            content.hint = firstQ.hint;
         } else {
             delete content.hint;
         }
+        content.keywords = firstQ.keywords;
+        content.sequence_matters = Boolean(firstQ.sequence_matters);
+
+        // Multi-question fields
+        content.case_text = (this.caseText || '').trim();
+        content.display_mode = this.displayMode === 'sequential' ? 'sequential' : 'simultaneous';
+        content.questions = questionsPayload;
 
         if (maxLength != null) {
             content.max_length = maxLength;
@@ -798,8 +1482,6 @@ class OpenAnswerEditor extends BaseEditor {
         }
         delete content.min_keywords;
         delete content.require_all_keywords;
-        content.sequence_matters = this.sequenceMatters;
-        content.keywords = keywordsTexts;
         content.images = this.normalizeContentImages(content.images);
         this.syncLegacyMaxLength(maxLength);
 
@@ -817,7 +1499,6 @@ class OpenAnswerEditor extends BaseEditor {
      * @returns {Object} State snapshot
      */
     captureState() {
-        // Use buildTaskData to get the current state
         const taskData = this.buildTaskData();
         return {
             content: JSON.parse(JSON.stringify(taskData.content))
@@ -835,9 +1516,7 @@ class OpenAnswerEditor extends BaseEditor {
         this.task.task_data.content = JSON.parse(JSON.stringify(state.content));
 
         // Restore local state properties that depend on content
-        const content = this.task.task_data.content;
-        this.sequenceMatters = Boolean(content.sequence_matters ?? content.check_sequence);
-        this.keywords = content.keywords || [];
+        this.initQuestionsFromContent();
 
         // Re-render
         this.renderUI();
@@ -969,6 +1648,7 @@ class OpenAnswerEditor extends BaseEditor {
 
     setupDirtyTracking() {
         const selectors = [
+            '#case-textarea',
             '#question-textarea',
             '#reference-textarea',
             '#hint-textarea',
@@ -980,6 +1660,20 @@ class OpenAnswerEditor extends BaseEditor {
             if (!el) return;
             const eventName = el.tagName === 'SELECT' ? 'change' : 'input';
             el.addEventListener(eventName, () => this.markUnsaved());
+        });
+
+        const questionsContainer = document.querySelector('#questions-container');
+        if (questionsContainer && !questionsContainer.dataset.dirtyBound) {
+            questionsContainer.dataset.dirtyBound = 'true';
+            questionsContainer.addEventListener('input', () => this.markUnsaved());
+            questionsContainer.addEventListener('change', () => this.markUnsaved());
+        }
+
+        document.querySelectorAll('input[name="display-mode"]').forEach((radio) => {
+            if (!radio.dataset.dirtyBound) {
+                radio.dataset.dirtyBound = 'true';
+                radio.addEventListener('change', () => this.markUnsaved());
+            }
         });
     }
 

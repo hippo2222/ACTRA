@@ -72,7 +72,8 @@ class ComplexSessionController:
 
         filtered_payload = deepcopy(task_data_full)
         task_data = filtered_payload.get("task_data") or {}
-        if not isinstance(task_data, dict) or task_data.get("type") != "test":
+        task_type = task_data.get("type") if isinstance(task_data, dict) else None
+        if not isinstance(task_data, dict) or task_type not in ("test", "open_answer"):
             return filtered_payload
 
         failed_index_set = set(failed_indices)
@@ -98,7 +99,13 @@ class ComplexSessionController:
         content = task_data.get("content") or {}
         if isinstance(content, dict):
             content = dict(content)
-            content["questions"] = _filter_question_list(content.get("questions") or [])
+            filtered_q = _filter_question_list(content.get("questions") or [])
+            content["questions"] = filtered_q
+            if task_type == "open_answer" and filtered_q and isinstance(filtered_q[0], dict):
+                content["question"] = filtered_q[0].get("question") or content.get("question")
+                content["prompt"] = content["question"]
+                content["reference_answer"] = filtered_q[0].get("reference_answer") or content.get("reference_answer")
+                content["keywords"] = filtered_q[0].get("keywords") or content.get("keywords")
             task_data = dict(task_data)
             task_data["content"] = content
             if isinstance(task_data.get("questions"), list):
@@ -109,7 +116,11 @@ class ComplexSessionController:
         if isinstance(answer_key, dict):
             answer_key = dict(answer_key)
             if isinstance(answer_key.get("questions"), list):
-                answer_key["questions"] = _filter_question_list(answer_key.get("questions") or [])
+                ak_questions = _filter_question_list(answer_key.get("questions") or [])
+                answer_key["questions"] = ak_questions
+                if task_type == "open_answer" and ak_questions and isinstance(ak_questions[0], dict):
+                    answer_key["reference_answer"] = ak_questions[0].get("reference_answer") or answer_key.get("reference_answer")
+                    answer_key["keywords"] = ak_questions[0].get("keywords") or answer_key.get("keywords")
             elif isinstance(answer_key.get("content"), dict):
                 answer_key_content = dict(answer_key.get("content") or {})
                 answer_key_content["questions"] = _filter_question_list(

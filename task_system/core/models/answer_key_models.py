@@ -137,9 +137,8 @@ class OpenAnswerTaskAnswerKey(BaseModel):
         default=1,
         description="Answer key format version"
     )
-    keywords: List[str] = Field(
-        ...,
-        min_items=1,
+    keywords: Optional[List[str]] = Field(
+        default_factory=list,
         description="Keywords for searching in answer"
     )
     sequence_matters: bool = Field(
@@ -150,7 +149,19 @@ class OpenAnswerTaskAnswerKey(BaseModel):
         None,
         description="Reference answer text"
     )
-    
+    display_mode: Optional[str] = Field(
+        default="simultaneous",
+        description="Display mode: simultaneous or sequential"
+    )
+    case_text: Optional[str] = Field(
+        None,
+        description="Case context text"
+    )
+    questions: Optional[List[Dict[str, Any]]] = Field(
+        None,
+        description="Per-question answer keys for multi-question mode"
+    )
+
     class Config:
         extra = "allow"
 

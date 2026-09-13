@@ -448,6 +448,14 @@ class StorageService:
             if 'require_all_keywords' not in base and 'require_all_keywords' in content and content.get('require_all_keywords') is not None:
                 base['require_all_keywords'] = content['require_all_keywords']
             
+            # Multi-question support
+            if 'questions' not in base and isinstance(content.get('questions'), list) and content.get('questions'):
+                base['questions'] = content['questions']
+            if 'display_mode' not in base and content.get('display_mode'):
+                base['display_mode'] = content['display_mode']
+            if 'case_text' not in base and content.get('case_text'):
+                base['case_text'] = content['case_text']
+            
             return base
 
         # 4. SEQUENCE ASSEMBLY
@@ -2037,7 +2045,7 @@ class StorageService:
         content["required_correct"] = canonical_value
 
     def _sanitize_open_answer_payload_for_save(self, task_data: Dict[str, Any]) -> None:
-        """Strip removed legacy fields and obvious null-only noise from new open_answer saves."""
+        """Strip removed legacy fields, normalize multi-question data, and remove null noise."""
         if not isinstance(task_data, dict):
             return
         if task_data.get("type") != "open_answer":
@@ -2056,6 +2064,108 @@ class StorageService:
         # Legacy partial-keyword threshold is no longer authored in the editor.
         content.pop("min_keywords", None)
         content.pop("require_all_keywords", None)
+
+        # Normalize display_mode and case_text
+        if "display_mode" in content:
+            dm = str(content["display_mode"]).strip().lower()
+            content["display_mode"] = dm if dm in ("simultaneous", "sequential") else "simultaneous"
+        else:
+            content["display_mode"] = "simultaneous"
+
+        if "case_text" in content:
+            ct = content["case_text"]
+            if ct is not None:
+                content["case_text"] = str(ct).strip()
+
+        # Multi-question normalization & backward compatibility mirroring
+        questions = content.get("questions")
+        if isinstance(questions, list) and len(questions) > 0:
+            cleaned_questions = []
+            for idx, q in enumerate(questions):
+                if not isinstance(q, dict):
+                    continue
+                q_id = str(q.get("id") or f"q_{idx + 1}").strip()
+                q_text = str(q.get("question") or q.get("prompt") or "").strip()
+                q_ref = str(q.get("reference_answer") or "").strip() if q.get("reference_answer") is not None else None
+
+                # Clean keywords
+                raw_kw = q.get("keywords") or []
+                clean_kw = []
+                if isinstance(raw_kw, list):
+                    for kw in raw_kw:
+                        if isinstance(kw, dict):
+                            val = kw.get("text") or kw.get("word") or kw.get("name")
+                            if val:
+                                clean_kw.append(str(val).strip())
+                        elif kw is not None and str(kw).strip():
+                            clean_kw.append(str(kw).strip())
+                elif isinstance(raw_kw, str) and raw_kw.strip():
+                    clean_kw.append(raw_kw.strip())
+
+                # Clean levels
+                raw_levels = q.get("levels")
+                clean_levels = [1, 2, 3]
+                if isinstance(raw_levels, list):
+                    parsed_levels = []
+                    for lvl in raw_levels:
+                        try:
+                            ilvl = int(lvl)
+                            if 1 <= ilvl <= 3:
+                                parsed_levels.append(ilvl)
+                        except (ValueError, TypeError):
+                            continue
+                    if parsed_levels:
+                        clean_levels = sorted(list(set(parsed_levels)))
+
+                item = {
+                    "id": q_id,
+                    "question": q_text,
+                    "reference_answer": q_ref or "",
+                    "keywords": clean_kw,
+                    "levels": clean_levels,
+                    "case_sensitive": bool(q.get("case_sensitive", False)),
+                    "sequence_matters": bool(q.get("sequence_matters", False)),
+                }
+                for opt_k in ("sample_answers", "min_length", "max_length"):
+                    if opt_k in q and q[opt_k] is not None:
+                        item[opt_k] = q[opt_k]
+                cleaned_questions.append(item)
+
+            if cleaned_questions:
+                content["questions"] = cleaned_questions
+                # Mirror first question into top-level for legacy catalog / single-question tools
+                first_q = cleaned_questions[0]
+                content["question"] = first_q["question"]
+                content["prompt"] = first_q["question"]
+                content["reference_answer"] = first_q["reference_answer"]
+                content["keywords"] = list(first_q["keywords"])
+                content["sequence_matters"] = first_q["sequence_matters"]
+                content["case_sensitive"] = first_q["case_sensitive"]
+        elif content.get("question") or content.get("prompt"):
+            # Single-question mode: synthesize questions array with 1 item
+            q_text = str(content.get("question") or content.get("prompt") or "").strip()
+            raw_kw = content.get("keywords") or []
+            clean_kw = []
+            if isinstance(raw_kw, list):
+                for kw in raw_kw:
+                    if isinstance(kw, dict):
+                        val = kw.get("text") or kw.get("word") or kw.get("name")
+                        if val:
+                            clean_kw.append(str(val).strip())
+                    elif kw is not None and str(kw).strip():
+                        clean_kw.append(str(kw).strip())
+            elif isinstance(raw_kw, str) and raw_kw.strip():
+                clean_kw.append(raw_kw.strip())
+
+            content["questions"] = [{
+                "id": "q_1",
+                "question": q_text,
+                "reference_answer": str(content.get("reference_answer") or "").strip(),
+                "keywords": clean_kw,
+                "levels": [1, 2, 3],
+                "case_sensitive": bool(content.get("case_sensitive", False)),
+                "sequence_matters": bool(content.get("sequence_matters", False)),
+            }]
 
         # Remove null-only open_answer noise while preserving any meaningful values.
         for key in ("image", "hint", "sample_answers", "min_length", "max_length"):

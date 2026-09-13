@@ -565,12 +565,57 @@ class DrawTaskContent(BaseModel):
         extra = "allow"
 
 
+class OpenAnswerQuestionItem(BaseModel):
+    """Question item for multi-question open answer task."""
+
+    id: Optional[str] = Field(None, description="Unique question identifier (e.g. q_1)")
+    question: str = Field(..., description="Question prompt")
+    reference_answer: Optional[str] = Field(None, description="Reference answer text")
+    keywords: Optional[List[str]] = Field(default_factory=list, description="Keywords for evaluation")
+    levels: Optional[List[int]] = Field(default_factory=lambda: [1, 2, 3], description="Difficulty levels where question appears")
+    sample_answers: Optional[List[str]] = Field(None, description="Example answers")
+    min_length: Optional[int] = Field(None, ge=1, description="Minimum length")
+    max_length: Optional[int] = Field(None, ge=1, description="Maximum length")
+    case_sensitive: bool = Field(default=False, description="Case-sensitive matching")
+    sequence_matters: bool = Field(default=False, description="Keyword order matters")
+
+    @validator('keywords', pre=True)
+    def normalize_keywords(cls, v):
+        if v is None:
+            return []
+        if isinstance(v, list):
+            result = []
+            for item in v:
+                if isinstance(item, dict):
+                    text = item.get('text') or item.get('word') or item.get('name')
+                    if text:
+                        result.append(str(text))
+                elif item is not None and str(item).strip():
+                    result.append(str(item).strip())
+            return result
+        return v
+
+    @validator('max_length')
+    def validate_max_length(cls, v, values):
+        min_length = values.get('min_length')
+        if v is not None and min_length is not None and v < min_length:
+            raise ValueError(f"max_length ({v}) must be greater than or equal to min_length ({min_length})")
+        return v
+
+    class Config:
+        extra = "allow"
+
+
 class OpenAnswerTaskContent(BaseModel):
     """Content model for open answer tasks."""
     
     image: Optional[str] = Field(None, description="Path to image (relative to task.json, optional)")
     images: Optional[List[str]] = Field(None, description="Array of image paths (editor multi-image)")
-    question: str = Field(..., description="Question text")
+    case_text: Optional[str] = Field(None, description="Context / case text shown above questions")
+    display_mode: Optional[str] = Field("simultaneous", description="Display mode: simultaneous or sequential")
+    questions: Optional[List[OpenAnswerQuestionItem]] = Field(None, description="List of questions in multi-question mode")
+
+    question: Optional[str] = Field(None, description="Question text")
     prompt: Optional[str] = Field(None, description="Legacy question field (synced with question)")
     keywords: Optional[List[str]] = Field(
         None,
@@ -599,6 +644,39 @@ class OpenAnswerTaskContent(BaseModel):
     min_keywords: Optional[int] = Field(None, ge=1, description="Minimum keywords required for success")
     require_all_keywords: Optional[bool] = Field(None, description="Whether all keywords must be found")
     sequence_matters: Optional[bool] = Field(None, description="Whether keyword order matters")
+
+    @root_validator(pre=True)
+    def normalize_open_answer_fields(cls, values):
+        if not isinstance(values, dict):
+            return values
+
+        # If questions list is provided, mirror first question to top-level fields
+        questions = values.get('questions')
+        if isinstance(questions, list) and len(questions) > 0:
+            first_q = questions[0]
+            if isinstance(first_q, dict):
+                first_text = first_q.get('question') or first_q.get('prompt') or ''
+                if not values.get('question'):
+                    values['question'] = first_text
+                if not values.get('prompt'):
+                    values['prompt'] = first_text
+                if not values.get('reference_answer') and first_q.get('reference_answer'):
+                    values['reference_answer'] = first_q.get('reference_answer')
+                if not values.get('keywords') and first_q.get('keywords'):
+                    values['keywords'] = first_q.get('keywords')
+        else:
+            if values.get('prompt') and not values.get('question'):
+                values['question'] = values['prompt']
+            elif values.get('question') and not values.get('prompt'):
+                values['prompt'] = values['question']
+        return values
+
+    @validator('question')
+    def validate_question_present(cls, v, values):
+        questions = values.get('questions')
+        if not v and (not questions or len(questions) == 0):
+            raise ValueError("question is required if questions list is not provided")
+        return v
     
     @validator('keywords', pre=True)
     def normalize_keywords(cls, v):

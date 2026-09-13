@@ -77,7 +77,7 @@ class DifficultyManager:
             "test": [1, 2],
             "sequence_assembly": [1, 2, 3],
             "image_labeling": [1, 2],
-            "open_answer": [1],
+            "open_answer": [1, 2, 3],
         }
 
     @staticmethod
@@ -239,6 +239,19 @@ class DifficultyManager:
         if authored_levels:
             return authored_levels
 
+        if resolved_task_type == "open_answer" and isinstance(resolved_task_data, dict):
+            content = resolved_task_data.get("content") or {}
+            questions = content.get("questions")
+            if isinstance(questions, list) and len(questions) > 0:
+                q_levels = set()
+                for q in questions:
+                    if isinstance(q, dict) and isinstance(q.get("levels"), list):
+                        for lvl in q["levels"]:
+                            if isinstance(lvl, int) and lvl in base_levels:
+                                q_levels.add(lvl)
+                if q_levels:
+                    return sorted(q_levels)
+
         if type_override_levels:
             return type_override_levels
 
@@ -389,7 +402,7 @@ class DifficultyManager:
             elif task_type == "image_labeling":
                 enhanced = self._enhance_image_labeling_task(enhanced, normalized_level)
             elif task_type == "open_answer":
-                pass
+                enhanced = self._enhance_open_answer_task(enhanced, normalized_level)
             elif self.hooks_available and difficulty_hooks:
                 plugin_levels = difficulty_hooks.call_get_levels(task_type, task_ref)
                 if plugin_levels and normalized_level in plugin_levels:
@@ -503,6 +516,44 @@ class DifficultyManager:
             content["requires_typing"] = False
         elif level >= 2:
             content["requires_typing"] = True
+        task_data["content"] = content
+        return task_data
+
+    def _enhance_open_answer_task(self, task_data: Dict[str, Any], level: int) -> Dict[str, Any]:
+        content = task_data.get("content", {})
+        questions = content.get("questions")
+        if isinstance(questions, list) and len(questions) > 0:
+            filtered_questions = []
+            for q in questions:
+                if not isinstance(q, dict):
+                    continue
+                q_levels = q.get("levels")
+                if not isinstance(q_levels, list) or len(q_levels) == 0:
+                    filtered_questions.append(copy.deepcopy(q))
+                elif level in q_levels:
+                    filtered_questions.append(copy.deepcopy(q))
+
+            if not filtered_questions:
+                candidates = [
+                    q for q in questions
+                    if isinstance(q, dict) and min(q.get("levels") or [1]) <= level
+                ]
+                filtered_questions = [copy.deepcopy(q) for q in (candidates or [questions[0]])]
+
+            content["questions"] = filtered_questions
+
+            first_q = filtered_questions[0]
+            first_text = first_q.get("question") or ""
+            content["question"] = first_text
+            content["prompt"] = first_text
+            content["reference_answer"] = first_q.get("reference_answer", "")
+            content["keywords"] = first_q.get("keywords", [])
+            content["sequence_matters"] = first_q.get("sequence_matters", False)
+            if "hint" in first_q:
+                content["hint"] = first_q.get("hint")
+            if "max_length" in first_q:
+                content["max_length"] = first_q.get("max_length")
+
         task_data["content"] = content
         return task_data
 
