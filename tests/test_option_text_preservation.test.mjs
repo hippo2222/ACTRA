@@ -232,5 +232,22 @@ describe("Test option text preservation", () => {
         expect(undoSpy).toHaveBeenCalledTimes(2);
         expect(ctrlYaOutside.defaultPrevented).toBe(true);
     });
+
+    it("validateTask returns error message without calling showToast directly", () => {
+        const toastSpy = vi.spyOn(editor, "showToast");
+
+        // Question with only 1 option when isOnlyLevel2Selected is false
+        editor.questions = [
+            {
+                text: "Вопрос 1",
+                options: [{ text: "Вариант 1", is_correct: true }]
+            }
+        ];
+        editor.isOnlyLevel2Selected = () => false;
+
+        const err = editor.validateTask();
+        expect(err).toContain("минимум два варианта ответа");
+        expect(toastSpy).not.toHaveBeenCalled();
+    });
 });
 

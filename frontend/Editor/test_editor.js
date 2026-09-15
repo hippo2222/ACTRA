@@ -3152,7 +3152,6 @@ class TestEditor extends BaseEditor {
     validateTask() {
         // Check minimum questions
         if (this.questions.length === 0) {
-            this.showToast(wt('xt.k047', 'Нужен хотя бы один вопрос'), 'warning');
             return wt('xt.k047', 'Нужен хотя бы один вопрос');
         }
 
@@ -3162,7 +3161,6 @@ class TestEditor extends BaseEditor {
 
             // Check question text
             if (!q.text || !q.text.trim()) {
-                this.showToast(`${wt('xt.k010', 'Вопрос ')}${i + 1}${wt('xt.k103', ': пустой текст')}`, 'warning');
                 this.currentQuestionIndex = i;
                 this.renderUI();
                 return `${wt('xt.k010', 'Вопрос ')}${i + 1}${wt('xt.k103', ': пустой текст')}`;
@@ -3175,7 +3173,6 @@ class TestEditor extends BaseEditor {
                 const message = isOnlyLevel2
                     ? `${wt('xt.k010', 'Вопрос ')}${i + 1}${wt('xt.k104_l2', ': добавьте хотя бы один вариант ответа')}`
                     : `${wt('xt.k010', 'Вопрос ')}${i + 1}${wt('xt.k104', ': минимум два варианта ответа')}`;
-                this.showToast(message, 'warning');
                 this.currentQuestionIndex = i;
                 this.renderUI();
                 return message;
@@ -3203,6 +3200,152 @@ class TestEditor extends BaseEditor {
         }
 
         return null; // Validation passed
+    }
+
+    /**
+     * Check if test consists exclusively of single-option questions while Level 1 is active.
+     * In this case, author most likely intended to create a Level 2 (Text Answer) test.
+     * @returns {boolean}
+     */
+    shouldPromptForLevel2Intent() {
+        if (!Array.isArray(this.questions) || this.questions.length === 0) {
+            return false;
+        }
+
+        if (this.isOnlyLevel2Selected()) {
+            return false;
+        }
+
+        const meta = this.difficultyAuthoring?.activeMeta;
+        const supported = typeof this._normalizeDifficultyLevels === 'function'
+            ? this._normalizeDifficultyLevels(meta?.supported_levels || [1, 2])
+            : [1, 2];
+        if (!supported.includes(2)) {
+            return false;
+        }
+
+        return this.questions.every(
+            (q) => Array.isArray(q?.options) && q.options.length === 1
+        );
+    }
+
+    /**
+     * Automatically switch difficulty authoring to Level 2 only (Text Answer).
+     * @returns {boolean} True if successfully switched
+     */
+    selectOnlyLevel2Difficulty() {
+        const meta = this.difficultyAuthoring?.activeMeta;
+        const supportedLevels = typeof this._normalizeDifficultyLevels === 'function'
+            ? this._normalizeDifficultyLevels(meta?.supported_levels || [1, 2])
+            : [1, 2];
+
+        if (!supportedLevels.includes(2)) {
+            return false;
+        }
+
+        if (!this.difficultyAuthoring) {
+            this.difficultyAuthoring = {
+                activeMeta: null,
+                activeKey: null,
+                metaCache: new Map(),
+                state: { mode: 'all', selectedLevels: [], lastCustomSelectedLevels: [] },
+                ui: { expanded: false }
+            };
+        }
+        if (!this.difficultyAuthoring.state) {
+            this.difficultyAuthoring.state = { mode: 'all', selectedLevels: [], lastCustomSelectedLevels: [] };
+        }
+
+        const state = this.difficultyAuthoring.state;
+        state.mode = 'custom';
+        state.selectedLevels = [2];
+        state.lastCustomSelectedLevels = [2];
+        if (this.difficultyAuthoring.ui) {
+            this.difficultyAuthoring.ui.expanded = true;
+        }
+
+        // Ensure single option is marked as correct for Level 2 text answer
+        if (Array.isArray(this.questions)) {
+            this.questions.forEach((q) => {
+                if (Array.isArray(q.options) && q.options.length === 1 && !q.options[0].is_correct) {
+                    q.options[0].is_correct = true;
+                }
+            });
+        }
+
+        if (typeof this.applyDifficultyAuthoringStateToTaskData === 'function') {
+            this.applyDifficultyAuthoringStateToTaskData();
+        } else if (this.task?.task_data?.settings) {
+            this.task.task_data.settings.allowed_difficulties = [2];
+            this.task.task_data.settings.__difficulty_authoring_mode = 'custom';
+            this.task.task_data.settings.__difficulty_authoring_selected_levels = [2];
+        }
+
+        if (this.task?.task_data?.settings && typeof this.task.task_data.settings === 'object') {
+            this.task.task_data.settings.allowed_difficulties = [2];
+        }
+
+        if (typeof this.renderDifficultyAuthoringControls === 'function') {
+            this.renderDifficultyAuthoringControls();
+        }
+
+        this.markUnsaved();
+        if (typeof this.onDifficultyAuthoringChanged === 'function') {
+            this.onDifficultyAuthoringChanged();
+        }
+        return true;
+    }
+
+    /**
+     * Resolve single-option test intent before saving.
+     * Shows a confirmation modal if author created questions with only 1 option each.
+     * @returns {Promise<boolean>} True if saving can proceed, false if author cancelled
+     */
+    async resolveSingleOptionTestIntent() {
+        if (typeof this.loadDifficultyAuthoringMeta === 'function' && !this.difficultyAuthoring?.activeMeta) {
+            try {
+                await this.loadDifficultyAuthoringMeta(this.task?.task_data);
+            } catch (_) {
+                // Non-fatal, fallback to default levels
+            }
+        }
+
+        if (!this.shouldPromptForLevel2Intent()) {
+            return true;
+        }
+
+        const confirmed = await this.confirmAction({
+            title: wt('xt.k104_prompt_title', 'Задание для ввода ответа?'),
+            message: wt(
+                'xt.k104_prompt_msg',
+                'Во всех вопросах указано по одному варианту ответа (без вариантов для выбора).\n\nПереключить задание на «Уровень 2» (ввод текстового ответа) и сохранить?'
+            ),
+            confirmText: wt('xt.k104_prompt_confirm', 'Да, сохранить как Уровень 2'),
+            cancelText: wt('xt.k104_prompt_cancel', 'Отмена, добавлю варианты'),
+            variant: 'primary'
+        });
+
+        if (confirmed) {
+            this.selectOnlyLevel2Difficulty();
+            return true;
+        }
+
+        this.showToast(
+            wt('xt.k104_prompt_hint', 'Добавьте второй вариант ответа для сохранения теста с выбором ответа'),
+            'info'
+        );
+        return false;
+    }
+
+    /**
+     * Override saveTask to intercept single-option questions with smart intent detection.
+     */
+    async saveTask() {
+        const intentOk = await this.resolveSingleOptionTestIntent();
+        if (!intentOk) {
+            return;
+        }
+        return super.saveTask();
     }
 
     /**
