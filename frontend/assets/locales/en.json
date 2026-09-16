@@ -8021,7 +8021,7 @@
       "guide_step1": "Copy the system prompt using the button below",
       "guide_step2": "Open ChatGPT, Claude or Gemini, attach your file (PDF, DOCX) or text and send the prompt",
       "guide_step3": "Copy the AI response and paste it into the field on the right",
-      "supported_models": "Supports ChatGPT (GPT-4o), Claude 3.5 Sonnet, Gemini 1.5 Pro, DeepSeek",
+      "supported_models": "Compatible with ChatGPT, Claude, Gemini, DeepSeek, and any modern AI",
       "btn_copy_prompt": "Copy lecture analysis prompt",
       "view_full_prompt": "View prompt text",
       "right_title": "2. AI Response and Lesson Map",

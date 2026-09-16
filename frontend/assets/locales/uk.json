@@ -8021,7 +8021,7 @@
       "guide_step1": "Скопіюйте системний промпт кнопкою нижче",
       "guide_step2": "Відкрийте ChatGPT, Claude або Gemini, прикріпіть файл (PDF, DOCX) або текст і надішліть промпт",
       "guide_step3": "Скопіюйте відповідь нейромережі та вставте в поле праворуч",
-      "supported_models": "Підтримуються ChatGPT (GPT-4o), Claude 3.5 Sonnet, Gemini 1.5 Pro, DeepSeek",
+      "supported_models": "Підходить для ChatGPT, Claude, Gemini, DeepSeek та будь-яких сучасних нейромереж",
       "btn_copy_prompt": "Скопіювати промпт аналізу лекції",
       "view_full_prompt": "Переглянути текст промпту",
       "right_title": "2. Відповідь ШІ та Карта уроку",
