@@ -357,6 +357,9 @@ def test_studio_html_scaffolding():
     assert 'id="type-response-input"' in content
     assert 'id="live-parse-counter"' in content
     assert 'id="btn-commit-type-tasks"' in content
+    assert 'id="btn-proceed-to-step-3"' in content
+    assert 'class="btn-proceed-step3-label"' in content
+    assert '+ Другой тип' not in content
 
     # Stage 3 Showcase & Selective Import
     assert 'id="showcase-select-all"' in content
@@ -716,6 +719,10 @@ def test_studio_localization_keys_parity():
     for d in (ru, en, uk):
         assert "md" in d and "studio_btn" in d["md"]
         assert "xt" in d and "studio_link_label" in d["xt"]
+        assert "strategies" in d["studio"]
+        assert "misconception_first" in d["studio"]["strategies"]
+        assert not d["studio"]["stage2"]["btn_add_type"].startswith("+"), "btn_add_type must not include '+' icon symbol"
+
 
 
 

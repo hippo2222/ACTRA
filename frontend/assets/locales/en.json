@@ -8046,6 +8046,7 @@
       "aria": "Stage 2: Generation by types",
       "badge_hint": "Select type for focused generation:",
       "btn_proceed_step3": "Go to showcase ({count})",
+      "btn_proceed_step3_empty": "Go to showcase",
       "prompt_title": "Generation prompt",
       "btn_copy_type_prompt": "Copy prompt for this type",
       "type_guidance_title": "Material recommendations",
@@ -8056,7 +8057,7 @@
       "committed_toast": "Accepted {count} tasks of type {label}!",
       "no_tasks_text": "No task text to save",
       "validation_error": "Task schema validation error",
-      "btn_add_type": "+ Another type",
+      "btn_add_type": "Another type",
       "add_type_title": "Add another task type",
       "focus_badge": "Focus",
       "select_direction_hint": "Select a focus area above to generate a targeted prompt.",
@@ -8111,6 +8112,18 @@
       "tasks_one": "task",
       "tasks_few": "tasks",
       "tasks_many": "tasks"
+    },
+    "strategies": {
+      "misconception_first": "Common Misconceptions",
+      "misconception_first_desc": "Pedagogical focus: identifying frequent traps, busting myths, and contrasting subtle differences",
+      "breadth_first": "Broad Coverage",
+      "breadth_first_desc": "Pedagogical focus: uniform coverage across all key concepts and lecture sections",
+      "high_risk_first": "Critical Pitfalls",
+      "high_risk_first_desc": "Pedagogical focus: high-stakes topics prone to errors in practical assessment",
+      "visual_first": "Visual Focus",
+      "visual_first_desc": "Pedagogical focus: relying on diagrams, scans, anatomical structures, and figures",
+      "structure_first": "Structure & Flow",
+      "structure_first_desc": "Pedagogical focus: assembling algorithms, process stages, hierarchies, and classifications"
     }
   },
   "open_answer_editor.case_description_label": "Case description / preamble (shared across all questions)",

@@ -253,6 +253,7 @@
                     switchStep(draft.currentStep);
                 }
 
+                updateProceedToStep3Button();
                 markSaved();
                 return true;
             }
@@ -751,6 +752,21 @@
         }
     }
 
+    function getStrategyInfo(strategy) {
+        if (!strategy) return { label: '', tooltip: '' };
+        const clean = String(strategy).toLowerCase().trim();
+        const fallbacks = {
+            misconception_first: 'Типичные заблуждения',
+            breadth_first: 'Широкий охват',
+            high_risk_first: 'Критические точки',
+            visual_first: 'Визуальный фокус',
+            structure_first: 'Структурирование',
+        };
+        const label = t(`studio.strategies.${clean}`, fallbacks[clean] || strategy);
+        const tooltip = t(`studio.strategies.${clean}_desc`, '');
+        return { label, tooltip };
+    }
+
     function renderLessonMap(analysis) {
         if (!DOM.lessonMapContainer) return;
         DOM.lessonMapContainer.classList.remove('hidden');
@@ -772,13 +788,13 @@
 
                     const typeName = rec.task_type || 'TEST';
                     const isManual = rec.manual_only || typeName === 'CLICK' || typeName === 'DRAW';
-                    const strategy = rec.coverage_strategy || '';
+                    const stratInfo = getStrategyInfo(rec.coverage_strategy);
 
                     card.innerHTML = `
                         <div class="flex items-center justify-between gap-2">
                             <span class="text-xs font-bold text-text-main">${TASK_TYPE_LABELS[typeName] || typeName}</span>
                             <div class="flex items-center gap-1">
-                                ${strategy ? `<span class="studio-unit-badge bg-surface-2 text-text-secondary border border-border-subtle">${strategy}</span>` : ''}
+                                ${stratInfo.label ? `<span class="studio-unit-badge bg-surface-2 text-text-secondary border border-border-subtle" title="${escapeHtml(stratInfo.tooltip)}">${escapeHtml(stratInfo.label)}</span>` : ''}
                                 <span class="studio-unit-badge ${isManual ? 'bg-warning-light text-warning-dark' : 'bg-primary-light text-primary'}">
                                     ${isManual ? t('studio.labels.manual_only', 'Ручное создание') : `${t('studio.labels.recommended', 'Рекомендовано')} (~${rec.count || 2})`}
                                 </span>
@@ -799,9 +815,23 @@
 
     let liveParseDebounceTimer = null;
 
+    function updateProceedToStep3Button() {
+        if (!DOM.btnProceedToStep3) return;
+        const count = (StudioState.allTasks || []).length;
+        const labelSpan = DOM.btnProceedToStep3.querySelector('.btn-proceed-step3-label') || DOM.btnProceedToStep3.querySelector('span:not(.material-symbols-outlined)');
+        if (labelSpan) {
+            if (count > 0) {
+                labelSpan.textContent = t('studio.stage2.btn_proceed_step3', 'Перейти к витрине ({count})').replace('{count}', count);
+            } else {
+                labelSpan.textContent = t('studio.stage2.btn_proceed_step3_empty', 'Перейти к витрине');
+            }
+        }
+    }
+
     function setupStage2() {
         renderStage2Tabs();
         selectGenerationType(StudioState.activeGenerationType);
+        updateProceedToStep3Button();
     }
 
     function renderStage2Tabs() {
@@ -863,15 +893,27 @@
         // Pedagogical focus from analysis
         let focusText = t('studio.stage2.select_direction_hint', 'Выберите направление сверху для формирования точечного промпта.');
         let strategyBadge = t('studio.stage2.focus_badge', 'Фокус');
+        let strategyTooltip = '';
         if (StudioState.analysisResult && Array.isArray(StudioState.analysisResult.recommendations)) {
             const rec = StudioState.analysisResult.recommendations.find((r) => r.task_type === taskType);
             if (rec) {
                 focusText = rec.generation_focus || rec.rationale || focusText;
-                strategyBadge = rec.coverage_strategy || strategyBadge;
+                if (rec.coverage_strategy) {
+                    const info = getStrategyInfo(rec.coverage_strategy);
+                    strategyBadge = info.label || strategyBadge;
+                    strategyTooltip = info.tooltip || '';
+                }
             }
         }
         if (DOM.focusUnitsDescription) DOM.focusUnitsDescription.textContent = focusText;
-        if (DOM.focusPaneCoverageBadge) DOM.focusPaneCoverageBadge.textContent = strategyBadge;
+        if (DOM.focusPaneCoverageBadge) {
+            DOM.focusPaneCoverageBadge.textContent = strategyBadge;
+            if (strategyTooltip) {
+                DOM.focusPaneCoverageBadge.setAttribute('title', strategyTooltip);
+            } else {
+                DOM.focusPaneCoverageBadge.removeAttribute('title');
+            }
+        }
 
         // Load canonical prompt for type
         await loadGenerationPromptForType(taskType);
@@ -1044,6 +1086,7 @@
             });
 
             renderStage2Tabs();
+            updateProceedToStep3Button();
             showToast(`Принято ${parsed.length} заданий типа ${TASK_TYPE_LABELS[taskType] || taskType}!`, 'success');
             markDirty();
         } catch (e) {
@@ -1154,6 +1197,7 @@
                     StudioState.allTasks = StudioState.allTasks.filter((t) => t._studio_id !== task._studio_id);
                     renderShowcase();
                     updateStickyBar();
+                    updateProceedToStep3Button();
                     showToast(t('studio.modal.history_delete', 'Удалено'), 'info');
                     markDirty();
                 });
@@ -1389,6 +1433,7 @@
         if (DOM.btnProceedToStep2) DOM.btnProceedToStep2.disabled = false;
 
         switchStep(session.tasks && session.tasks.length > 0 ? 3 : 2);
+        updateProceedToStep3Button();
         showToast('Сессия восстановлена из базы данных', 'success');
         markDirty();
     }
@@ -1499,6 +1544,7 @@
 
         updateTopicDisplay();
         updateStickyBar();
+        updateProceedToStep3Button();
 
         loadCatalog();
         loadSessionsList();
@@ -1513,6 +1559,7 @@
             }
             updateTopicDisplay();
             updateStickyBar();
+            updateProceedToStep3Button();
             if (StudioState.currentStep === 1) {
                 loadAnalysisPrompt();
                 if (StudioState.analysisResult) {
@@ -1520,6 +1567,7 @@
                 }
             } else if (StudioState.currentStep === 2) {
                 renderStage2Tabs();
+                selectGenerationType(StudioState.activeGenerationType);
                 loadGenerationPromptForType(StudioState.activeGenerationType);
             } else if (StudioState.currentStep === 3) {
                 renderShowcase();
