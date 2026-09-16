@@ -33,6 +33,8 @@
             generation: {},
         },
 
+        targetLanguage: 'auto', // 'auto' | 'ru' | 'en' | 'uk'
+
         sessionId: 'sess_' + Math.random().toString(36).substring(2, 11),
         isDirty: false,
         pendingNavUrl: null,
@@ -97,6 +99,7 @@
             stage3: document.getElementById('stage-3'),
 
             // Stage 1
+            targetLangGroup: document.getElementById('studio-target-lang-group'),
             btnCopyAnalysisPrompt: document.getElementById('btn-copy-analysis-prompt'),
             analysisPromptPreviewText: document.getElementById('analysis-prompt-preview-text'),
             analysisResponseInput: document.getElementById('analysis-response-input'),
@@ -193,6 +196,7 @@
                 analysisRawResponse: StudioState.analysisRawResponse,
                 analysisResult: StudioState.analysisResult,
                 activeGenerationType: StudioState.activeGenerationType,
+                targetLanguage: StudioState.targetLanguage,
                 typeDrafts: StudioState.typeDrafts,
                 allTasks: StudioState.allTasks,
                 savedAt: new Date().toISOString(),
@@ -211,13 +215,16 @@
             const draft = JSON.parse(raw);
             if (!draft || typeof draft !== 'object') return false;
 
-            if (draft.materialText || (draft.allTasks && draft.allTasks.length > 0)) {
+            if (draft.materialText || (draft.allTasks && draft.allTasks.length > 0) || draft.targetLanguage) {
                 StudioState.sessionId = draft.sessionId || StudioState.sessionId;
                 StudioState.materialText = draft.materialText || '';
                 StudioState.fileInfo = draft.fileInfo || null;
                 StudioState.analysisRawResponse = draft.analysisRawResponse || '';
                 StudioState.analysisResult = draft.analysisResult || null;
                 StudioState.activeGenerationType = draft.activeGenerationType || 'TEST';
+                if (draft.targetLanguage) {
+                    setTargetLanguage(draft.targetLanguage);
+                }
                 StudioState.typeDrafts = draft.typeDrafts || {};
                 StudioState.allTasks = draft.allTasks || [];
 
@@ -498,6 +505,16 @@
     // ---------------------------------------------------------------------------
 
     function initStage1() {
+        // Target Language Selector
+        if (DOM.targetLangGroup) {
+            DOM.targetLangGroup.querySelectorAll('.studio-lang-btn').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    const lang = btn.getAttribute('data-lang') || 'auto';
+                    setTargetLanguage(lang);
+                });
+            });
+        }
+
         // Copy Analysis Prompt
         if (DOM.btnCopyAnalysisPrompt) {
             DOM.btnCopyAnalysisPrompt.addEventListener('click', copyAnalysisPrompt);
@@ -526,19 +543,43 @@
         loadAnalysisPrompt();
     }
 
+    function setTargetLanguage(lang) {
+        if (!['auto', 'ru', 'en', 'uk'].includes(lang)) lang = 'auto';
+        StudioState.targetLanguage = lang;
+
+        if (DOM.targetLangGroup) {
+            DOM.targetLangGroup.querySelectorAll('.studio-lang-btn').forEach((btn) => {
+                const btnLang = btn.getAttribute('data-lang');
+                if (btnLang === lang) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        }
+
+        loadAnalysisPrompt();
+        if (StudioState.currentStep === 2 && StudioState.activeGenerationType) {
+            loadGenerationPromptForType(StudioState.activeGenerationType);
+        }
+        markDirty();
+    }
+
     async function loadAnalysisPrompt() {
         const currentLang = (typeof window !== 'undefined' && window.i18n && typeof window.i18n.getLang === 'function') ? window.i18n.getLang() : 'ru';
-        if (StudioState.cachedPrompts.analysis && StudioState.cachedPrompts.analysisLang === currentLang) {
+        const targetLang = StudioState.targetLanguage || 'auto';
+        const cacheKey = `${currentLang}_${targetLang}`;
+        if (StudioState.cachedPrompts.analysis && StudioState.cachedPrompts.analysisCacheKey === cacheKey) {
             updateAnalysisPromptPreview(StudioState.cachedPrompts.analysis);
             return;
         }
 
         try {
-            const res = await fetch(`/api/editor/studio/prompts?type=analysis&lang=${encodeURIComponent(currentLang)}`);
+            const res = await fetch(`/api/editor/studio/prompts?type=analysis&prompt_lang=${encodeURIComponent(currentLang)}&target_lang=${encodeURIComponent(targetLang)}`);
             if (res.ok) {
                 const data = await res.json();
                 StudioState.cachedPrompts.analysis = data.prompt || '';
-                StudioState.cachedPrompts.analysisLang = currentLang;
+                StudioState.cachedPrompts.analysisCacheKey = cacheKey;
                 updateAnalysisPromptPreview(data.prompt || '');
             }
         } catch (e) {
@@ -555,7 +596,9 @@
     async function copyAnalysisPrompt() {
         try {
             const currentLang = (typeof window !== 'undefined' && window.i18n && typeof window.i18n.getLang === 'function') ? window.i18n.getLang() : 'ru';
-            if (!StudioState.cachedPrompts.analysis || StudioState.cachedPrompts.analysisLang !== currentLang) {
+            const targetLang = StudioState.targetLanguage || 'auto';
+            const cacheKey = `${currentLang}_${targetLang}`;
+            if (!StudioState.cachedPrompts.analysis || StudioState.cachedPrompts.analysisCacheKey !== cacheKey) {
                 await loadAnalysisPrompt();
             }
 
@@ -745,14 +788,15 @@
 
     async function loadGenerationPromptForType(taskType) {
         const currentLang = (typeof window !== 'undefined' && window.i18n && typeof window.i18n.getLang === 'function') ? window.i18n.getLang() : 'ru';
-        const cacheKey = `${taskType}_${currentLang}`;
+        const targetLang = StudioState.targetLanguage || 'auto';
+        const cacheKey = `${taskType}_${currentLang}_${targetLang}`;
         if (StudioState.cachedPrompts.generation[cacheKey]) {
             updatePromptPreview(StudioState.cachedPrompts.generation[cacheKey]);
             return;
         }
 
         try {
-            const res = await fetch(`/api/editor/studio/prompts?type=generation&task_type=${taskType}&lang=${encodeURIComponent(currentLang)}`);
+            const res = await fetch(`/api/editor/studio/prompts?type=generation&task_type=${taskType}&prompt_lang=${encodeURIComponent(currentLang)}&target_lang=${encodeURIComponent(targetLang)}`);
             if (res.ok) {
                 const data = await res.json();
                 StudioState.cachedPrompts.generation[cacheKey] = data.prompt || '';
@@ -774,8 +818,13 @@
         if (DOM.btnCopyTypePrompt) {
             DOM.btnCopyTypePrompt.addEventListener('click', async () => {
                 const currentLang = (typeof window !== 'undefined' && window.i18n && typeof window.i18n.getLang === 'function') ? window.i18n.getLang() : 'ru';
-                const cacheKey = `${StudioState.activeGenerationType}_${currentLang}`;
-                const prompt = StudioState.cachedPrompts.generation[cacheKey] || StudioState.cachedPrompts.generation[StudioState.activeGenerationType] || '';
+                const targetLang = StudioState.targetLanguage || 'auto';
+                const cacheKey = `${StudioState.activeGenerationType}_${currentLang}_${targetLang}`;
+                let prompt = StudioState.cachedPrompts.generation[cacheKey] || '';
+                if (!prompt) {
+                    await loadGenerationPromptForType(StudioState.activeGenerationType);
+                    prompt = StudioState.cachedPrompts.generation[cacheKey] || '';
+                }
                 if (!prompt) {
                     showToast(t('studio.stage1.parsing_error', 'Промпт не загружен'), 'error');
                     return;

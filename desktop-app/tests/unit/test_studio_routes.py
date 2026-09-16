@@ -106,29 +106,71 @@ def test_get_prompts_requires_auth(client, monkeypatch):
 
 def test_get_prompts_analysis(client, monkeypatch):
     monkeypatch.setattr(_context, "get_current_user_id", lambda: "teacher_1")
-    resp = client.get("/api/editor/studio/prompts?type=analysis&lang=ru")
-    assert resp.status_code == 200
-    data = resp.get_json()
-    assert data["ok"] is True
-    assert data["prompt_type"] == "analysis"
-    assert "<human_summary>" in data["prompt"]
-    assert "<analysis_json>" in data["prompt"]
-    # Verify corrected CLICK_WORDS description
-    assert "CLICK_WORDS — синтез текста с намеренными фактическими ошибками" in data["prompt"]
+
+    # 1. Russian Analysis Prompt with auto target
+    resp_ru = client.get("/api/editor/studio/prompts?type=analysis&prompt_lang=ru&target_lang=auto")
+    assert resp_ru.status_code == 200
+    data_ru = resp_ru.get_json()
+    assert data_ru["ok"] is True
+    assert data_ru["prompt_type"] == "analysis"
+    assert "<human_summary>" in data_ru["prompt"]
+    assert "<analysis_json>" in data_ru["prompt"]
+    assert "CLICK_WORDS — синтез текста с намеренными фактическими ошибками" in data_ru["prompt"]
+    assert "<target_language>auto</target_language>" in data_ru["prompt"]
+    assert "ПРАВИЛО ЯЗЫКА ГЕНЕРАЦИИ" in data_ru["prompt"]
+
+    # 2. English Analysis Prompt with target en
+    resp_en = client.get("/api/editor/studio/prompts?type=analysis&prompt_lang=en&target_lang=en")
+    assert resp_en.status_code == 200
+    data_en = resp_en.get_json()
+    assert data_en["ok"] is True
+    assert "You are a senior curriculum designer" in data_en["prompt"]
+    assert "CLICK_WORDS — synthesizing a text with deliberate factual errors" in data_en["prompt"]
+    assert "<target_language>en</target_language>" in data_en["prompt"]
+    assert "TARGET LANGUAGE RULE" in data_en["prompt"]
+
+    # 3. Ukrainian Analysis Prompt with target uk
+    resp_uk = client.get("/api/editor/studio/prompts?type=analysis&prompt_lang=uk&target_lang=uk")
+    assert resp_uk.status_code == 200
+    data_uk = resp_uk.get_json()
+    assert data_uk["ok"] is True
+    assert "Ти — старший методист та експерт із педагогічного дизайну" in data_uk["prompt"]
+    assert "CLICK_WORDS — синтез тексту з навмисними фактичними помилками" in data_uk["prompt"]
+    assert "<target_language>uk</target_language>" in data_uk["prompt"]
+    assert "ПРАВИЛО МОВИ ГЕНЕРАЦІЇ" in data_uk["prompt"]
+
     # Verify schema v2 / capability matrix is excluded
-    assert "<capability_matrix_v1>" not in data["prompt"]
-    assert "<analysis_v2_routes_mode>" not in data["prompt"]
+    assert "<capability_matrix_v1>" not in data_ru["prompt"]
+    assert "<analysis_v2_routes_mode>" not in data_ru["prompt"]
 
 
 def test_get_prompts_generation_specific_type(client, monkeypatch):
     monkeypatch.setattr(_context, "get_current_user_id", lambda: "teacher_1")
     for task_type in ["TEST", "OPEN_ANSWER", "SEQUENCE", "CLICK_TEXT", "CLICK_WORDS"]:
-        resp = client.get(f"/api/editor/studio/prompts?type=generation&task_type={task_type}")
-        assert resp.status_code == 200
-        data = resp.get_json()
-        assert data["ok"] is True
-        assert data["task_type"] == task_type
-        assert f"@{task_type}" in data["prompt"]
+        # RU
+        resp_ru = client.get(f"/api/editor/studio/prompts?type=generation&task_type={task_type}&prompt_lang=ru")
+        assert resp_ru.status_code == 200
+        data_ru = resp_ru.get_json()
+        assert data_ru["ok"] is True
+        assert data_ru["task_type"] == task_type
+        assert f"@{task_type}" in data_ru["prompt"]
+        assert "Ты — генератор заданий" in data_ru["prompt"]
+
+        # EN
+        resp_en = client.get(f"/api/editor/studio/prompts?type=generation&task_type={task_type}&prompt_lang=en&target_lang=en")
+        assert resp_en.status_code == 200
+        data_en = resp_en.get_json()
+        assert f"@{task_type}" in data_en["prompt"]
+        assert "You are a task generator" in data_en["prompt"]
+        assert "<target_language>en</target_language>" in data_en["prompt"]
+
+        # UK
+        resp_uk = client.get(f"/api/editor/studio/prompts?type=generation&task_type={task_type}&prompt_lang=uk&target_lang=uk")
+        assert resp_uk.status_code == 200
+        data_uk = resp_uk.get_json()
+        assert f"@{task_type}" in data_uk["prompt"]
+        assert "Ти — генератор завдань" in data_uk["prompt"]
+        assert "<target_language>uk</target_language>" in data_uk["prompt"]
 
     # Unknown type
     resp = client.get("/api/editor/studio/prompts?type=generation&task_type=UNKNOWN_TYPE")
@@ -230,6 +272,7 @@ def test_studio_html_scaffolding():
     assert 'id="stage-3"' in content
 
     # Stage 1 elements
+    assert 'id="studio-target-lang-group"' in content
     assert 'id="btn-copy-analysis-prompt"' in content
     assert 'id="analysis-prompt-preview-text"' in content
     assert 'id="analysis-response-input"' in content
@@ -274,6 +317,10 @@ def test_studio_css_design_system():
     assert '.studio-split-panes' in content
     assert '.stage-2-container' in content
 
+    # Segmented Language Selector
+    assert '.studio-lang-segmented' in content
+    assert '.studio-lang-btn' in content
+
     # Utility hidden rules
     assert '.studio-file-chip.hidden' in content
     assert 'display: none !important;' in content
@@ -304,7 +351,9 @@ def test_studio_js_controller():
     assert 'switchStep' in content
     assert 'selectedTopicId' in content
 
-    # PromptEngine
+    # PromptEngine & Multi-language Support
+    assert 'targetLanguage' in content
+    assert 'setTargetLanguage' in content
     assert 'copyAnalysisPrompt' in content
     assert 'selectGenerationType' in content
     assert '/api/editor/studio/prompts' in content

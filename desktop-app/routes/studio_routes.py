@@ -130,20 +130,23 @@ def studio_get_prompts() -> Any:
 
     prompt_type = str(request.args.get("type", "analysis") or "analysis").strip().lower()
     task_type = str(request.args.get("task_type", "") or "").strip().upper()
-    lang = str(request.args.get("lang", "ru") or "ru").strip().lower()
+    prompt_lang = str(request.args.get("prompt_lang") or request.args.get("lang") or "ru").strip().lower()
+    target_lang = str(request.args.get("target_lang") or request.args.get("target_language") or "auto").strip().lower()
 
     if prompt_type == "analysis":
-        prompt_text = build_studio_analysis_prompt(target_language=lang)
+        prompt_text = build_studio_analysis_prompt(target_language=target_lang, prompt_language=prompt_lang)
         return jsonify({
             "ok": True,
             "prompt_type": "analysis",
             "prompt": prompt_text,
-            "language": lang,
+            "prompt_language": prompt_lang,
+            "target_language": target_lang,
+            "language": prompt_lang,
         })
 
     if prompt_type == "generation":
         if task_type:
-            prompt_text = get_studio_generation_prompt(task_type)
+            prompt_text = get_studio_generation_prompt(task_type, target_language=target_lang, prompt_language=prompt_lang)
             if not prompt_text:
                 return jsonify({
                     "ok": False,
@@ -155,22 +158,29 @@ def studio_get_prompts() -> Any:
                 "prompt_type": "generation",
                 "task_type": task_type,
                 "prompt": prompt_text,
-                "language": lang,
+                "prompt_language": prompt_lang,
+                "target_language": target_lang,
+                "language": prompt_lang,
             })
+        all_prompts = get_all_studio_prompts(target_language=target_lang, prompt_language=prompt_lang)
         return jsonify({
             "ok": True,
             "prompt_type": "generation",
-            "prompts": dict(_GENERATION_PROMPTS),
+            "prompts": all_prompts.get("generation", {}),
             "supported_types": list(_GENERATION_PROMPTS.keys()),
-            "language": lang,
+            "prompt_language": prompt_lang,
+            "target_language": target_lang,
+            "language": prompt_lang,
         })
 
     if prompt_type == "all":
-        all_prompts = get_all_studio_prompts(target_language=lang)
+        all_prompts = get_all_studio_prompts(target_language=target_lang, prompt_language=prompt_lang)
         return jsonify({
             "ok": True,
             "prompt_type": "all",
-            "language": lang,
+            "prompt_language": prompt_lang,
+            "target_language": target_lang,
+            "language": prompt_lang,
             **all_prompts,
         })
 

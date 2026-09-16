@@ -108,6 +108,20 @@
                     </div>
 
                     <div class="studio-card__body">
+                        <!-- Target Language Selector -->
+                        <div class="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-surface-1 border border-border-subtle">
+                            <div class="flex items-center gap-1.5 text-xs text-text-secondary">
+                                <span class="material-symbols-outlined text-[18px] text-text-muted">translate</span>
+                                <span class="font-semibold" data-i18n="studio.stage1.lang_selector_label">Язык заданий:</span>
+                            </div>
+                            <div class="studio-lang-segmented" role="radiogroup" aria-label="Язык заданий" id="studio-target-lang-group">
+                                <button type="button" class="studio-lang-btn active" data-lang="auto" title="Язык как в материале" data-i18n-title="studio.stage1.lang_auto_tooltip" data-i18n="studio.stage1.lang_auto">Авто</button>
+                                <button type="button" class="studio-lang-btn" data-lang="ru">RU</button>
+                                <button type="button" class="studio-lang-btn" data-lang="en">EN</button>
+                                <button type="button" class="studio-lang-btn" data-lang="uk">UK</button>
+                            </div>
+                        </div>
+
                         <!-- Step-by-Step Workflow Guide -->
                         <div class="p-3.5 rounded-xl bg-surface-1 border border-border-subtle flex flex-col gap-3">
                             <p class="text-[11px] font-bold uppercase tracking-wider text-text-secondary" data-i18n="studio.stage1.guide_title">

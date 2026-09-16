@@ -3425,26 +3425,30 @@ class AIGenerationService:
         return len(self._providers) > 0
 
 
-def build_studio_analysis_prompt(target_language: str = "ru") -> str:
-    """Build canonical material analysis prompt for external AI (without internal pipeline v2 addenda)."""
-    lang = str(target_language or "ru").strip().lower()
-    return (
-        STRUCTURED_ANALYSIS_PROMPT
-        + ANALYSIS_PROMPT_ADDENDUM
-        + f"\n\n<target_language>{lang}</target_language>"
-    )
+def build_studio_analysis_prompt(
+    target_language: str = "auto",
+    prompt_language: str = "ru",
+) -> str:
+    """Build canonical material analysis prompt for external AI."""
+    from services.ai_studio_prompts import build_studio_analysis_prompt as _build
+    return _build(target_language=target_language, prompt_language=prompt_language)
 
 
-def get_studio_generation_prompt(task_type: str) -> Optional[str]:
+def get_studio_generation_prompt(
+    task_type: str,
+    target_language: str = "auto",
+    prompt_language: str = "ru",
+) -> Optional[str]:
     """Return prompt template for specific task type (TEST, OPEN_ANSWER, SEQUENCE, CLICK_TEXT, CLICK_WORDS)."""
-    clean_type = str(task_type or "").strip().upper()
-    return _GENERATION_PROMPTS.get(clean_type)
+    from services.ai_studio_prompts import get_studio_generation_prompt as _get
+    return _get(task_type=task_type, target_language=target_language, prompt_language=prompt_language)
 
 
-def get_all_studio_prompts(target_language: str = "ru") -> Dict[str, Any]:
+def get_all_studio_prompts(
+    target_language: str = "auto",
+    prompt_language: str = "ru",
+) -> Dict[str, Any]:
     """Return dictionary of canonical studio prompts for all supported types."""
-    return {
-        "analysis": build_studio_analysis_prompt(target_language),
-        "generation": dict(_GENERATION_PROMPTS),
-    }
+    from services.ai_studio_prompts import get_all_studio_prompts as _get_all
+    return _get_all(target_language=target_language, prompt_language=prompt_language)
 
