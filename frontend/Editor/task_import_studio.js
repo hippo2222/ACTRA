@@ -97,15 +97,8 @@
             stage3: document.getElementById('stage-3'),
 
             // Stage 1
-            materialDropzone: document.getElementById('material-dropzone'),
-            fileInput: document.getElementById('file-input'),
-            fileLoadedChip: document.getElementById('file-loaded-chip'),
-            fileLoadedName: document.getElementById('file-loaded-name'),
-            fileLoadedMeta: document.getElementById('file-loaded-meta'),
-            btnRemoveFile: document.getElementById('btn-remove-file'),
-            materialTextInput: document.getElementById('material-text-input'),
-            materialWordCount: document.getElementById('material-word-count'),
             btnCopyAnalysisPrompt: document.getElementById('btn-copy-analysis-prompt'),
+            analysisPromptPreviewText: document.getElementById('analysis-prompt-preview-text'),
             analysisResponseInput: document.getElementById('analysis-response-input'),
             btnParseAnalysis: document.getElementById('btn-parse-analysis'),
             lessonMapContainer: document.getElementById('lesson-map-container'),
@@ -236,22 +229,7 @@
                 }
 
                 // Hydrate UI inputs
-                if (DOM.materialTextInput) DOM.materialTextInput.value = StudioState.materialText;
                 if (DOM.analysisResponseInput) DOM.analysisResponseInput.value = StudioState.analysisRawResponse;
-                updateWordCount();
-
-                if (StudioState.fileInfo && StudioState.fileInfo.original_name && DOM.fileLoadedChip) {
-                    renderFileChip(StudioState.fileInfo);
-                } else if (DOM.fileLoadedChip) {
-                    DOM.fileLoadedChip.classList.add('hidden');
-                    DOM.fileLoadedChip.setAttribute('hidden', '');
-                    DOM.fileLoadedChip.style.display = 'none';
-                    if (DOM.materialDropzone) {
-                        DOM.materialDropzone.classList.remove('hidden');
-                        DOM.materialDropzone.removeAttribute('hidden');
-                        DOM.materialDropzone.style.display = '';
-                    }
-                }
 
                 if (StudioState.analysisResult) {
                     renderLessonMap(StudioState.analysisResult);
@@ -520,75 +498,6 @@
     // ---------------------------------------------------------------------------
 
     function initStage1() {
-        // Drag & Drop
-        if (DOM.materialDropzone) {
-            DOM.materialDropzone.addEventListener('click', () => {
-                if (DOM.fileInput) DOM.fileInput.click();
-            });
-
-            DOM.materialDropzone.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                DOM.materialDropzone.setAttribute('data-dragover', 'true');
-            });
-
-            DOM.materialDropzone.addEventListener('dragleave', () => {
-                DOM.materialDropzone.removeAttribute('data-dragover');
-            });
-
-            DOM.materialDropzone.addEventListener('drop', (e) => {
-                e.preventDefault();
-                DOM.materialDropzone.removeAttribute('data-dragover');
-                if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                    uploadDocumentFile(e.dataTransfer.files[0]);
-                }
-            });
-        }
-
-        if (DOM.fileInput) {
-            DOM.fileInput.addEventListener('change', (e) => {
-                if (e.target.files && e.target.files[0]) {
-                    uploadDocumentFile(e.target.files[0]);
-                }
-            });
-        }
-
-        if (DOM.btnRemoveFile) {
-            DOM.btnRemoveFile.addEventListener('click', (e) => {
-                if (e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                }
-                StudioState.fileInfo = null;
-                StudioState.materialText = '';
-                if (DOM.materialTextInput) DOM.materialTextInput.value = '';
-                if (DOM.fileLoadedChip) {
-                    DOM.fileLoadedChip.classList.add('hidden');
-                    DOM.fileLoadedChip.setAttribute('hidden', '');
-                    DOM.fileLoadedChip.style.display = 'none';
-                    if (DOM.fileLoadedName) DOM.fileLoadedName.textContent = '';
-                    if (DOM.fileLoadedMeta) DOM.fileLoadedMeta.textContent = '';
-                }
-                if (DOM.materialDropzone) {
-                    DOM.materialDropzone.classList.remove('hidden');
-                    DOM.materialDropzone.removeAttribute('hidden');
-                    DOM.materialDropzone.style.display = '';
-                }
-                if (DOM.fileInput) DOM.fileInput.value = '';
-                updateWordCount();
-                showToast(t('studio.stage1.file_removed', 'Файл удалён'), 'info');
-                markDirty();
-            });
-        }
-
-        // Text input changes
-        if (DOM.materialTextInput) {
-            DOM.materialTextInput.addEventListener('input', () => {
-                StudioState.materialText = DOM.materialTextInput.value;
-                updateWordCount();
-                markDirty();
-            });
-        }
-
         // Copy Analysis Prompt
         if (DOM.btnCopyAnalysisPrompt) {
             DOM.btnCopyAnalysisPrompt.addEventListener('click', copyAnalysisPrompt);
@@ -612,80 +521,42 @@
                 switchStep(2);
             });
         }
+
+        // Preload analysis prompt preview
+        loadAnalysisPrompt();
     }
 
-    async function uploadDocumentFile(file) {
-        const formData = new FormData();
-        formData.append('file', file);
-
-        showToast('Извлечение текста из документа...', 'info');
+    async function loadAnalysisPrompt() {
+        const currentLang = (typeof window !== 'undefined' && window.i18n && typeof window.i18n.getLang === 'function') ? window.i18n.getLang() : 'ru';
+        if (StudioState.cachedPrompts.analysis && StudioState.cachedPrompts.analysisLang === currentLang) {
+            updateAnalysisPromptPreview(StudioState.cachedPrompts.analysis);
+            return;
+        }
 
         try {
-            const res = await fetch('/api/editor/studio/upload-document', {
-                method: 'POST',
-                body: formData,
-            });
-
-            const data = await res.json();
-            if (!res.ok || !data.ok) {
-                showToast(data.message || 'Ошибка обработки файла', 'error');
-                return;
+            const res = await fetch(`/api/editor/studio/prompts?type=analysis&lang=${encodeURIComponent(currentLang)}`);
+            if (res.ok) {
+                const data = await res.json();
+                StudioState.cachedPrompts.analysis = data.prompt || '';
+                StudioState.cachedPrompts.analysisLang = currentLang;
+                updateAnalysisPromptPreview(data.prompt || '');
             }
-
-            StudioState.materialText = data.extracted_text || '';
-            StudioState.fileInfo = data.file_info || null;
-
-            if (DOM.materialTextInput) {
-                DOM.materialTextInput.value = StudioState.materialText;
-            }
-            updateWordCount();
-            renderFileChip(data.file_info);
-
-            showToast(`Успешно извлечено ${data.word_count} слов`, 'success');
-            markDirty();
         } catch (e) {
-            console.error('[Studio] Upload document error:', e);
-            showToast('Не удалось загрузить документ', 'error');
+            console.warn('[Studio] Failed to load analysis prompt:', e);
         }
     }
 
-    function renderFileChip(info) {
-        if (!info || !DOM.fileLoadedChip) return;
-        if (DOM.fileLoadedName) DOM.fileLoadedName.textContent = info.original_name || 'document';
-        if (DOM.fileLoadedMeta) {
-            const sizeMb = info.size_mb !== undefined ? info.size_mb : (info.file_size ? (info.file_size / (1024 * 1024)).toFixed(1) : '0');
-            const words = info.word_count || 0;
-            const wordsLabel = t('studio.stage1.words', 'слов');
-            const fmt = info.format ? `(${info.format})` : '';
-            DOM.fileLoadedMeta.textContent = `${sizeMb} МБ · ${words} ${wordsLabel} ${fmt}`.trim();
+    function updateAnalysisPromptPreview(promptText) {
+        if (DOM.analysisPromptPreviewText) {
+            DOM.analysisPromptPreviewText.textContent = promptText || t('editor_base.lbl_loading', 'Загрузка промпта...');
         }
-        DOM.fileLoadedChip.classList.remove('hidden');
-        DOM.fileLoadedChip.removeAttribute('hidden');
-        DOM.fileLoadedChip.style.display = 'flex';
-        if (DOM.materialDropzone) {
-            DOM.materialDropzone.classList.add('hidden');
-            DOM.materialDropzone.setAttribute('hidden', '');
-            DOM.materialDropzone.style.display = 'none';
-        }
-    }
-
-    function updateWordCount() {
-        if (!DOM.materialWordCount) return;
-        const text = (StudioState.materialText || '').trim();
-        const words = text ? text.split(/\s+/).length : 0;
-        DOM.materialWordCount.textContent = `${words} слов`;
     }
 
     async function copyAnalysisPrompt() {
         try {
             const currentLang = (typeof window !== 'undefined' && window.i18n && typeof window.i18n.getLang === 'function') ? window.i18n.getLang() : 'ru';
             if (!StudioState.cachedPrompts.analysis || StudioState.cachedPrompts.analysisLang !== currentLang) {
-                const res = await fetch(`/api/editor/studio/prompts?type=analysis&lang=${encodeURIComponent(currentLang)}`);
-                if (res.ok) {
-                    const data = await res.json();
-                    StudioState.cachedPrompts.analysis = data.prompt || '';
-                    StudioState.cachedPrompts.analysisLang = currentLang;
-                }
+                await loadAnalysisPrompt();
             }
 
             const promptText = StudioState.cachedPrompts.analysis || '';
@@ -1464,8 +1335,11 @@
             }
             updateTopicDisplay();
             updateStickyBar();
-            if (StudioState.currentStep === 1 && StudioState.analysisResult) {
-                renderLessonMap(StudioState.analysisResult);
+            if (StudioState.currentStep === 1) {
+                loadAnalysisPrompt();
+                if (StudioState.analysisResult) {
+                    renderLessonMap(StudioState.analysisResult);
+                }
             } else if (StudioState.currentStep === 2) {
                 renderStage2Tabs();
                 loadGenerationPromptForType(StudioState.activeGenerationType);

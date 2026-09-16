@@ -230,9 +230,8 @@ def test_studio_html_scaffolding():
     assert 'id="stage-3"' in content
 
     # Stage 1 elements
-    assert 'id="material-dropzone"' in content
-    assert 'id="material-text-input"' in content
     assert 'id="btn-copy-analysis-prompt"' in content
+    assert 'id="analysis-prompt-preview-text"' in content
     assert 'id="analysis-response-input"' in content
     assert 'id="btn-parse-analysis"' in content
     assert 'id="lesson-map-container"' in content
@@ -311,7 +310,7 @@ def test_studio_js_controller():
     assert '/api/editor/studio/prompts' in content
 
     # ParserEngine
-    assert 'uploadDocumentFile' in content
+    assert 'loadAnalysisPrompt' in content
     assert 'parseAnalysisResponse' in content
     assert 'runClientRegexCounter' in content
     assert 'commitTypeTasks' in content
@@ -579,7 +578,7 @@ def test_studio_localization_keys_parity():
     en_keys = get_nested_keys(en["studio"])
     uk_keys = get_nested_keys(uk["studio"])
 
-    assert len(ru_keys) >= 110
+    assert len(ru_keys) >= 100
     assert ru_keys == en_keys, f"Diff RU vs EN: {ru_keys ^ en_keys}"
     assert ru_keys == uk_keys, f"Diff RU vs UK: {ru_keys ^ uk_keys}"
 
