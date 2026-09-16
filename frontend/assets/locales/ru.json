@@ -8172,5 +8172,8 @@
   "openanswerui.answer_for_question": "Ответ на вопрос",
   "openanswerui.finish_and_check_btn": "Завершить и проверить",
   "openanswerui.step_retry_needed": "Требуется исправление",
-  "openanswerui.your_answer": "Ваш ответ:"
+  "openanswerui.your_answer": "Ваш ответ:",
+  "openanswerui.show_info_btn": "Дополнительная информация",
+  "openanswerui.hide_info_btn": "Скрыть дополнительную информацию",
+  "openanswerui.info_title": "Справочные данные / примечание"
 }

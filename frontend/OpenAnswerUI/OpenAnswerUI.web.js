@@ -798,6 +798,13 @@
           color: var(--color-text-secondary);
           border: 1px solid var(--color-border-subtle);
         }
+        .oa-info-toggle-btn {
+          user-select: none;
+          cursor: pointer;
+        }
+        .oa-info-content {
+          border-left: 3px solid var(--color-primary);
+        }
       `;
       document.head.appendChild(style);
     }
@@ -864,6 +871,63 @@
       return wrapper;
     }
 
+    function _createAdditionalInfoWidget(infoText) {
+      if (!infoText || !String(infoText).trim()) return null;
+
+      const wrap = _createEl("div", "oa-info-wrap mt-2 mb-1", "");
+      const toggleBtn = _createEl(
+        "button",
+        "oa-info-toggle-btn inline-flex items-center gap-1.5 rounded-lg border border-border-subtle bg-surface-1 px-2.5 py-1 text-xs font-medium text-text-secondary shadow-sm transition-all hover:bg-bg-hover hover:text-text-main focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+        ""
+      );
+      toggleBtn.type = "button";
+      toggleBtn.setAttribute("aria-expanded", "false");
+
+      const icon = _createEl("span", "material-symbols-outlined text-[16px] text-primary", "info");
+      const btnLabel = _createEl("span", "", wt("openanswerui.show_info_btn", "Дополнительная информация"));
+      const chevron = _createEl("span", "material-symbols-outlined text-[15px] transition-transform duration-200", "expand_more");
+
+      toggleBtn.appendChild(icon);
+      toggleBtn.appendChild(btnLabel);
+      toggleBtn.appendChild(chevron);
+
+      const contentBox = _createEl(
+        "div",
+        "oa-info-content hidden mt-2 rounded-xl border border-border-subtle bg-surface-1 p-3 text-xs leading-relaxed text-text-main shadow-sm oa-card-entry",
+        ""
+      );
+      const headerRow = _createEl("div", "flex items-center gap-1.5 font-semibold text-text-secondary mb-1", "");
+      const titleIcon = _createEl("span", "material-symbols-outlined text-[16px] text-primary", "info");
+      const titleText = _createEl("span", "", wt("openanswerui.info_title", "Справочные данные / примечание"));
+      headerRow.appendChild(titleIcon);
+      headerRow.appendChild(titleText);
+
+      const bodyText = _createEl("div", "text-text-main/90 whitespace-pre-line", String(infoText).trim());
+      contentBox.appendChild(headerRow);
+      contentBox.appendChild(bodyText);
+
+      toggleBtn.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        const isHidden = contentBox.classList.contains("hidden");
+        if (isHidden) {
+          contentBox.classList.remove("hidden");
+          toggleBtn.setAttribute("aria-expanded", "true");
+          btnLabel.textContent = wt("openanswerui.hide_info_btn", "Скрыть дополнительную информацию");
+          chevron.style.transform = "rotate(180deg)";
+        } else {
+          contentBox.classList.add("hidden");
+          toggleBtn.setAttribute("aria-expanded", "false");
+          btnLabel.textContent = wt("openanswerui.show_info_btn", "Дополнительная информация");
+          chevron.style.transform = "rotate(0deg)";
+        }
+      });
+
+      wrap.appendChild(toggleBtn);
+      wrap.appendChild(contentBox);
+      return wrap;
+    }
+
     // =========================================================================
     // LEGACY / SINGLE QUESTION BRANCH
     // =========================================================================
@@ -912,6 +976,12 @@
 
       if (imgUrl) {
         card.appendChild(createThumbnailPreview(imgUrl, question || title || "Task image"));
+      }
+
+      const singleInfoText = content.hint || td.hint || (rawQuestions.length === 1 && rawQuestions[0].hint) || "";
+      const infoWidget = _createAdditionalInfoWidget(singleInfoText);
+      if (infoWidget) {
+        card.appendChild(infoWidget);
       }
 
       const textarea = document.createElement("textarea");
@@ -1155,6 +1225,11 @@
           activeCard.appendChild(createThumbnailPreview(qImgUrl, currentQ.question));
         }
 
+        const qInfoWidget = _createAdditionalInfoWidget(currentQ.hint);
+        if (qInfoWidget) {
+          activeCard.appendChild(qInfoWidget);
+        }
+
         // Active textarea
         const currentQid = String(currentQ.id);
         const textarea = document.createElement("textarea");
@@ -1317,6 +1392,11 @@
         const qImgUrl = _resolveImageUrl(q.image_url || q.image_path);
         if (qImgUrl) {
           card.appendChild(createThumbnailPreview(qImgUrl, q.question));
+        }
+
+        const qInfoWidget = _createAdditionalInfoWidget(q.hint);
+        if (qInfoWidget) {
+          card.appendChild(qInfoWidget);
         }
 
         // Textarea

@@ -50,6 +50,7 @@ class OpenAnswerParser(TaskImportParser):
             # Текст вопроса
             = Эталонный ответ (опционально)
             * ключевое_слово (опционально, можно несколько)
+            ~ Дополнительная информация / примечание к вопросу (опционально)
         
         Мульти-вопросный формат:
             @case_text: Описание случая
@@ -57,9 +58,11 @@ class OpenAnswerParser(TaskImportParser):
             ? Вопрос 1 [levels: 1, 2, 3]
             = Эталон 1
             * ключ1
+            ~ Дополнительная информация к вопросу 1 (опционально)
             ? Вопрос 2 [levels: 2, 3]
             = Эталон 2
             * ключ2
+            ~ Дополнительная информация к вопросу 2 (опционально)
 
         Args:
             content: Содержимое блока задания
@@ -126,6 +129,7 @@ class OpenAnswerParser(TaskImportParser):
                         'id': f"q_{len(questions) + 1}",
                         'question': self.sanitize_text(q_text),
                         'reference_answer': '',
+                        'hint': '',
                         'keywords': [],
                         'levels': levels,
                     }
@@ -138,6 +142,10 @@ class OpenAnswerParser(TaskImportParser):
                         kw = self.sanitize_text(line_stripped[1:].strip())
                         if kw:
                             current_q['keywords'].append(kw)
+                    elif line_stripped.startswith('~'):
+                        hint_val = self.sanitize_text(line_stripped[1:].strip())
+                        if hint_val:
+                            current_q['hint'] = hint_val
 
             if current_q:
                 questions.append(current_q)
@@ -148,6 +156,7 @@ class OpenAnswerParser(TaskImportParser):
 
             first_q = questions[0]
             prompt = header_prompt or first_q['question']
+            first_hint = first_q.get('hint', '')
             data = {
                 'case_text': self.sanitize_text(case_text) if case_text else '',
                 'display_mode': display_mode,
@@ -156,6 +165,8 @@ class OpenAnswerParser(TaskImportParser):
                 'reference_answer': first_q['reference_answer'],
                 'keywords': list(first_q['keywords']),
             }
+            if first_hint:
+                data['hint'] = first_hint
             if metadata:
                 data['metadata'] = metadata
 
@@ -169,6 +180,7 @@ class OpenAnswerParser(TaskImportParser):
 
         prompt = None
         reference_answer = None
+        hint = None
         keywords = []
         
         for line in lines:
@@ -194,15 +206,27 @@ class OpenAnswerParser(TaskImportParser):
                 if kw:
                     keywords.append(kw)
                 continue
+
+            # Дополнительная информация / подсказка (начинается с ~)
+            if line_stripped.startswith('~') and hint is None:
+                hint = line_stripped[1:].strip()
+                continue
         
         if not prompt:
             self.errors.append(f"Задание #{index + 1}: не найден текст вопроса (должен начинаться с #)")
             return None
+
+        if not hint and metadata:
+            raw_hint = metadata.get('info') or metadata.get('hint')
+            if raw_hint:
+                hint = str(raw_hint).strip()
         
         # Очищаем текст от потенциально опасных символов
         prompt = self.sanitize_text(prompt)
         if reference_answer:
             reference_answer = self.sanitize_text(reference_answer)
+        if hint:
+            hint = self.sanitize_text(hint)
         keywords = [self.sanitize_text(kw) for kw in keywords]
         
         # Создаем задание
@@ -211,6 +235,8 @@ class OpenAnswerParser(TaskImportParser):
             data['keywords'] = keywords
         if reference_answer:
             data['reference_answer'] = reference_answer
+        if hint:
+            data['hint'] = hint
         if metadata:
             raw_min_keywords = metadata.get('min_keywords')
             try:

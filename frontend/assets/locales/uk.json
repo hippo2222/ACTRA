@@ -8172,5 +8172,8 @@
   "openanswerui.answer_for_question": "Відповідь на питання",
   "openanswerui.finish_and_check_btn": "Завершити та перевірити",
   "openanswerui.step_retry_needed": "Потрібне виправлення",
-  "openanswerui.your_answer": "Ваша відповідь:"
+  "openanswerui.your_answer": "Ваша відповідь:",
+  "openanswerui.show_info_btn": "Додаткова інформація",
+  "openanswerui.hide_info_btn": "Сховати додаткову інформацію",
+  "openanswerui.info_title": "Довідкові дані / примітка"
 }

@@ -8172,5 +8172,8 @@
   "openanswerui.answer_for_question": "Answer for question",
   "openanswerui.finish_and_check_btn": "Finish and check",
   "openanswerui.step_retry_needed": "Correction required",
-  "openanswerui.your_answer": "Your answer:"
+  "openanswerui.your_answer": "Your answer:",
+  "openanswerui.show_info_btn": "Additional information",
+  "openanswerui.hide_info_btn": "Hide additional info",
+  "openanswerui.info_title": "Reference note"
 }

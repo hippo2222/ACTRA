@@ -235,16 +235,39 @@ _GENERATION_PROMPTS_RU = {
 - Обычно выбирай 4-8 значимых ключевых слов, но не раздувай список искусственно.
 - Включай в ключевые слова общепринятые аббревиатуры и синонимичные формулировки только если они действительно нужны для корректной проверки.
 - Не превращай открытый вопрос в простое "назовите/перечислите", если материал требует более глубокого понимания.
+- Строка дополнительной информации (строка ~) — опционально: справочные данные, нормы показателей или контекстное примечание к вопросу. Не должна содержать прямого эталонного ответа или дублировать ключевые слова.
 </quality_criteria>
 
 <output_format>
 Каждый блок начинается с маркера @OPEN_ANSWER на отдельной строке. Между блоками — одна пустая строка. Ответ содержит только блоки заданий, без пояснений и без Markdown.
 
+Стандартный формат (по умолчанию — один вопрос на блок):
 @OPEN_ANSWER
 # <вопрос>
 = <эталонный ответ>
 * <ключевое слово 1>
 * <ключевое слово 2>
+~ <дополнительная справочная информация к вопросу — опционально>
+
+Расширенный сценарный формат (по усмотрению ИИ — если материал описывает целостный клинический случай, сложный процесс или серию связанных этапов анализа):
+@OPEN_ANSWER
+@case_text: <описание клинического случая, вводная ситуация или преамбула>
+@display_mode: sequential
+? <вопрос 1> [levels: 1, 2, 3]
+= <эталонный ответ 1>
+* <ключевое слово 1>
+* <ключевое слово 2>
+~ <справочные данные к вопросу 1 — опционально>
+? <вопрос 2> [levels: 2, 3]
+= <эталонный ответ 2>
+* <ключевое слово 1>
+* <ключевое слово 2>
+
+Пояснения к директивам:
+- @case_text: общая вводная ситуация (анамнез, симптомы, описание эксперимента).
+- @display_mode: sequential (вопросы открываются по одному с раскрытием эталона предыдущего шага) или simultaneous (все вопросы открыты сразу).
+- [levels: ...]: уровни сложности комплекса (1, 2, 3), на которых открывается подвопрос (опционально).
+- ~: строка дополнительной информации / справочных данных к конкретному вопросу (опционально).
 </output_format>""",
 
     "SEQUENCE": r"""Ты — генератор заданий для образовательной платформы.
@@ -457,6 +480,7 @@ SYSTEM_INSTRUCTION_RU = r"""Ты — старший методист, экспе
 - Все варианты должны быть сопоставимы по длине и грамматической структуре. Правильный ответ не должен выделяться формой.
 
 2. СВОБОДНЫЙ ОТВЕТ (@OPEN_ANSWER):
+Стандартный формат (один вопрос):
 @OPEN_ANSWER
 # Текст вопроса (требует объяснения механизма, причинно-следственной связи или сравнения)
 = Эталонный ответ (краткий, но содержательно полный)
@@ -464,11 +488,25 @@ SYSTEM_INSTRUCTION_RU = r"""Ты — старший методист, экспе
 * ключевое слово 2
 * ключевое слово 3
 * ключевое слово 4
+~ Дополнительная справочная информация / нормы / примечание к вопросу (опционально)
+
+Для целостных клинических кейсов допустим расширенный формат:
+@OPEN_ANSWER
+@case_text: Вводное описание клинического случая или преамбула задачи
+@display_mode: sequential
+? Вопрос 1 [levels: 1, 2, 3]
+= Эталонный ответ 1
+* ключевое слово
+~ Справочные данные к вопросу 1 (опционально)
+? Вопрос 2 [levels: 2, 3]
+= Эталонный ответ 2
+* ключевое слово
 
 Критерии качества @OPEN_ANSWER:
 - Вопрос проверяет понимание сути, а не воспроизведение одиночного слова.
 - Эталонный ответ (=) формулирует главную мысль без лишней воды и строго по материалу.
 - Ключевые слова (*) — 4–8 обязательных терминов или коротких фраз, необходимых для зачёта.
+- Строка (~) — опциональные справочные ориентиры или примечания (без раскрытия эталона).
 
 3. ПОСЛЕДОВАТЕЛЬНОСТЬ И СТРУКТУРИРОВАНИЕ (@SEQUENCE):
 @SEQUENCE
@@ -751,16 +789,39 @@ Use this type only where the learner must articulate meaning in their own words.
 - Typically choose 4-8 meaningful keywords, without artificially bloating the list.
 - Include widely accepted abbreviations and synonymous phrasings only if genuinely needed for accurate scoring.
 - Do not reduce open questions to mere "name/list" items if the material demands deeper comprehension.
+- Supplementary reference line (line ~) — optional: reference norms, context note, or auxiliary data. Must not give away the direct answer or duplicate keywords.
 </quality_criteria>
 
 <output_format>
 Each block begins with the @OPEN_ANSWER marker on a separate line. Between blocks — one blank line. The response contains only task blocks, without explanations or Markdown.
 
+Standard format (default — one question per block):
 @OPEN_ANSWER
 # <question>
 = <reference answer>
 * <keyword 1>
 * <keyword 2>
+~ <supplementary reference info / note for the question — optional>
+
+Advanced scenario format (at AI discretion — when the material describes an integrated clinical vignette, complex multi-step mechanism, or structured case study):
+@OPEN_ANSWER
+@case_text: <clinical case description, scenario premise, or experiment context>
+@display_mode: sequential
+? <question 1> [levels: 1, 2, 3]
+= <reference answer 1>
+* <keyword 1>
+* <keyword 2>
+~ <supplementary info for question 1 — optional>
+? <question 2> [levels: 2, 3]
+= <reference answer 2>
+* <keyword 1>
+* <keyword 2>
+
+Format directives:
+- @case_text: shared premise / vignette context across all sub-questions.
+- @display_mode: sequential (reveals questions step-by-step with previous reference answer as context) or simultaneous (all questions visible at once).
+- [levels: ...]: complexity levels (1, 2, 3) at which each sub-question unlocks in adaptive complexes (optional).
+- ~: optional supplementary reference data or contextual note for the question.
 </output_format>""",
 
     "SEQUENCE": r"""You are a task generator for an educational platform.
@@ -973,6 +1034,7 @@ Quality Criteria for @TEST:
 - All options must be grammatically parallel and comparable in length to prevent test-taking heuristics.
 
 2. OPEN CONSTRUCTED RESPONSE (@OPEN_ANSWER):
+Standard format (single question):
 @OPEN_ANSWER
 # Question stem (demanding explanation of mechanism, causal link, or comparison)
 = Model answer (concise yet comprehensive core idea)
@@ -980,11 +1042,25 @@ Quality Criteria for @TEST:
 * keyword 2
 * keyword 3
 * keyword 4
+~ Supplementary reference info / norms / note for the question (optional)
+
+Advanced scenario format (for clinical vignettes and case studies):
+@OPEN_ANSWER
+@case_text: Premise / scenario description or clinical vignette
+@display_mode: sequential
+? Question 1 [levels: 1, 2, 3]
+= Model answer 1
+* keyword
+~ Supplementary note for question 1 (optional)
+? Question 2 [levels: 2, 3]
+= Model answer 2
+* keyword
 
 Quality Criteria for @OPEN_ANSWER:
 - Prompts conceptual understanding and synthesis rather than trivial recall of isolated facts.
 - Model answer (=) captures the essential principle without fluff, strictly grounded in the source.
 - Keywords (*) list 4–8 indispensable terms or short phrases required for grading.
+- Supplementary line (~) provides contextual reference data or clinical parameters (without giving away the model answer).
 
 3. SEQUENCE AND STRUCTURING (@SEQUENCE):
 @SEQUENCE
@@ -1267,16 +1343,39 @@ _GENERATION_PROMPTS_UK = {
 - Зазвичай обирай 4-8 значущих ключових слів, але не роздувай список штучно.
 - Включай у ключові слова загальноприйняті абревіатури та синонімічні формулювання лише якщо вони дійсно потрібні для коректної перевірки.
 - Не перетворюй відкрите питання на просте "назвіть/перелічіть", якщо матеріал вимагає глибшого розуміння.
+- Рядок додаткової інформації (рядок ~) — опціонально: довідкові дані, норми показників або контекстна примітка до питання. Не повинен містити прямої відповіді чи дублювати ключові слова.
 </quality_criteria>
 
 <output_format>
 Кожен блок починається з маркера @OPEN_ANSWER на окремому рядку. Між блоками — один порожній рядок. Відповідь містить лише блоки завдань, без пояснень і без Markdown.
 
+Стандартний формат (за замовчуванням — одне питання на блок):
 @OPEN_ANSWER
 # <питання>
 = <еталонна відповідь>
 * <ключове слово 1>
 * <ключове слово 2>
+~ <додаткова довідкова інформація до питання — опціонально>
+
+Розширений сценарний формат (на розсуд ШІ — якщо матеріал описує цілісний клінічний випадок, складний процес або серію пов'язаних етапів аналізу):
+@OPEN_ANSWER
+@case_text: <опис клінічного випадку, вступна ситуація або преамбула>
+@display_mode: sequential
+? <питання 1> [levels: 1, 2, 3]
+= <еталонна відповідь 1>
+* <ключове слово 1>
+* <ключове слово 2>
+~ <довідкові дані до питання 1 — опціонально>
+? <питання 2> [levels: 2, 3]
+= <еталонна відповідь 2>
+* <ключове слово 1>
+* <ключове слово 2>
+
+Пояснення до директив:
+- @case_text: спільний контекст/преамбула для всіх питань блоку.
+- @display_mode: sequential (покрокове відкриття з показом еталона попереднього кроку) або simultaneous (усі питання відкриті одночасно).
+- [levels: ...]: рівні складності комплексу (1, 2, 3), на яких відкривається підпитання (опціонально).
+- ~: рядок додаткової довідкової інформації до конкретного питання (опціонально).
 </output_format>""",
 
     "SEQUENCE": r"""Ти — генератор завдань для освітньої платформи.
@@ -1489,6 +1588,7 @@ SYSTEM_INSTRUCTION_UK = r"""Ти — старший методист, експе
 - Усі варіанти повинні бути порівнянними за довжиною та граматичною формою.
 
 2. ВІДКРИТА ВІДПОВІДЬ (@OPEN_ANSWER):
+Стандартний формат (одне питання):
 @OPEN_ANSWER
 # Текст питання (вимагає пояснення механізму, причинно-наслідкового зв'язку чи порівняння)
 = Еталонна відповідь (стисла, але змістовно повна)
@@ -1496,11 +1596,25 @@ SYSTEM_INSTRUCTION_UK = r"""Ти — старший методист, експе
 * ключове слово 2
 * ключове слово 3
 * ключове слово 4
+~ Додаткова довідкова інформація / норми / примітка до питання (опціонально)
+
+Для цілісних клінічних кейсів допустимий розширений формат:
+@OPEN_ANSWER
+@case_text: Вступний опис клінічного випадку або преамбула завдання
+@display_mode: sequential
+? Питання 1 [levels: 1, 2, 3]
+= Еталонна відповідь 1
+* ключове слово
+~ Довідкові дані до питання 1 (опціонально)
+? Питання 2 [levels: 2, 3]
+= Еталонна відповідь 2
+* ключове слово
 
 Критерії якості @OPEN_ANSWER:
 - Питання перевіряє глибинне розуміння суті, а не відтворення окремого факту.
 - Еталонна відповідь (=) формулює головну думку без зайвих слів і суворо за матеріалом.
 - Ключові слова (*) — 4–8 обов'язкових термінів чи коротких фраз, необхідних для зарахування.
+- Рядок (~) — опціональні довідкові орієнтири або примітки (без розкриття еталона).
 
 3. ПОСЛІДОВНІСТЬ ТА СТРУКТУРУВАННЯ (@SEQUENCE):
 @SEQUENCE

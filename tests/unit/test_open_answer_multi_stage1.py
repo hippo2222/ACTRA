@@ -149,6 +149,60 @@ class TestOpenAnswerParserStage1:
         assert task["data"]["question"] == "Какой ритм сердца на ЭКГ?"
         assert task["data"]["reference_answer"] == "Синусовая тахикардия"
         assert len(task["data"]["keywords"]) == 2
+        assert "hint" not in task["data"] or task["data"]["hint"] == ""
+
+    def test_parse_single_question_with_hint_tilde(self):
+        raw_text = """
+@OPEN_ANSWER
+# Какой ритм сердца на ЭКГ?
+= Синусовая тахикардия
+* тахикардия
+* синусовая
+~ ЧСС выше 100 уд/мин, зубец P положительный во II отведении
+"""
+        parser = OpenAnswerParser()
+        tasks = parser.parse_text(raw_text)
+        assert len(tasks) == 1
+        task = tasks[0]
+        assert task["data"]["hint"] == "ЧСС выше 100 уд/мин, зубец P положительный во II отведении"
+
+    def test_parse_single_question_with_metadata_hint(self):
+        raw_text = """
+@OPEN_ANSWER
+@info: Норма интервала PQ составляет 120-200 мс
+# Оцените длительность атриовентрикулярного проведения
+= Замедление проведения (АВ-блокада I степени)
+* блокада
+* проведение
+"""
+        parser = OpenAnswerParser()
+        tasks = parser.parse_text(raw_text)
+        assert len(tasks) == 1
+        task = tasks[0]
+        assert task["data"]["hint"] == "Норма интервала PQ составляет 120-200 мс"
+
+    def test_parse_multi_question_with_hints(self):
+        raw_text = """
+@OPEN_ANSWER
+@case_text: Пациент 60 лет с жалобами на одышку.
+@display_mode: sequential
+? Какой ритм? [levels: 1, 2]
+= Синусовый ритм
+* синусовый
+~ Обратите внимание на наличие зубца P перед каждым QRS
+? Какова предполагаемая патология? [levels: 2, 3]
+= Отек легких
+* отек
+~ Влажные хрипы в нижних отделах с обеих сторон
+"""
+        parser = OpenAnswerParser()
+        tasks = parser.parse_text(raw_text)
+        assert len(tasks) == 1
+        data = tasks[0]["data"]
+        assert len(data["questions"]) == 2
+        assert data["questions"][0]["hint"] == "Обратите внимание на наличие зубца P перед каждым QRS"
+        assert data["questions"][1]["hint"] == "Влажные хрипы в нижних отделах с обеих сторон"
+        assert data["hint"] == "Обратите внимание на наличие зубца P перед каждым QRS"
 
 
 class TestStorageServiceOpenAnswerStage1:
