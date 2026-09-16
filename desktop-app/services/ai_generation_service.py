@@ -3462,3 +3462,22 @@ def build_studio_system_instruction(
     return _build_sys(target_language=target_language, prompt_language=prompt_language)
 
 
+def build_enriched_generation_prompt(
+    task_type: str,
+    recommendation: Optional[Dict[str, Any]] = None,
+    educational_units: Optional[List[Dict[str, Any]]] = None,
+    target_language: str = "ru",
+    prompt_language: str = "ru",
+) -> Optional[str]:
+    """Build task-type generation prompt enriched with pedagogical directive from analysis."""
+    from services.ai_studio_prompts import build_enriched_generation_prompt as _build_enriched
+    return _build_enriched(
+        task_type=task_type,
+        recommendation=recommendation,
+        educational_units=educational_units,
+        target_language=target_language,
+        prompt_language=prompt_language,
+    )
+
+
+

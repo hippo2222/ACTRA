@@ -4,7 +4,7 @@ Provides complete prompt suites in Russian (RU), English (EN), and Ukrainian (UK
 along with target language directives for external AI generators.
 """
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Union
 
 
 # ===========================================================================
@@ -1830,4 +1830,195 @@ def get_all_studio_prompts(
         "generation": generation_dict,
         "system": build_studio_system_instruction(t_lang, p_lang),
     }
+
+
+def _format_pedagogical_directive(
+    task_type: str,
+    recommendation: Dict[str, Any],
+    educational_units: Optional[List[Dict[str, Any]]] = None,
+    prompt_lang: str = "ru",
+) -> str:
+    """Format structured <pedagogical_directive> block based on analysis recommendation."""
+    p_lang = _normalize_lang(prompt_lang, default="ru")
+
+    count = recommendation.get("count")
+    try:
+        count_val = int(count) if count is not None else 3
+        if count_val <= 0:
+            count_val = 3
+    except (ValueError, TypeError):
+        count_val = 3
+
+    generation_focus = str(recommendation.get("generation_focus") or recommendation.get("rationale") or "").strip()
+    strategy_raw = str(recommendation.get("coverage_strategy") or "").strip().lower()
+
+    anchors_raw = recommendation.get("assessable_anchors") or []
+    if not isinstance(anchors_raw, list):
+        anchors_raw = [str(anchors_raw)] if anchors_raw else []
+    anchors = [str(a).strip() for a in anchors_raw if a is not None and str(a).strip()]
+
+    candidates_raw = recommendation.get("design_candidates") or []
+    if not isinstance(candidates_raw, list):
+        candidates_raw = [str(candidates_raw)] if candidates_raw else []
+    candidates = [str(c).strip() for c in candidates_raw if c is not None and str(c).strip()]
+
+    # Resolve educational units
+    covers_units = recommendation.get("covers_units") or []
+    if not isinstance(covers_units, list):
+        covers_units = [covers_units] if covers_units else []
+    matched_units: List[Dict[str, Any]] = []
+    if isinstance(educational_units, list) and educational_units:
+        if covers_units:
+            covers_set = {str(u).strip() for u in covers_units}
+            matched_units = [
+                u for u in educational_units
+                if isinstance(u, dict) and (
+                    str(u.get("id", "")).strip() in covers_set or
+                    str(u.get("title", "")).strip() in covers_set
+                )
+            ]
+        if not matched_units and len(educational_units) <= 4:
+            matched_units = [u for u in educational_units if isinstance(u, dict)]
+
+    if not generation_focus and not anchors and not candidates and not matched_units and not strategy_raw:
+        return ""
+
+    if p_lang == "en":
+        strategies = {
+            "misconception_first": "Addressing common misconceptions, false assumptions, and subtle distinctions",
+            "high_risk_first": "Testing critical risk points, edge conditions, boundary values, and safety boundaries",
+            "breadth_first": "Broad systematic coverage of core concepts, definitions, and facts",
+            "structure_first": "Structuring logical relationships, chronological processes, and classification hierarchies",
+            "visual_first": "Visual identification, spatial relationships, and landmark recognition",
+        }
+        strategy_desc = strategies.get(strategy_raw, strategy_raw or "Pedagogical alignment with lecture material")
+
+        lines = [
+            "<pedagogical_directive>",
+            "PIPELINE STAGE: Task generation grounded in the prior pedagogical material analysis.",
+            f"TARGET TASK TYPE: {task_type}",
+            f"TARGET QUANTITY: Generate exactly {count_val} tasks of this type.",
+        ]
+        if generation_focus:
+            lines.extend(["", "PEDAGOGICAL GENERATION FOCUS:", generation_focus])
+        if strategy_desc:
+            lines.extend(["", "COVERAGE STRATEGY:", strategy_desc])
+        if anchors:
+            lines.extend(["", "ASSESSABLE ANCHORS & TRAPS (Incorporate these specific elements):"] + [f"- {a}" for a in anchors])
+        if matched_units:
+            unit_lines = []
+            for u in matched_units[:5]:
+                t = u.get("title") or f"Unit {u.get('id', '')}"
+                d = u.get("description") or ""
+                unit_lines.append(f"- {t}: {d}" if d else f"- {t}")
+            lines.extend(["", "TARGET EDUCATIONAL UNITS COVERED:"] + unit_lines)
+        if candidates:
+            lines.extend(["", "DRAFT DESIGN CANDIDATES (Use as inspiration / starting points):"] + [f"- {c}" for c in candidates[:4]])
+        lines.append("</pedagogical_directive>")
+        return "\n".join(lines)
+
+    elif p_lang == "uk":
+        strategies = {
+            "misconception_first": "Виявлення типових помилкових уявлень, хибних припущень і тонких відмінностей",
+            "high_risk_first": "Перевірка критичних точок, граничних умов, параметрів безпеки та зон ризику",
+            "breadth_first": "Широке системне охоплення ключових понять, термінів та визначень теми",
+            "structure_first": "Аналіз і складання логічної структури, послідовностей, етапів та ієрархій",
+            "visual_first": "Візуальний фокус, просторове розташування та розпізнавання орієнтирів",
+        }
+        strategy_desc = strategies.get(strategy_raw, strategy_raw or "Методична відповідність матеріалу лекції")
+
+        lines = [
+            "<pedagogical_directive>",
+            "ЕТАП ПАЙПЛАЙНУ: Генерація завдань за результатами попереднього методичного аналізу лекції.",
+            f"ТИП ЗАВДАНЬ: {task_type}",
+            f"КІЛЬКІСТЬ ЗАВДАНЬ: Згенеруй рівно {count_val} завдань цього типу.",
+        ]
+        if generation_focus:
+            lines.extend(["", "ЦІЛЬОВИЙ ПЕДАГОГІЧНИЙ ФОКУС:", generation_focus])
+        if strategy_desc:
+            lines.extend(["", "СТРАТЕГІЯ ПЕРЕВІРКИ:", strategy_desc])
+        if anchors:
+            lines.extend(["", "ЗМІСТОВІ ОПОРИ ТА ПАСТКИ ДЛЯ ПЕРЕВІРКИ (Обов'язково використай):"] + [f"- {a}" for a in anchors])
+        if matched_units:
+            unit_lines = []
+            for u in matched_units[:5]:
+                t = u.get("title") or f"Одиниця {u.get('id', '')}"
+                d = u.get("description") or ""
+                unit_lines.append(f"- {t}: {d}" if d else f"- {t}")
+            lines.extend(["", "ПОВ'ЯЗАНІ ОСВІТНІ ОДИНИЦІ:"] + unit_lines)
+        if candidates:
+            lines.extend(["", "ПОПЕРЕДНІ ЗАГОТОВКИ З АНАЛІЗУ (Використовуй як орієнтир):"] + [f"- {c}" for c in candidates[:4]])
+        lines.append("</pedagogical_directive>")
+        return "\n".join(lines)
+
+    else:  # ru
+        strategies = {
+            "misconception_first": "Выявление типичных заблуждений, ложных предпосылок и тонких различий",
+            "high_risk_first": "Проверка критических точек, граничных условий, параметров безопасности и зон риска",
+            "breadth_first": "Широкий системный охват ключевых понятий, терминов и определений темы",
+            "structure_first": "Анализ и сборка логической структуры, последовательностей, этапов и иерархий",
+            "visual_first": "Визуальный фокус, пространственное сопоставление и распознавание ориентиров",
+        }
+        strategy_desc = strategies.get(strategy_raw, strategy_raw or "Методическое соответствие материалу лекции")
+
+        lines = [
+            "<pedagogical_directive>",
+            "ЭТАП ПАЙПЛАЙНА: Генерация заданий по результатам предварительного методического анализа лекции.",
+            f"ТИП ЗАДАНИЙ: {task_type}",
+            f"КОЛИЧЕСТВО ЗАДАНИЙ: Сгенерируй ровно {count_val} заданий данного типа.",
+        ]
+        if generation_focus:
+            lines.extend(["", "ЦЕЛЕВОЙ ПЕДАГОГИЧЕСКИЙ ФОКУС:", generation_focus])
+        if strategy_desc:
+            lines.extend(["", "СТРАТЕГИЯ ПРОВЕРКИ:", strategy_desc])
+        if anchors:
+            lines.extend(["", "СОДЕРЖАТЕЛЬНЫЕ ОПОРЫ И ЛОВУШКИ ДЛЯ ПРОВЕРКИ (Обязательно задействуй):"] + [f"- {a}" for a in anchors])
+        if matched_units:
+            unit_lines = []
+            for u in matched_units[:5]:
+                t = u.get("title") or f"Единица {u.get('id', '')}"
+                d = u.get("description") or ""
+                unit_lines.append(f"- {t}: {d}" if d else f"- {t}")
+            lines.extend(["", "СВЯЗАННЫЕ ОБРАЗОВАТЕЛЬНЫЕ ЕДИНИЦЫ:"] + unit_lines)
+        if candidates:
+            lines.extend(["", "ПРЕДВАРИТЕЛЬНЫЕ ЗАГОТОВКИ ИЗ АНАЛИЗА (Используй как отправную точку):"] + [f"- {c}" for c in candidates[:4]])
+        lines.append("</pedagogical_directive>")
+        return "\n".join(lines)
+
+
+def build_enriched_generation_prompt(
+    task_type: str,
+    recommendation: Optional[Dict[str, Any]] = None,
+    educational_units: Optional[List[Dict[str, Any]]] = None,
+    target_language: str = "ru",
+    prompt_language: str = "ru",
+) -> Optional[str]:
+    """Build task-type generation prompt enriched with pedagogical directive from analysis.
+
+    If recommendation is absent or empty, falls back gracefully to standard canonical prompt.
+    """
+    clean_type = str(task_type or "").strip().upper()
+    t_lang = str(target_language or "ru").strip().lower()
+    if t_lang in ("source", "theory", "auto"):
+        p_lang = "en"
+    else:
+        p_lang = _normalize_lang(prompt_language, default="ru")
+
+    base_prompt = get_studio_generation_prompt(clean_type, target_language=t_lang, prompt_language=p_lang)
+    if not base_prompt:
+        return None
+
+    if not isinstance(recommendation, dict) or not recommendation:
+        return base_prompt
+
+    directive = _format_pedagogical_directive(
+        task_type=clean_type,
+        recommendation=recommendation,
+        educational_units=educational_units or [],
+        prompt_lang=p_lang,
+    )
+    if not directive:
+        return base_prompt
+
+    return directive + "\n\n" + base_prompt
 

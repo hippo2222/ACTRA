@@ -22,6 +22,7 @@ from services.ai_generation_service import (
     _GENERATION_PROMPTS,
     build_studio_analysis_prompt,
     build_studio_system_instruction,
+    build_enriched_generation_prompt,
     get_all_studio_prompts,
     get_studio_generation_prompt,
 )
@@ -205,6 +206,49 @@ def studio_get_prompts() -> Any:
         "error": "invalid_prompt_type",
         "supported_prompt_types": ["analysis", "generation", "system", "all"],
     }), 400
+
+
+@studio_bp.route("/api/editor/studio/prompts/enrich", methods=["POST"])
+def studio_enrich_prompt() -> Any:
+    """Build enriched generation prompt with pedagogical directive from analysis."""
+    ctx = get_ctx()
+    if ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_use_studio"}), 403
+
+    payload = request.get_json(silent=True) or {}
+    if not isinstance(payload, dict):
+        return jsonify({"ok": False, "error": "invalid_json_payload"}), 400
+    task_type = str(payload.get("task_type") or "").strip().upper()
+    recommendation = payload.get("recommendation")
+    educational_units = payload.get("educational_units")
+    target_lang = str(payload.get("target_language") or "ru").strip().lower()
+    prompt_lang = str(payload.get("prompt_language") or "ru").strip().lower()
+
+    if target_lang in ("source", "theory", "auto"):
+        target_lang = "source"
+        prompt_lang = "en"
+
+    prompt_text = build_enriched_generation_prompt(
+        task_type=task_type,
+        recommendation=recommendation,
+        educational_units=educational_units,
+        target_language=target_lang,
+        prompt_language=prompt_lang,
+    )
+    if not prompt_text:
+        return jsonify({
+            "ok": False,
+            "error": "task_type_not_found",
+            "supported_types": list(_GENERATION_PROMPTS.keys()),
+        }), 404
+
+    return jsonify({
+        "ok": True,
+        "task_type": task_type,
+        "prompt": prompt_text,
+        "prompt_language": prompt_lang,
+        "target_language": target_lang,
+    })
 
 
 # ---------------------------------------------------------------------------

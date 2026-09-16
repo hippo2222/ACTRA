@@ -116,6 +116,7 @@
             focusPaneTypeLabel: document.getElementById('focus-pane-type-label'),
             focusPaneCoverageBadge: document.getElementById('focus-pane-coverage-badge'),
             focusUnitsDescription: document.getElementById('focus-units-description'),
+            focusInjectedBadge: document.getElementById('focus-injected-badge'),
             btnCopyTypePrompt: document.getElementById('btn-copy-type-prompt'),
             labelCopyTypePrompt: document.getElementById('label-copy-type-prompt'),
             typePromptPreviewText: document.getElementById('type-prompt-preview-text'),
@@ -1063,6 +1064,197 @@
         });
     }
 
+    function formatClientPedagogicalDirective(taskType, recommendation, educationalUnits, promptLang) {
+        if (!recommendation || typeof recommendation !== 'object') {
+            return '';
+        }
+
+        let pLang = String(promptLang || 'ru').toLowerCase().trim();
+        if (!['ru', 'en', 'uk'].includes(pLang)) {
+            pLang = 'ru';
+        }
+
+        let countVal = 3;
+        if (recommendation.count !== undefined && recommendation.count !== null) {
+            const parsed = parseInt(recommendation.count, 10);
+            if (!isNaN(parsed) && parsed > 0) {
+                countVal = parsed;
+            }
+        }
+
+        const generationFocus = String(recommendation.generation_focus || recommendation.rationale || '').trim();
+        const strategyRaw = String(recommendation.coverage_strategy || '').trim().toLowerCase();
+
+        let anchorsRaw = recommendation.assessable_anchors || [];
+        if (!Array.isArray(anchorsRaw)) {
+            anchorsRaw = anchorsRaw ? [String(anchorsRaw)] : [];
+        }
+        const anchors = anchorsRaw.filter((a) => a != null).map((a) => String(a).trim()).filter(Boolean);
+
+        let candidatesRaw = recommendation.design_candidates || [];
+        if (!Array.isArray(candidatesRaw)) {
+            candidatesRaw = candidatesRaw ? [String(candidatesRaw)] : [];
+        }
+        const candidates = candidatesRaw.filter((c) => c != null).map((c) => String(c).trim()).filter(Boolean);
+
+        const coversUnits = Array.isArray(recommendation.covers_units) ? recommendation.covers_units : [];
+        let matchedUnits = [];
+        if (Array.isArray(educationalUnits) && educationalUnits.length > 0) {
+            if (coversUnits.length > 0) {
+                const coversSet = new Set(coversUnits.map((u) => String(u).trim()));
+                matchedUnits = educationalUnits.filter((u) => {
+                    if (!u || typeof u !== 'object') return false;
+                    const idStr = String(u.id || '').trim();
+                    const titleStr = String(u.title || '').trim();
+                    return coversSet.has(idStr) || coversSet.has(titleStr);
+                });
+            }
+            if (matchedUnits.length === 0 && educationalUnits.length <= 4) {
+                matchedUnits = educationalUnits.filter((u) => u && typeof u === 'object');
+            }
+        }
+
+        if (!generationFocus && anchors.length === 0 && candidates.length === 0 && matchedUnits.length === 0 && !strategyRaw) {
+            return '';
+        }
+
+        if (pLang === 'en') {
+            const strategies = {
+                misconception_first: 'Addressing common misconceptions, false assumptions, and subtle distinctions',
+                high_risk_first: 'Testing critical risk points, edge conditions, boundary values, and safety boundaries',
+                breadth_first: 'Broad systematic coverage of core concepts, definitions, and facts',
+                structure_first: 'Structuring logical relationships, chronological processes, and classification hierarchies',
+                visual_first: 'Visual identification, spatial relationships, and landmark recognition',
+            };
+            const strategyDesc = strategies[strategyRaw] || strategyRaw || 'Pedagogical alignment with lecture material';
+
+            const lines = [
+                '<pedagogical_directive>',
+                'PIPELINE STAGE: Task generation grounded in the prior pedagogical material analysis.',
+                `TARGET TASK TYPE: ${taskType}`,
+                `TARGET QUANTITY: Generate exactly ${countVal} tasks of this type.`,
+            ];
+            if (generationFocus) {
+                lines.push('', 'PEDAGOGICAL GENERATION FOCUS:', generationFocus);
+            }
+            if (strategyDesc) {
+                lines.push('', 'COVERAGE STRATEGY:', strategyDesc);
+            }
+            if (anchors.length > 0) {
+                lines.push('', 'ASSESSABLE ANCHORS & TRAPS (Incorporate these specific elements):', ...anchors.map((a) => `- ${a}`));
+            }
+            if (matchedUnits.length > 0) {
+                const unitLines = matchedUnits.slice(0, 5).map((u) => {
+                    const title = u.title || `Unit ${u.id || ''}`;
+                    const desc = u.description || '';
+                    return desc ? `- ${title}: ${desc}` : `- ${title}`;
+                });
+                lines.push('', 'TARGET EDUCATIONAL UNITS COVERED:', ...unitLines);
+            }
+            if (candidates.length > 0) {
+                lines.push('', 'DRAFT DESIGN CANDIDATES (Use as inspiration / starting points):', ...candidates.slice(0, 4).map((c) => `- ${c}`));
+            }
+            lines.push('</pedagogical_directive>');
+            return lines.join('\n');
+        } else if (pLang === 'uk') {
+            const strategies = {
+                misconception_first: 'Виявлення типових помилкових уявлень, хибних припущень і тонких відмінностей',
+                high_risk_first: 'Перевірка критичних точок, граничних умов, параметрів безпеки та зон ризику',
+                breadth_first: 'Широке системне охоплення ключових понять, термінів та визначень теми',
+                structure_first: 'Аналіз і складання логічної структури, послідовностей, етапів та ієрархій',
+                visual_first: 'Візуальний фокус, просторове розташування та розпізнавання орієнтирів',
+            };
+            const strategyDesc = strategies[strategyRaw] || strategyRaw || 'Методична відповідність матеріалу лекції';
+
+            const lines = [
+                '<pedagogical_directive>',
+                'ЕТАП ПАЙПЛАЙНУ: Генерація завдань за результатами попереднього методичного аналізу лекції.',
+                `ТИП ЗАВДАНЬ: ${taskType}`,
+                `КІЛЬКІСТЬ ЗАВДАНЬ: Згенеруй рівно ${countVal} завдань цього типу.`,
+            ];
+            if (generationFocus) {
+                lines.push('', 'ЦІЛЬОВИЙ ПЕДАГОГІЧНИЙ ФОКУС:', generationFocus);
+            }
+            if (strategyDesc) {
+                lines.push('', 'СТРАТЕГІЯ ПЕРЕВІРКИ:', strategyDesc);
+            }
+            if (anchors.length > 0) {
+                lines.push('', "ЗМІСТОВІ ОПОРИ ТА ПАСТКИ ДЛЯ ПЕРЕВІРКИ (Обов'язково використай):", ...anchors.map((a) => `- ${a}`));
+            }
+            if (matchedUnits.length > 0) {
+                const unitLines = matchedUnits.slice(0, 5).map((u) => {
+                    const title = u.title || `Одиниця ${u.id || ''}`;
+                    const desc = u.description || '';
+                    return desc ? `- ${title}: ${desc}` : `- ${title}`;
+                });
+                lines.push('', "ПОВ'ЯЗАНІ ОСВІТНІ ОДИНИЦІ:", ...unitLines);
+            }
+            if (candidates.length > 0) {
+                lines.push('', 'ПОПЕРЕДНІ ЗАГОТОВКИ З АНАЛІЗУ (Використовуй як орієнтир):', ...candidates.slice(0, 4).map((c) => `- ${c}`));
+            }
+            lines.push('</pedagogical_directive>');
+            return lines.join('\n');
+        } else {
+            const strategies = {
+                misconception_first: 'Выявление типичных заблуждений, ложных предпосылок и тонких различий',
+                high_risk_first: 'Проверка критических точек, граничных условий, параметров безопасности и зон риска',
+                breadth_first: 'Широкий системный охват ключевых понятий, терминов и определений темы',
+                structure_first: 'Анализ и сборка логической структуры, последовательностей, этапов и иерархий',
+                visual_first: 'Визуальный фокус, пространственное сопоставление и распознавание ориентиров',
+            };
+            const strategyDesc = strategies[strategyRaw] || strategyRaw || 'Методическое соответствие материалу лекции';
+
+            const lines = [
+                '<pedagogical_directive>',
+                'ЭТАП ПАЙПЛАЙНА: Генерация заданий по результатам предварительного методического анализа лекции.',
+                `ТИП ЗАДАНИЙ: ${taskType}`,
+                `КОЛИЧЕСТВО ЗАДАНИЙ: Сгенерируй ровно ${countVal} заданий данного типа.`,
+            ];
+            if (generationFocus) {
+                lines.push('', 'ЦЕЛЕВОЙ ПЕДАГОГИЧЕСКИЙ ФОКУС:', generationFocus);
+            }
+            if (strategyDesc) {
+                lines.push('', 'СТРАТЕГИЯ ПРОВЕРКИ:', strategyDesc);
+            }
+            if (anchors.length > 0) {
+                lines.push('', 'СОДЕРЖАТЕЛЬНЫЕ ОПОРЫ И ЛОВУШКИ ДЛЯ ПРОВЕРКИ (Обязательно задействуй):', ...anchors.map((a) => `- ${a}`));
+            }
+            if (matchedUnits.length > 0) {
+                const unitLines = matchedUnits.slice(0, 5).map((u) => {
+                    const title = u.title || `Единица ${u.id || ''}`;
+                    const desc = u.description || '';
+                    return desc ? `- ${title}: ${desc}` : `- ${title}`;
+                });
+                lines.push('', 'СВЯЗАННЫЕ ОБРАЗОВАТЕЛЬНЫЕ ЕДИНИЦЫ:', ...unitLines);
+            }
+            if (candidates.length > 0) {
+                lines.push('', 'ПРЕДВАРИТЕЛЬНЫЕ ЗАГОТОВКИ ИЗ АНАЛИЗА (Используй как отправную точку):', ...candidates.slice(0, 4).map((c) => `- ${c}`));
+            }
+            lines.push('</pedagogical_directive>');
+            return lines.join('\n');
+        }
+    }
+
+    function getEnrichedPromptForType(taskType, basePrompt, overridePromptLang) {
+        if (!basePrompt) return '';
+        if (!StudioState.analysisResult || !Array.isArray(StudioState.analysisResult.recommendations)) {
+            return basePrompt;
+        }
+        const rec = StudioState.analysisResult.recommendations.find((r) => r.task_type === taskType);
+        if (!rec) {
+            return basePrompt;
+        }
+        const currentLang = (typeof window !== 'undefined' && window.i18n && typeof window.i18n.getLang === 'function') ? window.i18n.getLang() : 'ru';
+        const targetLang = StudioState.targetLanguage || getDefaultTargetLanguage();
+        const promptLang = overridePromptLang || ((targetLang === 'source') ? 'en' : currentLang);
+        const units = Array.isArray(StudioState.analysisResult.educational_units) ? StudioState.analysisResult.educational_units : [];
+        const directive = formatClientPedagogicalDirective(taskType, rec, units, promptLang);
+        if (!directive) {
+            return basePrompt;
+        }
+        return directive + '\n\n' + basePrompt;
+    }
+
     async function selectGenerationType(taskType) {
         StudioState.activeGenerationType = taskType;
 
@@ -1085,9 +1277,11 @@
         let focusText = t('studio.stage2.select_direction_hint', 'Выберите направление сверху для формирования точечного промпта.');
         let strategyBadge = t('studio.stage2.focus_badge', 'Фокус');
         let strategyTooltip = '';
+        let hasAnalysisRec = false;
         if (StudioState.analysisResult && Array.isArray(StudioState.analysisResult.recommendations)) {
             const rec = StudioState.analysisResult.recommendations.find((r) => r.task_type === taskType);
             if (rec) {
+                hasAnalysisRec = true;
                 focusText = rec.generation_focus || rec.rationale || focusText;
                 if (rec.coverage_strategy) {
                     const info = getStrategyInfo(rec.coverage_strategy);
@@ -1103,6 +1297,13 @@
                 DOM.focusPaneCoverageBadge.setAttribute('title', strategyTooltip);
             } else {
                 DOM.focusPaneCoverageBadge.removeAttribute('title');
+            }
+        }
+        if (DOM.focusInjectedBadge) {
+            if (hasAnalysisRec) {
+                DOM.focusInjectedBadge.classList.remove('hidden');
+            } else {
+                DOM.focusInjectedBadge.classList.add('hidden');
             }
         }
 
@@ -1123,7 +1324,8 @@
         const promptLang = (targetLang === 'source') ? 'en' : currentLang;
         const cacheKey = `${taskType}_${promptLang}_${targetLang}`;
         if (StudioState.cachedPrompts.generation[cacheKey]) {
-            updatePromptPreview(StudioState.cachedPrompts.generation[cacheKey]);
+            const basePrompt = StudioState.cachedPrompts.generation[cacheKey];
+            updatePromptPreview(getEnrichedPromptForType(taskType, basePrompt));
             return;
         }
 
@@ -1131,8 +1333,9 @@
             const res = await fetch(`/api/editor/studio/prompts?type=generation&task_type=${taskType}&prompt_lang=${encodeURIComponent(promptLang)}&target_lang=${encodeURIComponent(targetLang)}`);
             if (res.ok) {
                 const data = await res.json();
-                StudioState.cachedPrompts.generation[cacheKey] = data.prompt || '';
-                updatePromptPreview(data.prompt || '');
+                const basePrompt = data.prompt || '';
+                StudioState.cachedPrompts.generation[cacheKey] = basePrompt;
+                updatePromptPreview(getEnrichedPromptForType(taskType, basePrompt));
             }
         } catch (e) {
             console.warn('[Studio] Failed to load generation prompt:', e);
@@ -1153,17 +1356,18 @@
                 const targetLang = StudioState.targetLanguage || getDefaultTargetLanguage();
                 const promptLang = (targetLang === 'source') ? 'en' : currentLang;
                 const cacheKey = `${StudioState.activeGenerationType}_${promptLang}_${targetLang}`;
-                let prompt = StudioState.cachedPrompts.generation[cacheKey] || '';
-                if (!prompt) {
+                let basePrompt = StudioState.cachedPrompts.generation[cacheKey] || '';
+                if (!basePrompt) {
                     await loadGenerationPromptForType(StudioState.activeGenerationType);
-                    prompt = StudioState.cachedPrompts.generation[cacheKey] || '';
+                    basePrompt = StudioState.cachedPrompts.generation[cacheKey] || '';
                 }
-                if (!prompt) {
+                if (!basePrompt) {
                     showToast(t('studio.stage1.parsing_error', 'Промпт не загружен'), 'error');
                     return;
                 }
+                const promptToCopy = getEnrichedPromptForType(StudioState.activeGenerationType, basePrompt);
                 try {
-                    await navigator.clipboard.writeText(prompt);
+                    await navigator.clipboard.writeText(promptToCopy);
                     const label = TASK_TYPE_LABELS[StudioState.activeGenerationType] || StudioState.activeGenerationType;
                     showToast(t('studio.stage1.prompt_copied', `Промпт для ${label} скопирован!`), 'success');
                 } catch (e) {
@@ -1779,5 +1983,17 @@
             }
         });
     });
+
+    if (typeof window !== 'undefined' && window.__ACTRA_DEV_MODE__) {
+        window.__StudioInternal = {
+            StudioState,
+            get DOM() { return DOM; },
+            formatClientPedagogicalDirective,
+            getEnrichedPromptForType,
+            selectGenerationType,
+            loadGenerationPromptForType,
+            updatePromptPreview,
+        };
+    }
 
 })();

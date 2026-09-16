@@ -8069,7 +8069,8 @@
       "focus_badge": "Focus",
       "select_direction_hint": "Select a focus area above to generate a targeted prompt.",
       "view_full_prompt": "View full prompt text",
-      "send_prompt_hint": "Send prompt to the same AI chat"
+      "send_prompt_hint": "Send prompt to the same AI chat",
+      "focus_injected_badge": "Pedagogical focus & traps from analysis are automatically included in the prompt"
     },
     "stage3": {
       "aria": "Stage 3: Showcase and import",
