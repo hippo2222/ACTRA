@@ -21,6 +21,7 @@ from routes._context import get_ctx, get_extra, get_file_processor, set_extra
 from services.ai_generation_service import (
     _GENERATION_PROMPTS,
     build_studio_analysis_prompt,
+    build_studio_system_instruction,
     get_all_studio_prompts,
     get_studio_generation_prompt,
 )
@@ -131,7 +132,11 @@ def studio_get_prompts() -> Any:
     prompt_type = str(request.args.get("type", "analysis") or "analysis").strip().lower()
     task_type = str(request.args.get("task_type", "") or "").strip().upper()
     prompt_lang = str(request.args.get("prompt_lang") or request.args.get("lang") or "ru").strip().lower()
-    target_lang = str(request.args.get("target_lang") or request.args.get("target_language") or "auto").strip().lower()
+    target_lang = str(request.args.get("target_lang") or request.args.get("target_language") or "ru").strip().lower()
+
+    if target_lang in ("source", "theory", "auto"):
+        target_lang = "source"
+        prompt_lang = "en"
 
     if prompt_type == "analysis":
         prompt_text = build_studio_analysis_prompt(target_language=target_lang, prompt_language=prompt_lang)
@@ -173,6 +178,17 @@ def studio_get_prompts() -> Any:
             "language": prompt_lang,
         })
 
+    if prompt_type == "system":
+        prompt_text = build_studio_system_instruction(target_language=target_lang, prompt_language=prompt_lang)
+        return jsonify({
+            "ok": True,
+            "prompt_type": "system",
+            "prompt": prompt_text,
+            "prompt_language": prompt_lang,
+            "target_language": target_lang,
+            "language": prompt_lang,
+        })
+
     if prompt_type == "all":
         all_prompts = get_all_studio_prompts(target_language=target_lang, prompt_language=prompt_lang)
         return jsonify({
@@ -187,7 +203,7 @@ def studio_get_prompts() -> Any:
     return jsonify({
         "ok": False,
         "error": "invalid_prompt_type",
-        "supported_prompt_types": ["analysis", "generation", "all"],
+        "supported_prompt_types": ["analysis", "generation", "system", "all"],
     }), 400
 
 

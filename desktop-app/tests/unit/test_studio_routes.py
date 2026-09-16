@@ -107,19 +107,33 @@ def test_get_prompts_requires_auth(client, monkeypatch):
 def test_get_prompts_analysis(client, monkeypatch):
     monkeypatch.setattr(_context, "get_current_user_id", lambda: "teacher_1")
 
-    # 1. Russian Analysis Prompt with auto target
-    resp_ru = client.get("/api/editor/studio/prompts?type=analysis&prompt_lang=ru&target_lang=auto")
+    # 1. Source Theory Language mode (forces English prompt with source_material directive)
+    resp_source = client.get("/api/editor/studio/prompts?type=analysis&prompt_lang=ru&target_lang=source")
+    assert resp_source.status_code == 200
+    data_source = resp_source.get_json()
+    assert data_source["ok"] is True
+    assert data_source["prompt_type"] == "analysis"
+    assert data_source["prompt_language"] == "en"
+    assert data_source["target_language"] == "source"
+    assert "You are a senior curriculum designer" in data_source["prompt"]
+    assert "<target_language>source_material</target_language>" in data_source["prompt"]
+    assert "STRICT LANGUAGE REQUIREMENT" in data_source["prompt"]
+
+    # 2. Russian Analysis Prompt with target ru
+    resp_ru = client.get("/api/editor/studio/prompts?type=analysis&prompt_lang=ru&target_lang=ru")
     assert resp_ru.status_code == 200
     data_ru = resp_ru.get_json()
     assert data_ru["ok"] is True
     assert data_ru["prompt_type"] == "analysis"
+    assert data_ru["prompt_language"] == "ru"
+    assert data_ru["target_language"] == "ru"
     assert "<human_summary>" in data_ru["prompt"]
     assert "<analysis_json>" in data_ru["prompt"]
     assert "CLICK_WORDS — синтез текста с намеренными фактическими ошибками" in data_ru["prompt"]
-    assert "<target_language>auto</target_language>" in data_ru["prompt"]
+    assert "<target_language>ru</target_language>" in data_ru["prompt"]
     assert "ПРАВИЛО ЯЗЫКА ГЕНЕРАЦИИ" in data_ru["prompt"]
 
-    # 2. English Analysis Prompt with target en
+    # 3. English Analysis Prompt with target en
     resp_en = client.get("/api/editor/studio/prompts?type=analysis&prompt_lang=en&target_lang=en")
     assert resp_en.status_code == 200
     data_en = resp_en.get_json()
@@ -129,7 +143,7 @@ def test_get_prompts_analysis(client, monkeypatch):
     assert "<target_language>en</target_language>" in data_en["prompt"]
     assert "TARGET LANGUAGE RULE" in data_en["prompt"]
 
-    # 3. Ukrainian Analysis Prompt with target uk
+    # 4. Ukrainian Analysis Prompt with target uk
     resp_uk = client.get("/api/editor/studio/prompts?type=analysis&prompt_lang=uk&target_lang=uk")
     assert resp_uk.status_code == 200
     data_uk = resp_uk.get_json()
@@ -186,7 +200,62 @@ def test_get_prompts_all(client, monkeypatch):
     assert data["ok"] is True
     assert "analysis" in data
     assert "generation" in data
+    assert "system" in data
     assert "SEQUENCE" in data["generation"]
+
+
+def test_get_prompts_system_instruction(client, monkeypatch):
+    monkeypatch.setattr(_context, "get_current_user_id", lambda: "teacher_1")
+
+    # 1. Russian System Instruction
+    resp_ru = client.get("/api/editor/studio/prompts?type=system&prompt_lang=ru&target_lang=ru")
+    assert resp_ru.status_code == 200
+    data_ru = resp_ru.get_json()
+    assert data_ru["ok"] is True
+    assert data_ru["prompt_type"] == "system"
+    assert data_ru["prompt_language"] == "ru"
+    assert data_ru["target_language"] == "ru"
+    assert "Ты — старший методист, эксперт по педагогическому дизайну" in data_ru["prompt"]
+    assert "<mode_1_lecture_analysis>" in data_ru["prompt"]
+    assert "<mode_2_task_generation>" in data_ru["prompt"]
+    assert "@TEST" in data_ru["prompt"]
+    assert "@OPEN_ANSWER" in data_ru["prompt"]
+    assert "@SEQUENCE" in data_ru["prompt"]
+    assert "@CLICK_TEXT" in data_ru["prompt"]
+    assert "@CLICK_WORDS" in data_ru["prompt"]
+    assert "<target_language>ru</target_language>" in data_ru["prompt"]
+
+    # 2. English System Instruction
+    resp_en = client.get("/api/editor/studio/prompts?type=system&prompt_lang=en&target_lang=en")
+    assert resp_en.status_code == 200
+    data_en = resp_en.get_json()
+    assert data_en["ok"] is True
+    assert "You are a senior curriculum designer" in data_en["prompt"]
+    assert "<mode_1_lecture_analysis>" in data_en["prompt"]
+    assert "<mode_2_task_generation>" in data_en["prompt"]
+    assert "<target_language>en</target_language>" in data_en["prompt"]
+
+    # 3. Ukrainian System Instruction
+    resp_uk = client.get("/api/editor/studio/prompts?type=system&prompt_lang=uk&target_lang=uk")
+    assert resp_uk.status_code == 200
+    data_uk = resp_uk.get_json()
+    assert data_uk["ok"] is True
+    assert "Ти — старший методист, експерт із педагогічного дизайну" in data_uk["prompt"]
+    assert "<mode_1_lecture_analysis>" in data_uk["prompt"]
+    assert "<mode_2_task_generation>" in data_uk["prompt"]
+    assert "<target_language>uk</target_language>" in data_uk["prompt"]
+
+    # 4. Source Theory Language mode (forces English prompt body with source_material directive)
+    resp_source = client.get("/api/editor/studio/prompts?type=system&prompt_lang=ru&target_lang=source")
+    assert resp_source.status_code == 200
+    data_source = resp_source.get_json()
+    assert data_source["ok"] is True
+    assert data_source["prompt_language"] == "en"
+    assert data_source["target_language"] == "source"
+    assert "You are a senior curriculum designer" in data_source["prompt"]
+    assert "<target_language>source_material</target_language>" in data_source["prompt"]
+    assert "STRICT LANGUAGE REQUIREMENT" in data_source["prompt"]
+
 
 
 # ---------------------------------------------------------------------------
@@ -273,7 +342,10 @@ def test_studio_html_scaffolding():
 
     # Stage 1 elements
     assert 'id="studio-target-lang-group"' in content
+    assert 'data-lang="source"' in content
+    assert 'data-lang="auto"' not in content
     assert 'id="btn-copy-analysis-prompt"' in content
+    assert 'id="btn-copy-system-prompt"' in content
     assert 'id="analysis-prompt-preview-text"' in content
     assert 'id="analysis-response-input"' in content
     assert 'id="btn-parse-analysis"' in content

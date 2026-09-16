@@ -104,7 +104,13 @@
                             <span class="material-symbols-outlined text-[20px] text-primary">psychology</span>
                             <span data-i18n="studio.stage1.left_title">1. Промпт для анализа лекции</span>
                         </h2>
-                        <span class="studio-unit-badge bg-primary-light text-primary font-bold" data-i18n="studio.stage1.agent_badge">ИИ-методист</span>
+                        <div class="flex items-center gap-2">
+                            <span class="studio-unit-badge bg-primary-light text-primary font-bold" data-i18n="studio.stage1.agent_badge">ИИ-методист</span>
+                            <button type="button" id="btn-copy-system-prompt" class="studio-btn studio-btn-secondary text-[11px] py-1 px-2.5 flex items-center gap-1 rounded-lg" title="Скопировать единый системный промпт (System Instructions) для внешних ИИ-агентов (AI Studio, Claude Projects)" data-i18n-title="studio.stage1.btn_copy_system_prompt_tooltip">
+                                <span class="material-symbols-outlined text-[15px]">terminal</span>
+                                <span data-i18n="studio.stage1.btn_copy_system_prompt">Системный промпт</span>
+                            </button>
+                        </div>
                     </div>
 
                     <div class="studio-card__body">
@@ -115,10 +121,10 @@
                                 <span class="font-semibold" data-i18n="studio.stage1.lang_selector_label">Язык заданий:</span>
                             </div>
                             <div class="studio-lang-segmented" role="radiogroup" aria-label="Язык заданий" id="studio-target-lang-group">
-                                <button type="button" class="studio-lang-btn active" data-lang="auto" title="Язык как в материале" data-i18n-title="studio.stage1.lang_auto_tooltip" data-i18n="studio.stage1.lang_auto">Авто</button>
-                                <button type="button" class="studio-lang-btn" data-lang="ru">RU</button>
+                                <button type="button" class="studio-lang-btn active" data-lang="ru">RU</button>
                                 <button type="button" class="studio-lang-btn" data-lang="en">EN</button>
                                 <button type="button" class="studio-lang-btn" data-lang="uk">UK</button>
+                                <button type="button" class="studio-lang-btn" data-lang="source" title="Задания и анализ на языке предоставляемой теории (промпт на английском)" data-i18n-title="studio.stage1.lang_source_tooltip" data-i18n="studio.stage1.lang_source">Язык теории</button>
                             </div>
                         </div>
 

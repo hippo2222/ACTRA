@@ -3452,3 +3452,13 @@ def get_all_studio_prompts(
     from services.ai_studio_prompts import get_all_studio_prompts as _get_all
     return _get_all(target_language=target_language, prompt_language=prompt_language)
 
+
+def build_studio_system_instruction(
+    target_language: str = "auto",
+    prompt_language: str = "ru",
+) -> str:
+    """Build canonical system instruction prompt for external AI."""
+    from services.ai_studio_prompts import build_studio_system_instruction as _build_sys
+    return _build_sys(target_language=target_language, prompt_language=prompt_language)
+
+

@@ -33,7 +33,8 @@
             generation: {},
         },
 
-        targetLanguage: 'auto', // 'auto' | 'ru' | 'en' | 'uk'
+        targetLanguage: '', // initialized to user's UI language on boot ('ru' | 'en' | 'uk' | 'source')
+        hasExplicitTargetLanguage: false,
 
         sessionId: 'sess_' + Math.random().toString(36).substring(2, 11),
         isDirty: false,
@@ -100,6 +101,7 @@
 
             // Stage 1
             targetLangGroup: document.getElementById('studio-target-lang-group'),
+            btnCopySystemPrompt: document.getElementById('btn-copy-system-prompt'),
             btnCopyAnalysisPrompt: document.getElementById('btn-copy-analysis-prompt'),
             analysisPromptPreviewText: document.getElementById('analysis-prompt-preview-text'),
             analysisResponseInput: document.getElementById('analysis-response-input'),
@@ -224,7 +226,10 @@
                 StudioState.analysisResult = draft.analysisResult || null;
                 StudioState.activeGenerationType = draft.activeGenerationType || 'TEST';
                 if (draft.targetLanguage) {
-                    setTargetLanguage(draft.targetLanguage);
+                    const restoredLang = draft.targetLanguage === 'auto' ? 'source' : draft.targetLanguage;
+                    setTargetLanguage(restoredLang, true);
+                } else {
+                    setTargetLanguage(getDefaultTargetLanguage(), false);
                 }
                 StudioState.typeDrafts = draft.typeDrafts || {};
                 StudioState.allTasks = draft.allTasks || [];
@@ -541,15 +546,34 @@
     // 6. Stage 1: Document Upload & Analysis Parser
     // ---------------------------------------------------------------------------
 
+    function getDefaultTargetLanguage() {
+        const uiLang = (typeof window !== 'undefined' && window.i18n && typeof window.i18n.getLang === 'function')
+            ? window.i18n.getLang()
+            : 'ru';
+        return ['ru', 'en', 'uk'].includes(uiLang) ? uiLang : 'ru';
+    }
+
     function initStage1() {
+        // Pre-select default target language if not already set
+        if (!StudioState.targetLanguage) {
+            setTargetLanguage(getDefaultTargetLanguage(), false);
+        } else {
+            updateTargetLanguageUI(StudioState.targetLanguage);
+        }
+
         // Target Language Selector
         if (DOM.targetLangGroup) {
             DOM.targetLangGroup.querySelectorAll('.studio-lang-btn').forEach((btn) => {
                 btn.addEventListener('click', () => {
-                    const lang = btn.getAttribute('data-lang') || 'auto';
-                    setTargetLanguage(lang);
+                    const lang = btn.getAttribute('data-lang') || getDefaultTargetLanguage();
+                    setTargetLanguage(lang, true);
                 });
             });
+        }
+
+        // Copy System Prompt
+        if (DOM.btnCopySystemPrompt) {
+            DOM.btnCopySystemPrompt.addEventListener('click', copySystemPrompt);
         }
 
         // Copy Analysis Prompt
@@ -580,10 +604,7 @@
         loadAnalysisPrompt();
     }
 
-    function setTargetLanguage(lang) {
-        if (!['auto', 'ru', 'en', 'uk'].includes(lang)) lang = 'auto';
-        StudioState.targetLanguage = lang;
-
+    function updateTargetLanguageUI(lang) {
         if (DOM.targetLangGroup) {
             DOM.targetLangGroup.querySelectorAll('.studio-lang-btn').forEach((btn) => {
                 const btnLang = btn.getAttribute('data-lang');
@@ -594,6 +615,18 @@
                 }
             });
         }
+    }
+
+    function setTargetLanguage(lang, isExplicit = true) {
+        if (!['ru', 'en', 'uk', 'source'].includes(lang)) {
+            lang = getDefaultTargetLanguage();
+        }
+        StudioState.targetLanguage = lang;
+        if (isExplicit) {
+            StudioState.hasExplicitTargetLanguage = true;
+        }
+
+        updateTargetLanguageUI(lang);
 
         loadAnalysisPrompt();
         if (StudioState.currentStep === 2 && StudioState.activeGenerationType) {
@@ -604,15 +637,16 @@
 
     async function loadAnalysisPrompt() {
         const currentLang = (typeof window !== 'undefined' && window.i18n && typeof window.i18n.getLang === 'function') ? window.i18n.getLang() : 'ru';
-        const targetLang = StudioState.targetLanguage || 'auto';
-        const cacheKey = `${currentLang}_${targetLang}`;
+        const targetLang = StudioState.targetLanguage || getDefaultTargetLanguage();
+        const promptLang = (targetLang === 'source') ? 'en' : currentLang;
+        const cacheKey = `${promptLang}_${targetLang}`;
         if (StudioState.cachedPrompts.analysis && StudioState.cachedPrompts.analysisCacheKey === cacheKey) {
             updateAnalysisPromptPreview(StudioState.cachedPrompts.analysis);
             return;
         }
 
         try {
-            const res = await fetch(`/api/editor/studio/prompts?type=analysis&prompt_lang=${encodeURIComponent(currentLang)}&target_lang=${encodeURIComponent(targetLang)}`);
+            const res = await fetch(`/api/editor/studio/prompts?type=analysis&prompt_lang=${encodeURIComponent(promptLang)}&target_lang=${encodeURIComponent(targetLang)}`);
             if (res.ok) {
                 const data = await res.json();
                 StudioState.cachedPrompts.analysis = data.prompt || '';
@@ -633,8 +667,9 @@
     async function copyAnalysisPrompt() {
         try {
             const currentLang = (typeof window !== 'undefined' && window.i18n && typeof window.i18n.getLang === 'function') ? window.i18n.getLang() : 'ru';
-            const targetLang = StudioState.targetLanguage || 'auto';
-            const cacheKey = `${currentLang}_${targetLang}`;
+            const targetLang = StudioState.targetLanguage || getDefaultTargetLanguage();
+            const promptLang = (targetLang === 'source') ? 'en' : currentLang;
+            const cacheKey = `${promptLang}_${targetLang}`;
             if (!StudioState.cachedPrompts.analysis || StudioState.cachedPrompts.analysisCacheKey !== cacheKey) {
                 await loadAnalysisPrompt();
             }
@@ -650,6 +685,32 @@
         } catch (e) {
             console.error('[Studio] Copy prompt error:', e);
             showToast(t('studio.stage1.parsing_error', 'Ошибка при копировании промпта'), 'error');
+        }
+    }
+
+    async function copySystemPrompt() {
+        try {
+            const currentLang = (typeof window !== 'undefined' && window.i18n && typeof window.i18n.getLang === 'function') ? window.i18n.getLang() : 'ru';
+            const targetLang = StudioState.targetLanguage || getDefaultTargetLanguage();
+            const promptLang = (targetLang === 'source') ? 'en' : currentLang;
+
+            const res = await fetch(`/api/editor/studio/prompts?type=system&prompt_lang=${encodeURIComponent(promptLang)}&target_lang=${encodeURIComponent(targetLang)}`);
+            if (!res.ok) {
+                showToast(t('studio.stage1.parsing_error', 'Не удалось получить текст системного промпта'), 'error');
+                return;
+            }
+
+            const data = await res.json();
+            if (!data.ok || !data.prompt) {
+                showToast(t('studio.stage1.parsing_error', 'Не удалось получить текст системного промпта'), 'error');
+                return;
+            }
+
+            await navigator.clipboard.writeText(data.prompt);
+            showToast(t('studio.stage1.system_prompt_copied', 'Системный промпт скопирован в буфер обмена!'), 'success');
+        } catch (e) {
+            console.error('[Studio] Copy system prompt error:', e);
+            showToast(t('studio.stage1.parsing_error', 'Ошибка при копировании системного промпта'), 'error');
         }
     }
 
@@ -825,15 +886,16 @@
 
     async function loadGenerationPromptForType(taskType) {
         const currentLang = (typeof window !== 'undefined' && window.i18n && typeof window.i18n.getLang === 'function') ? window.i18n.getLang() : 'ru';
-        const targetLang = StudioState.targetLanguage || 'auto';
-        const cacheKey = `${taskType}_${currentLang}_${targetLang}`;
+        const targetLang = StudioState.targetLanguage || getDefaultTargetLanguage();
+        const promptLang = (targetLang === 'source') ? 'en' : currentLang;
+        const cacheKey = `${taskType}_${promptLang}_${targetLang}`;
         if (StudioState.cachedPrompts.generation[cacheKey]) {
             updatePromptPreview(StudioState.cachedPrompts.generation[cacheKey]);
             return;
         }
 
         try {
-            const res = await fetch(`/api/editor/studio/prompts?type=generation&task_type=${taskType}&prompt_lang=${encodeURIComponent(currentLang)}&target_lang=${encodeURIComponent(targetLang)}`);
+            const res = await fetch(`/api/editor/studio/prompts?type=generation&task_type=${taskType}&prompt_lang=${encodeURIComponent(promptLang)}&target_lang=${encodeURIComponent(targetLang)}`);
             if (res.ok) {
                 const data = await res.json();
                 StudioState.cachedPrompts.generation[cacheKey] = data.prompt || '';
@@ -855,8 +917,9 @@
         if (DOM.btnCopyTypePrompt) {
             DOM.btnCopyTypePrompt.addEventListener('click', async () => {
                 const currentLang = (typeof window !== 'undefined' && window.i18n && typeof window.i18n.getLang === 'function') ? window.i18n.getLang() : 'ru';
-                const targetLang = StudioState.targetLanguage || 'auto';
-                const cacheKey = `${StudioState.activeGenerationType}_${currentLang}_${targetLang}`;
+                const targetLang = StudioState.targetLanguage || getDefaultTargetLanguage();
+                const promptLang = (targetLang === 'source') ? 'en' : currentLang;
+                const cacheKey = `${StudioState.activeGenerationType}_${promptLang}_${targetLang}`;
                 let prompt = StudioState.cachedPrompts.generation[cacheKey] || '';
                 if (!prompt) {
                     await loadGenerationPromptForType(StudioState.activeGenerationType);
@@ -1444,6 +1507,9 @@
         window.addEventListener('i18n:changed', () => {
             if (typeof window.i18n.updateDOM === 'function') {
                 window.i18n.updateDOM();
+            }
+            if (!StudioState.hasExplicitTargetLanguage) {
+                setTargetLanguage(getDefaultTargetLanguage(), false);
             }
             updateTopicDisplay();
             updateStickyBar();
