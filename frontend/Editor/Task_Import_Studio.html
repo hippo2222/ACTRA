@@ -263,27 +263,63 @@
                                 <span class="material-symbols-outlined text-[18px] text-primary">target</span>
                                 <span class="text-xs font-bold text-text-main" id="focus-pane-type-label" data-i18n="studio.stage2.prompt_title">Промпт для типа</span>
                             </div>
-                            <span id="focus-pane-coverage-badge" class="studio-unit-badge bg-surface-2 text-text-secondary border border-border-subtle" data-i18n="studio.stage2.focus_badge">Фокус</span>
                         </div>
 
                         <div class="studio-pane__body">
                             <!-- Focus Context Card -->
-                            <div class="p-3.5 rounded-xl bg-surface-1 border border-border-subtle flex flex-col gap-2">
-                                <p class="text-[11px] font-bold uppercase tracking-wider text-text-secondary" data-i18n="studio.stage2.type_guidance_title">Образовательные единицы темы</p>
+                            <div class="studio-focus-card p-3.5 rounded-xl bg-surface-1 border border-border-subtle flex flex-col gap-2.5">
+                                <div class="flex items-center justify-between gap-2 flex-wrap">
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="material-symbols-outlined text-[16px] text-primary">psychology</span>
+                                        <span class="text-[11px] font-bold uppercase tracking-wider text-text-secondary" data-i18n="studio.stage2.type_guidance_title">Методический фокус темы</span>
+                                    </div>
+                                    <span id="focus-pane-coverage-badge" class="studio-strategy-badge inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold border transition-all">
+                                        <span class="material-symbols-outlined text-[13px] strategy-icon">tune</span>
+                                        <span class="strategy-label">Фокус</span>
+                                    </span>
+                                </div>
                                 <p id="focus-units-description" class="text-xs leading-relaxed text-text-main" data-i18n="studio.stage2.select_direction_hint">
                                     Выберите направление сверху для формирования точечного промпта.
                                 </p>
-                                <div id="focus-injected-badge" class="hidden flex items-center gap-1.5 text-[11px] font-semibold text-primary pt-1 border-t border-border-subtle">
+                                <div id="focus-injected-badge" class="hidden flex items-center gap-1.5 text-[11px] font-semibold text-primary pt-1.5 border-t border-border-subtle">
                                     <span class="material-symbols-outlined text-[15px]">auto_awesome</span>
                                     <span data-i18n="studio.stage2.focus_injected_badge">Фокус и ловушки из анализа автоматически включены в промпт</span>
                                 </div>
                             </div>
 
-                            <!-- Large Action Button -->
-                            <button id="btn-copy-type-prompt" type="button" class="studio-btn studio-btn--lg studio-btn--primary w-full">
-                                <span class="material-symbols-outlined text-[20px]">content_copy</span>
-                                <span id="label-copy-type-prompt" data-i18n="studio.stage2.btn_copy_type_prompt">Скопировать промпт для заданий</span>
-                            </button>
+                            <!-- Guided Workflow Actions (Step 1 -> Step 2) -->
+                            <div class="studio-workflow-actions flex flex-col gap-3">
+                                <!-- Step 1: Copy Prompt -->
+                                <div class="flex flex-col gap-1.5">
+                                    <div class="flex items-center gap-1.5 text-[11px] font-bold text-text-secondary uppercase tracking-wider">
+                                        <span class="w-4 h-4 rounded-full bg-primary-light text-primary text-[10px] font-bold inline-flex items-center justify-center">1</span>
+                                        <span data-i18n="studio.stage2.step1_label">1. Скопируйте промпт</span>
+                                    </div>
+                                    <button id="btn-copy-type-prompt" type="button" class="studio-btn studio-btn--lg studio-btn--primary w-full">
+                                        <span class="material-symbols-outlined text-[20px]">content_copy</span>
+                                        <span id="label-copy-type-prompt" data-i18n="studio.stage2.btn_copy_type_prompt">Скопировать промпт для заданий</span>
+                                    </button>
+                                    <span class="text-[11px] text-text-muted px-1" data-i18n="studio.stage2.send_prompt_hint">Отправьте промпт в диалог с нейросетью (ChatGPT / Claude / Gemini)</span>
+                                </div>
+
+                                <!-- Transition Arrow / Bridge -->
+                                <div class="flex items-center justify-center -my-0.5 text-text-muted">
+                                    <span class="material-symbols-outlined text-[16px] text-border-strong">south</span>
+                                </div>
+
+                                <!-- Step 2: Paste Response -->
+                                <div class="flex flex-col gap-1.5">
+                                    <div class="flex items-center gap-1.5 text-[11px] font-bold text-text-secondary uppercase tracking-wider">
+                                        <span class="w-4 h-4 rounded-full bg-surface-2 text-text-secondary border border-border-subtle text-[10px] font-bold inline-flex items-center justify-center">2</span>
+                                        <span data-i18n="studio.stage2.step2_label">2. Вставьте результат генерации</span>
+                                    </div>
+                                    <button id="btn-paste-type-response" type="button" class="studio-btn studio-btn--lg studio-btn--secondary w-full hover:border-primary transition-all duration-150" title="Вставить скопированный ответ нейросети в текстовое окно справа" data-i18n-title="studio.stage2.btn_paste_title">
+                                        <span class="material-symbols-outlined text-[20px] text-primary">content_paste_go</span>
+                                        <span id="label-paste-type-response" data-i18n="studio.stage2.btn_paste_response">Вставить ответ нейросети в окно</span>
+                                    </button>
+                                    <span class="text-[11px] text-text-muted px-1" data-i18n="studio.stage2.paste_hint">Вставляет скопированный код заданий в поле справа</span>
+                                </div>
+                            </div>
 
                             <!-- Collapsible Full Prompt Preview -->
                             <details class="rounded-xl border border-border-subtle bg-surface-2 p-3 text-xs">
@@ -306,24 +342,126 @@
                                 <span class="material-symbols-outlined text-[18px] text-primary">edit_note</span>
                                 <span class="text-xs font-bold text-text-main" data-i18n="studio.stage2.paste_type_response_title">Ответ нейросети</span>
                             </div>
-                            <span id="live-parse-counter" class="studio-counter-pill hidden">
-                                <span class="material-symbols-outlined text-[14px]">check_circle</span>
-                                <span id="live-parse-count-text"></span>
-                            </span>
+                            <div class="flex items-center gap-2">
+                                <span id="live-parse-counter" class="studio-counter-pill hidden">
+                                    <span class="material-symbols-outlined text-[14px]">check_circle</span>
+                                    <span id="live-parse-count-text"></span>
+                                </span>
+                                <button id="btn-quick-commit-tasks" type="button" class="studio-btn studio-btn--sm studio-btn--primary hidden transition-all duration-150" title="Принять распознанные задания этого типа в витрину" data-i18n-title="studio.stage2.btn_quick_commit_title">
+                                    <span class="material-symbols-outlined text-[15px]">check_circle</span>
+                                    <span id="label-quick-commit-tasks" data-i18n="studio.stage2.btn_quick_commit">Принять</span>
+                                </button>
+                            </div>
                         </div>
 
                         <div class="studio-pane__body">
+                            <!-- Raw Response Textarea (Edit Mode) -->
                             <textarea id="type-response-input" class="studio-textarea flex-1 font-mono text-xs"
                                 placeholder="Вставьте сюда ответ нейросети со сгенерированными заданиями формата @..." data-i18n-placeholder="studio.stage2.paste_type_placeholder"></textarea>
+
+                            <!-- Verified Tasks View (Committed Mode) -->
+                            <div id="type-committed-view" class="hidden flex-1 flex flex-col gap-3 overflow-y-auto">
+                                <!-- Status Banner -->
+                                <div class="p-3.5 rounded-xl bg-success-light border border-success/30 flex items-center justify-between gap-3">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-success shadow-xs flex-shrink-0">
+                                            <span class="material-symbols-outlined text-[20px]">verified</span>
+                                        </div>
+                                        <div>
+                                            <p id="committed-view-title" class="text-xs font-bold text-success-dark">Задания успешно приняты в витрину</p>
+                                            <p class="text-[11px] text-text-secondary" data-i18n="studio.stage2.committed_view_desc">Схема проверена сервером и зафиксирована для импорта на Шаге 3</p>
+                                        </div>
+                                    </div>
+                                    <button id="btn-edit-type-tasks" type="button" class="studio-btn studio-btn--sm studio-btn--secondary flex-shrink-0" title="Вернуться к редактированию исходного текста" data-i18n-title="studio.stage2.btn_edit_tasks_title">
+                                        <span class="material-symbols-outlined text-[15px]">edit</span>
+                                        <span data-i18n="studio.stage2.btn_edit_tasks">Изменить код</span>
+                                    </button>
+                                </div>
+
+                                <!-- Parsed Task Mini-Cards List -->
+                                <div id="type-committed-cards-list" class="flex flex-col gap-2.5">
+                                    <!-- Rendered dynamically -->
+                                </div>
+
+                                <!-- Collapsible Raw Code Preview -->
+                                <details class="rounded-xl border border-border-subtle bg-surface-2 p-2.5 text-xs flex-shrink-0">
+                                    <summary class="font-semibold text-text-secondary cursor-pointer hover:text-primary transition-colors text-[11px]" data-i18n="studio.stage2.view_raw_code">
+                                        Показать исходный сгенерированный код
+                                    </summary>
+                                    <pre id="type-committed-raw-code" class="mt-2 p-2.5 rounded-lg bg-surface-1 border border-border-subtle text-[11px] font-mono text-text-main whitespace-pre-wrap overflow-x-auto max-h-[140px]"></pre>
+                                </details>
+                            </div>
+
+                            <!-- Manual / Visual Task View (CLICK / DRAW Mode) -->
+                            <div id="type-manual-visual-view" class="hidden flex-1 flex flex-col gap-3 overflow-y-auto">
+                                <!-- Visual Guidance Banner -->
+                                <div class="p-4 rounded-xl bg-surface-1 border border-border-subtle flex flex-col gap-3 shadow-xs">
+                                    <div class="flex items-start gap-3">
+                                        <div class="w-10 h-10 rounded-xl bg-primary-light text-primary flex items-center justify-center flex-shrink-0">
+                                            <span id="manual-visual-icon" class="material-symbols-outlined text-[24px]">ads_click</span>
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <div class="flex items-center gap-2 flex-wrap">
+                                                <h4 id="manual-visual-title" class="text-sm font-bold text-text-main" data-i18n="studio.stage2.visual_mode_title">Интерактивное задание на изображении</h4>
+                                                <span class="studio-tab-badge studio-tab-badge--manual">
+                                                    <span class="material-symbols-outlined text-[12px]">draw</span>
+                                                    <span data-i18n="studio.stage2.tab_manual_label">Ручной</span>
+                                                </span>
+                                            </div>
+                                            <p id="manual-visual-desc" class="text-xs text-text-secondary mt-1 leading-relaxed" data-i18n="studio.stage2.visual_mode_desc">
+                                                Задания этого типа требуют выбора графической подложки (снимка, схемы, рентгенограммы) и интерактивной разметки зон клика или контуров в визуальном редакторе ACTRA.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Visual Targets & Recommendations from Analysis -->
+                                    <div id="manual-visual-targets-box" class="p-3 rounded-lg bg-surface-2 border border-border-subtle flex flex-col gap-2">
+                                        <div class="flex items-center gap-1.5 text-xs font-bold text-text-main">
+                                            <span class="material-symbols-outlined text-[16px] text-primary">target</span>
+                                            <span data-i18n="studio.stage2.visual_targets_title">Рекомендуемые ориентиры для разметки из анализа:</span>
+                                        </div>
+                                        <ul id="manual-visual-targets-list" class="flex flex-col gap-1 text-xs text-text-secondary pl-5 list-disc">
+                                            <!-- Populated dynamically -->
+                                        </ul>
+                                        <p id="manual-visual-hint" class="text-[11px] text-text-muted italic hidden">
+                                            <!-- Optional stem or polygon hint -->
+                                        </p>
+                                    </div>
+
+                                    <!-- Action Button: Open Visual Editor -->
+                                    <div class="flex flex-col gap-1.5 pt-1">
+                                        <a id="btn-open-visual-editor" href="#" target="_blank" rel="noopener" class="studio-btn studio-btn--lg studio-btn--primary w-full justify-center">
+                                            <span class="material-symbols-outlined text-[20px]">open_in_new</span>
+                                            <span id="label-open-visual-editor" data-i18n="studio.stage2.btn_open_visual_editor">Открыть визуальный редактор</span>
+                                        </a>
+                                        <span class="text-[11px] text-text-muted text-center" data-i18n="studio.stage2.open_visual_editor_hint">Откроется в новой вкладке с сохранением текущего контекста темы</span>
+                                    </div>
+                                </div>
+
+                                <!-- Power User: Manual JSON / Spec Input Collapsible -->
+                                <details class="rounded-xl border border-border-subtle bg-surface-2 p-3 text-xs flex-shrink-0">
+                                    <summary class="font-semibold text-text-secondary cursor-pointer hover:text-primary transition-colors text-[11px] flex items-center justify-between" data-i18n="studio.stage2.manual_spec_toggle">
+                                        Ввести спецификацию вручную (JSON / код)
+                                    </summary>
+                                    <div class="mt-2.5 flex flex-col gap-2">
+                                        <p class="text-[11px] text-text-muted" data-i18n="studio.stage2.manual_spec_hint">Если у вас уже есть данные задания в формате JSON или @CLICK/@DRAW, вставьте их сюда:</p>
+                                        <textarea id="manual-spec-textarea" class="studio-textarea font-mono text-xs w-full min-h-[100px]" placeholder='{"type": "click", ...}'></textarea>
+                                        <button id="btn-commit-manual-spec" type="button" class="studio-btn studio-btn--sm studio-btn--secondary self-end">
+                                            <span class="material-symbols-outlined text-[15px]">check</span>
+                                            <span data-i18n="studio.stage2.btn_apply_spec">Применить спецификацию</span>
+                                        </button>
+                                    </div>
+                                </details>
+                            </div>
                         </div>
 
                         <div class="studio-pane__footer">
-                            <button id="btn-commit-type-tasks" type="button" class="studio-btn studio-btn--md studio-btn--secondary disabled:opacity-50" disabled>
-                                <span class="material-symbols-outlined text-[16px]">check</span>
-                                <span data-i18n="studio.stage2.btn_commit">Принять задания этого типа</span>
+                            <button id="btn-commit-type-tasks" type="button" class="studio-btn studio-btn--md studio-btn--secondary disabled:opacity-50 transition-all duration-150" disabled>
+                                <span class="material-symbols-outlined text-[16px]">check_circle</span>
+                                <span id="label-commit-type-tasks" data-i18n="studio.stage2.btn_commit">Принять задания этого типа</span>
                             </button>
 
-                            <button id="btn-proceed-to-step-3" type="button" class="studio-btn studio-btn--md studio-btn--primary">
+                            <button id="btn-proceed-to-step-3" type="button" class="studio-btn studio-btn--md studio-btn--secondary transition-all duration-150">
                                 <span class="btn-proceed-step3-label">Перейти к витрине</span>
                                 <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
                             </button>

@@ -119,12 +119,35 @@
             focusInjectedBadge: document.getElementById('focus-injected-badge'),
             btnCopyTypePrompt: document.getElementById('btn-copy-type-prompt'),
             labelCopyTypePrompt: document.getElementById('label-copy-type-prompt'),
+            btnPasteTypeResponse: document.getElementById('btn-paste-type-response'),
+            labelPasteTypeResponse: document.getElementById('label-paste-type-response'),
             typePromptPreviewText: document.getElementById('type-prompt-preview-text'),
             typeResponseInput: document.getElementById('type-response-input'),
+            typeCommittedView: document.getElementById('type-committed-view'),
+            committedViewTitle: document.getElementById('committed-view-title'),
+            btnEditTypeTasks: document.getElementById('btn-edit-type-tasks'),
+            typeCommittedCardsList: document.getElementById('type-committed-cards-list'),
+            typeCommittedRawCode: document.getElementById('type-committed-raw-code'),
             liveParseCounter: document.getElementById('live-parse-counter'),
             liveParseCountText: document.getElementById('live-parse-count-text'),
+            btnQuickCommitTasks: document.getElementById('btn-quick-commit-tasks'),
+            labelQuickCommitTasks: document.getElementById('label-quick-commit-tasks'),
             btnCommitTypeTasks: document.getElementById('btn-commit-type-tasks'),
+            labelCommitTypeTasks: document.getElementById('label-commit-type-tasks'),
             btnProceedToStep3: document.getElementById('btn-proceed-to-step-3'),
+
+            // Stage 2 Manual Visual View
+            typeManualVisualView: document.getElementById('type-manual-visual-view'),
+            manualVisualIcon: document.getElementById('manual-visual-icon'),
+            manualVisualTitle: document.getElementById('manual-visual-title'),
+            manualVisualDesc: document.getElementById('manual-visual-desc'),
+            manualVisualTargetsBox: document.getElementById('manual-visual-targets-box'),
+            manualVisualTargetsList: document.getElementById('manual-visual-targets-list'),
+            manualVisualHint: document.getElementById('manual-visual-hint'),
+            btnOpenVisualEditor: document.getElementById('btn-open-visual-editor'),
+            labelOpenVisualEditor: document.getElementById('label-open-visual-editor'),
+            manualSpecTextarea: document.getElementById('manual-spec-textarea'),
+            btnCommitManualSpec: document.getElementById('btn-commit-manual-spec'),
 
             // Stage 3
             showcaseSelectAll: document.getElementById('showcase-select-all'),
@@ -468,6 +491,13 @@
         // 4. Clear Stage 2 UI
         if (DOM.typeResponseInput) {
             DOM.typeResponseInput.value = '';
+            DOM.typeResponseInput.classList.remove('hidden');
+        }
+        if (DOM.typeCommittedView) {
+            DOM.typeCommittedView.classList.add('hidden');
+        }
+        if (DOM.typeCommittedCardsList) {
+            DOM.typeCommittedCardsList.innerHTML = '';
         }
         if (DOM.liveParseCounter) {
             DOM.liveParseCounter.classList.add('hidden');
@@ -477,6 +507,25 @@
         }
         if (DOM.typesTabsContainer) {
             DOM.typesTabsContainer.innerHTML = '';
+        }
+        if (DOM.focusUnitsDescription) {
+            DOM.focusUnitsDescription.textContent = t('studio.stage2.select_direction_hint', 'Выберите направление сверху для формирования точечного промпта.');
+        }
+        if (DOM.focusPaneCoverageBadge) {
+            DOM.focusPaneCoverageBadge.classList.add('hidden');
+            DOM.focusPaneCoverageBadge.removeAttribute('title');
+        }
+        if (DOM.typeManualVisualView) {
+            DOM.typeManualVisualView.classList.add('hidden');
+        }
+        if (DOM.manualSpecTextarea) {
+            DOM.manualSpecTextarea.value = '';
+        }
+        if (DOM.manualVisualTargetsList) {
+            DOM.manualVisualTargetsList.innerHTML = '';
+        }
+        if (DOM.focusInjectedBadge) {
+            DOM.focusInjectedBadge.classList.add('hidden');
         }
 
         // 5. Clear Stage 3 UI
@@ -945,18 +994,21 @@
     }
 
     function getStrategyInfo(strategy) {
-        if (!strategy) return { label: '', tooltip: '' };
+        if (!strategy) return { label: '', fullLabel: '', tooltip: '', icon: 'tune' };
         const clean = String(strategy).toLowerCase().trim();
-        const fallbacks = {
-            misconception_first: 'Типичные заблуждения',
-            breadth_first: 'Широкий охват',
-            high_risk_first: 'Критические точки',
-            visual_first: 'Визуальный фокус',
-            structure_first: 'Структурирование',
+        const strategyMeta = {
+            structure_first: { fallbackLabel: 'Структурирование', icon: 'account_tree' },
+            misconception_first: { fallbackLabel: 'Типичные заблуждения', icon: 'psychology' },
+            high_risk_first: { fallbackLabel: 'Критические точки', icon: 'warning' },
+            breadth_first: { fallbackLabel: 'Широкий охват', icon: 'apps' },
+            visual_first: { fallbackLabel: 'Визуальный фокус', icon: 'visibility' },
         };
-        const label = t(`studio.strategies.${clean}`, fallbacks[clean] || strategy);
+        const meta = strategyMeta[clean] || { fallbackLabel: strategy, icon: 'tune' };
+        const label = t(`studio.strategies.${clean}`, meta.fallbackLabel);
+        const prefixTpl = t('studio.strategies.strategy_prefix', 'Стратегия: {name}');
+        const fullLabel = prefixTpl.replace('{name}', label);
         const tooltip = t(`studio.strategies.${clean}_desc`, '');
-        return { label, tooltip };
+        return { label, fullLabel, tooltip, icon: meta.icon };
     }
 
     function renderLessonMap(analysis) {
@@ -986,7 +1038,7 @@
                         <div class="flex items-center justify-between gap-2">
                             <span class="text-xs font-bold text-text-main">${TASK_TYPE_LABELS[typeName] || typeName}</span>
                             <div class="flex items-center gap-1">
-                                ${stratInfo.label ? `<span class="studio-unit-badge bg-surface-2 text-text-secondary border border-border-subtle" title="${escapeHtml(stratInfo.tooltip)}">${escapeHtml(stratInfo.label)}</span>` : ''}
+                                ${stratInfo.label ? `<span class="studio-unit-badge bg-surface-2 text-text-secondary border border-border-subtle inline-flex items-center gap-1" title="${escapeHtml(stratInfo.tooltip || stratInfo.fullLabel)}"><span class="material-symbols-outlined text-[12px]">${escapeHtml(stratInfo.icon)}</span><span>${escapeHtml(stratInfo.label)}</span></span>` : ''}
                                 <span class="studio-unit-badge ${isManual ? 'bg-warning-light text-warning-dark' : 'bg-primary-light text-primary'}">
                                     ${isManual ? t('studio.labels.manual_only', 'Ручное создание') : `${t('studio.labels.recommended', 'Рекомендовано')} (~${rec.count || 2})`}
                                 </span>
@@ -1007,23 +1059,211 @@
 
     let liveParseDebounceTimer = null;
 
-    function updateProceedToStep3Button() {
-        if (!DOM.btnProceedToStep3) return;
-        const count = (StudioState.allTasks || []).length;
-        const labelSpan = DOM.btnProceedToStep3.querySelector('.btn-proceed-step3-label') || DOM.btnProceedToStep3.querySelector('span:not(.material-symbols-outlined)');
-        if (labelSpan) {
-            if (count > 0) {
-                labelSpan.textContent = t('studio.stage2.btn_proceed_step3', 'Перейти к витрине ({count})').replace('{count}', count);
+    function updateStage2ActionButtons() {
+        if (!DOM.btnCommitTypeTasks && !DOM.btnProceedToStep3) return;
+
+        const taskType = StudioState.activeGenerationType;
+        const draft = StudioState.typeDrafts[taskType] || { responseText: '', parsedTasks: [], isCommitted: false };
+        const currentText = DOM.typeResponseInput ? DOM.typeResponseInput.value : (draft.responseText || '');
+        const regexCount = countTasksByRegex(currentText, taskType);
+        const isCommitted = Boolean(draft.isCommitted && Array.isArray(draft.parsedTasks) && draft.parsedTasks.length > 0 && draft.responseText.trim() === currentText.trim());
+        const totalAllTasks = (StudioState.allTasks || []).length;
+
+        // 1. Live Parse Counter
+        if (DOM.liveParseCounter && DOM.liveParseCountText) {
+            if (regexCount > 0) {
+                DOM.liveParseCounter.classList.remove('hidden');
+                DOM.liveParseCountText.textContent = `${regexCount} ${pluralizeTasks(regexCount)} найдено`;
             } else {
-                labelSpan.textContent = t('studio.stage2.btn_proceed_step3_empty', 'Перейти к витрине');
+                DOM.liveParseCounter.classList.add('hidden');
             }
         }
+
+        // 2. Commit buttons (header quick commit + footer commit)
+        if (DOM.btnCommitTypeTasks) {
+            if (regexCount > 0 && !isCommitted) {
+                // UNCOMMITTED TASKS DETECTED: Primary CTA!
+                DOM.btnCommitTypeTasks.disabled = false;
+                DOM.btnCommitTypeTasks.classList.remove('studio-btn--secondary', 'studio-btn--committed');
+                DOM.btnCommitTypeTasks.classList.add('studio-btn--primary');
+                const commitLabel = t('studio.stage2.btn_commit_count', 'Принять задания ({count})').replace('{count}', regexCount);
+                if (DOM.labelCommitTypeTasks) {
+                    DOM.labelCommitTypeTasks.textContent = commitLabel;
+                } else {
+                    DOM.btnCommitTypeTasks.textContent = commitLabel;
+                }
+
+                // Quick commit in header
+                if (DOM.btnQuickCommitTasks) {
+                    DOM.btnQuickCommitTasks.classList.remove('hidden');
+                    const quickLabel = t('studio.stage2.btn_quick_commit_count', 'Принять ({count})').replace('{count}', regexCount);
+                    if (DOM.labelQuickCommitTasks) {
+                        DOM.labelQuickCommitTasks.textContent = quickLabel;
+                    } else {
+                        DOM.btnQuickCommitTasks.textContent = quickLabel;
+                    }
+                }
+            } else if (isCommitted) {
+                // COMMITTED TASKS: Confirmed calm state
+                DOM.btnCommitTypeTasks.disabled = false;
+                DOM.btnCommitTypeTasks.classList.remove('studio-btn--primary');
+                DOM.btnCommitTypeTasks.classList.add('studio-btn--secondary', 'studio-btn--committed');
+                const committedLabel = t('studio.stage2.btn_committed_count', '✓ Принято ({count})').replace('{count}', draft.parsedTasks.length);
+                if (DOM.labelCommitTypeTasks) {
+                    DOM.labelCommitTypeTasks.textContent = committedLabel;
+                } else {
+                    DOM.btnCommitTypeTasks.textContent = committedLabel;
+                }
+
+                if (DOM.btnQuickCommitTasks) {
+                    DOM.btnQuickCommitTasks.classList.add('hidden');
+                }
+            } else {
+                // NO TASKS DETECTED: Disabled state
+                DOM.btnCommitTypeTasks.disabled = true;
+                DOM.btnCommitTypeTasks.classList.remove('studio-btn--primary', 'studio-btn--committed');
+                DOM.btnCommitTypeTasks.classList.add('studio-btn--secondary');
+                const defaultLabel = t('studio.stage2.btn_commit', 'Принять задания этого типа');
+                if (DOM.labelCommitTypeTasks) {
+                    DOM.labelCommitTypeTasks.textContent = defaultLabel;
+                } else {
+                    DOM.btnCommitTypeTasks.textContent = defaultLabel;
+                }
+
+                if (DOM.btnQuickCommitTasks) {
+                    DOM.btnQuickCommitTasks.classList.add('hidden');
+                }
+            }
+        }
+
+        // 3. Proceed to Step 3 button
+        if (DOM.btnProceedToStep3) {
+            const labelSpan = DOM.btnProceedToStep3.querySelector('.btn-proceed-step3-label') || DOM.btnProceedToStep3.querySelector('span:not(.material-symbols-outlined)');
+            if (totalAllTasks > 0) {
+                if (labelSpan) {
+                    labelSpan.textContent = t('studio.stage2.btn_proceed_step3', 'Перейти к витрине ({count})').replace('{count}', totalAllTasks);
+                }
+                // If there are uncommitted tasks sitting in textarea, demote Proceed button to secondary!
+                if (regexCount > 0 && !isCommitted) {
+                    DOM.btnProceedToStep3.classList.remove('studio-btn--primary');
+                    DOM.btnProceedToStep3.classList.add('studio-btn--secondary');
+                } else {
+                    DOM.btnProceedToStep3.classList.remove('studio-btn--secondary');
+                    DOM.btnProceedToStep3.classList.add('studio-btn--primary');
+                }
+            } else {
+                if (labelSpan) {
+                    labelSpan.textContent = t('studio.stage2.btn_proceed_step3_empty', 'Перейти к витрине');
+                }
+                DOM.btnProceedToStep3.classList.remove('studio-btn--primary');
+                DOM.btnProceedToStep3.classList.add('studio-btn--secondary');
+            }
+        }
+    }
+
+    function updateProceedToStep3Button() {
+        updateStage2ActionButtons();
     }
 
     function setupStage2() {
         renderStage2Tabs();
         selectGenerationType(StudioState.activeGenerationType);
         updateProceedToStep3Button();
+    }
+
+    function getTypeTabState(t) {
+        const draft = StudioState.typeDrafts[t];
+        const rec = (StudioState.analysisResult && Array.isArray(StudioState.analysisResult.recommendations))
+            ? StudioState.analysisResult.recommendations.find((r) => r && r.task_type === t)
+            : null;
+
+        const isCommitted = Boolean(draft && draft.isCommitted && Array.isArray(draft.parsedTasks) && draft.parsedTasks.length > 0);
+        const committedCount = isCommitted ? draft.parsedTasks.length : 0;
+
+        const hasDraftText = Boolean(draft && !draft.isCommitted && draft.responseText && draft.responseText.trim().length > 0);
+        const hasUncommittedTasks = Boolean(draft && !draft.isCommitted && Array.isArray(draft.parsedTasks) && draft.parsedTasks.length > 0);
+        const isDraft = hasDraftText || hasUncommittedTasks;
+        const draftCount = (draft && Array.isArray(draft.parsedTasks) && draft.parsedTasks.length > 0) ? draft.parsedTasks.length : 0;
+
+        const isManual = Boolean(rec && rec.manual_only) || ['CLICK', 'DRAW'].includes(t);
+
+        let status = 'idle';
+        if (isCommitted) {
+            status = 'ready';
+        } else if (isDraft) {
+            status = 'draft';
+        } else if (isManual) {
+            status = 'manual';
+        } else if (rec) {
+            status = 'recommended';
+        }
+
+        let recCount = 3;
+        if (rec && rec.count !== undefined && rec.count !== null) {
+            const parsed = parseInt(rec.count, 10);
+            if (!isNaN(parsed) && parsed > 0) {
+                recCount = parsed;
+            }
+        }
+
+        return {
+            status,
+            isCommitted,
+            committedCount,
+            isDraft,
+            draftCount,
+            isManual,
+            isRecommended: Boolean(rec && !isManual),
+            recCount,
+        };
+    }
+
+    function renderTypeTabBadgeHtml(tabState) {
+        if (tabState.status === 'ready') {
+            const tooltip = t('studio.stage2.tab_ready_tooltip', 'Принято {count} заданий в витрину')
+                .replace('{count}', tabState.committedCount);
+            return `<span class="studio-tab-badge studio-tab-badge--ready" title="${escapeHtml(tooltip)}">✓ ${tabState.committedCount}</span>`;
+        }
+        if (tabState.status === 'draft') {
+            const tooltip = t('studio.stage2.tab_draft_tooltip', 'Есть несохранённый черновик заданий');
+            const countText = tabState.draftCount > 0 ? tabState.draftCount : t('studio.stage2.tab_draft_short', 'черновик');
+            return `<span class="studio-tab-badge studio-tab-badge--draft" title="${escapeHtml(tooltip)}"><span class="studio-tab-dot">●</span> ${escapeHtml(countText)}</span>`;
+        }
+        if (tabState.status === 'recommended') {
+            const tooltip = t('studio.stage2.tab_rec_tooltip', 'Рекомендовано анализом: ~{count} заданий')
+                .replace('{count}', tabState.recCount);
+            return `<span class="studio-tab-badge studio-tab-badge--rec" title="${escapeHtml(tooltip)}">~${tabState.recCount}</span>`;
+        }
+        if (tabState.status === 'manual') {
+            const label = t('studio.stage2.tab_manual_label', 'Ручной');
+            return `<span class="studio-tab-badge studio-tab-badge--manual"><span class="material-symbols-outlined text-[12px]">draw</span> ${escapeHtml(label)}</span>`;
+        }
+        return '';
+    }
+
+    function updateTypeTabStatus(taskType) {
+        if (!DOM.typesTabsContainer || !taskType) return;
+        const tab = DOM.typesTabsContainer.querySelector(`.studio-type-tab[data-type="${taskType}"]`);
+        if (!tab) return;
+
+        const tabState = getTypeTabState(taskType);
+        tab.setAttribute('data-status', tabState.status);
+        tab.setAttribute('data-ready', tabState.isCommitted ? 'true' : 'false');
+        tab.setAttribute('data-draft', tabState.isDraft ? 'true' : 'false');
+        tab.setAttribute('data-recommended', tabState.status === 'recommended' ? 'true' : 'false');
+        tab.setAttribute('data-manual', tabState.isManual ? 'true' : 'false');
+
+        const badgeHtml = renderTypeTabBadgeHtml(tabState);
+        const badgeSlot = tab.querySelector('.studio-tab-badge-slot');
+        if (badgeSlot) {
+            badgeSlot.innerHTML = badgeHtml;
+        } else {
+            const label = TASK_TYPE_LABELS[taskType] || taskType;
+            tab.innerHTML = `
+                <span class="studio-tab-label">${label}</span>
+                <span class="studio-tab-badge-slot">${badgeHtml}</span>
+            `;
+        }
     }
 
     function renderStage2Tabs() {
@@ -1034,7 +1274,7 @@
         const types = ['TEST', 'OPEN_ANSWER', 'SEQUENCE', 'CLICK_TEXT', 'CLICK_WORDS'];
         if (StudioState.analysisResult && Array.isArray(StudioState.analysisResult.recommendations)) {
             StudioState.analysisResult.recommendations.forEach((r) => {
-                if (r.task_type && !types.includes(r.task_type) && !r.manual_only) {
+                if (r && r.task_type && !types.includes(r.task_type)) {
                     types.push(r.task_type);
                 }
             });
@@ -1047,13 +1287,16 @@
             btn.setAttribute('data-type', t);
             btn.setAttribute('data-active', t === StudioState.activeGenerationType ? 'true' : 'false');
 
-            const draft = StudioState.typeDrafts[t];
-            const isReady = draft && draft.parsedTasks && draft.parsedTasks.length > 0;
-            btn.setAttribute('data-ready', isReady ? 'true' : 'false');
+            const tabState = getTypeTabState(t);
+            btn.setAttribute('data-status', tabState.status);
+            btn.setAttribute('data-ready', tabState.isCommitted ? 'true' : 'false');
+            btn.setAttribute('data-draft', tabState.isDraft ? 'true' : 'false');
+            btn.setAttribute('data-recommended', tabState.status === 'recommended' ? 'true' : 'false');
+            btn.setAttribute('data-manual', tabState.isManual ? 'true' : 'false');
 
             btn.innerHTML = `
-                <span>${TASK_TYPE_LABELS[t] || t}</span>
-                ${isReady ? `<span class="text-success text-[12px] font-bold">✓ ${draft.parsedTasks.length}</span>` : ''}
+                <span class="studio-tab-label">${TASK_TYPE_LABELS[t] || t}</span>
+                <span class="studio-tab-badge-slot">${renderTypeTabBadgeHtml(tabState)}</span>
             `;
 
             btn.addEventListener('click', () => {
@@ -1255,8 +1498,114 @@
         return directive + '\n\n' + basePrompt;
     }
 
+    function isManualVisualType(taskType, rec = null) {
+        const norm = String(taskType || '').trim().toUpperCase();
+        if (norm === 'CLICK' || norm === 'DRAW') return true;
+        if (rec && (rec.manual_only || rec.recommendation_status === 'recommended_manual')) return true;
+        return false;
+    }
+
+    function buildVisualGuidanceText(taskType, rec) {
+        const typeLabel = TASK_TYPE_LABELS[taskType] || taskType;
+        const topicName = StudioState.selectedTopicName || 'Тема';
+        const manual = (rec && rec.manual_authoring) ? rec.manual_authoring : {};
+        const focus = rec?.generation_focus || manual.why_visual || rec?.rationale || '';
+        const targets = (Array.isArray(manual.target_objects) && manual.target_objects.length > 0)
+            ? manual.target_objects
+            : (Array.isArray(rec?.assessable_anchors) ? rec.assessable_anchors : []);
+        const stem = manual.task_stem_example || '';
+        const hint = manual.polygon_hint || '';
+
+        const lines = [
+            `# МЕТОДИЧЕСКИЕ ОРИЕНТИРЫ ДЛЯ ВИЗУАЛЬНОГО ЗАДАНИЯ (${typeLabel})`,
+            `Тема: ${topicName}`,
+        ];
+        if (focus) {
+            lines.push(`\n## Целевой фокус:\n${focus}`);
+        }
+        if (targets.length > 0) {
+            lines.push(`\n## Рекомендуемые ориентиры и структуры для разметки:`);
+            targets.forEach((t) => lines.push(`- ${t}`));
+        }
+        if (stem) {
+            lines.push(`\n## Пример формулировки задания:\n${stem}`);
+        }
+        if (hint) {
+            lines.push(`\n## Подсказка по геометрии/разметке:\n${hint}`);
+        }
+        return lines.join('\n');
+    }
+
+    function renderManualVisualView(taskType, rec) {
+        if (!DOM.typeManualVisualView) return;
+
+        const isDraw = taskType === 'DRAW';
+        const typeLabel = TASK_TYPE_LABELS[taskType] || taskType;
+
+        // 1. Icon & Titles
+        if (DOM.manualVisualIcon) {
+            DOM.manualVisualIcon.textContent = isDraw ? 'draw' : 'ads_click';
+        }
+        if (DOM.manualVisualTitle) {
+            DOM.manualVisualTitle.textContent = `${t('studio.stage2.visual_mode_title', 'Интерактивное задание на изображении')}: ${typeLabel}`;
+        }
+
+        // 2. Open Visual Editor Button Link
+        if (DOM.btnOpenVisualEditor) {
+            const mod = StudioState.selectedModuleId || '';
+            const top = StudioState.selectedTopicId || '';
+            const edType = isDraw ? 'draw' : 'click';
+            const params = new URLSearchParams({
+                module: mod,
+                topic: top,
+                task_type: edType,
+                new: '1',
+            });
+            DOM.btnOpenVisualEditor.href = `/editor/Point_Annotation.html?${params.toString()}`;
+            if (DOM.labelOpenVisualEditor) {
+                DOM.labelOpenVisualEditor.textContent = `${t('studio.stage2.btn_open_visual_editor', 'Открыть визуальный редактор')} (${typeLabel})`;
+            }
+        }
+
+        // 3. Targets List
+        if (DOM.manualVisualTargetsList) {
+            const manual = (rec && rec.manual_authoring) ? rec.manual_authoring : {};
+            const targets = (Array.isArray(manual.target_objects) && manual.target_objects.length > 0)
+                ? manual.target_objects
+                : (Array.isArray(rec?.assessable_anchors) ? rec.assessable_anchors : []);
+
+            if (targets.length > 0) {
+                DOM.manualVisualTargetsList.innerHTML = targets
+                    .map((tgt) => `<li><span class="font-medium text-text-main">${escapeHtml(tgt)}</span></li>`)
+                    .join('');
+            } else {
+                DOM.manualVisualTargetsList.innerHTML = `<li>${escapeHtml(t('studio.stage2.visual_target_default', 'Локализуйте ключевые визуальные ориентиры и анатомические структуры по материалу лекции'))}</li>`;
+            }
+
+            // Hint
+            if (DOM.manualVisualHint) {
+                const stem = manual.task_stem_example || '';
+                const hint = manual.polygon_hint || '';
+                const hintParts = [];
+                if (stem) hintParts.push(`Пример формулировки: «${stem}»`);
+                if (hint) hintParts.push(`Подсказка: ${hint}`);
+                if (hintParts.length > 0) {
+                    DOM.manualVisualHint.textContent = hintParts.join(' • ');
+                    DOM.manualVisualHint.classList.remove('hidden');
+                } else {
+                    DOM.manualVisualHint.classList.add('hidden');
+                }
+            }
+        }
+    }
+
     async function selectGenerationType(taskType) {
         StudioState.activeGenerationType = taskType;
+
+        const rec = (StudioState.analysisResult && Array.isArray(StudioState.analysisResult.recommendations))
+            ? StudioState.analysisResult.recommendations.find((r) => r.task_type === taskType)
+            : null;
+        const isManualVisual = isManualVisualType(taskType, rec);
 
         // Update Tab active state
         if (DOM.typesTabsContainer) {
@@ -1270,32 +1619,36 @@
             DOM.focusPaneTypeLabel.textContent = `${t('studio.stage2.prompt_title', 'Промпт для типа')}: ${TASK_TYPE_LABELS[taskType] || taskType}`;
         }
         if (DOM.labelCopyTypePrompt) {
-            DOM.labelCopyTypePrompt.textContent = `${t('studio.stage2.btn_copy_type_prompt', 'Скопировать промпт для заданий')} (${TASK_TYPE_LABELS[taskType] || taskType})`;
+            const btnKey = isManualVisual ? 'studio.stage2.btn_copy_visual_guidance' : 'studio.stage2.btn_copy_type_prompt';
+            const defaultBtnLabel = isManualVisual ? 'Скопировать методические ориентиры' : 'Скопировать промпт для заданий';
+            DOM.labelCopyTypePrompt.textContent = `${t(btnKey, defaultBtnLabel)} (${TASK_TYPE_LABELS[taskType] || taskType})`;
         }
 
         // Pedagogical focus from analysis
         let focusText = t('studio.stage2.select_direction_hint', 'Выберите направление сверху для формирования точечного промпта.');
-        let strategyBadge = t('studio.stage2.focus_badge', 'Фокус');
-        let strategyTooltip = '';
+        let stratInfo = null;
         let hasAnalysisRec = false;
-        if (StudioState.analysisResult && Array.isArray(StudioState.analysisResult.recommendations)) {
-            const rec = StudioState.analysisResult.recommendations.find((r) => r.task_type === taskType);
-            if (rec) {
-                hasAnalysisRec = true;
-                focusText = rec.generation_focus || rec.rationale || focusText;
-                if (rec.coverage_strategy) {
-                    const info = getStrategyInfo(rec.coverage_strategy);
-                    strategyBadge = info.label || strategyBadge;
-                    strategyTooltip = info.tooltip || '';
-                }
+        if (rec) {
+            hasAnalysisRec = true;
+            focusText = rec.generation_focus || rec.rationale || focusText;
+            if (rec.coverage_strategy) {
+                stratInfo = getStrategyInfo(rec.coverage_strategy);
             }
         }
-        if (DOM.focusUnitsDescription) DOM.focusUnitsDescription.textContent = focusText;
+        if (DOM.focusUnitsDescription) {
+            DOM.focusUnitsDescription.textContent = focusText;
+        }
         if (DOM.focusPaneCoverageBadge) {
-            DOM.focusPaneCoverageBadge.textContent = strategyBadge;
-            if (strategyTooltip) {
-                DOM.focusPaneCoverageBadge.setAttribute('title', strategyTooltip);
+            if (stratInfo && stratInfo.label) {
+                DOM.focusPaneCoverageBadge.innerHTML = `
+                    <span class="material-symbols-outlined text-[13px] strategy-icon">${escapeHtml(stratInfo.icon || 'tune')}</span>
+                    <span class="strategy-label">${escapeHtml(stratInfo.fullLabel || stratInfo.label)}</span>
+                `;
+                const tooltip = stratInfo.tooltip || stratInfo.fullLabel || stratInfo.label;
+                DOM.focusPaneCoverageBadge.setAttribute('title', tooltip);
+                DOM.focusPaneCoverageBadge.classList.remove('hidden');
             } else {
+                DOM.focusPaneCoverageBadge.classList.add('hidden');
                 DOM.focusPaneCoverageBadge.removeAttribute('title');
             }
         }
@@ -1307,13 +1660,35 @@
             }
         }
 
-        // Load canonical prompt for type
-        await loadGenerationPromptForType(taskType);
+        // Prompt Preview or Visual Guidance
+        if (isManualVisual) {
+            const guidanceText = buildVisualGuidanceText(taskType, rec);
+            updatePromptPreview(guidanceText);
+        } else {
+            // Load canonical prompt for type
+            await loadGenerationPromptForType(taskType);
+        }
 
-        // Restore response textarea from draft
-        const draft = StudioState.typeDrafts[taskType] || { responseText: '', parsedTasks: [] };
+        // Restore response textarea from draft or show committed view
+        const draft = StudioState.typeDrafts[taskType] || { responseText: '', parsedTasks: [], isCommitted: false };
         if (DOM.typeResponseInput) {
             DOM.typeResponseInput.value = draft.responseText || '';
+        }
+        if (draft.isCommitted && Array.isArray(draft.parsedTasks) && draft.parsedTasks.length > 0) {
+            if (DOM.typeManualVisualView) DOM.typeManualVisualView.classList.add('hidden');
+            if (DOM.typeResponseInput) DOM.typeResponseInput.classList.add('hidden');
+            renderCommittedView(taskType);
+        } else if (isManualVisual) {
+            if (DOM.typeCommittedView) DOM.typeCommittedView.classList.add('hidden');
+            if (DOM.typeResponseInput) DOM.typeResponseInput.classList.add('hidden');
+            if (DOM.typeManualVisualView) {
+                DOM.typeManualVisualView.classList.remove('hidden');
+                renderManualVisualView(taskType, rec);
+            }
+        } else {
+            if (DOM.typeManualVisualView) DOM.typeManualVisualView.classList.add('hidden');
+            if (DOM.typeCommittedView) DOM.typeCommittedView.classList.add('hidden');
+            if (DOM.typeResponseInput) DOM.typeResponseInput.classList.remove('hidden');
         }
         runClientRegexCounter(draft.responseText || '', taskType);
     }
@@ -1348,10 +1723,252 @@
         }
     }
 
+    async function pasteResponseFromClipboard() {
+        const taskType = StudioState.activeGenerationType;
+        const rec = (StudioState.analysisResult && Array.isArray(StudioState.analysisResult.recommendations))
+            ? StudioState.analysisResult.recommendations.find((r) => r.task_type === taskType)
+            : null;
+        const isManualVisual = isManualVisualType(taskType, rec);
+
+        let text = '';
+        if (typeof navigator !== 'undefined' && navigator.clipboard && typeof navigator.clipboard.readText === 'function') {
+            try {
+                text = await navigator.clipboard.readText();
+            } catch (err) {
+                console.warn('[Studio] Clipboard readText failed or denied:', err);
+            }
+        }
+
+        if (isManualVisual) {
+            if (DOM.manualSpecTextarea) {
+                const details = DOM.manualSpecTextarea.closest('details');
+                if (details) details.open = true;
+                if (text && text.trim()) {
+                    DOM.manualSpecTextarea.value = text;
+                    DOM.manualSpecTextarea.focus();
+                    showToast(t('studio.stage2.paste_success_toast', 'Ответ нейросети успешно вставлен!'), 'success');
+                } else {
+                    DOM.manualSpecTextarea.focus();
+                    showToast(t('studio.stage2.paste_manual_hint_toast', 'Вставьте скопированный ответ клавишами Ctrl+V (Cmd+V)'), 'info');
+                }
+            }
+            return;
+        }
+
+        if (text && text.trim()) {
+            if (DOM.typeResponseInput) {
+                DOM.typeResponseInput.value = text;
+                if (!StudioState.typeDrafts[StudioState.activeGenerationType]) {
+                    StudioState.typeDrafts[StudioState.activeGenerationType] = { responseText: '', parsedTasks: [], isCommitted: false };
+                }
+                StudioState.typeDrafts[StudioState.activeGenerationType].responseText = text;
+                StudioState.typeDrafts[StudioState.activeGenerationType].isCommitted = false;
+
+                runClientRegexCounter(text, StudioState.activeGenerationType);
+                updateTypeTabStatus(StudioState.activeGenerationType);
+                markDirty();
+
+                DOM.typeResponseInput.focus();
+                DOM.typeResponseInput.classList.remove('studio-field-pulse');
+                void DOM.typeResponseInput.offsetWidth;
+                DOM.typeResponseInput.classList.add('studio-field-pulse');
+
+                showToast(t('studio.stage2.paste_success_toast', 'Ответ нейросети успешно вставлен!'), 'success');
+            }
+        } else {
+            if (DOM.typeResponseInput) {
+                DOM.typeResponseInput.focus();
+                DOM.typeResponseInput.classList.remove('studio-field-pulse');
+                void DOM.typeResponseInput.offsetWidth;
+                DOM.typeResponseInput.classList.add('studio-field-pulse');
+            }
+            showToast(t('studio.stage2.paste_manual_hint_toast', 'Вставьте скопированный ответ клавишами Ctrl+V (Cmd+V)'), 'info');
+        }
+    }
+
+    function renderCommittedView(taskType) {
+        if (!DOM.typeCommittedView || !DOM.typeResponseInput) return;
+        const draft = StudioState.typeDrafts[taskType];
+        if (!draft || !draft.isCommitted || !Array.isArray(draft.parsedTasks) || draft.parsedTasks.length === 0) {
+            DOM.typeCommittedView.classList.add('hidden');
+            const rec = (StudioState.analysisResult && Array.isArray(StudioState.analysisResult.recommendations))
+                ? StudioState.analysisResult.recommendations.find((r) => r.task_type === taskType)
+                : null;
+            if (isManualVisualType(taskType, rec)) {
+                if (DOM.typeManualVisualView) DOM.typeManualVisualView.classList.remove('hidden');
+                if (DOM.typeResponseInput) DOM.typeResponseInput.classList.add('hidden');
+            } else {
+                if (DOM.typeManualVisualView) DOM.typeManualVisualView.classList.add('hidden');
+                DOM.typeResponseInput.classList.remove('hidden');
+            }
+            return;
+        }
+
+        // Hide raw textarea and manual visual view, show committed view
+        if (DOM.typeResponseInput) DOM.typeResponseInput.classList.add('hidden');
+        if (DOM.typeManualVisualView) DOM.typeManualVisualView.classList.add('hidden');
+        DOM.typeCommittedView.classList.remove('hidden');
+
+        // Title with count and type label
+        if (DOM.committedViewTitle) {
+            const count = draft.parsedTasks.length;
+            const typeLabel = TASK_TYPE_LABELS[taskType] || taskType;
+            DOM.committedViewTitle.textContent = t('studio.stage2.committed_view_title', 'Задания успешно приняты в витрину ({count})')
+                .replace('{count}', `${count} ${pluralizeTasks(count)} типа «${typeLabel}»`);
+        }
+
+        // Raw code preview in collapsible details
+        if (DOM.typeCommittedRawCode) {
+            DOM.typeCommittedRawCode.textContent = draft.responseText || '';
+        }
+
+        // Cards list
+        if (DOM.typeCommittedCardsList) {
+            DOM.typeCommittedCardsList.innerHTML = '';
+            draft.parsedTasks.forEach((task, idx) => {
+                const card = document.createElement('div');
+                card.className = 'studio-committed-mini-card';
+
+                const title = task.title || task.question || task.stem || `${t('studio.stage2.task_index', 'Задание {index}').replace('{index}', idx + 1)}`;
+
+                card.innerHTML = `
+                    <div class="studio-committed-mini-card__header">
+                        <span class="text-[11px] font-bold text-text-muted uppercase tracking-wider">№${idx + 1}</span>
+                        <span class="studio-unit-badge bg-primary-light text-primary font-bold">${TASK_TYPE_LABELS[taskType] || taskType}</span>
+                    </div>
+                    <p class="text-xs font-bold text-text-main leading-relaxed line-clamp-2">${escapeHtml(title)}</p>
+                    ${renderTaskPreviewSnippet(task)}
+                `;
+                DOM.typeCommittedCardsList.appendChild(card);
+            });
+        }
+    }
+
+    function commitManualSpec() {
+        if (!DOM.manualSpecTextarea) return;
+        const raw = DOM.manualSpecTextarea.value.trim();
+        if (!raw) {
+            showToast(t('studio.stage2.no_tasks_text', 'Нет текста заданий для сохранения'), 'warning');
+            return;
+        }
+
+        const taskType = StudioState.activeGenerationType;
+        try {
+            let parsed = [];
+            if (raw.startsWith('{') || raw.startsWith('[')) {
+                const json = JSON.parse(raw);
+                const items = Array.isArray(json) ? json : [json];
+                parsed = items.map((it, idx) => ({
+                    id: it.id || `spec_${Date.now()}_${idx + 1}`,
+                    type: (it.type || it.task_type || taskType).toLowerCase(),
+                    task_type: (it.task_type || it.type || taskType).toUpperCase(),
+                    title: it.title || it.question || it.name || `${TASK_TYPE_LABELS[taskType] || taskType} #${idx + 1}`,
+                    question: it.question || it.title || '',
+                    task_data: it.task_data || it,
+                    module: StudioState.selectedModuleId,
+                    topic: StudioState.selectedTopicId,
+                }));
+            } else {
+                parsed = [{
+                    id: `spec_${Date.now()}_1`,
+                    type: taskType.toLowerCase(),
+                    task_type: taskType,
+                    title: `${TASK_TYPE_LABELS[taskType] || taskType} #1`,
+                    raw_text: raw,
+                    module: StudioState.selectedModuleId,
+                    topic: StudioState.selectedTopicId,
+                }];
+            }
+
+            if (!StudioState.typeDrafts[taskType]) {
+                StudioState.typeDrafts[taskType] = { responseText: '', parsedTasks: [], isCommitted: false };
+            }
+            StudioState.typeDrafts[taskType].responseText = raw;
+            StudioState.typeDrafts[taskType].parsedTasks = parsed;
+            StudioState.typeDrafts[taskType].isCommitted = true;
+
+            StudioState.allTasks = StudioState.allTasks.filter((t) => (t.task_type || t.type || '').toUpperCase() !== taskType);
+            parsed.forEach((t) => StudioState.allTasks.push(t));
+
+            renderStage2Tabs();
+            updateProceedToStep3Button();
+            renderCommittedView(taskType);
+            showToast(t('studio.stage2.spec_applied_toast', 'Спецификация успешно применена!'), 'success');
+            markDirty();
+        } catch (err) {
+            console.warn('[Studio] Manual spec commit error:', err);
+            showToast(t('studio.stage2.spec_error_toast', 'Ошибка парсинга спецификации. Проверьте формат JSON.'), 'error');
+        }
+    }
+
+    function switchToEditMode() {
+        if (!DOM.typeCommittedView) return;
+        const taskType = StudioState.activeGenerationType;
+        const draft = StudioState.typeDrafts[taskType];
+        if (draft) {
+            draft.isCommitted = false;
+        }
+
+        const rec = (StudioState.analysisResult && Array.isArray(StudioState.analysisResult.recommendations))
+            ? StudioState.analysisResult.recommendations.find((r) => r.task_type === taskType)
+            : null;
+        const isManualVisual = isManualVisualType(taskType, rec);
+
+        DOM.typeCommittedView.classList.add('hidden');
+        if (isManualVisual) {
+            if (DOM.typeManualVisualView) DOM.typeManualVisualView.classList.remove('hidden');
+            if (DOM.typeResponseInput) DOM.typeResponseInput.classList.add('hidden');
+            renderManualVisualView(taskType, rec);
+        } else {
+            if (DOM.typeManualVisualView) DOM.typeManualVisualView.classList.add('hidden');
+            if (DOM.typeResponseInput) {
+                DOM.typeResponseInput.classList.remove('hidden');
+                if (draft && draft.responseText && !DOM.typeResponseInput.value) {
+                    DOM.typeResponseInput.value = draft.responseText;
+                }
+                DOM.typeResponseInput.focus();
+            }
+        }
+
+        updateStage2ActionButtons();
+        renderStage2Tabs();
+        markDirty();
+    }
+
     function initStage2() {
+        // Switch to edit mode button
+        if (DOM.btnEditTypeTasks) {
+            DOM.btnEditTypeTasks.addEventListener('click', switchToEditMode);
+        }
+
+        // Commit manual spec button
+        if (DOM.btnCommitManualSpec) {
+            DOM.btnCommitManualSpec.addEventListener('click', commitManualSpec);
+        }
+
         // Copy type prompt
         if (DOM.btnCopyTypePrompt) {
             DOM.btnCopyTypePrompt.addEventListener('click', async () => {
+                const taskType = StudioState.activeGenerationType;
+                const rec = (StudioState.analysisResult && Array.isArray(StudioState.analysisResult.recommendations))
+                    ? StudioState.analysisResult.recommendations.find((r) => r.task_type === taskType)
+                    : null;
+                const isManualVisual = isManualVisualType(taskType, rec);
+
+                if (isManualVisual) {
+                    const guidance = buildVisualGuidanceText(taskType, rec);
+                    try {
+                        if (navigator && navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                            await navigator.clipboard.writeText(guidance);
+                            showToast(t('studio.stage1.prompt_copied', 'Методические ориентиры скопированы!'), 'success');
+                            return;
+                        }
+                    } catch (e) {
+                        showToast(t('studio.stage1.parsing_error', 'Ошибка копирования'), 'error');
+                        return;
+                    }
+                }
+
                 const currentLang = (typeof window !== 'undefined' && window.i18n && typeof window.i18n.getLang === 'function') ? window.i18n.getLang() : 'ru';
                 const targetLang = StudioState.targetLanguage || getDefaultTargetLanguage();
                 const promptLang = (targetLang === 'source') ? 'en' : currentLang;
@@ -1376,27 +1993,41 @@
             });
         }
 
+        // Paste type response from clipboard
+        if (DOM.btnPasteTypeResponse) {
+            DOM.btnPasteTypeResponse.addEventListener('click', pasteResponseFromClipboard);
+        }
+
         // Live typing in response
         if (DOM.typeResponseInput) {
             DOM.typeResponseInput.addEventListener('input', () => {
                 const val = DOM.typeResponseInput.value;
                 if (!StudioState.typeDrafts[StudioState.activeGenerationType]) {
-                    StudioState.typeDrafts[StudioState.activeGenerationType] = { responseText: '', parsedTasks: [] };
+                    StudioState.typeDrafts[StudioState.activeGenerationType] = { responseText: '', parsedTasks: [], isCommitted: false };
                 }
                 StudioState.typeDrafts[StudioState.activeGenerationType].responseText = val;
+                StudioState.typeDrafts[StudioState.activeGenerationType].isCommitted = false;
+
+                updateTypeTabStatus(StudioState.activeGenerationType);
 
                 clearTimeout(liveParseDebounceTimer);
                 liveParseDebounceTimer = setTimeout(() => {
                     runClientRegexCounter(val, StudioState.activeGenerationType);
-                }, 200);
+                    updateTypeTabStatus(StudioState.activeGenerationType);
+                }, 150);
 
                 markDirty();
             });
         }
 
-        // Commit tasks of this type
+        // Commit tasks of this type (footer button)
         if (DOM.btnCommitTypeTasks) {
             DOM.btnCommitTypeTasks.addEventListener('click', commitTypeTasks);
+        }
+
+        // Quick commit tasks of this type (header button)
+        if (DOM.btnQuickCommitTasks) {
+            DOM.btnQuickCommitTasks.addEventListener('click', commitTypeTasks);
         }
 
         // Back to Step 1
@@ -1415,17 +2046,7 @@
     }
 
     function runClientRegexCounter(text, taskType) {
-        if (!DOM.liveParseCounter || !DOM.liveParseCountText) return;
-
-        const count = countTasksByRegex(text, taskType);
-        if (count > 0) {
-            DOM.liveParseCounter.classList.remove('hidden');
-            DOM.liveParseCountText.textContent = `${count} ${pluralizeTasks(count)} найдено`;
-            if (DOM.btnCommitTypeTasks) DOM.btnCommitTypeTasks.disabled = false;
-        } else {
-            DOM.liveParseCounter.classList.add('hidden');
-            if (DOM.btnCommitTypeTasks) DOM.btnCommitTypeTasks.disabled = true;
-        }
+        updateStage2ActionButtons();
     }
 
     function countTasksByRegex(text, taskType) {
@@ -1489,6 +2110,7 @@
 
             renderStage2Tabs();
             updateProceedToStep3Button();
+            renderCommittedView(taskType);
             showToast(`Принято ${parsed.length} заданий типа ${TASK_TYPE_LABELS[taskType] || taskType}!`, 'success');
             markDirty();
         } catch (e) {
@@ -1993,6 +2615,20 @@
             selectGenerationType,
             loadGenerationPromptForType,
             updatePromptPreview,
+            updateStage2ActionButtons,
+            pasteResponseFromClipboard,
+            renderCommittedView,
+            switchToEditMode,
+            renderStage2Tabs,
+            getTypeTabState,
+            updateTypeTabStatus,
+            getStrategyInfo,
+            resetStudioState,
+            renderLessonMap,
+            isManualVisualType,
+            buildVisualGuidanceText,
+            renderManualVisualView,
+            commitManualSpec,
         };
     }
 

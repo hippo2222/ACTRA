@@ -719,13 +719,14 @@ html, body {
     align-items: center;
     gap: 0.5rem;
     overflow-x: auto;
+    padding: 0.125rem 0.125rem 0.25rem;
 }
 
 .studio-type-tab {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
-    padding: 0.35rem 0.8rem;
+    gap: 0.45rem;
+    padding: 0.35rem 0.75rem;
     border-radius: 0.625rem;
     border: 1px solid var(--color-border-subtle);
     background: var(--color-surface-2);
@@ -733,24 +734,120 @@ html, body {
     font-size: 0.78125rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.15s var(--ease-spring);
+    transition: all 0.18s var(--ease-spring);
     white-space: nowrap;
+    position: relative;
+    user-select: none;
 }
 
 .studio-type-tab:hover {
-    border-color: var(--color-primary);
+    border-color: var(--color-border-normal);
+    color: var(--color-text-main);
+    transform: translateY(-1px);
+}
+
+/* Tab Badges */
+.studio-tab-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    line-height: 1;
+    padding: 0.15rem 0.45rem;
+    border-radius: 9999px;
+    letter-spacing: 0.01em;
+    transition: all 0.15s ease;
+}
+
+.studio-tab-dot {
+    font-size: 0.5rem;
+    line-height: 1;
+}
+
+/* 1. Ready / Committed Status */
+.studio-type-tab[data-status="ready"],
+.studio-type-tab[data-ready="true"] {
+    background: color-mix(in srgb, var(--color-success) 10%, var(--color-surface-1));
+    border-color: color-mix(in srgb, var(--color-success) 42%, var(--color-border-normal));
     color: var(--color-text-main);
 }
 
-.studio-type-tab[data-active="true"] {
-    background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface-1));
-    border-color: var(--color-primary);
-    color: var(--color-primary);
+.studio-type-tab[data-status="ready"]:hover,
+.studio-type-tab[data-ready="true"]:hover {
+    border-color: var(--color-success);
 }
 
-.studio-type-tab[data-ready="true"] {
-    border-color: var(--color-success);
+.studio-tab-badge--ready {
+    background: color-mix(in srgb, var(--color-success) 18%, transparent);
     color: var(--color-success);
+    border: 1px solid color-mix(in srgb, var(--color-success) 35%, transparent);
+}
+
+/* 2. Drafting / Uncommitted Status */
+.studio-type-tab[data-status="draft"],
+.studio-type-tab[data-draft="true"] {
+    background: color-mix(in srgb, var(--color-warning) 10%, var(--color-surface-1));
+    border-color: color-mix(in srgb, var(--color-warning) 45%, var(--color-border-normal));
+    color: var(--color-text-main);
+}
+
+.studio-type-tab[data-status="draft"]:hover,
+.studio-type-tab[data-draft="true"]:hover {
+    border-color: var(--color-warning);
+}
+
+.studio-tab-badge--draft {
+    background: color-mix(in srgb, var(--color-warning) 22%, transparent);
+    color: var(--color-warning-text, #b45309);
+    border: 1px solid color-mix(in srgb, var(--color-warning) 40%, transparent);
+}
+
+/* 3. Recommended by Analysis Status */
+.studio-type-tab[data-status="recommended"],
+.studio-type-tab[data-recommended="true"] {
+    background: color-mix(in srgb, var(--color-primary) 6%, var(--color-surface-2));
+    border-color: color-mix(in srgb, var(--color-primary) 32%, var(--color-border-subtle));
+    color: var(--color-text-main);
+}
+
+.studio-type-tab[data-status="recommended"]:hover,
+.studio-type-tab[data-recommended="true"]:hover {
+    border-color: var(--color-primary);
+}
+
+.studio-tab-badge--rec {
+    background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+    color: var(--color-primary);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 28%, transparent);
+}
+
+/* 4. Manual / Visual Task Status */
+.studio-type-tab[data-status="manual"],
+.studio-type-tab[data-manual="true"] {
+    background: var(--color-surface-2);
+    border-color: var(--color-border-subtle);
+    color: var(--color-text-secondary);
+}
+
+.studio-tab-badge--manual {
+    background: color-mix(in srgb, var(--color-text-muted) 14%, transparent);
+    color: var(--color-text-secondary);
+    border: 1px solid var(--color-border-subtle);
+}
+
+/* 5. Active Tab State (overlay outline, preserves status background) */
+.studio-type-tab[data-active="true"] {
+    border-color: var(--color-primary) !important;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 70%, transparent), 0 2px 6px -1px color-mix(in srgb, var(--color-primary) 25%, transparent);
+    font-weight: 700;
+}
+
+/* Idle tab when active */
+.studio-type-tab[data-status="idle"][data-active="true"],
+.studio-type-tab:not([data-status])[data-active="true"] {
+    background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface-1));
+    color: var(--color-primary);
 }
 
 /* Split Panes */
@@ -815,6 +912,131 @@ html, body {
     background: color-mix(in srgb, var(--color-success) 12%, transparent);
     color: var(--color-success);
     border: 1px solid color-mix(in srgb, var(--color-success) 30%, transparent);
+}
+
+/* Quick Commit & Action Buttons in Stage 2 */
+#btn-quick-commit-tasks {
+    animation: studio-pop-in 0.18s var(--ease-spring);
+    box-shadow: 0 1px 3px rgba(37, 99, 235, 0.25);
+    white-space: nowrap;
+}
+
+.studio-btn--committed {
+    background: color-mix(in srgb, var(--color-success) 12%, var(--color-surface-1)) !important;
+    border-color: var(--color-success) !important;
+    color: var(--color-success) !important;
+    font-weight: 700;
+}
+
+.studio-btn--committed:hover {
+    background: color-mix(in srgb, var(--color-success) 18%, var(--color-surface-1)) !important;
+    border-color: var(--color-success) !important;
+    color: var(--color-success) !important;
+}
+
+@keyframes studio-pop-in {
+    0% { transform: scale(0.92); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* Focus Context Card & Strategy Badge */
+.studio-focus-card {
+    transition: all 0.2s var(--ease-smooth);
+}
+
+.studio-strategy-badge {
+    background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface-2));
+    border-color: color-mix(in srgb, var(--color-primary) 28%, var(--color-border-subtle));
+    color: var(--color-primary);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.studio-strategy-badge .strategy-icon {
+    font-size: 13px;
+    line-height: 1;
+}
+
+.studio-strategy-badge .strategy-label {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+/* Guided Workflow Actions in Stage 2 */
+.studio-workflow-actions {
+    background: var(--color-surface-1);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: 0.875rem;
+    padding: 0.875rem;
+}
+
+#btn-paste-type-response:hover {
+    border-color: var(--color-primary);
+    background: color-mix(in srgb, var(--color-primary) 4%, var(--color-surface-1));
+}
+
+/* Field Attention Pulse */
+@keyframes studio-field-flash {
+    0% {
+        box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.45);
+        border-color: var(--color-primary);
+    }
+    50% {
+        box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.18);
+        border-color: var(--color-primary);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
+        border-color: var(--color-border-normal);
+    }
+}
+
+.studio-field-pulse {
+    animation: studio-field-flash 0.8s var(--ease-spring);
+}
+
+/* Verified Tasks View (Stage 2 Committed Mode) */
+#type-committed-view {
+    animation: studio-fade-in 0.2s var(--ease-spring);
+}
+
+.studio-committed-mini-card {
+    background: var(--color-surface-1);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: 0.75rem;
+    padding: 0.75rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    transition: all 0.15s var(--ease-spring);
+}
+
+.studio-committed-mini-card:hover {
+    border-color: color-mix(in srgb, var(--color-success) 40%, var(--color-border-subtle));
+    box-shadow: var(--shadow-sm);
+}
+
+.studio-committed-mini-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+/* Manual & Visual Task Mode (CLICK / DRAW) */
+#type-manual-visual-view,
+.studio-manual-visual {
+    animation: studio-fade-in 0.2s var(--ease-spring);
+}
+
+.studio-manual-visual__banner {
+    border-color: var(--color-border-subtle);
+    background: var(--color-surface-1);
+    transition: border-color 0.15s ease;
+}
+
+.studio-manual-visual__banner:hover {
+    border-color: color-mix(in srgb, var(--color-primary) 35%, var(--color-border-subtle));
 }
 
 /* ---------------------------------------------------------------------------
