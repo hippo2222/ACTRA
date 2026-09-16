@@ -112,6 +112,7 @@
             btnProceedToStep2: document.getElementById('btn-proceed-to-step-2'),
 
             // Stage 2
+            btnBackToStep1: document.getElementById('btn-back-to-step-1'),
             typesTabsContainer: document.getElementById('types-tabs-container'),
             btnAddExtraType: document.getElementById('btnAddExtraType') || document.getElementById('btn-add-extra-type'),
             focusPaneTypeLabel: document.getElementById('focus-pane-type-label'),
@@ -149,6 +150,12 @@
             modalNavGuard: document.getElementById('modal-nav-guard'),
             btnGuardStay: document.getElementById('btn-guard-stay'),
             btnGuardLeave: document.getElementById('btn-guard-leave'),
+
+            // Reset / Discard Draft
+            btnResetDraft: document.getElementById('btn-reset-draft'),
+            modalResetDraft: document.getElementById('modal-reset-draft'),
+            btnResetCancel: document.getElementById('btn-reset-cancel'),
+            btnResetConfirm: document.getElementById('btn-reset-confirm'),
         };
     }
 
@@ -278,6 +285,8 @@
     // ---------------------------------------------------------------------------
 
     function switchStep(stepNumber) {
+        if (stepNumber === StudioState.currentStep) return;
+
         // Topic gate when moving from Step 1 to Step 2
         if (stepNumber >= 2 && !StudioState.selectedTopicId) {
             openTopicModal();
@@ -293,6 +302,7 @@
             const nodeStep = idx + 1;
             node.setAttribute('data-active', nodeStep === stepNumber ? 'true' : 'false');
             node.setAttribute('data-completed', nodeStep < stepNumber ? 'true' : 'false');
+            node.setAttribute('aria-current', nodeStep === stepNumber ? 'step' : 'false');
         });
 
         // Update Stage Visibility
@@ -307,6 +317,37 @@
         }
 
         scheduleAutosave();
+    }
+
+    function initStepper() {
+        if (DOM.stepNode1) {
+            DOM.stepNode1.addEventListener('click', () => {
+                if (StudioState.currentStep === 1) return;
+                switchStep(1);
+            });
+        }
+
+        if (DOM.stepNode2) {
+            DOM.stepNode2.addEventListener('click', () => {
+                if (StudioState.currentStep === 2) return;
+                if (StudioState.currentStep === 1 && !StudioState.analysisResult) {
+                    showToast(t('studio.stage1.no_response_error', 'Сначала выполните анализ материала'), 'warning');
+                    return;
+                }
+                switchStep(2);
+            });
+        }
+
+        if (DOM.stepNode3) {
+            DOM.stepNode3.addEventListener('click', () => {
+                if (StudioState.currentStep === 3) return;
+                if (StudioState.currentStep === 1 && !StudioState.analysisResult && StudioState.allTasks.length === 0) {
+                    showToast(t('studio.stage1.no_response_error', 'Сначала выполните анализ материала'), 'warning');
+                    return;
+                }
+                switchStep(3);
+            });
+        }
     }
 
     function initNavigationGuard() {
@@ -347,6 +388,15 @@
                 }
             });
         }
+
+        if (DOM.modalNavGuard) {
+            DOM.modalNavGuard.addEventListener('click', (e) => {
+                if (e.target === DOM.modalNavGuard) {
+                    closeNavGuardModal();
+                    StudioState.pendingNavUrl = null;
+                }
+            });
+        }
     }
 
     function openNavGuardModal() {
@@ -355,6 +405,149 @@
 
     function closeNavGuardModal() {
         if (DOM.modalNavGuard) DOM.modalNavGuard.classList.add('hidden');
+    }
+
+    // ---------------------------------------------------------------------------
+    // Reset & Discard Draft
+    // ---------------------------------------------------------------------------
+
+    function openResetModal() {
+        if (DOM.modalResetDraft) DOM.modalResetDraft.classList.remove('hidden');
+    }
+
+    function closeResetModal() {
+        if (DOM.modalResetDraft) DOM.modalResetDraft.classList.add('hidden');
+    }
+
+    function isDraftEmpty() {
+        const hasMaterial = Boolean(StudioState.materialText && StudioState.materialText.trim());
+        const hasAnalysisRaw = Boolean((DOM.analysisResponseInput ? DOM.analysisResponseInput.value : StudioState.analysisRawResponse || '').trim());
+        const hasAnalysisResult = Boolean(StudioState.analysisResult);
+        const hasTasks = Boolean(StudioState.allTasks && StudioState.allTasks.length > 0);
+        const hasTypeDrafts = Object.values(StudioState.typeDrafts || {}).some(
+            (d) => d && ((d.responseText && d.responseText.trim()) || (d.parsedTasks && d.parsedTasks.length > 0))
+        );
+        const hasTypeInput = Boolean(DOM.typeResponseInput && DOM.typeResponseInput.value.trim());
+        return !hasMaterial && !hasAnalysisRaw && !hasAnalysisResult && !hasTasks && !hasTypeDrafts && !hasTypeInput;
+    }
+
+    function resetStudioState() {
+        // Clear autosave timer first to avoid saving stale data
+        clearTimeout(autosaveTimer);
+
+        // 1. Reset state
+        StudioState.materialText = '';
+        StudioState.fileInfo = null;
+        StudioState.analysisRawResponse = '';
+        StudioState.analysisResult = null;
+        StudioState.activeGenerationType = 'TEST';
+        StudioState.typeDrafts = {};
+        StudioState.allTasks = [];
+        StudioState.cachedPrompts = { analysis: '', generation: {} };
+        StudioState.isDirty = false;
+
+        // 2. Clear localStorage
+        clearLocalStorageDraft();
+
+        // 3. Clear Stage 1 UI
+        if (DOM.analysisResponseInput) {
+            DOM.analysisResponseInput.value = '';
+        }
+        if (DOM.lessonMapContainer) {
+            DOM.lessonMapContainer.classList.add('hidden');
+        }
+        if (DOM.lessonMapSummary) {
+            DOM.lessonMapSummary.textContent = '';
+        }
+        if (DOM.lessonMapRecommendations) {
+            DOM.lessonMapRecommendations.innerHTML = '';
+        }
+        if (DOM.btnProceedToStep2) {
+            DOM.btnProceedToStep2.disabled = true;
+        }
+
+        // 4. Clear Stage 2 UI
+        if (DOM.typeResponseInput) {
+            DOM.typeResponseInput.value = '';
+        }
+        if (DOM.liveParseCounter) {
+            DOM.liveParseCounter.classList.add('hidden');
+        }
+        if (DOM.btnCommitTypeTasks) {
+            DOM.btnCommitTypeTasks.disabled = true;
+        }
+        if (DOM.typesTabsContainer) {
+            DOM.typesTabsContainer.innerHTML = '';
+        }
+
+        // 5. Clear Stage 3 UI
+        if (DOM.showcaseCardsGrid) {
+            DOM.showcaseCardsGrid.innerHTML = '';
+        }
+        if (DOM.showcaseTotalCount) {
+            DOM.showcaseTotalCount.textContent = '0';
+        }
+        if (DOM.btnExecuteImport) {
+            DOM.btnExecuteImport.disabled = true;
+        }
+
+        // 6. Navigate back to Step 1
+        if (StudioState.currentStep !== 1) {
+            switchStep(1);
+        } else {
+            [DOM.stepNode1, DOM.stepNode2, DOM.stepNode3].forEach((node, idx) => {
+                if (!node) return;
+                const nodeStep = idx + 1;
+                node.setAttribute('data-active', nodeStep === 1 ? 'true' : 'false');
+                node.setAttribute('data-completed', 'false');
+                node.setAttribute('aria-current', nodeStep === 1 ? 'step' : 'false');
+            });
+            if (DOM.stage1) DOM.stage1.classList.remove('hidden');
+            if (DOM.stage2) DOM.stage2.classList.add('hidden');
+            if (DOM.stage3) DOM.stage3.classList.add('hidden');
+        }
+
+        // Cancel any autosave triggered by switchStep
+        clearTimeout(autosaveTimer);
+        clearLocalStorageDraft();
+
+        // 7. Refresh previews and indicators
+        loadAnalysisPrompt();
+        updateProceedToStep3Button();
+        updateStickyBar();
+        markSaved();
+    }
+
+    function initResetDraft() {
+        if (DOM.btnResetDraft) {
+            DOM.btnResetDraft.addEventListener('click', () => {
+                if (isDraftEmpty()) {
+                    showToast(t('studio.modal.reset_empty_toast', 'Черновик уже пуст'), 'info');
+                    return;
+                }
+                openResetModal();
+            });
+        }
+
+        if (DOM.btnResetCancel) {
+            DOM.btnResetCancel.addEventListener('click', closeResetModal);
+        }
+
+        if (DOM.btnResetConfirm) {
+            DOM.btnResetConfirm.addEventListener('click', () => {
+                resetStudioState();
+                closeResetModal();
+                showToast(t('studio.modal.reset_toast', 'Черновик и анализ успешно сброшены'), 'success');
+            });
+        }
+
+        if (DOM.modalResetDraft) {
+            DOM.modalResetDraft.addEventListener('click', (e) => {
+                if (e.target === DOM.modalResetDraft) {
+                    closeResetModal();
+                }
+            });
+        }
     }
 
     // ---------------------------------------------------------------------------
@@ -1004,6 +1197,13 @@
             DOM.btnCommitTypeTasks.addEventListener('click', commitTypeTasks);
         }
 
+        // Back to Step 1
+        if (DOM.btnBackToStep1) {
+            DOM.btnBackToStep1.addEventListener('click', () => {
+                switchStep(1);
+            });
+        }
+
         // Proceed to Step 3
         if (DOM.btnProceedToStep3) {
             DOM.btnProceedToStep3.addEventListener('click', () => {
@@ -1536,10 +1736,12 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         initDOM();
+        initStepper();
         initStage1();
         initStage2();
         initStage3();
         initNavigationGuard();
+        initResetDraft();
         initHistoryModal();
 
         updateTopicDisplay();

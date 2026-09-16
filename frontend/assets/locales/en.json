@@ -8004,6 +8004,10 @@
       "btn": "History",
       "btn_title": "History of recent material analyses"
     },
+    "toolbar": {
+      "btn_reset": "Reset",
+      "btn_reset_title": "Discard current draft and analysis"
+    },
     "stepper": {
       "aria": "Task creation steps",
       "step1": "Material analysis",
@@ -8059,6 +8063,8 @@
       "validation_error": "Task schema validation error",
       "btn_add_type": "Another type",
       "add_type_title": "Add another task type",
+      "btn_back_to_analysis": "To analysis",
+      "btn_back_to_analysis_title": "Return to material analysis",
       "focus_badge": "Focus",
       "select_direction_hint": "Select a focus area above to generate a targeted prompt.",
       "view_full_prompt": "View full prompt text",
@@ -8104,7 +8110,13 @@
       "guard_title": "Unsaved Tasks",
       "guard_message": "You have generated tasks that have not been imported. If you leave the page, the draft will stay in your browser but will not be added to the course.",
       "guard_stay": "Stay",
-      "guard_leave": "Leave anyway"
+      "guard_leave": "Leave anyway",
+      "reset_title": "Discard draft and analysis?",
+      "reset_message": "The current material analysis, lesson map, and all created tasks will be removed. You will be able to start over with a fresh lecture.",
+      "reset_cancel": "Cancel",
+      "reset_confirm": "Discard all",
+      "reset_toast": "Draft and analysis successfully discarded",
+      "reset_empty_toast": "Draft is already empty"
     },
     "labels": {
       "manual_only": "Created manually in editor",

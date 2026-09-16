@@ -61,10 +61,17 @@
             </div>
 
             <!-- Session History Trigger -->
-            <button id="btn-open-history" type="button" class="studio-btn-secondary"
+            <button id="btn-open-history" type="button" class="studio-btn-history"
                 title="История последних анализов материала" data-i18n-title="studio.history.btn_title">
                 <span class="material-symbols-outlined text-[18px]">history</span>
                 <span><span data-i18n="studio.history.btn">История</span> (<span id="history-count-badge">0</span>)</span>
+            </button>
+
+            <!-- Reset / Discard Draft Trigger -->
+            <button id="btn-reset-draft" type="button" class="studio-btn-reset"
+                title="Сбросить текущий черновик и анализ" data-i18n-title="studio.toolbar.btn_reset_title">
+                <span class="material-symbols-outlined text-[18px]">restart_alt</span>
+                <span data-i18n="studio.toolbar.btn_reset">Сбросить</span>
             </button>
         </div>
     </header>
@@ -72,17 +79,17 @@
     <!-- 3. Stepper Indicator -->
     <nav class="studio-stepper" aria-label="Этапы создания заданий" data-i18n-aria="studio.stepper.aria">
         <div class="studio-stepper__track">
-            <button id="step-node-1" type="button" class="studio-step-node" data-active="true" data-completed="false">
+            <button id="step-node-1" type="button" class="studio-step-node" data-active="true" data-completed="false" aria-current="step" title="Анализ материала" data-i18n-title="studio.stepper.step1">
                 <span class="studio-step-node__num">1</span>
                 <span data-i18n="studio.stepper.step1">Анализ материала</span>
             </button>
             <div class="studio-step-divider"></div>
-            <button id="step-node-2" type="button" class="studio-step-node" data-active="false" data-completed="false">
+            <button id="step-node-2" type="button" class="studio-step-node" data-active="false" data-completed="false" title="Генерация по типам" data-i18n-title="studio.stepper.step2">
                 <span class="studio-step-node__num">2</span>
                 <span data-i18n="studio.stepper.step2">Генерация по типам</span>
             </button>
             <div class="studio-step-divider"></div>
-            <button id="step-node-3" type="button" class="studio-step-node" data-active="false" data-completed="false">
+            <button id="step-node-3" type="button" class="studio-step-node" data-active="false" data-completed="false" title="Витрина и импорт" data-i18n-title="studio.stepper.step3">
                 <span class="studio-step-node__num">3</span>
                 <span data-i18n="studio.stepper.step3">Витрина и импорт</span>
             </button>
@@ -106,7 +113,7 @@
                         </h2>
                         <div class="flex items-center gap-2">
                             <span class="studio-unit-badge bg-primary-light text-primary font-bold" data-i18n="studio.stage1.agent_badge">ИИ-методист</span>
-                            <button type="button" id="btn-copy-system-prompt" class="studio-btn studio-btn-secondary text-[11px] py-1 px-2.5 flex items-center gap-1 rounded-lg" title="Скопировать единый системный промпт (System Instructions) для внешних ИИ-агентов (AI Studio, Claude Projects)" data-i18n-title="studio.stage1.btn_copy_system_prompt_tooltip">
+                            <button type="button" id="btn-copy-system-prompt" class="studio-btn studio-btn--sm studio-btn--secondary" title="Скопировать единый системный промпт (System Instructions) для внешних ИИ-агентов (AI Studio, Claude Projects)" data-i18n-title="studio.stage1.btn_copy_system_prompt_tooltip">
                                 <span class="material-symbols-outlined text-[15px]">terminal</span>
                                 <span data-i18n="studio.stage1.btn_copy_system_prompt">Системный промпт</span>
                             </button>
@@ -128,30 +135,31 @@
                             </div>
                         </div>
 
-                        <!-- Step-by-Step Workflow Guide -->
-                        <div class="p-3.5 rounded-xl bg-surface-1 border border-border-subtle flex flex-col gap-3">
-                            <p class="text-[11px] font-bold uppercase tracking-wider text-text-secondary" data-i18n="studio.stage1.guide_title">
-                                Порядок работы с внешней нейросетью:
-                            </p>
-                            <ol class="flex flex-col gap-2.5 text-xs text-text-main">
-                                <li class="flex items-start gap-2.5">
+                        <!-- Step-by-Step Workflow Guide (Collapsible) -->
+                        <details class="studio-guide-details rounded-xl bg-surface-1 border border-border-subtle p-3 text-xs" open>
+                            <summary class="font-bold uppercase tracking-wider text-text-secondary cursor-pointer hover:text-primary transition-colors flex items-center justify-between select-none">
+                                <span data-i18n="studio.stage1.guide_title">Порядок работы с внешней нейросетью</span>
+                                <span class="material-symbols-outlined text-[18px] text-text-muted transition-transform studio-guide-chevron">expand_more</span>
+                            </summary>
+                            <ol class="flex flex-col gap-2 pt-2.5 text-xs text-text-main border-t border-border-subtle mt-2">
+                                <li class="flex items-start gap-2">
                                     <span class="flex-shrink-0 flex items-center justify-center w-5 h-5 rounded-full bg-surface-2 border border-border-strong text-[11px] font-bold text-primary">1</span>
-                                    <span class="leading-snug pt-0.5" data-i18n="studio.stage1.guide_step1">Скопируйте системный промпт кнопкой ниже</span>
+                                    <span class="leading-snug pt-0.5" data-i18n="studio.stage1.guide_step1">Скопируйте системный промпт кнопкой выше</span>
                                 </li>
-                                <li class="flex items-start gap-2.5">
+                                <li class="flex items-start gap-2">
                                     <span class="flex-shrink-0 flex items-center justify-center w-5 h-5 rounded-full bg-surface-2 border border-border-strong text-[11px] font-bold text-primary">2</span>
-                                    <span class="leading-snug pt-0.5" data-i18n="studio.stage1.guide_step2">Откройте ChatGPT, Claude или Gemini, прикрепите файл (PDF, DOCX) или текст и отправьте промпт</span>
+                                    <span class="leading-snug pt-0.5" data-i18n="studio.stage1.guide_step2">Откройте ChatGPT, Claude или Gemini, прикрепите файл или текст и отправьте промпт</span>
                                 </li>
-                                <li class="flex items-start gap-2.5">
+                                <li class="flex items-start gap-2">
                                     <span class="flex-shrink-0 flex items-center justify-center w-5 h-5 rounded-full bg-surface-2 border border-border-strong text-[11px] font-bold text-primary">3</span>
                                     <span class="leading-snug pt-0.5" data-i18n="studio.stage1.guide_step3">Скопируйте ответ нейросети и вставьте в поле справа</span>
                                 </li>
                             </ol>
-                        </div>
+                        </details>
 
                         <!-- Action: Copy Analysis Prompt -->
                         <div class="flex flex-col gap-2">
-                            <button id="btn-copy-analysis-prompt" type="button" class="studio-btn-primary py-3">
+                            <button id="btn-copy-analysis-prompt" type="button" class="studio-btn studio-btn--lg studio-btn--primary w-full">
                                 <span class="material-symbols-outlined text-[20px]">content_copy</span>
                                 <span data-i18n="studio.stage1.btn_copy_prompt">Скопировать промпт анализа лекции</span>
                             </button>
@@ -181,7 +189,7 @@
                             <span class="material-symbols-outlined text-[20px] text-primary">analytics</span>
                             <span data-i18n="studio.stage1.right_title">2. Результат анализа нейросети</span>
                         </h2>
-                        <button id="btn-parse-analysis" type="button" class="studio-btn-secondary text-xs">
+                        <button id="btn-parse-analysis" type="button" class="studio-btn studio-btn--md studio-btn--primary">
                             <span class="material-symbols-outlined text-[16px]">play_arrow</span>
                             <span data-i18n="studio.stage1.btn_parse">Разобрать ответ</span>
                         </button>
@@ -216,7 +224,7 @@
 
                         <!-- Proceed to Step 2 Action -->
                         <div class="pt-2">
-                            <button id="btn-proceed-to-step-2" type="button" class="studio-btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                            <button id="btn-proceed-to-step-2" type="button" class="studio-btn studio-btn--lg studio-btn--primary w-full disabled:opacity-50 disabled:cursor-not-allowed" disabled>
                                 <span data-i18n="studio.stage1.btn_proceed_step2">Перейти к созданию заданий</span>
                                 <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
                             </button>
@@ -233,10 +241,17 @@
             <div class="stage-2-container">
                 <!-- Top Types Navigation Bar -->
                 <div class="studio-types-bar">
-                    <div class="studio-types-tabs" id="types-tabs-container">
-                        <!-- Dynamic Type Pills inserted by JS (TEST, OPEN_ANSWER, SEQUENCE, etc.) -->
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <button id="btn-back-to-step-1" type="button" class="studio-btn studio-btn--sm studio-btn--secondary flex-shrink-0" title="Вернуться к анализу материала" data-i18n-title="studio.stage2.btn_back_to_analysis_title">
+                            <span class="material-symbols-outlined text-[16px]">arrow_back</span>
+                            <span data-i18n="studio.stage2.btn_back_to_analysis">К анализу</span>
+                        </button>
+                        <div class="h-4 w-px bg-border-subtle flex-shrink-0"></div>
+                        <div class="studio-types-tabs" id="types-tabs-container">
+                            <!-- Dynamic Type Pills inserted by JS (TEST, OPEN_ANSWER, SEQUENCE, etc.) -->
+                        </div>
                     </div>
-                    <button id="btn-add-extra-type" type="button" class="studio-btn-secondary text-xs flex-shrink-0" title="Добавить другой тип задания" data-i18n-title="studio.stage2.add_type_title">
+                    <button id="btn-add-extra-type" type="button" class="studio-btn studio-btn--sm studio-btn--secondary flex-shrink-0" title="Добавить другой тип задания" data-i18n-title="studio.stage2.add_type_title">
                         <span class="material-symbols-outlined text-[16px]">add</span>
                         <span data-i18n="studio.stage2.btn_add_type">Другой тип</span>
                     </button>
@@ -264,7 +279,7 @@
                             </div>
 
                             <!-- Large Action Button -->
-                            <button id="btn-copy-type-prompt" type="button" class="studio-btn-primary py-3">
+                            <button id="btn-copy-type-prompt" type="button" class="studio-btn studio-btn--lg studio-btn--primary w-full">
                                 <span class="material-symbols-outlined text-[20px]">content_copy</span>
                                 <span id="label-copy-type-prompt" data-i18n="studio.stage2.btn_copy_type_prompt">Скопировать промпт для заданий</span>
                             </button>
@@ -302,12 +317,12 @@
                         </div>
 
                         <div class="studio-pane__footer">
-                            <button id="btn-commit-type-tasks" type="button" class="studio-btn-primary text-xs disabled:opacity-50" disabled>
+                            <button id="btn-commit-type-tasks" type="button" class="studio-btn studio-btn--md studio-btn--secondary disabled:opacity-50" disabled>
                                 <span class="material-symbols-outlined text-[16px]">check</span>
                                 <span data-i18n="studio.stage2.btn_commit">Принять задания этого типа</span>
                             </button>
 
-                            <button id="btn-proceed-to-step-3" type="button" class="studio-btn-secondary text-xs">
+                            <button id="btn-proceed-to-step-3" type="button" class="studio-btn studio-btn--md studio-btn--primary">
                                 <span class="btn-proceed-step3-label">Перейти к витрине</span>
                                 <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
                             </button>
@@ -335,7 +350,7 @@
                         </div>
                     </div>
 
-                    <button id="btn-back-to-step-2" type="button" class="studio-btn-secondary text-xs">
+                    <button id="btn-back-to-step-2" type="button" class="studio-btn studio-btn--sm studio-btn--secondary">
                         <span class="material-symbols-outlined text-[16px]">arrow_back</span>
                         <span data-i18n="studio.stage3.btn_add_more_types">Добавить ещё типы</span>
                     </button>
@@ -356,8 +371,8 @@
                         </div>
                     </div>
 
-                    <button id="btn-execute-import" type="button" class="studio-btn-primary px-6 py-2.5 text-sm disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-                        <span data-i18n="studio.stage3.btn_import">🎉 Импортировать выбранные задания в тему курса</span>
+                    <button id="btn-execute-import" type="button" class="studio-btn studio-btn--lg studio-btn--primary px-8 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                        <span data-i18n="studio.stage3.btn_import">Импортировать выбранные задания в тему курса</span>
                     </button>
                 </div>
             </div>
@@ -421,11 +436,32 @@
                 У вас есть подготовленные задания, которые ещё не были импортированы в курс. Если вы покинете страницу, черновик останется в локальной памяти браузера, но не будет добавлен в каталог тем.
             </div>
             <div class="p-4 border-t border-border-subtle flex items-center justify-end gap-2">
-                <button id="btn-guard-stay" type="button" class="studio-btn-secondary text-xs" data-i18n="studio.modal.guard_stay">
+                <button id="btn-guard-stay" type="button" class="studio-btn studio-btn--md studio-btn--secondary text-xs" data-i18n="studio.modal.guard_stay">
                     Остаться в Студии
                 </button>
-                <button id="btn-guard-leave" type="button" class="studio-btn-primary text-xs bg-error hover:bg-error" data-i18n="studio.modal.guard_leave">
+                <button id="btn-guard-leave" type="button" class="studio-btn studio-btn--md studio-btn--danger text-xs" data-i18n="studio.modal.guard_leave">
                     Покинуть страницу
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Reset Draft Confirmation -->
+    <div id="modal-reset-draft" class="studio-modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-reset-title">
+        <div class="studio-modal-card max-w-[440px]">
+            <div class="p-4 border-b border-border-subtle flex items-center gap-2 text-error">
+                <span class="material-symbols-outlined text-[22px]">delete_forever</span>
+                <h3 id="modal-reset-title" class="text-sm font-bold text-text-main" data-i18n="studio.modal.reset_title">Сбросить черновик и анализ?</h3>
+            </div>
+            <div class="p-4 text-xs text-text-secondary leading-relaxed" data-i18n="studio.modal.reset_message">
+                Текущий анализ материала, карта урока и все созданные задания будут удалены. Вы сможете начать работу с новой лекцией с чистого листа.
+            </div>
+            <div class="p-4 border-t border-border-subtle flex items-center justify-end gap-2">
+                <button id="btn-reset-cancel" type="button" class="studio-btn studio-btn--md studio-btn--secondary text-xs" data-i18n="studio.modal.reset_cancel">
+                    Отмена
+                </button>
+                <button id="btn-reset-confirm" type="button" class="studio-btn studio-btn--md studio-btn--danger text-xs" data-i18n="studio.modal.reset_confirm">
+                    Сбросить всё
                 </button>
             </div>
         </div>
