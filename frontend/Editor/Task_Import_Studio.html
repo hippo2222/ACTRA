@@ -365,16 +365,22 @@
     <!-- Modal: Topic Selector Modal -->
     <div id="modal-topic-selector" class="studio-modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-topic-title">
         <div class="studio-modal-card">
-            <div class="p-4 border-b border-border-subtle flex items-center justify-between">
+            <div class="studio-modal-header">
                 <h3 id="modal-topic-title" class="text-sm font-bold text-text-main flex items-center gap-2">
                     <span class="material-symbols-outlined text-primary text-[20px]">folder_open</span>
                     <span data-i18n="studio.modal.topic_title">Выберите целевую тему курса</span>
                 </h3>
-                <button id="btn-close-topic-modal" type="button" class="text-text-muted hover:text-text-main p-1">
+                <button id="btn-close-topic-modal" type="button" class="text-text-muted hover:text-text-main p-1 rounded-lg hover:bg-surface-2 transition-colors" title="Закрыть">
                     <span class="material-symbols-outlined text-[18px]">close</span>
                 </button>
             </div>
-            <div class="p-4 flex flex-col gap-3 max-h-[360px] overflow-y-auto" id="topic-tree-container">
+            <div class="studio-modal-search">
+                <div class="studio-modal-search-input-wrapper">
+                    <span class="material-symbols-outlined studio-modal-search-icon">search</span>
+                    <input id="topic-search-input" type="search" class="studio-modal-search-input" placeholder="Поиск модуля или темы..." data-i18n-placeholder="studio.modal.topic_search" autocomplete="off" />
+                </div>
+            </div>
+            <div class="studio-modal-body" id="topic-tree-container">
                 <p class="text-xs text-text-secondary" data-i18n="studio.modal.topic_loading">Загрузка каталога тем...</p>
             </div>
         </div>
@@ -383,16 +389,16 @@
     <!-- Modal: Session History Modal -->
     <div id="modal-session-history" class="studio-modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-history-title">
         <div class="studio-modal-card max-w-[620px]">
-            <div class="p-4 border-b border-border-subtle flex items-center justify-between">
+            <div class="studio-modal-header">
                 <h3 id="modal-history-title" class="text-sm font-bold text-text-main flex items-center gap-2">
                     <span class="material-symbols-outlined text-primary text-[20px]">history</span>
                     <span data-i18n="studio.modal.history_title">История анализов</span>
                 </h3>
-                <button id="btn-close-history-modal" type="button" class="text-text-muted hover:text-text-main p-1">
+                <button id="btn-close-history-modal" type="button" class="text-text-muted hover:text-text-main p-1 rounded-lg hover:bg-surface-2 transition-colors" title="Закрыть">
                     <span class="material-symbols-outlined text-[18px]">close</span>
                 </button>
             </div>
-            <div class="p-4 flex flex-col gap-3 max-h-[420px] overflow-y-auto" id="history-items-container">
+            <div class="studio-modal-body" id="history-items-container">
                 <p class="text-xs text-text-secondary" data-i18n="studio.modal.history_loading">Загрузка сохранённых сессий...</p>
             </div>
         </div>

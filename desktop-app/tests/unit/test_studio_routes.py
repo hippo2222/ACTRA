@@ -295,6 +295,8 @@ def test_studio_html_scaffolding():
     assert 'id="modal-topic-selector"' in content
     assert 'id="modal-session-history"' in content
     assert 'id="modal-nav-guard"' in content
+    assert 'id="topic-search-input"' in content
+    assert 'class="studio-modal-body"' in content
 
     # Ensure no mock filename or dummy text is hardcoded in HTML
     assert 'document.pdf' not in content, "document.pdf must not be hardcoded in HTML scaffolding"
@@ -316,6 +318,11 @@ def test_studio_css_design_system():
     assert '.studio-shell' in content
     assert '.studio-split-panes' in content
     assert '.stage-2-container' in content
+
+    # Modals with scroll & search
+    assert '.studio-modal-body' in content
+    assert '.studio-modal-search' in content
+    assert 'scrollbar-width: thin;' in content
 
     # Segmented Language Selector
     assert '.studio-lang-segmented' in content
@@ -348,6 +355,8 @@ def test_studio_js_controller():
     # TopicGate
     assert 'openTopicModal' in content
     assert 'closeTopicModal' in content
+    assert 'topicSearchInput' in content
+    assert 'renderTopicTree' in content
     assert 'switchStep' in content
     assert 'selectedTopicId' in content
 

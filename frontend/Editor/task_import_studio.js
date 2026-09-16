@@ -137,6 +137,7 @@
             // Modals
             modalTopicSelector: document.getElementById('modal-topic-selector'),
             btnCloseTopicModal: document.getElementById('btn-close-topic-modal'),
+            topicSearchInput: document.getElementById('topic-search-input'),
             topicTreeContainer: document.getElementById('topic-tree-container'),
 
             modalSessionHistory: document.getElementById('modal-session-history'),
@@ -431,29 +432,49 @@
         }
     }
 
-    function renderTopicTree() {
+    function renderTopicTree(filterText = '') {
         if (!DOM.topicTreeContainer) return;
         DOM.topicTreeContainer.innerHTML = '';
 
         if (!StudioState.catalogModules || StudioState.catalogModules.length === 0) {
-            DOM.topicTreeContainer.innerHTML = `<p class="text-xs text-text-secondary">${t('studio.modal.topic_empty', 'Нет доступных модулей и тем.')}</p>`;
+            DOM.topicTreeContainer.innerHTML = `<p class="text-xs text-text-secondary text-center py-4">${t('studio.modal.topic_empty', 'Нет доступных модулей и тем.')}</p>`;
             return;
         }
 
+        const q = String(filterText || '').trim().toLowerCase();
+        let totalMatchingTopics = 0;
+
         StudioState.catalogModules.forEach((mod) => {
+            const modName = mod.name || mod.title || mod.id || '';
+            const modMatches = q ? modName.toLowerCase().includes(q) : true;
+
+            const topics = Array.isArray(mod.topics) ? mod.topics : [];
+            const matchingTopics = q
+                ? topics.filter((top) => {
+                    const topName = top.name || top.title || top.id || '';
+                    return modMatches || topName.toLowerCase().includes(q);
+                })
+                : topics;
+
+            if (q && !modMatches && matchingTopics.length === 0) {
+                return; // Hide module if neither its title nor its topics match
+            }
+
+            totalMatchingTopics += matchingTopics.length;
+
             const modBox = document.createElement('div');
-            modBox.className = 'flex flex-col gap-1 rounded-xl bg-surface-2 p-2.5 border border-border-subtle';
+            modBox.className = 'flex flex-col gap-1 rounded-xl bg-surface-2 p-2.5 border border-border-subtle shrink-0';
 
             const modHeader = document.createElement('p');
             modHeader.className = 'text-xs font-bold text-text-secondary uppercase tracking-wider px-1';
-            modHeader.textContent = mod.name || mod.title || mod.id;
+            modHeader.textContent = modName;
             modBox.appendChild(modHeader);
 
             const topicsList = document.createElement('div');
             topicsList.className = 'flex flex-col gap-1';
 
-            if (Array.isArray(mod.topics) && mod.topics.length > 0) {
-                mod.topics.forEach((top) => {
+            if (matchingTopics.length > 0) {
+                matchingTopics.forEach((top) => {
                     const btn = document.createElement('button');
                     btn.type = 'button';
                     btn.className = 'flex items-center justify-between p-2 rounded-lg text-xs font-medium text-left hover:bg-surface-1 transition-colors';
@@ -463,7 +484,7 @@
 
                     btn.innerHTML = `
                         <span class="truncate">${escapeHtml(top.name || top.title || top.id)}</span>
-                        <span class="text-[11px] text-text-muted ml-2">${(top.tasks && top.tasks.length) || 0} зад.</span>
+                        <span class="text-[11px] text-text-muted ml-2 shrink-0">${(top.tasks && top.tasks.length) || 0} зад.</span>
                     `;
 
                     btn.addEventListener('click', () => {
@@ -483,17 +504,33 @@
             } else {
                 const emptyP = document.createElement('p');
                 emptyP.className = 'text-[11px] text-text-muted px-2 py-1';
-                emptyP.textContent = 'Нет тем в модуле';
+                emptyP.textContent = t('studio.modal.module_empty', 'Нет тем в модуле');
                 topicsList.appendChild(emptyP);
             }
 
             modBox.appendChild(topicsList);
             DOM.topicTreeContainer.appendChild(modBox);
         });
+
+        if (q && totalMatchingTopics === 0) {
+            DOM.topicTreeContainer.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-8 text-center text-text-muted">
+                    <span class="material-symbols-outlined text-[32px] mb-1 text-text-muted">search_off</span>
+                    <p class="text-xs text-text-secondary">${t('studio.modal.topic_empty', 'Темы не найдены')}</p>
+                </div>
+            `;
+        }
     }
 
     function openTopicModal() {
+        if (DOM.topicSearchInput) {
+            DOM.topicSearchInput.value = '';
+        }
+        renderTopicTree('');
         if (DOM.modalTopicSelector) DOM.modalTopicSelector.classList.remove('hidden');
+        setTimeout(() => {
+            if (DOM.topicSearchInput) DOM.topicSearchInput.focus();
+        }, 80);
     }
 
     function closeTopicModal() {
@@ -1320,6 +1357,32 @@
         if (DOM.btnCloseTopicModal) {
             DOM.btnCloseTopicModal.addEventListener('click', closeTopicModal);
         }
+
+        // Live search in topic modal
+        if (DOM.topicSearchInput) {
+            DOM.topicSearchInput.addEventListener('input', (e) => {
+                renderTopicTree(e.target.value);
+            });
+        }
+
+        // Close modals when clicking on background backdrop
+        [DOM.modalTopicSelector, DOM.modalSessionHistory].forEach((modal) => {
+            if (!modal) return;
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.classList.add('hidden');
+                }
+            });
+        });
+
+        // Close active modal on Escape key
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeTopicModal();
+                closeHistoryModal();
+                closeNavGuardModal();
+            }
+        });
     }
 
     function closeHistoryModal() {
