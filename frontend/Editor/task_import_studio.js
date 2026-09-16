@@ -80,8 +80,6 @@
         DOM = {
             // Toolbar & Nav
             btnBackDashboard: document.getElementById('btn-back-dashboard'),
-            breadcrumbModule: document.getElementById('breadcrumb-module'),
-            breadcrumbTopic: document.getElementById('breadcrumb-topic'),
             btnSelectTopic: document.getElementById('btn-select-topic'),
             labelSelectedTopic: document.getElementById('label-selected-topic'),
             autosaveStatusDot: document.getElementById('autosave-status-dot'),

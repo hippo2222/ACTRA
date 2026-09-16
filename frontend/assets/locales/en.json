@@ -7979,6 +7979,7 @@
   "s1.err_theory_not_found": "Failed to load theory data",
   "s1.close_btn": "Close",
   "studio": {
+    "title": "Task Creation Studio",
     "page_title": "ACTRA — Task Creation Studio",
     "toolbar_aria": "Editor context toolbar",
     "back_to_dashboard": "To dashboard",

@@ -324,8 +324,7 @@ def test_studio_html_scaffolding():
 
     # Context toolbar elements
     assert 'id="btn-back-dashboard"' in content
-    assert 'id="breadcrumb-module"' in content
-    assert 'id="breadcrumb-topic"' in content
+    assert 'data-i18n="studio.title"' in content
     assert 'id="btn-select-topic"' in content
     assert 'id="autosave-status-dot"' in content
     assert 'id="btn-open-history"' in content
