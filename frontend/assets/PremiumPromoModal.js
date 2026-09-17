@@ -546,12 +546,18 @@
             await loadPaddleScript(config.environment);
             if (!window.Paddle) throw new Error('Paddle SDK not available');
 
-            window.Paddle.Environment.set(config.environment || 'production');
+            if (config.environment === 'sandbox') {
+                window.Paddle.Environment.set('sandbox');
+            }
             window.Paddle.Initialize({
                 token: config.client_token,
                 eventCallback: function(data) {
+                    console.log('[Paddle Event]', data);
                     if (data && (data.name === 'checkout.completed' || data.name === 'checkout.payment.complete')) {
                         window.dispatchEvent(new CustomEvent('actra:paddle:checkout_completed', { detail: data }));
+                    }
+                    if (data && data.name === 'checkout.error') {
+                        console.error('[Paddle Checkout Error Detail]', data);
                     }
                 }
             });
@@ -561,6 +567,8 @@
                 setStatus(modalNode, t('premium_promo_price_missing', 'Price configuration missing for selected period.'), 'error');
                 return;
             }
+
+            console.log('[Paddle] Launching checkout with priceId:', priceId, 'token:', config.client_token);
 
             setStatus(modalNode, '', 'neutral');
 
