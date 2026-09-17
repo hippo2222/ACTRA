@@ -56,6 +56,9 @@ async function runAudit() {
     viewport: { width: 1280, height: 800 }
   });
   const page = await context.newPage();
+  await page.addInitScript(() => {
+    window.ACTRA_DISABLE_AUTO_ONBOARDING = true;
+  });
 
   const consoleErrors = [];
   const networkErrors = [];

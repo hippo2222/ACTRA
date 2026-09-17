@@ -49,17 +49,31 @@
         return fallback;
     }
 
+    function normalizeTaskType(rawType) {
+        if (!rawType || typeof rawType !== 'string') return 'TEST';
+        const s = rawType.trim().toLowerCase();
+        if (s === 'sequence_assembly' || s === 'sequence') return 'SEQUENCE';
+        if (s === 'open_answer') return 'OPEN_ANSWER';
+        if (s === 'click_words' || s === 'text_errors') return 'CLICK_WORDS';
+        if (s === 'click_text') return 'CLICK_TEXT';
+        if (s === 'click') return 'CLICK';
+        if (s === 'draw') return 'DRAW';
+        if (s === 'test') return 'TEST';
+        return rawType.toUpperCase();
+    }
+
     function getTaskTypeLabel(taskType) {
+        const norm = normalizeTaskType(taskType);
         const labels = {
-            TEST: t('editor_base.task_type.test', 'Тест'),
-            OPEN_ANSWER: t('editor_base.task_type.open_answer', 'Открытый ответ'),
-            SEQUENCE: t('editor_base.task_type.sequence', 'Последовательность'),
-            CLICK_TEXT: t('editor_base.task_type.click_text', 'Клик / Текст'),
-            CLICK_WORDS: t('editor_base.task_type.click_words', 'Клик / Ошибки'),
-            CLICK: t('editor_base.task_type.click', 'Клик по изображению'),
-            DRAW: t('editor_base.task_type.draw', 'Рисование'),
+            TEST: t('studio.task_types.test', t('editor_base.task_type.test', 'Тест')),
+            OPEN_ANSWER: t('studio.task_types.open_answer', t('editor_base.task_type.open_answer', 'Открытый ответ')),
+            SEQUENCE: t('studio.task_types.sequence', t('editor_base.task_type.sequence', 'Последовательность')),
+            CLICK_TEXT: t('studio.task_types.click_text', t('editor_base.task_type.click_text', 'Клик / Текст')),
+            CLICK_WORDS: t('studio.task_types.click_words', t('editor_base.task_type.click_words', 'Клик / Ошибки')),
+            CLICK: t('studio.task_types.click', t('editor_base.task_type.click', 'Клик по изображению')),
+            DRAW: t('studio.task_types.draw', t('editor_base.task_type.draw', 'Рисование')),
         };
-        return labels[taskType] || taskType;
+        return labels[norm] || labels[taskType] || taskType;
     }
 
     const TASK_TYPE_LABELS = new Proxy({}, {
@@ -112,7 +126,6 @@
             // Stage 2
             btnBackToStep1: document.getElementById('btn-back-to-step-1'),
             typesTabsContainer: document.getElementById('types-tabs-container'),
-            btnAddExtraType: document.getElementById('btnAddExtraType') || document.getElementById('btn-add-extra-type'),
             focusPaneTypeLabel: document.getElementById('focus-pane-type-label'),
             focusPaneCoverageBadge: document.getElementById('focus-pane-coverage-badge'),
             focusUnitsDescription: document.getElementById('focus-units-description'),
@@ -130,8 +143,6 @@
             typeCommittedRawCode: document.getElementById('type-committed-raw-code'),
             liveParseCounter: document.getElementById('live-parse-counter'),
             liveParseCountText: document.getElementById('live-parse-count-text'),
-            btnQuickCommitTasks: document.getElementById('btn-quick-commit-tasks'),
-            labelQuickCommitTasks: document.getElementById('label-quick-commit-tasks'),
             btnCommitTypeTasks: document.getElementById('btn-commit-type-tasks'),
             labelCommitTypeTasks: document.getElementById('label-commit-type-tasks'),
             btnProceedToStep3: document.getElementById('btn-proceed-to-step-3'),
@@ -1079,10 +1090,10 @@
             }
         }
 
-        // 2. Commit buttons (header quick commit + footer commit)
+        // 2. Commit button (footer sole primary CTA when uncommitted)
         if (DOM.btnCommitTypeTasks) {
             if (regexCount > 0 && !isCommitted) {
-                // UNCOMMITTED TASKS DETECTED: Primary CTA!
+                // UNCOMMITTED TASKS DETECTED: Sole Primary CTA!
                 DOM.btnCommitTypeTasks.disabled = false;
                 DOM.btnCommitTypeTasks.classList.remove('studio-btn--secondary', 'studio-btn--committed');
                 DOM.btnCommitTypeTasks.classList.add('studio-btn--primary');
@@ -1091,17 +1102,6 @@
                     DOM.labelCommitTypeTasks.textContent = commitLabel;
                 } else {
                     DOM.btnCommitTypeTasks.textContent = commitLabel;
-                }
-
-                // Quick commit in header
-                if (DOM.btnQuickCommitTasks) {
-                    DOM.btnQuickCommitTasks.classList.remove('hidden');
-                    const quickLabel = t('studio.stage2.btn_quick_commit_count', 'Принять ({count})').replace('{count}', regexCount);
-                    if (DOM.labelQuickCommitTasks) {
-                        DOM.labelQuickCommitTasks.textContent = quickLabel;
-                    } else {
-                        DOM.btnQuickCommitTasks.textContent = quickLabel;
-                    }
                 }
             } else if (isCommitted) {
                 // COMMITTED TASKS: Confirmed calm state
@@ -1114,10 +1114,6 @@
                 } else {
                     DOM.btnCommitTypeTasks.textContent = committedLabel;
                 }
-
-                if (DOM.btnQuickCommitTasks) {
-                    DOM.btnQuickCommitTasks.classList.add('hidden');
-                }
             } else {
                 // NO TASKS DETECTED: Disabled state
                 DOM.btnCommitTypeTasks.disabled = true;
@@ -1128,10 +1124,6 @@
                     DOM.labelCommitTypeTasks.textContent = defaultLabel;
                 } else {
                     DOM.btnCommitTypeTasks.textContent = defaultLabel;
-                }
-
-                if (DOM.btnQuickCommitTasks) {
-                    DOM.btnQuickCommitTasks.classList.add('hidden');
                 }
             }
         }
@@ -1829,14 +1821,14 @@
                 const card = document.createElement('div');
                 card.className = 'studio-committed-mini-card';
 
-                const title = task.title || task.question || task.stem || `${t('studio.stage2.task_index', 'Задание {index}').replace('{index}', idx + 1)}`;
+                const { questionTitle } = extractTaskDisplayInfo(task, idx);
 
                 card.innerHTML = `
                     <div class="studio-committed-mini-card__header">
                         <span class="text-[11px] font-bold text-text-muted uppercase tracking-wider">№${idx + 1}</span>
                         <span class="studio-unit-badge bg-primary-light text-primary font-bold">${TASK_TYPE_LABELS[taskType] || taskType}</span>
                     </div>
-                    <p class="text-xs font-bold text-text-main leading-relaxed line-clamp-2">${escapeHtml(title)}</p>
+                    <p class="text-xs font-bold text-text-main leading-relaxed line-clamp-2">${escapeHtml(questionTitle)}</p>
                     ${renderTaskPreviewSnippet(task)}
                 `;
                 DOM.typeCommittedCardsList.appendChild(card);
@@ -2025,11 +2017,6 @@
             DOM.btnCommitTypeTasks.addEventListener('click', commitTypeTasks);
         }
 
-        // Quick commit tasks of this type (header button)
-        if (DOM.btnQuickCommitTasks) {
-            DOM.btnQuickCommitTasks.addEventListener('click', commitTypeTasks);
-        }
-
         // Back to Step 1
         if (DOM.btnBackToStep1) {
             DOM.btnBackToStep1.addEventListener('click', () => {
@@ -2101,7 +2088,11 @@
             draft.isCommitted = true;
 
             // Merge into allTasks (replace previous parsed tasks of this type)
-            StudioState.allTasks = StudioState.allTasks.filter((t) => t.type !== taskType && t._import_type !== taskType);
+            const normType = normalizeTaskType(taskType);
+            StudioState.allTasks = StudioState.allTasks.filter((t) => {
+                const curNorm = normalizeTaskType(t.type || t.task_type || t._import_type || '');
+                return curNorm !== normType;
+            });
             parsed.forEach((t) => {
                 t._selected_for_import = true;
                 t._studio_id = 't_' + Math.random().toString(36).substring(2, 9);
@@ -2124,6 +2115,64 @@
     // ---------------------------------------------------------------------------
 
     let showcaseFilterType = 'ALL';
+
+    const SHOWCASE_CATEGORIES = [
+        {
+            key: 'TEST',
+            types: ['TEST'],
+            labelKey: 'studio.stage3.group_test',
+            defaultLabel: 'Тестовые задания',
+            icon: 'quiz',
+        },
+        {
+            key: 'OPEN_ANSWER',
+            types: ['OPEN_ANSWER'],
+            labelKey: 'studio.stage3.group_open_answer',
+            defaultLabel: 'Задания с открытым ответом',
+            icon: 'edit_note',
+        },
+        {
+            key: 'SEQUENCE',
+            types: ['SEQUENCE'],
+            labelKey: 'studio.stage3.group_sequence',
+            defaultLabel: 'Последовательности',
+            icon: 'format_list_numbered',
+        },
+        {
+            key: 'CLICK_WORDS',
+            types: ['CLICK_WORDS'],
+            labelKey: 'studio.stage3.group_click_words',
+            defaultLabel: 'Поиск ошибок в тексте',
+            icon: 'find_in_page',
+        },
+        {
+            key: 'CLICK_TEXT',
+            types: ['CLICK_TEXT'],
+            labelKey: 'studio.stage3.group_click_text',
+            defaultLabel: 'Контрастные утверждения',
+            icon: 'rule',
+        },
+        {
+            key: 'VISUAL',
+            types: ['CLICK', 'DRAW'],
+            labelKey: 'studio.stage3.group_visual',
+            defaultLabel: 'Интерактивные задания на изображениях',
+            icon: 'image',
+        },
+    ];
+
+    const OTHER_CATEGORY = {
+        key: 'OTHER',
+        types: [],
+        labelKey: 'studio.stage3.group_other',
+        defaultLabel: 'Другие задания',
+        icon: 'extension',
+    };
+
+    function getCategoryForType(canonicalType) {
+        const found = SHOWCASE_CATEGORIES.find((cat) => cat.types.includes(canonicalType));
+        return found || OTHER_CATEGORY;
+    }
 
     function setupStage3() {
         renderShowcase();
@@ -2154,6 +2203,85 @@
         }
     }
 
+    function updateShowcaseSelectAllCheckbox() {
+        if (!DOM.showcaseSelectAll) return;
+        const tasks = StudioState.allTasks || [];
+        if (tasks.length === 0) {
+            DOM.showcaseSelectAll.checked = false;
+            DOM.showcaseSelectAll.indeterminate = false;
+            return;
+        }
+        const selectedCount = tasks.filter((t) => t._selected_for_import).length;
+        if (selectedCount === 0) {
+            DOM.showcaseSelectAll.checked = false;
+            DOM.showcaseSelectAll.indeterminate = false;
+        } else if (selectedCount === tasks.length) {
+            DOM.showcaseSelectAll.checked = true;
+            DOM.showcaseSelectAll.indeterminate = false;
+        } else {
+            DOM.showcaseSelectAll.checked = false;
+            DOM.showcaseSelectAll.indeterminate = true;
+        }
+    }
+
+    function createShowcaseTaskCard(task, allTasksIndex) {
+        const card = document.createElement('div');
+        card.className = 'studio-task-card';
+        card.setAttribute('data-selected', task._selected_for_import ? 'true' : 'false');
+
+        const canonicalType = normalizeTaskType(task.type || task._import_type || task.task_type || 'TEST');
+        const { questionTitle } = extractTaskDisplayInfo(task, allTasksIndex);
+
+        card.innerHTML = `
+            <div class="studio-task-card__top">
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" class="task-select-checkbox rounded border-border-strong text-primary w-4 h-4"
+                        ${task._selected_for_import ? 'checked' : ''} />
+                    <span class="studio-unit-badge bg-primary-light text-primary font-bold">${TASK_TYPE_LABELS[canonicalType] || canonicalType}</span>
+                </label>
+                <button type="button" class="btn-delete-task text-text-muted hover:text-error transition-colors p-1" title="${t('studio.stage3.delete_task', 'Удалить задание')}">
+                    <span class="material-symbols-outlined text-[18px]">delete</span>
+                </button>
+            </div>
+
+            <div class="flex flex-col gap-1 flex-1">
+                <p class="text-xs font-bold text-text-main line-clamp-2">${escapeHtml(questionTitle)}</p>
+                ${renderTaskPreviewSnippet(task)}
+            </div>
+        `;
+
+        // Checkbox event
+        const cb = card.querySelector('.task-select-checkbox');
+        if (cb) {
+            cb.addEventListener('change', (e) => {
+                task._selected_for_import = e.target.checked;
+                card.setAttribute('data-selected', task._selected_for_import ? 'true' : 'false');
+                updateStickyBar();
+                updateShowcaseSelectAllCheckbox();
+                const section = card.closest('.studio-showcase-section');
+                if (section && section._updateCategoryToggle) {
+                    section._updateCategoryToggle();
+                }
+                markDirty();
+            });
+        }
+
+        // Delete event
+        const delBtn = card.querySelector('.btn-delete-task');
+        if (delBtn) {
+            delBtn.addEventListener('click', () => {
+                StudioState.allTasks = StudioState.allTasks.filter((t) => t._studio_id !== task._studio_id);
+                renderShowcase();
+                updateStickyBar();
+                updateProceedToStep3Button();
+                showToast(t('studio.modal.history_delete', 'Удалено'), 'info');
+                markDirty();
+            });
+        }
+
+        return card;
+    }
+
     function renderShowcase() {
         if (!DOM.showcaseCardsGrid) return;
         DOM.showcaseCardsGrid.innerHTML = '';
@@ -2168,66 +2296,129 @@
                     <p class="text-sm font-semibold text-text-secondary">${t('studio.stage3.empty_showcase', 'Нет принятых заданий. Вернитесь на Шаг 2 для генерации.')}</p>
                 </div>
             `;
+            updateShowcaseSelectAllCheckbox();
             return;
         }
 
         renderShowcaseFilterPills();
+        updateShowcaseSelectAllCheckbox();
 
-        const filtered = showcaseFilterType === 'ALL'
-            ? tasks
-            : tasks.filter((t) => (t.type || t._import_type || '').toUpperCase() === showcaseFilterType);
+        // Group tasks by category
+        const tasksByCategory = new Map();
+        SHOWCASE_CATEGORIES.forEach((cat) => tasksByCategory.set(cat.key, { cat, tasks: [] }));
+        const otherGroup = { cat: OTHER_CATEGORY, tasks: [] };
 
-        filtered.forEach((task) => {
-            const card = document.createElement('div');
-            card.className = 'studio-task-card';
-            card.setAttribute('data-selected', task._selected_for_import ? 'true' : 'false');
+        tasks.forEach((task) => {
+            const canonicalType = normalizeTaskType(task.type || task._import_type || task.task_type || 'TEST');
+            const group = tasksByCategory.get(canonicalType) || (
+                canonicalType === 'CLICK' || canonicalType === 'DRAW' ? tasksByCategory.get('VISUAL') : otherGroup
+            );
+            if (group) {
+                group.tasks.push(task);
+            } else {
+                otherGroup.tasks.push(task);
+            }
+        });
 
-            const taskType = (task.type || task._import_type || 'TEST').toUpperCase();
-            const questionTitle = task.title || task.question || task.stem || 'Задание';
+        // Filter categories according to showcaseFilterType
+        const categoriesToRender = [];
+        SHOWCASE_CATEGORIES.forEach((cat) => {
+            const grp = tasksByCategory.get(cat.key);
+            if (grp && grp.tasks.length > 0) {
+                if (showcaseFilterType === 'ALL' || showcaseFilterType === cat.key) {
+                    categoriesToRender.push(grp);
+                }
+            }
+        });
+        if (otherGroup.tasks.length > 0 && (showcaseFilterType === 'ALL' || showcaseFilterType === 'OTHER')) {
+            categoriesToRender.push(otherGroup);
+        }
 
-            card.innerHTML = `
-                <div class="studio-task-card__top">
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" class="task-select-checkbox rounded border-border-strong text-primary w-4 h-4"
-                            ${task._selected_for_import ? 'checked' : ''} />
-                        <span class="studio-unit-badge bg-primary-light text-primary font-bold">${TASK_TYPE_LABELS[taskType] || taskType}</span>
-                    </label>
-                    <button type="button" class="btn-delete-task text-text-muted hover:text-error transition-colors p-1" title="${t('studio.stage3.delete_task', 'Удалить задание')}">
-                        <span class="material-symbols-outlined text-[18px]">delete</span>
-                    </button>
-                </div>
-
-                <div class="flex flex-col gap-1 flex-1">
-                    <p class="text-xs font-bold text-text-main line-clamp-2">${escapeHtml(questionTitle)}</p>
-                    ${renderTaskPreviewSnippet(task)}
+        if (categoriesToRender.length === 0) {
+            DOM.showcaseCardsGrid.innerHTML = `
+                <div class="col-span-full py-8 flex flex-col items-center justify-center text-center">
+                    <span class="material-symbols-outlined text-[36px] text-text-muted mb-2">filter_alt_off</span>
+                    <p class="text-xs font-medium text-text-secondary">Нет заданий выбранного типа в текущем наборе</p>
                 </div>
             `;
+            return;
+        }
 
-            // Checkbox event
-            const cb = card.querySelector('.task-select-checkbox');
-            if (cb) {
-                cb.addEventListener('change', (e) => {
-                    task._selected_for_import = e.target.checked;
-                    card.setAttribute('data-selected', task._selected_for_import ? 'true' : 'false');
-                    updateStickyBar();
-                    markDirty();
-                });
+        categoriesToRender.forEach(({ cat, tasks: catTasks }) => {
+            const section = document.createElement('div');
+            section.className = 'studio-showcase-section';
+            section.setAttribute('data-category', cat.key);
+
+            const header = document.createElement('div');
+            header.className = 'studio-showcase-section__header';
+
+            const titleWrap = document.createElement('div');
+            titleWrap.className = 'studio-showcase-section__title-wrap';
+
+            const iconSpan = document.createElement('span');
+            iconSpan.className = 'material-symbols-outlined studio-showcase-section__icon';
+            iconSpan.textContent = cat.icon;
+
+            const titleH3 = document.createElement('h3');
+            titleH3.className = 'studio-showcase-section__title';
+            titleH3.textContent = t(cat.labelKey, cat.defaultLabel);
+
+            const countBadge = document.createElement('span');
+            countBadge.className = 'studio-showcase-section__count';
+            countBadge.textContent = catTasks.length;
+
+            titleWrap.appendChild(iconSpan);
+            titleWrap.appendChild(titleH3);
+            titleWrap.appendChild(countBadge);
+
+            const actionsWrap = document.createElement('div');
+            actionsWrap.className = 'studio-showcase-section__actions';
+
+            const btnToggleCat = document.createElement('button');
+            btnToggleCat.type = 'button';
+            btnToggleCat.className = 'studio-showcase-section__btn-select-all';
+
+            function updateCategoryToggleBtn() {
+                const allSel = catTasks.every((t) => t._selected_for_import);
+                const someSel = !allSel && catTasks.some((t) => t._selected_for_import);
+                const iconName = allSel ? 'check_box' : (someSel ? 'indeterminate_check_box' : 'check_box_outline_blank');
+                const text = allSel ? t('studio.stage3.unselect_category', 'Снять выбор') : t('studio.stage3.select_category', 'Выбрать всю категорию');
+                btnToggleCat.innerHTML = `
+                    <span class="material-symbols-outlined text-[14px]">${iconName}</span>
+                    <span>${text}</span>
+                `;
             }
 
-            // Delete event
-            const delBtn = card.querySelector('.btn-delete-task');
-            if (delBtn) {
-                delBtn.addEventListener('click', () => {
-                    StudioState.allTasks = StudioState.allTasks.filter((t) => t._studio_id !== task._studio_id);
-                    renderShowcase();
-                    updateStickyBar();
-                    updateProceedToStep3Button();
-                    showToast(t('studio.modal.history_delete', 'Удалено'), 'info');
-                    markDirty();
-                });
-            }
+            updateCategoryToggleBtn();
+            section._updateCategoryToggle = updateCategoryToggleBtn;
 
-            DOM.showcaseCardsGrid.appendChild(card);
+            btnToggleCat.addEventListener('click', () => {
+                const allSel = catTasks.every((t) => t._selected_for_import);
+                const newState = !allSel;
+                catTasks.forEach((t) => {
+                    t._selected_for_import = newState;
+                });
+                renderShowcase();
+                updateStickyBar();
+                markDirty();
+            });
+
+            actionsWrap.appendChild(btnToggleCat);
+            header.appendChild(titleWrap);
+            header.appendChild(actionsWrap);
+            section.appendChild(header);
+
+            // Sub-grid for cards
+            const grid = document.createElement('div');
+            grid.className = 'studio-showcase-section__grid';
+
+            catTasks.forEach((task) => {
+                const card = createShowcaseTaskCard(task, StudioState.allTasks.indexOf(task));
+                grid.appendChild(card);
+            });
+
+            section.appendChild(grid);
+            DOM.showcaseCardsGrid.appendChild(section);
         });
     }
 
@@ -2235,49 +2426,243 @@
         if (!DOM.showcaseFilterPills) return;
         DOM.showcaseFilterPills.innerHTML = '';
 
-        const typeCounts = { ALL: StudioState.allTasks.length };
+        const categoryCounts = { ALL: StudioState.allTasks.length };
         StudioState.allTasks.forEach((t) => {
-            const key = (t.type || t._import_type || 'TEST').toUpperCase();
-            typeCounts[key] = (typeCounts[key] || 0) + 1;
+            const canonicalType = normalizeTaskType(t.type || t._import_type || t.task_type || 'TEST');
+            const cat = getCategoryForType(canonicalType);
+            const key = cat.key;
+            categoryCounts[key] = (categoryCounts[key] || 0) + 1;
         });
 
-        Object.keys(typeCounts).forEach((key) => {
+        // "All" pill
+        const allPill = document.createElement('button');
+        allPill.type = 'button';
+        allPill.className = `px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors ${showcaseFilterType === 'ALL' ? 'bg-primary text-white' : 'bg-surface-2 text-text-secondary hover:bg-surface-1'}`;
+        allPill.textContent = `${t('studio.stage3.filter_all', 'Все')} (${categoryCounts.ALL})`;
+        allPill.addEventListener('click', () => {
+            showcaseFilterType = 'ALL';
+            renderShowcase();
+        });
+        DOM.showcaseFilterPills.appendChild(allPill);
+
+        // Category pills for present categories
+        SHOWCASE_CATEGORIES.forEach((cat) => {
+            const count = categoryCounts[cat.key] || 0;
+            if (count > 0) {
+                const pill = document.createElement('button');
+                pill.type = 'button';
+                pill.className = `px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors ${showcaseFilterType === cat.key ? 'bg-primary text-white' : 'bg-surface-2 text-text-secondary hover:bg-surface-1'}`;
+                const labelText = cat.key === 'VISUAL'
+                    ? t('studio.stage3.group_visual', 'Интерактивные')
+                    : (TASK_TYPE_LABELS[cat.key] || t(cat.labelKey, cat.defaultLabel));
+                pill.textContent = `${labelText} (${count})`;
+                pill.addEventListener('click', () => {
+                    showcaseFilterType = cat.key;
+                    renderShowcase();
+                });
+                DOM.showcaseFilterPills.appendChild(pill);
+            }
+        });
+
+        if (categoryCounts.OTHER > 0) {
             const pill = document.createElement('button');
             pill.type = 'button';
-            pill.className = `px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors ${showcaseFilterType === key ? 'bg-primary text-white' : 'bg-surface-2 text-text-secondary hover:bg-surface-1'}`;
-            const labelText = key === 'ALL' ? t('studio.stage3.filter_all', 'Все') : (TASK_TYPE_LABELS[key] || key);
-            pill.textContent = `${labelText} (${typeCounts[key]})`;
-
+            pill.className = `px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors ${showcaseFilterType === 'OTHER' ? 'bg-primary text-white' : 'bg-surface-2 text-text-secondary hover:bg-surface-1'}`;
+            pill.textContent = `${t('studio.stage3.group_other', 'Другие')} (${categoryCounts.OTHER})`;
             pill.addEventListener('click', () => {
-                showcaseFilterType = key;
+                showcaseFilterType = 'OTHER';
                 renderShowcase();
             });
-
             DOM.showcaseFilterPills.appendChild(pill);
-        });
+        }
+    }
+
+    function extractTaskDisplayInfo(task, fallbackIndex = 0) {
+        if (!task || typeof task !== 'object') {
+            return { questionTitle: `Задание #${fallbackIndex + 1}`, data: {}, taskType: 'TEST' };
+        }
+        const data = task.data || task.task_data || task || {};
+        const rawType = String(task.type || task.task_type || task._import_type || data.type || 'TEST');
+        const normalizedType = rawType.toLowerCase();
+
+        function clean(str) {
+            if (!str || typeof str !== 'string') return '';
+            return str.replace(/^[#?@]+\s*/, '').trim();
+        }
+
+        let questionTitle = '';
+
+        // 1. Try questions array (common in TEST, or multi-question tasks)
+        if (Array.isArray(data.questions) && data.questions.length > 0) {
+            const q0 = data.questions[0];
+            if (typeof q0 === 'object' && q0) {
+                questionTitle = clean(q0.question || q0.title || q0.prompt || q0.stem);
+            }
+        }
+
+        // 2. Try prompt or question on data or task root
+        if (!questionTitle) {
+            questionTitle = clean(data.prompt || task.prompt || data.question || task.question || data.stem || task.stem);
+        }
+
+        // 3. For click_words or text_errors, fallback to data.text
+        if (!questionTitle && (normalizedType.includes('click_words') || data.mode === 'text_errors') && data.text) {
+            const sample = clean(data.text);
+            questionTitle = sample.length > 90 ? sample.slice(0, 87) + '...' : sample;
+        }
+
+        // 4. Try title / name (avoid generic placeholders like "Task #1" or "Задание 1")
+        if (!questionTitle) {
+            const candidate = clean(task.title || data.title || task.name || data.name);
+            if (candidate && !/^task\s*#?\d+/i.test(candidate) && !/^задание\s*#?\d+/i.test(candidate) && candidate.toLowerCase() !== 'задание') {
+                questionTitle = candidate;
+            }
+        }
+
+        // 5. Fallback to human type label + index
+        if (!questionTitle) {
+            const humanTypeLabel = getTaskTypeLabel(rawType);
+            questionTitle = `${humanTypeLabel} #${fallbackIndex + 1}`;
+        }
+
+        return {
+            questionTitle,
+            data,
+            taskType: rawType
+        };
     }
 
     function renderTaskPreviewSnippet(task) {
-        if (task.options && Array.isArray(task.options)) {
+        if (!task || typeof task !== 'object') return '';
+        const data = task.data || task.task_data || task;
+        const rawType = String(task.type || task.task_type || task._import_type || data.type || '').toLowerCase();
+
+        // 1. TEST (options with ✓ and •)
+        let options = null;
+        if (Array.isArray(data.questions) && data.questions[0] && Array.isArray(data.questions[0].options)) {
+            options = data.questions[0].options;
+        } else if (Array.isArray(data.options)) {
+            options = data.options;
+        } else if (Array.isArray(task.options)) {
+            options = task.options;
+        }
+
+        if (Array.isArray(options) && options.length > 0) {
+            const previewOpts = options.slice(0, 3);
+            const remaining = options.length - previewOpts.length;
             return `
                 <div class="mt-1 flex flex-col gap-1 text-[11px] text-text-secondary">
-                    ${task.options.slice(0, 3).map((opt) => `
-                        <div class="flex items-center gap-1.5 ${opt.is_correct ? 'text-success font-semibold' : ''}">
-                            <span class="text-[10px]">${opt.is_correct ? '✓' : '•'}</span>
-                            <span class="truncate">${escapeHtml(opt.text || opt.title || '')}</span>
-                        </div>
-                    `).join('')}
-                    ${task.options.length > 3 ? `<span class="text-text-muted text-[10px]">+ ещё ${task.options.length - 3} вар.</span>` : ''}
+                    ${previewOpts.map((opt) => {
+                        const isCorrect = Boolean(opt.is_correct ?? opt.correct ?? false);
+                        const optText = typeof opt === 'object' && opt ? (opt.text || opt.title || opt.value || '') : String(opt);
+                        return `
+                            <div class="flex items-center gap-1.5 ${isCorrect ? 'text-success font-semibold' : 'text-text-secondary'}">
+                                <span class="text-[10px] flex-shrink-0">${isCorrect ? '✓' : '•'}</span>
+                                <span class="truncate">${escapeHtml(optText)}</span>
+                            </div>
+                        `;
+                    }).join('')}
+                    ${remaining > 0 ? `<span class="text-text-muted text-[10px]">+ ещё ${remaining} вар.</span>` : ''}
                 </div>
             `;
         }
-        if (task.standard_answer || task.correct_answer) {
+
+        // 2. OPEN_ANSWER (standard / reference answer)
+        const stdAnswer = data.standard_answer || data.correct_answer || data.reference_answer || task.standard_answer || task.correct_answer;
+        if (stdAnswer && typeof stdAnswer === 'string') {
+            const cleanAnswer = stdAnswer.trim();
+            if (cleanAnswer) {
+                return `
+                    <div class="mt-1 text-[11px] text-text-secondary line-clamp-2 bg-surface-2 p-1.5 rounded-md border border-border-subtle">
+                        <span class="font-bold text-text-main">${t('studio.stage3.standard_answer', 'Эталон:')}</span> ${escapeHtml(cleanAnswer)}
+                    </div>
+                `;
+            }
+        }
+
+        // 3. SEQUENCE / SEQUENCE_ASSEMBLY (ordered steps 1 → 2 → 3)
+        let sequenceSteps = [];
+        if (data.elements && typeof data.elements === 'object') {
+            if (data.levels && typeof data.levels === 'object') {
+                const levelKeys = Object.keys(data.levels).sort((a, b) => Number(a) - Number(b));
+                levelKeys.forEach((lvlKey) => {
+                    const elIds = data.levels[lvlKey];
+                    if (Array.isArray(elIds)) {
+                        elIds.forEach((elId) => {
+                            const stepVal = data.elements[elId] || elId;
+                            const txt = typeof stepVal === 'object' && stepVal ? (stepVal.text || stepVal.title) : String(stepVal);
+                            if (txt) sequenceSteps.push(txt);
+                        });
+                    }
+                });
+            }
+            if (sequenceSteps.length === 0) {
+                Object.values(data.elements).forEach((val) => {
+                    const txt = typeof val === 'object' && val ? (val.text || val.title) : String(val);
+                    if (txt) sequenceSteps.push(txt);
+                });
+            }
+        } else if (Array.isArray(data.levels)) {
+            data.levels.forEach((lvl) => {
+                if (Array.isArray(lvl)) {
+                    lvl.forEach((s) => sequenceSteps.push(String(s)));
+                }
+            });
+        } else if (Array.isArray(data.items) || Array.isArray(task.items)) {
+            const items = data.items || task.items;
+            items.forEach((it) => {
+                const txt = typeof it === 'object' && it ? (it.text || it.title) : String(it);
+                if (txt) sequenceSteps.push(txt);
+            });
+        }
+
+        if (sequenceSteps.length > 0) {
+            const previewSteps = sequenceSteps.slice(0, 3);
+            const remainingSteps = sequenceSteps.length - previewSteps.length;
             return `
-                <p class="mt-1 text-[11px] text-text-secondary line-clamp-2 bg-surface-2 p-1.5 rounded-md border border-border-subtle">
-                    <span class="font-bold text-text-main">${t('studio.stage3.standard_answer', 'Эталон:')}</span> ${escapeHtml(task.standard_answer || task.correct_answer || '')}
-                </p>
+                <div class="mt-1 flex flex-wrap items-center gap-1 text-[11px] text-text-secondary">
+                    ${previewSteps.map((step, sIdx) => `
+                        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-surface-2 border border-border-subtle text-text-main text-[10px] font-medium">
+                            <span class="text-primary font-bold">${sIdx + 1}.</span>
+                            <span class="truncate max-w-[120px]">${escapeHtml(step)}</span>
+                        </span>
+                        ${sIdx < previewSteps.length - 1 ? '<span class="text-text-muted text-[10px]">→</span>' : ''}
+                    `).join('')}
+                    ${remainingSteps > 0 ? `<span class="text-text-muted text-[10px] pl-1">+ ещё ${remainingSteps} шаг.</span>` : ''}
+                </div>
             `;
         }
+
+        // 4. CLICK_WORDS / text_errors (error count badge)
+        if (data.mode === 'text_errors' || rawType.includes('click_words')) {
+            const errCount = data.error_count ?? (Array.isArray(data.error_spans) ? data.error_spans.length : (Array.isArray(data.error_indices) ? data.error_indices.length : null));
+            if (errCount !== null) {
+                return `
+                    <div class="mt-1 flex items-center gap-1.5 text-[11px]">
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold border border-amber-500/20 text-[10px]">
+                            <span class="material-symbols-outlined text-[12px]">find_in_page</span>
+                            <span>Ловушек / ошибок: ${errCount}</span>
+                        </span>
+                    </div>
+                `;
+            }
+        }
+
+        // 5. Visual / Manual targets (CLICK / DRAW)
+        const targets = data.targets || data.regions || task.targets;
+        if (Array.isArray(targets) && targets.length > 0) {
+            const targetNames = targets.slice(0, 3).map((t) => typeof t === 'object' && t ? (t.name || t.label || t.title) : String(t)).filter(Boolean);
+            if (targetNames.length > 0) {
+                return `
+                    <div class="mt-1 flex flex-wrap items-center gap-1 text-[10px] text-text-secondary">
+                        <span class="material-symbols-outlined text-[12px] text-primary">target</span>
+                        <span>${targetNames.map((n) => `<span class="font-medium text-text-main">${escapeHtml(n)}</span>`).join(', ')}</span>
+                        ${targets.length > 3 ? `<span class="text-text-muted">+ ещё ${targets.length - 3}</span>` : ''}
+                    </div>
+                `;
+            }
+        }
+
         return '';
     }
 
@@ -2629,6 +3014,12 @@
             buildVisualGuidanceText,
             renderManualVisualView,
             commitManualSpec,
+            extractTaskDisplayInfo,
+            renderTaskPreviewSnippet,
+            normalizeTaskType,
+            getTaskTypeLabel,
+            SHOWCASE_CATEGORIES,
+            renderShowcase,
         };
     }
 

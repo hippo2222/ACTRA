@@ -4,6 +4,8 @@
     var SUPPORTED = ['ru', 'en', 'uk'];
     var DEFAULT_LANG = 'ru';
     var STORAGE_KEY = 'actra_lang';
+    var LOCALE_VERSION = '2026.09.17.1';
+    var VERSION_KEY = 'actra_locale_version';
 
     var _locale = {};
     var _lang = DEFAULT_LANG;
@@ -62,6 +64,26 @@
             var val = t(key);
             if (val !== key) el.setAttribute('data-tooltip', val);
         });
+        document.querySelectorAll('[data-i18n-attr]').forEach(function (el) {
+            var raw = el.getAttribute('data-i18n-attr');
+            if (!raw) return;
+            var specs = raw.split(/[,;]/);
+            specs.forEach(function (spec) {
+                var parts = spec.trim().split('|');
+                if (parts.length === 2) {
+                    var attr = parts[0].trim();
+                    var key = parts[1].trim();
+                    var val = t(key);
+                    if (val !== key) {
+                        if (attr === 'placeholder') {
+                            el.placeholder = val;
+                        } else {
+                            el.setAttribute(attr, val);
+                        }
+                    }
+                }
+            });
+        });
         document.querySelectorAll('[data-lang-display]').forEach(function (el) {
             var display = _lang === 'uk' ? 'ua' : _lang;
             el.textContent = display.toUpperCase();
@@ -84,12 +106,13 @@
     async function loadLocale(lang) {
         var safeLang = SUPPORTED.indexOf(lang) !== -1 ? lang : DEFAULT_LANG;
         try {
-            var res = await fetch('/assets/locales/' + safeLang + '.json');
+            var res = await fetch('/assets/locales/' + safeLang + '.json?v=' + encodeURIComponent(LOCALE_VERSION));
             if (!res.ok) throw new Error('HTTP ' + res.status);
             var data = await res.json();
             applyLocale(data, safeLang);
             localStorage.setItem(STORAGE_KEY, safeLang);
             localStorage.setItem('actra_locale_' + safeLang, JSON.stringify(data));
+            localStorage.setItem(VERSION_KEY, LOCALE_VERSION);
         } catch (e) {
             console.warn('[i18n] Failed to load locale:', safeLang, e);
             if (safeLang !== DEFAULT_LANG) {
@@ -115,6 +138,15 @@
 
     async function init() {
         var lang = getLang();
+        var storedVersion = typeof localStorage !== 'undefined' ? localStorage.getItem(VERSION_KEY) : null;
+        if (storedVersion !== LOCALE_VERSION) {
+            try {
+                SUPPORTED.forEach(function (s) {
+                    localStorage.removeItem('actra_locale_' + s);
+                });
+                localStorage.setItem(VERSION_KEY, LOCALE_VERSION);
+            } catch (_) {}
+        }
         var cached = typeof localStorage !== 'undefined' ? localStorage.getItem('actra_locale_' + lang) : null;
         if (cached) {
             try {
@@ -132,6 +164,7 @@
         setLang: setLang,
         getLang: getLang,
         updateDOM: updateDOM,
+        applyLocale: applyLocale,
         init: init,
     };
 

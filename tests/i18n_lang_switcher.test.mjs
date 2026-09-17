@@ -1,4 +1,4 @@
-﻿import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { JSDOM } from 'jsdom';
 import fs from 'fs';
 import path from 'path';
@@ -26,7 +26,7 @@ function createFetchMock() {
   return vi.fn(async (input) => {
     const url = typeof input === 'string' ? input : String(input?.url || '');
     if (url.startsWith('/assets/locales/')) {
-      const lang = url.replace('/assets/locales/', '').replace('.json', '');
+      const lang = url.split('?')[0].replace('/assets/locales/', '').replace('.json', '');
       const filePath = path.resolve(process.cwd(), 'frontend/assets/locales', `${lang}.json`);
       if (fs.existsSync(filePath)) {
         const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));

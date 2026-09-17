@@ -238,20 +238,15 @@
             <div class="stage-2-container">
                 <!-- Top Types Navigation Bar -->
                 <div class="studio-types-bar">
-                    <div class="flex items-center gap-2.5 min-w-0">
+                    <div class="studio-types-bar__nav">
                         <button id="btn-back-to-step-1" type="button" class="studio-btn studio-btn--sm studio-btn--secondary flex-shrink-0" title="Вернуться к анализу материала" data-i18n-title="studio.stage2.btn_back_to_analysis_title">
                             <span class="material-symbols-outlined text-[16px]">arrow_back</span>
                             <span data-i18n="studio.stage2.btn_back_to_analysis">К анализу</span>
                         </button>
-                        <div class="h-4 w-px bg-border-subtle flex-shrink-0"></div>
-                        <div class="studio-types-tabs" id="types-tabs-container">
-                            <!-- Dynamic Type Pills inserted by JS (TEST, OPEN_ANSWER, SEQUENCE, etc.) -->
-                        </div>
                     </div>
-                    <button id="btn-add-extra-type" type="button" class="studio-btn studio-btn--sm studio-btn--secondary flex-shrink-0" title="Добавить другой тип задания" data-i18n-title="studio.stage2.add_type_title">
-                        <span class="material-symbols-outlined text-[16px]">add</span>
-                        <span data-i18n="studio.stage2.btn_add_type">Другой тип</span>
-                    </button>
+                    <div class="studio-types-tabs" id="types-tabs-container">
+                        <!-- Dynamic Type Pills inserted by JS (TEST, OPEN_ANSWER, SEQUENCE, etc.) -->
+                    </div>
                 </div>
 
                 <!-- Zero-Scroll Split View Panes -->
@@ -259,79 +254,49 @@
                     <!-- Left Column: Focused Prompt -->
                     <div class="studio-pane">
                         <div class="studio-pane__header">
-                            <div class="flex items-center gap-2">
-                                <span class="material-symbols-outlined text-[18px] text-primary">target</span>
-                                <span class="text-xs font-bold text-text-main" id="focus-pane-type-label" data-i18n="studio.stage2.prompt_title">Промпт для типа</span>
+                            <div class="flex items-center gap-2 min-w-0">
+                                <span class="material-symbols-outlined text-[18px] text-primary flex-shrink-0">target</span>
+                                <span class="text-xs font-bold text-text-main truncate" id="focus-pane-type-label" data-i18n="studio.stage2.prompt_title">Промпт для типа</span>
                             </div>
+                            <button id="btn-copy-type-prompt" type="button" class="studio-btn studio-btn--sm studio-btn--primary flex-shrink-0" title="Скопировать промпт в буфер обмена" data-i18n-title="studio.stage2.btn_copy_type_prompt_title">
+                                <span class="material-symbols-outlined text-[16px]">content_copy</span>
+                                <span id="label-copy-type-prompt" data-i18n="studio.stage2.btn_copy_type_prompt">Скопировать промпт</span>
+                            </button>
                         </div>
 
                         <div class="studio-pane__body">
                             <!-- Focus Context Card -->
-                            <div class="studio-focus-card p-3.5 rounded-xl bg-surface-1 border border-border-subtle flex flex-col gap-2.5">
-                                <div class="flex items-center justify-between gap-2 flex-wrap">
+                            <div class="studio-focus-card p-2.5 rounded-lg bg-surface-1 border border-border-subtle flex flex-col gap-1.5 flex-shrink-0">
+                                <div class="flex items-center justify-between gap-2">
                                     <div class="flex items-center gap-1.5">
-                                        <span class="material-symbols-outlined text-[16px] text-primary">psychology</span>
-                                        <span class="text-[11px] font-bold uppercase tracking-wider text-text-secondary" data-i18n="studio.stage2.type_guidance_title">Методический фокус темы</span>
+                                        <span class="material-symbols-outlined text-[15px] text-primary">psychology</span>
+                                        <span class="text-[10px] font-bold uppercase tracking-wider text-text-secondary" data-i18n="studio.stage2.type_guidance_title">Методический фокус темы</span>
                                     </div>
                                     <span id="focus-pane-coverage-badge" class="studio-strategy-badge inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold border transition-all">
                                         <span class="material-symbols-outlined text-[13px] strategy-icon">tune</span>
                                         <span class="strategy-label">Фокус</span>
                                     </span>
                                 </div>
-                                <p id="focus-units-description" class="text-xs leading-relaxed text-text-main" data-i18n="studio.stage2.select_direction_hint">
+                                <p id="focus-units-description" class="text-xs leading-relaxed text-text-main line-clamp-2" data-i18n="studio.stage2.select_direction_hint">
                                     Выберите направление сверху для формирования точечного промпта.
                                 </p>
-                                <div id="focus-injected-badge" class="hidden flex items-center gap-1.5 text-[11px] font-semibold text-primary pt-1.5 border-t border-border-subtle">
-                                    <span class="material-symbols-outlined text-[15px]">auto_awesome</span>
+                                <div id="focus-injected-badge" class="hidden flex items-center gap-1 text-[10px] font-semibold text-primary pt-1 border-t border-border-subtle">
+                                    <span class="material-symbols-outlined text-[13px]">auto_awesome</span>
                                     <span data-i18n="studio.stage2.focus_injected_badge">Фокус и ловушки из анализа автоматически включены в промпт</span>
                                 </div>
                             </div>
 
-                            <!-- Guided Workflow Actions (Step 1 -> Step 2) -->
-                            <div class="studio-workflow-actions flex flex-col gap-3">
-                                <!-- Step 1: Copy Prompt -->
-                                <div class="flex flex-col gap-1.5">
-                                    <div class="flex items-center gap-1.5 text-[11px] font-bold text-text-secondary uppercase tracking-wider">
-                                        <span class="w-4 h-4 rounded-full bg-primary-light text-primary text-[10px] font-bold inline-flex items-center justify-center">1</span>
-                                        <span data-i18n="studio.stage2.step1_label">1. Скопируйте промпт</span>
-                                    </div>
-                                    <button id="btn-copy-type-prompt" type="button" class="studio-btn studio-btn--lg studio-btn--primary w-full">
-                                        <span class="material-symbols-outlined text-[20px]">content_copy</span>
-                                        <span id="label-copy-type-prompt" data-i18n="studio.stage2.btn_copy_type_prompt">Скопировать промпт для заданий</span>
-                                    </button>
-                                    <span class="text-[11px] text-text-muted px-1" data-i18n="studio.stage2.send_prompt_hint">Отправьте промпт в диалог с нейросетью (ChatGPT / Claude / Gemini)</span>
+                            <!-- Open Prompt Area (Anti-Matryoshka) -->
+                            <div class="studio-prompt-container">
+                                <div class="studio-prompt-container__bar">
+                                    <span class="flex items-center gap-1.5 font-semibold text-text-main">
+                                        <span class="material-symbols-outlined text-[14px] text-primary">terminal</span>
+                                        <span data-i18n="studio.stage2.prompt_terminal_title">Готовый текст промпта</span>
+                                    </span>
+                                    <span class="text-text-muted text-[10px]" data-i18n="studio.stage2.send_prompt_hint">Отправьте в диалог с нейросетью</span>
                                 </div>
-
-                                <!-- Transition Arrow / Bridge -->
-                                <div class="flex items-center justify-center -my-0.5 text-text-muted">
-                                    <span class="material-symbols-outlined text-[16px] text-border-strong">south</span>
-                                </div>
-
-                                <!-- Step 2: Paste Response -->
-                                <div class="flex flex-col gap-1.5">
-                                    <div class="flex items-center gap-1.5 text-[11px] font-bold text-text-secondary uppercase tracking-wider">
-                                        <span class="w-4 h-4 rounded-full bg-surface-2 text-text-secondary border border-border-subtle text-[10px] font-bold inline-flex items-center justify-center">2</span>
-                                        <span data-i18n="studio.stage2.step2_label">2. Вставьте результат генерации</span>
-                                    </div>
-                                    <button id="btn-paste-type-response" type="button" class="studio-btn studio-btn--lg studio-btn--secondary w-full hover:border-primary transition-all duration-150" title="Вставить скопированный ответ нейросети в текстовое окно справа" data-i18n-title="studio.stage2.btn_paste_title">
-                                        <span class="material-symbols-outlined text-[20px] text-primary">content_paste_go</span>
-                                        <span id="label-paste-type-response" data-i18n="studio.stage2.btn_paste_response">Вставить ответ нейросети в окно</span>
-                                    </button>
-                                    <span class="text-[11px] text-text-muted px-1" data-i18n="studio.stage2.paste_hint">Вставляет скопированный код заданий в поле справа</span>
-                                </div>
+                                <pre id="type-prompt-preview-text" class="studio-prompt-container__code"></pre>
                             </div>
-
-                            <!-- Collapsible Full Prompt Preview -->
-                            <details class="rounded-xl border border-border-subtle bg-surface-2 p-3 text-xs">
-                                <summary class="font-semibold text-text-secondary cursor-pointer hover:text-primary transition-colors" data-i18n="studio.stage2.view_full_prompt">
-                                    Посмотреть полный текст промпта
-                                </summary>
-                                <pre id="type-prompt-preview-text" class="mt-2.5 p-2 rounded-lg bg-surface-1 border border-border-subtle text-[11px] font-mono text-text-main whitespace-pre-wrap overflow-x-auto max-h-[160px]"></pre>
-                            </details>
-                        </div>
-
-                        <div class="studio-pane__footer">
-                            <span class="text-[11px] text-text-muted" data-i18n="studio.stage2.send_prompt_hint">Отправьте промпт в тот же чат нейросети</span>
                         </div>
                     </div>
 
@@ -347,9 +312,9 @@
                                     <span class="material-symbols-outlined text-[14px]">check_circle</span>
                                     <span id="live-parse-count-text"></span>
                                 </span>
-                                <button id="btn-quick-commit-tasks" type="button" class="studio-btn studio-btn--sm studio-btn--primary hidden transition-all duration-150" title="Принять распознанные задания этого типа в витрину" data-i18n-title="studio.stage2.btn_quick_commit_title">
-                                    <span class="material-symbols-outlined text-[15px]">check_circle</span>
-                                    <span id="label-quick-commit-tasks" data-i18n="studio.stage2.btn_quick_commit">Принять</span>
+                                <button id="btn-paste-type-response" type="button" class="studio-btn studio-btn--sm studio-btn--secondary hover:border-primary transition-all duration-150" title="Вставить скопированный ответ нейросети в окно" data-i18n-title="studio.stage2.btn_paste_title">
+                                    <span class="material-symbols-outlined text-[16px] text-primary">content_paste_go</span>
+                                    <span id="label-paste-type-response" data-i18n="studio.stage2.btn_paste_response">Вставить из буфера</span>
                                 </button>
                             </div>
                         </div>
@@ -361,16 +326,11 @@
 
                             <!-- Verified Tasks View (Committed Mode) -->
                             <div id="type-committed-view" class="hidden flex-1 flex flex-col gap-3 overflow-y-auto">
-                                <!-- Status Banner -->
-                                <div class="p-3.5 rounded-xl bg-success-light border border-success/30 flex items-center justify-between gap-3">
-                                    <div class="flex items-center gap-2.5">
-                                        <div class="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-success shadow-xs flex-shrink-0">
-                                            <span class="material-symbols-outlined text-[20px]">verified</span>
-                                        </div>
-                                        <div>
-                                            <p id="committed-view-title" class="text-xs font-bold text-success-dark">Задания успешно приняты в витрину</p>
-                                            <p class="text-[11px] text-text-secondary" data-i18n="studio.stage2.committed_view_desc">Схема проверена сервером и зафиксирована для импорта на Шаге 3</p>
-                                        </div>
+                                <!-- Status Banner (Compact Strip) -->
+                                <div class="py-2.5 px-3.5 rounded-xl bg-success-light border border-success/30 flex items-center justify-between gap-3 flex-shrink-0">
+                                    <div class="flex items-center gap-2 min-w-0">
+                                        <span class="material-symbols-outlined text-[18px] text-success flex-shrink-0">verified</span>
+                                        <p id="committed-view-title" class="text-xs font-bold text-success-dark truncate">Задания успешно приняты в витрину</p>
                                     </div>
                                     <button id="btn-edit-type-tasks" type="button" class="studio-btn studio-btn--sm studio-btn--secondary flex-shrink-0" title="Вернуться к редактированию исходного текста" data-i18n-title="studio.stage2.btn_edit_tasks_title">
                                         <span class="material-symbols-outlined text-[15px]">edit</span>
