@@ -2510,11 +2510,59 @@
       border: 1px solid var(--color-page-builder-border-strong);
       box-shadow: var(--color-page-builder-shadow-soft);
       transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+      cursor: grab;
+      user-select: none;
+    }
+
+    .cx-chain-task-row:active {
+      cursor: grabbing;
     }
 
     .cx-chain-task-row:hover {
       border-color: var(--color-primary);
       box-shadow: var(--color-page-builder-shadow-strong, 0 4px 12px rgba(0, 0, 0, 0.06));
+    }
+
+    .cx-chain-drag-handle {
+      cursor: grab;
+    }
+
+    .cx-chain-drag-handle:active {
+      cursor: grabbing;
+    }
+
+    .cx-chain-task-row.cx-chain-task-dragging {
+      opacity: 0.45;
+      transform: scale(0.985);
+    }
+
+    .cx-chain-task-row.cx-chain-drag-over {
+      border-color: var(--color-primary) !important;
+      box-shadow: 0 0 0 2px var(--color-page-builder-primary-border, rgba(var(--color-primary-rgb), 0.25)) !important;
+      background-color: var(--color-page-builder-custom-checkbox-hover-bg) !important;
+    }
+
+    .cx-chain-task-row.cx-chain-task-highlight {
+      animation: cx-chain-moved-pulse 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    @keyframes cx-chain-moved-pulse {
+      0% {
+        background-color: var(--color-page-builder-custom-checkbox-hover-bg);
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 2px var(--color-page-builder-primary-border, rgba(var(--color-primary-rgb), 0.3));
+      }
+      100% {
+        background-color: var(--color-page-builder-surface);
+        border-color: var(--color-page-builder-border-strong);
+        box-shadow: var(--color-page-builder-shadow-soft);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .cx-chain-task-row.cx-chain-task-highlight {
+        animation: none !important;
+      }
     }
 
     .cx-chain-connector {
@@ -2816,46 +2864,42 @@
     }
 
     .cx-publish-modal-panel {
-      max-width: min(1080px, calc(100vw - 2rem));
+      max-width: min(620px, calc(100vw - 2rem));
       border-radius: 1.25rem;
       border: 1px solid var(--color-border-subtle);
       box-shadow: 0 24px 60px -12px rgba(0, 0, 0, 0.4);
     }
 
-    .cx-publish-modal-body {
-      grid-template-columns: minmax(0, 1fr);
-    }
-
-    .cx-publish-visibility-grid {
-      grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
-      gap: 0.75rem;
+    .cx-publish-visibility-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
     }
 
     .cx-publish-visibility-card {
       position: relative;
       display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      min-height: 8.25rem;
+      align-items: center;
+      gap: 0.875rem;
       border: 1.5px solid var(--color-border-subtle);
-      border-radius: 1rem;
-      padding: 1.125rem 1rem;
+      border-radius: 0.875rem;
+      padding: 0.75rem 1rem;
       background: var(--color-surface-1);
       cursor: pointer;
-      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     .cx-publish-visibility-card:hover {
       border-color: var(--color-primary-light);
       background: var(--color-bg-secondary);
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     }
 
     .cx-publish-visibility-card:has(input[type="radio"]:checked) {
       border-color: var(--color-primary);
-      background: var(--color-surface-1);
-      box-shadow: 0 0 0 1px var(--color-primary), 0 4px 14px rgba(99, 102, 241, 0.12);
+      background: var(--color-bg-secondary);
+      box-shadow: 0 0 0 1px var(--color-primary), 0 2px 10px rgba(99, 102, 241, 0.08);
     }
 
     .cx-publish-visibility-card input[type="radio"] {
@@ -2896,12 +2940,6 @@
     .cx-publish-visibility-card:has(input[type="radio"]:checked) .cx-publish-card-radio-indicator::after {
       opacity: 1;
       transform: scale(1);
-    }
-
-    @media (min-width: 1024px) {
-      .cx-publish-modal-body {
-        grid-template-columns: minmax(0, 1.45fr) minmax(320px, 1.05fr);
-      }
     }
 
     @media (max-width: 640px) {
@@ -4579,115 +4617,109 @@
       modal.innerHTML = `
         <div class="min-h-full w-full flex items-start justify-center py-4 sm:py-8">
         <div class="cx-dark-modal-panel cx-publish-modal-panel bg-surface-1 rounded-2xl shadow-2xl w-full border border-border-subtle overflow-hidden">
-          <div class="flex items-start justify-between gap-4 px-6 py-5 border-b border-border-subtle bg-bg-secondary/40">
-            <div class="flex items-start gap-3.5 max-w-3xl">
+          <div class="flex items-start justify-between gap-4 px-6 py-4 border-b border-border-subtle bg-bg-secondary/40">
+            <div class="flex items-start gap-3.5 max-w-xl">
               <div class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20 shadow-sm mt-0.5">
                 <span class="material-symbols-outlined text-[22px]">rocket_launch</span>
               </div>
-              <div class="space-y-1">
+              <div class="space-y-1 min-w-0">
                 <div class="flex items-center gap-2 flex-wrap">
-                  <h3 class="text-lg font-bold text-text-main">${wt('create.publication_complex_title', 'Публикация комплекса')}</h3>
-                  <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-surface-1 border border-border-subtle text-text-secondary truncate max-w-xs">${escapeHtml(asCleanString(document.getElementById('name')?.value) || wt('create.no_title', 'Без названия'))}</span>
+                  <h3 class="text-base font-bold text-text-main">${wt('create.publication_complex_title', 'Публикация комплекса')}</h3>
+                  <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-surface-1 border border-border-subtle text-text-secondary truncate max-w-[200px] sm:max-w-xs">${escapeHtml(asCleanString(document.getElementById('name')?.value) || wt('create.no_title', 'Без названия'))}</span>
                 </div>
                 <p class="text-xs text-text-secondary leading-relaxed">${escapeHtml(publishIntroText)}</p>
               </div>
             </div>
-            <button type="button" data-action="close" class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-text-muted hover:bg-bg-tertiary hover:text-text-main transition-colors" aria-label="${wt('create.close_btn', 'Закрыть')}">
-              <span class="material-symbols-outlined">close</span>
+            <button type="button" data-action="close" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-text-muted hover:bg-bg-tertiary hover:text-text-main transition-colors" aria-label="${wt('create.close_btn', 'Закрыть')}">
+              <span class="material-symbols-outlined text-[20px]">close</span>
             </button>
           </div>
-          <div class="cx-publish-modal-body px-6 py-5 grid gap-5">
-            <div class="space-y-4">
-              <div class="rounded-xl border border-border-subtle bg-bg-secondary p-4">
-                <div class="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <div class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-text-muted">
-                      <span class="material-symbols-outlined text-[15px]">info</span>
-                      ${wt('create.current_status', 'Текущий статус')}
-                    </div>
-                    <div id="complex-publish-current-status" class="mt-1 text-base font-bold text-text-main">${publication ? escapeHtml(getCatalogVisibilityLabel(currentVisibility)) : wt('create.not_published', 'Не опубликован')}</div>
-                    <div id="complex-publish-current-meta" class="mt-1 text-xs text-text-secondary">${publication ? `${wt('create.last_pub_prefix', 'Последняя публикация')}: ${escapeHtml(formatPublicationTimestamp(publication.latest_published_at))}` : wt('create.first_pub_note', 'После первой публикации комплекс появится в каталожной системе.')}</div>
-                  </div>
-                  <span id="complex-publish-current-badge" class="cx-mini-pill ${publication ? getCatalogVisibilityToneClass(currentVisibility) : 'cx-mini-pill--muted'} px-3 py-1 text-xs font-bold rounded-full">${publication ? escapeHtml(getCatalogVisibilityLabel(currentVisibility)) : wt('create.not_published', 'Не опубликован')}</span>
-                </div>
-              </div>
-
-              <div class="space-y-3">
+          <div class="cx-publish-modal-body px-6 py-4 space-y-4 max-h-[calc(100vh-14rem)] overflow-y-auto custom-scrollbar">
+            <div class="rounded-xl border border-border-subtle bg-bg-secondary/70 p-3.5">
+              <div class="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <div class="text-sm font-bold text-text-main">${wt('create.who_has_access', 'Кому будет доступен комплекс')}</div>
-                  <p class="mt-0.5 text-xs text-text-secondary leading-relaxed">${escapeHtml(visibilityHelpText)}</p>
-                </div>
-                <div class="cx-publish-visibility-grid grid gap-3">
-                  ${visibilityOptions.map(({ key, icon, iconBg }) => `
-                    <label class="cx-publish-visibility-card ${archivedSource && isCatalogVisibilityExpansion(currentVisibility, key) ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}">
-                      <input type="radio" name="complex-publish-visibility" value="${key}" ${key === currentVisibility ? 'checked' : ''} ${archivedSource && isCatalogVisibilityExpansion(currentVisibility, key) ? 'disabled' : ''} />
-                      <div class="flex items-center justify-between gap-2 mb-2">
-                        <div class="inline-flex h-8 w-8 items-center justify-center rounded-lg ${iconBg}">
-                          <span class="material-symbols-outlined text-[18px]">${icon}</span>
-                        </div>
-                        <div class="cx-publish-card-radio-indicator"></div>
-                      </div>
-                      <div class="space-y-1 min-w-0 flex-1">
-                        <div class="text-sm font-bold text-text-main">${escapeHtml(getCatalogVisibilityLabel(key))}</div>
-                        <div class="text-xs text-text-secondary leading-snug">${escapeHtml(getCatalogVisibilityDescription(key))}</div>
-                      </div>
-                    </label>
-                  `).join('')}
-                </div>
-              </div>
-            </div>
-
-            <div class="space-y-4">
-              <div id="complex-publish-access-box" class="rounded-xl border border-primary/30 bg-primary-lighter/20 p-4 ${accessCode ? '' : 'hidden'} transition-all">
-                <div class="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <div class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-text-muted">
-                      <span class="material-symbols-outlined text-[15px] text-primary">key</span>
-                      ${wt('create.access_code_label', 'Код доступа')}
-                    </div>
-                    <div id="complex-publish-access-code" class="mt-1 font-mono text-base font-bold tracking-[0.14em] text-text-main">${escapeHtml(accessCode ? formatAccessCodeDisplay(accessCode) : wt('create.code_will_be_created', 'Код будет создан после публикации'))}</div>
+                  <div class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-text-muted">
+                    <span class="material-symbols-outlined text-[15px]">info</span>
+                    ${wt('create.current_status', 'Текущий статус')}
                   </div>
-                  <button type="button" data-action="copy-access-code" class="btn-secondary inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg">
-                    <span class="material-symbols-outlined text-[16px]">content_copy</span>
-                    <span>${wt('create.copy_btn', 'Копировать')}</span>
-                  </button>
+                  <div id="complex-publish-current-status" class="mt-1 text-sm font-bold text-text-main">${publication ? escapeHtml(getCatalogVisibilityLabel(currentVisibility)) : wt('create.not_published', 'Не опубликован')}</div>
+                  <div id="complex-publish-current-meta" class="mt-0.5 text-xs text-text-secondary">${publication ? `${wt('create.last_pub_prefix', 'Последняя публикация')}: ${escapeHtml(formatPublicationTimestamp(publication.latest_published_at))}` : wt('create.first_pub_note', 'После первой публикации комплекс появится в каталожной системе.')}</div>
                 </div>
+                <span id="complex-publish-current-badge" class="cx-mini-pill ${publication ? getCatalogVisibilityToneClass(currentVisibility) : 'cx-mini-pill--muted'} px-2.5 py-0.5 text-xs font-semibold rounded-full">${publication ? escapeHtml(getCatalogVisibilityLabel(currentVisibility)) : wt('create.not_published', 'Не опубликован')}</span>
               </div>
-
-              <div class="rounded-xl border border-border-subtle bg-bg-secondary p-4">
-                <div class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-text-muted mb-2">
-                  <span class="material-symbols-outlined text-[15px]">help_outline</span>
-                  ${escapeHtml(publicationInfoTitle)}
-                </div>
-                <ul class="space-y-2 text-xs text-text-secondary leading-relaxed">
-                  ${publicationInfoItems.map((item) => `
-                    <li class="flex items-start gap-2">
-                      <span class="material-symbols-outlined text-[14px] text-primary shrink-0 mt-0.5">check_circle</span>
-                      <span>${escapeHtml(item)}</span>
-                    </li>
-                  `).join('')}
-                </ul>
-              </div>
-
-              <div id="complex-publish-unsaved-note" class="${state.isDirty ? '' : 'hidden'} rounded-xl border border-warning-light bg-warning-light/40 px-4 py-3 text-xs text-warning-darker flex items-start gap-2">
-                <span class="material-symbols-outlined text-[16px] shrink-0 mt-0.5">warning</span>
-                <span>${wt('create.unsaved_pub_note', 'Есть несохранённые изменения. В публикацию попадёт последняя сохранённая версия комплекса.')}</span>
-              </div>
-
-              <div id="complex-publish-feedback" class="hidden rounded-xl border px-4 py-3 text-xs"></div>
             </div>
+
+            <div class="space-y-2">
+              <div>
+                <div class="text-xs font-bold uppercase tracking-wider text-text-muted">${wt('create.who_has_access', 'Кому будет доступен комплекс')}</div>
+                <p class="mt-0.5 text-xs text-text-secondary leading-relaxed">${escapeHtml(visibilityHelpText)}</p>
+              </div>
+              <div class="cx-publish-visibility-list">
+                ${visibilityOptions.map(({ key, icon, iconBg }) => `
+                  <label class="cx-publish-visibility-card ${archivedSource && isCatalogVisibilityExpansion(currentVisibility, key) ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}">
+                    <input type="radio" name="complex-publish-visibility" value="${key}" ${key === currentVisibility ? 'checked' : ''} ${archivedSource && isCatalogVisibilityExpansion(currentVisibility, key) ? 'disabled' : ''} />
+                    <div class="cx-publish-card-radio-indicator"></div>
+                    <div class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${iconBg}">
+                      <span class="material-symbols-outlined text-[19px]">${icon}</span>
+                    </div>
+                    <div class="space-y-0.5 min-w-0 flex-1">
+                      <div class="text-sm font-bold text-text-main">${escapeHtml(getCatalogVisibilityLabel(key))}</div>
+                      <div class="text-xs text-text-secondary leading-snug">${escapeHtml(getCatalogVisibilityDescription(key))}</div>
+                    </div>
+                  </label>
+                `).join('')}
+              </div>
+            </div>
+
+            <div id="complex-publish-access-box" class="rounded-xl border border-primary/30 bg-primary-lighter/20 p-3.5 ${accessCode ? '' : 'hidden'} transition-all">
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <div class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-text-muted">
+                    <span class="material-symbols-outlined text-[15px] text-primary">key</span>
+                    ${wt('create.access_code_label', 'Код доступа')}
+                  </div>
+                  <div id="complex-publish-access-code" class="mt-1 font-mono text-base font-bold tracking-[0.14em] text-text-main">${escapeHtml(accessCode ? formatAccessCodeDisplay(accessCode) : wt('create.code_will_be_created', 'Код будет создан после публикации'))}</div>
+                </div>
+                <button type="button" data-action="copy-access-code" class="btn-secondary inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg">
+                  <span class="material-symbols-outlined text-[16px]">content_copy</span>
+                  <span>${wt('create.copy_btn', 'Копировать')}</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="rounded-xl border border-border-subtle bg-bg-secondary/60 p-3.5">
+              <div class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-text-muted mb-2">
+                <span class="material-symbols-outlined text-[15px]">help_outline</span>
+                ${escapeHtml(publicationInfoTitle)}
+              </div>
+              <ul class="space-y-1.5 text-xs text-text-secondary leading-relaxed">
+                ${publicationInfoItems.map((item) => `
+                  <li class="flex items-start gap-2">
+                    <span class="material-symbols-outlined text-[14px] text-primary shrink-0 mt-0.5">check_circle</span>
+                    <span>${escapeHtml(item)}</span>
+                  </li>
+                `).join('')}
+              </ul>
+            </div>
+
+            <div id="complex-publish-unsaved-note" class="${state.isDirty ? '' : 'hidden'} rounded-xl border border-warning-light bg-warning-light/40 px-4 py-3 text-xs text-warning-darker flex items-start gap-2">
+              <span class="material-symbols-outlined text-[16px] shrink-0 mt-0.5">warning</span>
+              <span>${wt('create.unsaved_pub_note', 'Есть несохранённые изменения. В публикацию попадёт последняя сохранённая версия комплекса.')}</span>
+            </div>
+
+            <div id="complex-publish-feedback" class="hidden rounded-xl border px-4 py-3 text-xs"></div>
           </div>
-          <div class="cx-publish-modal-footer flex flex-wrap items-center justify-between gap-3 border-t border-border-subtle bg-surface-1 px-6 py-4">
-            <button type="button" data-action="close" class="btn-secondary inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg">
+          <div class="cx-publish-modal-footer flex flex-wrap items-center justify-between gap-3 border-t border-border-subtle bg-surface-1 px-6 py-3.5">
+            <button type="button" data-action="close" class="btn-secondary inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-lg">
               <span class="material-symbols-outlined text-[16px]">close</span>
               <span>${wt('create.close_btn', 'Закрыть')}</span>
             </button>
             <div class="cx-publish-modal-actions flex flex-wrap items-center gap-2">
-              <button type="button" data-action="update-visibility" class="btn-secondary inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg ${hasPublication ? '' : 'hidden'}">
+              <button type="button" data-action="update-visibility" class="btn-secondary inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-lg ${hasPublication ? '' : 'hidden'}">
                 <span class="material-symbols-outlined text-[16px]">tune</span>
                 <span>${wt('create.save_access_btn', 'Сохранить доступ')}</span>
               </button>
-              <button type="button" data-action="publish-version" class="btn-primary inline-flex items-center gap-1.5 px-5 py-2 text-xs font-bold rounded-lg shadow-sm">
+              <button type="button" data-action="publish-version" class="btn-primary inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-lg shadow-sm">
                 <span class="material-symbols-outlined text-[16px]">publish</span>
                 <span data-role="publish-version-label">${hasPublication ? wt('create.publish_version_btn', 'Опубликовать версию') : wt('create.publish_btn', 'Опубликовать')}</span>
               </button>
@@ -6370,11 +6402,18 @@
 
         el.setAttribute('data-selected', isSelected ? '1' : '0');
 
+        el.classList.toggle('selected', isSelected);
+
         el.classList.toggle('ring-2', isSelected);
 
         el.classList.toggle('ring-primary-light', isSelected);
 
         el.classList.toggle('bg-primary-lighter', isSelected);
+
+        const cb = el.querySelector('.custom-checkbox');
+        if (cb) {
+          cb.setAttribute('aria-checked', isSelected ? 'true' : 'false');
+        }
 
       });
 
@@ -6707,7 +6746,7 @@
 
         card.innerHTML = `
           <!-- Custom Checkbox -->
-          <div class="custom-checkbox pointer-events-none"></div>
+          <div class="custom-checkbox" role="checkbox" aria-checked="${isSelected ? 'true' : 'false'}" tabindex="0" title="${wt('create.select_task', 'Выбрать задание')}"></div>
 
           <!-- Content -->
           <div class="flex-1 min-w-0 flex items-center gap-1">
@@ -6792,14 +6831,38 @@
           });
         }
 
+        // Checkbox Click / Keyboard (independent toggle for multi-selection without Ctrl)
+        const checkbox = card.querySelector('.custom-checkbox');
+        const toggleTaskSelection = () => {
+          const wasSelected = card.getAttribute('data-selected') === '1';
+          const nextSelected = !wasSelected;
+          card.setAttribute('data-selected', nextSelected ? '1' : '0');
+          card.classList.toggle('selected', nextSelected);
+          if (checkbox) {
+            checkbox.setAttribute('aria-checked', nextSelected ? 'true' : 'false');
+          }
+          syncHiddenSelectedListSelectionFromCards();
+        };
+
+        if (checkbox) {
+          checkbox.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleTaskSelection();
+          });
+          checkbox.addEventListener('keydown', (e) => {
+            if (e.key === ' ' || e.key === 'Enter') {
+              e.preventDefault();
+              e.stopPropagation();
+              toggleTaskSelection();
+            }
+          });
+        }
+
         // Click Selection Logic
         card.addEventListener('click', (e) => {
           if (e.ctrlKey || e.metaKey) {
-            // Toggle Multi
-            const selected = card.getAttribute('data-selected') === '1';
-            card.setAttribute('data-selected', selected ? '0' : '1');
-            card.classList.toggle('selected');
-            syncHiddenSelectedListSelectionFromCards();
+            // Toggle Multi with Ctrl/Cmd
+            toggleTaskSelection();
             return;
           }
 
@@ -6808,14 +6871,18 @@
             // Deselect
             card.setAttribute('data-selected', '0');
             card.classList.remove('selected');
+            if (checkbox) checkbox.setAttribute('aria-checked', 'false');
           } else {
             // Select Single
             document.querySelectorAll('[data-selected-task-ref]').forEach((el) => {
               el.setAttribute('data-selected', '0');
               el.classList.remove('selected');
+              const elCb = el.querySelector('.custom-checkbox');
+              if (elCb) elCb.setAttribute('aria-checked', 'false');
             });
             card.setAttribute('data-selected', '1');
             card.classList.add('selected');
+            if (checkbox) checkbox.setAttribute('aria-checked', 'true');
           }
           syncHiddenSelectedListSelectionFromCards();
         });
@@ -12589,6 +12656,87 @@
   <!-- Removed dead renderChains override #1 (modern compact design) — superseded by final version below -->
   <!-- Removed dead renderChains override #2 (Enhanced Visual Depth) — superseded by final version below -->
   <script>
+    function reorderChainTasks(chainIdx, fromIdx, toIdx) {
+      const chain = state.chains[chainIdx];
+      if (!chain) return;
+      const chainTasks = [...getChainTasks(chain)];
+      if (fromIdx < 0 || fromIdx >= chainTasks.length || toIdx < 0 || toIdx >= chainTasks.length || fromIdx === toIdx) return;
+
+      const movedRef = chainTasks[fromIdx];
+
+      // 1. FLIP (First): Record bounding boxes of task rows for this chain
+      const oldTops = new Map();
+      const chainCard = document.querySelector(`#chains-container > [data-chain-index="${chainIdx}"]`);
+      if (chainCard) {
+        chainCard.querySelectorAll('.cx-chain-task-row[data-chain-task-ref]').forEach((row) => {
+          const r = row.getAttribute('data-chain-task-ref');
+          if (r) {
+            oldTops.set(r, row.getBoundingClientRect().top);
+          }
+        });
+      }
+
+      // Reorder items in state
+      const [item] = chainTasks.splice(fromIdx, 1);
+      chainTasks.splice(toIdx, 0, item);
+
+      const currentMode = getChainShuffleMode(chain);
+      if (Array.isArray(state.chains[chainIdx])) {
+        state.chains[chainIdx] = { tasks: chainTasks, shuffle_mode: currentMode };
+      } else {
+        state.chains[chainIdx].tasks = chainTasks;
+      }
+      markDirty();
+
+      // 2. FLIP (Last): Render new DOM
+      renderChains();
+
+      // 3. FLIP (Invert & Play)
+      const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (prefersReducedMotion) return;
+
+      const newChainCard = document.querySelector(`#chains-container > [data-chain-index="${chainIdx}"]`);
+      if (!newChainCard) return;
+
+      const rowsToAnimate = [];
+      newChainCard.querySelectorAll('.cx-chain-task-row[data-chain-task-ref]').forEach((row) => {
+        const r = row.getAttribute('data-chain-task-ref');
+        if (r && oldTops.has(r)) {
+          const oldTop = oldTops.get(r);
+          const newTop = row.getBoundingClientRect().top;
+          const deltaY = oldTop - newTop;
+          if (Math.abs(deltaY) > 0.5) {
+            row.style.transform = `translateY(${deltaY}px)`;
+            row.style.transition = 'none';
+            rowsToAnimate.push({ row, isMoved: r === movedRef });
+          }
+        }
+      });
+
+      if (!rowsToAnimate.length) return;
+
+      requestAnimationFrame(() => {
+        rowsToAnimate.forEach(({ row, isMoved }) => {
+          // Force layout reflow
+          void row.offsetHeight;
+          row.style.transition = 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1)';
+          row.style.transform = '';
+          if (isMoved) {
+            row.classList.add('cx-chain-task-highlight');
+          }
+
+          const onTransitionEnd = (e) => {
+            if (e.propertyName === 'transform') {
+              row.style.transition = '';
+              row.style.transform = '';
+              row.removeEventListener('transitionend', onTransitionEnd);
+            }
+          };
+          row.addEventListener('transitionend', onTransitionEnd);
+        });
+      });
+    }
+
     // FINAL Override 2: RenderChains with "Settled" Interior & No White Lines
     // Addressed user feedback: "White line annoying" -> Removed internal borders
     // Addressed user feedback: "Hover not for element but for whole section" -> Removed inner lift
@@ -12613,7 +12761,7 @@
            </div>
            <p class="text-sm font-bold text-text-main mb-1">${escapeHtml(wt('create.chains_empty_title', 'Создание сцепок'))}</p>
            <p class="text-xs text-text-muted max-w-[280px] mx-auto leading-relaxed">
-             ${escapeHtml(wt('create.chains_empty_hint', 'Выделите 2 или более заданий в списке выше (Ctrl+Click), затем кликните ПКМ по одному из них для создания сцепки.'))}
+             ${escapeHtml(wt('create.chains_empty_hint', 'Отметьте чекбоксы 2 или более заданий в списке (или используйте Ctrl+Click), затем кликните ПКМ по одному из них для создания сцепки.'))}
            </p>
          `;
         root.appendChild(emptyState);
@@ -12640,6 +12788,7 @@
 
         // Card container - Flat relative to section, but Distinct
         const card = document.createElement('div');
+        card.setAttribute('data-chain-index', String(idx));
         card.className = 'flex rounded-xl border border-border-subtle bg-surface-1 overflow-hidden mb-3';
         card.style.cssText = 'box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);';
 
@@ -12733,9 +12882,20 @@
         tasks.forEach((ref, i) => {
           const taskRow = document.createElement('div');
           taskRow.className = 'cx-chain-task-row group/task flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl w-full relative';
+          taskRow.setAttribute('data-chain-idx', String(idx));
+          taskRow.setAttribute('data-task-idx', String(i));
+          taskRow.setAttribute('data-chain-task-ref', ref);
+          taskRow.setAttribute('draggable', 'true');
 
           const left = document.createElement('div');
-          left.className = 'flex items-center gap-3 min-w-0 flex-1';
+          left.className = 'flex items-center gap-2.5 min-w-0 flex-1';
+
+          // Drag Grip
+          const dragGrip = document.createElement('span');
+          dragGrip.className = 'cx-chain-drag-handle material-symbols-outlined text-[18px] text-text-muted opacity-40 group-hover/task:opacity-90 transition-opacity cursor-grab select-none shrink-0';
+          dragGrip.textContent = 'drag_indicator';
+          dragGrip.setAttribute('aria-hidden', 'true');
+          dragGrip.title = wt('create.chain_drag_handle', 'Потяните для изменения порядка');
 
           // Number bubble
           const num = document.createElement('span');
@@ -12747,11 +12907,53 @@
           const label = document.createElement('span');
           label.className = 'text-xs font-semibold text-text-main truncate leading-snug flex-1';
           label.textContent = getTaskLabel(ref);
-          label.title = ref;
+          label.title = getTaskLabel(ref);
 
+          left.appendChild(dragGrip);
           left.appendChild(num);
           left.appendChild(label);
           taskRow.appendChild(left);
+
+          // Drag and Drop Logic
+          taskRow.addEventListener('dragstart', (e) => {
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', ref);
+            e.dataTransfer.setData('application/x-actra-chain-task', JSON.stringify({ chainIdx: idx, taskIdx: i, ref }));
+            window._actraActiveDraggedChainTask = { chainIdx: idx, taskIdx: i, ref };
+            taskRow.classList.add('cx-chain-task-dragging');
+          });
+
+          taskRow.addEventListener('dragend', () => {
+            taskRow.classList.remove('cx-chain-task-dragging');
+            window._actraActiveDraggedChainTask = null;
+            document.querySelectorAll('.cx-chain-task-row.cx-chain-drag-over').forEach(el => el.classList.remove('cx-chain-drag-over'));
+          });
+
+          taskRow.addEventListener('dragover', (e) => {
+            const dragInfo = window._actraActiveDraggedChainTask;
+            if (!dragInfo || dragInfo.chainIdx !== idx || dragInfo.taskIdx === i) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            taskRow.classList.add('cx-chain-drag-over');
+          });
+
+          taskRow.addEventListener('dragleave', (e) => {
+            if (!taskRow.contains(e.relatedTarget)) {
+              taskRow.classList.remove('cx-chain-drag-over');
+            }
+          });
+
+          taskRow.addEventListener('drop', (e) => {
+            e.preventDefault();
+            taskRow.classList.remove('cx-chain-drag-over');
+            const dragInfo = window._actraActiveDraggedChainTask;
+            if (!dragInfo || dragInfo.chainIdx !== idx) return;
+            const fromIdx = dragInfo.taskIdx;
+            const toIdx = i;
+            window._actraActiveDraggedChainTask = null;
+            if (fromIdx === toIdx) return;
+            reorderChainTasks(idx, fromIdx, toIdx);
+          });
 
           // Reorder Buttons (▲ / ▼)
           const reorderGroup = document.createElement('div');
@@ -12764,6 +12966,7 @@
           upBtn.title = wt('create.chain_move_up', 'Переместить выше');
           upBtn.setAttribute('aria-label', `${wt('create.chain_move_up', 'Переместить выше')}: ${getTaskLabel(ref)}`);
           upBtn.innerHTML = '<span class="material-symbols-outlined text-[18px] select-none" aria-hidden="true">arrow_drop_up</span>';
+          upBtn.addEventListener('mousedown', (e) => e.stopPropagation());
           if (i === 0) {
             upBtn.disabled = true;
             upBtn.setAttribute('aria-disabled', 'true');
@@ -12771,18 +12974,7 @@
             upBtn.addEventListener('click', (e) => {
               e.preventDefault();
               e.stopPropagation();
-              const chainTasks = getChainTasks(state.chains[idx]);
-              if (i <= 0) return;
-              const tmp = chainTasks[i - 1];
-              chainTasks[i - 1] = chainTasks[i];
-              chainTasks[i] = tmp;
-              if (Array.isArray(state.chains[idx])) {
-                state.chains[idx] = { tasks: chainTasks, shuffle_mode: currentMode };
-              } else {
-                state.chains[idx].tasks = chainTasks;
-              }
-              markDirty();
-              renderChains();
+              reorderChainTasks(idx, i, i - 1);
             });
           }
 
@@ -12793,6 +12985,7 @@
           downBtn.title = wt('create.chain_move_down', 'Переместить ниже');
           downBtn.setAttribute('aria-label', `${wt('create.chain_move_down', 'Переместить ниже')}: ${getTaskLabel(ref)}`);
           downBtn.innerHTML = '<span class="material-symbols-outlined text-[18px] select-none" aria-hidden="true">arrow_drop_down</span>';
+          downBtn.addEventListener('mousedown', (e) => e.stopPropagation());
           if (i === tasks.length - 1) {
             downBtn.disabled = true;
             downBtn.setAttribute('aria-disabled', 'true');
@@ -12800,18 +12993,7 @@
             downBtn.addEventListener('click', (e) => {
               e.preventDefault();
               e.stopPropagation();
-              const chainTasks = getChainTasks(state.chains[idx]);
-              if (i >= chainTasks.length - 1) return;
-              const tmp = chainTasks[i + 1];
-              chainTasks[i + 1] = chainTasks[i];
-              chainTasks[i] = tmp;
-              if (Array.isArray(state.chains[idx])) {
-                state.chains[idx] = { tasks: chainTasks, shuffle_mode: currentMode };
-              } else {
-                state.chains[idx].tasks = chainTasks;
-              }
-              markDirty();
-              renderChains();
+              reorderChainTasks(idx, i, i + 1);
             });
           }
 
