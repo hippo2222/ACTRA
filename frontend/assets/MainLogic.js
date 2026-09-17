@@ -3369,4 +3369,28 @@
         loadQuickAccess().catch(() => {});
         loadStatistics().catch(() => {});
     });
+
+    window.addEventListener('actra:paddle:checkout_completed', () => {
+        if (window.__mainCurrentUser) {
+            window.__mainCurrentUser.effective_plan = 'premium';
+            if (typeof updateHeaderUser === 'function') {
+                updateHeaderUser(window.__mainCurrentUser);
+            }
+        }
+        loadCurrentUser().catch(() => {});
+        loadPremiumArchiveBanner().catch(() => {});
+    });
+
+    window.addEventListener('actra:premium_activated', () => {
+        if (window.__mainCurrentUser) {
+            window.__mainCurrentUser.effective_plan = 'premium';
+            if (typeof updateHeaderUser === 'function') {
+                updateHeaderUser(window.__mainCurrentUser);
+            }
+        }
+        loadCurrentUser().catch(() => {});
+        loadPremiumArchiveBanner().catch(() => {});
+        loadCalendarWidget().catch(() => {});
+        loadStatistics().catch(() => {});
+    });
 })();

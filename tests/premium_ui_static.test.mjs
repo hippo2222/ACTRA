@@ -102,4 +102,46 @@ describe('premium UI wiring', () => {
                 return;
             }`);
   });
+
+  it('implements smooth exit animation, scroll locking, and focus trapping', () => {
+    const promo = read('frontend/assets/PremiumPromoModal.js');
+
+    expect(promo).toContain("modal.classList.remove('is-open');");
+    expect(promo).toContain("transitionend");
+    expect(promo).toContain("prefers-reduced-motion");
+    expect(promo).toContain("document.body.style.overflow = 'hidden'");
+    expect(promo).toContain("aria-describedby");
+    expect(promo).toContain("event.key === 'Tab'");
+  });
+
+  it('provides button microinteractions, mobile responsive layout, and checkout debouncing', () => {
+    const promo = read('frontend/assets/PremiumPromoModal.js');
+
+    expect(promo).toContain("transform: scale(0.98)");
+    expect(promo).toContain("@media (max-width: 640px)");
+    expect(promo).toContain("grid-template-columns: 1fr");
+    expect(promo).toContain("isCheckoutPending");
+    expect(promo).toContain("modalNode?.classList.add('is-loading')");
+  });
+
+  it('provides post-checkout success view, toast, and instant plan badge updates', () => {
+    const promo = read('frontend/assets/PremiumPromoModal.js');
+    const header = read('frontend/assets/GlobalHeader.js');
+    const mainLogic = read('frontend/assets/MainLogic.js');
+    const settings = read('frontend/Settings/settings.js');
+
+    expect(promo).toContain('renderSuccessView');
+    expect(promo).toContain('showSuccess');
+    expect(promo).toContain('premiumSuccessPop');
+    expect(promo).toContain('showToast');
+    expect(promo).toContain('verifyPremiumActivation');
+    expect(promo).toContain('actra:paddle:checkout_completed');
+    expect(promo).toContain('actra:premium_activated');
+    expect(header).toContain('actra:paddle:checkout_completed');
+    expect(header).toContain('actra:premium_activated');
+    expect(mainLogic).toContain('actra:paddle:checkout_completed');
+    expect(mainLogic).toContain('actra:premium_activated');
+    expect(settings).toContain('actra:premium_activated');
+  });
 });
+

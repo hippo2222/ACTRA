@@ -1091,6 +1091,9 @@
         window.addEventListener('actra:paddle:checkout_completed', () => {
             void loadBillingStatus();
         });
+        window.addEventListener('actra:premium_activated', () => {
+            void loadBillingStatus();
+        });
     }
 
     async function createPremiumOrder(periodDays) {

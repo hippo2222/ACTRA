@@ -369,6 +369,14 @@
         reRenderAllHeaders();
     });
 
+    window.addEventListener('actra:paddle:checkout_completed', function () {
+        reRenderAllHeaders();
+    });
+
+    window.addEventListener('actra:premium_activated', function () {
+        reRenderAllHeaders();
+    });
+
     initGlobalHeaders();
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initGlobalHeaders, { once: true });
