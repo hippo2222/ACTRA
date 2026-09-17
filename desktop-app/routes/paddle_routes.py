@@ -39,6 +39,7 @@ def _paddle_service() -> Any:
 
 
 @paddle_bp.route("/api/webhooks/paddle", methods=["POST"])
+@paddle_bp.route("/api/paddle/webhook", methods=["POST"])
 def paddle_webhook() -> Any:
     """Public webhook receiver for Paddle API v2 events."""
     raw_body = request.get_data()
