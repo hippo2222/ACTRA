@@ -31,7 +31,7 @@ function loadCatalogBundleHelpers() {
 describe('Catalog bundle rendering helpers', () => {
   const { state, buildCatalogRenderEntries } = loadCatalogBundleHelpers();
 
-  it('groups a linked public complex and theory into one bundle in all filter', () => {
+  it('renders linked public complex and theory as atomic single items in all filter', () => {
     state.contentType = 'all';
     const entries = buildCatalogRenderEntries([
       {
@@ -53,14 +53,16 @@ describe('Catalog bundle rendering helpers', () => {
       },
     ]);
 
-    expect(entries).toHaveLength(2);
+    expect(entries).toHaveLength(3);
     expect(entries[0]).toMatchObject({
-      kind: 'bundle',
-      bundleId: 'bundle-1',
-      complexItem: { item_id: 'complex-1' },
-      theoryItem: { item_id: 'theory-1' },
+      kind: 'single',
+      item: { item_id: 'theory-1' },
     });
     expect(entries[1]).toMatchObject({
+      kind: 'single',
+      item: { item_id: 'complex-1' },
+    });
+    expect(entries[2]).toMatchObject({
       kind: 'single',
       item: { item_id: 'theory-standalone' },
     });
