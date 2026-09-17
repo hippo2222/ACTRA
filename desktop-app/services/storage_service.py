@@ -680,6 +680,16 @@ class StorageService:
         tasks_dir = topic_path / "tasks"
         task_dirs: List[Path] = []
 
+        topic_owner_id = None
+        topic_json_file = topic_path / "topic.json"
+        if topic_json_file.exists():
+            try:
+                with open(topic_json_file, 'r', encoding='utf-8') as tf:
+                    t_payload = json.load(tf)
+                topic_owner_id = _normalize_optional_text(t_payload.get("created_by_user_id"))
+            except Exception:
+                pass
+
         if tasks_dir.exists():
             task_dirs = [p for p in tasks_dir.iterdir() if p.is_dir()]
             self.logger.info(f"Scanning tasks in: {tasks_dir}")
@@ -758,9 +768,15 @@ class StorageService:
                     "updated_by_user_id",
                     "created_via",
                     "content_scope",
+                    "imported",
+                    "import_source",
                 ):
                     if meta.get(field_name) is not None:
                         metadata[field_name] = meta.get(field_name)
+                if not metadata.get("created_by_user_id") and topic_owner_id:
+                    metadata["created_by_user_id"] = topic_owner_id
+                    if not metadata.get("updated_by_user_id"):
+                        metadata["updated_by_user_id"] = topic_owner_id
                 if legacy_task_id and legacy_task_id != canonical_task_id:
                     metadata['legacy_id'] = legacy_task_id
                 metadata = self._normalize_task_metadata(module_id, topic_path.name, metadata)
@@ -2773,6 +2789,16 @@ class StorageService:
                     for field_name in ("imported", "import_source"):
                         if payload_meta.get(field_name) is not None:
                             new_entry[field_name] = payload_meta.get(field_name)
+                for field_name in _GRAPH_OWNERSHIP_FIELD_NAMES:
+                    if new_entry.get(field_name) is None and payload.get(field_name) is not None:
+                        new_entry[field_name] = payload.get(field_name)
+                fallback_owner_id = _normalize_optional_text(
+                    topic.get("created_by_user_id") or module.get("created_by_user_id")
+                )
+                if fallback_owner_id and new_entry.get("created_by_user_id") is None:
+                    new_entry["created_by_user_id"] = fallback_owner_id
+                    if new_entry.get("updated_by_user_id") is None:
+                        new_entry["updated_by_user_id"] = fallback_owner_id
                 new_entry = self._normalize_graph_ownership_fields(
                     new_entry,
                     fallback_source="manual_editor",
@@ -2808,6 +2834,18 @@ class StorageService:
                 if task_type and not existing_entry.get("type"):
                     existing_entry["type"] = task_type
                     changed = True
+                owner_id = (
+                    payload_meta.get("created_by_user_id")
+                    or payload.get("created_by_user_id")
+                    or topic.get("created_by_user_id")
+                    or module.get("created_by_user_id")
+                )
+                if owner_id and not existing_entry.get("created_by_user_id"):
+                    clean_owner = str(owner_id).strip()
+                    existing_entry["created_by_user_id"] = clean_owner
+                    if not existing_entry.get("updated_by_user_id"):
+                        existing_entry["updated_by_user_id"] = clean_owner
+                    changed = True
                 if changed:
                     import tempfile
                     import shutil
@@ -2818,7 +2856,7 @@ class StorageService:
 
                     shutil.move(temp_name, str(module_json_path))
                     self._modules_cache = None
-                    self.logger.debug(f"Updated task {task_id} name in module.json atomically: '{task_name}'")
+                    self.logger.debug(f"Updated task {task_id} in module.json atomically: '{task_name}'")
 
         except Exception as e:
             self.logger.error(f"Failed to update module.json for task {task_id}: {e}")

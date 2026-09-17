@@ -218,7 +218,9 @@ def _is_imported_workspace_graph_payload(item: Any) -> bool:
         or ((item.get("ownership") or {}).get("created_via") if isinstance(item.get("ownership"), dict) else "")
         or ""
     ).strip().lower()
-    if created_via in {"workspace_import", "archive_import"}:
+    if created_via in {"workspace_import", "archive_import"} or created_via.endswith("_import"):
+        return True
+    if item.get("imported") is True or (item.get("meta") or {}).get("imported") is True:
         return True
     return bool(
         _normalize_optional_text(item.get("source_catalog_item_id"))
@@ -274,9 +276,12 @@ def _is_visible_workspace_graph_payload_for_current_user(item: Any, *, current_u
     ownership = item.get("ownership") if isinstance(item.get("ownership"), dict) else {}
     if ownership.get("is_owned_by_current_user") is True:
         return True
-    if _extract_workspace_graph_owner_user_id(item) is not None:
-        return False
-    return _is_imported_workspace_graph_payload(item)
+    owner_user_id = _extract_workspace_graph_owner_user_id(item)
+    if owner_user_id is not None:
+        return owner_user_id == current_user_id
+    if _is_imported_workspace_graph_payload(item):
+        return True
+    return _is_ownerless_workspace_graph_payload(item, current_user_id=current_user_id)
 
 
 def _build_hosted_editor_workspace_meta(

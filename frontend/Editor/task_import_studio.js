@@ -2706,6 +2706,11 @@
                     module_id: StudioState.selectedModuleId,
                     topic_id: StudioState.selectedTopicId,
                     tasks: selected,
+                    import_context: {
+                        source: 'studio',
+                        source_file_name: StudioState.sourceFileName || null,
+                        target_language: StudioState.targetLanguage || null,
+                    },
                     idempotency_key: idempotencyKey,
                 }),
             });

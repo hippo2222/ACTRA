@@ -528,6 +528,7 @@ def _build_imported_task_payload(
     topic_id: str,
     task_id: str,
     import_context: Optional[Dict[str, Any]] = None,
+    user_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Build canonical task payload for imported task persistence."""
     h = _ih()
@@ -535,12 +536,27 @@ def _build_imported_task_payload(
     import_source = str(import_context.get("source") or "text").strip().lower() or "text"
     ai_run_id = str(import_context.get("ai_run_id") or "").strip() or None
 
+    raw_task_type = str(task.get("type") or "").strip().lower()
+    if raw_task_type in {"sequence", "sequence_assembly"}:
+        canonical_task_type = "sequence_assembly"
+    elif raw_task_type in {"click", "click_words", "click_text"}:
+        canonical_task_type = "click"
+    elif raw_task_type in {"test", "quiz", "single_choice", "multiple_choice"}:
+        canonical_task_type = "test"
+    elif raw_task_type in {"open_answer", "open-answer", "open"}:
+        canonical_task_type = "open_answer"
+    else:
+        canonical_task_type = raw_task_type or "unknown"
+
     now_iso = datetime.now().isoformat()
+    clean_user_id = str(user_id or "").strip() or None
     task_json_data = {
         "id": task_id,
         "name": task.get("name", task_id),
-        "type": task.get("type", "unknown"),
+        "type": canonical_task_type,
         "description": "",
+        "created_by_user_id": clean_user_id,
+        "updated_by_user_id": clean_user_id,
         "meta": {
             "created_at": now_iso,
             "imported": True,
@@ -548,6 +564,8 @@ def _build_imported_task_payload(
             "import_source": import_source,
             "created_via": f"{import_source}_import",
             "content_scope": "shared_local",
+            "created_by_user_id": clean_user_id,
+            "updated_by_user_id": clean_user_id,
             "module": module_id,
             "topic": topic_id,
             "id": task_id,
@@ -637,7 +655,7 @@ def _build_imported_task_payload(
             task_json_data["meta"]["ai_run_id"] = task_ai_meta.get("run_id")
 
     # Add type-specific data
-    if task.get("type") == "open_answer":
+    if canonical_task_type == "open_answer":
             oa_data = task.get("data", {})
             oa_content = {
                 "question": oa_data.get("question", task.get("prompt", "")),
@@ -654,7 +672,7 @@ def _build_imported_task_payload(
             if isinstance(oa_data.get("require_all_keywords"), bool):
                 oa_content["require_all_keywords"] = oa_data["require_all_keywords"]
             task_json_data["content"] = oa_content
-    elif task.get("type") == "sequence_assembly":
+    elif canonical_task_type == "sequence_assembly":
             data = task.get("data", {})
             elements_map = data.get("elements", {}) if isinstance(data.get("elements"), dict) else {}
             raw_levels = data.get("levels", {}) if isinstance(data.get("levels"), dict) else {}
@@ -709,7 +727,7 @@ def _build_imported_task_payload(
                 "level_order_matters": level_order_matters,
                 "order_inside_matters": sequence_within_level_matters,
             }
-    elif task.get("type") == "click":
+    elif canonical_task_type == "click":
             data = _normalize_click_import_data(task.get("data", {}))
             task_json_data["subtype"] = data.get("subtype", "error_detection")
 
@@ -737,7 +755,7 @@ def _build_imported_task_payload(
                 task_json_data["content"] = content
             else:
                 raise ValueError(f"Unsupported click import mode: {data.get('mode')}")
-    elif task.get("type") == "test":
+    elif canonical_task_type == "test":
             data = task.get("data", {})
             questions, inferred_test_type = _canonicalize_test_questions(data.get("questions", []))
             requested_test_type = str(data.get("test_type") or "").strip()
@@ -762,6 +780,12 @@ def _build_imported_task_payload(
                     },
                 ),
             }
+    else:
+        # Fallback preservation of content
+        if isinstance(task.get("content"), dict) and task.get("content"):
+            task_json_data["content"] = task["content"]
+        elif isinstance(task.get("data", {}).get("content"), dict) and task["data"]["content"]:
+            task_json_data["content"] = task["data"]["content"]
 
     return task_json_data
 
@@ -773,6 +797,7 @@ def _save_task_to_storage(
     task_id: str,
     storage_service: Any,
     import_context: Optional[Dict[str, Any]] = None,
+    user_id: Optional[str] = None,
 ) -> bool:
     """Persist imported task through the active storage service."""
     task_json_data = _build_imported_task_payload(
@@ -781,6 +806,7 @@ def _save_task_to_storage(
         topic_id,
         task_id,
         import_context=import_context,
+        user_id=user_id,
     )
     success = storage_service.save_task(
         module_id,
@@ -790,7 +816,7 @@ def _save_task_to_storage(
         validate=False,
     )
     if success:
-        logger.info(f"[HTTP] Saved imported task: {module_id}/{topic_id}/{task_id}")
+        logger.info(f"[HTTP] Saved imported task: {module_id}/{topic_id}/{task_id} (owner={user_id})")
     return bool(success)
 
 
@@ -1495,6 +1521,7 @@ def import_execute() -> Any:
                     task_id,
                     storage_service,
                     import_context=import_context,
+                    user_id=ctx.user_id,
                 )
 
                 if success:
