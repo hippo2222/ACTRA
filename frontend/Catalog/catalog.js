@@ -1242,49 +1242,75 @@
 
   function buildCatalogRenderEntries(items) {
     const sourceItems = Array.isArray(items) ? items : [];
-    if (state.contentType !== 'all') {
-      return sourceItems.map((item) => ({ kind: 'single', item }));
+    return sourceItems.map((item) => ({ kind: 'single', item }));
+  }
+
+  function getPairedItemId(item) {
+    if (!item) return '';
+    const bundle = item.bundle && typeof item.bundle === 'object' ? item.bundle : null;
+    if (bundle && bundle.paired_item_id) return asString(bundle.paired_item_id);
+    if (item.content_type === 'complex' && item.linked_theory_item && item.linked_theory_item.item_id) {
+      return asString(item.linked_theory_item.item_id);
     }
-    const itemById = new Map();
-    sourceItems.forEach((item) => {
-      const itemId = asString(item && item.item_id);
-      if (itemId) itemById.set(itemId, item);
-    });
-    const consumedIds = new Set();
-    const entries = [];
-    sourceItems.forEach((item) => {
-      const itemId = asString(item && item.item_id);
-      if (!itemId || consumedIds.has(itemId)) return;
-      const bundle = item && typeof item.bundle === 'object' ? item.bundle : null;
-      const pairedItemId = asString(bundle && bundle.paired_item_id);
-      const pairedItem = pairedItemId ? itemById.get(pairedItemId) : null;
-      if (pairedItem && !consumedIds.has(pairedItemId)) {
-        const complexItem = item && item.content_type === 'complex'
-          ? item
-          : pairedItem && pairedItem.content_type === 'complex'
-            ? pairedItem
-            : null;
-        const theoryItem = item && item.content_type === 'theory'
-          ? item
-          : pairedItem && pairedItem.content_type === 'theory'
-            ? pairedItem
-            : null;
-        if (complexItem && theoryItem) {
-          entries.push({
-            kind: 'bundle',
-            bundleId: asString(bundle && bundle.bundle_id) || `${asString(complexItem.item_id)}::${asString(theoryItem.item_id)}`,
-            complexItem,
-            theoryItem,
-          });
-          consumedIds.add(asString(complexItem.item_id));
-          consumedIds.add(asString(theoryItem.item_id));
-          return;
-        }
+    if (item.content_type === 'theory') {
+      if (Array.isArray(item.linked_complex_items) && item.linked_complex_items[0] && item.linked_complex_items[0].item_id) {
+        return asString(item.linked_complex_items[0].item_id);
       }
-      consumedIds.add(itemId);
-      entries.push({ kind: 'single', item });
+      const myId = asString(item.item_id);
+      const linkedComplex = state.items.find((entry) =>
+        entry && entry.content_type === 'complex' &&
+        entry.linked_theory_item && asString(entry.linked_theory_item.item_id) === myId
+      );
+      if (linkedComplex) return asString(linkedComplex.item_id);
+    }
+    return '';
+  }
+
+  function getPairedItemSummary(item) {
+    if (!item) return null;
+    const pairedId = getPairedItemId(item);
+    if (!pairedId) return null;
+    const fullItem = state.items.find((entry) => asString(entry && entry.item_id) === pairedId);
+    if (fullItem) return fullItem;
+    if (item.content_type === 'complex' && item.linked_theory_item) {
+      return item.linked_theory_item;
+    }
+    if (item.content_type === 'theory' && Array.isArray(item.linked_complex_items) && item.linked_complex_items[0]) {
+      return item.linked_complex_items[0];
+    }
+    return null;
+  }
+
+  async function navigateToCatalogItem(targetItemId) {
+    const cleanId = asString(targetItemId);
+    if (!cleanId) return;
+
+    const inFiltered = state.filteredItems.some((entry) => asString(entry && entry.item_id) === cleanId);
+    if (!inFiltered) {
+      state.contentType = 'all';
+      global.document.querySelectorAll('[data-filter]').forEach((node) => {
+        node.classList.toggle('is-active', asString(node.getAttribute('data-filter')) === 'all');
+      });
+      try {
+        const url = new URL(global.location.href);
+        url.searchParams.delete('content_type');
+        global.history.replaceState({}, '', `${url.pathname}${url.search}`);
+      } catch (_) {}
+      await loadCatalogItems();
+    }
+
+    selectItem(cleanId);
+
+    global.requestAnimationFrame(() => {
+      const targetCard = els.grid ? els.grid.querySelector(`.catalog-card[data-item-id="${cleanId}"]`) : null;
+      if (targetCard) {
+        targetCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        targetCard.classList.remove('catalog-card--spotlight');
+        void targetCard.offsetWidth;
+        targetCard.classList.add('catalog-card--spotlight');
+        setTimeout(() => targetCard.classList.remove('catalog-card--spotlight'), 1800);
+      }
     });
-    return entries;
   }
 
   function createCatalogCardElement(item, options = {}) {
@@ -1296,8 +1322,12 @@
     const primaryAction = showPrimaryAction ? getPrimaryAction(item) : null;
     const isSelected = asString(item.item_id) === state.selectedItemId;
     const typeKey = getTypeKey(item);
+    const pairedItemId = getPairedItemId(item);
     card.className = `catalog-card catalog-card--${typeKey}${withinBundle ? ' catalog-card--bundled' : ''}${isSelected ? ' is-selected' : ''}`;
     card.setAttribute('data-item-id', asString(item.item_id));
+    if (pairedItemId) {
+      card.setAttribute('data-paired-item-id', pairedItemId);
+    }
     if (isSelected) {
       card.setAttribute('data-onboarding-target', 'catalog-selected-card');
     }
@@ -1331,7 +1361,7 @@
               </span>
             ` : ''}
             ${relationshipBadge ? `
-              <span class="${escapeHtml(relationshipBadge.className)}">
+              <span class="${escapeHtml(relationshipBadge.className)}"${pairedItemId ? ` data-jump-to-paired="${escapeHtml(pairedItemId)}" role="button" tabindex="0" title="${escapeHtml(wt('catalog.jump_to_paired', 'Перейти к связанной публикации'))}"` : ''}>
                 ${relationshipBadge.icon ? `<span class="material-symbols-outlined">${escapeHtml(relationshipBadge.icon)}</span>` : ''}
                 ${escapeHtml(relationshipBadge.text)}
               </span>
@@ -1378,6 +1408,33 @@
         await handlePrimaryAction(item);
       });
     }
+
+    if (pairedItemId) {
+      card.addEventListener('mouseenter', () => {
+        const partner = els.grid?.querySelector(`.catalog-card[data-item-id="${pairedItemId}"]`);
+        if (partner) partner.classList.add('is-linked-highlight');
+      });
+      card.addEventListener('mouseleave', () => {
+        const partner = els.grid?.querySelector(`.catalog-card[data-item-id="${pairedItemId}"]`);
+        if (partner) partner.classList.remove('is-linked-highlight');
+      });
+
+      const jumpBadge = card.querySelector('[data-jump-to-paired]');
+      if (jumpBadge) {
+        const handleJump = (event) => {
+          event.stopPropagation();
+          navigateToCatalogItem(pairedItemId);
+        };
+        jumpBadge.addEventListener('click', handleJump);
+        jumpBadge.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            handleJump(event);
+          }
+        });
+      }
+    }
+
     return card;
   }
 
@@ -1749,8 +1806,37 @@
               `;
             } else {
               const breakdown = getTaskTypeBreakdown(snapshot);
-              if (breakdown.length > 0) {
+              const pairedTheory = getPairedItemSummary(item);
+              const pairedTheoryTitle = asString(pairedTheory?.title) || wt('catalog.theory_fallback_title', 'Теория');
+              const pairedManifest = pairedTheory ? getLatestManifest(pairedTheory) : {};
+              const pairedImgCount = normalizeCount(pairedManifest.image_count || 0);
+              const pairedSub = pairedImgCount > 0
+                ? `${pairedImgCount} ${wt('catalog.images_count', 'изображ.')}`
+                : '';
+              const linkedTheoryHtml = pairedTheory ? `
+                <div class="catalog-detail__row">
+                  <p class="catalog-detail__kicker">${wt('catalog.kicker_linked_theory', 'Связанная теория')}</p>
+                  <div class="catalog-detail__linked-box">
+                    <div class="catalog-detail__linked-header">
+                      <span class="material-symbols-outlined catalog-detail__linked-icon">menu_book</span>
+                      <div style="flex: 1; min-width: 0;">
+                        <p class="catalog-detail__linked-title" title="${escapeHtml(pairedTheoryTitle)}">${escapeHtml(pairedTheoryTitle)}</p>
+                        ${pairedSub ? `<p class="catalog-detail__linked-sub">${escapeHtml(pairedSub)}</p>` : ''}
+                      </div>
+                    </div>
+                    <p class="catalog-detail__linked-note">${wt('catalog.linked_theory_auto_note', 'При добавлении комплекса теория сохранится в вашем Теоретическом центре автоматически.')}</p>
+                    <button type="button" class="btn-secondary h-8 px-3 catalog-detail__linked-action" data-nav-to="${escapeHtml(asString(pairedTheory.item_id))}">
+                      <span class="material-symbols-outlined" style="font-size: 1rem;">open_in_new</span>
+                      <span>${wt('catalog.btn_go_to_theory', 'Перейти к теории')}</span>
+                    </button>
+                  </div>
+                </div>
+              ` : '';
+
+              if (breakdown.length > 0 || linkedTheoryHtml) {
                 asyncBlock.innerHTML = `
+                ${linkedTheoryHtml}
+                ${breakdown.length > 0 ? `
                 <div class="catalog-detail__row">
                   <p class="catalog-detail__kicker">${wt('catalog.detail_tasks_kicker', 'Состав заданий')}</p>
                   <div class="catalog-detail__breakdown">
@@ -1772,6 +1858,7 @@
                     `).join('')}
                   </div>
                 </div>
+                ` : ''}
                 `;
                 asyncBlock.querySelectorAll('[data-breakdown-toggle]').forEach(btn => {
                   btn.addEventListener('click', () => {
@@ -1878,12 +1965,39 @@
               await actOnDeckViewerResult(item, result);
             });
           } else {
+            const pairedComplex = getPairedItemSummary(item);
+            const pairedComplexTitle = asString(pairedComplex?.title) || wt('catalog.complex_fallback_title', 'Комплекс');
+            const pairedTaskCount = pairedComplex ? getTaskCount(pairedComplex) : 0;
+            const pairedSub = pairedTaskCount > 0
+              ? `${pairedTaskCount} ${wt('catalog.tasks_count', 'заданий')}`
+              : '';
+            const linkedComplexHtml = pairedComplex ? `
+              <div class="catalog-detail__row">
+                <p class="catalog-detail__kicker">${wt('catalog.kicker_linked_complex', 'Связанный комплекс')}</p>
+                <div class="catalog-detail__linked-box">
+                  <div class="catalog-detail__linked-header">
+                    <span class="material-symbols-outlined catalog-detail__linked-icon">task_alt</span>
+                    <div style="flex: 1; min-width: 0;">
+                      <p class="catalog-detail__linked-title" title="${escapeHtml(pairedComplexTitle)}">${escapeHtml(pairedComplexTitle)}</p>
+                      ${pairedSub ? `<p class="catalog-detail__linked-sub">${escapeHtml(pairedSub)}</p>` : ''}
+                    </div>
+                  </div>
+                  <button type="button" class="btn-secondary h-8 px-3 catalog-detail__linked-action" data-nav-to="${escapeHtml(asString(pairedComplex.item_id))}">
+                    <span class="material-symbols-outlined" style="font-size: 1rem;">open_in_new</span>
+                    <span>${wt('catalog.btn_go_to_complex', 'Перейти к комплексу')}</span>
+                  </button>
+                </div>
+              </div>
+            ` : '';
+
             const delta = snapshot.delta && typeof snapshot.delta === 'object' ? snapshot.delta : (snapshot && typeof snapshot === 'object' && snapshot.delta ? snapshot.delta : {});
             const ops = Array.isArray(delta.ops) ? delta.ops : [];
             const previewHtml = deltaToHtml({ ops });
 
-            if (previewHtml) {
+            if (previewHtml || linkedComplexHtml) {
               asyncBlock.innerHTML = `
+                ${linkedComplexHtml}
+                ${previewHtml ? `
                 <div class="catalog-detail__row">
                   <p class="catalog-detail__kicker">${wt('catalog.detail_theory_preview_kicker', 'Миниатюра содержания')}</p>
                   <div class="catalog-detail__theory-preview" role="button" tabindex="0" title="${wt('catalog.detail_theory_preview_title', 'Нажмите, чтобы открыть теорию')}">
@@ -1898,6 +2012,7 @@
                     </div>
                   </div>
                 </div>
+                ` : ''}
               `;
               const previewEl = asyncBlock.querySelector('.catalog-detail__theory-preview');
               if (previewEl) {
@@ -1924,6 +2039,13 @@
               `;
             }
           }
+        asyncBlock.querySelectorAll('[data-nav-to]').forEach((btn) => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const navTargetId = btn.getAttribute('data-nav-to');
+            if (navTargetId) navigateToCatalogItem(navTargetId);
+          });
+        });
         smoothSyncDetailHeight(previousDetailHeight);
       });
     });
