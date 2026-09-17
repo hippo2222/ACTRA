@@ -95,7 +95,9 @@ def _premium_archive_response(exc: PremiumArchivedContentError) -> Any:
     return jsonify(exc.to_payload()), 409
 
 
-def _assert_task_not_archived(ctx: Any, module_id: str, topic_id: str, task_id: str, *, action: str) -> None:
+def _assert_task_not_archived(
+    ctx: Any, module_id: str, topic_id: str, task_id: str, *, action: str
+) -> None:
     service = getattr(ctx, "workspace_limits_service", None)
     if service is None:
         return
@@ -167,7 +169,9 @@ def _assert_theory_dependency_not_archived(ctx: Any, theory_link: Any, *, action
             scope="linked_library",
         )
         return
-    theory_id = str(theory_link.get("theory_id") or theory_link.get("source_theory_id") or "").strip()
+    theory_id = str(
+        theory_link.get("theory_id") or theory_link.get("source_theory_id") or ""
+    ).strip()
     if not theory_id:
         return
     service.assert_entity_not_archived(
@@ -213,11 +217,19 @@ def _normalize_optional_text(value: Any) -> Optional[str]:
 def _is_imported_workspace_graph_payload(item: Any) -> bool:
     if not isinstance(item, dict):
         return False
-    created_via = str(
-        item.get("created_via")
-        or ((item.get("ownership") or {}).get("created_via") if isinstance(item.get("ownership"), dict) else "")
-        or ""
-    ).strip().lower()
+    created_via = (
+        str(
+            item.get("created_via")
+            or (
+                (item.get("ownership") or {}).get("created_via")
+                if isinstance(item.get("ownership"), dict)
+                else ""
+            )
+            or ""
+        )
+        .strip()
+        .lower()
+    )
     if created_via in {"workspace_import", "archive_import"} or created_via.endswith("_import"):
         return True
     if item.get("imported") is True or (item.get("meta") or {}).get("imported") is True:
@@ -270,7 +282,9 @@ def _is_ownerless_workspace_graph_payload(item: Any, *, current_user_id: str) ->
     return True
 
 
-def _is_visible_workspace_graph_payload_for_current_user(item: Any, *, current_user_id: str) -> bool:
+def _is_visible_workspace_graph_payload_for_current_user(
+    item: Any, *, current_user_id: str
+) -> bool:
     if not isinstance(item, dict):
         return False
     ownership = item.get("ownership") if isinstance(item.get("ownership"), dict) else {}
@@ -279,9 +293,7 @@ def _is_visible_workspace_graph_payload_for_current_user(item: Any, *, current_u
     owner_user_id = _extract_workspace_graph_owner_user_id(item)
     if owner_user_id is not None:
         return owner_user_id == current_user_id
-    if _is_imported_workspace_graph_payload(item):
-        return True
-    return _is_ownerless_workspace_graph_payload(item, current_user_id=current_user_id)
+    return _is_imported_workspace_graph_payload(item)
 
 
 def _build_hosted_editor_workspace_meta(
@@ -290,7 +302,9 @@ def _build_hosted_editor_workspace_meta(
     existing_payload: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     existing = existing_payload if isinstance(existing_payload, dict) else {}
-    created_by_user_id = _normalize_optional_text(existing.get("created_by_user_id")) or current_user_id
+    created_by_user_id = (
+        _normalize_optional_text(existing.get("created_by_user_id")) or current_user_id
+    )
     created_via = _normalize_optional_text(existing.get("created_via")) or "manual_editor"
     content_scope = _normalize_optional_text(existing.get("content_scope")) or "shared_local"
     return {
@@ -321,7 +335,9 @@ def _apply_hosted_editor_task_ownership(
     metadata.update(workspace_meta)
     normalized["metadata"] = metadata
 
-    task_data = normalized.get("task_data") if isinstance(normalized.get("task_data"), dict) else None
+    task_data = (
+        normalized.get("task_data") if isinstance(normalized.get("task_data"), dict) else None
+    )
     if isinstance(task_data, dict):
         task_data = dict(task_data)
         meta = task_data.get("meta") if isinstance(task_data.get("meta"), dict) else {}
@@ -370,8 +386,12 @@ def _adopt_workspace_graph_payload_for_current_user(item: Any, *, current_user_i
     if _is_ownerless_workspace_graph_payload(normalized, current_user_id=current_user_id):
         normalized["created_by_user_id"] = current_user_id
         normalized["updated_by_user_id"] = normalized.get("updated_by_user_id") or current_user_id
-        normalized["created_via"] = str(normalized.get("created_via") or "manual_editor").strip() or "manual_editor"
-        normalized["content_scope"] = str(normalized.get("content_scope") or "shared_local").strip() or "shared_local"
+        normalized["created_via"] = (
+            str(normalized.get("created_via") or "manual_editor").strip() or "manual_editor"
+        )
+        normalized["content_scope"] = (
+            str(normalized.get("content_scope") or "shared_local").strip() or "shared_local"
+        )
         ownership = dict(normalized.get("ownership") or {})
         ownership.update(
             {
@@ -389,7 +409,9 @@ def _adopt_workspace_graph_payload_for_current_user(item: Any, *, current_user_i
     return normalized
 
 
-def _filter_hosted_workspace_catalog_modules(modules: Any, *, current_user_id: str) -> List[Dict[str, Any]]:
+def _filter_hosted_workspace_catalog_modules(
+    modules: Any, *, current_user_id: str
+) -> List[Dict[str, Any]]:
     filtered_modules: List[Dict[str, Any]] = []
     if not isinstance(modules, list):
         return filtered_modules
@@ -768,8 +790,16 @@ def save_editor_task(module_id: str, topic_id: str, task_id: str) -> Any:
                     current_user_id=ctx.user_id,
                 )
                 logger.info("[SAVE_DEBUG_2] serialized: %s", serialized)
-                existing_metadata = serialized.get("metadata") if isinstance(serialized.get("metadata"), dict) else {}
-                logger.info("[SAVE_DEBUG_2] existing_metadata: %s, ctx.user_id: %s", existing_metadata, ctx.user_id)
+                existing_metadata = (
+                    serialized.get("metadata")
+                    if isinstance(serialized.get("metadata"), dict)
+                    else {}
+                )
+                logger.info(
+                    "[SAVE_DEBUG_2] existing_metadata: %s, ctx.user_id: %s",
+                    existing_metadata,
+                    ctx.user_id,
+                )
                 is_visible = _is_visible_workspace_graph_payload_for_current_user(
                     existing_metadata,
                     current_user_id=ctx.user_id,
@@ -866,7 +896,10 @@ def rename_editor_task() -> Any:
         new_name = str(payload.get("name") or "").strip()
 
         if not module_id or not topic_id or not task_id or not new_name:
-            return jsonify({"ok": False, "error": "module_id_topic_id_task_id_and_name_required"}), 400
+            return (
+                jsonify({"ok": False, "error": "module_id_topic_id_task_id_and_name_required"}),
+                400,
+            )
 
         if len(new_name) > 150:
             return jsonify({"ok": False, "error": "task_name_too_long"}), 400
@@ -914,12 +947,7 @@ def rename_editor_task() -> Any:
 
 def _resolve_task_dir(module_id: str, topic_id: str, task_id: str) -> Path:
     return (
-        get_ctx().storage_service.modules_dir
-        / module_id
-        / "topics"
-        / topic_id
-        / "tasks"
-        / task_id
+        get_ctx().storage_service.modules_dir / module_id / "topics" / topic_id / "tasks" / task_id
     )
 
 
@@ -1516,11 +1544,16 @@ def import_confirm() -> Any:
                                 os.remove(temp_path)
                             except Exception:
                                 pass
-                        return jsonify({
-                            "ok": False,
-                            "error": "limits_exceeded",
-                            "message": f"Недостаточно свободных слотов для импорта заданий. Доступно: {remaining_slots}, требуется: {importable_count}."
-                        }), 409
+                        return (
+                            jsonify(
+                                {
+                                    "ok": False,
+                                    "error": "limits_exceeded",
+                                    "message": f"Недостаточно свободных слотов для импорта заданий. Доступно: {remaining_slots}, требуется: {importable_count}.",
+                                }
+                            ),
+                            409,
+                        )
                 except Exception as e:
                     _archive_confirm_idempotency_release(
                         _TASK_ARCHIVE_CONFIRM_IDEMPOTENCY_CACHE,
@@ -1891,7 +1924,10 @@ def import_complexes_confirm() -> Any:
                     limit_exceeded = False
                     error_msg = ""
 
-                    if remaining_complex_slots is not None and complexes_count > remaining_complex_slots:
+                    if (
+                        remaining_complex_slots is not None
+                        and complexes_count > remaining_complex_slots
+                    ):
                         limit_exceeded = True
                         error_msg = f"Недостаточно свободных слотов для комплексов. Доступно: {remaining_complex_slots}, требуется: {complexes_count}."
                     elif remaining_task_slots is not None and tasks_count > remaining_task_slots:
@@ -1909,11 +1945,12 @@ def import_complexes_confirm() -> Any:
                                 os.remove(temp_path)
                             except Exception:
                                 pass
-                        return jsonify({
-                            "ok": False,
-                            "error": "limits_exceeded",
-                            "message": error_msg
-                        }), 409
+                        return (
+                            jsonify(
+                                {"ok": False, "error": "limits_exceeded", "message": error_msg}
+                            ),
+                            409,
+                        )
                 except Exception as e:
                     _archive_confirm_idempotency_release(
                         _COMPLEX_ARCHIVE_CONFIRM_IDEMPOTENCY_CACHE,
@@ -2023,7 +2060,9 @@ def import_test_from_file() -> Any:
             import_text = request.form.get("text")
 
         if isinstance(import_text, str) and import_text.strip():
-            tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".txt", mode="w", encoding="utf-8")
+            tmp = tempfile.NamedTemporaryFile(
+                delete=False, suffix=".txt", mode="w", encoding="utf-8"
+            )
             temp_path = tmp.name
             tmp.write(import_text)
             tmp.close()
@@ -2035,7 +2074,9 @@ def import_test_from_file() -> Any:
             if not file or file.filename == "":
                 return jsonify({"ok": False, "error": "no_selected_file"}), 400
 
-            tmp = tempfile.NamedTemporaryFile(delete=False, suffix=Path(file.filename).suffix or ".txt")
+            tmp = tempfile.NamedTemporaryFile(
+                delete=False, suffix=Path(file.filename).suffix or ".txt"
+            )
             temp_path = tmp.name
             file.save(temp_path)
             tmp.close()
@@ -2295,7 +2336,9 @@ def create_editor_topic() -> Any:
                         {
                             "ok": False,
                             "error": "validation_error",
-                            "details": {"errors": [{"field": "theory_link", "reason": theory_link_error}]},
+                            "details": {
+                                "errors": [{"field": "theory_link", "reason": theory_link_error}]
+                            },
                         }
                     ),
                     400,
@@ -2422,7 +2465,9 @@ def set_editor_topic_theory_link(module_id: str, topic_id: str) -> Any:
                         {
                             "ok": False,
                             "error": "validation_error",
-                            "details": {"errors": [{"field": "theory_link", "reason": theory_link_error}]},
+                            "details": {
+                                "errors": [{"field": "theory_link", "reason": theory_link_error}]
+                            },
                         }
                     ),
                     400,
@@ -2465,7 +2510,9 @@ def set_editor_topic_theory_link(module_id: str, topic_id: str) -> Any:
         )
 
         raw_apply_to_complexes = payload.get("apply_to_complexes")
-        apply_to_complexes = True if raw_apply_to_complexes is None else bool(raw_apply_to_complexes)
+        apply_to_complexes = (
+            True if raw_apply_to_complexes is None else bool(raw_apply_to_complexes)
+        )
         mode = _normalize_propagation_mode(payload.get("propagation_mode"))
         dry_run = bool(payload.get("dry_run"))
         propagation_result = None
@@ -2483,9 +2530,11 @@ def set_editor_topic_theory_link(module_id: str, topic_id: str) -> Any:
                 "item": {
                     "module_id": module_id,
                     "topic_id": topic_id,
-                    "theory_link": updated_topic_payload.get("theory_link")
-                    if isinstance(updated_topic_payload, dict)
-                    else None,
+                    "theory_link": (
+                        updated_topic_payload.get("theory_link")
+                        if isinstance(updated_topic_payload, dict)
+                        else None
+                    ),
                 },
                 "propagation": propagation_result,
             }
