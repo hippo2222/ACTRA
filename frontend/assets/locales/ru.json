@@ -2730,7 +2730,12 @@
     "theory_empty_content": "Контент теории пока недоступен.",
     "tab_prefix": "Теория",
     "err_theory_not_found": "Не удалось загрузить данные теории",
-    "close_btn": "Закрыть"
+    "close_btn": "Закрыть",
+    "focus_mode_label": "Режим просмотра",
+    "mode_all": "Вся теория",
+    "mode_dim": "Подсветка",
+    "mode_isolate": "Только выжимка",
+    "mode_no_linked_blocks": "Для этого задания нет связанных блоков"
   },
   "testui_q": {
     "reference_answer": "Эталонный ответ",

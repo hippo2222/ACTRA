@@ -413,18 +413,18 @@
                     ${complexName && isComposite ? `<p class="text-xs font-medium text-text-secondary truncate">${escapeHtml(complexName)}</p>` : ''}
                 </div>
                 <div class="flex items-center gap-3 flex-shrink-0">
-                    <div class="inline-flex items-center rounded-xl bg-surface-1 p-1 border border-border-strong text-xs font-semibold" role="group" aria-label="${wt('s1.focus_mode_label', 'Режим просмотра')}">
-                        <button type="button" data-focus-mode="all" class="px-2.5 py-1 rounded-lg transition-all ${activeFocusMode === 'all' ? 'bg-primary text-primary-fg shadow-sm' : 'text-text-secondary hover:text-text-main'}">
-                            ${wt('s1.mode_all', 'Вся теория')}
+                    <div class="inline-flex items-center rounded-xl bg-surface-1 p-1 border border-border-strong text-xs font-semibold" role="group" aria-label="${escapeHtml(wt('s1.focus_mode_label', 'Режим просмотра'))}" data-i18n-aria="s1.focus_mode_label">
+                        <button type="button" data-focus-mode="all" data-i18n="s1.mode_all" class="px-2.5 py-1 rounded-lg transition-all ${activeFocusMode === 'all' ? 'bg-primary text-primary-fg shadow-sm' : 'text-text-secondary hover:text-text-main'}">
+                            ${escapeHtml(wt('s1.mode_all', 'Вся теория'))}
                         </button>
-                        <button type="button" data-focus-mode="dim" ${!hasBlocksForTask ? 'disabled title="Для этого задания нет связанных блоков"' : ''} class="px-2.5 py-1 rounded-lg transition-all ${activeFocusMode === 'dim' ? 'bg-primary text-primary-fg shadow-sm' : 'text-text-secondary hover:text-text-main'} ${!hasBlocksForTask ? 'opacity-40 cursor-not-allowed' : ''}">
-                            ${wt('s1.mode_dim', 'Подсветка')}
+                        <button type="button" data-focus-mode="dim" data-i18n="s1.mode_dim" ${!hasBlocksForTask ? `disabled title="${escapeHtml(wt('s1.mode_no_linked_blocks', 'Для этого задания нет связанных блоков'))}" data-i18n-title="s1.mode_no_linked_blocks"` : ''} class="px-2.5 py-1 rounded-lg transition-all ${activeFocusMode === 'dim' ? 'bg-primary text-primary-fg shadow-sm' : 'text-text-secondary hover:text-text-main'} ${!hasBlocksForTask ? 'opacity-40 cursor-not-allowed' : ''}">
+                            ${escapeHtml(wt('s1.mode_dim', 'Подсветка'))}
                         </button>
-                        <button type="button" data-focus-mode="isolate" ${!hasBlocksForTask ? 'disabled title="Для этого задания нет связанных блоков"' : ''} class="px-2.5 py-1 rounded-lg transition-all ${activeFocusMode === 'isolate' ? 'bg-primary text-primary-fg shadow-sm' : 'text-text-secondary hover:text-text-main'} ${!hasBlocksForTask ? 'opacity-40 cursor-not-allowed' : ''}">
-                            ${wt('s1.mode_isolate', 'Только выжимка')}
+                        <button type="button" data-focus-mode="isolate" data-i18n="s1.mode_isolate" ${!hasBlocksForTask ? `disabled title="${escapeHtml(wt('s1.mode_no_linked_blocks', 'Для этого задания нет связанных блоков'))}" data-i18n-title="s1.mode_no_linked_blocks"` : ''} class="px-2.5 py-1 rounded-lg transition-all ${activeFocusMode === 'isolate' ? 'bg-primary text-primary-fg shadow-sm' : 'text-text-secondary hover:text-text-main'} ${!hasBlocksForTask ? 'opacity-40 cursor-not-allowed' : ''}">
+                            ${escapeHtml(wt('s1.mode_isolate', 'Только выжимка'))}
                         </button>
                     </div>
-                    <button type="button" data-action="close" class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-text-secondary hover:bg-surface-3 hover:text-text-main transition-colors flex-shrink-0" aria-label="${wt('s1.close_btn', 'Закрыть')}">
+                    <button type="button" data-action="close" class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-text-secondary hover:bg-surface-3 hover:text-text-main transition-colors flex-shrink-0" aria-label="${escapeHtml(wt('s1.close_btn', 'Закрыть'))}" data-i18n-aria="s1.close_btn">
                         <span class="material-symbols-outlined">close</span>
                     </button>
                 </div>
@@ -434,7 +434,7 @@
             </div>
             <div class="flex items-center justify-end border-t border-border-strong bg-surface-1 px-6 py-3 flex-shrink-0">
                 <button type="button" data-action="close" class="inline-flex items-center justify-center rounded-lg border-2 border-border-strong bg-surface-2 hover:bg-surface-3 px-4 py-2 text-xs font-semibold text-text-main transition-all s1-btn">
-                    <span>${wt('s1.close_btn', 'Закрыть')}</span>
+                    <span data-i18n="s1.close_btn">${escapeHtml(wt('s1.close_btn', 'Закрыть'))}</span>
                 </button>
             </div>
         `;
@@ -522,6 +522,9 @@
         });
 
         document.body.appendChild(dialog);
+        if (typeof window !== 'undefined' && window.i18n && typeof window.i18n.updateDOM === 'function') {
+            window.i18n.updateDOM();
+        }
         applyFocusMode(activeFocusMode);
         dialog.showModal();
     }

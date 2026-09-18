@@ -2730,7 +2730,12 @@
     "theory_empty_content": "Контент теорії поки недоступний.",
     "tab_prefix": "Теорія",
     "err_theory_not_found": "Не вдалося завантажити дані теорії",
-    "close_btn": "Закрити"
+    "close_btn": "Закрити",
+    "focus_mode_label": "Режим перегляду",
+    "mode_all": "Вся теорія",
+    "mode_dim": "Підсвічування",
+    "mode_isolate": "Лише вижимка",
+    "mode_no_linked_blocks": "Для цього завдання немає пов'язаних блоків"
   },
   "testui_q": {
     "reference_answer": "Еталонна відповідь",

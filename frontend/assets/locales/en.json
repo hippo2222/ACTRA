@@ -2730,7 +2730,12 @@
     "theory_empty_content": "Theory content is not available yet.",
     "tab_prefix": "Theory",
     "err_theory_not_found": "Failed to load theory data",
-    "close_btn": "Close"
+    "close_btn": "Close",
+    "focus_mode_label": "Viewing mode",
+    "mode_all": "All theory",
+    "mode_dim": "Highlight",
+    "mode_isolate": "Summary only",
+    "mode_no_linked_blocks": "No linked blocks for this task"
   },
   "testui_q": {
     "reference_answer": "Reference answer",

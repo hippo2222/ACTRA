@@ -180,4 +180,27 @@ describe('i18n locale integrity suite', () => {
     expect(img.getAttribute('alt')).toBe('Аккаунт');
     expect(img.getAttribute('title')).toBe('Аккаунт');
   });
+
+  it('s1 namespace includes full theory viewer focus mode keys in ru, en, uk', () => {
+    // Russian
+    expect(ru['s1.mode_all']).toBe('Вся теория');
+    expect(ru['s1.mode_dim']).toBe('Подсветка');
+    expect(ru['s1.mode_isolate']).toBe('Только выжимка');
+    expect(ru['s1.focus_mode_label']).toBe('Режим просмотра');
+    expect(ru['s1.mode_no_linked_blocks']).toBe('Для этого задания нет связанных блоков');
+
+    // English
+    expect(en['s1.mode_all']).toBe('All theory');
+    expect(en['s1.mode_dim']).toBe('Highlight');
+    expect(en['s1.mode_isolate']).toBe('Summary only');
+    expect(en['s1.focus_mode_label']).toBe('Viewing mode');
+    expect(en['s1.mode_no_linked_blocks']).toBe('No linked blocks for this task');
+
+    // Ukrainian
+    expect(uk['s1.mode_all']).toBe('Вся теорія');
+    expect(uk['s1.mode_dim']).toBe('Підсвічування');
+    expect(uk['s1.mode_isolate']).toBe('Лише вижимка');
+    expect(uk['s1.focus_mode_label']).toBe('Режим перегляду');
+    expect(uk['s1.mode_no_linked_blocks']).toBe("Для цього завдання немає пов'язаних блоків");
+  });
 });
