@@ -229,4 +229,44 @@ describe('i18n locale integrity suite', () => {
     expect(uk['catalog.jump_to_paired']).toBe("Перейти до пов'язаної публікації");
     expect(uk['catalog.type_image_labeling']).toBe('Підписи на малюнку');
   });
+
+  it('catalog namespace includes task composition breakdown and all task types in ru, en, uk', () => {
+    const expectedTypes = [
+      'type_test',
+      'type_click',
+      'type_open_answer',
+      'type_sequence',
+      'type_sequence_assembly',
+      'type_draw',
+      'type_image_labeling',
+      'type_error_detection',
+      'type_video',
+    ];
+
+    expect(ru['catalog.detail_tasks_kicker']).toBe('Состав заданий');
+    expect(en['catalog.detail_tasks_kicker']).toBe('Task composition');
+    expect(uk['catalog.detail_tasks_kicker']).toBe('Склад завдань');
+
+    expect(ru['catalog.type_sequence']).toBe('Последовательность');
+    expect(ru['catalog.type_sequence_assembly']).toBe('Последовательность');
+    expect(ru['catalog.type_error_detection']).toBe('Поиск ошибок');
+
+    expect(en['catalog.type_sequence']).toBe('Sequence');
+    expect(en['catalog.type_sequence_assembly']).toBe('Sequence');
+    expect(en['catalog.type_error_detection']).toBe('Error Detection');
+
+    expect(uk['catalog.type_sequence']).toBe('Послідовність');
+    expect(uk['catalog.type_sequence_assembly']).toBe('Послідовність');
+    expect(uk['catalog.type_error_detection']).toBe('Пошук помилок');
+
+    for (const key of expectedTypes) {
+      expect(ru[`catalog.${key}`]).toBeDefined();
+      expect(en[`catalog.${key}`]).toBeDefined();
+      expect(uk[`catalog.${key}`]).toBeDefined();
+      expect(ru[`catalog.${key}`].length).toBeGreaterThan(0);
+      expect(en[`catalog.${key}`].length).toBeGreaterThan(0);
+      expect(uk[`catalog.${key}`].length).toBeGreaterThan(0);
+    }
+  });
 });
+

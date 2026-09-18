@@ -40,20 +40,40 @@
   const VALID_CATALOG_SORTS = Object.keys(CATALOG_SORT_LABELS);
   const catalogCollator = new Intl.Collator('ru-RU', { sensitivity: 'base', numeric: true });
 
-  let TASK_TYPE_LABELS = {
-    click: wt('catalog.type_click', 'Клик'),
-    test: wt('catalog.type_test', 'Тест'),
-    open_answer: wt('catalog.type_open_answer', 'Открытый ответ'),
-    sequence_assembly: wt('catalog.type_sequence_assembly', 'Последовательность'),
-    image_labeling: wt('catalog.type_image_labeling', 'Подписи на рисунке'),
-    draw: wt('catalog.type_draw', 'Рисование'),
-    video: wt('catalog.type_video', 'Видео'),
-  };
+  function normalizeTaskType(type) {
+    const raw = String(type || '').trim().toLowerCase();
+    if (raw === 'sequence') return 'sequence_assembly';
+    if (raw === 'click_task') return 'click';
+    if (raw === 'draw_task') return 'draw';
+    return raw;
+  }
+
+  function getTaskTypeI18nKey(type) {
+    const key = normalizeTaskType(type);
+    return `catalog.type_${key}`;
+  }
 
   function getTaskTypeLabel(type) {
-    const key = String(type || '').trim().toLowerCase();
-    return TASK_TYPE_LABELS[key] || key || wt('catalog.type_other', 'Другое');
+    const raw = String(type || '').trim().toLowerCase();
+    const key = normalizeTaskType(raw);
+    const fallbacks = {
+      click: 'Клик',
+      test: 'Тест',
+      open_answer: 'Открытый ответ',
+      sequence_assembly: 'Последовательность',
+      sequence: 'Последовательность',
+      image_labeling: 'Подписи на рисунке',
+      draw: 'Рисование',
+      video: 'Видео',
+      error_detection: 'Поиск ошибок',
+    };
+    const defaultFallback = fallbacks[key] || (raw ? (raw.charAt(0).toUpperCase() + raw.slice(1)) : 'Другое');
+    return wt(`catalog.type_${key}`, defaultFallback);
   }
+
+  let TASK_TYPE_LABELS = new Proxy({}, {
+    get: (_, prop) => getTaskTypeLabel(prop),
+  });
 
   function getTaskTypeBreakdown(snapshot) {
     const deps = snapshot && typeof snapshot.dependencies === 'object' ? snapshot.dependencies : {};
@@ -78,6 +98,7 @@
       .map(([type, count]) => ({
         type,
         label: getTaskTypeLabel(type),
+        i18nKey: getTaskTypeI18nKey(type),
         count,
         names: namesByType[type].sort((a, b) => a.localeCompare(b))
       }));
@@ -1838,12 +1859,12 @@
                 ${linkedTheoryHtml}
                 ${breakdown.length > 0 ? `
                 <div class="catalog-detail__row">
-                  <p class="catalog-detail__kicker">${wt('catalog.detail_tasks_kicker', 'Состав заданий')}</p>
+                  <p class="catalog-detail__kicker" data-i18n="catalog.detail_tasks_kicker">${wt('catalog.detail_tasks_kicker', 'Состав заданий')}</p>
                   <div class="catalog-detail__breakdown">
                     ${breakdown.map((entry, idx) => `
                       <div class="catalog-detail__breakdown-group">
                         <button type="button" class="catalog-detail__breakdown-row" data-breakdown-toggle="${idx}">
-                          <span class="catalog-detail__breakdown-label">${escapeHtml(entry.label)}</span>
+                          <span class="catalog-detail__breakdown-label" data-i18n="${escapeHtml(entry.i18nKey)}">${escapeHtml(entry.label)}</span>
                           <div style="display:flex;align-items:center;gap:0.5rem;">
                             <span class="catalog-detail__breakdown-count">${escapeHtml(String(entry.count))}</span>
                             <span class="material-symbols-outlined catalog-detail__breakdown-chevron">expand_more</span>
@@ -2238,11 +2259,13 @@
         });
       }
       const topicBucket = moduleBucket.topics.get(topicRef);
+      const rawTaskType = taskPayload?.task_data?.type || taskPayload?.task_data?.task_type || '';
       const taskNode = {
         taskRef: parsed.taskRef,
         taskId: parsed.taskId,
         title: getTaskPayloadName(taskPayload, parsed.taskRef),
         typeLabel: getTaskPayloadType(taskPayload),
+        typeI18nKey: getTaskTypeI18nKey(rawTaskType),
         payload: taskPayload,
       };
       topicBucket.tasks.push(taskNode);
@@ -2395,7 +2418,7 @@
                             <button type="button" class="flex items-center justify-between gap-3 rounded-2xl border border-border-subtle bg-surface-1 px-4 py-3 text-left transition hover:border-primary-light hover:bg-bg-secondary" data-open-task-ref="${escapeHtml(task.taskRef)}">
                               <span>
                                 <span style="display:block;font-weight:800;color:var(--color-text-main);">${escapeHtml(task.title)}</span>
-                                <span style="display:block;margin-top:0.25rem;font-size:0.78rem;color:var(--color-text-secondary);">${escapeHtml(task.typeLabel)}</span>
+                                <span style="display:block;margin-top:0.25rem;font-size:0.78rem;color:var(--color-text-secondary);" data-i18n="${escapeHtml(task.typeI18nKey)}">${escapeHtml(task.typeLabel)}</span>
                               </span>
                               <span class="material-symbols-outlined" style="color:var(--color-text-secondary);">open_in_new</span>
                             </button>
@@ -2414,7 +2437,7 @@
                       <button type="button" class="flex items-center justify-between gap-3 rounded-2xl border border-border-subtle bg-surface-1 px-4 py-3 text-left transition hover:border-primary-light hover:bg-bg-secondary" data-open-task-ref="${escapeHtml(task.taskRef)}">
                         <span>
                           <span style="display:block;font-weight:800;color:var(--color-text-main);">${escapeHtml(task.title)}</span>
-                          <span style="display:block;margin-top:0.25rem;font-size:0.78rem;color:var(--color-text-secondary);">${escapeHtml(task.typeLabel)}</span>
+                          <span style="display:block;margin-top:0.25rem;font-size:0.78rem;color:var(--color-text-secondary);" data-i18n="${escapeHtml(task.typeI18nKey)}">${escapeHtml(task.typeLabel)}</span>
                         </span>
                         <span class="material-symbols-outlined" style="color:var(--color-text-secondary);">open_in_new</span>
                       </button>
