@@ -2590,7 +2590,13 @@
     "kicker_tags": "Tags",
     "remaining_cards_suffix": "more",
     "toast_flashcards_added": "Deck added to the Microcards section.",
-    "toast_flashcards_already": "This deck is already in your Microcards."
+    "toast_flashcards_already": "This deck is already in your Microcards.",
+    "btn_go_to_theory": "Go to theory",
+    "btn_go_to_complex": "Go to complex",
+    "linked_theory_auto_note": "When adding a complex, the theory is automatically saved to your Theory Center.",
+    "kicker_linked_complex": "Linked complex",
+    "jump_to_paired": "Go to linked publication",
+    "type_image_labeling": "Image labeling"
   },
   "s1": {
     "page_title": "Training Session – S1",

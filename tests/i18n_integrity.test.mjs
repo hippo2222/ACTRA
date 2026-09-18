@@ -203,4 +203,30 @@ describe('i18n locale integrity suite', () => {
     expect(uk['s1.focus_mode_label']).toBe('Режим перегляду');
     expect(uk['s1.mode_no_linked_blocks']).toBe("Для цього завдання немає пов'язаних блоків");
   });
+
+  it('catalog namespace includes linked theory and paired navigation keys in ru, en, uk', () => {
+    // Russian
+    expect(ru['catalog.btn_go_to_theory']).toBe('Перейти к теории');
+    expect(ru['catalog.btn_go_to_complex']).toBe('Перейти к комплексу');
+    expect(ru['catalog.linked_theory_auto_note']).toBe('При добавлении комплекса теория сохранится в вашем Теоретическом центре автоматически.');
+    expect(ru['catalog.kicker_linked_complex']).toBe('Связанный комплекс');
+    expect(ru['catalog.jump_to_paired']).toBe('Перейти к связанной публикации');
+    expect(ru['catalog.type_image_labeling']).toBe('Подписи на рисунке');
+
+    // English
+    expect(en['catalog.btn_go_to_theory']).toBe('Go to theory');
+    expect(en['catalog.btn_go_to_complex']).toBe('Go to complex');
+    expect(en['catalog.linked_theory_auto_note']).toBe('When adding a complex, the theory is automatically saved to your Theory Center.');
+    expect(en['catalog.kicker_linked_complex']).toBe('Linked complex');
+    expect(en['catalog.jump_to_paired']).toBe('Go to linked publication');
+    expect(en['catalog.type_image_labeling']).toBe('Image labeling');
+
+    // Ukrainian
+    expect(uk['catalog.btn_go_to_theory']).toBe('Перейти до теорії');
+    expect(uk['catalog.btn_go_to_complex']).toBe('Перейти до комплексу');
+    expect(uk['catalog.linked_theory_auto_note']).toBe('При додаванні комплексу теорія автоматично збережеться у вашому Теоретичному центрі.');
+    expect(uk['catalog.kicker_linked_complex']).toBe("Пов'язаний комплекс");
+    expect(uk['catalog.jump_to_paired']).toBe("Перейти до пов'язаної публікації");
+    expect(uk['catalog.type_image_labeling']).toBe('Підписи на малюнку');
+  });
 });

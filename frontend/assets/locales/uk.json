@@ -2590,7 +2590,13 @@
     "kicker_tags": "Теги",
     "remaining_cards_suffix": "ще",
     "toast_flashcards_added": "Колоду додано в розділ Мікрокартки.",
-    "toast_flashcards_already": "Ця колода вже є у ваших Мікрокартках."
+    "toast_flashcards_already": "Ця колода вже є у ваших Мікрокартках.",
+    "btn_go_to_theory": "Перейти до теорії",
+    "btn_go_to_complex": "Перейти до комплексу",
+    "linked_theory_auto_note": "При додаванні комплексу теорія автоматично збережеться у вашому Теоретичному центрі.",
+    "kicker_linked_complex": "Пов'язаний комплекс",
+    "jump_to_paired": "Перейти до пов'язаної публікації",
+    "type_image_labeling": "Підписи на малюнку"
   },
   "s1": {
     "page_title": "Комплексна сесія – S1",

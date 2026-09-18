@@ -1361,7 +1361,7 @@
               </span>
             ` : ''}
             ${relationshipBadge ? `
-              <span class="${escapeHtml(relationshipBadge.className)}"${pairedItemId ? ` data-jump-to-paired="${escapeHtml(pairedItemId)}" role="button" tabindex="0" title="${escapeHtml(wt('catalog.jump_to_paired', 'Перейти к связанной публикации'))}"` : ''}>
+              <span class="${escapeHtml(relationshipBadge.className)}"${pairedItemId ? ` data-jump-to-paired="${escapeHtml(pairedItemId)}" role="button" tabindex="0" title="${escapeHtml(wt('catalog.jump_to_paired', 'Перейти к связанной публикации'))}" data-i18n-title="catalog.jump_to_paired"` : ''}>
                 ${relationshipBadge.icon ? `<span class="material-symbols-outlined">${escapeHtml(relationshipBadge.icon)}</span>` : ''}
                 ${escapeHtml(relationshipBadge.text)}
               </span>
@@ -1815,7 +1815,7 @@
                 : '';
               const linkedTheoryHtml = pairedTheory ? `
                 <div class="catalog-detail__row">
-                  <p class="catalog-detail__kicker">${wt('catalog.kicker_linked_theory', 'Связанная теория')}</p>
+                  <p class="catalog-detail__kicker" data-i18n="catalog.kicker_linked_theory">${wt('catalog.kicker_linked_theory', 'Связанная теория')}</p>
                   <div class="catalog-detail__linked-box">
                     <div class="catalog-detail__linked-header">
                       <span class="material-symbols-outlined catalog-detail__linked-icon">menu_book</span>
@@ -1824,10 +1824,10 @@
                         ${pairedSub ? `<p class="catalog-detail__linked-sub">${escapeHtml(pairedSub)}</p>` : ''}
                       </div>
                     </div>
-                    <p class="catalog-detail__linked-note">${wt('catalog.linked_theory_auto_note', 'При добавлении комплекса теория сохранится в вашем Теоретическом центре автоматически.')}</p>
+                    <p class="catalog-detail__linked-note" data-i18n="catalog.linked_theory_auto_note">${wt('catalog.linked_theory_auto_note', 'При добавлении комплекса теория сохранится в вашем Теоретическом центре автоматически.')}</p>
                     <button type="button" class="btn-secondary h-8 px-3 catalog-detail__linked-action" data-nav-to="${escapeHtml(asString(pairedTheory.item_id))}">
                       <span class="material-symbols-outlined" style="font-size: 1rem;">open_in_new</span>
-                      <span>${wt('catalog.btn_go_to_theory', 'Перейти к теории')}</span>
+                      <span data-i18n="catalog.btn_go_to_theory">${wt('catalog.btn_go_to_theory', 'Перейти к теории')}</span>
                     </button>
                   </div>
                 </div>
@@ -1973,7 +1973,7 @@
               : '';
             const linkedComplexHtml = pairedComplex ? `
               <div class="catalog-detail__row">
-                <p class="catalog-detail__kicker">${wt('catalog.kicker_linked_complex', 'Связанный комплекс')}</p>
+                <p class="catalog-detail__kicker" data-i18n="catalog.kicker_linked_complex">${wt('catalog.kicker_linked_complex', 'Связанный комплекс')}</p>
                 <div class="catalog-detail__linked-box">
                   <div class="catalog-detail__linked-header">
                     <span class="material-symbols-outlined catalog-detail__linked-icon">task_alt</span>
@@ -1984,7 +1984,7 @@
                   </div>
                   <button type="button" class="btn-secondary h-8 px-3 catalog-detail__linked-action" data-nav-to="${escapeHtml(asString(pairedComplex.item_id))}">
                     <span class="material-symbols-outlined" style="font-size: 1rem;">open_in_new</span>
-                    <span>${wt('catalog.btn_go_to_complex', 'Перейти к комплексу')}</span>
+                    <span data-i18n="catalog.btn_go_to_complex">${wt('catalog.btn_go_to_complex', 'Перейти к комплексу')}</span>
                   </button>
                 </div>
               </div>
