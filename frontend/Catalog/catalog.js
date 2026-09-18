@@ -484,17 +484,101 @@
     console.info('[Catalog]', text);
   }
 
+  function getCurrentLang() {
+    if (global.i18n && typeof global.i18n.getLang === 'function') {
+      return global.i18n.getLang() || 'ru';
+    }
+    try {
+      if (typeof window !== 'undefined' && window.location && window.location.search) {
+        const params = new URLSearchParams(window.location.search);
+        const urlLang = params.get('lang');
+        if (urlLang && ['ru', 'en', 'uk'].includes(urlLang)) return urlLang;
+      }
+      const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('actra_lang') : null;
+      if (stored && ['ru', 'en', 'uk'].includes(stored)) return stored;
+    } catch (_) {}
+    return 'ru';
+  }
+
+  function getDateLocale() {
+    const lang = getCurrentLang();
+    const map = {
+      ru: 'ru-RU',
+      en: 'en-US',
+      uk: 'uk-UA',
+    };
+    return map[lang] || 'ru-RU';
+  }
+
+  function parseDateSafe(value) {
+    if (!value) return null;
+    if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
+    const raw = String(value).trim();
+    if (!raw) return null;
+    let d = new Date(raw);
+    if (!Number.isNaN(d.getTime())) return d;
+    if (raw.includes(' ')) {
+      d = new Date(raw.replace(' ', 'T'));
+      if (!Number.isNaN(d.getTime())) return d;
+    }
+    return null;
+  }
+
+  function getFreshnessInfo(item) {
+    const raw = asString(item && (item.latest_published_at || item.updated_at || item.created_at));
+    if (!raw) {
+      return {
+        label: wt('catalog.date_unknown', 'Дата не указана'),
+        i18nKey: 'catalog.date_unknown',
+      };
+    }
+    const date = parseDateSafe(raw);
+    if (!date) {
+      return { label: raw, i18nKey: '' };
+    }
+    const deltaMs = Date.now() - date.getTime();
+    const deltaDays = Math.round(deltaMs / 86400000);
+    if (Math.abs(deltaDays) < 1) {
+      return {
+        label: wt('catalog.date_today', 'Сегодня'),
+        i18nKey: 'catalog.date_today',
+      };
+    }
+    if (deltaDays === 1) {
+      return {
+        label: wt('catalog.date_yesterday', 'Вчера'),
+        i18nKey: 'catalog.date_yesterday',
+      };
+    }
+    if (deltaDays > 1 && deltaDays < 7) {
+      return {
+        label: wt('catalog.date_days_ago', '{n} дн. назад').replace('{n}', String(deltaDays)),
+        i18nKey: '',
+      };
+    }
+    return {
+      label: date.toLocaleDateString(getDateLocale(), {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+      }),
+      i18nKey: '',
+    };
+  }
+
   function formatRelativeDate(value) {
     const raw = asString(value);
     if (!raw) return wt('catalog.date_unknown', 'Дата не указана');
-    const date = new Date(raw);
-    if (Number.isNaN(date.getTime())) return raw;
+    const date = parseDateSafe(raw);
+    if (!date) return raw;
     const deltaMs = Date.now() - date.getTime();
     const deltaDays = Math.round(deltaMs / 86400000);
     if (Math.abs(deltaDays) < 1) return wt('catalog.date_today', 'Сегодня');
     if (deltaDays === 1) return wt('catalog.date_yesterday', 'Вчера');
-    if (deltaDays > 1 && deltaDays < 7) return wt('catalog.date_days_ago', '{n} дн. назад').replace('{n}', deltaDays);
-    return date.toLocaleDateString('ru-RU', {
+    if (deltaDays > 1 && deltaDays < 7) {
+      return wt('catalog.date_days_ago', '{n} дн. назад').replace('{n}', String(deltaDays));
+    }
+    return date.toLocaleDateString(getDateLocale(), {
       day: '2-digit',
       month: 'long',
       year: 'numeric',
@@ -530,7 +614,7 @@
   }
 
   function getFreshnessLabel(item) {
-    return formatRelativeDate(item && item.latest_published_at);
+    return getFreshnessInfo(item).label;
   }
 
   function normalizeCatalogSort(value) {
@@ -638,6 +722,11 @@
   function getTypeLabel(item) {
     if (item && item.content_type === 'flashcard_deck') return wt('catalog.type_label_flashcards', 'Карточки');
     return item && item.content_type === 'theory' ? wt('catalog.type_label_theory', 'Теория') : wt('catalog.type_label_complex', 'Комплекс');
+  }
+
+  function getTypeI18nKey(item) {
+    if (item && item.content_type === 'flashcard_deck') return 'catalog.type_label_flashcards';
+    return item && item.content_type === 'theory' ? 'catalog.type_label_theory' : 'catalog.type_label_complex';
   }
 
   function getTypeKey(item) {
@@ -1134,10 +1223,19 @@
     });
   }
 
-  function getDisplayOwner(item) {
+  function getDisplayOwnerInfo(item) {
     const ownerDisplayName = asString(item && (item.owner_display_name || item.owner_name));
-    if (isOwnPublication(item)) return wt('catalog.owner_you', '\u0412\u044b');
-    return ownerDisplayName || asString(item && item.owner_user_id) || wt('catalog.owner_unknown', '\u041d\u0435 \u0443\u043a\u0430\u0437\u0430\u043d');
+    if (isOwnPublication(item)) {
+      return { label: wt('catalog.owner_you', '\u0412\u044b'), i18nKey: 'catalog.owner_you' };
+    }
+    if (ownerDisplayName || asString(item && item.owner_user_id)) {
+      return { label: ownerDisplayName || asString(item && item.owner_user_id), i18nKey: '' };
+    }
+    return { label: wt('catalog.owner_unknown', '\u041d\u0435 \u0443\u043a\u0430\u0437\u0430\u043d'), i18nKey: 'catalog.owner_unknown' };
+  }
+
+  function getDisplayOwner(item) {
+    return getDisplayOwnerInfo(item).label;
   }
 
   async function loadCatalogItems() {
@@ -1344,6 +1442,8 @@
     const isSelected = asString(item.item_id) === state.selectedItemId;
     const typeKey = getTypeKey(item);
     const pairedItemId = getPairedItemId(item);
+    const ownerInfo = getDisplayOwnerInfo(item);
+    const freshness = getFreshnessInfo(item);
     card.className = `catalog-card catalog-card--${typeKey}${withinBundle ? ' catalog-card--bundled' : ''}${isSelected ? ' is-selected' : ''}`;
     card.setAttribute('data-item-id', asString(item.item_id));
     if (pairedItemId) {
@@ -1363,17 +1463,17 @@
           <div class="catalog-card__byline">
             <span class="catalog-card__meta-item">
               <span class="material-symbols-outlined">person</span>
-              ${escapeHtml(getDisplayOwner(item))}
+              <span${ownerInfo.i18nKey ? ` data-i18n="${ownerInfo.i18nKey}"` : ''}>${escapeHtml(ownerInfo.label)}</span>
             </span>
             <span class="catalog-card__meta-item">
               <span class="material-symbols-outlined">schedule</span>
-              ${escapeHtml(getFreshnessLabel(item))}
+              <span${freshness.i18nKey ? ` data-i18n="${freshness.i18nKey}"` : ''}>${escapeHtml(freshness.label)}</span>
             </span>
           </div>
           <div class="catalog-card__badges">
             <span class="${escapeHtml(getTypeBadgeClass(item))}">
               <span class="material-symbols-outlined">${escapeHtml(getTypeIcon(item))}</span>
-              ${escapeHtml(getTypeLabel(item))}
+              <span data-i18n="${escapeHtml(getTypeI18nKey(item))}">${escapeHtml(getTypeLabel(item))}</span>
             </span>
             ${cardStatusBadge ? `
               <span class="${escapeHtml(cardStatusBadge.className)}">
@@ -3243,6 +3343,12 @@
         renderDetail();
       }
     });
+
+    global.addEventListener('i18n:changed', () => {
+      CATALOG_SORT_LABELS = getCatalogSortLabels();
+      updateCatalogSortControls();
+      render();
+    });
   }
 
   async function init() {
@@ -3278,20 +3384,6 @@
       await loadCurrentUser();
       await loadWorkspaceLimits();
       await loadCatalogItems();
-      global.addEventListener('i18n:changed', () => {
-        CATALOG_SORT_LABELS = getCatalogSortLabels();
-        TASK_TYPE_LABELS = {
-          click: wt('catalog.type_click', 'Клик'),
-          test: wt('catalog.type_test', 'Тест'),
-          open_answer: wt('catalog.type_open_answer', 'Открытый ответ'),
-          sequence_assembly: wt('catalog.type_sequence_assembly', 'Последовательность'),
-          image_labeling: wt('catalog.type_image_labeling', 'Подписи на рисунке'),
-          draw: wt('catalog.type_draw', 'Рисование'),
-          video: wt('catalog.type_video', 'Видео'),
-        };
-        updateCatalogSortControls();
-        render();
-      });
     } finally {
       global.PageBoot?.ready();
     }

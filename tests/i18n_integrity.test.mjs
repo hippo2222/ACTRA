@@ -268,5 +268,50 @@ describe('i18n locale integrity suite', () => {
       expect(uk[`catalog.${key}`].length).toBeGreaterThan(0);
     }
   });
+
+  it('catalog namespace includes date, freshness and owner keys in ru, en, uk', () => {
+    expect(ru['catalog.date_unknown']).toBe('Дата не указана');
+    expect(en['catalog.date_unknown']).toBe('Date not set');
+    expect(uk['catalog.date_unknown']).toBe('Дату не вказано');
+
+    expect(ru['catalog.date_today']).toBe('Сегодня');
+    expect(en['catalog.date_today']).toBe('Today');
+    expect(uk['catalog.date_today']).toBe('Сьогодні');
+
+    expect(ru['catalog.date_yesterday']).toBe('Вчера');
+    expect(en['catalog.date_yesterday']).toBe('Yesterday');
+    expect(uk['catalog.date_yesterday']).toBe('Вчора');
+
+    expect(ru['catalog.date_days_ago']).toBe('{n} дн. назад');
+    expect(en['catalog.date_days_ago']).toBe('{n} days ago');
+    expect(uk['catalog.date_days_ago']).toBe('{n} дн. тому');
+
+    expect(ru['catalog.published_on']).toBe('Опубликовано {date}');
+    expect(en['catalog.published_on']).toBe('Published {date}');
+    expect(uk['catalog.published_on']).toBe('Опубліковано {date}');
+
+    expect(ru['catalog.owner_you']).toBe('Вы');
+    expect(en['catalog.owner_you']).toBe('You');
+    expect(uk['catalog.owner_you']).toBe('Ви');
+
+    expect(ru['catalog.owner_unknown']).toBe('Не указан');
+    expect(en['catalog.owner_unknown']).toBe('Not specified');
+    expect(uk['catalog.owner_unknown']).toBe('Не вказано');
+  });
+
+  it('formats dates in catalog according to active language locale', () => {
+    const fixedDate = new Date('2026-03-15T12:00:00Z');
+
+    const ruFormatted = fixedDate.toLocaleDateString('ru-RU', { day: '2-digit', month: 'long', year: 'numeric' });
+    expect(ruFormatted).toMatch(/марта/);
+
+    const enFormatted = fixedDate.toLocaleDateString('en-US', { day: '2-digit', month: 'long', year: 'numeric' });
+    expect(enFormatted).toMatch(/March/);
+
+    const ukFormatted = fixedDate.toLocaleDateString('uk-UA', { day: '2-digit', month: 'long', year: 'numeric' });
+    expect(ukFormatted).toMatch(/березня/);
+  });
 });
+
+
 
