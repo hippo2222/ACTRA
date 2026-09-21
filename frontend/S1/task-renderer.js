@@ -21,6 +21,17 @@
         return fallback;
     }
 
+    /** Like wt(), but replaces {placeholder} tokens with values from the `vars` object. */
+    function wtf(key, fallback, vars) {
+        let tpl = wt(key, fallback);
+        if (vars && typeof tpl === 'string') {
+            tpl = tpl.replace(/\{(\w+)\}/g, function (_, k) {
+                return vars[k] !== undefined ? vars[k] : '{' + k + '}';
+            });
+        }
+        return tpl;
+    }
+
     // Constants
     const VALID_TASK_TYPES = new Set([
         "click",
@@ -954,31 +965,44 @@
 
             let prefix = "";
             if (reqCount != null && totalCount != null && reqCount !== totalCount) {
-                prefix = `❌ Вы нашли ${foundCount} из ${reqCount} требуемых аннотаций (всего ${totalCount}). Попробуйте еще раз!`;
+                prefix = wtf('s1.click_fail_threshold',
+                    `❌ Вы нашли ${foundCount} из ${reqCount} требуемых аннотаций (всего ${totalCount}). Попробуйте ещё раз!`,
+                    { found_count: foundCount, required_correct: reqCount, total_count: totalCount });
             } else if (totalCount != null) {
-                prefix = `❌ Вы нашли ${foundCount} из ${totalCount} аннотаций. Попробуйте еще раз!`;
+                prefix = wtf('s1.click_fail_basic',
+                    `❌ Вы нашли ${foundCount} из ${totalCount} аннотаций. Попробуйте ещё раз!`,
+                    { found_count: foundCount, total_count: totalCount });
             } else {
-                prefix = "❌ Ответ неполный. Попробуйте еще раз!";
+                prefix = wt('s1.click_fail_incomplete', "❌ Ответ неполный. Попробуйте ещё раз!");
             }
             messageText = remainder ? `${prefix}\n${remainder}` : prefix;
         } else if (messageText && /^click_fail_basic\b/.test(messageText)) {
             const remainder = messageText.replace(/^click_fail_basic[^\S\r\n]*/, "").trim();
             const foundCount = detailsObj && Number.isFinite(Number(detailsObj.found_count)) ? Number(detailsObj.found_count) : 0;
             const totalCount = detailsObj && Number.isFinite(Number(detailsObj.total_targets)) ? Number(detailsObj.total_targets) : null;
-            const prefix = totalCount != null ? `❌ Вы нашли ${foundCount} из ${totalCount} аннотаций. Попробуйте еще раз!` : "❌ Ответ неверный. Попробуйте еще раз!";
+            const prefix = totalCount != null
+                ? wtf('s1.click_fail_basic',
+                    `❌ Вы нашли ${foundCount} из ${totalCount} аннотаций. Попробуйте ещё раз!`,
+                    { found_count: foundCount, total_count: totalCount })
+                : wt('s1.click_fail_wrong', "❌ Ответ неверный. Попробуйте ещё раз!");
             messageText = remainder ? `${prefix}\n${remainder}` : prefix;
         } else if (messageText && /^click_success_(all|partial_threshold|partial|threshold)\b/.test(messageText)) {
             const foundCount = detailsObj && Number.isFinite(Number(detailsObj.found_count)) ? Number(detailsObj.found_count) : "";
             const reqCount = detailsObj && Number.isFinite(Number(detailsObj.required_correct)) ? Number(detailsObj.required_correct) : "";
             const totalCount = detailsObj && Number.isFinite(Number(detailsObj.total_targets)) ? Number(detailsObj.total_targets) : "";
             if (reqCount && totalCount && reqCount !== totalCount) {
-                messageText = `✅ Правильно! Вы правильно указали на ${foundCount} из ${reqCount} требуемых аннотаций (всего ${totalCount})`;
+                messageText = wtf('s1.click_success_partial_threshold',
+                    `✅ Правильно! Вы правильно указали на ${foundCount} из ${reqCount} требуемых аннотаций (всего ${totalCount})`,
+                    { found_count: foundCount, required_correct: reqCount, total_count: totalCount });
             } else if (foundCount) {
-                messageText = `✅ Правильно! Вы правильно указали на все ${foundCount} аннотаций`;
+                messageText = wtf('s1.click_success_all',
+                    `✅ Правильно! Вы правильно указали на все ${foundCount} аннотаций`,
+                    { found_count: foundCount });
             } else {
-                messageText = "✅ Правильно!";
+                messageText = wt('s1.click_success_generic', "✅ Правильно!");
             }
         }
+
 
         // Logic for Sequence Assembly Hints
         try {
@@ -1021,9 +1045,13 @@
                 const incorrectCount = Math.max(0, totalCount - correctCount);
                 if (totalCount > 0) {
                     if (correctCount >= totalCount) {
-                        messageText = `✅ Все подписи расставлены верно (${correctCount}/${totalCount})`;
+                        messageText = wtf('s1.image_labeling_all_correct',
+                            `✅ Все подписи расставлены верно (${correctCount}/${totalCount})`,
+                            { correct_count: correctCount, total_count: totalCount });
                     } else {
-                        messageText = `Есть ошибки: ${incorrectCount} из ${totalCount} с ошибкой, верно ${correctCount}`;
+                        messageText = wtf('s1.image_labeling_has_errors',
+                            `Есть ошибки: ${incorrectCount} из ${totalCount} с ошибкой, верно ${correctCount}`,
+                            { incorrect_count: incorrectCount, total_count: totalCount, correct_count: correctCount });
                     }
                 }
             }
@@ -1073,7 +1101,7 @@
 
                     const errTitle = document.createElement('h4');
                     errTitle.className = 'text-xs font-bold uppercase tracking-wider text-text-secondary mb-2.5 flex items-center gap-1.5';
-                    errTitle.innerHTML = `<span class="material-symbols-outlined text-[16px] text-rose-500">error</span><span>Разбор ошибок</span>`;
+                    errTitle.innerHTML = `<span class="material-symbols-outlined text-[16px] text-rose-500">error</span><span>${wt('s1.image_labeling_error_review_title', 'Разбор ошибок')}</span>`;
                     userAnswerBox.appendChild(errTitle);
 
                     const grid = document.createElement('div');
@@ -1081,7 +1109,7 @@
 
                     incorrectEntries.forEach(([zId, zRes]) => {
                         const zoneLabel = zRes.label || zRes.expected || zId;
-                        const userVal = zRes.actual || 'не указано';
+                        const userVal = zRes.actual || wt('s1.not_specified', 'не указано');
                         const expectedVal = zRes.expected || zoneLabel;
 
                         const row = document.createElement('div');
@@ -1093,11 +1121,11 @@
                             </span>
                             <div class="flex items-center gap-2 flex-wrap">
                                 <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-500/15 text-rose-600 border border-rose-500/30 font-bold">
-                                    <span class="text-[10px] opacity-80">Ваш ответ:</span> ${userVal}
+                                    <span class="text-[10px] opacity-80">${wt('s1.image_labeling_your_answer', 'Ваш ответ:')}</span> ${userVal}
                                 </span>
                                 <span class="material-symbols-outlined text-[14px] text-text-tertiary">arrow_forward</span>
                                 <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-600 border border-emerald-500/30 font-bold">
-                                    <span class="text-[10px] opacity-80">Должно быть:</span> ${expectedVal}
+                                    <span class="text-[10px] opacity-80">${wt('s1.image_labeling_should_be', 'Должно быть:')}</span> ${expectedVal}
                                 </span>
                             </div>
                         `;
