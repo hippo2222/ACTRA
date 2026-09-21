@@ -5607,13 +5607,13 @@ class ClickEditor extends BaseEditor {
             const currentColor = ann.color || this.pickColor(index);
             colorDot.style.backgroundColor = currentColor;
             const colorTitle = wt("pa.choose_color", "Выбрать цвет контура");
-            colorDot.title = colorTitle;
             colorDot.setAttribute("aria-label", colorTitle);
             colorDot.setAttribute("data-i18n-title", "pa.choose_color");
-            colorDot.setAttribute("data-toolbar-tooltip", colorTitle);
+            colorDot.dataset.toolbarTooltip = colorTitle;
             if (this.activeColorPickerIndex === index) {
                 colorDot.classList.add("is-active");
             }
+            this.bindToolbarTooltipTarget(colorDot);
             colorDot.addEventListener("click", (event) => {
                 event.stopPropagation();
                 this.hideToolbarTooltip({ immediate: true });
@@ -6760,10 +6760,11 @@ class ClickEditor extends BaseEditor {
             }
 
             target.dataset.toolbarTooltip = tooltipText.trim();
-            target.setAttribute("title", tooltipText.trim());
+            target.removeAttribute("title");
             target.querySelectorAll?.("button, [tabindex], a, input, select, textarea").forEach((child) => {
-                if (child instanceof HTMLElement && !child.getAttribute("title")) {
-                    child.setAttribute("title", tooltipText.trim());
+                if (child instanceof HTMLElement) {
+                    child.removeAttribute("title");
+                    child.setAttribute("aria-label", tooltipText.trim());
                 }
             });
             target.dataset.toolbarTooltipBound = "1";
@@ -6846,6 +6847,9 @@ class ClickEditor extends BaseEditor {
 
         const bindableNodes = [target, ...target.querySelectorAll("button, [tabindex], a, input, select, textarea")];
         bindableNodes.forEach((node) => {
+            if (node instanceof HTMLElement && node.hasAttribute("title")) {
+                node.removeAttribute("title");
+            }
             if (!(node instanceof HTMLElement) || node.dataset.toolbarTooltipNodeBound === "1") {
                 return;
             }
@@ -6925,10 +6929,11 @@ class ClickEditor extends BaseEditor {
                 const text = this.getToolbarTooltipText(target);
                 if (text) {
                     target.dataset.toolbarTooltip = text;
-                    target.setAttribute("title", text);
+                    target.removeAttribute("title");
                     target.querySelectorAll?.("button, [tabindex], a, input, select, textarea").forEach((child) => {
                         if (child instanceof HTMLElement) {
-                            child.setAttribute("title", text);
+                            child.removeAttribute("title");
+                            child.setAttribute("aria-label", text);
                         }
                     });
                 }

@@ -884,9 +884,10 @@ describe("ClickEditor toolbar tooltips", () => {
         const deleteBtn = document.getElementById("delete-last-point-btn");
         const deleteTooltipTarget = deleteBtn.parentElement;
 
-        expect(deleteTooltipTarget.getAttribute("title")).toBe("Удалить последнюю точку");
-        expect(deleteBtn.getAttribute("title")).toBe("Удалить последнюю точку");
         expect(deleteTooltipTarget.dataset.toolbarTooltip).toBe("Удалить последнюю точку");
+        expect(deleteTooltipTarget.getAttribute("title")).toBeNull();
+        expect(deleteBtn.getAttribute("title")).toBeNull();
+        expect(deleteBtn.getAttribute("aria-label")).toBe("Удалить последнюю точку");
 
         deleteTooltipTarget.dispatchEvent(new window.FocusEvent("focus"));
 
@@ -1635,7 +1636,8 @@ describe("ClickEditor toolbar tooltip and header fallback localization (Task 5)"
         editor.handleLocaleChanged();
 
         expect(target.dataset.toolbarTooltip).toBe("Polygon lasso: place points along the object contour");
-        expect(target.getAttribute("title")).toBe("Polygon lasso: place points along the object contour");
+        expect(target.getAttribute("title")).toBeNull();
+        expect(target.querySelector("button")?.getAttribute("aria-label")).toBe("Polygon lasso: place points along the object contour");
 
         editor.showToolbarTooltip(target);
         const tooltip = document.getElementById("editor-toolbar-tooltip");
