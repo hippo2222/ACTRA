@@ -86,6 +86,7 @@
     reviewComparisonEl: null,
     runtimeMode: false,
     globalHoveredInfo: null,
+    _i18nListener: null,
   };
 
   function _getThemeColor(varName, fallback) {
@@ -1197,11 +1198,14 @@
       "px-4 pt-4 pb-3 border-b border-border-strong dark:border-border-strong bg-surface-1/60",
       ""
     );
+    const targetsTitleKey = _taskRequiresDrawing(taskDto) ? "clickui.what_to_mark" : "clickui.targets_to_find";
+    const targetsTitleFallback = _taskRequiresDrawing(taskDto) ? "Что нужно отметить" : "Цели для поиска";
     const title = _createEl(
       "h3",
       "text-sm font-semibold text-text-main dark:text-text-on-dark",
-      _taskRequiresDrawing(taskDto) ? wt("clickui.what_to_mark", "Что нужно отметить") : wt("clickui.targets_to_find", "Цели для поиска")
+      wt(targetsTitleKey, targetsTitleFallback)
     );
+    title.setAttribute("data-i18n", targetsTitleKey);
     const subtitle = _createEl(
       "p",
       "mt-1 text-xs leading-relaxed text-text-main dark:text-text-on-dark",
@@ -1421,10 +1425,15 @@
     const hideTargetsList = _shouldHideTargetsList(taskDto);
     const shouldShowPromptText = Boolean(promptText);
     const shouldShowInstructionText = Boolean(targetsInstruction && targetsInstruction !== promptText);
-    const targetsPanelTitle =
+    const targetsTitleKey =
       _taskRequiresDrawing(taskDto) || shouldAccentOutlineGuidance
-        ? "\u0427\u0442\u043e \u043d\u0443\u0436\u043d\u043e \u043e\u0442\u043c\u0435\u0442\u0438\u0442\u044c"
-        : "\u0426\u0435\u043b\u0438 \u0434\u043b\u044f \u043f\u043e\u0438\u0441\u043a\u0430";
+        ? "clickui.what_to_mark"
+        : "clickui.targets_to_find";
+    const targetsTitleFallback =
+      _taskRequiresDrawing(taskDto) || shouldAccentOutlineGuidance
+        ? "Что нужно отметить"
+        : "Цели для поиска";
+    const targetsPanelTitle = wt(targetsTitleKey, targetsTitleFallback);
     const targetsPanelIcon =
       _taskRequiresDrawing(taskDto) || shouldAccentOutlineGuidance ? "draw" : "my_location";
 
@@ -1454,6 +1463,7 @@
       targetsPanelTitle
     );
     title.setAttribute("data-clickui", "targets-title");
+    title.setAttribute("data-i18n", targetsTitleKey);
     titleRow.appendChild(titleIcon);
     titleRow.appendChild(title);
     state.targetsPanelTitleEl = header;
@@ -1492,9 +1502,10 @@
       const actionChip = _createEl(
         "span",
         "mt-2 inline-flex w-fit items-center rounded-full border border-warning-light bg-warning-lighter px-3 py-1 text-[12px] font-semibold uppercase tracking-[0.08em] text-warning-darker transition-transform dark:border-warning-light dark:bg-warning-light dark:text-warning-lighter",
-        "\u041e\u0431\u0432\u0435\u0441\u0442\u0438"
+        wt("clickui.verb_outline", "Обвести")
       );
       actionChip.setAttribute("data-clickui", "target-verb-outline");
+      actionChip.setAttribute("data-i18n", "clickui.verb_outline");
       subtitleWrap.appendChild(actionChip);
       state.outlineVerbEls.push(actionChip);
     }
@@ -1583,6 +1594,7 @@
           wt("clickui.verb_outline", "Обвести")
         );
         actionChip.setAttribute("data-clickui", "target-verb-outline");
+        actionChip.setAttribute("data-i18n", "clickui.verb_outline");
         metaRow.appendChild(actionChip);
         state.outlineVerbEls.push(actionChip);
       }
@@ -4287,6 +4299,33 @@
     };
     window.addEventListener("themechanged", state._themeListener);
 
+    if (state._i18nListener) {
+      window.removeEventListener("i18n:changed", state._i18nListener);
+    }
+    state._i18nListener = () => {
+      if (state.targetsPanelTitleEl && state.taskDto) {
+        const titleEl = state.targetsPanelTitleEl.querySelector('[data-clickui="targets-title"]');
+        if (titleEl) {
+          const targets = _getTargets(state.taskDto);
+          const shouldAccent = _shouldAccentOutlineGuidance(state.taskDto, targets);
+          const key =
+            _taskRequiresDrawing(state.taskDto) || shouldAccent
+              ? "clickui.what_to_mark"
+              : "clickui.targets_to_find";
+          const fallback =
+            _taskRequiresDrawing(state.taskDto) || shouldAccent
+              ? "Что нужно отметить"
+              : "Цели для поиска";
+          titleEl.textContent = wt(key, fallback);
+        }
+      }
+      if (state.targetsInstructionEl && state.taskDto) {
+        const targets = _getTargets(state.taskDto);
+        state.targetsInstructionEl.textContent = _buildTargetsInstruction(state.taskDto, targets);
+      }
+    };
+    window.addEventListener("i18n:changed", state._i18nListener);
+
     // Inject ClickUI entrance animation styles once
     if (!document.getElementById("clickui-anim-style")) {
       const _s = document.createElement("style");
@@ -6141,6 +6180,9 @@
     if (state._themeListener) {
       window.removeEventListener("themechanged", state._themeListener);
     }
+    if (state._i18nListener) {
+      window.removeEventListener("i18n:changed", state._i18nListener);
+    }
     if (state._updateSideColumnMaxHeight) {
       window.removeEventListener("scroll", state._updateSideColumnMaxHeight);
       window.removeEventListener("resize", state._updateSideColumnMaxHeight);
@@ -6209,6 +6251,7 @@
       additionalModal: null,
       additionalModalKeyHandler: null,
       _themeListener: null,
+      _i18nListener: null,
       _updateSideColumnMaxHeight: null,
     });
 

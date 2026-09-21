@@ -1347,5 +1347,42 @@ describe("ClickUI runtime targets panel", () => {
     expect(promptEl).toBeTruthy();
     expect(promptEl.textContent).toBe("Mark the indicated areas on the image");
   });
+
+  it("translates 'Targets to find' panel title according to active locale in runtimeMode (S1)", () => {
+    const task = createClickTaskFixture();
+    dom.window.i18n = {
+      t: (key) => {
+        if (key === "clickui.targets_to_find") return "Targets to find";
+        return key;
+      }
+    };
+    const container = document.getElementById("app");
+    dom.window.ClickUI.render(container, task, { runtimeMode: true });
+    const titleEl = container.querySelector('[data-clickui="targets-title"]');
+    expect(titleEl).toBeTruthy();
+    expect(titleEl.textContent).toBe("Targets to find");
+    expect(titleEl.getAttribute("data-i18n")).toBe("clickui.targets_to_find");
+  });
+
+  it("updates panel title dynamically on i18n:changed event", () => {
+    const task = createClickTaskFixture();
+    let currentLang = "ru";
+    dom.window.i18n = {
+      t: (key) => {
+        if (key === "clickui.targets_to_find") {
+          return currentLang === "uk" ? "Цілі для пошуку" : "Targets to find";
+        }
+        return key;
+      }
+    };
+    const container = document.getElementById("app");
+    dom.window.ClickUI.render(container, task, { runtimeMode: true });
+    const titleEl = container.querySelector('[data-clickui="targets-title"]');
+    expect(titleEl.textContent).toBe("Targets to find");
+
+    currentLang = "uk";
+    dom.window.dispatchEvent(new dom.window.CustomEvent("i18n:changed"));
+    expect(titleEl.textContent).toBe("Цілі для пошуку");
+  });
 });
 
