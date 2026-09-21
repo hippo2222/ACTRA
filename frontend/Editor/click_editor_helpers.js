@@ -292,12 +292,32 @@
         return true;
     }
 
+    function getAdaptiveHandleRadius(baseRadius = 5, zoomLevel = 1, options = {}) {
+        const normalizedZoom = Math.max(0.2, Math.min(5, Number(zoomLevel) || 1));
+        const minRadius = options.minRadius ?? 1.5;
+        const maxRadius = options.maxRadius ?? 12;
+        const rawSvgRadius = (Number(baseRadius) || 5) / normalizedZoom;
+        const clamped = Math.max(minRadius, Math.min(maxRadius, rawSvgRadius));
+        return Number(clamped.toFixed(2));
+    }
+
+    function getAdaptiveStrokeWidth(baseWidth = 2, zoomLevel = 1, options = {}) {
+        const normalizedZoom = Math.max(0.2, Math.min(5, Number(zoomLevel) || 1));
+        const minWidth = options.minWidth ?? 0.6;
+        const maxWidth = options.maxWidth ?? 6;
+        const rawSvgWidth = (Number(baseWidth) || 2) / normalizedZoom;
+        const clamped = Math.max(minWidth, Math.min(maxWidth, rawSvgWidth));
+        return Number(clamped.toFixed(2));
+    }
+
     return {
         computeLabelLayout,
         clampRequiredCorrectValue,
         getBaseLabelFontSize,
         getLabelScaleFactor,
         getLabelMaxWidth,
-        shouldRenderLabelWithContext
+        shouldRenderLabelWithContext,
+        getAdaptiveHandleRadius,
+        getAdaptiveStrokeWidth
     };
 });

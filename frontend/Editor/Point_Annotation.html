@@ -4,6 +4,7 @@
 <head>
     <link rel="icon" href="../assets/actra_white.ico" type="image/x-icon" />
     <script src="../../assets/ThemeManager.js"></script>
+    <script src="/assets/i18n.js"></script>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title data-i18n="pa.page_title">ACTRA — Редактор аннотаций</title>
@@ -40,7 +41,7 @@
                     <div class="flex items-center gap-1.5">
                         <h2 class="text-lg font-bold text-text-main tracking-tight"></h2>
                     </div>
-                    <p class="text-xs text-text-secondary" data-i18n="pa.last_change_fallback">Последнее изменение: 2 минуты назад</p>
+                    <p class="text-xs text-text-secondary" data-i18n="pa.last_change_fallback">Последнее изменение: недавно</p>
                 </div>
                 <div id="click-mode-switch" class="flex items-center gap-3 ml-4"
                     data-onboarding-target="click-mode-switch">
@@ -241,8 +242,7 @@
                             <label class="text-xs font-semibold uppercase tracking-wider text-text-muted" data-i18n="pa.prompt_section_label">Инструкция
                                 к заданию</label>
                             <div class="relative" data-onboarding-target="click-prompt">
-                                <label class="block text-sm font-medium text-text-main mb-1" data-i18n="pa.prompt_label">Формулировка
-                                    задания</label>
+                                <label class="block text-sm font-medium text-text-main mb-1" data-i18n="pa.click_prompt_format">Формулировка задания (если оставить пустым, возьмём стандартное «Отметьте указанные области на изображении»)</label>
                                 <textarea id="prompt-textarea"
                                     class="w-full rounded-lg border-border-subtle bg-surface-2 focus:border-primary focus:ring-0 sm:text-sm text-text-main p-3 shadow-sm min-h-[100px]"
                                     placeholder="Введите инструкцию для исполнителя..." data-i18n-placeholder="pa.prompt_ph"></textarea>
@@ -664,7 +664,6 @@
     </template>
 
     <script src="../../assets/ConnectionMonitor.js"></script>
-    <script src="/assets/i18n.js" defer></script>
     <script src="../../assets/onboarding_tours.js?v=draw-onboarding-4"></script>
     <script src="../../assets/OnboardingTour.js?v=draw-onboarding-4"></script>
 </body>

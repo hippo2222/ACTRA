@@ -1149,7 +1149,7 @@
   function _getPrompt(taskDto) {
     const td = (taskDto && taskDto.task_data) || {};
     const content = td.content || {};
-    return (
+    const raw = (
       content.question ||
       td.question ||
       content.prompt ||
@@ -1158,6 +1158,24 @@
       taskDto.prompt ||
       ""
     );
+    const trimmed = String(raw || "").trim();
+    const defaultClickPrompts = [
+      "Отметьте указанные области на изображении",
+      "Mark the indicated areas on the image",
+      "Позначте вказані області на зображенні"
+    ];
+    if (defaultClickPrompts.includes(trimmed)) {
+      return wt("ce.k001_click", trimmed);
+    }
+    const defaultErrorPrompts = [
+      "Отметьте ошибки в тексте",
+      "Mark errors in the text",
+      "Позначте помилки в тексті"
+    ];
+    if (defaultErrorPrompts.includes(trimmed)) {
+      return wt("ce.k001", trimmed);
+    }
+    return trimmed;
   }
 
   function _renderTargetsPanel(taskDto) {

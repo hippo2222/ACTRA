@@ -1334,5 +1334,18 @@ describe("ClickUI runtime targets panel", () => {
     if (t1InUser) expect(t1InUser.style.opacity).toBe("0.08");
     if (t1RefRow) expect(t1RefRow.style.opacity).toBe("0.08");
   });
+
+  it("renders default prompt translated to English when i18n locale is en", () => {
+    const task = createClickTaskFixture();
+    task.task_data.content.prompt = "Отметьте указанные области на изображении";
+    dom.window.i18n = {
+      t: (key) => (key === "ce.k001_click" ? "Mark the indicated areas on the image" : key)
+    };
+    const container = document.getElementById("app");
+    dom.window.ClickUI.render(container, task, { runtimeMode: true });
+    const promptEl = container.querySelector('[data-clickui="targets-prompt"]');
+    expect(promptEl).toBeTruthy();
+    expect(promptEl.textContent).toBe("Mark the indicated areas on the image");
+  });
 });
 

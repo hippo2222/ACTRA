@@ -7,7 +7,9 @@ const {
     getBaseLabelFontSize,
     getLabelScaleFactor,
     getLabelMaxWidth,
-    shouldRenderLabelWithContext
+    shouldRenderLabelWithContext,
+    getAdaptiveHandleRadius,
+    getAdaptiveStrokeWidth
 } = helpers;
 
 describe("computeLabelLayout", () => {
@@ -146,5 +148,46 @@ describe("shouldRenderLabelWithContext", () => {
             thresholds: { minSize: 20, skipSmallPointLabels: false }
         });
         expect(pointVisible).toBe(true);
+    });
+});
+
+describe("getAdaptiveHandleRadius", () => {
+    it("returns baseRadius when zoomLevel is 1", () => {
+        expect(getAdaptiveHandleRadius(5, 1)).toBe(5);
+        expect(getAdaptiveHandleRadius(6, 1)).toBe(6);
+    });
+
+    it("scales radius down inversely when zoomed in to keep constant screen size", () => {
+        // At 2x zoom, SVG radius must be halved so screen radius (r_svg * 2) remains baseRadius
+        expect(getAdaptiveHandleRadius(5, 2)).toBe(2.5);
+        expect(getAdaptiveHandleRadius(6, 3)).toBe(2);
+    });
+
+    it("scales radius up when zoomed out so points do not vanish", () => {
+        // At 0.5x zoom, SVG radius is doubled
+        expect(getAdaptiveHandleRadius(5, 0.5)).toBe(10);
+    });
+
+    it("respects minRadius and maxRadius bounds", () => {
+        // High zoom with minRadius
+        expect(getAdaptiveHandleRadius(5, 5, { minRadius: 2 })).toBe(2);
+        // Low zoom with maxRadius
+        expect(getAdaptiveHandleRadius(5, 0.2, { maxRadius: 12 })).toBe(12);
+    });
+});
+
+describe("getAdaptiveStrokeWidth", () => {
+    it("returns baseWidth when zoomLevel is 1", () => {
+        expect(getAdaptiveStrokeWidth(2, 1)).toBe(2);
+    });
+
+    it("scales stroke width down inversely when zoomed in", () => {
+        expect(getAdaptiveStrokeWidth(2, 2)).toBe(1);
+        expect(getAdaptiveStrokeWidth(3, 3)).toBe(1);
+    });
+
+    it("respects minWidth and maxWidth bounds", () => {
+        expect(getAdaptiveStrokeWidth(2, 5, { minWidth: 0.8 })).toBe(0.8);
+        expect(getAdaptiveStrokeWidth(2, 0.2, { maxWidth: 5 })).toBe(5);
     });
 });

@@ -1043,3 +1043,753 @@ describe("ClickEditor choice prompt (errors text_choice)", () => {
         expect(toastSpy).not.toHaveBeenCalledWith("Задание сохранено.", "success");
     });
 });
+
+describe("ClickEditor default prompt behavior", () => {
+    let editor;
+
+    beforeEach(() => {
+        vi.restoreAllMocks();
+        window.alert = vi.fn();
+        window.confirm = vi.fn(() => true);
+        document.body.innerHTML = `
+            <div id="app">
+                <textarea id="prompt-textarea"></textarea>
+                <textarea id="choice-prompt-textarea"></textarea>
+                <input id="required-correct-input" value="1" />
+                <div id="click-mode-pane"></div>
+                <div id="errors-mode-pane"></div>
+            </div>
+        `;
+        dispatchDomReady();
+        editor = createEditorInstance();
+        editor.cacheDom();
+        editor.moduleId = "m1";
+        editor.topicId = "t1";
+        editor.taskId = "task1";
+        editor.showToast = vi.fn();
+    });
+
+    it("defaults to 'ce.k001_click' prompt when saving regular click task with empty prompt", async () => {
+        const fetchMock = vi.fn().mockResolvedValue({
+            ok: true,
+            json: async () => ({ ok: true, meta: { authoring_enabled: false } })
+        });
+        dom.window.fetch = fetchMock;
+
+        editor.task = {
+            task_data: {
+                content: {
+                    image: "test.jpg",
+                    prompt: "",
+                    mode: "click"
+                },
+                meta: { module: "m1", topic: "t1", id: "task1" }
+            },
+            metadata: { id: "task1", module: "m1", topic: "t1" }
+        };
+        editor.annotations = [
+            { type: "polygon", label: "Зона 1", points: [[0, 0], [10, 0], [10, 10]] }
+        ];
+        editor.errorDetection.enabled = false;
+        editor.promptArea.value = "";
+
+        await editor.saveTask();
+
+        expect(editor.task.task_data.content.prompt).toBe("Отметьте указанные области на изображении");
+    });
+
+    it("defaults to 'ce.k001' prompt when saving error detection task with empty prompt", async () => {
+        const fetchMock = vi.fn().mockResolvedValue({
+            ok: true,
+            json: async () => ({ ok: true, meta: { authoring_enabled: false } })
+        });
+        dom.window.fetch = fetchMock;
+
+        editor.task = {
+            task_data: {
+                content: {
+                    prompt: "",
+                    choice_prompt: "",
+                    mode: "text_choice",
+                    options: [
+                        { id: "opt1", text: "Вариант А", is_correct: true },
+                        { id: "opt2", text: "Вариант Б", is_correct: false }
+                    ]
+                },
+                meta: { module: "m1", topic: "t1", id: "task1" },
+                subtype: "error_detection"
+            },
+            metadata: { id: "task1", module: "m1", topic: "t1" }
+        };
+        editor.errorDetection.enabled = true;
+        editor.errorDetection.mode = "text_choice";
+        editor.errorDetection.options = editor.task.task_data.content.options;
+        editor.promptArea.value = "";
+
+        await editor.saveTask();
+
+        expect(editor.task.task_data.content.prompt).toBe("Отметьте ошибки в тексте");
+    });
+
+    it("clears legacy error prompt in promptArea when hydrating regular click task via renderUI", () => {
+        editor.task = {
+            task_data: {
+                content: {
+                    prompt: "Отметьте ошибки в тексте",
+                    mode: "click"
+                },
+                meta: { module: "m1", topic: "t1", id: "task1" }
+            },
+            metadata: { id: "task1", module: "m1", topic: "t1" }
+        };
+        editor.errorDetection.enabled = false;
+
+        editor.renderUI();
+
+        expect(editor.promptArea.value).toBe("");
+    });
+
+    it("preserves custom prompt when hydrating regular click task via renderUI", () => {
+        editor.task = {
+            task_data: {
+                content: {
+                    prompt: "Найдите транзистор VT1 на схеме",
+                    mode: "click"
+                },
+                meta: { module: "m1", topic: "t1", id: "task1" }
+            },
+            metadata: { id: "task1", module: "m1", topic: "t1" }
+        };
+        editor.errorDetection.enabled = false;
+
+        editor.renderUI();
+
+        expect(editor.promptArea.value).toBe("Найдите транзистор VT1 на схеме");
+    });
+
+    it("defaults to English prompt when saving regular click task with empty prompt on English interface", async () => {
+        const fetchMock = vi.fn().mockResolvedValue({
+            ok: true,
+            json: async () => ({ ok: true, meta: { authoring_enabled: false } })
+        });
+        dom.window.fetch = fetchMock;
+        dom.window.localStorage.setItem("actra_lang", "en");
+        dom.window.i18n = {
+            getLang: () => "en",
+            t: (k) => (k === "ce.k001_click" ? "Mark the indicated areas on the image" : k)
+        };
+
+        editor.task = {
+            task_data: {
+                content: {
+                    image: "test.jpg",
+                    prompt: "",
+                    mode: "click"
+                },
+                meta: { module: "m1", topic: "t1", id: "task1" }
+            },
+            metadata: { id: "task1", module: "m1", topic: "t1" }
+        };
+        editor.annotations = [
+            { type: "polygon", label: "Zone 1", points: [[0, 0], [10, 0], [10, 10]] }
+        ];
+        editor.errorDetection.enabled = false;
+        editor.promptArea.value = "";
+
+        await editor.saveTask();
+
+        expect(editor.task.task_data.content.prompt).toBe("Mark the indicated areas on the image");
+        delete dom.window.i18n;
+        dom.window.localStorage.removeItem("actra_lang");
+    });
+
+    it("defaults to Ukrainian prompt when saving regular click task with empty prompt on Ukrainian interface", async () => {
+        const fetchMock = vi.fn().mockResolvedValue({
+            ok: true,
+            json: async () => ({ ok: true, meta: { authoring_enabled: false } })
+        });
+        dom.window.fetch = fetchMock;
+        dom.window.localStorage.setItem("actra_lang", "uk");
+        dom.window.i18n = {
+            getLang: () => "uk",
+            t: (k) => (k === "ce.k001_click" ? "Позначте вказані області на зображенні" : k)
+        };
+
+        editor.task = {
+            task_data: {
+                content: {
+                    image: "test.jpg",
+                    prompt: "",
+                    mode: "click"
+                },
+                meta: { module: "m1", topic: "t1", id: "task1" }
+            },
+            metadata: { id: "task1", module: "m1", topic: "t1" }
+        };
+        editor.annotations = [
+            { type: "polygon", label: "Zone 1", points: [[0, 0], [10, 0], [10, 10]] }
+        ];
+        editor.errorDetection.enabled = false;
+        editor.promptArea.value = "";
+
+        await editor.saveTask();
+
+        expect(editor.task.task_data.content.prompt).toBe("Позначте вказані області на зображенні");
+        delete dom.window.i18n;
+        dom.window.localStorage.removeItem("actra_lang");
+    });
+
+    it("clears previously saved Russian default click prompt when hydrating in renderUI", () => {
+        editor.task = {
+            task_data: {
+                content: {
+                    prompt: "Отметьте указанные области на изображении",
+                    mode: "click"
+                },
+                meta: { module: "m1", topic: "t1", id: "task1" }
+            },
+            metadata: { id: "task1", module: "m1", topic: "t1" }
+        };
+        editor.errorDetection.enabled = false;
+
+        editor.renderUI();
+
+        expect(editor.promptArea.value).toBe("");
+    });
+});
+
+describe("ClickEditor contour drawing isolation (Task 3)", () => {
+    let editor;
+
+    const setupEditorForDrawing = () => {
+        document.body.innerHTML = `
+            <header><h2></h2></header>
+            <div id="toolbar-row">
+                <button id="lasso-tool-btn" class="tool-toggle" data-tool="polygon" aria-pressed="true"></button>
+                <button id="freehand-tool-btn" class="tool-toggle" data-tool="freehand" aria-pressed="false"></button>
+                <button id="finish-polygon-btn"></button>
+                <button id="delete-last-point-btn"></button>
+                <button id="cancel-polygon-btn"></button>
+                <button id="clear-annotations-btn"></button>
+            </div>
+            <div id="toolbar-status-row"></div>
+            <div id="canvas-container">
+                <div id="canvas-stage">
+                    <img id="main-image" src="test.jpg" />
+                    <svg id="annotation-overlay"></svg>
+                </div>
+            </div>
+            <div id="annotation-list"></div>
+            <span data-annotations-count></span>
+            <div data-drawing-status><span data-drawing-status-text></span></div>
+            <textarea id="prompt-textarea"></textarea>
+            <div id="click-mode-pane"></div>
+            <div id="errors-mode-pane"></div>
+        `;
+        dispatchDomReady();
+        editor = createEditorInstance();
+        editor.cacheDom();
+        editor.setupEventListeners();
+        editor.baseImageWidth = 800;
+        editor.baseImageHeight = 600;
+        editor.annotations = [
+            {
+                type: "polygon",
+                label: "Zone 1",
+                points: [[10, 10], [50, 10], [50, 50], [10, 50]],
+                color: "#ff0000",
+                labelVisible: false
+            }
+        ];
+        editor.currentTool = "polygon";
+    };
+
+    beforeEach(() => {
+        vi.restoreAllMocks();
+        setupEditorForDrawing();
+    });
+
+    it("activates is-drawing-active class on overlay when polygon drawing starts", () => {
+        expect(editor.overlay.classList.contains("is-drawing-active")).toBe(false);
+
+        editor.startPolygon();
+        editor.currentPolygonPoints.push([100, 100]);
+        editor.syncDrawingActiveState();
+
+        expect(editor.drawingPolygon).toBe(true);
+        expect(editor.overlay.classList.contains("is-drawing-active")).toBe(true);
+    });
+
+    it("treats existing contour shapes as non-interactive while drawing a polygon", () => {
+        editor.startPolygon();
+        editor.currentPolygonPoints.push([100, 100]);
+
+        const fakeShape = document.createElement("path");
+        fakeShape.className = "annotation-shape";
+        fakeShape.dataset.annotationIndex = "0";
+
+        const fakeHandle = document.createElement("circle");
+        fakeHandle.className = "vertex-handle";
+        fakeHandle.dataset.annotationIndex = "0";
+        fakeHandle.dataset.vertexIndex = "0";
+
+        expect(editor.isOverlayInteractiveTarget(fakeShape)).toBe(false);
+        expect(editor.isOverlayInteractiveTarget(fakeHandle)).toBe(false);
+    });
+
+    it("does not select existing contour on mousedown when drawing a polygon", () => {
+        editor.startPolygon();
+        editor.currentPolygonPoints.push([100, 100]);
+        editor.selectedAnnotationIndex = -1;
+
+        const fakeShape = document.createElement("path");
+        fakeShape.className = "annotation-shape";
+        fakeShape.dataset.annotationIndex = "0";
+        editor.overlay.appendChild(fakeShape);
+
+        const mousedownEvent = new dom.window.MouseEvent("mousedown", {
+            button: 0,
+            bubbles: true
+        });
+        fakeShape.dispatchEvent(mousedownEvent);
+
+        expect(editor.selectedAnnotationIndex).toBe(-1);
+    });
+
+    it("removes is-drawing-active and restores interactivity when polygon is finished", () => {
+        editor.startPolygon();
+        editor.currentPolygonPoints = [[100, 100], [150, 100], [150, 150]];
+        expect(editor.overlay.classList.contains("is-drawing-active")).toBe(true);
+
+        editor.finishCurrentPolygon();
+
+        expect(editor.drawingPolygon).toBe(false);
+        expect(editor.overlay.classList.contains("is-drawing-active")).toBe(false);
+
+        const fakeShape = document.createElement("path");
+        fakeShape.className = "annotation-shape";
+        fakeShape.dataset.annotationIndex = "0";
+        expect(editor.isOverlayInteractiveTarget(fakeShape)).toBe(true);
+    });
+
+    it("removes is-drawing-active when polygon is cancelled", () => {
+        editor.startPolygon();
+        editor.currentPolygonPoints = [[100, 100]];
+        expect(editor.overlay.classList.contains("is-drawing-active")).toBe(true);
+
+        editor.cancelPolygonDrawing();
+
+        expect(editor.drawingPolygon).toBe(false);
+        expect(editor.currentPolygonPoints.length).toBe(0);
+        expect(editor.overlay.classList.contains("is-drawing-active")).toBe(false);
+    });
+
+    it("removes is-drawing-active and resets state when removeLastPoint leaves 0 points", () => {
+        editor.startPolygon();
+        editor.currentPolygonPoints = [[100, 100]];
+        expect(editor.overlay.classList.contains("is-drawing-active")).toBe(true);
+
+        editor.removeLastPoint();
+
+        expect(editor.currentPolygonPoints.length).toBe(0);
+        expect(editor.drawingPolygon).toBe(false);
+        expect(editor.overlay.classList.contains("is-drawing-active")).toBe(false);
+    });
+
+    it("deselects existing annotation when clicking active tool button", () => {
+        editor.selectAnnotation(0);
+        expect(editor.selectedAnnotationIndex).toBe(0);
+
+        const lassoBtn = document.getElementById("lasso-tool-btn");
+        lassoBtn.click();
+
+        expect(editor.selectedAnnotationIndex).toBe(-1);
+    });
+});
+
+describe("ClickEditor point deletion, reset and Escape hotkey audit (Task 4)", () => {
+    let editor;
+
+    const setupEditor = () => {
+        document.body.innerHTML = `
+            <header><h2></h2></header>
+            <div id="toolbar-row">
+                <button id="lasso-tool-btn" class="tool-toggle" data-tool="polygon" aria-pressed="true"></button>
+                <button id="freehand-tool-btn" class="tool-toggle" data-tool="freehand" aria-pressed="false"></button>
+                <button id="finish-polygon-btn"></button>
+                <button id="delete-last-point-btn"></button>
+                <button id="cancel-polygon-btn"></button>
+                <button id="clear-annotations-btn"></button>
+            </div>
+            <div id="toolbar-status-row"></div>
+            <div id="canvas-container">
+                <div id="canvas-stage">
+                    <img id="main-image" src="test.jpg" />
+                    <svg id="annotation-overlay"></svg>
+                </div>
+            </div>
+            <div id="annotation-list"></div>
+            <span data-annotations-count></span>
+            <div data-drawing-status><span data-drawing-status-text></span></div>
+            <textarea id="prompt-textarea"></textarea>
+            <div id="click-mode-pane"></div>
+            <div id="errors-mode-pane"></div>
+        `;
+        dispatchDomReady();
+        editor = createEditorInstance();
+        editor.cacheDom();
+        editor.setupEventListeners();
+        editor.baseImageWidth = 800;
+        editor.baseImageHeight = 600;
+        editor.annotations = [
+            {
+                type: "polygon",
+                label: "Zone 1",
+                points: [[10, 10], [50, 10], [50, 50], [10, 50]],
+                color: "#ff0000",
+                labelVisible: false
+            }
+        ];
+        editor.currentTool = "polygon";
+    };
+
+    beforeEach(() => {
+        vi.restoreAllMocks();
+        setupEditor();
+    });
+
+    it("transitions controls and status correctly through sequential removeLastPoint calls down to 0", () => {
+        editor.startPolygon();
+        editor.currentPolygonPoints = [[10, 10], [20, 20], [30, 30]];
+        editor.updateDrawingControlsState();
+
+        expect(editor.finishBtn.disabled).toBe(false);
+        expect(editor.deleteLastPointBtn.disabled).toBe(false);
+        expect(editor.cancelPolygonBtn.disabled).toBe(false);
+
+        // Remove 3rd point -> 2 points left
+        editor.removeLastPoint();
+        expect(editor.currentPolygonPoints.length).toBe(2);
+        expect(editor.drawingPolygon).toBe(true);
+        expect(editor.finishBtn.disabled).toBe(true);
+        expect(editor.deleteLastPointBtn.disabled).toBe(false);
+        expect(editor.cancelPolygonBtn.disabled).toBe(false);
+
+        // Remove 2nd point -> 1 point left
+        editor.removeLastPoint();
+        expect(editor.currentPolygonPoints.length).toBe(1);
+        expect(editor.drawingPolygon).toBe(true);
+        expect(editor.finishBtn.disabled).toBe(true);
+        expect(editor.deleteLastPointBtn.disabled).toBe(false);
+        expect(editor.cancelPolygonBtn.disabled).toBe(false);
+
+        // Remove 1st point -> 0 points left
+        editor.removeLastPoint();
+        expect(editor.currentPolygonPoints.length).toBe(0);
+        expect(editor.drawingPolygon).toBe(false);
+        expect(editor.finishBtn.disabled).toBe(true);
+        expect(editor.deleteLastPointBtn.disabled).toBe(true);
+        expect(editor.cancelPolygonBtn.disabled).toBe(true);
+        expect(editor.statusBadgeText.textContent).toBe("Режим ожидания");
+        expect(editor.overlay.classList.contains("is-drawing-active")).toBe(false);
+    });
+
+    it("resets all drawing state and controls on cancelPolygonDrawing", () => {
+        editor.startPolygon();
+        editor.currentPolygonPoints = [[10, 10], [20, 20]];
+        editor.updateDrawingControlsState();
+        expect(editor.cancelPolygonBtn.disabled).toBe(false);
+
+        editor.cancelPolygonDrawing();
+
+        expect(editor.currentPolygonPoints.length).toBe(0);
+        expect(editor.drawingPolygon).toBe(false);
+        expect(editor.finishBtn.disabled).toBe(true);
+        expect(editor.deleteLastPointBtn.disabled).toBe(true);
+        expect(editor.cancelPolygonBtn.disabled).toBe(true);
+        expect(editor.statusBadgeText.textContent).toBe("Режим ожидания");
+        expect(editor.overlay.classList.contains("is-drawing-active")).toBe(false);
+    });
+
+    it("marks task unsaved when deleting a vertex from an existing annotation", () => {
+        const markUnsavedSpy = vi.spyOn(editor, "markUnsaved");
+        editor.selectAnnotation(0);
+        editor.selectVertex(0, 1);
+
+        expect(editor.annotations[0].points.length).toBe(4);
+
+        editor.handleDeletePointAction();
+
+        expect(editor.annotations[0].points.length).toBe(3);
+        expect(markUnsavedSpy).toHaveBeenCalled();
+    });
+
+    it("prevents deleting vertex when polygon reaches minimum 3 points", () => {
+        editor.annotations[0].points = [[10, 10], [50, 10], [50, 50]];
+        editor.selectAnnotation(0);
+        editor.selectVertex(0, 1);
+
+        const markUnsavedSpy = vi.spyOn(editor, "markUnsaved");
+
+        editor.handleDeletePointAction();
+
+        expect(editor.annotations[0].points.length).toBe(3);
+        expect(markUnsavedSpy).not.toHaveBeenCalled();
+        expect(editor.statusBadgeText.textContent).toContain("Минимум точек: 3");
+    });
+
+    it("cancels polygon drawing when pressing Escape key", () => {
+        editor.startPolygon();
+        editor.currentPolygonPoints = [[10, 10], [20, 20]];
+        expect(editor.drawingPolygon).toBe(true);
+
+        const event = new dom.window.KeyboardEvent("keydown", { key: "Escape", bubbles: true });
+        window.dispatchEvent(event);
+
+        expect(editor.drawingPolygon).toBe(false);
+        expect(editor.currentPolygonPoints.length).toBe(0);
+        expect(editor.statusBadgeText.textContent).toBe("Режим ожидания");
+    });
+
+    it("clears selected vertex when pressing Escape key", () => {
+        editor.selectAnnotation(0);
+        editor.selectVertex(0, 1);
+        expect(editor.selectedVertex).toBeTruthy();
+
+        const event = new dom.window.KeyboardEvent("keydown", { key: "Escape", bubbles: true });
+        window.dispatchEvent(event);
+
+        expect(editor.selectedVertex).toBeNull();
+        expect(editor.selectedAnnotationIndex).toBe(0);
+    });
+
+    it("clears selected annotation when pressing Escape key", () => {
+        editor.selectAnnotation(0);
+        expect(editor.selectedAnnotationIndex).toBe(0);
+
+        const event = new dom.window.KeyboardEvent("keydown", { key: "Escape", bubbles: true });
+        window.dispatchEvent(event);
+
+        expect(editor.selectedAnnotationIndex).toBe(-1);
+    });
+
+    it("does not cancel drawing on Escape if user is typing in prompt textarea", () => {
+        editor.startPolygon();
+        editor.currentPolygonPoints = [[10, 10]];
+
+        const textarea = document.getElementById("prompt-textarea");
+        textarea.focus();
+        const event = new dom.window.KeyboardEvent("keydown", { key: "Escape", bubbles: true });
+        textarea.dispatchEvent(event);
+
+        expect(editor.drawingPolygon).toBe(true);
+        expect(editor.currentPolygonPoints.length).toBe(1);
+    });
+});
+
+describe("ClickEditor toolbar tooltip and header fallback localization (Task 5)", () => {
+    it("has all pa keys present across ru.json, en.json, and uk.json", () => {
+        const ru = JSON.parse(fs.readFileSync("frontend/assets/locales/ru.json", "utf8"));
+        const en = JSON.parse(fs.readFileSync("frontend/assets/locales/en.json", "utf8"));
+        const uk = JSON.parse(fs.readFileSync("frontend/assets/locales/uk.json", "utf8"));
+
+        const requiredKeys = [
+            "last_change_fallback",
+            "tooltip_lasso",
+            "tooltip_freehand",
+            "tooltip_finish",
+            "tooltip_delete",
+            "tooltip_cancel",
+            "tooltip_toggle_labels",
+            "label_visibility_smart",
+            "tooltip_clear_all",
+            "show"
+        ];
+
+        requiredKeys.forEach((key) => {
+            expect(ru.pa[key], `Missing ru.pa.${key}`).toBeTruthy();
+            expect(en.pa[key], `Missing en.pa.${key}`).toBeTruthy();
+            expect(uk.pa[key], `Missing uk.pa.${key}`).toBeTruthy();
+        });
+    });
+
+    it("dynamically resolves tooltip text according to active locale", () => {
+        document.body.innerHTML = `
+            <div id="toolbar-row">
+                <span data-toolbar-tooltip data-i18n-title="pa.tooltip_lasso" title="Прямолинейное лассо">
+                    <button id="lasso-tool-btn"></button>
+                </span>
+            </div>
+            <div id="toolbar-status-row"></div>
+        `;
+        dispatchDomReady();
+        const editor = createEditorInstance();
+        editor.cacheDom();
+        editor.initToolbarTooltips();
+
+        const target = document.querySelector("[data-toolbar-tooltip]");
+        dom.window.wt = (k, fb) => (k === "pa.tooltip_lasso" ? "Прямолинейное лассо: ставьте точки по контуру объекта" : fb);
+        expect(editor.getToolbarTooltipText(target)).toBe("Прямолинейное лассо: ставьте точки по контуру объекта");
+
+        dom.window.wt = (k, fb) => (k === "pa.tooltip_lasso" ? "Polygon lasso: place points along the object contour" : fb);
+        editor.handleLocaleChanged();
+
+        expect(target.dataset.toolbarTooltip).toBe("Polygon lasso: place points along the object contour");
+        expect(target.getAttribute("title")).toBe("Polygon lasso: place points along the object contour");
+
+        editor.showToolbarTooltip(target);
+        const tooltip = document.getElementById("editor-toolbar-tooltip");
+        expect(tooltip.textContent).toBe("Polygon lasso: place points along the object contour");
+    });
+
+    it("translates header last change fallback element in DOM", () => {
+        const en = JSON.parse(fs.readFileSync("frontend/assets/locales/en.json", "utf8"));
+        const uk = JSON.parse(fs.readFileSync("frontend/assets/locales/uk.json", "utf8"));
+
+        expect(en.pa.last_change_fallback).toBe("Last change: recently");
+        expect(uk.pa.last_change_fallback).toBe("Остання зміна: нещодавно");
+    });
+});
+
+describe("ClickEditor contour color picker and randomizer", () => {
+    let editor;
+
+    beforeEach(() => {
+        document.body.innerHTML = `
+            <div id="canvas-stage">
+                <canvas id="point-canvas"></canvas>
+                <div id="annotation-overlay">
+                    <svg id="annotation-svg"></svg>
+                </div>
+            </div>
+            <ul id="annotation-list"></ul>
+            <span data-annotations-count></span>
+            <span data-drawing-status-text></span>
+            <div id="status-badge" class="hidden"></div>
+            <button id="save-task-btn" disabled></button>
+            <div id="save-status-container">
+                <span data-save-status-text></span>
+            </div>
+        `;
+        dispatchDomReady();
+        editor = createEditorInstance();
+        editor.cacheDom();
+        editor.annotations = [
+            {
+                type: "polygon",
+                points: [[10, 10], [50, 10], [50, 50], [10, 50]],
+                label: "Контур 1",
+                color: "#2563eb",
+                labelVisible: false
+            },
+            {
+                type: "freehand",
+                points: [[100, 100], [120, 120], [140, 140]],
+                label: "Линия 2",
+                color: "#dc2626",
+                labelVisible: false
+            }
+        ];
+        editor.renderAnnotations();
+        editor.renderAnnotationList();
+    });
+
+    it("renders colorDot as an interactive button with accessibility attributes", () => {
+        const triggers = document.querySelectorAll(".color-picker-trigger");
+        expect(triggers.length).toBe(2);
+        expect(triggers[0].tagName).toBe("BUTTON");
+        expect(triggers[0].dataset.annotationIndex).toBe("0");
+        expect(triggers[0].style.backgroundColor).toBe("rgb(37, 99, 235)");
+        expect(triggers[0].getAttribute("aria-label")).toBeTruthy();
+        expect(triggers[0].getAttribute("data-i18n-title")).toBe("pa.choose_color");
+    });
+
+    it("opens color picker popover on trigger click with presets, random and custom buttons", () => {
+        const triggers = document.querySelectorAll(".color-picker-trigger");
+        triggers[0].click();
+
+        const popover = document.querySelector(".annotation-color-picker-popover");
+        expect(popover).not.toBeNull();
+        expect(popover.dataset.annotationIndex).toBe("0");
+        expect(triggers[0].classList.contains("is-active")).toBe(true);
+
+        const swatches = popover.querySelectorAll(".annotation-color-picker-popover__swatch");
+        expect(swatches.length).toBeGreaterThanOrEqual(12);
+
+        const randomBtn = popover.querySelector(".random-color-btn");
+        expect(randomBtn).not.toBeNull();
+
+        const customBtn = popover.querySelector(".custom-color-btn");
+        expect(customBtn).not.toBeNull();
+    });
+
+    it("applies new color from preset swatch and marks unsaved", () => {
+        const triggers = document.querySelectorAll(".color-picker-trigger");
+        triggers[0].click();
+
+        const popover = document.querySelector(".annotation-color-picker-popover");
+        const swatches = popover.querySelectorAll(".annotation-color-picker-popover__swatch");
+        const greenSwatch = Array.from(swatches).find(s => s.dataset.color === "#10b981");
+        expect(greenSwatch).toBeDefined();
+
+        greenSwatch.click();
+
+        expect(editor.annotations[0].color).toBe("#10b981");
+        expect(triggers[0].style.backgroundColor).toBe("rgb(16, 185, 129)");
+        expect(editor.hasUnsavedChanges).toBe(true);
+    });
+
+    it("generates a distinct vibrant color on Random click", () => {
+        const triggers = document.querySelectorAll(".color-picker-trigger");
+        triggers[0].click();
+
+        const popover = document.querySelector(".annotation-color-picker-popover");
+        const randomBtn = popover.querySelector(".random-color-btn");
+
+        const originalColor = editor.annotations[0].color;
+        randomBtn.click();
+
+        const newColor = editor.annotations[0].color;
+        expect(newColor).toMatch(/^#[0-9a-f]{6}$/i);
+        expect(newColor.toLowerCase()).not.toBe(originalColor.toLowerCase());
+        expect(editor.hasUnsavedChanges).toBe(true);
+    });
+
+    it("closes popover when pressing Escape", () => {
+        const triggers = document.querySelectorAll(".color-picker-trigger");
+        triggers[0].click();
+
+        expect(document.querySelector(".annotation-color-picker-popover")).not.toBeNull();
+
+        const escEvent = new dom.window.KeyboardEvent("keydown", { key: "Escape", bubbles: true });
+        document.dispatchEvent(escEvent);
+
+        expect(document.querySelector(".annotation-color-picker-popover")).toBeNull();
+        expect(triggers[0].classList.contains("is-active")).toBe(false);
+    });
+
+    it("closes popover when annotation is deleted", () => {
+        const triggers = document.querySelectorAll(".color-picker-trigger");
+        triggers[0].click();
+
+        expect(document.querySelector(".annotation-color-picker-popover")).not.toBeNull();
+
+        editor.deleteAnnotation(0);
+
+        expect(document.querySelector(".annotation-color-picker-popover")).toBeNull();
+    });
+
+    it("toggles popover when clicking the same trigger again", () => {
+        const triggers = document.querySelectorAll(".color-picker-trigger");
+        triggers[0].click();
+        expect(document.querySelector(".annotation-color-picker-popover")).not.toBeNull();
+
+        triggers[0].click();
+        expect(document.querySelector(".annotation-color-picker-popover")).toBeNull();
+    });
+});
+
+
+
+
+

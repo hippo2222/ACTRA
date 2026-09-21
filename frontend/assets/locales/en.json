@@ -6599,6 +6599,7 @@
   },
   "ce": {
     "k001": "Mark errors in the text",
+    "k001_click": "Mark the indicated areas on the image",
     "k002": "Select the correct text variant",
     "k003": "Editor initialization error: ",
     "k004": "Additional image upload error: ",
@@ -6880,6 +6881,7 @@
     "change_image": "Change image",
     "prompt_section_label": "Task instruction",
     "prompt_label": "Task prompt",
+    "click_prompt_format": "Task prompt (if left empty, we use the default «Mark the indicated areas on the image»)",
     "prompt_ph": "Enter instruction for the user...",
     "criteria_label": "Success criteria",
     "required_label": "How many annotations to mark",
@@ -6927,7 +6929,21 @@
     "one_correct_warning": "There must be exactly one correct option",
     "choice_prompt_format": "Task prompt (if left empty, we use the default «Choose the correct text option»)",
     "status_idle": "Idle",
-    "status_saved": "Saved"
+    "status_saved": "Saved",
+    "last_change_fallback": "Last change: recently",
+    "tooltip_lasso": "Polygon lasso: place points along the object contour",
+    "tooltip_freehand": "Freehand drawing: draw a line with a continuous stroke",
+    "tooltip_finish": "Finish current contour after 3 or more points",
+    "tooltip_delete": "Delete last point of in-progress contour or selected vertex",
+    "tooltip_cancel": "Reset in-progress contour and start over",
+    "tooltip_toggle_labels": "Toggle label visibility",
+    "label_visibility_smart": "Smart",
+    "tooltip_clear_all": "Delete all contours on the image",
+    "show": "Show",
+    "choose_color": "Choose contour color",
+    "color_palette_title": "Contour color",
+    "random_color": "Random",
+    "custom_color": "Custom color"
   },
   "se": {
     "k001": "New level",

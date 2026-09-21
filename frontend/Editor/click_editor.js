@@ -17,9 +17,63 @@ const CLICK_EDITOR_HELPERS =
 
 const LABEL_DISPLAY_MODES = ["compact", "off"];
 
-const getDEFAULT_PROMPT = () => wt("ce.k001", "Отметьте ошибки в тексте");
+function getCurrentLang() {
+    try {
+        if (typeof window !== "undefined") {
+            if (window.i18n && typeof window.i18n.getLang === "function") {
+                return window.i18n.getLang();
+            }
+            if (window.location && window.location.search) {
+                const params = new URLSearchParams(window.location.search);
+                const urlLang = params.get("lang");
+                if (urlLang && ["ru", "en", "uk"].includes(urlLang)) return urlLang;
+            }
+            if (typeof localStorage !== "undefined") {
+                const stored = localStorage.getItem("actra_lang");
+                if (stored && ["ru", "en", "uk"].includes(stored)) return stored;
+            }
+        }
+    } catch (_) {}
+    return "ru";
+}
+
+const DEFAULT_CLICK_PROMPTS_BY_LANG = {
+    ru: "Отметьте указанные области на изображении",
+    en: "Mark the indicated areas on the image",
+    uk: "Позначте вказані області на зображенні"
+};
+const DEFAULT_ERRORS_PROMPTS_BY_LANG = {
+    ru: "Отметьте ошибки в тексте",
+    en: "Mark errors in the text",
+    uk: "Позначте помилки в тексті"
+};
+const DEFAULT_CHOICE_PROMPTS_BY_LANG = {
+    ru: "Выберите правильный вариант текста",
+    en: "Select the correct text variant",
+    uk: "Виберіть правильний варіант тексту"
+};
+
+const ALL_DEFAULT_CLICK_PROMPTS = Object.values(DEFAULT_CLICK_PROMPTS_BY_LANG);
+const ALL_DEFAULT_ERRORS_PROMPTS = Object.values(DEFAULT_ERRORS_PROMPTS_BY_LANG);
+const ALL_DEFAULT_CHOICE_PROMPTS = Object.values(DEFAULT_CHOICE_PROMPTS_BY_LANG);
+
+const getDEFAULT_CLICK_PROMPT = () => {
+    const lang = getCurrentLang();
+    const fallback = DEFAULT_CLICK_PROMPTS_BY_LANG[lang] || DEFAULT_CLICK_PROMPTS_BY_LANG.ru;
+    return wt("ce.k001_click", fallback);
+};
+const getDEFAULT_ERRORS_PROMPT = () => {
+    const lang = getCurrentLang();
+    const fallback = DEFAULT_ERRORS_PROMPTS_BY_LANG[lang] || DEFAULT_ERRORS_PROMPTS_BY_LANG.ru;
+    return wt("ce.k001", fallback);
+};
+const getDEFAULT_PROMPT = (isErrorDetection = false) => isErrorDetection ? getDEFAULT_ERRORS_PROMPT() : getDEFAULT_CLICK_PROMPT();
 // В режиме «Тексты» пользователь выбирает правильный текст (один вариант), поэтому даём отдельный дефолт
-const getDEFAULT_CHOICE_PROMPT = () => wt("ce.k002", "Выберите правильный вариант текста");
+const getDEFAULT_CHOICE_PROMPT = () => {
+    const lang = getCurrentLang();
+    const fallback = DEFAULT_CHOICE_PROMPTS_BY_LANG[lang] || DEFAULT_CHOICE_PROMPTS_BY_LANG.ru;
+    return wt("ce.k002", fallback);
+};
 
 function escapeHtml(str) {
     return String(str ?? "")
@@ -84,6 +138,9 @@ class ClickEditor extends BaseEditor {
         this.choicePromptAreaWrapper = null;
         this.choicePromptToggleInitialized = false;
         this.choicePromptTextarea = null;
+        this.activeColorPickerIndex = -1;
+        this.activeColorPickerPopover = null;
+        this.colorPickerDismissHandlers = null;
         this.additionalInfoToggleBtn = null;
         this.additionalInfoContent = null;
         this.additionalInfoToggleIcon = null;
@@ -206,6 +263,371 @@ class ClickEditor extends BaseEditor {
     pickColor(index) {
         if (!this.palette || !this.palette.length) return "#3b82f6";
         return this.palette[index % this.palette.length];
+    }
+
+    // ===== CONTOUR COLOR PICKER =====
+
+    getContourPresetColors() {
+        return [
+            "#ef4444", "#f97316", "#f59e0b", "#eab308", "#84cc16", "#10b981",
+            "#14b8a6", "#06b6d4", "#0ea5e9", "#3b82f6", "#6366f1", "#8b5cf6",
+            "#a855f7", "#d946ef", "#ec4899", "#f43f5e", "#0284c7", "#059669"
+        ];
+    }
+
+    normalizeHexColor(color) {
+        if (typeof color !== "string") return "";
+        const trimmed = color.trim().toLowerCase();
+        if (/^#[0-9a-f]{6}$/.test(trimmed)) return trimmed;
+        if (/^#[0-9a-f]{3}$/.test(trimmed)) {
+            return `#${trimmed[1]}${trimmed[1]}${trimmed[2]}${trimmed[2]}${trimmed[3]}${trimmed[3]}`;
+        }
+        return trimmed;
+    }
+
+    hexToHue(hex) {
+        const normalized = this.normalizeHexColor(hex);
+        if (!/^#[0-9a-f]{6}$/.test(normalized)) return null;
+        const r = parseInt(normalized.slice(1, 3), 16) / 255;
+        const g = parseInt(normalized.slice(3, 5), 16) / 255;
+        const b = parseInt(normalized.slice(5, 7), 16) / 255;
+        const max = Math.max(r, g, b);
+        const min = Math.min(r, g, b);
+        if (max === min) return 0;
+        const d = max - min;
+        let h = 0;
+        switch (max) {
+            case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+            case g: h = ((b - r) / d + 2) / 6; break;
+            case b: h = ((r - g) / d + 4) / 6; break;
+        }
+        return Math.round(h * 360);
+    }
+
+    hslToHex(h, s, l) {
+        s /= 100;
+        l /= 100;
+        const k = n => (n + h / 30) % 12;
+        const a = s * Math.min(l, 1 - l);
+        const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+        const toHex = x => {
+            const hex = Math.round(x * 255).toString(16);
+            return hex.length === 1 ? "0" + hex : hex;
+        };
+        return `#${toHex(f(0))}${toHex(f(8))}${toHex(f(4))}`;
+    }
+
+    isLightColor(hex) {
+        const normalized = this.normalizeHexColor(hex);
+        if (!/^#[0-9a-f]{6}$/.test(normalized)) return false;
+        const r = parseInt(normalized.slice(1, 3), 16);
+        const g = parseInt(normalized.slice(3, 5), 16);
+        const b = parseInt(normalized.slice(5, 7), 16);
+        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        return luminance > 0.65;
+    }
+
+    generateRandomContourColor(excludeIndex = -1) {
+        const existingHues = [];
+        if (Array.isArray(this.annotations)) {
+            this.annotations.forEach((ann, idx) => {
+                if (idx !== excludeIndex && ann && ann.color) {
+                    const hue = this.hexToHue(ann.color);
+                    if (hue !== null) existingHues.push(hue);
+                }
+            });
+        }
+
+        let bestHue = Math.floor(Math.random() * 360);
+        if (existingHues.length > 0) {
+            let maxMinDiff = -1;
+            for (let i = 0; i < 24; i++) {
+                const candidate = Math.floor(Math.random() * 360);
+                let minDiff = 360;
+                for (const h of existingHues) {
+                    const diff = Math.abs(candidate - h);
+                    const circularDiff = Math.min(diff, 360 - diff);
+                    if (circularDiff < minDiff) {
+                        minDiff = circularDiff;
+                    }
+                }
+                if (minDiff > maxMinDiff) {
+                    maxMinDiff = minDiff;
+                    bestHue = candidate;
+                }
+            }
+        }
+
+        const saturation = 88;
+        const lightness = 52;
+        return this.hslToHex(bestHue, saturation, lightness);
+    }
+
+    toggleColorPickerPopover(index, triggerEl) {
+        if (this.activeColorPickerIndex === index && this.activeColorPickerPopover) {
+            this.closeColorPickerPopover();
+            return;
+        }
+        this.openColorPickerPopover(index, triggerEl);
+    }
+
+    openColorPickerPopover(index, triggerEl) {
+        this.closeColorPickerPopover();
+
+        const ann = this.annotations[index];
+        if (!ann) return;
+
+        this.activeColorPickerIndex = index;
+        if (triggerEl instanceof HTMLElement) {
+            triggerEl.classList.add("is-active");
+        }
+
+        const currentColor = ann.color || this.pickColor(index);
+        const normCurrentColor = this.normalizeHexColor(currentColor);
+
+        const popover = document.createElement("div");
+        popover.className = "annotation-color-picker-popover";
+        popover.setAttribute("role", "dialog");
+        popover.setAttribute("aria-modal", "false");
+        popover.dataset.annotationIndex = String(index);
+
+        // Header
+        const header = document.createElement("div");
+        header.className = "annotation-color-picker-popover__header";
+
+        const title = document.createElement("span");
+        title.className = "annotation-color-picker-popover__title";
+        title.textContent = wt("pa.color_palette_title", "Цвет контура");
+
+        const closeBtn = document.createElement("button");
+        closeBtn.type = "button";
+        closeBtn.className = "annotation-color-picker-popover__close";
+        closeBtn.title = wt("common.close", "Закрыть");
+        closeBtn.setAttribute("aria-label", wt("common.close", "Закрыть"));
+        closeBtn.innerHTML = '<span class="material-symbols-outlined text-[16px]">close</span>';
+        closeBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            this.closeColorPickerPopover();
+        });
+
+        header.appendChild(title);
+        header.appendChild(closeBtn);
+        popover.appendChild(header);
+
+        // Swatches
+        const swatchesContainer = document.createElement("div");
+        swatchesContainer.className = "annotation-color-picker-popover__swatches";
+
+        const presets = this.getContourPresetColors();
+        presets.forEach((presetColor) => {
+            const swatch = document.createElement("button");
+            swatch.type = "button";
+            swatch.className = "annotation-color-picker-popover__swatch";
+            swatch.style.backgroundColor = presetColor;
+            swatch.title = presetColor;
+            swatch.setAttribute("aria-label", presetColor);
+            swatch.dataset.color = presetColor;
+
+            const isCurrent = normCurrentColor === this.normalizeHexColor(presetColor);
+            if (isCurrent) {
+                swatch.classList.add("is-active");
+                const check = document.createElement("span");
+                check.className = "material-symbols-outlined annotation-color-picker-popover__swatch-check";
+                check.textContent = "check";
+                check.style.color = this.isLightColor(presetColor) ? "#0f172a" : "#ffffff";
+                swatch.appendChild(check);
+            }
+
+            swatch.addEventListener("click", (e) => {
+                e.stopPropagation();
+                this.setAnnotationColor(index, presetColor);
+                this.updateColorPickerActiveSwatch(presetColor);
+            });
+
+            swatchesContainer.appendChild(swatch);
+        });
+        popover.appendChild(swatchesContainer);
+
+        // Footer with Random & Custom Color buttons
+        const footer = document.createElement("div");
+        footer.className = "annotation-color-picker-popover__footer";
+
+        // Random button
+        const randomBtn = document.createElement("button");
+        randomBtn.type = "button";
+        randomBtn.className = "annotation-color-picker-popover__btn random-color-btn";
+        randomBtn.title = wt("pa.random_color", "Случайный");
+        randomBtn.innerHTML = `<span class="material-symbols-outlined text-[16px]">casino</span><span>${wt("pa.random_color", "Случайный")}</span>`;
+        randomBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const randomColor = this.generateRandomContourColor(index);
+            this.setAnnotationColor(index, randomColor);
+            this.updateColorPickerActiveSwatch(randomColor);
+        });
+
+        // Custom color input button
+        const customColorBtn = document.createElement("button");
+        customColorBtn.type = "button";
+        customColorBtn.className = "annotation-color-picker-popover__btn custom-color-btn";
+        customColorBtn.title = wt("pa.custom_color", "Свой цвет");
+
+        const nativeInput = document.createElement("input");
+        nativeInput.type = "color";
+        nativeInput.className = "annotation-color-picker-popover__native-input";
+        nativeInput.value = (/^#[0-9a-f]{6}$/i.test(normCurrentColor) ? normCurrentColor : "#3b82f6");
+        nativeInput.addEventListener("input", (e) => {
+            const chosen = e.target.value;
+            this.setAnnotationColor(index, chosen);
+            this.updateColorPickerActiveSwatch(chosen);
+        });
+        nativeInput.addEventListener("change", (e) => {
+            const chosen = e.target.value;
+            this.setAnnotationColor(index, chosen);
+            this.updateColorPickerActiveSwatch(chosen);
+        });
+
+        customColorBtn.innerHTML = `<span class="material-symbols-outlined text-[16px]">palette</span><span>${wt("pa.custom_color", "Свой цвет")}</span>`;
+        customColorBtn.appendChild(nativeInput);
+        customColorBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            nativeInput.click();
+        });
+
+        footer.appendChild(randomBtn);
+        footer.appendChild(customColorBtn);
+        popover.appendChild(footer);
+
+        document.body.appendChild(popover);
+        this.activeColorPickerPopover = popover;
+
+        // Position popover
+        if (triggerEl instanceof HTMLElement) {
+            this.positionColorPickerPopover(triggerEl, popover);
+        }
+
+        // Attach dismiss handlers
+        const onPointerDown = (event) => {
+            if (
+                this.activeColorPickerPopover &&
+                !this.activeColorPickerPopover.contains(event.target) &&
+                !(triggerEl instanceof HTMLElement && triggerEl.contains(event.target))
+            ) {
+                this.closeColorPickerPopover();
+            }
+        };
+
+        const onKeyDown = (event) => {
+            if (event.key === "Escape") {
+                event.stopPropagation();
+                this.closeColorPickerPopover();
+            }
+        };
+
+        const onReposition = () => {
+            if (this.activeColorPickerPopover && triggerEl instanceof HTMLElement && triggerEl.isConnected) {
+                this.positionColorPickerPopover(triggerEl, this.activeColorPickerPopover);
+            } else if (this.activeColorPickerPopover) {
+                this.closeColorPickerPopover();
+            }
+        };
+
+        this.colorPickerDismissHandlers = { onPointerDown, onKeyDown, onReposition };
+        document.addEventListener("pointerdown", onPointerDown, true);
+        document.addEventListener("keydown", onKeyDown, true);
+        window.addEventListener("resize", onReposition);
+        window.addEventListener("scroll", onReposition, true);
+    }
+
+    positionColorPickerPopover(triggerEl, popover) {
+        if (!triggerEl || !popover) return;
+        const rect = triggerEl.getBoundingClientRect();
+        const popoverRect = popover.getBoundingClientRect();
+        const margin = 8;
+        const gap = 6;
+
+        let left = rect.left + (rect.width / 2) - (popoverRect.width / 2);
+        left = Math.max(margin, Math.min(left, window.innerWidth - popoverRect.width - margin));
+
+        let top = rect.bottom + gap;
+        if (top + popoverRect.height > window.innerHeight - margin) {
+            const topAbove = rect.top - popoverRect.height - gap;
+            if (topAbove >= margin) {
+                top = topAbove;
+            } else {
+                top = Math.max(margin, window.innerHeight - popoverRect.height - margin);
+            }
+        }
+
+        popover.style.left = `${Math.round(left)}px`;
+        popover.style.top = `${Math.round(top)}px`;
+    }
+
+    updateColorPickerActiveSwatch(newColor) {
+        if (!this.activeColorPickerPopover) return;
+        const norm = this.normalizeHexColor(newColor);
+        const swatches = this.activeColorPickerPopover.querySelectorAll(".annotation-color-picker-popover__swatch");
+        swatches.forEach(swatch => {
+            const swatchNorm = this.normalizeHexColor(swatch.dataset.color);
+            const isActive = swatchNorm === norm;
+            swatch.classList.toggle("is-active", isActive);
+            const existingCheck = swatch.querySelector(".annotation-color-picker-popover__swatch-check");
+            if (isActive && !existingCheck) {
+                const check = document.createElement("span");
+                check.className = "material-symbols-outlined annotation-color-picker-popover__swatch-check";
+                check.textContent = "check";
+                check.style.color = this.isLightColor(swatch.dataset.color) ? "#0f172a" : "#ffffff";
+                swatch.appendChild(check);
+            } else if (!isActive && existingCheck) {
+                existingCheck.remove();
+            }
+        });
+
+        const nativeInput = this.activeColorPickerPopover.querySelector(".annotation-color-picker-popover__native-input");
+        if (nativeInput && /^#[0-9a-f]{6}$/i.test(norm)) {
+            nativeInput.value = norm;
+        }
+    }
+
+    setAnnotationColor(index, newColor) {
+        const ann = this.annotations[index];
+        if (!ann) return;
+        const normalizedColor = this.normalizeHexColor(newColor) || newColor;
+        ann.color = normalizedColor;
+
+        const trigger = this.annotationList?.querySelector?.(`.color-picker-trigger[data-annotation-index="${index}"]`);
+        if (trigger instanceof HTMLElement) {
+            trigger.style.backgroundColor = normalizedColor;
+        }
+
+        this.renderAnnotations();
+        this.markUnsaved();
+
+        if (typeof this.saveStateToHistory === "function") {
+            this.saveStateToHistory();
+        }
+    }
+
+    closeColorPickerPopover() {
+        if (this.colorPickerDismissHandlers) {
+            document.removeEventListener("pointerdown", this.colorPickerDismissHandlers.onPointerDown, true);
+            document.removeEventListener("keydown", this.colorPickerDismissHandlers.onKeyDown, true);
+            window.removeEventListener("resize", this.colorPickerDismissHandlers.onReposition);
+            window.removeEventListener("scroll", this.colorPickerDismissHandlers.onReposition, true);
+            this.colorPickerDismissHandlers = null;
+        }
+
+        if (this.activeColorPickerPopover) {
+            this.activeColorPickerPopover.remove();
+            this.activeColorPickerPopover = null;
+        }
+
+        if (this.annotationList) {
+            this.annotationList.querySelectorAll(".color-picker-trigger.is-active").forEach(el => {
+                el.classList.remove("is-active");
+            });
+        }
+
+        this.activeColorPickerIndex = -1;
     }
 
     normalizeImageReference(raw) {
@@ -992,7 +1414,7 @@ class ClickEditor extends BaseEditor {
         const referenceStart = referenceText.indexOf("в день");
         const referenceEnd = referenceStart + "в день".length;
         content.mode = "text_errors";
-        content.prompt = getDEFAULT_PROMPT();
+        content.prompt = getDEFAULT_ERRORS_PROMPT();
         content.choice_prompt = getDEFAULT_CHOICE_PROMPT();
         content.text = text;
         content.error_spans = errorStart >= 0
@@ -2587,7 +3009,7 @@ class ClickEditor extends BaseEditor {
         if (!this.errorsPaneInitialized || !this.errorsPromptPreviewEl) return;
         const promptInput = this.promptArea ? this.promptArea.value.trim() : "";
         const prompt = promptInput || this.task?.task_data?.content?.prompt || "";
-        const value = prompt || getDEFAULT_PROMPT();
+        const value = prompt || getDEFAULT_ERRORS_PROMPT();
         this.errorsPromptPreviewEl.textContent = value;
     }
 
@@ -3452,11 +3874,23 @@ class ClickEditor extends BaseEditor {
         }
 
         if (this.promptArea) {
-            const savedPrompt = this.task.task_data?.content?.prompt || "";
+            let savedPrompt = this.task.task_data?.content?.prompt || "";
+            if (!this.isErrorDetectionTask()) {
+                if (ALL_DEFAULT_ERRORS_PROMPTS.includes(savedPrompt.trim()) || ALL_DEFAULT_CLICK_PROMPTS.includes(savedPrompt.trim())) {
+                    savedPrompt = "";
+                }
+            } else {
+                if (ALL_DEFAULT_ERRORS_PROMPTS.includes(savedPrompt.trim())) {
+                    savedPrompt = "";
+                }
+            }
             this.promptArea.value = savedPrompt || "";
         }
         if (this.choicePromptTextarea) {
-            const choicePrompt = this.task.task_data?.content?.choice_prompt || this.task.task_data?.content?.prompt || "";
+            let choicePrompt = this.task.task_data?.content?.choice_prompt || "";
+            if (ALL_DEFAULT_CHOICE_PROMPTS.includes(choicePrompt.trim())) {
+                choicePrompt = "";
+            }
             this.choicePromptTextarea.value = choicePrompt || "";
         }
 
@@ -3597,6 +4031,12 @@ class ClickEditor extends BaseEditor {
             button.addEventListener("click", () => {
                 const { tool } = button.dataset;
                 if (tool) {
+                    if (this.currentTool === tool && this.selectedAnnotationIndex !== -1) {
+                        this.selectedAnnotationIndex = -1;
+                        this.resetVertexEditingState();
+                        this.renderAnnotations();
+                        this.renderAnnotationList();
+                    }
                     this.setTool(tool);
                 }
             });
@@ -3684,7 +4124,19 @@ class ClickEditor extends BaseEditor {
             this.renderAnnotations();
         });
 
-        window.addEventListener("keydown", (event) => this.handleKeyDown(event));
+        if (typeof window !== "undefined") {
+            if (window.__ACTIVE_CLICK_EDITOR_KEY_DOWN__) {
+                window.removeEventListener("keydown", window.__ACTIVE_CLICK_EDITOR_KEY_DOWN__);
+            }
+            window.__ACTIVE_CLICK_EDITOR_KEY_DOWN__ = (event) => this.handleKeyDown(event);
+            window.addEventListener("keydown", window.__ACTIVE_CLICK_EDITOR_KEY_DOWN__);
+
+            if (window.__ACTIVE_CLICK_EDITOR_I18N_CHANGED__) {
+                window.removeEventListener("i18n:changed", window.__ACTIVE_CLICK_EDITOR_I18N_CHANGED__);
+            }
+            window.__ACTIVE_CLICK_EDITOR_I18N_CHANGED__ = () => this.handleLocaleChanged();
+            window.addEventListener("i18n:changed", window.__ACTIVE_CLICK_EDITOR_I18N_CHANGED__);
+        }
 
         this.updateStatusBadge(wt("ce.k041", "Режим ожидания"));
 
@@ -3828,6 +4280,22 @@ class ClickEditor extends BaseEditor {
         return Math.max(120, Math.min(220, safeWidth - 40));
     }
 
+    getAdaptiveHandleRadius(baseRadius = 5, options = {}) {
+        if (this.helpers?.getAdaptiveHandleRadius) {
+            return this.helpers.getAdaptiveHandleRadius(baseRadius, this.zoomLevel, options);
+        }
+        const zoom = Math.max(0.2, Number(this.zoomLevel) || 1);
+        return Number((baseRadius / zoom).toFixed(2));
+    }
+
+    getAdaptiveStrokeWidth(baseWidth = 2, options = {}) {
+        if (this.helpers?.getAdaptiveStrokeWidth) {
+            return this.helpers.getAdaptiveStrokeWidth(baseWidth, this.zoomLevel, options);
+        }
+        const zoom = Math.max(0.2, Number(this.zoomLevel) || 1);
+        return Number((baseWidth / zoom).toFixed(2));
+    }
+
     shouldRenderLabel(annotation, index) {
         if (annotation?.labelVisible) {
             return true;
@@ -3938,8 +4406,25 @@ class ClickEditor extends BaseEditor {
         console.warn("exportScaleLog is deprecated and should not be called.");
     }
 
+    syncDrawingActiveState() {
+        const isDrawing = Boolean(
+            this.drawingPolygon ||
+            (this.currentPolygonPoints && this.currentPolygonPoints.length > 0) ||
+            this.drawingFreehand
+        );
+        this.overlay?.classList.toggle("is-drawing-active", isDrawing);
+    }
+
     isOverlayInteractiveTarget(element) {
         if (!element) return false;
+        if (
+            this.drawingPolygon ||
+            (this.currentPolygonPoints && this.currentPolygonPoints.length > 0) ||
+            this.drawingFreehand ||
+            this.isFreehandMouseDown
+        ) {
+            return false;
+        }
         return Boolean(
             element.closest(".vertex-handle") ||
             element.closest(".annotation-shape") ||
@@ -3949,6 +4434,14 @@ class ClickEditor extends BaseEditor {
 
     handleOverlayMouseDown(event) {
         if (event.button !== 0) return;
+        if (
+            this.drawingPolygon ||
+            (this.currentPolygonPoints && this.currentPolygonPoints.length > 0) ||
+            this.drawingFreehand ||
+            this.isFreehandMouseDown
+        ) {
+            return;
+        }
         const vertexTarget = event.target.closest(".vertex-handle");
         if (vertexTarget) {
             event.preventDefault();
@@ -4090,6 +4583,38 @@ class ClickEditor extends BaseEditor {
         if (event.key === "Delete" || event.key === "Backspace") {
             event.preventDefault();
             this.handleDeletePointAction();
+            return;
+        }
+
+        if (event.key === "Escape") {
+            event.preventDefault();
+            if (this.activeColorPickerPopover) {
+                this.closeColorPickerPopover();
+                return;
+            }
+            if (this.drawingPolygon || (this.currentPolygonPoints && this.currentPolygonPoints.length > 0)) {
+                this.cancelPolygonDrawing();
+                return;
+            }
+            if (this.drawingFreehand) {
+                this.cancelFreehandDrawing();
+                this.updateStatusBadge(wt("ce.k041", "Режим ожидания"));
+                return;
+            }
+            if (this.selectedVertex) {
+                this.resetVertexEditingState();
+                this.renderAnnotations();
+                this.updateDrawingControlsState();
+                return;
+            }
+            if (this.selectedAnnotationIndex !== -1) {
+                this.selectedAnnotationIndex = -1;
+                this.resetVertexEditingState();
+                this.renderAnnotations();
+                this.renderAnnotationList();
+                this.updateDrawingControlsState();
+                return;
+            }
         }
     }
 
@@ -4098,6 +4623,7 @@ class ClickEditor extends BaseEditor {
         this.currentPolygonPoints = [];
         this.selectedAnnotationIndex = -1;
         this.resetVertexEditingState();
+        this.syncDrawingActiveState();
         this.updateDrawingControlsState();
         this.updateStatusBadge(this.getPolygonProgressMessage(), { tone: "info" });
     }
@@ -4106,7 +4632,10 @@ class ClickEditor extends BaseEditor {
         if (!this.currentPolygonPoints.length) return;
         this.currentPolygonPoints.pop();
         if (!this.currentPolygonPoints.length) {
-            this.updateStatusBadge(wt("ce.k048", "Контур очищен"), { tone: "warning" });
+            this.drawingPolygon = false;
+            this.syncDrawingActiveState();
+            this.resetVertexEditingState();
+            this.updateStatusBadge(wt("ce.k041", "Режим ожидания"));
         } else {
             this.updateStatusBadge(this.getPolygonProgressMessage(), { tone: "info" });
         }
@@ -4198,6 +4727,9 @@ class ClickEditor extends BaseEditor {
         }
 
         const { skipStatus = false, allowUndo = true } = options;
+        if (this.activeColorPickerPopover) {
+            this.closeColorPickerPopover();
+        }
         const removedAnnotation = this.annotations[index];
         this.annotations.splice(index, 1);
         this.clearHighlightForAnnotation(removedAnnotation, { silent: true });
@@ -4274,6 +4806,7 @@ class ClickEditor extends BaseEditor {
             this.renderAnnotationList();
             this.updateStatusBadge(`${wt('ce.k062', 'Осталось точек: ')}${annotation.points.length}`, { tone: "info" });
             this.updateDrawingControlsState();
+            this.markUnsaved();
             return;
         }
 
@@ -4286,6 +4819,7 @@ class ClickEditor extends BaseEditor {
         this.drawingPolygon = false;
         this.currentPolygonPoints = [];
         this.resetVertexEditingState();
+        this.syncDrawingActiveState();
         this.updateDrawingControlsState();
         this.updateStatusBadge(wt("ce.k041", "Режим ожидания"));
         this.renderAnnotations();
@@ -4310,6 +4844,7 @@ class ClickEditor extends BaseEditor {
         this.annotations.push(polygon);
         this.drawingPolygon = false;
         this.currentPolygonPoints = [];
+        this.syncDrawingActiveState();
         this.updateAnnotationCount();
         this.updateDrawingControlsState();
         this.updateStatusBadge(wt("ce.k066", "Контур добавлен"), { tone: "success" });
@@ -4317,10 +4852,6 @@ class ClickEditor extends BaseEditor {
         this.renderAnnotationList();
         this.syncRequiredCorrectThreshold({ clampToMax: true });
         this.markUnsaved();
-    }
-
-    pickColor(index) {
-        return this.palette[index % this.palette.length];
     }
 
     generateAnnotationLabel(prefix, type) {
@@ -4333,6 +4864,7 @@ class ClickEditor extends BaseEditor {
         this.freehandPoints = [startCoords];
         this.selectedAnnotationIndex = -1;
         this.resetVertexEditingState();
+        this.syncDrawingActiveState();
         this.updateStatusBadge(wt("ce.k063", "Рисуйте с зажатой ЛКМ"), { tone: "info" });
         this.renderAnnotations();
     }
@@ -4373,6 +4905,7 @@ class ClickEditor extends BaseEditor {
         this.annotations.push(line);
         this.drawingFreehand = false;
         this.freehandPoints = [];
+        this.syncDrawingActiveState();
         this.updateAnnotationCount();
         this.renderAnnotations();
         this.renderAnnotationList();
@@ -4385,6 +4918,8 @@ class ClickEditor extends BaseEditor {
         this.drawingFreehand = false;
         this.freehandPoints = [];
         this.resetVertexEditingState();
+        this.syncDrawingActiveState();
+        this.renderAnnotations();
     }
 
     selectAnnotation(index, options = {}) {
@@ -4432,6 +4967,7 @@ class ClickEditor extends BaseEditor {
 
     renderAnnotations() {
         if (!this.overlay) return;
+        this.syncDrawingActiveState();
 
         const width = this.baseImageWidth || this.img?.offsetWidth || 0;
         const height = this.baseImageHeight || this.img?.offsetHeight || 0;
@@ -4528,7 +5064,7 @@ class ClickEditor extends BaseEditor {
                 const baseStrokeWidth = isSelected ? 2.6 : 1.8;
                 const strokeColor = isHighlighted ? "#facc15" : color;
                 const fillOpacity = isHighlighted ? 0.26 : isSelected ? 0.18 : 0.12;
-                const strokeWidth = isHighlighted ? Math.max(baseStrokeWidth, 3) : baseStrokeWidth;
+                const strokeWidth = this.getAdaptiveStrokeWidth(isHighlighted ? Math.max(baseStrokeWidth, 3) : baseStrokeWidth);
 
                 const polygon = this.createSvgElement("path", {
                     d: this.buildPathData(displayPoints, true),
@@ -4556,10 +5092,10 @@ class ClickEditor extends BaseEditor {
                         const handle = this.createSvgElement("circle", {
                             cx: x,
                             cy: y,
-                            r: isVertexSelected ? 6 : 5,
+                            r: this.getAdaptiveHandleRadius(isVertexSelected ? 6 : 5),
                             fill: "#ffffff",
                             stroke: color,
-                            "stroke-width": isVertexSelected ? 3 : 2,
+                            "stroke-width": this.getAdaptiveStrokeWidth(isVertexSelected ? 3 : 2),
                             class: `vertex-handle${isVertexSelected ? " is-active" : ""}`,
                             "data-annotation-index": index,
                             "data-vertex-index": vertexIndex
@@ -4590,7 +5126,7 @@ class ClickEditor extends BaseEditor {
                     fill: "none",
                     stroke: color,
                     "stroke-opacity": 0.95,
-                    "stroke-width": isSelected ? 3 : 2,
+                    "stroke-width": this.getAdaptiveStrokeWidth(isSelected ? 3 : 2),
                     "stroke-linejoin": "round",
                     "stroke-linecap": "round",
                     class: shapeClass.join(" "),
@@ -4607,10 +5143,10 @@ class ClickEditor extends BaseEditor {
                         const handle = this.createSvgElement("circle", {
                             cx: x,
                             cy: y,
-                            r: 5,
+                            r: this.getAdaptiveHandleRadius(5),
                             fill: "#ffffff",
                             stroke: color,
-                            "stroke-width": 2,
+                            "stroke-width": this.getAdaptiveStrokeWidth(2),
                             class: "vertex-handle vertex-handle--endpoint",
                             "data-annotation-index": index,
                             "data-vertex-index": vertexIndex === 0 ? 0 : displayPoints.length - 1
@@ -4637,10 +5173,10 @@ class ClickEditor extends BaseEditor {
                 const marker = this.createSvgElement("circle", {
                     cx: Number(displayPoint[0].toFixed(2)),
                     cy: Number(displayPoint[1].toFixed(2)),
-                    r: isSelected ? 6 : 5,
+                    r: this.getAdaptiveHandleRadius(isSelected ? 6 : 5),
                     fill: color,
                     stroke: "#ffffff",
-                    "stroke-width": 2,
+                    "stroke-width": this.getAdaptiveStrokeWidth(2),
                     class: shapeClass.join(" "),
                     "data-annotation-index": index
                 });
@@ -4660,7 +5196,7 @@ class ClickEditor extends BaseEditor {
                     d: this.buildPathData(draftPoints, true),
                     fill: "none",
                     stroke: "#f97316",
-                    "stroke-width": 1.5,
+                    "stroke-width": this.getAdaptiveStrokeWidth(1.5),
                     "stroke-linejoin": "round",
                     "stroke-linecap": "round",
                     "stroke-dasharray": "6 4",
@@ -4672,10 +5208,10 @@ class ClickEditor extends BaseEditor {
                     const marker = this.createSvgElement("circle", {
                         cx: x,
                         cy: y,
-                        r: 4.5,
+                        r: this.getAdaptiveHandleRadius(4.5),
                         fill: "#ffffff",
                         stroke: "#f97316",
-                        "stroke-width": 1.5,
+                        "stroke-width": this.getAdaptiveStrokeWidth(1.5),
                         class: "draft-handle"
                     });
                     layers.draft.appendChild(marker);
@@ -4690,7 +5226,7 @@ class ClickEditor extends BaseEditor {
                     points: draftFreehand.map(([x, y]) => `${x},${y}`).join(" "),
                     fill: "none",
                     stroke: "#fb923c",
-                    "stroke-width": 2,
+                    "stroke-width": this.getAdaptiveStrokeWidth(2),
                     "stroke-dasharray": "4 4",
                     class: "annotation-draft annotation-draft--freehand"
                 });
@@ -5064,9 +5600,25 @@ class ClickEditor extends BaseEditor {
             const header = document.createElement("div");
             header.className = "flex items-center gap-2";
 
-            const colorDot = document.createElement("span");
-            colorDot.className = "w-3.5 h-3.5 rounded-full border border-text-on-dark shadow-sm";
-            colorDot.style.backgroundColor = ann.color || this.pickColor(index);
+            const colorDot = document.createElement("button");
+            colorDot.type = "button";
+            colorDot.className = "color-picker-trigger";
+            colorDot.dataset.annotationIndex = String(index);
+            const currentColor = ann.color || this.pickColor(index);
+            colorDot.style.backgroundColor = currentColor;
+            const colorTitle = wt("pa.choose_color", "Выбрать цвет контура");
+            colorDot.title = colorTitle;
+            colorDot.setAttribute("aria-label", colorTitle);
+            colorDot.setAttribute("data-i18n-title", "pa.choose_color");
+            colorDot.setAttribute("data-toolbar-tooltip", colorTitle);
+            if (this.activeColorPickerIndex === index) {
+                colorDot.classList.add("is-active");
+            }
+            colorDot.addEventListener("click", (event) => {
+                event.stopPropagation();
+                this.hideToolbarTooltip({ immediate: true });
+                this.toggleColorPickerPopover(index, colorDot);
+            });
 
             const badge = document.createElement("div");
             badge.className = `w-7 h-7 text-xs font-bold rounded-full flex items-center justify-center ${isSelected
@@ -5482,6 +6034,7 @@ class ClickEditor extends BaseEditor {
         }
         this.updateStageTransform();
         this.updateZoomDisplay();
+        this.renderAnnotations();
         this.logScaleEvent("resetViewport");
     }
 
@@ -5956,7 +6509,7 @@ class ClickEditor extends BaseEditor {
         const isErrorDetection = this.isErrorDetectionTask();
         const requiredCorrect = this.requiredCorrectInput ? parseInt(this.requiredCorrectInput.value, 10) : 1;
 
-        const effectivePrompt = prompt || getDEFAULT_PROMPT();
+        const effectivePrompt = prompt || (isErrorDetection ? getDEFAULT_ERRORS_PROMPT() : getDEFAULT_CLICK_PROMPT());
         const effectiveChoicePrompt = choicePrompt || prompt || getDEFAULT_CHOICE_PROMPT();
         
         if (isErrorDetection && !this.validateErrorDetectionBeforeSave()) {
@@ -6201,11 +6754,7 @@ class ClickEditor extends BaseEditor {
                 return;
             }
 
-            const tooltipText =
-                target.dataset.toolbarTooltip ||
-                target.getAttribute("title") ||
-                target.getAttribute("aria-label") ||
-                "";
+            const tooltipText = this.getToolbarTooltipText(target);
             if (!tooltipText.trim()) {
                 return;
             }
@@ -6349,11 +6898,49 @@ class ClickEditor extends BaseEditor {
         return tooltip;
     }
 
+    getToolbarTooltipText(target) {
+        if (!(target instanceof HTMLElement)) return "";
+        const i18nKey = target.dataset.i18nTitle || target.querySelector?.("[data-i18n-title]")?.dataset.i18nTitle;
+        if (i18nKey && typeof wt === "function") {
+            const translated = wt(i18nKey);
+            if (translated && translated !== i18nKey) {
+                return translated;
+            }
+        }
+        return (target.dataset.toolbarTooltip || target.getAttribute("title") || target.getAttribute("aria-label") || "").trim();
+    }
+
+    handleLocaleChanged() {
+        this.updateLabelVisibilityUI();
+        this.updateDrawingControlsState();
+        this.updateStatusBadge();
+        this.updateErrorsPromptPreview();
+        this.updateChoicePromptPreview();
+        this.refreshToolbarTooltips();
+    }
+
+    refreshToolbarTooltips() {
+        document.querySelectorAll("[data-toolbar-tooltip]").forEach((target) => {
+            if (target instanceof HTMLElement) {
+                const text = this.getToolbarTooltipText(target);
+                if (text) {
+                    target.dataset.toolbarTooltip = text;
+                    target.setAttribute("title", text);
+                    target.querySelectorAll?.("button, [tabindex], a, input, select, textarea").forEach((child) => {
+                        if (child instanceof HTMLElement) {
+                            child.setAttribute("title", text);
+                        }
+                    });
+                }
+            }
+        });
+    }
+
     showToolbarTooltip(target, options = {}) {
         if (!(target instanceof HTMLElement)) {
             return;
         }
-        const tooltipText = (target.dataset.toolbarTooltip || "").trim();
+        const tooltipText = this.getToolbarTooltipText(target);
         if (!tooltipText) {
             return;
         }
