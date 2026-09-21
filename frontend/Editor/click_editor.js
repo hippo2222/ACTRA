@@ -327,39 +327,76 @@ class ClickEditor extends BaseEditor {
         return luminance > 0.65;
     }
 
-    generateRandomContourColor(excludeIndex = -1) {
-        const existingHues = [];
+    generateRandomContourColor(targetIndex = -1) {
+        const currentAnn = this.annotations && targetIndex >= 0 ? this.annotations[targetIndex] : null;
+        const currentColor = currentAnn?.color || (targetIndex >= 0 ? this.pickColor(targetIndex) : null);
+        const currentHue = currentColor ? this.hexToHue(currentColor) : null;
+
+        const otherHues = [];
         if (Array.isArray(this.annotations)) {
             this.annotations.forEach((ann, idx) => {
-                if (idx !== excludeIndex && ann && ann.color) {
+                if (idx !== targetIndex && ann && ann.color) {
                     const hue = this.hexToHue(ann.color);
-                    if (hue !== null) existingHues.push(hue);
+                    if (hue !== null) otherHues.push(hue);
                 }
             });
         }
 
-        let bestHue = Math.floor(Math.random() * 360);
-        if (existingHues.length > 0) {
-            let maxMinDiff = -1;
-            for (let i = 0; i < 24; i++) {
-                const candidate = Math.floor(Math.random() * 360);
-                let minDiff = 360;
-                for (const h of existingHues) {
-                    const diff = Math.abs(candidate - h);
-                    const circularDiff = Math.min(diff, 360 - diff);
-                    if (circularDiff < minDiff) {
-                        minDiff = circularDiff;
+        const minAngleStep = 45;
+        const maxAngleRange = 360 - 2 * minAngleStep; // 270 degrees of fresh colors
+
+        let bestHue;
+        if (currentHue !== null) {
+            // Generate candidates guaranteed to differ from current color by at least minAngleStep (45 deg)
+            const candidates = [];
+            for (let i = 0; i < 20; i++) {
+                const candidate = (currentHue + minAngleStep + Math.floor(Math.random() * maxAngleRange)) % 360;
+                candidates.push(candidate);
+            }
+
+            if (otherHues.length > 0) {
+                // Among candidates distinct from current color, pick one that maximizes distance to other contours
+                let bestScore = -1;
+                bestHue = candidates[0];
+                for (const cand of candidates) {
+                    let minOtherDiff = 360;
+                    for (const h of otherHues) {
+                        const diff = Math.abs(cand - h);
+                        const circ = Math.min(diff, 360 - diff);
+                        if (circ < minOtherDiff) minOtherDiff = circ;
+                    }
+                    if (minOtherDiff > bestScore) {
+                        bestScore = minOtherDiff;
+                        bestHue = cand;
                     }
                 }
-                if (minDiff > maxMinDiff) {
-                    maxMinDiff = minDiff;
-                    bestHue = candidate;
+            } else {
+                // No other contours: pick a random candidate that distinctly differs from current color
+                bestHue = candidates[Math.floor(Math.random() * candidates.length)];
+            }
+        } else {
+            // No current hue available: pick farthest from other contours, or random
+            bestHue = Math.floor(Math.random() * 360);
+            if (otherHues.length > 0) {
+                let maxMinDiff = -1;
+                for (let i = 0; i < 24; i++) {
+                    const candidate = Math.floor(Math.random() * 360);
+                    let minDiff = 360;
+                    for (const h of otherHues) {
+                        const diff = Math.abs(candidate - h);
+                        const circ = Math.min(diff, 360 - diff);
+                        if (circ < minDiff) minDiff = circ;
+                    }
+                    if (minDiff > maxMinDiff) {
+                        maxMinDiff = minDiff;
+                        bestHue = candidate;
+                    }
                 }
             }
         }
 
-        const saturation = 88;
-        const lightness = 52;
+        const saturation = 85 + Math.floor(Math.random() * 11);
+        const lightness = 50 + Math.floor(Math.random() * 6);
         return this.hslToHex(bestHue, saturation, lightness);
     }
 

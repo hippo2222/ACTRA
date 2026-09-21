@@ -1757,6 +1757,23 @@ describe("ClickEditor contour color picker and randomizer", () => {
         expect(editor.hasUnsavedChanges).toBe(true);
     });
 
+    it("changes color on every consecutive Random button click", () => {
+        const triggers = document.querySelectorAll(".color-picker-trigger");
+        triggers[0].click();
+
+        const popover = document.querySelector(".annotation-color-picker-popover");
+        const randomBtn = popover.querySelector(".random-color-btn");
+
+        let previousColor = editor.annotations[0].color;
+        for (let i = 0; i < 6; i++) {
+            randomBtn.click();
+            const currentColor = editor.annotations[0].color;
+            expect(currentColor).toMatch(/^#[0-9a-f]{6}$/i);
+            expect(currentColor.toLowerCase()).not.toBe(previousColor.toLowerCase());
+            previousColor = currentColor;
+        }
+    });
+
     it("closes popover when pressing Escape", () => {
         const triggers = document.querySelectorAll(".color-picker-trigger");
         triggers[0].click();
