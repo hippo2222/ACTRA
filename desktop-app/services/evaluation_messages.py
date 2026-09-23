@@ -82,3 +82,12 @@ def get_message(key: str, **kwargs: Any) -> str:
         logger.warning("Failed to format evaluation message for key '%s': %s", key, e)
         # В случае ошибки форматирования возвращаем шаблон как есть (лучше чем крэш)
         return template
+
+
+def get_message_payload(key: str, **kwargs: Any) -> tuple[str, str, Dict[str, Any]]:
+    """
+    Получить кортеж (formatted_message, message_key, message_params)
+    для поддержания протокола Decoupled i18n.
+    """
+    return get_message(key, **kwargs), key, dict(kwargs)
+

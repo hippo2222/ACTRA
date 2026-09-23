@@ -1089,9 +1089,27 @@
             return null;
         }
 
+        function translateStructuredMessage(result, detailsObj) {
+            const messageKey = (detailsObj && detailsObj.message_key) || (result && result.message_key);
+            const rawParams = (detailsObj && detailsObj.message_params) || (result && result.message_params) || {};
+            if (!messageKey) return null;
+
+            const params = { ...rawParams };
+            if (params.labels_message) {
+                const labelsObj = detailsObj && detailsObj.labels;
+                params.labels_message = translateLabelsMessage(params.labels_message, labelsObj);
+            }
+            const localeKey = `s1.${messageKey}`;
+            const fallback = result && result.message ? String(result.message) : "";
+            return wtf(localeKey, fallback, params);
+        }
+
         let messageText = result && result.message ? String(result.message) : "";
-        const combinedCandidate = translateClickCombinedMessage(messageText, detailsObj, result ? result.success : undefined);
-        if (combinedCandidate) {
+        const structuredCandidate = translateStructuredMessage(result, detailsObj);
+        const combinedCandidate = !structuredCandidate && translateClickCombinedMessage(messageText, detailsObj, result ? result.success : undefined);
+        if (structuredCandidate) {
+            messageText = structuredCandidate;
+        } else if (combinedCandidate) {
             messageText = combinedCandidate;
         } else if (messageText && /^click_fail_(partial|threshold)\b/.test(messageText)) {
             const remainder = messageText.replace(/^click_fail_(partial|threshold)[^\S\r\n]*/, "").trim();

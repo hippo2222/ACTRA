@@ -50,9 +50,11 @@ class EvaluationResult:
     metric: Optional[Literal["IoU", "distance", "percent"]] = None
     details: Dict[str, Any] = field(default_factory=dict)
     timestamp: datetime = field(default_factory=datetime.now)
+    message_key: Optional[str] = None
+    message_params: Dict[str, Any] = field(default_factory=dict)
     
     def __post_init__(self):
-        """Валидация данных"""
+        """Валидация данных и поддержка Decoupled i18n Protocol"""
         # Валидация score
         if self.score is not None and (self.score < 0 or self.score > 100):
             raise EvaluationError(
@@ -65,6 +67,16 @@ class EvaluationResult:
                 f"Invalid metric: {self.metric}. Must be one of: IoU, distance, percent",
                 details={'metric': self.metric}
             )
+        # Decoupled i18n: двусторонняя синхронизация с details для API клиентов и хуков
+        if not self.message_key and isinstance(self.details, dict) and 'message_key' in self.details:
+            self.message_key = self.details['message_key']
+        if not self.message_params and isinstance(self.details, dict) and 'message_params' in self.details:
+            self.message_params = self.details['message_params']
+
+        if self.message_key and 'message_key' not in self.details:
+            self.details['message_key'] = self.message_key
+        if self.message_params and 'message_params' not in self.details:
+            self.details['message_params'] = self.message_params
     
     @classmethod
     def infer_metric_from_task_type(cls, task_type: str) -> Literal["IoU", "distance", "percent"]:
@@ -240,7 +252,9 @@ class TaskEvaluatorService:
                             message=str(modified.get('message', result.message)),
                             score=modified.get('score', result.score),
                             metric=modified.get('metric', result.metric),
-                            details=modified.get('details', result.details)
+                            details=modified.get('details', result.details),
+                            message_key=modified.get('message_key', result.message_key),
+                            message_params=modified.get('message_params', result.message_params),
                         )
                 except Exception:
                     # Логи уже внутри hook_registry; возвращаем исходный result
@@ -1057,23 +1071,26 @@ class TaskEvaluatorService:
             
             if not user_labels and not labels_clicks:
                 if threshold_mode:
-                    msg = get_message(
-                        "click_labels_missing_threshold",
-                        found_count=found_count,
-                        required_correct=required_correct,
-                        total_count=total_count,
-                    )
+                    msg_key = "click_labels_missing_threshold"
+                    msg_params = {
+                        "found_count": found_count,
+                        "required_correct": required_correct,
+                        "total_count": total_count,
+                    }
                 else:
-                    msg = get_message(
-                        "click_labels_missing_all",
-                        found_count=found_count,
-                        total_count=total_count,
-                    )
+                    msg_key = "click_labels_missing_all"
+                    msg_params = {
+                        "found_count": found_count,
+                        "total_count": total_count,
+                    }
+                msg = get_message(msg_key, **msg_params)
                 return EvaluationResult(
                     success=False,
                     message=msg,
                     score=0.0,
                     metric="distance",
+                    message_key=msg_key,
+                    message_params=msg_params,
                     details={
                         'found_targets': list(found_targets),
                         'total_targets': total_count,
@@ -1128,28 +1145,45 @@ class TaskEvaluatorService:
             # Формируем сообщение
             if combined_success:
                 if threshold_mode:
-                    message = get_message("click_combined_success_threshold", 
-                                       found_count=found_count, required_correct=required_correct, 
-                                       total_count=total_count, labels_message=labels_result['message'])
+                    msg_key = "click_combined_success_threshold"
+                    msg_params = {
+                        "found_count": found_count,
+                        "required_correct": required_correct,
+                        "total_count": total_count,
+                        "labels_message": labels_result['message'],
+                    }
                 else:
-                    message = get_message("click_combined_success", 
-                                       found_count=found_count, total_count=total_count, 
-                                       labels_message=labels_result['message'])
+                    msg_key = "click_combined_success"
+                    msg_params = {
+                        "found_count": found_count,
+                        "total_count": total_count,
+                        "labels_message": labels_result['message'],
+                    }
             else:
                 if threshold_mode:
-                    message = get_message("click_combined_fail_threshold", 
-                                       found_count=found_count, required_correct=required_correct, 
-                                       total_count=total_count, labels_message=labels_result['message'])
+                    msg_key = "click_combined_fail_threshold"
+                    msg_params = {
+                        "found_count": found_count,
+                        "required_correct": required_correct,
+                        "total_count": total_count,
+                        "labels_message": labels_result['message'],
+                    }
                 else:
-                    message = get_message("click_combined_fail", 
-                                       found_count=found_count, total_count=total_count, 
-                                       labels_message=labels_result['message'])
+                    msg_key = "click_combined_fail"
+                    msg_params = {
+                        "found_count": found_count,
+                        "total_count": total_count,
+                        "labels_message": labels_result['message'],
+                    }
+            message = get_message(msg_key, **msg_params)
             
             return EvaluationResult(
                 success=combined_success,
                 score=combined_score,  # НОВОЕ
                 message=message,
                 metric="distance",
+                message_key=msg_key,
+                message_params=msg_params,
                 details={
                     'found_targets': list(found_targets),
                     'total_targets': total_count,
@@ -1169,28 +1203,43 @@ class TaskEvaluatorService:
         # УРОВЕНЬ 1: только клики (базовая логика)
         if click_success:
             if threshold_mode:
-                message = get_message("click_success_partial_threshold", 
-                                   found_count=found_count, required_correct=required_correct, 
-                                   total_count=total_count)
+                msg_key = "click_success_partial_threshold"
+                msg_params = {
+                    "found_count": found_count,
+                    "required_correct": required_correct,
+                    "total_count": total_count,
+                }
             else:
-                message = get_message("click_success_all", found_count=found_count)
+                msg_key = "click_success_all"
+                msg_params = {"found_count": found_count}
+            message = get_message(msg_key, **msg_params)
         else:
             found_labels = [info['label'] for info in targets_info if info['found']]
             if threshold_mode:
-                message = get_message("click_fail_threshold", 
-                                   found_count=found_count, required_correct=required_correct, 
-                                   total_count=total_count)
+                msg_key = "click_fail_threshold"
+                msg_params = {
+                    "found_count": found_count,
+                    "required_correct": required_correct,
+                    "total_count": total_count,
+                }
             else:
-                message = get_message("click_fail_basic", 
-                                   found_count=found_count, total_count=total_count)
+                msg_key = "click_fail_basic"
+                msg_params = {
+                    "found_count": found_count,
+                    "total_count": total_count,
+                }
+            message = get_message(msg_key, **msg_params)
             if found_labels:
                 message += f"\nНайдено: {', '.join(found_labels)}"
+                msg_params["found_labels"] = found_labels
         
         return EvaluationResult(
             success=click_success,
             score=click_score,  # НОВОЕ
             message=message,
             metric="distance",
+            message_key=msg_key,
+            message_params=msg_params,
             details={
                 'found_targets': list(found_targets),
                 'total_targets': total_count,
