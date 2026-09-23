@@ -4,7 +4,7 @@
     var SUPPORTED = ['ru', 'en', 'uk'];
     var DEFAULT_LANG = 'ru';
     var STORAGE_KEY = 'actra_lang';
-    var LOCALE_VERSION = '2026.09.23.1';
+    var LOCALE_VERSION = '2026.09.23.2';
     var VERSION_KEY = 'actra_locale_version';
 
     var _locale = {};

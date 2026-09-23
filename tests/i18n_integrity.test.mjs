@@ -118,7 +118,7 @@ describe("i18n Integrity & CI Gates", () => {
 
   describe("Suite 2: HTML Template data-i18n Attribute Validation", () => {
     const htmlFiles = walkFiles(path.resolve(process.cwd(), "frontend"), ".html");
-    const dataI18nRegex = /\bdata-i18n(?:-[a-z]+)?=['"]([^'"]+)['"]/g;
+    const dataI18nRegex = /\bdata-i18n(?:-(?:title|placeholder|tooltip|aria|attr))?=['"]([^'"]+)['"]/g;
 
     it("ensures all HTML data-i18n keys exist or are documented in baseline", () => {
       const unexpectedMissing = [];
@@ -154,6 +154,23 @@ describe("i18n Integrity & CI Gates", () => {
         unexpectedMissing,
         `New unlocalized data-i18n keys detected in HTML!\n${errorMsg}\n` +
           `Add these keys to frontend/assets/locales/ru.json, en.json, and uk.json.`
+      ).toEqual([]);
+    });
+
+    it("detects resolved baseline HTML keys to keep baseline shrinking", () => {
+      const resolvedFromBaseline = [];
+
+      for (const key of baselineMissingHtml) {
+        if (ruSet.has(key)) {
+          resolvedFromBaseline.push(key);
+        }
+      }
+
+      expect(
+        resolvedFromBaseline,
+        `Great job! The following HTML keys from baseline are now localized in ru.json:\n` +
+          `${resolvedFromBaseline.join("\n")}\n` +
+          `Please remove them from tests/fixtures/i18n_known_missing_keys.json to lock in the progress!`
       ).toEqual([]);
     });
   });

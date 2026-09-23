@@ -7,8 +7,9 @@
             if (val !== key) {
                 return val;
             }
-            const prefixed = window.i18n.t('profile_modal.' + key);
-            if (prefixed !== 'profile_modal.' + key) {
+            const fallbackKey = `profile_modal.${key}`;
+            const prefixed = window.i18n.t(fallbackKey);
+            if (prefixed !== fallbackKey) {
                 return prefixed;
             }
         }

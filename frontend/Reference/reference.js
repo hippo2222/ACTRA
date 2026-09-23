@@ -26,10 +26,21 @@
         'stats':    { ru: 'Смотрим статистику', en: 'Viewing statistics', uk: 'Переглядаємо статистику' },
     };
 
+    const CATEGORY_KEYS = {
+        'intro': 'reference.cat_intro',
+        'find': 'reference.cat_find',
+        'create': 'reference.cat_create',
+        'assemble': 'reference.cat_assemble',
+        'theory': 'reference.cat_theory',
+        'practice': 'reference.cat_practice',
+        'stats': 'reference.cat_stats',
+    };
+
     function translateCategory(category) {
         const labels = CATEGORY_LABELS[category];
         if (!labels) return category;
-        return wt('reference.cat_' + category, labels.ru);
+        const key = CATEGORY_KEYS[category];
+        return key ? wt(key, labels.ru) : labels.ru;
     }
 
     const PREVIEW_VIEWPORT_WIDTH = 1440;
