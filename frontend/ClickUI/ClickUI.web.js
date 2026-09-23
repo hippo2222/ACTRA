@@ -3,6 +3,9 @@
   const ClickUI = {};
 
   function wt(key, fallback) {
+    if (window.i18n && typeof window.i18n.wt === "function") {
+      return window.i18n.wt(key, fallback);
+    }
     if (!window.i18n || typeof window.i18n.t !== "function") return fallback;
     const v = window.i18n.t(key);
     return v !== key ? v : fallback;

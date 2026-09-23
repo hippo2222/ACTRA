@@ -14,6 +14,9 @@
     'use strict';
 
     function wt(key, fallback) {
+        if (typeof window !== 'undefined' && window.i18n && typeof window.i18n.wt === 'function') {
+            return window.i18n.wt(key, fallback);
+        }
         if (typeof window !== 'undefined' && window.i18n && typeof window.i18n.t === 'function') {
             const result = window.i18n.t(key);
             return result !== key ? result : fallback;
