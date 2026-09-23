@@ -9,6 +9,7 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:i18n": "vitest run tests/i18n_integrity.test.mjs",
     "lint:frontend": "node scripts/lint_frontend.js",
     "build:css": "npx tailwindcss -i ./frontend/assets/input.css -o ./frontend/assets/tailwind.css --minify",
     "audit:contrast": "node scripts/contrast_audit.js",
