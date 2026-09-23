@@ -1168,6 +1168,36 @@
     if (defaultClickPrompts.includes(trimmed)) {
       return wt("ce.k001_click", trimmed);
     }
+    const defaultClickLabelPrompts = [
+      "Отметьте указанные области на изображении и назовите её",
+      "Отметьте указанные области на изображении и назовите их",
+      "Mark the indicated areas on the image и назовите её",
+      "Mark the indicated areas on the image and name them",
+      "Позначте вказані області на зображенні і назвіть її",
+      "Позначте вказані області на зображенні та назвіть їх"
+    ];
+    if (
+      defaultClickLabelPrompts.includes(trimmed) ||
+      ((content.requires_labels || content.mode === "click_and_label") &&
+        defaultClickPrompts.some(p => trimmed.startsWith(p)))
+    ) {
+      return wt("ce.k001_click_label", "Отметьте указанные области на изображении и назовите их");
+    }
+    const defaultDrawLabelPrompts = [
+      "Обведите контур и назовите: Отметьте указанные области на изображении",
+      "Обведите контур и назовите: Mark the indicated areas on the image",
+      "Обведите контур и назовите: Позначте вказані області на зображенні",
+      "Обведите указанные области на изображении и назовите их",
+      "Outline the indicated areas on the image and name them",
+      "Обведіть вказані області на зображенні та назвіть їх"
+    ];
+    if (
+      defaultDrawLabelPrompts.includes(trimmed) ||
+      (content.requires_labels &&
+        defaultClickPrompts.some(p => trimmed.includes(p) && trimmed.includes("Обведите")))
+    ) {
+      return wt("ce.k001_draw_label", "Обведите указанные области на изображении и назовите их");
+    }
     const defaultErrorPrompts = [
       "Отметьте ошибки в тексте",
       "Mark errors in the text",
@@ -4318,10 +4348,18 @@
               : "Цели для поиска";
           titleEl.textContent = wt(key, fallback);
         }
+        const promptEl = state.targetsPanelTitleEl.querySelector('[data-clickui="targets-prompt"]');
+        if (promptEl) {
+          promptEl.textContent = _getPrompt(state.taskDto);
+        }
       }
       if (state.targetsInstructionEl && state.taskDto) {
-        const targets = _getTargets(state.taskDto);
-        state.targetsInstructionEl.textContent = _buildTargetsInstruction(state.taskDto, targets);
+        if (_shouldHideTargetsList(state.taskDto)) {
+          _updateTargetsPanelInstruction();
+        } else {
+          const targets = _getTargets(state.taskDto);
+          state.targetsInstructionEl.textContent = _buildTargetsInstruction(state.taskDto, targets);
+        }
       }
     };
     window.addEventListener("i18n:changed", state._i18nListener);

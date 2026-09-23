@@ -430,13 +430,27 @@ class DifficultyManager:
             content["requires_labels"] = True
             content["requires_drawing"] = False
             original_prompt = content.get("prompt", "Кликните на область")
-            content["prompt"] = f"{original_prompt} и назовите её"
+            if original_prompt == "Mark the indicated areas on the image":
+                content["prompt"] = "Mark the indicated areas on the image and name them"
+            elif original_prompt == "Позначте вказані області на зображенні":
+                content["prompt"] = "Позначте вказані області на зображенні та назвіть їх"
+            elif any(ch in original_prompt for ch in "абвгдеёжзийклмнопрстуфхцчшщъыьэюя"):
+                content["prompt"] = f"{original_prompt} и назовите её"
+            else:
+                content["prompt"] = f"{original_prompt} and name them"
         elif level >= 3:
             content["mode"] = "draw_and_label"
             content["requires_labels"] = True
             content["requires_drawing"] = True
             original_prompt = content.get("prompt", "Кликните на область")
-            content["prompt"] = f"Обведите контур и назовите: {original_prompt}"
+            if original_prompt == "Mark the indicated areas on the image":
+                content["prompt"] = "Outline the indicated areas on the image and name them"
+            elif original_prompt == "Позначте вказані області на зображенні":
+                content["prompt"] = "Обведіть вказані області на зображенні та назвіть їх"
+            elif any(ch in original_prompt for ch in "абвгдеёжзийклмнопрстуфхцчшщъыьэюя"):
+                content["prompt"] = f"Обведите контур и назовите: {original_prompt}"
+            else:
+                content["prompt"] = f"Outline the area and name it: {original_prompt}"
 
         task_data["content"] = content
         return task_data

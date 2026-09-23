@@ -1384,5 +1384,108 @@ describe("ClickUI runtime targets panel", () => {
     dom.window.dispatchEvent(new dom.window.CustomEvent("i18n:changed"));
     expect(titleEl.textContent).toBe("Цілі для пошуку");
   });
+
+  it("translates L2 prompt and status instruction to English", () => {
+    const task = {
+      task_type: "click",
+      difficulty: 2,
+      task_data: {
+        task_type: "click",
+        _difficulty_level: 2,
+        content: {
+          prompt: "Mark the indicated areas on the image и назовите её",
+          image_url: "",
+          mode: "click_and_label",
+          requires_labels: true,
+        },
+      },
+      answer_key: {
+        targets: [
+          {
+            label: "Center",
+            shape: "polygon",
+            points: [[10, 10], [20, 10], [20, 20], [10, 20]],
+          },
+        ],
+      },
+    };
+    const enLoc = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), "frontend/assets/locales/en.json"), "utf8"));
+    dom.window.i18n = {
+      t: (key) => {
+        if (typeof enLoc[key] === "string") return enLoc[key];
+        const parts = key.split(".");
+        let cur = enLoc;
+        for (const p of parts) {
+          if (!cur || typeof cur !== "object") return key;
+          cur = cur[p];
+        }
+        return typeof cur === "string" ? cur : key;
+      }
+    };
+    const container = document.getElementById("app");
+    dom.window.ClickUI.render(container, task, { runtimeMode: true });
+
+    const promptEl = container.querySelector('[data-clickui="targets-prompt"]');
+    expect(promptEl).toBeTruthy();
+    expect(promptEl.textContent).toBe("Mark the indicated areas on the image and name them");
+
+    const instructionEl = container.querySelector('[data-clickui="targets-instruction"]');
+    expect(instructionEl).toBeTruthy();
+    expect(instructionEl.textContent).toContain("Click the areas and name each one.");
+  });
+
+  it("updates L2 prompt and instruction dynamically on i18n:changed", () => {
+    const task = {
+      task_type: "click",
+      difficulty: 2,
+      task_data: {
+        task_type: "click",
+        _difficulty_level: 2,
+        content: {
+          prompt: "Mark the indicated areas on the image и назовите её",
+          image_url: "",
+          mode: "click_and_label",
+          requires_labels: true,
+        },
+      },
+      answer_key: {
+        targets: [
+          {
+            label: "Center",
+            shape: "polygon",
+            points: [[10, 10], [20, 10], [20, 20], [10, 20]],
+          },
+        ],
+      },
+    };
+    const enLoc = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), "frontend/assets/locales/en.json"), "utf8"));
+    const ukLoc = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), "frontend/assets/locales/uk.json"), "utf8"));
+
+    let activeLoc = enLoc;
+    dom.window.i18n = {
+      t: (key) => {
+        if (typeof activeLoc[key] === "string") return activeLoc[key];
+        const parts = key.split(".");
+        let cur = activeLoc;
+        for (const p of parts) {
+          if (!cur || typeof cur !== "object") return key;
+          cur = cur[p];
+        }
+        return typeof cur === "string" ? cur : key;
+      }
+    };
+    const container = document.getElementById("app");
+    dom.window.ClickUI.render(container, task, { runtimeMode: true });
+
+    const promptEl = container.querySelector('[data-clickui="targets-prompt"]');
+    expect(promptEl.textContent).toBe("Mark the indicated areas on the image and name them");
+
+    activeLoc = ukLoc;
+    dom.window.dispatchEvent(new dom.window.CustomEvent("i18n:changed"));
+
+    expect(promptEl.textContent).toBe("Позначте вказані області на зображенні та назвіть їх");
+    const instructionEl = container.querySelector('[data-clickui="targets-instruction"]');
+    expect(instructionEl.textContent).toContain("Клікай по областях і давай кожній назву.");
+  });
 });
 

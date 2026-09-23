@@ -752,10 +752,6 @@
     function showEvaluationResult(result) {
         function buildToleranceExplanation(candidate) {
             if (!candidate || typeof candidate !== "object") return "";
-            if (candidate.tolerance_explanation != null) {
-                const direct = String(candidate.tolerance_explanation).trim();
-                if (direct) return direct;
-            }
 
             const toleranceType =
                 candidate.tolerance_type != null
@@ -783,6 +779,28 @@
             if (toleranceType === "ending") return wt('s1.tolerance_ending', 'Ответ засчитан с учетом формы слова.');
             if (toleranceType === "both") return wt('s1.tolerance_both', 'Ответ засчитан с учетом формы слова и опечатки.');
             if (toleranceType === "normalized") return wt('s1.tolerance_normalized', 'Ответ засчитан после нормализации {suffix}.').replace('{suffix}', normalizedSuffix);
+
+            if (candidate.tolerance_explanation != null) {
+                const direct = String(candidate.tolerance_explanation).trim();
+                if (direct) {
+                    if (direct.includes("раскладки")) {
+                        return wt('s1.tolerance_normalized', 'Ответ засчитан после нормализации {suffix}.').replace('{suffix}', wt('s1.norm_layout', 'раскладки'));
+                    }
+                    if (direct.includes("е/ё")) {
+                        return wt('s1.tolerance_normalized', 'Ответ засчитан после нормализации {suffix}.').replace('{suffix}', wt('s1.norm_yo', 'е/ё'));
+                    }
+                    if (direct.includes("опечатки") && direct.includes("формы")) {
+                        return wt('s1.tolerance_both', 'Ответ засчитан с учетом формы слова и опечатки.');
+                    }
+                    if (direct.includes("опечатки")) {
+                        return wt('s1.tolerance_typo', 'Ответ засчитан с учетом опечатки.');
+                    }
+                    if (direct.includes("формы слова")) {
+                        return wt('s1.tolerance_ending', 'Ответ засчитан с учетом формы слова.');
+                    }
+                    return direct;
+                }
+            }
             return "";
         }
 
@@ -952,10 +970,127 @@
             );
         }
 
-        let messageText = result && result.message ? String(result.message) : "";
+        function translateLabelsMessage(rawLabelsMsg, labelsDetails) {
+            if (!rawLabelsMsg && !labelsDetails) return "";
+            const msg = String(rawLabelsMsg || "");
+            const matched = labelsDetails && Number.isFinite(Number(labelsDetails.matched_count))
+                ? Number(labelsDetails.matched_count)
+                : (Array.isArray(labelsDetails && labelsDetails.matched_labels) ? labelsDetails.matched_labels.length : null);
+            const total = labelsDetails && Number.isFinite(Number(labelsDetails.total_labels))
+                ? Number(labelsDetails.total_labels)
+                : (Array.isArray(labelsDetails && labelsDetails.matched_labels)
+                    ? labelsDetails.matched_labels.length + (Array.isArray(labelsDetails.unmatched_labels) ? labelsDetails.unmatched_labels.length : 0)
+                    : null);
+            const score = labelsDetails && Number.isFinite(Number(labelsDetails.score))
+                ? Number(labelsDetails.score).toFixed(1)
+                : null;
 
-        // Defensive normalization for raw evaluation keys (e.g. click_fail_partial / click_fail_threshold)
-        if (messageText && /^click_fail_(partial|threshold)\b/.test(messageText)) {
+            const countMatch = msg.match(/\((\d+)\/(\d+)\)/);
+            const mCount = matched != null ? matched : (countMatch ? Number(countMatch[1]) : 0);
+            const tCount = total != null ? total : (countMatch ? Number(countMatch[2]) : 0);
+
+            if (msg.includes("толерантност") || msg.includes("tolerance") || (labelsDetails && (labelsDetails.has_tolerance || labelsDetails.tolerance_type))) {
+                return wtf('s1.labels_success_tolerance',
+                    `✅ Все названия правильные (${mCount}/${tCount}) ⚠️ (с учетом толерантности)`,
+                    { matched_count: mCount, total_labels: tCount });
+            }
+            if (msg.includes("Все названия правильные") || msg.includes("All names are correct") || (labelsDetails && labelsDetails.success)) {
+                return wtf('s1.labels_success_all',
+                    `✅ Все названия правильные (${mCount}/${tCount})`,
+                    { matched_count: mCount, total_labels: tCount });
+            }
+            if (msg.includes("Верно названо") || msg.includes("Correctly named") || score != null) {
+                const sc = score != null ? score : (msg.match(/\(([\d.]+)%\)/) ? msg.match(/\(([\d.]+)%\)/)[1] : "0.0");
+                return wtf('s1.labels_fail_score',
+                    `❌ Верно названо: ${mCount}/${tCount} (${sc}%)`,
+                    { matched_count: mCount, total_labels: tCount, score: sc });
+            }
+            if (msg.includes("Не все названия правильные") || msg.includes("Not all names are correct") || (labelsDetails && !labelsDetails.success)) {
+                return wtf('s1.labels_fail',
+                    `❌ Не все названия правильные (${mCount}/${tCount})`,
+                    { matched_count: mCount, total_labels: tCount });
+            }
+            return msg;
+        }
+
+        function translateClickCombinedMessage(msgText, detailsObj, isSuccess) {
+            if (!msgText && !detailsObj) return null;
+            const text = String(msgText || "");
+
+            // 1. Labels missing
+            if (/^click_labels_missing\b/i.test(text) || /Введите названия для найденных областей/i.test(text) || /Enter names for the found areas/i.test(text)) {
+                let foundCount = detailsObj && detailsObj.found_count != null ? detailsObj.found_count : null;
+                if (foundCount == null) {
+                    const m = text.match(/\((\d+)\//);
+                    foundCount = m ? m[1] : 0;
+                }
+                let reqCount = detailsObj && detailsObj.required_correct != null ? detailsObj.required_correct : null;
+                if (reqCount == null) {
+                    const m = text.match(/\/(\d+)\s*(?:требуется|required)/i);
+                    reqCount = m ? m[1] : null;
+                }
+                let totalCount = detailsObj && detailsObj.total_targets != null ? detailsObj.total_targets : null;
+                if (totalCount == null) {
+                    const m1 = text.match(/(?:из|of)\s*(\d+)\)/i);
+                    const m2 = text.match(/\/(\d+)\)/);
+                    totalCount = m1 ? m1[1] : (m2 ? m2[1] : null);
+                }
+
+                if (reqCount != null && totalCount != null && reqCount !== totalCount) {
+                    return wtf('s1.click_labels_missing_threshold',
+                        `❌ Введите названия для найденных областей (${foundCount}/${reqCount} требуется из ${totalCount})`,
+                        { found_count: foundCount, required_correct: reqCount, total_count: totalCount });
+                }
+                if (totalCount != null) {
+                    return wtf('s1.click_labels_missing_all',
+                        `❌ Введите названия для найденных областей (${foundCount}/${totalCount})`,
+                        { found_count: foundCount, total_count: totalCount });
+                }
+                return wt('s1.click_labels_missing', "❌ Введите названия для найденных областей");
+            }
+
+            // 2. Combined message
+            const isCombined = /^click_combined/i.test(text) || /Найдено областей:/i.test(text) || /Areas found:/i.test(text);
+            if (isCombined) {
+                const foundMatch = text.match(/(?:Найдено областей:|Areas found:)?\s*(\d+)(?:\/(\d+)\s*(?:требуется\s*\(из\s*(\d+)\)|required\s*\(of\s*(\d+)\)|\/(\d+)))?/i);
+                let foundCount = detailsObj && detailsObj.found_count != null ? detailsObj.found_count : (foundMatch ? foundMatch[1] : 0);
+                let reqCount = detailsObj && detailsObj.required_correct != null ? detailsObj.required_correct : (foundMatch && (foundMatch[2] || foundMatch[4]) ? (foundMatch[2] || foundMatch[4]) : null);
+                let totalCount = detailsObj && detailsObj.total_targets != null ? detailsObj.total_targets : (foundMatch && (foundMatch[3] || foundMatch[5]) ? (foundMatch[3] || foundMatch[5]) : null);
+
+                const labelsObj = detailsObj && detailsObj.labels;
+                const commaSplit = text.split(/,\s*(?:но\s*|but\s*)?/i);
+                const rawLabelsMsg = commaSplit.length > 1 ? commaSplit.slice(1).join(", ") : (labelsObj && labelsObj.message ? labelsObj.message : "");
+                const translatedLabelsMsg = translateLabelsMessage(rawLabelsMsg, labelsObj);
+
+                const success = isSuccess !== undefined ? isSuccess : (text.includes("✅") || !text.includes("❌"));
+                if (success) {
+                    if (reqCount != null && totalCount != null && reqCount !== totalCount) {
+                        return wtf('s1.click_combined_success_threshold',
+                            `✅ Правильно! Найдено областей: ${foundCount}/${reqCount} требуется (из ${totalCount}), ${translatedLabelsMsg}`,
+                            { found_count: foundCount, required_correct: reqCount, total_count: totalCount, labels_message: translatedLabelsMsg });
+                    }
+                    return wtf('s1.click_combined_success',
+                        `✅ Правильно! Найдено областей: ${foundCount}/${totalCount || foundCount}, ${translatedLabelsMsg}`,
+                        { found_count: foundCount, total_count: totalCount || foundCount, labels_message: translatedLabelsMsg });
+                } else {
+                    if (reqCount != null && totalCount != null && reqCount !== totalCount) {
+                        return wtf('s1.click_combined_fail_threshold',
+                            `❌ Найдено областей: ${foundCount}/${reqCount} требуется (из ${totalCount}), но ${translatedLabelsMsg}`,
+                            { found_count: foundCount, required_correct: reqCount, total_count: totalCount, labels_message: translatedLabelsMsg });
+                    }
+                    return wtf('s1.click_combined_fail',
+                        `❌ Найдено областей: ${foundCount}/${totalCount || foundCount}, но ${translatedLabelsMsg}`,
+                        { found_count: foundCount, total_count: totalCount || foundCount, labels_message: translatedLabelsMsg });
+                }
+            }
+            return null;
+        }
+
+        let messageText = result && result.message ? String(result.message) : "";
+        const combinedCandidate = translateClickCombinedMessage(messageText, detailsObj, result ? result.success : undefined);
+        if (combinedCandidate) {
+            messageText = combinedCandidate;
+        } else if (messageText && /^click_fail_(partial|threshold)\b/.test(messageText)) {
             const remainder = messageText.replace(/^click_fail_(partial|threshold)[^\S\r\n]*/, "").trim();
             const foundCount = detailsObj && Number.isFinite(Number(detailsObj.found_count)) ? Number(detailsObj.found_count) : 0;
             const reqCount = detailsObj && Number.isFinite(Number(detailsObj.required_correct))
