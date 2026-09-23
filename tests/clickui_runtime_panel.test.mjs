@@ -1054,6 +1054,63 @@ describe("ClickUI runtime targets panel", () => {
     expect(refPreview?.querySelectorAll("path, circle").length || 0).toBeGreaterThan(0);
   });
 
+  it("keeps review pointers when its reference image is opened full-screen", () => {
+    const task = createClickTaskFixture();
+    task.task_data.content.image_url = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
+    const container = document.getElementById("app");
+
+    dom.window.ClickUI.render(container, task, { runtimeMode: true });
+    dom.window.ClickUI.restoreInput({
+      clicks: [{ x: 15, y: 15 }],
+      action_history: [{ kind: "click" }],
+    });
+    dom.window.ClickUI.applyCheckFeedback({
+      success: false,
+      details: {
+        click_results: [{ target_index: 0, click_success: true, matched_click_idx: 0 }],
+        found_targets: [0],
+      },
+    });
+
+    const zoomButton = container.querySelector('[data-clickui="review-reference-preview-zoom"]');
+    expect(zoomButton).toBeTruthy();
+    zoomButton.click();
+
+    const modalOverlay = document.querySelector('[role="dialog"]');
+    const modalPointers = modalOverlay?.querySelector("svg");
+    expect(modalOverlay?.getAttribute("aria-hidden")).toBe("false");
+    expect(modalPointers?.getAttribute("viewBox")).toBe("0 0 640 360");
+    expect(modalPointers?.querySelectorAll("path, circle").length || 0).toBeGreaterThan(0);
+  });
+
+  it("fades a duplicate user click while inspecting the first click", () => {
+    const task = createClickTaskFixture();
+    const container = document.getElementById("app");
+
+    dom.window.ClickUI.render(container, task, { runtimeMode: true });
+    dom.window.ClickUI.restoreInput({
+      clicks: [{ x: 15, y: 15 }, { x: 16, y: 16 }],
+      action_history: [{ kind: "click" }, { kind: "click" }],
+    });
+    dom.window.ClickUI.applyCheckFeedback({
+      success: true,
+      details: {
+        click_results: [{ target_index: 0, click_success: true, matched_click_idx: 0 }],
+        found_targets: [0],
+      },
+    });
+
+    const markers = Array.from(container.querySelectorAll(".clickui-marker-entry"));
+    const actions = Array.from(container.querySelectorAll('[data-clickui="user-action-row"]'));
+    expect(markers).toHaveLength(2);
+    expect(actions).toHaveLength(2);
+
+    actions[0].dispatchEvent(new dom.window.MouseEvent("mouseenter", { bubbles: true }));
+
+    expect(markers[0].style.opacity).toBe("1");
+    expect(markers[1].style.opacity).toBe("0.08");
+  });
+
   it("renders review comparison for level 2 click tasks in runtime mode", () => {
     // Разбор ответа показывается для всех уровней и в runtime-сессии (намеренно,
     // см. commit 4324339): после проверки пользователь видит свой ответ и эталон.

@@ -1122,14 +1122,14 @@
             let prefix = "";
             if (reqCount != null && totalCount != null && reqCount !== totalCount) {
                 prefix = wtf('s1.click_fail_threshold',
-                    `❌ Вы нашли ${foundCount} из ${reqCount} требуемых аннотаций (всего ${totalCount}). Попробуйте ещё раз!`,
+                    `❌ Вы нашли ${foundCount} из ${reqCount} требуемых аннотаций (всего ${totalCount}). Попробуйте еще раз!`,
                     { found_count: foundCount, required_correct: reqCount, total_count: totalCount });
             } else if (totalCount != null) {
                 prefix = wtf('s1.click_fail_basic',
-                    `❌ Вы нашли ${foundCount} из ${totalCount} аннотаций. Попробуйте ещё раз!`,
+                    `❌ Вы нашли ${foundCount} из ${totalCount} аннотаций. Попробуйте еще раз!`,
                     { found_count: foundCount, total_count: totalCount });
             } else {
-                prefix = wt('s1.click_fail_incomplete', "❌ Ответ неполный. Попробуйте ещё раз!");
+                prefix = wt('s1.click_fail_incomplete', "❌ Ответ неполный. Попробуйте еще раз!");
             }
             messageText = remainder ? `${prefix}\n${remainder}` : prefix;
         } else if (messageText && /^click_fail_basic\b/.test(messageText)) {
@@ -1138,9 +1138,9 @@
             const totalCount = detailsObj && Number.isFinite(Number(detailsObj.total_targets)) ? Number(detailsObj.total_targets) : null;
             const prefix = totalCount != null
                 ? wtf('s1.click_fail_basic',
-                    `❌ Вы нашли ${foundCount} из ${totalCount} аннотаций. Попробуйте ещё раз!`,
+                    `❌ Вы нашли ${foundCount} из ${totalCount} аннотаций. Попробуйте еще раз!`,
                     { found_count: foundCount, total_count: totalCount })
-                : wt('s1.click_fail_wrong', "❌ Ответ неверный. Попробуйте ещё раз!");
+                : wt('s1.click_fail_wrong', "❌ Ответ неверный. Попробуйте еще раз!");
             messageText = remainder ? `${prefix}\n${remainder}` : prefix;
         } else if (messageText && /^click_success_(all|partial_threshold|partial|threshold)\b/.test(messageText)) {
             const foundCount = detailsObj && Number.isFinite(Number(detailsObj.found_count)) ? Number(detailsObj.found_count) : "";

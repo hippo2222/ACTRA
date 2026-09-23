@@ -1870,14 +1870,19 @@
     viewport.style.maxHeight = "80vh";
     viewport.style.touchAction = "none";
     const zoomLayer = _createEl("div", "select-none transition-none will-change-transform", "");
+    zoomLayer.classList.add("relative");
     zoomLayer.style.transformOrigin = "0 0";
     zoomLayer.style.cursor = "zoom-in";
     const img = document.createElement("img");
-    img.className = "max-h-[80vh] w-auto max-w-full object-contain select-none pointer-events-none";
+    img.className = "block max-h-[80vh] w-auto max-w-full object-contain select-none pointer-events-none";
     img.alt = "";
+    const overlaySvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    overlaySvg.setAttribute("class", "pointer-events-none absolute inset-0 h-full w-full");
+    overlaySvg.setAttribute("preserveAspectRatio", "xMidYMid meet");
     const caption = _createEl("figcaption", "text-center text-sm text-text-on-dark opacity-80", "");
 
     zoomLayer.appendChild(img);
+    zoomLayer.appendChild(overlaySvg);
     viewport.appendChild(zoomLayer);
     figure.appendChild(viewport);
     figure.appendChild(caption);
@@ -2006,6 +2011,7 @@
       viewport,
       zoomLayer,
       img,
+      overlaySvg,
       caption,
       scale: 1,
       translateX: 0,
@@ -2020,10 +2026,21 @@
     return state.additionalModal;
   }
 
-  function _openAdditionalModal(url, captionText) {
+  function _openAdditionalModal(url, captionText, overlayOptions) {
     const modal = _ensureAdditionalModal();
     if (!modal || !url) return;
     _resetAdditionalModalTransform(modal);
+    if (modal.overlaySvg) {
+      modal.overlaySvg.innerHTML = "";
+      modal.overlaySvg.removeAttribute("viewBox");
+    }
+    const opts = overlayOptions && typeof overlayOptions === "object" ? overlayOptions : null;
+    if (opts && modal.overlaySvg) {
+      const naturalW = Math.max(1, Number(opts.naturalW) || 1);
+      const naturalH = Math.max(1, Number(opts.naturalH) || 1);
+      modal.overlaySvg.setAttribute("viewBox", `0 0 ${naturalW} ${naturalH}`);
+      if (typeof opts.renderSvg === "function") opts.renderSvg(modal.overlaySvg);
+    }
     modal.img.src = url;
     modal.img.alt = captionText || "";
     modal.caption.textContent = captionText || "";
@@ -2552,11 +2569,13 @@
       const elTargetIdxAttr = el.getAttribute("data-target-index");
       const elTargetIdx = (elTargetIdxAttr !== null && elTargetIdxAttr !== "") ? Number(elTargetIdxAttr) : null;
       const elActionKey = el.getAttribute("data-clickui-action-key");
+      // Separate user actions can map to the same target.  On action hover,
+      // leave only the exact action bright and fade the other click markers.
+      if (actionKey && elActionKey) return elActionKey === actionKey;
       if (targetIndex !== null && targetIndex !== undefined) {
         if (elTargetIdx === targetIndex) return true;
-        if (actionKey && elActionKey === actionKey) return true;
       } else if (actionKey) {
-        if (elActionKey === actionKey) return true;
+        return false;
       }
       return false;
     }
@@ -2657,7 +2676,11 @@
       const icon = _createEl("span", "material-symbols-outlined text-[18px]", "zoom_in");
       zoomBtn.appendChild(icon);
       zoomBtn.addEventListener("click", () => {
-        opts.openImage(imageUrl, opts.title || wt("clickui.review_title", "Разбор ответа"));
+        opts.openImage(imageUrl, opts.title || wt("clickui.review_title", "Разбор ответа"), {
+          naturalW: opts.naturalW,
+          naturalH: opts.naturalH,
+          renderSvg: opts.renderSvg,
+        });
       });
       header.appendChild(zoomBtn);
     }
