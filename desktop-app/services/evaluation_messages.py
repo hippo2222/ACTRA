@@ -36,10 +36,16 @@ MESSAGES = {
     # -------------------------------------------------------------------------
     "draw_no_targets": "Нет эталонных областей",
     "draw_no_polygons": "Сначала нарисуйте контуры",
+    "draw_no_lines": "Теперь нарисуйте штрихи",
     "draw_labels_missing": "Введите названия для всех целей",
     
     "draw_success": "✅ Отлично! Покрытие: {coverage:.1f}% (минимум {threshold}%)",
     "draw_fail": "❌ Нужно улучшить. Покрытие: {coverage:.1f}% (минимум {threshold}%)",
+    "draw_control_success": "✅ Отлично! Контроль: {successes}/{total_targets}.",
+    "draw_control_fail": "❌ Нужно улучшить. Контроль: {successes}/{total_targets}.",
+    "draw_combined_control_success": "✅ Контроль: {successes}/{total_targets}. {labels_message}",
+    "draw_combined_control_fail": "❌ Контроль: {successes}/{total_targets}. {labels_message}",
+    "draw_manual_label_judgement": "В названии цели пропущено 1–2 слова. Решите, считать ли ответ верным.",
     
     # -------------------------------------------------------------------------
     # Labels (General)

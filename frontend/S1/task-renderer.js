@@ -842,35 +842,7 @@
         const referenceTitle = document.getElementById("result-reference-title");
         const referenceCard = document.getElementById("result-reference-card");
 
-        try {
-            const currentTaskType = getCurrentEffectiveTaskType();
-            const subtype = SessionState ? getTaskSubtype(SessionState.currentTask) : null;
-            if (currentTaskType === "click" && subtype === "error_detection") {
-                if (box) {
-                    box.classList.add("hidden");
-                    box.style.minHeight = "0";
-                }
-                if (title) title.textContent = "";
-                if (icon) icon.textContent = "";
-                if (msg) msg.textContent = "";
-                if (details) details.textContent = "";
-                resetExtendedResultBlocks({
-                    keywordsBox,
-                    userAnswerBox,
-                    decisionContext,
-                    decisionActions,
-                    decisionAcceptBtn,
-                    decisionRejectBtn,
-                    referenceWrap,
-                    referenceText,
-                    referenceTitle
-                });
-                if (inner) inner.className = "flex flex-col rounded-lg border border-border-strong bg-surface-2 dark:bg-surface-2 overflow-hidden";
-                return;
-            }
-        } catch (e) {
-            // ignore
-        }
+
 
         if (!result) {
             if (box) box.classList.add("hidden");
@@ -1386,6 +1358,20 @@
             }
         } catch (e) {
             console.warn("[TaskRenderer] Draw/Judgement render error:", e);
+        }
+
+        try {
+            const currentTaskType = getCurrentEffectiveTaskType();
+            const currentTask = SessionState ? SessionState.currentTask : null;
+            const isClickTask = currentTaskType === "click" || isHandledByClickUI(currentTask);
+            if (isClickTask && !pendingUserJudgement) {
+                if (box) {
+                    box.classList.add("hidden");
+                    box.style.minHeight = "0";
+                }
+            }
+        } catch (e) {
+            // ignore
         }
     }
 

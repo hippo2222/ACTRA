@@ -186,16 +186,29 @@ class TestEnhanceDraw:
         result = dm.enhance_task_for_level(self._task(), 1)
         assert result["content"]["mode"] == "draw"
         assert result["content"]["requires_labels"] is False
+        assert result["content"]["requires_drawing"] is True
 
     def test_level2(self, dm):
         result = dm.enhance_task_for_level(self._task(), 2)
         assert result["content"]["mode"] == "draw_and_label"
         assert result["content"]["requires_labels"] is True
+        assert result["content"]["requires_drawing"] is True
+        assert result["content"]["prompt"] == "Outline the area and name it: Draw"
+
+    def test_level2_prompts_multilingual(self, dm):
+        task_ru = {"type": "draw", "content": {"type": "draw", "prompt": "Обведите очаг", "mode": "draw"}}
+        res_ru = dm.enhance_task_for_level(task_ru, 2)
+        assert res_ru["content"]["prompt"] == "Обведите контур и назовите: Обведите очаг"
+
+        task_en = {"type": "draw", "content": {"type": "draw", "prompt": "Outline the indicated areas on the image", "mode": "draw"}}
+        res_en = dm.enhance_task_for_level(task_en, 2)
+        assert res_en["content"]["prompt"] == "Outline the indicated areas on the image and name them"
 
     def test_level3(self, dm):
         result = dm.enhance_task_for_level(self._task(), 3)
         assert result["content"]["mode"] == "draw_multiple_and_explain"
         assert result["content"]["requires_explanation"] is True
+        assert result["content"]["requires_drawing"] is True
 
 
 # ═══════════════════════════════════════════════════════════════════

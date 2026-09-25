@@ -1278,6 +1278,28 @@ def serve_clickui_static_legacy(filename: str) -> Any:
     return _legacy_redirect(f"/ClickUI/{filename}")
 
 
+@static_bp.route("/visual_audit_click_result.html", methods=["GET"])
+def serve_visual_audit_click_result() -> Any:
+    dirs = _get_ui_dirs()
+    FRONTEND_ROOT = dirs.get("FRONTEND_ROOT")
+    if not FRONTEND_ROOT or not FRONTEND_ROOT.exists():
+        return jsonify({"ok": False, "error": "frontend_root_not_found"}), 500
+    resp = send_from_directory(FRONTEND_ROOT, "visual_audit_click_result.html")
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
+@static_bp.route("/heart_anatomy_fixture.js", methods=["GET"])
+def serve_heart_anatomy_fixture() -> Any:
+    dirs = _get_ui_dirs()
+    FRONTEND_ROOT = dirs.get("FRONTEND_ROOT")
+    if not FRONTEND_ROOT or not FRONTEND_ROOT.exists():
+        return jsonify({"ok": False, "error": "frontend_root_not_found"}), 500
+    resp = send_from_directory(FRONTEND_ROOT, "heart_anatomy_fixture.js")
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
 @static_bp.route("/DrawUI/<path:filename>", methods=["GET"])
 def serve_drawui_static(filename: str) -> Any:
     dirs = _get_ui_dirs()

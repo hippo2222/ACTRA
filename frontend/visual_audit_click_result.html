@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light-b">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ACTRA — Visual QA: ClickUI Result Workspace</title>
+  <link rel="stylesheet" href="/assets/fonts.css" />
+  <link rel="stylesheet" href="/assets/lightB-variables.css" />
+  <link rel="stylesheet" href="/assets/lightB-components.css" />
+  <link rel="stylesheet" href="/assets/tailwind.css" />
+  <link rel="stylesheet" href="/assets/animations.css" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+
+  <style>
+    :root {
+      --color-page-s1-progress-cluster-bg: color-mix(in srgb, var(--color-surface-1) 82%, var(--color-bg-secondary));
+      --color-page-s1-task-type-bg: color-mix(in srgb, var(--color-surface-2) 80%, var(--color-surface-1));
+      --color-page-s1-meta-copy: color-mix(in srgb, var(--color-text-secondary) 90%, var(--color-text-main));
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      background: var(--color-bg-main, #f8fafc);
+      color: var(--color-text-main, #0f172a);
+      font-family: var(--font-family-base, system-ui, -apple-system, sans-serif);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .material-symbols-outlined {
+      font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+    }
+    /* S1 TopNavBar styling */
+    .s1-shell-row {
+      padding: 0.75rem 1.25rem;
+      border-bottom: 1px solid var(--color-border-subtle, #e2e8f0);
+      background: var(--color-surface-1, #ffffff);
+    }
+    .s1-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    /* Test runner controls toolbar */
+    #test-control-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.5rem 1.25rem;
+      background: #1e293b;
+      color: #f1f5f9;
+      font-size: 0.82rem;
+      flex-wrap: wrap;
+      z-index: 100;
+    }
+    #test-control-bar button {
+      padding: 0.25rem 0.65rem;
+      border-radius: 4px;
+      border: 1px solid #475569;
+      background: #334155;
+      color: #f8fafc;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background 0.15s;
+    }
+    #test-control-bar button:hover {
+      background: #475569;
+    }
+    #test-control-bar button.active {
+      background: #3b82f6;
+      border-color: #60a5fa;
+    }
+  </style>
+</head>
+<body>
+  <!-- Test Runner Navigation -->
+  <div id="test-control-bar">
+    <span class="font-bold text-red-400">HeartAnatomy (Real Task):</span>
+    <button id="btn-case-heart_l1" onclick="switchCase('heart_l1')">❤️ L1 (Clicks)</button>
+    <button id="btn-case-heart_l2" onclick="switchCase('heart_l2')">❤️ L2 (Label Diff)</button>
+    <button id="btn-case-heart_l3" onclick="switchCase('heart_l3')">❤️ L3 (Contours)</button>
+    <span class="border-l border-slate-600 pl-2 font-bold text-slate-400">ОГК Стенд:</span>
+    <button id="btn-case-l1" onclick="switchCase('l1')">L1</button>
+    <button id="btn-case-l2" onclick="switchCase('l2')">L2</button>
+    <button id="btn-case-l3" onclick="switchCase('l3')">L3</button>
+    <button id="btn-case-all" onclick="switchCase('all')">100%</button>
+    <span class="border-l border-slate-600 pl-2">Тема:</span>
+    <button onclick="toggleTheme('light-b')">Light</button>
+    <button onclick="toggleTheme('dark-b')">Dark</button>
+    <button onclick="toggleTheme('neutral-b')">Neutral</button>
+  </div>
+
+  <!-- S1 Header (Production Shell) -->
+  <header class="s1-shell-row">
+    <div class="s1-toolbar">
+      <div class="flex items-center gap-3">
+        <button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border-subtle bg-surface-2 text-sm text-text-secondary hover:text-text-main transition-colors">
+          <span>←</span>
+          <span>К списку</span>
+        </button>
+        <div>
+          <h1 id="task-header-title" class="text-base font-bold text-text-main">Задание 1: Компьютерная томография органов грудной клетки</h1>
+          <p class="text-xs text-text-secondary">Уровень сложности: 1 • Заданий в комплексе: 5</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-4">
+        <!-- Progress bar -->
+        <div class="w-48 hidden sm:block">
+          <div class="flex justify-between text-xs text-text-secondary mb-1">
+            <span>Прогресс: 1 / 5</span>
+            <span>20%</span>
+          </div>
+          <div class="h-1.5 w-full bg-bg-secondary rounded-full overflow-hidden">
+            <div class="h-full bg-primary rounded-full" style="width: 20%"></div>
+          </div>
+        </div>
+
+        <!-- The ONLY Primary CTA on the entire page according to AGENTS.md Rule 3 -->
+        <button id="next-task-btn" class="btn--primary flex h-9 items-center justify-center rounded-lg bg-primary px-5 text-sm font-bold text-primary-fg shadow-sm hover:opacity-95 active:scale-[0.98] transition-all">
+          <span>Следующее</span>
+          <span class="ml-1.5">→</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Work Area -->
+  <main class="flex-grow p-4 lg:p-6 flex flex-col min-w-0">
+    <div id="task-content" class="w-full flex-grow flex flex-col min-w-0">
+      <!-- ClickUI will render here -->
+    </div>
+  </main>
+
+  <script src="/assets/ThemeManager.js"></script>
+  <script src="/ClickUI/ClickUI.web.js"></script>
+  <script src="/heart_anatomy_fixture.js"></script>
+
+  <script>
+    // Mock TaskMetadataPanel
+    window.TaskMetadataPanel = {
+      create() {
+        return {
+          rootEl: document.createElement("div"),
+          api: {
+            collect: () => null,
+            setLocked: () => {},
+            updateAnnotationTotals: () => {},
+          },
+        };
+      },
+    };
+
+    // Load ru.json localization
+    let locales = {};
+    window.i18n = {
+      t(key) {
+        return locales[key] || key;
+      },
+      wt(key, fallback, params) {
+        let text = locales[key] || fallback;
+        if (params && typeof params === "object") {
+          for (const [k, v] of Object.entries(params)) {
+            text = text.replace(new RegExp(`{${k}}`, "g"), v);
+          }
+        }
+        return text;
+      }
+    };
+
+    function toggleTheme(themeName) {
+      document.documentElement.setAttribute("data-theme", themeName);
+      if (themeName === "dark-b") {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
+    }
+
+    // High contrast test background image (SVG Data URL)
+    const testImageSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+      <defs>
+        <radialGradient id="lungGrad" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#334155" />
+          <stop offset="100%" stop-color="#0f172a" />
+        </radialGradient>
+      </defs>
+      <rect width="800" height="600" fill="#090d16"/>
+      <!-- Thorax ribcage outline -->
+      <ellipse cx="400" cy="300" rx="350" ry="260" fill="none" stroke="#475569" stroke-width="8"/>
+      <!-- Spine -->
+      <rect x="375" y="40" width="50" height="100" rx="10" fill="#64748b"/>
+      <rect x="375" y="460" width="50" height="100" rx="10" fill="#64748b"/>
+      <!-- Right Lung Area -->
+      <path d="M 140 180 C 140 100, 320 100, 340 220 C 350 320, 330 460, 260 480 C 170 500, 130 380, 140 180 Z" fill="url(#lungGrad)" stroke="#38bdf8" stroke-width="2"/>
+      <text x="210" y="300" fill="#94a3b8" font-family="sans-serif" font-size="16">Правое легкое</text>
+      <!-- Left Lung Area -->
+      <path d="M 660 180 C 660 100, 480 100, 460 220 C 450 320, 470 460, 540 480 C 630 500, 670 380, 660 180 Z" fill="url(#lungGrad)" stroke="#38bdf8" stroke-width="2"/>
+      <text x="530" y="300" fill="#94a3b8" font-family="sans-serif" font-size="16">Левое легкое</text>
+      <!-- Heart & Mediastinum -->
+      <path d="M 360 250 C 370 210, 430 210, 440 250 C 460 330, 440 410, 400 430 C 360 410, 340 330, 360 250 Z" fill="#7f1d1d" stroke="#f43f5e" stroke-width="2"/>
+      <text x="380" y="330" fill="#fecdd3" font-family="sans-serif" font-size="14">Сердце</text>
+      <!-- Trachea -->
+      <rect x="388" y="100" width="24" height="90" rx="6" fill="#1e293b" stroke="#cbd5e1" stroke-width="2"/>
+      <text x="375" y="85" fill="#e2e8f0" font-family="sans-serif" font-size="14">Трахея</text>
+    </svg>`;
+    const testImageUrl = "data:image/svg+xml;utf8," + encodeURIComponent(testImageSvg);
+
+    const fixtures = {
+      heart_l1: {
+        task: {
+          task_type: "click",
+          difficulty: 1,
+          task_data: {
+            task_type: "click",
+            _difficulty_level: 1,
+            content: {
+              prompt: "Укажите на схеме: Левый желудочек, Правый желудочек, Легочный ствол, Левая общая сонная артерия",
+              image_url: (window.HEART_ANATOMY_DATA && window.HEART_ANATOMY_DATA.imageUrl) || testImageUrl,
+              mode: "click",
+            },
+          },
+          answer_key: {
+            targets: (window.HEART_ANATOMY_DATA && window.HEART_ANATOMY_DATA.targets) || [],
+          },
+        },
+        userActions(clickUi) {
+          clickUi._injectClickForTest(540.2, 535.4);
+          clickUi._injectClickForTest(425.2, 569.0);
+          clickUi._injectClickForTest(510.1, 405.7);
+          clickUi._injectClickForTest(545.0, 540.0);
+          clickUi._injectClickForTest(200.0, 200.0);
+        },
+        result: {
+          success: false,
+          details: {
+            found_targets: [10, 12, 2],
+            target_matches: { "10": 0, "12": 1, "2": 2 },
+            duplicate_clicks: [3],
+            off_target_clicks: [4],
+            attempt_count: 5,
+            max_attempts: 5,
+          },
+        },
+      },
+      heart_l2: {
+        task: {
+          task_type: "click",
+          difficulty: 2,
+          task_data: {
+            task_type: "click",
+            _difficulty_level: 2,
+            content: {
+              prompt: "Найдите анатомические структуры сердца и введите их названия",
+              image_url: (window.HEART_ANATOMY_DATA && window.HEART_ANATOMY_DATA.imageUrl) || testImageUrl,
+              mode: "click_and_label",
+              requires_labels: true,
+            },
+          },
+          answer_key: {
+            targets: (window.HEART_ANATOMY_DATA && window.HEART_ANATOMY_DATA.targets) || [],
+          },
+        },
+        userActions(clickUi) {
+          clickUi._injectClickForTest(540.2, 535.4, "Левый желудочек");
+          clickUi._injectClickForTest(425.2, 569.0, "Правый желудочек");
+          clickUi._injectClickForTest(454.5, 276.8, "Плечеголовной ствол");
+          clickUi._injectClickForTest(510.1, 405.7, "Легочный ствол");
+          clickUi._injectClickForTest(557.4, 638.8, "Верхушка сердца");
+        },
+        result: {
+          success: false,
+          details: {
+            found_targets: [0, 2, 10, 11, 12],
+            targets_info: [
+              { index: 0, matched_click_idx: 2, found: true },
+              { index: 2, matched_click_idx: 3, found: true },
+              { index: 10, matched_click_idx: 0, found: true },
+              { index: 11, matched_click_idx: 4, found: true },
+              { index: 12, matched_click_idx: 1, found: true },
+            ],
+            target_matches: { "0": 2, "2": 3, "10": 0, "11": 4, "12": 1 },
+            labels: {
+              matched_labels: [
+                [1, "легочный ствол", "Pulmonary trunk"],
+                [2, "левый желудочек", "Left ventricle"],
+                [3, "верхушка сердца", "Top of the heart"],
+                [4, "правый желудочек", "Right ventricle"],
+              ],
+              unmatched_labels: [
+                [0, "плечеголовной ствол", "Left common carotid artery"],
+              ],
+            },
+            unmatched_details: [
+              { target_idx: 0, target_label: "Left common carotid artery", user_label: "плечеголовной ствол", click_idx: 2 },
+            ],
+            attempt_count: 5,
+            max_attempts: 5,
+          },
+        },
+      },
+      heart_l3: {
+        task: {
+          task_type: "draw",
+          difficulty: 3,
+          task_data: {
+            task_type: "draw",
+            _difficulty_level: 3,
+            content: {
+              prompt: "Обведите контуры желудочков и магистральных сосудов сердца",
+              image_url: (window.HEART_ANATOMY_DATA && window.HEART_ANATOMY_DATA.imageUrl) || testImageUrl,
+              mode: "draw",
+            },
+          },
+          answer_key: {
+            targets: (window.HEART_ANATOMY_DATA && window.HEART_ANATOMY_DATA.targets) || [],
+          },
+        },
+        userActions(clickUi) {
+          clickUi._injectPolygonForTest([
+            [488, 518], [493, 548], [503, 565], [525, 588], [568, 610],
+            [578, 593], [582, 561], [580, 520], [550, 502], [512, 518]
+          ]);
+          clickUi._injectPolygonForTest([
+            [422, 560], [405, 570], [380, 595], [405, 618], [435, 626], [455, 630]
+          ]);
+          clickUi._injectPolygonForTest([
+            [576, 340], [530, 345], [485, 370], [450, 390], [445, 405],
+            [485, 475], [510, 435], [570, 400], [595, 375]
+          ]);
+        },
+        result: {
+          success: false,
+          details: {
+            found_targets: [10, 2],
+            polygon_results: [
+              { target_index: 10, polygon_success: true, coverage: 89, threshold: 75, matched_polygon_idx: 0 },
+              { target_index: 12, polygon_success: false, coverage: 46, threshold: 75, matched_polygon_idx: 1 },
+              { target_index: 2, polygon_success: true, coverage: 93, threshold: 75, matched_polygon_idx: 2 },
+            ],
+            attempt_count: 3,
+            max_attempts: 3,
+          },
+        },
+      },
+      l1: {
+        task: {
+          task_type: "click",
+          difficulty: 1,
+          task_data: {
+            task_type: "click",
+            _difficulty_level: 1,
+            content: {
+              prompt: "Укажите на томограмме: Правое легкое, Трахею и Сердце",
+              image_url: testImageUrl,
+              mode: "click",
+            },
+          },
+          answer_key: {
+            targets: [
+              {
+                label: "Правое легкое",
+                shape: "polygon",
+                points: [[140, 180], [320, 120], [340, 300], [240, 480], [140, 380]],
+              },
+              {
+                label: "Трахея",
+                shape: "polygon",
+                points: [[388, 100], [412, 100], [412, 190], [388, 190]],
+              },
+              {
+                label: "Сердце",
+                shape: "polygon",
+                points: [[360, 250], [440, 250], [440, 410], [360, 410]],
+              },
+            ],
+          },
+        },
+        userActions(clickUi) {
+          // Click 1: in Right Lung (hit)
+          clickUi._injectClickForTest(230, 280);
+          // Click 2: duplicate in Right Lung
+          clickUi._injectClickForTest(250, 310);
+          // Click 3: off target in bone/spine
+          clickUi._injectClickForTest(400, 500);
+        },
+        result: {
+          success: false,
+          details: {
+            found_targets: [0], // Right lung found, Trachea skipped, Heart skipped
+            attempt_count: 3,
+            max_attempts: 3,
+          },
+        },
+      },
+      l2: {
+        task: {
+          task_type: "click",
+          difficulty: 2,
+          task_data: {
+            task_type: "click",
+            _difficulty_level: 2,
+            content: {
+              prompt: "Найдите анатомические структуры и введите их названия",
+              image_url: testImageUrl,
+              mode: "click_and_label",
+              requires_labels: true,
+            },
+          },
+          answer_key: {
+            targets: [
+              {
+                label: "Правое легкое",
+                shape: "polygon",
+                points: [[140, 180], [320, 120], [340, 300], [240, 480], [140, 380]],
+              },
+              {
+                label: "Трахея",
+                shape: "polygon",
+                points: [[388, 100], [412, 100], [412, 190], [388, 190]],
+              },
+            ],
+          },
+        },
+        userActions(clickUi) {
+          clickUi._injectClickForTest(230, 280, "Правое легкое");
+          clickUi._injectClickForTest(400, 140, "Пищевод"); // Wrong label for Trachea!
+        },
+        result: {
+          success: false,
+          details: {
+            found_targets: [0, 1],
+            labels: {
+              matched_labels: [[0, "правое легкое", "Правое легкое"]],
+              unmatched_labels: [[1, "пищевод", "Трахея"]],
+            },
+          },
+        },
+      },
+      l3: {
+        task: {
+          task_type: "draw",
+          difficulty: 3,
+          task_data: {
+            task_type: "draw",
+            _difficulty_level: 3,
+            content: {
+              prompt: "Обведите точный контур сердца и левого легкого",
+              image_url: testImageUrl,
+              mode: "draw",
+            },
+          },
+          answer_key: {
+            targets: [
+              {
+                label: "Сердце",
+                shape: "polygon",
+                points: [[360, 250], [440, 250], [420, 410], [380, 410]],
+              },
+              {
+                label: "Левое легкое",
+                shape: "polygon",
+                points: [[660, 180], [480, 120], [460, 300], [540, 480], [660, 380]],
+              },
+            ],
+          },
+        },
+        userActions(clickUi) {
+          // Injected user drawn polygons
+          clickUi._injectPolygonForTest([[365, 255], [435, 255], [415, 405], [385, 405]]);
+          clickUi._injectPolygonForTest([[500, 200], [580, 200], [580, 300], [500, 300]]);
+        },
+        result: {
+          success: false,
+          details: {
+            found_targets: [0],
+            polygon_results: [
+              { target_index: 0, polygon_success: true, coverage: 91, threshold: 75 },
+              { target_index: 1, polygon_success: false, coverage: 42, threshold: 70 },
+            ],
+          },
+        },
+      },
+      all: {
+        task: {
+          task_type: "click",
+          difficulty: 1,
+          task_data: {
+            task_type: "click",
+            _difficulty_level: 1,
+            content: {
+              prompt: "Найдите структуры: Трахея и Сердце",
+              image_url: testImageUrl,
+              mode: "click",
+            },
+          },
+          answer_key: {
+            targets: [
+              {
+                label: "Трахея",
+                shape: "polygon",
+                points: [[388, 100], [412, 100], [412, 190], [388, 190]],
+              },
+              {
+                label: "Сердце",
+                shape: "polygon",
+                points: [[360, 250], [440, 250], [440, 410], [360, 410]],
+              },
+            ],
+          },
+        },
+        userActions(clickUi) {
+          clickUi._injectClickForTest(400, 140);
+          clickUi._injectClickForTest(400, 330);
+        },
+        result: {
+          success: true,
+          details: {
+            found_targets: [0, 1],
+          },
+        },
+      },
+    };
+
+    let _harnessClicks = [];
+    let _harnessLabels = [];
+    let _harnessPolys = [];
+
+    // Helper inject methods on ClickUI if not exposed
+    function setupHarnessHelpers() {
+      _harnessClicks = [];
+      _harnessLabels = [];
+      _harnessPolys = [];
+
+      ClickUI._injectClickForTest = function (x, y, label) {
+        if (typeof ClickUI.restoreInput === "function") {
+          _harnessClicks.push({ x, y });
+          if (label !== undefined) {
+            _harnessLabels.push(String(label));
+          }
+          ClickUI.restoreInput({
+            clicks: _harnessClicks,
+            labels_clicks: _harnessLabels,
+          });
+        }
+      };
+
+      ClickUI._injectPolygonForTest = function (points) {
+        if (typeof ClickUI.restoreInput === "function") {
+          _harnessPolys.push({ points });
+          ClickUI.restoreInput({
+            polygons: _harnessPolys,
+          });
+        }
+      };
+    }
+
+    async function switchCase(caseKey) {
+      // Highlight button
+      document.querySelectorAll("#test-control-bar button").forEach(b => b.classList.remove("active"));
+      const activeBtn = document.getElementById("btn-case-" + caseKey);
+      if (activeBtn) activeBtn.classList.add("active");
+
+      const fixture = fixtures[caseKey] || fixtures.l1;
+      const container = document.getElementById("task-content");
+      container.innerHTML = "";
+
+      setupHarnessHelpers();
+
+      // 1. Render ClickUI
+      ClickUI.render(container, fixture.task, { runtimeMode: true });
+
+      // 2. Perform actions
+      if (typeof fixture.userActions === "function") {
+        fixture.userActions(ClickUI);
+      }
+
+      // 3. Apply Check Feedback
+      ClickUI.applyCheckFeedback(fixture.result);
+
+      // Notify test harness ready
+      document.body.setAttribute("data-harness-ready", caseKey);
+    }
+
+    // Initialize on load
+    window.addEventListener("DOMContentLoaded", async () => {
+      try {
+        const res = await fetch("/assets/locales/ru.json");
+        locales = await res.json();
+      } catch (e) {
+        console.warn("Locales fetch failed, using fallback strings", e);
+      }
+
+      if (document.fonts && document.fonts.ready) {
+        try {
+          await document.fonts.ready;
+        } catch (e) {}
+      }
+
+      const params = new URLSearchParams(window.location.search);
+      const caseParam = params.get("case") || "heart_l1";
+      const themeParam = params.get("theme") || "light-b";
+      toggleTheme(themeParam);
+      await switchCase(caseParam);
+    });
+  </script>
+</body>
+</html>

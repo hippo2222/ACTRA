@@ -250,7 +250,8 @@ class TestDrawEdgeCasesIntegration:
                 [[200, 0], [300, 0], [300, 100], [200, 100]],  # Регион 2
                 [[400, 0], [500, 0], [500, 100], [400, 100]]   # Регион 3 - не покрыт
             ],
-            "success_threshold": 2  # Требуется 2 из 3
+            "success_threshold": 2,  # Требуется 2 из 3
+            "coverage_threshold": 40,
         }
         
         result = evaluator.evaluate(ui_payload, reference_data)
@@ -258,6 +259,7 @@ class TestDrawEdgeCasesIntegration:
         # Должны пройти, т.к. 2+ успешных из требуемых 2
         assert result["details"]["total_targets"] == 3
         assert result["details"]["required_correct"] == 2
+        assert result["details"]["found_targets"] == [0, 1]
     
     def test_empty_stroke_points_handled(self):
         """

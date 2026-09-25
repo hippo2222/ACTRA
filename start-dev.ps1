@@ -57,5 +57,6 @@ Write-Host "🚀 Запускаем ACTRA сервер на http://127.0.0.1:800
 [System.Environment]::SetEnvironmentVariable("ACTRA_S3_ACCESS_KEY", $s3Access, "Process")
 [System.Environment]::SetEnvironmentVariable("ACTRA_S3_SECRET_KEY", $s3Secret, "Process")
 [System.Environment]::SetEnvironmentVariable("ACTRA_SECRET_KEY", $appSecret, "Process")
+[System.Environment]::SetEnvironmentVariable("ACTRA_SESSION_COOKIE_SECURE", "0", "Process")
 
 .venv\Scripts\python desktop-app/server.py

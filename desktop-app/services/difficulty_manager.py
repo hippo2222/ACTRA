@@ -462,21 +462,33 @@ class DifficultyManager:
             content["mode"] = "draw"
             content["requires_labels"] = False
             content["requires_explanation"] = False
-            content["requires_drawing"] = False
+            content["requires_drawing"] = True
         elif level == 2:
             content["mode"] = "draw_and_label"
             content["requires_labels"] = True
             content["requires_drawing"] = True
             content["requires_explanation"] = False
             original_prompt = content.get("prompt", "Обведите контур")
-            content["prompt"] = f"Обведите контур и назовите: {original_prompt}"
+            if original_prompt == "Outline the indicated areas on the image":
+                content["prompt"] = "Outline the indicated areas on the image and name them"
+            elif original_prompt == "Обведіть вказані області на зображенні":
+                content["prompt"] = "Обведіть вказані області на зображенні та назвіть їх"
+            elif any(ch in original_prompt for ch in "абвгдеёжзийклмнопрстуфхцчшщъыьэюя"):
+                content["prompt"] = f"Обведите контур и назовите: {original_prompt}"
+            else:
+                content["prompt"] = f"Outline the area and name it: {original_prompt}"
         elif level >= 3:
             content["mode"] = "draw_multiple_and_explain"
             content["requires_labels"] = True
             content["requires_explanation"] = True
             content["requires_drawing"] = True
             original_prompt = content.get("prompt", "Обведите контур")
-            content["prompt"] = f"Обведите несколько связанных структур и опишите связь между ними: {original_prompt}"
+            if any(ch in original_prompt for ch in "абвгдеёжзийклмнопрстуфхцчшщъыьэюя"):
+                content["prompt"] = f"Обведите несколько связанных структур и опишите связь между ними: {original_prompt}"
+            elif any(ch in original_prompt for ch in "іїєґ"):
+                content["prompt"] = f"Обведіть кілька пов'язаних структур та опишіть зв'язок між ними: {original_prompt}"
+            else:
+                content["prompt"] = f"Outline multiple related structures and describe the relationship between them: {original_prompt}"
 
         task_data["content"] = content
         return task_data

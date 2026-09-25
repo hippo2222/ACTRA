@@ -53,14 +53,16 @@ class DrawTaskEvaluator(BaseTaskEvaluator):
         # Вычисляем покрытие для каждого полигона
         coverage_results = []
         successful_targets = 0
+        found_targets = []
         
-        for polygon_points in reference_polygons:
+        for idx, polygon_points in enumerate(reference_polygons):
             coverage = self.calculate_polygon_coverage(polygon_points, user_drawing, brush_radius)
             coverage_results.append(coverage)
             
             # FIX: Используем настраиваемый порог вместо hardcoded 75%
             if coverage >= coverage_threshold:
                 successful_targets += 1
+                found_targets.append(idx)
         
         # Оценка с учетом порога
         success = successful_targets >= required_correct
@@ -76,6 +78,7 @@ class DrawTaskEvaluator(BaseTaskEvaluator):
             "details": {
                 "coverage": average_coverage,
                 "successful_targets": successful_targets,
+                "found_targets": found_targets,
                 "required_correct": required_correct,
                 "total_targets": total_targets,
                 "threshold_mode": success_threshold is not None,

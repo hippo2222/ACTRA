@@ -89,6 +89,9 @@
     reviewComparisonEl: null,
     runtimeMode: false,
     globalHoveredInfo: null,
+    sideColumnEl: null,
+    registryFilter: "all",
+    workspaceI18nRefs: null,
     _i18nListener: null,
   };
 
@@ -633,6 +636,51 @@
         threshold: result.threshold,
       });
     });
+
+    if (details && details.target_matches && typeof details.target_matches === "object") {
+      Object.entries(details.target_matches).forEach(([tIdxStr, cIdx]) => {
+        const tIdx = Number(tIdxStr);
+        const cIdxNum = Number(cIdx);
+        if (Number.isInteger(tIdx) && Number.isInteger(cIdxNum)) {
+          usedTargetIndexes.add(tIdx);
+          if (!hasAssignment("click", cIdxNum) || !map[_getActionKey("click", cIdxNum)].success) {
+            assign("click", cIdxNum, {
+              targetIndex: tIdx,
+              success: true,
+            });
+          }
+        }
+      });
+    }
+
+    if (Array.isArray(details && details.duplicate_clicks)) {
+      details.duplicate_clicks.forEach((cIdx) => {
+        if (typeof cIdx === "number") {
+          let dupTarget = null;
+          if (Array.isArray(state.clicks) && state.clicks[cIdx]) {
+            const h = _checkClickHit(state.clicks[cIdx].x, state.clicks[cIdx].y);
+            if (h && h.hit) dupTarget = h.targetIndex;
+          }
+          assign("click", cIdx, {
+            targetIndex: dupTarget,
+            success: false,
+            duplicate: true,
+          });
+        }
+      });
+    }
+
+    if (Array.isArray(details && details.off_target_clicks)) {
+      details.off_target_clicks.forEach((cIdx) => {
+        if (typeof cIdx === "number") {
+          assign("click", cIdx, {
+            targetIndex: null,
+            success: false,
+            offTarget: true,
+          });
+        }
+      });
+    }
 
     const foundTargets = _normalizeFoundTargetsSet(
       (Array.isArray(details && details.found_targets) && details.found_targets) ||
@@ -2259,6 +2307,9 @@
 
   function _requiresLabels() {
     const taskDto = state.taskDto;
+    const iteration =
+      taskDto && Number.isFinite(Number(taskDto.iteration)) ? Number(taskDto.iteration) : null;
+    if (iteration === 2) return true;
     const explicit =
       (taskDto && taskDto.task_data && taskDto.task_data.content
         ? taskDto.task_data.content.requires_labels
@@ -2266,12 +2317,21 @@
       (taskDto && taskDto.task_data ? taskDto.task_data.requires_labels : null) ??
       (taskDto && taskDto.content ? taskDto.content.requires_labels : null);
     if (explicit === true) return true;
+    if (explicit === false) return false;
+    const taskType = _getRawTaskType(taskDto);
+    if (taskType === "draw") return false;
     const difficulty = _getDifficultyLevel(taskDto);
-    const iteration =
-      taskDto && Number.isFinite(Number(taskDto.iteration)) ? Number(taskDto.iteration) : null;
-    const inferredLevel = Math.max(Number(difficulty) || 0, Number(iteration) || 0, 1);
-    if (inferredLevel >= 2) return true;
-    return explicit === false ? false : false;
+    const inferredLevel = Math.max(Number(difficulty) || 0, 1);
+    if (inferredLevel === 2) return true;
+    return false;
+  }
+
+  function _hasAnyUserLabels() {
+    return Boolean(
+      (Array.isArray(state.labelsClicks) && state.labelsClicks.some((l) => typeof l === "string" && l.trim().length > 0)) ||
+      (Array.isArray(state.labelsPolygons) && state.labelsPolygons.some((l) => typeof l === "string" && l.trim().length > 0)) ||
+      (Array.isArray(state.labelsLines) && state.labelsLines.some((l) => typeof l === "string" && l.trim().length > 0))
+    );
   }
 
   function _hasAnyUserMarks() {
@@ -2346,17 +2406,92 @@
   }
 
   function _getReviewCanvasSize() {
-    const width =
-      Number(state.img && (state.img.naturalWidth || state.img.width)) ||
-      Number((state.taskDto && state.taskDto.image_width) || 0) ||
-      640;
-    const height =
-      Number(state.img && (state.img.naturalHeight || state.img.height)) ||
-      Number((state.taskDto && state.taskDto.image_height) || 0) ||
-      360;
+    if (state.img && (state.img.naturalWidth > 0 || state.img.width > 0)) {
+      const w = Number(state.img.naturalWidth || state.img.width);
+      const h = Number(state.img.naturalHeight || state.img.height);
+      if (w > 0 && h > 0) {
+        return {
+          width: Math.max(1, w),
+          height: Math.max(1, h),
+        };
+      }
+    }
+
+    const td = (state.taskDto && state.taskDto.task_data) || {};
+    const content = td.content || (state.taskDto && state.taskDto.content) || {};
+    const metaWidth = Number(
+      (state.taskDto && state.taskDto.image_width) ||
+      td.image_width ||
+      content.image_width ||
+      (td.dimensions && td.dimensions.width) ||
+      (content.dimensions && content.dimensions.width) ||
+      0
+    );
+    const metaHeight = Number(
+      (state.taskDto && state.taskDto.image_height) ||
+      td.image_height ||
+      content.image_height ||
+      (td.dimensions && td.dimensions.height) ||
+      (content.dimensions && content.dimensions.height) ||
+      0
+    );
+    if (metaWidth > 0 && metaHeight > 0) {
+      return {
+        width: Math.max(1, metaWidth),
+        height: Math.max(1, metaHeight),
+      };
+    }
+
+    let maxFoundX = 0;
+    let maxFoundY = 0;
+    const checkPt = (x, y) => {
+      const nx = Number(x);
+      const ny = Number(y);
+      if (Number.isFinite(nx) && nx > maxFoundX) maxFoundX = nx;
+      if (Number.isFinite(ny) && ny > maxFoundY) maxFoundY = ny;
+    };
+    const targets = _getTargets(state.taskDto);
+    for (const t of targets) {
+      if (Array.isArray(t.points)) {
+        for (const p of t.points) {
+          const xy = _normalizeXY(p);
+          if (xy) checkPt(xy[0], xy[1]);
+        }
+      }
+      if (Array.isArray(t.point)) {
+        checkPt(t.point[0], t.point[1]);
+      }
+    }
+    for (const clk of (state.clicks || [])) {
+      if (clk) checkPt(clk.x, clk.y);
+    }
+    for (const poly of (state.polygons || [])) {
+      if (poly && Array.isArray(poly.points)) {
+        for (const p of poly.points) {
+          const xy = _normalizeXY(p);
+          if (xy) checkPt(xy[0], xy[1]);
+        }
+      }
+    }
+    for (const line of (state.lines || [])) {
+      if (line && Array.isArray(line.points)) {
+        for (const p of line.points) {
+          const xy = _normalizeXY(p);
+          if (xy) checkPt(xy[0], xy[1]);
+        }
+      }
+    }
+
+    if (maxFoundX > 1.5 || maxFoundY > 1.5) {
+      return {
+        width: Math.max(640, Math.ceil(maxFoundX * 1.05)),
+        height: Math.max(360, Math.ceil(maxFoundY * 1.05)),
+      };
+    }
+
     return {
-      width: Math.max(1, width),
-      height: Math.max(1, height),
+      width: 640,
+      height: 360,
     };
   }
 
@@ -2402,8 +2537,62 @@
       path.setAttribute("data-target-index", String(opts.targetIndex));
       path.style.pointerEvents = "auto";
     }
+    if (opts.actionKey) {
+      path.setAttribute("data-clickui-action-key", String(opts.actionKey));
+      path.style.pointerEvents = "auto";
+    }
+    if (opts.reviewKey) {
+      path.setAttribute("data-review-key", String(opts.reviewKey));
+    }
     svg.appendChild(path);
-    return scaled;
+
+    if (opts.coverageBadge && scaled.length >= 2) {
+      let sumX = 0, sumY = 0;
+      for (const p of scaled) { sumX += p.x; sumY += p.y; }
+      const cx = sumX / scaled.length;
+      const cy = sumY / scaled.length;
+
+      const badgeG = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      badgeG.setAttribute("class", "clickui-coverage-badge clickui-marker-badge");
+      if (opts.targetIndex != null) badgeG.setAttribute("data-target-index", String(opts.targetIndex));
+      if (opts.actionKey) badgeG.setAttribute("data-clickui-action-key", String(opts.actionKey));
+      if (opts.reviewKey) badgeG.setAttribute("data-review-key", String(opts.reviewKey));
+      badgeG.style.pointerEvents = "auto";
+
+      const covVal = Math.round(Number(opts.coverageBadge.coverage) || 0);
+      const isSuccess = opts.coverageBadge.success === true;
+      const badgeW = 38;
+      const badgeH = 17;
+      const rx = cx - badgeW / 2;
+      const ry = cy - badgeH / 2;
+
+      const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      rect.setAttribute("x", String(rx));
+      rect.setAttribute("y", String(ry));
+      rect.setAttribute("width", String(badgeW));
+      rect.setAttribute("height", String(badgeH));
+      rect.setAttribute("rx", "5");
+      rect.setAttribute("fill", isSuccess ? "#10b981" : "#f43f5e");
+      rect.setAttribute("stroke", "#ffffff");
+      rect.setAttribute("stroke-width", "1.5");
+      badgeG.appendChild(rect);
+
+      const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      text.setAttribute("x", String(cx));
+      text.setAttribute("y", String(cy + 0.5));
+      text.setAttribute("fill", "#ffffff");
+      text.setAttribute("font-size", "10");
+      text.setAttribute("font-family", "Inter, system-ui, sans-serif");
+      text.setAttribute("font-weight", "700");
+      text.setAttribute("text-anchor", "middle");
+      text.setAttribute("dominant-baseline", "middle");
+      text.textContent = `${covVal}%`;
+      badgeG.appendChild(text);
+
+      svg.appendChild(badgeG);
+    }
+
+    return path;
   }
 
   function _appendReviewMarker(svg, point, options) {
@@ -2416,6 +2605,10 @@
     const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
     if (opts.targetIndex != null) {
       g.setAttribute("data-target-index", String(opts.targetIndex));
+      g.style.pointerEvents = "auto";
+    }
+    if (opts.actionKey) {
+      g.setAttribute("data-clickui-action-key", String(opts.actionKey));
       g.style.pointerEvents = "auto";
     }
 
@@ -2443,8 +2636,43 @@
       g.appendChild(text);
     }
 
+    if (opts.reviewKey) {
+      g.setAttribute("data-review-key", String(opts.reviewKey));
+    }
+
+    if (opts.badge) {
+      const br = Number(opts.badge.radius || 7);
+      const bx = scaled.x + (opts.radius || 14) * 0.72;
+      const by = scaled.y - (opts.radius || 14) * 0.72;
+      const badgeG = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      badgeG.setAttribute("class", "clickui-marker-badge");
+      const badgeCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      badgeCircle.setAttribute("cx", String(bx));
+      badgeCircle.setAttribute("cy", String(by));
+      badgeCircle.setAttribute("r", String(br));
+      badgeCircle.setAttribute("fill", opts.badge.fill || "#f59e0b");
+      badgeCircle.setAttribute("stroke", opts.badge.stroke || "#ffffff");
+      badgeCircle.setAttribute("stroke-width", String(opts.badge.strokeWidth || 1.5));
+      badgeG.appendChild(badgeCircle);
+
+      if (opts.badge.text) {
+        const badgeText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        badgeText.setAttribute("x", String(bx));
+        badgeText.setAttribute("y", String(by + 0.5));
+        badgeText.setAttribute("fill", opts.badge.textColor || "#ffffff");
+        badgeText.setAttribute("font-size", String(opts.badge.fontSize || 9));
+        badgeText.setAttribute("font-family", "Inter, system-ui, sans-serif");
+        badgeText.setAttribute("font-weight", "800");
+        badgeText.setAttribute("text-anchor", "middle");
+        badgeText.setAttribute("dominant-baseline", "middle");
+        badgeText.textContent = String(opts.badge.text);
+        badgeG.appendChild(badgeText);
+      }
+      g.appendChild(badgeG);
+    }
+
     svg.appendChild(g);
-    return scaled;
+    return g;
   }
 
   function _buildReviewSummary(parts) {
@@ -2480,7 +2708,7 @@
       )
     );
 
-    const list = _createEl("div", "mt-2 flex flex-col gap-2", "");
+    const list = _createEl("div", "mt-2 flex flex-col gap-2 max-h-56 overflow-y-auto pr-1 clickui-registry-scroll", "");
     safeItems.forEach((item, idx) => {
       const row = _createEl(
         "div",
@@ -2489,6 +2717,9 @@
       );
       if (item && item.targetIndex != null) {
         row.setAttribute("data-target-index", String(item.targetIndex));
+      }
+      if (item && item.actionKey) {
+        row.setAttribute("data-clickui-action-key", String(item.actionKey));
       }
       const fallbackTitle =
         item && item.kind === "freehand"
@@ -2506,9 +2737,15 @@
   }
 
   function _setGlobalHover(hoverInfo) {
-    console.log('[ClickUI] _setGlobalHover', JSON.stringify(hoverInfo));
     state.globalHoveredInfo = hoverInfo;
     _updateGlobalHoverOpacities();
+    if (typeof state.resultInspectorUpdater === "function") {
+      try {
+        state.resultInspectorUpdater(hoverInfo);
+      } catch (e) {
+        // ignore
+      }
+    }
   }
 
   function _updateGlobalHoverOpacities() {
@@ -2542,7 +2779,7 @@
       svgElements.push(...state.labelsContainer.querySelectorAll("[data-target-index]"));
     }
     if (state.reviewComparisonEl) {
-      const reviewHoverables = Array.from(state.reviewComparisonEl.querySelectorAll("[data-target-index]"));
+      const reviewHoverables = Array.from(state.reviewComparisonEl.querySelectorAll("[data-target-index], [data-clickui-action-key]"));
       reviewHoverables.forEach((el) => {
         const isSvg = el instanceof SVGElement || (typeof el.closest === "function" && !!el.closest("svg"));
         if (isSvg) {
@@ -2620,20 +2857,29 @@
   }
 
   function _setupReviewHoverEffects(root) {
-    // Наведение на любую область/строку в блоке «Разбор ошибок» подсвечивает один и
-    // тот же target ОДНОВРЕМЕННО на обоих изображениях (ответ + эталон) и в обеих
-    // таблицах названий (что написал пользователь + что нужно было).
-    // Мы интегрируем это в глобальный ховер, чтобы синхронизировать с рабочей областью и списком действий.
-    const hoverables = Array.from(root.querySelectorAll("[data-target-index]"));
+    if (!root) return;
+    const hoverables = Array.from(root.querySelectorAll("[data-target-index], [data-clickui-action-key], [data-review-key]"));
     if (!hoverables.length) return;
 
     hoverables.forEach((el) => {
+      if (el._hasReviewHover) return;
+      el._hasReviewHover = true;
       const targetIndexStr = el.getAttribute("data-target-index");
-      if (targetIndexStr === null || targetIndexStr === undefined || targetIndexStr === "") return;
-      const targetIndex = Number(targetIndexStr);
+      const targetIndex =
+        targetIndexStr !== null && targetIndexStr !== undefined && targetIndexStr !== ""
+          ? Number(targetIndexStr)
+          : null;
+      const actionKey = el.getAttribute("data-clickui-action-key") || null;
 
-      el.addEventListener("mouseenter", () => _setGlobalHover({ targetIndex }));
+      el.addEventListener("mouseenter", () => _setGlobalHover({ targetIndex, actionKey }));
       el.addEventListener("mouseleave", () => _setGlobalHover(null));
+
+      // Touch / tablet support: tapping sets inspection
+      el.addEventListener("pointerdown", (ev) => {
+        if (ev.pointerType === "touch" || ev.pointerType === "pen") {
+          _setGlobalHover({ targetIndex, actionKey });
+        }
+      });
     });
   }
 
@@ -2733,6 +2979,23 @@
   }
 
   function _clearReviewComparison() {
+    if (state.resultWorkspaceResizeObserver) {
+      state.resultWorkspaceResizeObserver.disconnect();
+      state.resultWorkspaceResizeObserver = null;
+    }
+    state.resultInspectorUpdater = null;
+    if (state.sideColumnEl) {
+      state.sideColumnEl.style.overflow = "";
+      state.sideColumnEl.classList.remove("lg:overflow-hidden");
+      state.sideColumnEl.classList.add("lg:overflow-y-auto");
+      const userActionsSection = state.sideColumnEl.querySelector('[data-clickui="user-actions-section"], [data-clickui="user-actions-panel"]');
+      if (userActionsSection) {
+        userActionsSection.classList.remove("hidden");
+      }
+      if (state.userActionsListEl) {
+        state.userActionsListEl.classList.remove("hidden");
+      }
+    }
     if (state.reviewComparisonEl && state.reviewComparisonEl.parentNode) {
       state.reviewComparisonEl.parentNode.removeChild(state.reviewComparisonEl);
     }
@@ -2948,46 +3211,1832 @@
     });
   }
 
-  function _renderReviewComparison(result) {
+  function _renderUserReviewSvg(svg, naturalW, naturalH) {
+    if (!svg) return;
+    (state.polygons || []).forEach((poly, idx) => {
+      const color = _getActionDisplayColor(state.taskDto, "polygon", idx);
+      const targetIndex = _findTargetIndex(state.taskDto, "polygon", idx);
+      const actionKey = _getActionKey("polygon", idx);
+      const interp = _getActionInterpretation(actionKey);
+      const isContourSuccess = interp && interp.success === true;
+      const strokeColor = isContourSuccess ? _getThemeColor("--color-success", "#10b981") : color;
+
+      _appendReviewPath(svg, poly && poly.points, {
+        closed: true,
+        naturalW,
+        naturalH,
+        stroke: strokeColor,
+        fill: _withAlpha(strokeColor, isContourSuccess ? 0.18 : 0.12),
+        strokeWidth: isContourSuccess ? 4 : 3,
+        strokeDasharray: isContourSuccess ? undefined : "6 4",
+        targetIndex: targetIndex !== null ? targetIndex : undefined,
+        actionKey: actionKey,
+        reviewKey: `action:${actionKey}`,
+        coverageBadge: interp && Number.isFinite(Number(interp.coverage)) ? {
+          coverage: interp.coverage,
+          threshold: interp.threshold,
+          success: isContourSuccess,
+        } : null,
+      });
+    });
+
+    (state.lines || []).forEach((line, idx) => {
+      const color = _getActionDisplayColor(state.taskDto, "line", idx);
+      const targetIndex = _findTargetIndex(state.taskDto, "line", idx);
+      const actionKey = _getActionKey("line", idx);
+      const interp = _getActionInterpretation(actionKey);
+      const isLineSuccess = interp && interp.success === true;
+      const strokeColor = isLineSuccess ? _getThemeColor("--color-success", "#10b981") : color;
+
+      _appendReviewPath(svg, line && line.points, {
+        closed: false,
+        naturalW,
+        naturalH,
+        stroke: strokeColor,
+        strokeWidth: isLineSuccess ? 4 : 3,
+        strokeDasharray: "10 6",
+        strokeOpacity: 0.92,
+        targetIndex: targetIndex !== null ? targetIndex : undefined,
+        actionKey: actionKey,
+        reviewKey: `action:${actionKey}`,
+        coverageBadge: interp && Number.isFinite(Number(interp.coverage)) ? {
+          coverage: interp.coverage,
+          threshold: interp.threshold,
+          success: isLineSuccess,
+        } : null,
+      });
+    });
+
+    (state.clicks || []).forEach((click, idx) => {
+      const targetIndex = _findTargetIndex(state.taskDto, "click", idx);
+      const actionKey = _getActionKey("click", idx);
+      const labelStatus = _getLabelStatusForAction("click", idx);
+      const isLabelMismatch = labelStatus && labelStatus.status === "unmatched";
+      const interp = _getActionInterpretation(actionKey);
+      const isDuplicate = interp && interp.duplicate === true;
+      const isHit = interp && interp.success === true;
+
+      // Base marker color: if hit with label mismatch, show target color or green hit base
+      let baseColor = _getActionDisplayColor(state.taskDto, "click", idx);
+      let strokeColor = "#ffffff";
+      let badge = null;
+
+      if (isLabelMismatch) {
+        // Spatial hit was correct, but label wrong!
+        // Amber warning badge on top-right: "!"
+        badge = {
+          fill: "#f59e0b",
+          stroke: "#ffffff",
+          text: "!",
+          textColor: "#ffffff",
+        };
+        strokeColor = "#f59e0b";
+      } else if (isDuplicate) {
+        badge = {
+          fill: "#f59e0b",
+          stroke: "#ffffff",
+          text: "↻",
+          textColor: "#ffffff",
+        };
+        strokeColor = "#f59e0b";
+      } else if (!isHit && targetIndex == null) {
+        badge = {
+          fill: "#f43f5e",
+          stroke: "#ffffff",
+          text: "✕",
+          textColor: "#ffffff",
+        };
+      }
+
+      _appendReviewMarker(svg, [click && click.x, click && click.y], {
+        naturalW,
+        naturalH,
+        radius: 14,
+        fill: baseColor,
+        stroke: strokeColor,
+        strokeWidth: isLabelMismatch ? 3.5 : 3,
+        label: idx + 1,
+        targetIndex: targetIndex !== null ? targetIndex : undefined,
+        actionKey: actionKey,
+        reviewKey: `action:${actionKey}`,
+        badge,
+      });
+    });
+  }
+
+  function _renderReferenceReviewSvg(svg, naturalW, naturalH) {
+    if (!svg) return;
+    const targets = _getTargets(state.taskDto);
+    targets.forEach((target, idx) => {
+      const shape = _getTargetShape(target);
+      const isBad = state.badRefTargets instanceof Set && state.badRefTargets.has(idx);
+      const baseColor = isBad ? _getThemeColor("--color-error", "#ef4444") : _getTargetColor(idx);
+
+      if (shape === "polygon") {
+        _appendReviewPath(svg, target && target.points, {
+          closed: true,
+          naturalW,
+          naturalH,
+          stroke: baseColor,
+          fill: _withAlpha(baseColor, isBad ? 0.12 : 0.18),
+          strokeWidth: isBad ? 5 : 4,
+          targetIndex: idx,
+          reviewKey: `target:${idx}`,
+        });
+      } else if (shape === "freehand") {
+        _appendReviewPath(svg, target && target.points, {
+          closed: false,
+          naturalW,
+          naturalH,
+          stroke: baseColor,
+          strokeWidth: isBad ? 5 : 4,
+          strokeDasharray: "10 6",
+          strokeOpacity: 0.92,
+          targetIndex: idx,
+          reviewKey: `target:${idx}`,
+        });
+      } else if (shape === "point") {
+        _appendReviewMarker(svg, target && target.point, {
+          naturalW,
+          naturalH,
+          radius: 15,
+          fill: baseColor,
+          stroke: "#ffffff",
+          label: idx + 1,
+          targetIndex: idx,
+          reviewKey: `target:${idx}`,
+        });
+      } else if (Array.isArray(target && target.points) && target.points.length >= 2) {
+        const inferClosed = target.points.length >= 3;
+        _appendReviewPath(svg, target.points, {
+          closed: inferClosed,
+          naturalW,
+          naturalH,
+          stroke: baseColor,
+          fill: inferClosed ? _withAlpha(baseColor, isBad ? 0.12 : 0.18) : undefined,
+          strokeWidth: isBad ? 5 : 4,
+          strokeDasharray: inferClosed ? undefined : "10 6",
+          targetIndex: idx,
+          reviewKey: `target:${idx}`,
+        });
+      } else if (target && (target.point || target.coordinates || target.x != null)) {
+        const pt = target.point || (target.x != null ? [target.x, target.y] : null);
+        if (pt) {
+          _appendReviewMarker(svg, pt, {
+            naturalW,
+            naturalH,
+            radius: 15,
+            fill: baseColor,
+            stroke: "#ffffff",
+            label: idx + 1,
+            targetIndex: idx,
+            reviewKey: `target:${idx}`,
+          });
+        }
+      }
+    });
+  }
+
+  function _getUserReviewParts() {
+    const parts = [];
+    if (Array.isArray(state.clicks) && state.clicks.length) {
+      parts.push(state.clicks.length === 1 ? wt("clickui.one_click", "1 клик") : wt("clickui.n_clicks", "{n} клика").replace("{n}", state.clicks.length));
+    }
+    if (Array.isArray(state.polygons) && state.polygons.length) {
+      parts.push(state.polygons.length === 1 ? wt("clickui.one_polygon", "1 контур") : wt("clickui.n_polygons", "{n} контура").replace("{n}", state.polygons.length));
+    }
+    if (Array.isArray(state.lines) && state.lines.length) {
+      parts.push(state.lines.length === 1 ? wt("clickui.one_line", "1 линия") : wt("clickui.n_lines", "{n} линии").replace("{n}", state.lines.length));
+    }
+    return parts;
+  }
+
+  function _getReferenceReviewParts() {
+    const targets = _getTargets(state.taskDto);
+    const points = targets.filter((target) => _getTargetShape(target) === "point").length;
+    const outlines = targets.filter((target) => _getTargetShape(target) === "polygon").length;
+    const lines = targets.filter((target) => _getTargetShape(target) === "freehand").length;
+    const parts = [];
+    if (points) {
+      parts.push(points === 1 ? wt("clickui.one_point", "1 точка") : wt("clickui.n_points", "{n} точки").replace("{n}", points));
+    }
+    if (outlines) {
+      parts.push(outlines === 1 ? wt("clickui.one_polygon", "1 контур") : wt("clickui.n_polygons", "{n} контура").replace("{n}", outlines));
+    }
+    if (lines) {
+      parts.push(lines === 1 ? wt("clickui.one_line", "1 линия") : wt("clickui.n_lines", "{n} линии").replace("{n}", lines));
+    }
+    return parts;
+  }
+
+  function _getUserReviewLabelsBlock() {
+    const shouldShowLabels = _requiresLabels() || _hasAnyUserLabels();
+    if (!shouldShowLabels) return null;
+    const labelItems = [];
+    (state.clicks || []).forEach((_, idx) => {
+      labelItems.push({
+        kind: "click",
+        title: wt("clickui.shape_area_n", "Область {n}").replace("{n}", idx + 1),
+        label: state.labelsClicks && state.labelsClicks[idx],
+        targetIndex: _findTargetIndex(state.taskDto, "click", idx),
+        actionKey: _getActionKey("click", idx),
+      });
+    });
+    (state.polygons || []).forEach((_, idx) => {
+      labelItems.push({
+        kind: "polygon",
+        title: wt("clickui.shape_polygon_n", "Контур {n}").replace("{n}", idx + 1),
+        label: state.labelsPolygons && state.labelsPolygons[idx],
+        targetIndex: _findTargetIndex(state.taskDto, "polygon", idx),
+        actionKey: _getActionKey("polygon", idx),
+      });
+    });
+    (state.lines || []).forEach((_, idx) => {
+      labelItems.push({
+        kind: "freehand",
+        title: wt("clickui.shape_line_n", "Линия {n}").replace("{n}", idx + 1),
+        label: state.labelsLines && state.labelsLines[idx],
+        targetIndex: _findTargetIndex(state.taskDto, "line", idx),
+        actionKey: _getActionKey("line", idx),
+      });
+    });
+    return _buildReviewLabelsBlock(wt("clickui.user_labels", "Названия пользователя"), labelItems, "review-user-labels");
+  }
+
+  function _getReferenceReviewLabelsBlock() {
+    const shouldShowLabels = _requiresLabels() || _hasAnyUserLabels();
+    if (!shouldShowLabels) return null;
+    const targets = _getTargets(state.taskDto);
+    const labelItems = targets.map((target, idx) => {
+      const meta = _getTargetInteractionMeta(state.taskDto, target);
+      return {
+        kind: _getTargetShape(target),
+        title: `${meta && meta.label ? meta.label : wt("clickui.target_fallback", "Цель")} ${idx + 1}`,
+        label: target && target.label,
+        targetIndex: idx,
+      };
+    });
+    return _buildReviewLabelsBlock(wt("clickui.ref_labels", "Эталонные названия"), labelItems, "review-reference-labels");
+  }
+
+  function _updateResultWorkspaceI18n() {
+    if (!state.workspaceI18nRefs) return;
+    const refs = state.workspaceI18nRefs;
+    if (refs.verdictText) {
+      refs.verdictText.textContent = refs.verdictSuccess
+        ? wt("clickui.verdict_success", "Зачтено")
+        : wt("clickui.verdict_fail", "Не зачтено");
+    }
+    if (refs.foundStatsText) {
+      refs.foundStatsText.textContent = wt("clickui.targets_found_stat", "Найдено: {found} из {total} целей")
+        .replace("{found}", refs.foundCount)
+        .replace("{total}", refs.totalTargets);
+    }
+    if (refs.scoreText && refs.scoreVal != null) {
+      refs.scoreText.textContent = wt("clickui.score_stat", "Оценка: {score}%").replace("{score}", refs.scoreVal);
+    }
+    if (refs.extraText && refs.extraActionsCount > 0) {
+      refs.extraText.textContent = wt("clickui.inspector_stats_extra", "Лишних отметок: {extra}").replace("{extra}", refs.extraActionsCount);
+    }
+    if (refs.sideLabel) refs.sideLabel.textContent = wt("clickui.mode_sbs", "2 снимка рядом");
+    if (refs.tabsLabel) refs.tabsLabel.textContent = wt("clickui.mode_tabs", "Вкладками");
+    if (refs.resetLabel) refs.resetLabel.textContent = wt("clickui.reset_view", "Подогнать масштаб");
+    if (refs.resetViewBtn) refs.resetViewBtn.title = wt("clickui.reset_view", "Подогнать масштаб");
+    if (refs.userTitle) refs.userTitle.textContent = wt("clickui.your_answer", "Ваш ответ");
+    if (refs.refTitle) refs.refTitle.textContent = wt("clickui.reference", "Эталон");
+    if (refs.tabBtnUserText) refs.tabBtnUserText.textContent = wt("clickui.tab_user", "Ваш ответ");
+    if (refs.tabBtnRefText) refs.tabBtnRefText.textContent = wt("clickui.tab_reference", "Эталон");
+    if (refs.tabBtnOverlayText) refs.tabBtnOverlayText.textContent = wt("clickui.tab_overlay", "Наложение");
+
+    if (typeof state.resultInspectorUpdater === "function") {
+      state.resultInspectorUpdater(state.globalHoveredInfo);
+    }
+  }
+
+  function _setupResultRegistryInSidebar(result) {
+    if (!state.sideColumnEl && state.wrapperRow && state.wrapperRow.parentNode) {
+      state.sideColumnEl = state.wrapperRow.parentNode.querySelector('[data-clickui="side-column"]');
+    }
+    if (!state.sideColumnEl) return;
+
+    const sideColumn = state.sideColumnEl;
+    const targets = _getTargets(state.taskDto);
+    const details = (result && result.details) || {};
+    const foundTargets = _normalizeFoundTargetsSet(details.found_targets || details.foundTargets || []);
+    const clickResults = Array.isArray(details.click_results) ? details.click_results : [];
+    const polyResults = Array.isArray(details.polygon_results) ? details.polygon_results : [];
+    const lineResults = Array.isArray(details.line_results) ? details.line_results : [];
+    const userActions = _collectUserActions();
+
+    // Hide labelsContainer and statusCard in review mode to prevent duplicate clutter
+    if (state.labelsContainer) {
+      state.labelsContainer.classList.add("hidden");
+    }
+    const statusCard = sideColumn.querySelector('[data-clickui="status-card"]');
+    if (statusCard) {
+      statusCard.classList.add("hidden");
+    }
+    const userActionsSection = sideColumn.querySelector('[data-clickui="user-actions-section"], [data-clickui="user-actions-panel"]');
+    if (userActionsSection) {
+      userActionsSection.classList.add("hidden");
+    }
+    if (state.userActionsListEl) {
+      const section = state.userActionsListEl.closest('[data-clickui="user-actions-section"]') || state.userActionsListEl.parentElement;
+      if (section) section.classList.add("hidden");
+      state.userActionsListEl.classList.add("hidden");
+    }
+
+    // Configure sideColumn for pinned-header layout (scroll happens inside targetsPanel list)
+    sideColumn.style.overflow = "hidden";
+    sideColumn.classList.remove("lg:overflow-y-auto");
+    sideColumn.classList.add("lg:overflow-hidden", "flex", "flex-col");
+
+    // Find or create targetsPanel
+    let targetsPanel = sideColumn.querySelector('[data-clickui="targets-panel"]');
+    if (!targetsPanel) {
+      targetsPanel = _createEl(
+        "div",
+        "task-chip flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border-2 border-border-strong bg-surface-2 shadow-sm dark:border-border-strong dark:bg-surface-2 w-full max-h-full",
+        ""
+      );
+      targetsPanel.setAttribute("data-clickui", "targets-panel");
+      sideColumn.prepend(targetsPanel);
+    } else {
+      targetsPanel.className = "task-chip flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border-2 border-border-strong bg-surface-2 shadow-sm dark:border-border-strong dark:bg-surface-2 w-full max-h-full";
+    }
+    targetsPanel.style.height = "100%";
+
+    // 1. Transform Header
+    let header = targetsPanel.querySelector('[data-clickui="targets-header"]');
+    if (!header) {
+      header = _createEl(
+        "div",
+        "border-b border-border-strong bg-surface-1 px-4 py-3.5 dark:border-border-strong shrink-0 z-10 select-none",
+        ""
+      );
+      header.setAttribute("data-clickui", "targets-header");
+      targetsPanel.prepend(header);
+    } else {
+      header.className = "border-b border-border-strong bg-surface-1 px-4 py-3.5 dark:border-border-strong shrink-0 z-10 select-none";
+    }
+    header.innerHTML = "";
+
+    const titleRow = _createEl("div", "flex items-center justify-between gap-2", "");
+    const titleLeft = _createEl("div", "flex items-center gap-2", "");
+    const titleIcon = _createEl(
+      "span",
+      "material-symbols-outlined text-[20px] text-primary dark:text-primary",
+      "fact_check"
+    );
+    const title = _createEl(
+      "h3",
+      "text-[15px] font-bold text-text-main dark:text-text-on-dark",
+      wt("clickui.registry_title", "Реестр результатов")
+    );
+    title.setAttribute("data-clickui", "targets-title");
+    titleLeft.appendChild(titleIcon);
+    titleLeft.appendChild(title);
+    titleRow.appendChild(titleLeft);
+    header.appendChild(titleRow);
+
+    // 2. Count Errors & Items
+    let totalTargets = targets.length;
+    let targetErrors = 0;
+    targets.forEach((t, idx) => {
+      const isFound = foundTargets.has(idx);
+      const labelStatus = _getLabelStatusForTarget(idx);
+      const isLabelMismatch = labelStatus && labelStatus.status === "unmatched";
+      const polyRes = polyResults.find((r) => r.target_index === idx);
+      const lineRes = lineResults.find((r) => r.target_index === idx);
+      const contourRes = polyRes || lineRes;
+      const isLowCoverage = contourRes && contourRes.coverage < (contourRes.threshold || 75);
+      if (!isFound || isLabelMismatch || isLowCoverage) {
+        targetErrors++;
+      }
+    });
+
+    const allActions = _collectUserActions();
+    const unmatchedActions = allActions.filter((action) => {
+      const interp = _getActionInterpretation(action.key);
+      if (!interp) return true;
+      if (interp.duplicate === true) return true;
+      if (interp.offTarget === true) return true;
+      if (interp.success !== true) {
+        return interp.targetIndex == null;
+      }
+      return false;
+    });
+
+    const totalErrors = targetErrors + unmatchedActions.length;
+    const totalItems = totalTargets + unmatchedActions.length;
+
+    // Filter Segmented Controls
+    const filterWrap = _createEl("div", "mt-2.5 flex items-center gap-1.5 p-0.5 rounded-xl border border-border-subtle bg-surface-2/80", "");
+    filterWrap.setAttribute("data-clickui", "registry-filter-controls");
+
+    let activeFilter = state.registryFilter || "all";
+
+    const btnAll = _createEl(
+      "button",
+      "flex-1 inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all bg-surface-1 text-text-main shadow-xs border border-border-subtle/50",
+      ""
+    );
+    btnAll.type = "button";
+    btnAll.setAttribute("data-clickui-filter", "all");
+    const btnAllText = _createEl("span", "", wt("clickui.filter_all", "Все ({count})").replace("{count}", totalItems));
+    btnAll.appendChild(btnAllText);
+
+    const btnErrors = _createEl(
+      "button",
+      "flex-1 inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all text-text-secondary hover:text-text-main border-transparent",
+      ""
+    );
+    btnErrors.type = "button";
+    btnErrors.setAttribute("data-clickui-filter", "errors");
+    const btnErrorsText = _createEl("span", "", wt("clickui.filter_errors", "Ошибки ({count})").replace("{count}", totalErrors));
+    btnErrors.appendChild(btnErrorsText);
+
+    filterWrap.appendChild(btnAll);
+    filterWrap.appendChild(btnErrors);
+    header.appendChild(filterWrap);
+
+    // 3. Targets List Section (Pinned inner scroll container)
+    let listSection = targetsPanel.querySelector('[data-clickui="targets-list-section"]');
+    if (!listSection) {
+      listSection = _createEl("div", "clickui-registry-scroll flex-1 min-h-0 overflow-y-auto px-3 py-2.5 relative", "");
+      listSection.setAttribute("data-clickui", "targets-list-section");
+      targetsPanel.appendChild(listSection);
+    } else {
+      listSection.className = "clickui-registry-scroll flex-1 min-h-0 overflow-y-auto px-3 py-2.5 relative";
+    }
+    state.targetsListSectionEl = listSection;
+    listSection.innerHTML = "";
+
+    function updateScrollMask() {
+      if (!listSection) return;
+      const atTop = listSection.scrollTop <= 2;
+      const atBottom = listSection.scrollHeight - listSection.scrollTop - listSection.clientHeight <= 2;
+
+      if (atTop && atBottom) {
+        listSection.style.maskImage = "none";
+        listSection.style.webkitMaskImage = "none";
+      } else if (atTop) {
+        const mask = "linear-gradient(to bottom, black calc(100% - 20px), transparent 100%)";
+        listSection.style.maskImage = mask;
+        listSection.style.webkitMaskImage = mask;
+      } else if (atBottom) {
+        const mask = "linear-gradient(to bottom, transparent 0px, black 20px)";
+        listSection.style.maskImage = mask;
+        listSection.style.webkitMaskImage = mask;
+      } else {
+        const mask = "linear-gradient(to bottom, transparent 0px, black 20px, black calc(100% - 20px), transparent 100%)";
+        listSection.style.maskImage = mask;
+        listSection.style.webkitMaskImage = mask;
+      }
+    }
+    listSection.addEventListener("scroll", updateScrollMask, { passive: true });
+    requestAnimationFrame(updateScrollMask);
+    setTimeout(updateScrollMask, 60);
+
+    const list = _createEl("div", "result-registry-list flex flex-col gap-2.5", "");
+    list.setAttribute("data-clickui", "targets-list");
+    listSection.appendChild(list);
+
+    // Empty state placeholder for errors filter
+    const emptyPlaceholder = _createEl(
+      "div",
+      "hidden flex flex-col items-center justify-center p-4 text-center rounded-xl border border-dashed border-border-strong bg-surface-1/50 my-1",
+      ""
+    );
+    emptyPlaceholder.setAttribute("data-clickui", "no-errors-placeholder");
+    const emptyIcon = _createEl("span", "material-symbols-outlined text-[24px] text-emerald-500 mb-1", "verified");
+    const emptyText = _createEl(
+      "div",
+      "text-xs font-semibold text-text-main dark:text-text-on-dark",
+      wt("clickui.no_errors_found", "Ошибок не обнаружено — все цели найдены верно")
+    );
+    emptyPlaceholder.appendChild(emptyIcon);
+    emptyPlaceholder.appendChild(emptyText);
+    list.appendChild(emptyPlaceholder);
+
+    // Re-populate targetRows
+    state.targetRows = [];
+    const displayIndexes = _buildTargetDisplayIndexes(state.taskDto, targets);
+
+    targets.forEach((target, idx) => {
+      const displayIndex = Number.isInteger(displayIndexes[idx]) ? displayIndexes[idx] : idx + 1;
+      const isFound = foundTargets.has(idx);
+      const labelStatus = _getLabelStatusForTarget(idx);
+      const isLabelMismatch = labelStatus && labelStatus.status === "unmatched";
+      const polyRes = polyResults.find((r) => r.target_index === idx);
+      const lineRes = lineResults.find((r) => r.target_index === idx);
+      const contourRes = polyRes || lineRes;
+      const isLowCoverage = contourRes && contourRes.coverage < (contourRes.threshold || 75);
+      const hasError = !isFound || isLabelMismatch || isLowCoverage;
+
+      const item = _createEl(
+        "div",
+        "result-registry-item task-chip flex flex-col gap-2 rounded-xl border border-border-strong bg-surface-1 px-3 py-2.5 shadow-sm ring-2 ring-transparent transition-all duration-150 dark:border-border-strong dark:bg-surface-1",
+        ""
+      );
+      item.setAttribute("data-clickui", "target-row");
+      item.setAttribute("data-target-index", String(idx));
+      item.setAttribute("data-clickui-panel-row", "target");
+      item.setAttribute("data-has-error", hasError ? "true" : "false");
+
+      // Top row: Badge + Label + Status Pill
+      const rowTop = _createEl("div", "flex items-start justify-between gap-2.5", "");
+      const rowLeft = _createEl("div", "flex items-start gap-2.5 min-w-0 flex-1", "");
+
+      const badge = _createEl(
+        "div",
+        "task-chip mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full border-2 text-[12px] font-bold shadow-sm",
+        String(displayIndex)
+      );
+      const color = _getTargetColor(idx);
+      badge.style.backgroundColor = color;
+      badge.style.color = _getThemeColor("--color-text-on-dark", "#ffffff");
+      badge.style.borderColor = _withAlpha(color, 0.4);
+      badge.style.boxShadow = `0 0 0 2px ${_withAlpha(color, 0.12)}`;
+
+      const labelWrap = _createEl("div", "min-w-0 flex-1", "");
+      const labelText = target.label || wt("clickui.target_n", "Цель {n}").replace("{n}", idx + 1);
+      const label = _createEl(
+        "div",
+        "text-[13px] font-semibold leading-5 text-text-main dark:text-text-on-dark break-words",
+        labelText
+      );
+      labelWrap.appendChild(label);
+      rowLeft.appendChild(badge);
+      rowLeft.appendChild(labelWrap);
+      rowTop.appendChild(rowLeft);
+
+      // Status Pill
+      const statusPill = _createEl("div", "shrink-0 ml-1.5", "");
+      statusPill.setAttribute("data-clickui", "status-pill");
+      let pillText = "";
+      let pillIcon = "";
+      let pillClass = "";
+
+      if (!hasError) {
+        item.classList.add("ring-2", "ring-success-light", "bg-success-lighter");
+        badge.classList.add("border-success-light", "bg-success-lighter", "text-success-text");
+        pillClass = "inline-flex items-center gap-1 rounded-full border border-success-light bg-success-lighter px-2 py-0.5 text-[11px] font-semibold text-success-text";
+        pillText = wt("clickui.status_found", "Найдена");
+        pillIcon = "check";
+      } else if (isLabelMismatch) {
+        item.classList.add("ring-2", "ring-amber-500/30", "bg-amber-500/10");
+        pillClass = "inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-600 dark:text-amber-400";
+        pillText = wt("clickui.badge_label_err", "Ошибка названия");
+        pillIcon = "edit_note";
+      } else if (!isFound) {
+        item.classList.add("ring-2", "ring-error-light/30", "bg-error-lighter/20");
+        pillClass = "inline-flex items-center gap-1 rounded-full border border-error-light bg-error-lighter px-2 py-0.5 text-[11px] font-semibold text-error-text";
+        pillText = wt("clickui.badge_missed", "Пропущено");
+        pillIcon = "close";
+      } else if (isLowCoverage) {
+        item.classList.add("ring-2", "ring-error-light/30", "bg-error-lighter/20");
+        pillClass = "inline-flex items-center gap-1 rounded-full border border-error-light bg-error-lighter px-2 py-0.5 text-[11px] font-semibold text-error-text";
+        pillText = `${contourRes.coverage}%`;
+        pillIcon = "close";
+      }
+
+      statusPill.className = pillClass;
+      if (pillIcon) {
+        const sIcon = _createEl("span", "material-symbols-outlined text-[13px]", pillIcon);
+        statusPill.appendChild(sIcon);
+      }
+      const sText = _createEl("span", "", pillText);
+      statusPill.appendChild(sText);
+      rowTop.appendChild(statusPill);
+      item.appendChild(rowTop);
+
+      // Detail section (L2 naming comparison / L3 coverage / L1 click match)
+      if (isLabelMismatch) {
+        const diffBox = _createEl("div", "mt-0.5 pl-10 flex flex-col gap-0.5 text-[12px] border-t border-amber-500/20 pt-1.5", "");
+        const userEntered = _createEl(
+          "div",
+          "text-text-secondary truncate",
+          `${wt("clickui.user_entered", "Введено:")} `
+        );
+        const userSpan = _createEl("span", "font-medium text-rose-500 line-through", `«${_normalizeReviewLabelText(labelStatus.userLabel)}»`);
+        userEntered.appendChild(userSpan);
+
+        const expected = _createEl(
+          "div",
+          "text-text-secondary truncate",
+          `${wt("clickui.expected", "Ожидалось:")} `
+        );
+        const expectedSpan = _createEl("span", "font-semibold text-emerald-600 dark:text-emerald-400", `«${_normalizeReviewLabelText(labelStatus.correctLabel || target.label)}»`);
+        expected.appendChild(expectedSpan);
+
+        diffBox.appendChild(userEntered);
+        diffBox.appendChild(expected);
+        item.appendChild(diffBox);
+      } else if (contourRes) {
+        const covBox = _createEl(
+          "div",
+          "mt-0.5 pl-10 text-[12px] text-text-secondary border-t border-border-subtle pt-1",
+          wt("clickui.coverage_stat", "Покрытие: {cov}% (порог: {thr}%)")
+            .replace("{cov}", contourRes.coverage)
+            .replace("{thr}", contourRes.threshold || 75)
+        );
+        item.appendChild(covBox);
+      } else if (!isFound) {
+        const missBox = _createEl(
+          "div",
+          "mt-0.5 pl-10 text-[12px] text-text-muted border-t border-border-subtle pt-1",
+          wt("clickui.registry_missed_desc", "Отметка не была поставлена")
+        );
+        item.appendChild(missBox);
+      } else {
+        const clickRes = clickResults.find((r) => r.target_index === idx && r.click_success);
+        if (clickRes && clickRes.matched_click_idx != null) {
+          const hitBox = _createEl(
+            "div",
+            "mt-0.5 pl-10 text-[12px] text-text-secondary border-t border-border-subtle pt-1",
+            wt("clickui.found_by_click", "Засчитано кликом №{n}").replace("{n}", clickRes.matched_click_idx + 1)
+          );
+          item.appendChild(hitBox);
+        }
+      }
+
+      // Connected Hover
+      item.addEventListener("mouseenter", () => _setGlobalHover({ targetIndex: idx }));
+      item.addEventListener("mouseleave", () => _setGlobalHover(null));
+      item.addEventListener("pointerdown", () => _setGlobalHover({ targetIndex: idx }));
+
+      list.appendChild(item);
+      state.targetRows.push({ idx, el: item, badge, icon: null, dot: null, statusPill });
+    });
+
+    // 4. Append Unmatched / Extra User Actions to Unified Registry List
+    state.unmatchedActionRows = [];
+    if (unmatchedActions.length > 0) {
+      unmatchedActions.forEach((action) => {
+        const interp = _getActionInterpretation(action.key);
+        const isDuplicate = interp && interp.duplicate === true;
+        const targetIdx = interp && typeof interp.targetIndex === "number" ? interp.targetIndex : null;
+
+        const item = _createEl(
+          "div",
+          "result-registry-item task-chip flex flex-col gap-2 rounded-xl border border-border-strong bg-surface-1 px-3 py-2.5 shadow-sm ring-2 ring-transparent transition-all duration-150 dark:border-border-strong dark:bg-surface-1",
+          ""
+        );
+        item.setAttribute("data-clickui", "unmatched-action-row");
+        item.setAttribute("data-clickui-action-key", action.key);
+        item.setAttribute("data-clickui-panel-row", "action");
+        item.setAttribute("data-has-error", "true");
+        if (targetIdx !== null) {
+          item.setAttribute("data-target-index", String(targetIdx));
+        }
+
+        // Top row: Badge + Title + Status Pill
+        const rowTop = _createEl("div", "flex items-start justify-between gap-2.5", "");
+        const rowLeft = _createEl("div", "flex items-start gap-2.5 min-w-0 flex-1", "");
+
+        const badge = _createEl(
+          "div",
+          "task-chip mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full border-2 text-[12px] font-bold shadow-sm",
+          String(action.index + 1)
+        );
+        if (isDuplicate) {
+          badge.className += " border-amber-500/40 bg-amber-500/15 text-amber-600 dark:text-amber-400";
+        } else {
+          badge.className += " border-error-light/40 bg-error-lighter/25 text-error-text";
+        }
+
+        const labelWrap = _createEl("div", "min-w-0 flex-1", "");
+        const actionTitleText = isDuplicate
+          ? wt("clickui.duplicate_action_title", "Повторный клик №{n}").replace("{n}", action.index + 1)
+          : wt("clickui.extra_action_title", "Лишняя отметка №{n}").replace("{n}", action.index + 1);
+        const titleEl = _createEl(
+          "div",
+          "text-[13px] font-semibold leading-5 text-text-main dark:text-text-on-dark break-words",
+          actionTitleText
+        );
+        labelWrap.appendChild(titleEl);
+        rowLeft.appendChild(badge);
+        rowLeft.appendChild(labelWrap);
+        rowTop.appendChild(rowLeft);
+
+        // Status Pill
+        const statusPill = _createEl("div", "shrink-0 ml-1.5", "");
+        statusPill.setAttribute("data-clickui", "status-pill");
+        if (isDuplicate) {
+          statusPill.className = "inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-600 dark:text-amber-400";
+          const sIcon = _createEl("span", "material-symbols-outlined text-[13px]", "replay");
+          const sText = _createEl("span", "", wt("clickui.badge_duplicate", "Повтор"));
+          statusPill.appendChild(sIcon);
+          statusPill.appendChild(sText);
+        } else {
+          statusPill.className = "inline-flex items-center gap-1 rounded-full border border-error-light bg-error-lighter px-2 py-0.5 text-[11px] font-semibold text-error-text";
+          const sIcon = _createEl("span", "material-symbols-outlined text-[13px]", "close");
+          const sText = _createEl("span", "", wt("clickui.badge_out_of_bounds", "Вне зоны"));
+          statusPill.appendChild(sIcon);
+          statusPill.appendChild(sText);
+        }
+        rowTop.appendChild(statusPill);
+        item.appendChild(rowTop);
+
+        // Detail section
+        const detailBox = _createEl("div", "mt-0.5 pl-10 text-[12px] text-text-secondary border-t border-border-subtle pt-1", "");
+        if (isDuplicate) {
+          detailBox.textContent = wt("clickui.duplicate_action_desc", "Цель уже была отмечена другим действием");
+        } else {
+          detailBox.textContent = wt("clickui.extra_action_desc", "Отметка не попала ни в одну из целевых областей");
+        }
+        item.appendChild(detailBox);
+
+        // Connected Hover
+        item.addEventListener("mouseenter", () => {
+          _setHoveredActionKey(action.key);
+          _setGlobalHover({ targetIndex: targetIdx, actionKey: action.key });
+        });
+        item.addEventListener("mouseleave", () => {
+          _setHoveredActionKey(null);
+          _setGlobalHover(null);
+        });
+        item.addEventListener("pointerdown", () => {
+          _setHoveredActionKey(action.key);
+          _setGlobalHover({ targetIndex: targetIdx, actionKey: action.key });
+        });
+
+        list.appendChild(item);
+        state.unmatchedActionRows.push({ actionKey: action.key, el: item, targetIdx });
+      });
+    }
+
+    _refreshUserActionsPanel();
+
+    // 5. Connect Filter Toggle Handler
+    function applyFilter(filter) {
+      activeFilter = filter;
+      state.registryFilter = filter;
+      const activeClass = "flex-1 inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all bg-surface-1 text-text-main shadow-xs border border-border-subtle/50";
+      const inactiveClass = "flex-1 inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all text-text-secondary hover:text-text-main border-transparent";
+
+      if (filter === "all") {
+        btnAll.className = activeClass;
+        btnErrors.className = inactiveClass;
+        emptyPlaceholder.classList.add("hidden");
+
+        state.targetRows.forEach((r) => {
+          if (r.el) r.el.classList.remove("hidden");
+        });
+        if (Array.isArray(state.unmatchedActionRows)) {
+          state.unmatchedActionRows.forEach((r) => {
+            if (r.el) r.el.classList.remove("hidden");
+          });
+        }
+        if (Array.isArray(state.userActionRows)) {
+          state.userActionRows.forEach((r) => {
+            if (r.el) r.el.classList.remove("hidden");
+          });
+        }
+      } else {
+        btnAll.className = inactiveClass;
+        btnErrors.className = activeClass;
+
+        let visibleCount = 0;
+        state.targetRows.forEach((r) => {
+          if (r.el) {
+            const hasErr = r.el.getAttribute("data-has-error") === "true";
+            if (hasErr) {
+              r.el.classList.remove("hidden");
+              visibleCount++;
+            } else {
+              r.el.classList.add("hidden");
+            }
+          }
+        });
+
+        if (Array.isArray(state.unmatchedActionRows)) {
+          state.unmatchedActionRows.forEach((r) => {
+            if (r.el) {
+              r.el.classList.remove("hidden");
+              visibleCount++;
+            }
+          });
+        }
+
+        if (Array.isArray(state.userActionRows)) {
+          state.userActionRows.forEach((r) => {
+            if (r.el) {
+              const interp = _getActionInterpretation(r.key);
+              const isErr = interp && (interp.duplicate || !interp.success);
+              if (isErr) {
+                r.el.classList.remove("hidden");
+              } else {
+                r.el.classList.add("hidden");
+              }
+            }
+          });
+        }
+
+        if (visibleCount === 0) {
+          emptyPlaceholder.classList.remove("hidden");
+        } else {
+          emptyPlaceholder.classList.add("hidden");
+        }
+      }
+
+      if (typeof updateScrollMask === "function") {
+        requestAnimationFrame(updateScrollMask);
+      }
+    }
+
+    btnAll.addEventListener("click", () => applyFilter("all"));
+    btnErrors.addEventListener("click", () => applyFilter("errors"));
+
+    if (activeFilter === "errors") {
+      applyFilter("errors");
+    }
+  }
+
+  function _renderResultWorkspace(result) {
     _clearReviewComparison();
     if (!state.reviewHost) return;
-    // Разбор ответа показывается для всех уровней сложности (L1, L2, L3).
-    // Убрана старая проверка, которая скрывала блок для L2/L3.
+
+    // 1. Hide attempt canvas and toolbar controls to focus entirely on results
+    if (state.wrapperRow) {
+      state.wrapperRow.classList.add("hidden");
+    }
+    if (state.controlsEl) {
+      state.controlsEl.classList.add("hidden");
+    }
 
     const imageUrl = _resolveImageUrl(state.taskDto);
     const canvasSize = _getReviewCanvasSize();
+    let reviewW = canvasSize.width;
+    let reviewH = canvasSize.height;
+
+    // Root section container adhering to Rule 1: Anti-Matreshka (single flat card)
     const section = _createEl(
       "section",
-      "rounded-[28px] border border-border-strong bg-surface-1/80 p-4 shadow-sm dark:border-border-strong dark:bg-surface-1/80",
+      "clickui-result-workspace flex flex-col gap-3 rounded-2xl border border-border-subtle bg-surface-1 p-3 sm:p-4 text-text-main shadow-xs dark:text-text-on-dark min-w-0 overflow-hidden",
       ""
     );
     section.setAttribute("data-clickui", "review-comparison");
+    section.setAttribute("data-clickui-result-workspace", "true");
 
-    const title = _createEl(
-      "div",
-      "text-base font-semibold text-text-main dark:text-text-on-dark",
-      result && result.success === true ? wt("clickui.review_success_title", "Разбор ответа") : wt("clickui.review_error_title", "Разбор ошибок")
-    );
-    const note = _createEl(
-      "div",
-      "mt-1 text-sm leading-6 text-text-secondary dark:text-text-muted",
-      result && result.success === true
-        ? wt("clickui.review_success_desc", "Показываем, что вы отметили на изображении, и рядом оставляем эталон для быстрой сверки. Наведите на область — она подсветится на обоих изображениях и в обеих таблицах.")
-        : wt("clickui.review_error_desc", "Слева сохранён ваш ответ, справа показан эталон на том же изображении. Наведите на область — она подсветится на обоих изображениях и в обеих таблицах названий, чтобы сразу видеть, что вы написали и что нужно было.")
-    );
-    const grid = _createEl("div", "mt-4 grid gap-3 xl:grid-cols-2", "");
-    grid.appendChild(_buildUserReviewPreviewCard(imageUrl, canvasSize.width, canvasSize.height));
-    grid.appendChild(_buildReferenceReviewPreviewCard(imageUrl, canvasSize.width, canvasSize.height));
+    const details = (result && result.details) || {};
+    const success = result && result.success === true;
+    const targets = _getTargets(state.taskDto);
+    const totalTargets = targets.length;
+    const foundTargets = _normalizeFoundTargetsSet(details.found_targets || details.foundTargets || []);
+    const foundCount = details.found_count != null ? details.found_count : foundTargets.size;
+    const clickResults = Array.isArray(details.click_results) ? details.click_results : [];
 
-    section.appendChild(title);
-    section.appendChild(note);
-    section.appendChild(grid);
-    // Связанная подсветка по всему разделу: наведение на область/строку подсвечивает
-    // тот же target на обоих изображениях и в обеих таблицах одновременно.
+    // Total user marks count vs found
+    const userClicksCount = Array.isArray(state.clicks) ? state.clicks.length : 0;
+    const userPolysCount = Array.isArray(state.polygons) ? state.polygons.length : 0;
+    const userLinesCount = Array.isArray(state.lines) ? state.lines.length : 0;
+    const totalUserActions = userClicksCount + userPolysCount + userLinesCount;
+    const extraActionsCount = Math.max(0, totalUserActions - foundCount);
+
+    // ==========================================
+    // A. Top Header / Verdict & Stats Banner
+    // ==========================================
+    const headerBanner = _createEl("div", "flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-border-subtle", "");
+
+    // Left group: Verdict badge + Metrics
+    const leftGroup = _createEl("div", "flex flex-wrap items-center gap-3", "");
+    
+    // Strict binary verdict badge
+    const verdictBadge = _createEl(
+      "div",
+      success
+        ? "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-600 border border-emerald-500/25 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30 shadow-xs"
+        : "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-rose-500/10 text-rose-600 border border-rose-500/25 dark:bg-rose-500/15 dark:text-rose-400 dark:border-rose-500/30 shadow-xs",
+      ""
+    );
+    verdictBadge.setAttribute("data-clickui", "result-verdict-badge");
+    const verdictIcon = _createEl(
+      "span",
+      "material-symbols-outlined text-[16px]",
+      success ? "check_circle" : "cancel"
+    );
+    const verdictText = _createEl(
+      "span",
+      "",
+      success ? wt("clickui.verdict_success", "Зачтено") : wt("clickui.verdict_fail", "Не зачтено")
+    );
+    verdictBadge.appendChild(verdictIcon);
+    verdictBadge.appendChild(verdictText);
+    leftGroup.appendChild(verdictBadge);
+
+    // Targets found stat
+    const foundStats = _createEl(
+      "div",
+      "inline-flex items-center gap-1 text-xs font-medium text-text-secondary dark:text-text-muted",
+      ""
+    );
+    const targetIcon = _createEl("span", "material-symbols-outlined text-[15px] text-text-muted", "ads_click");
+    const foundStatsText = _createEl(
+      "span",
+      "",
+      wt("clickui.targets_found_stat", "Найдено: {found} из {total} целей")
+        .replace("{found}", foundCount)
+        .replace("{total}", totalTargets)
+    );
+    foundStats.appendChild(targetIcon);
+    foundStats.appendChild(foundStatsText);
+    leftGroup.appendChild(foundStats);
+
+    // Score metric if present
+    if (result && result.score != null) {
+      const scoreVal = Math.round(Number(result.score) || 0);
+      const scorePill = _createEl(
+        "div",
+        "inline-flex items-center gap-1 text-xs font-medium text-text-secondary dark:text-text-muted border-l border-border-subtle pl-3",
+        ""
+      );
+      const scoreIcon = _createEl("span", "material-symbols-outlined text-[15px] text-text-muted", "percent");
+      const scoreText = _createEl(
+        "span",
+        "",
+        wt("clickui.score_stat", "Оценка: {score}%").replace("{score}", scoreVal)
+      );
+      scorePill.appendChild(scoreIcon);
+      scorePill.appendChild(scoreText);
+      leftGroup.appendChild(scorePill);
+    }
+
+    // Extra actions pill if user made excess clicks
+    if (extraActionsCount > 0) {
+      const extraPill = _createEl(
+        "div",
+        "inline-flex items-center gap-1 text-xs font-medium text-warning dark:text-warning-light border-l border-border-subtle pl-3",
+        ""
+      );
+      const extraIcon = _createEl("span", "material-symbols-outlined text-[15px]", "info");
+      const extraText = _createEl(
+        "span",
+        "",
+        wt("clickui.inspector_stats_extra", "Лишних отметок: {extra}").replace("{extra}", extraActionsCount)
+      );
+      extraPill.appendChild(extraIcon);
+      extraPill.appendChild(extraText);
+      leftGroup.appendChild(extraPill);
+    }
+
+    headerBanner.appendChild(leftGroup);
+
+    // Right group: Mode Toggle (Side-by-Side vs Tabs) & Reset View
+    const rightControls = _createEl("div", "flex items-center gap-2", "");
+
+    const modeSwitch = _createEl(
+      "div",
+      "inline-flex items-center rounded-xl border border-border-subtle bg-surface-2/70 p-0.5 shadow-xs",
+      ""
+    );
+    modeSwitch.setAttribute("data-clickui", "result-mode-switch");
+
+    const sideBtn = _createEl(
+      "button",
+      "inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all text-text-main dark:text-text-on-dark bg-surface-1 shadow-xs border border-border-subtle/50",
+      ""
+    );
+    sideBtn.type = "button";
+    sideBtn.setAttribute("data-clickui", "mode-side-by-side");
+    const sideIcon = _createEl("span", "material-symbols-outlined text-[15px] leading-none select-none", "view_column");
+    const sideLabel = _createEl("span", "hidden sm:inline", wt("clickui.mode_sbs", "2 снимка рядом"));
+    sideBtn.appendChild(sideIcon);
+    sideBtn.appendChild(sideLabel);
+
+    const tabsBtn = _createEl(
+      "button",
+      "inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all text-text-secondary dark:text-text-muted hover:text-text-main",
+      ""
+    );
+    tabsBtn.type = "button";
+    tabsBtn.setAttribute("data-clickui", "mode-tabs");
+    const tabsIcon = _createEl("span", "material-symbols-outlined text-[15px] leading-none select-none", "tab");
+    const tabsLabel = _createEl("span", "hidden sm:inline", wt("clickui.mode_tabs", "Вкладками"));
+    tabsBtn.appendChild(tabsIcon);
+    tabsBtn.appendChild(tabsLabel);
+
+    modeSwitch.appendChild(sideBtn);
+    modeSwitch.appendChild(tabsBtn);
+    rightControls.appendChild(modeSwitch);
+
+    // Reset View Button
+    const resetViewBtn = _createEl(
+      "button",
+      "inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-border-subtle bg-surface-2/70 hover:bg-surface-2 text-xs font-medium text-text-secondary hover:text-text-main transition-colors shadow-xs",
+      ""
+    );
+    resetViewBtn.type = "button";
+    resetViewBtn.setAttribute("data-clickui", "result-reset-view");
+    resetViewBtn.title = wt("clickui.reset_view", "Подогнать масштаб");
+    const resetIcon = _createEl("span", "material-symbols-outlined text-[16px] leading-none select-none", "restart_alt");
+    const resetLabel = _createEl("span", "hidden md:inline", wt("clickui.reset_view", "Подогнать масштаб"));
+    resetViewBtn.appendChild(resetIcon);
+    resetViewBtn.appendChild(resetLabel);
+    rightControls.appendChild(resetViewBtn);
+
+    headerBanner.appendChild(rightControls);
+    section.appendChild(headerBanner);
+
+    // ==========================================
+    // B. Unified Anti-CLS Inspector Bar
+    // ==========================================
+    const inspectorBar = _createEl(
+      "div",
+      "clickui-result-inspector flex items-center justify-between px-3.5 py-2 rounded-xl border border-border-subtle bg-surface-2/60 dark:bg-surface-2/30 shadow-xs select-none transition-colors",
+      ""
+    );
+    inspectorBar.classList.add("clickui-result-inspector");
+    inspectorBar.style.minHeight = "58px";
+    inspectorBar.style.height = "58px";
+    inspectorBar.style.boxSizing = "border-box";
+    inspectorBar.setAttribute("data-clickui", "result-inspector");
+
+    const inspectorLeft = _createEl("div", "flex items-center gap-2.5 min-w-0 flex-1", "");
+    const inspectorIcon = _createEl(
+      "span",
+      "material-symbols-outlined text-[20px] text-text-muted shrink-0 transition-colors",
+      success ? "check_circle" : "info"
+    );
+    if (success) inspectorIcon.classList.add("text-emerald-500");
+
+    const inspectorTextCol = _createEl("div", "flex flex-col min-w-0 flex-1", "");
+    const defaultIdleTitle = success
+      ? wt("clickui.inspector_idle_success_title", "Задание успешно выполнено")
+      : wt("clickui.inspector_idle_error_title", "Разбор ошибок выполнения");
+    const defaultIdleDesc = wt("clickui.inspector_idle_desc", "Наведите курсор на отметку на снимке или элемент списка справа для детального анализа");
+
+    const inspectorTitle = _createEl(
+      "div",
+      "text-[11px] font-semibold uppercase tracking-wider text-text-secondary dark:text-text-muted truncate transition-opacity duration-150",
+      defaultIdleTitle
+    );
+    const inspectorDesc = _createEl(
+      "div",
+      "text-[13px] font-medium text-text-main dark:text-text-on-dark truncate transition-opacity duration-150",
+      defaultIdleDesc
+    );
+    inspectorTextCol.appendChild(inspectorTitle);
+    inspectorTextCol.appendChild(inspectorDesc);
+    inspectorLeft.appendChild(inspectorIcon);
+    inspectorLeft.appendChild(inspectorTextCol);
+    inspectorBar.appendChild(inspectorLeft);
+
+    const inspectorChip = _createEl("div", "inspector-chip shrink-0 ml-3", "");
+    inspectorBar.appendChild(inspectorChip);
+    section.appendChild(inspectorBar);
+
+    function updateInspector(hoverInfo) {
+      if (!hoverInfo) {
+        inspectorBar.className = "clickui-result-inspector min-h-[58px] h-[58px] flex items-center justify-between px-3.5 py-2 rounded-xl border border-border-subtle bg-surface-2/60 dark:bg-surface-2/30 shadow-xs select-none transition-all duration-150 ease-out";
+        inspectorTitle.textContent = success
+          ? wt("clickui.inspector_idle_success_title", "Задание успешно выполнено")
+          : wt("clickui.inspector_idle_error_title", "Разбор ошибок выполнения");
+        inspectorDesc.textContent = wt("clickui.inspector_idle_desc", "Наведите курсор на отметку на снимке или элемент списка справа для детального анализа");
+        inspectorChip.innerHTML = "";
+        return;
+      }
+
+      const { targetIndex, actionKey } = hoverInfo;
+
+      // 1. Hovered on a specific user action (click:0, polygon:0, etc.)
+      if (actionKey) {
+        const action = _collectUserActions().find((a) => a.key === actionKey);
+        if (action) {
+          const interpretation = _getActionInterpretation(actionKey);
+          inspectorTitle.textContent = action.title;
+          const assignedTargetIdx = interpretation && typeof interpretation.targetIndex === "number" ? interpretation.targetIndex : null;
+          const targetLabel = assignedTargetIdx != null ? _getTargetLabelByIndex(assignedTargetIdx) : "";
+
+          // Check if L2 label mismatch
+          const labelStatus = _getLabelStatusForAction(action.kind, action.index);
+          const isLabelMismatch = labelStatus && labelStatus.status === "unmatched";
+
+          if (assignedTargetIdx != null) {
+            const color = _getTargetColor(assignedTargetIdx);
+            inspectorChip.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold tracking-wide" style="background-color: ${_withAlpha(color, 0.15)}; color: ${color}; border: 1px solid ${_withAlpha(color, 0.3)};">${_escapeHtml(targetLabel || wt("clickui.target_fallback", "Цель") + " " + (assignedTargetIdx + 1))}</span>`;
+          } else {
+            inspectorChip.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold tracking-wide bg-rose-500/10 text-rose-500 border border-rose-500/25">${wt("clickui.badge_out_of_bounds", "Вне зоны")}</span>`;
+          }
+
+          if (interpretation && interpretation.duplicate) {
+            inspectorBar.className = "clickui-result-inspector min-h-[58px] h-[58px] flex items-center justify-between px-3.5 py-2 rounded-xl border border-amber-500/30 bg-amber-500/10 dark:bg-amber-500/15 shadow-xs select-none transition-all duration-150 ease-out";
+            inspectorIcon.textContent = "warning";
+            inspectorIcon.className = "material-symbols-outlined text-[20px] text-warning shrink-0 transition-colors";
+            inspectorTitle.textContent = wt("clickui.inspector_label_err_title", "Клик {n}: Место найдено, ошибка в названии").replace("{n}", action.index + 1);
+            inspectorDesc.textContent = wt("clickui.duplicate_click_detail", "Цель {ref} уже была отмечена другим кликом.").replace("{ref}", targetLabel || "");
+            inspectorChip.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold tracking-wide bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">${wt("clickui.badge_duplicate", "Повтор")}</span>`;
+          } else if (interpretation && interpretation.success) {
+            if (isLabelMismatch) {
+              const userLabel = _normalizeReviewLabelText(action.label || (state.labelsClicks && state.labelsClicks[action.index]));
+              const expectedLabel = labelStatus.correctLabel || targetLabel;
+              inspectorBar.className = "clickui-result-inspector min-h-[58px] h-[58px] flex items-center justify-between px-3.5 py-2 rounded-xl border border-amber-500/30 bg-amber-500/10 dark:bg-amber-500/15 shadow-xs select-none transition-all duration-150 ease-out";
+              inspectorIcon.textContent = "edit_note";
+              inspectorIcon.className = "material-symbols-outlined text-[20px] text-amber-500 shrink-0 transition-colors";
+              inspectorTitle.textContent = wt("clickui.inspector_label_err_title", "Клик {n}: Место найдено, ошибка в названии").replace("{n}", action.index + 1);
+              inspectorDesc.textContent = wt("clickui.inspector_label_err_desc", "Введено: «{user}», ожидалось: «{correct}»")
+                .replace("{user}", userLabel)
+                .replace("{correct}", expectedLabel);
+              inspectorChip.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold tracking-wide bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">${wt("clickui.badge_label_err", "Ошибка названия")}</span>`;
+            } else {
+              inspectorBar.className = "clickui-result-inspector min-h-[58px] h-[58px] flex items-center justify-between px-3.5 py-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-500/15 shadow-xs select-none transition-all duration-150 ease-out";
+              inspectorIcon.textContent = "check_circle";
+              inspectorIcon.className = "material-symbols-outlined text-[20px] text-emerald-500 shrink-0 transition-colors";
+              inspectorTitle.textContent = wt("clickui.inspector_click_hit_title", "Клик {n}: Точное попадание в область «{label}»")
+                .replace("{n}", action.index + 1)
+                .replace("{label}", targetLabel || "");
+              inspectorDesc.textContent = wt("clickui.inspector_click_hit_desc", "Анатомическая область определена верно");
+            }
+          } else if (action.kind === "polygon" || action.kind === "line") {
+            const cov = _formatPercentValue(interpretation && interpretation.coverage);
+            const thr = _formatPercentValue(interpretation && interpretation.threshold);
+            const isContourSuccess = interpretation && interpretation.success === true;
+            inspectorBar.className = isContourSuccess
+              ? "min-h-[58px] h-[58px] flex items-center justify-between px-3.5 py-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-500/15 shadow-xs select-none transition-all duration-150 ease-out"
+              : "min-h-[58px] h-[58px] flex items-center justify-between px-3.5 py-2 rounded-xl border border-rose-500/30 bg-rose-500/10 dark:bg-rose-500/15 shadow-xs select-none transition-all duration-150 ease-out";
+            inspectorIcon.textContent = isContourSuccess ? "check_circle" : "cancel";
+            inspectorIcon.className = "material-symbols-outlined text-[20px] " + (isContourSuccess ? "text-emerald-500" : "text-rose-500") + " shrink-0 transition-colors";
+            inspectorTitle.textContent = `${action.title}: ${targetLabel || wt("clickui.target_fallback", "Цель")}`;
+            inspectorDesc.textContent = `Покрытие: ${cov || "0%"} (порог: ${thr || "75%"})`;
+          } else {
+            inspectorBar.className = "clickui-result-inspector min-h-[58px] h-[58px] flex items-center justify-between px-3.5 py-2 rounded-xl border border-rose-500/30 bg-rose-500/10 dark:bg-rose-500/15 shadow-xs select-none transition-all duration-150 ease-out";
+            inspectorIcon.textContent = "cancel";
+            inspectorIcon.className = "material-symbols-outlined text-[20px] text-rose-500 shrink-0 transition-colors";
+            inspectorTitle.textContent = wt("clickui.inspector_click_miss_title", "Клик {n}: Вне целевой области").replace("{n}", action.index + 1);
+            inspectorDesc.textContent = wt("clickui.inspector_click_miss_desc", "В данной точке патологических или целевых структур нет");
+          }
+          return;
+        }
+      }
+
+      // 2. Hovered on a reference target (targetIndex)
+      if (targetIndex != null) {
+        const targetLabel = _getTargetLabelByIndex(targetIndex);
+        const color = _getTargetColor(targetIndex);
+        const isFound = foundTargets.has(targetIndex);
+        const labelStatus = _getLabelStatusForTarget(targetIndex);
+        const isLabelMismatch = labelStatus && labelStatus.status === "unmatched";
+        const polyResults = Array.isArray(details.polygon_results) ? details.polygon_results : [];
+        const lineResults = Array.isArray(details.line_results) ? details.line_results : [];
+        const polyRes = polyResults.find((r) => r.target_index === targetIndex);
+        const lineRes = lineResults.find((r) => r.target_index === targetIndex);
+        const contourRes = polyRes || lineRes;
+        const isLowCoverage = contourRes && contourRes.coverage < (contourRes.threshold || 75);
+
+        if (isLabelMismatch) {
+          const userLabel = _normalizeReviewLabelText(labelStatus.userLabel);
+          const expectedLabel = labelStatus.correctLabel || targetLabel;
+          inspectorBar.className = "clickui-result-inspector min-h-[58px] h-[58px] flex items-center justify-between px-3.5 py-2 rounded-xl border border-amber-500/30 bg-amber-500/10 dark:bg-amber-500/15 shadow-xs select-none transition-all duration-150 ease-out";
+          inspectorIcon.textContent = "edit_note";
+          inspectorIcon.className = "material-symbols-outlined text-[20px] text-amber-500 shrink-0 transition-colors";
+          inspectorTitle.textContent = wt("clickui.inspector_label_err_title_target", "Область «{label}»: Ошибка в названии").replace("{label}", targetLabel || "");
+          inspectorDesc.textContent = wt("clickui.inspector_label_err_desc", "Введено: «{user}», ожидалось: «{correct}»")
+            .replace("{user}", userLabel)
+            .replace("{correct}", expectedLabel);
+          inspectorChip.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold tracking-wide bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">${wt("clickui.badge_label_err", "Ошибка названия")}</span>`;
+        } else if (contourRes && isLowCoverage) {
+          inspectorBar.className = "clickui-result-inspector min-h-[58px] h-[58px] flex items-center justify-between px-3.5 py-2 rounded-xl border border-rose-500/30 bg-rose-500/10 dark:bg-rose-500/15 shadow-xs select-none transition-all duration-150 ease-out";
+          inspectorIcon.textContent = "cancel";
+          inspectorIcon.className = "material-symbols-outlined text-[20px] text-rose-500 shrink-0 transition-colors";
+          inspectorTitle.textContent = wt("clickui.inspector_ref_missed_title", "Область «{label}» · Недостаточное покрытие").replace("{label}", targetLabel || "");
+          inspectorDesc.textContent = wt("clickui.coverage_stat", "Покрытие: {cov}% (порог: {thr}%)")
+            .replace("{cov}", contourRes.coverage)
+            .replace("{thr}", contourRes.threshold || 75);
+          inspectorChip.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold tracking-wide bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">${contourRes.coverage}%</span>`;
+        } else if (isFound) {
+          inspectorBar.className = "clickui-result-inspector min-h-[58px] h-[58px] flex items-center justify-between px-3.5 py-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-500/15 shadow-xs select-none transition-all duration-150 ease-out";
+          inspectorIcon.textContent = "check_circle";
+          inspectorIcon.className = "material-symbols-outlined text-[20px] text-emerald-500 shrink-0 transition-colors";
+          inspectorTitle.textContent = wt("clickui.inspector_ref_found_title", "Область «{label}» · Найдена").replace("{label}", targetLabel || "");
+          const clickRes = clickResults.find((r) => r.target_index === targetIndex && r.click_success);
+          if (clickRes && clickRes.matched_click_idx != null) {
+            inspectorDesc.textContent = wt("clickui.inspector_ref_found_by_click", "Засчитано вашим кликом {n}").replace("{n}", clickRes.matched_click_idx + 1);
+          } else {
+            inspectorDesc.textContent = wt("clickui.inspector_ref_found_desc", "Целевая анатомическая область обнаружена");
+          }
+          inspectorChip.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold tracking-wide bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">${wt("clickui.badge_passed", "Зачтено")}</span>`;
+        } else {
+          inspectorBar.className = "clickui-result-inspector min-h-[58px] h-[58px] flex items-center justify-between px-3.5 py-2 rounded-xl border border-rose-500/30 bg-rose-500/10 dark:bg-rose-500/15 shadow-xs select-none transition-all duration-150 ease-out";
+          inspectorIcon.textContent = "cancel";
+          inspectorIcon.className = "material-symbols-outlined text-[20px] text-rose-500 shrink-0 transition-colors";
+          inspectorTitle.textContent = wt("clickui.inspector_ref_missed_title", "Область «{label}» · Пропущена").replace("{label}", targetLabel || "");
+          inspectorDesc.textContent = wt("clickui.inspector_ref_missed_desc", "Отметка в данной анатомической зоне не была поставлена");
+          inspectorChip.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold tracking-wide bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">${wt("clickui.badge_missed", "Пропущено")}</span>`;
+        }
+      }
+    }
+
+    state.resultInspectorUpdater = updateInspector;
+
+    // ==========================================
+    // C. Comparison Containers
+    // ==========================================
+    const userParts = _getUserReviewParts();
+    const refParts = _getReferenceReviewParts();
+    const userLabelsBlock = _getUserReviewLabelsBlock();
+    const refLabelsBlock = _getReferenceReviewLabelsBlock();
+
+    // 1. Side-by-Side Container
+    const sideBySideGrid = _createEl("div", "clickui-side-by-side-grid grid gap-3.5 xl:grid-cols-2", "");
+    sideBySideGrid.setAttribute("data-clickui", "result-side-by-side");
+
+    // Left Card: User Answer
+    const userCard = _createEl("div", "flex flex-col gap-2 rounded-xl border border-border-subtle bg-surface-2/40 p-3 shadow-xs", "");
+    userCard.setAttribute("data-clickui", "review-user-preview");
+
+    const userHeader = _createEl("div", "flex items-center justify-between gap-2 px-1", "");
+    const userTitleWrap = _createEl("div", "flex items-baseline gap-2 min-w-0", "");
+    const userTitle = _createEl("span", "text-sm font-bold text-text-main dark:text-text-on-dark", wt("clickui.your_answer", "Ваш ответ"));
+    const userDesc = _createEl("span", "text-xs text-text-secondary dark:text-text-muted truncate", _buildReviewSummary(userParts));
+    userTitleWrap.appendChild(userTitle);
+    userTitleWrap.appendChild(userDesc);
+    userHeader.appendChild(userTitleWrap);
+
+    const userZoomBtn = _createEl(
+      "button",
+      "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border-subtle bg-surface-1 text-text-secondary hover:text-text-main hover:bg-surface-2 transition-colors shadow-xs overflow-hidden leading-none",
+      ""
+    );
+    userZoomBtn.type = "button";
+    userZoomBtn.setAttribute("data-clickui", "review-user-preview-zoom");
+    userZoomBtn.title = wt("clickui.open_img", "Открыть изображение");
+    const userZoomIcon = _createEl("span", "material-symbols-outlined text-[18px]", "zoom_in");
+    userZoomBtn.appendChild(userZoomIcon);
+    userZoomBtn.addEventListener("click", () => {
+      _openAdditionalModal(imageUrl, wt("clickui.your_answer", "Ваш ответ"), {
+        naturalW: reviewW,
+        naturalH: reviewH,
+        renderSvg: (svg) => _renderUserReviewSvg(svg, reviewW, reviewH),
+      });
+    });
+    userHeader.appendChild(userZoomBtn);
+    userCard.appendChild(userHeader);
+
+    const viewportUser = _createEl(
+      "div",
+      "relative overflow-hidden rounded-xl border border-border-subtle bg-surface-2 select-none cursor-grab",
+      ""
+    );
+    viewportUser.style.height = "480px";
+    viewportUser.setAttribute("data-clickui", "viewport-user");
+
+    const contentLayerUser = _createEl("div", "absolute left-0 top-0", "");
+    contentLayerUser.style.transformOrigin = "0 0";
+    contentLayerUser.style.width = reviewW + "px";
+    contentLayerUser.style.height = reviewH + "px";
+
+    const imgUser = document.createElement("img");
+    imgUser.src = imageUrl || "";
+    imgUser.alt = wt("clickui.your_answer", "Ваш ответ");
+    imgUser.draggable = false;
+    imgUser.className = "block select-none pointer-events-none";
+    imgUser.style.width = reviewW + "px";
+    imgUser.style.height = reviewH + "px";
+    imgUser.style.maxWidth = "none";
+    imgUser.style.maxHeight = "none";
+    contentLayerUser.appendChild(imgUser);
+
+    const svgUser = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svgUser.setAttribute("class", "absolute inset-0 block select-none pointer-events-none");
+    svgUser.setAttribute("width", String(reviewW));
+    svgUser.setAttribute("height", String(reviewH));
+    svgUser.style.width = reviewW + "px";
+    svgUser.style.height = reviewH + "px";
+    svgUser.setAttribute("viewBox", `0 0 ${reviewW} ${reviewH}`);
+    svgUser.setAttribute("preserveAspectRatio", "none");
+    _renderUserReviewSvg(svgUser, reviewW, reviewH);
+    contentLayerUser.appendChild(svgUser);
+    viewportUser.appendChild(contentLayerUser);
+    userCard.appendChild(viewportUser);
+
+    if (userLabelsBlock) {
+      userCard.appendChild(userLabelsBlock);
+    }
+    sideBySideGrid.appendChild(userCard);
+
+    // Right Card: Reference
+    const refCard = _createEl("div", "flex flex-col gap-2 rounded-xl border border-border-subtle bg-surface-2/40 p-3 shadow-xs", "");
+    refCard.setAttribute("data-clickui", "review-reference-preview");
+
+    const refHeader = _createEl("div", "flex items-center justify-between gap-2 px-1", "");
+    const refTitleWrap = _createEl("div", "flex items-baseline gap-2 min-w-0", "");
+    const refTitle = _createEl("span", "text-sm font-bold text-text-main dark:text-text-on-dark", wt("clickui.reference", "Эталон"));
+    const refDesc = _createEl("span", "text-xs text-text-secondary dark:text-text-muted truncate", _buildReviewSummary(refParts));
+    refTitleWrap.appendChild(refTitle);
+    refTitleWrap.appendChild(refDesc);
+    refHeader.appendChild(refTitleWrap);
+
+    const refZoomBtn = _createEl(
+      "button",
+      "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border-subtle bg-surface-1 text-text-secondary hover:text-text-main hover:bg-surface-2 transition-colors shadow-xs overflow-hidden leading-none",
+      ""
+    );
+    refZoomBtn.type = "button";
+    refZoomBtn.setAttribute("data-clickui", "review-reference-preview-zoom");
+    refZoomBtn.title = wt("clickui.open_img", "Открыть изображение");
+    const refZoomIcon = _createEl("span", "material-symbols-outlined text-[18px]", "zoom_in");
+    refZoomBtn.appendChild(refZoomIcon);
+    refZoomBtn.addEventListener("click", () => {
+      _openAdditionalModal(imageUrl, wt("clickui.reference", "Эталон"), {
+        naturalW: reviewW,
+        naturalH: reviewH,
+        renderSvg: (svg) => _renderReferenceReviewSvg(svg, reviewW, reviewH),
+      });
+    });
+    refHeader.appendChild(refZoomBtn);
+    refCard.appendChild(refHeader);
+
+    const viewportRef = _createEl(
+      "div",
+      "relative overflow-hidden rounded-xl border border-border-subtle bg-surface-2 select-none cursor-grab",
+      ""
+    );
+    viewportRef.style.height = "480px";
+    viewportRef.setAttribute("data-clickui", "viewport-reference");
+
+    const contentLayerRef = _createEl("div", "absolute left-0 top-0", "");
+    contentLayerRef.style.transformOrigin = "0 0";
+    contentLayerRef.style.width = reviewW + "px";
+    contentLayerRef.style.height = reviewH + "px";
+
+    const imgRef = document.createElement("img");
+    imgRef.src = imageUrl || "";
+    imgRef.alt = wt("clickui.reference", "Эталон");
+    imgRef.draggable = false;
+    imgRef.className = "block select-none pointer-events-none";
+    imgRef.style.width = reviewW + "px";
+    imgRef.style.height = reviewH + "px";
+    imgRef.style.maxWidth = "none";
+    imgRef.style.maxHeight = "none";
+    contentLayerRef.appendChild(imgRef);
+
+    const svgRef = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svgRef.setAttribute("class", "absolute inset-0 block select-none pointer-events-none");
+    svgRef.setAttribute("width", String(reviewW));
+    svgRef.setAttribute("height", String(reviewH));
+    svgRef.style.width = reviewW + "px";
+    svgRef.style.height = reviewH + "px";
+    svgRef.setAttribute("viewBox", `0 0 ${reviewW} ${reviewH}`);
+    svgRef.setAttribute("preserveAspectRatio", "none");
+    _renderReferenceReviewSvg(svgRef, reviewW, reviewH);
+    contentLayerRef.appendChild(svgRef);
+    viewportRef.appendChild(contentLayerRef);
+    refCard.appendChild(viewportRef);
+
+    if (refLabelsBlock) {
+      refCard.appendChild(refLabelsBlock);
+    }
+    sideBySideGrid.appendChild(refCard);
+    section.appendChild(sideBySideGrid);
+
+    // 2. Tabs Container (Single full-width viewport with tabs)
+    const tabsContainer = _createEl("div", "hidden flex flex-col gap-2.5", "");
+    tabsContainer.setAttribute("data-clickui", "result-tabs-container");
+
+    const tabBar = _createEl("div", "flex items-center justify-between gap-2 pb-1 min-w-0 overflow-hidden", "");
+    const tabButtonsWrap = _createEl("div", "inline-flex items-center rounded-xl border border-border-subtle bg-surface-2/70 p-0.5 shadow-xs max-w-full overflow-x-auto min-w-0", "");
+
+    const tabBtnUser = _createEl(
+      "button",
+      "inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-surface-1 text-text-main dark:text-text-on-dark shadow-xs border border-border-subtle/50 whitespace-nowrap shrink-0",
+      ""
+    );
+    tabBtnUser.type = "button";
+    tabBtnUser.setAttribute("data-clickui", "tab-user");
+    tabBtnUser.innerHTML = `<span class="material-symbols-outlined text-[16px]">person</span><span>${wt("clickui.tab_user", "Ваш ответ")}</span>`;
+
+    const tabBtnRef = _createEl(
+      "button",
+      "inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-text-secondary dark:text-text-muted hover:text-text-main whitespace-nowrap shrink-0",
+      ""
+    );
+    tabBtnRef.type = "button";
+    tabBtnRef.setAttribute("data-clickui", "tab-reference");
+    tabBtnRef.innerHTML = `<span class="material-symbols-outlined text-[16px]">verified</span><span>${wt("clickui.tab_reference", "Эталон")}</span>`;
+
+    const tabBtnOverlay = _createEl(
+      "button",
+      "inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-text-secondary dark:text-text-muted hover:text-text-main whitespace-nowrap shrink-0",
+      ""
+    );
+    tabBtnOverlay.type = "button";
+    tabBtnOverlay.setAttribute("data-clickui", "tab-overlay");
+    tabBtnOverlay.innerHTML = `<span class="material-symbols-outlined text-[16px]">layers</span><span>${wt("clickui.tab_overlay", "Наложение")}</span>`;
+
+    tabButtonsWrap.appendChild(tabBtnUser);
+    tabButtonsWrap.appendChild(tabBtnRef);
+    tabButtonsWrap.appendChild(tabBtnOverlay);
+    tabBar.appendChild(tabButtonsWrap);
+
+    const tabZoomBtn = _createEl(
+      "button",
+      "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border-subtle bg-surface-1 text-text-secondary hover:text-text-main hover:bg-surface-2 transition-colors shadow-xs overflow-hidden leading-none",
+      ""
+    );
+    tabZoomBtn.type = "button";
+    tabZoomBtn.title = wt("clickui.open_img", "Открыть изображение");
+    tabZoomBtn.innerHTML = `<span class="material-symbols-outlined text-[18px]">zoom_in</span>`;
+    tabBar.appendChild(tabZoomBtn);
+    tabsContainer.appendChild(tabBar);
+
+    const viewportTab = _createEl(
+      "div",
+      "relative overflow-hidden rounded-xl border border-border-subtle bg-surface-2 select-none cursor-grab",
+      ""
+    );
+    viewportTab.style.height = "520px";
+    viewportTab.setAttribute("data-clickui", "viewport-tab");
+
+    const contentLayerTab = _createEl("div", "absolute left-0 top-0", "");
+    contentLayerTab.style.transformOrigin = "0 0";
+    contentLayerTab.style.width = reviewW + "px";
+    contentLayerTab.style.height = reviewH + "px";
+
+    const imgTab = document.createElement("img");
+    imgTab.src = imageUrl || "";
+    imgTab.alt = wt("clickui.tab_overlay", "Сравнение");
+    imgTab.draggable = false;
+    imgTab.className = "block select-none pointer-events-none";
+    imgTab.style.width = reviewW + "px";
+    imgTab.style.height = reviewH + "px";
+    imgTab.style.maxWidth = "none";
+    imgTab.style.maxHeight = "none";
+    contentLayerTab.appendChild(imgTab);
+
+    const svgTabRef = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svgTabRef.setAttribute("class", "absolute inset-0 block select-none pointer-events-none");
+    svgTabRef.setAttribute("width", String(reviewW));
+    svgTabRef.setAttribute("height", String(reviewH));
+    svgTabRef.style.width = reviewW + "px";
+    svgTabRef.style.height = reviewH + "px";
+    svgTabRef.setAttribute("viewBox", `0 0 ${reviewW} ${reviewH}`);
+    svgTabRef.setAttribute("preserveAspectRatio", "none");
+    _renderReferenceReviewSvg(svgTabRef, reviewW, reviewH);
+    contentLayerTab.appendChild(svgTabRef);
+
+    const svgTabUser = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svgTabUser.setAttribute("class", "absolute inset-0 block select-none pointer-events-none");
+    svgTabUser.setAttribute("width", String(reviewW));
+    svgTabUser.setAttribute("height", String(reviewH));
+    svgTabUser.style.width = reviewW + "px";
+    svgTabUser.style.height = reviewH + "px";
+    svgTabUser.setAttribute("viewBox", `0 0 ${reviewW} ${reviewH}`);
+    svgTabUser.setAttribute("preserveAspectRatio", "none");
+    _renderUserReviewSvg(svgTabUser, reviewW, reviewH);
+    contentLayerTab.appendChild(svgTabUser);
+
+    viewportTab.appendChild(contentLayerTab);
+    tabsContainer.appendChild(viewportTab);
+    section.appendChild(tabsContainer);
+
+    let activeTab = "user";
+    function setTab(tabName) {
+      activeTab = tabName;
+      const activeClass = "inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-surface-1 text-text-main dark:text-text-on-dark shadow-xs border border-border-subtle/50 whitespace-nowrap shrink-0";
+      const inactiveClass = "inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-text-secondary dark:text-text-muted hover:text-text-main border-transparent whitespace-nowrap shrink-0";
+      
+      tabBtnUser.className = tabName === "user" ? activeClass : inactiveClass;
+      tabBtnRef.className = tabName === "ref" ? activeClass : inactiveClass;
+      tabBtnOverlay.className = tabName === "overlay" ? activeClass : inactiveClass;
+
+      if (tabName === "user") {
+        svgTabUser.style.display = "block";
+        svgTabRef.style.display = "none";
+      } else if (tabName === "ref") {
+        svgTabUser.style.display = "none";
+        svgTabRef.style.display = "block";
+      } else {
+        svgTabUser.style.display = "block";
+        svgTabRef.style.display = "block";
+      }
+    }
+    setTab("user");
+
+    tabBtnUser.addEventListener("click", () => setTab("user"));
+    tabBtnRef.addEventListener("click", () => setTab("ref"));
+    tabBtnOverlay.addEventListener("click", () => setTab("overlay"));
+
+    tabZoomBtn.addEventListener("click", () => {
+      _openAdditionalModal(imageUrl, activeTab === "ref" ? wt("clickui.reference", "Эталон") : wt("clickui.your_answer", "Ваш ответ"), {
+        naturalW: reviewW,
+        naturalH: reviewH,
+        renderSvg: (svg) => {
+          if (activeTab === "user" || activeTab === "overlay") _renderUserReviewSvg(svg, reviewW, reviewH);
+          if (activeTab === "ref" || activeTab === "overlay") _renderReferenceReviewSvg(svg, reviewW, reviewH);
+        },
+      });
+    });
+
+    // ==========================================
+    // D. Synchronized Mirror Zoom & Pan Engine
+    // ==========================================
+    const mirrorState = { zoom: 1, panX: 0, panY: 0 };
+    let currentDisplayMode = "side_by_side";
+    let userChoseDisplayMode = false;
+
+    function applyMirrorTransform() {
+      const transformStr = `translate(${mirrorState.panX}px, ${mirrorState.panY}px) scale(${mirrorState.zoom})`;
+      if (contentLayerUser) contentLayerUser.style.transform = transformStr;
+      if (contentLayerRef) contentLayerRef.style.transform = transformStr;
+      if (contentLayerTab) contentLayerTab.style.transform = transformStr;
+    }
+
+    function fitView(targetVp) {
+      const vp = targetVp || (currentDisplayMode === "side_by_side" ? viewportUser : viewportTab);
+      if (!vp) return;
+      const rect = typeof vp.getBoundingClientRect === "function" ? vp.getBoundingClientRect() : null;
+      const w = rect && rect.width > 0 ? rect.width : (vp.clientWidth || 640);
+      const h = rect && rect.height > 0 ? rect.height : (vp.clientHeight || 480);
+      const nw = reviewW || 640;
+      const nh = reviewH || 480;
+      const fitX = w / nw;
+      const fitY = h / nh;
+      const initialZoom = Math.max(0.05, Math.min(5, Math.min(fitX, fitY) * 0.98));
+      mirrorState.zoom = initialZoom;
+      mirrorState.panX = (w - nw * initialZoom) / 2;
+      mirrorState.panY = (h - nh * initialZoom) / 2;
+      applyMirrorTransform();
+    }
+
+    function updateReviewCanvasDimensions(newW, newH) {
+      const w = Math.max(1, Math.round(Number(newW) || 0));
+      const h = Math.max(1, Math.round(Number(newH) || 0));
+      if (!w || !h) return;
+      if (w === reviewW && h === reviewH) {
+        fitView();
+        return;
+      }
+      reviewW = w;
+      reviewH = h;
+
+      if (contentLayerUser) {
+        contentLayerUser.style.width = reviewW + "px";
+        contentLayerUser.style.height = reviewH + "px";
+      }
+      if (imgUser) {
+        imgUser.style.width = reviewW + "px";
+        imgUser.style.height = reviewH + "px";
+      }
+      if (svgUser) {
+        svgUser.setAttribute("width", String(reviewW));
+        svgUser.setAttribute("height", String(reviewH));
+        svgUser.style.width = reviewW + "px";
+        svgUser.style.height = reviewH + "px";
+        svgUser.setAttribute("viewBox", `0 0 ${reviewW} ${reviewH}`);
+        svgUser.innerHTML = "";
+        _renderUserReviewSvg(svgUser, reviewW, reviewH);
+      }
+
+      if (contentLayerRef) {
+        contentLayerRef.style.width = reviewW + "px";
+        contentLayerRef.style.height = reviewH + "px";
+      }
+      if (imgRef) {
+        imgRef.style.width = reviewW + "px";
+        imgRef.style.height = reviewH + "px";
+      }
+      if (svgRef) {
+        svgRef.setAttribute("width", String(reviewW));
+        svgRef.setAttribute("height", String(reviewH));
+        svgRef.style.width = reviewW + "px";
+        svgRef.style.height = reviewH + "px";
+        svgRef.setAttribute("viewBox", `0 0 ${reviewW} ${reviewH}`);
+        svgRef.innerHTML = "";
+        _renderReferenceReviewSvg(svgRef, reviewW, reviewH);
+      }
+
+      if (contentLayerTab) {
+        contentLayerTab.style.width = reviewW + "px";
+        contentLayerTab.style.height = reviewH + "px";
+      }
+      if (imgTab) {
+        imgTab.style.width = reviewW + "px";
+        imgTab.style.height = reviewH + "px";
+      }
+      if (svgTabRef) {
+        svgTabRef.setAttribute("width", String(reviewW));
+        svgTabRef.setAttribute("height", String(reviewH));
+        svgTabRef.style.width = reviewW + "px";
+        svgTabRef.style.height = reviewH + "px";
+        svgTabRef.setAttribute("viewBox", `0 0 ${reviewW} ${reviewH}`);
+        svgTabRef.innerHTML = "";
+        _renderReferenceReviewSvg(svgTabRef, reviewW, reviewH);
+      }
+      if (svgTabUser) {
+        svgTabUser.setAttribute("width", String(reviewW));
+        svgTabUser.setAttribute("height", String(reviewH));
+        svgTabUser.style.width = reviewW + "px";
+        svgTabUser.style.height = reviewH + "px";
+        svgTabUser.setAttribute("viewBox", `0 0 ${reviewW} ${reviewH}`);
+        svgTabUser.innerHTML = "";
+        _renderUserReviewSvg(svgTabUser, reviewW, reviewH);
+      }
+
+      _setupReviewHoverEffects(section);
+      fitView();
+    }
+
+    function setDisplayMode(mode) {
+      currentDisplayMode = mode;
+      const activeBtnClass = "inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all bg-surface-1 text-text-main dark:text-text-on-dark shadow-xs border border-border-subtle/50";
+      const inactiveBtnClass = "inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all text-text-secondary dark:text-text-muted hover:text-text-main border-transparent";
+
+      if (mode === "side_by_side") {
+        sideBtn.className = activeBtnClass;
+        tabsBtn.className = inactiveBtnClass;
+        sideBySideGrid.classList.remove("hidden");
+        tabsContainer.classList.add("hidden");
+        fitView(viewportUser);
+      } else {
+        sideBtn.className = inactiveBtnClass;
+        tabsBtn.className = activeBtnClass;
+        sideBySideGrid.classList.add("hidden");
+        tabsContainer.classList.remove("hidden");
+        fitView(viewportTab);
+      }
+    }
+
+    sideBtn.addEventListener("click", () => {
+      userChoseDisplayMode = true;
+      setDisplayMode("side_by_side");
+    });
+    tabsBtn.addEventListener("click", () => {
+      userChoseDisplayMode = true;
+      setDisplayMode("tabs");
+    });
+    resetViewBtn.addEventListener("click", () => {
+      fitView();
+    });
+
+    function attachZoomPan(vp) {
+      if (!vp) return;
+
+      vp.addEventListener(
+        "wheel",
+        (ev) => {
+          ev.preventDefault();
+          const dir = ev.deltaY > 0 ? -1 : 1;
+          const factor = dir > 0 ? 1.15 : 1 / 1.15;
+          const rect = typeof vp.getBoundingClientRect === "function" ? vp.getBoundingClientRect() : null;
+          const left = rect ? rect.left : 0;
+          const top = rect ? rect.top : 0;
+          const anchorX = ev.clientX - left;
+          const anchorY = ev.clientY - top;
+          const worldX = (anchorX - mirrorState.panX) / (mirrorState.zoom || 1);
+          const worldY = (anchorY - mirrorState.panY) / (mirrorState.zoom || 1);
+
+          mirrorState.zoom = Math.max(0.15, Math.min(8, mirrorState.zoom * factor));
+          mirrorState.panX = anchorX - worldX * mirrorState.zoom;
+          mirrorState.panY = anchorY - worldY * mirrorState.zoom;
+          applyMirrorTransform();
+        },
+        { passive: false }
+      );
+
+      let isDragging = false;
+      let startX = 0;
+      let startY = 0;
+      let startPanX = 0;
+      let startPanY = 0;
+
+      vp.addEventListener("pointerdown", (ev) => {
+        if (ev.button != null && ev.button !== 0) return;
+        if (ev.target && typeof ev.target.closest === "function" && (ev.target.closest("button") || ev.target.closest("[data-target-index]"))) {
+          return;
+        }
+        isDragging = true;
+        startX = ev.clientX;
+        startY = ev.clientY;
+        startPanX = mirrorState.panX;
+        startPanY = mirrorState.panY;
+        try { vp.setPointerCapture(ev.pointerId); } catch(e) {}
+        viewportUser.style.cursor = "grabbing";
+        viewportRef.style.cursor = "grabbing";
+        viewportTab.style.cursor = "grabbing";
+      });
+
+      vp.addEventListener("pointermove", (ev) => {
+        if (!isDragging) return;
+        const dx = ev.clientX - startX;
+        const dy = ev.clientY - startY;
+        mirrorState.panX = startPanX + dx;
+        mirrorState.panY = startPanY + dy;
+        applyMirrorTransform();
+      });
+
+      const stopDrag = () => {
+        if (!isDragging) return;
+        isDragging = false;
+        try { vp.releasePointerCapture(ev.pointerId); } catch(e) {}
+        viewportUser.style.cursor = "grab";
+        viewportRef.style.cursor = "grab";
+        viewportTab.style.cursor = "grab";
+      };
+
+      vp.addEventListener("pointerup", stopDrag);
+      vp.addEventListener("pointercancel", stopDrag);
+    }
+
+    attachZoomPan(viewportUser);
+    attachZoomPan(viewportRef);
+    attachZoomPan(viewportTab);
+
+    // Initial fit & dynamic load detection
+    function onReviewImgLoad(ev) {
+      const targetImg = (ev && ev.target) || imgUser;
+      if (targetImg && targetImg.naturalWidth > 0 && targetImg.naturalHeight > 0) {
+        updateReviewCanvasDimensions(targetImg.naturalWidth, targetImg.naturalHeight);
+      } else {
+        fitView();
+      }
+    }
+
+    imgUser.addEventListener("load", onReviewImgLoad);
+    imgRef.addEventListener("load", onReviewImgLoad);
+    imgTab.addEventListener("load", onReviewImgLoad);
+
+    if (imgUser.complete && imgUser.naturalWidth > 0) {
+      updateReviewCanvasDimensions(imgUser.naturalWidth, imgUser.naturalHeight);
+    } else if (imgRef.complete && imgRef.naturalWidth > 0) {
+      updateReviewCanvasDimensions(imgRef.naturalWidth, imgRef.naturalHeight);
+    } else if (state.img && state.img.complete && state.img.naturalWidth > 0) {
+      updateReviewCanvasDimensions(state.img.naturalWidth, state.img.naturalHeight);
+    }
+
+    // Always unconditionally calculate and apply initial fitView transform
+    fitView();
+    setTimeout(() => fitView(), 0);
+    if (typeof requestAnimationFrame !== "undefined") {
+      requestAnimationFrame(() => fitView());
+    }
+
+    if (state.img && !state.img.complete) {
+      state.img.addEventListener("load", () => {
+        if (state.img && state.img.naturalWidth > 0) {
+          updateReviewCanvasDimensions(state.img.naturalWidth, state.img.naturalHeight);
+        }
+      });
+    }
+
+    // Auto-adaptive width observer
+    if (typeof ResizeObserver !== "undefined") {
+      let lastObservedW = 0;
+      const ro = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          const width = entry.contentRect.width;
+          if (width <= 0) continue;
+          const widthChanged = Math.abs(width - lastObservedW) > 2;
+          lastObservedW = width;
+          if (!userChoseDisplayMode) {
+            if (width < 950 && currentDisplayMode !== "tabs") {
+              setDisplayMode("tabs");
+              return;
+            } else if (width >= 950 && currentDisplayMode !== "side_by_side") {
+              setDisplayMode("side_by_side");
+              return;
+            }
+          }
+          if (widthChanged) {
+            fitView();
+          }
+        }
+      });
+      ro.observe(section);
+      state.resultWorkspaceResizeObserver = ro;
+    }
+
+    state.workspaceI18nRefs = {
+      verdictText,
+      verdictSuccess: success,
+      foundStatsText,
+      foundCount,
+      totalTargets,
+      scoreText: typeof scoreText !== "undefined" ? scoreText : null,
+      scoreVal: typeof scoreVal !== "undefined" ? scoreVal : null,
+      extraText: typeof extraText !== "undefined" ? extraText : null,
+      extraActionsCount,
+      sideLabel,
+      tabsLabel,
+      resetLabel,
+      resetViewBtn,
+      userTitle,
+      refTitle,
+      tabBtnUserText: tabBtnUser ? tabBtnUser.querySelector("span:last-child") : null,
+      tabBtnRefText: tabBtnRef ? tabBtnRef.querySelector("span:last-child") : null,
+      tabBtnOverlayText: tabBtnOverlay ? tabBtnOverlay.querySelector("span:last-child") : null,
+    };
+
+    // Connected Hover
     _setupReviewHoverEffects(section);
     state.reviewHost.classList.remove("hidden");
     state.reviewHost.appendChild(section);
     state.reviewComparisonEl = section;
+    _setupResultRegistryInSidebar(result);
+  }
+
+  function _renderReviewComparison(result) {
+    return _renderResultWorkspace(result);
   }
 
   function _renderReference() {
@@ -3194,7 +5243,7 @@
           }
         } else if (
           state.showRefLines &&
-          shapeLower === "freehand" &&
+          (shapeLower === "freehand" || shapeLower === "line") &&
           Array.isArray(t.points) &&
           t.points.length >= 2
         ) {
@@ -4387,6 +6436,12 @@
           state.targetsInstructionEl.textContent = _buildTargetsInstruction(state.taskDto, targets);
         }
       }
+      if (typeof _updateResultWorkspaceI18n === "function") {
+        _updateResultWorkspaceI18n();
+      }
+      if (state.lastResult && typeof _setupResultRegistryInSidebar === "function") {
+        _setupResultRegistryInSidebar(state.lastResult);
+      }
     };
     window.addEventListener("i18n:changed", state._i18nListener);
 
@@ -4435,6 +6490,7 @@
       ""
     );
     sideColumn.setAttribute("data-clickui", "side-column");
+    state.sideColumnEl = sideColumn;
     let sideHasContent = false;
 
     state.metadataApi = null;
@@ -4469,6 +6525,7 @@
       "flex flex-1 flex-col gap-3 lg:flex-row lg:items-stretch",
       ""
     );
+    state.wrapperRow = wrapperRow;
     const reviewHost = _createEl("div", "hidden", "");
     reviewHost.setAttribute("data-clickui", "review-host");
 
@@ -4787,6 +6844,7 @@
     wrapper.appendChild(toolbar);
 
     const controls = _createEl("div", "mt-2.5 flex flex-col gap-2", "");
+    state.controlsEl = controls;
 
     const refToggles = _createEl(
       "div",
@@ -5129,6 +7187,30 @@
         .clickui-undo-attention { animation: clickuiUndoAttention 780ms ease-in-out infinite; }
         .clickui-targets-attention { animation: clickuiTargetsAttention 900ms ease-in-out 2; }
         .clickui-outline-verb-attention { animation: clickuiOutlineVerbAttention 680ms ease-in-out 2; }
+        .clickui-registry-scroll {
+          scrollbar-width: thin;
+          scrollbar-color: var(--color-border-strong, #cbd5e1) transparent;
+          scroll-padding-top: 6px;
+          scroll-padding-bottom: 8px;
+        }
+        .clickui-registry-scroll::-webkit-scrollbar {
+          width: 5px;
+        }
+        .clickui-registry-scroll::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .clickui-registry-scroll::-webkit-scrollbar-thumb {
+          background-color: var(--color-border-strong, #cbd5e1);
+          border-radius: 9999px;
+        }
+        .clickui-registry-scroll::-webkit-scrollbar-thumb:hover {
+          background-color: var(--color-text-secondary, #64748b);
+        }
+        .clickui-registry-scroll::-webkit-scrollbar-button {
+          display: none;
+          width: 0;
+          height: 0;
+        }
       `;
       document.head.appendChild(style);
     }
@@ -5973,6 +8055,10 @@
     };
   };
 
+  ClickUI.getState = function getState() {
+    return state;
+  };
+
   ClickUI.restoreViewState = function restoreViewState(viewState) {
     const safeViewState = _sanitizeViewState(viewState);
     if (!safeViewState) return;
@@ -5985,6 +8071,8 @@
 
   ClickUI.applyCheckFeedback = function applyCheckFeedback(result) {
     state.locked = true;
+    state.lastResult = result || null;
+    state.lastEvaluationResult = result || null;
 
     if (!result || !result.details || typeof result.details !== "object") {
       return;
@@ -6009,6 +8097,7 @@
     try {
       const clickResults = Array.isArray(details.click_results) ? details.click_results : [];
       const lineResults = Array.isArray(details.line_results) ? details.line_results : [];
+      const polygonResults = Array.isArray(details.polygon_results) ? details.polygon_results : [];
       // Level 2: backend returns targets_info instead of click_results/line_results
       const targetsInfo = Array.isArray(details.targets_info) ? details.targets_info : [];
 
@@ -6016,23 +8105,20 @@
       const answerKey = (taskDto && taskDto.answer_key) || {};
       const targets = Array.isArray(answerKey.targets) ? answerKey.targets : [];
 
-      function _inferShapeLower(t) {
-        const s = (t && (t.shape || t.type)) || "";
-        let sl = String(s).toLowerCase();
-        if (!sl && t && Array.isArray(t.points)) {
-          if (t.points.length >= 3) sl = "polygon";
-          else if (t.points.length >= 2) sl = "freehand";
-        }
-        return sl;
-      }
-
       clickResults.forEach((r) => {
         if (!r || typeof r !== "object") return;
         const idx = typeof r.target_index === "number" ? r.target_index : null;
         const ok = r.click_success === true;
         if (idx == null || ok) return;
-        const shape = _inferShapeLower(targets[idx]);
-        if (shape === "polygon") bad.add(idx);
+        bad.add(idx);
+      });
+
+      polygonResults.forEach((r) => {
+        if (!r || typeof r !== "object") return;
+        const idx = typeof r.target_index === "number" ? r.target_index : null;
+        const ok = r.polygon_success === true;
+        if (idx == null || ok) return;
+        bad.add(idx);
       });
 
       lineResults.forEach((r) => {
@@ -6040,12 +8126,11 @@
         const idx = typeof r.target_index === "number" ? r.target_index : null;
         const ok = r.line_success === true;
         if (idx == null || ok) return;
-        const shape = _inferShapeLower(targets[idx]);
-        if (shape === "freehand") bad.add(idx);
+        bad.add(idx);
       });
 
       // Level 2: parse targets_info (found: false => mark as bad)
-      if (!clickResults.length && !lineResults.length && targetsInfo.length) {
+      if (!clickResults.length && !polygonResults.length && !lineResults.length && targetsInfo.length) {
         targetsInfo.forEach((info) => {
           if (!info || typeof info !== "object") return;
           if (info.found === false) {
@@ -6223,7 +8308,7 @@
     // Re-assign palette so _renderReference uses fresh colors (important for Level 2).
     _assignTargetColors(state.taskDto);
     _renderReference();
-    _renderReviewComparison(result);
+    _renderResultWorkspace(result);
 
     if (_debugEnabled()) {
       try {
@@ -6240,6 +8325,13 @@
   ClickUI.cleanup = function cleanup() {
     // Teardown additional modal if exists
     _teardownAdditionalModal();
+    _clearReviewComparison();
+    if (state.wrapperRow) {
+      state.wrapperRow.classList.remove("hidden");
+    }
+    if (state.controlsEl) {
+      state.controlsEl.classList.remove("hidden");
+    }
 
     if (state._themeListener) {
       window.removeEventListener("themechanged", state._themeListener);
@@ -6311,6 +8403,11 @@
       pendingViewState: null,
       reviewHost: null,
       reviewComparisonEl: null,
+      sideColumnEl: null,
+      registryFilter: "all",
+      workspaceI18nRefs: null,
+      lastResult: null,
+      lastEvaluationResult: null,
       runtimeMode: false,
       additionalModal: null,
       additionalModalKeyHandler: null,

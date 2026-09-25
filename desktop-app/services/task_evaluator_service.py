@@ -31,9 +31,8 @@ from task_system.core.hooks.evaluator_hooks import evaluator_hooks
 
 # Импортируем модуль толерантности к тексту
 from .text_tolerance import find_keyword_with_tolerance, normalize_text, compare_words_with_tolerance_info, extract_words_from_text
-from .text_tolerance import find_keyword_with_tolerance, normalize_text, compare_words_with_tolerance_info, extract_words_from_text
 from .difficulty_config_loader import load_difficulty_config
-from .evaluation_messages import get_message
+from .evaluation_messages import get_message, get_message_payload
 
 logger = logging.getLogger(__name__)
 
@@ -2231,13 +2230,22 @@ class TaskEvaluatorService:
                 details={'error': 'no_targets', 'level': 3}
             )
 
+        def _is_line_target_legacy(t: Dict[str, Any]) -> bool:
+            st = str(t.get('shape') or t.get('type') or '').strip().lower()
+            if st in ('line', 'freehand'):
+                return True
+            if st == 'polygon':
+                return False
+            pts = t.get('points', [])
+            return isinstance(pts, list) and len(pts) == 2
+
         polygon_targets = [
             idx for idx, t in enumerate(targets)
-            if (t.get('shape') != 'freehand' and t.get('type') != 'freehand')
+            if not _is_line_target_legacy(t)
         ]
         freehand_targets = [
             idx for idx, t in enumerate(targets)
-            if (t.get('shape') == 'freehand' or t.get('type') == 'freehand')
+            if _is_line_target_legacy(t)
         ]
 
         # Legacy fallback: if polygons/lines are not provided, try to split drawing by points count.
@@ -3780,21 +3788,39 @@ class TaskEvaluatorService:
 
         targets = answer_key.get('targets', [])
         if not isinstance(targets, list) or not targets:
+            msg_text, msg_key, msg_params = get_message_payload("draw_no_targets")
             return EvaluationResult(
                 success=False,
-                message="Нет эталонных областей",
+                message=msg_text,
                 score=0.0,
                 metric="IoU",
-                details={'error': 'no_targets'}
+                message_key=msg_key,
+                message_params=msg_params,
+                details={
+                    'error': 'no_targets',
+                    'found_targets': [],
+                    'unmatched_actions': [],
+                    'polygon_results': [],
+                    'line_results': [],
+                }
             )
+
+        def _is_line_target(t: Dict[str, Any]) -> bool:
+            st = str(t.get('shape') or t.get('type') or '').strip().lower()
+            if st in ('line', 'freehand'):
+                return True
+            if st == 'polygon':
+                return False
+            pts = t.get('points', [])
+            return isinstance(pts, list) and len(pts) == 2
 
         polygon_targets = [
             idx for idx, t in enumerate(targets)
-            if (t.get('shape') != 'freehand' and t.get('type') != 'freehand')
+            if not _is_line_target(t)
         ]
         freehand_targets = [
             idx for idx, t in enumerate(targets)
-            if (t.get('shape') == 'freehand' or t.get('type') == 'freehand')
+            if _is_line_target(t)
         ]
 
         user_polygons = user_input.get('polygons', [])
@@ -3809,11 +3835,18 @@ class TaskEvaluatorService:
         required_lines = len(freehand_targets)
 
         if required_polygons > 0 and len(user_polygons) < required_polygons:
+            msg_text, msg_key, msg_params = get_message_payload(
+                "draw_no_polygons",
+                required_polygons=required_polygons,
+                done_polygons=len(user_polygons),
+            )
             return EvaluationResult(
                 success=False,
-                message="Сначала нарисуйте контуры",
+                message=msg_text,
                 score=0.0,
                 metric="IoU",
+                message_key=msg_key,
+                message_params=msg_params,
                 details={
                     'stage': 'polygons',
                     'error': 'polygons_missing',
@@ -3821,16 +3854,27 @@ class TaskEvaluatorService:
                     'done_polygons': len(user_polygons),
                     'required_lines': required_lines,
                     'done_lines': len(user_lines),
+                    'found_targets': [],
+                    'unmatched_actions': [],
+                    'polygon_results': [],
+                    'line_results': [],
                     'level': 1 if not requires_labels else 2
                 }
             )
 
         if required_lines > 0 and len(user_lines) < required_lines:
+            msg_text, msg_key, msg_params = get_message_payload(
+                "draw_no_lines",
+                required_lines=required_lines,
+                done_lines=len(user_lines),
+            )
             return EvaluationResult(
                 success=False,
-                message="Теперь нарисуйте штрихи",
+                message=msg_text,
                 score=0.0,
                 metric="IoU",
+                message_key=msg_key,
+                message_params=msg_params,
                 details={
                     'stage': 'lines',
                     'error': 'lines_missing',
@@ -3838,6 +3882,10 @@ class TaskEvaluatorService:
                     'done_polygons': len(user_polygons),
                     'required_lines': required_lines,
                     'done_lines': len(user_lines),
+                    'found_targets': [],
+                    'unmatched_actions': [],
+                    'polygon_results': [],
+                    'line_results': [],
                     'level': 1 if not requires_labels else 2
                 }
             )
@@ -3997,6 +4045,41 @@ class TaskEvaluatorService:
 
         coverage_success = successes >= required_correct
 
+        # Collect successfully found target indices (for Result Registry)
+        found_targets_set = set()
+        for r in polygon_results:
+            if r.get('polygon_success') and r.get('target_index') is not None:
+                found_targets_set.add(int(r['target_index']))
+        for r in line_results:
+            if r.get('line_success') and r.get('target_index') is not None:
+                found_targets_set.add(int(r['target_index']))
+        found_targets = sorted(list(found_targets_set))
+
+        # Collect unmatched / extra actions (polygons or lines not matched to any target)
+        unmatched_actions = []
+        for poly_idx, poly in enumerate(user_polygons):
+            if poly_idx not in used_polygon_indices:
+                unmatched_actions.append({
+                    'kind': 'polygon',
+                    'type': 'polygon',
+                    'index': poly_idx,
+                    'key': f'polygon:{poly_idx}',
+                    'off_target': True,
+                    'duplicate': False,
+                    'matched_target_idx': None,
+                })
+        for line_idx, line in enumerate(user_lines):
+            if line_idx not in used_line_indices:
+                unmatched_actions.append({
+                    'kind': 'line',
+                    'type': 'line',
+                    'index': line_idx,
+                    'key': f'line:{line_idx}',
+                    'off_target': True,
+                    'duplicate': False,
+                    'matched_target_idx': None,
+                })
+
         # Labels stage (L2)
         if requires_labels:
             labels_polygons = user_input.get('labels_polygons', [])
@@ -4035,15 +4118,20 @@ class TaskEvaluatorService:
                     ordered_user_labels.append(str(labels_lines[int(m_idx)] or '').strip())
 
             if any(not (s or '').strip() for s in ordered_user_labels):
+                msg_text, msg_key, msg_params = get_message_payload("draw_labels_missing")
                 return EvaluationResult(
                     success=False,
-                    message=get_message("draw_labels_missing"),
+                    message=msg_text,
                     score=0.0,
                     metric="IoU",
+                    message_key=msg_key,
+                    message_params=msg_params,
                     details={
                         'stage': 'labels',
                         'error': 'labels_missing',
                         'level': 2,
+                        'found_targets': found_targets,
+                        'unmatched_actions': unmatched_actions,
                         'polygon_results': polygon_results,
                         'line_results': line_results,
                     }
@@ -4062,20 +4150,25 @@ class TaskEvaluatorService:
                 manual_label_judgement = self._build_draw_label_user_judgement(labels_eval)
 
             if manual_label_judgement is not None:
+                judgement_msg = str(
+                    manual_label_judgement.get('message')
+                    or get_message("draw_manual_label_judgement")
+                ).strip()
                 return EvaluationResult(
                     success=False,
                     score=combined_score,
-                    message=str(
-                        manual_label_judgement.get('message')
-                        or 'В названии цели пропущено 1–2 слова. Решите, считать ли ответ верным.'
-                    ).strip(),
+                    message=judgement_msg,
                     metric="IoU",
+                    message_key="draw_manual_label_judgement",
+                    message_params={'draw_score': draw_score, 'label_score': label_score},
                     details={
                         'stage': 'labels_review',
                         'level': 2,
                         'successful_targets': successes,
                         'required_correct': required_correct,
                         'total_targets': total_targets,
+                        'found_targets': found_targets,
+                        'unmatched_actions': unmatched_actions,
                         'draw_score': draw_score,
                         'label_score': label_score,
                         'threshold': threshold,
@@ -4089,23 +4182,30 @@ class TaskEvaluatorService:
                 )
             
             combined_success = coverage_success and labels_eval.get('success') is True
-            msg = (
-                ("✅ " if combined_success else "❌ ") +
-                f"Контроль: {successes}/{total_targets}. " +
-                str(labels_eval.get('message', '')).strip()
-            )
+            labels_msg = str(labels_eval.get('message', '')).strip()
+            msg_key = "draw_combined_control_success" if combined_success else "draw_combined_control_fail"
+            msg_params = {
+                'successes': successes,
+                'total_targets': total_targets,
+                'labels_message': labels_msg,
+            }
+            msg = get_message(msg_key, **msg_params)
 
             return EvaluationResult(
                 success=combined_success,
-                score=combined_score,  # НОВОЕ
+                score=combined_score,
                 message=msg,
                 metric="IoU",
+                message_key=msg_key,
+                message_params=msg_params,
                 details={
                     'stage': 'done',
                     'level': 2,
                     'successful_targets': successes,
                     'required_correct': required_correct,
                     'total_targets': total_targets,
+                    'found_targets': found_targets,
+                    'unmatched_actions': unmatched_actions,
                     'draw_score': draw_score,
                     'label_score': label_score,
                     'threshold': threshold,
@@ -4116,11 +4216,14 @@ class TaskEvaluatorService:
             )
 
         # L1 result
-        msg = (
-            "✅ Отлично! " if coverage_success else "❌ Нужно улучшить. "
-        ) + f"Контроль: {successes}/{total_targets}."
+        msg_key = "draw_control_success" if coverage_success else "draw_control_fail"
+        msg_params = {
+            'successes': successes,
+            'total_targets': total_targets,
+        }
+        msg = get_message(msg_key, **msg_params)
 
-        # НОВОЕ: Скор для Л1 (процент успешных целей)
+        # Скор для Л1 (процент успешных целей)
         score = (successes / total_targets * 100) if total_targets > 0 else 0.0
 
         return EvaluationResult(
@@ -4128,12 +4231,16 @@ class TaskEvaluatorService:
             message=msg,
             score=score,
             metric="IoU",
+            message_key=msg_key,
+            message_params=msg_params,
             details={
                 'stage': 'done',
                 'level': 1,
                 'successful_targets': successes,
                 'required_correct': required_correct,
                 'total_targets': total_targets,
+                'found_targets': found_targets,
+                'unmatched_actions': unmatched_actions,
                 'threshold': threshold,
                 'polygon_results': polygon_results,
                 'line_results': line_results,
@@ -4229,6 +4336,7 @@ class TaskEvaluatorService:
         
         # НОВОЕ: Скор (процент успешных полигонов)
         score = (successful_count / total_count * 100) if total_count > 0 else 0.0
+        found_targets = [r['index'] for r in polygon_results if r.get('success')]
 
         return EvaluationResult(
             success=overall_success,
@@ -4239,6 +4347,7 @@ class TaskEvaluatorService:
                 'successful_count': successful_count,
                 'required_correct': required_correct,
                 'total_targets': total_count,
+                'found_targets': found_targets,
                 'threshold_mode': threshold_mode,
                 'polygon_results': polygon_results,
                 'coverage_threshold': threshold,
