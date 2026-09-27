@@ -1520,15 +1520,16 @@
 
     const panel = _createEl(
       "div",
-      "task-chip flex min-h-0 flex-col overflow-hidden rounded-2xl border-2 border-border-strong bg-surface-2 shadow-sm dark:border-border-strong dark:bg-surface-2",
+      "task-chip flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border-2 border-border-strong bg-surface-2 shadow-sm dark:border-border-strong dark:bg-surface-2 w-full max-h-full",
       ""
     );
     panel.setAttribute("data-clickui", "targets-panel");
+    panel.style.height = "100%";
 
-    // Header: px-5 py-4 — symmetric, generous
+    // Header: px-5 py-4 — symmetric, generous, pinned at top
     const header = _createEl(
       "div",
-      "border-b border-border-strong bg-surface-1 px-4 py-3.5 dark:border-border-strong",
+      "border-b border-border-strong bg-surface-1 px-4 py-3.5 dark:border-border-strong shrink-0 z-10 select-none",
       ""
     );
     header.setAttribute("data-clickui", "targets-header");
@@ -1608,10 +1609,41 @@
       return panel;
     }
 
-    // List section: px-4 py-4 — consistent inset, one unit less than header
-    const listSection = _createEl("div", "px-3 py-3 lg:py-2.5", "");
+    // List section: internal scroll container with dynamic gradient mask
+    const listSection = _createEl(
+      "div",
+      "clickui-registry-scroll flex-1 min-h-0 overflow-y-auto px-3 py-3 lg:py-2.5 relative",
+      ""
+    );
     listSection.setAttribute("data-clickui", "targets-list-section");
     state.targetsListSectionEl = listSection;
+
+    function updateScrollMask() {
+      if (!listSection) return;
+      const atTop = listSection.scrollTop <= 2;
+      const atBottom = listSection.scrollHeight - listSection.scrollTop - listSection.clientHeight <= 2;
+
+      if (atTop && atBottom) {
+        listSection.style.maskImage = "none";
+        listSection.style.webkitMaskImage = "none";
+      } else if (atTop) {
+        const mask = "linear-gradient(to bottom, black calc(100% - 20px), transparent 100%)";
+        listSection.style.maskImage = mask;
+        listSection.style.webkitMaskImage = mask;
+      } else if (atBottom) {
+        const mask = "linear-gradient(to bottom, transparent 0px, black 20px)";
+        listSection.style.maskImage = mask;
+        listSection.style.webkitMaskImage = mask;
+      } else {
+        const mask = "linear-gradient(to bottom, transparent 0px, black 20px, black calc(100% - 20px), transparent 100%)";
+        listSection.style.maskImage = mask;
+        listSection.style.webkitMaskImage = mask;
+      }
+    }
+    listSection.addEventListener("scroll", updateScrollMask, { passive: true });
+    requestAnimationFrame(updateScrollMask);
+    setTimeout(updateScrollMask, 60);
+
     const list = _createEl("div", "flex flex-col gap-2.5", "");
     list.setAttribute("data-clickui", "targets-list");
     const displayIndexes = _buildTargetDisplayIndexes(taskDto, targets);
@@ -2985,9 +3017,9 @@
     }
     state.resultInspectorUpdater = null;
     if (state.sideColumnEl) {
-      state.sideColumnEl.style.overflow = "";
-      state.sideColumnEl.classList.remove("lg:overflow-hidden");
-      state.sideColumnEl.classList.add("lg:overflow-y-auto");
+      state.sideColumnEl.style.overflow = "hidden";
+      state.sideColumnEl.classList.remove("lg:overflow-y-auto");
+      state.sideColumnEl.classList.add("lg:overflow-hidden", "flex", "flex-col");
       const userActionsSection = state.sideColumnEl.querySelector('[data-clickui="user-actions-section"], [data-clickui="user-actions-panel"]');
       if (userActionsSection) {
         userActionsSection.classList.remove("hidden");
@@ -6486,7 +6518,7 @@
     );
     const sideColumn = _createEl(
       "div",
-      "flex w-full flex-col gap-3 lg:w-80 lg:sticky lg:top-3 lg:self-start lg:max-h-[calc(100vh-128px)] lg:overflow-y-auto lg:pr-1 xl:w-96 2xl:w-[420px]",
+      "flex w-full flex-col gap-3 lg:w-80 lg:sticky lg:top-3 lg:self-stretch lg:h-full lg:overflow-hidden lg:pr-1 xl:w-96 2xl:w-[420px]",
       ""
     );
     sideColumn.setAttribute("data-clickui", "side-column");
@@ -6804,14 +6836,24 @@
     const labelsWorkflowInPanel = runtimeMode && _shouldHideTargetsList(taskDto);
     let runtimeAdditionalCard = null;
       if (runtimeMode) {
+        const additionalInfo = _getAdditionalInfo(taskDto);
+        const hasAdditionalInfo = Boolean(
+          additionalInfo && (additionalInfo.text || additionalInfo.imageUrl || additionalInfo.imageAssetId)
+        );
         const targetsPanel = _renderTargetsPanelV2(taskDto);
         if (targetsPanel) {
-          targetsPanel.className += " w-full shrink-0";
+          targetsPanel.classList.add("w-full");
+          if (hasAdditionalInfo) {
+            targetsPanel.classList.add("shrink-0");
+            targetsPanel.style.height = "";
+          } else {
+            targetsPanel.classList.add("flex-1", "min-h-0");
+          }
           sideColumn.appendChild(targetsPanel);
           if (difficultyLevel === 1) {
             const userActionsPanel = _renderUserActionsSection();
             if (userActionsPanel) {
-              userActionsPanel.className += " w-full shrink-0";
+              userActionsPanel.classList.add("w-full", "shrink-0", "max-h-[40%]", "flex", "flex-col", "min-h-0");
               sideColumn.appendChild(userActionsPanel);
             }
             suppressStatusCard = true;
@@ -6830,8 +6872,10 @@
           "lg:sticky",
           "lg:top-3",
           "lg:self-start",
+          "lg:self-stretch",
           "lg:max-h-[calc(100vh-128px)]",
           "lg:overflow-y-auto",
+          "lg:overflow-hidden",
           "lg:pr-1"
         );
       }
@@ -7137,10 +7181,12 @@
         const vw = window.innerWidth || document.documentElement.clientWidth || 0;
         if (vw < 1024) {
           sideColumn.style.maxHeight = "";
+          sideColumn.style.height = "";
           return;
         }
         if (!sideColumn.classList.contains("lg:sticky")) {
           sideColumn.style.maxHeight = "";
+          sideColumn.style.height = "";
           return;
         }
         const rect = sideColumn.getBoundingClientRect();
@@ -7148,7 +7194,13 @@
         const margin = 24; // bottom spacing
         const top = Math.max(12, rect.top);
         const avail = vh - top - margin;
-        sideColumn.style.maxHeight = `${Math.max(200, avail)}px`;
+        let targetH = avail;
+        if (mainColumn && mainColumn.offsetHeight > 0) {
+          targetH = Math.min(avail, mainColumn.offsetHeight);
+        }
+        const boundedHeight = Math.max(200, targetH);
+        sideColumn.style.maxHeight = `${boundedHeight}px`;
+        sideColumn.style.height = `${boundedHeight}px`;
       } catch (e) {
         // ignore
       }
@@ -7156,6 +7208,17 @@
 
     state._updateSideColumnMaxHeight = _updateSideColumnMaxHeight;
     setTimeout(_updateSideColumnMaxHeight, 100);
+
+    if (typeof ResizeObserver === "function" && mainColumn) {
+      try {
+        const ro = new ResizeObserver(() => {
+          _updateSideColumnMaxHeight();
+        });
+        ro.observe(mainColumn);
+      } catch (e) {
+        // ignore
+      }
+    }
 
     window.addEventListener("scroll", _updateSideColumnMaxHeight, { passive: true });
     window.addEventListener("resize", _updateSideColumnMaxHeight, { passive: true });
@@ -7401,6 +7464,7 @@
         _renderReference();
       }
       if (typeof state._updateLabelsIndicator === "function") state._updateLabelsIndicator();
+      if (typeof _updateSideColumnMaxHeight === "function") _updateSideColumnMaxHeight();
     });
 
     img.addEventListener("error", () => {

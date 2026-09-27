@@ -572,13 +572,18 @@
       // 1. Render ClickUI
       ClickUI.render(container, fixture.task, { runtimeMode: true });
 
-      // 2. Perform actions
-      if (typeof fixture.userActions === "function") {
+      // 2. Perform actions (if not pure attempt mode)
+      const currentUrlParams = new URLSearchParams(window.location.search);
+      const isAttemptMode = currentUrlParams.get("mode") === "attempt";
+
+      if (!isAttemptMode && typeof fixture.userActions === "function") {
         fixture.userActions(ClickUI);
       }
 
-      // 3. Apply Check Feedback
-      ClickUI.applyCheckFeedback(fixture.result);
+      // 3. Apply Check Feedback (only in review mode)
+      if (!isAttemptMode) {
+        ClickUI.applyCheckFeedback(fixture.result);
+      }
 
       // Notify test harness ready
       document.body.setAttribute("data-harness-ready", caseKey);
