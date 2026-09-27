@@ -176,8 +176,8 @@
 
         if (!url) {
             const message = kind === 'telegram'
-                ? (window.i18n?.t('main.community_telegram_wip') || '\u0421\u0441\u044b\u043b\u043a\u0430 \u043d\u0430 \u0442\u0435\u043b\u0435\u0433\u0440\u0430\u043c-\u043a\u0430\u043d\u0430\u043b \u043f\u043e\u044f\u0432\u0438\u0442\u0441\u044f, \u043a\u043e\u0433\u0434\u0430 \u0443\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u0435 \u043f\u0443\u0431\u043b\u0438\u0447\u043d\u044b\u0439 \u0430\u0434\u0440\u0435\u0441.')
-                : (window.i18n?.t('main.community_link_wip') || '\u0421\u0441\u044b\u043b\u043a\u0430 \u0434\u043b\u044f \u044d\u0442\u043e\u0433\u043e \u0440\u0430\u0437\u0434\u0435\u043b\u0430 \u043f\u043e\u043a\u0430 \u043d\u0435 \u0437\u0430\u0434\u0430\u043d\u0430.');
+                ? wt('main.community_telegram_wip', 'Ссылка на телеграм-канал появится, когда утвердите публичный адрес.')
+                : wt('main.community_link_wip', 'Ссылка для этого раздела пока не задана.');
             if (typeof NotificationUI !== 'undefined' && typeof NotificationUI.toast === 'function') {
                 NotificationUI.toast(message, 'warning', 2600);
                 return;
@@ -226,19 +226,19 @@
         return escapeHtml(escaped);
     }
 
-    const PREMIUM_GATED_UI_PAGES = Object.freeze({
-        '/calendar': '\u041a\u0430\u043b\u0435\u043d\u0434\u0430\u0440\u044c',
-        '/statistics': '\u0421\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u0430',
-    });
     let premiumGateModalOpen = false;
+
+    const PREMIUM_GATED_UI_PAGES = Object.freeze([
+        { path: '/calendar', label: wt('main.calendar_title', 'Календарь') },
+        { path: '/statistics', label: wt('main.stats_title', 'Статистика') },
+    ]);
 
     function getPremiumGatedPage(url) {
         if (!url) return null;
         try {
             const destination = new URL(String(url), window.location.href);
             const path = destination.pathname.replace(/\/+$/, '') || '/';
-            const label = PREMIUM_GATED_UI_PAGES[path];
-            return label ? { path, label } : null;
+            return PREMIUM_GATED_UI_PAGES.find((item) => item.path === path) || null;
         } catch (_err) {
             return null;
         }
@@ -257,22 +257,22 @@
             if (window.PremiumPromo && typeof window.PremiumPromo.open === 'function') {
                 window.PremiumPromo.open({
                     title: page.path === '/statistics'
-                        ? (window.i18n?.t('main.premium_stats_title') || '\u041f\u043e\u043b\u043d\u0430\u044f \u0421\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u0430 \u0434\u043e\u0441\u0442\u0443\u043f\u043d\u0430 \u0432 Premium')
-                        : (window.i18n?.t('main.premium_calendar_title') || '\u041f\u043e\u043b\u043d\u044b\u0439 \u041a\u0430\u043b\u0435\u043d\u0434\u0430\u0440\u044c \u0434\u043e\u0441\u0442\u0443\u043f\u0435\u043d \u0432 Premium'),
+                        ? wt('main.premium_stats_title', 'Полная Статистика доступна в Premium')
+                        : wt('main.premium_calendar_title', 'Полный Календарь доступен в Premium'),
                     lead: page.path === '/statistics'
-                        ? (window.i18n?.t('main.premium_stats_lead') || '\u041f\u043e\u043b\u043d\u0430\u044f \u0441\u0432\u043e\u0434\u043a\u0430: \u0437\u0430\u0434\u0430\u0447\u0438, \u0432\u0440\u0435\u043c\u044f, \u043c\u0438\u043a\u0440\u043e\u043a\u0430\u0440\u0442\u043e\u0447\u043a\u0438, \u0441\u0435\u0440\u0438\u044f, \u0433\u0440\u0430\u0444\u0438\u043a, \u0442\u0438\u043f\u044b \u0437\u0430\u0434\u0430\u043d\u0438\u0439 \u0438 \u043a\u043e\u043c\u043f\u043b\u0435\u043a\u0441\u044b.')
-                        : (window.i18n?.t('main.premium_calendar_lead') || '\u041f\u043e\u043b\u043d\u0430\u044f \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0430: Daily Mix, \u043d\u043e\u0432\u044b\u0439 \u043c\u0430\u0442\u0435\u0440\u0438\u0430\u043b, \u0440\u0430\u0441\u043f\u0438\u0441\u0430\u043d\u0438\u0435, \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c \u0438 \u0437\u0434\u043e\u0440\u043e\u0432\u044c\u0435 \u043f\u0430\u043c\u044f\u0442\u0438.'),
+                        ? wt('main.premium_stats_lead', 'Полная сводка: задачи, время, микрокарточки, серия, график, типы заданий и комплексы.')
+                        : wt('main.premium_calendar_lead', 'Полная страница: Daily Mix, новый материал, расписание, активность и здоровье памяти.'),
                 });
                 return;
             }
             if (window.NotificationUI && typeof window.NotificationUI.confirm === 'function') {
                 const shouldOpenSettings = await window.NotificationUI.confirm({
                     title: page.path === '/statistics'
-                        ? (window.i18n?.t('main.premium_stats_dialog_title') || '\u0421\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u0430 \u0434\u043e\u0441\u0442\u0443\u043f\u043d\u0430 \u0432 Premium')
-                        : (window.i18n?.t('main.premium_calendar_dialog_title') || '\u041a\u0430\u043b\u0435\u043d\u0434\u0430\u0440\u044c \u0434\u043e\u0441\u0442\u0443\u043f\u0435\u043d \u0432 Premium'),
-                    message: window.i18n?.t('main.premium_dialog_message') || '\u0412\u0438\u0434\u0436\u0435\u0442 \u043d\u0430 \u0433\u043b\u0430\u0432\u043d\u043e\u0439 \u043e\u0441\u0442\u0430\u0435\u0442\u0441\u044f \u0434\u043e\u0441\u0442\u0443\u043f\u0435\u043d \u0432\u0441\u0435\u043c. \u041f\u043e\u043b\u043d\u0430\u044f \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0430 \u0441 \u0440\u0430\u0441\u0448\u0438\u0440\u0435\u043d\u043d\u044b\u043c\u0438 \u0434\u0430\u043d\u043d\u044b\u043c\u0438 \u043e\u0442\u043a\u0440\u044b\u0432\u0430\u0435\u0442\u0441\u044f \u043f\u043e\u0441\u043b\u0435 \u0430\u043a\u0442\u0438\u0432\u0430\u0446\u0438\u0438 Premium.',
-                    confirmText: window.i18n?.t('main.premium_dialog_confirm') || '\u041e\u0442\u043a\u0440\u044b\u0442\u044c Premium',
-                    cancelText: window.i18n?.t('main.premium_dialog_cancel') || '\u041e\u0441\u0442\u0430\u0442\u044c\u0441\u044f \u0437\u0434\u0435\u0441\u044c',
+                        ? wt('main.premium_stats_dialog_title', 'Статистика доступна в Premium')
+                        : wt('main.premium_calendar_dialog_title', 'Календарь доступен в Premium'),
+                    message: wt('main.premium_dialog_message', 'Виджет на главной остается доступен всем. Полная страница с расширенными данными открывается после активации Premium.'),
+                    confirmText: wt('main.premium_dialog_confirm', 'Открыть Premium'),
+                    cancelText: wt('main.premium_dialog_cancel', 'Остаться здесь'),
                     variant: 'primary',
                 });
                 if (shouldOpenSettings) {
@@ -282,8 +282,8 @@
             }
 
             const _fallbackMsg = page.path === '/statistics'
-                ? (window.i18n?.t('main.premium_dialog_fallback_stats') || `${page.label} \u0434\u043e\u0441\u0442\u0443\u043f\u043d\u0430 \u0432 Premium. \u041e\u0442\u043a\u0440\u044b\u0442\u044c \u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438 Premium?`)
-                : (window.i18n?.t('main.premium_dialog_fallback_calendar') || `${page.label} \u0434\u043e\u0441\u0442\u0443\u043f\u0435\u043d \u0432 Premium. \u041e\u0442\u043a\u0440\u044b\u0442\u044c \u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438 Premium?`);
+                ? wt('main.premium_dialog_fallback_stats', 'Статистика доступна в Premium. Откройте настройки Premium?')
+                : wt('main.premium_dialog_fallback_calendar', 'Календарь доступен в Premium. Откройте настройки Premium?');
             const shouldOpenSettings = window.confirm(_fallbackMsg);
             if (shouldOpenSettings) {
                 window.__mainPremiumNavigationBase?.('/settings#premium');
@@ -918,26 +918,26 @@
         const options = await ensureFeedbackOptionsLoaded();
         if (options) {
             renderFeedbackSelectOptions('feedbackType', options.types || [], {
-                bug: '\u0411\u0430\u0433',
-                idea: '\u0418\u0434\u0435\u044f',
-                improvement: '\u0423\u043b\u0443\u0447\u0448\u0435\u043d\u0438\u0435',
-                question: '\u0412\u043e\u043f\u0440\u043e\u0441',
+                bug: wt('main.feedback_type_bug', 'Баг'),
+                idea: wt('main.feedback_type_idea', 'Идея'),
+                improvement: wt('main.feedback_type_improvement', 'Улучшение'),
+                question: wt('main.feedback_type_question', 'Вопрос'),
             }, 'bug');
             renderFeedbackSelectOptions('feedbackSeverity', options.severity || [], {
-                low: '\u041d\u0438\u0437\u043a\u0430\u044f',
-                medium: '\u0421\u0440\u0435\u0434\u043d\u044f\u044f',
-                high: '\u0412\u044b\u0441\u043e\u043a\u0430\u044f',
-                critical: '\u041a\u0440\u0438\u0442\u0438\u0447\u043d\u0430\u044f',
+                low: wt('main.feedback_severity_low', 'Низкая'),
+                medium: wt('main.feedback_severity_medium', 'Средняя'),
+                high: wt('main.feedback_severity_high', 'Высокая'),
+                critical: wt('main.feedback_severity_critical', 'Критичная'),
             }, 'medium');
         }
 
         const network = await fetchNetworkStatus();
         if (network && network.internet_online === false) {
-            showFeedbackNetworkStatus('\u0418\u043d\u0442\u0435\u0440\u043d\u0435\u0442 \u043d\u0435\u0434\u043e\u0441\u0442\u0443\u043f\u0435\u043d. \u041e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u0435 \u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u0441\u044f \u043b\u043e\u043a\u0430\u043b\u044c\u043d\u043e \u0438 \u0431\u0443\u0434\u0435\u0442 \u043e\u0442\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u043e \u043f\u0440\u0438 \u0441\u043b\u0435\u0434\u0443\u044e\u0449\u0435\u0439 \u043f\u043e\u043f\u044b\u0442\u043a\u0435.', 'warning');
+            showFeedbackNetworkStatus(wt('main.feedback_net_offline', 'Интернет недоступен. Обращение сохранится локально и будет отправлено при следующей попытке.'), 'warning');
         } else if (network?.feedback_delivery && network.feedback_delivery.configured === false) {
-            showFeedbackNetworkStatus('\u041a\u0430\u043d\u0430\u043b \u043e\u0442\u043f\u0440\u0430\u0432\u043a\u0438 \u0441\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u0439 \u0440\u0430\u0437\u0440\u0430\u0431\u043e\u0442\u0447\u0438\u043a\u0443 \u043f\u043e\u043a\u0430 \u043d\u0435 \u043d\u0430\u0441\u0442\u0440\u043e\u0435\u043d. \u041e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u0435 \u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u0441\u044f \u043b\u043e\u043a\u0430\u043b\u044c\u043d\u043e.', 'neutral');
+            showFeedbackNetworkStatus(wt('main.feedback_net_unstable', 'Канал отправки сообщений разработчику пока не настроен. Обращение сохранится локально.'), 'neutral');
         } else if (network?.internet_online === true) {
-            showFeedbackNetworkStatus('\u0421\u043e\u0435\u0434\u0438\u043d\u0435\u043d\u0438\u0435 \u0441 \u0438\u043d\u0442\u0435\u0440\u043d\u0435\u0442\u043e\u043c \u0435\u0441\u0442\u044c. \u041e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u0435 \u0431\u0443\u0434\u0435\u0442 \u043e\u0442\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u043e \u0440\u0430\u0437\u0440\u0430\u0431\u043e\u0442\u0447\u0438\u043a\u0443 \u043f\u043e email.', 'success');
+            showFeedbackNetworkStatus(wt('main.feedback_net_ready', 'Соединение с интернетом есть. Обращение будет отправлено разработчику по email.'), 'success');
             retryPendingFeedbackDelivery();
         }
 
@@ -963,17 +963,17 @@
         const description = (descEl?.value || '').trim();
 
         if (title.length < 3 || title.length > 180) {
-            showFeedbackError('\u0422\u0435\u043c\u0430 \u0434\u043e\u043b\u0436\u043d\u0430 \u0441\u043e\u0434\u0435\u0440\u0436\u0430\u0442\u044c \u043e\u0442 3 \u0434\u043e 180 \u0441\u0438\u043c\u0432\u043e\u043b\u043e\u0432');
+            showFeedbackError(wt('main.feedback_err_title', 'Тема должна содержать от 3 до 180 символов'));
             titleEl?.focus();
             return;
         }
         if (description.length < 5 || description.length > 10000) {
-            showFeedbackError('\u041e\u043f\u0438\u0441\u0430\u043d\u0438\u0435 \u0434\u043e\u043b\u0436\u043d\u043e \u0441\u043e\u0434\u0435\u0440\u0436\u0430\u0442\u044c \u043e\u0442 5 \u0434\u043e 10000 \u0441\u0438\u043c\u0432\u043e\u043b\u043e\u0432');
+            showFeedbackError(wt('main.feedback_err_desc', 'Описание должно содержать от 5 до 10000 символов'));
             descEl?.focus();
             return;
         }
         if (!currentUser?.user_id) {
-            showFeedbackError('\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043e\u043f\u0440\u0435\u0434\u0435\u043b\u0438\u0442\u044c \u0442\u0435\u043a\u0443\u0449\u0438\u0439 \u043f\u0440\u043e\u0444\u0438\u043b\u044c');
+            showFeedbackError(wt('main.feedback_err_profile', 'Не удалось определить текущий профиль'));
             return;
         }
 
@@ -1003,7 +1003,7 @@
         if (submitBtn) submitBtn.disabled = false;
 
         if (!ok) {
-            const message = (data && (data.message || data.error)) || '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u044c \u043e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u0435';
+            const message = (data && (data.message || data.error)) || wt('main.feedback_err_send', 'Не удалось отправить обращение');
             showFeedbackError(message);
             return;
         }
@@ -1011,9 +1011,9 @@
         const ticketId = data?.ticket_id ? ` (${data.ticket_id})` : '';
         const emailSent = !!data?.email_notification?.sent;
         if (emailSent) {
-            NotificationUI.toast(`\u041e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u0435 \u043e\u0442\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u043e${ticketId}`, 'success');
+            NotificationUI.toast(`${wt('main.feedback_toast_sent', 'Обращение отправлено')}${ticketId}`, 'success');
         } else {
-            NotificationUI.toast(`\u041e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u0435 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u043e \u043b\u043e\u043a\u0430\u043b\u044c\u043d\u043e${ticketId}. \u041e\u0442\u043f\u0440\u0430\u0432\u0438\u043c \u043f\u0440\u0438 \u0441\u043b\u0435\u0434\u0443\u044e\u0449\u0435\u0439 \u0432\u043e\u0437\u043c\u043e\u0436\u043d\u043e\u0441\u0442\u0438`, 'warning');
+            NotificationUI.toast(`${wt('main.feedback_toast_saved', 'Обращение сохранено локально')}${ticketId}. ${wt('main.feedback_toast_retry', 'Отправим при следующей возможности')}`, 'warning');
         }
         window.closeFeedbackModal();
     };
@@ -1186,11 +1186,13 @@
         renderMiniHeatmap(previewDynamics);
 
         if (healthList) {
+            const sampleTopic = wt('main.health_sample_topic', 'электродинамика');
+            const sampleRepeat = wt('main.health_repeat_prefix', 'Повторить: {name}').replace('{name}', sampleTopic);
             healthList.innerHTML = `
-                <div class="main-health-row panel-row" title="${wt('main.health_repeat_prefix', 'Повторить: {name}').replace('{name}', 'электродинамика')}">
+                <div class="main-health-row panel-row" title="${sampleRepeat}">
                     <div class="main-health-meta">
                         <div class="w-1.5 h-1.5 rounded-full bg-status-error"></div>
-                        <span class="main-health-name">${wt('main.health_repeat_prefix', 'Повторить: {name}').replace('{name}', 'электродинамика')}</span>
+                        <span class="main-health-name">${sampleRepeat}</span>
                     </div>
                     <span class="main-health-extra" title="${wt('main.health_extra', '+{n} more').replace('{n}', '2')}">+2</span>
                 </div>
@@ -2634,17 +2636,17 @@
                     <span class="material-symbols-outlined text-[20px]">bolt</span>
                 </div>
                 <div class="min-w-0">
-                    <p class="main-quick-access-kicker">\u041f\u0440\u043e\u0434\u043e\u043b\u0436\u0438\u0442\u044c</p>
-                    <h3 class="text-base font-bold text-text-main">\u0411\u044b\u0441\u0442\u0440\u044b\u0439 \u0434\u043e\u0441\u0442\u0443\u043f</h3>
+                    <p class="main-quick-access-kicker" data-i18n="main.qa_kicker_resume">${wt('main.qa_kicker_resume', 'Продолжить')}</p>
+                    <h3 class="text-base font-bold text-text-main" data-i18n="main.qa_title_quick_access">${wt('main.qa_title_quick_access', 'Быстрый доступ')}</h3>
                 </div>
             </div>
             <div class="main-quick-access-toolbar">
                 <span class="main-quick-access-count" id="quick-access-count" title="${wt('main.qa_count_title', 'Комплексов в быстром доступе')}">0</span>
                 <div class="main-quick-access-nav" id="quick-access-nav" hidden>
-                    <button type="button" class="main-quick-access-nav-btn icon-button-muted" id="quick-access-prev" aria-label="Previous complex">
+                    <button type="button" class="main-quick-access-nav-btn icon-button-muted" id="quick-access-prev" aria-label="Previous complex" data-i18n-aria="main.qa_nav_prev">
                         <span class="material-symbols-outlined text-[16px]">chevron_left</span>
                     </button>
-                    <button type="button" class="main-quick-access-nav-btn icon-button-muted" id="quick-access-next" aria-label="Next complex">
+                    <button type="button" class="main-quick-access-nav-btn icon-button-muted" id="quick-access-next" aria-label="Next complex" data-i18n-aria="main.qa_nav_next">
                         <span class="material-symbols-outlined text-[16px]">chevron_right</span>
                     </button>
                 </div>
@@ -2781,7 +2783,9 @@
             if (!value) return "";
             const date = new Date(value);
             if (Number.isNaN(date.getTime())) return "";
-            return date.toLocaleString("ru-RU", {
+            const currentLang = window.i18n?.getLang?.() || "ru";
+            const localeCode = currentLang === "en" ? "en-US" : currentLang === "uk" ? "uk-UA" : "ru-RU";
+            return date.toLocaleString(localeCode, {
                 day: "2-digit",
                 month: "2-digit",
                 hour: "2-digit",
@@ -2923,73 +2927,81 @@
             }
 
             let cardTone = 'ready';
-            let statusPill = '\u0413\u043e\u0442\u043e\u0432';
+            let statusPill = wt('main.card_status_ready', 'К СТАРТУ');
             let metaTag = '';
-            let description = complex.description || '\u0411\u044b\u0441\u0442\u0440\u044b\u0439 \u0432\u0445\u043e\u0434 \u0432 \u043a\u043e\u043c\u043f\u043b\u0435\u043a\u0441 \u0431\u0435\u0437 \u043b\u0438\u0448\u043d\u0435\u0433\u043e \u043f\u043e\u0438\u0441\u043a\u0430.';
-            let progressLabel = '\u0413\u043e\u0442\u043e\u0432 \u043a \u0437\u0430\u043f\u0443\u0441\u043a\u0443';
+            let description = complex.description || wt('main.card_desc_ready', 'Комплекс готов к работе: начните тренировку в один клик.');
+            let progressLabel = wt('main.card_ready_launch', 'Готов к запуску');
             let progressValue = 0;
-            let actionLabel = '\u0417\u0430\u043f\u0443\u0441\u0442\u0438\u0442\u044c';
+            let actionLabel = wt('main.card_action_launch', 'Запустить');
             let actionIcon = 'play_arrow';
 
             if (isPaused) {
                 cardTone = 'paused';
-                statusPill = '\u041d\u0430 \u043f\u0430\u0443\u0437\u0435';
-                metaTag = (pausedProgress && pausedTotal) ? '\u0428\u0430\u0433 ' + pausedProgress + '/' + pausedTotal : '\u0415\u0441\u0442\u044c \u0441\u0435\u0441\u0441\u0438\u044f';
+                statusPill = wt('main.card_status_paused', 'НА ПАУЗЕ');
+                metaTag = (pausedProgress && pausedTotal)
+                    ? wt('main.card_step_indicator', 'Шаг {current}/{total}').replace('{current}', pausedProgress).replace('{total}', pausedTotal)
+                    : wt('main.card_has_session', 'Есть начатая сессия');
                 description = pausedAtLabel
-                    ? '\u041f\u0430\u0443\u0437\u0430 \u0441 ' + pausedAtLabel + '. \u041c\u043e\u0436\u043d\u043e \u043f\u0440\u043e\u0434\u043e\u043b\u0436\u0438\u0442\u044c \u0441 \u043f\u043e\u0441\u043b\u0435\u0434\u043d\u0435\u0433\u043e \u0437\u0430\u0434\u0430\u043d\u0438\u044f.'
-                    : '\u0421\u0435\u0441\u0441\u0438\u044f \u0443\u0436\u0435 \u0436\u0434\u0451\u0442 \u043f\u0440\u043e\u0434\u043e\u043b\u0436\u0435\u043d\u0438\u044f \u0441 \u0442\u043e\u0433\u043e \u043c\u0435\u0441\u0442\u0430, \u0433\u0434\u0435 \u0432\u044b \u043e\u0441\u0442\u0430\u043d\u043e\u0432\u0438\u043b\u0438\u0441\u044c.';
+                    ? wt('main.card_paused_resume', 'Пауза с {date}. Можно продолжить с последнего задания.').replace('{date}', pausedAtLabel)
+                    : wt('main.card_desc_paused_session', 'Сессия на паузе. Продолжайте в комфортном ритме.');
                 progressLabel = (pausedProgress && pausedTotal)
-                    ? '\u0421\u0435\u0439\u0447\u0430\u0441 ' + pausedProgress + '/' + pausedTotal
-                    : '\u0413\u043e\u0442\u043e\u0432\u043e \u043a \u043f\u0440\u043e\u0434\u043e\u043b\u0436\u0435\u043d\u0438\u044e';
+                    ? wt('main.card_now_step', 'Сейчас {current}/{total}').replace('{current}', pausedProgress).replace('{total}', pausedTotal)
+                    : wt('main.card_ready_continue', 'Готов к продолжению');
                 progressValue = (pausedProgress && pausedTotal && pausedTotal > 0)
                     ? Math.round((pausedProgress / pausedTotal) * 100)
                     : Math.max(progress, 8);
-                actionLabel = '\u041f\u0440\u043e\u0434\u043e\u043b\u0436\u0438\u0442\u044c';
+                actionLabel = wt('main.card_action_continue', 'Продолжить');
                 actionIcon = 'restart_alt';
             } else if (health.is_critical) {
                 cardTone = 'critical';
-                statusPill = '\u041d\u0443\u0436\u0435\u043d \u043f\u043e\u0432\u0442\u043e\u0440';
-                metaTag = '\u0420\u0438\u0441\u043a \u0437\u0430\u0431\u044b\u0432\u0430\u043d\u0438\u044f';
-                description = complex.description || '\u041c\u0430\u0442\u0435\u0440\u0438\u0430\u043b \u043f\u0440\u043e\u0441\u0438\u0442 \u0432\u043d\u0438\u043c\u0430\u043d\u0438\u044f: \u043b\u0443\u0447\u0448\u0435 \u0431\u044b\u0441\u0442\u0440\u043e \u0432\u0435\u0440\u043d\u0443\u0442\u044c\u0441\u044f \u0438 \u043e\u0441\u0432\u0435\u0436\u0438\u0442\u044c \u043a\u043b\u044e\u0447\u0435\u0432\u044b\u0435 \u0448\u0430\u0433\u0438.';
-                progressLabel = progress > 0 ? '\u041e\u0441\u0432\u043e\u0435\u043d\u043e ' + progress + '%' : '\u041f\u043e\u0440\u0430 \u0432\u0435\u0440\u043d\u0443\u0442\u044c\u0441\u044f';
+                statusPill = wt('main.card_status_critical', 'НУЖЕН ПОВТОР');
+                metaTag = wt('main.card_risk_forgetting', 'Есть риск забывания материала');
+                description = complex.description || wt('main.card_desc_retention', 'Пора повторить материал, чтобы закрепить навык и не потерять точность.');
+                progressLabel = progress > 0
+                    ? wt('main.card_mastered_percent', 'Освоено {percent}%').replace('{percent}', progress)
+                    : wt('main.card_time_to_return', 'Самое время вернуться к комплексу');
                 progressValue = progress > 0 ? progress : 18;
-                actionLabel = '\u0412\u0435\u0440\u043d\u0443\u0442\u044c\u0441\u044f';
+                actionLabel = wt('main.card_action_return', 'Вернуться');
                 actionIcon = 'local_fire_department';
             } else if (health.status === 'frozen') {
                 cardTone = 'frozen';
-                statusPill = '\u0417\u0430\u043c\u043e\u0440\u043e\u0436\u0435\u043d';
-                metaTag = '\u0412 \u043a\u0430\u043b\u0435\u043d\u0434\u0430\u0440\u0435';
-                description = complex.description || '\u041a\u043e\u043c\u043f\u043b\u0435\u043a\u0441 \u0437\u0430\u043c\u043e\u0440\u043e\u0436\u0435\u043d \u0432 \u0440\u0430\u0441\u043f\u0438\u0441\u0430\u043d\u0438\u0438, \u043d\u043e \u0435\u0433\u043e \u043c\u043e\u0436\u043d\u043e \u043e\u0442\u043a\u0440\u044b\u0442\u044c \u0432\u0440\u0443\u0447\u043d\u0443\u044e.';
-                progressLabel = progress > 0 ? '\u041e\u0441\u0432\u043e\u0435\u043d\u043e ' + progress + '%' : '\u0420\u0443\u0447\u043d\u043e\u0439 \u0437\u0430\u043f\u0443\u0441\u043a';
+                statusPill = wt('main.card_status_frozen', 'ЗАМОРОЖЕН');
+                metaTag = wt('main.card_in_calendar', 'Запланирован в календаре');
+                description = complex.description || wt('main.card_desc_frozen', 'Комплекс заморожен в расписании, но его можно открыть вручную.');
+                progressLabel = progress > 0
+                    ? wt('main.card_mastered_percent', 'Освоено {percent}%').replace('{percent}', progress)
+                    : wt('main.card_manual_launch', 'Доступен для ручного запуска');
                 progressValue = progress;
-                actionLabel = '\u041e\u0442\u043a\u0440\u044b\u0442\u044c';
+                actionLabel = wt('main.card_action_open', 'Открыть');
                 actionIcon = 'ac_unit';
             } else if (isMastered) {
                 cardTone = 'mastered';
-                statusPill = '\u041f\u0440\u043e\u0439\u0434\u0435\u043d';
-                metaTag = '\u041c\u043e\u0436\u043d\u043e \u043f\u043e\u0432\u0442\u043e\u0440\u0438\u0442\u044c';
-                description = complex.description || '\u041a\u043e\u043c\u043f\u043b\u0435\u043a\u0441 \u0437\u0430\u0432\u0435\u0440\u0448\u0451\u043d \u0438 \u0433\u043e\u0442\u043e\u0432 \u043a \u043f\u043e\u0432\u0442\u043e\u0440\u043d\u043e\u043c\u0443 \u043f\u0440\u043e\u0445\u043e\u0434\u0443 \u0431\u0435\u0437 \u0434\u043e\u043b\u0433\u043e\u0433\u043e \u043f\u043e\u0438\u0441\u043a\u0430.';
-                progressLabel = '\u041e\u0441\u0432\u043e\u0435\u043d\u043e 100%';
+                statusPill = wt('main.card_status_completed', 'ЗАВЕРШЕН');
+                metaTag = wt('main.card_can_repeat', 'Материал можно повторить в удобное время');
+                description = complex.description || wt('main.card_can_repeat', 'Материал можно повторить в удобное время');
+                progressLabel = wt('main.card_percent_mastered', '{percent}% освоено').replace('{percent}', 100);
                 progressValue = 100;
-                actionLabel = '\u041e\u0442\u043a\u0440\u044b\u0442\u044c';
+                actionLabel = wt('main.card_action_repeat', 'Повторить');
                 actionIcon = 'task_alt';
             } else if (progress > 0) {
                 cardTone = 'active';
-                statusPill = '\u0412 \u0440\u0430\u0431\u043e\u0442\u0435';
-                metaTag = String(progress) + '% \u043e\u0441\u0432\u043e\u0435\u043d\u043e';
-                description = complex.description || '\u041f\u0440\u043e\u0434\u043e\u043b\u0436\u0430\u0439\u0442\u0435 \u0441 \u0442\u043e\u0433\u043e \u043c\u0435\u0441\u0442\u0430, \u0433\u0434\u0435 \u0443\u0436\u0435 \u043d\u0430\u043a\u043e\u043f\u043b\u0435\u043d \u043f\u0440\u043e\u0433\u0440\u0435\u0441\u0441.';
-                progressLabel = '\u041e\u0441\u0432\u043e\u0435\u043d\u043e ' + progress + '%';
+                statusPill = wt('main.card_status_in_progress', 'В РАБОТЕ');
+                metaTag = wt('main.card_percent_mastered', '{percent}% освоено').replace('{percent}', progress);
+                description = complex.description || wt('main.card_desc_active_session', 'Активная сессия готова к продолжению прямо сейчас.');
+                progressLabel = wt('main.card_percent_mastered', '{percent}% освоено').replace('{percent}', progress);
                 progressValue = progress;
-                actionLabel = '\u041e\u0442\u043a\u0440\u044b\u0442\u044c';
+                actionLabel = wt('main.card_action_open', 'Открыть');
                 actionIcon = 'arrow_forward';
             } else {
-                description = complex.description || '\u041a\u043e\u043c\u043f\u043b\u0435\u043a\u0441 \u0433\u043e\u0442\u043e\u0432 \u043a \u043d\u043e\u0432\u043e\u043c\u0443 \u0437\u0430\u043f\u0443\u0441\u043a\u0443 \u0438 \u0431\u044b\u0441\u0442\u0440\u043e\u043c\u0443 \u0432\u0445\u043e\u0434\u0443 \u0432 \u0440\u0430\u0431\u043e\u0442\u0443.';
+                description = complex.description || wt('main.card_desc_ready', 'Комплекс готов к работе: начните тренировку в один клик.');
             }
 
             if (!metaTag && item.is_pinned) {
-                metaTag = '\u0417\u0430\u043a\u0440\u0435\u043f\u043b\u0451\u043d';
+                metaTag = wt('main.card_status_pinned', 'ЗАКРЕПЛЕН');
             } else if (!metaTag && health.days_since_last !== null && health.days_since_last !== undefined) {
-                metaTag = health.days_since_last === 0 ? '\u0421\u0435\u0433\u043e\u0434\u043d\u044f' : String(health.days_since_last) + ' \u0434\u043d. \u043d\u0430\u0437\u0430\u0434';
+                metaTag = health.days_since_last === 0
+                    ? wt('main.card_today', 'Сегодня')
+                    : wt('main.card_days_ago', '{n} дн. назад').replace('{n}', health.days_since_last);
             }
 
             const card = document.createElement("div");
@@ -3012,7 +3024,7 @@
             const removeBtn = document.createElement("button");
             removeBtn.type = "button";
             removeBtn.className = "main-quick-access-remove icon-button-muted";
-            removeBtn.title = '\u0423\u0431\u0440\u0430\u0442\u044c';
+            removeBtn.title = wt('main.card_action_remove', 'Убрать');
             removeBtn.onclick = (e) => {
                 e.stopPropagation();
                 window._removeFromQuickAccess(complexId);
@@ -3105,121 +3117,6 @@
             container.appendChild(buildQuickAccessCard(item));
         });
         setupQuickAccessRail(previewItems.length);
-        return;
-
-        previewItems.forEach(item => {
-            const complex = item.complex;
-            const complexName = String(complex.name || '');
-            const safeComplexInitials = complexName.slice(0, 2);
-            const complexId = complex.id;
-            const pausedSession = pausedMap.get(complex.id) || item.paused_session || null;
-            const isPaused = !!(pausedSession && pausedSession.paused);
-            const stats = item.stats || {};
-            const health = item.health || {};
-            const pausedSessionId = pausedSession ? pausedSession.session_id : null;
-            const pausedResumeUrl =
-                pausedSession && pausedSession.resume_target && typeof pausedSession.resume_target.url === "string"
-                    ? pausedSession.resume_target.url
-                    : "";
-            const pausedAtLabel = formatPausedAt(pausedSession && pausedSession.paused_at);
-            const pausedDisplayIndex = pausedSession && typeof pausedSession.display_task_index === "number"
-                ? pausedSession.display_task_index
-                : (pausedSession && typeof pausedSession.current_task_index === "number"
-                    ? Math.max(0, pausedSession.current_task_index - 1)
-                    : null);
-            const pausedProgress = typeof pausedDisplayIndex === "number"
-                ? pausedDisplayIndex + 1
-                : null;
-            const pausedTotal = pausedSession && typeof pausedSession.total_tasks === "number"
-                ? pausedSession.total_tasks
-                : null;
-
-            let healthBadge = '';
-            if (health.is_critical) {
-                healthBadge = `<div class="absolute -top-1 -right-1 flex h-3 w-3"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-status-error opacity-75"></span><span class="relative inline-flex rounded-full h-3 w-3 bg-status-error"></span></div>`;
-            } else if (health.status === 'frozen') {
-                healthBadge = `<div class="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-border-strong border-2 border-text-on-dark dark:border-border-strong"></div>`;
-            }
-
-            const progress = Math.round(stats.progress || 0);
-            const isMastered = progress >= 100;
-            let iconContent = '';
-            if (isMastered) {
-                iconContent = `<div class="w-8 h-8 rounded-full bg-primary-lighter text-primary flex items-center justify-center shrink-0"><span class="material-symbols-outlined text-[16px]">check</span></div>`;
-            } else if (progress > 0) {
-                iconContent = `<div class="relative w-8 h-8 flex items-center justify-center shrink-0"><svg class="w-full h-full transform -rotate-90"><circle cx="16" cy="16" r="12" stroke="currentColor" stroke-width="2.5" fill="transparent" pathLength="100" class="text-text-on-dark dark:text-text-secondary"/><circle cx="16" cy="16" r="12" stroke="currentColor" stroke-width="2.5" fill="transparent" pathLength="100" stroke-dasharray="100" stroke-dashoffset="${100 - progress}" stroke-linecap="round" class="text-primary transition-all duration-500 ease-out"/></svg><span class="absolute text-[8px] font-bold text-text-secondary dark:text-text-on-dark">${progress}%</span></div>`;
-            } else {
-                iconContent = `<div class="w-8 h-8 rounded-lg border border-border-subtle bg-surface-2 flex items-center justify-center text-text-secondary font-bold text-[10px] uppercase shrink-0">${escapeHtml(safeComplexInitials)}</div>`;
-            }
-
-            let statusLine = '';
-            if (isPaused) {
-                const pauseText = pausedAtLabel
-                    ? wt('main.card_status_paused_since', 'На паузе с {date}').replace('{date}', pausedAtLabel)
-                    : wt('main.card_status_paused', 'На паузе');
-                const progressText = (pausedProgress && pausedTotal) ? ` ${wt('main.card_step', 'Шаг {n}/{total}').replace('{n}', pausedProgress).replace('{total}', pausedTotal)}` : '';
-                statusLine = `${pauseText}${progressText}`;
-            } else if (item.is_pinned) {
-                statusLine = wt('main.card_status_mastered', 'Закреплено');
-            } else {
-                if (health.days_since_last !== null && health.days_since_last !== undefined) {
-                    statusLine = health.days_since_last === 0
-                        ? wt('main.card_today', 'Сегодня')
-                        : wt('main.card_days_ago', '{n} дн. назад').replace('{n}', health.days_since_last);
-                } else {
-                    statusLine = complex.description || wt('main.card_no_desc', 'Нет описания');
-                }
-            }
-
-            const card = document.createElement("div");
-            card.className = "main-quick-access-card interactive-card group";
-            card.title = complexName;
-            card.onclick = () => {
-                if (isPaused) {
-                    window.handleStartSession(complexId, pausedSessionId, pausedResumeUrl);
-                } else {
-                    window.handleStartSession(complexId);
-                }
-            };
-
-            const iconWrap = document.createElement("div");
-            iconWrap.className = "relative flex-shrink-0";
-            iconWrap.innerHTML = iconContent + healthBadge;
-
-            const textWrap = document.createElement("div");
-            textWrap.className = "flex flex-col min-w-0 flex-1";
-
-            const titleEl = document.createElement("span");
-            titleEl.className = "text-text-main font-bold text-xs leading-tight min-w-0 main-quick-access-title";
-                titleEl.textContent = compactUiLabel(complexName, 58);
-            titleEl.title = complexName;
-
-            const metaEl = document.createElement("span");
-            metaEl.className = "text-text-secondary text-[10px] mt-0.5 leading-tight min-w-0 main-quick-access-status-copy";
-            metaEl.textContent = compactUiLabel(statusLine, 74);
-            metaEl.title = statusLine;
-
-            const removeBtn = document.createElement("button");
-            removeBtn.className = "absolute top-1 right-1 w-6 h-6 flex items-center justify-center rounded-full bg-surface-1 text-text-secondary opacity-0 group-hover:opacity-100 transition hover:bg-error-lighter hover:text-error";
-            removeBtn.title = wt('main.qa_card_remove', 'Убрать');
-            removeBtn.onclick = (e) => {
-                e.stopPropagation();
-                window._removeFromQuickAccess(complexId);
-            };
-            const rmIcon = document.createElement("span");
-            rmIcon.className = "material-symbols-outlined text-[14px]";
-            rmIcon.textContent = "close";
-            removeBtn.appendChild(rmIcon);
-
-            textWrap.appendChild(titleEl);
-            textWrap.appendChild(metaEl);
-
-            card.appendChild(iconWrap);
-            card.appendChild(textWrap);
-            card.appendChild(removeBtn);
-
-            container.appendChild(card);
-        });
     }
 
     window._retryQuickAccess = async function () {

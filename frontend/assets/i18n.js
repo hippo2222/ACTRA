@@ -51,9 +51,62 @@
         try {
             var style = document.createElement('style');
             style.id = 'i18n-strict-styles';
-            style.textContent = '[data-i18n-missing="true"] { outline: 2px dashed #ef4444 !important; outline-offset: 1px !important; background-color: rgba(239, 68, 68, 0.08) !important; }';
+            style.textContent = '[data-i18n-missing="true"] { outline: 2px dashed #ef4444 !important; outline-offset: 1px !important; background-color: rgba(239, 68, 68, 0.08) !important; }\n' +
+                '[data-i18n-untranslated="true"] { outline: 2px dashed #f59e0b !important; outline-offset: 1px !important; background-color: rgba(245, 158, 11, 0.08) !important; }';
             document.head.appendChild(style);
         } catch (_) {}
+    }
+
+    function scanLeaks(rootEl) {
+        if (typeof document === 'undefined') return [];
+        var root = rootEl || document.body;
+        if (!root) return [];
+        var leaks = [];
+        var cyrillicRegex = /[\u0400-\u04FF]/;
+
+        try {
+            var walker = document.createTreeWalker(
+                root,
+                NodeFilter.SHOW_TEXT,
+                {
+                    acceptNode: function (node) {
+                        if (!node || !node.parentElement) return NodeFilter.FILTER_REJECT;
+                        var parent = node.parentElement;
+                        var tag = (parent.tagName || '').toLowerCase();
+                        if (tag === 'script' || tag === 'style' || tag === 'textarea' || tag === 'input') {
+                            return NodeFilter.FILTER_REJECT;
+                        }
+                        if (parent.closest('[data-i18n-ignore]') || parent.closest('[data-lang-btn]')) {
+                            return NodeFilter.FILTER_REJECT;
+                        }
+                        var text = (node.nodeValue || '').trim();
+                        if (!text || !cyrillicRegex.test(text)) {
+                            return NodeFilter.FILTER_SKIP;
+                        }
+                        return NodeFilter.FILTER_ACCEPT;
+                    }
+                }
+            );
+
+            var node;
+            while ((node = walker.nextNode())) {
+                var parent = node.parentElement;
+                var text = (node.nodeValue || '').trim();
+                leaks.push({
+                    element: parent,
+                    text: text,
+                    tag: (parent.tagName || '').toLowerCase(),
+                    hasDataI18n: parent.hasAttribute('data-i18n')
+                });
+                if (isStrict() && _lang !== DEFAULT_LANG) {
+                    parent.setAttribute('data-i18n-untranslated', 'true');
+                    if (typeof console !== 'undefined' && typeof console.warn === 'function') {
+                        console.warn('[i18n:leak] Untranslated text in DOM under locale "' + _lang + '":', text, parent);
+                    }
+                }
+            }
+        } catch (_) {}
+        return leaks;
     }
 
     function setStrict(enabled) {
@@ -200,6 +253,9 @@
             btn.classList.toggle('is-active', isActive);
             btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
         });
+        if (strictMode) {
+            scanLeaks();
+        }
     }
 
     function applyLocale(localeObj, lang) {
@@ -270,6 +326,7 @@
         wt: wt,
         isStrict: isStrict,
         setStrict: setStrict,
+        scanLeaks: scanLeaks,
         setLang: setLang,
         getLang: getLang,
         updateDOM: updateDOM,
