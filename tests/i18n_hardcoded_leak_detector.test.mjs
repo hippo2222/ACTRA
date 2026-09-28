@@ -66,6 +66,50 @@ describe("i18n Hardcoded String Leak Detector & Ratchet Gate", () => {
     }
   });
 
+  it("enforces zero unlocalized string leaks permanently on S1 core session files", { timeout: 30000 }, () => {
+    const s1Files = ["S1/main.js", "S1/index.html", "S1/session-controls.js", "assets/s2-results.js"];
+    for (const file of s1Files) {
+      const output = execSync(
+        `python scripts/audit_i18n_leaks.py --json --filter "${file}"`,
+        {
+          cwd: projectRoot,
+          encoding: "utf8",
+          env: { ...process.env, PYTHONIOENCODING: "utf-8" },
+        }
+      );
+      const data = JSON.parse(output);
+      expect(
+        data.total_leaks,
+        `${file} must have 0 hardcoded unlocalized strings, found ${data.total_leaks}`
+      ).toBe(0);
+    }
+  });
+
+  it("enforces zero unlocalized string leaks permanently on Student Journey files (GlobalHeader, Calendar, Settings)", { timeout: 30000 }, () => {
+    const studentFiles = [
+      "assets/GlobalHeader.js",
+      "Calendar/calendar.js",
+      "Calendar/calendar.html",
+      "Settings/settings.js",
+      "Settings/settings.html",
+    ];
+    for (const file of studentFiles) {
+      const output = execSync(
+        `python scripts/audit_i18n_leaks.py --json --filter "${file}"`,
+        {
+          cwd: projectRoot,
+          encoding: "utf8",
+          env: { ...process.env, PYTHONIOENCODING: "utf-8" },
+        }
+      );
+      const data = JSON.parse(output);
+      expect(
+        data.total_leaks,
+        `${file} must have 0 hardcoded unlocalized strings, found ${data.total_leaks}`
+      ).toBe(0);
+    }
+  });
+
   it("verifies detector catches both literal Cyrillic and escaped Unicode (\\u04xx)", () => {
     const pythonScript = [
       "from scripts.audit_i18n_leaks import mask_safe_js_calls, ANY_CYRILLIC",

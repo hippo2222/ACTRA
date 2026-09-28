@@ -1160,8 +1160,8 @@
                 messageText = normalizeSequenceEvaluationMessage(messageText, detailsObj);
             }
             if (currentTaskType === "sequence_assembly" && difficulty === 2) {
-                if (messageText && messageText.toLowerCase().includes("\u043d\u0435\u0432\u0435\u0440\u043d\u043e\u0435 \u043a\u043e\u043b\u0438\u0447\u0435\u0441\u0442\u0432\u043e \u0443\u0440\u043e\u0432\u043d\u0435\u0439")) {
-                    messageText = "\u0421\u0442\u0440\u0443\u043a\u0442\u0443\u0440\u0430 \u0443\u0440\u043e\u0432\u043d\u0435\u0439 \u043f\u043e\u043a\u0430 \u043d\u0435 \u0441\u043e\u0432\u043f\u0430\u0434\u0430\u0435\u0442. \u041f\u0440\u043e\u0434\u043e\u043b\u0436\u0430\u0439\u0442\u0435 \u0433\u0440\u0443\u043f\u043f\u0438\u0440\u043e\u0432\u0430\u0442\u044c \u044d\u043b\u0435\u043c\u0435\u043d\u0442\u044b \u043f\u043e \u0443\u0440\u043e\u0432\u043d\u044f\u043c \u0438 \u043f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 \u0441\u043d\u043e\u0432\u0430.";
+                if (messageText && (messageText.toLowerCase().includes("\u043d\u0435\u0432\u0435\u0440\u043d\u043e\u0435 \u043a\u043e\u043b\u0438\u0447\u0435\u0441\u0442\u0432\u043e \u0443\u0440\u043e\u0432\u043d\u0435\u0439") || messageText.toLowerCase().includes("incorrect number of levels"))) {
+                    messageText = wt('s1.seq_struct_mismatch', 'Структура уровней пока не совпадает. Продолжайте группировать элементы по уровням и проверьте снова.');
                 }
             }
             if (currentTaskType === "image_labeling" && detailsObj) {
@@ -1287,7 +1287,7 @@
 
                     const uaTitle = document.createElement("h4");
                     uaTitle.className = "text-xs font-bold uppercase tracking-wider text-text-secondary";
-                    uaTitle.textContent = "\u0412\u0430\u0448 \u043e\u0442\u0432\u0435\u0442";
+                    uaTitle.textContent = wt('s1.your_answer_title', 'Ваш ответ');
                     userAnswerBox.appendChild(uaTitle);
 
                     const uaCard = document.createElement("div");
@@ -1300,7 +1300,7 @@
                     detailsObj.reference_answer != null ? String(detailsObj.reference_answer) : "";
                 if (referenceWrap && referenceAnswerText) {
                     referenceWrap.classList.remove("hidden");
-                    if (referenceTitle) referenceTitle.textContent = "\u042d\u0442\u0430\u043b\u043e\u043d\u043d\u044b\u0439 \u043e\u0442\u0432\u0435\u0442";
+                    if (referenceTitle) referenceTitle.textContent = wt('s1.reference_answer_title', 'Эталонный ответ');
                     if (referenceText) {
                         referenceText.innerHTML = renderReferenceAnswerWithKeywordHighlights(referenceAnswerText, detailsObj);
                     }
@@ -1445,12 +1445,12 @@
             if (SessionState) SessionState.currentEvaluationResult = null;
             if (SessionState) SessionState.pendingManualJudgement = false;
             UIHelpers.setCanGoNext(false);
-            if (titleEl) titleEl.textContent = "\u041d\u0435\u0442 \u0434\u043e\u0441\u0442\u0443\u043f\u043d\u044b\u0445 \u0437\u0430\u0434\u0430\u043d\u0438\u0439";
+            if (titleEl) titleEl.textContent = wt('s1.no_available_tasks', 'Нет доступных заданий');
             if (metaEl) metaEl.textContent = "";
             if (refEl) refEl.textContent = "";
             if (descEl) descEl.textContent = "";
             if (currentTaskTitleEl) {
-                currentTaskTitleEl.textContent = "\u041d\u0435\u0442 \u0434\u043e\u0441\u0442\u0443\u043f\u043d\u044b\u0445 \u0437\u0430\u0434\u0430\u043d\u0438\u0439";
+                currentTaskTitleEl.textContent = wt('s1.no_available_tasks', 'Нет доступных заданий');
                 currentTaskTitleEl.classList.remove("is-expanded");
             }
             if (currentTaskTypeEl) currentTaskTypeEl.textContent = "\u2013";
@@ -1463,9 +1463,9 @@
             if (imgEl) {
                 imgEl.style.backgroundImage = "none";
             }
-            if (progressLabel) progressLabel.textContent = "\u0417\u0430\u0434\u0430\u043d\u0438\u0435 \u2013";
+            if (progressLabel) progressLabel.textContent = wt('s1.task_indicator_dash', 'Задание –');
             if (difficultyLabel) {
-                difficultyLabel.textContent = "\u0421\u043b\u043e\u0436\u043d\u043e\u0441\u0442\u044c: -";
+                difficultyLabel.textContent = wt('s1.difficulty_dash', 'Сложность: -');
                 difficultyLabel.classList.add("hidden");
             }
             if (progressBar) progressBar.style.width = "0%";
@@ -1490,7 +1490,7 @@
                 emptyState.className =
                     "rounded-lg border border-border-strong bg-surface-2 p-6 text-center text-sm text-text-secondary";
                 emptyState.textContent =
-                    "\u0414\u043b\u044f \u044d\u0442\u043e\u0439 \u0441\u0435\u0441\u0441\u0438\u0438 \u0431\u043e\u043b\u044c\u0448\u0435 \u043d\u0435\u0442 \u0434\u043e\u0441\u0442\u0443\u043f\u043d\u044b\u0445 \u0437\u0430\u0434\u0430\u043d\u0438\u0439.";
+                    wt('s1.no_more_session_tasks', 'Для этой сессии больше нет доступных заданий.');
                 taskContent.appendChild(emptyState);
             }
             return;
@@ -1712,7 +1712,7 @@
                             } else {
                                 if (UIHelpers && typeof UIHelpers.showStatus === "function") {
                                     UIHelpers.showStatus(
-                                        "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u044c \u043e\u0442\u0432\u0435\u0442 \u0430\u0432\u0442\u043e\u043c\u0430\u0442\u0438\u0447\u0435\u0441\u043a\u0438. \u041f\u0435\u0440\u0435\u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u0435 \u044d\u043a\u0440\u0430\u043d \u0438 \u043f\u043e\u043f\u0440\u043e\u0431\u0443\u0439\u0442\u0435 \u0441\u043d\u043e\u0432\u0430.",
+                                        wt('s1.err_auto_submit_failed', 'Не удалось отправить ответ автоматически. Перезагрузите экран и попробуйте снова.'),
                                         "error"
                                     );
                                 }
@@ -1772,7 +1772,7 @@
 
                 // Show user-friendly error message
                 if (UIHelpers && typeof UIHelpers.showStatus === 'function') {
-                    UIHelpers.showStatus(`\u041d\u0435\u043f\u043e\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u043c\u044b\u0439 \u0442\u0438\u043f \u0437\u0430\u0434\u0430\u043d\u0438\u044f: ${taskType || 'unknown'}. \u041e\u0431\u0440\u0430\u0442\u0438\u0442\u0435\u0441\u044c \u043a \u0430\u0434\u043c\u0438\u043d\u0438\u0441\u0442\u0440\u0430\u0442\u043e\u0440\u0443.`, "error");
+                    UIHelpers.showStatus(wt('s1.err_unsupported_task_type', 'Неподдерживаемый тип задания: {type}. Обратитесь к администратору.').replace('{type}', taskType || 'unknown'), "error");
                 }
 
                 // Display fallback error UI
@@ -1809,7 +1809,7 @@
                         const type = pickEffectiveTaskType(task);
                         restoreDraftToUI(type, draft);
                         UIHelpers.showStatus(
-                            "\u0412\u043e\u0441\u0441\u0442\u0430\u043d\u043e\u0432\u043b\u0435\u043d \u043d\u0435\u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u043d\u044b\u0439 \u043e\u0442\u0432\u0435\u0442",
+                            wt('s1.restored_user_input', 'Восстановлен сохранённый ответ'),
                             "info",
                             { dismissible: true, autoHideMs: 8000 }
                         );

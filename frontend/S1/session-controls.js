@@ -1061,7 +1061,7 @@
             if (currentTaskType === "image_labeling" && typeof ImageLabelUI !== "undefined" && typeof ImageLabelUI.validateBeforeSubmit === "function") {
                 const validation = ImageLabelUI.validateBeforeSubmit();
                 if (validation && validation.valid === false) {
-                    showStatus(validation.message || 'Заполните все области перед отправкой на проверку', "error");
+                    showStatus(validation.message || wt('s1.err_fill_all_areas', 'Заполните все области перед отправкой на проверку'), "error");
                     showEvaluationResult(null);
                     return;
                 }

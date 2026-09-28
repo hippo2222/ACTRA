@@ -1907,11 +1907,9 @@
 
         if (isUser && !isCorrect) {
           const expectedText = (zEntry && typeof zEntry === "object" && zEntry.expected) || zone.label || "";
-          if (expectedText) {
             zoneEl.title = isTypo
-              ? `Опечатка! Правильно: ${expectedText}`
-              : `Неверно! Должно быть: ${expectedText}`;
-          }
+              ? wt('s2.zone_typo', 'Опечатка! Правильно: {expected}').replace('{expected}', expectedText)
+              : wt('s2.zone_wrong', 'Неверно! Должно быть: {expected}').replace('{expected}', expectedText);
         }
 
         zoneEl.addEventListener("mouseenter", function () {

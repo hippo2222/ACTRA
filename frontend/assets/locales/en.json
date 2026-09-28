@@ -212,7 +212,8 @@
     "demo_consolidation": "Consolidation",
     "demo_final_review": "Final review",
     "status_recalculated": "Recalculated",
-    "status_shifted": "Shifted"
+    "status_shifted": "Shifted",
+    "tasks_approx_zero": "tasks (~0 min)"
   },
   "sequenceui.create_level_btn": "Create level",
   "sequenceui.reference_badge": "Reference",
@@ -2851,7 +2852,19 @@
     "mode_all": "All theory",
     "mode_dim": "Highlight",
     "mode_isolate": "Summary only",
-    "mode_no_linked_blocks": "No linked blocks for this task"
+    "mode_no_linked_blocks": "No linked blocks for this task",
+    "restored_evaluation_result": "Verification result restored",
+    "restored_user_input": "Saved answer restored",
+    "err_fill_all_areas": "Fill in all areas before submitting for verification",
+    "your_answer_title": "Your answer",
+    "reference_answer_title": "Reference answer",
+    "no_available_tasks": "No available tasks",
+    "task_indicator_dash": "Task –",
+    "difficulty_dash": "Difficulty: -",
+    "no_more_session_tasks": "No more available tasks for this session.",
+    "err_auto_submit_failed": "Failed to submit answer automatically. Please reload the screen and try again.",
+    "err_unsupported_task_type": "Unsupported task type: {type}. Please contact administrator.",
+    "seq_struct_mismatch": "Level structure does not match yet. Continue grouping elements by levels and check again."
   },
   "testui_q": {
     "reference_answer": "Reference answer",
@@ -3041,7 +3054,9 @@
     "next_step_hint_finish": "Next step — view complex summary.",
     "hide_answer": "Hide",
     "show_answer": "Show",
-    "user_answer_label": "Your answer: "
+    "user_answer_label": "Your answer: ",
+    "zone_typo": "Typo! Correct: {expected}",
+    "zone_wrong": "Incorrect! Should be: {expected}"
   },
   "s3": {
     "page_title": "Complex Final Results",
@@ -8632,5 +8647,19 @@
   "clickui.extra_action_desc": "Mark did not fall into any target area",
   "clickui.duplicate_action_title": "Duplicate click #{n}",
   "clickui.duplicate_action_desc": "Target was already marked by another action",
-  "clickui.extra_actions_header": "Extra marks"
+  "clickui.extra_actions_header": "Extra marks",
+  "s1.restored_evaluation_result": "Verification result restored",
+  "s1.restored_user_input": "Saved answer restored",
+  "s1.err_fill_all_areas": "Fill in all areas before submitting for verification",
+  "s1.your_answer_title": "Your answer",
+  "s1.reference_answer_title": "Reference answer",
+  "s1.no_available_tasks": "No available tasks",
+  "s1.task_indicator_dash": "Task –",
+  "s1.difficulty_dash": "Difficulty: -",
+  "s1.no_more_session_tasks": "No more available tasks for this session.",
+  "s1.err_auto_submit_failed": "Failed to submit answer automatically. Please reload the screen and try again.",
+  "s1.err_unsupported_task_type": "Unsupported task type: {type}. Please contact administrator.",
+  "s1.seq_struct_mismatch": "Level structure does not match yet. Continue grouping elements by levels and check again.",
+  "s2.zone_typo": "Typo! Correct: {expected}",
+  "s2.zone_wrong": "Incorrect! Should be: {expected}"
 }

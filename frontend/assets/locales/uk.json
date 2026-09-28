@@ -212,7 +212,8 @@
     "demo_consolidation": "Закріплення",
     "demo_final_review": "Фінальне повторення",
     "status_recalculated": "Розраховано",
-    "status_shifted": "Зсунуто"
+    "status_shifted": "Зсунуто",
+    "tasks_approx_zero": "завдань (~0 хв)"
   },
   "sequenceui.create_level_btn": "Створити рівень",
   "sequenceui.reference_badge": "Еталон",
@@ -2851,7 +2852,19 @@
     "mode_all": "Вся теорія",
     "mode_dim": "Підсвічування",
     "mode_isolate": "Лише вижимка",
-    "mode_no_linked_blocks": "Для цього завдання немає пов'язаних блоків"
+    "mode_no_linked_blocks": "Для цього завдання немає пов'язаних блоків",
+    "restored_evaluation_result": "Відновлено результат перевірки",
+    "restored_user_input": "Відновлено збережену відповідь",
+    "err_fill_all_areas": "Заповніть усі області перед відправкою на перевірку",
+    "your_answer_title": "Ваша відповідь",
+    "reference_answer_title": "Еталонна відповідь",
+    "no_available_tasks": "Немає доступних завдань",
+    "task_indicator_dash": "Завдання –",
+    "difficulty_dash": "Складність: -",
+    "no_more_session_tasks": "Для цієї сесії більше немає доступних завдань.",
+    "err_auto_submit_failed": "Не вдалося надіслати відповідь автоматично. Перезавантажте екран і спробуйте знову.",
+    "err_unsupported_task_type": "Непідтримуваний тип завдання: {type}. Зверніться до адміністратора.",
+    "seq_struct_mismatch": "Структура рівнів поки не збігається. Продовжуйте групувати елементи за рівнями та перевірте знову."
   },
   "testui_q": {
     "reference_answer": "Еталонна відповідь",
@@ -3041,7 +3054,9 @@
     "next_step_hint_finish": "Наступний крок — перегляд підсумків комплексу.",
     "hide_answer": "Сховати",
     "show_answer": "Показати",
-    "user_answer_label": "Ваша відповідь: "
+    "user_answer_label": "Ваша відповідь: ",
+    "zone_typo": "Описка! Правильно: {expected}",
+    "zone_wrong": "Невірно! Має бути: {expected}"
   },
   "s3": {
     "page_title": "Підсумкові результати комплексу",
@@ -8632,5 +8647,19 @@
   "clickui.extra_action_desc": "Позначка не потрапила в жодну з цільових областей",
   "clickui.duplicate_action_title": "Повторний клік №{n}",
   "clickui.duplicate_action_desc": "Ціль уже була позначена іншою дією",
-  "clickui.extra_actions_header": "Зайві позначки"
+  "clickui.extra_actions_header": "Зайві позначки",
+  "s1.restored_evaluation_result": "Відновлено результат перевірки",
+  "s1.restored_user_input": "Відновлено збережену відповідь",
+  "s1.err_fill_all_areas": "Заповніть усі області перед відправкою на перевірку",
+  "s1.your_answer_title": "Ваша відповідь",
+  "s1.reference_answer_title": "Еталонна відповідь",
+  "s1.no_available_tasks": "Немає доступних завдань",
+  "s1.task_indicator_dash": "Завдання –",
+  "s1.difficulty_dash": "Складність: -",
+  "s1.no_more_session_tasks": "Для цієї сесії більше немає доступних завдань.",
+  "s1.err_auto_submit_failed": "Не вдалося надіслати відповідь автоматично. Перезавантажте екран і спробуйте знову.",
+  "s1.err_unsupported_task_type": "Непідтримуваний тип завдання: {type}. Зверніться до адміністратора.",
+  "s1.seq_struct_mismatch": "Структура рівнів поки не збігається. Продовжуйте групувати елементи за рівнями та перевірте знову.",
+  "s2.zone_typo": "Описка! Правильно: {expected}",
+  "s2.zone_wrong": "Невірно! Має бути: {expected}"
 }

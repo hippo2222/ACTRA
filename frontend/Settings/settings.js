@@ -47,17 +47,17 @@
     const AVATAR_CROP_OUTPUT_SIZE = 512;
     function getThemeCopy(themeId) {
         const map = {
-            'light-a':   { nameKey: 'settings.theme_contrast', descKey: 'settings.theme_contrast_desc', nameFb: '\u041a\u043e\u043d\u0442\u0440\u0430\u0441\u0442',  descFb: '\u0421\u0432\u0435\u0442\u043b\u0430\u044f \u0442\u0435\u043c\u0430 \u0441 \u0445\u043e\u043b\u043e\u0434\u043d\u044b\u043c \u0430\u043a\u0446\u0435\u043d\u0442\u043e\u043c' },
-            'light-b':   { nameKey: 'settings.theme_warm',     descKey: 'settings.theme_warm_desc',     nameFb: '\u0422\u0435\u043f\u043b\u043e',     descFb: '\u041c\u044f\u0433\u043a\u0430\u044f \u0441\u0432\u0435\u0442\u043b\u0430\u044f \u043f\u0430\u043b\u0438\u0442\u0440\u0430 \u0441 \u0442\u0451\u043f\u043b\u044b\u043c\u0438 \u043e\u0442\u0442\u0435\u043d\u043a\u0430\u043c\u0438' },
-            'neutral-a': { nameKey: 'settings.theme_earth',    descKey: 'settings.theme_earth_desc',    nameFb: '\u0417\u0435\u043c\u043b\u044f',     descFb: '\u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f \u043f\u0430\u043b\u0438\u0442\u0440\u0430 \u0432 \u043f\u0440\u0438\u0440\u043e\u0434\u043d\u044b\u0445 \u0442\u043e\u043d\u0430\u0445' },
-            'neutral-b': { nameKey: 'settings.theme_slate',    descKey: 'settings.theme_slate_desc',    nameFb: '\u0421\u0443\u043c\u0435\u0440\u043a\u0438',   descFb: '\u0421\u043f\u043e\u043a\u043e\u0439\u043d\u0430\u044f \u043d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f \u0442\u0435\u043c\u0430 \u0441 \u043c\u044f\u0433\u043a\u0438\u043c \u043a\u043e\u043d\u0442\u0440\u0430\u0441\u0442\u043e\u043c' },
-            'dark-a':    { nameKey: 'settings.theme_night',    descKey: 'settings.theme_night_desc',    nameFb: '\u041d\u043e\u0447\u044c',      descFb: '\u0422\u0451\u043c\u043d\u0430\u044f \u0442\u0435\u043c\u0430 \u0441 \u0442\u0451\u043f\u043b\u044b\u043c\u0438 \u0430\u043a\u0446\u0435\u043d\u0442\u0430\u043c\u0438' },
-            'dark-b':    { nameKey: 'settings.theme_cosmos',   descKey: 'settings.theme_cosmos_desc',   nameFb: '\u041a\u043e\u0441\u043c\u043e\u0441',    descFb: '\u0413\u043b\u0443\u0431\u043e\u043a\u0430\u044f \u0442\u0451\u043c\u043d\u0430\u044f \u043f\u0430\u043b\u0438\u0442\u0440\u0430 \u0434\u043b\u044f \u0432\u0435\u0447\u0435\u0440\u043d\u0435\u0439 \u0440\u0430\u0431\u043e\u0442\u044b' },
+            'light-a':   { name: wt('settings.theme_contrast', 'Контраст'),  desc: wt('settings.theme_contrast_desc', 'Светлая тема с холодным акцентом') },
+            'light-b':   { name: wt('settings.theme_warm', 'Тепло'),         desc: wt('settings.theme_warm_desc', 'Мягкая светлая палитра с тёплыми оттенками') },
+            'neutral-a': { name: wt('settings.theme_earth', 'Земля'),        desc: wt('settings.theme_earth_desc', 'Нейтральная палитра в природных тонах') },
+            'neutral-b': { name: wt('settings.theme_slate', 'Сумерки'),      desc: wt('settings.theme_slate_desc', 'Спокойная нейтральная тема с мягким контрастом') },
+            'dark-a':    { name: wt('settings.theme_night', 'Ночь'),         desc: wt('settings.theme_night_desc', 'Тёмная тема с тёплыми акцентами') },
+            'dark-b':    { name: wt('settings.theme_cosmos', 'Космос'),       desc: wt('settings.theme_cosmos_desc', 'Глубокая тёмная палитра для вечерней работы') },
         };
         const entry = map[String(themeId)] || {};
         return {
-            name: entry.nameKey ? wt(entry.nameKey, entry.nameFb) : undefined,
-            description: entry.descKey ? wt(entry.descKey, entry.descFb) : undefined,
+            name: entry.name,
+            description: entry.desc,
         };
     }
 
@@ -276,24 +276,24 @@
     }
 
     function applyStaticCopy() {
-        document.title = '\u041d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438 \u2014 ACTRA';
+        document.title = `${wt('settings.title', 'Настройки')} — ACTRA`;
 
         const topbarBackLabel = document.querySelector('.settings-topbar a span:last-child');
-        if (topbarBackLabel) topbarBackLabel.textContent = '\u0413\u043b\u0430\u0432\u043d\u0430\u044f';
+        if (topbarBackLabel) topbarBackLabel.textContent = wt('settings.nav_home', 'Главная');
 
         const pageTitle = document.querySelector('.settings-topbar h1');
-        if (pageTitle) pageTitle.textContent = '\u041d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438';
+        if (pageTitle) pageTitle.textContent = wt('settings.title', 'Настройки');
 
         const sectionCopy = [
-            ['settings-profile-title', '\u041f\u0440\u043e\u0444\u0438\u043b\u044c'],
-            ['settings-profile-description', '\u041e\u0441\u043d\u043e\u0432\u043d\u044b\u0435 \u0434\u0430\u043d\u043d\u044b\u0435 \u0430\u043a\u043a\u0430\u0443\u043d\u0442\u0430 \u0438 \u0444\u043e\u0442\u043e \u043f\u0440\u043e\u0444\u0438\u043b\u044f.'],
-            ['settings-security-title', '\u0411\u0435\u0437\u043e\u043f\u0430\u0441\u043d\u043e\u0441\u0442\u044c'],
-            ['settings-security-description', '\u0421\u043c\u0435\u043d\u0430 \u043f\u0430\u0440\u043e\u043b\u044f \u0438 \u0431\u0430\u0437\u043e\u0432\u0430\u044f \u0437\u0430\u0449\u0438\u0442\u0430 \u0432\u0445\u043e\u0434\u0430.'],
-            ['settings-admin-title', '\u0423\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0438\u0435 \u0430\u043a\u043a\u0430\u0443\u043d\u0442\u0430\u043c\u0438'],
-            ['settings-admin-description', '\u041f\u043e\u0438\u0441\u043a \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u0435\u0439, \u0441\u0440\u043e\u043a\u0438 premium \u0438 \u0432\u044b\u0434\u0430\u0447\u0430 \u0434\u043e\u0441\u0442\u0443\u043f\u0430.'],
-            ['settings-appearance-title', '\u041e\u0444\u043e\u0440\u043c\u043b\u0435\u043d\u0438\u0435'],
+            ['settings-profile-title', wt('settings.profile_title', 'Профиль')],
+            ['settings-profile-description', wt('settings.profile_description', 'Основные данные аккаунта и фото профиля.')],
+            ['settings-security-title', wt('settings.security_title', 'Безопасность')],
+            ['settings-security-description', wt('settings.security_description', 'Смена пароля и базовая защита входа.')],
+            ['settings-admin-title', wt('settings.admin_title', 'Управление аккаунтами')],
+            ['settings-admin-description', wt('settings.admin_description', 'Поиск пользователей, сроки premium и выдача доступа.')],
+            ['settings-appearance-title', wt('settings.appearance_title', 'Оформление')],
             ['settings-ai-title', 'AI keys'],
-            ['settings-ai-description', '\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u0435 \u043a\u043b\u044e\u0447\u0438 \u0438 \u043f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 \u0438\u0445 \u043f\u0440\u044f\u043c\u043e \u043d\u0430 \u044d\u0442\u043e\u0439 \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0435.'],
+            ['settings-ai-description', wt('settings.ai_description', 'Сохраните ключи и проверьте их прямо на этой странице.')],
         ];
         sectionCopy.forEach(([id, value]) => {
             const element = document.getElementById(id);
@@ -310,7 +310,7 @@
                 const fallbackLabel = directTextNodes
                     .map((node) => String(node.textContent || '').trim())
                     .filter(Boolean)
-                    .join(' ') || '\u0413\u043b\u0430\u0432\u043d\u0430\u044f';
+                    .join(' ') || wt('settings.nav_home', 'Главная');
                 directTextNodes.forEach((node) => node.remove());
                 label = document.createElement('span');
                 label.className = 'settings-main-link-label';
@@ -320,103 +320,103 @@
         }
 
         const accountActions = Array.from(document.querySelectorAll('.settings-main-link-label'));
-        if (accountActions[0]) accountActions[0].textContent = '\u0413\u043b\u0430\u0432\u043d\u0430\u044f';
+        if (accountActions[0]) accountActions[0].textContent = wt('settings.nav_home', 'Главная');
 
         const avatarPreviewName = document.getElementById('settings-avatar-preview-name');
-        if (avatarPreviewName) avatarPreviewName.textContent = '\u0424\u043e\u0442\u043e \u043f\u0440\u043e\u0444\u0438\u043b\u044f';
+        if (avatarPreviewName) avatarPreviewName.textContent = wt('settings.avatar_title', 'Фото профиля');
 
         const avatarPreviewNote = document.getElementById('settings-avatar-preview-note');
         if (avatarPreviewNote) {
-            avatarPreviewNote.textContent = '\u0417\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u0435 \u0441\u0432\u043e\u0451 \u0438\u0437\u043e\u0431\u0440\u0430\u0436\u0435\u043d\u0438\u0435. \u041e\u043d\u043e \u0441\u0440\u0430\u0437\u0443 \u043f\u043e\u044f\u0432\u0438\u0442\u0441\u044f \u0432 \u043c\u0435\u043d\u044e \u0438 \u043d\u0430 \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0435 \u043d\u0430\u0441\u0442\u0440\u043e\u0435\u043a.';
+            avatarPreviewNote.textContent = wt('settings.avatar_note', 'Загрузите своё изображение. Оно сразу появится в меню и на странице настроек.');
         }
 
         const nameLabel = document.getElementById('settings-name-input')?.previousElementSibling;
         if (nameLabel && nameLabel.tagName === 'SPAN') {
-            nameLabel.textContent = '\u0418\u043c\u044f \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044f';
+            nameLabel.textContent = wt('settings.name_label', 'Имя пользователя');
         }
 
         const nameInput = document.getElementById('settings-name-input');
-        if (nameInput) nameInput.setAttribute('placeholder', '\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0438\u043c\u044f');
+        if (nameInput) nameInput.setAttribute('placeholder', wt('settings.name_placeholder', 'Введите имя'));
 
         const emailTitle = document.getElementById('settings-email-value')?.previousElementSibling;
         if (emailTitle && emailTitle.tagName === 'P') {
-            emailTitle.textContent = '\u041f\u043e\u0447\u0442\u0430 \u0430\u043a\u043a\u0430\u0443\u043d\u0442\u0430';
+            emailTitle.textContent = wt('settings.email_label', 'Почта аккаунта');
         }
 
         const emailPendingTitle = document.getElementById('settings-email-pending-title');
-        if (emailPendingTitle) emailPendingTitle.textContent = '\u0421\u043c\u0435\u043d\u0430 \u043f\u043e\u0447\u0442\u044b \u0436\u0434\u0451\u0442 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f';
+        if (emailPendingTitle) emailPendingTitle.textContent = wt('settings.email_pending_title', 'Смена почты ждёт подтверждения');
 
         const emailPendingHint = document.getElementById('settings-email-pending-hint');
         if (emailPendingHint) {
-            emailPendingHint.textContent = '\u041f\u043e\u043a\u0430 \u043d\u043e\u0432\u0430\u044f \u043f\u043e\u0447\u0442\u0430 \u043d\u0435 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0430, \u0432\u0445\u043e\u0434 \u0438 \u0443\u0432\u0435\u0434\u043e\u043c\u043b\u0435\u043d\u0438\u044f \u043e\u0441\u0442\u0430\u044e\u0442\u0441\u044f \u043d\u0430 \u0442\u0435\u043a\u0443\u0449\u0435\u043c \u0430\u0434\u0440\u0435\u0441\u0435.';
+            emailPendingHint.textContent = wt('settings.email_pending_hint', 'Пока новая почта не подтверждена, вход и уведомления остаются на текущем адресе.');
         }
 
         const emailInputLabel = document.getElementById('settings-email-input')?.previousElementSibling;
         if (emailInputLabel && emailInputLabel.tagName === 'SPAN') {
-            emailInputLabel.textContent = '\u041d\u043e\u0432\u0430\u044f \u043f\u043e\u0447\u0442\u0430';
+            emailInputLabel.textContent = wt('settings.email_new_label', 'Новая почта');
         }
 
         const passwordTitle = document.getElementById('settings-password-state')?.previousElementSibling;
         if (passwordTitle && passwordTitle.tagName === 'P') {
-            passwordTitle.textContent = '\u041f\u0430\u0440\u043e\u043b\u044c';
+            passwordTitle.textContent = wt('settings.password_label', 'Пароль');
         }
 
         const currentPasswordLabel = document.querySelector('label[for="settings-password-current"] span');
-        if (currentPasswordLabel) currentPasswordLabel.textContent = '\u0422\u0435\u043a\u0443\u0449\u0438\u0439 \u043f\u0430\u0440\u043e\u043b\u044c';
+        if (currentPasswordLabel) currentPasswordLabel.textContent = wt('settings.password_current_label', 'Текущий пароль');
 
         const newPasswordLabel = document.getElementById('settings-password-new')?.closest('label')?.querySelector('span');
-        if (newPasswordLabel) newPasswordLabel.textContent = '\u041d\u043e\u0432\u044b\u0439 \u043f\u0430\u0440\u043e\u043b\u044c';
+        if (newPasswordLabel) newPasswordLabel.textContent = wt('settings.password_new_label', 'Новый пароль');
 
         const confirmPasswordLabel = document.getElementById('settings-password-confirm')?.closest('label')?.querySelector('span');
-        if (confirmPasswordLabel) confirmPasswordLabel.textContent = '\u041f\u043e\u0432\u0442\u043e\u0440\u0438\u0442\u0435 \u043d\u043e\u0432\u044b\u0439 \u043f\u0430\u0440\u043e\u043b\u044c';
+        if (confirmPasswordLabel) confirmPasswordLabel.textContent = wt('settings.password_confirm_label', 'Повторите новый пароль');
 
         const deleteTitle = document.getElementById('settings-delete-title');
-        if (deleteTitle) deleteTitle.textContent = '\u0423\u0434\u0430\u043b\u0435\u043d\u0438\u0435 \u0430\u043a\u043a\u0430\u0443\u043d\u0442\u0430';
+        if (deleteTitle) deleteTitle.textContent = wt('settings.delete_title', 'Удаление аккаунта');
 
         const deleteNote = document.getElementById('settings-delete-note');
         if (deleteNote) {
-            deleteNote.textContent = '\u0410\u043a\u043a\u0430\u0443\u043d\u0442 \u0431\u0443\u0434\u0435\u0442 \u0443\u0434\u0430\u043b\u0451\u043d \u0432\u043c\u0435\u0441\u0442\u0435 \u0441 \u043f\u043e\u0447\u0442\u043e\u0439 \u0438 \u0441\u0432\u044f\u0437\u0430\u043d\u043d\u044b\u043c\u0438 \u0434\u0430\u043d\u043d\u044b\u043c\u0438.';
+            deleteNote.textContent = wt('settings.delete_note', 'Аккаунт будет удалён вместе с почтой и связанными данными.');
         }
 
         const deleteWarning = document.getElementById('settings-delete-warning');
-        if (deleteWarning) deleteWarning.textContent = '\u042d\u0442\u043e \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u043d\u0435\u043b\u044c\u0437\u044f \u043e\u0442\u043c\u0435\u043d\u0438\u0442\u044c.';
+        if (deleteWarning) deleteWarning.textContent = wt('settings.delete_warning', 'Это действие нельзя отменить.');
 
         const deletePasswordLabel = document.getElementById('settings-delete-password')?.closest('label')?.querySelector('span');
-        if (deletePasswordLabel) deletePasswordLabel.textContent = '\u0422\u0435\u043a\u0443\u0449\u0438\u0439 \u043f\u0430\u0440\u043e\u043b\u044c';
+        if (deletePasswordLabel) deletePasswordLabel.textContent = wt('settings.password_current_label', 'Текущий пароль');
 
         const deletePasswordInput = document.getElementById('settings-delete-password');
         if (deletePasswordInput) {
-            deletePasswordInput.setAttribute('placeholder', '\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0442\u0435\u043a\u0443\u0449\u0438\u0439 \u043f\u0430\u0440\u043e\u043b\u044c');
+            deletePasswordInput.setAttribute('placeholder', wt('settings.password_current_placeholder', 'Введите текущий пароль'));
         }
 
         const themePlaceholder = document.querySelector('#theme-options > div');
-        if (themePlaceholder) themePlaceholder.textContent = '\u0417\u0430\u0433\u0440\u0443\u0437\u043a\u0430 \u0442\u0435\u043c...';
+        if (themePlaceholder) themePlaceholder.textContent = wt('settings.loading_themes', 'Загрузка тем...');
 
         const saveKeysButton = document.getElementById('save-keys-btn');
-        if (saveKeysButton) saveKeysButton.textContent = '\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u043a\u043b\u044e\u0447\u0438';
+        if (saveKeysButton) saveKeysButton.textContent = wt('settings.save_keys', 'Сохранить ключи');
 
         const validateAllButton = document.getElementById('validate-all-btn');
-        if (validateAllButton) validateAllButton.textContent = '\u041f\u0440\u043e\u0432\u0435\u0440\u0438\u0442\u044c \u0432\u0441\u0435 \u043a\u043b\u044e\u0447\u0438';
+        if (validateAllButton) validateAllButton.textContent = wt('settings.validate_keys', 'Проверить все ключи');
 
         const restoreDraftButton = document.getElementById('settings-draft-restore-btn');
-        if (restoreDraftButton) restoreDraftButton.textContent = '\u0412\u043e\u0441\u0441\u0442\u0430\u043d\u043e\u0432\u0438\u0442\u044c';
+        if (restoreDraftButton) restoreDraftButton.textContent = wt('settings.draft_restore', 'Восстановить');
 
         const discardDraftButton = document.getElementById('settings-draft-discard-btn');
-        if (discardDraftButton) discardDraftButton.textContent = '\u0423\u0434\u0430\u043b\u0438\u0442\u044c';
+        if (discardDraftButton) discardDraftButton.textContent = wt('settings.draft_discard', 'Удалить');
 
-        setButtonLabel('settings-avatar-upload-btn', 'upload', '\u0417\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c \u0438\u0437\u043e\u0431\u0440\u0430\u0436\u0435\u043d\u0438\u0435');
-        setButtonLabel('settings-name-save-btn', 'save', '\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u0438\u043c\u044f');
-        setButtonLabel('settings-email-toggle-btn', 'mail', '\u0418\u0437\u043c\u0435\u043d\u0438\u0442\u044c \u043f\u043e\u0447\u0442\u0443');
-        setButtonLabel('settings-email-save-btn', 'check', '\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u043f\u043e\u0447\u0442\u0443');
-        setButtonLabel('settings-email-cancel-btn', 'close', '\u041e\u0442\u043c\u0435\u043d\u0430');
-        setButtonLabel('settings-email-pending-resend-btn', 'forward_to_inbox', '\u041e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u044c \u0435\u0449\u0451 \u0440\u0430\u0437');
-        setButtonLabel('settings-password-toggle-btn', 'password', '\u0418\u0437\u043c\u0435\u043d\u0438\u0442\u044c \u043f\u0430\u0440\u043e\u043b\u044c');
-        setButtonLabel('settings-password-save-btn', 'check', '\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u043f\u0430\u0440\u043e\u043b\u044c');
-        setButtonLabel('settings-password-cancel-btn', 'close', '\u041e\u0442\u043c\u0435\u043d\u0430');
-        setButtonLabel('settings-delete-toggle-btn', 'delete_forever', '\u0423\u0434\u0430\u043b\u0438\u0442\u044c \u0430\u043a\u043a\u0430\u0443\u043d\u0442');
-        setButtonLabel('settings-delete-confirm-btn', 'delete_forever', '\u0423\u0434\u0430\u043b\u0438\u0442\u044c \u043d\u0430\u0432\u0441\u0435\u0433\u0434\u0430');
-        setButtonLabel('settings-delete-cancel-btn', 'close', '\u041e\u0442\u043c\u0435\u043d\u0430');
-        setButtonLabel('settings-logout-btn', 'logout', '\u0412\u044b\u0439\u0442\u0438');
+        setButtonLabel('settings-avatar-upload-btn', 'upload', wt('settings.avatar_upload', 'Загрузить изображение'));
+        setButtonLabel('settings-name-save-btn', 'save', wt('settings.name_save', 'Сохранить имя'));
+        setButtonLabel('settings-email-toggle-btn', 'mail', wt('settings.email_change', 'Изменить почту'));
+        setButtonLabel('settings-email-save-btn', 'check', wt('settings.email_save', 'Сохранить почту'));
+        setButtonLabel('settings-email-cancel-btn', 'close', wt('settings.cancel', 'Отмена'));
+        setButtonLabel('settings-email-pending-resend-btn', 'forward_to_inbox', wt('settings.email_resend', 'Отправить ещё раз'));
+        setButtonLabel('settings-password-toggle-btn', 'password', wt('settings.password_change', 'Изменить пароль'));
+        setButtonLabel('settings-password-save-btn', 'check', wt('settings.password_save', 'Сохранить пароль'));
+        setButtonLabel('settings-password-cancel-btn', 'close', wt('settings.cancel', 'Отмена'));
+        setButtonLabel('settings-delete-toggle-btn', 'delete_forever', wt('settings.delete_toggle', 'Удалить аккаунт'));
+        setButtonLabel('settings-delete-confirm-btn', 'delete_forever', wt('settings.delete_confirm', 'Удалить навсегда'));
+        setButtonLabel('settings-delete-cancel-btn', 'close', wt('settings.cancel', 'Отмена'));
+        setButtonLabel('settings-logout-btn', 'logout', wt('settings.logout', 'Выйти'));
         syncAccountCaptionPlacement();
     }
 

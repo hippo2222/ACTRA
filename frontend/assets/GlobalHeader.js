@@ -231,9 +231,9 @@
             }
         } catch (_) {
             if (planBadge) planBadge.hidden = true;
-            if (name) name.textContent = (window.i18n && typeof window.i18n.t === 'function')
-                ? window.i18n.t('header.profile_fallback')
-                : 'Профиль';
+            if (name) name.textContent = (window.i18n && typeof window.i18n.wt === 'function')
+                ? window.i18n.wt('header.profile_fallback', 'Profile')
+                : 'Profile';
         }
     }
 

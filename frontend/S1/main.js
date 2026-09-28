@@ -722,13 +722,13 @@
 
             if (restoredEvaluationResult) {
                 showStatus(
-                    '\u0412\u043e\u0441\u0441\u0442\u0430\u043d\u043e\u0432\u043b\u0435\u043d \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442 \u043f\u0440\u043e\u0432\u0435\u0440\u043a\u0438',
+                    wt('s1.restored_evaluation_result', 'Восстановлен результат проверки'),
                     'info',
                     { dismissible: true, autoHideMs: 8000 }
                 );
             } else if (restoredUserInput) {
                 showStatus(
-                    '\u0412\u043e\u0441\u0441\u0442\u0430\u043d\u043e\u0432\u043b\u0435\u043d \u043d\u0435\u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u043d\u044b\u0439 \u043e\u0442\u0432\u0435\u0442',
+                    wt('s1.restored_user_input', 'Восстановлен сохранённый ответ'),
                     'info',
                     { dismissible: true, autoHideMs: 8000 }
                 );

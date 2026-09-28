@@ -212,7 +212,8 @@
     "demo_consolidation": "Закрепление",
     "demo_final_review": "Финальное повторение",
     "status_recalculated": "Рассчитано",
-    "status_shifted": "Сдвинуто"
+    "status_shifted": "Сдвинуто",
+    "tasks_approx_zero": "задач (~0 мин)"
   },
   "sequenceui.create_level_btn": "Создать уровень",
   "sequenceui.reference_badge": "Эталон",
@@ -2851,7 +2852,19 @@
     "mode_all": "Вся теория",
     "mode_dim": "Подсветка",
     "mode_isolate": "Только выжимка",
-    "mode_no_linked_blocks": "Для этого задания нет связанных блоков"
+    "mode_no_linked_blocks": "Для этого задания нет связанных блоков",
+    "restored_evaluation_result": "Восстановлен результат проверки",
+    "restored_user_input": "Восстановлен сохранённый ответ",
+    "err_fill_all_areas": "Заполните все области перед отправкой на проверку",
+    "your_answer_title": "Ваш ответ",
+    "reference_answer_title": "Эталонный ответ",
+    "no_available_tasks": "Нет доступных заданий",
+    "task_indicator_dash": "Задание –",
+    "difficulty_dash": "Сложность: -",
+    "no_more_session_tasks": "Для этой сессии больше нет доступных заданий.",
+    "err_auto_submit_failed": "Не удалось отправить ответ автоматически. Перезагрузите экран и попробуйте снова.",
+    "err_unsupported_task_type": "Неподдерживаемый тип задания: {type}. Обратитесь к администратору.",
+    "seq_struct_mismatch": "Структура уровней пока не совпадает. Продолжайте группировать элементы по уровням и проверьте снова."
   },
   "testui_q": {
     "reference_answer": "Эталонный ответ",
@@ -3041,7 +3054,9 @@
     "next_step_hint_finish": "Следующий шаг — просмотр итогов комплекса.",
     "hide_answer": "Скрыть",
     "show_answer": "Показать",
-    "user_answer_label": "Ваш ответ: "
+    "user_answer_label": "Ваш ответ: ",
+    "zone_typo": "Опечатка! Правильно: {expected}",
+    "zone_wrong": "Неверно! Должно быть: {expected}"
   },
   "s3": {
     "page_title": "Итоговые результаты комплекса",
@@ -8632,5 +8647,19 @@
   "clickui.extra_action_desc": "Отметка не попала ни в одну из целевых областей",
   "clickui.duplicate_action_title": "Повторный клик №{n}",
   "clickui.duplicate_action_desc": "Цель уже была отмечена другим действием",
-  "clickui.extra_actions_header": "Лишние отметки"
+  "clickui.extra_actions_header": "Лишние отметки",
+  "s1.restored_evaluation_result": "Восстановлен результат проверки",
+  "s1.restored_user_input": "Восстановлен сохранённый ответ",
+  "s1.err_fill_all_areas": "Заполните все области перед отправкой на проверку",
+  "s1.your_answer_title": "Ваш ответ",
+  "s1.reference_answer_title": "Эталонный ответ",
+  "s1.no_available_tasks": "Нет доступных заданий",
+  "s1.task_indicator_dash": "Задание –",
+  "s1.difficulty_dash": "Сложность: -",
+  "s1.no_more_session_tasks": "Для этой сессии больше нет доступных заданий.",
+  "s1.err_auto_submit_failed": "Не удалось отправить ответ автоматически. Перезагрузите экран и попробуйте снова.",
+  "s1.err_unsupported_task_type": "Неподдерживаемый тип задания: {type}. Обратитесь к администратору.",
+  "s1.seq_struct_mismatch": "Структура уровней пока не совпадает. Продолжайте группировать элементы по уровням и проверьте снова.",
+  "s2.zone_typo": "Опечатка! Правильно: {expected}",
+  "s2.zone_wrong": "Неверно! Должно быть: {expected}"
 }

@@ -75,7 +75,10 @@ class I18nHtmlAuditor(HTMLParser):
             val = attr_dict.get(attr, "")
             if val and ANY_CYRILLIC.search(val):
                 i18n_attr = f"data-i18n-{attr}" if attr != "aria-label" else "data-i18n-aria"
-                if i18n_attr not in attr_dict and "data-i18n" not in attr_dict:
+                has_attr_i18n = i18n_attr in attr_dict or "data-i18n" in attr_dict
+                if not has_attr_i18n and "data-i18n-attr" in attr_dict:
+                    has_attr_i18n = f"{attr}|" in attr_dict["data-i18n-attr"]
+                if not has_attr_i18n:
                     line, _ = self.getpos()
                     self.leaks.append(
                         Leak(
@@ -130,22 +133,25 @@ def audit_html_file(filepath: Path) -> List[Leak]:
 
 # ── JavaScript Auditor ───────────────────────────────────────────────────────
 def mask_safe_js_calls(content: str) -> str:
-    """Masks comments, console calls, regex literals, and wt/t/wtf calls with spaces of equal length."""
-    # 1. Block comments
-    content = re.sub(r"/\*[\s\S]*?\*/", lambda m: " " * len(m.group(0)), content)
+    """Masks comments, console calls, regex literals, and wt/t/wtf calls with spaces of equal length, preserving newlines."""
+    def _mask_preserve_newlines(s: str) -> str:
+        return re.sub(r"[^\n]", " ", s)
+
+    # 1. Block comments (preserve newlines!)
+    content = re.sub(r"/\*[\s\S]*?\*/", lambda m: _mask_preserve_newlines(m.group(0)), content)
     # 2. Line comments
     content = re.sub(r"//.*$", lambda m: " " * len(m.group(0)), content, flags=re.MULTILINE)
-    # 3. Console / logger calls
+    # 3. Console / logger calls (preserve newlines if multiline)
     content = re.sub(
         r"\b(?:console|logger)\s*\.\s*(?:log|warn|error|info|debug)\s*\([^)]*\)",
-        lambda m: " " * len(m.group(0)),
+        lambda m: _mask_preserve_newlines(m.group(0)),
         content,
     )
     # 4. Standard i18n wrapper calls: wt('key', 'fallback', ...) or _wt(...) or wtf(...) or tTour(...) or t(...)
-    # We match both single-quoted, double-quoted, and backtick strings
+    # We match both single-quoted, double-quoted, and backtick strings (preserve newlines if multiline)
     content = re.sub(
-        r"\b(?:wt|_wt|wtf|tTour|t)\s*\(\s*(['\"`])(?:(?!\1)[\s\S])*\1\s*(?:,\s*(['\"`])(?:(?!\2)[\s\S])*\2)?\s*[\),]",
-        lambda m: " " * len(m.group(0)),
+        r"\b(?:wt|_wt|wtf|tTour|t)\s*\(\s*(['\"`])(?:(?!\1)[\s\S])*?\1(?:\s*,\s*(['\"`])(?:(?!\2)[\s\S])*?\2)?(?:\s*,\s*\{[\s\S]*?\})?\s*\)",
+        lambda m: _mask_preserve_newlines(m.group(0)),
         content,
     )
     # 5. Regex literals matching cyrillic: /[а-я]/i
