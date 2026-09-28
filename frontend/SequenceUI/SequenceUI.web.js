@@ -476,7 +476,7 @@ const SequenceUI = (function () {
 
     const availableTitle = document.createElement("div");
     availableTitle.className = "text-sm font-bold text-text-main dark:text-text-on-dark";
-    availableTitle.textContent = "\u0414\u043e\u0441\u0442\u0443\u043f\u043d\u044b\u0435 \u044d\u043b\u0435\u043c\u0435\u043d\u0442\u044b";
+    availableTitle.textContent = wt("sequenceui.available_items", "Доступные элементы");
 
     const availableCount = document.createElement("div");
     availableCount.className =
@@ -488,7 +488,7 @@ const SequenceUI = (function () {
 
     const availableHint = document.createElement("div");
     availableHint.className = "mt-2 text-xs leading-relaxed text-text-main dark:text-text-on-dark";
-    availableHint.textContent = "\u0421\u043d\u0430\u0447\u0430\u043b\u0430 \u0432\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u044d\u043b\u0435\u043c\u0435\u043d\u0442 \u0437\u0434\u0435\u0441\u044c, \u0437\u0430\u0442\u0435\u043c \u043a\u043b\u0438\u043a\u043d\u0438\u0442\u0435 \u043f\u043e \u043f\u0443\u0441\u0442\u043e\u043c\u0443 \u0441\u043b\u043e\u0442\u0443 \u043d\u0443\u0436\u043d\u043e\u0433\u043e \u0443\u0440\u043e\u0432\u043d\u044f.";
+    availableHint.textContent = wt("sequenceui.available_hint", "Сначала выберите элемент здесь, затем кликните по пустому слоту нужного уровня.");
 
     const availableList = document.createElement("div");
     availableList.className = "mt-3 min-h-0 flex-1 overflow-y-auto pr-1 sequenceui-scrollbar";
@@ -515,7 +515,7 @@ const SequenceUI = (function () {
 
     const levelsTitle = document.createElement("div");
     levelsTitle.className = "min-w-0 text-base font-bold leading-tight text-text-main dark:text-text-on-dark";
-    levelsTitle.textContent = data.prompt || "\u0420\u0430\u0441\u043f\u043e\u043b\u043e\u0436\u0438\u0442\u0435 \u044d\u043b\u0435\u043c\u0435\u043d\u0442\u044b \u043f\u043e \u0443\u0440\u043e\u0432\u043d\u044f\u043c";
+    levelsTitle.textContent = data.prompt || wt("sequenceui.default_prompt", "Расположите элементы по уровням");
     levelsTitle.title = levelsTitle.textContent;
     levelsTitle.dataset.sequenceui = "task-prompt";
 
@@ -528,9 +528,9 @@ const SequenceUI = (function () {
     const clearBtn = document.createElement("button");
     clearBtn.type = "button";
     clearBtn.className = "hidden items-center justify-center gap-1.5 px-3 py-1.5 border border-border-strong bg-surface-1 text-text-main hover:bg-bg-hover rounded text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 dark:border-border-strong dark:bg-surface-1 dark:text-text-on-dark dark:hover:bg-bg-hover dark:focus-visible:ring-offset-surface-2";
-    clearBtn.setAttribute("aria-label", "\u041e\u0447\u0438\u0441\u0442\u0438\u0442\u044c");
+    clearBtn.setAttribute("aria-label", wt("sequenceui.clear_btn", "Очистить"));
     clearBtn.dataset.sequenceui = "clear-button";
-    clearBtn.innerHTML = '<span class="material-symbols-outlined text-sm">backspace</span> \u041e\u0447\u0438\u0441\u0442\u0438\u0442\u044c';
+    clearBtn.innerHTML = '<span class="material-symbols-outlined text-sm">backspace</span> ' + wt("sequenceui.clear_btn", "Очистить");
 
     const levelsActions = document.createElement("div");
     levelsActions.className = "flex flex-wrap items-center justify-end gap-2";
@@ -542,15 +542,15 @@ const SequenceUI = (function () {
 
     const levelsHint = document.createElement("div");
     levelsHint.className = "mt-2 text-xs leading-relaxed text-text-main dark:text-text-on-dark";
-    levelsHint.textContent = "\u041f\u0440\u043e\u0447\u0438\u0442\u0430\u0439\u0442\u0435 \u0444\u043e\u0440\u043c\u0443\u043b\u0438\u0440\u043e\u0432\u043a\u0443 \u0432\u044b\u0448\u0435, \u0437\u0430\u0442\u0435\u043c \u0440\u0430\u0441\u043f\u0440\u0435\u0434\u0435\u043b\u0438\u0442\u0435 \u044d\u043b\u0435\u043c\u0435\u043d\u0442\u044b \u043f\u043e \u043f\u043e\u0434\u0445\u043e\u0434\u044f\u0449\u0438\u043c \u0443\u0440\u043e\u0432\u043d\u044f\u043c. \u041d\u0430\u0437\u0432\u0430\u043d\u0438\u044f \u0443\u0440\u043e\u0432\u043d\u0435\u0439 \u043f\u043e\u0434\u0441\u043a\u0430\u0437\u044b\u0432\u0430\u044e\u0442, \u043a\u0443\u0434\u0430 \u0438\u043c\u0435\u043d\u043d\u043e \u043d\u0443\u0436\u043d\u043e \u043f\u043e\u043c\u0435\u0441\u0442\u0438\u0442\u044c \u043a\u0430\u0436\u0434\u044b\u0439 \u044d\u043b\u0435\u043c\u0435\u043d\u0442.";
+    levelsHint.textContent = wt("sequenceui.levels_hint_d1", "Прочитайте формулировку выше, затем распределите элементы по подходящим уровням. Названия уровней подсказывают, куда именно нужно поместить каждый элемент.");
     if (requiresBlockNames || difficulty === 3) {
-      levelsHint.textContent = "\u041f\u0440\u043e\u0447\u0438\u0442\u0430\u0439\u0442\u0435 \u0444\u043e\u0440\u043c\u0443\u043b\u0438\u0440\u043e\u0432\u043a\u0443 \u0432\u044b\u0448\u0435, \u0434\u043e\u0431\u0430\u0432\u043b\u044f\u0439\u0442\u0435 \u0441\u043b\u043e\u0442\u044b \u0438 \u0432\u0432\u043e\u0434\u0438\u0442\u0435 \u043d\u0430\u0437\u0432\u0430\u043d\u0438\u044f \u044d\u043b\u0435\u043c\u0435\u043d\u0442\u043e\u0432 \u043f\u0440\u044f\u043c\u043e \u0432 \u043d\u0443\u0436\u043d\u044b\u0435 \u0443\u0440\u043e\u0432\u043d\u0438.";
+      levelsHint.textContent = wt("sequenceui.levels_hint_d3", "Прочитайте формулировку выше, добавляйте слоты и вводите названия элементов прямо в нужные уровни.");
     }
     if (sequenceWithinLevelMatters) {
       levelsHint.appendChild(document.createTextNode(" "));
       const strong = document.createElement("strong");
       strong.className = "font-bold text-text-main dark:text-text-on-dark";
-      strong.textContent = "\u041f\u043e\u0440\u044f\u0434\u043e\u043a \u044d\u043b\u0435\u043c\u0435\u043d\u0442\u043e\u0432 \u0432\u043d\u0443\u0442\u0440\u0438 \u0443\u0440\u043e\u0432\u043d\u044f \u0432\u0430\u0436\u0435\u043d.";
+      strong.textContent = wt("sequenceui.order_within_matters", "Порядок элементов внутри уровня важен.");
       levelsHint.appendChild(strong);
     }
 
@@ -558,7 +558,7 @@ const SequenceUI = (function () {
       levelsHint.appendChild(document.createTextNode(" "));
       const strong = document.createElement("strong");
       strong.className = "font-bold text-text-main dark:text-text-on-dark";
-      strong.textContent = "\u041f\u043e\u0440\u044f\u0434\u043e\u043a \u0443\u0440\u043e\u0432\u043d\u0435\u0439 \u0442\u043e\u0436\u0435 \u0432\u0430\u0436\u0435\u043d.";
+      strong.textContent = wt("sequenceui.order_levels_matters", "Порядок уровней тоже важен.");
       levelsHint.appendChild(strong);
     }
 
@@ -576,7 +576,7 @@ const SequenceUI = (function () {
     const userViewBtn = document.createElement("button");
     userViewBtn.type = "button";
     userViewBtn.dataset.sequenceui = "comparison-view-user";
-    userViewBtn.textContent = "\u041c\u043e\u0439 \u043e\u0442\u0432\u0435\u0442";
+    userViewBtn.textContent = wt("sequenceui.my_answer_btn", "Мой ответ");
 
     const referenceViewBtn = document.createElement("button");
     referenceViewBtn.type = "button";
@@ -1125,7 +1125,7 @@ const SequenceUI = (function () {
       if (ids.length === 0) {
         const empty = document.createElement("div");
         empty.className = "text-xs text-text-muted dark:text-text-muted";
-        empty.textContent = "\u041d\u0435\u0442 \u0434\u043e\u0441\u0442\u0443\u043f\u043d\u044b\u0445 \u044d\u043b\u0435\u043c\u0435\u043d\u0442\u043e\u0432";
+        empty.textContent = wt("sequenceui.no_available_items", "Нет доступных элементов");
         availableInner.appendChild(empty);
         return;
       }
@@ -1559,8 +1559,8 @@ const SequenceUI = (function () {
 
           const upBtn = document.createElement("button");
           upBtn.type = "button";
-          upBtn.title = "\u041f\u0435\u0440\u0435\u043c\u0435\u0441\u0442\u0438\u0442\u044c \u0432\u0432\u0435\u0440\u0445";
-          upBtn.setAttribute("aria-label", "\u041f\u0435\u0440\u0435\u043c\u0435\u0441\u0442\u0438\u0442\u044c \u0443\u0440\u043e\u0432\u0435\u043d\u044c \u0432\u0432\u0435\u0440\u0445");
+          upBtn.title = wt("sequenceui.move_level_up", "Переместить вверх");
+          upBtn.setAttribute("aria-label", wt("sequenceui.move_level_up_aria", "Переместить уровень вверх"));
 
           const upIcon = document.createElement("span");
           upIcon.className = "material-symbols-outlined text-[18px]";
@@ -1580,8 +1580,8 @@ const SequenceUI = (function () {
 
           const downBtn = document.createElement("button");
           downBtn.type = "button";
-          downBtn.title = "\u041f\u0435\u0440\u0435\u043c\u0435\u0441\u0442\u0438\u0442\u044c \u0432\u043d\u0438\u0437";
-          downBtn.setAttribute("aria-label", "\u041f\u0435\u0440\u0435\u043c\u0435\u0441\u0442\u0438\u0442\u044c \u0443\u0440\u043e\u0432\u0435\u043d\u044c \u0432\u043d\u0438\u0437");
+          downBtn.title = wt("sequenceui.move_level_down", "Переместить вниз");
+          downBtn.setAttribute("aria-label", wt("sequenceui.move_level_down_aria", "Переместить уровень вниз"));
 
           const downIcon = document.createElement("span");
           downIcon.className = "material-symbols-outlined text-[18px]";

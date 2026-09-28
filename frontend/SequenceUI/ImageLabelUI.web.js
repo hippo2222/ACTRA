@@ -5,6 +5,21 @@
 const ImageLabelUI = (function () {
     let currentInstance = null;
 
+    function wt(key, fallback) {
+        if (!window.i18n || typeof window.i18n.t !== 'function') return fallback;
+        const v = window.i18n.t(key);
+        return v !== key ? v : fallback;
+    }
+
+    function _escapeHtml(str) {
+        return String(str || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
     function createRoot(container, task) {
         const taskData = (task && (task.task_data || task.content || task.task || task)) || {};
         const content = taskData.content || (task && task.content) || {};
@@ -414,15 +429,15 @@ const ImageLabelUI = (function () {
         zoomControls.style.top = '50%';
         zoomControls.style.transform = 'translateY(-50%)';
         zoomControls.innerHTML = `
-            <button id="p-zoom-in" title="Увеличить" class="p-1 hover:text-text-main transition-colors flex items-center justify-center">
+            <button id="p-zoom-in" title="${_escapeHtml(wt('imagelabel.zoom_in', 'Увеличить'))}" class="p-1 hover:text-text-main transition-colors flex items-center justify-center">
                 <span class="material-symbols-outlined text-[20px]">zoom_in</span>
             </button>
             <span id="p-zoom-value" class="text-[10px] font-bold select-none min-w-[32px] text-center tracking-tighter">100%</span>
-            <button id="p-zoom-out" title="Уменьшить" class="p-1 hover:text-text-main transition-colors flex items-center justify-center">
+            <button id="p-zoom-out" title="${_escapeHtml(wt('imagelabel.zoom_out', 'Уменьшить'))}" class="p-1 hover:text-text-main transition-colors flex items-center justify-center">
                 <span class="material-symbols-outlined text-[20px]">zoom_out</span>
             </button>
             <div class="w-3.5 h-px bg-border-subtle my-1"></div>
-            <button id="p-zoom-reset" title="Вписать" class="p-1 hover:text-text-main transition-colors flex items-center justify-center">
+            <button id="p-zoom-reset" title="${_escapeHtml(wt('imagelabel.zoom_reset', 'Вписать'))}" class="p-1 hover:text-text-main transition-colors flex items-center justify-center">
                 <span class="material-symbols-outlined text-[20px]">fullscreen_exit</span>
             </button>
         `;
@@ -437,7 +452,7 @@ const ImageLabelUI = (function () {
                 <div class="h-14 flex items-center px-6 border-b border-border-subtle shrink-0">
                     <h3 class="text-text-main font-bold text-sm uppercase tracking-wider flex items-center gap-2">
                         <span class="material-symbols-outlined text-text-disabled">list</span>
-                        <span>Доступные элементы</span>
+                        <span>${_escapeHtml(wt('imagelabel.available_elements', 'Доступные элементы'))}</span>
                     </h3>
                 </div>
                 <div id="labels-pool" class="flex-1 p-6 space-y-3 overflow-y-auto custom-scrollbar">
@@ -640,7 +655,7 @@ const ImageLabelUI = (function () {
             const barEl = sidebar.querySelector('#lvl2-progress-bar');
             const zonesListEl = sidebar.querySelector('#lvl2-zones-list');
 
-            if (counterEl) counterEl.textContent = `${filledCount} из ${total}`;
+            if (counterEl) counterEl.textContent = wt('imagelabel.progress_of', '{filled} из {total}').replace('{filled}', filledCount).replace('{total}', total);
             if (barEl) barEl.style.width = `${pct}%`;
 
             if (zonesListEl) {
@@ -648,7 +663,7 @@ const ImageLabelUI = (function () {
                 zones.forEach((z, i) => {
                     const val = (assignments[z.id] || '').trim();
                     const isFilled = val.length > 0;
-                    const displayText = isFilled ? val : 'Область ' + (i + 1);
+                    const displayText = isFilled ? val : wt('imagelabel.zone_fallback', 'Область {n}').replace('{n}', i + 1);
                     
                     const card = document.createElement('div');
                     card.className = `p-2.5 rounded-xl border text-xs transition-all flex items-center justify-between gap-2 cursor-pointer ${
@@ -1241,10 +1256,10 @@ const ImageLabelUI = (function () {
             reviewSection.className = 'w-full mt-6 rounded-3xl border border-border-subtle bg-surface-1/90 p-5 shadow-md z-10 box-border';
             reviewSection.setAttribute('data-image-labeling', 'review-comparison');
 
-            const titleText = isSuccess ? 'Разбор ответа' : 'Разбор ошибок';
+            const titleText = isSuccess ? wt('imagelabel.review_success_title', 'Разбор ответа') : wt('imagelabel.review_mistakes_title', 'Разбор ошибок');
             const descText = isSuccess
-                ? 'Ваше решение совпало с эталоном. Наведите на область на любом рисунке — она подсветится на обоих изображениях одновременно.'
-                : 'Слева сохранён ваш ответ, справа показан эталон на том же изображении. Наведите на область — она подсветится на обоих рисунках одновременно для быстрой сверки.';
+                ? wt('imagelabel.review_success_desc', 'Ваше решение совпало с эталоном. Наведите на область на любом рисунке — она подсветится на обоих изображениях одновременно.')
+                : wt('imagelabel.review_mistakes_desc', 'Слева сохранён ваш ответ, справа показан эталон на том же изображении. Наведите на область — она подсветится на обоих рисунках одновременно для быстрой сверки.');
 
             reviewSection.innerHTML = `
                 <div class="flex items-center justify-between gap-3 border-b border-border-subtle pb-3 mb-4">
@@ -1266,7 +1281,7 @@ const ImageLabelUI = (function () {
 
             // Card 1: Student
             const userCard = createReviewPreviewCard({
-                title: 'Ваш ответ',
+                title: wt('imagelabel.your_answer', 'Ваш ответ'),
                 isUser: true,
                 zoneResults,
                 zones,
@@ -1275,7 +1290,7 @@ const ImageLabelUI = (function () {
 
             // Card 2: Reference
             const refCard = createReviewPreviewCard({
-                title: 'Правильный ответ (Эталон)',
+                title: wt('imagelabel.reference_answer', 'Правильный ответ (Эталон)'),
                 isUser: false,
                 zoneResults,
                 zones,
@@ -1299,7 +1314,7 @@ const ImageLabelUI = (function () {
             head.innerHTML = `
                 <span class="text-xs font-bold text-text-main uppercase tracking-wider">${title}</span>
                 <span class="text-[11px] px-2.5 py-0.5 rounded-full font-semibold ${isUser ? 'bg-primary/10 text-primary' : 'bg-emerald-500/10 text-emerald-600'}">
-                    ${isUser ? 'Студент' : 'Эталон'}
+                    ${isUser ? wt('imagelabel.badge_student', 'Студент') : wt('imagelabel.badge_reference', 'Эталон')}
                 </span>
             `;
             card.appendChild(head);
@@ -1442,7 +1457,7 @@ const ImageLabelUI = (function () {
                     overlay.style.borderColor = 'var(--color-success, #10b981)';
                     overlay.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.35)';
                     overlay.style.backgroundColor = '#ecfdf5';
-                    overlay.title = 'Правильно!';
+                    overlay.title = wt('imagelabel.tooltip_correct', 'Правильно!');
                     
                     if (labelSpan) {
                         labelSpan.style.backgroundColor = 'var(--color-success, #10b981)';
@@ -1493,7 +1508,7 @@ const ImageLabelUI = (function () {
                         qMark.style.backgroundColor = '#f59e0b';
                         qMark.style.border = '2px solid #ffffff';
                         qMark.innerHTML = '<span class="material-symbols-outlined text-[11px] leading-none flex items-center justify-center text-white shrink-0">warning</span>';
-                        qMark.title = 'Опечатка. Наведите для просмотра ответа';
+                        qMark.title = wt('imagelabel.tooltip_typo', 'Опечатка. Наведите для просмотра ответа');
                         overlay.appendChild(qMark);
                     }
 
@@ -1565,7 +1580,7 @@ const ImageLabelUI = (function () {
                         qMark.style.border = '2px solid #ffffff';
                         qMark.style.animation = 'pulseQMarkRight 1.8s infinite ease-in-out';
                         qMark.textContent = '?';
-                        qMark.title = 'Неверно. Наведите для просмотра ответа';
+                        qMark.title = wt('imagelabel.tooltip_incorrect', 'Неверно. Наведите для просмотра ответа');
                         overlay.appendChild(qMark);
                     }
 
@@ -1620,15 +1635,15 @@ const ImageLabelUI = (function () {
                         if (status === 'correct') {
                             cardClass = 'bg-emerald-50 border-emerald-300 text-emerald-900';
                             statusIcon = '<span class="material-symbols-outlined text-[16px] text-emerald-600">check_circle</span>';
-                            statusLabel = 'Верно';
+                            statusLabel = wt('imagelabel.status_correct', 'Верно');
                         } else if (status === 'typo') {
                             cardClass = 'bg-amber-50 border-amber-300 text-amber-900';
                             statusIcon = '<span class="material-symbols-outlined text-[16px] text-amber-600">warning</span>';
-                            statusLabel = `Опечатка (Правильно: ${expected})`;
+                            statusLabel = wt('imagelabel.status_typo_expected', 'Опечатка (Правильно: {expected})').replace('{expected}', expected);
                         } else {
                             cardClass = 'bg-red-50 border-red-300 text-red-900';
                             statusIcon = '<span class="material-symbols-outlined text-[16px] text-red-600">cancel</span>';
-                            statusLabel = `Неверно (Правильно: ${expected})`;
+                            statusLabel = wt('imagelabel.status_incorrect_expected', 'Неверно (Правильно: {expected})').replace('{expected}', expected);
                         }
                         
                         const card = document.createElement('div');
@@ -1637,7 +1652,7 @@ const ImageLabelUI = (function () {
                             <div class="flex items-center justify-between gap-2">
                                 <div class="flex items-center gap-2 min-w-0 flex-1">
                                     <span class="w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center shrink-0 bg-white shadow-2xs">${i + 1}</span>
-                                    <span class="truncate font-semibold">${val || '(пусто)'}</span>
+                                    <span class="truncate font-semibold">${_escapeHtml(val || wt('imagelabel.empty_val', '(пусто)'))}</span>
                                 </div>
                                 ${statusIcon}
                             </div>
@@ -1660,18 +1675,18 @@ const ImageLabelUI = (function () {
                         <div class="flex items-start gap-2 text-amber-800 dark:text-amber-300">
                             <span class="material-symbols-outlined text-[20px] text-amber-500 shrink-0 mt-0.5">warning</span>
                             <div class="space-y-0.5">
-                                <div class="font-bold text-sm">Обнаружена опечатка!</div>
-                                <div class="opacity-90 leading-tight">Система распознала неточности в буквах. Выберите решение:</div>
+                                <div class="font-bold text-sm">${_escapeHtml(wt('imagelabel.typo_banner_title', 'Обнаружена опечатка!'))}</div>
+                                <div class="opacity-90 leading-tight">${_escapeHtml(wt('imagelabel.typo_banner_desc', 'Система распознала неточности в буквах. Выберите решение:'))}</div>
                             </div>
                         </div>
                         <div class="flex flex-col gap-2 pt-1">
                             <button id="btn-accept-typo" class="w-full py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer">
                                 <span class="material-symbols-outlined text-[16px]">check_circle</span>
-                                <span>Зачесть как верный ответ</span>
+                                <span>${_escapeHtml(wt('imagelabel.btn_accept_typo', 'Зачесть как верный ответ'))}</span>
                             </button>
                             <button id="btn-retry-typo" class="w-full py-2 px-3 rounded-xl bg-surface-1 border border-amber-500/40 text-amber-900 dark:text-amber-200 hover:bg-amber-500/10 font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer">
                                 <span class="material-symbols-outlined text-[16px]">replay</span>
-                                <span>Повторить в колоде (1 копия)</span>
+                                <span>${_escapeHtml(wt('imagelabel.btn_retry_typo', 'Повторить в колоде (1 копия)'))}</span>
                             </button>
                         </div>
                     `;
@@ -1681,7 +1696,7 @@ const ImageLabelUI = (function () {
                         banner.innerHTML = `
                             <div class="flex items-center gap-2 text-emerald-600 font-bold py-1">
                                 <span class="material-symbols-outlined text-[20px]">task_alt</span>
-                                <span>Ответ зачтён как верный!</span>
+                                <span>${_escapeHtml(wt('imagelabel.accepted_typo_msg', 'Ответ зачтён как верный!'))}</span>
                             </div>
                         `;
                         canvasContainer.querySelectorAll('.player-zone-overlay').forEach(overlay => {
@@ -1710,7 +1725,7 @@ const ImageLabelUI = (function () {
                         banner.innerHTML = `
                             <div class="flex items-center gap-2 text-amber-600 font-bold py-1">
                                 <span class="material-symbols-outlined text-[20px]">published_with_changes</span>
-                                <span>Добавлена 1 копия в колоду</span>
+                                <span>${_escapeHtml(wt('imagelabel.retry_typo_msg', 'Добавлена 1 копия в колоду'))}</span>
                             </div>
                         `;
                         if (!lastCheckResult) lastCheckResult = {};
@@ -1764,7 +1779,7 @@ const ImageLabelUI = (function () {
                     unfilledWarningShown = true;
                     return {
                         valid: false,
-                        message: `Заполнены не все области (осталось: ${missingCount}). Нажмите «Проверить» ещё раз, чтобы отправить как есть.`
+                        message: wt('imagelabel.warn_unfilled_areas', 'Заполнены не все области (осталось: {missing}). Нажмите «Проверить» ещё раз, чтобы отправить как есть.').replace('{missing}', missingCount)
                     };
                 }
             }

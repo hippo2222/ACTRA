@@ -150,7 +150,7 @@ def mask_safe_js_calls(content: str) -> str:
     # 4. Standard i18n wrapper calls: wt('key', 'fallback', ...) or _wt(...) or wtf(...) or tTour(...) or t(...)
     # We match both single-quoted, double-quoted, and backtick strings (preserve newlines if multiline)
     content = re.sub(
-        r"\b(?:wt|_wt|wtf|tTour|t)\s*\(\s*(['\"`])(?:(?!\1)[\s\S])*?\1(?:\s*,\s*(['\"`])(?:(?!\2)[\s\S])*?\2)?(?:\s*,\s*\{[\s\S]*?\})?\s*\)",
+        r"\b(?:wt|_wt|wtf|tTour|t)\s*\(\s*(['\"`])(?:\\.|(?!\1)[\s\S])*?\1(?:\s*,\s*(['\"`])(?:\\.|(?!\2)[\s\S])*?\2)?(?:\s*,\s*\{[\s\S]*?\})?\s*\)",
         lambda m: _mask_preserve_newlines(m.group(0)),
         content,
     )

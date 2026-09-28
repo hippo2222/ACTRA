@@ -1211,50 +1211,29 @@
       ""
     );
     const trimmed = String(raw || "").trim();
-    const defaultClickPrompts = [
-      "Отметьте указанные области на изображении",
-      "Mark the indicated areas on the image",
-      "Позначте вказані області на зображенні"
-    ];
-    if (defaultClickPrompts.includes(trimmed)) {
+    const reDefaultClick = /^(?:Отметьте указанные области на изображении|Mark the indicated areas on the image|Позначте вказані області на зображенні)$/i;
+    if (reDefaultClick.test(trimmed)) {
       return wt("ce.k001_click", trimmed);
     }
-    const defaultClickLabelPrompts = [
-      "Отметьте указанные области на изображении и назовите её",
-      "Отметьте указанные области на изображении и назовите их",
-      "Mark the indicated areas on the image и назовите её",
-      "Mark the indicated areas on the image and name them",
-      "Позначте вказані області на зображенні і назвіть її",
-      "Позначте вказані області на зображенні та назвіть їх"
-    ];
+    const reDefaultClickLabel = /^(?:Отметьте указанные области на изображении и назовите е[её]|Отметьте указанные области на изображении и назовите их|Mark the indicated areas on the image и назовите е[её]|Mark the indicated areas on the image and name them|Позначте вказані області на зображенні і назвіть її|Позначте вказані області на зображенні та назвіть їх)$/i;
     if (
-      defaultClickLabelPrompts.includes(trimmed) ||
+      reDefaultClickLabel.test(trimmed) ||
       ((content.requires_labels || content.mode === "click_and_label") &&
-        defaultClickPrompts.some(p => trimmed.startsWith(p)))
+        /^(?:Отметьте указанные области|Mark the indicated areas|Позначте вказані області)/i.test(trimmed))
     ) {
       return wt("ce.k001_click_label", "Отметьте указанные области на изображении и назовите их");
     }
-    const defaultDrawLabelPrompts = [
-      "Обведите контур и назовите: Отметьте указанные области на изображении",
-      "Обведите контур и назовите: Mark the indicated areas on the image",
-      "Обведите контур и назовите: Позначте вказані області на зображенні",
-      "Обведите указанные области на изображении и назовите их",
-      "Outline the indicated areas on the image and name them",
-      "Обведіть вказані області на зображенні та назвіть їх"
-    ];
+    const reDefaultDrawLabel = /^(?:Обведите контур и назовите: (?:Отметьте указанные области на изображении|Mark the indicated areas on the image|Позначте вказані області на зображенні)|Обведите указанные области на изображении и назовите их|Outline the indicated areas on the image and name them|Обведіть вказані області на зображенні та назвіть їх)$/i;
     if (
-      defaultDrawLabelPrompts.includes(trimmed) ||
+      reDefaultDrawLabel.test(trimmed) ||
       (content.requires_labels &&
-        defaultClickPrompts.some(p => trimmed.includes(p) && trimmed.includes("Обведите")))
+        /Обведите/i.test(trimmed) &&
+        /(?:Отметьте указанные области|Mark the indicated areas|Позначте вказані області)/i.test(trimmed))
     ) {
       return wt("ce.k001_draw_label", "Обведите указанные области на изображении и назовите их");
     }
-    const defaultErrorPrompts = [
-      "Отметьте ошибки в тексте",
-      "Mark errors in the text",
-      "Позначте помилки в тексті"
-    ];
-    if (defaultErrorPrompts.includes(trimmed)) {
+    const reDefaultError = /^(?:Отметьте ошибки в тексте|Mark errors in the text|Позначте помилки в тексті)$/i;
+    if (reDefaultError.test(trimmed)) {
       return wt("ce.k001", trimmed);
     }
     return trimmed;
@@ -1280,11 +1259,13 @@
       ""
     );
     const targetsTitleKey = _taskRequiresDrawing(taskDto) ? "clickui.what_to_mark" : "clickui.targets_to_find";
-    const targetsTitleFallback = _taskRequiresDrawing(taskDto) ? "Что нужно отметить" : "Цели для поиска";
+    const targetsTitle = _taskRequiresDrawing(taskDto)
+      ? wt("clickui.what_to_mark", "Что нужно отметить")
+      : wt("clickui.targets_to_find", "Цели для поиска");
     const title = _createEl(
       "h3",
       "text-sm font-semibold text-text-main dark:text-text-on-dark",
-      wt(targetsTitleKey, targetsTitleFallback)
+      targetsTitle
     );
     title.setAttribute("data-i18n", targetsTitleKey);
     const subtitle = _createEl(
@@ -1510,11 +1491,10 @@
       _taskRequiresDrawing(taskDto) || shouldAccentOutlineGuidance
         ? "clickui.what_to_mark"
         : "clickui.targets_to_find";
-    const targetsTitleFallback =
+    const targetsPanelTitle =
       _taskRequiresDrawing(taskDto) || shouldAccentOutlineGuidance
-        ? "Что нужно отметить"
-        : "Цели для поиска";
-    const targetsPanelTitle = wt(targetsTitleKey, targetsTitleFallback);
+        ? wt("clickui.what_to_mark", "Что нужно отметить")
+        : wt("clickui.targets_to_find", "Цели для поиска");
     const targetsPanelIcon =
       _taskRequiresDrawing(taskDto) || shouldAccentOutlineGuidance ? "draw" : "my_location";
 
@@ -4389,8 +4369,11 @@
               : "min-h-[58px] h-[58px] flex items-center justify-between px-3.5 py-2 rounded-xl border border-rose-500/30 bg-rose-500/10 dark:bg-rose-500/15 shadow-xs select-none transition-all duration-150 ease-out";
             inspectorIcon.textContent = isContourSuccess ? "check_circle" : "cancel";
             inspectorIcon.className = "material-symbols-outlined text-[20px] " + (isContourSuccess ? "text-emerald-500" : "text-rose-500") + " shrink-0 transition-colors";
-            inspectorTitle.textContent = `${action.title}: ${targetLabel || wt("clickui.target_fallback", "Цель")}`;
-            inspectorDesc.textContent = `Покрытие: ${cov || "0%"} (порог: ${thr || "75%"})`;
+            const covVal = String(cov || "0%").replace("%", "");
+            const thrVal = String(thr || "75%").replace("%", "");
+            inspectorDesc.textContent = wt("clickui.coverage_stat", "Покрытие: {cov}% (порог: {thr}%)")
+              .replace("{cov}", covVal)
+              .replace("{thr}", thrVal);
           } else {
             inspectorBar.className = "clickui-result-inspector min-h-[58px] h-[58px] flex items-center justify-between px-3.5 py-2 rounded-xl border border-rose-500/30 bg-rose-500/10 dark:bg-rose-500/15 shadow-xs select-none transition-all duration-150 ease-out";
             inspectorIcon.textContent = "cancel";
@@ -6445,15 +6428,10 @@
         if (titleEl) {
           const targets = _getTargets(state.taskDto);
           const shouldAccent = _shouldAccentOutlineGuidance(state.taskDto, targets);
-          const key =
+          titleEl.textContent =
             _taskRequiresDrawing(state.taskDto) || shouldAccent
-              ? "clickui.what_to_mark"
-              : "clickui.targets_to_find";
-          const fallback =
-            _taskRequiresDrawing(state.taskDto) || shouldAccent
-              ? "Что нужно отметить"
-              : "Цели для поиска";
-          titleEl.textContent = wt(key, fallback);
+              ? wt("clickui.what_to_mark", "Что нужно отметить")
+              : wt("clickui.targets_to_find", "Цели для поиска");
         }
         const promptEl = state.targetsPanelTitleEl.querySelector('[data-clickui="targets-prompt"]');
         if (promptEl) {

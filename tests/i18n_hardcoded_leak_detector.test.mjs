@@ -110,6 +110,30 @@ describe("i18n Hardcoded String Leak Detector & Ratchet Gate", () => {
     }
   });
 
+  it("enforces zero unlocalized string leaks permanently on Interactive Mechanics (ClickUI, ImageLabelUI, SequenceUI)", { timeout: 30000 }, () => {
+    const mechanicsFiles = [
+      "ClickUI/ClickUI.web.js",
+      "ClickUI/TaskMetadataPanel.js",
+      "SequenceUI/ImageLabelUI.web.js",
+      "SequenceUI/SequenceUI.web.js",
+    ];
+    for (const file of mechanicsFiles) {
+      const output = execSync(
+        `python scripts/audit_i18n_leaks.py --json --filter "${file}"`,
+        {
+          cwd: projectRoot,
+          encoding: "utf8",
+          env: { ...process.env, PYTHONIOENCODING: "utf-8" },
+        }
+      );
+      const data = JSON.parse(output);
+      expect(
+        data.total_leaks,
+        `${file} must have 0 hardcoded unlocalized strings, found ${data.total_leaks}`
+      ).toBe(0);
+    }
+  });
+
   it("verifies detector catches both literal Cyrillic and escaped Unicode (\\u04xx)", () => {
     const pythonScript = [
       "from scripts.audit_i18n_leaks import mask_safe_js_calls, ANY_CYRILLIC",
