@@ -3,13 +3,14 @@
  */
 
 function wt(key, fallback) {
-    if (typeof window !== 'undefined' && typeof window.wt === 'function') return window.wt(key, fallback);
     if (typeof window !== 'undefined' && window.i18n && typeof window.i18n.t === 'function') {
         const v = window.i18n.t(key);
         return v !== key ? v : fallback;
     }
     return fallback;
 }
+
+const OPEN_ANSWER_ONBOARDING_TOUR_ID = 'open-answer-authoring';
 
 class OpenAnswerEditor extends BaseEditor {
     constructor() {

@@ -3,7 +3,6 @@
  * Saves editor state to localStorage periodically
  */
 function wt(key, fallback) {
-    if (typeof window !== 'undefined' && typeof window.wt === 'function') return window.wt(key, fallback);
     if (typeof window !== 'undefined' && typeof window.t === 'function') return window.t(key, fallback);
     if (typeof window !== 'undefined' && window.i18n && typeof window.i18n.t === 'function') {
         const v = window.i18n.t(key);
