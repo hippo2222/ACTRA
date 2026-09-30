@@ -1544,5 +1544,72 @@ describe("ClickUI runtime targets panel", () => {
     const instructionEl = container.querySelector('[data-clickui="targets-instruction"]');
     expect(instructionEl.textContent).toContain("Клікай по областях і давай кожній назву.");
   });
-});
+it("activates canvas spotlight and highlights matched polygon contour when hovering on user click in review", () => {
+    const task = createLevel2ClickTaskWithoutExplicitLabels();
+    const container = document.getElementById("app");
 
+    dom.window.ClickUI.render(container, task, { runtimeMode: true });
+    dom.window.ClickUI.restoreInput({
+      clicks: [{ x: 15, y: 15, scale_factor: 1.0, offset_x: 0.0, offset_y: 0.0 }],
+      labels_clicks: ["Подпись пользователя"],
+      action_history: [{ kind: "click" }],
+    });
+
+    dom.window.ClickUI.applyCheckFeedback({
+      success: true,
+      details: {
+        click_results: [{ target_index: 0, click_success: true, matched_click_idx: 0 }],
+        found_targets: [0],
+        targets_info: [{ index: 0, found: true, matched_click_idx: 0 }],
+      },
+    });
+
+    const userPreview = container.querySelector('[data-clickui="review-user-preview"]');
+    const refPreview = container.querySelector('[data-clickui="review-reference-preview"]');
+    expect(userPreview).toBeTruthy();
+    expect(refPreview).toBeTruthy();
+
+    const spotlightOverlays = Array.from(container.querySelectorAll(".clickui-spotlight-overlay"));
+    expect(spotlightOverlays.length).toBeGreaterThan(0);
+    spotlightOverlays.forEach(ov => {
+      expect(ov.style.opacity || "0").toBe("0");
+    });
+
+    const userClickMarker = userPreview.querySelector('[data-clickui-action-key="click:0"]');
+    expect(userClickMarker).toBeTruthy();
+
+    userClickMarker.dispatchEvent(new dom.window.MouseEvent("mouseenter", { bubbles: true }));
+
+    spotlightOverlays.forEach(ov => {
+      expect(ov.style.opacity).toBe("0.38");
+    });
+
+    const cutouts = Array.from(container.querySelectorAll(".clickui-spotlight-cutouts"));
+    const totalCutoutShapes = cutouts.reduce((sum, g) => sum + g.children.length, 0);
+    expect(totalCutoutShapes).toBeGreaterThan(0);
+
+    const userTarget0Contour = userPreview.querySelector('path[data-target-index="0"]');
+    if (userTarget0Contour) {
+      expect(userTarget0Contour.style.opacity).toBe("1");
+      expect(userTarget0Contour.style.filter).toContain("drop-shadow");
+      expect(Number(userTarget0Contour.getAttribute("stroke-width"))).toBeGreaterThanOrEqual(5);
+    }
+
+    const refTarget0Contour = refPreview.querySelector('path[data-target-index="0"]');
+    expect(refTarget0Contour).toBeTruthy();
+    expect(refTarget0Contour.style.opacity).toBe("1");
+    expect(refTarget0Contour.style.filter).toContain("drop-shadow");
+    expect(Number(refTarget0Contour.getAttribute("stroke-width"))).toBeGreaterThanOrEqual(5);
+
+    userClickMarker.dispatchEvent(new dom.window.MouseEvent("mouseleave", { bubbles: true }));
+
+    spotlightOverlays.forEach(ov => {
+      expect(ov.style.opacity).toBe("0");
+    });
+    cutouts.forEach(g => {
+      expect(g.children.length).toBe(0);
+    });
+    // Contrast halo filter is preserved on unhovered review path
+    expect(refTarget0Contour.style.filter).toContain("drop-shadow");
+  });
+});

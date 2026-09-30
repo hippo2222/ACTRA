@@ -9,6 +9,15 @@
     let measureCanvas = null;
     let measureCtx = null;
 
+    function wt(key, fallback) {
+        if (typeof window !== 'undefined' && typeof window.wt === 'function') return window.wt(key, fallback);
+        if (typeof window !== 'undefined' && window.i18n && typeof window.i18n.t === 'function') {
+            const v = window.i18n.t(key);
+            return v !== key ? v : fallback;
+        }
+        return fallback;
+    }
+
     function getMeasureContext() {
         if (measureCtx) return measureCtx;
 
@@ -66,7 +75,7 @@
         const paddingX = 14 * normalizedPaddingScale;
         const paddingY = 10 * normalizedPaddingScale;
         const lineHeight = Math.round(fontSize * 1.3);
-        const sanitized = (text ?? "").toString().trim() || (typeof wt === 'function' ? wt('drawui.no_name', 'Без названия') : 'Без названия');
+        const sanitized = (text ?? "").toString().trim() || wt('drawui.no_name', 'Без названия');
         const paragraphs = sanitized.replace(/\r/g, "").split(/\n+/);
         const lines = [];
         let widest = 0;

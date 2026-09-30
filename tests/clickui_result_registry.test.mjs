@@ -435,12 +435,12 @@ describe("ClickUI Result Registry (Stage 4)", () => {
 
     expect(typeof resizeCallback).toBe("function");
 
-    // Simulate small laptop / tablet container width (< 1020px)
-    resizeCallback([{ contentRect: { width: 920 } }]);
+    // Simulate narrow container width (< 680px breakpoint)
+    resizeCallback([{ contentRect: { width: 600 } }]);
     expect(sbsGrid?.classList.contains("hidden")).toBe(true);
     expect(tabsContainer?.classList.contains("hidden")).toBe(false);
 
-    // Simulate large desktop container width (>= 1020px)
+    // Simulate large desktop container width (>= 680px)
     resizeCallback([{ contentRect: { width: 1200 } }]);
     expect(sbsGrid?.classList.contains("hidden")).toBe(false);
     expect(tabsContainer?.classList.contains("hidden")).toBe(true);

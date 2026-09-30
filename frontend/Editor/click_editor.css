@@ -379,6 +379,66 @@
     pointer-events: none;
 }
 
+/* Contrast warning block in color picker popover */
+.annotation-color-picker-popover__contrast-warning {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    padding: 0.5rem 0.625rem;
+    border-radius: 0.5rem;
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    color: var(--color-text-main, #92400e);
+    font-size: 0.72rem;
+    line-height: 1.35;
+    animation: colorPickerFadeIn 0.12s ease-out;
+}
+
+.annotation-color-picker-popover__contrast-text {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.375rem;
+}
+
+.annotation-color-picker-popover__contrast-icon {
+    font-size: 1rem;
+    color: #d97706;
+    flex-shrink: 0;
+    margin-top: 0.05rem;
+}
+
+.annotation-color-picker-popover__contrast-actions {
+    display: flex;
+    gap: 0.375rem;
+    margin-top: 0.125rem;
+}
+
+.annotation-color-picker-popover__contrast-btn {
+    flex: 1;
+    font-size: 0.7rem;
+    font-weight: 500;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    border: 1px solid rgba(245, 158, 11, 0.4);
+    background: var(--color-surface-1, #ffffff);
+    color: #b45309;
+    cursor: pointer;
+    transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+    text-align: center;
+    user-select: none;
+}
+
+.annotation-color-picker-popover__contrast-btn:hover {
+    background: #fef3c7;
+    border-color: #d97706;
+    color: #92400e;
+}
+
+.annotation-color-picker-popover__contrast-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px #fde68a;
+}
+
 .click-editor-header {
     align-items: center;
     justify-content: flex-start !important;

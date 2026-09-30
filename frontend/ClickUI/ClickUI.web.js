@@ -151,7 +151,9 @@
     const palette = TARGET_COLOR_PALETTE.map((entry) =>
       _getThemeColor(entry.varName, entry.fallback)
     );
-    state.targetColors = targets.map((_, idx) => palette[idx % palette.length]);
+    state.targetColors = targets.map((t, idx) =>
+      (t && t.color) ? t.color : palette[idx % palette.length]
+    );
   }
 
   function _getTargetColor(idx) {
@@ -167,6 +169,24 @@
     const clamped = Math.max(0, Math.min(1, alpha));
     if (!rgb) return `rgba(0,0,0,${clamped})`;
     return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${clamped})`;
+  }
+
+  function _getRelativeLuminance(color) {
+    const rgb = _parseRgb(color);
+    if (!rgb) return 0.5;
+    const sRGB = [rgb.r / 255, rgb.g / 255, rgb.b / 255];
+    const linear = sRGB.map(c => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)));
+    return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+  }
+
+  function _getContrastHaloFilter(color) {
+    const lum = _getRelativeLuminance(color);
+    // Dark contour (lum < 0.18) -> light halo
+    if (lum < 0.18) return "drop-shadow(0 0 1.5px rgba(255, 255, 255, 0.85))";
+    // Light contour (lum > 0.7) -> dark halo
+    if (lum > 0.7) return "drop-shadow(0 0 1.5px rgba(0, 0, 0, 0.85))";
+    // Mid-range colors -> dual halo
+    return "drop-shadow(0 0 1px rgba(255, 255, 255, 0.6)) drop-shadow(0 0 1px rgba(0, 0, 0, 0.6))";
   }
 
   function _updateTargetsProgressUI() {
@@ -721,6 +741,19 @@
     state.userActionRows = [];
 
     const actions = _collectUserActions();
+
+    // Toggle the whole section: hide when empty (no actions yet = pre-check blank state),
+    // reveal as soon as the user places the first click/contour/line.
+    const sectionEl = state.userActionsListEl.closest('[data-clickui="user-actions-section"]');
+    if (sectionEl && !state.locked) {
+      // Pre-check: hide when no actions (no placeholder wasted space), show when has actions
+      if (actions.length === 0) {
+        sectionEl.classList.add("hidden");
+      } else {
+        sectionEl.classList.remove("hidden");
+      }
+    }
+
     if (!actions.length) {
       const empty = _createEl(
         "div",
@@ -756,7 +789,7 @@
       if (_actionTargetIdx !== null) {
         row.setAttribute("data-target-index", String(_actionTargetIdx));
       }
-      row.addEventListener("mouseenter", () => _setGlobalHover({ targetIndex: _actionTargetIdx, actionKey: action.key }));
+      row.addEventListener("mouseenter", () => _setGlobalHover({ targetIndex: _actionTargetIdx, actionKey: action.key, source: "sidebar" }));
       row.addEventListener("mouseleave", () => _setGlobalHover(null));
 
       const badge = _createEl(
@@ -856,7 +889,7 @@
     const listWrap = _createEl("div", "px-3 py-3", "");
     const list = _createEl(
       "div",
-      "flex max-h-52 flex-col gap-2 overflow-y-auto pr-1",
+      "flex max-h-52 flex-col gap-2 overflow-y-auto px-1 pt-1.5 pb-0.5",
       ""
     );
     list.setAttribute("data-clickui", "user-actions-list");
@@ -1026,6 +1059,13 @@
     const interpretation = _getActionInterpretation(key);
     if (interpretation && typeof interpretation.targetIndex === "number" && interpretation.targetIndex >= 0) {
       return interpretation.targetIndex;
+    }
+    if (kind === "click" && Array.isArray(state.clicks) && state.clicks[actionIndex]) {
+      const click = state.clicks[actionIndex];
+      const hit = _checkClickHit(click && click.x, click && click.y);
+      if (hit && hit.hit && typeof hit.targetIndex === "number" && hit.targetIndex >= 0) {
+        return hit.targetIndex;
+      }
     }
     return null;
   }
@@ -1592,7 +1632,7 @@
     // List section: internal scroll container with dynamic gradient mask
     const listSection = _createEl(
       "div",
-      "clickui-registry-scroll flex-1 min-h-0 overflow-y-auto px-3 py-3 lg:py-2.5 relative",
+      "clickui-registry-scroll flex-1 min-h-0 overflow-y-auto px-3 py-3 lg:py-2.5 pb-8 relative",
       ""
     );
     listSection.setAttribute("data-clickui", "targets-list-section");
@@ -1624,7 +1664,7 @@
     requestAnimationFrame(updateScrollMask);
     setTimeout(updateScrollMask, 60);
 
-    const list = _createEl("div", "flex flex-col gap-2.5", "");
+    const list = _createEl("div", "flex flex-col gap-2.5 pb-4", "");
     list.setAttribute("data-clickui", "targets-list");
     const displayIndexes = _buildTargetDisplayIndexes(taskDto, targets);
     state.targetRows = [];
@@ -1706,7 +1746,7 @@
 
       item.setAttribute("data-target-index", String(idx));
       item.setAttribute("data-clickui-panel-row", "target");
-      item.addEventListener("mouseenter", () => _setGlobalHover({ targetIndex: idx }));
+      item.addEventListener("mouseenter", () => _setGlobalHover({ targetIndex: idx, source: "sidebar" }));
       item.addEventListener("mouseleave", () => _setGlobalHover(null));
       item.appendChild(badge);
       item.appendChild(info);
@@ -2545,6 +2585,9 @@
     if (opts.strokeDasharray) path.setAttribute("stroke-dasharray", opts.strokeDasharray);
     if (opts.strokeOpacity != null) path.setAttribute("stroke-opacity", String(opts.strokeOpacity));
     if (opts.fillOpacity != null) path.setAttribute("fill-opacity", String(opts.fillOpacity));
+    const haloFilter = _getContrastHaloFilter(opts.stroke || "#2563eb");
+    path._contrastHaloFilter = haloFilter;
+    path.style.filter = haloFilter;
     if (opts.targetIndex != null) {
       path.setAttribute("data-target-index", String(opts.targetIndex));
       path.style.pointerEvents = "auto";
@@ -2607,6 +2650,69 @@
     return path;
   }
 
+  function _ensureSpotlightOverlay(svg, role) {
+    if (!svg) return null;
+    const safeRole = role || svg.getAttribute("data-spotlight-role") || "review";
+    svg.setAttribute("data-spotlight-role", safeRole);
+    const maskId = `clickui-spotlight-mask-${safeRole}`;
+
+    let defs = svg.querySelector("defs");
+    if (!defs) {
+      defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+      if (svg.firstChild) {
+        svg.insertBefore(defs, svg.firstChild);
+      } else {
+        svg.appendChild(defs);
+      }
+    }
+
+    let mask = defs.querySelector(`#${maskId}`);
+    if (!mask) {
+      mask = document.createElementNS("http://www.w3.org/2000/svg", "mask");
+      mask.setAttribute("id", maskId);
+      mask.setAttribute("maskUnits", "userSpaceOnUse");
+
+      const bgWhite = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      bgWhite.setAttribute("x", "0");
+      bgWhite.setAttribute("y", "0");
+      bgWhite.setAttribute("width", "100%");
+      bgWhite.setAttribute("height", "100%");
+      bgWhite.setAttribute("fill", "#ffffff");
+      mask.appendChild(bgWhite);
+
+      const cutoutGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      cutoutGroup.setAttribute("class", "clickui-spotlight-cutouts");
+      cutoutGroup.setAttribute("fill", "#000000");
+      cutoutGroup.setAttribute("stroke", "#000000");
+      mask.appendChild(cutoutGroup);
+
+      defs.appendChild(mask);
+    }
+
+    let overlay = svg.querySelector(`.clickui-spotlight-overlay[data-spotlight-role="${safeRole}"]`);
+    if (!overlay) {
+      overlay = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      overlay.setAttribute("class", "clickui-spotlight-overlay");
+      overlay.setAttribute("data-spotlight-role", safeRole);
+      overlay.setAttribute("x", "0");
+      overlay.setAttribute("y", "0");
+      overlay.setAttribute("width", "100%");
+      overlay.setAttribute("height", "100%");
+      overlay.setAttribute("fill", "#000000");
+      overlay.setAttribute("mask", `url(#${maskId})`);
+      overlay.style.opacity = "0";
+      overlay.style.pointerEvents = "none";
+      overlay.style.transition = "opacity 0.15s ease-out";
+
+      if (defs.nextSibling) {
+        svg.insertBefore(overlay, defs.nextSibling);
+      } else {
+        svg.appendChild(overlay);
+      }
+    }
+    return overlay;
+  }
+
   function _appendReviewMarker(svg, point, options) {
     const opts = options || {};
     const naturalW = Number(opts.naturalW) || 1;
@@ -2615,6 +2721,10 @@
     if (!scaled) return null;
 
     const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    const markerColor = opts.fill || opts.stroke || "#f59e0b";
+    const haloFilter = _getContrastHaloFilter(markerColor);
+    g._contrastHaloFilter = haloFilter;
+    g.style.filter = haloFilter;
     if (opts.targetIndex != null) {
       g.setAttribute("data-target-index", String(opts.targetIndex));
       g.style.pointerEvents = "auto";
@@ -2758,6 +2868,63 @@
         // ignore
       }
     }
+
+    // 3.1 — Auto-scroll registry sidebar to matching card when hover comes from canvas.
+    // Skipped when source === 'sidebar' to prevent ping-pong scroll loops.
+    // Always cancel pending debounce on hover-out (hoverInfo === null).
+    if (!hoverInfo && state._sidebarScrollDebounce) {
+      clearTimeout(state._sidebarScrollDebounce);
+      state._sidebarScrollDebounce = null;
+    }
+    const isCanvasHover = hoverInfo && hoverInfo.source !== "sidebar";
+    if (isCanvasHover && state.targetsListSectionEl) {
+      if (state._sidebarScrollDebounce) {
+        clearTimeout(state._sidebarScrollDebounce);
+      }
+      state._sidebarScrollDebounce = setTimeout(() => {
+        state._sidebarScrollDebounce = null;
+        const scrollEl = state.targetsListSectionEl;
+        if (!scrollEl) return;
+
+        // Find the matching card element
+        let cardEl = null;
+        const { targetIndex, actionKey } = hoverInfo;
+
+        // 1. Check post-check targetRows (unified registry)
+        if (!cardEl && Array.isArray(state.targetRows) && targetIndex != null) {
+          const row = state.targetRows.find((r) => r.idx === targetIndex);
+          if (row && row.el) cardEl = row.el;
+        }
+        // 2. Check unmatchedActionRows (extra/off-target clicks)
+        if (!cardEl && Array.isArray(state.unmatchedActionRows) && actionKey) {
+          const row = state.unmatchedActionRows.find((r) => r.actionKey === actionKey);
+          if (row && row.el) cardEl = row.el;
+        }
+        // 3. Check pre-check targetRows (sidebar targets panel)
+        if (!cardEl && Array.isArray(state.targetRows) && actionKey && targetIndex != null) {
+          const row = state.targetRows.find((r) => r.idx === targetIndex);
+          if (row && row.el) cardEl = row.el;
+        }
+
+        if (!cardEl) return;
+
+        // Only scroll if card is not already fully visible inside the scroll container
+        const containerRect = scrollEl.getBoundingClientRect();
+        const cardRect = cardEl.getBoundingClientRect();
+        const isFullyVisible =
+          cardRect.top >= containerRect.top &&
+          cardRect.bottom <= containerRect.bottom;
+        if (isFullyVisible) return;
+
+        // Scroll so card is centered in the visible area — use container.scrollTo()
+        // (NOT scrollIntoView which leaks scroll to window on some browsers)
+        const cardOffsetTop = cardEl.offsetTop;
+        const cardHeight = cardEl.offsetHeight;
+        const containerHeight = scrollEl.clientHeight;
+        const targetScrollTop = Math.max(0, cardOffsetTop - (containerHeight - cardHeight) / 2);
+        scrollEl.scrollTo({ top: targetScrollTop, behavior: "smooth" });
+      }, 80);
+    }
   }
 
   function _updateGlobalHoverOpacities() {
@@ -2803,36 +2970,202 @@
     }
 
     if (!hoverInfo) {
-      svgElements.forEach(el => { el.style.opacity = ""; });
+      svgElements.forEach(el => {
+        el.style.opacity = "";
+        el.style.filter = el._contrastHaloFilter || "";
+        if (el._origStrokeWidth != null) {
+          el.setAttribute("stroke-width", el._origStrokeWidth);
+          delete el._origStrokeWidth;
+        }
+        if (el._origFillOpacity != null) {
+          if (el._origFillOpacity) el.setAttribute("fill-opacity", el._origFillOpacity);
+          else el.removeAttribute("fill-opacity");
+          delete el._origFillOpacity;
+        }
+        if (el._origTransform != null) {
+          el.style.transform = el._origTransform;
+          delete el._origTransform;
+        }
+      });
       panelElements.forEach(el => {
         el.style.opacity = "";
         el.style.boxShadow = "";
         el.style.transform = "";
       });
+
+      // Clear spotlight overlays
+      const searchRoot = state.reviewComparisonEl || document;
+      const overlays = searchRoot.querySelectorAll(".clickui-spotlight-overlay");
+      overlays.forEach(ov => { ov.style.opacity = "0"; });
+      const cutouts = searchRoot.querySelectorAll(".clickui-spotlight-cutouts");
+      cutouts.forEach(cg => { cg.innerHTML = ""; });
       return;
     }
 
     const { targetIndex, actionKey } = hoverInfo;
 
+    // Resolve target index from actionKey if targetIndex is missing
+    let effectiveTargetIndex = targetIndex != null ? targetIndex : null;
+    if (effectiveTargetIndex == null && actionKey) {
+      const match = String(actionKey).match(/^([a-z]+):(\d+)$/);
+      if (match) {
+        effectiveTargetIndex = _findTargetIndex(state.taskDto, match[1], parseInt(match[2], 10));
+      }
+    }
+
+    // Resolve matching action key if not provided (e.g. hovered target in sidebar -> find hit click)
+    let effectiveActionKey = actionKey || null;
+    if (!effectiveActionKey && effectiveTargetIndex != null && state.actionInterpretation) {
+      for (const [key, interp] of Object.entries(state.actionInterpretation)) {
+        if (interp && interp.success === true && interp.targetIndex === effectiveTargetIndex) {
+          effectiveActionKey = key;
+          break;
+        }
+      }
+    }
+
     function _elMatches(el) {
       const elTargetIdxAttr = el.getAttribute("data-target-index");
       const elTargetIdx = (elTargetIdxAttr !== null && elTargetIdxAttr !== "") ? Number(elTargetIdxAttr) : null;
       const elActionKey = el.getAttribute("data-clickui-action-key");
-      // Separate user actions can map to the same target.  On action hover,
-      // leave only the exact action bright and fade the other click markers.
-      if (actionKey && elActionKey) return elActionKey === actionKey;
-      if (targetIndex !== null && targetIndex !== undefined) {
-        if (elTargetIdx === targetIndex) return true;
-      } else if (actionKey) {
+
+      // Exact action key match (isolates this specific click and fades duplicate/other clicks)
+      if (effectiveActionKey && elActionKey) {
+        if (elActionKey === effectiveActionKey) return true;
+        return false;
+      }
+
+      // Target contour / target element match
+      if (effectiveTargetIndex != null && elTargetIdx != null) {
+        if (elTargetIdx === effectiveTargetIndex) return true;
+      } else if (effectiveActionKey) {
         return false;
       }
       return false;
     }
 
-    // SVG / canvas elements: opacity dim approach
+    // SVG / canvas elements: opacity dim + active contour/marker highlight
     svgElements.forEach(el => {
-      el.style.transition = "opacity 0.15s ease-in-out";
-      el.style.opacity = _elMatches(el) ? "1" : "0.08";
+      el.style.transition = "opacity 0.15s ease-in-out, filter 0.15s ease-in-out";
+      const isMatch = _elMatches(el);
+      if (isMatch) {
+        el.style.opacity = "1";
+        const tag = (el.tagName || "").toLowerCase();
+        if (tag === "path") {
+          const elTargetIdxAttr = el.getAttribute("data-target-index");
+          const elTargetIdx = (elTargetIdxAttr !== null && elTargetIdxAttr !== "") ? Number(elTargetIdxAttr) : null;
+          const contourColor = elTargetIdx !== null ? _getTargetColor(elTargetIdx) : _getThemeColor("--color-success", "#10b981");
+
+          if (el._origStrokeWidth == null) {
+            el._origStrokeWidth = el.getAttribute("stroke-width") || "3";
+          }
+          const origW = Number(el._origStrokeWidth) || 3;
+          el.setAttribute("stroke-width", String(Math.max(origW + 2, 5)));
+
+          if (el._origFillOpacity == null) {
+            el._origFillOpacity = el.getAttribute("fill-opacity") || el.style.fillOpacity || "";
+          }
+          el.setAttribute("fill-opacity", "0.28");
+
+          el.style.filter = `drop-shadow(0 0 4px ${_withAlpha(contourColor, 0.95)}) drop-shadow(0 0 8px ${_withAlpha(contourColor, 0.6)})`;
+
+          if (el.parentNode && el.parentNode.lastChild !== el) {
+            try { el.parentNode.appendChild(el); } catch (e) {}
+          }
+        } else if (tag === "g") {
+          el.style.filter = "drop-shadow(0 0 6px rgba(255, 255, 255, 0.95))";
+          if (el.parentNode && el.parentNode.lastChild !== el) {
+            try { el.parentNode.appendChild(el); } catch (e) {}
+          }
+        }
+      } else {
+        el.style.opacity = "0.08";
+        el.style.filter = el._contrastHaloFilter || "";
+        if (el._origStrokeWidth != null) {
+          el.setAttribute("stroke-width", el._origStrokeWidth);
+          delete el._origStrokeWidth;
+        }
+        if (el._origFillOpacity != null) {
+          if (el._origFillOpacity) el.setAttribute("fill-opacity", el._origFillOpacity);
+          else el.removeAttribute("fill-opacity");
+          delete el._origFillOpacity;
+        }
+        if (el._origTransform != null) {
+          el.style.transform = el._origTransform;
+          delete el._origTransform;
+        }
+      }
+    });
+
+    // Canvas Spotlight: cut out active geometry and dim background by 38%
+    const searchRoot = state.reviewComparisonEl || document;
+    const spotlightOverlays = searchRoot.querySelectorAll(".clickui-spotlight-overlay");
+    spotlightOverlays.forEach(overlay => {
+      const parentSvg = overlay.ownerSVGElement || overlay.closest("svg");
+      if (!parentSvg) return;
+      const cutoutGroup = parentSvg.querySelector(".clickui-spotlight-cutouts");
+      if (!cutoutGroup) return;
+
+      cutoutGroup.innerHTML = "";
+      const localMatches = Array.from(parentSvg.querySelectorAll("[data-target-index], [data-clickui-action-key]")).filter(el => _elMatches(el));
+
+      localMatches.forEach(matchEl => {
+        const tag = (matchEl.tagName || "").toLowerCase();
+        if (tag === "path") {
+          const d = matchEl.getAttribute("d");
+          if (d) {
+            const cp = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            cp.setAttribute("d", d);
+            cp.setAttribute("fill", "#000000");
+            cp.setAttribute("stroke", "#000000");
+            cp.setAttribute("stroke-width", "20");
+            cp.setAttribute("stroke-linejoin", "round");
+            cp.setAttribute("stroke-linecap", "round");
+            cutoutGroup.appendChild(cp);
+          }
+        } else if (tag === "circle") {
+          const cc = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+          cc.setAttribute("cx", matchEl.getAttribute("cx") || "0");
+          cc.setAttribute("cy", matchEl.getAttribute("cy") || "0");
+          const r = Number(matchEl.getAttribute("r") || 14) + 14;
+          cc.setAttribute("r", String(r));
+          cc.setAttribute("fill", "#000000");
+          cutoutGroup.appendChild(cc);
+        } else if (tag === "g") {
+          const innerCircle = matchEl.querySelector("circle");
+          if (innerCircle) {
+            const cc = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            cc.setAttribute("cx", innerCircle.getAttribute("cx") || "0");
+            cc.setAttribute("cy", innerCircle.getAttribute("cy") || "0");
+            const r = Number(innerCircle.getAttribute("r") || 14) + 14;
+            cc.setAttribute("r", String(r));
+            cc.setAttribute("fill", "#000000");
+            cutoutGroup.appendChild(cc);
+          }
+        }
+      });
+
+      // If local SVG didn't have a matching element but effectiveTargetIndex is set,
+      // borrow the geometry from another SVG (e.g. svgRef) so the student sees the anatomy in both panes!
+      if (cutoutGroup.children.length === 0 && effectiveTargetIndex != null) {
+        const siblingPath = searchRoot.querySelector(`svg path[data-target-index="${effectiveTargetIndex}"]`);
+        if (siblingPath && siblingPath.getAttribute("d")) {
+          const cp = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          cp.setAttribute("d", siblingPath.getAttribute("d"));
+          cp.setAttribute("fill", "#000000");
+          cp.setAttribute("stroke", "#000000");
+          cp.setAttribute("stroke-width", "20");
+          cp.setAttribute("stroke-linejoin", "round");
+          cp.setAttribute("stroke-linecap", "round");
+          cutoutGroup.appendChild(cp);
+        }
+      }
+
+      if (cutoutGroup.children.length > 0) {
+        overlay.style.opacity = "0.38";
+      } else {
+        overlay.style.opacity = "0";
+      }
     });
 
     // Panel rows: ring-highlight on match, subtle dim otherwise
@@ -3223,8 +3556,60 @@
     });
   }
 
-  function _renderUserReviewSvg(svg, naturalW, naturalH) {
+  function _renderUserReviewSvg(svg, naturalW, naturalH, role) {
     if (!svg) return;
+    _ensureSpotlightOverlay(svg, role || "user");
+
+    // 2.3 — Draw found target contours in the "Your Answer" pane so the student
+    // can see which polygon/point their click actually hit.
+    // Only rendered in post-check mode; skipped pre-check to keep the view clean.
+    if (state.actionInterpretationActive && state.foundClickTargets instanceof Set && state.foundClickTargets.size > 0) {
+      const targets = _getTargets(state.taskDto);
+      const successColor = _getThemeColor("--color-success", "#10b981");
+      targets.forEach((target, idx) => {
+        if (!state.foundClickTargets.has(idx)) return; // only found targets
+        const shape = _getTargetShape(target);
+        if (shape === "polygon" || (!shape && Array.isArray(target && target.points) && target.points.length >= 3)) {
+          _appendReviewPath(svg, target.points, {
+            closed: true,
+            naturalW,
+            naturalH,
+            stroke: successColor,
+            fill: _withAlpha(successColor, 0.15),
+            strokeWidth: 3,
+            strokeDasharray: "5 3",
+            targetIndex: idx,
+            reviewKey: `found-target:${idx}`,
+          });
+        } else if (shape === "freehand" || (!shape && Array.isArray(target && target.points) && target.points.length >= 2)) {
+          _appendReviewPath(svg, target.points, {
+            closed: false,
+            naturalW,
+            naturalH,
+            stroke: successColor,
+            strokeWidth: 3,
+            strokeDasharray: "8 5",
+            strokeOpacity: 0.85,
+            targetIndex: idx,
+            reviewKey: `found-target:${idx}`,
+          });
+        } else if (shape === "point" || (target && (target.point || target.x != null))) {
+          const pt = target.point || (target.x != null ? [target.x, target.y] : null);
+          if (pt) {
+            _appendReviewMarker(svg, pt, {
+              naturalW,
+              naturalH,
+              radius: 15,
+              fill: _withAlpha(successColor, 0.25),
+              stroke: successColor,
+              strokeWidth: 3,
+              targetIndex: idx,
+              reviewKey: `found-target:${idx}`,
+            });
+          }
+        }
+      });
+    }
     (state.polygons || []).forEach((poly, idx) => {
       const color = _getActionDisplayColor(state.taskDto, "polygon", idx);
       const targetIndex = _findTargetIndex(state.taskDto, "polygon", idx);
@@ -3336,8 +3721,9 @@
     });
   }
 
-  function _renderReferenceReviewSvg(svg, naturalW, naturalH) {
+  function _renderReferenceReviewSvg(svg, naturalW, naturalH, role) {
     if (!svg) return;
+    _ensureSpotlightOverlay(svg, role || "ref");
     const targets = _getTargets(state.taskDto);
     targets.forEach((target, idx) => {
       const shape = _getTargetShape(target);
@@ -3675,11 +4061,11 @@
     // 3. Targets List Section (Pinned inner scroll container)
     let listSection = targetsPanel.querySelector('[data-clickui="targets-list-section"]');
     if (!listSection) {
-      listSection = _createEl("div", "clickui-registry-scroll flex-1 min-h-0 overflow-y-auto px-3 py-2.5 relative", "");
+      listSection = _createEl("div", "clickui-registry-scroll flex-1 min-h-0 overflow-y-auto px-3 py-2.5 pb-8 relative", "");
       listSection.setAttribute("data-clickui", "targets-list-section");
       targetsPanel.appendChild(listSection);
     } else {
-      listSection.className = "clickui-registry-scroll flex-1 min-h-0 overflow-y-auto px-3 py-2.5 relative";
+      listSection.className = "clickui-registry-scroll flex-1 min-h-0 overflow-y-auto px-3 py-2.5 pb-8 relative";
     }
     state.targetsListSectionEl = listSection;
     listSection.innerHTML = "";
@@ -3710,7 +4096,7 @@
     requestAnimationFrame(updateScrollMask);
     setTimeout(updateScrollMask, 60);
 
-    const list = _createEl("div", "result-registry-list flex flex-col gap-2.5", "");
+    const list = _createEl("div", "result-registry-list flex flex-col gap-2.5 pb-4", "");
     list.setAttribute("data-clickui", "targets-list");
     listSection.appendChild(list);
 
@@ -3862,21 +4248,47 @@
         );
         item.appendChild(missBox);
       } else {
-        const clickRes = clickResults.find((r) => r.target_index === idx && r.click_success);
-        if (clickRes && clickRes.matched_click_idx != null) {
+        // Find which click number was attributed to this target.
+        // clickResults (L3 only) and state.actionInterpretation (L1/L2/L3 unified map)
+        // are both valid sources; prefer actionInterpretation as it covers all levels.
+        let hitClickNum = null;
+        if (state.actionInterpretation && typeof state.actionInterpretation === "object") {
+          for (const [key, interp] of Object.entries(state.actionInterpretation)) {
+            if (
+              interp &&
+              interp.success === true &&
+              interp.targetIndex === idx &&
+              key.startsWith("click:")
+            ) {
+              const clickIdx = parseInt(key.slice(6), 10);
+              if (Number.isInteger(clickIdx) && clickIdx >= 0) {
+                hitClickNum = clickIdx + 1;
+              }
+              break;
+            }
+          }
+        }
+        // Fallback: L3 click_results array (legacy path)
+        if (hitClickNum == null) {
+          const clickRes = clickResults.find((r) => r.target_index === idx && r.click_success);
+          if (clickRes && clickRes.matched_click_idx != null) {
+            hitClickNum = clickRes.matched_click_idx + 1;
+          }
+        }
+        if (hitClickNum != null) {
           const hitBox = _createEl(
             "div",
             "mt-0.5 pl-10 text-[12px] text-text-secondary border-t border-border-subtle pt-1",
-            wt("clickui.found_by_click", "Засчитано кликом №{n}").replace("{n}", clickRes.matched_click_idx + 1)
+            wt("clickui.found_by_click", "Засчитано кликом №{n}").replace("{n}", hitClickNum)
           );
           item.appendChild(hitBox);
         }
       }
 
       // Connected Hover
-      item.addEventListener("mouseenter", () => _setGlobalHover({ targetIndex: idx }));
+      item.addEventListener("mouseenter", () => _setGlobalHover({ targetIndex: idx, source: "sidebar" }));
       item.addEventListener("mouseleave", () => _setGlobalHover(null));
-      item.addEventListener("pointerdown", () => _setGlobalHover({ targetIndex: idx }));
+      item.addEventListener("pointerdown", () => _setGlobalHover({ targetIndex: idx, source: "sidebar" }));
 
       list.appendChild(item);
       state.targetRows.push({ idx, el: item, badge, icon: null, dot: null, statusPill });
@@ -3963,7 +4375,7 @@
         // Connected Hover
         item.addEventListener("mouseenter", () => {
           _setHoveredActionKey(action.key);
-          _setGlobalHover({ targetIndex: targetIdx, actionKey: action.key });
+          _setGlobalHover({ targetIndex: targetIdx, actionKey: action.key, source: "sidebar" });
         });
         item.addEventListener("mouseleave", () => {
           _setHoveredActionKey(null);
@@ -3971,7 +4383,7 @@
         });
         item.addEventListener("pointerdown", () => {
           _setHoveredActionKey(action.key);
-          _setGlobalHover({ targetIndex: targetIdx, actionKey: action.key });
+          _setGlobalHover({ targetIndex: targetIdx, actionKey: action.key, source: "sidebar" });
         });
 
         list.appendChild(item);
@@ -4099,6 +4511,10 @@
     const foundTargets = _normalizeFoundTargetsSet(details.found_targets || details.foundTargets || []);
     const foundCount = details.found_count != null ? details.found_count : foundTargets.size;
     const clickResults = Array.isArray(details.click_results) ? details.click_results : [];
+    // Threshold fields: required_correct = min targets to pass; threshold_mode = true when
+    // a custom threshold (not "find all") was set by the task author.
+    const requiredCorrect = details.required_correct != null ? Number(details.required_correct) : null;
+    const thresholdMode = details.threshold_mode === true;
 
     // Total user marks count vs found
     const userClicksCount = Array.isArray(state.clicks) ? state.clicks.length : 0;
@@ -4148,9 +4564,14 @@
     const foundStatsText = _createEl(
       "span",
       "",
-      wt("clickui.targets_found_stat", "Найдено: {found} из {total} целей")
-        .replace("{found}", foundCount)
-        .replace("{total}", totalTargets)
+      thresholdMode && requiredCorrect != null
+        ? wt("clickui.targets_found_stat_threshold", "Найдено: {found} из {total} целей (порог: {required})")
+            .replace("{found}", foundCount)
+            .replace("{total}", totalTargets)
+            .replace("{required}", requiredCorrect)
+        : wt("clickui.targets_found_stat", "Найдено: {found} из {total} целей")
+            .replace("{found}", foundCount)
+            .replace("{total}", totalTargets)
     );
     foundStats.appendChild(targetIcon);
     foundStats.appendChild(foundStatsText);
@@ -4168,7 +4589,16 @@
       const scoreText = _createEl(
         "span",
         "",
-        wt("clickui.score_stat", "Оценка: {score}%").replace("{score}", scoreVal)
+        thresholdMode && requiredCorrect != null && totalTargets > 0
+          ? (() => {
+              const reqPct = Math.round((requiredCorrect / totalTargets) * 100);
+              return reqPct < 100
+                ? wt("clickui.score_stat_threshold", "Оценка: {score}% (порог: {required}%)")
+                    .replace("{score}", scoreVal)
+                    .replace("{required}", reqPct)
+                : wt("clickui.score_stat", "Оценка: {score}%").replace("{score}", scoreVal);
+            })()
+          : wt("clickui.score_stat", "Оценка: {score}%").replace("{score}", scoreVal)
       );
       scorePill.appendChild(scoreIcon);
       scorePill.appendChild(scoreText);
@@ -4277,7 +4707,7 @@
     const defaultIdleTitle = success
       ? wt("clickui.inspector_idle_success_title", "Задание успешно выполнено")
       : wt("clickui.inspector_idle_error_title", "Разбор ошибок выполнения");
-    const defaultIdleDesc = wt("clickui.inspector_idle_desc", "Наведите курсор на отметку на снимке или элемент списка справа для детального анализа");
+    const defaultIdleDesc = wt("clickui.inspector_idle_desc", "Наведите курсор на отметку на снимке или элемент списка для детального анализа");
 
     const inspectorTitle = _createEl(
       "div",
@@ -4305,7 +4735,7 @@
         inspectorTitle.textContent = success
           ? wt("clickui.inspector_idle_success_title", "Задание успешно выполнено")
           : wt("clickui.inspector_idle_error_title", "Разбор ошибок выполнения");
-        inspectorDesc.textContent = wt("clickui.inspector_idle_desc", "Наведите курсор на отметку на снимке или элемент списка справа для детального анализа");
+        inspectorDesc.textContent = wt("clickui.inspector_idle_desc", "Наведите курсор на отметку на снимке или элемент списка для детального анализа");
         inspectorChip.innerHTML = "";
         return;
       }
@@ -4453,7 +4883,7 @@
     const refLabelsBlock = _getReferenceReviewLabelsBlock();
 
     // 1. Side-by-Side Container
-    const sideBySideGrid = _createEl("div", "clickui-side-by-side-grid grid gap-3.5 xl:grid-cols-2", "");
+    const sideBySideGrid = _createEl("div", "clickui-side-by-side-grid grid grid-cols-2 gap-3.5", "");
     sideBySideGrid.setAttribute("data-clickui", "result-side-by-side");
 
     // Left Card: User Answer
@@ -4520,7 +4950,7 @@
     svgUser.style.height = reviewH + "px";
     svgUser.setAttribute("viewBox", `0 0 ${reviewW} ${reviewH}`);
     svgUser.setAttribute("preserveAspectRatio", "none");
-    _renderUserReviewSvg(svgUser, reviewW, reviewH);
+    _renderUserReviewSvg(svgUser, reviewW, reviewH, "user");
     contentLayerUser.appendChild(svgUser);
     viewportUser.appendChild(contentLayerUser);
     userCard.appendChild(viewportUser);
@@ -4556,7 +4986,7 @@
       _openAdditionalModal(imageUrl, wt("clickui.reference", "Эталон"), {
         naturalW: reviewW,
         naturalH: reviewH,
-        renderSvg: (svg) => _renderReferenceReviewSvg(svg, reviewW, reviewH),
+        renderSvg: (svg) => _renderReferenceReviewSvg(svg, reviewW, reviewH, "modal-ref"),
       });
     });
     refHeader.appendChild(refZoomBtn);
@@ -4594,7 +5024,7 @@
     svgRef.style.height = reviewH + "px";
     svgRef.setAttribute("viewBox", `0 0 ${reviewW} ${reviewH}`);
     svgRef.setAttribute("preserveAspectRatio", "none");
-    _renderReferenceReviewSvg(svgRef, reviewW, reviewH);
+    _renderReferenceReviewSvg(svgRef, reviewW, reviewH, "ref");
     contentLayerRef.appendChild(svgRef);
     viewportRef.appendChild(contentLayerRef);
     refCard.appendChild(viewportRef);
@@ -4687,7 +5117,7 @@
     svgTabRef.style.height = reviewH + "px";
     svgTabRef.setAttribute("viewBox", `0 0 ${reviewW} ${reviewH}`);
     svgTabRef.setAttribute("preserveAspectRatio", "none");
-    _renderReferenceReviewSvg(svgTabRef, reviewW, reviewH);
+    _renderReferenceReviewSvg(svgTabRef, reviewW, reviewH, "tab-ref");
     contentLayerTab.appendChild(svgTabRef);
 
     const svgTabUser = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -4698,7 +5128,7 @@
     svgTabUser.style.height = reviewH + "px";
     svgTabUser.setAttribute("viewBox", `0 0 ${reviewW} ${reviewH}`);
     svgTabUser.setAttribute("preserveAspectRatio", "none");
-    _renderUserReviewSvg(svgTabUser, reviewW, reviewH);
+    _renderUserReviewSvg(svgTabUser, reviewW, reviewH, "tab-user");
     contentLayerTab.appendChild(svgTabUser);
 
     viewportTab.appendChild(contentLayerTab);
@@ -4800,7 +5230,7 @@
         svgUser.style.height = reviewH + "px";
         svgUser.setAttribute("viewBox", `0 0 ${reviewW} ${reviewH}`);
         svgUser.innerHTML = "";
-        _renderUserReviewSvg(svgUser, reviewW, reviewH);
+        _renderUserReviewSvg(svgUser, reviewW, reviewH, "user");
       }
 
       if (contentLayerRef) {
@@ -4818,7 +5248,7 @@
         svgRef.style.height = reviewH + "px";
         svgRef.setAttribute("viewBox", `0 0 ${reviewW} ${reviewH}`);
         svgRef.innerHTML = "";
-        _renderReferenceReviewSvg(svgRef, reviewW, reviewH);
+        _renderReferenceReviewSvg(svgRef, reviewW, reviewH, "ref");
       }
 
       if (contentLayerTab) {
@@ -4836,7 +5266,7 @@
         svgTabRef.style.height = reviewH + "px";
         svgTabRef.setAttribute("viewBox", `0 0 ${reviewW} ${reviewH}`);
         svgTabRef.innerHTML = "";
-        _renderReferenceReviewSvg(svgTabRef, reviewW, reviewH);
+        _renderReferenceReviewSvg(svgTabRef, reviewW, reviewH, "tab-ref");
       }
       if (svgTabUser) {
         svgTabUser.setAttribute("width", String(reviewW));
@@ -4845,7 +5275,7 @@
         svgTabUser.style.height = reviewH + "px";
         svgTabUser.setAttribute("viewBox", `0 0 ${reviewW} ${reviewH}`);
         svgTabUser.innerHTML = "";
-        _renderUserReviewSvg(svgTabUser, reviewW, reviewH);
+        _renderUserReviewSvg(svgTabUser, reviewW, reviewH, "tab-user");
       }
 
       _setupReviewHoverEffects(section);
@@ -4994,7 +5424,13 @@
       });
     }
 
-    // Auto-adaptive width observer
+    // Apply initial display mode explicitly before ResizeObserver fires.
+    // Without this call the DOM stays in whatever state the HTML was built with,
+    // and the observer fires asynchronously — causing a visible flicker to tabs.
+    setDisplayMode("side_by_side");
+
+    // Auto-adaptive width observer: switches to tabs only on truly narrow containers.
+    // 680px = ~320px per pane which is still readable for annotated medical images.
     if (typeof ResizeObserver !== "undefined") {
       let lastObservedW = 0;
       const ro = new ResizeObserver((entries) => {
@@ -5004,10 +5440,10 @@
           const widthChanged = Math.abs(width - lastObservedW) > 2;
           lastObservedW = width;
           if (!userChoseDisplayMode) {
-            if (width < 950 && currentDisplayMode !== "tabs") {
+            if (width < 680 && currentDisplayMode !== "tabs") {
               setDisplayMode("tabs");
               return;
-            } else if (width >= 950 && currentDisplayMode !== "side_by_side") {
+            } else if (width >= 680 && currentDisplayMode !== "side_by_side") {
               setDisplayMode("side_by_side");
               return;
             }

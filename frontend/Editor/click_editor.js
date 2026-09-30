@@ -38,19 +38,19 @@ function getCurrentLang() {
 }
 
 const DEFAULT_CLICK_PROMPTS_BY_LANG = {
-    ru: "Отметьте указанные области на изображении",
+    ru: wt("ce.k001_click_ru", "Отметьте указанные области на изображении"),
     en: "Mark the indicated areas on the image",
-    uk: "Позначте вказані області на зображенні"
+    uk: wt("ce.k001_click_uk", "Позначте вказані області на зображенні")
 };
 const DEFAULT_ERRORS_PROMPTS_BY_LANG = {
-    ru: "Отметьте ошибки в тексте",
+    ru: wt("ce.k002_errors_ru", "Отметьте ошибки в тексте"),
     en: "Mark errors in the text",
-    uk: "Позначте помилки в тексті"
+    uk: wt("ce.k002_errors_uk", "Позначте помилки в тексті")
 };
 const DEFAULT_CHOICE_PROMPTS_BY_LANG = {
-    ru: "Выберите правильный вариант текста",
+    ru: wt("ce.k003_choice_ru", "Выберите правильный вариант текста"),
     en: "Select the correct text variant",
-    uk: "Виберіть правильний варіант тексту"
+    uk: wt("ce.k003_choice_uk", "Виберіть правильний варіант тексту")
 };
 
 const ALL_DEFAULT_CLICK_PROMPTS = Object.values(DEFAULT_CLICK_PROMPTS_BY_LANG);
@@ -219,6 +219,7 @@ class ClickEditor extends BaseEditor {
         this.additionalInfoDirty = false;
 
         this.debugLogBuffer = [];
+        this._contrastMap = null;
 
         this.cacheDom();
         this.setupEventListeners();
@@ -327,10 +328,197 @@ class ClickEditor extends BaseEditor {
         return luminance > 0.65;
     }
 
-    generateRandomContourColor(targetIndex = -1) {
+    // ===== CONTRAST EVALUATION & ADAPTATION =====
+
+    hexToHsl(hex) {
+        const normalized = this.normalizeHexColor(hex);
+        if (!/^#[0-9a-f]{6}$/.test(normalized)) return null;
+        const r = parseInt(normalized.slice(1, 3), 16) / 255;
+        const g = parseInt(normalized.slice(3, 5), 16) / 255;
+        const b = parseInt(normalized.slice(5, 7), 16) / 255;
+        const max = Math.max(r, g, b);
+        const min = Math.min(r, g, b);
+        let h = 0;
+        let s = 0;
+        const l = (max + min) / 2;
+        if (max !== min) {
+            const d = max - min;
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+            switch (max) {
+                case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+                case g: h = ((b - r) / d + 2) / 6; break;
+                case b: h = ((r - g) / d + 4) / 6; break;
+            }
+        }
+        return {
+            h: Math.round(h * 360),
+            s: Math.round(s * 100),
+            l: Math.round(l * 100)
+        };
+    }
+
+    adjustColorLightness(hex, direction) {
+        const hsl = this.hexToHsl(hex);
+        if (!hsl) return direction > 0 ? "#ffffff" : "#000000";
+        let newL;
+        if (direction > 0) {
+            newL = Math.min(88, Math.max(hsl.l + 25, 75));
+        } else {
+            newL = Math.max(15, Math.min(hsl.l - 25, 28));
+        }
+        return this.hslToHex(hsl.h, Math.max(40, hsl.s), newL);
+    }
+
+    getRelativeLuminance(hexOrRgb) {
+        let r, g, b;
+        if (typeof hexOrRgb === "string") {
+            const normalized = this.normalizeHexColor(hexOrRgb);
+            if (!/^#[0-9a-f]{6}$/.test(normalized)) return 0.5;
+            r = parseInt(normalized.slice(1, 3), 16);
+            g = parseInt(normalized.slice(3, 5), 16);
+            b = parseInt(normalized.slice(5, 7), 16);
+        } else if (Array.isArray(hexOrRgb)) {
+            [r, g, b] = hexOrRgb;
+        } else if (hexOrRgb && typeof hexOrRgb === "object") {
+            ({ r, g, b } = hexOrRgb);
+        } else {
+            return 0.5;
+        }
+        const sRGB = [r / 255, g / 255, b / 255];
+        const linear = sRGB.map(c => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)));
+        return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+    }
+
+    getContrastRatio(lum1, lum2) {
+        const l1 = Math.max(lum1, lum2);
+        const l2 = Math.min(lum1, lum2);
+        return (l1 + 0.05) / (l2 + 0.05);
+    }
+
+    getContrastMap() {
+        if (this._contrastMap) return this._contrastMap;
+        if (!this.img || this.img.classList.contains("hidden") || !this.img.complete || !this.img.naturalWidth || !this.img.naturalHeight) {
+            return null;
+        }
+        try {
+            const naturalW = this.img.naturalWidth;
+            const naturalH = this.img.naturalHeight;
+            const maxDim = 400;
+            const scale = Math.min(1, maxDim / Math.max(naturalW, naturalH));
+            const w = Math.max(1, Math.round(naturalW * scale));
+            const h = Math.max(1, Math.round(naturalH * scale));
+
+            let canvas;
+            if (typeof OffscreenCanvas !== "undefined") {
+                canvas = new OffscreenCanvas(w, h);
+            } else {
+                canvas = document.createElement("canvas");
+                canvas.width = w;
+                canvas.height = h;
+            }
+            const ctx = canvas.getContext("2d", { willReadFrequently: true });
+            if (!ctx) return null;
+            ctx.drawImage(this.img, 0, 0, w, h);
+            const imgData = ctx.getImageData(0, 0, w, h);
+            this._contrastMap = {
+                data: imgData.data,
+                width: w,
+                height: h,
+                naturalWidth: naturalW,
+                naturalHeight: naturalH
+            };
+            return this._contrastMap;
+        } catch (_) {
+            this._contrastMap = null;
+            return null;
+        }
+    }
+
+    evaluateContourContrast(points, hexColor, isClosed = true) {
+        if (!Array.isArray(points) || points.length < 2 || !hexColor) {
+            return null;
+        }
+        const map = this.getContrastMap();
+        if (!map) {
+            return null;
+        }
+
+        const { data, width, height, naturalWidth, naturalHeight } = map;
+
+        const segments = [];
+        let totalLength = 0;
+        const count = isClosed ? points.length : points.length - 1;
+        for (let i = 0; i < count; i++) {
+            const p1 = points[i];
+            const p2 = points[(i + 1) % points.length];
+            const dx = p2[0] - p1[0];
+            const dy = p2[1] - p1[1];
+            const len = Math.hypot(dx, dy);
+            if (len > 0) {
+                segments.push({ p1, p2, len });
+                totalLength += len;
+            }
+        }
+        if (totalLength <= 0 || segments.length === 0) return null;
+
+        const sampleCount = Math.min(30, Math.max(12, Math.round(totalLength / 15)));
+        const step = totalLength / sampleCount;
+
+        let currentSegIdx = 0;
+        let distInSeg = 0;
+        let totalBgLuminance = 0;
+        let validSamples = 0;
+
+        for (let s = 0; s < sampleCount; s++) {
+            const targetDist = s * step;
+            while (currentSegIdx < segments.length && distInSeg + segments[currentSegIdx].len < targetDist) {
+                distInSeg += segments[currentSegIdx].len;
+                currentSegIdx++;
+            }
+            if (currentSegIdx >= segments.length) break;
+
+            const seg = segments[currentSegIdx];
+            const t = seg.len > 0 ? (targetDist - distInSeg) / seg.len : 0;
+            const nx = seg.p1[0] + t * (seg.p2[0] - seg.p1[0]);
+            const ny = seg.p1[1] + t * (seg.p2[1] - seg.p1[1]);
+
+            const cx = Math.max(0, Math.min(width - 1, Math.round(nx * (width / naturalWidth))));
+            const cy = Math.max(0, Math.min(height - 1, Math.round(ny * (height / naturalHeight))));
+            const offset = (cy * width + cx) * 4;
+
+            const r = data[offset];
+            const g = data[offset + 1];
+            const b = data[offset + 2];
+            const lum = this.getRelativeLuminance([r, g, b]);
+            totalBgLuminance += lum;
+            validSamples++;
+        }
+
+        if (validSamples === 0) return null;
+        const bgLuminance = totalBgLuminance / validSamples;
+        const colorLuminance = this.getRelativeLuminance(hexColor);
+        const ratio = this.getContrastRatio(colorLuminance, bgLuminance);
+        const roundedRatio = Math.round(ratio * 10) / 10;
+
+        return {
+            ratio: roundedRatio,
+            bgLuminance,
+            colorLuminance,
+            isLow: roundedRatio < 3.0
+        };
+    }
+
+    isContourContrastLow(points, hexColor, isClosed = true) {
+        const result = this.evaluateContourContrast(points, hexColor, isClosed);
+        return Boolean(result && result.isLow);
+    }
+
+    generateRandomContourColor(targetIndex = -1, explicitPoints = null) {
         const currentAnn = this.annotations && targetIndex >= 0 ? this.annotations[targetIndex] : null;
         const currentColor = currentAnn?.color || (targetIndex >= 0 ? this.pickColor(targetIndex) : null);
         const currentHue = currentColor ? this.hexToHue(currentColor) : null;
+        const points = explicitPoints || currentAnn?.points;
+        const isClosed = currentAnn?.type !== "freehand";
 
         const otherHues = [];
         if (Array.isArray(this.annotations)) {
@@ -396,8 +584,23 @@ class ClickEditor extends BaseEditor {
         }
 
         const saturation = 85 + Math.floor(Math.random() * 11);
-        const lightness = 50 + Math.floor(Math.random() * 6);
-        return this.hslToHex(bestHue, saturation, lightness);
+        let lightness = 50 + Math.floor(Math.random() * 6);
+        let candidateHex = this.hslToHex(bestHue, saturation, lightness);
+
+        // Check contrast against background image along contour points: discard candidates with CR < 2.5:1
+        if (Array.isArray(points) && points.length >= 2) {
+            const contrast = this.evaluateContourContrast(points, candidateHex, isClosed);
+            if (contrast && contrast.ratio < 2.5) {
+                const targetL = contrast.bgLuminance > 0.5 ? 35 : 68;
+                const adjustedHex = this.hslToHex(bestHue, saturation, targetL);
+                const adjustedContrast = this.evaluateContourContrast(points, adjustedHex, isClosed);
+                if (adjustedContrast && adjustedContrast.ratio >= contrast.ratio) {
+                    candidateHex = adjustedHex;
+                }
+            }
+        }
+
+        return candidateHex;
     }
 
     toggleColorPickerPopover(index, triggerEl) {
@@ -479,11 +682,17 @@ class ClickEditor extends BaseEditor {
                 e.stopPropagation();
                 this.setAnnotationColor(index, presetColor);
                 this.updateColorPickerActiveSwatch(presetColor);
+                this.updateColorPickerContrastWarning(index, presetColor);
             });
 
             swatchesContainer.appendChild(swatch);
         });
         popover.appendChild(swatchesContainer);
+
+        // Contrast warning container
+        const warningContainer = document.createElement("div");
+        warningContainer.className = "annotation-color-picker-popover__contrast-warning hidden";
+        popover.appendChild(warningContainer);
 
         // Footer with Random & Custom Color buttons
         const footer = document.createElement("div");
@@ -500,6 +709,7 @@ class ClickEditor extends BaseEditor {
             const randomColor = this.generateRandomContourColor(index);
             this.setAnnotationColor(index, randomColor);
             this.updateColorPickerActiveSwatch(randomColor);
+            this.updateColorPickerContrastWarning(index, randomColor);
         });
 
         // Custom color input button
@@ -516,11 +726,13 @@ class ClickEditor extends BaseEditor {
             const chosen = e.target.value;
             this.setAnnotationColor(index, chosen);
             this.updateColorPickerActiveSwatch(chosen);
+            this.updateColorPickerContrastWarning(index, chosen);
         });
         nativeInput.addEventListener("change", (e) => {
             const chosen = e.target.value;
             this.setAnnotationColor(index, chosen);
             this.updateColorPickerActiveSwatch(chosen);
+            this.updateColorPickerContrastWarning(index, chosen);
         });
 
         customColorBtn.innerHTML = `<span class="material-symbols-outlined text-[16px]">palette</span><span>${wt("pa.custom_color", "Свой цвет")}</span>`;
@@ -536,6 +748,8 @@ class ClickEditor extends BaseEditor {
 
         document.body.appendChild(popover);
         this.activeColorPickerPopover = popover;
+
+        this.updateColorPickerContrastWarning(index, normCurrentColor);
 
         // Position popover
         if (triggerEl instanceof HTMLElement) {
@@ -622,6 +836,81 @@ class ClickEditor extends BaseEditor {
         const nativeInput = this.activeColorPickerPopover.querySelector(".annotation-color-picker-popover__native-input");
         if (nativeInput && /^#[0-9a-f]{6}$/i.test(norm)) {
             nativeInput.value = norm;
+        }
+    }
+
+    updateColorPickerContrastWarning(index, currentColor) {
+        if (!this.activeColorPickerPopover) return;
+        const warningEl = this.activeColorPickerPopover.querySelector(".annotation-color-picker-popover__contrast-warning");
+        const ann = this.annotations && this.annotations[index];
+        const points = ann?.points;
+
+        if (!points || points.length < 2) {
+            if (warningEl) {
+                warningEl.classList.add("hidden");
+                warningEl.innerHTML = "";
+            }
+            return;
+        }
+
+        const isClosed = ann.type !== "freehand";
+        const contrast = this.evaluateContourContrast(points, currentColor, isClosed);
+        if (!contrast || !contrast.isLow) {
+            if (warningEl) {
+                warningEl.classList.add("hidden");
+                warningEl.innerHTML = "";
+                const trigger = this.annotationList?.querySelector?.(`.color-picker-trigger[data-annotation-index="${index}"]`);
+                if (trigger instanceof HTMLElement) {
+                    this.positionColorPickerPopover(trigger, this.activeColorPickerPopover);
+                }
+            }
+            return;
+        }
+
+        if (!warningEl) return;
+
+        const warningMsg = wt(
+            "pa.contrast_warning_low",
+            "Низкий контраст с фоном (~{ratio}:1). Контур может сливаться с изображением."
+        ).replace("{ratio}", contrast.ratio);
+
+        warningEl.classList.remove("hidden");
+        warningEl.innerHTML = `
+            <div class="annotation-color-picker-popover__contrast-text">
+                <span class="material-symbols-outlined annotation-color-picker-popover__contrast-icon">warning</span>
+                <span>${warningMsg}</span>
+            </div>
+            <div class="annotation-color-picker-popover__contrast-actions">
+                <button type="button" class="annotation-color-picker-popover__contrast-btn contrast-lighten-btn">
+                    ${wt("pa.contrast_action_lighten", "Осветлить")}
+                </button>
+                <button type="button" class="annotation-color-picker-popover__contrast-btn contrast-darken-btn">
+                    ${wt("pa.contrast_action_darken", "Затемнить")}
+                </button>
+            </div>
+        `;
+
+        const lightenBtn = warningEl.querySelector(".contrast-lighten-btn");
+        lightenBtn?.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const adjusted = this.adjustColorLightness(currentColor, 1);
+            this.setAnnotationColor(index, adjusted);
+            this.updateColorPickerActiveSwatch(adjusted);
+            this.updateColorPickerContrastWarning(index, adjusted);
+        });
+
+        const darkenBtn = warningEl.querySelector(".contrast-darken-btn");
+        darkenBtn?.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const adjusted = this.adjustColorLightness(currentColor, -1);
+            this.setAnnotationColor(index, adjusted);
+            this.updateColorPickerActiveSwatch(adjusted);
+            this.updateColorPickerContrastWarning(index, adjusted);
+        });
+
+        const trigger = this.annotationList?.querySelector?.(`.color-picker-trigger[data-annotation-index="${index}"]`);
+        if (trigger instanceof HTMLElement) {
+            this.positionColorPickerPopover(trigger, this.activeColorPickerPopover);
         }
     }
 
@@ -1185,41 +1474,41 @@ class ClickEditor extends BaseEditor {
         return {
             metadata: {
                 id: "click-onboarding-preview",
-                name: "Демо Click-задание"
+                name: wt("editor_base.demo.click_title", "Демо Click-задание")
             },
             task_data: {
                 id: "click-onboarding-preview",
                 type: "click",
-                name: "Демо Click-задание",
+                name: wt("editor_base.demo.click_title", "Демо Click-задание"),
                 meta: {
                     id: "click-onboarding-preview",
                     module: "onboarding-preview",
                     topic: "click",
-                    title: "Демо Click-задание"
+                    title: wt("editor_base.demo.click_title", "Демо Click-задание")
                 },
                 content: {
-                    prompt: "Отметьте на изображении области, которые пользователь должен найти кликом.",
-                    choice_prompt: "Выберите область на изображении.",
+                    prompt: wt("click_editor.demo.click_prompt", "Отметьте на изображении области, которые пользователь должен найти кликом."),
+                    choice_prompt: wt("click_editor.demo.click_choice_prompt", "Выберите область на изображении."),
                     image: { asset_url: image },
                     required_correct: 1,
                     annotations: [
                         {
                             type: "polygon",
-                            label: "Область 1",
+                            label: wt("editor_base.demo.region_1", "Область 1"),
                             color: "#ef4444",
                             labelVisible: true,
                             points: [[350, 208], [425, 190], [466, 236], [434, 294], [360, 284]]
                         },
                         {
                             type: "polygon",
-                            label: "Область 2",
+                            label: wt("editor_base.demo.region_2", "Область 2"),
                             color: "#22c55e",
                             labelVisible: true,
                             points: [[512, 284], [578, 274], [610, 326], [568, 374], [506, 350]]
                         },
                         {
                             type: "freehand",
-                            label: "Контур",
+                            label: wt("editor_base.demo.contour", "Контур"),
                             color: "#8b5cf6",
                             labelVisible: true,
                             points: [[696, 166], [725, 194], [746, 224], [758, 254], [760, 282], [755, 314], [742, 346], [720, 378], [686, 410], [638, 440]]
@@ -1227,7 +1516,7 @@ class ClickEditor extends BaseEditor {
                     ],
                     additionalInfo: {
                         type: "text",
-                        text: "Дополнительный контекст можно оставить здесь."
+                        text: wt("editor_base.demo.context", "Дополнительный контекст можно оставить здесь.")
                     }
                 },
                 settings: {
@@ -1240,35 +1529,35 @@ class ClickEditor extends BaseEditor {
     createDrawOnboardingPreviewTask() {
         const task = this.createClickOnboardingPreviewTask();
         task.metadata.id = "draw-onboarding-preview";
-        task.metadata.name = "Демо задание «Рисование»";
+        task.metadata.name = wt("editor_base.demo.draw_title", "Демо задание «Рисование»");
         task.task_data.id = "draw-onboarding-preview";
         task.task_data.type = "draw";
-        task.task_data.name = "Демо задание «Рисование»";
+        task.task_data.name = wt("editor_base.demo.draw_title", "Демо задание «Рисование»");
         task.task_data.meta.id = "draw-onboarding-preview";
         task.task_data.meta.topic = "draw";
-        task.task_data.meta.title = "Демо задание «Рисование»";
-        task.task_data.content.prompt = "Найдите красный и зелёный круги, а также отметьте правый контур овала.";
+        task.task_data.meta.title = wt("editor_base.demo.draw_title", "Демо задание «Рисование»");
+        task.task_data.content.prompt = wt("click_editor.demo.draw_prompt", "Найдите красный и зелёный круги, а также отметьте правый контур овала.");
         task.task_data.content.choice_prompt = "";
         task.task_data.content.required_correct = 2;
         task.task_data.settings.success_threshold = 2;
         task.task_data.content.annotations = [
             {
                 type: "polygon",
-                label: "Область 1",
+                label: wt("editor_base.demo.region_1", "Область 1"),
                 color: "#ef4444",
                 labelVisible: true,
                 points: [[350, 208], [425, 190], [466, 236], [434, 294], [360, 284]]
             },
             {
                 type: "polygon",
-                label: "Область 2",
+                label: wt("editor_base.demo.region_2", "Область 2"),
                 color: "#22c55e",
                 labelVisible: true,
                 points: [[512, 284], [578, 274], [610, 326], [568, 374], [506, 350]]
             },
             {
                 type: "freehand",
-                label: "Свободный контур",
+                label: wt("editor_base.demo.freehand_contour", "Свободный контур"),
                 color: "#8b5cf6",
                 labelVisible: true,
                 points: [[696, 166], [725, 194], [746, 224], [758, 254], [760, 282], [755, 314], [742, 346], [720, 378], [686, 410], [638, 440]]
@@ -1276,7 +1565,7 @@ class ClickEditor extends BaseEditor {
         ];
         task.task_data.content.additionalInfo = {
             type: "text",
-            text: "Здесь можно оставить контекст, который поможет автору точнее разметить изображение."
+            text: wt("click_editor.demo.draw_context", "Здесь можно оставить контекст, который поможет автору точнее разметить изображение.")
         };
         return task;
     }
@@ -1444,18 +1733,20 @@ class ClickEditor extends BaseEditor {
         if (!this.task?.task_data) return;
         this.captureClickEditorOnboardingErrorsSnapshot();
         const content = this.ensureTaskContentObject();
-        const text = "Пациенту рекомендовано принимать препарат три раза в неделю после еды.";
-        const errorStart = text.indexOf("в неделю");
-        const errorEnd = errorStart + "в неделю".length;
-        const referenceText = "Пациенту рекомендовано принимать препарат три раза в день после еды.";
-        const referenceStart = referenceText.indexOf("в день");
-        const referenceEnd = referenceStart + "в день".length;
+        const text = wt("click_editor.demo.prescription_error", "Пациенту рекомендовано принимать препарат три раза в неделю после еды.");
+        const errorPhrase = wt("click_editor.demo.error_phrase", "в неделю");
+        const errorStart = text.indexOf(errorPhrase);
+        const errorEnd = errorStart + errorPhrase.length;
+        const referenceText = wt("click_editor.demo.prescription_ref", "Пациенту рекомендовано принимать препарат три раза в день после еды.");
+        const refPhrase = wt("click_editor.demo.ref_phrase", "в день");
+        const referenceStart = referenceText.indexOf(refPhrase);
+        const referenceEnd = referenceStart + refPhrase.length;
         content.mode = "text_errors";
         content.prompt = getDEFAULT_ERRORS_PROMPT();
         content.choice_prompt = getDEFAULT_CHOICE_PROMPT();
         content.text = text;
         content.error_spans = errorStart >= 0
-            ? [{ start: errorStart, end: errorEnd, label: "Неверная частота приёма" }]
+            ? [{ start: errorStart, end: errorEnd, label: wt("click_editor.demo.error_label", "Неверная частота приёма") }]
             : [];
         content.reference_text = referenceText;
         content.reference_spans = referenceStart >= 0
@@ -1464,12 +1755,12 @@ class ClickEditor extends BaseEditor {
         content.options = [
             {
                 id: "click_onboarding_choice_correct",
-                text: "Пациенту рекомендовано принимать препарат три раза в день после еды.",
+                text: referenceText,
                 is_correct: true
             },
             {
                 id: "click_onboarding_choice_wrong",
-                text: "Пациенту рекомендовано принимать препарат три раза в неделю после еды.",
+                text: text,
                 is_correct: false
             }
         ];
@@ -1561,7 +1852,7 @@ class ClickEditor extends BaseEditor {
             this.renderErrorsHighlightLayer();
             this.updateErrorsTotalCount();
             if (this.errorsTextEditor && this.errorDetection.text) {
-                const selectionText = "в неделю";
+                const selectionText = wt("click_editor.demo.error_phrase", "в неделю");
                 const selectionStart = this.errorDetection.text.indexOf(selectionText);
                 if (selectionStart >= 0 && typeof this.errorsTextEditor.setSelectionRange === "function") {
                     const selectionEnd = selectionStart + selectionText.length;
@@ -1651,7 +1942,7 @@ class ClickEditor extends BaseEditor {
         if (!Array.isArray(this.annotations) || !this.annotations.length) return;
         const preferredIndex = this.annotations.findIndex((annotation) => {
             const label = String(annotation?.label || "").trim().toLowerCase();
-            return label === "область 1";
+            return label === wt("editor_base.demo.region_1", "Область 1").toLowerCase();
         });
         const index = preferredIndex >= 0 ? preferredIndex : 0;
         this.selectAnnotation(index);
@@ -3842,7 +4133,7 @@ class ClickEditor extends BaseEditor {
                 if (sanitizedPoints.length < 3) return null;
                 return {
                     type: "polygon",
-                    label: region.label || region.name || `Область ${index + 1}`,
+                    label: region.label || region.name || wt("click_editor.region_n", "Область {n}").replace("{n}", index + 1),
                     points: sanitizedPoints,
                     color: region.color,
                     hidden: region.hidden ?? false
@@ -3879,7 +4170,7 @@ class ClickEditor extends BaseEditor {
                 const color = ann.color || this.pickColor(index);
                 return {
                     type: annType,
-                    label: ann.label || (annType === "freehand" ? `Линия ${index + 1}` : `Область ${index + 1}`),
+                    label: ann.label || (annType === "freehand" ? wt("click_editor.line_n", "Линия {n}").replace("{n}", index + 1) : wt("click_editor.region_n", "Область {n}").replace("{n}", index + 1)),
                     points: sanitizedPoints,
                     color,
                     hidden: ann.hidden ?? false,
@@ -3965,6 +4256,7 @@ class ClickEditor extends BaseEditor {
             this.imagePlaceholder?.classList.add("hidden");
             this.img.classList.remove("hidden");
             this.img.onload = () => {
+                this._contrastMap = null;
                 this.captureBaseImageMetrics({ forceBase: true });
                 this.resetViewport();
                 this.renderAnnotations();
@@ -4867,14 +5159,19 @@ class ClickEditor extends BaseEditor {
             return;
         }
 
+        let color = this.pickColor(this.annotations.length);
+        if (this.isContourContrastLow(this.currentPolygonPoints, color, true)) {
+            color = this.generateRandomContourColor(-1, this.currentPolygonPoints);
+        }
+
         const polygon = {
             type: "polygon",
-            label: this.generateAnnotationLabel("Контур", "polygon"),
+            label: this.generateAnnotationLabel(wt("click_editor.contour", "Контур"), "polygon"),
             points: this.currentPolygonPoints.map(([x, y]) => [
                 Number(x.toFixed(2)),
                 Number(y.toFixed(2))
             ]),
-            color: this.pickColor(this.annotations.length),
+            color,
             labelVisible: false
         };
 
@@ -4928,14 +5225,19 @@ class ClickEditor extends BaseEditor {
             return;
         }
 
+        let color = this.pickColor(this.annotations.length);
+        if (this.isContourContrastLow(this.freehandPoints, color, false)) {
+            color = this.generateRandomContourColor(-1, this.freehandPoints);
+        }
+
         const line = {
             type: "freehand",
-            label: this.generateAnnotationLabel("Линия", "freehand"),
+            label: this.generateAnnotationLabel(wt("click_editor.line", "Линия"), "freehand"),
             points: this.freehandPoints.map(([x, y]) => [
                 Number(x.toFixed(2)),
                 Number(y.toFixed(2))
             ]),
-            color: this.pickColor(this.annotations.length),
+            color,
             labelVisible: false
         };
 
@@ -6179,6 +6481,7 @@ class ClickEditor extends BaseEditor {
         this.displayImageWidth = 0;
         this.displayImageHeight = 0;
         this.hasCenteredImage = false;
+        this._contrastMap = null;
     }
 
     applyEmptyCanvasStageSize() {
