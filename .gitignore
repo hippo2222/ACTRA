@@ -94,13 +94,16 @@ data/catalog/
 data/complexes/complexes.json
 data/complexes/history/
 data/complexes/*.autosave.json
+data/complexes/*.json
 data/complexes/theories/
 data/microcards/
 data/modules/test_*/
+!data/modules/test_tsentr_teorii/
 data/import_journal.json
 data/import_manifests/
 data/feedback/
 data/hosted_identity_migration_report.json
+data/system/update_check_cache.json
 
 # AI config with API keys — never commit
 data/ai_config.json
@@ -113,6 +116,7 @@ tmp_*.html
 
 # --- Local-only artifacts (never commit) ---
 # Exported complexes pulled from prod for local testing
+*.zip
 export_complexes_*/
 export_complexes_*.zip
 # Nested agent worktrees and agent tooling caches
@@ -128,3 +132,5 @@ github_deploy_key
 .impeccable/
 start_server_test.py
 scratch_visual_test.mjs
+misc/
+docs/ACTRA_STATUS_AND_STRATEGY.md
