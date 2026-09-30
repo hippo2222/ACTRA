@@ -812,7 +812,7 @@
                     <div class="flex items-center gap-3 min-w-0">
                         <button id="theory-back-btn" type="button"
                             class="btn-secondary inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-semibold transition-all hover:bg-surface-2"
-                            title="Вернуться назад">
+                            data-i18n-title="the.k042" title="Вернуться назад">
                             <span class="material-symbols-outlined text-[18px]">arrow_back</span>
                             <span id="theory-back-btn-label" data-i18n="the.k004">Назад</span>
                         </button>
@@ -827,8 +827,7 @@
                         <div class="theory-header-actions">
                             <button id="theory-sidebar-toggle-btn" type="button"
                                 class="btn-secondary inline-flex items-center justify-center rounded-xl p-2.5 text-sm font-semibold transition-all hover:bg-surface-2"
-                                title="Свернуть / развернуть библиотеку"
-                                aria-label="Свернуть / развернуть библиотеку"
+                                data-i18n-title="the.k043" data-i18n-aria="the.k043" title="Свернуть / развернуть библиотеку" aria-label="Свернуть / развернуть библиотеку"
                                 aria-expanded="true">
                                 <span class="material-symbols-outlined text-[20px]">view_sidebar</span>
                             </button>
@@ -895,7 +894,7 @@
                             placeholder="Поиск по названию или ID" />
                     </div>
                     <div class="mt-2.5 flex items-center justify-between text-xs text-text-secondary">
-                        <span id="theory-library-count">0 теорий</span>
+                        <span id="theory-library-count" data-i18n="the.k044">0 теорий</span>
                         <span data-i18n="the.k012">Личная библиотека</span>
                     </div>
                     <div id="theory-library-list" class="theory-library-list theory-scroll mt-3 flex flex-col gap-2 overflow-y-auto pr-1 min-h-0" data-onboarding-target="theory-editor-library-list">
@@ -935,41 +934,41 @@
                         <!-- Sticky Toolbar -->
                         <div id="theory-toolbar" class="theory-toolbar-shell sticky top-0 z-40 flex flex-wrap items-center gap-1.5 px-3 py-2.5 mt-1 backdrop-blur-md" data-onboarding-target="theory-editor-toolbar">
                             <div id="theory-text-controls" class="inline-flex flex-wrap items-center gap-1.5" data-onboarding-target="theory-editor-text-controls">
-                                <button id="theory-bold" type="button" class="theory-toolbar-btn" data-i18n-title="the.k023" title="Жирный (Ctrl+B)" aria-label="Жирный" aria-pressed="false">
+                                <button id="theory-bold" type="button" class="theory-toolbar-btn" data-i18n-title="the.k023" data-i18n-aria="the.k045" title="Жирный (Ctrl+B)" aria-label="Жирный" aria-pressed="false">
                                     <span class="material-symbols-outlined text-[18px]">format_bold</span>
                                 </button>
-                                <button id="theory-italic" type="button" class="theory-toolbar-btn" data-i18n-title="the.k024" title="Курсив (Ctrl+I)" aria-label="Курсив" aria-pressed="false">
+                                <button id="theory-italic" type="button" class="theory-toolbar-btn" data-i18n-title="the.k024" data-i18n-aria="the.k046" title="Курсив (Ctrl+I)" aria-label="Курсив" aria-pressed="false">
                                     <span class="material-symbols-outlined text-[18px]">format_italic</span>
                                 </button>
-                                <button id="theory-underline" type="button" class="theory-toolbar-btn" data-i18n-title="the.k025" title="Подчёркнутый (Ctrl+U)" aria-label="Подчёркнутый" aria-pressed="false">
+                                <button id="theory-underline" type="button" class="theory-toolbar-btn" data-i18n-title="the.k025" data-i18n-aria="the.k047" title="Подчёркнутый (Ctrl+U)" aria-label="Подчёркнутый" aria-pressed="false">
                                     <span class="material-symbols-outlined text-[18px]">format_underlined</span>
                                 </button>
                                 <span class="theory-toolbar-sep"></span>
-                                <button id="theory-h1" type="button" class="theory-toolbar-btn theory-toolbar-btn--text" data-i18n-title="the.k026" title="Заголовок 1" aria-label="Заголовок 1" aria-pressed="false">H1</button>
-                                <button id="theory-h2" type="button" class="theory-toolbar-btn theory-toolbar-btn--text" data-i18n-title="the.k027" title="Заголовок 2" aria-label="Заголовок 2" aria-pressed="false">H2</button>
+                                <button id="theory-h1" type="button" class="theory-toolbar-btn theory-toolbar-btn--text" data-i18n-title="the.k026" data-i18n-aria="the.k026" title="Заголовок 1" aria-label="Заголовок 1" aria-pressed="false">H1</button>
+                                <button id="theory-h2" type="button" class="theory-toolbar-btn theory-toolbar-btn--text" data-i18n-title="the.k027" data-i18n-aria="the.k027" title="Заголовок 2" aria-label="Заголовок 2" aria-pressed="false">H2</button>
                                 <span class="theory-toolbar-sep"></span>
-                                <button id="theory-ul" type="button" class="theory-toolbar-btn" data-i18n-title="the.k028" title="Маркированный список" aria-label="Маркированный список" aria-pressed="false">
+                                <button id="theory-ul" type="button" class="theory-toolbar-btn" data-i18n-title="the.k028" data-i18n-aria="the.k028" title="Маркированный список" aria-label="Маркированный список" aria-pressed="false">
                                     <span class="material-symbols-outlined text-[18px]">format_list_bulleted</span>
                                 </button>
-                                <button id="theory-ol" type="button" class="theory-toolbar-btn" data-i18n-title="the.k029" title="Нумерованный список" aria-label="Нумерованный список" aria-pressed="false">
+                                <button id="theory-ol" type="button" class="theory-toolbar-btn" data-i18n-title="the.k029" data-i18n-aria="the.k029" title="Нумерованный список" aria-label="Нумерованный список" aria-pressed="false">
                                     <span class="material-symbols-outlined text-[18px]">format_list_numbered</span>
                                 </button>
                                 <span class="theory-toolbar-sep"></span>
-                                <button id="theory-align-left" type="button" class="theory-toolbar-btn" data-i18n-title="the.k030" title="По левому краю" aria-label="По левому краю" aria-pressed="false">
+                                <button id="theory-align-left" type="button" class="theory-toolbar-btn" data-i18n-title="the.k030" data-i18n-aria="the.k030" title="По левому краю" aria-label="По левому краю" aria-pressed="false">
                                     <span class="material-symbols-outlined text-[18px]">format_align_left</span>
                                 </button>
-                                <button id="theory-align-center" type="button" class="theory-toolbar-btn" data-i18n-title="the.k031" title="По центру" aria-label="По центру" aria-pressed="false">
+                                <button id="theory-align-center" type="button" class="theory-toolbar-btn" data-i18n-title="the.k031" data-i18n-aria="the.k031" title="По центру" aria-label="По центру" aria-pressed="false">
                                     <span class="material-symbols-outlined text-[18px]">format_align_center</span>
                                 </button>
-                                <button id="theory-align-right" type="button" class="theory-toolbar-btn" data-i18n-title="the.k032" title="По правому краю" aria-label="По правому краю" aria-pressed="false">
+                                <button id="theory-align-right" type="button" class="theory-toolbar-btn" data-i18n-title="the.k032" data-i18n-aria="the.k032" title="По правому краю" aria-label="По правому краю" aria-pressed="false">
                                     <span class="material-symbols-outlined text-[18px]">format_align_right</span>
                                 </button>
-                                <button id="theory-align-justify" type="button" class="theory-toolbar-btn" data-i18n-title="the.k033" title="По ширине" aria-label="По ширине" aria-pressed="false">
+                                <button id="theory-align-justify" type="button" class="theory-toolbar-btn" data-i18n-title="the.k033" data-i18n-aria="the.k033" title="По ширине" aria-label="По ширине" aria-pressed="false">
                                     <span class="material-symbols-outlined text-[18px]">format_align_justify</span>
                                 </button>
                                 <span class="theory-toolbar-sep"></span>
                                 <div class="relative" id="theory-color-picker-host">
-                                    <button id="theory-color-btn" type="button" class="theory-toolbar-btn relative" data-i18n-title="the.k034" title="Цвет текста" aria-label="Цвет текста">
+                                    <button id="theory-color-btn" type="button" class="theory-toolbar-btn relative" data-i18n-title="the.k034" data-i18n-aria="the.k034" title="Цвет текста" aria-label="Цвет текста">
                                         <span class="material-symbols-outlined text-[18px]">format_color_text</span>
                                         <span id="theory-color-indicator" style="position:absolute;bottom:3px;left:5px;right:5px;height:3px;border-radius:2px;background:var(--color-text-main)"></span>
                                     </button>
@@ -978,7 +977,7 @@
                                 </div>
                                 <span class="theory-toolbar-sep"></span>
                             </div>
-                            <button id="theory-image-btn" type="button" class="theory-toolbar-btn" data-i18n-title="the.k035" title="Добавить изображение" aria-label="Добавить изображение" data-onboarding-target="theory-editor-image-action">
+                            <button id="theory-image-btn" type="button" class="theory-toolbar-btn" data-i18n-title="the.k035" data-i18n-aria="the.k035" title="Добавить изображение" aria-label="Добавить изображение" data-onboarding-target="theory-editor-image-action">
                                 <span class="material-symbols-outlined text-[18px]">add_photo_alternate</span>
                             </button>
                             <input id="theory-image-input" type="file" accept=".png,.jpg,.jpeg,.gif,.webp,.svg" class="hidden" />
@@ -991,48 +990,48 @@
                                     <span class="text-xs text-text-muted" data-i18n="the.k018">Размер:</span>
                                     <input id="theory-image-width-slider" type="range" min="10" max="100" value="100" 
                                         class="w-20 h-1.5 bg-border-subtle rounded-lg appearance-none cursor-pointer"
-                                        style="accent-color: var(--color-primary);" aria-label="Размер изображения" />
+                                        style="accent-color: var(--color-primary);" data-i18n-aria="the.k048" aria-label="Размер изображения" />
                                     <span id="theory-image-width-label" class="text-xs font-medium text-text-secondary w-8">100%</span>
                                 </div>
                                 
                                 <span class="theory-toolbar-sep"></span>
                                 
                                 <!-- Alignment buttons -->
-                                <button type="button" class="theory-toolbar-btn theory-image-align-btn" data-align="left" data-i18n-title="the.k030" title="По левому краю" aria-label="Изображение по левому краю">
+                                <button type="button" class="theory-toolbar-btn theory-image-align-btn" data-align="left" data-i18n-title="the.k030" data-i18n-aria="the.k049" title="По левому краю" aria-label="Изображение по левому краю">
                                     <span class="material-symbols-outlined text-[18px]">format_align_left</span>
                                 </button>
-                                <button type="button" class="theory-toolbar-btn theory-image-align-btn" data-align="center" data-i18n-title="the.k031" title="По центру" aria-label="Изображение по центру">
+                                <button type="button" class="theory-toolbar-btn theory-image-align-btn" data-align="center" data-i18n-title="the.k031" data-i18n-aria="the.k050" title="По центру" aria-label="Изображение по центру">
                                     <span class="material-symbols-outlined text-[18px]">format_align_center</span>
                                 </button>
-                                <button type="button" class="theory-toolbar-btn theory-image-align-btn" data-align="right" data-i18n-title="the.k032" title="По правому краю" aria-label="Изображение по правому краю">
+                                <button type="button" class="theory-toolbar-btn theory-image-align-btn" data-align="right" data-i18n-title="the.k032" data-i18n-aria="the.k051" title="По правому краю" aria-label="Изображение по правому краю">
                                     <span class="material-symbols-outlined text-[18px]">format_align_right</span>
                                 </button>
                                 
                                 <span class="theory-toolbar-sep"></span>
                                 
                                 <!-- Float buttons -->
-                                <button type="button" class="theory-toolbar-btn theory-image-float-btn" data-float="none" data-i18n-title="the.k036" title="Сверху и снизу" aria-label="Без обтекания">
+                                <button type="button" class="theory-toolbar-btn theory-image-float-btn" data-float="none" data-i18n-title="the.k036" data-i18n-aria="the.k052" title="Сверху и снизу" aria-label="Без обтекания">
                                     <span class="material-symbols-outlined text-[18px]">view_agenda</span>
                                 </button>
-                                <button type="button" class="theory-toolbar-btn theory-image-float-btn" data-float="left" data-i18n-title="the.k037" title="Обтекание справа" aria-label="Обтекание справа">
+                                <button type="button" class="theory-toolbar-btn theory-image-float-btn" data-float="left" data-i18n-title="the.k037" data-i18n-aria="the.k037" title="Обтекание справа" aria-label="Обтекание справа">
                                     <span class="material-symbols-outlined text-[18px]">view_sidebar</span>
                                 </button>
-                                <button type="button" class="theory-toolbar-btn theory-image-float-btn" data-float="right" data-i18n-title="the.k038" title="Обтекание слева" aria-label="Обтекание слева">
+                                <button type="button" class="theory-toolbar-btn theory-image-float-btn" data-float="right" data-i18n-title="the.k038" data-i18n-aria="the.k038" title="Обтекание слева" aria-label="Обтекание слева">
                                     <span class="material-symbols-outlined text-[18px]" style="transform: scaleX(-1);">view_sidebar</span>
                                 </button>
                                 
                                 <span class="theory-toolbar-sep"></span>
                                 
                                 <!-- Rotation buttons -->
-                                <button type="button" id="theory-image-rotate-left" class="theory-toolbar-btn" data-i18n-title="the.k039" title="Повернуть влево" aria-label="Повернуть влево">
+                                <button type="button" id="theory-image-rotate-left" class="theory-toolbar-btn" data-i18n-title="the.k039" data-i18n-aria="the.k039" title="Повернуть влево" aria-label="Повернуть влево">
                                     <span class="material-symbols-outlined text-[18px]">rotate_left</span>
                                 </button>
-                                <button type="button" id="theory-image-rotate-right" class="theory-toolbar-btn" data-i18n-title="the.k040" title="Повернуть вправо" aria-label="Повернуть вправо">
+                                <button type="button" id="theory-image-rotate-right" class="theory-toolbar-btn" data-i18n-title="the.k040" data-i18n-aria="the.k040" title="Повернуть вправо" aria-label="Повернуть вправо">
                                     <span class="material-symbols-outlined text-[18px]">rotate_right</span>
                                 </button>
                                 
                                 <!-- Flip button -->
-                                <button type="button" id="theory-image-flip" class="theory-toolbar-btn" data-i18n-title="the.k041" title="Отразить по горизонтали" aria-label="Отразить по горизонтали">
+                                <button type="button" id="theory-image-flip" class="theory-toolbar-btn" data-i18n-title="the.k041" data-i18n-aria="the.k041" title="Отразить по горизонтали" aria-label="Отразить по горизонтали">
                                     <span class="material-symbols-outlined text-[18px]">flip</span>
                                 </button>
                             </div>

@@ -2,6 +2,15 @@
  * ACTRA Image Labeling Editor
  */
 
+function wt(key, fallback) {
+    if (typeof window !== 'undefined' && typeof window.wt === 'function') return window.wt(key, fallback);
+    if (typeof window !== 'undefined' && window.i18n && typeof window.i18n.t === 'function') {
+        const v = window.i18n.t(key);
+        return v !== key ? v : fallback;
+    }
+    return fallback;
+}
+
 class ImageLabelingEditor extends BaseEditor {
     constructor() {
         super();
@@ -122,17 +131,17 @@ class ImageLabelingEditor extends BaseEditor {
         return {
             metadata: {
                 id: "task_6b008145",
-                name: "Проверка"
+                name: wt('editor_base.demo.check_title', 'Проверка')
             },
             task_data: {
                 id: "task_6b008145",
                 type: "image_labeling",
-                name: "Проверка",
+                name: wt('editor_base.demo.check_title', 'Проверка'),
                 meta: {
                     id: "task_6b008145",
                     module: "proverka_skhem",
                     topic: "proverochka",
-                    title: "Проверка"
+                    title: wt('editor_base.demo.check_title', 'Проверка')
                 },
                 content: {
                     prompt: "Name the bones of a leg",

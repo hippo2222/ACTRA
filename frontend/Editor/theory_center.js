@@ -64,30 +64,30 @@
     const now = new Date().toISOString();
     const owner = {
       created_by_user_id: 'demo-user',
-      created_by_user_name: 'Иванов А.П.',
+      created_by_user_name: wt('tc.k221', 'Иванов А.П.'),
       ownership: {
         created_by_user_id: 'demo-user',
-        created_by_user_name: 'Иванов А.П.',
+        created_by_user_name: wt('tc.k221', 'Иванов А.П.'),
         is_owned_by_current_user: true,
       },
     };
     const primaryTheory = {
       id: 'theory-radio-wave-basics',
-      title: 'Радиофизика: электромагнитные волны',
+      title: wt('tc.k222', 'Радиофизика: электромагнитные волны'),
       version: now,
       updated_at: now,
       has_content: true,
       image_count: 3,
       usage_topics: 2,
       usage_complexes: 1,
-      linked_complex_names: ['Короткий комплекс по радиоволнам'],
+      linked_complex_names: [wt('tc.k223', 'Короткий комплекс по радиоволнам')],
       catalog_visibility: 'private',
       is_onboarding_primary: true,
       ...owner,
     };
     const orphanTheory = {
       id: 'theory-signal-noise',
-      title: 'Шум и отношение сигнал/шум',
+      title: wt('tc.k224', 'Шум и отношение сигнал/шум'),
       version: now,
       updated_at: now,
       has_content: false,
@@ -109,20 +109,20 @@
       },
       filters: {
         modules: [
-          { id: 'radio-basics', name: 'Радиофизика' },
-          { id: 'signals', name: 'Сигналы и тракты' },
+          { id: 'radio-basics', name: wt('tc.k225', 'Радиофизика') },
+          { id: 'signals', name: wt('tc.k226', 'Сигналы и тракты') },
         ],
         topic_states: [
-          { id: 'all', label: 'Все состояния' },
-          { id: 'missing', label: 'Без теории' },
-          { id: 'single', label: 'Есть теория' },
+          { id: 'all', label: wt('tc.k227', 'Все состояния') },
+          { id: 'missing', label: wt('tc.k228', 'Без теории') },
+          { id: 'single', label: wt('tc.k229', 'Есть теория') },
         ],
         complex_states: [
-          { id: 'all', label: 'Все состояния' },
-          { id: 'none', label: 'Без теории' },
-          { id: 'single', label: 'Одна теория' },
-          { id: 'composite', label: 'Подборка теорий' },
-          { id: 'own', label: 'Своя теория' },
+          { id: 'all', label: wt('tc.k227', 'Все состояния') },
+          { id: 'none', label: wt('tc.k228', 'Без теории') },
+          { id: 'single', label: wt('tc.k230', 'Одна теория') },
+          { id: 'composite', label: wt('tc.k231', 'Подборка теорий') },
+          { id: 'own', label: wt('tc.k232', 'Своя теория') },
         ],
       },
       theories: [primaryTheory, orphanTheory],
@@ -130,12 +130,12 @@
         {
           library_entry_id: 'linked-theory-polarization',
           id: 'published-polarization',
-          title: 'Поляризация сигнала: базовая теория',
+          title: wt('tc.k233', 'Поляризация сигнала: базовая теория'),
           updated_at: now,
           is_linked_publication: true,
           access_state: 'active',
           owner_user_id: 'catalog-author',
-          owner_display_name: 'Смирнова Е.В.',
+          owner_display_name: wt('tc.k234', 'Смирнова Е.В.'),
           image_count: 2,
         },
       ],
@@ -143,39 +143,39 @@
       topics: [
         {
           module_id: 'radio-basics',
-          module_name: 'Радиофизика',
+          module_name: wt('tc.k225', 'Радиофизика'),
           topic_id: 'wave-frequency',
-          topic_name: 'Частота и длина волны',
+          topic_name: wt('tc.k235', 'Частота и длина волны'),
           has_theory: true,
           theory_id: primaryTheory.id,
           theory_title: primaryTheory.title,
           theory_state: 'single',
-          theory_state_label: 'Есть теория',
+          theory_state_label: wt('tc.k229', 'Есть теория'),
           linked_complexes_count: 1,
           theory_has_content: true,
           theory_image_count: 3,
         },
         {
           module_id: 'signals',
-          module_name: 'Сигналы и тракты',
+          module_name: wt('tc.k226', 'Сигналы и тракты'),
           topic_id: 'signal-noise',
-          topic_name: 'Шум в канале',
+          topic_name: wt('tc.k236', 'Шум в канале'),
           has_theory: false,
           theory_state: 'missing',
-          theory_state_label: 'Без теории',
+          theory_state_label: wt('tc.k228', 'Без теории'),
           linked_complexes_count: 0,
         },
       ],
       complexes: [
         {
           complex_id: 'complex-radio-short',
-          complex_name: 'Короткий комплекс по радиоволнам',
+          complex_name: wt('tc.k223', 'Короткий комплекс по радиоволнам'),
           module_ids: ['radio-basics'],
-          module_names: ['Радиофизика'],
+          module_names: [wt('tc.k225', 'Радиофизика')],
           theory_state: 'single',
-          theory_state_label: 'Одна теория',
+          theory_state_label: wt('tc.k230', 'Одна теория'),
           theory_source: 'topic',
-          theory_source_label: 'Из тем',
+          theory_source_label: wt('tc.k237', 'Из тем'),
           task_count: 12,
           theory_items: [
             { theory_id: primaryTheory.id, title_cache: primaryTheory.title },
@@ -2412,7 +2412,7 @@
 
   function renderTheoryItemsStatusText(row) {
     const sl = row.sync_label || '';
-    if (sl.includes('больше не задана') || sl.includes('not set')) {
+    if (/больше не задана/.test(sl) || sl.includes('not set')) {
       return wt('tc.k138', 'Ни одна из тем комплекса больше не имеет теории. Синхронизация удалит устаревшую теорию.');
     }
     return wt('tc.k139', 'Теория ещё не назначена. Откройте настройки и выберите или создайте теорию.');

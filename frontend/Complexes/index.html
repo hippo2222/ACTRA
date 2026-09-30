@@ -84,20 +84,20 @@
                       aria-label="Поиск по комплексам"
                       data-i18n-placeholder="complexes.search_placeholder"
                       data-i18n-aria="complexes.search_aria">
-                    <button id="complex-search-clear" type="button" class="cx-search-clear-btn" aria-label="Очистить поиск" title="Очистить поиск (Esc)" hidden>
+                    <button id="complex-search-clear" type="button" class="cx-search-clear-btn" aria-label="Очистить поиск" title="Очистить поиск (Esc)" data-i18n-aria="complexes.search_clear_aria" data-i18n-title="complexes.search_clear_title" hidden>
                       <span class="material-symbols-outlined text-[16px]">close</span>
                     </button>
                   </div>
 
                   <div class="cx-controls-top-bar__actions">
-                    <div class="cx-sort-select-wrapper" id="complex-sort-dropdown" title="Сортировка комплексов">
-                      <button id="complex-sort-trigger" type="button" class="cx-sort-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="Сортировка комплексов">
+                    <div class="cx-sort-select-wrapper" id="complex-sort-dropdown" title="Сортировка комплексов" data-i18n-title="complexes.sort_wrapper_title">
+                      <button id="complex-sort-trigger" type="button" class="cx-sort-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="Сортировка комплексов" data-i18n-aria="complexes.sort_trigger_aria">
                         <span class="material-symbols-outlined cx-sort-icon" aria-hidden="true">swap_vert</span>
                         <span id="complex-sort-selected-label" class="cx-sort-selected-label" data-i18n="complexes.sort_name_asc">По названию (А → Я)</span>
                         <span class="material-symbols-outlined cx-sort-select-arrow" aria-hidden="true">expand_more</span>
                       </button>
 
-                      <div id="complex-sort-menu" class="cx-sort-menu" role="listbox" aria-label="Параметры сортировки" hidden>
+                      <div id="complex-sort-menu" class="cx-sort-menu" role="listbox" aria-label="Параметры сортировки" data-i18n-aria="complexes.sort_menu_aria" hidden>
                         <button type="button" class="cx-sort-menu-item is-selected" role="option" data-sort-value="name-asc" aria-selected="true">
                           <span class="material-symbols-outlined cx-sort-item-icon" aria-hidden="true">sort_by_alpha</span>
                           <span class="cx-sort-item-text" data-i18n="complexes.sort_name_asc">По названию (А → Я)</span>
@@ -216,7 +216,7 @@
                     <p class="cx-card-description text-[15px] font-normal" data-i18n="complexes.card_demo_desc">Учебная карточка показывает основные состояния комплекса: сохранённая сессия, прогресс, связанная теория, источник и действия.</p>
                     <div class="cx-card-meta-stack">
                       <div class="cx-card-inline-meta">
-                        <span><span data-i18n="complexes.paused_at_label">Пауза</span>: сегодня, 18:40</span>
+                        <span><span data-i18n="complexes.paused_at_label">Пауза</span>: <span data-i18n="complexes.demo_paused_time">сегодня, 18:40</span></span>
                         <span class="inline-flex items-center gap-2 whitespace-nowrap">
                           <span><span data-i18n="complexes.progress_label">Прогресс</span> 4/12</span>
                           <span class="h-1.5 w-24 shrink-0 overflow-hidden rounded-full bg-bg-secondary">
@@ -224,7 +224,7 @@
                           </span>
                         </span>
                       </div>
-                      <p class="cx-card-inline-meta"><span><span data-i18n="complexes.total_tasks">Всего заданий</span>: <strong>12</strong></span><span class="cx-meta-divider">•</span><span><span data-i18n="complexes.adaptive_label">Адаптивность</span>: <strong>Вкл</strong></span></p>
+                      <p class="cx-card-inline-meta"><span><span data-i18n="complexes.total_tasks">Всего заданий</span>: <strong>12</strong></span><span class="cx-meta-divider">•</span><span><span data-i18n="complexes.adaptive_label">Адаптивность</span>: <strong data-i18n="complexes.adaptive_on">Вкл</strong></span></p>
                     </div>
                   </div>
                   <div class="cx-card-actions">

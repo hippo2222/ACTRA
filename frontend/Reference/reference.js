@@ -16,16 +16,6 @@
         'practice',
         'stats',
     ];
-    const CATEGORY_LABELS = {
-        'intro':    { ru: 'Знакомимся с проектом', en: 'Getting started', uk: 'Знайомимося з проєктом' },
-        'find':     { ru: 'Находим материалы', en: 'Finding materials', uk: 'Шукаємо матеріали' },
-        'create':   { ru: 'Создаем задания', en: 'Creating tasks', uk: 'Створюємо завдання' },
-        'assemble': { ru: 'Объединяем задания в комплексы', en: 'Assembling complexes', uk: 'Об\'єднуємо завдання в комплекси' },
-        'theory':   { ru: 'Работаем с теорией', en: 'Working with theory', uk: 'Працюємо з теорією' },
-        'practice': { ru: 'Проходим и повторяем', en: 'Practising and reviewing', uk: 'Проходимо і повторюємо' },
-        'stats':    { ru: 'Смотрим статистику', en: 'Viewing statistics', uk: 'Переглядаємо статистику' },
-    };
-
     const CATEGORY_KEYS = {
         'intro': 'reference.cat_intro',
         'find': 'reference.cat_find',
@@ -37,10 +27,16 @@
     };
 
     function translateCategory(category) {
-        const labels = CATEGORY_LABELS[category];
-        if (!labels) return category;
-        const key = CATEGORY_KEYS[category];
-        return key ? wt(key, labels.ru) : labels.ru;
+        switch (category) {
+            case 'intro': return wt('reference.cat_intro', 'Знакомимся с проектом');
+            case 'find': return wt('reference.cat_find', 'Находим материалы');
+            case 'create': return wt('reference.cat_create', 'Создаем задания');
+            case 'assemble': return wt('reference.cat_assemble', 'Объединяем задания в комплексы');
+            case 'theory': return wt('reference.cat_theory', 'Работаем с теорией');
+            case 'practice': return wt('reference.cat_practice', 'Проходим и повторяем');
+            case 'stats': return wt('reference.cat_stats', 'Смотрим статистику');
+            default: return category;
+        }
     }
 
     const PREVIEW_VIEWPORT_WIDTH = 1440;

@@ -323,7 +323,7 @@
         // Topic gate when moving from Step 1 to Step 2
         if (stepNumber >= 2 && !StudioState.selectedTopicId) {
             openTopicModal();
-            showToast('Пожалуйста, выберите тему курса для добавления заданий', 'warning');
+            showToast(t('studio.toast.select_topic_first', 'Пожалуйста, выберите тему курса для добавления заданий'), 'warning');
             return;
         }
 
@@ -742,7 +742,7 @@
 
                     btn.innerHTML = `
                         <span class="truncate">${escapeHtml(top.name || top.title || top.id)}</span>
-                        <span class="text-[11px] text-text-muted ml-2 shrink-0">${(top.tasks && top.tasks.length) || 0} зад.</span>
+                        <span class="text-[11px] text-text-muted ml-2 shrink-0">${(top.tasks && top.tasks.length) || 0} ${t('studio.card.tasks_abbr', 'зад.')}</span>
                     `;
 
                     btn.addEventListener('click', () => {
@@ -753,7 +753,7 @@
 
                         updateTopicDisplay();
                         closeTopicModal();
-                        showToast(`Выбрана тема: ${StudioState.selectedTopicName}`, 'success');
+                        showToast(t('studio.toast.topic_selected', 'Выбрана тема: {topic}').replace('{topic}', StudioState.selectedTopicName), 'success');
                         markDirty();
                     });
 
@@ -970,11 +970,11 @@
     async function parseAnalysisResponse() {
         const raw = (DOM.analysisResponseInput ? DOM.analysisResponseInput.value : '').trim();
         if (!raw) {
-            showToast('Пожалуйста, вставьте текст ответа нейросети', 'warning');
+            showToast(t('studio.toast.paste_response_first', 'Пожалуйста, вставьте текст ответа нейросети'), 'warning');
             return;
         }
 
-        showToast('Разбор структуры материала...', 'info');
+        showToast(t('studio.toast.parsing_structure', 'Разбор структуры материала...'), 'info');
 
         try {
             const res = await fetch('/api/editor/import/parse-analysis', {
@@ -985,7 +985,7 @@
 
             const data = await res.json();
             if (!res.ok || !data.ok) {
-                showToast(data.message || 'Ошибка парсинга ответа анализа', 'error');
+                showToast(data.message || t('studio.toast.analysis_parse_error', 'Ошибка парсинга ответа анализа'), 'error');
                 return;
             }
 
@@ -996,11 +996,11 @@
                 DOM.btnProceedToStep2.disabled = false;
             }
 
-            showToast('Структура материала успешно разобрана!', 'success');
+            showToast(t('studio.toast.analysis_parse_success', 'Структура материала успешно разобрана!'), 'success');
             markDirty();
         } catch (e) {
             console.error('[Studio] Parse analysis error:', e);
-            showToast('Сетевая ошибка при парсинге анализа', 'error');
+            showToast(t('studio.toast.analysis_network_error', 'Сетевая ошибка при парсинге анализа'), 'error');
         }
     }
 
@@ -1008,11 +1008,11 @@
         if (!strategy) return { label: '', fullLabel: '', tooltip: '', icon: 'tune' };
         const clean = String(strategy).toLowerCase().trim();
         const strategyMeta = {
-            structure_first: { fallbackLabel: 'Структурирование', icon: 'account_tree' },
-            misconception_first: { fallbackLabel: 'Типичные заблуждения', icon: 'psychology' },
-            high_risk_first: { fallbackLabel: 'Критические точки', icon: 'warning' },
-            breadth_first: { fallbackLabel: 'Широкий охват', icon: 'apps' },
-            visual_first: { fallbackLabel: 'Визуальный фокус', icon: 'visibility' },
+            structure_first: { fallbackLabel: t('studio.strategies.structure_first', 'Структурирование'), icon: 'account_tree' },
+            misconception_first: { fallbackLabel: t('studio.strategies.misconception_first', 'Типичные заблуждения'), icon: 'psychology' },
+            high_risk_first: { fallbackLabel: t('studio.strategies.high_risk_first', 'Критические точки'), icon: 'warning' },
+            breadth_first: { fallbackLabel: t('studio.strategies.breadth_first', 'Широкий охват'), icon: 'apps' },
+            visual_first: { fallbackLabel: t('studio.strategies.visual_first', 'Визуальный фокус'), icon: 'visibility' },
         };
         const meta = strategyMeta[clean] || { fallbackLabel: strategy, icon: 'tune' };
         const label = t(`studio.strategies.${clean}`, meta.fallbackLabel);
@@ -1084,7 +1084,7 @@
         if (DOM.liveParseCounter && DOM.liveParseCountText) {
             if (regexCount > 0) {
                 DOM.liveParseCounter.classList.remove('hidden');
-                DOM.liveParseCountText.textContent = `${regexCount} ${pluralizeTasks(regexCount)} найдено`;
+                DOM.liveParseCountText.textContent = `${regexCount} ${pluralizeTasks(regexCount)} ` + t('studio.stage2.tasks_found_suffix', 'найдено');
             } else {
                 DOM.liveParseCounter.classList.add('hidden');
             }
@@ -1393,77 +1393,77 @@
             return lines.join('\n');
         } else if (pLang === 'uk') {
             const strategies = {
-                misconception_first: 'Виявлення типових помилкових уявлень, хибних припущень і тонких відмінностей',
-                high_risk_first: 'Перевірка критичних точок, граничних умов, параметрів безпеки та зон ризику',
-                breadth_first: 'Широке системне охоплення ключових понять, термінів та визначень теми',
-                structure_first: 'Аналіз і складання логічної структури, послідовностей, етапів та ієрархій',
-                visual_first: 'Візуальний фокус, просторове розташування та розпізнавання орієнтирів',
+                misconception_first: t('studio.prompt.strategy_misconceptions_uk', 'Виявлення типових помилкових уявлень, хибних припущень і тонких відмінностей'),
+                high_risk_first: t('studio.prompt.strategy_high_risk_uk', 'Перевірка критичних точок, граничних умов, параметрів безпеки та зон ризику'),
+                breadth_first: t('studio.prompt.strategy_breadth_uk', 'Широке системне охоплення ключових понять, термінів та визначень теми'),
+                structure_first: t('studio.prompt.strategy_structure_uk', 'Аналіз і складання логічної структури, послідовностей, етапів та ієрархій'),
+                visual_first: t('studio.prompt.strategy_visual_uk', 'Візуальний фокус, просторове розташування та розпізнавання орієнтирів'),
             };
-            const strategyDesc = strategies[strategyRaw] || strategyRaw || 'Методична відповідність матеріалу лекції';
+            const strategyDesc = strategies[strategyRaw] || strategyRaw || t('studio.prompt.strategy_default_uk', 'Методична відповідність матеріалу лекції');
 
             const lines = [
                 '<pedagogical_directive>',
-                'ЕТАП ПАЙПЛАЙНУ: Генерація завдань за результатами попереднього методичного аналізу лекції.',
-                `ТИП ЗАВДАНЬ: ${taskType}`,
-                `КІЛЬКІСТЬ ЗАВДАНЬ: Згенеруй рівно ${countVal} завдань цього типу.`,
+                t('studio.prompt.directive_stage_uk', 'ЕТАП ПАЙПЛАЙНУ: Генерація завдань за результатами попереднього методичного аналізу лекції.'),
+                t('studio.prompt.task_type_prefix_uk', 'ТИП ЗАВДАНЬ: {type}').replace('{type}', taskType),
+                t('studio.prompt.task_count_prefix_uk', 'КІЛЬКІСТЬ ЗАВДАНЬ: Згенеруй рівно {count} завдань цього типу.').replace('{count}', countVal),
             ];
             if (generationFocus) {
-                lines.push('', 'ЦІЛЬОВИЙ ПЕДАГОГІЧНИЙ ФОКУС:', generationFocus);
+                lines.push('', t('studio.prompt.focus_header_uk', 'ЦІЛЬОВИЙ ПЕДАГОГІЧНИЙ ФОКУС:'), generationFocus);
             }
             if (strategyDesc) {
-                lines.push('', 'СТРАТЕГІЯ ПЕРЕВІРКИ:', strategyDesc);
+                lines.push('', t('studio.prompt.strategy_header_uk', 'СТРАТЕГІЯ ПЕРЕВІРКИ:'), strategyDesc);
             }
             if (anchors.length > 0) {
-                lines.push('', "ЗМІСТОВІ ОПОРИ ТА ПАСТКИ ДЛЯ ПЕРЕВІРКИ (Обов'язково використай):", ...anchors.map((a) => `- ${a}`));
+                lines.push('', t('studio.prompt.anchors_header_uk', "ЗМІСТОВІ ОПОРИ ТА ПАСТКИ ДЛЯ ПЕРЕВІРКИ (Обов'язково використай):"), ...anchors.map((a) => `- ${a}`));
             }
             if (matchedUnits.length > 0) {
                 const unitLines = matchedUnits.slice(0, 5).map((u) => {
-                    const title = u.title || `Одиниця ${u.id || ''}`;
+                    const title = u.title || t('studio.prompt.unit_fallback_uk', 'Одиниця {id}').replace('{id}', u.id || '');
                     const desc = u.description || '';
                     return desc ? `- ${title}: ${desc}` : `- ${title}`;
                 });
-                lines.push('', "ПОВ'ЯЗАНІ ОСВІТНІ ОДИНИЦІ:", ...unitLines);
+                lines.push('', t('studio.prompt.units_header_uk', "ПОВ'ЯЗАНІ ОСВІТНІ ОДИНИЦІ:"), ...unitLines);
             }
             if (candidates.length > 0) {
-                lines.push('', 'ПОПЕРЕДНІ ЗАГОТОВКИ З АНАЛІЗУ (Використовуй як орієнтир):', ...candidates.slice(0, 4).map((c) => `- ${c}`));
+                lines.push('', t('studio.prompt.candidates_header_uk', 'ПОПЕРЕДНІ ЗАГОТОВКИ З АНАЛІЗУ (Використовуй як орієнтир):'), ...candidates.slice(0, 4).map((c) => `- ${c}`));
             }
             lines.push('</pedagogical_directive>');
             return lines.join('\n');
         } else {
             const strategies = {
-                misconception_first: 'Выявление типичных заблуждений, ложных предпосылок и тонких различий',
-                high_risk_first: 'Проверка критических точек, граничных условий, параметров безопасности и зон риска',
-                breadth_first: 'Широкий системный охват ключевых понятий, терминов и определений темы',
-                structure_first: 'Анализ и сборка логической структуры, последовательностей, этапов и иерархий',
-                visual_first: 'Визуальный фокус, пространственное сопоставление и распознавание ориентиров',
+                misconception_first: t('studio.prompt.strategy_misconceptions', 'Выявление типичных заблуждений, ложных предпосылок и тонких различий'),
+                high_risk_first: t('studio.prompt.strategy_high_risk', 'Проверка критических точек, граничных условий, параметров безопасности и зон риска'),
+                breadth_first: t('studio.prompt.strategy_breadth', 'Широкий системный охват ключевых понятий, терминов и определений темы'),
+                structure_first: t('studio.prompt.strategy_structure', 'Анализ и сборка логической структуры, последовательностей, этапов и иерархий'),
+                visual_first: t('studio.prompt.strategy_visual', 'Визуальный фокус, пространственное сопоставление и распознавание ориентиров'),
             };
-            const strategyDesc = strategies[strategyRaw] || strategyRaw || 'Методическое соответствие материалу лекции';
+            const strategyDesc = strategies[strategyRaw] || strategyRaw || t('studio.prompt.strategy_default', 'Методическое соответствие материалу лекции');
 
             const lines = [
                 '<pedagogical_directive>',
-                'ЭТАП ПАЙПЛАЙНА: Генерация заданий по результатам предварительного методического анализа лекции.',
-                `ТИП ЗАДАНИЙ: ${taskType}`,
-                `КОЛИЧЕСТВО ЗАДАНИЙ: Сгенерируй ровно ${countVal} заданий данного типа.`,
+                t('studio.prompt.directive_stage', 'ЭТАП ПАЙПЛАЙНА: Генерация заданий по результатам предварительного методического анализа лекции.'),
+                t('studio.prompt.task_type_prefix', 'ТИП ЗАДАНИЙ: {type}').replace('{type}', taskType),
+                t('studio.prompt.task_count_prefix', 'КОЛИЧЕСТВО ЗАДАНИЙ: Сгенерируй ровно {count} заданий данного типа.').replace('{count}', countVal),
             ];
             if (generationFocus) {
-                lines.push('', 'ЦЕЛЕВОЙ ПЕДАГОГИЧЕСКИЙ ФОКУС:', generationFocus);
+                lines.push('', t('studio.prompt.focus_header', 'ЦЕЛЕВОЙ ПЕДАГОГИЧЕСКИЙ ФОКУС:'), generationFocus);
             }
             if (strategyDesc) {
-                lines.push('', 'СТРАТЕГИЯ ПРОВЕРКИ:', strategyDesc);
+                lines.push('', t('studio.prompt.strategy_header', 'СТРАТЕГИЯ ПРОВЕРКИ:'), strategyDesc);
             }
             if (anchors.length > 0) {
-                lines.push('', 'СОДЕРЖАТЕЛЬНЫЕ ОПОРЫ И ЛОВУШКИ ДЛЯ ПРОВЕРКИ (Обязательно задействуй):', ...anchors.map((a) => `- ${a}`));
+                lines.push('', t('studio.prompt.anchors_header', 'СОДЕРЖАТЕЛЬНЫЕ ОПОРЫ И ЛОВУШКИ ДЛЯ ПРОВЕРКИ (Обязательно задействуй):'), ...anchors.map((a) => `- ${a}`));
             }
             if (matchedUnits.length > 0) {
                 const unitLines = matchedUnits.slice(0, 5).map((u) => {
-                    const title = u.title || `Единица ${u.id || ''}`;
+                    const title = u.title || t('studio.prompt.unit_fallback', 'Единица {id}').replace('{id}', u.id || '');
                     const desc = u.description || '';
                     return desc ? `- ${title}: ${desc}` : `- ${title}`;
                 });
-                lines.push('', 'СВЯЗАННЫЕ ОБРАЗОВАТЕЛЬНЫЕ ЕДИНИЦЫ:', ...unitLines);
+                lines.push('', t('studio.prompt.units_header', 'СВЯЗАННЫЕ ОБРАЗОВАТЕЛЬНЫЕ ЕДИНИЦЫ:'), ...unitLines);
             }
             if (candidates.length > 0) {
-                lines.push('', 'ПРЕДВАРИТЕЛЬНЫЕ ЗАГОТОВКИ ИЗ АНАЛИЗА (Используй как отправную точку):', ...candidates.slice(0, 4).map((c) => `- ${c}`));
+                lines.push('', t('studio.prompt.candidates_header', 'ПРЕДВАРИТЕЛЬНЫЕ ЗАГОТОВКИ ИЗ АНАЛИЗА (Используй как отправную точку):'), ...candidates.slice(0, 4).map((c) => `- ${c}`));
             }
             lines.push('</pedagogical_directive>');
             return lines.join('\n');
@@ -1499,7 +1499,7 @@
 
     function buildVisualGuidanceText(taskType, rec) {
         const typeLabel = TASK_TYPE_LABELS[taskType] || taskType;
-        const topicName = StudioState.selectedTopicName || 'Тема';
+        const topicName = StudioState.selectedTopicName || t('studio.prompt.default_topic', 'Тема');
         const manual = (rec && rec.manual_authoring) ? rec.manual_authoring : {};
         const focus = rec?.generation_focus || manual.why_visual || rec?.rationale || '';
         const targets = (Array.isArray(manual.target_objects) && manual.target_objects.length > 0)
@@ -1509,21 +1509,21 @@
         const hint = manual.polygon_hint || '';
 
         const lines = [
-            `# МЕТОДИЧЕСКИЕ ОРИЕНТИРЫ ДЛЯ ВИЗУАЛЬНОГО ЗАДАНИЯ (${typeLabel})`,
-            `Тема: ${topicName}`,
+            t('studio.prompt.visual_guidance_header', '# МЕТОДИЧЕСКИЕ ОРИЕНТИРЫ ДЛЯ ВИЗУАЛЬНОГО ЗАДАНИЯ ({type})').replace('{type}', typeLabel),
+            t('studio.prompt.topic_label', 'Тема: {topic}').replace('{topic}', topicName),
         ];
         if (focus) {
-            lines.push(`\n## Целевой фокус:\n${focus}`);
+            lines.push('\n' + t('studio.prompt.focus_title', '## Целевой фокус:') + '\n' + focus);
         }
         if (targets.length > 0) {
-            lines.push(`\n## Рекомендуемые ориентиры и структуры для разметки:`);
-            targets.forEach((t) => lines.push(`- ${t}`));
+            lines.push('\n' + t('studio.prompt.targets_title', '## Рекомендуемые ориентиры и структуры для разметки:'));
+            targets.forEach((targetItem) => lines.push(`- ${targetItem}`));
         }
         if (stem) {
-            lines.push(`\n## Пример формулировки задания:\n${stem}`);
+            lines.push('\n' + t('studio.prompt.stem_example_title', '## Пример формулировки задания:') + '\n' + stem);
         }
         if (hint) {
-            lines.push(`\n## Подсказка по геометрии/разметке:\n${hint}`);
+            lines.push('\n' + t('studio.prompt.geometry_hint_title', '## Подсказка по геометрии/разметке:') + '\n' + hint);
         }
         return lines.join('\n');
     }
@@ -1579,8 +1579,8 @@
                 const stem = manual.task_stem_example || '';
                 const hint = manual.polygon_hint || '';
                 const hintParts = [];
-                if (stem) hintParts.push(`Пример формулировки: «${stem}»`);
-                if (hint) hintParts.push(`Подсказка: ${hint}`);
+                if (stem) hintParts.push(t('studio.prompt.stem_example_fmt', 'Пример формулировки: «{stem}»').replace('{stem}', stem));
+                if (hint) hintParts.push(t('studio.prompt.hint_fmt', 'Подсказка: {hint}').replace('{hint}', hint));
                 if (hintParts.length > 0) {
                     DOM.manualVisualHint.textContent = hintParts.join(' • ');
                     DOM.manualVisualHint.classList.remove('hidden');
@@ -1612,7 +1612,7 @@
         }
         if (DOM.labelCopyTypePrompt) {
             const btnKey = isManualVisual ? 'studio.stage2.btn_copy_visual_guidance' : 'studio.stage2.btn_copy_type_prompt';
-            const defaultBtnLabel = isManualVisual ? 'Скопировать методические ориентиры' : 'Скопировать промпт для заданий';
+            const defaultBtnLabel = isManualVisual ? t('studio.stage2.btn_copy_visual_guidance', 'Скопировать методические ориентиры') : t('studio.stage2.btn_copy_type_prompt', 'Скопировать промпт для заданий');
             DOM.labelCopyTypePrompt.textContent = `${t(btnKey, defaultBtnLabel)} (${TASK_TYPE_LABELS[taskType] || taskType})`;
         }
 
@@ -1806,7 +1806,7 @@
             const count = draft.parsedTasks.length;
             const typeLabel = TASK_TYPE_LABELS[taskType] || taskType;
             DOM.committedViewTitle.textContent = t('studio.stage2.committed_view_title', 'Задания успешно приняты в витрину ({count})')
-                .replace('{count}', `${count} ${pluralizeTasks(count)} типа «${typeLabel}»`);
+                .replace('{count}', `${count} ${pluralizeTasks(count)} ` + t('studio.stage2.type_quote_fmt', 'типа «{type}»').replace('{type}', typeLabel));
         }
 
         // Raw code preview in collapsible details
@@ -2048,17 +2048,17 @@
         const taskType = StudioState.activeGenerationType;
         const draft = StudioState.typeDrafts[taskType];
         if (!draft || !draft.responseText.trim()) {
-            showToast('Нет текста заданий для сохранения', 'warning');
+            showToast(t('studio.toast.no_tasks_to_save', 'Нет текста заданий для сохранения'), 'warning');
             return;
         }
 
         if (!StudioState.selectedModuleId || !StudioState.selectedTopicId) {
             openTopicModal();
-            showToast('Выберите модуль и тему курса', 'warning');
+            showToast(t('studio.toast.select_module_topic', 'Выберите модуль и тему курса'), 'warning');
             return;
         }
 
-        showToast('Серверная валидация схемы заданий...', 'info');
+        showToast(t('studio.toast.validating_schema', 'Серверная валидация схемы заданий...'), 'info');
 
         try {
             const res = await fetch('/api/editor/import/parse', {
@@ -2073,13 +2073,13 @@
 
             const data = await res.json();
             if (!res.ok || !data.ok) {
-                showToast(data.message || 'Ошибка парсинга схемы заданий', 'error');
+                showToast(data.message || t('studio.toast.schema_parse_error', 'Ошибка парсинга схемы заданий'), 'error');
                 return;
             }
 
             const parsed = data.tasks || [];
             if (parsed.length === 0) {
-                showToast('Не удалось распознать корректные задания', 'warning');
+                showToast(t('studio.toast.no_valid_tasks', 'Не удалось распознать корректные задания'), 'warning');
                 return;
             }
 
@@ -2102,11 +2102,11 @@
             renderStage2Tabs();
             updateProceedToStep3Button();
             renderCommittedView(taskType);
-            showToast(`Принято ${parsed.length} заданий типа ${TASK_TYPE_LABELS[taskType] || taskType}!`, 'success');
+            showToast(t('studio.toast.tasks_accepted_fmt', 'Принято {count} заданий типа {type}!').replace('{count}', parsed.length).replace('{type}', TASK_TYPE_LABELS[taskType] || taskType), 'success');
             markDirty();
         } catch (e) {
             console.error('[Studio] Commit error:', e);
-            showToast('Ошибка проверки заданий', 'error');
+            showToast(t('studio.toast.validation_error', 'Ошибка проверки заданий'), 'error');
         }
     }
 
@@ -2121,42 +2121,42 @@
             key: 'TEST',
             types: ['TEST'],
             labelKey: 'studio.stage3.group_test',
-            defaultLabel: 'Тестовые задания',
+            defaultLabel: t('studio.stage3.group_test', 'Тестовые задания'),
             icon: 'quiz',
         },
         {
             key: 'OPEN_ANSWER',
             types: ['OPEN_ANSWER'],
             labelKey: 'studio.stage3.group_open_answer',
-            defaultLabel: 'Задания с открытым ответом',
+            defaultLabel: t('studio.stage3.group_open_answer', 'Задания с открытым ответом'),
             icon: 'edit_note',
         },
         {
             key: 'SEQUENCE',
             types: ['SEQUENCE'],
             labelKey: 'studio.stage3.group_sequence',
-            defaultLabel: 'Последовательности',
+            defaultLabel: t('studio.stage3.group_sequence', 'Последовательности'),
             icon: 'format_list_numbered',
         },
         {
             key: 'CLICK_WORDS',
             types: ['CLICK_WORDS'],
             labelKey: 'studio.stage3.group_click_words',
-            defaultLabel: 'Поиск ошибок в тексте',
+            defaultLabel: t('studio.stage3.group_click_words', 'Поиск ошибок в тексте'),
             icon: 'find_in_page',
         },
         {
             key: 'CLICK_TEXT',
             types: ['CLICK_TEXT'],
             labelKey: 'studio.stage3.group_click_text',
-            defaultLabel: 'Контрастные утверждения',
+            defaultLabel: t('studio.stage3.group_click_text', 'Контрастные утверждения'),
             icon: 'rule',
         },
         {
             key: 'VISUAL',
             types: ['CLICK', 'DRAW'],
             labelKey: 'studio.stage3.group_visual',
-            defaultLabel: 'Интерактивные задания на изображениях',
+            defaultLabel: t('studio.stage3.group_visual', 'Интерактивные задания на изображениях'),
             icon: 'image',
         },
     ];
@@ -2165,7 +2165,7 @@
         key: 'OTHER',
         types: [],
         labelKey: 'studio.stage3.group_other',
-        defaultLabel: 'Другие задания',
+        defaultLabel: t('studio.stage3.group_other', 'Другие задания'),
         icon: 'extension',
     };
 
@@ -2338,7 +2338,7 @@
             DOM.showcaseCardsGrid.innerHTML = `
                 <div class="col-span-full py-8 flex flex-col items-center justify-center text-center">
                     <span class="material-symbols-outlined text-[36px] text-text-muted mb-2">filter_alt_off</span>
-                    <p class="text-xs font-medium text-text-secondary">Нет заданий выбранного типа в текущем наборе</p>
+                    <p class="text-xs font-medium text-text-secondary">${t('studio.stage3.no_tasks_of_type', 'Нет заданий выбранного типа в текущем наборе')}</p>
                 </div>
             `;
             return;
@@ -2479,7 +2479,7 @@
 
     function extractTaskDisplayInfo(task, fallbackIndex = 0) {
         if (!task || typeof task !== 'object') {
-            return { questionTitle: `Задание #${fallbackIndex + 1}`, data: {}, taskType: 'TEST' };
+            return { questionTitle: t('studio.stage3.task_num_prefix', 'Задание #{n}').replace('{n}', fallbackIndex + 1), data: {}, taskType: 'TEST' };
         }
         const data = task.data || task.task_data || task || {};
         const rawType = String(task.type || task.task_type || task._import_type || data.type || 'TEST');
@@ -2514,7 +2514,7 @@
         // 4. Try title / name (avoid generic placeholders like "Task #1" or "Задание 1")
         if (!questionTitle) {
             const candidate = clean(task.title || data.title || task.name || data.name);
-            if (candidate && !/^task\s*#?\d+/i.test(candidate) && !/^задание\s*#?\d+/i.test(candidate) && candidate.toLowerCase() !== 'задание') {
+            if (candidate && !/^task\s*#?\d+/i.test(candidate) && !/^(?:задание|завдання)\s*#?\d+/i.test(candidate) && candidate.toLowerCase() !== t('studio.stage3.task_word_ru', 'задание') && candidate.toLowerCase() !== t('studio.stage3.task_word_uk', 'завдання')) {
                 questionTitle = candidate;
             }
         }
@@ -2562,7 +2562,7 @@
                             </div>
                         `;
                     }).join('')}
-                    ${remaining > 0 ? `<span class="text-text-muted text-[10px]">+ ещё ${remaining} вар.</span>` : ''}
+                    ${remaining > 0 ? `<span class="text-text-muted text-[10px]">+ ${t('studio.stage3.more_options_fmt', 'ещё {n} вар.').replace('{n}', remaining)}</span>` : ''}
                 </div>
             `;
         }
@@ -2628,7 +2628,7 @@
                         </span>
                         ${sIdx < previewSteps.length - 1 ? '<span class="text-text-muted text-[10px]">→</span>' : ''}
                     `).join('')}
-                    ${remainingSteps > 0 ? `<span class="text-text-muted text-[10px] pl-1">+ ещё ${remainingSteps} шаг.</span>` : ''}
+                    ${remainingSteps > 0 ? `<span class="text-text-muted text-[10px] pl-1">+ ${t('studio.stage3.more_steps_fmt', 'ещё {n} шаг.').replace('{n}', remainingSteps)}</span>` : ''}
                 </div>
             `;
         }
@@ -2641,7 +2641,7 @@
                     <div class="mt-1 flex items-center gap-1.5 text-[11px]">
                         <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold border border-amber-500/20 text-[10px]">
                             <span class="material-symbols-outlined text-[12px]">find_in_page</span>
-                            <span>Ловушек / ошибок: ${errCount}</span>
+                            <span>${t('studio.stage3.traps_errors_fmt', 'Ловушек / ошибок: {count}').replace('{count}', errCount)}</span>
                         </span>
                     </div>
                 `;
@@ -2657,7 +2657,7 @@
                     <div class="mt-1 flex flex-wrap items-center gap-1 text-[10px] text-text-secondary">
                         <span class="material-symbols-outlined text-[12px] text-primary">target</span>
                         <span>${targetNames.map((n) => `<span class="font-medium text-text-main">${escapeHtml(n)}</span>`).join(', ')}</span>
-                        ${targets.length > 3 ? `<span class="text-text-muted">+ ещё ${targets.length - 3}</span>` : ''}
+                        ${targets.length > 3 ? `<span class="text-text-muted">+ ${t('studio.stage3.more_targets_fmt', 'ещё {n}').replace('{n}', targets.length - 3)}</span>` : ''}
                     </div>
                 `;
             }
@@ -2685,18 +2685,18 @@
     async function executeImport() {
         const selected = StudioState.allTasks.filter((t) => t._selected_for_import);
         if (selected.length === 0) {
-            showToast('Выберите хотя бы одно задание для импорта', 'warning');
+            showToast(t('studio.toast.select_at_least_one', 'Выберите хотя бы одно задание для импорта'), 'warning');
             return;
         }
 
         if (!StudioState.selectedModuleId || !StudioState.selectedTopicId) {
             openTopicModal();
-            showToast('Выберите целевую тему курса', 'warning');
+            showToast(t('studio.toast.select_target_topic', 'Выберите целевую тему курса'), 'warning');
             return;
         }
 
         const idempotencyKey = 'imp_' + Math.random().toString(36).substring(2, 15) + '_' + Date.now();
-        showToast('Импорт заданий в тему курса...', 'info');
+        showToast(t('studio.toast.importing_tasks', 'Импорт заданий в тему курса...'), 'info');
 
         try {
             const res = await fetch('/api/editor/import/execute', {
@@ -2717,7 +2717,7 @@
 
             const data = await res.json();
             if (!res.ok || !data.ok) {
-                showToast(data.message || 'Ошибка импорта заданий в тему', 'error');
+                showToast(data.message || t('studio.toast.import_failed', 'Ошибка импорта заданий в тему'), 'error');
                 return;
             }
 
@@ -2725,7 +2725,7 @@
             await saveSessionToBackend('imported');
 
             clearLocalStorageDraft();
-            showToast(`🎉 Успешно импортировано ${data.imported || selected.length} заданий!`, 'success');
+            showToast(`🎉 ` + t('studio.toast.import_success_fmt', 'Успешно импортировано {count} заданий!').replace('{count}', data.imported || selected.length), 'success');
 
             // Redirect back to dashboard topic after short delay
             setTimeout(() => {
@@ -2733,7 +2733,7 @@
             }, 1200);
         } catch (e) {
             console.error('[Studio] Execute import error:', e);
-            showToast('Сетевая ошибка импорта', 'error');
+            showToast(t('studio.toast.network_import_error', 'Сетевая ошибка импорта'), 'error');
         }
     }
 
@@ -2848,7 +2848,7 @@
 
         switchStep(session.tasks && session.tasks.length > 0 ? 3 : 2);
         updateProceedToStep3Button();
-        showToast('Сессия восстановлена из базы данных', 'success');
+        showToast(t('studio.toast.session_restored', 'Сессия восстановлена из базы данных'), 'success');
         markDirty();
     }
 
@@ -2857,9 +2857,9 @@
             await fetch(`/api/editor/studio/sessions/${encodeURIComponent(sessionId)}`, {
                 method: 'DELETE',
             });
-            showToast('Сессия удалена', 'info');
+            showToast(t('studio.toast.session_deleted', 'Сессия удалена'), 'info');
         } catch (e) {
-            showToast('Ошибка удаления сессии', 'error');
+            showToast(t('studio.toast.session_delete_error', 'Ошибка удаления сессии'), 'error');
         }
     }
 

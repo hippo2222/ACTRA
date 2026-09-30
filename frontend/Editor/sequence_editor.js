@@ -2,7 +2,14 @@
  * ACTRA Sequence Assembly Editor
  */
 
-const SEQUENCE_ONBOARDING_TOUR_ID = 'sequence-editor-authoring';
+function wt(key, fallback) {
+    if (typeof window !== 'undefined' && typeof window.wt === 'function') return window.wt(key, fallback);
+    if (typeof window !== 'undefined' && window.i18n && typeof window.i18n.t === 'function') {
+        const v = window.i18n.t(key);
+        return v !== key ? v : fallback;
+    }
+    return fallback;
+}
 
 class SequenceEditor extends BaseEditor {
     constructor() {
@@ -201,21 +208,21 @@ class SequenceEditor extends BaseEditor {
             task_data: {
                 id: this.taskId,
                 type: 'sequence_assembly',
-                name: 'Последовательность: приготовление раствора',
+                name: wt('sequence_editor.demo.solution_prep_title', 'Последовательность: приготовление раствора'),
                 content: {},
                 settings: {},
                 meta: {
                     id: this.taskId,
                     module: this.moduleId,
                     topic: this.topicId,
-                    name: 'Последовательность: приготовление раствора',
+                    name: wt('sequence_editor.demo.solution_prep_title', 'Последовательность: приготовление раствора'),
                 },
             },
             metadata: {
                 id: this.taskId,
                 module: this.moduleId,
                 topic: this.topicId,
-                name: 'Последовательность: приготовление раствора',
+                name: wt('sequence_editor.demo.solution_prep_title', 'Последовательность: приготовление раствора'),
                 type: 'sequence_assembly',
             },
         };
@@ -223,24 +230,24 @@ class SequenceEditor extends BaseEditor {
 
     createSequenceOnboardingContent() {
         return {
-            prompt: 'Расположите этапы приготовления раствора по двум уровням: подготовка и выполнение.',
+            prompt: wt('sequence_editor.demo.prompt', 'Расположите этапы приготовления раствора по двум уровням: подготовка и выполнение.'),
             sequence_within_level_matters: true,
             level_order_matters: true,
             elements: [
-                { id: 'seq_elem_check_flask', text: 'Проверить мерную колбу', semantic_key: 'text:проверить мерную колбу' },
-                { id: 'seq_elem_measure_solvent', text: 'Отмерить растворитель', semantic_key: 'text:отмерить растворитель' },
-                { id: 'seq_elem_add_substance', text: 'Добавить вещество', semantic_key: 'text:добавить вещество' },
-                { id: 'seq_elem_mix_solution', text: 'Перемешать раствор', semantic_key: 'text:перемешать раствор' },
+                { id: 'seq_elem_check_flask', text: wt('sequence_editor.demo.step_check_flask', 'Проверить мерную колбу'), semantic_key: 'text:check_flask' },
+                { id: 'seq_elem_measure_solvent', text: wt('sequence_editor.demo.step_measure_solvent', 'Отмерить растворитель'), semantic_key: 'text:measure_solvent' },
+                { id: 'seq_elem_add_substance', text: wt('sequence_editor.demo.step_add_substance', 'Добавить вещество'), semantic_key: 'text:add_substance' },
+                { id: 'seq_elem_mix_solution', text: wt('sequence_editor.demo.step_mix_solution', 'Перемешать раствор'), semantic_key: 'text:mix_solution' },
             ],
             levels: [
                 {
                     level_id: 'seq_level_prepare',
-                    level_name: 'Подготовка',
+                    level_name: wt('sequence_editor.demo.level_prepare', 'Подготовка'),
                     blocks: ['seq_elem_check_flask', 'seq_elem_measure_solvent'],
                 },
                 {
                     level_id: 'seq_level_execute',
-                    level_name: 'Выполнение',
+                    level_name: wt('sequence_editor.demo.level_execute', 'Выполнение'),
                     blocks: ['seq_elem_add_substance', 'seq_elem_mix_solution'],
                 },
             ],
@@ -253,10 +260,10 @@ class SequenceEditor extends BaseEditor {
         if (!this.task.task_data) this.task.task_data = {};
         if (!this.task.task_data.meta) this.task.task_data.meta = {};
         if (!this.task.metadata) this.task.metadata = {};
-        this.task.task_data.name = 'Последовательность: приготовление раствора';
+        this.task.task_data.name = wt('sequence_editor.demo.solution_prep_title', 'Последовательность: приготовление раствора');
         this.task.task_data.type = 'sequence_assembly';
-        this.task.task_data.meta.name = 'Последовательность: приготовление раствора';
-        this.task.metadata.name = 'Последовательность: приготовление раствора';
+        this.task.task_data.meta.name = wt('sequence_editor.demo.solution_prep_title', 'Последовательность: приготовление раствора');
+        this.task.metadata.name = wt('sequence_editor.demo.solution_prep_title', 'Последовательность: приготовление раствора');
         this.task.metadata.type = 'sequence_assembly';
         this.task.task_data.content = this.createSequenceOnboardingContent();
         this.task.task_data.settings = {
@@ -864,7 +871,7 @@ class SequenceEditor extends BaseEditor {
         for (let i = 0; i < this.levels.length; i++) {
             const level = this.levels[i];
             if (!level.items || !level.items.length) {
-                return `В уровне ${i + 1} должен быть минимум один шаг.`;
+                return wt('sequence_editor.validation.min_one_step', 'В уровне {level} должен быть минимум один шаг.').replace('{level}', i + 1);
             }
 
             // Validate each item has label
@@ -872,7 +879,7 @@ class SequenceEditor extends BaseEditor {
                 const label = (level.items[j].label || "").trim();
                 if (!label) {
                     const levelLabel = level.title ? `«${level.title}»` : `#${i + 1}`;
-                    return `Заполните описание шага ${j + 1} в уровне ${levelLabel}.`;
+                    return wt('sequence_editor.validation.fill_step_desc', 'Заполните описание шага {step} в уровне {level}.').replace('{step}', j + 1).replace('{level}', levelLabel);
                 }
             }
         }
@@ -896,7 +903,7 @@ class SequenceEditor extends BaseEditor {
         );
 
         if (singleStepLevels.length > 0) {
-            warnings.push(`У ${singleStepLevels.length} уровней только по одному шагу. Проверьте, действительно ли здесь нужна многоуровневая структура.`);
+            warnings.push(wt('sequence_editor.validation.single_step_levels', 'У {count} уровней только по одному шагу. Проверьте, действительно ли здесь нужна многоуровневая структура.').replace('{count}', singleStepLevels.length));
         }
 
         if (levels.length > 1 && levels.every((level) => Array.isArray(level?.items) && level.items.length === 1)) {
@@ -944,8 +951,7 @@ class SequenceEditor extends BaseEditor {
 
         if (duplicates.length) {
             warnings.push(
-                `Есть одинаковые названия шагов: ${duplicates.slice(0, 2).join(", ")}. ` +
-                `При проверке такие шаги считаются взаимозаменяемыми. Если это разные по смыслу шаги, уточните их текст.`
+                wt('sequence_editor.validation.duplicate_steps', 'Есть одинаковые названия шагов: {steps}. При проверке такие шаги считаются взаимозаменяемыми. Если это разные по смыслу шаги, уточните их текст.').replace('{steps}', duplicates.slice(0, 2).join(", "))
             );
         }
 
@@ -955,8 +961,7 @@ class SequenceEditor extends BaseEditor {
 
         if (ambiguousLevelGroups.length) {
             warnings.push(
-                `Уровни ${ambiguousLevelGroups[0]} семантически не различаются по составу шагов. ` +
-                `На сложностях с вводом названий тренажер не сможет надежно различить такие уровни без разных шагов или разных формулировок.`
+                wt('sequence_editor.validation.ambiguous_levels', 'Уровни {levels} семантически не различаются по составу шагов. На сложностях с вводом названий тренажер не сможет надежно различить такие уровни без разных шагов или разных формулировок.').replace('{levels}', ambiguousLevelGroups[0])
             );
         }
 

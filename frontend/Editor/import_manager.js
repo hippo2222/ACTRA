@@ -1,8 +1,17 @@
 // i18n helper
-function wt(key, fallback) {
-    if (!window.i18n || typeof window.i18n.t !== 'function') return fallback;
+function wt(key, fallback, params) {
+    if (!window.i18n || typeof window.i18n.t !== 'function') {
+        if (params && typeof fallback === 'string') {
+            return fallback.replace(/{(\w+)}/g, function (_, k) { return params[k] !== undefined ? params[k] : '{' + k + '}'; });
+        }
+        return fallback;
+    }
     var v = window.i18n.t(key);
-    return v !== key ? v : fallback;
+    var res = v !== key ? v : fallback;
+    if (params && typeof res === 'string') {
+        return res.replace(/{(\w+)}/g, function (_, k) { return params[k] !== undefined ? params[k] : '{' + k + '}'; });
+    }
+    return res;
 }
 
 /**
@@ -886,9 +895,9 @@ class ImportManager {
             const units = item.units.length ? `; units: ${item.units.join(', ')}` : '';
             return `- ${item.label}: imported_count=${item.importedCount}${units}`;
         }).join('\n') || wt('im.k619', '- Пока ничего не импортировано');
-        const remaining = ctx.remainingUnits.map((unit) => `- #${unit.id} ${unit.title}`).join('\n') || '- Все единицы уже покрыты хотя бы одним импортированным типом';
-        const anchorsText = anchors.length ? anchors.map((item) => `- ${item}`).join('\n') : '- Нет дополнительных assessable anchors';
-        const candidatesText = candidates.length ? candidates.map((item) => `- ${item}`).join('\n') : '- Нет отдельных design candidates';
+        const remaining = ctx.remainingUnits.map((unit) => `- #${unit.id} ${unit.title}`).join('\n') || wt('im.k980', '- Все единицы уже покрыты хотя бы одним импортированным типом');
+        const anchorsText = anchors.length ? anchors.map((item) => `- ${item}`).join('\n') : wt('im.k981', '- Нет дополнительных assessable anchors');
+        const candidatesText = candidates.length ? candidates.map((item) => `- ${item}`).join('\n') : wt('im.k982', '- Нет отдельных design candidates');
 
         return `
 <analysis_session_context>
@@ -941,7 +950,7 @@ ${remaining}
         }
         return {
             ...active,
-            instructions: `${active.instructions}\n4. В промпт уже встроен контекст analysis session: используй его как основной authoring brief и не игнорируй покрытие уже импортированных типов.`,
+            instructions: `${active.instructions}\n${wt('im.k983', '4. В промпт уже встроен контекст analysis session: используй его как основной authoring brief и не игнорируй покрытие уже импортированных типов.')}`,
             prompt: `${active.prompt}\n\n${analysisContextBlock}`,
         };
     }
@@ -1973,11 +1982,11 @@ ${remaining}
                         </div>
                         <div class="flex flex-wrap items-start justify-between gap-3">
                             <span class="text-text-secondary">${wt('im.k839', 'Создаст новых')}</span>
-                            <span class="font-medium text-text-main">${this.escapeHtml(`${createdCounts.modules || 0} модулей, ${createdCounts.topics || 0} тем, ${createdCounts.tasks || 0} заданий, ${createdCounts.theories || 0} теорий`)}</span>
+                            <span class="font-medium text-text-main">${this.escapeHtml(wt('im.k984', '{m} модулей, {t} тем, {tsk} заданий, {th} теорий', { m: createdCounts.modules || 0, t: createdCounts.topics || 0, tsk: createdCounts.tasks || 0, th: createdCounts.theories || 0 }))}</span>
                         </div>
                         <div class="flex flex-wrap items-start justify-between gap-3">
                             <span class="text-text-secondary">${wt('im.k840', 'Переиспользует')}</span>
-                            <span class="font-medium text-text-main">${this.escapeHtml(`${reusedCounts.modules || 0} модулей, ${reusedCounts.topics || 0} тем, ${reusedCounts.tasks || 0} заданий, ${reusedCounts.theories || 0} теорий`)}</span>
+                            <span class="font-medium text-text-main">${this.escapeHtml(wt('im.k984', '{m} модулей, {t} тем, {tsk} заданий, {th} теорий', { m: reusedCounts.modules || 0, t: reusedCounts.topics || 0, tsk: reusedCounts.tasks || 0, th: reusedCounts.theories || 0 }))}</span>
                         </div>
                     </div>
                 </div>
@@ -3177,7 +3186,7 @@ ${remaining}
                                                 <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-1 text-text-secondary border border-border-subtle">${Number(rec?.count || 0)} ${wt('im.k889', 'шт.')}</span>
                                                 <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${statusMeta.className}">${this.escapeHtml(statusMeta.label)}</span>
                                                 ${importedCount > 0 ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-1 text-text-main border border-success-light">${wt('im.k890', 'импортов:')} ${importedCount}</span>` : ''}
-                                                ${hasDraft ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-1 text-text-main border border-primary-light">черновик: ${draftCount || wt('im.k130', 'сохранён')}</span>` : ''}
+                                                ${hasDraft ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-1 text-text-main border border-primary-light">${wt('im.k985', 'черновик:')} ${draftCount || wt('im.k130', 'сохранён')}</span>` : ''}
                                             </div>
                                             ${rec?.coverage_role ? `<div class="mt-2 text-xs text-text-secondary">${this.escapeHtml(String(rec.coverage_role))}</div>` : ''}
                                             ${rec?.generation_focus ? `<div class="mt-2 text-[11px] text-text-secondary"><span class="font-semibold text-text-main">${wt('im.k891', 'Фокус генерации:')}</span> ${this.escapeHtml(String(rec.generation_focus))}</div>` : ''}
@@ -3732,7 +3741,7 @@ ${remaining}
                         </div>
                         <div class="rounded-lg border border-border-subtle bg-surface-2 px-3 py-3">
                             <div class="text-xs uppercase tracking-wide text-text-secondary">${wt('im.k929', 'Политика ошибок')}</div>
-                            <div class="mt-1 font-semibold text-text-main">${this.excludedTasks.size > 0 ? `Ручных исключений: ${this.excludedTasks.size}` : wt('im.k149', 'Исключений вручную пока нет.')}</div>
+                            <div class="mt-1 font-semibold text-text-main">${this.excludedTasks.size > 0 ? `${wt('im.k986', 'Ручных исключений:')} ${this.excludedTasks.size}` : wt('im.k149', 'Исключений вручную пока нет.')}</div>
                         </div>
                     </div>
                 </div>
@@ -4471,7 +4480,7 @@ ${remaining}
                 </div>
                 <div class="p-5 space-y-4">
                     <div class="grid grid-cols-2 gap-3 text-sm">
-                        <div><span class="text-text-muted">\u0422\u0438\u043f:</span> <span class="font-medium text-text-main">${typeLabels[task.type] || task.type}</span></div>
+                        <div><span class="text-text-muted">${wt('im.k987', 'Тип:')}</span> <span class="font-medium text-text-main">${typeLabels[task.type] || task.type}</span></div>
                         <div><span class="text-text-muted">${wt('im.k194', 'Статус:</span>')}${statusLabels[task.status] || task.status}</div>
                     </div>
                     <div>
@@ -4479,7 +4488,7 @@ ${remaining}
                         <div class="text-sm text-text-main">${this.escapeHtml(task.name)}</div>
                     </div>
                     <div>
-                        <div class="text-xs font-semibold text-text-muted mb-1">\u041f\u0440\u043e\u043c\u043f\u0442</div>
+                        <div class="text-xs font-semibold text-text-muted mb-1">${wt('im.k988', 'Промпт')}</div>
                         <div class="text-sm text-text-main bg-surface-2 rounded p-3 whitespace-pre-wrap">${this.escapeHtml(data.prompt || wt('im.k752', 'Нет'))}</div>
                     </div>
                     ${extraFieldsHtml}
@@ -4779,7 +4788,7 @@ ${remaining}
 ${wt('im.k207', '2. Прикрепите файл с материалом (PDF, DOCX) или вставьте текст после промпта.')}
 ${wt('im.k208', '3. Изучите рекомендации ИИ и выберите подходящий тип задания из списка выше.')}
 ${wt('im.k571', 'Этот промпт НЕ генерирует задания — он помогает выбрать оптимальную стратегию.')}`,
-                prompt: `Ты — старший методист и эксперт по педагогическому дизайну. Проанализируй учебный материал.
+                prompt: wt('im.prompt.material_analysis', `Ты — старший методист и эксперт по педагогическому дизайну. Проанализируй учебный материал.
 
 <goal>
 Твоя главная цель — не назначать количество заданий. Построй методическую карту материала: выдели образовательные единицы и покажи, как существующие типы заданий можно применять к ним максимально эффективно, разнообразно и практично.
@@ -4931,14 +4940,14 @@ DRAW — обводка/выделение нужных зон на изобра
 - design_candidates и assessable_anchors должны быть достаточно конкретными, чтобы автор мог на их основе сразу проектировать задания.
 - count и count_rationale — только вторичная техническая подсказка для последующей генерации; они не должны доминировать над rationale, coverage_role и generation_focus.
 - Если сомневаешься, усиливай generation_focus, coverage_role, assessable_anchors и design_candidates, а не спорь о количестве.
-</strictness_addendum>`
+</strictness_addendum>`)
             },
             open_answer: {
                 title: wt('im.k209', 'Открытый ответ (@OPEN_ANSWER)'),
                 instructions: `${wt('im.k570', '1. Скопируйте промпт и отправьте его ИИ-агенту.')}
 ${wt('im.k210', '2. Прикрепите файл с материалом (PDF, DOCX) или вставьте текст после промпта.')}
 ${wt('im.k572', '3. Скопируйте ответ ИИ без изменений и вставьте в поле ниже.')}`,
-                prompt: `Ты — генератор заданий для образовательной платформы.
+                prompt: wt('im.prompt.open_answer', `Ты — генератор заданий для образовательной платформы.
 
 <task_context>
 Задания типа OPEN_ANSWER — это вопросы со свободным ответом. Студент видит вопрос и пишет ответ своими словами. Система затем сравнивает ответ с эталоном и ключевыми словами. Этот формат развивает глубокое понимание материала, способность формулировать мысли и воспроизводить знания по памяти — в отличие от тестов, где можно угадать ответ.
@@ -4994,14 +5003,14 @@ ${wt('im.k572', '3. Скопируйте ответ ИИ без изменени
 * доля
 * дольки
 * стадийное течение
-</example>`
+</example>`)
             },
             sequence_assembly: {
                 title: wt('im.k211', 'Последовательность (@SEQUENCE)'),
                 instructions: `${wt('im.k570', '1. Скопируйте промпт и отправьте его ИИ-агенту.')}
 ${wt('im.k212', '2. Прикрепите файл с материалом (PDF, DOCX) или вставьте текст после промпта.')}
 ${wt('im.k572', '3. Скопируйте ответ ИИ без изменений и вставьте в поле ниже.')}`,
-                prompt: `Ты — генератор заданий для образовательной платформы.
+                prompt: wt('im.prompt.sequence_assembly', `Ты — генератор заданий для образовательной платформы.
 
 <task_context>
 Задания типа SEQUENCE — это упражнения на восстановление правильного порядка. Студент видит перемешанные элементы и выстраивает их в верную последовательность перетаскиванием. Этот формат развивает процедурное мышление, понимание причинно-следственных связей, этапности процессов и хронологии событий.
@@ -5059,14 +5068,14 @@ level_2: element_2
 level_3: element_3
 level_4: element_4
 level_5: element_5
-</example>`
+</example>`)
             },
             test: {
                 title: wt('im.k213', 'Тест (@TEST)'),
                 instructions: `${wt('im.k570', '1. Скопируйте промпт и отправьте его ИИ-агенту.')}
 ${wt('im.k214', '2. Прикрепите файл с материалом (PDF, DOCX) или вставьте текст после промпта.')}
 ${wt('im.k572', '3. Скопируйте ответ ИИ без изменений и вставьте в поле ниже.')}`,
-                prompt: `Ты — генератор заданий для образовательной платформы.
+                prompt: wt('im.prompt.test', `Ты — генератор заданий для образовательной платформы.
 
 <task_context>
 Задания типа TEST — это тестовые вопросы с вариантами ответов. Студент выбирает один или несколько правильных вариантов из предложенных. Тесты позволяют быстро проверить знание фактов, понимание терминологии и способность различать верные и ложные утверждения. Это самый распространённый формат контроля знаний.
@@ -5116,14 +5125,14 @@ ${wt('im.k572', '3. Скопируйте ответ ИИ без изменени
 - Поражение отдельных долек
 - Постепенное начало на фоне ОРВИ
 - Отсутствие лихорадки
-</example>`
+</example>`)
             },
             click_text: {
                 title: wt('im.k215', 'Ошибки — выбор из вариантов (@CLICK_TEXT)'),
                 instructions: `${wt('im.k570', '1. Скопируйте промпт и отправьте его ИИ-агенту.')}
 ${wt('im.k216', '2. Прикрепите файл с материалом (PDF, DOCX) или вставьте текст после промпта.')}
 ${wt('im.k572', '3. Скопируйте ответ ИИ без изменений и вставьте в поле ниже.')}`,
-                prompt: `Ты — генератор заданий для образовательной платформы.
+                prompt: wt('im.prompt.click_text', `Ты — генератор заданий для образовательной платформы.
 
 <task_context>
 Задания типа CLICK_TEXT — это упражнения на классификацию утверждений. Студент видит список утверждений и должен кликнуть на верные (или неверные — в зависимости от инструкции). Все варианты отображаются как равноправные карточки, студент отмечает нужные. Этот формат развивает критическое мышление и способность отличать достоверную информацию от заблуждений.
@@ -5171,14 +5180,14 @@ ${wt('im.k572', '3. Скопируйте ответ ИИ без изменени
 + Дыхательная недостаточность
 - Язвенная болезнь желудка
 - Глаукома
-</example>`
+</example>`)
             },
             click_words: {
                 title: wt('im.k217', 'Ошибки — поиск ошибок в тексте (@CLICK_WORDS)'),
                 instructions: `${wt('im.k570', '1. Скопируйте промпт и отправьте его ИИ-агенту.')}
 ${wt('im.k218', '2. Прикрепите файл с материалом (PDF, DOCX) или вставьте текст после промпта.')}
 ${wt('im.k572', '3. Скопируйте ответ ИИ без изменений и вставьте в поле ниже.')}`,
-                prompt: `Ты — генератор заданий для образовательной платформы.
+                prompt: wt('im.prompt.click_words', `Ты — генератор заданий для образовательной платформы.
 
 <task_context>
 Задания типа CLICK_WORDS — это упражнения на поиск ошибок в тексте. Студент читает текст, в котором намеренно допущены фактические ошибки, и кликает на слова или фразы, которые считает неверными. Этот формат развивает внимательное чтение, критический анализ информации и глубокое владение материалом — студент должен не просто знать правильный ответ, но и распознать, где именно текст искажает факты.
@@ -5214,7 +5223,7 @@ text: Пневмония — это воспалительное заболев�
 @CLICK_WORDS
 # Найдите ошибки в описании кровообращения
 text: Сердце человека состоит из [трёх] камер. Артерии несут кровь от сердца к органам, а вены — от органов к сердцу. Малый круг кровообращения проходит через [печень], где происходит газообмен. В норме частота сердечных сокращений взрослого человека составляет [40–50] ударов в минуту.
-</example>`
+</example>`)
             }
         };
     }
@@ -6307,7 +6316,7 @@ text: Сердце человека состоит из [трёх] камер. �
                             ${hasSession ? `
                                 <div class="text-xs text-text-secondary text-right">
                                     <div>Session: <span class="font-semibold text-text-main">${this.escapeHtml(session.id)}</span></div>
-                                    <div>${wt('im.k295', 'Режим: <span class="font-semibold text-text-main">')}${this.escapeHtml(isCoverageMap ? 'анализ и карта покрытия' : this.getEditorFacingTaskTypeLabel(this.getTaskTypeForAIAgentTemplateKey(this.aiTemplateType)))}</span></div>
+                                    <div>${wt('im.k295', 'Режим: <span class="font-semibold text-text-main">')}${this.escapeHtml(isCoverageMap ? wt('im.k989', 'анализ и карта покрытия') : this.getEditorFacingTaskTypeLabel(this.getTaskTypeForAIAgentTemplateKey(this.aiTemplateType)))}</span></div>
                                 </div>
                             ` : ''}
                         </div>
@@ -6537,7 +6546,7 @@ text: Сердце человека состоит из [трёх] камер. �
         }
         const defaultId = String(this.microcardsActiveDeck?.id || decks[0]?.id || '').trim();
         const preview = decks.slice(0, 8).map((d) => `${d.id} — ${d.name || d.id}`).join('\n');
-        const raw = window.prompt(`${wt('im.k690', 'Введите ID колоды для добавления карточек:')}\n\n${preview}${decks.length > 8 ? `\n... и ещё ${decks.length - 8}` : ''}`, defaultId);
+        const raw = window.prompt(`${wt('im.k690', 'Введите ID колоды для добавления карточек:')}\n\n${preview}${decks.length > 8 ? wt('im.k990', '\n... и ещё {count}', { count: decks.length - 8 }) : ''}`, defaultId);
         if (raw == null) return null;
         const picked = String(raw || '').trim();
         if (!picked) return null;
@@ -7137,7 +7146,7 @@ text: Сердце человека состоит из [трёх] камер. �
                 instructions: `${wt('im.k616', '1. Скопируйте промпт и отправьте его ИИ-агенту вместе с учебным материалом.')}
 ${wt('im.k418', '2. Скопируйте ответ ИИ без изменений и вставьте в поле ниже.')}
 ${wt('im.k573', '3. Нажмите «Распарсить» для предпросмотра карточек.')}`,
-                prompt: `Ты — генератор микрокарточек для образовательной платформы.
+                prompt: wt('im.prompt.mc_qa_short', `Ты — генератор микрокарточек для образовательной платформы.
 
 <task_context>
 Микрокарточки — это карточки для интервального повторения (spaced repetition). На лицевой стороне — короткий вопрос, на обратной — краткий точный ответ. Цель — быстрое запоминание фактов, определений и ключевых связей.
@@ -7183,14 +7192,14 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
 @ difficulty: 2
 # Какова нормальная ЧСС у взрослого в покое?
 = 60–100 ударов в минуту.
-</example>`
+</example>`)
             },
             term_definition: {
                 title: wt('im.k419', 'Термин → определение (@MICROCARD)'),
                 instructions: `${wt('im.k616', '1. Скопируйте промпт и отправьте его ИИ-агенту вместе с учебным материалом.')}
 ${wt('im.k420', '2. Скопируйте ответ ИИ без изменений и вставьте в поле ниже.')}
 ${wt('im.k573', '3. Нажмите «Распарсить» для предпросмотра карточек.')}`,
-                prompt: `Ты — генератор микрокарточек для образовательной платформы.
+                prompt: wt('im.prompt.mc_term_definition', `Ты — генератор микрокарточек для образовательной платформы.
 
 <task>
 Извлеки из предоставленного материала все ключевые термины и создай микрокарточки формата «Термин → Определение». На лицевой стороне — термин или понятие (в форме вопроса «Что такое…?»). На обратной — точное, краткое определение.
@@ -7222,14 +7231,14 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
 @ tags: гематология
 # Что такое гематокрит?
 = Объёмная доля эритроцитов в общем объёме крови, выражаемая в процентах.
-</example>`
+</example>`)
             },
             definition_term: {
                 title: wt('im.k421', 'Определение → термин (@MICROCARD)'),
                 instructions: `${wt('im.k616', '1. Скопируйте промпт и отправьте его ИИ-агенту вместе с учебным материалом.')}
 ${wt('im.k422', '2. Скопируйте ответ ИИ без изменений и вставьте в поле ниже.')}
 ${wt('im.k573', '3. Нажмите «Распарсить» для предпросмотра карточек.')}`,
-                prompt: `Ты — генератор микрокарточек для образовательной платформы.
+                prompt: wt('im.prompt.mc_definition_term', `Ты — генератор микрокарточек для образовательной платформы.
 
 <task>
 Извлеки из предоставленного материала ключевые термины и создай микрокарточки в формате «Определение → Термин» (обратное направление). На лицевой стороне — описание или определение понятия. На обратной — сам термин. Это развивает узнавание термина по описанию.
@@ -7261,14 +7270,14 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
 @ tags: гематология
 # Объёмная доля эритроцитов в общем объёме крови, выраженная в процентах
 = Гематокрит
-</example>`
+</example>`)
             },
             material_cards: {
                 title: wt('im.k423', 'Карточки по тезисам материала (@MICROCARD)'),
                 instructions: `${wt('im.k616', '1. Скопируйте промпт и отправьте его ИИ-агенту вместе с учебным материалом.')}
 ${wt('im.k424', '2. Скопируйте ответ ИИ без изменений и вставьте в поле ниже.')}
 ${wt('im.k573', '3. Нажмите «Распарсить» для предпросмотра карточек.')}`,
-                prompt: `Ты — генератор микрокарточек для образовательной платформы.
+                prompt: wt('im.prompt.mc_material_cards', `Ты — генератор микрокарточек для образовательной платформы.
 
 <task>
 Проанализируй предоставленный материал и создай микрокарточки по ключевым тезисам. Каждая карточка должна проверять понимание одного тезиса, факта или связи из материала. Используй разнообразные формулировки вопросов: «Почему…?», «Как…?», «В чём отличие…?», «Каков механизм…?», «Назовите…».
@@ -7312,7 +7321,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
 @ difficulty: 3
 # В чём различие между крупозной и очаговой пневмонией?
 = Крупозная поражает целую долю лёгкого и имеет стадийное течение, очаговая — захватывает отдельные дольки и часто развивается как осложнение бронхита.
-</example>`
+</example>`)
             },
         };
     }
@@ -7500,7 +7509,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                                     class="w-full px-3 py-2 text-xs rounded-lg border border-border-strong bg-surface-1 text-text-main focus:outline-none focus:ring-1 focus:ring-primary">
                                     <option value="">${wt('im.k961', '— выберите колоду —')}</option>
                                     ${decks.filter(d => !d?.meta?.archived).map(d => `
-                                        <option value="${this.escapeHtmlAttr(String(d?.id || ''))}" ${this.mcImportTargetDeckId === String(d?.id) ? 'selected' : ''}>${this.escapeHtml(String(d?.name || d?.id || 'Колода'))} (${d?.stats?.cards_total ?? 0} карт.)</option>
+                                        <option value="${this.escapeHtmlAttr(String(d?.id || ''))}" ${this.mcImportTargetDeckId === String(d?.id) ? 'selected' : ''}>${this.escapeHtml(String(d?.name || d?.id || wt('im.k431', 'Колода')))} (${d?.stats?.cards_total ?? 0} ${wt('im.k991', 'карт.')})</option>
                                     `).join('')}
                                 </select>
                             </div>
@@ -7509,7 +7518,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                     ${targetDeck ? `
                         <div id="mcImportTargetDeckNote" class="mt-3 rounded-lg border border-border-subtle bg-bg-secondary px-3 py-2">
                             <div class="flex flex-wrap gap-1 mb-1.5">${this.renderMicrocardsDeckOwnershipBadges(targetDeck)}</div>
-                            <p class="text-[11px] text-text-secondary">Карточки будут добавлены в общую колоду <span class="font-semibold text-text-main">${this.escapeHtml(String(targetDeck.name || targetDeck.id || wt('im.k431', 'Колода')))}</span>. Прогресс повторения по ним останется персональным.</p>
+                            <p class="text-[11px] text-text-secondary">${wt('im.k992', 'Карточки будут добавлены в общую колоду')} <span class="font-semibold text-text-main">${this.escapeHtml(String(targetDeck.name || targetDeck.id || wt('im.k431', 'Колода')))}</span>. ${wt('im.k993', 'Прогресс повторения по ним останется персональным.')}</p>
                         </div>
                     ` : ''}
                     <div class="flex flex-wrap items-center gap-2">
@@ -9159,7 +9168,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                                     </td>
                                     <td class="px-2 py-2">
                                         ${avoidTypes.length ? `<div class="text-[11px] text-text-secondary">avoid: ${avoidTypes.map(t => this.escapeHtml(String(t))).join(', ')}</div>` : '<div class="text-[11px] text-text-secondary">avoid: —</div>'}
-                                        ${isGap ? `<div class="text-[11px] text-warning-text mt-1">gap: must_cover без surface/type подсказок</div>` : ''}
+                                        ${isGap ? `<div class="text-[11px] text-warning-text mt-1">${wt('im.k994', 'gap: must_cover без surface/type подсказок')}</div>` : ''}
                                     </td>
                                 </tr>
                             `;
@@ -9205,8 +9214,8 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                                                 }).join('')}
                                             </div>
                                         ` : `<div class="text-[11px] text-text-secondary">${wt('im.k1031', 'Нет route_ids')}</div>`}
-                                        ${hasGap ? `<div class="text-[11px] text-warning-text mt-1">gap: chunk без маршрута</div>` : ''}
-                                        ${hasOverlap ? `<div class="text-[11px] text-info-text mt-1">overlap: ${routeIds.length} маршрута(ов)</div>` : ''}
+                                        ${hasGap ? `<div class="text-[11px] text-warning-text mt-1">${wt('im.k995', 'gap: chunk без маршрута')}</div>` : ''}
+                                        ${hasOverlap ? `<div class="text-[11px] text-info-text mt-1">${wt('im.k996', 'overlap: {count} маршрута(ов)', { count: routeIds.length })}</div>` : ''}
                                     </td>
                                     <td class="px-2 py-2">
                                         <div class="text-[11px] text-text-secondary">max_primary_tasks: ${this.escapeHtml(String(target?.max_primary_tasks_recommended ?? '—'))}</div>
@@ -9537,8 +9546,8 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                                 <select id="ai-output-language-select"
                                     class="rounded-md border-border-subtle bg-surface-1 py-1 px-2 text-sm text-text-main focus:ring-1 focus:ring-primary disabled:opacity-50"
                                     ${this.aiOutputLanguageMode !== 'custom' ? 'disabled' : ''}>
-                                    <option value="ru" ${this.aiOutputLanguage === 'ru' ? 'selected' : ''}>Русский</option>
-                                    <option value="en" ${this.aiOutputLanguage === 'en' ? 'selected' : ''}>English</option>
+                                    <option value="ru" ${this.aiOutputLanguage === 'ru' ? 'selected' : ''}>${wt('im.k997', 'Русский')}</option>
+                                    <option value="en" ${this.aiOutputLanguage === 'en' ? 'selected' : ''}>${wt('im.k998', 'English')}</option>
                                 </select>
                             </label>
                         </div>
@@ -9564,7 +9573,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                                 ${this.aiUploadedFile ? `
                                     <span class="material-symbols-outlined text-3xl text-success-text mb-1">check_circle</span>
                                     <p class="text-sm font-bold text-success-text" id="ai-file-name">${this.escapeHtml(this.aiUploadedFile.name)}</p>
-                                    <p class="text-xs text-text-muted mt-1">${this.aiFileInfo ? `${this.aiFileInfo.word_count} слов` : wt('im.k498', 'Загружено')}</p>
+                                    <p class="text-xs text-text-muted mt-1">${this.aiFileInfo ? `${this.aiFileInfo.word_count} ${wt('im.k675', 'слов')}` : wt('im.k498', 'Загружено')}</p>
                                 ` : `
                                     <span class="material-symbols-outlined text-3xl text-text-disabled mb-1">upload_file</span>
                                     <p class="text-sm font-medium text-text-secondary" id="ai-file-name">${wt('im.k1048', 'Перетащите PDF, DOCX или TXT')}</p>
@@ -9580,7 +9589,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                     <div class="mb-4">
                         <textarea id="ai-material-textarea" rows="8"
                             class="block w-full rounded-lg border-border-subtle bg-surface-2 p-3 text-sm text-text-main placeholder:text-text-secondary focus:ring-2 focus:ring-primary resize-y"
-                            placeholder=wt('im.k499', "Вставьте учебный материал сюда...") oninput="dashboard.importManager.onAiMaterialInput(event)">${this.escapeHtml(this.materialText)}</textarea>
+                            placeholder="${wt('im.k499', 'Вставьте учебный материал сюда...')}" oninput="dashboard.importManager.onAiMaterialInput(event)">${this.escapeHtml(this.materialText)}</textarea>
                         <div class="flex justify-between mt-1">
                             <span class="text-xs ${wordCount > 0 && wordCount < 50 ? 'text-error-text' : 'text-text-secondary'}" id="ai-word-count">${wordCount ? `${wordCount} ${wt('im.k675', 'слов')}` : ''}</span>
                             <span class="text-xs ${wordCount > 0 && wordCount < 50 ? 'text-error-text' : 'text-text-secondary'}" id="ai-word-count-text">${wt('im.k1050', 'Минимум 50 слов')}</span>
@@ -9594,7 +9603,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                         ${this.aiAnalyzing ? '<span class="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>' : ''}
                         <span>${this.aiAnalyzing ? wt('im.k1051', 'Анализ...') : wt('im.k1052', 'Запустить анализ')}</span>
                     </button>
-                    ${!isSubmitDisabled ? `<span class="editor-flow-wrap text-xs text-text-secondary ml-2">${this.aiRunId ? `Последний ai_run_id: ${this.escapeHtml(this.aiRunId)}` : wt('im.k500', 'Результат будет сохранён в истории анализов')}</span>` : ''}
+                    ${!isSubmitDisabled ? `<span class="editor-flow-wrap text-xs text-text-secondary ml-2">${this.aiRunId ? `${wt('im.k999', 'Последний ai_run_id:')} ${this.escapeHtml(this.aiRunId)}` : wt('im.k500', 'Результат будет сохранён в истории анализов')}</span>` : ''}
                 </div>
             </div>
         `;
@@ -9720,7 +9729,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                     <div class="flex flex-wrap items-center justify-between gap-2">
                         <div class="text-xs font-semibold text-text-main">${this.escapeHtml(item.task_type || 'UNKNOWN')}${item.subtype ? ` / ${this.escapeHtml(item.subtype)}` : ''}</div>
                         <div class="flex flex-wrap gap-1">
-                            <span class="text-[10px] px-1 py-0.5 rounded font-medium text-text-main">${this.escapeHtml(item.suitability || 'н/д')}</span>
+                            <span class="text-[10px] px-1 py-0.5 rounded font-medium text-text-main">${this.escapeHtml(item.suitability || wt('im.k1000', 'н/д'))}</span>
                             ${item?.progression_is_fixed ? `<span class="text-[10px] px-1 py-0.5 rounded text-text-secondary">${wt('im.k1060', 'фиксированная посл.')}</span>` : ''}
                             ${item?.complex_role && item.complex_role !== 'none' ? `<span class="text-[10px] px-1 py-0.5 rounded text-text-secondary">${this.escapeHtml(String(item.complex_role))}</span>` : ''}
                         </div>
@@ -10150,8 +10159,8 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                                 <select id="ai-output-language-select"
                                     class="rounded-md border-border-subtle bg-surface-1 py-1 px-2 text-sm text-text-main focus:ring-1 focus:ring-primary disabled:opacity-50"
                                     ${this.aiOutputLanguageMode !== 'custom' ? 'disabled' : ''}>
-                                    <option value="ru" ${this.aiOutputLanguage === 'ru' ? 'selected' : ''}>Русский</option>
-                                    <option value="en" ${this.aiOutputLanguage === 'en' ? 'selected' : ''}>English</option>
+                                    <option value="ru" ${this.aiOutputLanguage === 'ru' ? 'selected' : ''}>${wt('im.k997', 'Русский')}</option>
+                                    <option value="en" ${this.aiOutputLanguage === 'en' ? 'selected' : ''}>${wt('im.k998', 'English')}</option>
                                 </select>
                             </label>
                         </div>
@@ -10166,7 +10175,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                             ${this.aiUploadedFile ? `
                                 <span class="material-symbols-outlined text-3xl text-success-text mb-1">check_circle</span>
                                 <p class="text-sm font-bold text-primary" id="ai-file-name">${this.escapeHtml(this.aiUploadedFile.name)}</p>
-                                <p class="text-xs text-text-muted mt-1">${this.aiFileInfo ? `${this.aiFileInfo.word_count} слов` : wt('im.k498', 'Загружено')}</p>
+                                <p class="text-xs text-text-muted mt-1">${this.aiFileInfo ? `${this.aiFileInfo.word_count} ${wt('im.k675', 'слов')}` : wt('im.k498', 'Загружено')}</p>
                             ` : `
                                 <span class="material-symbols-outlined text-3xl text-text-disabled mb-1">upload_file</span>
                                 <p class="text-sm font-medium text-text-secondary" id="ai-file-name">${wt('im.k1048', 'Перетащите PDF, DOCX или TXT')}</p>
@@ -10187,7 +10196,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
                         class="block w-full rounded-lg border-border-subtle bg-surface-2 p-3 text-sm text-text-main focus:ring-2 focus:ring-primary resize-y"
                         placeholder="${wt('im.k499', 'Вставьте учебный материал сюда...')}">${this.escapeHtml(this.materialText)}</textarea>
                     <div class="flex justify-between mt-1">
-                        <span class="text-xs text-text-disabled" id="ai-word-count">${this.materialText ? this.materialText.split(/\s+/).filter(Boolean).length + ' слов' : ''}</span>
+                        <span class="text-xs text-text-disabled" id="ai-word-count">${this.materialText ? this.materialText.split(/\s+/).filter(Boolean).length + ' ' + wt('im.k675', 'слов') : ''}</span>
                         <span class="text-xs text-text-disabled">${wt('im.k1050', 'Минимум 50 слов')}</span>
                     </div>
                 </div>

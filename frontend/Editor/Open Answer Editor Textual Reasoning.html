@@ -100,23 +100,23 @@
                                     <div class="question-card-header-main">
                                         <span class="question-badge" data-i18n="open_answer_editor.tab_question_n">Вопрос 1</span>
                                         <div class="question-levels-badges">
-                                            <span class="question-level-pill is-active" title="Уровень 1">L1</span>
-                                            <span class="question-level-pill is-active" title="Уровень 2">L2</span>
-                                            <span class="question-level-pill is-active" title="Уровень 3">L3</span>
+                                            <span class="question-level-pill is-active" data-i18n-title="open_answer_editor.level_1_title" title="Уровень 1">L1</span>
+                                            <span class="question-level-pill is-active" data-i18n-title="open_answer_editor.level_2_title" title="Уровень 2">L2</span>
+                                            <span class="question-level-pill is-active" data-i18n-title="open_answer_editor.level_3_title" title="Уровень 3">L3</span>
                                         </div>
                                         <span class="question-snippet"></span>
                                     </div>
                                     <div class="question-card-actions">
-                                        <button type="button" class="question-card-btn move-up-btn" data-i18n-title="open_answer_editor.move_up" title="Переместить вопрос выше" disabled aria-label="Переместить вопрос выше">
+                                        <button type="button" class="question-card-btn move-up-btn" data-i18n-title="open_answer_editor.move_up" data-i18n-aria="open_answer_editor.move_up" title="Переместить вопрос выше" disabled aria-label="Переместить вопрос выше">
                                             <span class="material-symbols-outlined text-[18px]">arrow_upward</span>
                                         </button>
-                                        <button type="button" class="question-card-btn move-down-btn" data-i18n-title="open_answer_editor.move_down" title="Переместить вопрос ниже" disabled aria-label="Переместить вопрос ниже">
+                                        <button type="button" class="question-card-btn move-down-btn" data-i18n-title="open_answer_editor.move_down" data-i18n-aria="open_answer_editor.move_down" title="Переместить вопрос ниже" disabled aria-label="Переместить вопрос ниже">
                                             <span class="material-symbols-outlined text-[18px]">arrow_downward</span>
                                         </button>
-                                        <button type="button" class="question-card-btn collapse-btn" data-i18n-title="open_answer_editor.collapse" title="Свернуть вопрос" aria-label="Свернуть вопрос" aria-expanded="true">
+                                        <button type="button" class="question-card-btn collapse-btn" data-i18n-title="open_answer_editor.collapse" data-i18n-aria="open_answer_editor.collapse" title="Свернуть вопрос" aria-label="Свернуть вопрос" aria-expanded="true">
                                             <span class="material-symbols-outlined text-[18px]">expand_less</span>
                                         </button>
-                                        <button type="button" class="question-card-btn delete-btn" data-i18n-title="open_answer_editor.delete_question_title" title="Удалить вопрос" aria-label="Удалить вопрос" disabled>
+                                        <button type="button" class="question-card-btn delete-btn" data-i18n-title="open_answer_editor.delete_question_title" data-i18n-aria="open_answer_editor.delete_question_title" title="Удалить вопрос" aria-label="Удалить вопрос" disabled>
                                             <span class="material-symbols-outlined text-[18px]">delete</span>
                                         </button>
                                     </div>
@@ -178,6 +178,7 @@
                                             <h3 class="text-xs font-bold text-text-secondary uppercase tracking-wider" data-i18n="open_answer_editor.keywords_title">Ключевые слова</h3>
                                             <span id="selected-count-badge"
                                                 data-onboarding-target="open-answer-selected-count"
+                                                data-i18n="open_answer_editor.selected_count_zero"
                                                 class="text-xs font-medium text-text-secondary bg-surface-2 px-2 py-0.5 rounded-full">Выбрано: 0</span>
                                         </div>
                                         <div id="keywords-container"
@@ -338,7 +339,7 @@
             </button>
             <div id="image-preview-container"
                 class="flex-1 flex items-center justify-center p-6 bg-surface-2 overflow-hidden relative cursor-grab active:cursor-grabbing">
-                <img id="image-preview-img" src="" alt="Просмотр изображения"
+                <img id="image-preview-img" src="" data-i18n-alt="common.image_preview_alt" alt="Просмотр изображения"
                     class="max-h-full max-w-full object-contain rounded-lg shadow-inner origin-center will-change-transform">
             </div>
         </div>

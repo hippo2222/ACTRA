@@ -786,19 +786,19 @@
             if (candidate.tolerance_explanation != null) {
                 const direct = String(candidate.tolerance_explanation).trim();
                 if (direct) {
-                    if (direct.includes("раскладки")) {
+                    if (/раскладки/.test(direct)) {
                         return wt('s1.tolerance_normalized', 'Ответ засчитан после нормализации {suffix}.').replace('{suffix}', wt('s1.norm_layout', 'раскладки'));
                     }
-                    if (direct.includes("е/ё")) {
+                    if (/е\/ё/.test(direct)) {
                         return wt('s1.tolerance_normalized', 'Ответ засчитан после нормализации {suffix}.').replace('{suffix}', wt('s1.norm_yo', 'е/ё'));
                     }
-                    if (direct.includes("опечатки") && direct.includes("формы")) {
+                    if (/опечатки/.test(direct) && /формы/.test(direct)) {
                         return wt('s1.tolerance_both', 'Ответ засчитан с учетом формы слова и опечатки.');
                     }
-                    if (direct.includes("опечатки")) {
+                    if (/опечатки/.test(direct)) {
                         return wt('s1.tolerance_typo', 'Ответ засчитан с учетом опечатки.');
                     }
-                    if (direct.includes("формы слова")) {
+                    if (/формы слова/.test(direct)) {
                         return wt('s1.tolerance_ending', 'Ответ засчитан с учетом формы слова.');
                     }
                     return direct;
@@ -964,23 +964,23 @@
             const mCount = matched != null ? matched : (countMatch ? Number(countMatch[1]) : 0);
             const tCount = total != null ? total : (countMatch ? Number(countMatch[2]) : 0);
 
-            if (msg.includes("толерантност") || msg.includes("tolerance") || (labelsDetails && (labelsDetails.has_tolerance || labelsDetails.tolerance_type))) {
+            if (/толерантност/.test(msg) || msg.includes("tolerance") || (labelsDetails && (labelsDetails.has_tolerance || labelsDetails.tolerance_type))) {
                 return wtf('s1.labels_success_tolerance',
                     `✅ Все названия правильные (${mCount}/${tCount}) ⚠️ (с учетом толерантности)`,
                     { matched_count: mCount, total_labels: tCount });
             }
-            if (msg.includes("Все названия правильные") || msg.includes("All names are correct") || (labelsDetails && labelsDetails.success)) {
+            if (/Все названия правильные/.test(msg) || msg.includes("All names are correct") || (labelsDetails && labelsDetails.success)) {
                 return wtf('s1.labels_success_all',
                     `✅ Все названия правильные (${mCount}/${tCount})`,
                     { matched_count: mCount, total_labels: tCount });
             }
-            if (msg.includes("Верно названо") || msg.includes("Correctly named") || score != null) {
+            if (/Верно названо/.test(msg) || msg.includes("Correctly named") || score != null) {
                 const sc = score != null ? score : (msg.match(/\(([\d.]+)%\)/) ? msg.match(/\(([\d.]+)%\)/)[1] : "0.0");
                 return wtf('s1.labels_fail_score',
                     `❌ Верно названо: ${mCount}/${tCount} (${sc}%)`,
                     { matched_count: mCount, total_labels: tCount, score: sc });
             }
-            if (msg.includes("Не все названия правильные") || msg.includes("Not all names are correct") || (labelsDetails && !labelsDetails.success)) {
+            if (/Не все названия правильные/.test(msg) || msg.includes("Not all names are correct") || (labelsDetails && !labelsDetails.success)) {
                 return wtf('s1.labels_fail',
                     `❌ Не все названия правильные (${mCount}/${tCount})`,
                     { matched_count: mCount, total_labels: tCount });
@@ -1160,7 +1160,7 @@
                 messageText = normalizeSequenceEvaluationMessage(messageText, detailsObj);
             }
             if (currentTaskType === "sequence_assembly" && difficulty === 2) {
-                if (messageText && (messageText.toLowerCase().includes("\u043d\u0435\u0432\u0435\u0440\u043d\u043e\u0435 \u043a\u043e\u043b\u0438\u0447\u0435\u0441\u0442\u0432\u043e \u0443\u0440\u043e\u0432\u043d\u0435\u0439") || messageText.toLowerCase().includes("incorrect number of levels"))) {
+                if (messageText && (/неверное количество уровней/i.test(messageText) || messageText.toLowerCase().includes("incorrect number of levels"))) {
                     messageText = wt('s1.seq_struct_mismatch', 'Структура уровней пока не совпадает. Продолжайте группировать элементы по уровням и проверьте снова.');
                 }
             }

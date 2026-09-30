@@ -16,16 +16,8 @@ class EditorDashboard {
         this.catalog = [];
         this.workspaceLimits = null;
         this.placeholderTaskNames = [
-            'тест теста',
-            'тест теста 2',
-            'тест теста 21',
-            'тест теста 25',
-            'тест теста 26',
-            'тест теста 27',
-            'тест теста 28',
-            'тест теста 45',
-            'тест теста 98',
-            'тест теста 99',
+            'test test',
+            'placeholder',
         ];
         this.currentSearchQuery = '';
         this.debouncedSearchHandler = null;
@@ -245,11 +237,11 @@ class EditorDashboard {
         return [
             {
                 id: 'onboarding-module-radiology',
-                name: 'Лучевая диагностика',
+                name: wt('editor_base.demo.radiation_diagnostics', 'Лучевая диагностика'),
                 topics: [
                     {
                         id: 'onboarding-topic-waves',
-                        name: 'Электромагнитные волны',
+                        name: wt('editor_base.demo.em_waves', 'Электромагнитные волны'),
                         theory_link: {
                             theory_id: 'theory-radio-wave-basics',
                             relation: 'primary',
@@ -257,14 +249,14 @@ class EditorDashboard {
                         tasks: [
                             {
                                 id: 'onboarding-task-wave-test',
-                                name: 'Тест: параметры волны',
+                                name: wt('editor_base.demo.wave_params', 'Тест: параметры волны'),
                                 type: 'test',
                                 created_at: now,
                                 updated_at: now,
                             },
                             {
                                 id: 'onboarding-task-spectrum-click',
-                                name: 'Клик: участки спектра',
+                                name: wt('editor_base.demo.spectrum_parts', 'Клик: участки спектра'),
                                 type: 'click',
                                 created_at: now,
                                 updated_at: now,
@@ -273,11 +265,11 @@ class EditorDashboard {
                     },
                     {
                         id: 'onboarding-topic-safety',
-                        name: 'Безопасность исследования',
+                        name: wt('editor_base.demo.safety', 'Безопасность исследования'),
                         tasks: [
                             {
                                 id: 'onboarding-task-safety-open',
-                                name: 'Открытый ответ: подготовка пациента',
+                                name: wt('editor_base.demo.patient_prep', 'Открытый ответ: подготовка пациента'),
                                 type: 'open_answer',
                                 created_at: now,
                                 updated_at: now,
@@ -288,15 +280,15 @@ class EditorDashboard {
             },
             {
                 id: 'onboarding-module-practice',
-                name: 'Практические навыки',
+                name: wt('editor_base.demo.practical_skills', 'Практические навыки'),
                 topics: [
                     {
                         id: 'onboarding-topic-sequence',
-                        name: 'Последовательность действий',
+                        name: wt('editor_base.demo.action_sequence', 'Последовательность действий'),
                         tasks: [
                             {
                                 id: 'onboarding-task-sequence',
-                                name: 'Сборка: порядок подготовки',
+                                name: wt('editor_base.demo.prep_assembly', 'Сборка: порядок подготовки'),
                                 type: 'sequence_assembly',
                                 created_at: now,
                                 updated_at: now,
@@ -374,7 +366,7 @@ class EditorDashboard {
             this.updateTopicSelect();
         }
         if (topicSelect) topicSelect.value = 'onboarding-topic-waves';
-        if (nameInput) nameInput.value = 'Контрольный вопрос по волнам';
+        if (nameInput) nameInput.value = wt('editor_base.demo.wave_control_q', 'Контрольный вопрос по волнам');
         if (typeSelect) typeSelect.value = 'test';
     }
 
@@ -1883,7 +1875,7 @@ class EditorDashboard {
                 const countBadge = document.createElement('span');
                 countBadge.className = 'editor-breadcrumb-count shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-surface-2 text-text-secondary border border-border-subtle anim-scale-in ml-1';
                 countBadge.textContent = this.formatTopicTaskCount(taskCount);
-                countBadge.title = `Заданий в теме: ${taskCount}`;
+                countBadge.title = wt('dashboard.topic_task_count_title', 'Заданий в теме: {count}').replace('{count}', taskCount);
                 nav.appendChild(countBadge);
             }
         }
@@ -6069,7 +6061,7 @@ class EditorDashboard {
 
         const isPlaceholderTask = (task) => {
             const name = (task?.name || task?.id || '').trim().toLowerCase();
-            return this.placeholderTaskNames.includes(name);
+            return /^тест\s+теста(\s+\d+)?$/i.test(name) || this.placeholderTaskNames.includes(name);
         };
 
         return modules.map(module => {

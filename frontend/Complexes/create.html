@@ -3325,7 +3325,7 @@
                       <div class="flex items-center gap-1.5 min-w-0">
                         <span class="material-symbols-outlined text-[16px] text-primary flex-shrink-0">layers</span>
                         <h4 class="text-[11px] font-bold uppercase tracking-wider text-text-secondary whitespace-nowrap" data-i18n="create.theory_blocks_section_title">Блоки теории</h4>
-                        <span id="theory-blocks-count-badge" class="cx-mini-pill inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold flex-shrink-0">0 блоков</span>
+                        <span id="theory-blocks-count-badge" class="cx-mini-pill inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold flex-shrink-0" data-i18n="create.theory_blocks_zero">0 блоков</span>
                       </div>
                       <div class="flex items-center gap-1.5 flex-shrink-0">
                         <button id="theory-block-mode-toggle" type="button" role="switch" aria-checked="false" class="theory-block-action-btn" title="Режим разметки блоков теории" data-i18n-title="create.fmt_theory_blocks_mode">
@@ -3356,12 +3356,12 @@
                             data-i18n-placeholder="create.block_name_placeholder"
                             maxlength="60" autocomplete="off" />
                           <button id="theory-block-create-confirm-btn" type="button"
-                            class="theory-block-create-form__confirm-btn" title="Создать блок">
+                            class="theory-block-create-form__confirm-btn" title="Создать блок" data-i18n-title="create.block_create_confirm">
                             <span class="material-symbols-outlined text-[15px]">check</span>
                             <span data-i18n="create.block_create_confirm">Создать</span>
                           </button>
                           <button id="theory-block-create-cancel-btn" type="button"
-                            class="theory-block-create-form__cancel-btn" title="Отмена" aria-label="Отмена">
+                            class="theory-block-create-form__cancel-btn" title="Отмена" aria-label="Отмена" data-i18n-title="create.cancel_btn" data-i18n-aria="create.cancel_btn">
                             <span class="material-symbols-outlined text-[16px]">close</span>
                           </button>
                         </div>
@@ -3608,7 +3608,7 @@
     </button>
   </div>
 
-  <div id="theory-block-floating-panel" class="theory-block-floating-panel" role="toolbar" aria-label="Добавить выделенный текст в блок теории">
+  <div id="theory-block-floating-panel" class="theory-block-floating-panel" role="toolbar" aria-label="Добавить выделенный текст в блок теории" data-i18n-aria="create.theory_floating_aria">
     <div id="theory-floating-block-chips" class="flex items-center gap-1 flex-wrap max-w-xs"></div>
     <button id="theory-floating-add-block-btn" type="button" class="theory-block-tag-btn bg-surface-2 text-text-main hover:bg-surface-3 border-border-subtle">
       <span class="material-symbols-outlined text-[14px]">add</span>
@@ -3617,13 +3617,13 @@
   </div>
 
   <!-- Floating Popover for Theory Block Task Binding -->
-  <div id="theory-block-task-picker" class="theory-block-task-picker hidden" role="dialog" aria-label="Привязка заданий к блоку теории">
+  <div id="theory-block-task-picker" class="theory-block-task-picker hidden" role="dialog" aria-label="Привязка заданий к блоку теории" data-i18n-aria="create.theory_picker_aria">
     <div class="flex items-center justify-between pb-1.5 border-b border-border-subtle px-0.5">
       <div class="flex items-center gap-2 min-w-0">
         <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" id="theory-task-picker-dot"></span>
-        <span class="text-xs font-bold text-text-main truncate" id="theory-task-picker-title">Привязать задания</span>
+        <span class="text-xs font-bold text-text-main truncate" id="theory-task-picker-title" data-i18n="create.bind_tasks_title">Привязать задания</span>
       </div>
-      <button type="button" id="theory-task-picker-close-btn" class="text-text-muted hover:text-text-main p-0.5 rounded-md hover:bg-surface-2 flex items-center justify-center transition-colors" aria-label="Закрыть">
+      <button type="button" id="theory-task-picker-close-btn" class="text-text-muted hover:text-text-main p-0.5 rounded-md hover:bg-surface-2 flex items-center justify-center transition-colors" aria-label="Закрыть" data-i18n-aria="create.close_btn">
         <span class="material-symbols-outlined text-[16px]">close</span>
       </button>
     </div>

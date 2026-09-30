@@ -776,9 +776,9 @@ const StatisticsApp = {
         const yesterdayIso = new Date(today.getTime() - (24 * 60 * 60 * 1000)).toISOString();
         const olderIso = new Date(today.getTime() - (3 * 24 * 60 * 60 * 1000)).toISOString();
         const complexList = [
-            { id: 'demo-lagusa', name: 'Laguskа Complex' },
-            { id: 'demo-anatomy', name: 'Анатомия: базовый блок' },
-            { id: 'demo-blood', name: 'Физиология крови' }
+            { id: 'demo-lagusa', name: wt('stats.demo_laguska', 'Комплекс Лагуска') },
+            { id: 'demo-anatomy', name: wt('stats.demo_anatomy', 'Анатомия: базовый блок') },
+            { id: 'demo-blood', name: wt('stats.demo_blood', 'Физиология крови') }
         ];
         const complexStats = {
             'demo-lagusa': {
@@ -833,9 +833,9 @@ const StatisticsApp = {
             complexStats,
             complexList,
             complexNames: {
-                'demo-lagusa': 'Laguskа Complex',
-                'demo-anatomy': 'Анатомия: базовый блок',
-                'demo-blood': 'Физиология крови'
+                'demo-lagusa': wt('stats.demo_laguska', 'Комплекс Лагуска'),
+                'demo-anatomy': wt('stats.demo_anatomy', 'Анатомия: базовый блок'),
+                'demo-blood': wt('stats.demo_blood', 'Физиология крови')
             },
             currentPeriod: 7,
             currentMetric: 'study',

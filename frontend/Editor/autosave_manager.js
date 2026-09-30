@@ -2,11 +2,18 @@
  * Automatic Draft Saving Manager
  * Saves editor state to localStorage periodically
  */
-function getAutoSaveI18n(key, fallback) {
+function wt(key, fallback) {
     if (typeof window !== 'undefined' && typeof window.wt === 'function') return window.wt(key, fallback);
     if (typeof window !== 'undefined' && typeof window.t === 'function') return window.t(key, fallback);
-    if (typeof wt === 'function') return wt(key, fallback);
+    if (typeof window !== 'undefined' && window.i18n && typeof window.i18n.t === 'function') {
+        const v = window.i18n.t(key);
+        return v !== key ? v : fallback;
+    }
     return fallback || key;
+}
+
+function getAutoSaveI18n(key, fallback) {
+    return wt(key, fallback);
 }
 
 class AutoSaveManager {
@@ -229,7 +236,7 @@ class AutoSaveManager {
             if (blockingState) {
                 this.editor.updateSaveStatus({
                     type: 'blocking',
-                    message: blockingState.message || getAutoSaveI18n('editor_base.status.needs_editing', '! Требуется правка'),
+                    message: blockingState.message || wt('editor_base.status.needs_editing', '! Требуется правка'),
                     detail: blockingState.draftDetail || blockingState.detail || '',
                 });
                 if (typeof this.editor?.notifyBlockingDraftSaved === 'function') {
@@ -240,7 +247,7 @@ class AutoSaveManager {
             const time = new Date(this.lastSaveTime).toLocaleTimeString();
             this.editor.updateSaveStatus({
                 type: 'draft',
-                message: getAutoSaveI18n('editor_base.status.draft_saved', 'Черновик сохранён'),
+                message: wt('editor_base.status.draft_saved', 'Черновик сохранён'),
                 time: time
             });
         }

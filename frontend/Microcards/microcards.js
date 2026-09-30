@@ -1887,9 +1887,9 @@
 
     // ── Editable cards accordion (inline editing on the deck page) ─────────
     const CARD_STATUS = {
-        new:      { label: 'Новая',     varName: '--color-border-strong', textVarName: '--color-text-secondary' },
-        learning: { label: 'Изучается', varName: '--color-warning', textVarName: '--color-warning-text' },
-        mastered: { label: 'Освоено',   varName: '--color-success', textVarName: '--color-success-text' }
+        get new() { return { label: t('microcards.status_new', 'Новая'), varName: '--color-border-strong', textVarName: '--color-text-secondary' }; },
+        get learning() { return { label: t('microcards.status_learning', 'Изучается'), varName: '--color-warning', textVarName: '--color-warning-text' }; },
+        get mastered() { return { label: t('microcards.status_mastered', 'Освоено'), varName: '--color-success', textVarName: '--color-success-text' }; }
     };
 
     function cardStatusPill(card) {
@@ -1919,10 +1919,10 @@
         return `
         <div class="mc-card-item rounded-xl border border-border-subtle bg-surface-1${openCls}" data-card-id="${card.id || ''}" data-front-image="${escHtml(frontImg)}" data-back-image="${escHtml(backImg)}" data-front-attr="${escHtml(JSON.stringify(frontAttr))}" data-back-attr="${escHtml(JSON.stringify(backAttr))}">
             <div class="mc-card-head flex items-center gap-3 p-3 cursor-pointer select-none" onclick="mcApp.toggleCardExpand(this)">
-                ${isNew ? '' : `<input type="checkbox" class="mc-card-select" data-select-id="${card.id}" ${state.selectedCards.has(card.id) ? 'checked' : ''} onclick="event.stopPropagation(); mcApp.toggleCardSelect(this)" aria-label="Выбрать карточку" />`}
+                ${isNew ? '' : `<input type="checkbox" class="mc-card-select" data-select-id="${card.id}" ${state.selectedCards.has(card.id) ? 'checked' : ''} onclick="event.stopPropagation(); mcApp.toggleCardSelect(this)" aria-label="${t('microcards.select_card', 'Выбрать карточку')}" />`}
                 ${cardStatusPill(card)}
                 <div class="flex-1 min-w-0">
-                    <p class="mc-head-front text-sm font-bold text-text-main truncate">${escHtml(front) || '<span class="text-text-secondary font-normal">Новая карточка…</span>'}</p>
+                    <p class="mc-head-front text-sm font-bold text-text-main truncate">${escHtml(front) || `<span class="text-text-secondary font-normal">${t('microcards.new_card_placeholder', 'Новая карточка…')}</span>`}</p>
                     <p class="mc-head-back text-xs text-text-secondary truncate">${escHtml(back)}</p>
                 </div>
                 <span class="material-symbols-outlined mc-card-chevron text-text-secondary text-[20px]" aria-hidden="true">expand_more</span>
@@ -1931,27 +1931,27 @@
               <div class="px-3 pb-3 pt-0 space-y-3">
                 <div class="mc-form-row two">
                     <div>
-                        <label for="front-${cardSuffix}" class="block text-[10px] font-bold text-text-secondary uppercase mb-1">Вопрос</label>
-                        <textarea id="front-${cardSuffix}" data-field="front" rows="3" class="${mcInputCls} resize-y" placeholder="Лицевая сторона">${escHtml(front)}</textarea>
+                        <label for="front-${cardSuffix}" class="block text-[10px] font-bold text-text-secondary uppercase mb-1">${t('microcards.card_question_label', 'Вопрос')}</label>
+                        <textarea id="front-${cardSuffix}" data-field="front" rows="3" class="${mcInputCls} resize-y" placeholder="${t('microcards.ph_front', 'Лицевая сторона')}">${escHtml(front)}</textarea>
                     </div>
                     <div>
-                        <label for="back-${cardSuffix}" class="block text-[10px] font-bold text-text-secondary uppercase mb-1">Ответ</label>
-                        <textarea id="back-${cardSuffix}" data-field="back" rows="3" class="${mcInputCls} resize-y" placeholder="Обратная сторона">${escHtml(back)}</textarea>
+                        <label for="back-${cardSuffix}" class="block text-[10px] font-bold text-text-secondary uppercase mb-1">${t('microcards.card_answer_label', 'Ответ')}</label>
+                        <textarea id="back-${cardSuffix}" data-field="back" rows="3" class="${mcInputCls} resize-y" placeholder="${t('microcards.ph_back', 'Обратная сторона')}">${escHtml(back)}</textarea>
                     </div>
                 </div>
 
                 <button type="button" onclick="mcApp.toggleCardAdvanced(this)" class="flex items-center gap-1 text-[11px] font-bold text-text-secondary hover:text-text-main transition-colors">
                     <span class="material-symbols-outlined text-[16px] mc-adv-chevron" aria-hidden="true">expand_more</span>
-                    Доп. настройки
+                    ${t('microcards.advanced_settings', 'Доп. настройки')}
                 </button>
                 <div class="mc-card-adv hidden space-y-3">
                     <div>
-                        <label for="hint-${cardSuffix}" class="block text-[10px] font-bold text-text-secondary uppercase mb-1">Подсказка</label>
-                        <input id="hint-${cardSuffix}" data-field="hint" type="text" class="${mcInputCls}" placeholder="Опционально" value="${escHtml(hint)}" />
+                        <label for="hint-${cardSuffix}" class="block text-[10px] font-bold text-text-secondary uppercase mb-1">${t('microcards.hint_label', 'Подсказка')}</label>
+                        <input id="hint-${cardSuffix}" data-field="hint" type="text" class="${mcInputCls}" placeholder="${t('microcards.ph_hint_optional', 'Опционально')}" value="${escHtml(hint)}" />
                     </div>
                     <div>
-                        <label for="acceptable-${cardSuffix}" class="block text-[10px] font-bold text-text-secondary uppercase mb-1">Доп. допустимые ответы (по одному на строку)</label>
-                        <textarea id="acceptable-${cardSuffix}" data-field="acceptable" rows="2" class="${mcInputCls} resize-y" placeholder="Синонимы, засчитываемые как верные">${escHtml(acc)}</textarea>
+                        <label for="acceptable-${cardSuffix}" class="block text-[10px] font-bold text-text-secondary uppercase mb-1">${t('microcards.lbl_acceptable', 'Доп. допустимые ответы (по одному на строку)')}</label>
+                        <textarea id="acceptable-${cardSuffix}" data-field="acceptable" rows="2" class="${mcInputCls} resize-y" placeholder="${t('microcards.ph_acceptable', 'Синонимы, засчитываемые как верные')}">${escHtml(acc)}</textarea>
                     </div>
                     <div class="mc-form-row two">
                         <div class="mc-img-field" data-side="front">${cardImageFieldInner('front', frontImg, frontAttr)}</div>
@@ -1961,10 +1961,10 @@
 
                 <div class="flex items-center justify-between pt-1">
                     <button type="button" onclick="mcApp.deleteCardInline(this)" class="px-3 py-1.5 rounded-lg border border-error/40 text-error font-bold text-xs hover:bg-bg-hover transition-colors flex items-center gap-1.5">
-                        <span class="material-symbols-outlined text-[16px]" aria-hidden="true">delete</span>${isNew ? 'Отмена' : 'Удалить'}
+                        <span class="material-symbols-outlined text-[16px]" aria-hidden="true">delete</span>${isNew ? t('microcards.btn_cancel', 'Отмена') : t('microcards.btn_delete', 'Удалить')}
                     </button>
                     <button type="button" onclick="mcApp.saveCardInline(this)" class="px-4 py-1.5 rounded-lg bg-primary text-primary-fg hover:bg-primary-hover font-bold text-xs transition-colors flex items-center gap-1.5">
-                        <span class="material-symbols-outlined text-[16px]" aria-hidden="true">check</span>Сохранить
+                        <span class="material-symbols-outlined text-[16px]" aria-hidden="true">check</span>${t('microcards.btn_save', 'Сохранить')}
                     </button>
                 </div>
               </div>
@@ -2298,7 +2298,8 @@
     }
 
     function confirmDeleteDeck() {
-        $('deleteConfirmText').textContent = `Вы действительно хотите удалить колоду "${state.activeDeck.name}"? Это действие сотрет все карточки и ваш прогресс по ним.`;
+        const deckName = (state.activeDeck && state.activeDeck.name) || '';
+        $('deleteConfirmText').textContent = t('microcards.confirm_delete_deck_with_name', 'Вы действительно хотите удалить колоду "{name}"? Это действие сотрет все карточки и ваш прогресс по ним.').replace('{name}', deckName);
         const btn = $('btnDeleteConfirmAction');
         btn.onclick = async () => {
             try {
@@ -3109,21 +3110,35 @@
         if ($('sumCombo')) $('sumCombo').textContent = state.maxCombo;
 
         // Dynamic title / message
-        let titleKey, titleFb, subKey, subFb;
+        let titleText, subText;
         if (!isRun) {
-            titleKey = 'microcards.res_title_review'; titleFb = 'Повторение завершено!';
-            subKey = accuracy >= 80 ? 'microcards.res_sub_review_good' : 'microcards.res_sub_review_keep';
-            subFb = accuracy >= 80
-                ? 'Память держит материал крепко — так держать.'
-                : 'Сложные карточки вернутся чаще — память подтянется.';
+            titleText = t('microcards.res_title_review', 'Повторение завершено!');
+            subText = accuracy >= 80
+                ? t('microcards.res_sub_review_good', 'Память держит материал крепко — так держать.')
+                : t('microcards.res_sub_review_keep', 'Сложные карточки вернутся чаще — память подтянется.');
         }
-        else if (starCount === 5) { titleKey = 'microcards.res_title_perfect'; titleFb = 'Идеально!'; subKey = 'microcards.res_sub_perfect'; subFb = 'Безупречно — ни одной ошибки!'; }
-        else if (starCount >= 4) { titleKey = 'microcards.res_title_great'; titleFb = 'Великолепно!'; subKey = 'microcards.res_sub_great'; subFb = 'Отличный результат, так держать!'; }
-        else if (starCount >= 3) { titleKey = 'microcards.res_title_good'; titleFb = 'Хорошая работа!'; subKey = 'microcards.res_sub_good'; subFb = 'Уверенный результат — ещё немного до идеала.'; }
-        else if (starCount >= 1) { titleKey = 'microcards.res_title_ok'; titleFb = 'Неплохо!'; subKey = 'microcards.res_sub_ok'; subFb = 'Сложные карточки вернулись и были закрыты — попробуй пройти их с первой попытки.'; }
-        else { titleKey = 'microcards.res_title_keep'; titleFb = 'Продолжай тренироваться'; subKey = 'microcards.res_sub_keep'; subFb = 'Пройди колоду ещё раз, чтобы закрепить материал.'; }
-        if ($('sumTitle')) $('sumTitle').textContent = t(titleKey, titleFb);
-        if ($('sumSubtitle')) $('sumSubtitle').textContent = t(subKey, subFb);
+        else if (starCount === 5) {
+            titleText = t('microcards.res_title_perfect', 'Идеально!');
+            subText = t('microcards.res_sub_perfect', 'Безупречно — ни одной ошибки!');
+        }
+        else if (starCount >= 4) {
+            titleText = t('microcards.res_title_great', 'Великолепно!');
+            subText = t('microcards.res_sub_great', 'Отличный результат, так держать!');
+        }
+        else if (starCount >= 3) {
+            titleText = t('microcards.res_title_good', 'Хорошая работа!');
+            subText = t('microcards.res_sub_good', 'Уверенный результат — ещё немного до идеала.');
+        }
+        else if (starCount >= 1) {
+            titleText = t('microcards.res_title_ok', 'Неплохо!');
+            subText = t('microcards.res_sub_ok', 'Сложные карточки вернулись и были закрыты — попробуй пройти их с первой попытки.');
+        }
+        else {
+            titleText = t('microcards.res_title_keep', 'Продолжай тренироваться');
+            subText = t('microcards.res_sub_keep', 'Пройди колоду ещё раз, чтобы закрепить материал.');
+        }
+        if ($('sumTitle')) $('sumTitle').textContent = titleText;
+        if ($('sumSubtitle')) $('sumSubtitle').textContent = subText;
     }
 
     function restartLearningSession() {
@@ -3319,12 +3334,12 @@
 
     // ── Import Decks Dialog ───────────────────────────────────────────────
     const IMPORT_HINTS = {
-        auto: ['microcards.imp_hint_auto', 'Вставьте что угодно — формат определится сам: Quizlet/Excel (таб), «вопрос — ответ», CSV, JSON или тест. Файлы тоже: Anki (.apkg, без медиа) и Word (.docx — таблица «вопрос|ответ» или абзацы). Разделитель и иерархия распознаются автоматически.'],
-        csv: ['microcards.imp_hint_csv', 'Колонки: front, back, hint. Строки в кавычках. Совместимо с Quizlet (term/definition).'],
-        json: ['microcards.imp_hint_json', 'Схема actra_flashcards_v1: { "cards": [ { "front": "Q", "back": "A", "hint": "H" } ] }'],
-        txt_full: ['microcards.imp_hint_txt_full', 'Блочный формат @MICROCARD с полями Q:/A: — несколько строк на карточку, поддержка изображений и подсказок.'],
-        txt_simplified: ['microcards.imp_hint_txt_simple', 'По строке на карточку: «вопрос<разделитель>ответ». Разделитель выбирается ниже (или «Авто»).'],
-        test: ['microcards.imp_hint_test', 'Тестовый формат: «? Вопрос», «+ правильный», «- неправильный». Неправильные варианты игнорируются.'],
+        auto: ['microcards.imp_hint_auto', t('microcards.imp_hint_auto', 'Вставьте что угодно — формат определится сам: Quizlet/Excel (таб), «вопрос — ответ», CSV, JSON или тест. Файлы тоже: Anki (.apkg, без медиа) и Word (.docx — таблица «вопрос|ответ» или абзацы). Разделитель и иерархия распознаются автоматически.')],
+        csv: ['microcards.imp_hint_csv', t('microcards.imp_hint_csv', 'Колонки: front, back, hint. Строки в кавычках. Совместимо с Quizlet (term/definition).')],
+        json: ['microcards.imp_hint_json', t('microcards.imp_hint_json', 'Схема actra_flashcards_v1: { "cards": [ { "front": "Q", "back": "A", "hint": "H" } ] }')],
+        txt_full: ['microcards.imp_hint_txt_full', t('microcards.imp_hint_txt_full', 'Блочный формат @MICROCARD с полями Q:/A: — несколько строк на карточку, поддержка изображений и подсказок.')],
+        txt_simplified: ['microcards.imp_hint_txt_simple', t('microcards.imp_hint_txt_simple', 'По строке на карточку: «вопрос<разделитель>ответ». Разделитель выбирается ниже (или «Авто»).')],
+        test: ['microcards.imp_hint_test', t('microcards.imp_hint_test', 'Тестовый формат: «? Вопрос», «+ правильный», «- неправильный». Неправильные варианты игнорируются.')],
     };
 
     function openImportDialog() {
@@ -3347,9 +3362,9 @@
     // Ready-made prompt the user pastes into an AI to generate cards in our format.
     // Variants: detail (short = token-thrifty / full = thorough) × hints (no / yes).
     function _aiPromptText(detail, hints) {
-        const fill = '<<вставьте сюда свой материал: конспект, текст лекции, статью>>';
+        const fill = t('microcards.ai_prompt_fill', '<<вставьте сюда свой материал: конспект, текст лекции, статью>>');
         if (detail === 'short' && hints === 'no') {
-            return `Сделай из текста ниже карточки для заучивания (вопрос и ответ).
+            return t('microcards.ai_prompt_short_no', `Сделай из текста ниже карточки для заучивания (вопрос и ответ).
 
 Правила. Каждая карточка — это одна строка вида «Вопрос — Ответ», между вопросом и ответом ставь длинное тире « — » с пробелами. Не используй нумерацию, маркированные списки, заголовки, markdown и тройные кавычки — в ответе должны быть только строки-карточки и ничего больше. Вопросы короткие и конкретные, ответы краткие.
 
@@ -3358,10 +3373,10 @@
 Сколько костей у взрослого человека? — 206
 
 Материал:
-${fill}`;
+{fill}`).replace('{fill}', fill);
         }
         if (detail === 'short' && hints === 'yes') {
-            return `Сделай из текста ниже карточки для заучивания (вопрос и ответ).
+            return t('microcards.ai_prompt_short_yes', `Сделай из текста ниже карточки для заучивания (вопрос и ответ).
 
 Правила. Каждая карточка — это одна строка вида «Вопрос — Ответ», между вопросом и ответом ставь длинное тире « — » с пробелами. К трудной карточке можно добавить подсказку в самом конце строки в особых скобках со слешами: (/короткий намёк/). Подсказка — это намёк, а не сам ответ. Не используй нумерацию, маркированные списки, заголовки, markdown и тройные кавычки — только строки-карточки.
 
@@ -3370,10 +3385,10 @@ ${fill}`;
 Что такое митоз? — Деление клетки на две одинаковые (/«мито» значит «нить»/)
 
 Материал:
-${fill}`;
+{fill}`).replace('{fill}', fill);
         }
         if (detail === 'full' && hints === 'no') {
-            return `Ты — помощник, который делает качественные карточки для запоминания (вопрос → ответ). Преврати мой материал ниже в набор таких карточек.
+            return t('microcards.ai_prompt_full_no', `Ты — помощник, который делает качественные карточки для запоминания (вопрос → ответ). Преврати мой материал ниже в набор таких карточек.
 
 Как оформлять (соблюдай точно). Каждая карточка — это одна строка вида «Вопрос — Ответ»; между вопросом и ответом ставь длинное тире с пробелами « — ». Пустых строк между карточками нет. Не добавляй нумерацию, маркированные списки, заголовки, пояснения, markdown или тройные кавычки — в ответе должны быть только строки-карточки и ничего больше.
 
@@ -3385,10 +3400,10 @@ ${fill}`;
 Год начала Второй мировой войны — 1939
 
 Материал:
-${fill}`;
+{fill}`).replace('{fill}', fill);
         }
         // full + hints
-        return `Ты — помощник, который делает качественные карточки для запоминания (вопрос → ответ). Преврати мой материал ниже в набор таких карточек.
+        return t('microcards.ai_prompt_full_yes', `Ты — помощник, который делает качественные карточки для запоминания (вопрос → ответ). Преврати мой материал ниже в набор таких карточек.
 
 Как оформлять (соблюдай точно). Каждая карточка — это одна строка вида «Вопрос — Ответ»; между вопросом и ответом ставь длинное тире с пробелами « — ». Если карточка трудная, можешь добавить подсказку в самом конце строки в особых скобках со слешами: «Вопрос — Ответ (/короткий намёк/)». Подсказка — это лёгкая зацепка для памяти, а не сам ответ; добавляй её только там, где она правда помогает, не к каждой карточке. Обычные скобки без слешей подсказкой не считаются. Не используй нумерацию, маркированные списки, заголовки, пояснения, markdown или тройные кавычки — только строки-карточки.
 
@@ -3400,7 +3415,7 @@ ${fill}`;
 Год начала Второй мировой войны — 1939
 
 Материал:
-${fill}`;
+{fill}`).replace('{fill}', fill);
     }
 
     function renderAiPrompt() {
@@ -3594,11 +3609,11 @@ ${fill}`;
     }
 
     const IMPORT_FORMAT_LABELS = {
-        csv: ['microcards.fmt_csv', 'CSV-таблица'],
+        csv: ['microcards.fmt_csv', t('microcards.fmt_csv', 'CSV-таблица')],
         json: ['microcards.fmt_json', 'JSON'],
-        txt_full: ['microcards.fmt_txt_full', 'TXT (блоки)'],
-        txt_simplified: ['microcards.fmt_txt_simplified', 'Текст «вопрос — ответ»'],
-        test: ['microcards.fmt_test', 'Тестовые вопросы'],
+        txt_full: ['microcards.fmt_txt_full', t('microcards.fmt_txt_full', 'TXT (блоки)')],
+        txt_simplified: ['microcards.fmt_txt_simplified', t('microcards.fmt_txt_simplified', 'Текст «вопрос — ответ»')],
+        test: ['microcards.fmt_test', t('microcards.fmt_test', 'Тестовые вопросы')],
     };
     function importFormatLabel(fmt) {
         const e = IMPORT_FORMAT_LABELS[fmt];
@@ -3963,27 +3978,27 @@ ${fill}`;
         return [
             {
                 id: MC_DEMO_DECK_ID,
-                name: 'Радиофизика: основы',
-                description: 'Демоколода для обучения: ключевые термины и формулы по основам радиофизики.',
-                tags: ['радиофизика', 'демо'],
+                name: t('microcards.demo_deck_1_name', 'Радиофизика: основы'),
+                description: t('microcards.demo_deck_1_desc', 'Демоколода для обучения: ключевые термины и формулы по основам радиофизики.'),
+                tags: [t('microcards.demo_deck_1_tag1', 'радиофизика'), t('microcards.demo_deck_1_tag2', 'демо')],
                 card_count: 24, new_count: 6, due_count: 9, level2_count: 12,
                 level: 3, is_paused: false, linked: false, author_name: '',
                 updated_at: iso(-2 * day), created_at: iso(-30 * day),
             },
             {
                 id: 'mc-demo-deck-antennas',
-                name: 'Антенны и распространение',
-                description: 'Параметры антенн, диаграмма направленности, усиление.',
-                tags: ['антенны'],
+                name: t('microcards.demo_deck_2_name', 'Антенны и распространение'),
+                description: t('microcards.demo_deck_2_desc', 'Параметры антенн, диаграмма направленности, усиление.'),
+                tags: [t('microcards.demo_deck_2_tag1', 'антенны')],
                 card_count: 16, new_count: 4, due_count: 0, level2_count: 9,
                 level: 2, is_paused: false, linked: true, author_name: 'RadioLab',
                 updated_at: iso(-5 * day), created_at: iso(-20 * day),
             },
             {
                 id: 'mc-demo-deck-modulation',
-                name: 'Модуляция сигналов',
-                description: 'AM, FM, фазовая модуляция и их применение.',
-                tags: ['сигналы', 'демо'],
+                name: t('microcards.demo_deck_3_name', 'Модуляция сигналов'),
+                description: t('microcards.demo_deck_3_desc', 'AM, FM, фазовая модуляция и их применение.'),
+                tags: [t('microcards.demo_deck_3_tag1', 'сигналы'), t('microcards.demo_deck_3_tag2', 'демо')],
                 card_count: 18, new_count: 0, due_count: 3, level2_count: 5,
                 level: 1, is_paused: true, paused_progress: '7/18', linked: false, author_name: '',
                 updated_at: iso(-1 * day), created_at: iso(-12 * day),
@@ -4005,12 +4020,12 @@ ${fill}`;
         const hour = 3600000, day = 86400000;
         const due = (offsetMs) => new Date(Date.now() + offsetMs).toISOString();
         return [
-            { id: 'mc-demo-card-1', front: { text: 'Что такое длина волны?' }, back: { text: 'Расстояние между соседними точками волны в одинаковой фазе.' }, is_new: false, level: 2, due_at: due(5 * day) },
-            { id: 'mc-demo-card-2', front: { text: 'Единица измерения частоты?' }, back: { text: 'Герц (Гц) — одно колебание в секунду.' }, is_new: false, level: 2, due_at: due(3 * day) },
-            { id: 'mc-demo-card-3', front: { text: 'Связь скорости, частоты и длины волны' }, back: { text: 'v = λ · f' }, is_new: false, level: 1, due_at: due(-1 * hour) },
-            { id: 'mc-demo-card-4', front: { text: 'Что такое поляризация волны?' }, back: { text: 'Ориентация колебаний вектора электрического поля.' }, is_new: false, level: 1, due_at: due(1 * day) },
-            { id: 'mc-demo-card-5', front: { text: 'Что описывает диаграмма направленности антенны?' }, back: { text: 'Распределение излучаемой мощности по направлениям.' }, is_new: true, level: 0, due_at: null },
-            { id: 'mc-demo-card-6', front: { text: 'Что такое резонанс в колебательном контуре?' }, back: { text: 'Резкое возрастание амплитуды на собственной частоте.' }, is_new: true, level: 0, due_at: null },
+            { id: 'mc-demo-card-1', front: { text: t('microcards.demo_card_1_front', 'Что такое длина волны?') }, back: { text: t('microcards.demo_card_1_back', 'Расстояние между соседними точками волны в одинаковой фазе.') }, is_new: false, level: 2, due_at: due(5 * day) },
+            { id: 'mc-demo-card-2', front: { text: t('microcards.demo_card_2_front', 'Единица измерения частоты?') }, back: { text: t('microcards.demo_card_2_back', 'Герц (Гц) — одно колебание в секунду.') }, is_new: false, level: 2, due_at: due(3 * day) },
+            { id: 'mc-demo-card-3', front: { text: t('microcards.demo_card_3_front', 'Связь скорости, частоты и длины волны') }, back: { text: 'v = λ · f' }, is_new: false, level: 1, due_at: due(-1 * hour) },
+            { id: 'mc-demo-card-4', front: { text: t('microcards.demo_card_4_front', 'Что такое поляризация волны?') }, back: { text: t('microcards.demo_card_4_back', 'Ориентация колебаний вектора электрического поля.') }, is_new: false, level: 1, due_at: due(1 * day) },
+            { id: 'mc-demo-card-5', front: { text: t('microcards.demo_card_5_front', 'Что описывает диаграмма направленности антенны?') }, back: { text: t('microcards.demo_card_5_back', 'Распределение излучаемой мощности по направлениям.') }, is_new: true, level: 0, due_at: null },
+            { id: 'mc-demo-card-6', front: { text: t('microcards.demo_card_6_front', 'Что такое резонанс в колебательном контуре?') }, back: { text: t('microcards.demo_card_6_back', 'Резкое возрастание амплитуды на собственной частоте.') }, is_new: true, level: 0, due_at: null },
         ];
     }
 

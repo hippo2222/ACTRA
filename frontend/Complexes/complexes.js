@@ -3893,11 +3893,11 @@ function wt(key, fallback) {
               return;
             }
             if (!visible) {
-              summaryEl.textContent = `0 из ${total}`;
+              summaryEl.textContent = `0 ${wt('complexes.summary_of', 'из')} ${total}`;
               if (badgeContainer) badgeContainer.setAttribute("title", `${wt('complexes.summary_no_match', 'Нет совпадений')}: ${activeLabel}`);
               return;
             }
-            summaryEl.textContent = `${visible} из ${total}`;
+            summaryEl.textContent = `${visible} ${wt('complexes.summary_of', 'из')} ${total}`;
             if (badgeContainer) badgeContainer.setAttribute("title", `${wt('complexes.summary_shown', 'Показано')} ${visible} ${wt('complexes.summary_of', 'из')} ${total} (${activeLabel})`);
           }
 
@@ -4761,7 +4761,7 @@ function wt(key, fallback) {
                               const label = document.getElementById("import-progress-label");
                               const pctEl = document.getElementById("import-progress-percent");
                               if (fill) fill.style.width = `${pct}%`;
-                              if (label) label.textContent = msg.status || `Импорт: ${msg.current} из ${msg.total}`;
+                               if (label) label.textContent = msg.status || wt('complexes.import_progress_label', 'Импорт: {current} из {total}').replace('{current}', msg.current).replace('{total}', msg.total);
                               if (pctEl) pctEl.textContent = `${pct}%`;
                             } else if (msg.type === "result") {
                               finalResult = msg.data;
@@ -4778,7 +4778,7 @@ function wt(key, fallback) {
                         showComplexVoiceToast({
                           severity: "success",
                           what: wt('complexes.import_success_what', 'Импорт успешно завершён.'),
-                          impact: `${wt('im.k680', 'Добавлено:')} ${finalResult.imported_complexes || 0} комплексов.`,
+                          impact: wt('complexes.import_success_count', 'Добавлено: {count} комплексов.').replace('{count}', finalResult.imported_complexes || 0),
                           next: wt('complexes.import_success_next', 'Список комплексов обновлён.'),
                         });
                         close(true);
@@ -4794,7 +4794,7 @@ function wt(key, fallback) {
                         severity: "error",
                         what: wt('complexes.import_failed_what', 'Импорт завершился ошибкой.'),
                         impact: wt('complexes.import_failed_impact', 'Данные не были импортированы.'),
-                        next: String(err?.message || "").trim() || "Проверьте архив и повторите попытку.",
+                        next: String(err?.message || "").trim() || wt('complexes.import_err_check_archive', 'Проверьте архив и повторите попытку.'),
                       });
                       close(false);
                     }
@@ -4806,7 +4806,7 @@ function wt(key, fallback) {
                     severity: "error",
                     what: wt('complexes.import_failed_what', 'Проверка архива завершилась ошибкой.'),
                     impact: wt('complexes.import_failed_impact', 'Не удалось прочитать данные архива.'),
-                    next: String(err?.message || "").trim() || "Проверьте корректность zip-файла.",
+                    next: String(err?.message || "").trim() || wt('complexes.import_err_check_zip', 'Проверьте корректность zip-файла.'),
                   });
                   close(false);
                 }

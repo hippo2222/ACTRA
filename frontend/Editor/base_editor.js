@@ -1619,40 +1619,40 @@ class BaseEditor {
         if (false) switch (type) {
             case 'saving':
                 dot.classList.add('bg-info', 'animate-pulse');
-                text.textContent = options.message || 'Сохранение...';
+                text.textContent = options.message || wt('editor_base.status.saving', 'Сохранение...');
                 text.className = 'text-[11px] font-bold text-info-dark leading-none';
                 if (detail) detail.classList.add('hidden');
                 break;
             case 'dirty':
                 dot.classList.add('bg-warning');
-                text.textContent = options.message || 'Изменения не сохранены';
+                text.textContent = options.message || wt('editor_base.status.unsaved', 'Изменения не сохранены');
                 text.className = 'text-[11px] font-bold text-warning-dark leading-none';
                 if (detail) detail.classList.add('hidden');
                 break;
             case 'saved':
                 dot.classList.add('bg-success');
-                text.textContent = options.message || 'Сохранено';
+                text.textContent = options.message || wt('editor_base.status.saved', 'Сохранено');
                 text.className = 'text-[11px] font-bold text-success-dark leading-none';
                 if (detail) detail.classList.add('hidden');
                 break;
             case 'draft':
                 dot.classList.add('bg-success');
-                text.textContent = options.message || 'Черновик сохранён';
+                text.textContent = options.message || wt('editor_base.status.draft_saved', 'Черновик сохранён');
                 text.className = 'text-[11px] font-bold text-success-dark leading-none';
                 if (detail && options.time) {
-                    detail.textContent = `Локально: ${options.time}`;
+                    detail.textContent = wt('editor_base.status.locally_time', 'Локально: {time}').replace('{time}', options.time);
                     detail.classList.remove('hidden');
                 }
                 break;
             case 'error':
                 dot.classList.add('bg-error');
-                text.textContent = options.message || 'Ошибка сохранения';
+                text.textContent = options.message || wt('editor_base.status.save_error', 'Ошибка сохранения');
                 text.className = 'text-[11px] font-bold text-error-dark leading-none';
                 if (detail) detail.classList.add('hidden');
                 break;
             case 'blocking':
                 dot.classList.add('bg-error', 'animate-pulse');
-                text.textContent = options.message || 'Действие заблокировано';
+                text.textContent = options.message || wt('editor_base.status.action_blocked', 'Действие заблокировано');
                 text.className = 'text-[11px] font-bold text-error-dark leading-none';
                 if (detail && options.detail) {
                     detail.textContent = options.detail;
@@ -1663,7 +1663,7 @@ class BaseEditor {
                 break;
             case 'warning':
                 dot.classList.add('bg-warning');
-                text.textContent = options.message || 'Сохранено с предупреждениями';
+                text.textContent = options.message || wt('editor_base.status.saved_warnings', 'Сохранено с предупреждениями');
                 text.className = 'text-[11px] font-bold text-warning-dark leading-none';
                 if (detail && options.detail) {
                     detail.textContent = options.detail;
@@ -2082,11 +2082,12 @@ class BaseEditor {
         const hasSavedVersion = Boolean(this.normalizeDraftTimestamp(lastSavedTimestamp));
 
         if (hasSavedVersion) {
+            const savedTimeSuffix = savedTime ? wt('editor_base.draft.from_saved_time', ' от {time}').replace('{time}', savedTime) : '';
             return {
                 title: wt('editor_base.draft.recover_title', 'Вернуть несохранённые изменения?'),
                 message: draftTime
-                    ? wt('editor_base.draft.recover_message_newer_with_time', 'На этом устройстве есть несохранённые изменения этой задачи от {draftTime}. Они новее последней сохранённой версии{savedTime}. Что открыть?').replace('{draftTime}', draftTime).replace('{savedTime}', savedTime ? ` от ${savedTime}` : '')
-                    : wt('editor_base.draft.recover_message_newer', 'На этом устройстве есть несохранённые изменения этой задачи. Они новее последней сохранённой версии{savedTime}. Что открыть?').replace('{savedTime}', savedTime ? ` от ${savedTime}` : ''),
+                    ? wt('editor_base.draft.recover_message_newer_with_time', 'На этом устройстве есть несохранённые изменения этой задачи от {draftTime}. Они новее последней сохранённой версии{savedTime}. Что открыть?').replace('{draftTime}', draftTime).replace('{savedTime}', savedTimeSuffix)
+                    : wt('editor_base.draft.recover_message_newer', 'На этом устройстве есть несохранённые изменения этой задачи. Они новее последней сохранённой версии{savedTime}. Что открыть?').replace('{savedTime}', savedTimeSuffix),
                 confirmText: wt('editor_base.draft.recover_confirm', 'Вернуть изменения'),
                 cancelText: wt('editor_base.draft.recover_cancel', 'Открыть сохранённую версию'),
             };
@@ -2795,7 +2796,7 @@ class BaseEditor {
             } else {
                 this.theoryGrounding.analyses = [];
                 this.theoryGrounding.items = [...manualItems];
-                this.theoryGrounding.analysesError = data?.error || data?.message || this.aiUxMessage('p8.analysis.list_load_failed', 'Не удалось загрузить список анализов. Можно повторить позже.');
+                this.theoryGrounding.analysesError = data?.error || data?.message || this.aiUxMessage('p8.analysis.list_load_failed', wt('p8.analysis.list_load_failed', 'Не удалось загрузить список анализов. Можно повторить позже.'));
                 this.theoryGrounding.itemsError = this.theoryGrounding.analysesError;
             }
         } catch (_) {
@@ -2803,7 +2804,7 @@ class BaseEditor {
             this.theoryGrounding.items = this._readManualTheoryAnalysisArchive()
                 .map((entry) => this._normalizeManualTheoryArchiveItem(entry))
                 .filter(Boolean);
-            this.theoryGrounding.analysesError = this.aiUxMessage('p8.analysis.list_load_failed', 'Не удалось загрузить список анализов. Можно повторить позже.');
+            this.theoryGrounding.analysesError = this.aiUxMessage('p8.analysis.list_load_failed', wt('p8.analysis.list_load_failed', 'Не удалось загрузить список анализов. Можно повторить позже.'));
             this.theoryGrounding.itemsError = this.theoryGrounding.analysesError;
         } finally {
             this.theoryGrounding.analysesLoading = false;
@@ -2861,19 +2862,19 @@ class BaseEditor {
                 this.theoryGrounding.analysisError = '';
                 this._hydrateTheorySelectionsFromTaskMetaAndBridge();
                 await this.refreshTheoryGroundingCoverage();
-                if (!silent) this.showToast(this.aiUxMessage('p8.analysis.loaded', 'Анализ открыт для ручной привязки.'), 'success');
+                if (!silent) this.showToast(this.aiUxMessage('p8.analysis.loaded', wt('p8.analysis.loaded', 'Анализ открыт для ручной привязки.')), 'success');
             } else {
                 this.theoryGrounding.analysisData = null;
                 this.theoryGrounding.selectedAnalysisData = null;
                 this.theoryGrounding.coverageData = null;
-                this.theoryGrounding.analysisError = data?.error || data?.message || this.aiUxMessage('p8.analysis.open_failed', 'Не удалось открыть анализ. Можно выбрать другой или продолжить без него.');
+                this.theoryGrounding.analysisError = data?.error || data?.message || this.aiUxMessage('p8.analysis.open_failed', wt('p8.analysis.open_failed', 'Не удалось открыть анализ. Можно выбрать другой или продолжить без него.'));
                 if (!silent) this.showToast(this.theoryGrounding.analysisError, 'warning');
             }
         } catch (_) {
             this.theoryGrounding.analysisData = null;
             this.theoryGrounding.selectedAnalysisData = null;
             this.theoryGrounding.coverageData = null;
-            this.theoryGrounding.analysisError = this.aiUxMessage('p8.analysis.open_failed', 'Не удалось открыть анализ. Можно выбрать другой или продолжить без него.');
+            this.theoryGrounding.analysisError = this.aiUxMessage('p8.analysis.open_failed', wt('p8.analysis.open_failed', 'Не удалось открыть анализ. Можно выбрать другой или продолжить без него.'));
             if (!silent) this.showToast(this.theoryGrounding.analysisError, 'warning');
         } finally {
             this.theoryGrounding.analysisLoading = false;
@@ -2909,11 +2910,11 @@ class BaseEditor {
                 this.theoryGrounding.coverageData = data;
             } else {
                 this.theoryGrounding.coverageData = null;
-                this.theoryGrounding.coverageError = data?.error || data?.message || this.aiUxMessage('ai_common.network_error', 'Не удалось выполнить действие из-за сетевой ошибки. Попробуйте ещё раз.');
+                this.theoryGrounding.coverageError = data?.error || data?.message || this.aiUxMessage('ai_common.network_error', wt('ai_common.network_error', 'Не удалось выполнить действие из-за сетевой ошибки. Попробуйте ещё раз.'));
             }
         } catch (_) {
             this.theoryGrounding.coverageData = null;
-            this.theoryGrounding.coverageError = this.aiUxMessage('ai_common.network_error', 'Не удалось выполнить действие из-за сетевой ошибки. Попробуйте ещё раз.');
+            this.theoryGrounding.coverageError = this.aiUxMessage('ai_common.network_error', wt('ai_common.network_error', 'Не удалось выполнить действие из-за сетевой ошибки. Попробуйте ещё раз.'));
         } finally {
             this.theoryGrounding.coverageLoading = false;
             this.renderTheoryGroundingPanel();
@@ -2983,11 +2984,11 @@ class BaseEditor {
         if (next.ignoreCoverage) {
             this.theoryGrounding.coverageData = null;
             this.theoryGrounding.coverageError = '';
-            this.showToast(this.aiUxMessage('p8.coverage.ignored_toggle_on', 'Покрытие для выбранного анализа скрыто в этой теме.'), 'info');
+            this.showToast(this.aiUxMessage('p8.coverage.ignored_toggle_on', wt('p8.coverage.ignored_toggle_on', 'Покрытие для выбранного анализа скрыто в этой теме.')), 'info');
             this.renderTheoryGroundingPanel();
             return;
         }
-        this.showToast(this.aiUxMessage('p8.coverage.ignored_toggle_off', 'Покрытие для выбранного анализа снова включено в этой теме.'), 'info');
+        this.showToast(this.aiUxMessage('p8.coverage.ignored_toggle_off', wt('p8.coverage.ignored_toggle_off', 'Покрытие для выбранного анализа снова включено в этой теме.')), 'info');
         this.renderTheoryGroundingPanel();
         this.refreshTheoryGroundingCoverage().catch(() => {});
     }
@@ -3017,7 +3018,7 @@ class BaseEditor {
         this.markUnsaved();
         this.renderTheoryGroundingPanel();
         this.refreshTheoryGroundingCoverage().catch(() => {});
-        this.showToast(this.aiUxMessage('p8.link.apply_success', 'Привязка к разделам и фрагментам обновлена. Сохраните задачу, когда будете готовы.'), 'success');
+        this.showToast(this.aiUxMessage('p8.link.apply_success', wt('p8.link.apply_success', 'Привязка к разделам и фрагментам обновлена. Сохраните задачу, когда будете готовы.')), 'success');
     }
 
     applyTheoryBridgeContextToTask() {
@@ -3053,16 +3054,16 @@ class BaseEditor {
         const trustLevel = String(this.theoryGrounding?.trustLevel || 'normal').trim() === 'low_trust' ? 'low_trust' : 'normal';
         const currentCoverageRow = this._theoryGroundingCurrentTaskCoverageRow();
         if (!taskMeta.unitIds.length && !taskMeta.chunkIds.length) {
-            warnings.push(this.aiUxMessage('p8.soft.no_links_ok', 'У задачи пока нет привязки к разделам и фрагментам текущего анализа — это допустимо.'));
+            warnings.push(this.aiUxMessage('p8.soft.no_links_ok', wt('p8.soft.no_links_ok', 'У задачи пока нет привязки к разделам и фрагментам текущего анализа — это допустимо.')));
         }
         if (taskMeta.sourceGrounding && taskMeta.sourceGrounding.weak === true) {
-            warnings.push(this.aiUxMessage('p8.soft.saved_weak_grounding', 'Сохранённая привязка выглядит слабой; при необходимости уточните разделы и фрагменты вручную.'));
+            warnings.push(this.aiUxMessage('p8.soft.saved_weak_grounding', wt('p8.soft.saved_weak_grounding', 'Сохранённая привязка выглядит слабой; при необходимости уточните разделы и фрагменты вручную.')));
         }
         if (currentCoverageRow && currentCoverageRow.weak_grounding && trustLevel !== 'low_trust') {
-            warnings.push(this.aiUxMessage('p8.soft.coverage_weak_grounding', 'Покрытие для этой задачи указывает на слабую привязку к материалу. Проверьте вручную.'));
+            warnings.push(this.aiUxMessage('p8.soft.coverage_weak_grounding', wt('p8.soft.coverage_weak_grounding', 'Покрытие для этой задачи указывает на слабую привязку к материалу. Проверьте вручную.')));
         }
         if (selectedRun && taskMeta.aiRunId && taskMeta.aiRunId !== selectedRun) {
-            warnings.push(this.aiUxMessage('p8.soft.run_mismatch', 'Задача связана с другим анализом; в текущем coverage она может учитываться отдельно.'));
+            warnings.push(this.aiUxMessage('p8.soft.run_mismatch', wt('p8.soft.run_mismatch', 'Задача связана с другим анализом; в текущем coverage она может учитываться отдельно.')));
         }
         const bridgeRefs = bridge?.refs && typeof bridge.refs === 'object'
             ? (this._normalizeIntIdList(bridge.refs.unit_ids).length || this._normalizeStrIdList(bridge.refs.chunk_ids).length)
@@ -3247,7 +3248,7 @@ class BaseEditor {
                                             <div class="space-y-1">
                                                 ${shownUnits.slice(0, 3).map((unit) => `
                                                     <div class="text-[11px] text-text-secondary bg-surface-1 border border-border-subtle rounded-lg px-2 py-1.5">
-                                                        <span class="font-semibold text-text-main">#${Number(unit?.id || 0)} ${this.escapeHtml(String(unit?.title || 'Единица'))}</span>
+                                                        <span class="font-semibold text-text-main">#${Number(unit?.id || 0)} ${this.escapeHtml(String(unit?.title || wt('editor_base.theory.unit_default', 'Единица')))}</span>
                                                         ${unit?.description ? `<div class="mt-1">${this.escapeHtml(String(unit.description))}</div>` : ''}
                                                     </div>
                                                 `).join('')}
@@ -3338,8 +3339,8 @@ class BaseEditor {
             }
 
             const isCtrl = e.ctrlKey || e.metaKey;
-            const isZ = e.key === 'z' || e.key === 'Z' || e.key === 'я' || e.key === 'Я' || e.code === 'KeyZ';
-            const isY = e.key === 'y' || e.key === 'Y' || e.key === 'н' || e.key === 'Н' || e.code === 'KeyY';
+            const isZ = e.key === 'z' || e.key === 'Z' || /[яЯ]/.test(e.key) || e.code === 'KeyZ';
+            const isY = e.key === 'y' || e.key === 'Y' || /[нН]/.test(e.key) || e.code === 'KeyY';
 
             // Ctrl+Z - Undo
             if (isCtrl && isZ && !e.shiftKey) {

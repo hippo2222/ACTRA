@@ -134,6 +134,120 @@ describe("i18n Hardcoded String Leak Detector & Ratchet Gate", () => {
     }
   });
 
+  it("enforces zero unlocalized string leaks permanently on Task Editor Core Mechanics & Shell (Package 1)", { timeout: 60000 }, () => {
+    const editorCoreFiles = [
+      "Editor/Image Labeling Editor.html",
+      "Editor/Sequence Assembly Editor Procedural Steps.html",
+      "Editor/Test Task Editor Multiple Choice.html",
+      "Editor/Test_Task_Editor_Multiple_Choice.html",
+      "Editor/Main_Dashboard.html",
+      "Editor/Open Answer Editor Textual Reasoning.html",
+      "Editor/Point_Annotation.html",
+      "Editor/autosave_manager.js",
+      "Editor/click_editor_helpers.js",
+      "Editor/image_labeling_editor.js",
+      "Editor/open_answer_editor.js",
+      "Editor/test_editor.js",
+      "Editor/sequence_editor.js",
+      "Editor/dashboard.js",
+      "Editor/base_editor.js",
+      "Editor/click_editor.js",
+    ];
+    for (const file of editorCoreFiles) {
+      const output = execSync(
+        `python scripts/audit_i18n_leaks.py --json --filter "${file}"`,
+        {
+          cwd: projectRoot,
+          encoding: "utf8",
+          env: { ...process.env, PYTHONIOENCODING: "utf-8" },
+        }
+      );
+      const data = JSON.parse(output);
+      expect(
+        data.total_leaks,
+        `${file} must have 0 hardcoded unlocalized strings, found ${data.total_leaks}`
+      ).toBe(0);
+    }
+  });
+
+  it("enforces zero unlocalized string leaks permanently on Task Import Studio & Manager (Package 2)", { timeout: 60000 }, () => {
+    const importStudioFiles = [
+      "Editor/Task_Import_Studio.html",
+      "Editor/ai_ux_messages.js",
+      "Editor/task_import_studio.js",
+      "Editor/import_manager.js",
+    ];
+    for (const file of importStudioFiles) {
+      const output = execSync(
+        `python scripts/audit_i18n_leaks.py --json --filter "${file}"`,
+        {
+          cwd: projectRoot,
+          encoding: "utf8",
+          env: { ...process.env, PYTHONIOENCODING: "utf-8" },
+        }
+      );
+      const data = JSON.parse(output);
+      expect(
+        data.total_leaks,
+        `${file} must have 0 hardcoded unlocalized strings, found ${data.total_leaks}`
+      ).toBe(0);
+    }
+  });
+
+  it("enforces zero unlocalized string leaks permanently on Theory Editor & Microcards (Package 3)", { timeout: 60000 }, () => {
+    const pkg3Files = [
+      "Editor/Theory_Editor.html",
+      "Editor/theory_editor.js",
+      "Editor/theory_center.js",
+      "Microcards/microcards.html",
+      "visual-audit-microcards.html",
+      "Microcards/microcards.js",
+    ];
+    for (const file of pkg3Files) {
+      const output = execSync(
+        `python scripts/audit_i18n_leaks.py --json --filter "${file}"`,
+        {
+          cwd: projectRoot,
+          encoding: "utf8",
+          env: { ...process.env, PYTHONIOENCODING: "utf-8" },
+        }
+      );
+      const data = JSON.parse(output);
+      expect(
+        data.total_leaks,
+        `${file} must have 0 hardcoded unlocalized strings, found ${data.total_leaks}`
+      ).toBe(0);
+    }
+  });
+
+  it("enforces zero unlocalized string leaks permanently on Complexes, Reference, Stats & S1 (Package 4)", { timeout: 60000 }, () => {
+    const pkg4Files = [
+      "Complexes/complexes.js",
+      "Complexes/create.html",
+      "Complexes/index.html",
+      "visual_audit_click_result.html",
+      "Reference/index.html",
+      "Reference/reference.js",
+      "statistics/statistics.js",
+      "S1/task-renderer.js",
+    ];
+    for (const file of pkg4Files) {
+      const output = execSync(
+        `python scripts/audit_i18n_leaks.py --json --filter "${file}"`,
+        {
+          cwd: projectRoot,
+          encoding: "utf8",
+          env: { ...process.env, PYTHONIOENCODING: "utf-8" },
+        }
+      );
+      const data = JSON.parse(output);
+      expect(
+        data.total_leaks,
+        `${file} must have 0 hardcoded unlocalized strings, found ${data.total_leaks}`
+      ).toBe(0);
+    }
+  });
+
   it("verifies detector catches both literal Cyrillic and escaped Unicode (\\u04xx)", () => {
     const pythonScript = [
       "from scripts.audit_i18n_leaks import mask_safe_js_calls, ANY_CYRILLIC",

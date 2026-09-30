@@ -66,7 +66,7 @@ function createTheoryEditorOnboardingImageSrc() {
             <rect width="720" height="320" rx="28" fill="#eef4ff"/>
             <path d="M72 238c86-82 142-124 210-90 30 15 48 44 88 42 58-2 84-66 138-70 46-4 82 32 140 118" fill="none" stroke="#32208a" stroke-width="18" stroke-linecap="round"/>
             <circle cx="560" cy="92" r="38" fill="#b8c7ff"/>
-            <text x="72" y="86" fill="#17213a" font-family="Arial, sans-serif" font-size="34" font-weight="700">Схема распространения волны</text>
+            <text x="72" y="86" fill="#17213a" font-family="Arial, sans-serif" font-size="34" font-weight="700">${wt('te.k139', 'Схема распространения волны')}</text>
         </svg>
     `.trim();
     return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
@@ -75,19 +75,19 @@ function createTheoryEditorOnboardingImageSrc() {
 function createTheoryEditorOnboardingDelta() {
     return {
         ops: [
-            { insert: "Электромагнитная волна\n", attributes: { header: 1 } },
-            { insert: "Волна переносит энергию через связанные электрическое и магнитное поля. В задачах важно видеть три параметра: частоту, длину волны и поляризацию.\n" },
+            { insert: `${wt('te.k140', 'Электромагнитная волна')}\n`, attributes: { header: 1 } },
+            { insert: `${wt('te.k141', 'Волна переносит энергию через связанные электрическое и магнитное поля. В задачах важно видеть три параметра: частоту, длину волны и поляризацию.')}\n` },
             {
                 insert: { image: createTheoryEditorOnboardingImageSrc() },
                 attributes: { width: "56%", align: "center", float: "none" },
             },
             { insert: "\n" },
-            { insert: "Что запомнить\n", attributes: { header: 2 } },
-            { insert: "частота показывает, сколько колебаний происходит за секунду;" },
+            { insert: `${wt('te.k142', 'Что запомнить')}\n`, attributes: { header: 2 } },
+            { insert: wt('te.k143', 'частота показывает, сколько колебаний происходит за секунду;') },
             { insert: "\n", attributes: { list: "bullet" } },
-            { insert: "длина волны связана со скоростью распространения;" },
+            { insert: wt('te.k144', 'длина волны связана со скоростью распространения;') },
             { insert: "\n", attributes: { list: "bullet" } },
-            { insert: "поляризация описывает направление колебаний поля." },
+            { insert: wt('te.k145', 'поляризация описывает направление колебаний поля.') },
             { insert: "\n", attributes: { list: "bullet" } },
         ],
     };
@@ -98,7 +98,7 @@ function createTheoryEditorOnboardingCatalog() {
     return [
         {
             id: "theory-radio-wave-basics",
-            title: "Радиофизика: электромагнитные волны",
+            title: wt('te.k146', 'Радиофизика: электромагнитные волны'),
             version: now,
             updated_at: now,
             has_content: true,
@@ -109,7 +109,7 @@ function createTheoryEditorOnboardingCatalog() {
         },
         {
             id: "theory-signal-noise",
-            title: "Шум и отношение сигнал/шум",
+            title: wt('te.k147', 'Шум и отношение сигнал/шум'),
             version: now,
             updated_at: now,
             has_content: false,
@@ -175,7 +175,7 @@ function applyTheoryEditorOnboardingDemoState() {
     const search = document.getElementById("theory-library-search");
     if (search) search.value = "";
     setTheoryEditorContent(catalog[0].title, createTheoryEditorOnboardingDelta());
-    setTheoryStatus("Демо-теория готова к редактированию", "info", "edit_note");
+    setTheoryStatus(wt('te.k148', 'Демо-теория готова к редактированию'), "info", "edit_note");
     renderTheoryContextHeader();
     updateTheoryEditorActions();
     renderTheoryLibraryList();
@@ -1303,7 +1303,7 @@ async function fetchTheoryPublicationItems(forceRefresh = false) {
 
 async function copyTheoryAccessCode(value) {
     const code = String(value || "").trim().replace(/\s+/g, "").replace(/-/g, "").toUpperCase();
-    if (!code || code === "Код будет создан после публикации") return;
+    if (!code || code === wt('te.k063', 'Код будет создан после публикации')) return;
     try {
         if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
             await navigator.clipboard.writeText(code);

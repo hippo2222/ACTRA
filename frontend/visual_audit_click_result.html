@@ -81,12 +81,12 @@
     <button id="btn-case-heart_l1" onclick="switchCase('heart_l1')">❤️ L1 (Clicks)</button>
     <button id="btn-case-heart_l2" onclick="switchCase('heart_l2')">❤️ L2 (Label Diff)</button>
     <button id="btn-case-heart_l3" onclick="switchCase('heart_l3')">❤️ L3 (Contours)</button>
-    <span class="border-l border-slate-600 pl-2 font-bold text-slate-400">ОГК Стенд:</span>
+    <span class="border-l border-slate-600 pl-2 font-bold text-slate-400" data-i18n="visual_audit.ogk_stand">ОГК Стенд:</span>
     <button id="btn-case-l1" onclick="switchCase('l1')">L1</button>
     <button id="btn-case-l2" onclick="switchCase('l2')">L2</button>
     <button id="btn-case-l3" onclick="switchCase('l3')">L3</button>
     <button id="btn-case-all" onclick="switchCase('all')">100%</button>
-    <span class="border-l border-slate-600 pl-2">Тема:</span>
+    <span class="border-l border-slate-600 pl-2" data-i18n="visual_audit.theme_label">Тема:</span>
     <button onclick="toggleTheme('light-b')">Light</button>
     <button onclick="toggleTheme('dark-b')">Dark</button>
     <button onclick="toggleTheme('neutral-b')">Neutral</button>
@@ -98,11 +98,11 @@
       <div class="flex items-center gap-3">
         <button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border-subtle bg-surface-2 text-sm text-text-secondary hover:text-text-main transition-colors">
           <span>←</span>
-          <span>К списку</span>
+          <span data-i18n="visual_audit.to_list">К списку</span>
         </button>
         <div>
-          <h1 id="task-header-title" class="text-base font-bold text-text-main">Задание 1: Компьютерная томография органов грудной клетки</h1>
-          <p class="text-xs text-text-secondary">Уровень сложности: 1 • Заданий в комплексе: 5</p>
+          <h1 id="task-header-title" class="text-base font-bold text-text-main" data-i18n="visual_audit.demo_task_title">Задание 1: Компьютерная томография органов грудной клетки</h1>
+          <p class="text-xs text-text-secondary" data-i18n="visual_audit.demo_task_meta">Уровень сложности: 1 • Заданий в комплексе: 5</p>
         </div>
       </div>
 
@@ -110,7 +110,7 @@
         <!-- Progress bar -->
         <div class="w-48 hidden sm:block">
           <div class="flex justify-between text-xs text-text-secondary mb-1">
-            <span>Прогресс: 1 / 5</span>
+            <span data-i18n="visual_audit.progress_label">Прогресс: 1 / 5</span>
             <span>20%</span>
           </div>
           <div class="h-1.5 w-full bg-bg-secondary rounded-full overflow-hidden">
@@ -120,7 +120,7 @@
 
         <!-- The ONLY Primary CTA on the entire page according to AGENTS.md Rule 3 -->
         <button id="next-task-btn" class="btn--primary flex h-9 items-center justify-center rounded-lg bg-primary px-5 text-sm font-bold text-primary-fg shadow-sm hover:opacity-95 active:scale-[0.98] transition-all">
-          <span>Следующее</span>
+          <span data-i18n="visual_audit.btn_next">Следующее</span>
           <span class="ml-1.5">→</span>
         </button>
       </div>

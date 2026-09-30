@@ -61,12 +61,12 @@
                 <!-- Undo/Redo buttons -->
                 <div class="flex items-center gap-1 border-r border-border-subtle pr-3"
                     data-onboarding-target="sequence-history-actions">
-                    <button id="undo-btn" disabled title="\u041e\u0442\u043c\u0435\u043d\u0438\u0442\u044c (Ctrl+Z)"
+                    <button id="undo-btn" disabled data-i18n-title="editor_base.history.undo_tooltip" title="Отменить (Ctrl+Z)"
                         class="p-2 rounded-lg text-text-disabled hover:text-primary hover:bg-bg-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-text-disabled">
                         <span class="material-symbols-outlined text-[20px]">undo</span>
                     </button>
-                    <button id="redo-btn" disabled
-                        title="\u041f\u043e\u0432\u0442\u043e\u0440\u0438\u0442\u044c (Ctrl+Y)"
+                    <button id="redo-btn" disabled data-i18n-title="editor_base.history.redo_tooltip"
+                        title="Повторить (Ctrl+Y)"
                         class="p-2 rounded-lg text-text-disabled hover:text-primary hover:bg-bg-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-text-disabled">
                         <span class="material-symbols-outlined text-[20px]">redo</span>
                     </button>

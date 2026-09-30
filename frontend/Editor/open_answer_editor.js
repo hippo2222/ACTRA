@@ -2,7 +2,14 @@
  * ACTRA Open Answer Editor
  */
 
-const OPEN_ANSWER_ONBOARDING_TOUR_ID = 'open-answer-authoring';
+function wt(key, fallback) {
+    if (typeof window !== 'undefined' && typeof window.wt === 'function') return window.wt(key, fallback);
+    if (typeof window !== 'undefined' && window.i18n && typeof window.i18n.t === 'function') {
+        const v = window.i18n.t(key);
+        return v !== key ? v : fallback;
+    }
+    return fallback;
+}
 
 class OpenAnswerEditor extends BaseEditor {
     constructor() {
@@ -93,21 +100,21 @@ class OpenAnswerEditor extends BaseEditor {
             task_data: {
                 id: this.taskId,
                 type: 'open_answer',
-                name: 'Открытый ответ: газообмен',
+                name: wt('open_answer_editor.demo.gas_exchange_title', 'Открытый ответ: газообмен'),
                 content: {},
                 settings: {},
                 meta: {
                     id: this.taskId,
                     module: this.moduleId,
                     topic: this.topicId,
-                    name: 'Открытый ответ: газообмен',
+                    name: wt('open_answer_editor.demo.gas_exchange_title', 'Открытый ответ: газообмен'),
                 },
             },
             metadata: {
                 id: this.taskId,
                 module: this.moduleId,
                 topic: this.topicId,
-                name: 'Открытый ответ: газообмен',
+                name: wt('open_answer_editor.demo.gas_exchange_title', 'Открытый ответ: газообмен'),
                 type: 'open_answer',
             },
         };
@@ -117,11 +124,11 @@ class OpenAnswerEditor extends BaseEditor {
         const onboardingAlveoliImageUrl = 'data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20160%20120%22%3E%3Crect%20width%3D%22160%22%20height%3D%22120%22%20rx%3D%2216%22%20fill%3D%22%23eef7ff%22%2F%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%232f63d8%22%20stroke-width%3D%225%22%20stroke-linecap%3D%22round%22%3E%3Cpath%20d%3D%22M80%2062%20V24%22%2F%3E%3Cpath%20d%3D%22M80%2062%20C62%2052%2050%2043%2038%2031%22%2F%3E%3Cpath%20d%3D%22M80%2062%20C98%2052%20110%2043%20122%2031%22%2F%3E%3C%2Fg%3E%3Cg%20fill%3D%22%23dbeafe%22%20stroke%3D%22%230f766e%22%20stroke-width%3D%223%22%3E%3Ccircle%20cx%3D%2240%22%20cy%3D%2282%22%20r%3D%2216%22%2F%3E%3Ccircle%20cx%3D%2280%22%20cy%3D%2291%22%20r%3D%2219%22%2F%3E%3Ccircle%20cx%3D%22120%22%20cy%3D%2282%22%20r%3D%2216%22%2F%3E%3C%2Fg%3E%3Cpath%20d%3D%22M29%2098%20C62%20110%2099%20110%20131%2098%22%20fill%3D%22none%22%20stroke%3D%22%23ef4444%22%20stroke-width%3D%224%22%20stroke-linecap%3D%22round%22%20stroke-dasharray%3D%226%207%22%2F%3E%3C%2Fsvg%3E';
         const q1 = {
             id: 'q_1',
-            question: 'Как называется процесс обмена кислородом и углекислым газом в альвеолах?',
-            prompt: 'Как называется процесс обмена кислородом и углекислым газом в альвеолах?',
-            reference_answer: 'Этот процесс называется газообмен.',
-            hint: 'Вспомните термин для обмена газами в альвеолах.',
-            keywords: ['газообмен'],
+            question: wt('open_answer_editor.demo.question_prompt', 'Как называется процесс обмена кислородом и углекислым газом в альвеолах?'),
+            prompt: wt('open_answer_editor.demo.question_prompt', 'Как называется процесс обмена кислородом и углекислым газом в альвеолах?'),
+            reference_answer: wt('open_answer_editor.demo.reference_answer', 'Этот процесс называется газообмен.'),
+            hint: wt('open_answer_editor.demo.hint', 'Вспомните термин для обмена газами в альвеолах.'),
+            keywords: [wt('open_answer_editor.demo.keyword', 'газообмен')],
             sequence_matters: false,
             levels: [1, 2, 3],
         };
@@ -146,10 +153,10 @@ class OpenAnswerEditor extends BaseEditor {
         if (!this.task.task_data) this.task.task_data = {};
         if (!this.task.task_data.meta) this.task.task_data.meta = {};
         if (!this.task.metadata) this.task.metadata = {};
-        this.task.task_data.name = 'Открытый ответ: газообмен';
+        this.task.task_data.name = wt('open_answer_editor.demo.gas_exchange_title', 'Открытый ответ: газообмен');
         this.task.task_data.type = 'open_answer';
-        this.task.task_data.meta.name = 'Открытый ответ: газообмен';
-        this.task.metadata.name = 'Открытый ответ: газообмен';
+        this.task.task_data.meta.name = wt('open_answer_editor.demo.gas_exchange_title', 'Открытый ответ: газообмен');
+        this.task.metadata.name = wt('open_answer_editor.demo.gas_exchange_title', 'Открытый ответ: газообмен');
         this.task.metadata.type = 'open_answer';
         this.task.task_data.content = this.createOpenAnswerOnboardingContent();
         this.initQuestionsFromContent();
@@ -1642,7 +1649,7 @@ class OpenAnswerEditor extends BaseEditor {
         addBtn.classList.toggle('opacity-60', isDisabled);
         addBtn.classList.toggle('cursor-not-allowed', isDisabled);
         if (label) {
-            label.textContent = isDisabled ? 'Лимит изображений' : 'Добавить изображение';
+            label.textContent = isDisabled ? wt('open_answer_editor.images_limit', 'Лимит изображений') : wt('open_answer_editor.add_image', 'Добавить изображение');
         }
     }
 
@@ -1758,7 +1765,7 @@ class OpenAnswerEditor extends BaseEditor {
             closeBtn.type = 'button';
             closeBtn.dataset.toastAction = 'close';
             closeBtn.className = 'ml-1 inline-flex h-7 w-7 items-center justify-center rounded-full hover:bg-scrim-soft transition-colors';
-            closeBtn.setAttribute('aria-label', 'Закрыть уведомление');
+            closeBtn.setAttribute('aria-label', wt('common.close_notification', 'Закрыть уведомление'));
             closeBtn.innerHTML = '<span class="material-symbols-outlined text-[16px]">close</span>';
             closeBtn.onclick = () => {
                 this.toastDismissCallback = null;

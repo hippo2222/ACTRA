@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ACTRA — Студия создания заданий</title>
+    <title data-i18n="studio.page_title">ACTRA — Студия создания заданий</title>
     <link rel="icon" href="/assets/actra_white.ico" type="image/x-icon" />
 
     <!-- Theme & Global Styles -->
@@ -124,7 +124,7 @@
                                 <span class="material-symbols-outlined text-[18px] text-text-muted">translate</span>
                                 <span class="font-semibold" data-i18n="studio.stage1.lang_selector_label">Язык заданий:</span>
                             </div>
-                            <div class="studio-lang-segmented" role="radiogroup" aria-label="Язык заданий" id="studio-target-lang-group">
+                            <div class="studio-lang-segmented" role="radiogroup" aria-label="Язык заданий" data-i18n-aria="studio.stage1.lang_selector_label" id="studio-target-lang-group">
                                 <button type="button" class="studio-lang-btn active" data-lang="ru">RU</button>
                                 <button type="button" class="studio-lang-btn" data-lang="en">EN</button>
                                 <button type="button" class="studio-lang-btn" data-lang="uk">UK</button>
@@ -274,7 +274,7 @@
                                     </div>
                                     <span id="focus-pane-coverage-badge" class="studio-strategy-badge inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold border transition-all">
                                         <span class="material-symbols-outlined text-[13px] strategy-icon">tune</span>
-                                        <span class="strategy-label">Фокус</span>
+                                        <span class="strategy-label" data-i18n="studio.stage2.strategy_focus_label">Фокус</span>
                                     </span>
                                 </div>
                                 <p id="focus-units-description" class="text-xs leading-relaxed text-text-main line-clamp-2" data-i18n="studio.stage2.select_direction_hint">
@@ -330,7 +330,7 @@
                                 <div class="py-2.5 px-3.5 rounded-xl bg-success-light border border-success/30 flex items-center justify-between gap-3 flex-shrink-0">
                                     <div class="flex items-center gap-2 min-w-0">
                                         <span class="material-symbols-outlined text-[18px] text-success flex-shrink-0">verified</span>
-                                        <p id="committed-view-title" class="text-xs font-bold text-success-dark truncate">Задания успешно приняты в витрину</p>
+                                        <p id="committed-view-title" class="text-xs font-bold text-success-dark truncate" data-i18n="studio.stage2.tasks_committed_title">Задания успешно приняты в витрину</p>
                                     </div>
                                     <button id="btn-edit-type-tasks" type="button" class="studio-btn studio-btn--sm studio-btn--secondary flex-shrink-0" title="Вернуться к редактированию исходного текста" data-i18n-title="studio.stage2.btn_edit_tasks_title">
                                         <span class="material-symbols-outlined text-[15px]">edit</span>
@@ -422,7 +422,7 @@
                             </button>
 
                             <button id="btn-proceed-to-step-3" type="button" class="studio-btn studio-btn--md studio-btn--secondary transition-all duration-150">
-                                <span class="btn-proceed-step3-label">Перейти к витрине</span>
+                                <span class="btn-proceed-step3-label" data-i18n="studio.stage2.btn_proceed_step3">Перейти к витрине</span>
                                 <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
                             </button>
                         </div>
@@ -490,7 +490,7 @@
                     <span class="material-symbols-outlined text-primary text-[20px]">folder_open</span>
                     <span data-i18n="studio.modal.topic_title">Выберите целевую тему курса</span>
                 </h3>
-                <button id="btn-close-topic-modal" type="button" class="text-text-muted hover:text-text-main p-1 rounded-lg hover:bg-surface-2 transition-colors" title="Закрыть">
+                <button id="btn-close-topic-modal" type="button" class="text-text-muted hover:text-text-main p-1 rounded-lg hover:bg-surface-2 transition-colors" title="Закрыть" data-i18n-title="common.close" aria-label="Закрыть" data-i18n-aria="common.close">
                     <span class="material-symbols-outlined text-[18px]">close</span>
                 </button>
             </div>
@@ -514,7 +514,7 @@
                     <span class="material-symbols-outlined text-primary text-[20px]">history</span>
                     <span data-i18n="studio.modal.history_title">История анализов</span>
                 </h3>
-                <button id="btn-close-history-modal" type="button" class="text-text-muted hover:text-text-main p-1 rounded-lg hover:bg-surface-2 transition-colors" title="Закрыть">
+                <button id="btn-close-history-modal" type="button" class="text-text-muted hover:text-text-main p-1 rounded-lg hover:bg-surface-2 transition-colors" title="Закрыть" data-i18n-title="common.close" aria-label="Закрыть" data-i18n-aria="common.close">
                     <span class="material-symbols-outlined text-[18px]">close</span>
                 </button>
             </div>

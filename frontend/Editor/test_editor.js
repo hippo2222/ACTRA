@@ -1138,14 +1138,14 @@ class TestEditor extends BaseEditor {
         return [
             {
                 id: 101,
-                text: 'Какой параметр электромагнитной волны определяет расстояние между двумя соседними максимумами?',
+                text: wt('test_editor.demo.q1_text', 'Какой параметр электромагнитной волны определяет расстояние между двумя соседними максимумами?'),
                 options: [
-                    { text: 'Длина волны', is_correct: true, image_path: null, image_asset_id: null, image_asset_url: onboardingWaveImageUrl },
-                    { text: 'Амплитуда сигнала', is_correct: false, image_path: null, image_asset_id: null, image_asset_url: null },
-                    { text: 'Период полураспада', is_correct: false, image_path: null, image_asset_id: null, image_asset_url: null },
+                    { text: wt('test_editor.demo.q1_opt1', 'Длина волны'), is_correct: true, image_path: null, image_asset_id: null, image_asset_url: onboardingWaveImageUrl },
+                    { text: wt('test_editor.demo.q1_opt2', 'Амплитуда сигнала'), is_correct: false, image_path: null, image_asset_id: null, image_asset_url: null },
+                    { text: wt('test_editor.demo.q1_opt3', 'Период полураспада'), is_correct: false, image_path: null, image_asset_id: null, image_asset_url: null },
                 ],
                 settings: { all_correct_required: true, allow_partial_credit: false },
-                explanation: 'Длина волны измеряет расстояние между соседними точками колебания в одинаковой фазе.',
+                explanation: wt('test_editor.demo.q1_explanation', 'Длина волны измеряет расстояние между соседними точками колебания в одинаковой фазе.'),
                 image: null,
                 image_asset_id: null,
                 image_asset_url: null,
@@ -1153,14 +1153,14 @@ class TestEditor extends BaseEditor {
             },
             {
                 id: 102,
-                text: 'Какие утверждения верны для электромагнитных волн?',
+                text: wt('test_editor.demo.q2_text', 'Какие утверждения верны для электромагнитных волн?'),
                 options: [
-                    { text: 'Могут распространяться в вакууме', is_correct: true, image_path: null, image_asset_id: null, image_asset_url: null },
-                    { text: 'Всегда требуют упругую среду', is_correct: false, image_path: null, image_asset_id: null, image_asset_url: null },
-                    { text: 'Переносят энергию', is_correct: true, image_path: null, image_asset_id: null, image_asset_url: null },
+                    { text: wt('test_editor.demo.q2_opt1', 'Могут распространяться в вакууме'), is_correct: true, image_path: null, image_asset_id: null, image_asset_url: null },
+                    { text: wt('test_editor.demo.q2_opt2', 'Всегда требуют упругую среду'), is_correct: false, image_path: null, image_asset_id: null, image_asset_url: null },
+                    { text: wt('test_editor.demo.q2_opt3', 'Переносят энергию'), is_correct: true, image_path: null, image_asset_id: null, image_asset_url: null },
                 ],
                 settings: { all_correct_required: true, allow_partial_credit: false },
-                explanation: 'Если отмечено несколько правильных вариантов, тест автоматически становится множественным выбором.',
+                explanation: wt('test_editor.demo.q2_explanation', 'Если отмечено несколько правильных вариантов, тест автоматически становится множественным выбором.'),
                 image: null,
                 image_asset_id: null,
                 image_asset_url: null,
@@ -1181,21 +1181,21 @@ class TestEditor extends BaseEditor {
             task_data: {
                 id: this.taskId,
                 type: 'test',
-                name: 'Тест: параметры волны',
+                name: wt('editor_base.demo.wave_params', 'Тест: параметры волны'),
                 content: {},
                 settings: {},
                 meta: {
                     id: this.taskId,
                     module: this.moduleId,
                     topic: this.topicId,
-                    name: 'Тест: параметры волны',
+                    name: wt('editor_base.demo.wave_params', 'Тест: параметры волны'),
                 },
             },
             metadata: {
                 id: this.taskId,
                 module: this.moduleId,
                 topic: this.topicId,
-                name: 'Тест: параметры волны',
+                name: wt('editor_base.demo.wave_params', 'Тест: параметры волны'),
                 type: 'test',
             },
         };
@@ -1210,10 +1210,10 @@ class TestEditor extends BaseEditor {
         if (!this.task.task_data.content) this.task.task_data.content = {};
         if (!this.task.task_data.meta) this.task.task_data.meta = {};
         if (!this.task.metadata) this.task.metadata = {};
-        this.task.task_data.name = 'Тест: параметры волны';
+        this.task.task_data.name = wt('editor_base.demo.wave_params', 'Тест: параметры волны');
         this.task.task_data.type = 'test';
-        this.task.task_data.meta.name = 'Тест: параметры волны';
-        this.task.metadata.name = 'Тест: параметры волны';
+        this.task.task_data.meta.name = wt('editor_base.demo.wave_params', 'Тест: параметры волны');
+        this.task.metadata.name = wt('editor_base.demo.wave_params', 'Тест: параметры волны');
         this.task.metadata.type = 'test';
         this.task.task_data.content = {
             ...this.task.task_data.content,
