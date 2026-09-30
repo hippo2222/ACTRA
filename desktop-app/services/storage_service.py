@@ -1704,7 +1704,7 @@ class StorageService:
             task_json_path = self._resolve_task_path(metadata['path'])
             task_dir = task_json_path.parent
         else:
-            task_json_path = task_dir / "task.json"
+            task_json_path = (task_dir / "task.json").resolve()
         
         if not task_dir.exists():
             self.logger.warning(f"Task directory not found: {task_dir}")
@@ -1854,20 +1854,20 @@ class StorageService:
             # Старый формат: "../data/modules/..."
             # Убираем префикс и строим путь от self.data_dir
             normalized_path = path.replace('../data/', '', 1)
-            return self.data_dir / normalized_path
+            return (self.data_dir / normalized_path).resolve()
         elif path.startswith('data/'):
             # Формат от корня проекта: "data/modules/..."
             # Убираем префикс и строим путь от self.data_dir
             normalized_path = path.replace('data/', '', 1)
-            return self.data_dir / normalized_path
+            return (self.data_dir / normalized_path).resolve()
         elif path.startswith('modules/'):
             # Новый нормализованный формат: "modules/..."
             # Путь относительно self.data_dir
-            return self.data_dir / path
+            return (self.data_dir / path).resolve()
         else:
             # Путь без префиксов или относительный путь
             # Пробуем разрешить относительно self.data_dir
-            return self.data_dir / path
+            return (self.data_dir / path).resolve()
     
     # =========================================================================
     # УТИЛИТЫ

@@ -437,7 +437,18 @@ class TaskLoader:
         """
         if path.is_absolute():
             return path
-        return self.data_dir / path
+        if path.exists():
+            return path.resolve()
+        candidate = self.data_dir / path
+        if candidate.exists():
+            return candidate.resolve()
+        # Fallback if path accidentally included data_dir name as leading component
+        path_parts = path.parts
+        if path_parts and path_parts[0] in ("data", self.data_dir.name):
+            stripped_candidate = self.data_dir.parent / path
+            if stripped_candidate.exists():
+                return stripped_candidate.resolve()
+        return candidate
 
 
 
