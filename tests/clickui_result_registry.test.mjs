@@ -726,6 +726,58 @@ describe("ClickUI Result Registry (Stage 4)", () => {
     expect(icon?.classList.contains("text-emerald-500")).toBe(true);
     expect(inspector?.className).toContain("h-[46px]");
   });
+
+  it("provides unified zoom cluster and context-aware fullscreen buttons without clutter", () => {
+    const task = createL1ClickTaskFixture();
+    const container = document.getElementById("app");
+
+    dom.window.ClickUI.render(container, task, { runtimeMode: true });
+
+    dom.window.ClickUI.applyCheckFeedback({
+      success: true,
+      details: {
+        found_targets: [0, 1],
+      },
+    });
+
+    // 1. Zoom cluster in toolbar
+    const zoomCluster = container.querySelector('[data-clickui="result-zoom-cluster"]');
+    const zoomOutBtn = container.querySelector('[data-clickui="result-zoom-out"]');
+    const zoomInBtn = container.querySelector('[data-clickui="result-zoom-in"]');
+    const resetViewBtn = container.querySelector('[data-clickui="result-reset-view"]');
+    const tabZoomBtn = container.querySelector('[data-clickui="result-zoom-btn"]');
+
+    expect(zoomCluster).toBeTruthy();
+    expect(zoomOutBtn).toBeTruthy();
+    expect(zoomInBtn).toBeTruthy();
+    expect(resetViewBtn).toBeTruthy();
+
+    // 2. In SBS mode (default), toolbar fullscreen button is hidden to prevent clutter and surprise overlay
+    expect(tabZoomBtn?.classList.contains("hidden")).toBe(true);
+
+    // 3. Card headers have distinct open_in_full buttons
+    const userPreviewZoom = container.querySelector('[data-clickui="review-user-preview-zoom"]');
+    const refPreviewZoom = container.querySelector('[data-clickui="review-reference-preview-zoom"]');
+    expect(userPreviewZoom).toBeTruthy();
+    expect(refPreviewZoom).toBeTruthy();
+    expect(userPreviewZoom?.querySelector(".material-symbols-outlined")?.textContent).toBe("open_in_full");
+    expect(refPreviewZoom?.querySelector(".material-symbols-outlined")?.textContent).toBe("open_in_full");
+    expect(userPreviewZoom?.getAttribute("aria-label")).toBe("Развернуть ответ на весь экран");
+    expect(refPreviewZoom?.getAttribute("aria-label")).toBe("Развернуть эталон на весь экран");
+
+    // 4. In tabs mode, toolbar fullscreen button becomes visible
+    const userTabBtn = container.querySelector('[data-clickui="tab-user"]');
+    userTabBtn?.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true }));
+    expect(tabZoomBtn?.classList.contains("hidden")).toBe(false);
+    expect(tabZoomBtn?.getAttribute("aria-label")).toBe("Развернуть ответ на весь экран");
+
+    // 5. Open modal and check modal zoom controls
+    userPreviewZoom?.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true }));
+    const modalControls = dom.window.document.querySelector('[data-clickui="modal-zoom-controls"]');
+    expect(modalControls).toBeTruthy();
+    const modalButtons = Array.from(modalControls?.querySelectorAll("button") || []);
+    expect(modalButtons.length).toBe(3); // Zoom out, Scale badge/reset, Zoom in
+  });
 });
 
 

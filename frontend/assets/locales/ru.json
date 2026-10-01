@@ -423,6 +423,9 @@
   "clickui.inspector_ref_found_by_click": "Засчитано вашим кликом {n}",
   "clickui.inspector_ref_missed_title": "Область «{label}» · Пропущена",
   "clickui.inspector_ref_missed_desc": "Отметка в данной анатомической зоне не была поставлена",
+  "clickui.fullscreen": "Развернуть на весь экран",
+  "clickui.fullscreen_user": "Развернуть ответ на весь экран",
+  "clickui.fullscreen_ref": "Развернуть эталон на весь экран",
   "complex_autosave": {
     "save_failed": "Автосохранение не выполнено",
     "draft_saved": "Черновик сохранён"

@@ -423,6 +423,9 @@
   "clickui.inspector_ref_found_by_click": "Marked by your click {n}",
   "clickui.inspector_ref_missed_title": "Region \"{label}\" · Missed",
   "clickui.inspector_ref_missed_desc": "No mark was placed in this anatomical region",
+  "clickui.fullscreen": "Full screen",
+  "clickui.fullscreen_user": "Expand your answer",
+  "clickui.fullscreen_ref": "Expand reference",
   "complex_autosave": {
     "save_failed": "Autosave failed",
     "draft_saved": "Draft saved"

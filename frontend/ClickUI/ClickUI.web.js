@@ -2015,6 +2015,109 @@
     inner.appendChild(closeBtn);
     overlay.appendChild(inner);
 
+    // Floating Modal Zoom Controls
+    const modalControls = _createEl(
+      "div",
+      "absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 p-1 rounded-xl bg-surface-1/90 dark:bg-surface-2/90 border border-border-subtle shadow-xl backdrop-blur-md select-none",
+      ""
+    );
+    modalControls.setAttribute("data-clickui", "modal-zoom-controls");
+
+    const modalZoomOutBtn = _createEl(
+      "button",
+      "inline-flex h-8 w-8 items-center justify-center rounded-lg text-text-secondary hover:text-text-main hover:bg-surface-2 dark:hover:bg-surface-1 transition-colors",
+      ""
+    );
+    modalZoomOutBtn.type = "button";
+    modalZoomOutBtn.title = wt("clickui.zoom_out_title", "Уменьшить");
+    modalZoomOutBtn.setAttribute("aria-label", wt("clickui.zoom_out_title", "Уменьшить"));
+    modalZoomOutBtn.appendChild(_createEl("span", "material-symbols-outlined text-[18px]", "remove"));
+
+    const modalScaleBadge = _createEl(
+      "button",
+      "inline-flex h-8 px-2.5 items-center justify-center rounded-lg text-xs font-semibold text-text-secondary hover:text-text-main hover:bg-surface-2 dark:hover:bg-surface-1 transition-colors min-w-[54px]",
+      "100%"
+    );
+    modalScaleBadge.type = "button";
+    modalScaleBadge.title = wt("clickui.reset_view", "Подогнать масштаб");
+    modalScaleBadge.setAttribute("aria-label", wt("clickui.reset_view", "Подогнать масштаб"));
+
+    const modalZoomInBtn = _createEl(
+      "button",
+      "inline-flex h-8 w-8 items-center justify-center rounded-lg text-text-secondary hover:text-text-main hover:bg-surface-2 dark:hover:bg-surface-1 transition-colors",
+      ""
+    );
+    modalZoomInBtn.type = "button";
+    modalZoomInBtn.title = wt("clickui.zoom_in_title", "Увеличить");
+    modalZoomInBtn.setAttribute("aria-label", wt("clickui.zoom_in_title", "Увеличить"));
+    modalZoomInBtn.appendChild(_createEl("span", "material-symbols-outlined text-[18px]", "add"));
+
+    modalControls.appendChild(modalZoomOutBtn);
+    modalControls.appendChild(modalScaleBadge);
+    modalControls.appendChild(modalZoomInBtn);
+    viewport.appendChild(modalControls);
+
+    const stepModalZoom = (factor) => {
+      const modal = state.additionalModal;
+      if (!modal || !modal.viewport) return;
+      const nextScale = Math.min(
+        modal.maxScale,
+        Math.max(modal.minScale, modal.scale * factor)
+      );
+      if (nextScale === modal.scale) return;
+
+      const viewportRect = modal.viewport.getBoundingClientRect();
+      const originX = (viewportRect.width || 640) / 2;
+      const originY = (viewportRect.height || 480) / 2;
+      const relX = (originX - modal.translateX) / modal.scale;
+      const relY = (originY - modal.translateY) / modal.scale;
+
+      modal.scale = nextScale;
+      if (nextScale === modal.minScale) {
+        modal.translateX = 0;
+        modal.translateY = 0;
+      } else {
+        modal.translateX = originX - relX * nextScale;
+        modal.translateY = originY - relY * nextScale;
+      }
+      _applyAdditionalModalTransform(modal);
+      _updateAdditionalModalCursor(modal);
+    };
+
+    modalZoomOutBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      stepModalZoom(1 / 1.25);
+    });
+    modalZoomInBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      stepModalZoom(1.25);
+    });
+    modalScaleBadge.addEventListener("click", (e) => {
+      e.stopPropagation();
+      _resetAdditionalModalTransform(state.additionalModal);
+    });
+
+    viewport.addEventListener("dblclick", (ev) => {
+      if (ev.target && typeof ev.target.closest === "function" && ev.target.closest("button")) return;
+      const modal = state.additionalModal;
+      if (!modal) return;
+      if (modal.scale > modal.minScale) {
+        _resetAdditionalModalTransform(modal);
+      } else {
+        const viewportRect = modal.viewport.getBoundingClientRect();
+        const originX = ev.clientX - viewportRect.left;
+        const originY = ev.clientY - viewportRect.top;
+        const nextScale = Math.min(modal.maxScale, 2.0);
+        const relX = (originX - modal.translateX) / modal.scale;
+        const relY = (originY - modal.translateY) / modal.scale;
+        modal.scale = nextScale;
+        modal.translateX = originX - relX * nextScale;
+        modal.translateY = originY - relY * nextScale;
+        _applyAdditionalModalTransform(modal);
+        _updateAdditionalModalCursor(modal);
+      }
+    });
+
     const handleOverlayClick = (ev) => {
       if (ev.target === overlay || closeBtn.contains(ev.target)) {
         _closeAdditionalModal();
@@ -2063,6 +2166,7 @@
     const handlePointerDown = (ev) => {
       const modal = state.additionalModal;
       if (!modal || modal.viewport !== viewport || modal.scale <= modal.minScale) return;
+      if (ev.target && typeof ev.target.closest === "function" && ev.target.closest("button")) return;
       panPointerId = ev.pointerId;
       viewport.setPointerCapture(ev.pointerId);
       modal.isPanning = true;
@@ -2115,7 +2219,15 @@
     });
 
     const keyHandler = (ev) => {
-      if (ev.key === "Escape") _closeAdditionalModal();
+      if (ev.key === "Escape") {
+        _closeAdditionalModal();
+      } else if (ev.key === "+" || ev.key === "=") {
+        stepModalZoom(1.25);
+      } else if (ev.key === "-" || ev.key === "_") {
+        stepModalZoom(1 / 1.25);
+      } else if (ev.key === "0") {
+        _resetAdditionalModalTransform(state.additionalModal);
+      }
     };
     document.addEventListener("keydown", keyHandler);
 
@@ -2127,6 +2239,7 @@
       img,
       overlaySvg,
       caption,
+      scaleBadge: modalScaleBadge,
       scale: 1,
       translateX: 0,
       translateY: 0,
@@ -2183,6 +2296,9 @@
   function _applyAdditionalModalTransform(modal) {
     if (!modal || !modal.zoomLayer) return;
     modal.zoomLayer.style.transform = `translate(${modal.translateX}px, ${modal.translateY}px) scale(${modal.scale})`;
+    if (modal.scaleBadge) {
+      modal.scaleBadge.textContent = `${Math.round((modal.scale || 1) * 100)}%`;
+    }
   }
 
   function _updateAdditionalModalCursor(modal) {
@@ -4889,33 +5005,72 @@
 
     viewportToolbar.appendChild(modeSwitch);
 
-    // Right actions: Reset View and Zoom Modal
-    const rightActions = _createEl("div", "flex items-center gap-2 shrink-0 ml-auto", "");
+    // Right actions: Canvas Zoom Cluster and Contextual Fullscreen action
+    const rightActions = _createEl("div", "flex items-center gap-1.5 sm:gap-2 shrink-0 ml-auto", "");
+
+    // 1. Unified Canvas Zoom Cluster [ - ] [ ⟲ ] [ + ]
+    const zoomCluster = _createEl(
+      "div",
+      "inline-flex items-center rounded-xl border border-border-subtle bg-surface-2/70 p-0.5 shadow-xs",
+      ""
+    );
+    zoomCluster.setAttribute("data-clickui", "result-zoom-cluster");
+
+    const zoomOutBtn = _createEl(
+      "button",
+      "inline-flex h-7 w-7 items-center justify-center rounded-lg text-text-secondary hover:text-text-main hover:bg-surface-1 dark:hover:bg-surface-2 transition-colors",
+      ""
+    );
+    zoomOutBtn.type = "button";
+    zoomOutBtn.setAttribute("data-clickui", "result-zoom-out");
+    zoomOutBtn.title = wt("clickui.zoom_out_title", "Уменьшить");
+    zoomOutBtn.setAttribute("aria-label", wt("clickui.zoom_out_title", "Уменьшить"));
+    zoomOutBtn.appendChild(_createEl("span", "material-symbols-outlined text-[16px] leading-none select-none", "remove"));
 
     const resetViewBtn = _createEl(
       "button",
-      "inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-border-subtle bg-surface-2/70 hover:bg-surface-2 text-xs font-medium text-text-secondary hover:text-text-main transition-colors shadow-xs",
+      "inline-flex items-center gap-1 px-2 h-7 rounded-lg text-xs font-medium text-text-secondary hover:text-text-main hover:bg-surface-1 dark:hover:bg-surface-2 transition-colors",
       ""
     );
     resetViewBtn.type = "button";
     resetViewBtn.setAttribute("data-clickui", "result-reset-view");
     resetViewBtn.title = wt("clickui.reset_view", "Подогнать масштаб");
+    resetViewBtn.setAttribute("aria-label", wt("clickui.reset_view", "Подогнать масштаб"));
     const resetIcon = _createEl("span", "material-symbols-outlined text-[16px] leading-none select-none", "restart_alt");
     const resetLabel = _createEl("span", "hidden 2xl:inline", wt("clickui.reset_view", "Подогнать масштаб"));
     resetViewBtn.appendChild(resetIcon);
     resetViewBtn.appendChild(resetLabel);
-    rightActions.appendChild(resetViewBtn);
 
+    const zoomInBtn = _createEl(
+      "button",
+      "inline-flex h-7 w-7 items-center justify-center rounded-lg text-text-secondary hover:text-text-main hover:bg-surface-1 dark:hover:bg-surface-2 transition-colors",
+      ""
+    );
+    zoomInBtn.type = "button";
+    zoomInBtn.setAttribute("data-clickui", "result-zoom-in");
+    zoomInBtn.title = wt("clickui.zoom_in_title", "Увеличить");
+    zoomInBtn.setAttribute("aria-label", wt("clickui.zoom_in_title", "Увеличить"));
+    zoomInBtn.appendChild(_createEl("span", "material-symbols-outlined text-[16px] leading-none select-none", "add"));
+
+    zoomCluster.appendChild(zoomOutBtn);
+    zoomCluster.appendChild(resetViewBtn);
+    zoomCluster.appendChild(zoomInBtn);
+    rightActions.appendChild(zoomCluster);
+
+    // 2. Fullscreen Button (data-clickui="result-zoom-btn" for test compatibility)
+    // In Side-by-Side mode, this button is hidden because each pane header has its own dedicated expand button.
+    // In Single Tab modes (Your answer, Reference, Overlay), this is visible to expand the current tab.
     const tabZoomBtn = _createEl(
       "button",
-      "inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-border-subtle bg-surface-2/70 hover:bg-surface-2 text-xs font-medium text-text-secondary hover:text-text-main transition-colors shadow-xs",
+      "hidden inline-flex items-center gap-1 px-2.5 h-8 rounded-xl border border-border-subtle bg-surface-2/70 hover:bg-surface-2 text-xs font-medium text-text-secondary hover:text-text-main transition-colors shadow-xs",
       ""
     );
     tabZoomBtn.type = "button";
     tabZoomBtn.setAttribute("data-clickui", "result-zoom-btn");
-    tabZoomBtn.title = wt("clickui.open_img", "Открыть изображение");
-    const tabZoomIcon = _createEl("span", "material-symbols-outlined text-[16px] leading-none select-none", "zoom_in");
-    const tabZoomLabel = _createEl("span", "hidden 2xl:inline", wt("clickui.open_img", "Открыть изображение"));
+    tabZoomBtn.title = wt("clickui.fullscreen", "Развернуть на весь экран");
+    tabZoomBtn.setAttribute("aria-label", wt("clickui.fullscreen", "Развернуть на весь экран"));
+    const tabZoomIcon = _createEl("span", "material-symbols-outlined text-[16px] leading-none select-none", "open_in_full");
+    const tabZoomLabel = _createEl("span", "hidden 2xl:inline", wt("clickui.fullscreen", "Развернуть на весь экран"));
     tabZoomBtn.appendChild(tabZoomIcon);
     tabZoomBtn.appendChild(tabZoomLabel);
     rightActions.appendChild(tabZoomBtn);
@@ -5101,8 +5256,9 @@
     );
     userZoomBtn.type = "button";
     userZoomBtn.setAttribute("data-clickui", "review-user-preview-zoom");
-    userZoomBtn.title = wt("clickui.open_img", "Открыть изображение");
-    const userZoomIcon = _createEl("span", "material-symbols-outlined text-[18px]", "zoom_in");
+    userZoomBtn.title = wt("clickui.fullscreen_user", "Развернуть ответ на весь экран");
+    userZoomBtn.setAttribute("aria-label", wt("clickui.fullscreen_user", "Развернуть ответ на весь экран"));
+    const userZoomIcon = _createEl("span", "material-symbols-outlined text-[18px]", "open_in_full");
     userZoomBtn.appendChild(userZoomIcon);
     userZoomBtn.addEventListener("click", () => {
       _openAdditionalModal(imageUrl, wt("clickui.your_answer", "Ваш ответ"), {
@@ -5175,8 +5331,9 @@
     );
     refZoomBtn.type = "button";
     refZoomBtn.setAttribute("data-clickui", "review-reference-preview-zoom");
-    refZoomBtn.title = wt("clickui.open_img", "Открыть изображение");
-    const refZoomIcon = _createEl("span", "material-symbols-outlined text-[18px]", "zoom_in");
+    refZoomBtn.title = wt("clickui.fullscreen_ref", "Развернуть эталон на весь экран");
+    refZoomBtn.setAttribute("aria-label", wt("clickui.fullscreen_ref", "Развернуть эталон на весь экран"));
+    const refZoomIcon = _createEl("span", "material-symbols-outlined text-[18px]", "open_in_full");
     refZoomBtn.appendChild(refZoomIcon);
     refZoomBtn.addEventListener("click", () => {
       _openAdditionalModal(imageUrl, wt("clickui.reference", "Эталон"), {
@@ -5415,21 +5572,29 @@
       if (mode === "side_by_side") {
         sideBySideGrid.classList.remove("hidden");
         tabsContainer.classList.add("hidden");
+        tabZoomBtn.classList.add("hidden");
         fitView(viewportUser);
       } else {
         sideBySideGrid.classList.add("hidden");
         tabsContainer.classList.remove("hidden");
+        tabZoomBtn.classList.remove("hidden");
 
         if (mode === "user") {
           svgTabUser.style.display = "block";
           svgTabRef.style.display = "none";
+          tabZoomBtn.title = wt("clickui.fullscreen_user", "Развернуть ответ на весь экран");
+          tabZoomBtn.setAttribute("aria-label", wt("clickui.fullscreen_user", "Развернуть ответ на весь экран"));
         } else if (mode === "ref") {
           svgTabUser.style.display = "none";
           svgTabRef.style.display = "block";
+          tabZoomBtn.title = wt("clickui.fullscreen_ref", "Развернуть эталон на весь экран");
+          tabZoomBtn.setAttribute("aria-label", wt("clickui.fullscreen_ref", "Развернуть эталон на весь экран"));
         } else {
           // overlay
           svgTabUser.style.display = "block";
           svgTabRef.style.display = "block";
+          tabZoomBtn.title = wt("clickui.fullscreen", "Развернуть на весь экран");
+          tabZoomBtn.setAttribute("aria-label", wt("clickui.fullscreen", "Развернуть на весь экран"));
         }
         fitView(viewportTab);
       }
@@ -5451,12 +5616,36 @@
       userChoseDisplayMode = true;
       setProjectionMode("overlay");
     });
+
+    function stepZoom(factor) {
+      const vp = currentProjectionMode === "side_by_side" ? viewportUser : viewportTab;
+      if (!vp) return;
+      const rect = typeof vp.getBoundingClientRect === "function" ? vp.getBoundingClientRect() : null;
+      const w = rect && rect.width > 0 ? rect.width : (vp.clientWidth || 640);
+      const h = rect && rect.height > 0 ? rect.height : (vp.clientHeight || 480);
+      const anchorX = w / 2;
+      const anchorY = h / 2;
+      const worldX = (anchorX - mirrorState.panX) / (mirrorState.zoom || 1);
+      const worldY = (anchorY - mirrorState.panY) / (mirrorState.zoom || 1);
+
+      mirrorState.zoom = Math.max(0.15, Math.min(8, mirrorState.zoom * factor));
+      mirrorState.panX = anchorX - worldX * mirrorState.zoom;
+      mirrorState.panY = anchorY - worldY * mirrorState.zoom;
+      applyMirrorTransform();
+    }
+
+    zoomInBtn.addEventListener("click", () => {
+      stepZoom(1.25);
+    });
+    zoomOutBtn.addEventListener("click", () => {
+      stepZoom(1 / 1.25);
+    });
     resetViewBtn.addEventListener("click", () => {
       fitView();
     });
 
     tabZoomBtn.addEventListener("click", () => {
-      let title = wt("clickui.tab_overlay", "Сравнение");
+      let title = wt("clickui.tab_overlay", "Наложение");
       if (currentProjectionMode === "user") {
         title = wt("clickui.your_answer", "Ваш ответ");
       } else if (currentProjectionMode === "ref") {
@@ -5466,10 +5655,10 @@
         naturalW: reviewW,
         naturalH: reviewH,
         renderSvg: (svg) => {
-          if (currentProjectionMode === "user" || currentProjectionMode === "overlay" || currentProjectionMode === "side_by_side") {
+          if (currentProjectionMode === "user" || currentProjectionMode === "overlay") {
             _renderUserReviewSvg(svg, reviewW, reviewH);
           }
-          if (currentProjectionMode === "ref" || currentProjectionMode === "overlay" || currentProjectionMode === "side_by_side") {
+          if (currentProjectionMode === "ref" || currentProjectionMode === "overlay") {
             _renderReferenceReviewSvg(svg, reviewW, reviewH);
           }
         },
@@ -5665,10 +5854,14 @@
       tabBtnRefText: tabRefLabel,
       tabBtnOverlay,
       tabBtnOverlayText: tabOverlayLabel,
+      zoomOutBtn,
+      zoomInBtn,
       resetLabel,
       resetViewBtn,
       tabZoomBtn,
       tabZoomLabel,
+      userZoomBtn,
+      refZoomBtn,
       userTitle,
       refTitle,
     };

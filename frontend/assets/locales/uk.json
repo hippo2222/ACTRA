@@ -423,6 +423,9 @@
   "clickui.inspector_ref_found_by_click": "Зараховано вашим кліком {n}",
   "clickui.inspector_ref_missed_title": "Область «{label}» · Пропущена",
   "clickui.inspector_ref_missed_desc": "Позначка в даній анатомічній зоні не була поставлена",
+  "clickui.fullscreen": "Розгорнути на весь екран",
+  "clickui.fullscreen_user": "Розгорнути відповідь на весь екран",
+  "clickui.fullscreen_ref": "Розгорнути еталон на весь екран",
   "complex_autosave": {
     "save_failed": "Автозбереження не виконано",
     "draft_saved": "Чернетку збережено"
