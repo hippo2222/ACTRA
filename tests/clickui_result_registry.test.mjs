@@ -603,6 +603,129 @@ describe("ClickUI Result Registry (Stage 4)", () => {
     expect(unmatchedRows[0]?.classList.contains("hidden")).toBe(false);
     expect(unmatchedRows[1]?.classList.contains("hidden")).toBe(false);
   });
+
+  it("renders flat 4-mode projection toolbar and allows switching between side-by-side, user, ref, and overlay", () => {
+    const task = createL1ClickTaskFixture();
+    const container = document.getElementById("app");
+
+    dom.window.ClickUI.render(container, task, { runtimeMode: true });
+
+    dom.window.ClickUI.applyCheckFeedback({
+      success: true,
+      details: {
+        found_targets: [0, 1],
+      },
+    });
+
+    const toolbar = container.querySelector('[data-clickui="result-viewport-toolbar"]');
+    expect(toolbar).toBeTruthy();
+
+    const modeSwitch = container.querySelector('[data-clickui="result-mode-switch"]');
+    expect(modeSwitch?.getAttribute("role")).toBe("tablist");
+
+    const sideBtn = container.querySelector('[data-clickui="mode-side-by-side"]');
+    const userBtn = container.querySelector('[data-clickui="tab-user"]');
+    const refBtn = container.querySelector('[data-clickui="tab-reference"]');
+    const overlayBtn = container.querySelector('[data-clickui="tab-overlay"]');
+    const resetViewBtn = container.querySelector('[data-clickui="result-reset-view"]');
+    const zoomBtn = container.querySelector('[data-clickui="result-zoom-btn"]');
+
+    expect(sideBtn).toBeTruthy();
+    expect(userBtn).toBeTruthy();
+    expect(refBtn).toBeTruthy();
+    expect(overlayBtn).toBeTruthy();
+    expect(resetViewBtn).toBeTruthy();
+    expect(zoomBtn).toBeTruthy();
+
+    expect(sideBtn?.getAttribute("role")).toBe("tab");
+    expect(userBtn?.getAttribute("role")).toBe("tab");
+    expect(refBtn?.getAttribute("role")).toBe("tab");
+    expect(overlayBtn?.getAttribute("role")).toBe("tab");
+
+    const sbsGrid = container.querySelector('[data-clickui="result-side-by-side"]');
+    const tabsContainer = container.querySelector('[data-clickui="result-tabs-container"]');
+
+    // Default mode is side-by-side
+    expect(sbsGrid?.classList.contains("hidden")).toBe(false);
+    expect(tabsContainer?.classList.contains("hidden")).toBe(true);
+    expect(sideBtn?.getAttribute("aria-selected")).toBe("true");
+    expect(sideBtn?.tabIndex).toBe(0);
+    expect(userBtn?.getAttribute("aria-selected")).toBe("false");
+    expect(userBtn?.tabIndex).toBe(-1);
+
+    // Switch to User Answer
+    userBtn?.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true }));
+    expect(sbsGrid?.classList.contains("hidden")).toBe(true);
+    expect(tabsContainer?.classList.contains("hidden")).toBe(false);
+    expect(userBtn?.getAttribute("aria-selected")).toBe("true");
+    expect(userBtn?.tabIndex).toBe(0);
+    expect(sideBtn?.getAttribute("aria-selected")).toBe("false");
+    expect(sideBtn?.tabIndex).toBe(-1);
+
+    // Keyboard navigation: ArrowRight from User Answer moves to Reference
+    userBtn?.focus();
+    modeSwitch?.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+    expect(refBtn?.getAttribute("aria-selected")).toBe("true");
+    expect(refBtn?.tabIndex).toBe(0);
+    expect(userBtn?.getAttribute("aria-selected")).toBe("false");
+
+    // Switch to Overlay
+    overlayBtn?.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true }));
+    expect(sbsGrid?.classList.contains("hidden")).toBe(true);
+    expect(tabsContainer?.classList.contains("hidden")).toBe(false);
+    expect(overlayBtn?.getAttribute("aria-selected")).toBe("true");
+
+    // Switch back to side-by-side
+    sideBtn?.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true }));
+    expect(sbsGrid?.classList.contains("hidden")).toBe(false);
+    expect(tabsContainer?.classList.contains("hidden")).toBe(true);
+    expect(sideBtn?.getAttribute("aria-selected")).toBe("true");
+  });
+
+  it("maintains compact 46px inspector bar height and resets icon on hover-out (no sticky error icon bug)", () => {
+    const task = createL1ClickTaskFixture();
+    const container = document.getElementById("app");
+
+    dom.window.ClickUI.render(container, task, { runtimeMode: true });
+
+    dom.window.ClickUI.restoreInput({
+      clicks: [{ x: 99, y: 99 }],
+      action_history: [{ kind: "click" }],
+    });
+
+    dom.window.ClickUI.applyCheckFeedback({
+      success: true,
+      details: {
+        found_targets: [0, 1],
+        off_target_clicks: [0],
+      },
+    });
+
+    const inspector = container.querySelector('[data-clickui="result-inspector"]');
+    expect(inspector).toBeTruthy();
+    expect(inspector?.style.height).toBe("46px");
+    expect(inspector?.style.minHeight).toBe("46px");
+
+    const icon = inspector?.querySelector(".material-symbols-outlined");
+    expect(icon?.textContent).toBe("check_circle");
+    expect(icon?.classList.contains("text-emerald-500")).toBe(true);
+
+    // Hover over off-target click row (error)
+    const unmatchedRow = container.querySelector('[data-clickui="unmatched-action-row"]');
+    unmatchedRow?.dispatchEvent(new dom.window.MouseEvent("mouseenter", { bubbles: true }));
+
+    expect(icon?.textContent).toBe("cancel");
+    expect(icon?.classList.contains("text-rose-500")).toBe(true);
+    expect(inspector?.className).toContain("h-[46px]");
+
+    // Hover out
+    unmatchedRow?.dispatchEvent(new dom.window.MouseEvent("mouseleave", { bubbles: true }));
+
+    // Icon MUST be restored to check_circle and NOT stuck as cancel
+    expect(icon?.textContent).toBe("check_circle");
+    expect(icon?.classList.contains("text-emerald-500")).toBe(true);
+    expect(inspector?.className).toContain("h-[46px]");
+  });
 });
 
 

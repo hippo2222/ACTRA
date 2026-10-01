@@ -88,6 +88,7 @@ data/avatars/
 runtime_state/
 
 # Runtime content — modules, complexes, import history are user-generated at runtime
+modules/
 data/modules/
 data/ai_runs/
 data/catalog/

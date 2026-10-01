@@ -404,6 +404,7 @@
   "clickui.score_stat_threshold": "Score: {score}% (min. {required}% required)",
   "clickui.mode_tabs": "Tabs",
   "clickui.mode_sbs": "Side by side",
+  "clickui.projection_modes_aria": "Image projection modes",
   "clickui.reset_view": "Fit to screen",
   "clickui.inspector_idle_success_title": "Task completed successfully",
   "clickui.inspector_idle_error_title": "Task review & error analysis",

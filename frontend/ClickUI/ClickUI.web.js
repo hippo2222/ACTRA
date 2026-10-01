@@ -3981,15 +3981,21 @@
     if (refs.extraText && refs.extraActionsCount > 0) {
       refs.extraText.textContent = wt("clickui.inspector_stats_extra", "Лишних отметок: {extra}").replace("{extra}", refs.extraActionsCount);
     }
-    if (refs.sideLabel) refs.sideLabel.textContent = wt("clickui.mode_sbs", "2 снимка рядом");
+    if (refs.sideBtn) refs.sideBtn.title = wt("clickui.mode_sbs", "2 снимка");
+    if (refs.sideLabel) refs.sideLabel.textContent = wt("clickui.mode_sbs", "2 снимка");
     if (refs.tabsLabel) refs.tabsLabel.textContent = wt("clickui.mode_tabs", "Вкладками");
+    if (refs.tabBtnUser) refs.tabBtnUser.title = wt("clickui.tab_user", "Ваш ответ");
+    if (refs.tabBtnUserText) refs.tabBtnUserText.textContent = wt("clickui.tab_user", "Ваш ответ");
+    if (refs.tabBtnRef) refs.tabBtnRef.title = wt("clickui.tab_reference", "Эталон");
+    if (refs.tabBtnRefText) refs.tabBtnRefText.textContent = wt("clickui.tab_reference", "Эталон");
+    if (refs.tabBtnOverlay) refs.tabBtnOverlay.title = wt("clickui.tab_overlay", "Наложение");
+    if (refs.tabBtnOverlayText) refs.tabBtnOverlayText.textContent = wt("clickui.tab_overlay", "Наложение");
     if (refs.resetLabel) refs.resetLabel.textContent = wt("clickui.reset_view", "Подогнать масштаб");
     if (refs.resetViewBtn) refs.resetViewBtn.title = wt("clickui.reset_view", "Подогнать масштаб");
+    if (refs.tabZoomLabel) refs.tabZoomLabel.textContent = wt("clickui.open_img", "Открыть изображение");
+    if (refs.tabZoomBtn) refs.tabZoomBtn.title = wt("clickui.open_img", "Открыть изображение");
     if (refs.userTitle) refs.userTitle.textContent = wt("clickui.your_answer", "Ваш ответ");
     if (refs.refTitle) refs.refTitle.textContent = wt("clickui.reference", "Эталон");
-    if (refs.tabBtnUserText) refs.tabBtnUserText.textContent = wt("clickui.tab_user", "Ваш ответ");
-    if (refs.tabBtnRefText) refs.tabBtnRefText.textContent = wt("clickui.tab_reference", "Эталон");
-    if (refs.tabBtnOverlayText) refs.tabBtnOverlayText.textContent = wt("clickui.tab_overlay", "Наложение");
 
     if (typeof state.resultInspectorUpdater === "function") {
       state.resultInspectorUpdater(state.globalHoveredInfo);
@@ -4707,7 +4713,7 @@
     if (extraActionsCount > 0) {
       const extraPill = _createEl(
         "div",
-        "inline-flex items-center gap-1 text-xs font-medium text-warning dark:text-warning-light border-l border-border-subtle pl-3",
+        "inline-flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400 border-l border-border-subtle pl-3",
         ""
       );
       const extraIcon = _createEl("span", "material-symbols-outlined text-[15px]", "info");
@@ -4722,46 +4728,122 @@
     }
 
     headerBanner.appendChild(leftGroup);
+    section.appendChild(headerBanner);
 
-    // Right group: Mode Toggle (Side-by-Side vs Tabs) & Reset View
-    const rightControls = _createEl("div", "flex items-center gap-2", "");
+    // ==========================================
+    // B. Viewport Projection & Action Toolbar (Option 1)
+    // ==========================================
+    const viewportToolbar = _createEl(
+      "div",
+      "clickui-result-toolbar flex flex-wrap items-center justify-between gap-2.5 min-w-0 select-none",
+      ""
+    );
+    viewportToolbar.setAttribute("data-clickui", "result-viewport-toolbar");
 
+    // Unified 4-projection segmented control (WAI-ARIA Tabs pattern)
     const modeSwitch = _createEl(
       "div",
-      "inline-flex items-center rounded-xl border border-border-subtle bg-surface-2/70 p-0.5 shadow-xs",
+      "inline-flex items-center rounded-xl border border-border-subtle bg-surface-2/70 p-0.5 shadow-xs max-w-full overflow-x-auto min-w-0",
       ""
     );
     modeSwitch.setAttribute("data-clickui", "result-mode-switch");
+    modeSwitch.setAttribute("role", "tablist");
+    modeSwitch.setAttribute("aria-label", wt("clickui.projection_modes_aria", "Режимы отображения снимка"));
 
-    const sideBtn = _createEl(
-      "button",
-      "inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all text-text-main dark:text-text-on-dark bg-surface-1 shadow-xs border border-border-subtle/50",
-      ""
-    );
+    const btnBaseClass = "inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg text-xs font-semibold transition-all whitespace-nowrap shrink-0";
+    const activeBtnClass = `${btnBaseClass} bg-surface-1 text-text-main dark:text-text-on-dark shadow-xs border border-border-subtle/50`;
+    const inactiveBtnClass = `${btnBaseClass} text-text-secondary dark:text-text-muted hover:text-text-main border-transparent`;
+
+    // 1. Side-by-Side button
+    const sideBtn = _createEl("button", activeBtnClass, "");
     sideBtn.type = "button";
+    sideBtn.setAttribute("role", "tab");
+    sideBtn.setAttribute("aria-selected", "true");
+    sideBtn.tabIndex = 0;
     sideBtn.setAttribute("data-clickui", "mode-side-by-side");
+    sideBtn.title = wt("clickui.mode_sbs", "2 снимка");
     const sideIcon = _createEl("span", "material-symbols-outlined text-[15px] leading-none select-none", "view_column");
-    const sideLabel = _createEl("span", "hidden sm:inline", wt("clickui.mode_sbs", "2 снимка рядом"));
+    const sideLabel = _createEl("span", "hidden sm:inline", wt("clickui.mode_sbs", "2 снимка"));
     sideBtn.appendChild(sideIcon);
     sideBtn.appendChild(sideLabel);
 
-    const tabsBtn = _createEl(
-      "button",
-      "inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all text-text-secondary dark:text-text-muted hover:text-text-main",
-      ""
-    );
-    tabsBtn.type = "button";
-    tabsBtn.setAttribute("data-clickui", "mode-tabs");
-    const tabsIcon = _createEl("span", "material-symbols-outlined text-[15px] leading-none select-none", "tab");
-    const tabsLabel = _createEl("span", "hidden sm:inline", wt("clickui.mode_tabs", "Вкладками"));
-    tabsBtn.appendChild(tabsIcon);
-    tabsBtn.appendChild(tabsLabel);
+    // 2. User Answer button
+    const tabBtnUser = _createEl("button", inactiveBtnClass, "");
+    tabBtnUser.type = "button";
+    tabBtnUser.setAttribute("role", "tab");
+    tabBtnUser.setAttribute("aria-selected", "false");
+    tabBtnUser.tabIndex = -1;
+    tabBtnUser.setAttribute("data-clickui", "tab-user");
+    tabBtnUser.title = wt("clickui.tab_user", "Ваш ответ");
+    const tabUserIcon = _createEl("span", "material-symbols-outlined text-[15px] leading-none select-none", "person");
+    const tabUserLabel = _createEl("span", "hidden sm:inline", wt("clickui.tab_user", "Ваш ответ"));
+    tabBtnUser.appendChild(tabUserIcon);
+    tabBtnUser.appendChild(tabUserLabel);
+
+    // 3. Reference button
+    const tabBtnRef = _createEl("button", inactiveBtnClass, "");
+    tabBtnRef.type = "button";
+    tabBtnRef.setAttribute("role", "tab");
+    tabBtnRef.setAttribute("aria-selected", "false");
+    tabBtnRef.tabIndex = -1;
+    tabBtnRef.setAttribute("data-clickui", "tab-reference");
+    tabBtnRef.title = wt("clickui.tab_reference", "Эталон");
+    const tabRefIcon = _createEl("span", "material-symbols-outlined text-[15px] leading-none select-none", "verified");
+    const tabRefLabel = _createEl("span", "hidden sm:inline", wt("clickui.tab_reference", "Эталон"));
+    tabBtnRef.appendChild(tabRefIcon);
+    tabBtnRef.appendChild(tabRefLabel);
+
+    // 4. Overlay button
+    const tabBtnOverlay = _createEl("button", inactiveBtnClass, "");
+    tabBtnOverlay.type = "button";
+    tabBtnOverlay.setAttribute("role", "tab");
+    tabBtnOverlay.setAttribute("aria-selected", "false");
+    tabBtnOverlay.tabIndex = -1;
+    tabBtnOverlay.setAttribute("data-clickui", "tab-overlay");
+    tabBtnOverlay.title = wt("clickui.tab_overlay", "Наложение");
+    const tabOverlayIcon = _createEl("span", "material-symbols-outlined text-[15px] leading-none select-none", "layers");
+    const tabOverlayLabel = _createEl("span", "hidden sm:inline", wt("clickui.tab_overlay", "Наложение"));
+    tabBtnOverlay.appendChild(tabOverlayIcon);
+    tabBtnOverlay.appendChild(tabOverlayLabel);
 
     modeSwitch.appendChild(sideBtn);
-    modeSwitch.appendChild(tabsBtn);
-    rightControls.appendChild(modeSwitch);
+    modeSwitch.appendChild(tabBtnUser);
+    modeSwitch.appendChild(tabBtnRef);
+    modeSwitch.appendChild(tabBtnOverlay);
 
-    // Reset View Button
+    // WAI-ARIA keyboard navigation for tabs
+    const projectionButtons = [sideBtn, tabBtnUser, tabBtnRef, tabBtnOverlay];
+    modeSwitch.addEventListener("keydown", (e) => {
+      let currentIndex = projectionButtons.findIndex((b) => b === document.activeElement);
+      if (currentIndex === -1) {
+        currentIndex = projectionButtons.findIndex((b) => b.getAttribute("aria-selected") === "true");
+      }
+      if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+        e.preventDefault();
+        const nextIndex = (currentIndex + 1) % projectionButtons.length;
+        projectionButtons[nextIndex].focus();
+        projectionButtons[nextIndex].click();
+      } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+        e.preventDefault();
+        const prevIndex = (currentIndex - 1 + projectionButtons.length) % projectionButtons.length;
+        projectionButtons[prevIndex].focus();
+        projectionButtons[prevIndex].click();
+      } else if (e.key === "Home") {
+        e.preventDefault();
+        projectionButtons[0].focus();
+        projectionButtons[0].click();
+      } else if (e.key === "End") {
+        e.preventDefault();
+        projectionButtons[projectionButtons.length - 1].focus();
+        projectionButtons[projectionButtons.length - 1].click();
+      }
+    });
+
+    viewportToolbar.appendChild(modeSwitch);
+
+    // Right actions: Reset View and Zoom Modal
+    const rightActions = _createEl("div", "flex items-center gap-2 shrink-0 ml-auto", "");
+
     const resetViewBtn = _createEl(
       "button",
       "inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-border-subtle bg-surface-2/70 hover:bg-surface-2 text-xs font-medium text-text-secondary hover:text-text-main transition-colors shadow-xs",
@@ -4771,25 +4853,39 @@
     resetViewBtn.setAttribute("data-clickui", "result-reset-view");
     resetViewBtn.title = wt("clickui.reset_view", "Подогнать масштаб");
     const resetIcon = _createEl("span", "material-symbols-outlined text-[16px] leading-none select-none", "restart_alt");
-    const resetLabel = _createEl("span", "hidden md:inline", wt("clickui.reset_view", "Подогнать масштаб"));
+    const resetLabel = _createEl("span", "hidden 2xl:inline", wt("clickui.reset_view", "Подогнать масштаб"));
     resetViewBtn.appendChild(resetIcon);
     resetViewBtn.appendChild(resetLabel);
-    rightControls.appendChild(resetViewBtn);
+    rightActions.appendChild(resetViewBtn);
 
-    headerBanner.appendChild(rightControls);
-    section.appendChild(headerBanner);
+    const tabZoomBtn = _createEl(
+      "button",
+      "inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-border-subtle bg-surface-2/70 hover:bg-surface-2 text-xs font-medium text-text-secondary hover:text-text-main transition-colors shadow-xs",
+      ""
+    );
+    tabZoomBtn.type = "button";
+    tabZoomBtn.setAttribute("data-clickui", "result-zoom-btn");
+    tabZoomBtn.title = wt("clickui.open_img", "Открыть изображение");
+    const tabZoomIcon = _createEl("span", "material-symbols-outlined text-[16px] leading-none select-none", "zoom_in");
+    const tabZoomLabel = _createEl("span", "hidden 2xl:inline", wt("clickui.open_img", "Открыть изображение"));
+    tabZoomBtn.appendChild(tabZoomIcon);
+    tabZoomBtn.appendChild(tabZoomLabel);
+    rightActions.appendChild(tabZoomBtn);
+
+    viewportToolbar.appendChild(rightActions);
+    section.appendChild(viewportToolbar);
 
     // ==========================================
-    // B. Unified Anti-CLS Inspector Bar
+    // C. Unified Anti-CLS Inspector Bar
     // ==========================================
     const inspectorBar = _createEl(
       "div",
-      "clickui-result-inspector flex items-center justify-between px-3.5 py-2 rounded-xl border border-border-subtle bg-surface-2/60 dark:bg-surface-2/30 shadow-xs select-none transition-colors",
+      "clickui-result-inspector flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-border-subtle bg-surface-2/60 dark:bg-surface-2/30 shadow-xs select-none transition-colors",
       ""
     );
     inspectorBar.classList.add("clickui-result-inspector");
-    inspectorBar.style.minHeight = "58px";
-    inspectorBar.style.height = "58px";
+    inspectorBar.style.minHeight = "46px";
+    inspectorBar.style.height = "46px";
     inspectorBar.style.boxSizing = "border-box";
     inspectorBar.setAttribute("data-clickui", "result-inspector");
 
@@ -4829,7 +4925,9 @@
 
     function updateInspector(hoverInfo) {
       if (!hoverInfo) {
-        inspectorBar.className = "clickui-result-inspector min-h-[58px] h-[58px] flex items-center justify-between px-3.5 py-2 rounded-xl border border-border-subtle bg-surface-2/60 dark:bg-surface-2/30 shadow-xs select-none transition-all duration-150 ease-out";
+        inspectorBar.className = "clickui-result-inspector min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-border-subtle bg-surface-2/60 dark:bg-surface-2/30 shadow-xs select-none transition-all duration-150 ease-out";
+        inspectorIcon.textContent = success ? "check_circle" : "info";
+        inspectorIcon.className = "material-symbols-outlined text-[20px] shrink-0 transition-colors " + (success ? "text-emerald-500" : "text-text-muted");
         inspectorTitle.textContent = success
           ? wt("clickui.inspector_idle_success_title", "Задание успешно выполнено")
           : wt("clickui.inspector_idle_error_title", "Разбор ошибок выполнения");
@@ -4861,7 +4959,7 @@
           }
 
           if (interpretation && interpretation.duplicate) {
-            inspectorBar.className = "clickui-result-inspector min-h-[58px] h-[58px] flex items-center justify-between px-3.5 py-2 rounded-xl border border-amber-500/30 bg-amber-500/10 dark:bg-amber-500/15 shadow-xs select-none transition-all duration-150 ease-out";
+            inspectorBar.className = "clickui-result-inspector min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 dark:bg-amber-500/15 shadow-xs select-none transition-all duration-150 ease-out";
             inspectorIcon.textContent = "warning";
             inspectorIcon.className = "material-symbols-outlined text-[20px] text-warning shrink-0 transition-colors";
             inspectorTitle.textContent = wt("clickui.inspector_label_err_title", "Клик {n}: Место найдено, ошибка в названии").replace("{n}", action.index + 1);
@@ -4871,7 +4969,7 @@
             if (isLabelMismatch) {
               const userLabel = _normalizeReviewLabelText(action.label || (state.labelsClicks && state.labelsClicks[action.index]));
               const expectedLabel = labelStatus.correctLabel || targetLabel;
-              inspectorBar.className = "clickui-result-inspector min-h-[58px] h-[58px] flex items-center justify-between px-3.5 py-2 rounded-xl border border-amber-500/30 bg-amber-500/10 dark:bg-amber-500/15 shadow-xs select-none transition-all duration-150 ease-out";
+              inspectorBar.className = "clickui-result-inspector min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 dark:bg-amber-500/15 shadow-xs select-none transition-all duration-150 ease-out";
               inspectorIcon.textContent = "edit_note";
               inspectorIcon.className = "material-symbols-outlined text-[20px] text-amber-500 shrink-0 transition-colors";
               inspectorTitle.textContent = wt("clickui.inspector_label_err_title", "Клик {n}: Место найдено, ошибка в названии").replace("{n}", action.index + 1);
@@ -4880,7 +4978,7 @@
                 .replace("{correct}", expectedLabel);
               inspectorChip.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold tracking-wide bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">${wt("clickui.badge_label_err", "Ошибка названия")}</span>`;
             } else {
-              inspectorBar.className = "clickui-result-inspector min-h-[58px] h-[58px] flex items-center justify-between px-3.5 py-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-500/15 shadow-xs select-none transition-all duration-150 ease-out";
+              inspectorBar.className = "clickui-result-inspector min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-500/15 shadow-xs select-none transition-all duration-150 ease-out";
               inspectorIcon.textContent = "check_circle";
               inspectorIcon.className = "material-symbols-outlined text-[20px] text-emerald-500 shrink-0 transition-colors";
               inspectorTitle.textContent = wt("clickui.inspector_click_hit_title", "Клик {n}: Точное попадание в область «{label}»")
@@ -4893,8 +4991,8 @@
             const thr = _formatPercentValue(interpretation && interpretation.threshold);
             const isContourSuccess = interpretation && interpretation.success === true;
             inspectorBar.className = isContourSuccess
-              ? "min-h-[58px] h-[58px] flex items-center justify-between px-3.5 py-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-500/15 shadow-xs select-none transition-all duration-150 ease-out"
-              : "min-h-[58px] h-[58px] flex items-center justify-between px-3.5 py-2 rounded-xl border border-rose-500/30 bg-rose-500/10 dark:bg-rose-500/15 shadow-xs select-none transition-all duration-150 ease-out";
+              ? "min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-500/15 shadow-xs select-none transition-all duration-150 ease-out"
+              : "min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 dark:bg-rose-500/15 shadow-xs select-none transition-all duration-150 ease-out";
             inspectorIcon.textContent = isContourSuccess ? "check_circle" : "cancel";
             inspectorIcon.className = "material-symbols-outlined text-[20px] " + (isContourSuccess ? "text-emerald-500" : "text-rose-500") + " shrink-0 transition-colors";
             const covVal = String(cov || "0%").replace("%", "");
@@ -4903,7 +5001,7 @@
               .replace("{cov}", covVal)
               .replace("{thr}", thrVal);
           } else {
-            inspectorBar.className = "clickui-result-inspector min-h-[58px] h-[58px] flex items-center justify-between px-3.5 py-2 rounded-xl border border-rose-500/30 bg-rose-500/10 dark:bg-rose-500/15 shadow-xs select-none transition-all duration-150 ease-out";
+            inspectorBar.className = "clickui-result-inspector min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 dark:bg-rose-500/15 shadow-xs select-none transition-all duration-150 ease-out";
             inspectorIcon.textContent = "cancel";
             inspectorIcon.className = "material-symbols-outlined text-[20px] text-rose-500 shrink-0 transition-colors";
             inspectorTitle.textContent = wt("clickui.inspector_click_miss_title", "Клик {n}: Вне целевой области").replace("{n}", action.index + 1);
@@ -4930,7 +5028,7 @@
         if (isLabelMismatch) {
           const userLabel = _normalizeReviewLabelText(labelStatus.userLabel);
           const expectedLabel = labelStatus.correctLabel || targetLabel;
-          inspectorBar.className = "clickui-result-inspector min-h-[58px] h-[58px] flex items-center justify-between px-3.5 py-2 rounded-xl border border-amber-500/30 bg-amber-500/10 dark:bg-amber-500/15 shadow-xs select-none transition-all duration-150 ease-out";
+          inspectorBar.className = "clickui-result-inspector min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 dark:bg-amber-500/15 shadow-xs select-none transition-all duration-150 ease-out";
           inspectorIcon.textContent = "edit_note";
           inspectorIcon.className = "material-symbols-outlined text-[20px] text-amber-500 shrink-0 transition-colors";
           inspectorTitle.textContent = wt("clickui.inspector_label_err_title_target", "Область «{label}»: Ошибка в названии").replace("{label}", targetLabel || "");
@@ -4939,7 +5037,7 @@
             .replace("{correct}", expectedLabel);
           inspectorChip.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold tracking-wide bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">${wt("clickui.badge_label_err", "Ошибка названия")}</span>`;
         } else if (contourRes && isLowCoverage) {
-          inspectorBar.className = "clickui-result-inspector min-h-[58px] h-[58px] flex items-center justify-between px-3.5 py-2 rounded-xl border border-rose-500/30 bg-rose-500/10 dark:bg-rose-500/15 shadow-xs select-none transition-all duration-150 ease-out";
+          inspectorBar.className = "clickui-result-inspector min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 dark:bg-rose-500/15 shadow-xs select-none transition-all duration-150 ease-out";
           inspectorIcon.textContent = "cancel";
           inspectorIcon.className = "material-symbols-outlined text-[20px] text-rose-500 shrink-0 transition-colors";
           inspectorTitle.textContent = wt("clickui.inspector_ref_missed_title", "Область «{label}» · Недостаточное покрытие").replace("{label}", targetLabel || "");
@@ -4948,7 +5046,7 @@
             .replace("{thr}", contourRes.threshold || 75);
           inspectorChip.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold tracking-wide bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">${contourRes.coverage}%</span>`;
         } else if (isFound) {
-          inspectorBar.className = "clickui-result-inspector min-h-[58px] h-[58px] flex items-center justify-between px-3.5 py-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-500/15 shadow-xs select-none transition-all duration-150 ease-out";
+          inspectorBar.className = "clickui-result-inspector min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-500/15 shadow-xs select-none transition-all duration-150 ease-out";
           inspectorIcon.textContent = "check_circle";
           inspectorIcon.className = "material-symbols-outlined text-[20px] text-emerald-500 shrink-0 transition-colors";
           inspectorTitle.textContent = wt("clickui.inspector_ref_found_title", "Область «{label}» · Найдена").replace("{label}", targetLabel || "");
@@ -4960,7 +5058,7 @@
           }
           inspectorChip.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold tracking-wide bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">${wt("clickui.badge_passed", "Зачтено")}</span>`;
         } else {
-          inspectorBar.className = "clickui-result-inspector min-h-[58px] h-[58px] flex items-center justify-between px-3.5 py-2 rounded-xl border border-rose-500/30 bg-rose-500/10 dark:bg-rose-500/15 shadow-xs select-none transition-all duration-150 ease-out";
+          inspectorBar.className = "clickui-result-inspector min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 dark:bg-rose-500/15 shadow-xs select-none transition-all duration-150 ease-out";
           inspectorIcon.textContent = "cancel";
           inspectorIcon.className = "material-symbols-outlined text-[20px] text-rose-500 shrink-0 transition-colors";
           inspectorTitle.textContent = wt("clickui.inspector_ref_missed_title", "Область «{label}» · Пропущена").replace("{label}", targetLabel || "");
@@ -5133,55 +5231,9 @@
     sideBySideGrid.appendChild(refCard);
     section.appendChild(sideBySideGrid);
 
-    // 2. Tabs Container (Single full-width viewport with tabs)
+    // 2. Tabs Container (Single full-width viewport for User / Ref / Overlay projections)
     const tabsContainer = _createEl("div", "hidden flex flex-col gap-2.5", "");
     tabsContainer.setAttribute("data-clickui", "result-tabs-container");
-
-    const tabBar = _createEl("div", "flex items-center justify-between gap-2 pb-1 min-w-0 overflow-hidden", "");
-    const tabButtonsWrap = _createEl("div", "inline-flex items-center rounded-xl border border-border-subtle bg-surface-2/70 p-0.5 shadow-xs max-w-full overflow-x-auto min-w-0", "");
-
-    const tabBtnUser = _createEl(
-      "button",
-      "inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-surface-1 text-text-main dark:text-text-on-dark shadow-xs border border-border-subtle/50 whitespace-nowrap shrink-0",
-      ""
-    );
-    tabBtnUser.type = "button";
-    tabBtnUser.setAttribute("data-clickui", "tab-user");
-    tabBtnUser.innerHTML = `<span class="material-symbols-outlined text-[16px]">person</span><span>${wt("clickui.tab_user", "Ваш ответ")}</span>`;
-
-    const tabBtnRef = _createEl(
-      "button",
-      "inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-text-secondary dark:text-text-muted hover:text-text-main whitespace-nowrap shrink-0",
-      ""
-    );
-    tabBtnRef.type = "button";
-    tabBtnRef.setAttribute("data-clickui", "tab-reference");
-    tabBtnRef.innerHTML = `<span class="material-symbols-outlined text-[16px]">verified</span><span>${wt("clickui.tab_reference", "Эталон")}</span>`;
-
-    const tabBtnOverlay = _createEl(
-      "button",
-      "inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-text-secondary dark:text-text-muted hover:text-text-main whitespace-nowrap shrink-0",
-      ""
-    );
-    tabBtnOverlay.type = "button";
-    tabBtnOverlay.setAttribute("data-clickui", "tab-overlay");
-    tabBtnOverlay.innerHTML = `<span class="material-symbols-outlined text-[16px]">layers</span><span>${wt("clickui.tab_overlay", "Наложение")}</span>`;
-
-    tabButtonsWrap.appendChild(tabBtnUser);
-    tabButtonsWrap.appendChild(tabBtnRef);
-    tabButtonsWrap.appendChild(tabBtnOverlay);
-    tabBar.appendChild(tabButtonsWrap);
-
-    const tabZoomBtn = _createEl(
-      "button",
-      "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border-subtle bg-surface-1 text-text-secondary hover:text-text-main hover:bg-surface-2 transition-colors shadow-xs overflow-hidden leading-none",
-      ""
-    );
-    tabZoomBtn.type = "button";
-    tabZoomBtn.title = wt("clickui.open_img", "Открыть изображение");
-    tabZoomBtn.innerHTML = `<span class="material-symbols-outlined text-[18px]">zoom_in</span>`;
-    tabBar.appendChild(tabZoomBtn);
-    tabsContainer.appendChild(tabBar);
 
     const viewportTab = _createEl(
       "div",
@@ -5233,49 +5285,11 @@
     tabsContainer.appendChild(viewportTab);
     section.appendChild(tabsContainer);
 
-    let activeTab = "user";
-    function setTab(tabName) {
-      activeTab = tabName;
-      const activeClass = "inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-surface-1 text-text-main dark:text-text-on-dark shadow-xs border border-border-subtle/50 whitespace-nowrap shrink-0";
-      const inactiveClass = "inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-text-secondary dark:text-text-muted hover:text-text-main border-transparent whitespace-nowrap shrink-0";
-      
-      tabBtnUser.className = tabName === "user" ? activeClass : inactiveClass;
-      tabBtnRef.className = tabName === "ref" ? activeClass : inactiveClass;
-      tabBtnOverlay.className = tabName === "overlay" ? activeClass : inactiveClass;
-
-      if (tabName === "user") {
-        svgTabUser.style.display = "block";
-        svgTabRef.style.display = "none";
-      } else if (tabName === "ref") {
-        svgTabUser.style.display = "none";
-        svgTabRef.style.display = "block";
-      } else {
-        svgTabUser.style.display = "block";
-        svgTabRef.style.display = "block";
-      }
-    }
-    setTab("user");
-
-    tabBtnUser.addEventListener("click", () => setTab("user"));
-    tabBtnRef.addEventListener("click", () => setTab("ref"));
-    tabBtnOverlay.addEventListener("click", () => setTab("overlay"));
-
-    tabZoomBtn.addEventListener("click", () => {
-      _openAdditionalModal(imageUrl, activeTab === "ref" ? wt("clickui.reference", "Эталон") : wt("clickui.your_answer", "Ваш ответ"), {
-        naturalW: reviewW,
-        naturalH: reviewH,
-        renderSvg: (svg) => {
-          if (activeTab === "user" || activeTab === "overlay") _renderUserReviewSvg(svg, reviewW, reviewH);
-          if (activeTab === "ref" || activeTab === "overlay") _renderReferenceReviewSvg(svg, reviewW, reviewH);
-        },
-      });
-    });
-
     // ==========================================
     // D. Synchronized Mirror Zoom & Pan Engine
     // ==========================================
     const mirrorState = { zoom: 1, panX: 0, panY: 0 };
-    let currentDisplayMode = "side_by_side";
+    let currentProjectionMode = "side_by_side";
     let userChoseDisplayMode = false;
 
     function applyMirrorTransform() {
@@ -5286,7 +5300,7 @@
     }
 
     function fitView(targetVp) {
-      const vp = targetVp || (currentDisplayMode === "side_by_side" ? viewportUser : viewportTab);
+      const vp = targetVp || (currentProjectionMode === "side_by_side" ? viewportUser : viewportTab);
       if (!vp) return;
       const rect = typeof vp.getBoundingClientRect === "function" ? vp.getBoundingClientRect() : null;
       const w = rect && rect.width > 0 ? rect.width : (vp.clientWidth || 640);
@@ -5380,36 +5394,86 @@
       fitView();
     }
 
-    function setDisplayMode(mode) {
-      currentDisplayMode = mode;
-      const activeBtnClass = "inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all bg-surface-1 text-text-main dark:text-text-on-dark shadow-xs border border-border-subtle/50";
-      const inactiveBtnClass = "inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all text-text-secondary dark:text-text-muted hover:text-text-main border-transparent";
+    function setProjectionMode(mode) {
+      currentProjectionMode = mode;
+
+      sideBtn.className = mode === "side_by_side" ? activeBtnClass : inactiveBtnClass;
+      tabBtnUser.className = mode === "user" ? activeBtnClass : inactiveBtnClass;
+      tabBtnRef.className = mode === "ref" ? activeBtnClass : inactiveBtnClass;
+      tabBtnOverlay.className = mode === "overlay" ? activeBtnClass : inactiveBtnClass;
+
+      sideBtn.setAttribute("aria-selected", mode === "side_by_side" ? "true" : "false");
+      tabBtnUser.setAttribute("aria-selected", mode === "user" ? "true" : "false");
+      tabBtnRef.setAttribute("aria-selected", mode === "ref" ? "true" : "false");
+      tabBtnOverlay.setAttribute("aria-selected", mode === "overlay" ? "true" : "false");
+
+      sideBtn.tabIndex = mode === "side_by_side" ? 0 : -1;
+      tabBtnUser.tabIndex = mode === "user" ? 0 : -1;
+      tabBtnRef.tabIndex = mode === "ref" ? 0 : -1;
+      tabBtnOverlay.tabIndex = mode === "overlay" ? 0 : -1;
 
       if (mode === "side_by_side") {
-        sideBtn.className = activeBtnClass;
-        tabsBtn.className = inactiveBtnClass;
         sideBySideGrid.classList.remove("hidden");
         tabsContainer.classList.add("hidden");
         fitView(viewportUser);
       } else {
-        sideBtn.className = inactiveBtnClass;
-        tabsBtn.className = activeBtnClass;
         sideBySideGrid.classList.add("hidden");
         tabsContainer.classList.remove("hidden");
+
+        if (mode === "user") {
+          svgTabUser.style.display = "block";
+          svgTabRef.style.display = "none";
+        } else if (mode === "ref") {
+          svgTabUser.style.display = "none";
+          svgTabRef.style.display = "block";
+        } else {
+          // overlay
+          svgTabUser.style.display = "block";
+          svgTabRef.style.display = "block";
+        }
         fitView(viewportTab);
       }
     }
 
     sideBtn.addEventListener("click", () => {
       userChoseDisplayMode = true;
-      setDisplayMode("side_by_side");
+      setProjectionMode("side_by_side");
     });
-    tabsBtn.addEventListener("click", () => {
+    tabBtnUser.addEventListener("click", () => {
       userChoseDisplayMode = true;
-      setDisplayMode("tabs");
+      setProjectionMode("user");
+    });
+    tabBtnRef.addEventListener("click", () => {
+      userChoseDisplayMode = true;
+      setProjectionMode("ref");
+    });
+    tabBtnOverlay.addEventListener("click", () => {
+      userChoseDisplayMode = true;
+      setProjectionMode("overlay");
     });
     resetViewBtn.addEventListener("click", () => {
       fitView();
+    });
+
+    tabZoomBtn.addEventListener("click", () => {
+      let title = wt("clickui.tab_overlay", "Сравнение");
+      if (currentProjectionMode === "user") {
+        title = wt("clickui.your_answer", "Ваш ответ");
+      } else if (currentProjectionMode === "ref") {
+        title = wt("clickui.reference", "Эталон");
+      }
+      _openAdditionalModal(imageUrl, title, {
+        naturalW: reviewW,
+        naturalH: reviewH,
+        renderSvg: (svg) => {
+          if (currentProjectionMode === "user" || currentProjectionMode === "overlay" || currentProjectionMode === "side_by_side") {
+            _renderUserReviewSvg(svg, reviewW, reviewH);
+          }
+          if (currentProjectionMode === "ref" || currentProjectionMode === "overlay" || currentProjectionMode === "side_by_side") {
+            _renderReferenceReviewSvg(svg, reviewW, reviewH);
+          }
+        },
+      });
     });
 
     function attachZoomPan(vp) {
@@ -5553,9 +5617,9 @@
     // Apply initial display mode explicitly before ResizeObserver fires.
     // Without this call the DOM stays in whatever state the HTML was built with,
     // and the observer fires asynchronously — causing a visible flicker to tabs.
-    setDisplayMode("side_by_side");
+    setProjectionMode("side_by_side");
 
-    // Auto-adaptive width observer: switches to tabs only on truly narrow containers.
+    // Auto-adaptive width observer: switches to single-view overlay only on truly narrow containers.
     // 680px = ~320px per pane which is still readable for annotated medical images.
     if (typeof ResizeObserver !== "undefined") {
       let lastObservedW = 0;
@@ -5566,11 +5630,11 @@
           const widthChanged = Math.abs(width - lastObservedW) > 2;
           lastObservedW = width;
           if (!userChoseDisplayMode) {
-            if (width < 680 && currentDisplayMode !== "tabs") {
-              setDisplayMode("tabs");
+            if (width < 680 && currentProjectionMode === "side_by_side") {
+              setProjectionMode("overlay");
               return;
-            } else if (width >= 680 && currentDisplayMode !== "side_by_side") {
-              setDisplayMode("side_by_side");
+            } else if (width >= 680 && currentProjectionMode !== "side_by_side") {
+              setProjectionMode("side_by_side");
               return;
             }
           }
@@ -5593,15 +5657,20 @@
       scoreVal: typeof scoreVal !== "undefined" ? scoreVal : null,
       extraText: typeof extraText !== "undefined" ? extraText : null,
       extraActionsCount,
+      sideBtn,
       sideLabel,
-      tabsLabel,
+      tabBtnUser,
+      tabBtnUserText: tabUserLabel,
+      tabBtnRef,
+      tabBtnRefText: tabRefLabel,
+      tabBtnOverlay,
+      tabBtnOverlayText: tabOverlayLabel,
       resetLabel,
       resetViewBtn,
+      tabZoomBtn,
+      tabZoomLabel,
       userTitle,
       refTitle,
-      tabBtnUserText: tabBtnUser ? tabBtnUser.querySelector("span:last-child") : null,
-      tabBtnRefText: tabBtnRef ? tabBtnRef.querySelector("span:last-child") : null,
-      tabBtnOverlayText: tabBtnOverlay ? tabBtnOverlay.querySelector("span:last-child") : null,
     };
 
     // Connected Hover
