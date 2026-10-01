@@ -767,7 +767,8 @@
     if (opts.targetIndex != null) {
       path.setAttribute("data-target-index", String(opts.targetIndex));
       // svg has pointer-events:none — re-enable on the shape so hover works.
-      path.style.pointerEvents = "auto";
+      path.setAttribute("pointer-events", "all");
+      path.style.pointerEvents = "all";
     }
     svg.appendChild(path);
     return scaled;
@@ -951,6 +952,7 @@
   // подсвечивает тот же target ОДНОВРЕМЕННО на обоих изображениях (ответ + эталон) и в
   // обеих таблицах названий (что нарисовал/назвал пользователь + что нужно было).
   function _setupReviewHoverEffects(root) {
+    if (!root) return;
     const hoverables = Array.from(root.querySelectorAll("[data-target-index]"));
     if (!hoverables.length) return;
 
@@ -973,10 +975,14 @@
       el.style.transition = "opacity 0.2s ease-in-out, box-shadow 0.2s ease-in-out";
     });
 
+    let activeTargetIndexStr = null;
+
     hoverables.forEach((el) => {
       const targetIndexStr = el.getAttribute("data-target-index");
       if (targetIndexStr === null || targetIndexStr === undefined) return;
-      el.addEventListener("mouseenter", () => {
+
+      const onEnter = () => {
+        activeTargetIndexStr = targetIndexStr;
         hoverables.forEach((other) => {
           if (other.getAttribute("data-target-index") !== targetIndexStr) {
             other.style.opacity = "0.08";
@@ -985,11 +991,42 @@
             applyMatch(other);
           }
         });
+      };
+
+      const onLeave = () => {
+        if (activeTargetIndexStr === targetIndexStr) {
+          activeTargetIndexStr = null;
+          hoverables.forEach(clear);
+        }
+      };
+
+      el.addEventListener("pointerenter", onEnter);
+      el.addEventListener("pointerleave", onLeave);
+      el.addEventListener("mouseenter", onEnter);
+      el.addEventListener("mouseleave", onLeave);
+    });
+
+    if (!root._hasDrawReviewGuard) {
+      root._hasDrawReviewGuard = true;
+      root.addEventListener("pointermove", (ev) => {
+        if (!activeTargetIndexStr) return;
+        const hit = ev.target && typeof ev.target.closest === "function"
+          ? ev.target.closest("[data-target-index]")
+          : null;
+        if (!hit) {
+          activeTargetIndexStr = null;
+          hoverables.forEach(clear);
+        }
       });
-      el.addEventListener("mouseleave", () => {
+      root.addEventListener("pointerleave", () => {
+        activeTargetIndexStr = null;
         hoverables.forEach(clear);
       });
-    });
+      window.addEventListener("blur", () => {
+        activeTargetIndexStr = null;
+        hoverables.forEach(clear);
+      });
+    }
   }
 
   function _clearReviewComparison() {

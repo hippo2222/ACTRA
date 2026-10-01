@@ -562,8 +562,6 @@
     if (state.hoveredActionKey === nextKey) return;
     state.hoveredActionKey = nextKey;
     _syncUserActionRowsState();
-    _renderMarkers();
-    _renderDrawing();
     if (nextKey) {
       const parts = nextKey.split(":");
       const targetIndex = _findTargetIndex(state.taskDto, parts[0], Number(parts[1]));
@@ -789,8 +787,16 @@
       if (_actionTargetIdx !== null) {
         row.setAttribute("data-target-index", String(_actionTargetIdx));
       }
-      row.addEventListener("mouseenter", () => _setGlobalHover({ targetIndex: _actionTargetIdx, actionKey: action.key, source: "sidebar" }));
-      row.addEventListener("mouseleave", () => _setGlobalHover(null));
+      const onRowEnter = () => _setGlobalHover({ targetIndex: _actionTargetIdx, actionKey: action.key, source: "sidebar" });
+      const onRowLeave = () => {
+        if (state.globalHoveredInfo && state.globalHoveredInfo.actionKey === action.key) {
+          _setGlobalHover(null);
+        }
+      };
+      row.addEventListener("pointerenter", onRowEnter);
+      row.addEventListener("pointerleave", onRowLeave);
+      row.addEventListener("mouseenter", onRowEnter);
+      row.addEventListener("mouseleave", onRowLeave);
 
       const badge = _createEl(
         "div",
@@ -1746,8 +1752,16 @@
 
       item.setAttribute("data-target-index", String(idx));
       item.setAttribute("data-clickui-panel-row", "target");
-      item.addEventListener("mouseenter", () => _setGlobalHover({ targetIndex: idx, source: "sidebar" }));
-      item.addEventListener("mouseleave", () => _setGlobalHover(null));
+      const onItemEnter = () => _setGlobalHover({ targetIndex: idx, source: "sidebar" });
+      const onItemLeave = () => {
+        if (state.globalHoveredInfo && state.globalHoveredInfo.targetIndex === idx) {
+          _setGlobalHover(null);
+        }
+      };
+      item.addEventListener("pointerenter", onItemEnter);
+      item.addEventListener("pointerleave", onItemLeave);
+      item.addEventListener("mouseenter", onItemEnter);
+      item.addEventListener("mouseleave", onItemLeave);
       item.appendChild(badge);
       item.appendChild(info);
       item.appendChild(sideInfo);
@@ -2590,11 +2604,13 @@
     path.style.filter = haloFilter;
     if (opts.targetIndex != null) {
       path.setAttribute("data-target-index", String(opts.targetIndex));
-      path.style.pointerEvents = "auto";
+      path.setAttribute("pointer-events", "all");
+      path.style.pointerEvents = "all";
     }
     if (opts.actionKey) {
       path.setAttribute("data-clickui-action-key", String(opts.actionKey));
-      path.style.pointerEvents = "auto";
+      path.setAttribute("pointer-events", "all");
+      path.style.pointerEvents = "all";
     }
     if (opts.reviewKey) {
       path.setAttribute("data-review-key", String(opts.reviewKey));
@@ -2931,10 +2947,6 @@
     const hoverInfo = state.globalHoveredInfo;
     const svgElements = [];
     const panelElements = [];
-    console.log('[ClickUI] _updateGlobalHoverOpacities hoverInfo=', JSON.stringify(hoverInfo),
-      'labelOverlay=', !!state.labelOverlay,
-      'targetRows=', Array.isArray(state.targetRows) ? state.targetRows.map(r => r.el ? r.el.getAttribute('data-target-index') : 'no-el') : 'N/A'
-    );
 
     if (state.refLayer) {
       svgElements.push(...state.refLayer.querySelectorAll("[data-target-index]"));
@@ -2954,6 +2966,9 @@
     if (Array.isArray(state.userActionRows)) {
       state.userActionRows.forEach(r => { if (r.el) panelElements.push(r.el); });
     }
+    if (Array.isArray(state.unmatchedActionRows)) {
+      state.unmatchedActionRows.forEach(r => { if (r.el) panelElements.push(r.el); });
+    }
     if (state.labelsContainer) {
       svgElements.push(...state.labelsContainer.querySelectorAll("[data-target-index]"));
     }
@@ -2971,8 +2986,12 @@
 
     if (!hoverInfo) {
       svgElements.forEach(el => {
-        el.style.opacity = "";
-        el.style.filter = el._contrastHaloFilter || "";
+        el.style.removeProperty("opacity");
+        if (el._contrastHaloFilter) {
+          el.style.filter = el._contrastHaloFilter;
+        } else {
+          el.style.removeProperty("filter");
+        }
         if (el._origStrokeWidth != null) {
           el.setAttribute("stroke-width", el._origStrokeWidth);
           delete el._origStrokeWidth;
@@ -2985,12 +3004,16 @@
         if (el._origTransform != null) {
           el.style.transform = el._origTransform;
           delete el._origTransform;
+        } else {
+          el.style.removeProperty("transform");
         }
+        el.style.removeProperty("z-index");
+        el.style.removeProperty("box-shadow");
       });
       panelElements.forEach(el => {
-        el.style.opacity = "";
-        el.style.boxShadow = "";
-        el.style.transform = "";
+        el.style.removeProperty("opacity");
+        el.style.removeProperty("box-shadow");
+        el.style.removeProperty("transform");
       });
 
       // Clear spotlight overlays
@@ -3046,12 +3069,12 @@
 
     // SVG / canvas elements: opacity dim + active contour/marker highlight
     svgElements.forEach(el => {
-      el.style.transition = "opacity 0.15s ease-in-out, filter 0.15s ease-in-out";
+      el.style.transition = "opacity 0.15s ease-in-out, filter 0.15s ease-in-out, transform 0.15s ease-in-out";
       const isMatch = _elMatches(el);
+      const tag = (el.tagName || "").toLowerCase();
       if (isMatch) {
         el.style.opacity = "1";
-        const tag = (el.tagName || "").toLowerCase();
-        if (tag === "path") {
+        if (tag === "path" || tag === "polygon") {
           const elTargetIdxAttr = el.getAttribute("data-target-index");
           const elTargetIdx = (elTargetIdxAttr !== null && elTargetIdxAttr !== "") ? Number(elTargetIdxAttr) : null;
           const contourColor = elTargetIdx !== null ? _getTargetColor(elTargetIdx) : _getThemeColor("--color-success", "#10b981");
@@ -3068,15 +3091,12 @@
           el.setAttribute("fill-opacity", "0.28");
 
           el.style.filter = `drop-shadow(0 0 4px ${_withAlpha(contourColor, 0.95)}) drop-shadow(0 0 8px ${_withAlpha(contourColor, 0.6)})`;
-
-          if (el.parentNode && el.parentNode.lastChild !== el) {
-            try { el.parentNode.appendChild(el); } catch (e) {}
-          }
         } else if (tag === "g") {
           el.style.filter = "drop-shadow(0 0 6px rgba(255, 255, 255, 0.95))";
-          if (el.parentNode && el.parentNode.lastChild !== el) {
-            try { el.parentNode.appendChild(el); } catch (e) {}
-          }
+        } else if (tag === "div") {
+          el.style.opacity = "1";
+          el.style.zIndex = "10";
+          el.style.transform = "scale(1.15)";
         }
       } else {
         el.style.opacity = "0.08";
@@ -3093,6 +3113,11 @@
         if (el._origTransform != null) {
           el.style.transform = el._origTransform;
           delete el._origTransform;
+        } else {
+          el.style.removeProperty("transform");
+        }
+        if (tag === "div") {
+          el.style.zIndex = "1";
         }
       }
     });
@@ -3123,6 +3148,18 @@
             cp.setAttribute("stroke-linecap", "round");
             cutoutGroup.appendChild(cp);
           }
+        } else if (tag === "polygon") {
+          const pts = matchEl.getAttribute("points");
+          if (pts) {
+            const cpoly = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+            cpoly.setAttribute("points", pts);
+            cpoly.setAttribute("fill", "#000000");
+            cpoly.setAttribute("stroke", "#000000");
+            cpoly.setAttribute("stroke-width", "20");
+            cpoly.setAttribute("stroke-linejoin", "round");
+            cpoly.setAttribute("stroke-linecap", "round");
+            cutoutGroup.appendChild(cpoly);
+          }
         } else if (tag === "circle") {
           const cc = document.createElementNS("http://www.w3.org/2000/svg", "circle");
           cc.setAttribute("cx", matchEl.getAttribute("cx") || "0");
@@ -3148,16 +3185,30 @@
       // If local SVG didn't have a matching element but effectiveTargetIndex is set,
       // borrow the geometry from another SVG (e.g. svgRef) so the student sees the anatomy in both panes!
       if (cutoutGroup.children.length === 0 && effectiveTargetIndex != null) {
-        const siblingPath = searchRoot.querySelector(`svg path[data-target-index="${effectiveTargetIndex}"]`);
-        if (siblingPath && siblingPath.getAttribute("d")) {
-          const cp = document.createElementNS("http://www.w3.org/2000/svg", "path");
-          cp.setAttribute("d", siblingPath.getAttribute("d"));
-          cp.setAttribute("fill", "#000000");
-          cp.setAttribute("stroke", "#000000");
-          cp.setAttribute("stroke-width", "20");
-          cp.setAttribute("stroke-linejoin", "round");
-          cp.setAttribute("stroke-linecap", "round");
-          cutoutGroup.appendChild(cp);
+        const siblingShape = searchRoot.querySelector(
+          `svg path[data-target-index="${effectiveTargetIndex}"], svg polygon[data-target-index="${effectiveTargetIndex}"]`
+        );
+        if (siblingShape) {
+          const sTag = (siblingShape.tagName || "").toLowerCase();
+          if (sTag === "path" && siblingShape.getAttribute("d")) {
+            const cp = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            cp.setAttribute("d", siblingShape.getAttribute("d"));
+            cp.setAttribute("fill", "#000000");
+            cp.setAttribute("stroke", "#000000");
+            cp.setAttribute("stroke-width", "20");
+            cp.setAttribute("stroke-linejoin", "round");
+            cp.setAttribute("stroke-linecap", "round");
+            cutoutGroup.appendChild(cp);
+          } else if (sTag === "polygon" && siblingShape.getAttribute("points")) {
+            const cpoly = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+            cpoly.setAttribute("points", siblingShape.getAttribute("points"));
+            cpoly.setAttribute("fill", "#000000");
+            cpoly.setAttribute("stroke", "#000000");
+            cpoly.setAttribute("stroke-width", "20");
+            cpoly.setAttribute("stroke-linejoin", "round");
+            cpoly.setAttribute("stroke-linecap", "round");
+            cutoutGroup.appendChild(cpoly);
+          }
         }
       }
 
@@ -3216,8 +3267,23 @@
           : null;
       const actionKey = el.getAttribute("data-clickui-action-key") || null;
 
-      el.addEventListener("mouseenter", () => _setGlobalHover({ targetIndex, actionKey }));
-      el.addEventListener("mouseleave", () => _setGlobalHover(null));
+      const onEnter = () => _setGlobalHover({ targetIndex, actionKey });
+      const onLeave = () => {
+        if (!state.globalHoveredInfo) return;
+        if (state.globalHoveredInfo.source === "sidebar") return;
+        const curTarget = state.globalHoveredInfo.targetIndex;
+        const curAction = state.globalHoveredInfo.actionKey;
+        const isSameTarget = targetIndex != null && curTarget === targetIndex;
+        const isSameAction = actionKey != null && curAction === actionKey;
+        if (isSameTarget || isSameAction || (targetIndex == null && !actionKey)) {
+          _setGlobalHover(null);
+        }
+      };
+
+      el.addEventListener("pointerenter", onEnter);
+      el.addEventListener("pointerleave", onLeave);
+      el.addEventListener("mouseenter", onEnter);
+      el.addEventListener("mouseleave", onLeave);
 
       // Touch / tablet support: tapping sets inspection
       el.addEventListener("pointerdown", (ev) => {
@@ -3226,6 +3292,25 @@
         }
       });
     });
+
+    if (!root._hasReviewContainerGuard) {
+      root._hasReviewContainerGuard = true;
+      root.addEventListener("pointermove", (ev) => {
+        if (!state.globalHoveredInfo) return;
+        if (state.globalHoveredInfo.source === "sidebar") return;
+        const hit = ev.target && typeof ev.target.closest === "function"
+          ? ev.target.closest("[data-target-index], [data-clickui-action-key], [data-review-key]")
+          : null;
+        if (!hit) {
+          _setGlobalHover(null);
+        }
+      });
+      root.addEventListener("pointerleave", () => {
+        if (state.globalHoveredInfo && state.globalHoveredInfo.source !== "sidebar") {
+          _setGlobalHover(null);
+        }
+      });
+    }
   }
 
   function _createReviewPreviewCard(config) {
@@ -4286,9 +4371,17 @@
       }
 
       // Connected Hover
-      item.addEventListener("mouseenter", () => _setGlobalHover({ targetIndex: idx, source: "sidebar" }));
-      item.addEventListener("mouseleave", () => _setGlobalHover(null));
-      item.addEventListener("pointerdown", () => _setGlobalHover({ targetIndex: idx, source: "sidebar" }));
+      const onRowEnter = () => _setGlobalHover({ targetIndex: idx, source: "sidebar" });
+      const onRowLeave = () => {
+        if (state.globalHoveredInfo && state.globalHoveredInfo.targetIndex === idx) {
+          _setGlobalHover(null);
+        }
+      };
+      item.addEventListener("pointerenter", onRowEnter);
+      item.addEventListener("pointerleave", onRowLeave);
+      item.addEventListener("mouseenter", onRowEnter);
+      item.addEventListener("mouseleave", onRowLeave);
+      item.addEventListener("pointerdown", onRowEnter);
 
       list.appendChild(item);
       state.targetRows.push({ idx, el: item, badge, icon: null, dot: null, statusPill });
@@ -4373,18 +4466,23 @@
         item.appendChild(detailBox);
 
         // Connected Hover
-        item.addEventListener("mouseenter", () => {
+        const onUnmatchedEnter = () => {
           _setHoveredActionKey(action.key);
           _setGlobalHover({ targetIndex: targetIdx, actionKey: action.key, source: "sidebar" });
-        });
-        item.addEventListener("mouseleave", () => {
-          _setHoveredActionKey(null);
-          _setGlobalHover(null);
-        });
-        item.addEventListener("pointerdown", () => {
-          _setHoveredActionKey(action.key);
-          _setGlobalHover({ targetIndex: targetIdx, actionKey: action.key, source: "sidebar" });
-        });
+        };
+        const onUnmatchedLeave = () => {
+          if (state.hoveredActionKey === action.key) {
+            _setHoveredActionKey(null);
+          }
+          if (state.globalHoveredInfo && state.globalHoveredInfo.actionKey === action.key) {
+            _setGlobalHover(null);
+          }
+        };
+        item.addEventListener("pointerenter", onUnmatchedEnter);
+        item.addEventListener("pointerleave", onUnmatchedLeave);
+        item.addEventListener("mouseenter", onUnmatchedEnter);
+        item.addEventListener("mouseleave", onUnmatchedLeave);
+        item.addEventListener("pointerdown", onUnmatchedEnter);
 
         list.appendChild(item);
         state.unmatchedActionRows.push({ actionKey: action.key, el: item, targetIdx });
@@ -5387,6 +5485,34 @@
     attachZoomPan(viewportRef);
     attachZoomPan(viewportTab);
 
+    function attachViewportHoverGuard(vp) {
+      if (!vp || vp._hasViewportHoverGuard) return;
+      vp._hasViewportHoverGuard = true;
+
+      vp.addEventListener("pointermove", (ev) => {
+        if (!state.globalHoveredInfo) return;
+        if (state.globalHoveredInfo.source === "sidebar") return;
+
+        const hit = ev.target && typeof ev.target.closest === "function"
+          ? ev.target.closest("[data-target-index], [data-clickui-action-key], [data-review-key]")
+          : null;
+
+        if (!hit) {
+          _setGlobalHover(null);
+        }
+      });
+
+      vp.addEventListener("pointerleave", () => {
+        if (state.globalHoveredInfo && state.globalHoveredInfo.source !== "sidebar") {
+          _setGlobalHover(null);
+        }
+      });
+    }
+
+    attachViewportHoverGuard(viewportUser);
+    attachViewportHoverGuard(viewportRef);
+    attachViewportHoverGuard(viewportTab);
+
     // Initial fit & dynamic load detection
     function onReviewImgLoad(ev) {
       const targetImg = (ev && ev.target) || imgUser;
@@ -5673,20 +5799,28 @@
             poly.setAttribute("stroke-width", String((isBad ? 3 : 2) / zoom));
             poly.setAttribute("stroke-opacity", "0.75");
             poly.setAttribute("data-target-index", String(idx));
-            poly.setAttribute("pointer-events", "visiblePainted");
+            poly.setAttribute("pointer-events", "all");
 
             // Also set inline styles to prevent any external CSS from overriding SVG attributes.
             poly.style.stroke = baseColor;
             poly.style.strokeWidth = String((isBad ? 3 : 2) / zoom);
             poly.style.strokeOpacity = "0.75";
             poly.style.fill = baseFill;
-            poly.style.pointerEvents = "visiblePainted";
+            poly.style.pointerEvents = "all";
 
             if (isBad) {
               poly.classList.add("clickui-bad-target");
             }
-            poly.addEventListener("mouseenter", () => _setGlobalHover({ targetIndex: idx }));
-            poly.addEventListener("mouseleave", () => _setGlobalHover(null));
+            const onPolyEnter = () => _setGlobalHover({ targetIndex: idx });
+            const onPolyLeave = () => {
+              if (state.globalHoveredInfo && state.globalHoveredInfo.targetIndex === idx) {
+                _setGlobalHover(null);
+              }
+            };
+            poly.addEventListener("pointerenter", onPolyEnter);
+            poly.addEventListener("pointerleave", onPolyLeave);
+            poly.addEventListener("mouseenter", onPolyEnter);
+            poly.addEventListener("mouseleave", onPolyLeave);
 
             (isBad ? badEls : normalEls).push(poly);
             appendedPolygons += 1;
@@ -5719,20 +5853,28 @@
             path.setAttribute("stroke-opacity", "0.85");
             path.setAttribute("stroke-dasharray", `${10 / zoom} ${6 / zoom}`);
             path.setAttribute("data-target-index", String(idx));
-            path.setAttribute("pointer-events", "visibleStroke");
+            path.setAttribute("pointer-events", "all");
 
             // Inline styles as well.
             path.style.stroke = baseColor;
             path.style.strokeWidth = String((isBad ? 3 : 2) / zoom);
             path.style.strokeOpacity = "0.85";
             path.style.strokeDasharray = `${10 / zoom} ${6 / zoom}`;
-            path.style.pointerEvents = "visibleStroke";
+            path.style.pointerEvents = "all";
 
             if (isBad) {
               path.classList.add("clickui-bad-target");
             }
-            path.addEventListener("mouseenter", () => _setGlobalHover({ targetIndex: idx }));
-            path.addEventListener("mouseleave", () => _setGlobalHover(null));
+            const onPathEnter = () => _setGlobalHover({ targetIndex: idx });
+            const onPathLeave = () => {
+              if (state.globalHoveredInfo && state.globalHoveredInfo.targetIndex === idx) {
+                _setGlobalHover(null);
+              }
+            };
+            path.addEventListener("pointerenter", onPathEnter);
+            path.addEventListener("pointerleave", onPathLeave);
+            path.addEventListener("mouseenter", onPathEnter);
+            path.addEventListener("mouseleave", onPathLeave);
 
             (isBad ? badEls : normalEls).push(path);
             appendedLines += 1;
@@ -5752,11 +5894,19 @@
             circle.setAttribute("stroke", baseColor);
             circle.setAttribute("stroke-width", String(2 / zoom));
             circle.setAttribute("data-target-index", String(idx));
-            circle.setAttribute("pointer-events", "auto");
-            circle.style.pointerEvents = "auto";
+            circle.setAttribute("pointer-events", "all");
+            circle.style.pointerEvents = "all";
 
-            circle.addEventListener("mouseenter", () => _setGlobalHover({ targetIndex: idx }));
-            circle.addEventListener("mouseleave", () => _setGlobalHover(null));
+            const onCircleEnter = () => _setGlobalHover({ targetIndex: idx });
+            const onCircleLeave = () => {
+              if (state.globalHoveredInfo && state.globalHoveredInfo.targetIndex === idx) {
+                _setGlobalHover(null);
+              }
+            };
+            circle.addEventListener("pointerenter", onCircleEnter);
+            circle.addEventListener("pointerleave", onCircleLeave);
+            circle.addEventListener("mouseenter", onCircleEnter);
+            circle.addEventListener("mouseleave", onCircleLeave);
 
             (bad && bad.has(idx) ? badEls : normalEls).push(circle);
             appendedPoints += 1;
@@ -5790,13 +5940,21 @@
           text.setAttribute("text-anchor", "middle");
           text.setAttribute("dominant-baseline", "middle");
           text.setAttribute("data-target-index", String(idx));
-          text.setAttribute("pointer-events", "auto");
-          text.style.pointerEvents = "auto";
+          text.setAttribute("pointer-events", "all");
+          text.style.pointerEvents = "all";
           text.style.cursor = "pointer";
 
           text.textContent = textValue;
-          text.addEventListener("mouseenter", () => _setGlobalHover({ targetIndex: idx }));
-          text.addEventListener("mouseleave", () => _setGlobalHover(null));
+          const onTextEnter = () => _setGlobalHover({ targetIndex: idx });
+          const onTextLeave = () => {
+            if (state.globalHoveredInfo && state.globalHoveredInfo.targetIndex === idx) {
+              _setGlobalHover(null);
+            }
+          };
+          text.addEventListener("pointerenter", onTextEnter);
+          text.addEventListener("pointerleave", onTextLeave);
+          text.addEventListener("mouseenter", onTextEnter);
+          text.addEventListener("mouseleave", onTextLeave);
 
           labelEls.push(text);
         }
@@ -5937,10 +6095,16 @@
     function attachActionHover(node, actionKey) {
       if (!node || !actionKey) return;
       node.setAttribute("data-clickui-action-key", actionKey);
-      node.addEventListener("mouseenter", () => _setHoveredActionKey(actionKey));
-      node.addEventListener("mouseleave", () => _setHoveredActionKey(null));
-      node.addEventListener("focus", () => _setHoveredActionKey(actionKey));
-      node.addEventListener("blur", () => _setHoveredActionKey(null));
+      const onEnter = () => _setHoveredActionKey(actionKey);
+      const onLeave = () => {
+        if (state.hoveredActionKey === actionKey) _setHoveredActionKey(null);
+      };
+      node.addEventListener("pointerenter", onEnter);
+      node.addEventListener("pointerleave", onLeave);
+      node.addEventListener("mouseenter", onEnter);
+      node.addEventListener("mouseleave", onLeave);
+      node.addEventListener("focus", onEnter);
+      node.addEventListener("blur", onLeave);
     }
 
     // Live preview of the active stroke while drawing (so the user sees it in real time)
@@ -5997,7 +6161,8 @@
       path.setAttribute("stroke-linecap", "round");
       path.setAttribute("stroke-linejoin", "round");
       path.setAttribute("stroke-opacity", pathOpacity);
-      path.setAttribute("pointer-events", "visibleStroke");
+      path.setAttribute("pointer-events", "all");
+      path.style.pointerEvents = "all";
       attachActionHover(path, actionKey);
       svg.appendChild(path);
 
@@ -6153,10 +6318,16 @@
       if (targetIdx !== null) {
         dot.setAttribute("data-target-index", String(targetIdx));
       }
-      dot.addEventListener("mouseenter", () => _setHoveredActionKey(actionKey));
-      dot.addEventListener("mouseleave", () => _setHoveredActionKey(null));
-      dot.addEventListener("focus", () => _setHoveredActionKey(actionKey));
-      dot.addEventListener("blur", () => _setHoveredActionKey(null));
+      const onDotEnter = () => _setHoveredActionKey(actionKey);
+      const onDotLeave = () => {
+        if (state.hoveredActionKey === actionKey) _setHoveredActionKey(null);
+      };
+      dot.addEventListener("pointerenter", onDotEnter);
+      dot.addEventListener("pointerleave", onDotLeave);
+      dot.addEventListener("mouseenter", onDotEnter);
+      dot.addEventListener("mouseleave", onDotLeave);
+      dot.addEventListener("focus", onDotEnter);
+      dot.addEventListener("blur", onDotLeave);
       state.markerLayer.appendChild(dot);
     });
   }
@@ -6746,8 +6917,16 @@
         if (targetIdx !== null && targetIdx !== undefined) {
           wrap.setAttribute("data-target-index", String(targetIdx));
           wrap.style.transition = "opacity 0.15s ease-in-out";
-          wrap.addEventListener("mouseenter", () => _setGlobalHover({ targetIndex: targetIdx }));
-          wrap.addEventListener("mouseleave", () => _setGlobalHover(null));
+          const onWrapEnter = () => _setGlobalHover({ targetIndex: targetIdx });
+          const onWrapLeave = () => {
+            if (state.globalHoveredInfo && state.globalHoveredInfo.targetIndex === targetIdx) {
+              _setGlobalHover(null);
+            }
+          };
+          wrap.addEventListener("pointerenter", onWrapEnter);
+          wrap.addEventListener("pointerleave", onWrapLeave);
+          wrap.addEventListener("mouseenter", onWrapEnter);
+          wrap.addEventListener("mouseleave", onWrapLeave);
         }
       } catch (e) {
         // ignore
@@ -8133,6 +8312,28 @@
     window.addEventListener("pointermove", _onPointerMove);
     window.addEventListener("pointerup", _onPointerUp);
     window.addEventListener("pointercancel", _onPointerUp);
+
+    viewport.addEventListener("pointermove", (ev) => {
+      if (!state.hoveredActionKey && !state.globalHoveredInfo) return;
+      if (state.globalHoveredInfo && state.globalHoveredInfo.source === "sidebar") return;
+      const hit = ev.target && typeof ev.target.closest === "function"
+        ? ev.target.closest("[data-target-index], [data-clickui-action-key], [data-review-key]")
+        : null;
+      if (!hit) {
+        if (state.hoveredActionKey) _setHoveredActionKey(null);
+        if (state.globalHoveredInfo) _setGlobalHover(null);
+      }
+    });
+    viewport.addEventListener("pointerleave", () => {
+      if (state.hoveredActionKey) _setHoveredActionKey(null);
+      if (state.globalHoveredInfo && state.globalHoveredInfo.source !== "sidebar") {
+        _setGlobalHover(null);
+      }
+    });
+    window.addEventListener("blur", () => {
+      if (state.hoveredActionKey) _setHoveredActionKey(null);
+      if (state.globalHoveredInfo) _setGlobalHover(null);
+    });
 
     viewport.addEventListener("click", (ev) => {
       _clientLog("evt_click", {
