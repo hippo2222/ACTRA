@@ -4731,7 +4731,55 @@
     section.appendChild(headerBanner);
 
     // ==========================================
-    // B. Viewport Projection & Action Toolbar (Option 1)
+    // B. Unified Anti-CLS Inspector Bar
+    // ==========================================
+    const inspectorBar = _createEl(
+      "div",
+      "clickui-result-inspector flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-border-subtle bg-surface-2/60 dark:bg-surface-2/30 shadow-xs select-none transition-colors",
+      ""
+    );
+    inspectorBar.classList.add("clickui-result-inspector");
+    inspectorBar.style.minHeight = "46px";
+    inspectorBar.style.height = "46px";
+    inspectorBar.style.boxSizing = "border-box";
+    inspectorBar.setAttribute("data-clickui", "result-inspector");
+
+    const inspectorLeft = _createEl("div", "flex items-center gap-2.5 min-w-0 flex-1", "");
+    const inspectorIcon = _createEl(
+      "span",
+      "material-symbols-outlined text-[20px] text-text-muted shrink-0 transition-colors",
+      success ? "check_circle" : "info"
+    );
+    if (success) inspectorIcon.classList.add("text-emerald-500");
+
+    const inspectorTextCol = _createEl("div", "flex flex-col min-w-0 flex-1", "");
+    const defaultIdleTitle = success
+      ? wt("clickui.inspector_idle_success_title", "Задание успешно выполнено")
+      : wt("clickui.inspector_idle_error_title", "Разбор ошибок выполнения");
+    const defaultIdleDesc = wt("clickui.inspector_idle_desc", "Наведите курсор на отметку на снимке или элемент списка для детального анализа");
+
+    const inspectorTitle = _createEl(
+      "div",
+      "text-[11px] font-semibold uppercase tracking-wider text-text-secondary dark:text-text-muted truncate transition-opacity duration-150",
+      defaultIdleTitle
+    );
+    const inspectorDesc = _createEl(
+      "div",
+      "text-[13px] font-medium text-text-main dark:text-text-on-dark truncate transition-opacity duration-150",
+      defaultIdleDesc
+    );
+    inspectorTextCol.appendChild(inspectorTitle);
+    inspectorTextCol.appendChild(inspectorDesc);
+    inspectorLeft.appendChild(inspectorIcon);
+    inspectorLeft.appendChild(inspectorTextCol);
+    inspectorBar.appendChild(inspectorLeft);
+
+    const inspectorChip = _createEl("div", "inspector-chip shrink-0 ml-3", "");
+    inspectorBar.appendChild(inspectorChip);
+    section.appendChild(inspectorBar);
+
+    // ==========================================
+    // C. Viewport Projection & Action Toolbar
     // ==========================================
     const viewportToolbar = _createEl(
       "div",
@@ -4874,54 +4922,6 @@
 
     viewportToolbar.appendChild(rightActions);
     section.appendChild(viewportToolbar);
-
-    // ==========================================
-    // C. Unified Anti-CLS Inspector Bar
-    // ==========================================
-    const inspectorBar = _createEl(
-      "div",
-      "clickui-result-inspector flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-border-subtle bg-surface-2/60 dark:bg-surface-2/30 shadow-xs select-none transition-colors",
-      ""
-    );
-    inspectorBar.classList.add("clickui-result-inspector");
-    inspectorBar.style.minHeight = "46px";
-    inspectorBar.style.height = "46px";
-    inspectorBar.style.boxSizing = "border-box";
-    inspectorBar.setAttribute("data-clickui", "result-inspector");
-
-    const inspectorLeft = _createEl("div", "flex items-center gap-2.5 min-w-0 flex-1", "");
-    const inspectorIcon = _createEl(
-      "span",
-      "material-symbols-outlined text-[20px] text-text-muted shrink-0 transition-colors",
-      success ? "check_circle" : "info"
-    );
-    if (success) inspectorIcon.classList.add("text-emerald-500");
-
-    const inspectorTextCol = _createEl("div", "flex flex-col min-w-0 flex-1", "");
-    const defaultIdleTitle = success
-      ? wt("clickui.inspector_idle_success_title", "Задание успешно выполнено")
-      : wt("clickui.inspector_idle_error_title", "Разбор ошибок выполнения");
-    const defaultIdleDesc = wt("clickui.inspector_idle_desc", "Наведите курсор на отметку на снимке или элемент списка для детального анализа");
-
-    const inspectorTitle = _createEl(
-      "div",
-      "text-[11px] font-semibold uppercase tracking-wider text-text-secondary dark:text-text-muted truncate transition-opacity duration-150",
-      defaultIdleTitle
-    );
-    const inspectorDesc = _createEl(
-      "div",
-      "text-[13px] font-medium text-text-main dark:text-text-on-dark truncate transition-opacity duration-150",
-      defaultIdleDesc
-    );
-    inspectorTextCol.appendChild(inspectorTitle);
-    inspectorTextCol.appendChild(inspectorDesc);
-    inspectorLeft.appendChild(inspectorIcon);
-    inspectorLeft.appendChild(inspectorTextCol);
-    inspectorBar.appendChild(inspectorLeft);
-
-    const inspectorChip = _createEl("div", "inspector-chip shrink-0 ml-3", "");
-    inspectorBar.appendChild(inspectorChip);
-    section.appendChild(inspectorBar);
 
     function updateInspector(hoverInfo) {
       if (!hoverInfo) {
