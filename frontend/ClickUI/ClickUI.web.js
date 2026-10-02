@@ -557,7 +557,21 @@
     });
   }
 
-  function _setHoveredActionKey(actionKey) {
+  function _scrollActionRowIntoView(actionKey) {
+    if (!actionKey) return;
+    try {
+      const container = state.labelsContainer;
+      if (!container) return;
+      const row = container.querySelector(`[data-clickui-action-key="${actionKey}"]`);
+      if (row && typeof row.scrollIntoView === "function") {
+        row.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  function _setHoveredActionKey(actionKey, source) {
     const nextKey = actionKey || null;
     if (state.hoveredActionKey === nextKey) return;
     state.hoveredActionKey = nextKey;
@@ -566,6 +580,9 @@
       const parts = nextKey.split(":");
       const targetIndex = _findTargetIndex(state.taskDto, parts[0], Number(parts[1]));
       _setGlobalHover({ targetIndex, actionKey: nextKey });
+      if (source === "canvas" || source === "marker" || !source) {
+        _scrollActionRowIntoView(nextKey);
+      }
     } else {
       _setGlobalHover(null);
     }
@@ -1536,13 +1553,21 @@
     const targetsTitleKey =
       _taskRequiresDrawing(taskDto) || shouldAccentOutlineGuidance
         ? "clickui.what_to_mark"
+        : hideTargetsList
+        ? "clickui.labels_title"
         : "clickui.targets_to_find";
     const targetsPanelTitle =
       _taskRequiresDrawing(taskDto) || shouldAccentOutlineGuidance
         ? wt("clickui.what_to_mark", "Что нужно отметить")
+        : hideTargetsList
+        ? wt("clickui.labels_title", "Подписи")
         : wt("clickui.targets_to_find", "Цели для поиска");
     const targetsPanelIcon =
-      _taskRequiresDrawing(taskDto) || shouldAccentOutlineGuidance ? "draw" : "my_location";
+      _taskRequiresDrawing(taskDto) || shouldAccentOutlineGuidance
+        ? "draw"
+        : hideTargetsList
+        ? "edit_note"
+        : "my_location";
 
     const panel = _createEl(
       "div",
@@ -1632,6 +1657,16 @@
           outlineVerbEls: state.outlineVerbEls.slice(),
         });
       }
+      const panelBody = _createEl(
+        "div",
+        "clickui-registry-scroll flex-1 min-h-0 overflow-y-auto px-4 py-3 flex flex-col gap-2.5 relative",
+        ""
+      );
+      panelBody.setAttribute("data-clickui", "labels-section");
+      panel.appendChild(panelBody);
+      panel._labelsBody = panelBody;
+      state.labelsContainer = panelBody;
+      state.targetsListSectionEl = panelBody;
       return panel;
     }
 
@@ -3086,7 +3121,7 @@
       state.unmatchedActionRows.forEach(r => { if (r.el) panelElements.push(r.el); });
     }
     if (state.labelsContainer) {
-      svgElements.push(...state.labelsContainer.querySelectorAll("[data-target-index]"));
+      panelElements.push(...state.labelsContainer.querySelectorAll("[data-clickui-action-key], [data-target-index]"));
     }
     if (state.reviewComparisonEl) {
       const reviewHoverables = Array.from(state.reviewComparisonEl.querySelectorAll("[data-target-index], [data-clickui-action-key]"));
@@ -3129,6 +3164,7 @@
       panelElements.forEach(el => {
         el.style.removeProperty("opacity");
         el.style.removeProperty("box-shadow");
+        el.style.removeProperty("border-color");
         el.style.removeProperty("transform");
       });
 
@@ -3211,8 +3247,10 @@
           el.style.filter = "drop-shadow(0 0 6px rgba(255, 255, 255, 0.95))";
         } else if (tag === "div") {
           el.style.opacity = "1";
-          el.style.zIndex = "10";
-          el.style.transform = "scale(1.15)";
+          el.style.zIndex = "40";
+          el.style.transform = "translate(-50%, -50%) scale(1.24)";
+          const dotColor = el.style.backgroundColor || _getThemeColor("--color-primary", "#3b82f6");
+          el.style.boxShadow = `0 0 0 4px ${_withAlpha(dotColor, 0.42)}, 0 6px 20px rgba(0,0,0,0.35)`;
         }
       } else {
         el.style.opacity = "0.08";
@@ -3234,6 +3272,8 @@
         }
         if (tag === "div") {
           el.style.zIndex = "1";
+          el.style.transform = "translate(-50%, -50%) scale(1)";
+          el.style.boxShadow = "";
         }
       }
     });
@@ -3337,20 +3377,31 @@
 
     // Panel rows: ring-highlight on match, subtle dim otherwise
     panelElements.forEach(el => {
-      el.style.transition = "opacity 0.15s ease-in-out, box-shadow 0.15s ease-in-out, transform 0.15s ease-in-out";
+      el.style.transition = "opacity 0.15s ease-in-out, box-shadow 0.15s ease-in-out, transform 0.15s ease-in-out, border-color 0.15s ease-in-out";
       const inReview = state.reviewComparisonEl && state.reviewComparisonEl.contains(el);
       if (_elMatches(el)) {
+        const elActionKey = el.getAttribute("data-clickui-action-key");
         const elTargetIdxAttr = el.getAttribute("data-target-index");
         const elTargetIdx = (elTargetIdxAttr !== null && elTargetIdxAttr !== "") ? Number(elTargetIdxAttr) : null;
-        const ringColor = elTargetIdx !== null ? _getTargetColor(elTargetIdx) : _getThemeColor("--color-accent", "#d97706");
+        let ringColor = null;
+        if (elActionKey) {
+          const parts = elActionKey.split(":");
+          ringColor = _getActionDisplayColor(state.taskDto, parts[0], Number(parts[1]));
+        } else if (elTargetIdx !== null) {
+          ringColor = _getTargetColor(elTargetIdx);
+        } else {
+          ringColor = _getThemeColor("--color-accent", "#d97706");
+        }
         el.style.opacity = "1";
         el.style.boxShadow = `0 0 0 2px ${ringColor}, 0 2px 10px ${_withAlpha(ringColor, 0.22)}`;
+        el.style.borderColor = ringColor;
         if (!inReview) {
           el.style.transform = "translateX(2px)";
         }
       } else {
-        el.style.opacity = inReview ? "0.08" : "0.45";
+        el.style.opacity = inReview ? "0.08" : "0.55";
         el.style.boxShadow = "";
+        el.style.borderColor = "";
         el.style.transform = "";
       }
     });
@@ -6550,7 +6601,7 @@
       const isHovered = state.hoveredActionKey === actionKey;
       const dot = _createEl(
         "div",
-        "absolute flex items-center justify-center -translate-x-1/2 -translate-y-1/2 rounded-full font-bold shadow-md clickui-marker-entry",
+        "absolute flex items-center justify-center -translate-x-1/2 -translate-y-1/2 rounded-full font-bold shadow-md clickui-marker-entry pointer-events-auto cursor-pointer transition-transform duration-150",
         ""
       );
       dot.style.width = `${markerPx}px`;
@@ -6580,9 +6631,18 @@
       if (targetIdx !== null) {
         dot.setAttribute("data-target-index", String(targetIdx));
       }
-      const onDotEnter = () => _setHoveredActionKey(actionKey);
+      const onDotEnter = () => _setHoveredActionKey(actionKey, "canvas");
       const onDotLeave = () => {
-        if (state.hoveredActionKey === actionKey) _setHoveredActionKey(null);
+        if (state.hoveredActionKey === actionKey) {
+          const activeEl = document.activeElement;
+          const activeWrap = activeEl && typeof activeEl.closest === "function" ? activeEl.closest("[data-clickui-action-key]") : null;
+          const activeKey = activeWrap ? activeWrap.getAttribute("data-clickui-action-key") : null;
+          if (activeKey) {
+            _setHoveredActionKey(activeKey, "row");
+          } else {
+            _setHoveredActionKey(null);
+          }
+        }
       };
       dot.addEventListener("pointerenter", onDotEnter);
       dot.addEventListener("pointerleave", onDotLeave);
@@ -6907,6 +6967,44 @@
     if (!state.labelsContainer) return;
 
     state.labelsInputs = [];
+    const labelsWorkflowInPanel = Boolean(
+      state.labelsContainer &&
+      typeof state.labelsContainer.closest === "function" &&
+      state.labelsContainer.closest('[data-clickui="targets-panel"]')
+    );
+
+    function _renderEmptyState() {
+      if (!state.labelsContainer || _hasAnyUserMarks()) return;
+      state.labelsContainer.innerHTML = "";
+      const emptyWrap = _createEl(
+        "div",
+        "my-auto flex flex-col items-center justify-center p-6 text-center select-none text-text-secondary",
+        ""
+      );
+      emptyWrap.setAttribute("data-clickui", "labels-empty-state");
+      const emptyIcon = _createEl(
+        "span",
+        "material-symbols-outlined text-[36px] text-text-muted/60 mb-2.5",
+        "touch_app"
+      );
+      const emptyTitle = _createEl(
+        "div",
+        "text-[13px] font-semibold text-text-main dark:text-text-on-dark mb-1",
+        wt("clickui.level2_empty_state_title", "Поставьте первую отметку")
+      );
+      emptyTitle.setAttribute("data-i18n", "clickui.level2_empty_state_title");
+      const emptyDesc = _createEl(
+        "div",
+        "text-[12px] leading-relaxed text-text-secondary dark:text-text-secondary max-w-[240px]",
+        wt("clickui.level2_empty_state_desc", "Кликните по анатомической области на снимке, чтобы поставить отметку и подписать её название.")
+      );
+      emptyDesc.setAttribute("data-i18n", "clickui.level2_empty_state_desc");
+      emptyWrap.appendChild(emptyIcon);
+      emptyWrap.appendChild(emptyTitle);
+      emptyWrap.appendChild(emptyDesc);
+      state.labelsContainer.appendChild(emptyWrap);
+    }
+
     function _clearLabelsCard(animate) {
       if (!state.labelsContainer) return;
       if (state.labelsRemovalTimer) {
@@ -6919,6 +7017,9 @@
       if (!existingCard) {
         state.labelsContainer.innerHTML = "";
         if (typeof state._updateLabelsIndicator === "function") state._updateLabelsIndicator();
+        if (labelsWorkflowInPanel && !_hasAnyUserMarks()) {
+          _renderEmptyState();
+        }
         return;
       }
       if (!animate) {
@@ -6953,6 +7054,9 @@
         }
         state.labelsRemovalTimer = null;
         if (typeof state._updateLabelsIndicator === "function") state._updateLabelsIndicator();
+        if (labelsWorkflowInPanel && !_hasAnyUserMarks()) {
+          _renderEmptyState();
+        }
       }, 220);
     }
 
@@ -6977,59 +7081,74 @@
       typeof state.labelsContainer.closest === "function" &&
       state.labelsContainer.closest('[data-clickui="side-column"]')
     );
-    const card = _createEl(
-      "section",
-      labelsInSideColumn
-        ? "task-chip flex flex-col overflow-hidden rounded-2xl border-2 border-border-strong bg-surface-2 shadow-sm dark:border-border-strong dark:bg-surface-2"
-        : "mt-4 flex flex-col gap-4 rounded-2xl border border-border-strong bg-surface-2 p-4 shadow-sm dark:border-border-strong dark:bg-surface-2",
-      ""
-    );
-    card.setAttribute("data-clickui", "labels-card");
 
-    const header = _createEl(
-      "div",
-      labelsInSideColumn
-        ? "border-b border-border-strong bg-surface-1 px-4 py-3.5 dark:border-border-strong"
-        : "flex flex-col gap-1",
-      ""
-    );
-    header.appendChild(
-      _createEl(
-        "div",
-        "text-[12px] font-bold uppercase tracking-[0.08em] text-text-main dark:text-text-on-dark",
-        wt("clickui.your_actions", "Ваши действия")
-      )
-    );
-    header.appendChild(
-      _createEl(
+    let listContainer;
+    let card;
+    if (labelsWorkflowInPanel) {
+      listContainer = _createEl("div", "flex flex-col gap-2.5 w-full clickui-card-entry", "");
+      listContainer.setAttribute("data-clickui", "labels-card");
+      card = listContainer;
+      state.labelsContainer.appendChild(listContainer);
+    } else {
+      card = _createEl(
+        "section",
+        labelsInSideColumn
+          ? "task-chip flex flex-col overflow-hidden rounded-2xl border-2 border-border-strong bg-surface-2 shadow-sm dark:border-border-strong dark:bg-surface-2"
+          : "mt-4 flex flex-col gap-4 rounded-2xl border border-border-strong bg-surface-2 p-4 shadow-sm dark:border-border-strong dark:bg-surface-2",
+        ""
+      );
+      card.setAttribute("data-clickui", "labels-card");
+
+      const header = _createEl(
         "div",
         labelsInSideColumn
-          ? "hidden"
-          : "text-[13px] leading-5 text-text-secondary dark:text-text-on-dark",
-        wt("clickui.label_targets_prompt", "Подпиши отмеченные цели перед проверкой ответа.")
-      )
-    );
-    card.appendChild(header);
+          ? "border-b border-border-strong bg-surface-1 px-4 py-3.5 dark:border-border-strong"
+          : "flex flex-col gap-1",
+        ""
+      );
+      header.appendChild(
+        _createEl(
+          "div",
+          "text-[12px] font-bold uppercase tracking-[0.08em] text-text-main dark:text-text-on-dark",
+          wt("clickui.your_actions", "Ваши действия")
+        )
+      );
+      header.appendChild(
+        _createEl(
+          "div",
+          labelsInSideColumn
+            ? "hidden"
+            : "text-[13px] leading-5 text-text-secondary dark:text-text-on-dark",
+          wt("clickui.label_targets_prompt", "Подпиши отмеченные цели перед проверкой ответа.")
+        )
+      );
+      card.appendChild(header);
 
-    const grid = _createEl(
-      "div",
-      labelsInSideColumn
-        ? "grid grid-cols-1 gap-3 px-4 py-3"
-        : "grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3",
-      ""
-    );
-    card.appendChild(grid);
+      const grid = _createEl(
+        "div",
+        labelsInSideColumn
+          ? "grid grid-cols-1 gap-3 px-4 py-3"
+          : "grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3",
+        ""
+      );
+      card.appendChild(grid);
+      card.classList.add("clickui-card-entry");
+      state.labelsContainer.appendChild(card);
+      listContainer = grid;
+    }
 
     function _makeRow(kind, idx1based, value, onChange) {
       const id = `clickui-${kind}-${idx1based}`;
+      const actionKey = _getActionKey(kind, idx1based - 1);
 
       const wrap = _createEl(
         "div",
         labelsInSideColumn
-          ? "flex items-center gap-3 rounded-xl border border-border-subtle bg-surface-1 px-3 py-2.5 shadow-sm dark:border-border-strong dark:bg-surface-1"
-          : "flex flex-col gap-2 rounded-xl border border-border-subtle bg-surface-1 px-3.5 py-3 shadow-sm dark:border-border-strong dark:bg-surface-1",
+          ? "flex items-center gap-3 rounded-xl border border-border-subtle bg-surface-1 px-3 py-2.5 shadow-sm dark:border-border-strong dark:bg-surface-1 transition-all duration-150"
+          : "flex flex-col gap-2 rounded-xl border border-border-subtle bg-surface-1 px-3.5 py-3 shadow-sm dark:border-border-strong dark:bg-surface-1 transition-all duration-150",
         ""
       );
+      wrap.setAttribute("data-clickui-action-key", actionKey);
       const top = _createEl(
         "div",
         labelsInSideColumn ? "contents" : "flex items-center justify-between gap-3",
@@ -7172,23 +7291,34 @@
         wrap.appendChild(input);
       }
 
-      // Attach hover isolation: resolve which target this row belongs to and
-      // wire mouseenter/mouseleave to the global hover system.
+      // Wire bidirectional connected hover between sidebar row and image markers
+      const onRowEnter = () => _setHoveredActionKey(actionKey, "row");
+      const onRowLeave = () => {
+        if (state.hoveredActionKey === actionKey) {
+          const activeEl = document.activeElement;
+          const activeWrap = activeEl && typeof activeEl.closest === "function" ? activeEl.closest("[data-clickui-action-key]") : null;
+          const activeKey = activeWrap ? activeWrap.getAttribute("data-clickui-action-key") : null;
+          if (activeKey && activeKey !== actionKey) {
+            _setHoveredActionKey(activeKey, "row");
+          } else if (!activeKey) {
+            _setHoveredActionKey(null);
+          }
+        }
+      };
+
+      wrap.addEventListener("pointerenter", onRowEnter);
+      wrap.addEventListener("pointerleave", onRowLeave);
+      wrap.addEventListener("mouseenter", onRowEnter);
+      wrap.addEventListener("mouseleave", onRowLeave);
+
+      input.addEventListener("focus", onRowEnter);
+      input.addEventListener("blur", onRowLeave);
+
+      // Attach target-index for compatibility with answer_key targets
       try {
         const targetIdx = _findLabelRowTargetIndex(kind, idx1based - 1);
         if (targetIdx !== null && targetIdx !== undefined) {
           wrap.setAttribute("data-target-index", String(targetIdx));
-          wrap.style.transition = "opacity 0.15s ease-in-out";
-          const onWrapEnter = () => _setGlobalHover({ targetIndex: targetIdx });
-          const onWrapLeave = () => {
-            if (state.globalHoveredInfo && state.globalHoveredInfo.targetIndex === targetIdx) {
-              _setGlobalHover(null);
-            }
-          };
-          wrap.addEventListener("pointerenter", onWrapEnter);
-          wrap.addEventListener("pointerleave", onWrapLeave);
-          wrap.addEventListener("mouseenter", onWrapEnter);
-          wrap.addEventListener("mouseleave", onWrapLeave);
         }
       } catch (e) {
         // ignore
@@ -7203,7 +7333,7 @@
         const row = _makeRow("polygon", i + 1, state.labelsPolygons[i], (v) => {
           state.labelsPolygons[i] = String(v || "");
         });
-        grid.appendChild(row.wrap);
+        listContainer.appendChild(row.wrap);
         state.labelsInputs.push({ kind: "polygon", index: i, input: row.input });
       }
     } else {
@@ -7212,7 +7342,7 @@
         const row = _makeRow("click", i + 1, state.labelsClicks[i], (v) => {
           state.labelsClicks[i] = String(v || "");
         });
-        grid.appendChild(row.wrap);
+        listContainer.appendChild(row.wrap);
         state.labelsInputs.push({ kind: "click", index: i, input: row.input });
       }
     }
@@ -7222,12 +7352,10 @@
       const row = _makeRow("line", i + 1, state.labelsLines[i], (v) => {
         state.labelsLines[i] = String(v || "");
       });
-      grid.appendChild(row.wrap);
+      listContainer.appendChild(row.wrap);
       state.labelsInputs.push({ kind: "line", index: i, input: row.input });
     }
 
-    card.classList.add("clickui-card-entry");
-    state.labelsContainer.appendChild(card);
     state.labelsCardEl = card;
     if (typeof state._updateLabelsIndicator === "function") state._updateLabelsIndicator();
   }
@@ -7736,8 +7864,13 @@
       }
     }
 
-    const labelsContainer = _createEl("div", "w-full shrink-0", "");
-    labelsContainer.setAttribute("data-clickui", "labels-section");
+    const labelsContainer =
+      labelsWorkflowInPanel && state.labelsContainer
+        ? state.labelsContainer
+        : _createEl("div", "w-full shrink-0", "");
+    if (!labelsWorkflowInPanel) {
+      labelsContainer.setAttribute("data-clickui", "labels-section");
+    }
 
     wrapperRow.appendChild(wrapper);
     wrapper.appendChild(toolbar);
@@ -7930,7 +8063,7 @@
       sideColumn.appendChild(statusCard);
       sideHasContent = true;
     }
-    if (runtimeMode) {
+    if (runtimeMode && !labelsWorkflowInPanel) {
       sideColumn.appendChild(labelsContainer);
       sideHasContent = true;
     }

@@ -301,6 +301,8 @@
   "clickui.labels_hide": "Скрыть",
   "clickui.labels_title": "Подписи",
   "clickui.labels_toggle_checkbox": "Названия",
+  "clickui.level2_empty_state_title": "Поставьте первую отметку",
+  "clickui.level2_empty_state_desc": "Кликните по анатомической области на снимке, чтобы поставить отметку и подписать её название.",
   "clickui.limit_clicks_hint": "Достигнут лимит кликов. Нажми «Проверить» для завершения или «Отменить», чтобы убрать последний клик.",
   "clickui.limit_clicks_status": "Лимит кликов",
   "clickui.limit_lines_hint": "Достигнут лимит штрихов. Нажми «Проверить» для завершения.",

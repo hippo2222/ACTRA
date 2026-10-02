@@ -301,6 +301,8 @@
   "clickui.labels_hide": "Приховати",
   "clickui.labels_title": "Підписи",
   "clickui.labels_toggle_checkbox": "Назви",
+  "clickui.level2_empty_state_title": "Поставте першу позначку",
+  "clickui.level2_empty_state_desc": "Клікніть по анатомічній області на знімку, щоб поставити позначку та підписати її назву.",
   "clickui.limit_clicks_hint": "Досягнуто ліміту кліків. Натисни «Перевірити» для завершення або «Скасувати», щоб прибрати останній клік.",
   "clickui.limit_clicks_status": "Ліміт кліків",
   "clickui.limit_lines_hint": "Досягнуто ліміту штрихів. Натисни «Перевірити» для завершення.",

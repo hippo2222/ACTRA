@@ -474,6 +474,12 @@ describe("ClickUI runtime targets panel", () => {
     const container = document.getElementById("app");
 
     dom.window.ClickUI.render(container, task, { runtimeMode: true });
+
+    // Pre-action state: empty state is shown inside the unified panel before clicks
+    const emptyState = container.querySelector('[data-clickui="labels-empty-state"]');
+    expect(emptyState).toBeTruthy();
+    expect(emptyState?.textContent || "").toContain("Поставьте первую отметку");
+
     dom.window.ClickUI.restoreInput({
       clicks: [{ x: 15, y: 15, scale_factor: 1.0, offset_x: 0.0, offset_y: 0.0 }],
       action_history: [{ kind: "click" }],
@@ -482,13 +488,14 @@ describe("ClickUI runtime targets panel", () => {
 
     const input = container.querySelector('.clickui-card-entry input[type="text"]');
     const sideColumn = container.querySelector('[data-clickui="side-column"]');
+    const targetsPanel = container.querySelector('[data-clickui="targets-panel"]');
     const labelsSection = container.querySelector('[data-clickui="labels-section"]');
     const statusCard = container.querySelector('[data-clickui="status-card"]');
     const additionalInfo = container.querySelector('[data-clickui="additional-info"]');
-    const labelsGrid = container.querySelector('[data-clickui="labels-card"] > div:last-child');
-    const labelsHeader = container.querySelector('[data-clickui="labels-card"] > div:first-child');
+    const labelsCard = container.querySelector('[data-clickui="labels-card"]');
+    const targetsTitle = container.querySelector('[data-clickui="targets-title"]');
     const inputLabel = container.querySelector('label[for="clickui-click-1"]');
-    const row = container.querySelector('[data-clickui="labels-card"] > div:last-child > div');
+    const row = container.querySelector('[data-clickui="labels-card"] > div');
     const labelsIndicator = Array.from(container.querySelectorAll("button")).find((el) =>
       (el.textContent || "").includes("Ваши действия")
     );
@@ -497,16 +504,17 @@ describe("ClickUI runtime targets panel", () => {
     expect(input?.id || "").toContain("clickui-click-1");
     expect(input?.getAttribute("aria-label") || "").toContain("Клик 1");
     expect(sideColumn?.contains(input)).toBe(true);
-    expect(Array.from(sideColumn?.children || [])).toContain(labelsSection);
+    // Unified single-card architecture: targetsPanel contains labelsSection internally
+    expect(Array.from(sideColumn?.children || [])).toContain(targetsPanel);
+    expect(targetsPanel?.contains(labelsSection)).toBe(true);
     expect(statusCard).toBeNull();
     if (additionalInfo) {
-      expect(labelsSection?.compareDocumentPosition(additionalInfo) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(targetsPanel?.compareDocumentPosition(additionalInfo) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     }
-    expect(labelsHeader?.textContent || "").toContain("Ваши действия");
+    expect(targetsTitle?.textContent || "").toContain("Подписи");
     expect(inputLabel).toBeNull();
     expect(row?.className || "").toContain("items-center");
-    expect(labelsGrid?.className || "").toContain("grid-cols-1");
-    expect(labelsGrid?.className || "").not.toContain("sm:grid-cols-3");
+    expect(labelsCard?.className || "").toContain("flex-col");
     expect(labelsIndicator).toBeUndefined();
   });
 
@@ -1611,5 +1619,91 @@ it("activates canvas spotlight and highlights matched polygon contour when hover
     });
     // Contrast halo filter is preserved on unhovered review path
     expect(refTarget0Contour.style.filter).toContain("drop-shadow");
+  });
+
+  it("renders empty state when zero marks are placed in Level 2 runtime mode", () => {
+    const task = createLevel2ClickTaskWithoutExplicitLabels();
+    const container = document.getElementById("app");
+
+    dom.window.ClickUI.render(container, task, { runtimeMode: true });
+
+    const emptyState = container.querySelector('[data-clickui="labels-empty-state"]');
+    expect(emptyState).toBeTruthy();
+    expect(emptyState?.textContent || "").toContain("Поставьте первую отметку");
+    expect(emptyState?.querySelector('.material-symbols-outlined')?.textContent).toBe("touch_app");
+
+    // Title should be Labels (Подписи) with edit_note icon
+    const targetsTitle = container.querySelector('[data-clickui="targets-title"]');
+    expect(targetsTitle?.textContent || "").toContain("Подписи");
+    const titleIcon = container.querySelector('[data-clickui="targets-header"] .material-symbols-outlined');
+    expect(titleIcon?.textContent).toBe("edit_note");
+
+    // No duplicate card or "Ваши действия" header
+    expect(container.querySelector('[data-clickui="labels-card"]')).toBeNull();
+  });
+
+  it("links bidirectional interactive hover and smooth scroll between canvas marker dots and sidebar label rows before check", () => {
+    const task = createLevel2ClickTaskWithoutExplicitLabels();
+    const container = document.getElementById("app");
+
+    dom.window.ClickUI.render(container, task, { runtimeMode: true });
+    dom.window.ClickUI.restoreInput({
+      clicks: [
+        { x: 15, y: 15, scale_factor: 1.0, offset_x: 0.0, offset_y: 0.0 },
+        { x: 50, y: 50, scale_factor: 1.0, offset_x: 0.0, offset_y: 0.0 },
+      ],
+      action_history: [{ kind: "click" }, { kind: "click" }],
+      labels_clicks: ["", ""],
+    });
+
+    const dots = Array.from(container.querySelectorAll('.clickui-marker-entry'));
+    expect(dots.length).toBe(2);
+
+    const rows = Array.from(container.querySelectorAll('[data-clickui="labels-card"] > div'));
+    expect(rows.length).toBe(2);
+
+    // Mock scrollIntoView on rows
+    let scrollCalledOnRow1 = false;
+    rows[0].scrollIntoView = () => { scrollCalledOnRow1 = true; };
+
+    // Hover dot 1 on canvas
+    dots[0].dispatchEvent(new dom.window.MouseEvent("mouseenter", { bubbles: true }));
+
+    // Dot 1 is scaled with high z-index
+    expect(dots[0].style.transform).toContain("scale(1.24)");
+    expect(dots[0].style.zIndex).toBe("40");
+
+    // Dot 2 is dimmed
+    expect(dots[1].style.opacity).toBe("0.08");
+
+    // Row 1 in sidebar gets active ring and border
+    expect(rows[0].style.boxShadow).toContain("0 0 0 2px");
+    expect(rows[0].style.transform).toBe("translateX(2px)");
+    expect(scrollCalledOnRow1).toBe(true);
+
+    // Row 2 is dimmed
+    expect(rows[1].style.opacity).toBe("0.55");
+
+    // Leave dot 1
+    dots[0].dispatchEvent(new dom.window.MouseEvent("mouseleave", { bubbles: true }));
+
+    expect(dots[0].style.transform).toBe("");
+    expect(dots[0].style.zIndex).toBe("");
+    expect(rows[0].style.boxShadow).toBe("");
+    expect(rows[0].style.transform).toBe("");
+
+    // Now hover row 2 in sidebar
+    rows[1].dispatchEvent(new dom.window.MouseEvent("mouseenter", { bubbles: true }));
+
+    expect(dots[1].style.transform).toContain("scale(1.24)");
+    expect(dots[1].style.zIndex).toBe("40");
+    expect(dots[0].style.opacity).toBe("0.08");
+    expect(rows[1].style.boxShadow).toContain("0 0 0 2px");
+
+    // Leave row 2
+    rows[1].dispatchEvent(new dom.window.MouseEvent("mouseleave", { bubbles: true }));
+
+    expect(dots[1].style.transform).toBe("");
+    expect(rows[1].style.boxShadow).toBe("");
   });
 });

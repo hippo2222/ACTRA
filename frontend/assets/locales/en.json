@@ -301,6 +301,8 @@
   "clickui.labels_hide": "Hide",
   "clickui.labels_title": "Labels",
   "clickui.labels_toggle_checkbox": "Labels",
+  "clickui.level2_empty_state_title": "Place your first mark",
+  "clickui.level2_empty_state_desc": "Click an anatomical area on the image to place a mark and enter its name.",
   "clickui.limit_clicks_hint": "Click limit reached. Click «Check» to complete or «Undo» to remove the last click.",
   "clickui.limit_clicks_status": "Click limit",
   "clickui.limit_lines_hint": "Stroke limit reached. Click «Check» to complete.",
