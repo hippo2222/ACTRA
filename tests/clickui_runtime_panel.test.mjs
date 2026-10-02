@@ -1706,4 +1706,61 @@ it("activates canvas spotlight and highlights matched polygon contour when hover
     expect(dots[1].style.transform).toBe("");
     expect(rows[1].style.boxShadow).toBe("");
   });
+
+  it("preserves existing input DOM elements, focus, and values when new clicks are added sequentially", () => {
+    const task = createLevel2ClickTaskWithoutExplicitLabels([
+      { label: "Target 1", shape: "point", x: 10, y: 10 },
+      { label: "Target 2", shape: "point", x: 30, y: 30 },
+      { label: "Target 3", shape: "point", x: 50, y: 50 },
+    ]);
+    const container = document.getElementById("app");
+
+    dom.window.ClickUI.render(container, task, { runtimeMode: true });
+    primeClickUiImage(container, dom);
+
+    const viewport = container.querySelector('[data-clickui="viewport"]');
+
+    // Click 1
+    viewport.dispatchEvent(new dom.window.MouseEvent("click", { clientX: 10, clientY: 10, bubbles: true }));
+
+    const card = container.querySelector('[data-clickui="labels-card"]');
+    expect(card).not.toBeNull();
+    const rowsAfterClick1 = Array.from(card.querySelectorAll('[data-clickui-action-key]'));
+    expect(rowsAfterClick1.length).toBe(1);
+    const input1 = rowsAfterClick1[0].querySelector("input");
+    expect(input1).not.toBeNull();
+
+    // User types in input 1
+    input1.value = "Anatomy Alpha";
+    input1.dispatchEvent(new dom.window.Event("input", { bubbles: true }));
+
+    // Click 2
+    viewport.dispatchEvent(new dom.window.MouseEvent("click", { clientX: 30, clientY: 30, bubbles: true }));
+
+    const cardAfterClick2 = container.querySelector('[data-clickui="labels-card"]');
+    // Card DOM element must be preserved (not recreated via innerHTML = "")
+    expect(cardAfterClick2).toBe(card);
+
+    const rowsAfterClick2 = Array.from(card.querySelectorAll('[data-clickui-action-key]'));
+    expect(rowsAfterClick2.length).toBe(2);
+
+    // Row 1 DOM element and input must be PRESERVED
+    expect(rowsAfterClick2[0]).toBe(rowsAfterClick1[0]);
+    expect(rowsAfterClick2[0].querySelector("input")).toBe(input1);
+    expect(input1.value).toBe("Anatomy Alpha");
+
+    // Click 2 dot must NOT trigger immediate hover dimming on dot 1
+    const dots = Array.from(container.querySelectorAll(".clickui-marker-entry"));
+    expect(dots.length).toBe(2);
+    // Dot 1 must NOT be dimmed to 0.08 on click 2 addition
+    expect(dots[0].style.opacity).not.toBe("0.08");
+
+    // Click 3
+    viewport.dispatchEvent(new dom.window.MouseEvent("click", { clientX: 50, clientY: 50, bubbles: true }));
+    const rowsAfterClick3 = Array.from(card.querySelectorAll('[data-clickui-action-key]'));
+    expect(rowsAfterClick3.length).toBe(3);
+    expect(rowsAfterClick3[0]).toBe(rowsAfterClick1[0]);
+    expect(input1.value).toBe("Anatomy Alpha");
+  });
 });
+

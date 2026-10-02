@@ -93,6 +93,7 @@
     registryFilter: "all",
     workspaceI18nRefs: null,
     _i18nListener: null,
+    _suppressMarkerHoverKey: null,
   };
 
   function _getThemeColor(varName, fallback) {
@@ -6579,10 +6580,12 @@
   }
 
   function _renderMarkers() {
-    _clearMarkers();
     if (!state.markerLayer || !state.img) return;
 
-    if (state.soloDuringDraw) return;
+    if (state.soloDuringDraw) {
+      _clearMarkers();
+      return;
+    }
 
     const textOnDark = _getThemeColor("--color-text-on-dark", "#ffffff");
     const zoom = state.zoom || 1;
@@ -6590,16 +6593,38 @@
     const markerFontPx = Math.max(9, Math.round(11 / zoom));
     const markerBorderPx = Math.max(1, Math.round(2 / zoom));
 
-    const rect = state.img.getBoundingClientRect();
-    const naturalW = state.img.naturalWidth || rect.width || 1;
-    const naturalH = state.img.naturalHeight || rect.height || 1;
+    const existingDots = Array.from(state.markerLayer.querySelectorAll("[data-clickui-action-key]"));
+    const existingMap = new Map();
+    existingDots.forEach((el) => {
+      const k = el.getAttribute("data-clickui-action-key");
+      if (k) existingMap.set(k, el);
+    });
 
     state.clicks.forEach((c, idx) => {
       const actionKey = _getActionKey("click", idx);
       const targetIdx = _findTargetIndex(state.taskDto, "click", idx);
       const color = _getActionDisplayColor(state.taskDto, "click", idx);
       const isHovered = state.hoveredActionKey === actionKey;
-      const dot = _createEl(
+
+      let dot = existingMap.get(actionKey);
+      if (dot) {
+        existingMap.delete(actionKey);
+        dot.style.width = `${markerPx}px`;
+        dot.style.height = `${markerPx}px`;
+        dot.style.fontSize = `${markerFontPx}px`;
+        dot.style.borderWidth = `${markerBorderPx}px`;
+        if (state.userMarksCheckedStyle) {
+          dot.style.opacity = "0.8";
+        } else if (!state.globalHoveredInfo) {
+          dot.style.opacity = "1";
+        }
+        if (targetIdx !== null) {
+          dot.setAttribute("data-target-index", String(targetIdx));
+        }
+        return;
+      }
+
+      dot = _createEl(
         "div",
         "absolute flex items-center justify-center -translate-x-1/2 -translate-y-1/2 rounded-full font-bold shadow-md clickui-marker-entry pointer-events-auto cursor-pointer transition-transform duration-150",
         ""
@@ -6631,8 +6656,14 @@
       if (targetIdx !== null) {
         dot.setAttribute("data-target-index", String(targetIdx));
       }
-      const onDotEnter = () => _setHoveredActionKey(actionKey, "canvas");
+      const onDotEnter = () => {
+        if (state._suppressMarkerHoverKey === actionKey) return;
+        _setHoveredActionKey(actionKey, "canvas");
+      };
       const onDotLeave = () => {
+        if (state._suppressMarkerHoverKey === actionKey) {
+          state._suppressMarkerHoverKey = null;
+        }
         if (state.hoveredActionKey === actionKey) {
           const activeEl = document.activeElement;
           const activeWrap = activeEl && typeof activeEl.closest === "function" ? activeEl.closest("[data-clickui-action-key]") : null;
@@ -6651,6 +6682,10 @@
       dot.addEventListener("focus", onDotEnter);
       dot.addEventListener("blur", onDotLeave);
       state.markerLayer.appendChild(dot);
+    });
+
+    existingMap.forEach((obsoleteDot) => {
+      try { obsoleteDot.remove(); } catch (e) { /* ignore */ }
     });
   }
 
@@ -7074,7 +7109,11 @@
       return;
     }
 
-    _clearLabelsCard(false);
+    // User HAS marks: ensure empty state placeholder is removed
+    const emptyStateEl = state.labelsContainer.querySelector('[data-clickui="labels-empty-state"]');
+    if (emptyStateEl) {
+      emptyStateEl.remove();
+    }
 
     const labelsInSideColumn = Boolean(
       state.labelsContainer &&
@@ -7082,64 +7121,158 @@
       state.labelsContainer.closest('[data-clickui="side-column"]')
     );
 
+    let card =
+      state.labelsCardEl || state.labelsContainer.querySelector('[data-clickui="labels-card"]');
     let listContainer;
-    let card;
-    if (labelsWorkflowInPanel) {
-      listContainer = _createEl("div", "flex flex-col gap-2.5 w-full clickui-card-entry", "");
-      listContainer.setAttribute("data-clickui", "labels-card");
-      card = listContainer;
-      state.labelsContainer.appendChild(listContainer);
-    } else {
-      card = _createEl(
-        "section",
-        labelsInSideColumn
-          ? "task-chip flex flex-col overflow-hidden rounded-2xl border-2 border-border-strong bg-surface-2 shadow-sm dark:border-border-strong dark:bg-surface-2"
-          : "mt-4 flex flex-col gap-4 rounded-2xl border border-border-strong bg-surface-2 p-4 shadow-sm dark:border-border-strong dark:bg-surface-2",
-        ""
-      );
-      card.setAttribute("data-clickui", "labels-card");
 
-      const header = _createEl(
-        "div",
-        labelsInSideColumn
-          ? "border-b border-border-strong bg-surface-1 px-4 py-3.5 dark:border-border-strong"
-          : "flex flex-col gap-1",
-        ""
-      );
-      header.appendChild(
-        _createEl(
-          "div",
-          "text-[12px] font-bold uppercase tracking-[0.08em] text-text-main dark:text-text-on-dark",
-          wt("clickui.your_actions", "Ваши действия")
-        )
-      );
-      header.appendChild(
-        _createEl(
+    if (!card) {
+      if (labelsWorkflowInPanel) {
+        listContainer = _createEl("div", "flex flex-col gap-2.5 w-full clickui-card-entry", "");
+        listContainer.setAttribute("data-clickui", "labels-card");
+        card = listContainer;
+        state.labelsContainer.appendChild(listContainer);
+      } else {
+        card = _createEl(
+          "section",
+          labelsInSideColumn
+            ? "task-chip flex flex-col overflow-hidden rounded-2xl border-2 border-border-strong bg-surface-2 shadow-sm dark:border-border-strong dark:bg-surface-2"
+            : "mt-4 flex flex-col gap-4 rounded-2xl border border-border-strong bg-surface-2 p-4 shadow-sm dark:border-border-strong dark:bg-surface-2",
+          ""
+        );
+        card.setAttribute("data-clickui", "labels-card");
+
+        const header = _createEl(
           "div",
           labelsInSideColumn
-            ? "hidden"
-            : "text-[13px] leading-5 text-text-secondary dark:text-text-on-dark",
-          wt("clickui.label_targets_prompt", "Подпиши отмеченные цели перед проверкой ответа.")
-        )
-      );
-      card.appendChild(header);
+            ? "border-b border-border-strong bg-surface-1 px-4 py-3.5 dark:border-border-strong"
+            : "flex flex-col gap-1",
+          ""
+        );
+        header.appendChild(
+          _createEl(
+            "div",
+            "text-[12px] font-bold uppercase tracking-[0.08em] text-text-main dark:text-text-on-dark",
+            wt("clickui.your_actions", "Ваши действия")
+          )
+        );
+        header.appendChild(
+          _createEl(
+            "div",
+            labelsInSideColumn
+              ? "hidden"
+              : "text-[13px] leading-5 text-text-secondary dark:text-text-on-dark",
+            wt("clickui.label_targets_prompt", "Подпиши отмеченные цели перед проверкой ответа.")
+          )
+        );
+        card.appendChild(header);
 
-      const grid = _createEl(
-        "div",
-        labelsInSideColumn
-          ? "grid grid-cols-1 gap-3 px-4 py-3"
-          : "grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3",
-        ""
-      );
-      card.appendChild(grid);
-      card.classList.add("clickui-card-entry");
-      state.labelsContainer.appendChild(card);
-      listContainer = grid;
+        const grid = _createEl(
+          "div",
+          labelsInSideColumn
+            ? "grid grid-cols-1 gap-3 px-4 py-3"
+            : "grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3",
+          ""
+        );
+        card.appendChild(grid);
+        card.classList.add("clickui-card-entry");
+        state.labelsContainer.appendChild(card);
+        listContainer = grid;
+      }
+      state.labelsCardEl = card;
+    } else {
+      state.labelsCardEl = card;
+      listContainer = labelsWorkflowInPanel ? card : (card.querySelector(".grid") || card);
+    }
+
+    const baseInputClass =
+      "block min-h-[44px] w-full rounded-xl border border-border-strong bg-surface-2 px-3.5 py-2.5 text-[14px] leading-5 text-text-main transition-colors placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-light disabled:cursor-not-allowed disabled:bg-bg-disabled disabled:text-text-secondary dark:border-border-strong dark:bg-surface-2 dark:text-text-on-dark dark:placeholder:text-text-secondary";
+
+    function _applyInputHighlight(input, kind, idx0based) {
+      const hasText = String(input.value || "").trim().length > 0;
+      input.className = baseInputClass;
+      if (labelsInSideColumn) {
+        input.className += " flex-1 min-w-0";
+      }
+
+      if (state.locked && state.labelEval && hasText) {
+        const statusInfo = _getLabelStatusForAction(kind, idx0based);
+        if (statusInfo) {
+          if (statusInfo.status === "matched") {
+            input.className +=
+              " border-success-light dark:border-success-dark bg-success-lighter dark:bg-success-light";
+            return;
+          }
+          if (statusInfo.status === "unmatched") {
+            input.className +=
+              " border-error-light dark:border-error-dark bg-error-lighter dark:bg-error-light";
+            return;
+          }
+        }
+      }
+
+      if (state.highlightLabelErrors && !hasText) {
+        input.className +=
+          " border-error focus:border-error focus:ring-error dark:border-error bg-error-lighter dark:bg-error-light";
+        return;
+      }
+
+      if (hasText) {
+        input.className += " border-success-light dark:border-success-dark bg-success-lighter dark:bg-success-light";
+      }
+    }
+
+    function _updateStatusIcon(statusIcon, kind, idx0based) {
+      if (!statusIcon) return;
+      statusIcon.style.visibility = "hidden";
+      statusIcon.classList.remove("text-success", "dark:text-success", "text-error", "dark:text-error");
+      try {
+        if (state.locked && state.labelEval) {
+          const statusInfo = _getLabelStatusForAction(kind, idx0based);
+          if (statusInfo) {
+            if (statusInfo.status === "matched") {
+              statusIcon.textContent = "check";
+              statusIcon.classList.add("text-success", "dark:text-success");
+              statusIcon.style.visibility = "visible";
+            } else if (statusInfo.status === "unmatched") {
+              statusIcon.textContent = "close";
+              statusIcon.classList.add("text-error", "dark:text-error");
+              statusIcon.style.visibility = "visible";
+            }
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    function _updateExistingRow(wrap, kind, idx0based, itemValue) {
+      const input = wrap.querySelector("input");
+      if (input) {
+        input.disabled = state.locked;
+        if (document.activeElement !== input && input.value !== (itemValue || "")) {
+          input.value = itemValue || "";
+        }
+        _applyInputHighlight(input, kind, idx0based);
+      }
+      const statusIcon = wrap.querySelector(".material-symbols-outlined");
+      if (statusIcon) {
+        _updateStatusIcon(statusIcon, kind, idx0based);
+      }
+      try {
+        const targetIdx = _findLabelRowTargetIndex(kind, idx0based);
+        if (targetIdx !== null && targetIdx !== undefined) {
+          wrap.setAttribute("data-target-index", String(targetIdx));
+        }
+      } catch (e) {
+        // ignore
+      }
+      return input;
     }
 
     function _makeRow(kind, idx1based, value, onChange) {
+      const idx0based = idx1based - 1;
       const id = `clickui-${kind}-${idx1based}`;
-      const actionKey = _getActionKey(kind, idx1based - 1);
+      const actionKey = _getActionKey(kind, idx0based);
 
       const wrap = _createEl(
         "div",
@@ -7177,7 +7310,7 @@
         String(idx1based)
       );
       if (labelsInSideColumn) {
-        const accentColor = _getActionDisplayColor(state.taskDto, kind, idx1based - 1);
+        const accentColor = _getActionDisplayColor(state.taskDto, kind, idx0based);
         badge.style.backgroundColor = accentColor;
         badge.style.color = _getThemeColor("--color-text-on-dark", "#ffffff");
         badge.style.borderColor = _withAlpha(accentColor, 0.3);
@@ -7186,26 +7319,7 @@
 
       const statusIcon = document.createElement("span");
       statusIcon.className = "material-symbols-outlined text-[16px]";
-      statusIcon.style.visibility = "hidden";
-
-      try {
-        if (state.locked && state.labelEval) {
-          const statusInfo = _getLabelStatusForAction(kind, idx1based - 1);
-          if (statusInfo) {
-            if (statusInfo.status === "matched") {
-              statusIcon.textContent = "check";
-              statusIcon.classList.add("text-success", "dark:text-success");
-              statusIcon.style.visibility = "visible";
-            } else if (statusInfo.status === "unmatched") {
-              statusIcon.textContent = "close";
-              statusIcon.classList.add("text-error", "dark:text-error");
-              statusIcon.style.visibility = "visible";
-            }
-          }
-        }
-      } catch (e) {
-        // ignore
-      }
+      _updateStatusIcon(statusIcon, kind, idx0based);
 
       const left = _createEl(
         "div",
@@ -7231,50 +7345,12 @@
       input.setAttribute("aria-label", wt("clickui.name_for", "Название для {label}").replace("{label}", labelText));
       input.placeholder = wt("clickui.enter_name_placeholder", "Введите название...");
       input.disabled = state.locked;
-      const baseInputClass =
-        "block min-h-[44px] w-full rounded-xl border border-border-strong bg-surface-2 px-3.5 py-2.5 text-[14px] leading-5 text-text-main transition-colors placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-light disabled:cursor-not-allowed disabled:bg-bg-disabled disabled:text-text-secondary dark:border-border-strong dark:bg-surface-2 dark:text-text-on-dark dark:placeholder:text-text-secondary";
-      input.className = baseInputClass;
       input.value = value || "";
+      _applyInputHighlight(input, kind, idx0based);
 
-      function _applyInputHighlight() {
-        const hasText = String(input.value || "").trim().length > 0;
-        // Reset to base each time to avoid class accumulation.
-        input.className = baseInputClass;
-
-        // After check: if backend returned per-label correctness, highlight accordingly.
-        if (state.locked && state.labelEval && hasText) {
-          const statusInfo = _getLabelStatusForAction(kind, idx1based - 1);
-          if (statusInfo) {
-            if (statusInfo.status === "matched") {
-              input.className +=
-                " border-success-light dark:border-success-dark bg-success-lighter dark:bg-success-light";
-              return;
-            }
-            if (statusInfo.status === "unmatched") {
-              input.className +=
-                " border-error-light dark:border-error-dark bg-error-lighter dark:bg-error-light";
-              return;
-            }
-          }
-        }
-
-        if (state.highlightLabelErrors && !hasText) {
-          input.className +=
-            " border-error focus:border-error focus:ring-error dark:border-error bg-error-lighter dark:bg-error-light";
-          return;
-        }
-
-        if (hasText) {
-          input.className += " border-success-light dark:border-success-dark bg-success-lighter dark:bg-success-light";
-        }
-      }
-
-      _applyInputHighlight();
       input.addEventListener("input", () => {
         onChange(input.value);
-
-        _applyInputHighlight();
-
+        _applyInputHighlight(input, kind, idx0based);
         if (state.highlightLabelErrors && _allLabelFieldsFilled()) {
           state.highlightLabelErrors = false;
           _renderLabelsInputs(null);
@@ -7282,7 +7358,6 @@
       });
 
       if (labelsInSideColumn) {
-        input.className += " flex-1 min-w-0";
         wrap.appendChild(top);
         wrap.appendChild(input);
         wrap.appendChild(right);
@@ -7314,9 +7389,8 @@
       input.addEventListener("focus", onRowEnter);
       input.addEventListener("blur", onRowLeave);
 
-      // Attach target-index for compatibility with answer_key targets
       try {
-        const targetIdx = _findLabelRowTargetIndex(kind, idx1based - 1);
+        const targetIdx = _findLabelRowTargetIndex(kind, idx0based);
         if (targetIdx !== null && targetIdx !== undefined) {
           wrap.setAttribute("data-target-index", String(targetIdx));
         }
@@ -7327,34 +7401,82 @@
       return { wrap, input };
     }
 
+    const existingRows = Array.from(listContainer.querySelectorAll("[data-clickui-action-key]"));
+    const existingMap = new Map();
+    existingRows.forEach((r) => {
+      const k = r.getAttribute("data-clickui-action-key");
+      if (k) existingMap.set(k, r);
+    });
+
+    state.labelsInputs = [];
+
+    const items = [];
     if (_requiresDrawing()) {
       // L3: contours first
       for (let i = 0; i < state.polygons.length; i += 1) {
-        const row = _makeRow("polygon", i + 1, state.labelsPolygons[i], (v) => {
-          state.labelsPolygons[i] = String(v || "");
+        items.push({
+          kind: "polygon",
+          index: i,
+          idx1based: i + 1,
+          actionKey: _getActionKey("polygon", i),
+          value: state.labelsPolygons[i],
+          onChange: (v) => {
+            state.labelsPolygons[i] = String(v || "");
+          },
         });
-        listContainer.appendChild(row.wrap);
-        state.labelsInputs.push({ kind: "polygon", index: i, input: row.input });
       }
     } else {
       // L2: clicks first
       for (let i = 0; i < state.clicks.length; i += 1) {
-        const row = _makeRow("click", i + 1, state.labelsClicks[i], (v) => {
-          state.labelsClicks[i] = String(v || "");
+        items.push({
+          kind: "click",
+          index: i,
+          idx1based: i + 1,
+          actionKey: _getActionKey("click", i),
+          value: state.labelsClicks[i],
+          onChange: (v) => {
+            state.labelsClicks[i] = String(v || "");
+          },
         });
-        listContainer.appendChild(row.wrap);
-        state.labelsInputs.push({ kind: "click", index: i, input: row.input });
       }
     }
 
     // Then strokes (always)
     for (let i = 0; i < state.lines.length; i += 1) {
-      const row = _makeRow("line", i + 1, state.labelsLines[i], (v) => {
-        state.labelsLines[i] = String(v || "");
+      items.push({
+        kind: "line",
+        index: i,
+        idx1based: i + 1,
+        actionKey: _getActionKey("line", i),
+        value: state.labelsLines[i],
+        onChange: (v) => {
+          state.labelsLines[i] = String(v || "");
+        },
       });
-      listContainer.appendChild(row.wrap);
-      state.labelsInputs.push({ kind: "line", index: i, input: row.input });
     }
+
+    items.forEach((item) => {
+      const existingWrap = existingMap.get(item.actionKey);
+      if (existingWrap) {
+        existingMap.delete(item.actionKey);
+        const input = _updateExistingRow(existingWrap, item.kind, item.index, item.value);
+        if (input) {
+          state.labelsInputs.push({ kind: item.kind, index: item.index, input });
+        }
+      } else {
+        const row = _makeRow(item.kind, item.idx1based, item.value, item.onChange);
+        listContainer.appendChild(row.wrap);
+        state.labelsInputs.push({ kind: item.kind, index: item.index, input: row.input });
+      }
+    });
+
+    existingMap.forEach((obsoleteWrap) => {
+      try {
+        obsoleteWrap.remove();
+      } catch (e) {
+        // ignore
+      }
+    });
 
     state.labelsCardEl = card;
     if (typeof state._updateLabelsIndicator === "function") state._updateLabelsIndicator();
@@ -7398,6 +7520,7 @@
     state.userActionsListEl = null;
     state.userActionRows = [];
     state.hoveredActionKey = null;
+    state._suppressMarkerHoverKey = null;
     state.pendingViewState = null;
     state.reviewHost = null;
     state.reviewComparisonEl = null;
@@ -8777,6 +8900,13 @@
       }
 
       state.clicks.push(click);
+      const newActionKey = _getActionKey("click", state.clicks.length - 1);
+      state._suppressMarkerHoverKey = newActionKey;
+      setTimeout(() => {
+        if (state._suppressMarkerHoverKey === newActionKey) {
+          state._suppressMarkerHoverKey = null;
+        }
+      }, 300);
       state.labelsClicks = Array.isArray(state.labelsClicks) ? state.labelsClicks : [];
       state.labelsClicks.push("");
       state.actionHistory = Array.isArray(state.actionHistory) ? state.actionHistory : [];
