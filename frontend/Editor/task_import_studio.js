@@ -49,29 +49,68 @@
         return fallback;
     }
 
-    function normalizeTaskType(rawType) {
-        if (!rawType || typeof rawType !== 'string') return 'TEST';
-        const s = rawType.trim().toLowerCase();
-        if (s === 'sequence_assembly' || s === 'sequence') return 'SEQUENCE';
-        if (s === 'open_answer') return 'OPEN_ANSWER';
-        if (s === 'click_words' || s === 'text_errors') return 'CLICK_WORDS';
-        if (s === 'click_text') return 'CLICK_TEXT';
-        if (s === 'click') return 'CLICK';
-        if (s === 'draw') return 'DRAW';
-        if (s === 'test') return 'TEST';
-        return rawType.toUpperCase();
+    function normalizeTaskType(taskOrType) {
+        if (!taskOrType) return 'TEST';
+        let rawType = '';
+        let mode = '';
+        let subtype = '';
+        if (typeof taskOrType === 'object') {
+            const data = taskOrType.data || taskOrType.task_data || taskOrType.content || {};
+            rawType = taskOrType.type || taskOrType._import_type || taskOrType.task_type || data.type || '';
+            mode = taskOrType.mode || data.mode || (taskOrType.content && taskOrType.content.mode) || '';
+            subtype = taskOrType.subtype || data.subtype || (taskOrType.content && taskOrType.content.subtype) || '';
+        } else if (typeof taskOrType === 'string') {
+            rawType = taskOrType;
+        }
+
+        const s = String(rawType || '').trim().toLowerCase();
+        const m = String(mode || '').trim().toLowerCase();
+        const sub = String(subtype || '').trim().toLowerCase();
+
+        // 1. Text error detection (text_errors mode, error_detection subtype, or click_words)
+        if (m === 'text_errors' || sub === 'error_detection' || s === 'click_words' || s === 'text_errors') {
+            return 'CLICK_WORDS';
+        }
+        // 2. Contrastive statements (text_choice mode, myth_busters subtype, or click_text)
+        if (m === 'text_choice' || sub === 'myth_busters' || s === 'click_text' || s === 'text_choice') {
+            return 'CLICK_TEXT';
+        }
+        // 3. Sequences
+        if (s === 'sequence_assembly' || s === 'sequence') {
+            return 'SEQUENCE';
+        }
+        // 4. Open Answer
+        if (s === 'open_answer') {
+            return 'OPEN_ANSWER';
+        }
+        // 5. Draw
+        if (s === 'draw') {
+            return 'DRAW';
+        }
+        // 6. Test
+        if (s === 'test') {
+            return 'TEST';
+        }
+        // 7. Visual Click on image
+        if (s === 'click') {
+            return 'CLICK';
+        }
+        if (s) {
+            return s.toUpperCase();
+        }
+        return 'TEST';
     }
 
     function getTaskTypeLabel(taskType) {
         const norm = normalizeTaskType(taskType);
         const labels = {
-            TEST: t('studio.task_types.test', t('editor_base.task_type.test', 'Тест')),
-            OPEN_ANSWER: t('studio.task_types.open_answer', t('editor_base.task_type.open_answer', 'Открытый ответ')),
-            SEQUENCE: t('studio.task_types.sequence', t('editor_base.task_type.sequence', 'Последовательность')),
-            CLICK_TEXT: t('studio.task_types.click_text', t('editor_base.task_type.click_text', 'Клик / Текст')),
-            CLICK_WORDS: t('studio.task_types.click_words', t('editor_base.task_type.click_words', 'Клик / Ошибки')),
-            CLICK: t('studio.task_types.click', t('editor_base.task_type.click', 'Клик по изображению')),
-            DRAW: t('studio.task_types.draw', t('editor_base.task_type.draw', 'Рисование')),
+            TEST: t('studio.task_types.test', 'Тест'),
+            OPEN_ANSWER: t('studio.task_types.open_answer', 'Открытый ответ'),
+            SEQUENCE: t('studio.task_types.sequence', 'Последовательность'),
+            CLICK_TEXT: t('studio.task_types.click_text', 'Контрастные утверждения'),
+            CLICK_WORDS: t('studio.task_types.click_words', 'Поиск ошибок в тексте'),
+            CLICK: t('studio.task_types.click', 'Клик по изображению'),
+            DRAW: t('studio.task_types.draw', 'Рисование'),
         };
         return labels[norm] || labels[taskType] || taskType;
     }
@@ -134,6 +173,8 @@
             labelCopyTypePrompt: document.getElementById('label-copy-type-prompt'),
             btnPasteTypeResponse: document.getElementById('btn-paste-type-response'),
             labelPasteTypeResponse: document.getElementById('label-paste-type-response'),
+            paneResponseIcon: document.getElementById('pane-response-icon'),
+            paneResponseTitle: document.getElementById('pane-response-title'),
             typePromptPreviewText: document.getElementById('type-prompt-preview-text'),
             typeResponseInput: document.getElementById('type-response-input'),
             typeCommittedView: document.getElementById('type-committed-view'),
@@ -171,6 +212,18 @@
             btnExecuteImport: document.getElementById('btn-execute-import'),
 
             // Modals
+            modalTaskPreview: document.getElementById('modal-task-preview'),
+            modalPreviewTitle: document.getElementById('modal-preview-title'),
+            previewTaskTypeBadge: document.getElementById('preview-task-type-badge'),
+            previewTaskCounter: document.getElementById('preview-task-counter'),
+            btnPreviewPrevTask: document.getElementById('btn-preview-prev-task'),
+            btnPreviewNextTask: document.getElementById('btn-preview-next-task'),
+            btnClosePreviewModal: document.getElementById('btn-close-preview-modal'),
+            btnClosePreviewFooter: document.getElementById('btn-close-preview-footer'),
+            taskPreviewContentContainer: document.getElementById('task-preview-content-container'),
+            previewTaskSelectCheckbox: document.getElementById('preview-task-select-checkbox'),
+            btnPreviewToggleRaw: document.getElementById('btn-preview-toggle-raw'),
+
             modalTopicSelector: document.getElementById('modal-topic-selector'),
             btnCloseTopicModal: document.getElementById('btn-close-topic-modal'),
             topicSearchInput: document.getElementById('topic-search-input'),
@@ -273,6 +326,7 @@
                 }
                 StudioState.typeDrafts = draft.typeDrafts || {};
                 StudioState.allTasks = draft.allTasks || [];
+                syncTypeDraftsWithAllTasks();
 
                 if (!StudioState.selectedTopicId && draft.selectedTopicId) {
                     StudioState.selectedModuleId = draft.selectedModuleId || '';
@@ -678,11 +732,27 @@
         }
 
         if (DOM.stickyBarTopicTarget) {
-            DOM.stickyBarTopicTarget.textContent = StudioState.selectedTopicId
-                ? t('studio.stage3.topic_target_selected', 'Целевая тема курса: {module} / {topic}')
-                    .replace('{module}', StudioState.selectedModuleName)
-                    .replace('{topic}', StudioState.selectedTopicName)
-                : t('studio.stage3.topic_not_selected', 'Целевая тема курса: не выбрана');
+            if (StudioState.selectedTopicId) {
+                DOM.stickyBarTopicTarget.innerHTML = escapeHtml(
+                    t('studio.stage3.topic_target_selected', 'Целевая тема курса: {module} / {topic}')
+                        .replace('{module}', StudioState.selectedModuleName)
+                        .replace('{topic}', StudioState.selectedTopicName)
+                );
+            } else {
+                DOM.stickyBarTopicTarget.innerHTML = `
+                    <span class="text-text-muted">${escapeHtml(t('studio.stage3.topic_not_selected', 'Целевая тема курса: не выбрана'))}</span>
+                    <button type="button" id="btn-sticky-choose-topic" class="ml-1.5 text-primary hover:underline font-semibold cursor-pointer inline-flex items-center gap-0.5 align-baseline">
+                        <span>${escapeHtml(t('studio.stage3.choose_topic_action', 'выбрать тему'))}</span>
+                        <span class="material-symbols-outlined text-[13px]">arrow_forward</span>
+                    </button>
+                `;
+                const chooseBtn = DOM.stickyBarTopicTarget.querySelector('#btn-sticky-choose-topic');
+                if (chooseBtn) {
+                    chooseBtn.addEventListener('click', () => {
+                        openTopicModal();
+                    });
+                }
+            }
         }
 
         if (DOM.btnBackDashboard && StudioState.selectedModuleId && StudioState.selectedTopicId) {
@@ -1157,7 +1227,283 @@
         updateStage2ActionButtons();
     }
 
+    function extractTestOptions(task, data) {
+        if (!data && task) data = task.data || task.task_data || task.content || task;
+        if (!data) return null;
+        if (Array.isArray(data.questions) && data.questions[0]) {
+            const q0 = data.questions[0];
+            if (Array.isArray(q0.answers) && q0.answers.length > 0) return q0.answers;
+            if (Array.isArray(q0.options) && q0.options.length > 0) return q0.options;
+        }
+        if (Array.isArray(data.answers) && data.answers.length > 0) return data.answers;
+        if (Array.isArray(data.options) && data.options.length > 0) return data.options;
+        if (task) {
+            if (Array.isArray(task.answers) && task.answers.length > 0) return task.answers;
+            if (Array.isArray(task.options) && task.options.length > 0) return task.options;
+        }
+        return null;
+    }
+
+    function serializeTaskToText(task) {
+        if (!task || typeof task !== 'object') return '';
+        const canonicalType = normalizeTaskType(task);
+        const data = task.data || task.task_data || task.content || task;
+        const { questionTitle } = extractTaskDisplayInfo(task);
+
+        if (canonicalType === 'TEST') {
+            const lines = ['@TEST'];
+            if (questionTitle) lines.push(`# ${questionTitle}`);
+            const options = extractTestOptions(task, data);
+            if (Array.isArray(options)) {
+                options.forEach((opt) => {
+                    const isCorrect = Boolean(opt.is_correct ?? opt.correct ?? false);
+                    const optText = typeof opt === 'object' && opt ? (opt.text || opt.title || opt.value || '') : String(opt);
+                    lines.push(`${isCorrect ? '+' : '-'} ${optText}`);
+                });
+            }
+            const explanation = data.explanation || (data.questions && data.questions[0] && data.questions[0].explanation) || task.explanation;
+            if (explanation && typeof explanation === 'string' && explanation.trim()) {
+                lines.push(`// ${explanation.trim()}`);
+            }
+            return lines.join('\n');
+        }
+
+        if (canonicalType === 'OPEN_ANSWER') {
+            const lines = ['@OPEN_ANSWER'];
+            if (questionTitle) lines.push(`# ${questionTitle}`);
+            const stdAnswer = data.standard_answer || data.correct_answer || data.reference_answer || task.standard_answer || task.correct_answer || '';
+            if (stdAnswer) {
+                lines.push(`= ${String(stdAnswer).trim()}`);
+            }
+            const criteria = data.criteria || data.rubric || task.criteria;
+            if (criteria && typeof criteria === 'string' && criteria.trim()) {
+                lines.push(`// ${criteria.trim()}`);
+            }
+            return lines.join('\n');
+        }
+
+        if (canonicalType === 'SEQUENCE') {
+            const lines = ['@SEQUENCE'];
+            if (questionTitle) lines.push(`# ${questionTitle}`);
+            let sequenceSteps = [];
+            if (data.elements && typeof data.elements === 'object') {
+                if (data.levels && typeof data.levels === 'object') {
+                    const levelKeys = Object.keys(data.levels).sort((a, b) => Number(a) - Number(b));
+                    levelKeys.forEach((lvlKey) => {
+                        const elIds = data.levels[lvlKey];
+                        if (Array.isArray(elIds)) {
+                            elIds.forEach((elId) => {
+                                const stepVal = data.elements[elId] || elId;
+                                const txt = typeof stepVal === 'object' && stepVal ? (stepVal.text || stepVal.title) : String(stepVal);
+                                if (txt) sequenceSteps.push(txt);
+                            });
+                        }
+                    });
+                }
+                if (sequenceSteps.length === 0) {
+                    Object.values(data.elements).forEach((val) => {
+                        const txt = typeof val === 'object' && val ? (val.text || val.title) : String(val);
+                        if (txt) sequenceSteps.push(txt);
+                    });
+                }
+            } else if (Array.isArray(data.levels)) {
+                data.levels.forEach((lvl) => {
+                    if (Array.isArray(lvl)) {
+                        lvl.forEach((s) => sequenceSteps.push(String(s)));
+                    }
+                });
+            } else if (Array.isArray(data.items) || Array.isArray(task.items)) {
+                const items = data.items || task.items;
+                items.forEach((it) => {
+                    const txt = typeof it === 'object' && it ? (it.text || it.title) : String(it);
+                    if (txt) sequenceSteps.push(txt);
+                });
+            }
+            sequenceSteps.forEach((step, idx) => {
+                lines.push(`${idx + 1}. ${step}`);
+            });
+            return lines.join('\n');
+        }
+
+        if (canonicalType === 'CLICK_TEXT') {
+            const lines = ['@CLICK_TEXT'];
+            if (questionTitle) lines.push(`# ${questionTitle}`);
+            const options = Array.isArray(data.options) ? data.options : (Array.isArray(data.statements) ? data.statements : []);
+            options.forEach((opt) => {
+                const isCorrect = Boolean(opt.is_correct ?? opt.correct ?? false);
+                const optText = typeof opt === 'object' && opt ? (opt.text || opt.title || opt.value || '') : String(opt);
+                lines.push(`${isCorrect ? '+' : '-'} ${optText}`);
+            });
+            return lines.join('\n');
+        }
+
+        if (canonicalType === 'CLICK_WORDS' || data.mode === 'text_errors') {
+            const lines = ['@CLICK_WORDS'];
+            if (questionTitle && !questionTitle.startsWith('text:')) {
+                lines.push(`# ${questionTitle}`);
+            }
+            let rawText = String(data.text || task.text || (task.content && task.content.text) || '').trim();
+            let prefixLen = 0;
+            const prefixMatch = rawText.match(/^text:\s*/i);
+            if (prefixMatch) {
+                prefixLen = prefixMatch[0].length;
+                rawText = rawText.slice(prefixLen);
+            }
+            const errorSpans = data.error_spans || task.error_spans || (task.content && task.content.error_spans);
+            const errorIndices = data.error_indices || task.error_indices || (task.content && task.content.error_indices);
+            const { clusters } = getErrorAnalysis(rawText, errorSpans, errorIndices);
+
+            if (clusters && clusters.length > 0) {
+                const adjustedClusters = clusters.map((c) => ({
+                    ...c,
+                    start: Math.max(0, c.start - prefixLen),
+                    end: Math.max(0, c.end - prefixLen),
+                })).filter((c) => c.start < rawText.length && c.end > c.start);
+
+                if (adjustedClusters.length > 0) {
+                    const snappedClusters = snapClustersToWordBoundaries(rawText, adjustedClusters);
+                    let markedText = '';
+                    let cursor = 0;
+                    snappedClusters.forEach((cl) => {
+                        const s = cl.start;
+                        const e = cl.end;
+                        markedText += rawText.slice(cursor, s);
+                        markedText += `[${rawText.slice(s, e)}]`;
+                        cursor = e;
+                    });
+                    markedText += rawText.slice(cursor);
+                    lines.push(markedText);
+                } else if (rawText) {
+                    lines.push(rawText);
+                }
+            } else if (rawText) {
+                lines.push(rawText);
+            }
+            return lines.join('\n');
+        }
+
+        if (canonicalType === 'CLICK' || canonicalType === 'DRAW') {
+            return JSON.stringify(task, null, 2);
+        }
+
+        return JSON.stringify(task, null, 2);
+    }
+
+    function serializeTasksToText(taskType, tasks) {
+        if (!Array.isArray(tasks) || tasks.length === 0) return '';
+        if (taskType === 'CLICK' || taskType === 'DRAW') {
+            return JSON.stringify(tasks, null, 2);
+        }
+        return tasks.map((t) => serializeTaskToText(t)).join('\n\n');
+    }
+
+    function syncTypeDraftsWithAllTasks() {
+        const tasks = StudioState.allTasks || [];
+        if (!StudioState.typeDrafts || typeof StudioState.typeDrafts !== 'object') {
+            StudioState.typeDrafts = {};
+        }
+
+        const tasksByType = new Map();
+        tasks.forEach((task) => {
+            const canonicalType = normalizeTaskType(task);
+            if (!tasksByType.has(canonicalType)) {
+                tasksByType.set(canonicalType, []);
+            }
+            tasksByType.get(canonicalType).push(task);
+        });
+
+        tasksByType.forEach((typeTasks, canonicalType) => {
+            let draft = StudioState.typeDrafts[canonicalType];
+            if (!draft) {
+                draft = { responseText: '', parsedTasks: [], isCommitted: false };
+                StudioState.typeDrafts[canonicalType] = draft;
+            }
+
+            draft.parsedTasks = typeTasks;
+            draft.isCommitted = true;
+
+            if (!draft.responseText || !draft.responseText.trim()) {
+                draft.responseText = serializeTasksToText(canonicalType, typeTasks);
+            }
+        });
+
+        Object.keys(StudioState.typeDrafts).forEach((type) => {
+            const draft = StudioState.typeDrafts[type];
+            if (draft && draft.isCommitted) {
+                const stillInAll = tasksByType.get(type);
+                if (!stillInAll || stillInAll.length === 0) {
+                    draft.parsedTasks = [];
+                    draft.isCommitted = false;
+                }
+            }
+        });
+    }
+
+    function attachSnippetExpansionListeners(container) {
+        if (!container) return;
+        container.querySelectorAll('.btn-expand-snippet').forEach((btn) => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const action = btn.getAttribute('data-action');
+                let targetSelector = '.task-extra-options';
+                if (action === 'toggle-steps') targetSelector = '.task-extra-steps';
+                else if (action === 'toggle-targets') targetSelector = '.task-extra-targets';
+                const extraEl = container.querySelector(targetSelector);
+                if (!extraEl) return;
+                const isHidden = extraEl.classList.contains('hidden');
+                if (isHidden) {
+                    extraEl.classList.remove('hidden');
+                    const icon = btn.querySelector('.material-symbols-outlined');
+                    if (icon) icon.textContent = 'expand_less';
+                    const textEl = btn.querySelector('.expand-btn-text');
+                    if (textEl) textEl.textContent = btn.getAttribute('data-collapse-text') || t('studio.stage3.collapse', 'Свернуть');
+                } else {
+                    extraEl.classList.add('hidden');
+                    const icon = btn.querySelector('.material-symbols-outlined');
+                    if (icon) icon.textContent = 'expand_more';
+                    const textEl = btn.querySelector('.expand-btn-text');
+                    if (textEl) textEl.textContent = btn.getAttribute('data-more-fmt') || '';
+                }
+            });
+        });
+
+        const expandTextBtn = container.querySelector('.btn-expand-text');
+        if (expandTextBtn) {
+            expandTextBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const textSnippet = container.querySelector('.task-text-snippet');
+                if (!textSnippet) return;
+                const isClamped = textSnippet.classList.contains('line-clamp-3');
+                if (isClamped) {
+                    textSnippet.classList.remove('line-clamp-3');
+                    const icon = expandTextBtn.querySelector('.material-symbols-outlined');
+                    if (icon) icon.textContent = 'expand_less';
+                    const textEl = expandTextBtn.querySelector('.expand-btn-text');
+                    if (textEl) textEl.textContent = expandTextBtn.getAttribute('data-collapse-text') || t('studio.stage3.collapse', 'Свернуть');
+                } else {
+                    textSnippet.classList.add('line-clamp-3');
+                    const icon = expandTextBtn.querySelector('.material-symbols-outlined');
+                    if (icon) icon.textContent = 'expand_more';
+                    const textEl = expandTextBtn.querySelector('.expand-btn-text');
+                    if (textEl) textEl.textContent = expandTextBtn.getAttribute('data-expand-text') || t('studio.stage3.expand_text', 'Читать полностью');
+                }
+            });
+        }
+    }
+
     function setupStage2() {
+        syncTypeDraftsWithAllTasks();
+
+        const curDraft = StudioState.typeDrafts[StudioState.activeGenerationType];
+        if (!curDraft || (!curDraft.isCommitted && !curDraft.responseText)) {
+            const typesWithTasks = Object.keys(StudioState.typeDrafts).filter(
+                (t) => StudioState.typeDrafts[t]?.isCommitted && StudioState.typeDrafts[t]?.parsedTasks?.length > 0
+            );
+            if (typesWithTasks.length > 0) {
+                StudioState.activeGenerationType = typesWithTasks[0];
+            }
+        }
+
         renderStage2Tabs();
         selectGenerationType(StudioState.activeGenerationType);
         updateProceedToStep3Button();
@@ -1657,8 +2003,8 @@
             const guidanceText = buildVisualGuidanceText(taskType, rec);
             updatePromptPreview(guidanceText);
         } else {
-            // Load canonical prompt for type
-            await loadGenerationPromptForType(taskType);
+            // Load canonical prompt for type in background
+            loadGenerationPromptForType(taskType);
         }
 
         // Restore response textarea from draft or show committed view
@@ -1671,6 +2017,12 @@
             if (DOM.typeResponseInput) DOM.typeResponseInput.classList.add('hidden');
             renderCommittedView(taskType);
         } else if (isManualVisual) {
+            if (DOM.paneResponseIcon) DOM.paneResponseIcon.textContent = 'edit_note';
+            if (DOM.paneResponseTitle) {
+                DOM.paneResponseTitle.setAttribute('data-i18n', 'studio.stage2.paste_type_response_title');
+                DOM.paneResponseTitle.textContent = t('studio.stage2.paste_type_response_title', 'Вставьте ответ ИИ');
+            }
+            if (DOM.btnPasteTypeResponse) DOM.btnPasteTypeResponse.classList.remove('hidden');
             if (DOM.typeCommittedView) DOM.typeCommittedView.classList.add('hidden');
             if (DOM.typeResponseInput) DOM.typeResponseInput.classList.add('hidden');
             if (DOM.typeManualVisualView) {
@@ -1678,6 +2030,12 @@
                 renderManualVisualView(taskType, rec);
             }
         } else {
+            if (DOM.paneResponseIcon) DOM.paneResponseIcon.textContent = 'edit_note';
+            if (DOM.paneResponseTitle) {
+                DOM.paneResponseTitle.setAttribute('data-i18n', 'studio.stage2.paste_type_response_title');
+                DOM.paneResponseTitle.textContent = t('studio.stage2.paste_type_response_title', 'Вставьте ответ ИИ');
+            }
+            if (DOM.btnPasteTypeResponse) DOM.btnPasteTypeResponse.classList.remove('hidden');
             if (DOM.typeManualVisualView) DOM.typeManualVisualView.classList.add('hidden');
             if (DOM.typeCommittedView) DOM.typeCommittedView.classList.add('hidden');
             if (DOM.typeResponseInput) DOM.typeResponseInput.classList.remove('hidden');
@@ -1782,6 +2140,12 @@
         if (!DOM.typeCommittedView || !DOM.typeResponseInput) return;
         const draft = StudioState.typeDrafts[taskType];
         if (!draft || !draft.isCommitted || !Array.isArray(draft.parsedTasks) || draft.parsedTasks.length === 0) {
+            if (DOM.paneResponseIcon) DOM.paneResponseIcon.textContent = 'edit_note';
+            if (DOM.paneResponseTitle) {
+                DOM.paneResponseTitle.setAttribute('data-i18n', 'studio.stage2.paste_type_response_title');
+                DOM.paneResponseTitle.textContent = t('studio.stage2.paste_type_response_title', 'Вставьте ответ ИИ');
+            }
+            if (DOM.btnPasteTypeResponse) DOM.btnPasteTypeResponse.classList.remove('hidden');
             DOM.typeCommittedView.classList.add('hidden');
             const rec = (StudioState.analysisResult && Array.isArray(StudioState.analysisResult.recommendations))
                 ? StudioState.analysisResult.recommendations.find((r) => r.task_type === taskType)
@@ -1800,6 +2164,15 @@
         if (DOM.typeResponseInput) DOM.typeResponseInput.classList.add('hidden');
         if (DOM.typeManualVisualView) DOM.typeManualVisualView.classList.add('hidden');
         DOM.typeCommittedView.classList.remove('hidden');
+
+        // Update pane header for committed state
+        const count = draft.parsedTasks.length;
+        if (DOM.paneResponseIcon) DOM.paneResponseIcon.textContent = 'task_alt';
+        if (DOM.paneResponseTitle) {
+            DOM.paneResponseTitle.removeAttribute('data-i18n');
+            DOM.paneResponseTitle.textContent = t('studio.stage2.tasks_committed_header', 'Принятые задания ({count})').replace('{count}', count);
+        }
+        if (DOM.btnPasteTypeResponse) DOM.btnPasteTypeResponse.classList.add('hidden');
 
         // Title with count and type label
         if (DOM.committedViewTitle) {
@@ -1826,11 +2199,29 @@
                 card.innerHTML = `
                     <div class="studio-committed-mini-card__header">
                         <span class="text-[11px] font-bold text-text-muted uppercase tracking-wider">№${idx + 1}</span>
-                        <span class="studio-unit-badge bg-primary-light text-primary font-bold">${TASK_TYPE_LABELS[taskType] || taskType}</span>
+                        <div class="flex items-center gap-1.5">
+                            <span class="studio-unit-badge bg-primary-light text-primary font-bold">${TASK_TYPE_LABELS[taskType] || taskType}</span>
+                            <button type="button" class="btn-preview-committed-task btn-action-ghost text-text-muted hover:text-primary transition-colors p-0.5 rounded cursor-pointer" title="${escapeHtml(t('studio.stage3.preview_btn_tooltip', 'Просмотреть задание целиком'))}">
+                                <span class="material-symbols-outlined text-[15px]">visibility</span>
+                            </button>
+                        </div>
                     </div>
-                    <p class="text-xs font-bold text-text-main leading-relaxed line-clamp-2">${escapeHtml(questionTitle)}</p>
+                    <p class="studio-task-card-title text-xs font-bold text-text-main leading-relaxed line-clamp-2 cursor-pointer hover:text-primary transition-colors" title="${escapeHtml(questionTitle)}">${escapeHtml(questionTitle)}</p>
                     ${renderTaskPreviewSnippet(task)}
                 `;
+
+                const previewBtn = card.querySelector('.btn-preview-committed-task');
+                const titleEl = card.querySelector('.studio-task-card-title');
+                const openPreview = (e) => {
+                    e.stopPropagation();
+                    const allTasksIdx = StudioState.allTasks.indexOf(task);
+                    openTaskPreviewModal(task, allTasksIdx >= 0 ? allTasksIdx : 0);
+                };
+                if (previewBtn) previewBtn.addEventListener('click', openPreview);
+                if (titleEl) titleEl.addEventListener('click', openPreview);
+
+                attachSnippetExpansionListeners(card);
+
                 DOM.typeCommittedCardsList.appendChild(card);
             });
         }
@@ -1907,6 +2298,12 @@
         const isManualVisual = isManualVisualType(taskType, rec);
 
         DOM.typeCommittedView.classList.add('hidden');
+        if (DOM.paneResponseIcon) DOM.paneResponseIcon.textContent = 'edit_note';
+        if (DOM.paneResponseTitle) {
+            DOM.paneResponseTitle.setAttribute('data-i18n', 'studio.stage2.paste_type_response_title');
+            DOM.paneResponseTitle.textContent = t('studio.stage2.paste_type_response_title', 'Вставьте ответ ИИ');
+        }
+        if (DOM.btnPasteTypeResponse) DOM.btnPasteTypeResponse.classList.remove('hidden');
         if (isManualVisual) {
             if (DOM.typeManualVisualView) DOM.typeManualVisualView.classList.remove('hidden');
             if (DOM.typeResponseInput) DOM.typeResponseInput.classList.add('hidden');
@@ -1915,9 +2312,8 @@
             if (DOM.typeManualVisualView) DOM.typeManualVisualView.classList.add('hidden');
             if (DOM.typeResponseInput) {
                 DOM.typeResponseInput.classList.remove('hidden');
-                if (draft && draft.responseText && !DOM.typeResponseInput.value) {
-                    DOM.typeResponseInput.value = draft.responseText;
-                }
+                DOM.typeResponseInput.value = (draft && draft.responseText) || '';
+                runClientRegexCounter(DOM.typeResponseInput.value, taskType);
                 DOM.typeResponseInput.focus();
             }
         }
@@ -2090,12 +2486,15 @@
             // Merge into allTasks (replace previous parsed tasks of this type)
             const normType = normalizeTaskType(taskType);
             StudioState.allTasks = StudioState.allTasks.filter((t) => {
-                const curNorm = normalizeTaskType(t.type || t.task_type || t._import_type || '');
+                const curNorm = normalizeTaskType(t);
                 return curNorm !== normType;
             });
             parsed.forEach((t) => {
                 t._selected_for_import = true;
                 t._studio_id = 't_' + Math.random().toString(36).substring(2, 9);
+                if (!t._import_type && taskType) {
+                    t._import_type = taskType;
+                }
                 StudioState.allTasks.push(t);
             });
 
@@ -2179,7 +2578,10 @@
         updateStickyBar();
     }
 
+    let stage3Initialized = false;
     function initStage3() {
+        if (stage3Initialized) return;
+        stage3Initialized = true;
         if (DOM.showcaseSelectAll) {
             DOM.showcaseSelectAll.addEventListener('change', (e) => {
                 const checked = e.target.checked;
@@ -2200,6 +2602,62 @@
 
         if (DOM.btnExecuteImport) {
             DOM.btnExecuteImport.addEventListener('click', executeImport);
+        }
+
+        // Preview modal interactions
+        if (DOM.btnClosePreviewModal) {
+            DOM.btnClosePreviewModal.addEventListener('click', closeTaskPreviewModal);
+        }
+
+        if (DOM.btnClosePreviewFooter) {
+            DOM.btnClosePreviewFooter.addEventListener('click', closeTaskPreviewModal);
+        }
+
+        if (DOM.modalTaskPreview) {
+            DOM.modalTaskPreview.addEventListener('click', (e) => {
+                if (e.target === DOM.modalTaskPreview) {
+                    closeTaskPreviewModal();
+                }
+            });
+        }
+
+        if (DOM.btnPreviewPrevTask) {
+            DOM.btnPreviewPrevTask.addEventListener('click', () => {
+                if (currentPreviewIndex > 0) {
+                    currentPreviewIndex--;
+                    renderTaskPreviewModalContent();
+                }
+            });
+        }
+
+        if (DOM.btnPreviewNextTask) {
+            DOM.btnPreviewNextTask.addEventListener('click', () => {
+                const tasks = StudioState.allTasks || [];
+                if (currentPreviewIndex < tasks.length - 1) {
+                    currentPreviewIndex++;
+                    renderTaskPreviewModalContent();
+                }
+            });
+        }
+
+        if (DOM.previewTaskSelectCheckbox) {
+            DOM.previewTaskSelectCheckbox.addEventListener('change', (e) => {
+                const tasks = StudioState.allTasks || [];
+                const currentTask = tasks[currentPreviewIndex];
+                if (currentTask) {
+                    currentTask._selected_for_import = e.target.checked;
+                    renderShowcase();
+                    updateStickyBar();
+                    markDirty();
+                }
+            });
+        }
+
+        if (DOM.btnPreviewToggleRaw) {
+            DOM.btnPreviewToggleRaw.addEventListener('click', () => {
+                isRawSpecVisible = !isRawSpecVisible;
+                renderTaskPreviewModalContent();
+            });
         }
     }
 
@@ -2224,12 +2682,343 @@
         }
     }
 
+    let currentPreviewIndex = 0;
+    let isRawSpecVisible = false;
+
+    function openTaskPreviewModal(task, targetIndex) {
+        const tasks = StudioState.allTasks || [];
+        if (tasks.length === 0) return;
+
+        if (typeof targetIndex === 'number' && targetIndex >= 0) {
+            currentPreviewIndex = targetIndex;
+        } else if (task) {
+            const idx = tasks.indexOf(task);
+            currentPreviewIndex = idx >= 0 ? idx : 0;
+        } else {
+            currentPreviewIndex = 0;
+        }
+
+        if (currentPreviewIndex < 0) currentPreviewIndex = 0;
+        if (currentPreviewIndex >= tasks.length) currentPreviewIndex = tasks.length - 1;
+
+        if (DOM.modalTaskPreview) {
+            DOM.modalTaskPreview.classList.remove('hidden');
+        }
+        renderTaskPreviewModalContent();
+    }
+
+    function closeTaskPreviewModal() {
+        if (DOM.modalTaskPreview) {
+            DOM.modalTaskPreview.classList.add('hidden');
+        }
+        isRawSpecVisible = false;
+    }
+
+    function renderTaskPreviewModalContent() {
+        const tasks = StudioState.allTasks || [];
+        if (tasks.length === 0 || !tasks[currentPreviewIndex]) {
+            closeTaskPreviewModal();
+            return;
+        }
+
+        const task = tasks[currentPreviewIndex];
+        const canonicalType = normalizeTaskType(task);
+        const { questionTitle, data } = extractTaskDisplayInfo(task, currentPreviewIndex);
+
+        if (DOM.modalPreviewTitle) {
+            DOM.modalPreviewTitle.textContent = questionTitle || t('studio.modal.preview_title', 'Просмотр задания');
+            DOM.modalPreviewTitle.title = questionTitle || '';
+        }
+        if (DOM.previewTaskTypeBadge) {
+            DOM.previewTaskTypeBadge.textContent = TASK_TYPE_LABELS[canonicalType] || canonicalType;
+        }
+        if (DOM.previewTaskCounter) {
+            DOM.previewTaskCounter.textContent = `${currentPreviewIndex + 1} / ${tasks.length}`;
+        }
+        if (DOM.btnPreviewPrevTask) {
+            DOM.btnPreviewPrevTask.disabled = currentPreviewIndex <= 0;
+        }
+        if (DOM.btnPreviewNextTask) {
+            DOM.btnPreviewNextTask.disabled = currentPreviewIndex >= tasks.length - 1;
+        }
+        if (DOM.previewTaskSelectCheckbox) {
+            DOM.previewTaskSelectCheckbox.checked = Boolean(task._selected_for_import);
+        }
+        if (DOM.btnPreviewToggleRaw) {
+            if (isRawSpecVisible) {
+                DOM.btnPreviewToggleRaw.classList.remove('studio-btn--secondary');
+                DOM.btnPreviewToggleRaw.classList.add('studio-btn--primary');
+            } else {
+                DOM.btnPreviewToggleRaw.classList.remove('studio-btn--primary');
+                DOM.btnPreviewToggleRaw.classList.add('studio-btn--secondary');
+            }
+        }
+
+        if (!DOM.taskPreviewContentContainer) return;
+
+        if (isRawSpecVisible) {
+            DOM.taskPreviewContentContainer.innerHTML = `
+                <div class="flex flex-col gap-2">
+                    <span class="text-[11px] font-bold text-text-muted uppercase tracking-wider">${t('studio.stage3.raw_spec_title', 'Спецификация задания (JSON):')}</span>
+                    <pre class="p-3.5 rounded-lg bg-surface-2 border border-border-subtle text-xs font-mono text-text-main overflow-x-auto max-h-[60vh] leading-relaxed select-all">${escapeHtml(JSON.stringify(task, null, 2))}</pre>
+                </div>
+            `;
+            return;
+        }
+
+        let bodyHtml = `
+            <div class="flex flex-col gap-1.5">
+                <span class="text-[11px] font-bold text-text-muted uppercase tracking-wider">${t('studio.stage3.modal_prompt_label', 'Текст вопроса / задание:')}</span>
+                <div class="text-sm font-semibold text-text-main p-3 rounded-lg bg-surface-2 border border-border-subtle leading-relaxed">
+                    ${escapeHtml(questionTitle)}
+                </div>
+            </div>
+        `;
+
+        // 1. TEST or CLICK_TEXT options
+        const options = extractTestOptions(task, data);
+
+        if (Array.isArray(options) && options.length > 0) {
+            const isClickText = canonicalType === 'CLICK_TEXT';
+            const groupTitle = isClickText
+                ? t('studio.stage3.statements_label', 'Утверждения (верные и мифы):')
+                : t('studio.stage3.modal_options_label', 'Варианты ответов:');
+
+            bodyHtml += `
+                <div class="flex flex-col gap-1.5">
+                    <span class="text-[11px] font-bold text-text-muted uppercase tracking-wider">${groupTitle}</span>
+                    <div class="flex flex-col gap-2">
+                        ${options.map((opt) => {
+                            const isCorrect = Boolean(opt.is_correct ?? opt.correct ?? false);
+                            const optText = typeof opt === 'object' && opt ? (opt.text || opt.title || opt.value || '') : String(opt);
+
+                            if (isClickText) {
+                                return `
+                                    <div class="flex items-start justify-between gap-3 p-2.5 rounded-lg border ${isCorrect ? 'bg-success/5 border-success/30' : 'bg-surface-2 border-border-subtle'}">
+                                        <span class="text-xs text-text-main leading-relaxed font-medium">${escapeHtml(optText)}</span>
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold flex-shrink-0 ${isCorrect ? 'bg-success/15 text-success' : 'bg-surface-3 text-text-muted'}">
+                                            <span class="material-symbols-outlined text-[12px]">${isCorrect ? 'check_circle' : 'cancel'}</span>
+                                            <span>${isCorrect ? t('studio.stage3.true_statement', 'Верно') : t('studio.stage3.false_statement', 'Ложь / Миф')}</span>
+                                        </span>
+                                    </div>
+                                `;
+                            } else {
+                                return `
+                                    <div class="flex items-start justify-between gap-3 p-2.5 rounded-lg border ${isCorrect ? 'bg-success/5 border-success/30' : 'bg-surface-2 border-border-subtle'}">
+                                        <div class="flex items-start gap-2">
+                                            <span class="text-xs font-bold ${isCorrect ? 'text-success' : 'text-text-muted'} mt-0.5">${isCorrect ? '✓' : '•'}</span>
+                                            <span class="text-xs text-text-main leading-relaxed ${isCorrect ? 'font-semibold' : ''}">${escapeHtml(optText)}</span>
+                                        </div>
+                                        ${isCorrect ? `
+                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold flex-shrink-0 bg-success/15 text-success">
+                                                <span>${t('studio.stage3.correct_answer_badge', 'Правильный ответ')}</span>
+                                            </span>
+                                        ` : ''}
+                                    </div>
+                                `;
+                            }
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Explanation / Rationale
+        const explanation = data.explanation || (data.questions && data.questions[0] && data.questions[0].explanation) || task.explanation;
+        if (explanation && typeof explanation === 'string' && explanation.trim()) {
+            bodyHtml += `
+                <div class="flex flex-col gap-1.5">
+                    <span class="text-[11px] font-bold text-text-muted uppercase tracking-wider">${t('studio.stage3.explanation_label', 'Методическое пояснение:')}</span>
+                    <div class="text-xs text-text-secondary p-3 rounded-lg bg-surface-2 border border-border-subtle leading-relaxed flex items-start gap-2">
+                        <span class="material-symbols-outlined text-primary text-[16px] flex-shrink-0 mt-0.5">info</span>
+                        <div>${escapeHtml(explanation.trim())}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 2. OPEN_ANSWER
+        if (canonicalType === 'OPEN_ANSWER') {
+            const stdAnswer = data.standard_answer || data.correct_answer || data.reference_answer || task.standard_answer || task.correct_answer;
+            if (stdAnswer && typeof stdAnswer === 'string' && stdAnswer.trim()) {
+                bodyHtml += `
+                    <div class="flex flex-col gap-1.5">
+                        <span class="text-[11px] font-bold text-text-muted uppercase tracking-wider">${t('studio.stage3.standard_answer', 'Эталонный ответ:')}</span>
+                        <div class="text-xs text-text-main p-3 rounded-lg bg-primary-light/15 border border-primary/20 leading-relaxed font-mono whitespace-pre-wrap">
+                            ${escapeHtml(stdAnswer.trim())}
+                        </div>
+                    </div>
+                `;
+            }
+
+            const criteria = data.criteria || data.rubric || task.criteria;
+            if (criteria && typeof criteria === 'string' && criteria.trim()) {
+                bodyHtml += `
+                    <div class="flex flex-col gap-1.5">
+                        <span class="text-[11px] font-bold text-text-muted uppercase tracking-wider">${t('studio.stage3.criteria_label', 'Критерии проверки:')}</span>
+                        <div class="text-xs text-text-secondary p-2.5 rounded-lg bg-surface-2 border border-border-subtle leading-relaxed whitespace-pre-wrap">
+                            ${escapeHtml(criteria.trim())}
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // 3. SEQUENCE
+        if (canonicalType === 'SEQUENCE') {
+            let sequenceSteps = [];
+            if (data.elements && typeof data.elements === 'object') {
+                if (data.levels && typeof data.levels === 'object') {
+                    const levelKeys = Object.keys(data.levels).sort((a, b) => Number(a) - Number(b));
+                    levelKeys.forEach((lvlKey) => {
+                        const elIds = data.levels[lvlKey];
+                        if (Array.isArray(elIds)) {
+                            elIds.forEach((elId) => {
+                                const stepVal = data.elements[elId] || elId;
+                                const txt = typeof stepVal === 'object' && stepVal ? (stepVal.text || stepVal.title) : String(stepVal);
+                                if (txt) sequenceSteps.push(txt);
+                            });
+                        }
+                    });
+                }
+                if (sequenceSteps.length === 0) {
+                    Object.values(data.elements).forEach((val) => {
+                        const txt = typeof val === 'object' && val ? (val.text || val.title) : String(val);
+                        if (txt) sequenceSteps.push(txt);
+                    });
+                }
+            } else if (Array.isArray(data.levels)) {
+                data.levels.forEach((lvl) => {
+                    if (Array.isArray(lvl)) {
+                        lvl.forEach((s) => sequenceSteps.push(String(s)));
+                    }
+                });
+            } else if (Array.isArray(data.items) || Array.isArray(task.items)) {
+                const items = data.items || task.items;
+                items.forEach((it) => {
+                    const txt = typeof it === 'object' && it ? (it.text || it.title) : String(it);
+                    if (txt) sequenceSteps.push(txt);
+                });
+            }
+
+            if (sequenceSteps.length > 0) {
+                bodyHtml += `
+                    <div class="flex flex-col gap-1.5">
+                        <span class="text-[11px] font-bold text-text-muted uppercase tracking-wider">${t('studio.stage3.sequence_steps_label', 'Правильный порядок шагов:')}</span>
+                        <div class="flex flex-col gap-1.5">
+                            ${sequenceSteps.map((step, sIdx) => `
+                                <div class="flex items-center gap-3 p-2.5 rounded-lg bg-surface-2 border border-border-subtle text-xs text-text-main">
+                                    <span class="w-6 h-6 rounded-full bg-primary text-white font-bold text-[11px] flex items-center justify-center flex-shrink-0">${sIdx + 1}</span>
+                                    <span class="font-medium leading-relaxed">${escapeHtml(step)}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // 4. CLICK_WORDS (error text and fragmented breakdown)
+        if (canonicalType === 'CLICK_WORDS' || data.mode === 'text_errors') {
+            const text = String(data.text || task.text || (task.content && task.content.text) || '');
+            const errorSpans = data.error_spans || task.error_spans || (task.content && task.content.error_spans);
+            const errorIndices = data.error_indices || task.error_indices || (task.content && task.content.error_indices);
+
+            const { phraseCount, totalWords, clusters } = getErrorAnalysis(text, errorSpans, errorIndices);
+            let badgeLabel = '';
+            if (phraseCount > 0) {
+                if (totalWords > phraseCount) {
+                    badgeLabel = t('studio.stage3.errors_phrases_and_words_fmt', 'Ошибок: {phrases} фрагм. ({words} сл.)')
+                        .replace('{phrases}', phraseCount)
+                        .replace('{words}', totalWords);
+                } else {
+                    badgeLabel = t('studio.stage3.errors_count_fmt', 'Ошибок: {count}')
+                        .replace('{count}', phraseCount);
+                }
+            } else {
+                const fallbackCount = data.error_count ?? (Array.isArray(errorSpans) ? errorSpans.length : 0);
+                badgeLabel = t('studio.stage3.errors_count_fmt', 'Ошибок: {count}').replace('{count}', fallbackCount);
+            }
+
+            const highlightedText = highlightErrorSpansInText(text, clusters);
+
+            bodyHtml += `
+                <div class="flex flex-col gap-1.5">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[11px] font-bold text-text-muted uppercase tracking-wider">${t('studio.stage3.error_text_title', 'Клинический текст с ошибками:')}</span>
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-300 font-semibold border border-amber-500/20 text-[11px]">
+                            <span class="material-symbols-outlined text-[13px]">find_in_page</span>
+                            <span>${badgeLabel}</span>
+                        </span>
+                    </div>
+                    <div class="text-xs text-text-secondary p-3.5 rounded-lg bg-surface-2 border border-border-subtle leading-relaxed whitespace-pre-wrap">
+                        ${highlightedText}
+                    </div>
+                </div>
+            `;
+
+            if (clusters && clusters.length > 0) {
+                let cleanText = text.trim();
+                const prefixMatch = cleanText.match(/^text:\s*/i);
+                if (prefixMatch) cleanText = cleanText.slice(prefixMatch[0].length);
+
+                bodyHtml += `
+                    <div class="flex flex-col gap-1.5">
+                        <span class="text-[11px] font-bold text-text-muted uppercase tracking-wider">${t('studio.stage3.error_fragments_label', 'Ошибочные фрагменты (цели клика):')}</span>
+                        <div class="flex flex-wrap gap-1.5">
+                            ${clusters.map((cl, cIdx) => {
+                                const fragment = cleanText.slice(cl.start, cl.end).trim();
+                                return `
+                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/15 border border-amber-500/30 text-xs font-semibold text-amber-900 dark:text-amber-200">
+                                        <span class="text-amber-700 dark:text-amber-300 font-bold">${cIdx + 1}.</span>
+                                        <span>${escapeHtml(fragment || '—')}</span>
+                                    </span>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // 5. Visual / Interactive targets (CLICK / DRAW)
+        if (canonicalType === 'CLICK' || canonicalType === 'DRAW') {
+            const targets = data.targets || data.regions || task.targets;
+            bodyHtml += `
+                <div class="flex flex-col gap-2">
+                    <div class="p-3 rounded-lg bg-primary-light/10 border border-primary/20 text-xs text-primary leading-relaxed flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[18px]">info</span>
+                        <span>${t('studio.stage3.visual_image_note', 'Графическая подложка размечается в интерактивном редакторе.')}</span>
+                    </div>
+                    ${Array.isArray(targets) && targets.length > 0 ? `
+                        <div class="flex flex-col gap-1.5">
+                            <span class="text-[11px] font-bold text-text-muted uppercase tracking-wider">${t('studio.stage3.targets_label', 'Ориентиры / цели:')}</span>
+                            <div class="flex flex-wrap gap-1.5">
+                                ${targets.map((tgt, tIdx) => {
+                                    const tgtName = typeof tgt === 'object' && tgt ? (tgt.name || tgt.label || tgt.title) : String(tgt);
+                                    return `
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-surface-2 border border-border-subtle text-xs font-medium text-text-main">
+                                            <span class="text-primary font-bold">${tIdx + 1}.</span>
+                                            <span>${escapeHtml(tgtName || '—')}</span>
+                                        </span>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        DOM.taskPreviewContentContainer.innerHTML = bodyHtml;
+    }
+
     function createShowcaseTaskCard(task, allTasksIndex) {
         const card = document.createElement('div');
         card.className = 'studio-task-card';
         card.setAttribute('data-selected', task._selected_for_import ? 'true' : 'false');
 
-        const canonicalType = normalizeTaskType(task.type || task._import_type || task.task_type || 'TEST');
+        const canonicalType = normalizeTaskType(task);
         const { questionTitle } = extractTaskDisplayInfo(task, allTasksIndex);
 
         card.innerHTML = `
@@ -2239,13 +3028,18 @@
                         ${task._selected_for_import ? 'checked' : ''} />
                     <span class="studio-unit-badge bg-primary-light text-primary font-bold">${TASK_TYPE_LABELS[canonicalType] || canonicalType}</span>
                 </label>
-                <button type="button" class="btn-delete-task text-text-muted hover:text-error transition-colors p-1" title="${t('studio.stage3.delete_task', 'Удалить задание')}">
-                    <span class="material-symbols-outlined text-[18px]">delete</span>
-                </button>
+                <div class="flex items-center gap-1">
+                    <button type="button" class="btn-preview-task text-text-muted hover:text-primary transition-colors p-1" title="${t('studio.stage3.preview_task', 'Просмотр задания')}">
+                        <span class="material-symbols-outlined text-[18px]">visibility</span>
+                    </button>
+                    <button type="button" class="btn-delete-task text-text-muted hover:text-error transition-colors p-1" title="${t('studio.stage3.delete_task', 'Удалить задание')}">
+                        <span class="material-symbols-outlined text-[18px]">delete</span>
+                    </button>
+                </div>
             </div>
 
             <div class="flex flex-col gap-1 flex-1">
-                <p class="text-xs font-bold text-text-main line-clamp-2">${escapeHtml(questionTitle)}</p>
+                <p class="studio-task-card-title text-xs font-bold text-text-main line-clamp-2 cursor-pointer hover:text-primary transition-colors" title="${t('studio.stage3.preview_task', 'Просмотр задания')}">${escapeHtml(questionTitle)}</p>
                 ${renderTaskPreviewSnippet(task)}
             </div>
         `;
@@ -2269,8 +3063,19 @@
         // Delete event
         const delBtn = card.querySelector('.btn-delete-task');
         if (delBtn) {
-            delBtn.addEventListener('click', () => {
+            delBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
                 StudioState.allTasks = StudioState.allTasks.filter((t) => t._studio_id !== task._studio_id);
+                if (currentPreviewIndex >= StudioState.allTasks.length) {
+                    currentPreviewIndex = Math.max(0, StudioState.allTasks.length - 1);
+                }
+                if (DOM.modalTaskPreview && !DOM.modalTaskPreview.classList.contains('hidden')) {
+                    if (StudioState.allTasks.length === 0) {
+                        closeTaskPreviewModal();
+                    } else {
+                        renderTaskPreviewModalContent();
+                    }
+                }
                 renderShowcase();
                 updateStickyBar();
                 updateProceedToStep3Button();
@@ -2278,6 +3083,26 @@
                 markDirty();
             });
         }
+
+        // Preview modal events
+        const previewBtn = card.querySelector('.btn-preview-task');
+        if (previewBtn) {
+            previewBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                openTaskPreviewModal(task, allTasksIndex);
+            });
+        }
+
+        const titleEl = card.querySelector('.studio-task-card-title');
+        if (titleEl) {
+            titleEl.addEventListener('click', (e) => {
+                e.stopPropagation();
+                openTaskPreviewModal(task, allTasksIndex);
+            });
+        }
+
+        // Expand snippet events (+ ещё N вар. / + ещё N шаг. / + ещё N / Читать полностью)
+        attachSnippetExpansionListeners(card);
 
         return card;
     }
@@ -2309,7 +3134,7 @@
         const otherGroup = { cat: OTHER_CATEGORY, tasks: [] };
 
         tasks.forEach((task) => {
-            const canonicalType = normalizeTaskType(task.type || task._import_type || task.task_type || 'TEST');
+            const canonicalType = normalizeTaskType(task);
             const group = tasksByCategory.get(canonicalType) || (
                 canonicalType === 'CLICK' || canonicalType === 'DRAW' ? tasksByCategory.get('VISUAL') : otherGroup
             );
@@ -2428,7 +3253,7 @@
 
         const categoryCounts = { ALL: StudioState.allTasks.length };
         StudioState.allTasks.forEach((t) => {
-            const canonicalType = normalizeTaskType(t.type || t._import_type || t.task_type || 'TEST');
+            const canonicalType = normalizeTaskType(t);
             const cat = getCategoryForType(canonicalType);
             const key = cat.key;
             categoryCounts[key] = (categoryCounts[key] || 0) + 1;
@@ -2481,13 +3306,18 @@
         if (!task || typeof task !== 'object') {
             return { questionTitle: t('studio.stage3.task_num_prefix', 'Задание #{n}').replace('{n}', fallbackIndex + 1), data: {}, taskType: 'TEST' };
         }
-        const data = task.data || task.task_data || task || {};
-        const rawType = String(task.type || task.task_type || task._import_type || data.type || 'TEST');
+        const data = task.data || task.task_data || task.content || task || {};
+        const canonicalType = normalizeTaskType(task);
+        const rawType = String(task.type || task.task_type || task._import_type || data.type || canonicalType);
         const normalizedType = rawType.toLowerCase();
 
         function clean(str) {
             if (!str || typeof str !== 'string') return '';
-            return str.replace(/^[#?@]+\s*/, '').trim();
+            let s = str.trim();
+            s = s.replace(/^text:\s*/i, '');
+            s = s.replace(/^(?:клик|тест|последовательность|открытый ответ|рисуй|рисование)\s*[-—:]\s*/i, '');
+            s = s.replace(/^[#?@*•-]+\s*/, '');
+            return s.trim();
         }
 
         let questionTitle = '';
@@ -2496,7 +3326,7 @@
         if (Array.isArray(data.questions) && data.questions.length > 0) {
             const q0 = data.questions[0];
             if (typeof q0 === 'object' && q0) {
-                questionTitle = clean(q0.question || q0.title || q0.prompt || q0.stem);
+                questionTitle = clean(q0.text || q0.question || q0.title || q0.prompt || q0.stem);
             }
         }
 
@@ -2506,7 +3336,7 @@
         }
 
         // 3. For click_words or text_errors, fallback to data.text
-        if (!questionTitle && (normalizedType.includes('click_words') || data.mode === 'text_errors') && data.text) {
+        if (!questionTitle && (canonicalType === 'CLICK_WORDS' || normalizedType.includes('click_words') || data.mode === 'text_errors') && data.text) {
             const sample = clean(data.text);
             questionTitle = sample.length > 90 ? sample.slice(0, 87) + '...' : sample;
         }
@@ -2521,48 +3351,188 @@
 
         // 5. Fallback to human type label + index
         if (!questionTitle) {
-            const humanTypeLabel = getTaskTypeLabel(rawType);
+            const humanTypeLabel = getTaskTypeLabel(task);
             questionTitle = `${humanTypeLabel} #${fallbackIndex + 1}`;
         }
 
         return {
             questionTitle,
             data,
-            taskType: rawType
+            taskType: canonicalType
         };
+    }
+
+    function getErrorAnalysis(text, errorSpans, errorIndices) {
+        if (Array.isArray(errorSpans) && errorSpans.length > 0) {
+            const normalizedSpans = errorSpans.map((s) => {
+                if (Array.isArray(s) && s.length >= 2 && typeof s[0] === 'number' && typeof s[1] === 'number') {
+                    return { start: s[0], end: s[1] };
+                }
+                return s;
+            });
+            const validSpans = normalizedSpans.filter((s) => {
+                if (!s || typeof s !== 'object') return false;
+                if (typeof s.start !== 'number' || typeof s.end !== 'number') return false;
+                if (s.start < 0 || s.end <= s.start) return false;
+                if (s.is_correct === true) return false;
+                return true;
+            }).sort((a, b) => a.start - b.start);
+
+            if (validSpans.length > 0) {
+                const clusters = [];
+                let currentCluster = { start: validSpans[0].start, end: validSpans[0].end, wordCount: 1 };
+
+                for (let i = 1; i < validSpans.length; i++) {
+                    const sp = validSpans[i];
+                    if (sp.start <= currentCluster.end) {
+                        currentCluster.end = Math.max(currentCluster.end, sp.end);
+                        currentCluster.wordCount++;
+                    } else {
+                        const gap = typeof text === 'string' ? text.slice(currentCluster.end, sp.start) : '';
+                        if (gap.trim().length === 0 || gap.length <= 2) {
+                            currentCluster.end = Math.max(currentCluster.end, sp.end);
+                            currentCluster.wordCount++;
+                        } else {
+                            clusters.push(currentCluster);
+                            currentCluster = { start: sp.start, end: sp.end, wordCount: 1 };
+                        }
+                    }
+                }
+                clusters.push(currentCluster);
+
+                return {
+                    phraseCount: clusters.length,
+                    totalWords: validSpans.length,
+                    clusters,
+                };
+            }
+        }
+
+        if (Array.isArray(errorIndices) && errorIndices.length > 0) {
+            const sorted = [...errorIndices].sort((a, b) => a - b);
+            let phrases = 0;
+            let lastIdx = -999;
+            sorted.forEach((idx) => {
+                if (idx !== lastIdx + 1) phrases++;
+                lastIdx = idx;
+            });
+            return {
+                phraseCount: phrases,
+                totalWords: sorted.length,
+                clusters: [],
+            };
+        }
+
+        return { phraseCount: 0, totalWords: 0, clusters: [] };
+    }
+
+    function snapClustersToWordBoundaries(text, clusters) {
+        if (!text || !Array.isArray(clusters) || clusters.length === 0) return [];
+        const isWordChar = (ch) => /[\p{L}\p{N}_-]/u.test(ch);
+        const snapped = [];
+
+        clusters.forEach((cl) => {
+            let s = Math.max(0, Math.min(cl.start, text.length));
+            let e = Math.max(s, Math.min(cl.end, text.length));
+
+            while (s > 0 && isWordChar(text[s]) && isWordChar(text[s - 1])) {
+                s--;
+            }
+            while (e < text.length && isWordChar(text[e - 1]) && isWordChar(text[e])) {
+                e++;
+            }
+
+            if (snapped.length > 0 && s <= snapped[snapped.length - 1].end) {
+                snapped[snapped.length - 1].end = Math.max(snapped[snapped.length - 1].end, e);
+            } else {
+                snapped.push({ start: s, end: e });
+            }
+        });
+
+        return snapped;
+    }
+
+    function highlightErrorSpansInText(text, clusters) {
+        if (!text || typeof text !== 'string') return '';
+        let cleanText = text.trim();
+        let prefixLen = 0;
+        const prefixMatch = cleanText.match(/^text:\s*/i);
+        if (prefixMatch) {
+            prefixLen = prefixMatch[0].length;
+            cleanText = cleanText.slice(prefixLen);
+        }
+
+        if (!clusters || clusters.length === 0) {
+            return escapeHtml(cleanText);
+        }
+
+        const adjustedClusters = clusters.map((c) => ({
+            ...c,
+            start: Math.max(0, c.start - prefixLen),
+            end: Math.max(0, c.end - prefixLen),
+        })).filter((c) => c.start < cleanText.length && c.end > c.start);
+
+        if (adjustedClusters.length === 0) {
+            return escapeHtml(cleanText);
+        }
+
+        const snappedClusters = snapClustersToWordBoundaries(cleanText, adjustedClusters);
+
+        let result = '';
+        let cursor = 0;
+        snappedClusters.forEach((cl) => {
+            const s = cl.start;
+            const e = cl.end;
+            if (s > cursor) {
+                result += escapeHtml(cleanText.slice(cursor, s));
+            }
+            const highlightedPart = cleanText.slice(s, e);
+            if (highlightedPart) {
+                result += `<mark class="bg-amber-500/20 text-amber-900 dark:text-amber-200 px-0.5 rounded font-semibold underline decoration-amber-500/40">${escapeHtml(highlightedPart)}</mark>`;
+            }
+            cursor = e;
+        });
+        if (cursor < cleanText.length) {
+            result += escapeHtml(cleanText.slice(cursor));
+        }
+        return result;
     }
 
     function renderTaskPreviewSnippet(task) {
         if (!task || typeof task !== 'object') return '';
-        const data = task.data || task.task_data || task;
-        const rawType = String(task.type || task.task_type || task._import_type || data.type || '').toLowerCase();
+        const data = task.data || task.task_data || task.content || task;
+        const canonicalType = normalizeTaskType(task);
+        const rawType = String(task.type || task.task_type || task._import_type || data.type || canonicalType).toLowerCase();
 
         // 1. TEST (options with ✓ and •)
-        let options = null;
-        if (Array.isArray(data.questions) && data.questions[0] && Array.isArray(data.questions[0].options)) {
-            options = data.questions[0].options;
-        } else if (Array.isArray(data.options)) {
-            options = data.options;
-        } else if (Array.isArray(task.options)) {
-            options = task.options;
-        }
+        const options = extractTestOptions(task, data);
 
         if (Array.isArray(options) && options.length > 0) {
             const previewOpts = options.slice(0, 3);
-            const remaining = options.length - previewOpts.length;
+            const remainingOpts = options.slice(3);
+            const formatOpt = (opt) => {
+                const isCorrect = Boolean(opt.is_correct ?? opt.correct ?? false);
+                const optText = typeof opt === 'object' && opt ? (opt.text || opt.title || opt.value || '') : String(opt);
+                return `
+                    <div class="flex items-center gap-1.5 ${isCorrect ? 'text-success font-semibold' : 'text-text-secondary'}">
+                        <span class="text-[10px] flex-shrink-0">${isCorrect ? '✓' : '•'}</span>
+                        <span class="truncate">${escapeHtml(optText)}</span>
+                    </div>
+                `;
+            };
+
             return `
                 <div class="mt-1 flex flex-col gap-1 text-[11px] text-text-secondary">
-                    ${previewOpts.map((opt) => {
-                        const isCorrect = Boolean(opt.is_correct ?? opt.correct ?? false);
-                        const optText = typeof opt === 'object' && opt ? (opt.text || opt.title || opt.value || '') : String(opt);
-                        return `
-                            <div class="flex items-center gap-1.5 ${isCorrect ? 'text-success font-semibold' : 'text-text-secondary'}">
-                                <span class="text-[10px] flex-shrink-0">${isCorrect ? '✓' : '•'}</span>
-                                <span class="truncate">${escapeHtml(optText)}</span>
-                            </div>
-                        `;
-                    }).join('')}
-                    ${remaining > 0 ? `<span class="text-text-muted text-[10px]">+ ${t('studio.stage3.more_options_fmt', 'ещё {n} вар.').replace('{n}', remaining)}</span>` : ''}
+                    ${previewOpts.map(formatOpt).join('')}
+                    ${remainingOpts.length > 0 ? `
+                        <div class="task-extra-options hidden flex flex-col gap-1">
+                            ${remainingOpts.map(formatOpt).join('')}
+                        </div>
+                        <button type="button" class="btn-expand-snippet text-primary hover:underline text-[10px] font-semibold flex items-center gap-0.5 mt-0.5 w-fit" data-action="toggle-options" data-more-fmt="+ ${t('studio.stage3.more_options_fmt', 'ещё {n} вар.').replace('{n}', remainingOpts.length)}" data-collapse-text="${t('studio.stage3.collapse', 'Свернуть')}">
+                            <span class="material-symbols-outlined text-[12px]">expand_more</span>
+                            <span class="expand-btn-text">+ ${t('studio.stage3.more_options_fmt', 'ещё {n} вар.').replace('{n}', remainingOpts.length)}</span>
+                        </button>
+                    ` : ''}
                 </div>
             `;
         }
@@ -2618,46 +3588,97 @@
 
         if (sequenceSteps.length > 0) {
             const previewSteps = sequenceSteps.slice(0, 3);
-            const remainingSteps = sequenceSteps.length - previewSteps.length;
+            const remainingSteps = sequenceSteps.slice(3);
+            const formatStep = (step, idx, hasArrow) => `
+                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-surface-2 border border-border-subtle text-text-main text-[10px] font-medium">
+                    <span class="text-primary font-bold">${idx + 1}.</span>
+                    <span class="truncate max-w-[120px]">${escapeHtml(step)}</span>
+                </span>
+                ${hasArrow ? '<span class="text-text-muted text-[10px]">→</span>' : ''}
+            `;
+
             return `
                 <div class="mt-1 flex flex-wrap items-center gap-1 text-[11px] text-text-secondary">
-                    ${previewSteps.map((step, sIdx) => `
-                        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-surface-2 border border-border-subtle text-text-main text-[10px] font-medium">
-                            <span class="text-primary font-bold">${sIdx + 1}.</span>
-                            <span class="truncate max-w-[120px]">${escapeHtml(step)}</span>
-                        </span>
-                        ${sIdx < previewSteps.length - 1 ? '<span class="text-text-muted text-[10px]">→</span>' : ''}
-                    `).join('')}
-                    ${remainingSteps > 0 ? `<span class="text-text-muted text-[10px] pl-1">+ ${t('studio.stage3.more_steps_fmt', 'ещё {n} шаг.').replace('{n}', remainingSteps)}</span>` : ''}
+                    ${previewSteps.map((step, sIdx) => formatStep(step, sIdx, sIdx < previewSteps.length - 1 || remainingSteps.length > 0)).join('')}
+                    ${remainingSteps.length > 0 ? `
+                        <div class="task-extra-steps hidden flex flex-wrap items-center gap-1">
+                            ${remainingSteps.map((step, rIdx) => formatStep(step, previewSteps.length + rIdx, rIdx < remainingSteps.length - 1)).join('')}
+                        </div>
+                        <button type="button" class="btn-expand-snippet text-primary hover:underline text-[10px] font-semibold flex items-center gap-0.5 ml-1" data-action="toggle-steps" data-more-fmt="+ ${t('studio.stage3.more_steps_fmt', 'ещё {n} шаг.').replace('{n}', remainingSteps.length)}" data-collapse-text="${t('studio.stage3.collapse', 'Свернуть')}">
+                            <span class="material-symbols-outlined text-[12px]">expand_more</span>
+                            <span class="expand-btn-text">+ ${t('studio.stage3.more_steps_fmt', 'ещё {n} шаг.').replace('{n}', remainingSteps.length)}</span>
+                        </button>
+                    ` : ''}
                 </div>
             `;
         }
 
-        // 4. CLICK_WORDS / text_errors (error count badge)
-        if (data.mode === 'text_errors' || rawType.includes('click_words')) {
-            const errCount = data.error_count ?? (Array.isArray(data.error_spans) ? data.error_spans.length : (Array.isArray(data.error_indices) ? data.error_indices.length : null));
-            if (errCount !== null) {
-                return `
-                    <div class="mt-1 flex items-center gap-1.5 text-[11px]">
-                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold border border-amber-500/20 text-[10px]">
+        // 4. CLICK_WORDS / text_errors (error count badge & highlighted snippet)
+        if (canonicalType === 'CLICK_WORDS' || data.mode === 'text_errors' || rawType.includes('click_words')) {
+            const text = String(data.text || task.text || (task.content && task.content.text) || '');
+            const errorSpans = data.error_spans || task.error_spans || (task.content && task.content.error_spans);
+            const errorIndices = data.error_indices || task.error_indices || (task.content && task.content.error_indices);
+
+            const { phraseCount, totalWords, clusters } = getErrorAnalysis(text, errorSpans, errorIndices);
+
+            let badgeLabel = '';
+            if (phraseCount > 0) {
+                if (totalWords > phraseCount) {
+                    badgeLabel = t('studio.stage3.errors_phrases_and_words_fmt', 'Ошибок: {phrases} фрагм. ({words} сл.)')
+                        .replace('{phrases}', phraseCount)
+                        .replace('{words}', totalWords);
+                } else {
+                    badgeLabel = t('studio.stage3.errors_count_fmt', 'Ошибок: {count}')
+                        .replace('{count}', phraseCount);
+                }
+            } else {
+                const fallbackCount = data.error_count ?? (Array.isArray(errorSpans) ? errorSpans.length : 0);
+                badgeLabel = t('studio.stage3.errors_count_fmt', 'Ошибок: {count}').replace('{count}', fallbackCount);
+            }
+
+            const highlightedSnippet = highlightErrorSpansInText(text, clusters);
+
+            return `
+                <div class="mt-1 flex flex-col gap-1 text-[11px]">
+                    <div class="flex items-center gap-1.5">
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-300 font-semibold border border-amber-500/20 text-[10px]">
                             <span class="material-symbols-outlined text-[12px]">find_in_page</span>
-                            <span>${t('studio.stage3.traps_errors_fmt', 'Ловушек / ошибок: {count}').replace('{count}', errCount)}</span>
+                            <span>${badgeLabel}</span>
                         </span>
                     </div>
-                `;
-            }
+                    ${highlightedSnippet ? `
+                        <div class="task-text-snippet p-1.5 rounded-md bg-surface-2 border border-border-subtle text-text-secondary text-[11px] leading-relaxed line-clamp-3">
+                            ${highlightedSnippet}
+                        </div>
+                        ${text.length > 140 ? `
+                            <button type="button" class="btn-expand-text text-primary hover:underline text-[10px] font-semibold flex items-center gap-0.5 self-start mt-0.5" data-expand-text="${t('studio.stage3.expand_text', 'Читать полностью')}" data-collapse-text="${t('studio.stage3.collapse', 'Свернуть')}">
+                                <span class="material-symbols-outlined text-[12px]">expand_more</span>
+                                <span class="expand-btn-text">${t('studio.stage3.expand_text', 'Читать полностью')}</span>
+                            </button>
+                        ` : ''}
+                    ` : ''}
+                </div>
+            `;
         }
 
         // 5. Visual / Manual targets (CLICK / DRAW)
         const targets = data.targets || data.regions || task.targets;
         if (Array.isArray(targets) && targets.length > 0) {
-            const targetNames = targets.slice(0, 3).map((t) => typeof t === 'object' && t ? (t.name || t.label || t.title) : String(t)).filter(Boolean);
+            const targetNames = targets.slice(0, 10).map((t) => typeof t === 'object' && t ? (t.name || t.label || t.title) : String(t)).filter(Boolean);
             if (targetNames.length > 0) {
+                const previewTargets = targetNames.slice(0, 3);
+                const remainingTargets = targetNames.slice(3);
                 return `
                     <div class="mt-1 flex flex-wrap items-center gap-1 text-[10px] text-text-secondary">
                         <span class="material-symbols-outlined text-[12px] text-primary">target</span>
-                        <span>${targetNames.map((n) => `<span class="font-medium text-text-main">${escapeHtml(n)}</span>`).join(', ')}</span>
-                        ${targets.length > 3 ? `<span class="text-text-muted">+ ${t('studio.stage3.more_targets_fmt', 'ещё {n}').replace('{n}', targets.length - 3)}</span>` : ''}
+                        <span>${previewTargets.map((n) => `<span class="font-medium text-text-main">${escapeHtml(n)}</span>`).join(', ')}</span>
+                        ${remainingTargets.length > 0 ? `
+                            <span class="task-extra-targets hidden">, ${remainingTargets.map((n) => `<span class="font-medium text-text-main">${escapeHtml(n)}</span>`).join(', ')}</span>
+                            <button type="button" class="btn-expand-snippet text-primary hover:underline text-[10px] font-semibold flex items-center gap-0.5 ml-1" data-action="toggle-targets" data-more-fmt="+ ${t('studio.stage3.more_targets_fmt', 'ещё {n}').replace('{n}', remainingTargets.length)}" data-collapse-text="${t('studio.stage3.collapse', 'Свернуть')}">
+                                <span class="material-symbols-outlined text-[12px]">expand_more</span>
+                                <span class="expand-btn-text">+ ${t('studio.stage3.more_targets_fmt', 'ещё {n}').replace('{n}', remainingTargets.length)}</span>
+                            </button>
+                        ` : ''}
                     </div>
                 `;
             }
@@ -2678,7 +3699,12 @@
             }
         }
         if (DOM.btnExecuteImport) {
-            DOM.btnExecuteImport.disabled = selected.length === 0 || !StudioState.selectedTopicId;
+            DOM.btnExecuteImport.disabled = selected.length === 0;
+            if (selected.length > 0 && !StudioState.selectedTopicId) {
+                DOM.btnExecuteImport.title = t('studio.stage3.select_topic_first_tooltip', 'Сначала выберите целевую тему курса для импорта');
+            } else {
+                DOM.btnExecuteImport.removeAttribute('title');
+            }
         }
     }
 
@@ -2691,7 +3717,12 @@
 
         if (!StudioState.selectedModuleId || !StudioState.selectedTopicId) {
             openTopicModal();
-            showToast(t('studio.toast.select_target_topic', 'Выберите целевую тему курса'), 'warning');
+            if (DOM.btnSelectTopic) {
+                DOM.btnSelectTopic.classList.remove('studio-field-pulse');
+                void DOM.btnSelectTopic.offsetWidth;
+                DOM.btnSelectTopic.classList.add('studio-field-pulse');
+            }
+            showToast(t('studio.toast.select_target_topic', 'Выберите целевую тему курса для импорта'), 'warning');
             return;
         }
 
@@ -2841,6 +3872,7 @@
             recommendations: session.recommendations || [],
         };
         StudioState.allTasks = session.tasks || [];
+        syncTypeDraftsWithAllTasks();
 
         resolveTopicFromUrlOrCatalog();
         if (DOM.lessonMapContainer) renderLessonMap(StudioState.analysisResult);
@@ -2897,12 +3929,29 @@
             });
         });
 
-        // Close active modal on Escape key
+        // Close active modal on Escape key, navigate preview on Arrow keys
         window.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 closeTopicModal();
                 closeHistoryModal();
                 closeNavGuardModal();
+                closeTaskPreviewModal();
+                closeResetModal();
+            } else if (DOM.modalTaskPreview && !DOM.modalTaskPreview.classList.contains('hidden')) {
+                if (e.key === 'ArrowLeft') {
+                    if (currentPreviewIndex > 0) {
+                        e.preventDefault();
+                        currentPreviewIndex--;
+                        renderTaskPreviewModalContent();
+                    }
+                } else if (e.key === 'ArrowRight') {
+                    const tasks = StudioState.allTasks || [];
+                    if (currentPreviewIndex < tasks.length - 1) {
+                        e.preventDefault();
+                        currentPreviewIndex++;
+                        renderTaskPreviewModalContent();
+                    }
+                }
             }
         });
     }
@@ -3021,10 +4070,27 @@
             commitManualSpec,
             extractTaskDisplayInfo,
             renderTaskPreviewSnippet,
+            getErrorAnalysis,
+            highlightErrorSpansInText,
+            snapClustersToWordBoundaries,
             normalizeTaskType,
             getTaskTypeLabel,
             SHOWCASE_CATEGORIES,
             renderShowcase,
+            openTaskPreviewModal,
+            closeTaskPreviewModal,
+            renderTaskPreviewModalContent,
+            getCurrentPreviewIndex: () => currentPreviewIndex,
+            createShowcaseTaskCard,
+            serializeTaskToText,
+            serializeTasksToText,
+            syncTypeDraftsWithAllTasks,
+            attachSnippetExpansionListeners,
+            restoreDraftFromLocalStorage,
+            restoreSession,
+            switchStep,
+            setupStage2,
+            runClientRegexCounter,
         };
     }
 

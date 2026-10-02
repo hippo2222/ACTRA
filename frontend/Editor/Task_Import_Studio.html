@@ -29,7 +29,7 @@
         <div class="studio-toolbar__left">
             <a id="btn-back-dashboard" href="/editor" class="studio-btn-back" title="Вернуться в дашборд редактора" data-i18n-title="studio.back_to_dashboard_title">
                 <span class="material-symbols-outlined text-[18px]">arrow_back</span>
-                <span data-i18n="studio.back_to_dashboard">В дашборд</span>
+                <span class="studio-btn-text" data-i18n="studio.back_to_dashboard">В дашборд</span>
             </a>
 
             <div class="h-4 w-px bg-border-subtle flex-shrink-0" aria-hidden="true"></div>
@@ -61,14 +61,14 @@
             <button id="btn-open-history" type="button" class="studio-btn-history"
                 title="История последних анализов материала" data-i18n-title="studio.history.btn_title">
                 <span class="material-symbols-outlined text-[18px]">history</span>
-                <span><span data-i18n="studio.history.btn">История</span> (<span id="history-count-badge">0</span>)</span>
+                <span class="studio-btn-text"><span data-i18n="studio.history.btn">История</span> (<span id="history-count-badge">0</span>)</span>
             </button>
 
             <!-- Reset / Discard Draft Trigger -->
             <button id="btn-reset-draft" type="button" class="studio-btn-reset"
                 title="Сбросить текущий черновик и анализ" data-i18n-title="studio.toolbar.btn_reset_title">
                 <span class="material-symbols-outlined text-[18px]">restart_alt</span>
-                <span data-i18n="studio.toolbar.btn_reset">Сбросить</span>
+                <span class="studio-btn-text" data-i18n="studio.toolbar.btn_reset">Сбросить</span>
             </button>
         </div>
     </header>
@@ -119,7 +119,7 @@
 
                     <div class="studio-card__body">
                         <!-- Target Language Selector -->
-                        <div class="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-surface-1 border border-border-subtle">
+                        <div class="flex items-center justify-between gap-2 py-1 px-1 border-b border-border-subtle pb-3">
                             <div class="flex items-center gap-1.5 text-xs text-text-secondary">
                                 <span class="material-symbols-outlined text-[18px] text-text-muted">translate</span>
                                 <span class="font-semibold" data-i18n="studio.stage1.lang_selector_label">Язык заданий:</span>
@@ -133,7 +133,7 @@
                         </div>
 
                         <!-- Step-by-Step Workflow Guide (Collapsible) -->
-                        <details class="studio-guide-details rounded-xl bg-surface-1 border border-border-subtle p-3 text-xs" open>
+                        <details class="studio-guide-details rounded-lg bg-surface-2/40 p-3 text-xs" open>
                             <summary class="font-bold uppercase tracking-wider text-text-secondary cursor-pointer hover:text-primary transition-colors flex items-center justify-between select-none">
                                 <span data-i18n="studio.stage1.guide_title">Порядок работы с внешней нейросетью</span>
                                 <span class="material-symbols-outlined text-[18px] text-text-muted transition-transform studio-guide-chevron">expand_more</span>
@@ -156,18 +156,18 @@
 
                         <!-- Action: Copy Analysis Prompt -->
                         <div class="flex flex-col gap-2">
-                            <button id="btn-copy-analysis-prompt" type="button" class="studio-btn studio-btn--lg studio-btn--primary w-full">
+                            <button id="btn-copy-analysis-prompt" type="button" class="studio-btn studio-btn--lg studio-btn--secondary w-full">
                                 <span class="material-symbols-outlined text-[20px]">content_copy</span>
                                 <span data-i18n="studio.stage1.btn_copy_prompt">Скопировать промпт анализа лекции</span>
                             </button>
                         </div>
 
                         <!-- Collapsible Full Prompt Preview -->
-                        <details class="rounded-xl border border-border-subtle bg-surface-2 p-3 text-xs">
+                        <details class="rounded-lg bg-surface-2/40 p-3 text-xs">
                             <summary class="font-semibold text-text-secondary cursor-pointer hover:text-primary transition-colors" data-i18n="studio.stage1.view_full_prompt">
                                 Посмотреть текст промпта
                             </summary>
-                            <pre id="analysis-prompt-preview-text" class="mt-2.5 p-2 rounded-lg bg-surface-1 border border-border-subtle text-[11px] font-mono text-text-main whitespace-pre-wrap overflow-x-auto max-h-[160px]"></pre>
+                            <pre id="analysis-prompt-preview-text" class="mt-2.5 p-2.5 rounded-md bg-surface-1 text-[11px] font-mono text-text-main whitespace-pre-wrap overflow-x-auto max-h-[160px]"></pre>
                         </details>
 
                         <!-- Supported Models Micro-footer -->
@@ -186,7 +186,7 @@
                             <span class="material-symbols-outlined text-[20px] text-primary">analytics</span>
                             <span data-i18n="studio.stage1.right_title">2. Результат анализа нейросети</span>
                         </h2>
-                        <button id="btn-parse-analysis" type="button" class="studio-btn studio-btn--md studio-btn--primary">
+                        <button id="btn-parse-analysis" type="button" class="studio-btn studio-btn--md studio-btn--secondary">
                             <span class="material-symbols-outlined text-[16px]">play_arrow</span>
                             <span data-i18n="studio.stage1.btn_parse">Разобрать ответ</span>
                         </button>
@@ -205,7 +205,7 @@
                         <!-- Structured Lesson Map View (Appears after parsing) -->
                         <div id="lesson-map-container" class="flex-1 flex flex-col gap-3 overflow-y-auto hidden">
                             <!-- Human Summary Box -->
-                            <div class="p-3 rounded-xl bg-surface-2 border border-border-subtle">
+                            <div class="p-3 rounded-lg bg-surface-2/60">
                                 <p class="text-[11px] font-bold uppercase tracking-wider text-text-secondary mb-1" data-i18n="studio.stage1.summary_title">Методическая выжимка</p>
                                 <p id="lesson-map-summary" class="text-xs leading-relaxed text-text-main"></p>
                             </div>
@@ -258,7 +258,7 @@
                                 <span class="material-symbols-outlined text-[18px] text-primary flex-shrink-0">target</span>
                                 <span class="text-xs font-bold text-text-main truncate" id="focus-pane-type-label" data-i18n="studio.stage2.prompt_title">Промпт для типа</span>
                             </div>
-                            <button id="btn-copy-type-prompt" type="button" class="studio-btn studio-btn--sm studio-btn--primary flex-shrink-0" title="Скопировать промпт в буфер обмена" data-i18n-title="studio.stage2.btn_copy_type_prompt_title">
+                            <button id="btn-copy-type-prompt" type="button" class="studio-btn studio-btn--sm studio-btn--secondary flex-shrink-0" title="Скопировать промпт в буфер обмена" data-i18n-title="studio.stage2.btn_copy_type_prompt_title">
                                 <span class="material-symbols-outlined text-[16px]">content_copy</span>
                                 <span id="label-copy-type-prompt" data-i18n="studio.stage2.btn_copy_type_prompt">Скопировать промпт</span>
                             </button>
@@ -304,8 +304,8 @@
                     <div class="studio-pane">
                         <div class="studio-pane__header">
                             <div class="flex items-center gap-2">
-                                <span class="material-symbols-outlined text-[18px] text-primary">edit_note</span>
-                                <span class="text-xs font-bold text-text-main" data-i18n="studio.stage2.paste_type_response_title">Ответ нейросети</span>
+                                <span id="pane-response-icon" class="material-symbols-outlined text-[18px] text-primary">edit_note</span>
+                                <span id="pane-response-title" class="text-xs font-bold text-text-main" data-i18n="studio.stage2.paste_type_response_title">Ответ нейросети</span>
                             </div>
                             <div class="flex items-center gap-2">
                                 <span id="live-parse-counter" class="studio-counter-pill hidden">
@@ -390,7 +390,7 @@
 
                                     <!-- Action Button: Open Visual Editor -->
                                     <div class="flex flex-col gap-1.5 pt-1">
-                                        <a id="btn-open-visual-editor" href="#" target="_blank" rel="noopener" class="studio-btn studio-btn--lg studio-btn--primary w-full justify-center">
+                                        <a id="btn-open-visual-editor" href="#" target="_blank" rel="noopener" class="studio-btn studio-btn--lg studio-btn--secondary w-full justify-center text-primary font-semibold border-primary/30">
                                             <span class="material-symbols-outlined text-[20px]">open_in_new</span>
                                             <span id="label-open-visual-editor" data-i18n="studio.stage2.btn_open_visual_editor">Открыть визуальный редактор</span>
                                         </a>
@@ -502,6 +502,49 @@
             </div>
             <div class="studio-modal-body" id="topic-tree-container">
                 <p class="text-xs text-text-secondary" data-i18n="studio.modal.topic_loading">Загрузка каталога тем...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Task Full Preview / Inspector -->
+    <div id="modal-task-preview" class="studio-modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-preview-title">
+        <div class="studio-modal-card max-w-[720px] max-h-[88vh] flex flex-col">
+            <div class="studio-modal-header flex-shrink-0">
+                <div class="flex items-center gap-2.5 min-w-0">
+                    <span id="preview-task-type-badge" class="studio-unit-badge bg-primary-light text-primary font-bold"></span>
+                    <h3 id="modal-preview-title" class="text-sm font-bold text-text-main truncate" data-i18n="studio.modal.preview_title">Просмотр задания</h3>
+                </div>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                    <button id="btn-preview-prev-task" type="button" class="studio-btn studio-btn--sm studio-btn--secondary p-1" title="Предыдущее задание" data-i18n-title="studio.modal.preview_prev">
+                        <span class="material-symbols-outlined text-[18px]">chevron_left</span>
+                    </button>
+                    <span id="preview-task-counter" class="text-xs font-semibold text-text-secondary px-1 min-w-[40px] text-center">1 / 1</span>
+                    <button id="btn-preview-next-task" type="button" class="studio-btn studio-btn--sm studio-btn--secondary p-1" title="Следующее задание" data-i18n-title="studio.modal.preview_next">
+                        <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+                    </button>
+                    <button id="btn-close-preview-modal" type="button" class="text-text-muted hover:text-text-main p-1 rounded-lg hover:bg-surface-2 transition-colors ml-2" title="Закрыть" data-i18n-title="common.close" aria-label="Закрыть" data-i18n-aria="common.close">
+                        <span class="material-symbols-outlined text-[18px]">close</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="studio-modal-body flex-1 overflow-y-auto p-4 flex flex-col gap-4" id="task-preview-content-container">
+                <!-- Dynamically filled with rich task preview -->
+            </div>
+
+            <div class="p-3 border-t border-border-subtle flex items-center justify-between gap-3 bg-surface-1 flex-shrink-0">
+                <label class="flex items-center gap-2 text-xs font-semibold text-text-main cursor-pointer">
+                    <input type="checkbox" id="preview-task-select-checkbox" class="rounded border-border-strong text-primary w-4 h-4" />
+                    <span data-i18n="studio.modal.preview_select_for_import">Включить в импорт</span>
+                </label>
+                <div class="flex items-center gap-2">
+                    <button id="btn-preview-toggle-raw" type="button" class="studio-btn studio-btn--sm studio-btn--secondary" data-i18n="studio.modal.preview_toggle_raw">
+                        JSON / Спецификация
+                    </button>
+                    <button id="btn-close-preview-footer" type="button" class="studio-btn studio-btn--sm studio-btn--secondary" data-i18n="common.close">
+                        Закрыть
+                    </button>
+                </div>
             </div>
         </div>
     </div>

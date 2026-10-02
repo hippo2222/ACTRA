@@ -48,25 +48,30 @@ html, body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1rem;
-    padding: 0 1.5rem;
+    gap: 0.75rem;
+    padding: 0 1.25rem;
     background: var(--color-surface-1);
     border-bottom: 1px solid var(--color-border-subtle);
     z-index: 20;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .studio-toolbar__left {
     display: flex;
     align-items: center;
-    gap: 0.875rem;
+    gap: 0.75rem;
     min-width: 0;
+    flex-shrink: 1;
+    overflow: hidden;
 }
 
 .studio-toolbar__right {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.5rem;
     flex-shrink: 0;
+    min-width: 0;
 }
 
 .studio-btn-back,
@@ -154,6 +159,9 @@ html, body {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    min-width: 0;
+    max-width: 240px;
+    flex-shrink: 1;
 }
 
 .studio-topic-badge {
@@ -171,6 +179,14 @@ html, body {
     cursor: pointer;
     transition: all 0.15s var(--ease-spring);
     box-sizing: border-box;
+    min-width: 0;
+    max-width: 100%;
+}
+
+#label-selected-topic {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .studio-topic-badge:hover {
@@ -661,10 +677,10 @@ html, body {
 
 /* Lesson Map Cards */
 .studio-unit-card {
-    border-radius: 0.875rem;
+    border-radius: 0.75rem;
     border: 1px solid var(--color-border-subtle);
-    background: var(--color-surface-1);
-    padding: 0.875rem 1rem;
+    background: var(--color-surface-2);
+    padding: 0.75rem 0.875rem;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
@@ -748,6 +764,7 @@ html, body {
     white-space: nowrap;
     position: relative;
     user-select: none;
+    flex-shrink: 0;
 }
 
 .studio-type-tab:hover {
@@ -1443,6 +1460,113 @@ html, body {
 }
 .studio-guide-details[open] .studio-guide-chevron {
     transform: rotate(180deg);
+}
+
+/* ---------------------------------------------------------------------------
+   Responsive Layout & Collision Prevention (Google AI Studio Method)
+   --------------------------------------------------------------------------- */
+
+@media (max-width: 1024px) {
+    .studio-toolbar {
+        padding: 0 0.75rem;
+        gap: 0.5rem;
+    }
+
+    .studio-btn-history .studio-btn-text,
+    .studio-btn-reset .studio-btn-text {
+        display: none;
+    }
+
+    .studio-btn-history,
+    .studio-btn-reset {
+        padding: 0 0.5rem;
+        width: 34px;
+        justify-content: center;
+    }
+
+    .studio-status-cluster #autosave-status-text {
+        display: none;
+    }
+
+    .studio-status-cluster {
+        padding: 0.35rem 0.45rem;
+    }
+
+    .studio-topic-selector {
+        max-width: 180px;
+    }
+
+    .studio-pane__header {
+        padding: 0 0.75rem;
+        gap: 0.5rem;
+    }
+
+    #label-copy-type-prompt,
+    #label-paste-type-response,
+    #label-commit-type-tasks {
+        display: none;
+    }
+
+    #btn-copy-type-prompt,
+    #btn-paste-type-response,
+    #btn-commit-type-tasks {
+        padding: 0 0.55rem;
+    }
+
+    .studio-card__header {
+        padding: 0.75rem 1rem;
+    }
+
+    .stage-1-container {
+        gap: 1rem;
+    }
+}
+
+@media (max-width: 850px) {
+    .studio-btn-back .studio-btn-text {
+        display: none;
+    }
+
+    .studio-btn-back {
+        padding: 0 0.5rem;
+        width: 34px;
+        justify-content: center;
+    }
+
+    .studio-title-badge {
+        display: none;
+    }
+
+    .studio-toolbar__left {
+        flex-shrink: 0;
+    }
+
+    .studio-topic-selector {
+        max-width: 160px;
+    }
+
+    .studio-types-bar {
+        padding: 0 0.75rem;
+        gap: 0.5rem;
+    }
+
+    .studio-types-bar__nav {
+        padding-right: 0.5rem;
+    }
+
+    #btn-back-to-step-1 span:not(.material-symbols-outlined) {
+        display: none;
+    }
+
+    #btn-back-to-step-1 {
+        padding: 0 0.5rem;
+        width: 32px;
+        justify-content: center;
+    }
+
+    .studio-card__title {
+        font-size: 0.8125rem;
+    }
 }
 
 /* ---------------------------------------------------------------------------
