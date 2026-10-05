@@ -838,11 +838,25 @@ describe("ClickUI Result Registry (Stage 4)", () => {
     expect(pill?.textContent).toContain("Опечатка");
     expect(pill?.querySelector(".material-symbols-outlined")?.textContent).toBe("spellcheck");
 
-    // 2. Typo diff box
+    // 2. Typo diff box with fine-grained character highlighting
     expect(typoRow.textContent).toContain("Введено:");
     expect(typoRow.textContent).toContain("«Правое легкае»");
     expect(typoRow.textContent).toContain("Ожидалось:");
     expect(typoRow.textContent).toContain("«Правое легкое»");
+    const charDiffDel = typoRow.querySelector(".text-rose-700, .dark\\:text-rose-300");
+    expect(charDiffDel).toBeTruthy();
+    expect(charDiffDel?.textContent).toBe("а");
+    const charDiffIns = typoRow.querySelector(".text-emerald-700, .dark\\:text-emerald-300");
+    expect(charDiffIns).toBeTruthy();
+    expect(charDiffIns?.textContent).toBe("о");
+
+    // 2b. Exact match row (target 1) must NEVER be marked as typo
+    const exactRow = targetRows.find((r) => r.getAttribute("data-target-index") === "1");
+    expect(exactRow).toBeTruthy();
+    const exactPill = exactRow.querySelector('[data-clickui="status-pill"]');
+    expect(exactPill?.textContent).toContain("Найдена");
+    expect(exactPill?.textContent).not.toContain("Опечатка");
+    expect(exactRow.textContent).not.toContain("Введено:");
 
     // 3. Bottom panel USER LABELS should show typo badge with canonical hint
     const userLabelsBlock = container.querySelector('[data-clickui="review-user-labels"]');

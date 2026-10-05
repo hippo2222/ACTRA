@@ -2977,6 +2977,75 @@
     return text || wt("clickui.no_name", "Без названия");
   }
 
+  function _computeStringDiff(s1, s2) {
+    const str1 = String(s1 || "").trim();
+    const str2 = String(s2 || "").trim();
+    const n = str1.length;
+    const m = str2.length;
+    const dp = Array.from({ length: n + 1 }, () => new Int32Array(m + 1));
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < m; j++) {
+        if (str1[i].toLowerCase() === str2[j].toLowerCase()) {
+          dp[i + 1][j + 1] = dp[i][j] + 1;
+        } else {
+          dp[i + 1][j + 1] = Math.max(dp[i + 1][j], dp[i][j + 1]);
+        }
+      }
+    }
+    let i = n, j = m;
+    const diff1 = [], diff2 = [];
+    while (i > 0 || j > 0) {
+      if (i > 0 && j > 0 && str1[i - 1].toLowerCase() === str2[j - 1].toLowerCase()) {
+        diff1.unshift({ char: str1[i - 1], isDiff: false });
+        diff2.unshift({ char: str2[j - 1], isDiff: false });
+        i--;
+        j--;
+      } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+        diff2.unshift({ char: str2[j - 1], isDiff: true });
+        j--;
+      } else if (i > 0) {
+        diff1.unshift({ char: str1[i - 1], isDiff: true });
+        i--;
+      }
+    }
+    const merge = (chunks) => {
+      const res = [];
+      for (const c of chunks) {
+        if (res.length > 0 && res[res.length - 1].isDiff === c.isDiff) {
+          res[res.length - 1].text += c.char;
+        } else {
+          res.push({ text: c.char, isDiff: c.isDiff });
+        }
+      }
+      return res;
+    };
+    return { userChunks: merge(diff1), expectedChunks: merge(diff2) };
+  }
+
+  function _renderDiffSpan(parentEl, chunks, isError) {
+    if (!parentEl || !Array.isArray(chunks)) return;
+    chunks.forEach((chunk) => {
+      if (!chunk.isDiff) {
+        const tNode = document.createTextNode(chunk.text);
+        parentEl.appendChild(tNode);
+      } else if (isError) {
+        const errSpan = _createEl(
+          "span",
+          "font-bold text-rose-700 dark:text-rose-300 bg-rose-500/20 dark:bg-rose-500/30 px-0.5 rounded underline decoration-rose-500/70",
+          chunk.text
+        );
+        parentEl.appendChild(errSpan);
+      } else {
+        const corSpan = _createEl(
+          "span",
+          "font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-500/20 dark:bg-emerald-500/30 px-0.5 rounded",
+          chunk.text
+        );
+        parentEl.appendChild(corSpan);
+      }
+    });
+  }
+
   function _buildReviewLabelsBlock(titleText, items, dataTestUi) {
     const safeItems = Array.isArray(items) ? items : [];
     if (!safeItems.length) return null;
@@ -4477,8 +4546,7 @@
       const hasTypo = !hasError && !!(labelStatus && labelStatus.hasTypo);
 
       if (hasTypo) {
-        item.classList.add("ring-2", "ring-amber-500/30", "bg-amber-500/10");
-        badge.classList.add("border-amber-500/40", "bg-amber-500/15", "text-amber-800", "dark:text-amber-200");
+        item.classList.add("ring-1", "ring-amber-500/40", "bg-surface-1");
         pillClass = "inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-300";
         pillText = wt("clickui.badge_typo", "Опечатка");
         pillIcon = "spellcheck";
@@ -4591,29 +4659,27 @@
             );
             typoBox.appendChild(hitLine);
           }
-          const userEntered = _createEl(
-            "div",
-            "text-text-secondary truncate",
-            `${wt("clickui.user_entered", "Введено:")} `
-          );
-          const userSpan = _createEl(
-            "span",
-            "font-medium text-amber-600 dark:text-amber-400 underline decoration-wavy decoration-amber-500/60",
-            `«${_normalizeReviewLabelText(labelStatus.userLabel)}»`
-          );
-          userEntered.appendChild(userSpan);
+          const rawUser = _normalizeReviewLabelText(labelStatus.userLabel);
+          const rawExpected = _normalizeReviewLabelText(labelStatus.canonicalLabel || labelStatus.correctLabel || target.label);
+          const diffResult = _computeStringDiff(rawUser, rawExpected);
 
-          const expected = _createEl(
-            "div",
-            "text-text-secondary truncate",
-            `${wt("clickui.expected", "Ожидалось:")} `
-          );
-          const expectedSpan = _createEl(
-            "span",
-            "font-semibold text-emerald-600 dark:text-emerald-400",
-            `«${_normalizeReviewLabelText(labelStatus.canonicalLabel || labelStatus.correctLabel || target.label)}»`
-          );
-          expected.appendChild(expectedSpan);
+          const userEntered = _createEl("div", "text-text-secondary truncate flex items-baseline gap-1", "");
+          const userPrefix = _createEl("span", "font-medium shrink-0", `${wt("clickui.user_entered", "Введено:")} `);
+          userEntered.appendChild(userPrefix);
+          const userQuoteSpan = _createEl("span", "font-medium text-text-main", "");
+          userQuoteSpan.appendChild(document.createTextNode("«"));
+          _renderDiffSpan(userQuoteSpan, diffResult.userChunks, true);
+          userQuoteSpan.appendChild(document.createTextNode("»"));
+          userEntered.appendChild(userQuoteSpan);
+
+          const expected = _createEl("div", "text-text-secondary truncate flex items-baseline gap-1", "");
+          const expPrefix = _createEl("span", "font-medium shrink-0", `${wt("clickui.expected", "Ожидалось:")} `);
+          expected.appendChild(expPrefix);
+          const expQuoteSpan = _createEl("span", "font-medium text-text-main", "");
+          expQuoteSpan.appendChild(document.createTextNode("«"));
+          _renderDiffSpan(expQuoteSpan, diffResult.expectedChunks, false);
+          expQuoteSpan.appendChild(document.createTextNode("»"));
+          expected.appendChild(expQuoteSpan);
 
           typoBox.appendChild(userEntered);
           typoBox.appendChild(expected);
@@ -9611,12 +9677,16 @@
           }
           if (targetIdx != null && byTarget.has(targetIdx)) {
             const entry = byTarget.get(targetIdx);
-            entry.hasTypo = true;
-            entry.toleranceType = tm.type || "typo";
-            entry.normalizedKinds = Array.isArray(tm.normalized_kinds) ? tm.normalized_kinds : [];
-            entry.canonicalLabel = String(tm.correct_answer || entry.correctLabel || "").trim();
-            if (tm.user_answer) {
-              entry.userLabel = String(tm.user_answer).trim();
+            const uText = String(tm.user_answer || entry.userLabel || "").trim().toLowerCase();
+            const cText = String(tm.correct_answer || entry.correctLabel || "").trim().toLowerCase();
+            if (uText && cText && uText !== cText) {
+              entry.hasTypo = true;
+              entry.toleranceType = tm.type || "typo";
+              entry.normalizedKinds = Array.isArray(tm.normalized_kinds) ? tm.normalized_kinds : [];
+              entry.canonicalLabel = String(tm.correct_answer || entry.correctLabel || "").trim();
+              if (tm.user_answer) {
+                entry.userLabel = String(tm.user_answer).trim();
+              }
             }
           }
         });

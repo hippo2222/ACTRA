@@ -475,34 +475,45 @@ def compare_words_with_tolerance_info(user_word: str, correct_word: str,
     user_normalized = user_word.lower().strip()
     correct_normalized = correct_word.lower().strip()
     
+    # 1. Быстрое точное совпадение (без каких-либо нормализаций раскладки/букв)
+    if user_normalized == correct_normalized:
+        return {
+            'type': 'exact',
+            'correct_answer': correct_word,
+            'user_answer': user_word,
+            'normalized_kinds': []
+        }
+    
+    # Проверяем, содержит ли эталон кириллицу (для предотвращения ложной конвертации английского текста в кириллицу)
+    is_cyrillic_target = any('а' <= c.lower() <= 'я' or c.lower() in ('ё', 'і', 'ї', 'є', 'ў') for c in correct_word)
+    should_normalize_layout = bool(config.get('normalize_layout', True) and is_cyrillic_target)
+    should_normalize_yo = bool(config.get('normalize_yo', True) and is_cyrillic_target)
+    should_normalize_y_i = bool(config.get('normalize_y_i', True) and is_cyrillic_target)
+
     user_normalized_noyo = normalize_text(
         user_normalized,
-        normalize_yo=config.get('normalize_yo', True),
-        normalize_layout=config.get('normalize_layout', True),
-        normalize_y_i=config.get('normalize_y_i', True)
+        normalize_yo=should_normalize_yo,
+        normalize_layout=should_normalize_layout,
+        normalize_y_i=should_normalize_y_i
     )
     correct_normalized_noyo = normalize_text(
         correct_normalized,
-        normalize_yo=config.get('normalize_yo', True),
-        normalize_layout=config.get('normalize_layout', True),
-        normalize_y_i=config.get('normalize_y_i', True)
+        normalize_yo=should_normalize_yo,
+        normalize_layout=should_normalize_layout,
+        normalize_y_i=should_normalize_y_i
     )
     
     # Точное совпадение (после нормализации).
-    # Важно: даже если type='exact', могли сработать нормализации (раскладка/ё/ы-і),
-    # это полезно подсвечивать в UI.
+    # Важно: фиксируем, какие именно нормализации реально помогли сопоставить строки
     if user_normalized_noyo == correct_normalized_noyo:
+        kinds = []
         try:
-            kinds = []
-            if config.get('normalize_layout', True):
-                if normalize_keyboard_layout(user_word) != user_word:
-                    kinds.append('layout')
-            if config.get('normalize_y_i', True):
-                if globals()['normalize_y_i'](user_word) != user_word:
-                    kinds.append('y_i')
-            if config.get('normalize_yo', True):
-                if normalize_text_with_yo(user_word) != user_word:
-                    kinds.append('yo')
+            if should_normalize_layout and normalize_keyboard_layout(user_normalized) == correct_normalized:
+                kinds.append('layout')
+            if should_normalize_y_i and globals()['normalize_y_i'](user_normalized) == globals()['normalize_y_i'](correct_normalized):
+                kinds.append('y_i')
+            if should_normalize_yo and normalize_text_with_yo(user_normalized) == normalize_text_with_yo(correct_normalized):
+                kinds.append('yo')
         except Exception:
             kinds = []
 
@@ -599,17 +610,26 @@ def compare_words_with_tolerance(user_word: str, correct_word: str,
     user_normalized = user_word.lower().strip()
     correct_normalized = correct_word.lower().strip()
     
+    # Быстрое точное совпадение
+    if user_normalized == correct_normalized:
+        return True
+
+    is_cyrillic_target = any('а' <= c.lower() <= 'я' or c.lower() in ('ё', 'і', 'ї', 'є', 'ў') for c in correct_word)
+    should_normalize_layout = bool(config.get('normalize_layout', True) and is_cyrillic_target)
+    should_normalize_yo = bool(config.get('normalize_yo', True) and is_cyrillic_target)
+    should_normalize_y_i = bool(config.get('normalize_y_i', True) and is_cyrillic_target)
+
     user_normalized = normalize_text(
         user_normalized,
-        normalize_yo=config.get('normalize_yo', True),
-        normalize_layout=config.get('normalize_layout', True),
-        normalize_y_i=config.get('normalize_y_i', True)
+        normalize_yo=should_normalize_yo,
+        normalize_layout=should_normalize_layout,
+        normalize_y_i=should_normalize_y_i
     )
     correct_normalized = normalize_text(
         correct_normalized,
-        normalize_yo=config.get('normalize_yo', True),
-        normalize_layout=config.get('normalize_layout', True),
-        normalize_y_i=config.get('normalize_y_i', True)
+        normalize_yo=should_normalize_yo,
+        normalize_layout=should_normalize_layout,
+        normalize_y_i=should_normalize_y_i
     )
     
     # Точное совпадение
