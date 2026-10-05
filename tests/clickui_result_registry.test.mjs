@@ -778,6 +778,97 @@ describe("ClickUI Result Registry (Stage 4)", () => {
     const modalButtons = Array.from(modalControls?.querySelectorAll("button") || []);
     expect(modalButtons.length).toBe(3); // Zoom out, Scale badge/reset, Zoom in
   });
+
+  it("renders typo status pill, pedagogical diff, gentle hover opacity, and inset focus ring", () => {
+    const task = createL2ClickTaskFixture();
+    const container = document.getElementById("app");
+
+    dom.window.ClickUI.render(container, task, { runtimeMode: true });
+
+    dom.window.ClickUI.restoreInput({
+      labels_clicks: ["Правое легкае", "Трахея"],
+      clicks: [
+        { x: 20, y: 20, scale_factor: 1.0, offset_x: 0.0, offset_y: 0.0 },
+        { x: 45, y: 20, scale_factor: 1.0, offset_x: 0.0, offset_y: 0.0 },
+      ],
+      action_history: [{ kind: "click" }, { kind: "click" }],
+    });
+
+    dom.window.ClickUI.applyCheckFeedback({
+      success: true,
+      score: 100,
+      details: {
+        level: 2,
+        found_targets: [0, 1],
+        total_targets: 2,
+        click_results: [
+          { target_index: 0, click_success: true, matched_click_idx: 0 },
+          { target_index: 1, click_success: true, matched_click_idx: 1 },
+        ],
+        labels: {
+          success: true,
+          score: 100,
+          matched_labels: [
+            [0, "Правое легкае", "Правое легкое"],
+            [1, "Трахея", "Трахея"],
+          ],
+          unmatched_labels: [],
+          tolerance_matches: [
+            {
+              index: 0,
+              type: "typo",
+              user_answer: "Правое легкае",
+              correct_answer: "Правое легкое",
+              target_index: 0,
+              matched_click_idx: 0,
+            },
+          ],
+        },
+      },
+    });
+
+    // 1. Result Registry row for target 0 should have typo pill
+    const targetRows = Array.from(container.querySelectorAll('[data-clickui="target-row"]'));
+    expect(targetRows.length).toBe(2);
+
+    const typoRow = targetRows.find((r) => r.getAttribute("data-target-index") === "0");
+    expect(typoRow).toBeTruthy();
+
+    const pill = typoRow.querySelector('[data-clickui="status-pill"]');
+    expect(pill?.textContent).toContain("Опечатка");
+    expect(pill?.querySelector(".material-symbols-outlined")?.textContent).toBe("spellcheck");
+
+    // 2. Typo diff box
+    expect(typoRow.textContent).toContain("Введено:");
+    expect(typoRow.textContent).toContain("«Правое легкае»");
+    expect(typoRow.textContent).toContain("Ожидалось:");
+    expect(typoRow.textContent).toContain("«Правое легкое»");
+
+    // 3. Bottom panel USER LABELS should show typo badge with canonical hint
+    const userLabelsBlock = container.querySelector('[data-clickui="review-user-labels"]');
+    expect(userLabelsBlock).toBeTruthy();
+    const userRows = Array.from(userLabelsBlock.querySelectorAll("[data-target-index]"));
+    const userTypoRow = userRows.find((r) => r.getAttribute("data-target-index") === "0");
+    expect(userTypoRow).toBeTruthy();
+    expect(userTypoRow.textContent).toContain("Опечатка");
+    expect(userTypoRow.querySelector("span[title*='Правое легкое']")).toBeTruthy();
+
+    // 4. Hovering on target row activates inspector with typo state
+    typoRow.dispatchEvent(new dom.window.MouseEvent("mouseenter", { bubbles: true }));
+    const inspector = container.querySelector(".clickui-result-inspector");
+    expect(inspector?.textContent).toContain("Опечатка");
+    expect(inspector?.textContent).toContain("Правое легкае");
+    expect(inspector?.textContent).toContain("Правое легкое");
+
+    // 5. Unhovered rows maintain gentle opacity (0.55), not collapsed to 0.08
+    const otherRow = userRows.find((r) => r.getAttribute("data-target-index") === "1");
+    if (otherRow) {
+      expect(otherRow.style.opacity).toBe("0.55");
+    }
+
+    // 6. Active row has inset box-shadow to avoid clipping
+    expect(userTypoRow.style.boxShadow).toContain("inset");
+  });
 });
 
 

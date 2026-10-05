@@ -1130,6 +1130,15 @@ class TaskEvaluatorService:
                 found_user_labels = user_labels[:len(found_targets_list)] if len(user_labels) >= len(found_targets_list) else user_labels
             
             labels_result = self._evaluate_labels(found_user_labels, found_correct_labels)
+            if isinstance(labels_result, dict) and 'tolerance_matches' in labels_result:
+                for match in labels_result.get('tolerance_matches', []):
+                    if isinstance(match, dict) and 'index' in match:
+                        idx_in_found = match['index']
+                        if isinstance(idx_in_found, int) and 0 <= idx_in_found < len(found_targets_list):
+                            t_idx = found_targets_list[idx_in_found]
+                            match['target_index'] = t_idx
+                            if labels_clicks:
+                                match['matched_click_idx'] = matched_click_idx_by_target.get(t_idx)
             
             # НОВОЕ: Комбинированный score
             # 70% за нахождение целей, 30% за правильные названия
@@ -2041,7 +2050,6 @@ class TaskEvaluatorService:
         matched = []
         unmatched = []
         tolerance_matches = []
-        tolerance_matches = []
 
         max_len = max(len(user_labels), len(correct_labels))
         for i in range(max_len):
@@ -2523,6 +2531,13 @@ class TaskEvaluatorService:
                 )
 
             labels_result = self._evaluate_labels(found_user_labels, found_correct_labels)
+            if isinstance(labels_result, dict) and 'tolerance_matches' in labels_result:
+                for match in labels_result.get('tolerance_matches', []):
+                    if isinstance(match, dict) and 'index' in match:
+                        idx_in_found = match['index']
+                        if isinstance(idx_in_found, int) and 0 <= idx_in_found < len(found_targets_list):
+                            t_idx = found_targets_list[idx_in_found]
+                            match['target_index'] = t_idx
 
         combined_success = all_polygons_success and all_lines_success and (labels_result.get('success') if requires_labels else True)
 

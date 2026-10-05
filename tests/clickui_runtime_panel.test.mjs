@@ -1268,7 +1268,7 @@ describe("ClickUI runtime targets panel", () => {
     expect(refLabels?.textContent || "").toContain("Линия ориентира");
   });
 
-  it("isolates hovered review target/label and fades others to 0.08 opacity", () => {
+  it("isolates hovered review target/label and fades other SVG elements to 0.08 opacity", () => {
     const task = createDrawTaskFixture([
       {
         label: "Контур мишени",
@@ -1337,7 +1337,8 @@ describe("ClickUI runtime targets panel", () => {
     target0Elements[0].dispatchEvent(eventEnter);
 
     target1Elements.forEach(el => {
-      expect(el.style.opacity).toBe("0.08");
+      const isSvg = el instanceof dom.window.SVGElement || !!(el.closest && el.closest("svg"));
+      expect(el.style.opacity).toBe(isSvg ? "0.08" : "0.55");
     });
     target0Elements.forEach(el => {
       expect(el.style.opacity).toBe("1");
@@ -1397,7 +1398,7 @@ describe("ClickUI runtime targets panel", () => {
     expect(t0UserRow.style.opacity).toBe("1");
     expect(t0RefRow.style.opacity).toBe("1");
     if (t1InUser) expect(t1InUser.style.opacity).toBe("0.08");
-    if (t1RefRow) expect(t1RefRow.style.opacity).toBe("0.08");
+    if (t1RefRow) expect(t1RefRow.style.opacity).toBe("0.55");
   });
 
   it("renders default prompt translated to English when i18n locale is en", () => {

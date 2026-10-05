@@ -2998,11 +2998,11 @@
       )
     );
 
-    const list = _createEl("div", "mt-2 flex flex-col gap-2 max-h-56 overflow-y-auto pr-1 clickui-registry-scroll", "");
+    const list = _createEl("div", "mt-2 flex flex-col gap-2 max-h-56 overflow-y-auto p-1.5 scroll-py-1 pr-2 clickui-registry-scroll", "");
     safeItems.forEach((item, idx) => {
       const row = _createEl(
         "div",
-        "rounded-xl border border-border-subtle bg-surface-2 px-3 py-2 text-sm text-text-main dark:border-border-subtle dark:bg-surface-2 dark:text-text-on-dark",
+        "rounded-xl border border-border-subtle bg-surface-2 px-3 py-2 text-sm text-text-main dark:border-border-subtle dark:bg-surface-2 dark:text-text-on-dark flex items-center justify-between gap-2 min-w-0 transition-colors",
         ""
       );
       if (item && item.targetIndex != null) {
@@ -3019,7 +3019,46 @@
             : item && item.kind === "click"
               ? wt("clickui.shape_area_n", "Область {n}").replace("{n}", idx + 1)
               : wt("clickui.shape_polygon_n", "Контур {n}").replace("{n}", idx + 1);
-      row.textContent = `${item && item.title ? item.title : fallbackTitle}: ${_normalizeReviewLabelText(item && item.label)}`;
+
+      const labelStatus = item && item.targetIndex != null ? _getLabelStatusForTarget(item.targetIndex) : null;
+      const hasTypo = !!(labelStatus && labelStatus.hasTypo);
+      const isLabelMismatch = labelStatus && labelStatus.status === "unmatched";
+      const isMatched = labelStatus && labelStatus.status === "matched";
+
+      const labelLeft = _createEl("div", "min-w-0 flex-1 truncate", "");
+      const titlePrefix = item && item.title ? item.title : fallbackTitle;
+      const textVal = _normalizeReviewLabelText(item && item.label);
+      labelLeft.textContent = `${titlePrefix}: ${textVal}`;
+      row.appendChild(labelLeft);
+
+      if (hasTypo) {
+        const badge = _createEl(
+          "span",
+          "shrink-0 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30",
+          ""
+        );
+        badge.title = wt("clickui.typo_canonical_hint", "Эталон: {canonical}").replace("{canonical}", labelStatus.canonicalLabel || labelStatus.correctLabel || "");
+        const bIcon = _createEl("span", "material-symbols-outlined text-[13px] leading-none select-none", "spellcheck");
+        const bText = _createEl("span", "", wt("clickui.badge_typo", "Опечатка"));
+        badge.appendChild(bIcon);
+        badge.appendChild(bText);
+        row.appendChild(badge);
+      } else if (isLabelMismatch) {
+        const badge = _createEl(
+          "span",
+          "shrink-0 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30",
+          ""
+        );
+        const bIcon = _createEl("span", "material-symbols-outlined text-[13px] leading-none select-none", "close");
+        const bText = _createEl("span", "", wt("clickui.badge_label_err", "Ошибка названия"));
+        badge.appendChild(bIcon);
+        badge.appendChild(bText);
+        row.appendChild(badge);
+      } else if (isMatched) {
+        const check = _createEl("span", "shrink-0 material-symbols-outlined text-[14px] text-emerald-500 leading-none select-none", "check");
+        row.appendChild(check);
+      }
+
       list.appendChild(row);
     });
     block.appendChild(list);
@@ -3394,13 +3433,13 @@
           ringColor = _getThemeColor("--color-accent", "#d97706");
         }
         el.style.opacity = "1";
-        el.style.boxShadow = `0 0 0 2px ${ringColor}, 0 2px 10px ${_withAlpha(ringColor, 0.22)}`;
+        el.style.boxShadow = `inset 0 0 0 2px ${ringColor}, 0 1px 3px rgba(0,0,0,0.08)`;
         el.style.borderColor = ringColor;
         if (!inReview) {
           el.style.transform = "translateX(2px)";
         }
       } else {
-        el.style.opacity = inReview ? "0.08" : "0.55";
+        el.style.opacity = "0.55";
         el.style.boxShadow = "";
         el.style.borderColor = "";
         el.style.transform = "";
@@ -4435,7 +4474,15 @@
       let pillIcon = "";
       let pillClass = "";
 
-      if (!hasError) {
+      const hasTypo = !hasError && !!(labelStatus && labelStatus.hasTypo);
+
+      if (hasTypo) {
+        item.classList.add("ring-2", "ring-amber-500/30", "bg-amber-500/10");
+        badge.classList.add("border-amber-500/40", "bg-amber-500/15", "text-amber-800", "dark:text-amber-200");
+        pillClass = "inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-300";
+        pillText = wt("clickui.badge_typo", "Опечатка");
+        pillIcon = "spellcheck";
+      } else if (!hasError) {
         item.classList.add("ring-2", "ring-success-light", "bg-success-lighter");
         badge.classList.add("border-success-light", "bg-success-lighter", "text-success-text");
         pillClass = "inline-flex items-center gap-1 rounded-full border border-success-light bg-success-lighter px-2 py-0.5 text-[11px] font-semibold text-success-text";
@@ -4534,7 +4581,44 @@
             hitClickNum = clickRes.matched_click_idx + 1;
           }
         }
-        if (hitClickNum != null) {
+        if (hasTypo) {
+          const typoBox = _createEl("div", "mt-0.5 pl-10 flex flex-col gap-0.5 text-[12px] border-t border-amber-500/20 pt-1.5", "");
+          if (hitClickNum != null) {
+            const hitLine = _createEl(
+              "div",
+              "text-text-secondary font-medium",
+              wt("clickui.found_by_click", "Засчитано кликом №{n}").replace("{n}", hitClickNum)
+            );
+            typoBox.appendChild(hitLine);
+          }
+          const userEntered = _createEl(
+            "div",
+            "text-text-secondary truncate",
+            `${wt("clickui.user_entered", "Введено:")} `
+          );
+          const userSpan = _createEl(
+            "span",
+            "font-medium text-amber-600 dark:text-amber-400 underline decoration-wavy decoration-amber-500/60",
+            `«${_normalizeReviewLabelText(labelStatus.userLabel)}»`
+          );
+          userEntered.appendChild(userSpan);
+
+          const expected = _createEl(
+            "div",
+            "text-text-secondary truncate",
+            `${wt("clickui.expected", "Ожидалось:")} `
+          );
+          const expectedSpan = _createEl(
+            "span",
+            "font-semibold text-emerald-600 dark:text-emerald-400",
+            `«${_normalizeReviewLabelText(labelStatus.canonicalLabel || labelStatus.correctLabel || target.label)}»`
+          );
+          expected.appendChild(expectedSpan);
+
+          typoBox.appendChild(userEntered);
+          typoBox.appendChild(expected);
+          item.appendChild(typoBox);
+        } else if (hitClickNum != null) {
           const hitBox = _createEl(
             "div",
             "mt-0.5 pl-10 text-[12px] text-text-secondary border-t border-border-subtle pt-1",
@@ -5173,6 +5257,7 @@
             inspectorDesc.textContent = wt("clickui.duplicate_click_detail", "Цель {ref} уже была отмечена другим кликом.").replace("{ref}", targetLabel || "");
             inspectorChip.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold tracking-wide bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">${wt("clickui.badge_duplicate", "Повтор")}</span>`;
           } else if (interpretation && interpretation.success) {
+            const hasTypo = !!(labelStatus && labelStatus.hasTypo);
             if (isLabelMismatch) {
               const userLabel = _normalizeReviewLabelText(action.label || (state.labelsClicks && state.labelsClicks[action.index]));
               const expectedLabel = labelStatus.correctLabel || targetLabel;
@@ -5184,6 +5269,19 @@
                 .replace("{user}", userLabel)
                 .replace("{correct}", expectedLabel);
               inspectorChip.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold tracking-wide bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">${wt("clickui.badge_label_err", "Ошибка названия")}</span>`;
+            } else if (hasTypo) {
+              const userLabel = _normalizeReviewLabelText(labelStatus.userLabel || action.label || (state.labelsClicks && state.labelsClicks[action.index]));
+              const expectedLabel = labelStatus.canonicalLabel || labelStatus.correctLabel || targetLabel;
+              inspectorBar.className = "clickui-result-inspector min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 dark:bg-amber-500/15 shadow-xs select-none transition-all duration-150 ease-out";
+              inspectorIcon.textContent = "spellcheck";
+              inspectorIcon.className = "material-symbols-outlined text-[20px] text-amber-500 shrink-0 transition-colors";
+              inspectorTitle.textContent = wt("clickui.inspector_click_typo_title", "Клик {n}: Область «{label}» · Опечатка в названии")
+                .replace("{n}", action.index + 1)
+                .replace("{label}", targetLabel || "");
+              inspectorDesc.textContent = wt("clickui.inspector_click_typo_desc", "Введено: «{user}», правильное написание: «{correct}»")
+                .replace("{user}", userLabel)
+                .replace("{correct}", expectedLabel);
+              inspectorChip.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold tracking-wide bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">${wt("clickui.badge_typo", "Опечатка")}</span>`;
             } else {
               inspectorBar.className = "clickui-result-inspector min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-500/15 shadow-xs select-none transition-all duration-150 ease-out";
               inspectorIcon.textContent = "check_circle";
@@ -5253,17 +5351,31 @@
             .replace("{thr}", contourRes.threshold || 75);
           inspectorChip.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold tracking-wide bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">${contourRes.coverage}%</span>`;
         } else if (isFound) {
-          inspectorBar.className = "clickui-result-inspector min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-500/15 shadow-xs select-none transition-all duration-150 ease-out";
-          inspectorIcon.textContent = "check_circle";
-          inspectorIcon.className = "material-symbols-outlined text-[20px] text-emerald-500 shrink-0 transition-colors";
-          inspectorTitle.textContent = wt("clickui.inspector_ref_found_title", "Область «{label}» · Найдена").replace("{label}", targetLabel || "");
-          const clickRes = clickResults.find((r) => r.target_index === targetIndex && r.click_success);
-          if (clickRes && clickRes.matched_click_idx != null) {
-            inspectorDesc.textContent = wt("clickui.inspector_ref_found_by_click", "Засчитано вашим кликом {n}").replace("{n}", clickRes.matched_click_idx + 1);
+          const hasTypo = !!(labelStatus && labelStatus.hasTypo);
+          if (hasTypo) {
+            const userLabel = _normalizeReviewLabelText(labelStatus.userLabel);
+            const expectedLabel = labelStatus.canonicalLabel || labelStatus.correctLabel || targetLabel;
+            inspectorBar.className = "clickui-result-inspector min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 dark:bg-amber-500/15 shadow-xs select-none transition-all duration-150 ease-out";
+            inspectorIcon.textContent = "spellcheck";
+            inspectorIcon.className = "material-symbols-outlined text-[20px] text-amber-500 shrink-0 transition-colors";
+            inspectorTitle.textContent = wt("clickui.inspector_ref_typo_title", "Область «{label}» · Найдена с опечаткой").replace("{label}", targetLabel || "");
+            inspectorDesc.textContent = wt("clickui.inspector_click_typo_desc", "Введено: «{user}», правильное написание: «{correct}»")
+              .replace("{user}", userLabel)
+              .replace("{correct}", expectedLabel);
+            inspectorChip.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold tracking-wide bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">${wt("clickui.badge_typo", "Опечатка")}</span>`;
           } else {
-            inspectorDesc.textContent = wt("clickui.inspector_ref_found_desc", "Целевая анатомическая область обнаружена");
+            inspectorBar.className = "clickui-result-inspector min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-500/15 shadow-xs select-none transition-all duration-150 ease-out";
+            inspectorIcon.textContent = "check_circle";
+            inspectorIcon.className = "material-symbols-outlined text-[20px] text-emerald-500 shrink-0 transition-colors";
+            inspectorTitle.textContent = wt("clickui.inspector_ref_found_title", "Область «{label}» · Найдена").replace("{label}", targetLabel || "");
+            const clickRes = clickResults.find((r) => r.target_index === targetIndex && r.click_success);
+            if (clickRes && clickRes.matched_click_idx != null) {
+              inspectorDesc.textContent = wt("clickui.inspector_ref_found_by_click", "Засчитано вашим кликом {n}").replace("{n}", clickRes.matched_click_idx + 1);
+            } else {
+              inspectorDesc.textContent = wt("clickui.inspector_ref_found_desc", "Целевая анатомическая область обнаружена");
+            }
+            inspectorChip.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold tracking-wide bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">${wt("clickui.badge_passed", "Зачтено")}</span>`;
           }
-          inspectorChip.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold tracking-wide bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">${wt("clickui.badge_passed", "Зачтено")}</span>`;
         } else {
           inspectorBar.className = "clickui-result-inspector min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 dark:bg-rose-500/15 shadow-xs select-none transition-all duration-150 ease-out";
           inspectorIcon.textContent = "cancel";
@@ -9489,6 +9601,25 @@
         };
         matched.forEach((t) => recordTuple(t, "matched"));
         unmatched.forEach((t) => recordTuple(t, "unmatched"));
+        const toleranceMatches = Array.isArray(labelsBlock.tolerance_matches) ? labelsBlock.tolerance_matches : [];
+        toleranceMatches.forEach((tm) => {
+          if (!tm || typeof tm !== "object") return;
+          const pos = tm.index;
+          let targetIdx = tm.target_index != null ? tm.target_index : null;
+          if (targetIdx == null && Number.isInteger(pos) && pos >= 0 && pos < foundTargetsList.length) {
+            targetIdx = foundTargetsList[pos];
+          }
+          if (targetIdx != null && byTarget.has(targetIdx)) {
+            const entry = byTarget.get(targetIdx);
+            entry.hasTypo = true;
+            entry.toleranceType = tm.type || "typo";
+            entry.normalizedKinds = Array.isArray(tm.normalized_kinds) ? tm.normalized_kinds : [];
+            entry.canonicalLabel = String(tm.correct_answer || entry.correctLabel || "").trim();
+            if (tm.user_answer) {
+              entry.userLabel = String(tm.user_answer).trim();
+            }
+          }
+        });
         if (byTarget.size) {
           state.labelEval = { byTarget, success: labelsBlock.success === true };
         }

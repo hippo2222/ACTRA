@@ -45,7 +45,7 @@
 
     /* Button interactions */
     .s1-btn {
-      transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
     }
 
     .s1-btn:hover {
@@ -55,6 +55,20 @@
 
     .s1-btn:active {
       transform: scale(0.97);
+    }
+
+    /* Fixed-header toolbar buttons: lock geometry to prevent hover jumps and boundary clipping */
+    .s1-toolbar .s1-btn {
+      transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .s1-toolbar .s1-btn:hover {
+      transform: none;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+
+    .s1-toolbar .s1-btn:active {
+      transform: scale(0.98);
     }
 
     .s1-shell-row {
@@ -83,7 +97,7 @@
       flex: 0 1 clamp(320px, 38vw, 560px);
       align-items: center;
       gap: 0.75rem;
-      overflow: hidden;
+      min-width: 0;
     }
 
     .s1-toolbar-title {
@@ -476,7 +490,7 @@
             class="s1-toolbar task-chip mb-3 flex items-center rounded-xl border border-solid border-border-strong bg-surface-1 px-4 py-2 shadow-sm sm:px-5 lg:px-6">
             <div class="s1-toolbar-main flex items-center text-text-main">
               <button id="back-to-complexes-btn"
-                class="flex shrink-0 whitespace-nowrap h-9 min-w-[122px] max-w-[480px] cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-lg border border-border-strong bg-surface-2 hover:bg-surface-3 active:scale-[0.98] px-4 text-sm font-semibold leading-normal tracking-[0.015em] text-text-main transition-all disabled:cursor-default disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 s1-btn"
+                class="flex shrink-0 whitespace-nowrap h-9 min-w-[122px] max-w-[480px] cursor-pointer items-center justify-center gap-2 rounded-lg border border-border-strong bg-surface-2 hover:bg-surface-3 px-4 text-sm font-semibold leading-normal tracking-[0.015em] text-text-main transition-all disabled:cursor-default disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 s1-btn"
                 type="button">
                 <span aria-hidden="true">←</span>
                 <span data-i18n="s1.back_to_list">К списку</span>
