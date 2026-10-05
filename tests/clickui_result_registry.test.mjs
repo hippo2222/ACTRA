@@ -883,6 +883,66 @@ describe("ClickUI Result Registry (Stage 4)", () => {
     // 6. Active row has inset box-shadow to avoid clipping
     expect(userTypoRow.style.boxShadow).toContain("inset");
   });
+
+  it("eliminates inspector jitter via grace-period debounce and sticky hover retention", async () => {
+    const task = createL1ClickTaskFixture();
+    const container = document.getElementById("app");
+
+    dom.window.ClickUI.render(container, task, { runtimeMode: true });
+
+    dom.window.ClickUI.applyCheckFeedback({
+      success: true,
+      score: 100,
+      details: {
+        found_targets: [0, 1],
+      },
+    });
+
+    const inspector = container.querySelector('[data-clickui="result-inspector"]');
+    const rows = Array.from(container.querySelectorAll('[data-clickui="target-row"]'));
+    expect(rows.length).toBeGreaterThanOrEqual(2);
+
+    // Initial state: idle prompt
+    expect(inspector?.textContent).toContain("Задание успешно выполнено");
+
+    // Enable custom delay for testing debounce behavior
+    dom.window._CLICKUI_FORCE_INSPECTOR_DELAY = 100;
+
+    try {
+      // 1. Instant update on mouseenter (0ms)
+      rows[0].dispatchEvent(new dom.window.MouseEvent("mouseenter", { bubbles: true }));
+      expect(inspector?.textContent).toContain("Правое легкое");
+      expect(inspector?.textContent).toContain("Найдена");
+
+      // 2. Mouse leave row 0 into gap: inspector MUST retain row 0 details during grace period (no flash)
+      rows[0].dispatchEvent(new dom.window.MouseEvent("mouseleave", { bubbles: true }));
+      expect(inspector?.textContent).toContain("Правое легкое");
+      expect(inspector?.textContent).not.toContain("Задание успешно выполнено");
+
+      // 3. Move into row 1 before grace period expires (at 30ms): transitions directly to row 1
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      rows[1].dispatchEvent(new dom.window.MouseEvent("mouseenter", { bubbles: true }));
+      expect(inspector?.textContent).toContain("Трахея");
+      expect(inspector?.textContent).not.toContain("Правое легкое");
+      expect(inspector?.textContent).not.toContain("Задание успешно выполнено");
+
+      // 4. Mouse leave row 1: remains sticky during grace period
+      rows[1].dispatchEvent(new dom.window.MouseEvent("mouseleave", { bubbles: true }));
+      expect(inspector?.textContent).toContain("Трахея");
+
+      // 5. User moves cursor into inspector bar: preserves content and prevents reset
+      inspector?.dispatchEvent(new dom.window.MouseEvent("mouseenter", { bubbles: true }));
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      expect(inspector?.textContent).toContain("Трахея");
+
+      // 6. User exits inspector bar and leaves: after delay expires, smoothly returns to idle prompt
+      inspector?.dispatchEvent(new dom.window.MouseEvent("mouseleave", { bubbles: true }));
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      expect(inspector?.textContent).toContain("Задание успешно выполнено");
+    } finally {
+      delete dom.window._CLICKUI_FORCE_INSPECTOR_DELAY;
+    }
+  });
 });
 
 

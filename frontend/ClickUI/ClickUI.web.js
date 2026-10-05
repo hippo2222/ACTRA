@@ -3689,6 +3689,10 @@
       state.resultWorkspaceResizeObserver.disconnect();
       state.resultWorkspaceResizeObserver = null;
     }
+    if (state._inspectorResetTimer) {
+      clearTimeout(state._inspectorResetTimer);
+      state._inspectorResetTimer = null;
+    }
     state.resultInspectorUpdater = null;
     if (state.sideColumnEl) {
       state.sideColumnEl.style.overflow = "hidden";
@@ -4274,7 +4278,7 @@
     if (refs.refTitle) refs.refTitle.textContent = wt("clickui.reference", "Эталон");
 
     if (typeof state.resultInspectorUpdater === "function") {
-      state.resultInspectorUpdater(state.globalHoveredInfo);
+      state.resultInspectorUpdater(state.globalHoveredInfo, true);
     }
   }
 
@@ -5053,7 +5057,7 @@
     // ==========================================
     const inspectorBar = _createEl(
       "div",
-      "clickui-result-inspector flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-border-subtle bg-surface-2/60 dark:bg-surface-2/30 shadow-xs select-none transition-colors",
+      "clickui-result-inspector flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-border-subtle bg-surface-2/60 dark:bg-surface-2/30 shadow-xs select-none transition-all duration-200 ease-out",
       ""
     );
     inspectorBar.classList.add("clickui-result-inspector");
@@ -5280,9 +5284,59 @@
     viewportToolbar.appendChild(rightActions);
     section.appendChild(viewportToolbar);
 
-    function updateInspector(hoverInfo) {
+    let inspectorResetTimer = null;
+    let isMouseOverInspector = false;
+
+    inspectorBar.addEventListener("mouseenter", () => {
+      isMouseOverInspector = true;
+      if (inspectorResetTimer) {
+        clearTimeout(inspectorResetTimer);
+        inspectorResetTimer = null;
+        state._inspectorResetTimer = null;
+      }
+    });
+
+    inspectorBar.addEventListener("mouseleave", () => {
+      isMouseOverInspector = false;
+      if (!state.globalHoveredInfo) {
+        scheduleInspectorReset();
+      }
+    });
+
+    function getInspectorDelay() {
+      if (typeof window !== "undefined" && typeof window._CLICKUI_FORCE_INSPECTOR_DELAY === "number") {
+        return window._CLICKUI_FORCE_INSPECTOR_DELAY;
+      }
+      const isTestEnv =
+        (typeof navigator !== "undefined" && /jsdom/i.test(navigator.userAgent)) ||
+        (typeof process !== "undefined" && !!process?.env?.VITEST);
+      return isTestEnv ? 0 : 220;
+    }
+
+    function scheduleInspectorReset() {
+      if (inspectorResetTimer) {
+        clearTimeout(inspectorResetTimer);
+        inspectorResetTimer = null;
+        state._inspectorResetTimer = null;
+      }
+      const delay = getInspectorDelay();
+      if (delay <= 0) {
+        renderInspectorContent(null);
+        return;
+      }
+      inspectorResetTimer = setTimeout(() => {
+        inspectorResetTimer = null;
+        state._inspectorResetTimer = null;
+        if (!isMouseOverInspector && !state.globalHoveredInfo) {
+          renderInspectorContent(null);
+        }
+      }, delay);
+      state._inspectorResetTimer = inspectorResetTimer;
+    }
+
+    function renderInspectorContent(hoverInfo) {
       if (!hoverInfo) {
-        inspectorBar.className = "clickui-result-inspector min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-border-subtle bg-surface-2/60 dark:bg-surface-2/30 shadow-xs select-none transition-all duration-150 ease-out";
+        inspectorBar.className = "clickui-result-inspector min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-border-subtle bg-surface-2/60 dark:bg-surface-2/30 shadow-xs select-none transition-all duration-200 ease-out";
         inspectorIcon.textContent = success ? "check_circle" : "info";
         inspectorIcon.className = "material-symbols-outlined text-[20px] shrink-0 transition-colors " + (success ? "text-emerald-500" : "text-text-muted");
         inspectorTitle.textContent = success
@@ -5316,7 +5370,7 @@
           }
 
           if (interpretation && interpretation.duplicate) {
-            inspectorBar.className = "clickui-result-inspector min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 dark:bg-amber-500/15 shadow-xs select-none transition-all duration-150 ease-out";
+            inspectorBar.className = "clickui-result-inspector min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 dark:bg-amber-500/15 shadow-xs select-none transition-all duration-200 ease-out";
             inspectorIcon.textContent = "warning";
             inspectorIcon.className = "material-symbols-outlined text-[20px] text-warning shrink-0 transition-colors";
             inspectorTitle.textContent = wt("clickui.inspector_label_err_title", "Клик {n}: Место найдено, ошибка в названии").replace("{n}", action.index + 1);
@@ -5327,7 +5381,7 @@
             if (isLabelMismatch) {
               const userLabel = _normalizeReviewLabelText(action.label || (state.labelsClicks && state.labelsClicks[action.index]));
               const expectedLabel = labelStatus.correctLabel || targetLabel;
-              inspectorBar.className = "clickui-result-inspector min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 dark:bg-amber-500/15 shadow-xs select-none transition-all duration-150 ease-out";
+              inspectorBar.className = "clickui-result-inspector min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 dark:bg-amber-500/15 shadow-xs select-none transition-all duration-200 ease-out";
               inspectorIcon.textContent = "edit_note";
               inspectorIcon.className = "material-symbols-outlined text-[20px] text-amber-500 shrink-0 transition-colors";
               inspectorTitle.textContent = wt("clickui.inspector_label_err_title", "Клик {n}: Место найдено, ошибка в названии").replace("{n}", action.index + 1);
@@ -5338,7 +5392,7 @@
             } else if (hasTypo) {
               const userLabel = _normalizeReviewLabelText(labelStatus.userLabel || action.label || (state.labelsClicks && state.labelsClicks[action.index]));
               const expectedLabel = labelStatus.canonicalLabel || labelStatus.correctLabel || targetLabel;
-              inspectorBar.className = "clickui-result-inspector min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 dark:bg-amber-500/15 shadow-xs select-none transition-all duration-150 ease-out";
+              inspectorBar.className = "clickui-result-inspector min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 dark:bg-amber-500/15 shadow-xs select-none transition-all duration-200 ease-out";
               inspectorIcon.textContent = "spellcheck";
               inspectorIcon.className = "material-symbols-outlined text-[20px] text-amber-500 shrink-0 transition-colors";
               inspectorTitle.textContent = wt("clickui.inspector_click_typo_title", "Клик {n}: Область «{label}» · Опечатка в названии")
@@ -5349,7 +5403,7 @@
                 .replace("{correct}", expectedLabel);
               inspectorChip.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold tracking-wide bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">${wt("clickui.badge_typo", "Опечатка")}</span>`;
             } else {
-              inspectorBar.className = "clickui-result-inspector min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-500/15 shadow-xs select-none transition-all duration-150 ease-out";
+              inspectorBar.className = "clickui-result-inspector min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-500/15 shadow-xs select-none transition-all duration-200 ease-out";
               inspectorIcon.textContent = "check_circle";
               inspectorIcon.className = "material-symbols-outlined text-[20px] text-emerald-500 shrink-0 transition-colors";
               inspectorTitle.textContent = wt("clickui.inspector_click_hit_title", "Клик {n}: Точное попадание в область «{label}»")
@@ -5362,8 +5416,8 @@
             const thr = _formatPercentValue(interpretation && interpretation.threshold);
             const isContourSuccess = interpretation && interpretation.success === true;
             inspectorBar.className = isContourSuccess
-              ? "min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-500/15 shadow-xs select-none transition-all duration-150 ease-out"
-              : "min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 dark:bg-rose-500/15 shadow-xs select-none transition-all duration-150 ease-out";
+              ? "clickui-result-inspector min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-500/15 shadow-xs select-none transition-all duration-200 ease-out"
+              : "clickui-result-inspector min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 dark:bg-rose-500/15 shadow-xs select-none transition-all duration-200 ease-out";
             inspectorIcon.textContent = isContourSuccess ? "check_circle" : "cancel";
             inspectorIcon.className = "material-symbols-outlined text-[20px] " + (isContourSuccess ? "text-emerald-500" : "text-rose-500") + " shrink-0 transition-colors";
             const covVal = String(cov || "0%").replace("%", "");
@@ -5372,7 +5426,7 @@
               .replace("{cov}", covVal)
               .replace("{thr}", thrVal);
           } else {
-            inspectorBar.className = "clickui-result-inspector min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 dark:bg-rose-500/15 shadow-xs select-none transition-all duration-150 ease-out";
+            inspectorBar.className = "clickui-result-inspector min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 dark:bg-rose-500/15 shadow-xs select-none transition-all duration-200 ease-out";
             inspectorIcon.textContent = "cancel";
             inspectorIcon.className = "material-symbols-outlined text-[20px] text-rose-500 shrink-0 transition-colors";
             inspectorTitle.textContent = wt("clickui.inspector_click_miss_title", "Клик {n}: Вне целевой области").replace("{n}", action.index + 1);
@@ -5399,7 +5453,7 @@
         if (isLabelMismatch) {
           const userLabel = _normalizeReviewLabelText(labelStatus.userLabel);
           const expectedLabel = labelStatus.correctLabel || targetLabel;
-          inspectorBar.className = "clickui-result-inspector min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 dark:bg-amber-500/15 shadow-xs select-none transition-all duration-150 ease-out";
+          inspectorBar.className = "clickui-result-inspector min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 dark:bg-amber-500/15 shadow-xs select-none transition-all duration-200 ease-out";
           inspectorIcon.textContent = "edit_note";
           inspectorIcon.className = "material-symbols-outlined text-[20px] text-amber-500 shrink-0 transition-colors";
           inspectorTitle.textContent = wt("clickui.inspector_label_err_title_target", "Область «{label}»: Ошибка в названии").replace("{label}", targetLabel || "");
@@ -5408,7 +5462,7 @@
             .replace("{correct}", expectedLabel);
           inspectorChip.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold tracking-wide bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">${wt("clickui.badge_label_err", "Ошибка названия")}</span>`;
         } else if (contourRes && isLowCoverage) {
-          inspectorBar.className = "clickui-result-inspector min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 dark:bg-rose-500/15 shadow-xs select-none transition-all duration-150 ease-out";
+          inspectorBar.className = "clickui-result-inspector min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 dark:bg-rose-500/15 shadow-xs select-none transition-all duration-200 ease-out";
           inspectorIcon.textContent = "cancel";
           inspectorIcon.className = "material-symbols-outlined text-[20px] text-rose-500 shrink-0 transition-colors";
           inspectorTitle.textContent = wt("clickui.inspector_ref_missed_title", "Область «{label}» · Недостаточное покрытие").replace("{label}", targetLabel || "");
@@ -5421,7 +5475,7 @@
           if (hasTypo) {
             const userLabel = _normalizeReviewLabelText(labelStatus.userLabel);
             const expectedLabel = labelStatus.canonicalLabel || labelStatus.correctLabel || targetLabel;
-            inspectorBar.className = "clickui-result-inspector min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 dark:bg-amber-500/15 shadow-xs select-none transition-all duration-150 ease-out";
+            inspectorBar.className = "clickui-result-inspector min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 dark:bg-amber-500/15 shadow-xs select-none transition-all duration-200 ease-out";
             inspectorIcon.textContent = "spellcheck";
             inspectorIcon.className = "material-symbols-outlined text-[20px] text-amber-500 shrink-0 transition-colors";
             inspectorTitle.textContent = wt("clickui.inspector_ref_typo_title", "Область «{label}» · Найдена с опечаткой").replace("{label}", targetLabel || "");
@@ -5430,7 +5484,7 @@
               .replace("{correct}", expectedLabel);
             inspectorChip.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold tracking-wide bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">${wt("clickui.badge_typo", "Опечатка")}</span>`;
           } else {
-            inspectorBar.className = "clickui-result-inspector min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-500/15 shadow-xs select-none transition-all duration-150 ease-out";
+            inspectorBar.className = "clickui-result-inspector min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-500/15 shadow-xs select-none transition-all duration-200 ease-out";
             inspectorIcon.textContent = "check_circle";
             inspectorIcon.className = "material-symbols-outlined text-[20px] text-emerald-500 shrink-0 transition-colors";
             inspectorTitle.textContent = wt("clickui.inspector_ref_found_title", "Область «{label}» · Найдена").replace("{label}", targetLabel || "");
@@ -5443,12 +5497,34 @@
             inspectorChip.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold tracking-wide bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">${wt("clickui.badge_passed", "Зачтено")}</span>`;
           }
         } else {
-          inspectorBar.className = "clickui-result-inspector min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 dark:bg-rose-500/15 shadow-xs select-none transition-all duration-150 ease-out";
+          inspectorBar.className = "clickui-result-inspector min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 dark:bg-rose-500/15 shadow-xs select-none transition-all duration-200 ease-out";
           inspectorIcon.textContent = "cancel";
           inspectorIcon.className = "material-symbols-outlined text-[20px] text-rose-500 shrink-0 transition-colors";
           inspectorTitle.textContent = wt("clickui.inspector_ref_missed_title", "Область «{label}» · Пропущена").replace("{label}", targetLabel || "");
           inspectorDesc.textContent = wt("clickui.inspector_ref_missed_desc", "Отметка в данной анатомической зоне не была поставлена");
           inspectorChip.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold tracking-wide bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">${wt("clickui.badge_missed", "Пропущено")}</span>`;
+        }
+      }
+    }
+
+    function updateInspector(hoverInfo, forceImmediate = false) {
+      if (hoverInfo) {
+        if (inspectorResetTimer) {
+          clearTimeout(inspectorResetTimer);
+          inspectorResetTimer = null;
+          state._inspectorResetTimer = null;
+        }
+        renderInspectorContent(hoverInfo);
+      } else {
+        if (forceImmediate) {
+          if (inspectorResetTimer) {
+            clearTimeout(inspectorResetTimer);
+            inspectorResetTimer = null;
+            state._inspectorResetTimer = null;
+          }
+          renderInspectorContent(null);
+        } else {
+          scheduleInspectorReset();
         }
       }
     }
@@ -5827,6 +5903,10 @@
           tabZoomBtn.setAttribute("aria-label", wt("clickui.fullscreen", "Развернуть на весь экран"));
         }
         fitView(viewportTab);
+      }
+
+      if (!state.globalHoveredInfo && typeof state.resultInspectorUpdater === "function") {
+        state.resultInspectorUpdater(null, true);
       }
     }
 
