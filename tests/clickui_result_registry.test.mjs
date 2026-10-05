@@ -843,10 +843,10 @@ describe("ClickUI Result Registry (Stage 4)", () => {
     expect(typoRow.textContent).toContain("«Правое легкае»");
     expect(typoRow.textContent).toContain("Ожидалось:");
     expect(typoRow.textContent).toContain("«Правое легкое»");
-    const charDiffDel = typoRow.querySelector(".text-rose-700, .dark\\:text-rose-300");
+    const charDiffDel = typoRow.querySelector(".text-rose-600, .dark\\:text-rose-400");
     expect(charDiffDel).toBeTruthy();
     expect(charDiffDel?.textContent).toBe("а");
-    const charDiffIns = typoRow.querySelector(".text-emerald-700, .dark\\:text-emerald-300");
+    const charDiffIns = typoRow.querySelector(".text-emerald-600, .dark\\:text-emerald-400");
     expect(charDiffIns).toBeTruthy();
     expect(charDiffIns?.textContent).toBe("о");
 

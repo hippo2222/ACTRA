@@ -3031,14 +3031,14 @@
       } else if (isError) {
         const errSpan = _createEl(
           "span",
-          "font-bold text-rose-700 dark:text-rose-300 bg-rose-500/20 dark:bg-rose-500/30 px-0.5 rounded underline decoration-rose-500/70",
+          "font-bold text-rose-600 dark:text-rose-400 underline decoration-rose-500 decoration-2 underline-offset-2",
           chunk.text
         );
         parentEl.appendChild(errSpan);
       } else {
         const corSpan = _createEl(
           "span",
-          "font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-500/20 dark:bg-emerald-500/30 px-0.5 rounded",
+          "font-bold text-emerald-600 dark:text-emerald-400 underline decoration-emerald-500 decoration-2 underline-offset-2",
           chunk.text
         );
         parentEl.appendChild(corSpan);
