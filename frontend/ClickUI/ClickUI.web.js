@@ -3447,36 +3447,6 @@
         }
       });
 
-      // If local SVG didn't have a matching element but effectiveTargetIndex is set,
-      // borrow the geometry from another SVG (e.g. svgRef) so the student sees the anatomy in both panes!
-      if (cutoutGroup.children.length === 0 && effectiveTargetIndex != null) {
-        const siblingShape = searchRoot.querySelector(
-          `svg path[data-target-index="${effectiveTargetIndex}"], svg polygon[data-target-index="${effectiveTargetIndex}"]`
-        );
-        if (siblingShape) {
-          const sTag = (siblingShape.tagName || "").toLowerCase();
-          if (sTag === "path" && siblingShape.getAttribute("d")) {
-            const cp = document.createElementNS("http://www.w3.org/2000/svg", "path");
-            cp.setAttribute("d", siblingShape.getAttribute("d"));
-            cp.setAttribute("fill", "#000000");
-            cp.setAttribute("stroke", "#000000");
-            cp.setAttribute("stroke-width", "20");
-            cp.setAttribute("stroke-linejoin", "round");
-            cp.setAttribute("stroke-linecap", "round");
-            cutoutGroup.appendChild(cp);
-          } else if (sTag === "polygon" && siblingShape.getAttribute("points")) {
-            const cpoly = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
-            cpoly.setAttribute("points", siblingShape.getAttribute("points"));
-            cpoly.setAttribute("fill", "#000000");
-            cpoly.setAttribute("stroke", "#000000");
-            cpoly.setAttribute("stroke-width", "20");
-            cpoly.setAttribute("stroke-linejoin", "round");
-            cpoly.setAttribute("stroke-linecap", "round");
-            cutoutGroup.appendChild(cpoly);
-          }
-        }
-      }
-
       if (cutoutGroup.children.length > 0) {
         overlay.style.opacity = "0.38";
       } else {

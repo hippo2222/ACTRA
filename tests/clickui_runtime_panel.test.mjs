@@ -1622,6 +1622,85 @@ it("activates canvas spotlight and highlights matched polygon contour when hover
     expect(refTarget0Contour.style.filter).toContain("drop-shadow");
   });
 
+  it("does not spotlight user answer pane when hovering on a missed target in side-by-side review", () => {
+    const task = createLevel2ClickTaskWithoutExplicitLabels([
+      {
+        label: "Цель 1",
+        shape: "polygon",
+        points: [[10, 10], [20, 10], [20, 20], [10, 20]],
+      },
+      {
+        label: "Цель 2",
+        shape: "polygon",
+        points: [[50, 50], [60, 50], [60, 60], [50, 60]],
+      },
+    ]);
+    const container = document.getElementById("app");
+
+    dom.window.ClickUI.render(container, task, { runtimeMode: true });
+    dom.window.ClickUI.restoreInput({
+      clicks: [{ x: 15, y: 15, scale_factor: 1.0, offset_x: 0.0, offset_y: 0.0 }],
+      labels_clicks: ["Подпись пользователя"],
+      action_history: [{ kind: "click" }],
+    });
+
+    dom.window.ClickUI.applyCheckFeedback({
+      success: false,
+      details: {
+        click_results: [{ target_index: 0, click_success: true, matched_click_idx: 0 }],
+        found_targets: [0],
+        targets_info: [
+          { index: 0, found: true, matched_click_idx: 0 },
+          { index: 1, found: false },
+        ],
+      },
+    });
+
+    const userPreview = container.querySelector('[data-clickui="review-user-preview"]');
+    const refPreview = container.querySelector('[data-clickui="review-reference-preview"]');
+    expect(userPreview).toBeTruthy();
+    expect(refPreview).toBeTruthy();
+
+    const userOverlay = userPreview.querySelector('.clickui-spotlight-overlay[data-spotlight-role="user"]');
+    const refOverlay = refPreview.querySelector('.clickui-spotlight-overlay[data-spotlight-role="ref"]');
+    const userCutouts = userPreview.querySelector(".clickui-spotlight-cutouts");
+    const refCutouts = refPreview.querySelector(".clickui-spotlight-cutouts");
+
+    expect(userOverlay).toBeTruthy();
+    expect(refOverlay).toBeTruthy();
+    expect(userOverlay.style.opacity || "0").toBe("0");
+    expect(refOverlay.style.opacity || "0").toBe("0");
+
+    // 1. Hover target 1 in reference pane (MISSED by the user)
+    const refTarget1 = refPreview.querySelector('path[data-target-index="1"]');
+    expect(refTarget1).toBeTruthy();
+
+    refTarget1.dispatchEvent(new dom.window.MouseEvent("mouseenter", { bubbles: true }));
+
+    // Reference pane should activate its spotlight on target 1
+    expect(refOverlay.style.opacity).toBe("0.38");
+    expect(refCutouts.children.length).toBeGreaterThan(0);
+
+    // User answer pane MUST NOT spotlight because the student did not click target 1!
+    expect(userOverlay.style.opacity || "0").toBe("0");
+    expect(userCutouts.children.length).toBe(0);
+
+    refTarget1.dispatchEvent(new dom.window.MouseEvent("mouseleave", { bubbles: true }));
+
+    // 2. Hover user click on target 0 (HIT by the user)
+    const userClickMarker = userPreview.querySelector('[data-clickui-action-key="click:0"]');
+    expect(userClickMarker).toBeTruthy();
+
+    userClickMarker.dispatchEvent(new dom.window.MouseEvent("mouseenter", { bubbles: true }));
+
+    // Both panes should spotlight because user actually hit target 0
+    expect(refOverlay.style.opacity).toBe("0.38");
+    expect(userOverlay.style.opacity).toBe("0.38");
+    expect(userCutouts.children.length).toBeGreaterThan(0);
+
+    userClickMarker.dispatchEvent(new dom.window.MouseEvent("mouseleave", { bubbles: true }));
+  });
+
   it("renders empty state when zero marks are placed in Level 2 runtime mode", () => {
     const task = createLevel2ClickTaskWithoutExplicitLabels();
     const container = document.getElementById("app");
