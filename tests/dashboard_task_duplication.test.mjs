@@ -216,4 +216,147 @@ describe('Dashboard Task Duplication UI', () => {
             })
         );
     });
+
+    it('cancelSelection and toggleSelectionMode refresh current view instead of forcing renderGrid', () => {
+        const dashboardJs = loadScript('frontend/Editor/dashboard.js');
+        const mSelection = dashboardJs.slice(
+            dashboardJs.indexOf('toggleSelectionMode() {'),
+            dashboardJs.indexOf('handleTaskSelection(uniqueId, isSelected, isShiftClick) {')
+        );
+        dom.window.eval(`
+            class TestDashboard {
+                ${mSelection}
+            }
+            window.TestDashboard = TestDashboard;
+        `);
+
+        const inst = new dom.window.TestDashboard();
+        Object.assign(inst, mockDashboard);
+        delete inst.cancelSelection;
+        inst.renderGrid = vi.fn();
+        inst.refreshCurrentView = vi.fn();
+        inst.updateActionBar = vi.fn();
+
+        inst.selectionMode = true;
+        inst.toggleSelectionMode();
+        expect(inst.refreshCurrentView).toHaveBeenCalled();
+        expect(inst.renderGrid).not.toHaveBeenCalled();
+
+        inst.refreshCurrentView.mockClear();
+        inst.cancelSelection();
+        expect(inst.refreshCurrentView).toHaveBeenCalled();
+        expect(inst.renderGrid).not.toHaveBeenCalled();
+
+        inst.refreshCurrentView.mockClear();
+        inst.cancelSelection({ rerender: false });
+        expect(inst.refreshCurrentView).not.toHaveBeenCalled();
+    });
+
+    it('duplicateSelectedTasks preserves activeModuleId and activeTopicId without intermediate render', async () => {
+        const dashboardJs = loadScript('frontend/Editor/dashboard.js');
+        const m1 = dashboardJs.slice(dashboardJs.indexOf('setupSelectionControls() {'), dashboardJs.indexOf('setupSidebarResizer() {'));
+        const m2 = dashboardJs.slice(dashboardJs.indexOf('updateActionBar() {'), dashboardJs.indexOf('async duplicateSelectedTasks() {'));
+        const m3 = dashboardJs.slice(dashboardJs.indexOf('async duplicateSelectedTasks() {'), dashboardJs.indexOf('async exportSelectedTasks() {'));
+        dom.window.eval(`
+            class TestDashboard {
+                ${m1}
+                ${m2}
+                ${m3}
+            }
+            window.TestDashboard = TestDashboard;
+        `);
+
+        const inst = new dom.window.TestDashboard();
+        Object.assign(inst, mockDashboard);
+        inst.setupSelectionControls();
+
+        inst.activeModuleId = 'mod_xray';
+        inst.activeTopicId = 'top_chest';
+        inst.selectedTasks = new Set(['mod_xray:top_chest:task1']);
+
+        dom.window.fetch.mockResolvedValueOnce({
+            ok: true,
+            status: 200,
+            json: async () => ({
+                ok: true,
+                duplicated_count: 1,
+                duplicated: [{ source_task_id: 'task1', task_id: 'task1_copy', name: 'Task 1 (Copy)' }]
+            }),
+        });
+
+        await inst.duplicateSelectedTasks();
+
+        expect(inst.cancelSelection).toHaveBeenCalledWith({ rerender: false });
+        expect(inst.activeModuleId).toBe('mod_xray');
+        expect(inst.activeTopicId).toBe('top_chest');
+        expect(inst.renderSidebar).toHaveBeenCalled();
+        expect(inst.refreshCurrentView).toHaveBeenCalled();
+    });
+
+    it('updateTaskNameInCatalog updates catalog and synchronously synchronizes task label in the sidebar', () => {
+        const dashboardJs = loadScript('frontend/Editor/dashboard.js');
+        const mCreateTask = dashboardJs.slice(
+            dashboardJs.indexOf('createTaskElement(task, moduleId, topicId) {'),
+            dashboardJs.indexOf('expandSidebarModule(moduleId, { saveState = true } = {}) {')
+        );
+        const mUpdateCatalog = dashboardJs.slice(
+            dashboardJs.indexOf('updateTaskNameInCatalog(moduleId, topicId, taskId, newName) {'),
+            dashboardJs.indexOf('showTaskRenameUndoToast({ moduleId, topicId, taskId, oldName, newName, titleEl, taskObj }) {')
+        );
+        dom.window.eval(`
+            class TestDashboard {
+                ${mCreateTask}
+                ${mUpdateCatalog}
+            }
+            window.TestDashboard = TestDashboard;
+        `);
+
+        const inst = new dom.window.TestDashboard();
+        inst.catalog = [
+            {
+                id: 'mod1',
+                topics: [
+                    {
+                        id: 'top1',
+                        tasks: [
+                            { id: 'task1', name: 'Original Name' }
+                        ]
+                    }
+                ]
+            }
+        ];
+        inst.favoriteTaskMap = {};
+        inst.recentTasks = [];
+        inst.saveWorkspaceShortcuts = vi.fn();
+        inst.renderWorkspaceShortcuts = vi.fn();
+
+        // Create sidebar task button and attach to DOM
+        const sidebarContainer = dom.window.document.createElement('div');
+        sidebarContainer.dataset.topic = 'mod1:top1';
+        const taskBtn = inst.createTaskElement({ id: 'task1', name: 'Original Name', type: 'test' }, 'mod1', 'top1');
+        sidebarContainer.appendChild(taskBtn);
+        dom.window.document.body.appendChild(sidebarContainer);
+
+        expect(taskBtn.dataset.sidebarTaskId).toBe('task1');
+        expect(taskBtn.dataset.taskUniqueId).toBe('mod1:top1:task1');
+
+        const label = taskBtn.querySelector('.editor-sidebar-tree-label');
+        expect(label.textContent).toBe('Original Name');
+
+        // Execute rename
+        inst.updateTaskNameInCatalog('mod1', 'top1', 'task1', 'Renamed Task');
+
+        // Verify in-memory catalog
+        expect(inst.catalog[0].topics[0].tasks[0].name).toBe('Renamed Task');
+
+        // Verify DOM label in sidebar
+        expect(label.textContent).toBe('Renamed Task');
+        expect(label.title).toBe('Renamed Task');
+
+        // Execute undo / revert
+        inst.updateTaskNameInCatalog('mod1', 'top1', 'task1', 'Original Name');
+        expect(inst.catalog[0].topics[0].tasks[0].name).toBe('Original Name');
+        expect(label.textContent).toBe('Original Name');
+        expect(label.title).toBe('Original Name');
+    });
 });

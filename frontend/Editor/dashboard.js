@@ -5409,20 +5409,23 @@ class EditorDashboard {
         }
 
         this.updateActionBar();
-        this.renderGrid(); // Re-render to update UI state
+        this.refreshCurrentView(); // Re-render current view to update UI state
     }
 
-    cancelSelection() {
+    cancelSelection({ rerender = true } = {}) {
         this.selectionMode = false;
         this.selectedTasks.clear();
         this.lastSelectedTaskId = null;
         this.updateActionBar();
-        this.renderGrid();
 
         // Update button
         const btn = document.getElementById('toggle-select-btn');
         if (btn) {
             btn.classList.remove('text-primary', 'bg-primary-lighter');
+        }
+
+        if (rerender) {
+            this.refreshCurrentView();
         }
     }
 
@@ -5583,10 +5586,17 @@ class EditorDashboard {
             const data = await response.json();
 
             if (response.ok && data.ok) {
+                const currentModuleId = this.activeModuleId;
+                const currentTopicId = this.activeTopicId;
+
                 this.selectedTasks.clear();
-                this.cancelSelection();
+                this.cancelSelection({ rerender: false });
 
                 await this.loadCatalog();
+
+                if (currentModuleId) this.activeModuleId = currentModuleId;
+                if (currentTopicId) this.activeTopicId = currentTopicId;
+
                 this.renderSidebar();
                 this.refreshCurrentView();
                 this.renderRecoveryCenter();
@@ -5985,6 +5995,10 @@ class EditorDashboard {
         const baseClasses = 'editor-sidebar-tree-button flex items-center gap-2 px-3 min-h-[2.5rem] rounded-lg w-full text-left transition-colors';
         const tone = 'text-text-secondary hover:text-text-main hover:bg-bg-hover';
         button.className = `${baseClasses} ${tone}`;
+        button.dataset.sidebarTaskId = task.id;
+        button.dataset.taskUniqueId = `${moduleId}:${topicId}:${task.id}`;
+        button.dataset.topicModule = moduleId;
+        button.dataset.topicId = topicId;
 
         let icon = 'description';
         if (task.type === 'video') icon = 'play_circle';
@@ -6960,8 +6974,15 @@ class EditorDashboard {
         });
 
         if (!tasksToDelete.length) {
+            const currentModuleId = this.activeModuleId;
+            const currentTopicId = this.activeTopicId;
+
             this.selectedTasks.clear();
-            this.cancelSelection();
+            this.cancelSelection({ rerender: false });
+
+            if (currentModuleId) this.activeModuleId = currentModuleId;
+            if (currentTopicId) this.activeTopicId = currentTopicId;
+
             this.renderSidebar();
             this.refreshCurrentView();
             this.renderRecoveryCenter();
@@ -6985,11 +7006,18 @@ class EditorDashboard {
             const data = await response.json();
 
             if (data.ok) {
+                const currentModuleId = this.activeModuleId;
+                const currentTopicId = this.activeTopicId;
+
                 this.selectedTasks.clear();
-                this.cancelSelection();
+                this.cancelSelection({ rerender: false });
 
                 // Refresh catalog and view
                 await this.loadCatalog();
+
+                if (currentModuleId) this.activeModuleId = currentModuleId;
+                if (currentTopicId) this.activeTopicId = currentTopicId;
+
                 this.renderSidebar();
                 this.refreshCurrentView();
                 this.renderRecoveryCenter();
@@ -7139,21 +7167,56 @@ class EditorDashboard {
     }
 
     updateTaskNameInCatalog(moduleId, topicId, taskId, newName) {
-        if (!Array.isArray(this.catalog)) return;
-        for (const m of this.catalog) {
-            if (m.id === moduleId && Array.isArray(m.topics)) {
-                for (const t of m.topics) {
-                    if (t.id === topicId && Array.isArray(t.tasks)) {
-                        for (const task of t.tasks) {
-                            if (task.id === taskId) {
-                                task.name = newName;
-                                if (task.meta) task.meta.name = newName;
-                                return;
+        if (Array.isArray(this.catalog)) {
+            for (const m of this.catalog) {
+                if (m.id === moduleId && Array.isArray(m.topics)) {
+                    for (const t of m.topics) {
+                        if (t.id === topicId && Array.isArray(t.tasks)) {
+                            for (const task of t.tasks) {
+                                if (task.id === taskId) {
+                                    task.name = newName;
+                                    if (task.meta) task.meta.name = newName;
+                                    break;
+                                }
                             }
                         }
                     }
                 }
             }
+        }
+        this.updateSidebarTaskName(moduleId, topicId, taskId, newName);
+    }
+
+    updateSidebarTaskName(moduleId, topicId, taskId, newName) {
+        if (!taskId) return;
+        const uniqueId = `${moduleId}:${topicId}:${taskId}`;
+        const taskButtons = document.querySelectorAll(
+            `button[data-task-unique-id="${uniqueId}"], [data-topic="${moduleId}:${topicId}"] button[data-sidebar-task-id="${taskId}"]`
+        );
+        taskButtons.forEach(btn => {
+            const label = btn.querySelector('.editor-sidebar-tree-label');
+            if (label) {
+                label.textContent = newName;
+                label.title = newName;
+            }
+        });
+        if (this.favoriteTaskMap && this.favoriteTaskMap[uniqueId]) {
+            this.favoriteTaskMap[uniqueId].name = newName;
+            if (typeof this.saveWorkspaceShortcuts === 'function') {
+                this.saveWorkspaceShortcuts();
+            }
+        }
+        if (Array.isArray(this.recentTasks)) {
+            const recent = this.recentTasks.find(item => item.uniqueId === uniqueId);
+            if (recent) {
+                recent.name = newName;
+                if (typeof this.saveWorkspaceShortcuts === 'function') {
+                    this.saveWorkspaceShortcuts();
+                }
+            }
+        }
+        if (typeof this.renderWorkspaceShortcuts === 'function') {
+            this.renderWorkspaceShortcuts();
         }
     }
 
