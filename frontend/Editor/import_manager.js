@@ -2444,7 +2444,9 @@ ${remaining}
             return wt('im.step2_label_archive', 'ZIP-архив');
         }
         if (this.importMode === 'ai') {
-            return wt('im.step2_label_ai', 'Промпт и ответ');
+            return !this.isInternalAiGenerationInDevelopment()
+                ? wt('im.k726', 'Результат анализа')
+                : wt('im.step2_label_ai', 'Промпт и ответ');
         }
         return wt('im.step2_label_text', 'Текст заданий');
     }
@@ -2687,6 +2689,11 @@ ${remaining}
         // Next button label
         if (this.currentStep === 4) {
             setBtnText(nextBtn, 'import-next-text', this.importInProgress ? wt('im.k099', 'Импорт...') : wt('im.k100', 'Импортировать'));
+        } else if (this.importMode === 'ai' && !this.isInternalAiGenerationInDevelopment()) {
+            if (this.currentStep === 1) setBtnText(nextBtn, 'import-next-text', wt('im.k723', 'Анализировать'));
+            else if (this.currentStep === 2) setBtnText(nextBtn, 'import-next-text', wt('im.k724', 'Генерировать'));
+            else if (this.currentStep === 3) setBtnText(nextBtn, 'import-next-text', wt('im.k102', 'К импорту'));
+            else setBtnText(nextBtn, 'import-next-text', wt('im.k103', 'Далее'));
         } else if (this.importMode === 'ai') {
             if (this.currentStep === 1) setBtnText(nextBtn, 'import-next-text', wt('im.k101', 'К промптам'));
             else if (this.currentStep === 2) setBtnText(nextBtn, 'import-next-text', this.aiTemplateType === 'material_analysis' ? wt('im.k561', 'Разобрать анализ') : wt('im.k562', 'Проверить текст'));
@@ -3083,7 +3090,7 @@ ${remaining}
                 </div>
                 
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <button type="button" data-role="import-mode-card" data-mode="text" onclick="dashboard.importManager.setImportMode('text')" 
+                    <button type="button" data-role="import-mode-text" data-mode="text" onclick="dashboard.importManager.setImportMode('text')" 
                         class="p-4 rounded-xl border text-left transition-all cursor-pointer ${this.importMode === 'text' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-border-subtle bg-surface-1 hover:border-primary/40 hover:bg-surface-2'}">
                         <div class="flex items-center gap-3 mb-2">
                             <span class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${this.importMode === 'text' ? 'bg-primary text-primary-contrast' : 'bg-surface-2 text-text-secondary'}">
@@ -3094,7 +3101,7 @@ ${remaining}
                         <p class="text-xs text-text-secondary leading-relaxed">${wt('im.step1_mode_text_desc', 'Вставка текста заданий с разметкой (@TEST, @OPEN_ANSWER...)')}</p>
                     </button>
                     
-                    <button type="button" data-role="import-mode-card" data-mode="archive" onclick="dashboard.importManager.setImportMode('archive')" 
+                    <button type="button" data-role="import-mode-archive" data-mode="archive" onclick="dashboard.importManager.setImportMode('archive')" 
                         class="p-4 rounded-xl border text-left transition-all cursor-pointer ${this.importMode === 'archive' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-border-subtle bg-surface-1 hover:border-primary/40 hover:bg-surface-2'}">
                         <div class="flex items-center gap-3 mb-2">
                             <span class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${this.importMode === 'archive' ? 'bg-primary text-primary-contrast' : 'bg-surface-2 text-text-secondary'}">
@@ -3105,7 +3112,7 @@ ${remaining}
                         <p class="text-xs text-text-secondary leading-relaxed">${wt('im.step1_mode_archive_desc', 'Загрузка ZIP-архива с заданиями и изображениями')}</p>
                     </button>
 
-                    <button type="button" data-role="import-mode-card" data-mode="ai" onclick="dashboard.importManager.setImportMode('ai')" 
+                    <button type="button" data-role="import-mode-ai" data-mode="ai" onclick="dashboard.importManager.setImportMode('ai')" 
                         class="p-4 rounded-xl border text-left transition-all cursor-pointer ${this.importMode === 'ai' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-border-subtle bg-surface-1 hover:border-primary/40 hover:bg-surface-2'}">
                         <div class="flex items-center gap-3 mb-2">
                             <span class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${this.importMode === 'ai' ? 'bg-primary text-primary-contrast' : 'bg-surface-2 text-text-secondary'}">
@@ -3194,6 +3201,9 @@ ${remaining}
         `;
     }
     renderStep2() {
+        if (this.importMode === 'ai' && !this.isInternalAiGenerationInDevelopment()) {
+            return this.renderStep2InternalAI();
+        }
         if (this.importMode === 'archive') {
             return this.renderStep2Archive();
         }

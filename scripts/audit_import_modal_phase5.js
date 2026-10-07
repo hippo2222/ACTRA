@@ -101,7 +101,7 @@ async function runPhase5GrandRegressionSweep() {
         await page.waitForTimeout(300);
 
         const s1ModalVisible = await page.$eval('#import-modal', el => !el.classList.contains('hidden'));
-        const s1CardsCount = await page.$$eval('[data-role="import-mode-card"]', els => els.length).catch(() => 0);
+        const s1CardsCount = await page.$$eval('[data-role="import-mode-card"], [data-role="import-mode-text"], [data-role="import-mode-archive"], [data-role="import-mode-ai"]', els => els.length).catch(() => 0);
         const s1HeaderVisible = await page.$eval('#import-modal [data-role="import-header"]', el => !!el).catch(() => false);
         const s1StepperVisible = await page.$eval('#import-modal [data-role="import-stepper"]', el => !!el).catch(() => false);
         const s1FooterSticky = await page.$eval('#import-modal [data-role="import-footer"]', el => {

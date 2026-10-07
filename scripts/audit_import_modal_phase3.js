@@ -110,7 +110,7 @@ async function runPhase3Audit() {
         }
 
         // Click Text mode card
-        const textModeCard = await page.$('[data-role="import-mode-card"][data-mode="text"]');
+        const textModeCard = await page.$('[data-role="import-mode-text"], [data-role="import-mode-card"][data-mode="text"]');
         if (textModeCard) {
             await textModeCard.click();
             await page.waitForTimeout(300);
