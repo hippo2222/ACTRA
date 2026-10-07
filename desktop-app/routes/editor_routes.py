@@ -3017,7 +3017,12 @@ def editor_start_preview_session() -> Any:
                 display_index = max(0, min(idx, len(queue) - 1))
 
         if not cur_ref and queue and 0 <= display_index < len(queue):
-            cur_ref = queue[display_index].task_ref
+            item = queue[display_index]
+            cur_ref = (
+                item
+                if isinstance(item, str)
+                else (item.get("task_ref") if isinstance(item, dict) else getattr(item, "task_ref", None))
+            )
 
         paused_at_dt = getattr(existing, "paused_at", None)
         task_info = _resolve_task_display_info(cur_ref)
@@ -3122,7 +3127,12 @@ def editor_get_active_preview_session() -> Any:
         display_index = max(0, min(idx, len(queue) - 1))
 
     if not cur_ref and queue and 0 <= display_index < len(queue):
-        cur_ref = queue[display_index].task_ref
+        item = queue[display_index]
+        cur_ref = (
+            item
+            if isinstance(item, str)
+            else (item.get("task_ref") if isinstance(item, dict) else getattr(item, "task_ref", None))
+        )
 
     paused_at_dt = getattr(session, "paused_at", None)
     task_info = _resolve_task_display_info(cur_ref)

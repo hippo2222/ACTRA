@@ -121,7 +121,12 @@ def _serialize_active_session_item(session: Any, session_api: Any = None) -> Dic
 
     resolved_idx = _resolve_display_task_index(session_api, session)
     cur_slot = resolved_idx if (resolved_idx is not None and 0 <= resolved_idx < len(queue)) else 0
-    cur_ref = queue[cur_slot].task_ref if (queue and 0 <= cur_slot < len(queue)) else None
+    slot_item = queue[cur_slot] if (queue and 0 <= cur_slot < len(queue)) else None
+    cur_ref = (
+        slot_item
+        if isinstance(slot_item, str)
+        else (slot_item.get("task_ref") if isinstance(slot_item, dict) else getattr(slot_item, "task_ref", None))
+    )
     task_info = _resolve_task_display_info(cur_ref) if cur_ref else {"id": None, "name": None}
 
     payload = {
