@@ -156,6 +156,7 @@ class EditorDashboard {
             if (!document.getElementById('recovery-center-modal')?.classList.contains('hidden')) {
                 this.renderRecoveryCenter();
             }
+            this.checkActivePreviewSession();
         }); // Clean orphaned drafts after catalog loads
         this.setupEventListeners();
         this.setupPageExitSafety();
@@ -1609,6 +1610,42 @@ class EditorDashboard {
             });
         }
 
+        const reviewCloseBtn = document.querySelector('[data-action="close-selection-review"]');
+        if (reviewCloseBtn) {
+            reviewCloseBtn.addEventListener('click', () => this.closeSelectionReviewModal());
+        }
+
+        const reviewModal = document.getElementById('selection-review-modal');
+        if (reviewModal) {
+            reviewModal.addEventListener('click', (event) => {
+                if (event.target === reviewModal) {
+                    this.closeSelectionReviewModal();
+                }
+            });
+        }
+
+        const reviewClearBtn = document.querySelector('[data-action="selection-clear-all"]');
+        if (reviewClearBtn) {
+            reviewClearBtn.addEventListener('click', () => {
+                this.cancelSelection();
+                this.closeSelectionReviewModal();
+            });
+        }
+
+        const reviewCreateComplexBtn = document.querySelector('[data-action="selection-create-complex-modal"]');
+        if (reviewCreateComplexBtn) {
+            reviewCreateComplexBtn.addEventListener('click', () => {
+                this.createComplexFromSelectedTasks();
+            });
+        }
+
+        const reviewPlayBtn = document.querySelector('[data-action="selection-play-modal"]');
+        if (reviewPlayBtn) {
+            reviewPlayBtn.addEventListener('click', () => {
+                this.playSelectedTasks();
+            });
+        }
+
         this.setupSortControls();
         this.setupSelectionControls(); // Add selection controls
         this.setupSidebarResizer();
@@ -1626,30 +1663,45 @@ class EditorDashboard {
             actionBar.id = 'selection-action-bar';
             actionBar.className = 'fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-surface-1 rounded-xl shadow-2xl border border-border-subtle p-2 flex items-center gap-3 z-50 transition-all duration-300 translate-y-[200%]';
             actionBar.innerHTML = `
-                <div class="px-3 font-semibold text-text-secondary border-r border-border-subtle" id="selection-counter">0 ${wt('db.k061', 'выбрано')}</div>
-                <button data-role="selection-select-all" onclick="dashboard.selectAllVisibleTasks()" class="flex items-center gap-2 px-4 py-2 bg-surface-2 text-text-secondary rounded-lg hover:bg-bg-hover transition-colors font-medium">
-                    <span class="material-symbols-outlined">select_all</span>
+                <div class="px-3 font-semibold text-text-secondary border-r border-border-subtle cursor-pointer hover:text-primary transition-colors flex items-center gap-1" id="selection-counter" title="${wt('db.k_selection_view_title', 'Показать выбранные задания')}">0 ${wt('db.k061', 'выбрано')}</div>
+                <button data-role="selection-select-all" onclick="dashboard.selectAllVisibleTasks()" class="flex items-center gap-2 px-3 py-2 bg-surface-2 text-text-secondary rounded-lg hover:bg-bg-hover transition-colors font-medium text-sm">
+                    <span class="material-symbols-outlined text-[18px]">select_all</span>
                     ${wt('db.k062', 'Все')}
                 </button>
                 <div class="w-px h-6 bg-border-subtle"></div>
-                <button data-role="selection-duplicate" onclick="dashboard.duplicateSelectedTasks()" class="flex items-center gap-2 px-4 py-2 bg-surface-2 text-text-main border border-border-subtle rounded-lg hover:bg-bg-hover transition-colors font-medium">
-                    <span class="material-symbols-outlined">content_copy</span>
+                <button data-role="selection-play" onclick="dashboard.playSelectedTasks()" class="btn--primary flex items-center gap-2 px-3.5 py-2 bg-primary text-primary-contrast rounded-lg hover:bg-primary-dark transition-colors font-medium text-sm shadow-sm">
+                    <span class="material-symbols-outlined text-[18px]">play_circle</span>
+                    ${wt('db.k_selection_play', 'Пройти выбранные')}
+                </button>
+                <button data-role="selection-create-complex" onclick="dashboard.createComplexFromSelectedTasks()" class="flex items-center gap-2 px-3.5 py-2 bg-surface-2 text-text-main border border-border-subtle rounded-lg hover:bg-bg-hover transition-colors font-medium text-sm">
+                    <span class="material-symbols-outlined text-[18px]">library_add</span>
+                    ${wt('db.k_selection_create_complex', 'Создать комплекс')}
+                </button>
+                <div class="w-px h-6 bg-border-subtle"></div>
+                <button data-role="selection-duplicate" onclick="dashboard.duplicateSelectedTasks()" class="flex items-center gap-2 px-3 py-2 bg-surface-2 text-text-main border border-border-subtle rounded-lg hover:bg-bg-hover transition-colors font-medium text-sm">
+                    <span class="material-symbols-outlined text-[18px]">content_copy</span>
                     ${wt('db.k_duplicate', 'Дублировать')}
                 </button>
-                <button data-role="selection-export" onclick="dashboard.exportSelectedTasks()" class="flex items-center gap-2 px-4 py-2 bg-primary text-primary-contrast rounded-lg hover:bg-primary-dark transition-colors font-medium">
-                    <span class="material-symbols-outlined">archive</span>
+                <button data-role="selection-export" onclick="dashboard.exportSelectedTasks()" class="flex items-center gap-2 px-3 py-2 bg-surface-2 text-text-main border border-border-subtle rounded-lg hover:bg-bg-hover transition-colors font-medium text-sm">
+                    <span class="material-symbols-outlined text-[18px]">archive</span>
                     ${wt('db.k063', 'Экспорт')}
                 </button>
-                <button data-role="selection-delete" onclick="dashboard.deleteSelectedTasks()" class="flex items-center gap-2 px-4 py-2 bg-error-lighter text-error-dark border border-error-light rounded-lg hover:bg-error-light transition-colors font-medium">
-                    <span class="material-symbols-outlined">delete</span>
+                <button data-role="selection-delete" onclick="dashboard.deleteSelectedTasks()" class="flex items-center gap-2 px-3 py-2 bg-error-lighter text-error-dark border border-error-light rounded-lg hover:bg-error-light transition-colors font-medium text-sm">
+                    <span class="material-symbols-outlined text-[18px]">delete</span>
                     ${wt('db.k064', 'Удалить')}
                 </button>
                 <div class="w-px h-6 bg-border-subtle"></div>
                 <button data-role="selection-cancel" onclick="dashboard.cancelSelection()" class="p-2 text-text-disabled hover:text-text-muted hover:bg-bg-hover rounded-lg" title="${wt('db.k065', 'Отмена')}">
-                    <span class="material-symbols-outlined">close</span>
+                    <span class="material-symbols-outlined text-[18px]">close</span>
                 </button>
             `;
             document.body.appendChild(actionBar);
+        }
+
+        const counter = actionBar.querySelector('#selection-counter');
+        if (counter && !counter.dataset.boundReview) {
+            counter.dataset.boundReview = 'true';
+            counter.addEventListener('click', () => this.showSelectionReviewModal());
         }
 
         // Add "Select" button to header if exists
@@ -2022,7 +2074,11 @@ class EditorDashboard {
     }
 
     closeModals() {
-        ['create-task-modal', 'create-module-modal', 'create-topic-modal', 'topic-theory-modal', 'theory-hub-modal', 'import-modal'].forEach(id => {
+        ['create-task-modal', 'create-module-modal', 'create-topic-modal', 'topic-theory-modal', 'theory-hub-modal', 'import-modal', 'selection-review-modal'].forEach(id => {
+            if (id === 'selection-review-modal') {
+                this.closeSelectionReviewModal();
+                return;
+            }
             if (id === 'topic-theory-modal') {
                 const theoryModal = document.getElementById('topic-theory-modal');
                 if (theoryModal && (!theoryModal.classList.contains('hidden') || theoryModal.open)) {
@@ -5045,6 +5101,13 @@ class EditorDashboard {
                         class="h-8 w-8 inline-flex shrink-0 items-center justify-center rounded-lg border ${isFavorite ? 'border-warning bg-warning-light text-warning-dark' : 'border-border-subtle bg-surface-1 text-text-disabled'} hover:border-warning hover:text-warning transition-colors">
                         <span class="material-symbols-outlined text-[17px]">${isFavorite ? 'star' : 'star_outline'}</span>
                     </button>
+                    ${!isPremiumArchived ? `
+                        <button type="button" data-action="play-task"
+                            class="h-8 w-8 inline-flex shrink-0 items-center justify-center rounded-lg border border-border-subtle bg-surface-1 text-text-secondary hover:border-primary hover:text-primary hover:bg-primary-lighter transition-colors"
+                            title="${wt('db.k_play_task_title', 'Пройти задание (Тест-драйв)')}">
+                            <span class="material-symbols-outlined text-[18px]">play_arrow</span>
+                        </button>
+                    ` : ''}
                     <div class="flex flex-wrap gap-1.5 pt-1">
                         <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${typeClass}">
                             ${safeTypeLabel}
@@ -5113,6 +5176,14 @@ class EditorDashboard {
                     topicName: task.topicName || task.topicId,
                     type: task.type,
                 });
+            });
+        }
+
+        const playBtn = article.querySelector('[data-action="play-task"]');
+        if (playBtn) {
+            playBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.handleTaskPlayClick(task, { hasDraft, isDraftOnly });
             });
         }
 
@@ -5237,6 +5308,7 @@ class EditorDashboard {
     }
 
     refreshCurrentView() {
+        this.checkActivePreviewSession();
         if (this.currentSearchQuery) {
             this.handleSearch(this.currentSearchQuery);
             return;
@@ -5536,6 +5608,484 @@ class EditorDashboard {
             exportBtn.title = hasArchivedSelection
                 ? wt('db.k298', 'Экспорт недоступен: среди выбранных заданий есть архив Premium.')
                 : wt('db.k299', 'Экспортировать выбранные задания');
+        }
+
+        const playBtn = bar.querySelector('[data-role="selection-play"]');
+        const createComplexBtn = bar.querySelector('[data-role="selection-create-complex"]');
+
+        if (playBtn) {
+            const playBlocked = count === 0 || hasArchivedSelection;
+            playBtn.disabled = playBlocked;
+            playBtn.classList.toggle('opacity-60', playBlocked);
+            playBtn.classList.toggle('cursor-not-allowed', playBlocked);
+            playBtn.title = hasArchivedSelection
+                ? wt('db.k_preview_blocked_archive', 'Тест-драйв недоступен: среди выбранных заданий есть архив Premium.')
+                : wt('db.k_selection_play_title', 'Запустить тест-драйв выбранных заданий');
+        }
+
+        if (createComplexBtn) {
+            const createBlocked = count === 0 || hasArchivedSelection;
+            createComplexBtn.disabled = createBlocked;
+            createComplexBtn.classList.toggle('opacity-60', createBlocked);
+            createComplexBtn.classList.toggle('cursor-not-allowed', createBlocked);
+            createComplexBtn.title = hasArchivedSelection
+                ? wt('db.k_create_complex_blocked_archive', 'Создание комплекса недоступно: среди выбранных заданий есть архив Premium.')
+                : wt('db.k_create_complex_title', 'Создать новый комплекс с выбранными заданиями');
+        }
+    }
+
+    async handleTaskPlayClick(task, { hasDraft, isDraftOnly } = {}) {
+        if (isDraftOnly) {
+            this.showVoiceToast({
+                severity: 'warning',
+                what: wt('db.k_play_draft_only_what', 'Задание существует только как локальный черновик.'),
+                impact: wt('db.k_play_draft_only_impact', 'Тест-драйв требует сохранения задания на сервере.'),
+                next: wt('db.k_play_draft_only_next', 'Откройте задание и сохраните его перед запуском.')
+            });
+            return;
+        }
+
+        if (hasDraft) {
+            const runSaved = await NotificationUI.confirm({
+                title: wt('db.k_play_draft_warning_title', 'Есть несохранённые изменения'),
+                message: wt('db.k_play_draft_warning_msg', 'У задания есть локальный черновик. Тест-драйв запустит версию, сохранённую на сервере. Продолжить?'),
+                confirmText: wt('db.k_play_draft_warning_continue', 'Запустить сохранённую'),
+                cancelText: wt('db.k_play_draft_warning_open', 'Открыть черновик'),
+                variant: 'warning'
+            });
+            if (runSaved) {
+                const uniqueId = this.makeTaskUniqueId(task.moduleId, task.topicId, task.id);
+                await this.startTaskPreview([uniqueId], { moduleId: task.moduleId, topicId: task.topicId });
+            } else {
+                this.openTaskEntry(
+                    { ...task, hasDraft: true },
+                    task.moduleId,
+                    task.topicId,
+                    { preferDraft: true }
+                );
+            }
+            return;
+        }
+
+        const uniqueId = this.makeTaskUniqueId(task.moduleId, task.topicId, task.id);
+        await this.startTaskPreview([uniqueId], { moduleId: task.moduleId, topicId: task.topicId });
+    }
+
+    async startTaskPreview(taskRefs, sourceContext = null, { force = false } = {}) {
+        if (!taskRefs || taskRefs.length === 0) return;
+        const slashRefs = taskRefs.map(ref => String(ref || '').replace(/:/g, '/'));
+        const effectiveContext = sourceContext || {
+            moduleId: this.activeModuleId || '',
+            topicId: this.activeTopicId || '',
+        };
+
+        try {
+            const response = await fetch('/api/editor/preview-session/start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    task_refs: slashRefs,
+                    source_context: effectiveContext,
+                    force: force,
+                }),
+            });
+
+            const data = await response.json();
+            if (response.status === 409) {
+                const activeSession = data.active_session;
+                const currentName = activeSession?.current_task?.name || activeSession?.current_task?.id || wt('db.k_preview_unnamed', 'Задание');
+                const displayIndex = Number(activeSession?.display_index || 1);
+                const totalTasks = Number(activeSession?.total_tasks || 1);
+                const confirmed = await NotificationUI.confirm({
+                    title: wt('db.k_preview_conflict_title', 'Предыдущий тест-драйв на паузе'),
+                    message: `${wt('db.k_preview_conflict_msg_p1', 'У вас уже есть активный тест-драйв:')} «${currentName}» (${displayIndex} ${wt('db.k_preview_of', 'из')} ${totalTasks}). ${wt('db.k_preview_conflict_msg_p2', 'Прервать его и начать новый?')}`,
+                    confirmText: wt('db.k_preview_conflict_confirm', 'Начать новый'),
+                    cancelText: wt('db.k_preview_conflict_cancel', 'Отмена'),
+                    variant: 'warning',
+                });
+                if (confirmed) {
+                    return this.startTaskPreview(taskRefs, sourceContext, { force: true });
+                } else {
+                    await this.checkActivePreviewSession();
+                    return;
+                }
+            }
+
+            if (!response.ok || !data.ok) {
+                throw new Error(data.message || data.error || 'Server error');
+            }
+
+            if (!data.session_id) {
+                throw new Error(data.message || data.error || 'Session ID missing');
+            }
+
+            const modParam = effectiveContext.moduleId || '';
+            const topParam = effectiveContext.topicId || '';
+            const returnTo = encodeURIComponent(`/editor/?module=${modParam}&topic=${topParam}`);
+            window.location.href = `/session/${encodeURIComponent(data.session_id)}?return_to=${returnTo}`;
+        } catch (err) {
+            console.error('[Dashboard] startTaskPreview failed', err);
+            this.showVoiceToast({
+                severity: 'error',
+                what: wt('db.k_preview_start_failed', 'Не удалось запустить тест-драйв.'),
+                impact: wt('db.k_preview_start_failed_impact', 'Сессия не была создана на сервере.'),
+                next: err?.message || wt('db.k_preview_check_network', 'Проверьте соединение и повторите попытку.')
+            });
+        }
+    }
+
+    async playSelectedTasks() {
+        if (this.selectedTasks.size === 0) return;
+        const allTasks = this.collectAllTasks();
+        const taskLookup = new Map(allTasks.map(t => [this.makeTaskUniqueId(t.moduleId, t.topicId, t.id), t]));
+        const draftOnlyTasks = [];
+        const playableTasks = [];
+
+        this.selectedTasks.forEach(uid => {
+            const task = taskLookup.get(uid);
+            if (task && task.isDraftOnly) {
+                draftOnlyTasks.push(task);
+            } else {
+                playableTasks.push(uid);
+            }
+        });
+
+        if (draftOnlyTasks.length > 0 && playableTasks.length === 0) {
+            this.showVoiceToast({
+                severity: 'warning',
+                what: wt('db.k_play_draft_only_what', 'Выбранные задания существуют только как локальные черновики.'),
+                impact: wt('db.k_play_draft_only_impact', 'Тест-драйв требует сохранения заданий на сервере.'),
+                next: wt('db.k_play_draft_only_next', 'Сохраните их перед запуском тест-драйва.')
+            });
+            return;
+        }
+
+        if (draftOnlyTasks.length > 0) {
+            const proceed = await NotificationUI.confirm({
+                title: wt('db.k_preview_draft_skip_title', 'Черновики в выборке'),
+                message: `${wt('db.k_preview_draft_skip_msg', 'Некоторые задания существуют только как локальные черновики')} (${draftOnlyTasks.length}) ${wt('db.k_preview_draft_skip_msg_p2', 'и будут пропущены. Запустить тест-драйв для сохранённых')} (${playableTasks.length})?`,
+                confirmText: wt('db.k_preview_draft_skip_confirm', 'Запустить'),
+                cancelText: wt('db.k_preview_draft_skip_cancel', 'Отмена'),
+                variant: 'warning'
+            });
+            if (!proceed) return;
+        }
+
+        this.closeSelectionReviewModal();
+        await this.startTaskPreview(playableTasks, {
+            moduleId: this.activeModuleId || '',
+            topicId: this.activeTopicId || '',
+        });
+    }
+
+    createComplexFromSelectedTasks() {
+        if (this.selectedTasks.size === 0) return;
+        const allTasks = this.collectAllTasks();
+        const taskLookup = new Map(allTasks.map(t => [this.makeTaskUniqueId(t.moduleId, t.topicId, t.id), t]));
+        const taskRefs = [];
+        let skippedDrafts = 0;
+
+        this.selectedTasks.forEach(uniqueId => {
+            const task = taskLookup.get(uniqueId);
+            if (task && task.isDraftOnly) {
+                skippedDrafts++;
+                return;
+            }
+            const [moduleId, topicId, ...taskIdParts] = String(uniqueId || '').split(':');
+            const taskId = taskIdParts.join(':');
+            if (moduleId && topicId && taskId) {
+                taskRefs.push(`${moduleId}/${topicId}/${taskId}`);
+            }
+        });
+
+        if (taskRefs.length === 0) {
+            this.showVoiceToast({
+                severity: 'warning',
+                what: wt('db.k_create_draft_only_what', 'Выбранные задания существуют только как локальные черновики.'),
+                impact: wt('db.k_create_draft_only_impact', 'Создание комплекса возможно только из сохранённых заданий.'),
+                next: wt('db.k_create_draft_only_next', 'Сохраните задания в редакторе перед добавлением в комплекс.')
+            });
+            return;
+        }
+
+        if (skippedDrafts > 0) {
+            this.showVoiceToast({
+                severity: 'info',
+                what: wt('db.k_create_draft_skipped', 'Некоторые черновики пропущены.'),
+                impact: `${skippedDrafts} ${wt('db.k_create_draft_skipped_impact', 'локальных черновиков не были добавлены в создаваемый комплекс.')}`,
+                next: wt('db.k_create_draft_skipped_next', 'В комплекс добавлены только сохранённые задания.')
+            });
+        }
+
+        sessionStorage.setItem('actra_handoff_complex_tasks', JSON.stringify(taskRefs));
+        window.location.href = '/complexes/create';
+    }
+
+    async checkActivePreviewSession() {
+        const container = document.getElementById('editor-preview-banner-container');
+        if (!container) return;
+
+        try {
+            const response = await fetch('/api/editor/preview-session/active');
+            if (!response.ok) {
+                container.innerHTML = '';
+                this.activePreviewSession = null;
+                return;
+            }
+            const data = await response.json();
+            if (data.ok && data.active_session) {
+                this.activePreviewSession = data.active_session;
+                this.renderPreviewBanner(data.active_session);
+            } else {
+                this.activePreviewSession = null;
+                container.innerHTML = '';
+            }
+        } catch (err) {
+            console.warn('[Dashboard] checkActivePreviewSession error:', err);
+            container.innerHTML = '';
+            this.activePreviewSession = null;
+        }
+    }
+
+    renderPreviewBanner(session) {
+        const container = document.getElementById('editor-preview-banner-container');
+        if (!container || !session) return;
+
+        const currentTask = session.current_task || {};
+        const safeTaskName = this.escapeHtml(currentTask.name || currentTask.id || wt('db.k_preview_unnamed', 'Задание'));
+        const displayIndex = Number(session.display_index || 1);
+        const totalTasks = Number(session.total_tasks || 1);
+        const isModified = Boolean(session.task_modified);
+        const progressText = totalTasks > 1
+            ? wt('db.k_preview_task_progress', `Задание ${displayIndex} из ${totalTasks}`).replace('{current}', String(displayIndex)).replace('{total}', String(totalTasks))
+            : wt('db.k_preview_one_task', '1 задание');
+
+        const sourceContext = session.source_context || {};
+        const returnUrl = `/editor/?module=${sourceContext.moduleId || this.activeModuleId || ''}&topic=${sourceContext.topicId || this.activeTopicId || ''}`;
+
+        container.innerHTML = `
+            <div class="rounded-xl border border-border-subtle bg-surface-1 p-4 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4 animate-fade-in" data-role="preview-session-banner">
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div class="h-10 w-10 rounded-lg bg-primary-lighter text-primary flex items-center justify-center shrink-0">
+                        <span class="material-symbols-outlined text-[24px]">play_circle</span>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="text-xs font-bold uppercase tracking-wider text-primary">
+                                ${wt('db.k_preview_sandbox_badge', 'Тест-драйв на паузе')}
+                            </span>
+                            <span class="text-xs text-text-muted">·</span>
+                            <span class="text-xs font-medium text-text-secondary">
+                                ${progressText}
+                            </span>
+                            ${isModified ? `
+                                <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold border border-warning-light bg-warning-lighter text-warning-darker">
+                                    <span class="material-symbols-outlined text-[14px]">edit_note</span>
+                                    ${wt('db.k_preview_task_modified', 'Задание отредактировано')}
+                                </span>
+                            ` : ''}
+                        </div>
+                        <h4 class="text-sm font-bold text-text-main truncate mt-0.5" title="${safeTaskName}">
+                            ${safeTaskName}
+                        </h4>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 shrink-0 flex-wrap">
+                    ${isModified ? `
+                        <button type="button" data-action="preview-restart" class="px-3 py-1.5 rounded-lg border border-warning text-warning-dark hover:bg-warning-lighter text-xs font-semibold transition-colors flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-[16px]">restart_alt</span>
+                            ${wt('db.k_preview_restart_btn', 'Проверить заново')}
+                        </button>
+                    ` : ''}
+                    <button type="button" data-action="preview-resume" class="btn--primary px-4 py-1.5 rounded-lg bg-primary text-primary-contrast hover:bg-primary-dark text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-sm">
+                        <span class="material-symbols-outlined text-[16px]">play_arrow</span>
+                        ${wt('db.k_preview_resume_btn', 'Продолжить')}
+                    </button>
+                    <button type="button" data-action="preview-cancel" class="p-1.5 rounded-lg text-text-disabled hover:text-text-main hover:bg-bg-hover transition-colors" title="${wt('db.k_preview_cancel_btn', 'Сбросить тест-драйв')}">
+                        <span class="material-symbols-outlined text-[18px]">close</span>
+                    </button>
+                </div>
+            </div>
+        `;
+
+        const resumeBtn = container.querySelector('[data-action="preview-resume"]');
+        if (resumeBtn) {
+            resumeBtn.addEventListener('click', () => {
+                const targetSessionId = session.session_id || session.id;
+                if (!targetSessionId) return;
+                window.location.href = `/session/${encodeURIComponent(targetSessionId)}?return_to=${encodeURIComponent(returnUrl)}`;
+            });
+        }
+
+        const restartBtn = container.querySelector('[data-action="preview-restart"]');
+        if (restartBtn) {
+            restartBtn.addEventListener('click', async () => {
+                try {
+                    const res = await fetch('/api/editor/preview-session/restart', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ session_id: session.session_id || session.id }),
+                    });
+                    const data = await res.json();
+                    if (data.ok) {
+                        const targetSessionId = data.session_id || session.session_id || session.id;
+                        window.location.href = `/session/${encodeURIComponent(targetSessionId)}?return_to=${encodeURIComponent(returnUrl)}`;
+                    } else {
+                        throw new Error(data.message || data.error);
+                    }
+                } catch (err) {
+                    console.error('[Dashboard] restart preview error', err);
+                    this.showVoiceToast({
+                        severity: 'error',
+                        what: wt('db.k_preview_start_failed', 'Не удалось перезапустить тест-драйв.'),
+                        impact: err?.message || '',
+                        next: wt('db.k_preview_check_network', 'Проверьте соединение и повторите попытку.')
+                    });
+                }
+            });
+        }
+
+        const cancelBtn = container.querySelector('[data-action="preview-cancel"]');
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', async () => {
+                try {
+                    const res = await fetch('/api/editor/preview-session/cancel', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                    });
+                    const data = await res.json();
+                    if (data.ok) {
+                        this.activePreviewSession = null;
+                        container.innerHTML = '';
+                        this.showVoiceToast({
+                            severity: 'info',
+                            what: wt('db.k_preview_cancelled', 'Тест-драйв сброшен.'),
+                            impact: wt('db.k_preview_cancelled_impact', 'Временная сессия закрыта.'),
+                            next: wt('db.k_preview_cancelled_next', 'Вы можете начать новый тест-драйв в любой момент.')
+                        });
+                    }
+                } catch (err) {
+                    console.error('[Dashboard] cancel preview error', err);
+                }
+            });
+        }
+    }
+
+    showSelectionReviewModal() {
+        const modal = document.getElementById('selection-review-modal');
+        if (!modal) return;
+        this.renderSelectionReviewList();
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+
+    closeSelectionReviewModal() {
+        const modal = document.getElementById('selection-review-modal');
+        if (!modal) return;
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+
+    renderSelectionReviewList() {
+        const listEl = document.getElementById('selection-review-list');
+        if (!listEl) return;
+        listEl.innerHTML = '';
+
+        if (this.selectedTasks.size === 0) {
+            listEl.innerHTML = `
+                <div class="py-8 text-center text-text-disabled">
+                    <span class="material-symbols-outlined text-4xl mb-2">checklist</span>
+                    <p class="text-sm font-medium">${wt('db.k_selection_empty', 'Нет выбранных заданий')}</p>
+                </div>
+            `;
+            return;
+        }
+
+        const allTasks = this.collectAllTasks();
+        const taskLookup = new Map(allTasks.map(t => [this.makeTaskUniqueId(t.moduleId, t.topicId, t.id), t]));
+
+        const groups = new Map();
+        this.selectedTasks.forEach(uniqueId => {
+            const [moduleId, topicId, ...taskIdParts] = String(uniqueId || '').split(':');
+            const taskId = taskIdParts.join(':');
+            const task = taskLookup.get(uniqueId);
+            const groupKey = `${moduleId}:::${topicId}`;
+            if (!groups.has(groupKey)) {
+                groups.set(groupKey, {
+                    moduleId,
+                    topicId,
+                    moduleName: task?.moduleName || moduleId,
+                    topicName: task?.topicName || topicId,
+                    tasks: []
+                });
+            }
+            groups.get(groupKey).tasks.push({
+                uniqueId,
+                task: task || { id: taskId, name: taskId, moduleId, topicId }
+            });
+        });
+
+        groups.forEach(group => {
+            const groupHeader = document.createElement('div');
+            groupHeader.className = 'text-xs font-bold uppercase tracking-wider text-text-disabled pt-2 pb-1 border-b border-border-subtle flex items-center gap-1.5';
+            groupHeader.innerHTML = `
+                <span class="truncate">${this.escapeHtml(group.moduleName)}</span>
+                <span class="text-text-muted">/</span>
+                <span class="truncate text-text-secondary">${this.escapeHtml(group.topicName)}</span>
+                <span class="ml-auto text-[11px] font-normal text-text-muted">(${group.tasks.length})</span>
+            `;
+            listEl.appendChild(groupHeader);
+
+            group.tasks.forEach(({ uniqueId, task }) => {
+                const row = document.createElement('div');
+                row.className = 'flex items-center justify-between gap-3 py-2 px-2.5 rounded-lg hover:bg-bg-hover transition-colors group';
+
+                const { label: typeLabel, className: typeClass } = this.getTaskTypeMeta(task);
+                const safeName = this.escapeHtml(task.name || task.id || wt('db.k_preview_unnamed', 'Задание'));
+
+                row.innerHTML = `
+                    <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                        <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium shrink-0 ring-1 ring-inset ${typeClass}">
+                            ${this.escapeHtml(typeLabel)}
+                        </span>
+                        <span class="text-sm font-medium text-text-main truncate" title="${safeName}">
+                            ${safeName}
+                        </span>
+                    </div>
+                    <button type="button" data-action="remove-item"
+                        class="p-1 rounded-md text-text-disabled hover:text-error-dark hover:bg-error-lighter transition-colors shrink-0"
+                        title="${wt('db.k_selection_remove_task', 'Убрать из выбранных')}">
+                        <span class="material-symbols-outlined text-[18px]">close</span>
+                    </button>
+                `;
+
+                row.querySelector('[data-action="remove-item"]').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.removeSelectedTask(uniqueId);
+                });
+
+                listEl.appendChild(row);
+            });
+        });
+    }
+
+    removeSelectedTask(uniqueId) {
+        this.selectedTasks.delete(uniqueId);
+        if (this.lastSelectedTaskId === uniqueId) {
+            this.lastSelectedTaskId = null;
+        }
+
+        const card = document.querySelector(`article[data-task-id="${uniqueId}"]`);
+        if (card) {
+            this._updateCardVisualState(card, false);
+            const cb = card.querySelector('input[type="checkbox"]');
+            if (cb) cb.checked = false;
+        }
+
+        this.updateActionBar();
+        this.renderSelectionReviewList();
+        if (this.selectedTasks.size === 0) {
+            this.closeSelectionReviewModal();
         }
     }
 
@@ -7723,7 +8273,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.addEventListener('keydown', (e) => {
         if (e.key !== 'Escape') return;
-        const modalIds = ['create-task-modal', 'create-module-modal', 'create-topic-modal', 'topic-theory-modal', 'theory-hub-modal', 'import-modal'];
+        const modalIds = ['create-task-modal', 'create-module-modal', 'create-topic-modal', 'topic-theory-modal', 'theory-hub-modal', 'import-modal', 'selection-review-modal'];
         for (const id of modalIds) {
             const el = document.getElementById(id);
             if (el && (!el.classList.contains('hidden') || el.open)) {

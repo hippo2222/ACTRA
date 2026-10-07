@@ -327,6 +327,19 @@ class SessionAPI:
             return False
         if parse_linked_runtime_complex_id(normalized_complex_id):
             return self._register_linked_runtime_complex(normalized_complex_id, user_id)
+        if normalized_complex_id in {"daily_mix", "task_preview"}:
+            if hasattr(self._complex_service, "_complexes_cache"):
+                if normalized_complex_id not in self._complex_service._complexes_cache:
+                    from task_system.core.models.complex_models import Complex
+                    from datetime import datetime
+                    self._complex_service._complexes_cache[normalized_complex_id] = Complex(
+                        id=normalized_complex_id,
+                        name="Task Preview" if normalized_complex_id == "task_preview" else "Daily Mix",
+                        description="Synthetic runtime complex",
+                        tasks=[],
+                        created_at=datetime.utcnow(),
+                    )
+            return True
         if self._complex_service.get_complex(normalized_complex_id):
             return True
         return False
@@ -565,6 +578,282 @@ class SessionAPI:
                 "error": str(e),
                 "user_id": user_id,
             }
+
+    @_hosted_controller_serialized
+    def start_preview_session(
+        self,
+        task_refs: List[str],
+        user_id: Optional[str] = None,
+        source_context: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """Запустить тестовое прохождение заданий (author preview / sandbox) без влияния на учебную статистику.
+
+        Создаёт ComplexSession с synthetic complex_id="task_preview" и очередью из task_refs.
+        """
+        user_id = self._resolve_runtime_user_id(user_id)
+        if not user_id:
+            return {"ok": False, "error": "user_id_required"}
+
+        if not task_refs:
+            return {"ok": False, "error": "empty_task_refs", "user_id": user_id}
+
+        # Validate task existence
+        valid_task_refs: List[str] = []
+        for r in task_refs:
+            if not isinstance(r, str):
+                continue
+            cleaned = r.strip()
+            if not cleaned:
+                continue
+            parts = [p.strip() for p in cleaned.replace(":", "/").split("/") if p.strip()]
+            if len(parts) >= 3:
+                if self._storage_service:
+                    try:
+                        if hasattr(self._storage_service, "task_exists"):
+                            if self._storage_service.task_exists(parts[0], parts[1], parts[-1]):
+                                valid_task_refs.append(cleaned)
+                        elif hasattr(self._storage_service, "load_task"):
+                            if self._storage_service.load_task(parts[0], parts[1], parts[-1]) is not None:
+                                valid_task_refs.append(cleaned)
+                        else:
+                            valid_task_refs.append(cleaned)
+                    except Exception:
+                        pass
+                else:
+                    valid_task_refs.append(cleaned)
+
+        if not valid_task_refs:
+            return {"ok": False, "error": "tasks_not_found", "user_id": user_id}
+
+        logger.info("[SessionAPI.start_preview_session] task_refs=%s (valid=%s), user_id=%s, context=%s", task_refs, valid_task_refs, user_id, source_context)
+
+        try:
+            from task_system.core.models.complex_models import ComplexSession, QueuedTask, Complex
+            from datetime import datetime
+            import uuid
+
+            session_id = str(uuid.uuid4())
+            queue = [
+                QueuedTask(
+                    task_ref=task_ref,
+                    difficulty=1,
+                    is_retry=False,
+                )
+                for task_ref in valid_task_refs
+            ]
+
+            now_dt = datetime.utcnow()
+            session = ComplexSession(
+                id=session_id,
+                complex_id="task_preview",
+                user_id=user_id,
+                start_time=now_dt,
+                iteration=1,
+                current_task_index=0,
+                queue=queue,
+                completed_tasks=[],
+                is_active=True,
+                is_preview=True,
+                source_context=source_context or {},
+                task_modified=False,
+            )
+
+            # Сохраняем сессию в репозиторий
+            if self._session_manager.session_repository:
+                self._session_manager.session_repository.save_session(session, user_id)
+
+            # Регистрируем в активных сессиях менеджера
+            self._session_manager._active_sessions[session_id] = session
+
+            # Устанавливаем текущую сессию в контроллере
+            self._controller.current_session_id = session_id
+            self._controller.current_task_ref = None
+
+            # Регистрируем synthetic Complex в кэше complex_service
+            try:
+                if self._complex_service:
+                    synthetic_complex = Complex(
+                        id="task_preview",
+                        name="Task Preview",
+                        description="Synthetic preview complex",
+                        tasks=valid_task_refs,
+                        created_at=now_dt,
+                        updated_at=now_dt,
+                    )
+                    if hasattr(self._complex_service, "_complexes_cache"):
+                        self._complex_service._complexes_cache["task_preview"] = synthetic_complex
+            except Exception:
+                logger.warning("[SessionAPI.start_preview_session] Failed to register synthetic complex", exc_info=True)
+
+            # Загружаем первое задание
+            try:
+                self._controller._load_current_task()
+            except Exception as e:
+                logger.warning("[SessionAPI.start_preview_session] Failed to load first task: %s", e, exc_info=True)
+
+            self._remember_hosted_session_controller(session_id)
+
+            return {
+                "ok": True,
+                "session_id": session_id,
+                "complex_id": "task_preview",
+                "user_id": user_id,
+                "iteration": 1,
+                "is_preview": True,
+                "queue": {
+                    "index": 0,
+                    "total": len(queue),
+                },
+            }
+        except Exception as e:
+            logger.exception("[SessionAPI.start_preview_session] Failed to create preview session")
+            return {"ok": False, "error": str(e), "user_id": user_id}
+
+    @_hosted_controller_serialized
+    def get_active_preview_session(self, user_id: Optional[str] = None) -> Optional[Any]:
+        """Получить текущую активную превью-сессию пользователя (если есть)."""
+        user_id = self._resolve_runtime_user_id(user_id)
+        if not user_id:
+            return None
+
+        sm = getattr(self, "_session_manager", None)
+        in_memory = getattr(sm, "_active_sessions", {}) if sm else {}
+        for s in in_memory.values():
+            if not s or not getattr(s, "is_active", False):
+                continue
+            if str(getattr(s, "user_id", "") or "").strip() != user_id:
+                continue
+            cid = str(getattr(s, "complex_id", "") or "").strip()
+            if cid == "task_preview" or getattr(s, "is_preview", False):
+                return s
+
+        repo = getattr(sm, "session_repository", None) if sm else None
+        if repo:
+            try:
+                for s in repo.load_all_sessions(user_id):
+                    s = self.mark_interrupted_session_as_paused(s) if hasattr(self, "mark_interrupted_session_as_paused") else s
+                    if not getattr(s, "is_active", False):
+                        continue
+                    cid = str(getattr(s, "complex_id", "") or "").strip()
+                    if cid == "task_preview" or getattr(s, "is_preview", False):
+                        return s
+            except Exception:
+                logger.warning("[SessionAPI.get_active_preview_session] Failed to scan repository sessions", exc_info=True)
+        return None
+
+    @_hosted_controller_serialized
+    def invalidate_task_preview(self, task_ref: str, user_id: Optional[str] = None) -> bool:
+        """Инвалидировать кэш TaskController и ui_state для задания в активной превью-сессии при его редактировании."""
+        user_id = self._resolve_runtime_user_id(user_id)
+        if not user_id or not task_ref:
+            return False
+
+        clean_ref = str(task_ref).strip()
+        preview_session = self.get_active_preview_session(user_id)
+        if not preview_session:
+            return False
+
+        queue = getattr(preview_session, "queue", []) or []
+        matches = any(getattr(qt, "task_ref", None) == clean_ref for qt in queue)
+        if not matches:
+            return False
+
+        logger.info(
+            "[SessionAPI.invalidate_task_preview] Invalidate cache for task_ref=%s in preview session_id=%s",
+            clean_ref,
+            preview_session.id,
+        )
+
+        try:
+            ctrl_task = getattr(getattr(self._controller, "task_controller", None), "current_task", None)
+            if ctrl_task is not None:
+                ctrl_ref = getattr(ctrl_task, "full_id", None)
+                if ctrl_ref == clean_ref:
+                    self._controller.task_controller.current_task = None
+                    logger.info("[SessionAPI.invalidate_task_preview] Cleared task_controller.current_task")
+        except Exception:
+            logger.warning("[SessionAPI.invalidate_task_preview] Failed to clear controller task cache", exc_info=True)
+
+        try:
+            ui_state = getattr(preview_session, "ui_state", None)
+            if isinstance(ui_state, dict) and ui_state.get("task_ref") == clean_ref:
+                preview_session.ui_state = None
+                logger.info("[SessionAPI.invalidate_task_preview] Cleared preview_session.ui_state")
+
+            prt = getattr(preview_session, "paused_resume_target", None)
+            if isinstance(prt, dict) and prt.get("task_ref") == clean_ref:
+                preview_session.paused_resume_target = None
+        except Exception:
+            logger.warning("[SessionAPI.invalidate_task_preview] Failed to clear ui_state", exc_info=True)
+
+        setattr(preview_session, "task_modified", True)
+
+        try:
+            sm = getattr(self, "_session_manager", None)
+            repo = getattr(sm, "session_repository", None) if sm else None
+            if repo:
+                repo.save_session(preview_session, user_id)
+        except Exception:
+            logger.warning("[SessionAPI.invalidate_task_preview] Failed to save invalidated preview session", exc_info=True)
+
+        return True
+
+    @_hosted_controller_serialized
+    def restart_preview_session(
+        self,
+        session_id: Optional[str] = None,
+        user_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Сбросить прогресс превью-сессии и перезапустить с первого задания."""
+        user_id = self._resolve_runtime_user_id(user_id)
+        if not user_id:
+            return {"ok": False, "error": "user_id_required"}
+
+        session = None
+        if session_id:
+            session = self.get_session(session_id, user_id=user_id)
+        if not session:
+            session = self.get_active_preview_session(user_id)
+
+        if not session:
+            return {"ok": False, "error": "preview_session_not_found"}
+
+        session_id = session.id
+        logger.info("[SessionAPI.restart_preview_session] Restarting preview session %s", session_id)
+
+        session.current_task_index = 0
+        session.completed_tasks = []
+        session.ui_state = None
+        session.paused = False
+        session.paused_at = None
+        session.paused_resume_target = None
+        setattr(session, "task_modified", False)
+
+        if getattr(self._controller, "task_controller", None):
+            self._controller.task_controller.current_task = None
+        self._controller.current_session_id = session_id
+        self._controller.current_task_ref = None
+
+        try:
+            self._controller._load_current_task()
+        except Exception as e:
+            logger.warning("[SessionAPI.restart_preview_session] Failed to load first task on restart: %s", e, exc_info=True)
+
+        sm = getattr(self, "_session_manager", None)
+        repo = getattr(sm, "session_repository", None) if sm else None
+        if repo:
+            try:
+                repo.save_session(session, user_id)
+            except Exception:
+                logger.warning("[SessionAPI.restart_preview_session] Failed to save restarted session", exc_info=True)
+
+        return {
+            "ok": True,
+            "session_id": session_id,
+            "complex_id": "task_preview",
+            "current_task_index": 0,
+            "total_tasks": len(session.queue) if session.queue else 0,
+        }
 
     @staticmethod
     def _infer_user_id_from_session_id(session_id: Optional[str]) -> Optional[str]:
@@ -4281,10 +4570,17 @@ class SessionAPI:
             logger.exception("[SessionAPI.get_iteration_results] Failed to persist iteration_results ui_state")
 
         # Pydantic-модели умеют dict(), иначе берём __dict__
-        if hasattr(summary, "dict"):
+        if hasattr(summary, "model_dump") and callable(getattr(summary, "model_dump")):
+            data = summary.model_dump()
+        elif hasattr(summary, "dict") and callable(getattr(summary, "dict")):
             data = summary.dict()
         else:
             data = getattr(summary, "__dict__", {})
+        if not isinstance(data, dict):
+            try:
+                data = dict(data)
+            except Exception:
+                data = {}
 
         # Web UI (S3) умеет отображать "Динамика по итерациям", если backend отдаёт массив iterations.
         # Сейчас ExtendedSessionResultSummary не содержит iterations, поэтому добавляем их прямо в payload.
@@ -6120,8 +6416,15 @@ class SessionAPI:
         except Exception:
             logger.exception("[SessionAPI.get_final_results] Failed to build problem tasks payload")
 
+        # Проверяем, является ли сессия превью-сессией (песочницей)
+        complex_id = data.get("complex_id") or getattr(session, "complex_id", None)
+        is_preview_session = bool(
+            getattr(session, "is_preview", False)
+            or (complex_id and str(complex_id).strip() == "task_preview")
+        )
+
         # Если сводка взята из кеша сохраненной сессии, убеждаемся, что completion зафиксирован для streak
-        if summary_from_cache:
+        if summary_from_cache and not is_preview_session:
             try:
                 mgr = getattr(self._session_manager, "user_progress_manager", None)
                 if mgr and hasattr(mgr, "add_complex_completion"):
@@ -6137,44 +6440,48 @@ class SessionAPI:
                     )
                     if not already:
                         mgr.add_complex_completion(
-                            complex_id=data.get("complex_id") or getattr(session, "complex_id", None),
+                            complex_id=complex_id,
                             session_id=session_id,
                             timestamp=datetime.utcnow().isoformat(),
                         )
             except Exception:
                 logger.exception("[SessionAPI.get_final_results] Failed to ensure completion for session %s", session_id)
 
-        # Hook: Update Complex Statistics
-        try:
-            user_id = self._resolve_runtime_user_id(
-                getattr(session, "user_id", None) if session else user_id,
-                allow_default_in_hosted=False,
-            )
-            complex_id = data.get("complex_id") or getattr(session, "complex_id", None)
+        if is_preview_session and isinstance(data, dict):
+            data["is_preview"] = True
+            data["complex_id"] = "task_preview"
 
-            # summary is ExtendedSessionResultSummary here
-            if user_id:
-                updated = self._statistics_service.update_complex_stats(
-                    session_result=summary,
-                    user_id=user_id,
-                    complex_id=complex_id
+        # Hook: Update Complex Statistics (skip for preview sessions)
+        if not is_preview_session:
+            try:
+                user_id = self._resolve_runtime_user_id(
+                    getattr(session, "user_id", None) if session else user_id,
+                    allow_default_in_hosted=False,
                 )
-                if updated:
-                    logger.info("[SessionAPI.get_final_results] Complex statistics updated for session %s", session_id)
+
+                # summary is ExtendedSessionResultSummary here
+                if user_id:
+                    updated = self._statistics_service.update_complex_stats(
+                        session_result=summary,
+                        user_id=user_id,
+                        complex_id=complex_id
+                    )
+                    if updated:
+                        logger.info("[SessionAPI.get_final_results] Complex statistics updated for session %s", session_id)
+                    else:
+                        logger.warning(
+                            "[SessionAPI.get_final_results] Complex statistics update returned False for session %s",
+                            session_id,
+                        )
                 else:
                     logger.warning(
-                        "[SessionAPI.get_final_results] Complex statistics update returned False for session %s",
+                        "[SessionAPI.get_final_results] Skipping complex statistics update for session %s due to missing user_id",
                         session_id,
                     )
-            else:
-                logger.warning(
-                    "[SessionAPI.get_final_results] Skipping complex statistics update for session %s due to missing user_id",
-                    session_id,
-                )
-        except HostedShadowWriteFallbackDisabledError:
-            raise
-        except Exception:
-            logger.exception("[SessionAPI.get_final_results] Failed to update complex statistics for session %s", session_id)
+            except HostedShadowWriteFallbackDisabledError:
+                raise
+            except Exception:
+                logger.exception("[SessionAPI.get_final_results] Failed to update complex statistics for session %s", session_id)
 
         return data
 

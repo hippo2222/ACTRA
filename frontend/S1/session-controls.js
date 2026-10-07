@@ -795,7 +795,7 @@
                 showStatus(message, "error");
                 return;
             }
-            navigateWithoutPrompt(SessionRoutes.COMPLEXES || SessionRoutes.MAIN || "/complexes");
+            navigateWithoutPrompt(getExitTargetUrl());
         } catch (err) {
             console.error("Pause request failed", err);
             showStatus(wt('s1.err_pause_fail_network', 'Не удалось поставить сессию на паузу. Проверьте соединение и попробуйте снова'), "error");
@@ -806,7 +806,7 @@
 
     async function handleDiscardSession() {
         if (!SessionState.sessionId) {
-            navigateWithoutPrompt(SessionRoutes.COMPLEXES || SessionRoutes.MAIN || "/complexes");
+            navigateWithoutPrompt(getExitTargetUrl());
             return;
         }
 
@@ -829,7 +829,7 @@
                 return;
             }
 
-            navigateWithoutPrompt(SessionRoutes.COMPLEXES || SessionRoutes.MAIN || "/complexes");
+            navigateWithoutPrompt(getExitTargetUrl());
         } catch (err) {
             console.error("Discard session failed", err);
             showStatus(wt('s1.err_discard_fail_retry', 'Не удалось выйти без сохранения. Попробуйте снова'), "error");
@@ -1532,7 +1532,7 @@
                 if (finishBtn) finishBtn.removeAttribute("disabled");
                 return;
             }
-            navigateWithoutPrompt(SessionRoutes.MAIN);
+            navigateWithoutPrompt(getExitTargetUrl());
         } catch (err) {
             console.error("Cancel session failed", err);
             showStatus(wt('s1.err_cancel_fail', 'Не удалось завершить комплекс. Попробуйте ещё раз'), "error");
@@ -1758,6 +1758,19 @@
                 // best-effort
             }
         });
+    }
+
+    function getExitTargetUrl() {
+        try {
+            const params = new URLSearchParams(window.location.search || '');
+            const returnTo = params.get('return_to');
+            if (returnTo && typeof returnTo === 'string' && returnTo.startsWith('/')) {
+                return returnTo;
+            }
+        } catch (e) {
+            // best-effort
+        }
+        return SessionRoutes.COMPLEXES || SessionRoutes.MAIN || "/complexes";
     }
 
     function allowNavigationWithoutPrompt() {

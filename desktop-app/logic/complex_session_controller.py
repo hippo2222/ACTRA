@@ -566,6 +566,11 @@ class ComplexSessionController:
             task_id = parts[-1]
             task_data_full = self.storage_service.load_task(module_id, topic_id, task_id)
             if not task_data_full:
+                is_preview = getattr(session, "is_preview", False) or getattr(session, "complex_id", None) == "task_preview"
+                if is_preview and session.current_task_index + 1 < len(queue):
+                    logger.warning("[ComplexSessionController] Preview task deleted: %s, skipping to next task", task_ref)
+                    session.current_task_index += 1
+                    return self._load_current_task()
                 raise ValueError(f"Task not found: {task_ref}")
 
             task_data_full = self._apply_test_queue_slot_filters(

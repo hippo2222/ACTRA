@@ -29,6 +29,7 @@ from routes._helpers import (
     _json_safe,
     _maybe_hosted_shadow_write_error_response,
     _resolve_effective_user_id,
+    _resolve_task_display_info,
 )
 
 logger = logging.getLogger(__name__)
@@ -103,7 +104,7 @@ def _resolve_display_task_index(session_api: Any, session: Any) -> Optional[int]
     if not isinstance(current_index, int):
         current_index = 0
 
-    if getattr(session, "complex_id", None) == "daily_mix":
+    if getattr(session, "complex_id", None) in {"daily_mix", "task_preview"} or getattr(session, "is_preview", False):
         return max(0, min(current_index, len(queue) - 1))
 
     return max(0, min(current_index - 1, len(queue) - 1))
@@ -118,6 +119,11 @@ def _serialize_active_session_item(session: Any, session_api: Any = None) -> Dic
     end_time = getattr(session, "end_time", None)
     updated_at = paused_at or end_time or start_time
 
+    resolved_idx = _resolve_display_task_index(session_api, session)
+    cur_slot = resolved_idx if (resolved_idx is not None and 0 <= resolved_idx < len(queue)) else 0
+    cur_ref = queue[cur_slot].task_ref if (queue and 0 <= cur_slot < len(queue)) else None
+    task_info = _resolve_task_display_info(cur_ref) if cur_ref else {"id": None, "name": None}
+
     payload = {
         "session_id": getattr(session, "id", None),
         "complex_id": getattr(session, "complex_id", None),
@@ -129,8 +135,14 @@ def _serialize_active_session_item(session: Any, session_api: Any = None) -> Dic
         "updated_at": _json_safe(updated_at),
         "iteration": getattr(session, "iteration", None),
         "current_task_index": getattr(session, "current_task_index", None),
+        "display_index": (cur_slot + 1) if queue else 1,
+        "current_task_ref": cur_ref,
+        "current_task": task_info,
         "total_tasks": len(queue),
         "is_active": bool(getattr(session, "is_active", False)),
+        "is_preview": bool(getattr(session, "is_preview", False) or getattr(session, "complex_id", None) == "task_preview"),
+        "task_modified": bool(getattr(session, "task_modified", False)),
+        "source_context": getattr(session, "source_context", None),
     }
     try:
         if session_api is not None and hasattr(session_api, "get_resume_target"):

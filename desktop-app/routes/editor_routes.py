@@ -58,6 +58,7 @@ from routes._helpers import (
     _maybe_hosted_shadow_write_error_response,
     _compute_inherited_theory_for_topics,
     _make_safe_id,
+    _resolve_task_display_info,
     _resolve_editor_image_path,
     _serialize_workspace_catalog_modules,
     _serialize_workspace_task_payload,
@@ -834,6 +835,12 @@ def save_editor_task(module_id: str, topic_id: str, task_id: str) -> Any:
         )
 
         if success:
+            try:
+                session_api = getattr(ctx, "session_api", None)
+                if session_api and hasattr(session_api, "invalidate_task_preview"):
+                    session_api.invalidate_task_preview(f"{module_id}/{topic_id}/{task_id}", ctx.user_id)
+            except Exception:
+                logger.warning("[HTTP] Failed to invalidate preview session for task %s/%s/%s", module_id, topic_id, task_id, exc_info=True)
             return jsonify({"ok": True})
         else:
             return jsonify({"ok": False, "error": "save_failed"}), 500
@@ -867,6 +874,12 @@ def delete_editor_task(module_id: str, topic_id: str, task_id: str) -> Any:
                 return jsonify({"ok": False, "error": "task_not_found"}), 404
         success = ctx.storage_service.delete_task(module_id, topic_id, task_id)
         if success:
+            try:
+                session_api = getattr(ctx, "session_api", None)
+                if session_api and hasattr(session_api, "invalidate_task_preview"):
+                    session_api.invalidate_task_preview(f"{module_id}/{topic_id}/{task_id}", ctx.user_id)
+            except Exception:
+                logger.warning("[HTTP] Failed to invalidate preview session on task delete %s/%s/%s", module_id, topic_id, task_id, exc_info=True)
             return jsonify({"ok": True})
         else:
             return (
@@ -918,6 +931,12 @@ def rename_editor_task() -> Any:
 
         success = ctx.storage_service.rename_task(module_id, topic_id, task_id, new_name)
         if success:
+            try:
+                session_api = getattr(ctx, "session_api", None)
+                if session_api and hasattr(session_api, "invalidate_task_preview"):
+                    session_api.invalidate_task_preview(f"{module_id}/{topic_id}/{task_id}", ctx.user_id)
+            except Exception:
+                logger.warning("[HTTP] Failed to invalidate preview session on task rename %s/%s/%s", module_id, topic_id, task_id, exc_info=True)
             return jsonify({"ok": True})
         else:
             return jsonify({"ok": False, "error": "rename_failed"}), 404
@@ -2933,3 +2952,219 @@ def serve_editor_image() -> Any:
     resp = send_file(str(target))
     resp.headers["Cache-Control"] = "private, max-age=3600"
     return resp
+
+
+# =========================================================================
+# Author Preview Session Endpoints (Sandbox test-drive for tasks)
+# =========================================================================
+
+@editor_bp.route("/api/editor/preview-session/start", methods=["POST"])
+def editor_start_preview_session() -> Any:
+    """Start author preview session for one or multiple tasks."""
+    ctx = get_ctx()
+    if ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_preview"}), 403
+
+    session_api = getattr(ctx, "session_api", None)
+    if not session_api:
+        return jsonify({"ok": False, "error": "session_api_unavailable"}), 500
+
+    payload = request.get_json(silent=True) or {}
+    task_refs = payload.get("task_refs") or []
+    if not isinstance(task_refs, list) or not task_refs:
+        return jsonify({"ok": False, "error": "empty_task_refs"}), 400
+
+    clean_task_refs = [str(r).strip() for r in task_refs if str(r).strip()]
+    if not clean_task_refs:
+        return jsonify({"ok": False, "error": "empty_task_refs"}), 400
+
+    force = bool(payload.get("force", False))
+    source_context = payload.get("source_context") if isinstance(payload.get("source_context"), dict) else None
+
+    # Check for existing paused preview session
+    existing = session_api.get_active_preview_session(ctx.user_id)
+    if existing and not force:
+        queue = getattr(existing, "queue", []) or []
+        ui_state = getattr(existing, "ui_state", None) or {}
+        cur_ref = (
+            ui_state.get("task_ref")
+            if isinstance(ui_state, dict) and ui_state.get("task_ref")
+            else None
+        )
+        if not cur_ref and hasattr(session_api, "_controller"):
+            cur_ref = getattr(session_api._controller, "current_task_ref", None)
+
+        display_index = 0
+        if isinstance(ui_state, dict) and isinstance(ui_state.get("task_index"), int):
+            display_index = ui_state.get("task_index")
+        elif queue:
+            try:
+                resolver = getattr(session_api, "_resolve_current_queue_slot", None)
+                if callable(resolver):
+                    _, q_idx = resolver(existing)
+                    if isinstance(q_idx, int) and 0 <= q_idx < len(queue):
+                        display_index = q_idx
+                    else:
+                        idx = getattr(existing, "current_task_index", 0)
+                        display_index = max(0, min(idx - 1, len(queue) - 1))
+                else:
+                    idx = getattr(existing, "current_task_index", 0)
+                    display_index = max(0, min(idx - 1, len(queue) - 1))
+            except Exception:
+                idx = getattr(existing, "current_task_index", 0)
+                display_index = max(0, min(idx, len(queue) - 1))
+
+        if not cur_ref and queue and 0 <= display_index < len(queue):
+            cur_ref = queue[display_index].task_ref
+
+        paused_at_dt = getattr(existing, "paused_at", None)
+        task_info = _resolve_task_display_info(cur_ref)
+        display_idx = max(1, display_index + 1) if queue else 1
+        total_tasks = len(queue)
+        active_session_payload = {
+            "id": getattr(existing, "id", None),
+            "session_id": getattr(existing, "id", None),
+            "complex_id": getattr(existing, "complex_id", "task_preview"),
+            "status": "paused" if getattr(existing, "paused", False) else "active",
+            "paused": bool(getattr(existing, "paused", False)),
+            "paused_at": paused_at_dt.isoformat() if paused_at_dt else None,
+            "display_index": display_idx,
+            "current_index": display_index,
+            "total_tasks": total_tasks,
+            "current_task": task_info,
+            "current_task_ref": cur_ref,
+        }
+        return (
+            jsonify(
+                {
+                    "ok": False,
+                    "error": "paused_preview_exists",
+                    "session_id": getattr(existing, "id", None),
+                    "paused_at": paused_at_dt.isoformat() if paused_at_dt else None,
+                    "current_task_ref": cur_ref,
+                    "total_tasks": total_tasks,
+                    "current_index": display_index,
+                    "display_index": display_idx,
+                    "active_session": active_session_payload,
+                }
+            ),
+            409,
+        )
+
+    if existing and force:
+        try:
+            session_api.cancel_session(existing.id, user_id=ctx.user_id)
+        except Exception:
+            logger.warning("[HTTP] Failed to cancel previous preview session %s", existing.id, exc_info=True)
+
+    result = session_api.start_preview_session(
+        task_refs=clean_task_refs,
+        user_id=ctx.user_id,
+        source_context=source_context,
+    )
+    status_code = 200 if result.get("ok") else 400
+    return jsonify(result), status_code
+
+
+@editor_bp.route("/api/editor/preview-session/restart", methods=["POST"])
+def editor_restart_preview_session() -> Any:
+    """Reset preview session progress and restart from the beginning."""
+    ctx = get_ctx()
+    if ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_preview"}), 403
+
+    session_api = getattr(ctx, "session_api", None)
+    if not session_api:
+        return jsonify({"ok": False, "error": "session_api_unavailable"}), 500
+
+    payload = request.get_json(silent=True) or {}
+    session_id = payload.get("session_id")
+
+    result = session_api.restart_preview_session(
+        session_id=str(session_id).strip() if session_id else None,
+        user_id=ctx.user_id,
+    )
+    status_code = 200 if result.get("ok") else 400
+    return jsonify(result), status_code
+
+
+@editor_bp.route("/api/editor/preview-session/active", methods=["GET"])
+def editor_get_active_preview_session() -> Any:
+    """Get status of the currently active preview session (if any)."""
+    ctx = get_ctx()
+    session_api = getattr(ctx, "session_api", None)
+    if not session_api:
+        return jsonify({"ok": False, "error": "session_api_unavailable"}), 500
+
+    session = session_api.get_active_preview_session(ctx.user_id)
+    if not session:
+        return jsonify({"ok": True, "active": False, "active_session": None})
+
+    queue = getattr(session, "queue", []) or []
+    ui_state = getattr(session, "ui_state", None) or {}
+    cur_ref = (
+        ui_state.get("task_ref")
+        if isinstance(ui_state, dict) and ui_state.get("task_ref")
+        else None
+    )
+    if not cur_ref and hasattr(session_api, "_controller"):
+        cur_ref = getattr(session_api._controller, "current_task_ref", None)
+
+    display_index = 0
+    if isinstance(ui_state, dict) and isinstance(ui_state.get("task_index"), int):
+        display_index = ui_state.get("task_index")
+    elif queue:
+        idx = getattr(session, "current_task_index", 0)
+        display_index = max(0, min(idx, len(queue) - 1))
+
+    if not cur_ref and queue and 0 <= display_index < len(queue):
+        cur_ref = queue[display_index].task_ref
+
+    paused_at_dt = getattr(session, "paused_at", None)
+    task_info = _resolve_task_display_info(cur_ref)
+    display_idx_1based = max(1, display_index + 1) if queue else 1
+
+    session_payload = {
+        "id": getattr(session, "id", None),
+        "session_id": getattr(session, "id", None),
+        "complex_id": getattr(session, "complex_id", "task_preview"),
+        "paused": bool(getattr(session, "paused", False)),
+        "paused_at": paused_at_dt.isoformat() if paused_at_dt else None,
+        "current_task_index": display_index,
+        "display_index": display_idx_1based,
+        "current_task_ref": cur_ref,
+        "current_task": task_info,
+        "total_tasks": len(queue),
+        "task_modified": bool(getattr(session, "task_modified", False)),
+        "source_context": getattr(session, "source_context", None),
+    }
+
+    return jsonify(
+        {
+            "ok": True,
+            "active": True,
+            "active_session": session_payload,
+            **session_payload,
+        }
+    )
+
+
+@editor_bp.route("/api/editor/preview-session/cancel", methods=["POST"])
+def editor_cancel_preview_session() -> Any:
+    """Cancel and discard the active preview session."""
+    ctx = get_ctx()
+    session_api = getattr(ctx, "session_api", None)
+    if not session_api:
+        return jsonify({"ok": False, "error": "session_api_unavailable"}), 500
+
+    payload = request.get_json(silent=True) or {}
+    session_id = payload.get("session_id")
+    if not session_id:
+        active = session_api.get_active_preview_session(ctx.user_id)
+        session_id = getattr(active, "id", None) if active else None
+
+    if not session_id:
+        return jsonify({"ok": True, "message": "no_active_preview_to_cancel"})
+
+    result = session_api.cancel_session(str(session_id).strip(), user_id=ctx.user_id)
+    return jsonify({"ok": True, "result": result})

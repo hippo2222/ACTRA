@@ -3022,6 +3022,169 @@ function wt(key, fallback) {
             complexesSkeletonTimer = null;
           }
 
+          function createPreviewSessionComplexCard(session) {
+            const card = document.createElement("article");
+            card.className = "p-4 @container cx-card border-primary/40 bg-surface-1 shadow-sm";
+            card.setAttribute("data-complex-card-id", "task_preview");
+            card.setAttribute("data-complex-status", "in_progress");
+            card.setAttribute("data-complex-paused", "true");
+            card.setAttribute("data-complex-owned", "true");
+            card.setAttribute("data-is-preview", "true");
+
+            const totalTasks = Number(session.total_tasks || 1);
+            const displayIndex = Number(
+              typeof session.display_index === "number"
+                ? session.display_index
+                : (typeof session.display_task_index === "number"
+                    ? session.display_task_index + 1
+                    : (typeof session.current_task_index === "number" ? Math.max(1, session.current_task_index) : 1))
+            );
+            const currentTaskTitle = session.current_task?.name || session.current_task?.id || wt('complexes.sandbox_task_fallback', 'Задание');
+            const searchTerms = [
+              currentTaskTitle,
+              wt('complexes.sandbox_badge', 'Тест-драйв из Редактора'),
+              wt('complexes.sandbox_desc', 'песочница'),
+              'task preview sandbox'
+            ].join(' ').toLowerCase();
+            card.setAttribute("data-complex-search", searchTerms);
+
+            const isModified = Boolean(session.task_modified);
+            const pausedAtLabel = formatPausedAt(session.paused_at || session.updated_at || session.start_time);
+            const percent = Math.min(100, Math.round((displayIndex / totalTasks) * 100));
+
+            card.innerHTML = `
+              <div class="flex flex-col gap-3 h-full">
+                <div class="flex items-start justify-between gap-2">
+                  <div class="flex flex-wrap items-center gap-1.5 min-w-0">
+                    <span class="cx-card-badge pill pill-sm pill-primary">
+                      <span class="material-symbols-outlined text-sm">science</span>
+                      ${wt('complexes.sandbox_badge', 'Тест-драйв из Редактора')}
+                    </span>
+                    <span class="cx-card-badge pill pill-sm pill-warning">
+                      <span class="material-symbols-outlined text-sm">pause</span>
+                      ${wt('complexes.status_paused', 'На паузе')}
+                    </span>
+                    ${isModified ? `
+                      <span class="cx-card-badge pill pill-sm pill-warning">
+                        <span class="material-symbols-outlined text-sm">edit_note</span>
+                        ${wt('complexes.sandbox_modified', 'Отредактировано')}
+                      </span>
+                    ` : ''}
+                  </div>
+                </div>
+
+                <div class="min-w-0 flex-1">
+                  <h3 class="text-base font-bold text-text-main truncate" title="${escapeHtml(currentTaskTitle)}">
+                    ${escapeHtml(currentTaskTitle)}
+                  </h3>
+                  <p class="text-xs text-text-secondary line-clamp-2 mt-1">
+                    ${wt('complexes.sandbox_desc', 'Временная сессия для проверки заданий без влияния на статистику и лимиты.')}
+                  </p>
+                </div>
+
+                <div class="cx-card-inline-meta text-xs text-text-secondary">
+                  <span>${pausedAtLabel ? `${wt('complexes.paused_at_label', 'Пауза')}: ${pausedAtLabel}` : ''}</span>
+                  <span class="inline-flex items-center gap-2 whitespace-nowrap">
+                    <span>${wt('complexes.progress_label', 'Прогресс')} ${displayIndex}/${totalTasks}</span>
+                    <span class="h-1.5 w-24 shrink-0 overflow-hidden rounded-full bg-bg-secondary">
+                      <span class="block h-1.5 rounded-full bg-primary transition-all" style="width: ${percent}%"></span>
+                    </span>
+                  </span>
+                </div>
+
+                <div class="flex items-center justify-between gap-2 pt-2 border-t border-border-subtle mt-auto">
+                  <button type="button" data-action="cancel-preview" class="p-2 text-text-disabled hover:text-error-dark hover:bg-error-lighter rounded-lg transition-colors text-xs font-semibold flex items-center gap-1" title="${wt('complexes.sandbox_cancel', 'Сбросить тест-драйв')}">
+                    <span class="material-symbols-outlined text-[16px]">close</span>
+                    ${wt('complexes.sandbox_cancel', 'Сбросить')}
+                  </button>
+                  <div class="flex items-center gap-2">
+                    ${isModified ? `
+                      <button type="button" data-action="restart-preview" class="btn--secondary px-3 py-1.5 text-xs font-semibold rounded-lg border border-warning text-warning-dark hover:bg-warning-lighter transition-colors flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[16px]">restart_alt</span>
+                        ${wt('complexes.sandbox_restart', 'Заново')}
+                      </button>
+                    ` : ''}
+                    <button type="button" data-action="resume-preview" class="btn--primary px-4 py-1.5 text-xs font-semibold rounded-lg bg-primary text-primary-contrast hover:bg-primary-dark transition-colors flex items-center gap-1 shadow-sm">
+                      <span class="material-symbols-outlined text-[16px]">play_arrow</span>
+                      ${wt('complexes.btn_continue', 'Продолжить')}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            `;
+
+            card.querySelector('[data-action="resume-preview"]')?.addEventListener('click', () => {
+              const targetSessionId = session.session_id || session.id;
+              if (targetSessionId) {
+                window.location.href = `/session/${encodeURIComponent(targetSessionId)}?return_to=${encodeURIComponent('/complexes')}`;
+              }
+            });
+
+            const restartBtn = card.querySelector('[data-action="restart-preview"]');
+            restartBtn?.addEventListener('click', async () => {
+              try {
+                restartBtn.disabled = true;
+                const res = await fetch('/api/editor/preview-session/restart', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ session_id: session.session_id || session.id }),
+                });
+                const data = await res.json();
+                if (data.ok) {
+                  const targetSessionId = data.session_id || session.session_id || session.id;
+                  window.location.href = `/session/${encodeURIComponent(targetSessionId)}?return_to=${encodeURIComponent('/complexes')}`;
+                } else {
+                  restartBtn.disabled = false;
+                  showComplexVoiceToast({
+                    severity: 'error',
+                    what: wt('complexes.sandbox_restart_failed', 'Не удалось перезапустить тест-драйв.')
+                  });
+                }
+              } catch (err) {
+                console.error('restart preview failed', err);
+                restartBtn.disabled = false;
+              }
+            });
+
+            const cancelBtn = card.querySelector('[data-action="cancel-preview"]');
+            cancelBtn?.addEventListener('click', async () => {
+              const confirmed = typeof NotificationUI !== 'undefined' && typeof NotificationUI.confirm === 'function'
+                ? await NotificationUI.confirm({
+                    title: wt('complexes.sandbox_cancel_confirm_title', 'Сбросить тест-драйв?'),
+                    message: wt('complexes.sandbox_cancel_confirm_msg', 'Текущий прогресс тест-драйва будет удалён.'),
+                    confirmText: wt('complexes.sandbox_cancel', 'Сбросить'),
+                    cancelText: wt('complexes.btn_cancel', 'Отмена'),
+                    variant: 'error',
+                  })
+                : window.confirm(wt('complexes.sandbox_cancel_confirm_msg', 'Текущий прогресс тест-драйва будет удалён.'));
+              if (!confirmed) return;
+
+              try {
+                cancelBtn.disabled = true;
+                const res = await fetch('/api/editor/preview-session/cancel', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ session_id: session.session_id || session.id }),
+                });
+                const data = await res.json();
+                if (data.ok) {
+                  showComplexVoiceToast({
+                    severity: 'info',
+                    what: wt('complexes.sandbox_cancelled_what', 'Тест-драйв сброшен.')
+                  });
+                  fetchComplexes();
+                } else {
+                  cancelBtn.disabled = false;
+                }
+              } catch (err) {
+                console.error('cancel preview failed', err);
+                cancelBtn.disabled = false;
+              }
+            });
+
+            return card;
+          }
+
           async function fetchComplexes() {
             const listEl = document.getElementById("complexes-list");
             const emptyEl = document.getElementById("empty-state");
@@ -3152,16 +3315,28 @@ function wt(key, fallback) {
                 });
               }
 
-              if (items.length === 0) {
+              const previewSession = sessions.find((session) => session && (session.is_preview || session.complex_id === "task_preview"));
+              const libraryItems = items.filter((complex) => complex && normalizeComplexId(complex.id) !== "task_preview" && !complex.is_preview);
+
+              if (libraryItems.length === 0) {
                 listEl.innerHTML = "";
                 setComplexSelectionMode(false);
-                if (emptyEl) emptyEl.hidden = false;
-                updateComplexFilterSummary(0, 0);
+                if (previewSession) {
+                  listEl.appendChild(createPreviewSessionComplexCard(previewSession));
+                  if (emptyEl) emptyEl.hidden = true;
+                  applyComplexFilters();
+                } else {
+                  if (emptyEl) emptyEl.hidden = false;
+                  updateComplexFilterSummary(0, 0);
+                }
                 return;
               }
 
               listEl.innerHTML = "";
-              const sortedItems = sortComplexItems(items, activeComplexSort);
+              if (previewSession) {
+                listEl.appendChild(createPreviewSessionComplexCard(previewSession));
+              }
+              const sortedItems = sortComplexItems(libraryItems, activeComplexSort);
               let renderIndex = 0;
               for (const complex of sortedItems) {
                 const complexId = normalizeComplexId(complex.id);

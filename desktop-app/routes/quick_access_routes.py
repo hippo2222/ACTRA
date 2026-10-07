@@ -75,6 +75,8 @@ def _is_imported_library_complex_payload(item: Any) -> bool:
 def _is_visible_library_complex_for_current_user(item: Any) -> bool:
     if not isinstance(item, dict):
         return False
+    if item.get("id") == "task_preview" or item.get("is_preview") is True:
+        return True
     ownership = item.get("ownership") if isinstance(item.get("ownership"), dict) else {}
     if ownership.get("is_owned_by_current_user") is True:
         return True
@@ -642,6 +644,8 @@ def get_quick_access() -> Any:
 
     items = []
     for cid in ordered_ids:
+        if cid == "task_preview":
+            continue
         cobj = _get_complex_by_id(cid)
         if not cobj:
             continue
@@ -763,6 +767,8 @@ def mark_recent_complex() -> Any:
     complex_id = _normalize_complex_id(payload.get("complex_id"))
     if not complex_id:
         return jsonify({"ok": False, "error": "complex_id_required"}), 400
+    if complex_id == "task_preview":
+        return jsonify({"ok": True, "skipped": True})
 
     try:
         state = _read_ui_state(user_id)
@@ -836,6 +842,7 @@ def list_complexes() -> Any:
         items = [
             _serialize_complex_payload(c, current_user_id=ctx.user_id)
             for c in complexes
+            if getattr(c, "id", None) != "task_preview" and not getattr(c, "is_preview", False)
         ]
         if is_hosted_web_runtime():
             items = [

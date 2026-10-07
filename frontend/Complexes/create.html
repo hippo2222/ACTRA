@@ -3640,7 +3640,9 @@
 
       selectedTasks: [], // [{ref, label}]
       chains: [],        // [[ref1, ref2], [ref3, ref4]]
-      complexSettings: {}
+      complexSettings: {},
+      expandedModules: new Set(),
+      expandedTopics: new Set()
     };
     window.state = state;
 
@@ -7389,7 +7391,14 @@
         modContentInner.className = 'module-card-content-inner';
 
         // Toggle functionality
-        let isExpanded = document.body.dataset.complexEditorOnboardingDemo === 'true' && moduleIndex === 0;
+        const modKey = String(m.id || '');
+        const searchInput = document.getElementById('catalog-search');
+        const hasSearchQuery = Boolean(searchInput && searchInput.value && searchInput.value.trim());
+        let isExpanded = Boolean(
+          hasSearchQuery ||
+          (state.expandedModules && state.expandedModules.has(modKey)) ||
+          (document.body.dataset.complexEditorOnboardingDemo === 'true' && moduleIndex === 0)
+        );
         const toggleBtn = modHeader.querySelector('[data-action="toggle"]');
         const chevron = modHeader.querySelector('[data-chevron]');
 
@@ -7402,10 +7411,12 @@
           isExpanded = !isExpanded;
           if (isExpanded) {
             modContent.classList.add('expanded');
-            chevron.textContent = 'expand_more';
+            if (chevron) chevron.textContent = 'expand_more';
+            state.expandedModules?.add(modKey);
           } else {
             modContent.classList.remove('expanded');
-            chevron.textContent = 'chevron_right';
+            if (chevron) chevron.textContent = 'chevron_right';
+            state.expandedModules?.delete(modKey);
           }
         });
 
@@ -7502,7 +7513,12 @@
           tasksWrapper.appendChild(tasksInner);
 
           // Topic collapse/expand functionality
-          let topicExpanded = document.body.dataset.complexEditorOnboardingDemo === 'true' && moduleIndex === 0 && topicIndex === 0;
+          const topicKey = `${m.id}/${t.id}`;
+          let topicExpanded = Boolean(
+            hasSearchQuery ||
+            (state.expandedTopics && (state.expandedTopics.has(topicKey) || state.expandedTopics.has(t.id))) ||
+            (document.body.dataset.complexEditorOnboardingDemo === 'true' && moduleIndex === 0 && topicIndex === 0)
+          );
           const topicChevron = topicHeader.querySelector('[data-topic-chevron]');
           if (topicChevron) {
             topicChevron.textContent = topicExpanded ? 'expand_more' : 'chevron_right';
@@ -7517,11 +7533,14 @@
               if (topicChevron) {
                 topicChevron.textContent = 'expand_more';
               }
+              state.expandedTopics?.add(topicKey);
             } else {
               tasksWrapper.classList.add('collapsed');
               if (topicChevron) {
                 topicChevron.textContent = 'chevron_right';
               }
+              state.expandedTopics?.delete(topicKey);
+              state.expandedTopics?.delete(t.id);
             }
           });
 
@@ -11241,16 +11260,56 @@
       updateComplexPublishUi();
 
       if (editId) {
+        sessionStorage.removeItem('actra_handoff_complex_tasks');
         await loadComplexData(editId);
-
       } else {
-
+        const handoffJson = sessionStorage.getItem('actra_handoff_complex_tasks');
+        if (handoffJson) {
+          sessionStorage.removeItem('actra_handoff_complex_tasks');
+          try {
+            const handoffRefs = JSON.parse(handoffJson);
+            if (Array.isArray(handoffRefs) && handoffRefs.length > 0) {
+              let addedCount = 0;
+              handoffRefs.forEach((ref) => {
+                const res = addTaskRef(ref);
+                if (res && res.ok) {
+                  addedCount++;
+                  const parts = String(ref || '').split('/');
+                  if (parts[0]) state.expandedModules.add(parts[0]);
+                  if (parts[0] && parts[1]) {
+                    state.expandedTopics.add(`${parts[0]}/${parts[1]}`);
+                    state.expandedTopics.add(parts[1]);
+                  }
+                }
+              });
+              const nameInput = document.getElementById('name');
+              if (nameInput) {
+                setTimeout(() => nameInput.focus(), 150);
+              }
+              if (addedCount > 0) {
+                notifyComplexToast(
+                  wt('create.handoff_tasks_added', 'Добавлено заданий из Редактора: {count}').replace('{count}', String(addedCount)),
+                  'info'
+                );
+                setTimeout(() => {
+                  const firstRef = handoffRefs[0];
+                  if (firstRef) {
+                    const chipEl = document.querySelector(`[data-catalog-task-ref="${typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(firstRef) : firstRef}"]`);
+                    if (chipEl) {
+                      chipEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                  }
+                }, 200);
+              }
+            }
+          } catch (e) {
+            console.warn('Failed to parse handoff complex tasks', e);
+          }
+        }
         renderSelectedList();
-
         renderChains();
-
+        applyCatalogFilter();
         updateComplexPublishUi();
-
       }
 
       syncCatalogTreeSelectionFromSelect();

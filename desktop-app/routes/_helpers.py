@@ -782,8 +782,54 @@ def _enrich_complex_with_theory_link(obj: dict) -> dict:
     return obj
 
 
+def _resolve_task_display_info(task_ref: Optional[str]) -> Dict[str, Optional[str]]:
+    """Resolve task ID and human-friendly task name from task_ref."""
+    if not task_ref:
+        return {"id": None, "name": None}
+    ref = str(task_ref).strip()
+    parts = [p.strip() for p in ref.replace(":", "/").split("/") if p.strip()]
+    task_id = parts[-1] if parts else ref
+    task_name = None
+    if len(parts) >= 3:
+        try:
+            ctx = get_ctx()
+            storage = getattr(ctx, "storage_service", None)
+            if storage and hasattr(storage, "load_task"):
+                loaded = storage.load_task(parts[0], parts[1], parts[-1])
+                if isinstance(loaded, dict):
+                    td = loaded.get("task_data") if isinstance(loaded.get("task_data"), dict) else loaded
+                    meta = td.get("meta") if isinstance(td, dict) and isinstance(td.get("meta"), dict) else {}
+                    metadata = loaded.get("metadata") if isinstance(loaded.get("metadata"), dict) else {}
+                    task_name = (
+                        (td.get("name") if isinstance(td, dict) else None)
+                        or meta.get("name")
+                        or metadata.get("name")
+                        or (td.get("title") if isinstance(td, dict) else None)
+                        or meta.get("title")
+                    )
+        except Exception:
+            pass
+    return {"id": ref, "name": task_name or task_id}
+
+
 def _get_complex_by_id(complex_id: str) -> Optional[dict]:
     try:
+        if complex_id == "task_preview":
+            complex_service = getattr(get_ctx(), "complex_service", None)
+            cached = getattr(complex_service, "_complexes_cache", {}).get("task_preview")
+            if cached:
+                obj = _serialize_complex_payload(cached)
+                obj["is_preview"] = True
+                return obj
+            return {
+                "id": "task_preview",
+                "name": "Тест-драйв",
+                "description": "Синтетический комплекс для тестового прогона заданий",
+                "is_preview": True,
+                "tasks": [],
+                "task_refs": [],
+                "time_limit": 0,
+            }
         complexes = get_ctx().complex_service.get_all_complexes()
         for c in complexes:
             obj = _serialize_complex_payload(c)
